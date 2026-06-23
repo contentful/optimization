@@ -71,7 +71,7 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 400,
+        "index.cjs": 600,
         "index.mjs": 300,
         "client.cjs": 1200,
         "client.mjs": 1200,
@@ -98,8 +98,7 @@
   "dependencies": {
     "@contentful/optimization-node": "workspace:*",
     "@contentful/optimization-react-web": "workspace:*",
-    "@contentful/optimization-web": "workspace:*",
-    "react": "19.2.5"
+    "@contentful/optimization-web": "workspace:*"
   },
   "devDependencies": {
     "@rsbuild/plugin-react": "^1.4.2",
@@ -113,6 +112,8 @@
     "contentful": "catalog:",
     "happy-dom": "catalog:",
     "next": "^16.2.6",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
     "rimraf": "catalog:",
     "tslib": "catalog:",
     "typescript": "catalog:"

@@ -90,8 +90,6 @@ export interface PreviewPanelProps {
  * @public
  */
 export interface PreviewPanelOverlayProps extends Omit<PreviewPanelProps, 'style'> {
-  /** App content that the overlay wraps */
-  children: React.ReactNode
   /** Optional positioning overrides for the floating action button */
   fabPosition?: { bottom?: number; right?: number }
 }
@@ -358,40 +356,6 @@ export interface VariantSelectorProps {
   isAudienceActive: boolean
   /** Variant index that user naturally qualifies for */
   qualifiedIndex?: number
-}
-
-/**
- * Configuration options for the preview panel feature.
- *
- * @public
- */
-export interface PreviewPanelConfig {
-  /**
-   * Whether the preview panel is enabled.
-   * When `true`, a floating action button appears that opens the preview panel.
-   */
-  enabled: boolean
-
-  /**
-   * Contentful client instance used to fetch `nt_audience` and `nt_experience` entries
-   * (Contentful content type IDs created by the Optimization platform).
-   */
-  contentfulClient: ContentfulClient
-
-  /**
-   * Optional positioning overrides for the floating action button.
-   */
-  fabPosition?: { bottom?: number; right?: number }
-
-  /**
-   * Called when the panel visibility changes.
-   */
-  onVisibilityChange?: (isVisible: boolean) => void
-
-  /**
-   * Whether to show the header with title in the preview panel.
-   */
-  showHeader?: boolean
 }
 
 /**

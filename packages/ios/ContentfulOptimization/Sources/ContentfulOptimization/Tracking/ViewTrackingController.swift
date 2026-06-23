@@ -5,33 +5,33 @@ import AppKit
 #endif
 import Foundation
 
-/// Extracts tracking metadata from an entry and its resolved personalization.
+/// Extracts tracking metadata from an entry and its selected optimization.
 public struct TrackingMetadata {
     public let componentId: String
     public let experienceId: String?
     public let variantIndex: Int
     public let sticky: Bool?
 
-    public init(entry: [String: Any], personalization: [String: Any]?) {
+    public init(entry: [String: Any], selectedOptimization: [String: Any]?) {
         let sys = entry["sys"] as? [String: Any]
         self.componentId = sys?["id"] as? String ?? ""
-        self.experienceId = personalization?["experienceId"] as? String
-        self.variantIndex = personalization?["variantIndex"] as? Int ?? 0
-        self.sticky = personalization?["sticky"] as? Bool
+        self.experienceId = selectedOptimization?["experienceId"] as? String
+        self.variantIndex = selectedOptimization?["variantIndex"] as? Int ?? 0
+        self.sticky = selectedOptimization?["sticky"] as? Bool
     }
 }
 
 /// Manages viewport tracking for a single component, implementing the three-phase event lifecycle:
 ///
-/// 1. **Initial event**: After accumulated visible time reaches `viewTimeMs` (default 2000ms)
+/// 1. **Initial event**: After accumulated visible time reaches `dwellTimeMs` (default 2000ms)
 /// 2. **Periodic updates**: Every `viewDurationUpdateIntervalMs` (default 5000ms) while visible
 /// 3. **Final event**: When visibility ends (only if at least one event was already emitted)
 ///
 /// State machine per visibility cycle:
 /// ```
-/// INVISIBLE → (ratio >= threshold) → VISIBLE → timer → EMIT → schedule next
+/// INVISIBLE → (ratio >= minVisibleRatio) → VISIBLE → timer → EMIT → schedule next
 ///                                       ↓
-///                            (ratio < threshold) → INVISIBLE (emit final if attempts > 0)
+///                            (ratio < minVisibleRatio) → INVISIBLE (emit final if attempts > 0)
 /// ```
 @MainActor
 public final class ViewTrackingController {
@@ -39,8 +39,8 @@ public final class ViewTrackingController {
 
     private weak var client: OptimizationClient?
     private let metadata: TrackingMetadata
-    private let threshold: Double
-    private let viewTimeMs: Int
+    private let minVisibleRatio: Double
+    private let dwellTimeMs: Int
     private let viewDurationUpdateIntervalMs: Int
 
     // Cycle state
@@ -49,6 +49,7 @@ public final class ViewTrackingController {
     private var accumulatedMs: Double = 0
     private var attempts: Int = 0
     private var timer: Timer?
+    private let stickyTrackingKey = UUID().uuidString
 
     // Last known visibility parameters for re-evaluation after resume
     private var lastElementY: CGFloat = 0
@@ -75,15 +76,15 @@ public final class ViewTrackingController {
     public init(
         client: OptimizationClient,
         entry: [String: Any],
-        personalization: [String: Any]?,
-        threshold: Double = 0.8,
-        viewTimeMs: Int = 2000,
+        selectedOptimization: [String: Any]?,
+        minVisibleRatio: Double = 0.8,
+        dwellTimeMs: Int = 2000,
         viewDurationUpdateIntervalMs: Int = 5000
     ) {
         self.client = client
-        self.metadata = TrackingMetadata(entry: entry, personalization: personalization)
-        self.threshold = threshold
-        self.viewTimeMs = viewTimeMs
+        self.metadata = TrackingMetadata(entry: entry, selectedOptimization: selectedOptimization)
+        self.minVisibleRatio = minVisibleRatio
+        self.dwellTimeMs = dwellTimeMs
         self.viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs
 
         #if canImport(UIKit)
@@ -135,7 +136,7 @@ public final class ViewTrackingController {
         let visibleHeight = max(0, visibleBottom - visibleTop)
         let visibilityRatio = Double(visibleHeight / elementHeight)
 
-        let nowVisible = visibilityRatio >= threshold
+        let nowVisible = visibilityRatio >= minVisibleRatio
 
         if nowVisible && !isVisible {
             onBecameVisible()
@@ -215,7 +216,7 @@ public final class ViewTrackingController {
 
     private func scheduleNextFire() {
         flushAccumulatedTime()
-        let requiredMs = Double(viewTimeMs) + Double(attempts) * Double(viewDurationUpdateIntervalMs)
+        let requiredMs = Double(dwellTimeMs) + Double(attempts) * Double(viewDurationUpdateIntervalMs)
         let remainingMs = max(0, requiredMs - accumulatedMs)
         let interval = remainingMs / 1000.0
 
@@ -244,7 +245,8 @@ public final class ViewTrackingController {
             experienceId: metadata.experienceId,
             variantIndex: metadata.variantIndex,
             viewDurationMs: Int(accumulatedMs),
-            sticky: metadata.sticky
+            sticky: metadata.sticky,
+            stickyTrackingKey: stickyTrackingKey
         )
         Task {
             try? await client.trackView(payload)

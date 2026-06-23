@@ -1,7 +1,7 @@
 # Integrating the Optimization Android SDK in an XML Views app
 
-Use this guide when you want to add Personalization, Analytics, screen tracking, and preview
-overrides to a native Android application built with XML layouts or Android Views.
+Use this guide when you want to add Optimization, Analytics, screen tracking, and preview overrides
+to a native Android application built with XML layouts or Android Views.
 
 For shared runtime behavior, consent gates, tracking thresholds, live-update precedence, and offline
 delivery, see
@@ -18,7 +18,7 @@ Use the Compose guide instead if your app is Compose-based:
 - [1. Add the package and create the config](#1-add-the-package-and-create-the-config)
 - [2. Initialize with OptimizationManager](#2-initialize-with-optimizationmanager)
 - [3. Handle consent](#3-handle-consent)
-- [4. Personalize entries with OptimizedEntryView](#4-personalize-entries-with-optimizedentryview)
+- [4. Optimize entries with OptimizedEntryView](#4-optimize-entries-with-optimizedentryview)
   - [Fetch entries in the expected shape](#fetch-entries-in-the-expected-shape)
   - [Render resolved entries](#render-resolved-entries)
   - [Use TrackingRecyclerView for scrollable content](#use-trackingrecyclerview-for-scrollable-content)
@@ -40,8 +40,7 @@ The XML Views integration uses the SDK's View-based adapter surface:
 
 - `OptimizationManager` initializes one process-wide `OptimizationClient` and stores global tracking
   and live-update defaults.
-- `OptimizedEntryView` resolves a personalized Contentful entry and can attach view and tap
-  tracking.
+- `OptimizedEntryView` resolves an optimized Contentful entry and can attach view and tap tracking.
 - `TrackingRecyclerView` nudges descendant `OptimizedEntryView` instances to re-check visibility
   while lists scroll.
 - `ScreenTracker` emits screen events from Activity or Fragment lifecycle methods.
@@ -93,9 +92,9 @@ val appLocale = "en-US"
 
 val optimizationConfig = OptimizationConfig(
     clientId = "your-client-id",
-    environment = "master",
+    environment = "main",
     locale = appLocale,
-    debug = BuildConfig.DEBUG,
+    logLevel = if (BuildConfig.DEBUG) OptimizationLogLevel.debug else OptimizationLogLevel.error,
 )
 ```
 
@@ -198,11 +197,11 @@ value remains valid.
 Use `OptimizationManager.client.consent(events = true, persistence = false)` when events are allowed
 but durable profile continuity must stay session-only.
 
-## 4. Personalize entries with OptimizedEntryView
+## 4. Optimize entries with OptimizedEntryView
 
 `OptimizedEntryView` is the View-based component for rendering Contentful entries through the
-Optimization resolver. It passes non-personalized entries through unchanged, resolves personalized
-entries against the selected variants for the visitor, and can attach view and tap tracking.
+Optimization resolver. It passes non-optimized entries through unchanged, resolves optimized entries
+against the selected variants for the visitor, and can attach view and tap tracking.
 
 ### Fetch entries in the expected shape
 
@@ -229,7 +228,7 @@ lifecycleScope.launch {
 
 The resolver expects the same single-locale CDA entry contract used by the other SDK runtimes. For
 details, see
-[Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
+[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
 
 ### Render resolved entries
 
@@ -237,7 +236,7 @@ details, see
 fun createHeroView(entry: Map<String, Any>): View {
     return OptimizedEntryView(this).apply {
         trackTaps = true
-        accessibilityIdentifier = "home-hero-personalization"
+        accessibilityIdentifier = "home-hero-optimization"
         setContentRenderer { resolvedEntry ->
             HeroBinder.create(context, resolvedEntry)
         }
@@ -306,6 +305,17 @@ OptimizedEntryView(context).apply {
 Setting `trackTaps = false` disables tap tracking even when `onTap` is present. For timing
 thresholds and event delivery behavior, see
 [Android SDK runtime and interaction mechanics](../concepts/android-sdk-runtime-and-interaction-mechanics.md#tracking-mechanics).
+
+Use `track(...)` for custom business events:
+
+```kotlin
+lifecycleScope.launch {
+    OptimizationManager.client.track(
+        event = "Purchase Completed",
+        properties = mapOf("sku" to "sku-1"),
+    )
+}
+```
 
 ## 6. Track screen views
 

@@ -197,14 +197,14 @@ async function getRequestOptimizationData({
     consent: { events: consent === true, persistence: consent === true },
     profile: requestProfile,
   })
-  let apiResponse = await requestOptimization.page()
+  let eventResult = await requestOptimization.page()
 
   if (isNonEmptyString(userId)) {
-    apiResponse = await requestOptimization.identify({ userId })
+    eventResult = await requestOptimization.identify({ userId })
   }
 
-  const profile = apiResponse?.profile
-  const selectedOptimizations = apiResponse?.selectedOptimizations
+  const profile = eventResult.data?.profile
+  const selectedOptimizations = eventResult.data?.selectedOptimizations
 
   if (requestOptimization.canPersistProfile && profile?.id !== undefined) {
     updateState({

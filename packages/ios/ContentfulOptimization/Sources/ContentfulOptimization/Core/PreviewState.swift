@@ -8,9 +8,9 @@ public struct PreviewState: Codable, Sendable {
     public let profile: JSONValue?
     public let consent: Bool?
     public let persistenceConsent: Bool?
-    public let canPersonalize: Bool
+    public let canOptimize: Bool
     public let changes: [PreviewChange]?
-    public let selectedPersonalizations: [SelectedPersonalization]?
+    public let selectedOptimizations: [SelectedOptimization]?
     public let previewPanelOpen: Bool
 
     /// Active audience overrides set via the preview panel (audienceId → qualified).
@@ -86,10 +86,10 @@ public struct PreviewModelDTO: Codable, Sendable {
     public let experienceNameMap: [String: String]
 }
 
-/// A selected optimization/personalization variant from the bridge.
+/// A selected optimization variant from the bridge.
 ///
 /// Mirrors the `SelectedOptimization` Zod schema from `api-schemas`.
-public struct SelectedPersonalization: Codable, Equatable, Sendable {
+public struct SelectedOptimization: Codable, Equatable, Sendable {
     public let experienceId: String
     public let variantIndex: Int
     public let variants: [String: String]?

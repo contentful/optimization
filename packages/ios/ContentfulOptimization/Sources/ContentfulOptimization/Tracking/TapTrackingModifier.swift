@@ -4,7 +4,7 @@ import SwiftUI
 /// to the optimization client.
 struct TapTrackingModifier: ViewModifier {
     let entry: [String: Any]
-    let personalization: [String: Any]?
+    let selectedOptimization: [String: Any]?
     let enabled: Bool
     let onTap: (([String: Any]) -> Void)?
     let client: OptimizationClient
@@ -14,7 +14,10 @@ struct TapTrackingModifier: ViewModifier {
             content
                 .simultaneousGesture(TapGesture().onEnded {
                     if client.hasConsent(method: "trackClick") {
-                        let metadata = TrackingMetadata(entry: entry, personalization: personalization)
+                        let metadata = TrackingMetadata(
+                            entry: entry,
+                            selectedOptimization: selectedOptimization
+                        )
                         let payload = TrackClickPayload(
                             componentId: metadata.componentId,
                             experienceId: metadata.experienceId,

@@ -8,6 +8,8 @@ packages:
   - packages/node/node-sdk
   - packages/universal/*
 
+verifyDepsBeforeRun: false
+
 allowBuilds:
   core-js: true
   esbuild: true

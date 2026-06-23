@@ -1,4 +1,8 @@
-import type { CoreStateful } from '@contentful/optimization-core'
+import {
+  shouldRememberStickyEntryViewResult,
+  shouldSendStickyEntryView,
+  type CoreStateful,
+} from '@contentful/optimization-core'
 import type { EntryInteractionDetector } from '../../EntryInteractionDetector'
 import type {
   EntryViewInteractionElementOptions,
@@ -28,7 +32,7 @@ export function createEntryViewDetector(
   EntryViewInteractionStartOptions | undefined,
   EntryViewInteractionElementOptions
 > {
-  const stickySuccessElements = new WeakSet<Element>()
+  const acceptedStickyElements = new WeakSet<Element>()
 
   return createTimedEntryDetector<
     EntryViewTrackingCore,
@@ -54,19 +58,23 @@ export function createEntryViewDetector(
       }
     },
     track: async (runtimeCore, payload, info: ElementViewCallbackInfo, element): Promise<void> => {
-      const stickyAlreadySucceeded = stickySuccessElements.has(element)
-      const shouldSendSticky = payload.sticky === true && !stickyAlreadySucceeded
-      const sticky = shouldSendSticky ? true : undefined
+      const shouldSendSticky = shouldSendStickyEntryView(
+        payload.sticky,
+        acceptedStickyElements.has(element),
+      )
 
-      const data = await runtimeCore.trackView({
+      const result = await runtimeCore.trackView({
         ...payload,
-        sticky,
+        sticky: shouldSendSticky ? true : undefined,
         viewId: info.viewId,
         viewDurationMs: Math.max(0, Math.round(info.totalVisibleMs)),
       })
 
-      if (shouldSendSticky && data !== undefined) {
-        stickySuccessElements.add(element)
+      if (
+        shouldSendSticky &&
+        shouldRememberStickyEntryViewResult(shouldSendSticky, result.accepted)
+      ) {
+        acceptedStickyElements.add(element)
       }
     },
   })

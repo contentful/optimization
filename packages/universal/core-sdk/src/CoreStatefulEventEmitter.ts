@@ -4,7 +4,6 @@ import type {
   InsightsEvent as InsightsEventPayload,
   Json,
   MergeTagEntry,
-  OptimizationData,
   PartialProfile,
   Profile,
   SelectedOptimizationArray,
@@ -12,13 +11,14 @@ import type {
 import { createScopedLogger, logger } from '@contentful/optimization-api-client/logger'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { isEqual } from 'es-toolkit/predicate'
-import type { BlockedEvent } from './BlockedEvent'
-import type { ConsentGuard } from './Consent'
+import type { ConsentGuard } from './consent'
 import CoreBase from './CoreBase'
 import type { CoreStatefulConfig } from './CoreStateful'
-import type { EventEmissionResult } from './EventEmissionResult'
 import type {
+  AllowedEventType,
+  BlockedEvent,
   ClickBuilderArgs,
+  EventEmissionResult,
   FlagViewBuilderArgs,
   HoverBuilderArgs,
   IdentifyBuilderArgs,
@@ -27,7 +27,6 @@ import type {
   TrackBuilderArgs,
   ViewBuilderArgs,
 } from './events'
-import type { AllowedEventType } from './EventType'
 import type { ExperienceQueue } from './queues/ExperienceQueue'
 import type { InsightsQueue } from './queues/InsightsQueue'
 import type { ResolvedData } from './resolvers'
@@ -134,17 +133,20 @@ abstract class CoreStatefulEventEmitter
    * Convenience wrapper for sending an `identify` event through the Experience path.
    *
    * @param payload - Identify builder arguments.
-   * @returns The resulting {@link OptimizationData} for the identified user.
+   * @returns Whether the event was accepted and any resulting {@link OptimizationData}.
    * @example
    * ```ts
-   * const data = await core.identify({ userId: 'user-123', traits: { plan: 'pro' } })
+   * const { accepted, data } = await core.identify({
+   *   userId: 'user-123',
+   *   traits: { plan: 'pro' },
+   * })
    * ```
    */
   async identify(
     payload: IdentifyBuilderArgs & { profile?: PartialProfile },
-  ): Promise<OptimizationData | undefined> {
+  ): Promise<EventEmissionResult> {
     const { profile, ...builderArgs } = payload
-    return await this.sendExperienceEvent(
+    return await this.sendExperienceEventWithResult(
       'identify',
       [payload],
       this.eventBuilder.buildIdentify(builderArgs),
@@ -156,30 +158,13 @@ abstract class CoreStatefulEventEmitter
    * Convenience wrapper for sending a `page` event through the Experience path.
    *
    * @param payload - Page view builder arguments.
-   * @returns The evaluated {@link OptimizationData} for this page view.
+   * @returns Whether the event was accepted and any resulting {@link OptimizationData}.
    * @example
    * ```ts
-   * const data = await core.page({ properties: { title: 'Home' } })
+   * const { accepted, data } = await core.page({ properties: { title: 'Home' } })
    * ```
    */
   async page(
-    payload: PageViewBuilderArgs & { profile?: PartialProfile } = {},
-  ): Promise<OptimizationData | undefined> {
-    const { data } = await this.pageWithEmissionResult(payload)
-    return data
-  }
-
-  /**
-   * Emit a page event and expose whether Core accepted it.
-   *
-   * @remarks
-   * Use this when coordinating automatic current-page tracking. A blocked
-   * event returns `{ accepted: false }`; an offline-queued but consent-allowed
-   * event returns `{ accepted: true }`.
-   *
-   * @internal
-   */
-  protected async pageWithEmissionResult(
     payload: PageViewBuilderArgs & { profile?: PartialProfile } = {},
   ): Promise<EventEmissionResult> {
     const { profile, ...builderArgs } = payload
@@ -195,30 +180,13 @@ abstract class CoreStatefulEventEmitter
    * Convenience wrapper for sending a `screen` event through the Experience path.
    *
    * @param payload - Screen view builder arguments.
-   * @returns The evaluated {@link OptimizationData} for this screen view.
+   * @returns Whether the event was accepted and any resulting {@link OptimizationData}.
    * @example
    * ```ts
-   * const data = await core.screen({ name: 'HomeScreen' })
+   * const { accepted, data } = await core.screen({ name: 'HomeScreen' })
    * ```
    */
   async screen(
-    payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
-  ): Promise<OptimizationData | undefined> {
-    const { data } = await this.screenWithEmissionResult(payload)
-    return data
-  }
-
-  /**
-   * Emit a screen event and expose whether Core accepted it.
-   *
-   * @remarks
-   * Use this when coordinating automatic current-screen tracking. A blocked
-   * event returns `{ accepted: false }`; an offline-queued but consent-allowed
-   * event returns `{ accepted: true }`.
-   *
-   * @internal
-   */
-  protected async screenWithEmissionResult(
     payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<EventEmissionResult> {
     const { profile, ...builderArgs } = payload
@@ -234,17 +202,20 @@ abstract class CoreStatefulEventEmitter
    * Convenience wrapper for sending a custom `track` event through the Experience path.
    *
    * @param payload - Track builder arguments.
-   * @returns The evaluated {@link OptimizationData} for this event.
+   * @returns Whether the event was accepted and any resulting {@link OptimizationData}.
    * @example
    * ```ts
-   * const data = await core.track({ event: 'button_click', properties: { label: 'Buy' } })
+   * const { accepted, data } = await core.track({
+   *   event: 'button_click',
+   *   properties: { label: 'Buy' },
+   * })
    * ```
    */
   async track(
     payload: TrackBuilderArgs & { profile?: PartialProfile },
-  ): Promise<OptimizationData | undefined> {
+  ): Promise<EventEmissionResult> {
     const { profile, ...builderArgs } = payload
-    return await this.sendExperienceEvent(
+    return await this.sendExperienceEventWithResult(
       'track',
       [payload],
       this.eventBuilder.buildTrack(builderArgs),
@@ -258,7 +229,8 @@ abstract class CoreStatefulEventEmitter
    * @param payload - Entry view builder arguments. When `payload.sticky` is
    *   `true`, the event will also be sent through Experience as a sticky
    *   entry view.
-   * @returns A promise that resolves when all delegated calls complete.
+   * @returns Whether the event was accepted and, for sticky views, any resulting
+   * {@link OptimizationData}.
    * @remarks
    * Experience receives sticky entry views only; Insights is always invoked
    * regardless of `sticky`.
@@ -269,18 +241,26 @@ abstract class CoreStatefulEventEmitter
    */
   async trackView(
     payload: ViewBuilderArgs & { profile?: PartialProfile },
-  ): Promise<OptimizationData | undefined> {
+  ): Promise<EventEmissionResult> {
     const { profile, ...builderArgs } = payload
-    let result: OptimizationData | undefined = undefined
+    if (!this.hasConsent('trackView')) {
+      this.onBlockedByConsent('trackView', [payload])
+      return { accepted: false }
+    }
+
+    let result: EventEmissionResult = { accepted: true }
 
     if (payload.sticky) {
-      result = await this.sendExperienceEvent(
+      result = await this.sendExperienceEventWithResult(
         'trackView',
         [payload],
         this.eventBuilder.buildView(builderArgs),
         profile,
       )
     }
+
+    if (!result.accepted) return result
+
     await this.sendInsightsEvent(
       'trackView',
       [payload],
@@ -353,16 +333,6 @@ abstract class CoreStatefulEventEmitter
       `Event "${name}" was blocked due to lack of consent; payload: ${JSON.stringify(args)}`,
     )
     this.reportBlockedEvent(name, args)
-  }
-
-  protected async sendExperienceEvent(
-    method: string,
-    args: readonly unknown[],
-    event: ExperienceEventPayload,
-    _profile?: PartialProfile,
-  ): Promise<OptimizationData | undefined> {
-    const { data } = await this.sendExperienceEventWithResult(method, args, event, _profile)
-    return data
   }
 
   protected async sendExperienceEventWithResult(

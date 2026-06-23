@@ -17,7 +17,7 @@ class SharedPreferencesStoreTest {
         store.persistenceConsent = false
         store.profile = mapOf("id" to "profile-id")
         store.changes = listOf(mapOf("experienceId" to "experience-id"))
-        store.personalizations = listOf(mapOf("experienceId" to "personalization-id"))
+        store.selectedOptimizations = listOf(mapOf("experienceId" to "optimization-id"))
         store.anonymousId = "anonymous-id"
 
         store.clearProfileContinuity()
@@ -26,7 +26,7 @@ class SharedPreferencesStoreTest {
         assertEquals(false, store.persistenceConsent)
         assertNull(store.profile)
         assertNull(store.changes)
-        assertNull(store.personalizations)
+        assertNull(store.selectedOptimizations)
         assertNull(store.anonymousId)
 
         val reloadedStore = SharedPreferencesStore(context)
@@ -36,7 +36,7 @@ class SharedPreferencesStoreTest {
         assertEquals(false, reloadedStore.persistenceConsent)
         assertNull(reloadedStore.profile)
         assertNull(reloadedStore.changes)
-        assertNull(reloadedStore.personalizations)
+        assertNull(reloadedStore.selectedOptimizations)
         assertNull(reloadedStore.anonymousId)
     }
 
@@ -49,7 +49,7 @@ class SharedPreferencesStoreTest {
         store.persistenceConsent = true
         store.profile = mapOf("id" to "profile-id")
         store.changes = listOf(mapOf("experienceId" to "experience-id"))
-        store.personalizations = listOf(mapOf("experienceId" to "personalization-id"))
+        store.selectedOptimizations = listOf(mapOf("experienceId" to "optimization-id"))
         store.anonymousId = "anonymous-id"
 
         val reloadedStore = SharedPreferencesStore(context)
@@ -59,14 +59,14 @@ class SharedPreferencesStoreTest {
         assertEquals(true, reloadedStore.persistenceConsent)
         assertNull(reloadedStore.profile)
         assertNull(reloadedStore.changes)
-        assertNull(reloadedStore.personalizations)
+        assertNull(reloadedStore.selectedOptimizations)
         assertNull(reloadedStore.anonymousId)
 
         reloadedStore.loadProfileContinuity()
 
         assertEquals("profile-id", reloadedStore.profile?.get("id"))
         assertEquals("experience-id", reloadedStore.changes?.first()?.get("experienceId"))
-        assertEquals("personalization-id", reloadedStore.personalizations?.first()?.get("experienceId"))
+        assertEquals("optimization-id", reloadedStore.selectedOptimizations?.first()?.get("experienceId"))
         assertEquals("anonymous-id", reloadedStore.anonymousId)
     }
 }

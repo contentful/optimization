@@ -1,32 +1,7 @@
 import type ContentfulOptimization from '@contentful/optimization-web'
-import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
-import type { Entry, EntrySkeletonType } from 'contentful'
 import { createContext } from 'react'
 
-export type OptimizationSdk = Pick<
-  ContentfulOptimization,
-  | 'consent'
-  | 'destroy'
-  | 'getFlag'
-  | 'getMergeTagValue'
-  | 'hasConsent'
-  | 'identify'
-  | 'locale'
-  | 'page'
-  | 'reset'
-  | 'states'
-  | 'setLocale'
-  | 'track'
-  | 'trackClick'
-  | 'trackView'
-  | 'tracking'
-> & {
-  resolveOptimizedEntry: (
-    entry: Entry,
-    selectedOptimizations?: SelectedOptimizationArray,
-  ) => ResolvedData<EntrySkeletonType>
-}
+export type OptimizationSdk = ContentfulOptimization
 
 export interface OptimizationContextValue {
   readonly sdk: OptimizationSdk | undefined

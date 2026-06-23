@@ -1,10 +1,6 @@
 import Combine
 import SwiftUI
 
-/// ID used by core's `buildPreviewModel` to bucket experiences that don't
-/// target any defined audience.
-let allVisitorsAudienceId = "ALL_VISITORS"
-
 // MARK: - View Model
 
 /// Thin UI-state holder. All bridge-derived data is observed directly from
@@ -452,16 +448,16 @@ struct PreviewPanelMain: View {
                 .accessibilityIdentifier("debug-consent")
 
                 HStack {
-                    Text("Can Personalize")
+                    Text("Can Optimize")
                         .font(.system(size: PreviewTheme.FontSize.sm, weight: .medium))
                         .foregroundColor(PreviewTheme.Colors.TextColor.primary)
                     Spacer()
-                    Text(canPersonalizeLabel)
+                    Text(canOptimizeLabel)
                         .font(.system(size: PreviewTheme.FontSize.sm))
                         .foregroundColor(PreviewTheme.Colors.TextColor.secondary)
                 }
                 .accessibilityElement(children: .combine)
-                .accessibilityIdentifier("debug-can-personalize")
+                .accessibilityIdentifier("debug-can-optimize")
 
                 Button(action: { client.refreshPreviewState() }) {
                     Text("Refresh")
@@ -487,8 +483,8 @@ struct PreviewPanelMain: View {
         }
     }
 
-    private var canPersonalizeLabel: String {
-        (client.previewState?.canPersonalize ?? false) ? "Yes" : "No"
+    private var canOptimizeLabel: String {
+        (client.previewState?.canOptimize ?? false) ? "Yes" : "No"
     }
 
     // MARK: - Overrides Section

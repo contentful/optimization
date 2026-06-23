@@ -3,13 +3,13 @@ package com.contentful.optimization.core
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class PreviewState(
+public data class PreviewState(
     val profile: JSONValue?,
     val consent: Boolean?,
     val persistenceConsent: Boolean?,
-    val canPersonalize: Boolean,
+    val canOptimize: Boolean,
     val changes: List<PreviewChange>?,
-    val selectedPersonalizations: List<SelectedPersonalization>?,
+    val selectedOptimizations: List<SelectedOptimization>?,
     val previewPanelOpen: Boolean,
     val audienceOverrides: Map<String, Boolean>?,
     val variantOverrides: Map<String, Int>?,
@@ -25,9 +25,9 @@ data class PreviewState(
                     profile = if (obj.isNull("profile")) null else JSONValue.fromAny(obj.get("profile")),
                     consent = if (obj.isNull("consent")) null else obj.optBoolean("consent"),
                     persistenceConsent = if (obj.isNull("persistenceConsent")) null else obj.optBoolean("persistenceConsent"),
-                    canPersonalize = obj.optBoolean("canPersonalize", false),
+                    canOptimize = obj.optBoolean("canOptimize", false),
                     changes = obj.optJSONArray("changes")?.let { parseChanges(it) },
-                    selectedPersonalizations = obj.optJSONArray("selectedPersonalizations")?.let { parsePersonalizations(it) },
+                    selectedOptimizations = obj.optJSONArray("selectedOptimizations")?.let { parseOptimizations(it) },
                     previewPanelOpen = obj.optBoolean("previewPanelOpen", false),
                     audienceOverrides = obj.optJSONObject("audienceOverrides")?.let { parseBoolMap(it) },
                     variantOverrides = obj.optJSONObject("variantOverrides")?.let { parseIntMap(it) },
@@ -43,8 +43,8 @@ data class PreviewState(
         private fun parseChanges(arr: JSONArray): List<PreviewChange> =
             (0 until arr.length()).map { PreviewChange.fromJSON(arr.getJSONObject(it)) }
 
-        private fun parsePersonalizations(arr: JSONArray): List<SelectedPersonalization> =
-            (0 until arr.length()).map { SelectedPersonalization.fromJSON(arr.getJSONObject(it)) }
+        private fun parseOptimizations(arr: JSONArray): List<SelectedOptimization> =
+            (0 until arr.length()).map { SelectedOptimization.fromJSON(arr.getJSONObject(it)) }
 
         private fun parseBoolMap(obj: JSONObject): Map<String, Boolean> =
             obj.keys().asSequence().associateWith { obj.getBoolean(it) }
@@ -54,7 +54,7 @@ data class PreviewState(
     }
 }
 
-data class AudienceDefinitionDTO(
+public data class AudienceDefinitionDTO(
     val id: String,
     val name: String,
     val description: String?,
@@ -68,7 +68,7 @@ data class AudienceDefinitionDTO(
     }
 }
 
-data class VariantDistributionDTO(
+public data class VariantDistributionDTO(
     val index: Int,
     val variantRef: String,
     val percentage: Int?,
@@ -84,7 +84,7 @@ data class VariantDistributionDTO(
     }
 }
 
-data class ExperienceDefinitionDTO(
+public data class ExperienceDefinitionDTO(
     val id: String,
     val name: String,
     val type: String,
@@ -116,7 +116,7 @@ data class ExperienceDefinitionDTO(
     }
 }
 
-data class AudienceWithExperiencesDTO(
+public data class AudienceWithExperiencesDTO(
     val audience: AudienceDefinitionDTO,
     val experiences: List<ExperienceDefinitionDTO>,
     val isQualified: Boolean,
@@ -136,7 +136,7 @@ data class AudienceWithExperiencesDTO(
     }
 }
 
-data class PreviewModelDTO(
+public data class PreviewModelDTO(
     val audiencesWithExperiences: List<AudienceWithExperiencesDTO>,
     val unassociatedExperiences: List<ExperienceDefinitionDTO>,
     val hasData: Boolean,
@@ -166,14 +166,14 @@ data class PreviewModelDTO(
     }
 }
 
-data class SelectedPersonalization(
+public data class SelectedOptimization(
     val experienceId: String,
     val variantIndex: Int,
     val variants: Map<String, String>?,
     val sticky: Boolean?,
 ) {
     companion object {
-        fun fromJSON(obj: JSONObject) = SelectedPersonalization(
+        fun fromJSON(obj: JSONObject) = SelectedOptimization(
             experienceId = obj.getString("experienceId"),
             variantIndex = obj.getInt("variantIndex"),
             variants = obj.optJSONObject("variants")?.let { m ->
@@ -184,7 +184,7 @@ data class SelectedPersonalization(
     }
 }
 
-data class PreviewChange(
+public data class PreviewChange(
     val audienceId: String?,
     val qualified: Boolean?,
     val name: String?,
@@ -204,7 +204,7 @@ data class PreviewChange(
     }
 }
 
-data class PreviewChangeMeta(
+public data class PreviewChangeMeta(
     val experienceId: String,
     val variantIndex: Int,
 ) {

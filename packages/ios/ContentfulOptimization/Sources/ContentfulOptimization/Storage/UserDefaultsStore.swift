@@ -3,14 +3,14 @@ import Foundation
 /// Persistent storage adapter backed by `UserDefaults`.
 ///
 /// Provides in-memory caching with write-through to UserDefaults for SDK state
-/// such as profile, changes, consent, and personalizations.
+/// such as profile, changes, consent, and selectedOptimizations.
 final class UserDefaultsStore: PersistentStore {
     private let defaults: UserDefaults
     private let keyPrefix = "com.contentful.optimization."
 
     private var cache: [String: Any] = [:]
-    private let consentStateKeys = ["consent", "persistenceConsent", "debug"]
-    private let profileContinuityKeys = ["profile", "changes", "personalizations", "anonymousId"]
+    private let consentStateKeys = ["consent", "persistenceConsent"]
+    private let profileContinuityKeys = ["profile", "changes", "selectedOptimizations", "anonymousId"]
     private var keys: [String] { consentStateKeys + profileContinuityKeys }
 
     init(suiteName: String = "com.contentful.optimization") {
@@ -38,10 +38,6 @@ final class UserDefaultsStore: PersistentStore {
             case "anonymousId":
                 if let str = String(data: data, encoding: .utf8) {
                     cache[key] = str
-                }
-            case "debug":
-                if let str = String(data: data, encoding: .utf8) {
-                    cache[key] = str == "true"
                 }
             default:
                 if let json = try? JSONSerialization.jsonObject(with: data) {
@@ -77,15 +73,10 @@ final class UserDefaultsStore: PersistentStore {
 
     var consent: Bool? {
         get {
-            guard let str = cache["consent"] as? String else { return nil }
-            switch str {
-            case "accepted": return true
-            case "denied": return false
-            default: return nil
-            }
+            ConsentStoragePolicy.decode(cache["consent"] as? String)
         }
         set {
-            let translated: String? = newValue.map { $0 ? "accepted" : "denied" }
+            let translated = ConsentStoragePolicy.encode(newValue)
             cache["consent"] = translated
             writeString(translated, forKey: "consent")
         }
@@ -93,17 +84,13 @@ final class UserDefaultsStore: PersistentStore {
 
     var persistenceConsent: Bool? {
         get {
-            guard let str = cache["persistenceConsent"] as? String else {
-                return consent == true ? true : nil
-            }
-            switch str {
-            case "accepted": return true
-            case "denied": return false
-            default: return nil
-            }
+            ConsentStoragePolicy.resolvePersistedPersistenceConsent(
+                persistenceConsent: ConsentStoragePolicy.decode(cache["persistenceConsent"] as? String),
+                consent: consent
+            )
         }
         set {
-            let translated: String? = newValue.map { $0 ? "accepted" : "denied" }
+            let translated = ConsentStoragePolicy.encode(newValue)
             cache["persistenceConsent"] = translated
             writeString(translated, forKey: "persistenceConsent")
         }
@@ -117,11 +104,11 @@ final class UserDefaultsStore: PersistentStore {
         }
     }
 
-    var personalizations: [[String: Any]]? {
-        get { cache["personalizations"] as? [[String: Any]] }
+    var selectedOptimizations: [[String: Any]]? {
+        get { cache["selectedOptimizations"] as? [[String: Any]] }
         set {
-            cache["personalizations"] = newValue
-            writeJSON(newValue, forKey: "personalizations")
+            cache["selectedOptimizations"] = newValue
+            writeJSON(newValue, forKey: "selectedOptimizations")
         }
     }
 
@@ -130,14 +117,6 @@ final class UserDefaultsStore: PersistentStore {
         set {
             cache["anonymousId"] = newValue
             writeString(newValue, forKey: "anonymousId")
-        }
-    }
-
-    var debug: Bool {
-        get { cache["debug"] as? Bool ?? false }
-        set {
-            cache["debug"] = newValue
-            writeString(newValue ? "true" : "false", forKey: "debug")
         }
     }
 

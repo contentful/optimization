@@ -6,7 +6,7 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.ViewTreeObserver
 import android.widget.FrameLayout
-import com.contentful.optimization.core.PersonalizedResult
+import com.contentful.optimization.core.ResolvedOptimizedEntry
 import com.contentful.optimization.core.TrackClickPayload
 import com.contentful.optimization.tracking.TrackingMetadata
 import com.contentful.optimization.tracking.VIEW_TRACKING_LOG_TAG
@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 /**
  * View-based counterpart of [com.contentful.optimization.compose.OptimizedEntry].
  *
- * Wraps a single Contentful entry and renders the resolved (personalized) entry through a
+ * Wraps a single Contentful entry and renders the resolved optimized entry through a
  * caller-supplied [contentRenderer]. Owns a [ViewTrackingController] for visibility-based view
  * tracking and forwards click events to [com.contentful.optimization.core.OptimizationClient.trackClick].
  *
@@ -40,15 +40,15 @@ import kotlinx.coroutines.launch
  * view.setEntry(rawEntry)
  * ```
  */
-class OptimizedEntryView @JvmOverloads constructor(
+public class OptimizedEntryView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
     // Configuration — public so consumers can tune per-instance without subclassing.
-    var viewTimeMs: Int = 2000
-    var threshold: Double = 0.8
+    var dwellTimeMs: Int = 2000
+    var minVisibleRatio: Double = 0.8
     var viewDurationUpdateIntervalMs: Int = 5000
     var liveUpdates: Boolean? = null
     var trackViews: Boolean? = null
@@ -66,24 +66,24 @@ class OptimizedEntryView @JvmOverloads constructor(
         }
 
     private var entry: Map<String, Any>? = null
-    private var personalizationsOverride: List<Map<String, Any>>? = null
+    private var selectedOptimizationsOverride: List<Map<String, Any>>? = null
     private var contentRenderer: ((Map<String, Any>) -> View)? = null
 
     private var trackingScope: CoroutineScope? = null
-    private var personalizationJob: Job? = null
+    private var optimizationJob: Job? = null
     private var previewJob: Job? = null
     private var consentJob: Job? = null
 
     private var controller: ViewTrackingController? = null
-    private var lockedPersonalizations: List<Map<String, Any>>? = null
+    private var lockedOptimizations: List<Map<String, Any>>? = null
     private var isLocked: Boolean = false
-    private var lastResult: PersonalizedResult? = null
-    // Track the (entry, personalization) tuple the current controller was built for so we
-    // don't tear it down on every personalization re-emission — that would reset the dwell
+    private var lastResult: ResolvedOptimizedEntry? = null
+    // Track the (entry, selectedOptimization) tuple the current controller was built for so we
+    // don't tear it down on every optimization re-emission — that would reset the dwell
     // timer and prevent component events from ever firing. Mirrors Compose's
-    // `remember(entry, personalization)` semantics.
+    // `remember(entry, selectedOptimization)` semantics.
     private var controllerEntry: Map<String, Any>? = null
-    private var controllerPersonalization: Map<String, Any>? = null
+    private var controllerSelectedOptimization: Map<String, Any>? = null
 
     private val preDrawListener = ViewTreeObserver.OnPreDrawListener {
         updateVisibility()
@@ -92,7 +92,7 @@ class OptimizedEntryView @JvmOverloads constructor(
 
     /**
      * Set the renderer that turns a resolved entry map into a child View. Called on every
-     * personalization update; the returned View replaces the previous content.
+     * optimization update; the returned View replaces the previous content.
      */
     fun setContentRenderer(renderer: (Map<String, Any>) -> View) {
         this.contentRenderer = renderer
@@ -100,17 +100,17 @@ class OptimizedEntryView @JvmOverloads constructor(
     }
 
     /**
-     * Set the entry to personalize. Optional [personalizations] forces a specific set instead
-     * of observing the live personalizations stream (used by tests or callers driving their own
-     * personalization state).
+     * Set the entry to optimize. Optional [selectedOptimizations] forces a specific set instead
+     * of observing the live selectedOptimizations stream (used by tests or callers driving their own
+     * optimization state).
      */
     fun setEntry(
         entry: Map<String, Any>,
-        personalizations: List<Map<String, Any>>? = null,
+        selectedOptimizations: List<Map<String, Any>>? = null,
     ) {
         this.entry = entry
-        this.personalizationsOverride = personalizations
-        this.lockedPersonalizations = null
+        this.selectedOptimizationsOverride = selectedOptimizations
+        this.lockedOptimizations = null
         this.isLocked = false
         restartObservation()
     }
@@ -138,7 +138,7 @@ class OptimizedEntryView @JvmOverloads constructor(
         controller = null
         trackingScope?.cancel()
         trackingScope = null
-        personalizationJob = null
+        optimizationJob = null
         previewJob = null
         consentJob = null
     }
@@ -154,50 +154,50 @@ class OptimizedEntryView @JvmOverloads constructor(
         }
         controller = null
         controllerEntry = null
-        controllerPersonalization = null
-        personalizationJob?.cancel()
+        controllerSelectedOptimization = null
+        optimizationJob?.cancel()
         previewJob?.cancel()
         consentJob?.cancel()
 
         @Suppress("UNCHECKED_CAST")
         val fields = entry["fields"] as? Map<String, Any>
-        val isPersonalized = fields?.containsKey("nt_experiences") == true
-        val explicitOverride = personalizationsOverride
+        val isOptimized = fields?.containsKey("nt_experiences") == true
+        val explicitOverride = selectedOptimizationsOverride
 
-        personalizationJob = scope.launch {
-            if (!isPersonalized || explicitOverride != null) {
-                // Plain entry — or caller-supplied personalizations. No live observation.
+        optimizationJob = scope.launch {
+            if (!isOptimized || explicitOverride != null) {
+                // Plain entry — or caller-supplied selectedOptimizations. No live observation.
                 publishResult(
-                    client.personalizeEntry(baseline = entry, personalizations = explicitOverride),
+                    client.resolveOptimizedEntry(baseline = entry, selectedOptimizations = explicitOverride),
                 )
                 return@launch
             }
-            // Mirrors the OptimizedEntry composable: collect each personalization emission
+            // Mirrors the OptimizedEntry composable: collect each optimization emission
             // rather than snapshotting, so the rapid sequence triggered by identify() is not
             // coalesced.
-            client.selectedPersonalizations.collect { newValue ->
+            client.selectedOptimizations.collect { newValue ->
                 val previewOpen = client.isPreviewPanelOpen.value
                 val shouldLive =
                     if (previewOpen) true else liveUpdates ?: OptimizationManager.liveUpdates
                 if (!shouldLive && !isLocked && newValue != null) {
-                    lockedPersonalizations = newValue
+                    lockedOptimizations = newValue
                     isLocked = true
                 }
-                val effective = if (shouldLive) newValue else lockedPersonalizations
+                val effective = if (shouldLive) newValue else lockedOptimizations
                 publishResult(
-                    client.personalizeEntry(baseline = entry, personalizations = effective),
+                    client.resolveOptimizedEntry(baseline = entry, selectedOptimizations = effective),
                 )
             }
         }
 
         previewJob = scope.launch {
             client.isPreviewPanelOpen.collect { open ->
-                if (!open && isPersonalized && isLocked) {
-                    lockedPersonalizations = client.selectedPersonalizations.value
+                if (!open && isOptimized && isLocked) {
+                    lockedOptimizations = client.selectedOptimizations.value
                     publishResult(
-                        client.personalizeEntry(
+                        client.resolveOptimizedEntry(
                             baseline = entry,
-                            personalizations = lockedPersonalizations,
+                            selectedOptimizations = lockedOptimizations,
                         ),
                     )
                 }
@@ -212,7 +212,7 @@ class OptimizedEntryView @JvmOverloads constructor(
         }
     }
 
-    private fun publishResult(result: PersonalizedResult) {
+    private fun publishResult(result: ResolvedOptimizedEntry) {
         lastResult = result
         renderContent(result.entry)
         attachController(result)
@@ -224,7 +224,7 @@ class OptimizedEntryView @JvmOverloads constructor(
         addView(renderer(entry))
     }
 
-    private fun attachController(result: PersonalizedResult) {
+    private fun attachController(result: ResolvedOptimizedEntry) {
         if (!resolveTrackViews()) return
         val client = OptimizationManager.client
         if (!client.hasConsent("trackView")) {
@@ -234,19 +234,19 @@ class OptimizedEntryView @JvmOverloads constructor(
             }
             controller = null
             controllerEntry = null
-            controllerPersonalization = null
+            controllerSelectedOptimization = null
             return
         }
         val entry = entry ?: return
-        val newPersonalization = result.personalization
+        val newSelectedOptimization = result.selectedOptimization
         @Suppress("UNCHECKED_CAST")
         val entryId = (entry["sys"] as? Map<String, Any>)?.get("id") as? String ?: ""
 
-        // If the controller is already wired up for the same (entry, personalization) tuple,
+        // If the controller is already wired up for the same (entry, selectedOptimization) tuple,
         // keep it — rebuilding would reset the dwell timer mid-cycle.
         if (controller != null &&
             controllerEntry === entry &&
-            controllerPersonalization == newPersonalization
+            controllerSelectedOptimization == newSelectedOptimization
         ) {
             trackingLog { "attachController KEEP componentId=$entryId" }
             updateVisibility()
@@ -266,13 +266,13 @@ class OptimizedEntryView @JvmOverloads constructor(
         controller = ViewTrackingController(
             client = client,
             entry = entry,
-            personalization = newPersonalization,
-            threshold = threshold,
-            viewTimeMs = viewTimeMs,
+            selectedOptimization = newSelectedOptimization,
+            minVisibleRatio = minVisibleRatio,
+            dwellTimeMs = dwellTimeMs,
             viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
         )
         controllerEntry = entry
-        controllerPersonalization = newPersonalization
+        controllerSelectedOptimization = newSelectedOptimization
         updateVisibility()
     }
 
@@ -304,7 +304,7 @@ class OptimizedEntryView @JvmOverloads constructor(
         if (OptimizationManager.client.hasConsent("trackClick")) {
             val scope = trackingScope
             if (scope != null) {
-                val metadata = TrackingMetadata(entry, lastResult?.personalization)
+                val metadata = TrackingMetadata(entry, lastResult?.selectedOptimization)
                 scope.launch {
                     try {
                         OptimizationManager.client.trackClick(

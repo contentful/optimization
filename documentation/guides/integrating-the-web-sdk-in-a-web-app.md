@@ -217,7 +217,7 @@ viewport size automatically.
 That is exactly what the vanilla and hybrid reference implementations do:
 
 ```ts
-await optimization.page()
+const { accepted, data } = await optimization.page()
 ```
 
 For SPAs or other client-side routing solutions, emit another page event whenever the active route
@@ -437,7 +437,7 @@ async function handleLogout(): Promise<void> {
   optimization.reset()
 
   // Create a fresh anonymous profile immediately if the app still needs browser-side optimization.
-  await optimization.page()
+  const { accepted, data } = await optimization.page()
 }
 ```
 

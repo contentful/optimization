@@ -33,57 +33,230 @@ public struct StorageDefaults {
     public var persistenceConsent: Bool?
     public var profile: [String: Any]?
     public var changes: [[String: Any]]?
-    public var personalizations: [[String: Any]]?
+    public var selectedOptimizations: [[String: Any]]?
 
     public init(
         consent: Bool? = nil,
         persistenceConsent: Bool? = nil,
         profile: [String: Any]? = nil,
         changes: [[String: Any]]? = nil,
-        personalizations: [[String: Any]]? = nil
+        selectedOptimizations: [[String: Any]]? = nil
     ) {
         self.consent = consent
         self.persistenceConsent = persistenceConsent
         self.profile = profile
         self.changes = changes
-        self.personalizations = personalizations
+        self.selectedOptimizations = selectedOptimizations
     }
+}
+
+/// API options forwarded to the shared Optimization bridge.
+public struct OptimizationApiConfig {
+    public let experienceBaseUrl: String?
+    public let insightsBaseUrl: String?
+    public let enabledFeatures: [String]?
+    public let preflight: Bool?
+
+    public init(
+        experienceBaseUrl: String? = nil,
+        insightsBaseUrl: String? = nil,
+        enabledFeatures: [String]? = nil,
+        preflight: Bool? = nil
+    ) {
+        self.experienceBaseUrl = experienceBaseUrl
+        self.insightsBaseUrl = insightsBaseUrl
+        self.enabledFeatures = enabledFeatures
+        self.preflight = preflight
+    }
+
+    var isEmpty: Bool {
+        experienceBaseUrl == nil
+            && insightsBaseUrl == nil
+            && enabledFeatures == nil
+            && preflight == nil
+    }
+
+    func toDictionary() -> [String: Any] {
+        var dict: [String: Any] = [:]
+        if let experienceBaseUrl {
+            dict["experienceBaseUrl"] = experienceBaseUrl
+        }
+        if let insightsBaseUrl {
+            dict["insightsBaseUrl"] = insightsBaseUrl
+        }
+        if let enabledFeatures {
+            dict["enabledFeatures"] = enabledFeatures
+        }
+        if let preflight {
+            dict["preflight"] = preflight
+        }
+        return dict
+    }
+}
+
+/// Minimum native and bridge log level.
+public enum OptimizationLogLevel: String {
+    case fatal
+    case error
+    case warn
+    case info
+    case debug
+    case log
+}
+
+/// Queue flush retry policy forwarded to Core.
+public struct QueueFlushPolicy {
+    public let flushIntervalMs: Int?
+    public let baseBackoffMs: Int?
+    public let maxBackoffMs: Int?
+    public let jitterRatio: Double?
+    public let maxConsecutiveFailures: Int?
+    public let circuitOpenMs: Int?
+
+    public init(
+        flushIntervalMs: Int? = nil,
+        baseBackoffMs: Int? = nil,
+        maxBackoffMs: Int? = nil,
+        jitterRatio: Double? = nil,
+        maxConsecutiveFailures: Int? = nil,
+        circuitOpenMs: Int? = nil
+    ) {
+        self.flushIntervalMs = flushIntervalMs
+        self.baseBackoffMs = baseBackoffMs
+        self.maxBackoffMs = maxBackoffMs
+        self.jitterRatio = jitterRatio
+        self.maxConsecutiveFailures = maxConsecutiveFailures
+        self.circuitOpenMs = circuitOpenMs
+    }
+
+    var isEmpty: Bool {
+        flushIntervalMs == nil
+            && baseBackoffMs == nil
+            && maxBackoffMs == nil
+            && jitterRatio == nil
+            && maxConsecutiveFailures == nil
+            && circuitOpenMs == nil
+    }
+
+    func toDictionary() -> [String: Any] {
+        var dict: [String: Any] = [:]
+        if let flushIntervalMs {
+            dict["flushIntervalMs"] = flushIntervalMs
+        }
+        if let baseBackoffMs {
+            dict["baseBackoffMs"] = baseBackoffMs
+        }
+        if let maxBackoffMs {
+            dict["maxBackoffMs"] = maxBackoffMs
+        }
+        if let jitterRatio {
+            dict["jitterRatio"] = jitterRatio
+        }
+        if let maxConsecutiveFailures {
+            dict["maxConsecutiveFailures"] = maxConsecutiveFailures
+        }
+        if let circuitOpenMs {
+            dict["circuitOpenMs"] = circuitOpenMs
+        }
+        return dict
+    }
+}
+
+/// Queue policy and native queue observability callbacks.
+public struct QueuePolicy {
+    public let flush: QueueFlushPolicy?
+    public let offlineMaxEvents: Int?
+    public let onOfflineDrop: ((QueueEvent) -> Void)?
+    public let onFlushFailure: ((QueueEvent) -> Void)?
+    public let onCircuitOpen: ((QueueEvent) -> Void)?
+    public let onFlushRecovered: ((QueueEvent) -> Void)?
+
+    public init(
+        flush: QueueFlushPolicy? = nil,
+        offlineMaxEvents: Int? = nil,
+        onOfflineDrop: ((QueueEvent) -> Void)? = nil,
+        onFlushFailure: ((QueueEvent) -> Void)? = nil,
+        onCircuitOpen: ((QueueEvent) -> Void)? = nil,
+        onFlushRecovered: ((QueueEvent) -> Void)? = nil
+    ) {
+        self.flush = flush
+        self.offlineMaxEvents = offlineMaxEvents
+        self.onOfflineDrop = onOfflineDrop
+        self.onFlushFailure = onFlushFailure
+        self.onCircuitOpen = onCircuitOpen
+        self.onFlushRecovered = onFlushRecovered
+    }
+
+    var isEmpty: Bool {
+        (flush == nil || flush?.isEmpty == true) && offlineMaxEvents == nil
+    }
+
+    func toDictionary() -> [String: Any] {
+        var dict: [String: Any] = [:]
+        if let flush, !flush.isEmpty {
+            dict["flush"] = flush.toDictionary()
+        }
+        if let offlineMaxEvents {
+            dict["offlineMaxEvents"] = offlineMaxEvents
+        }
+        return dict
+    }
+}
+
+/// Event blocked by consent or SDK guard logic.
+public struct BlockedEvent {
+    public let reason: String
+    public let method: String
+    public let args: [Any]
+}
+
+/// Queue callback event type.
+public enum QueueEventType: String {
+    case offlineDrop
+    case flushFailure
+    case circuitOpen
+    case flushRecovered
+}
+
+/// Queue event emitted by the shared bridge.
+public struct QueueEvent {
+    public let type: QueueEventType
+    public let context: [String: Any]
 }
 
 /// Configuration for initializing the Contentful Optimization SDK.
 public struct OptimizationConfig {
     public let clientId: String
     public let environment: String
-    public let experienceBaseUrl: String?
-    public let insightsBaseUrl: String?
+    public let api: OptimizationApiConfig?
     /// Default SDK locale used for Experience API requests and event context.
     public let locale: String?
     public var defaults: StorageDefaults?
     public let allowedEventTypes: [String]?
-
-    /// When `true`, the SDK emits detailed diagnostic logs via `os.Logger`
-    /// under the subsystem `com.contentful.optimization`.
-    /// Logs are visible in Xcode console and Console.app.
-    public var debug: Bool
+    public let logLevel: OptimizationLogLevel
+    public let queuePolicy: QueuePolicy?
+    public let onEventBlocked: ((BlockedEvent) -> Void)?
 
     public init(
         clientId: String,
-        environment: String = "master",
-        experienceBaseUrl: String? = nil,
-        insightsBaseUrl: String? = nil,
+        environment: String = "main",
+        api: OptimizationApiConfig? = nil,
         locale: String? = nil,
         defaults: StorageDefaults? = nil,
-        debug: Bool = false,
-        allowedEventTypes: [String]? = nil
+        allowedEventTypes: [String]? = nil,
+        logLevel: OptimizationLogLevel = .error,
+        queuePolicy: QueuePolicy? = nil,
+        onEventBlocked: ((BlockedEvent) -> Void)? = nil
     ) {
         self.clientId = clientId
         self.environment = environment
-        self.experienceBaseUrl = experienceBaseUrl
-        self.insightsBaseUrl = insightsBaseUrl
+        self.api = api
         self.locale = locale
         self.defaults = defaults
-        self.debug = debug
         self.allowedEventTypes = allowedEventTypes
+        self.logLevel = logLevel
+        self.queuePolicy = queuePolicy
+        self.onEventBlocked = onEventBlocked
     }
 
     /// Normalizes the SDK locale for Experience API requests and event context.
@@ -100,18 +273,19 @@ public struct OptimizationConfig {
         var dict: [String: Any] = [
             "clientId": clientId,
             "environment": environment,
+            "logLevel": logLevel.rawValue,
         ]
-        if let url = experienceBaseUrl {
-            dict["experienceBaseUrl"] = url
-        }
-        if let url = insightsBaseUrl {
-            dict["insightsBaseUrl"] = url
+        if let api, !api.isEmpty {
+            dict["api"] = api.toDictionary()
         }
         if let locale = try normalizedLocale() {
             dict["locale"] = locale
         }
         if let allowedEventTypes {
             dict["allowedEventTypes"] = allowedEventTypes
+        }
+        if let queuePolicy, !queuePolicy.isEmpty {
+            dict["queuePolicy"] = queuePolicy.toDictionary()
         }
         if defaults != nil || anonymousId != nil {
             var defaultsDict: [String: Any] = [:]
@@ -127,8 +301,8 @@ public struct OptimizationConfig {
             if let changes = defaults?.changes {
                 defaultsDict["changes"] = changes
             }
-            if let personalizations = defaults?.personalizations {
-                defaultsDict["optimizations"] = personalizations
+            if let selectedOptimizations = defaults?.selectedOptimizations {
+                defaultsDict["selectedOptimizations"] = selectedOptimizations
             }
             if let anonymousId {
                 defaultsDict["anonymousId"] = anonymousId

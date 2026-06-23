@@ -6,7 +6,7 @@ import {
   type OptimizationRootSdkConfig,
   type OnStatesReady as SharedOnStatesReady,
   type TrackEntryInteractionOptions as SharedTrackEntryInteractionOptions,
-} from '@contentful/optimization-web/sdk-support'
+} from '@contentful/optimization-web/presentation'
 import { useLayoutEffect, useRef, useState, type PropsWithChildren, type ReactElement } from 'react'
 
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
@@ -73,7 +73,7 @@ function createOwnedSdkBinding(props: OptimizationProviderConfigProps): Provider
 
   return createOptimizationRootSdkBinding({
     config,
-    createSdk: (sdkConfig) => new ContentfulOptimization(sdkConfig) as OptimizationSdk,
+    createSdk: (sdkConfig) => new ContentfulOptimization(sdkConfig),
     onStatesReady,
     trackEntryInteraction,
   })

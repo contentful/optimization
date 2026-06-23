@@ -11,14 +11,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import com.contentful.optimization.core.PersonalizedResult
+import com.contentful.optimization.core.ResolvedOptimizedEntry
 
 @Suppress("UNCHECKED_CAST")
 @Composable
-fun OptimizedEntry(
+public fun OptimizedEntry(
     entry: Map<String, Any>,
-    viewTimeMs: Int = 2000,
-    threshold: Double = 0.8,
+    dwellTimeMs: Int = 2000,
+    minVisibleRatio: Double = 0.8,
     viewDurationUpdateIntervalMs: Int = 5000,
     liveUpdates: Boolean? = null,
     trackViews: Boolean? = null,
@@ -32,10 +32,10 @@ fun OptimizedEntry(
 
     val isPreviewPanelOpen by client.isPreviewPanelOpen.collectAsState()
 
-    var lockedPersonalizations by remember { mutableStateOf<List<Map<String, Any>>?>(null) }
+    var lockedOptimizations by remember { mutableStateOf<List<Map<String, Any>>?>(null) }
     var isLocked by remember { mutableStateOf(false) }
 
-    val isPersonalized = remember(entry) {
+    val isOptimized = remember(entry) {
         val fields = entry["fields"] as? Map<String, Any>
         fields?.containsKey("nt_experiences") == true
     }
@@ -48,10 +48,10 @@ fun OptimizedEntry(
     }
 
     var result by remember(entry) {
-        mutableStateOf(PersonalizedResult(entry = entry, personalization = null))
+        mutableStateOf(ResolvedOptimizedEntry(entry = entry, selectedOptimization = null))
     }
 
-    // Re-resolve by collecting the personalizations StateFlow directly rather
+    // Re-resolve by collecting the selectedOptimizations StateFlow directly rather
     // than keying on a `collectAsState()` snapshot. Compose snapshot conflation
     // can coalesce the rapid emission sequence that `identify()` produces, which
     // left a long-mounted live entry stuck on its first resolution. Collecting
@@ -61,44 +61,44 @@ fun OptimizedEntry(
     // preview-panel state INSIDE the collect via `isPreviewPanelOpen.value` —
     // never key the effect on a derived `shouldLiveUpdate`. Keying on the panel
     // state cancels and restarts the collector every time the panel opens or
-    // closes, which can drop the `selectedPersonalizations` emission produced by
+    // closes, which can drop the `selectedOptimizations` emission produced by
     // a preview override change (e.g. reset-variant) and leave the entry
-    // resolved against a stale personalization set (observed as the baseline
+    // resolved against a stale optimization set (observed as the baseline
     // sticking after reset-variant). The View-based `OptimizedEntryView` uses
     // this same long-lived collector; keeping them identical is what makes
     // Compose and Views behave the same.
     //
-    // Live entries follow the latest personalizations on every emission. Locked
+    // Live entries follow the latest selectedOptimizations on every emission. Locked
     // entries freeze on the first non-null value — mirrors the iOS `onReceive`
     // lock — and ignore later updates until the component is remounted.
     LaunchedEffect(entry) {
-        if (!isPersonalized) {
-            result = PersonalizedResult(entry = entry, personalization = null)
+        if (!isOptimized) {
+            result = ResolvedOptimizedEntry(entry = entry, selectedOptimization = null)
             return@LaunchedEffect
         }
-        client.selectedPersonalizations.collect { newValue ->
+        client.selectedOptimizations.collect { newValue ->
             val shouldLiveUpdate =
                 if (client.isPreviewPanelOpen.value) true else liveUpdates ?: trackingConfig.liveUpdates
             if (!shouldLiveUpdate && !isLocked && newValue != null) {
-                lockedPersonalizations = newValue
+                lockedOptimizations = newValue
                 isLocked = true
             }
-            val personalizations = if (shouldLiveUpdate) newValue else lockedPersonalizations
-            result = client.personalizeEntry(
+            val selectedOptimizations = if (shouldLiveUpdate) newValue else lockedOptimizations
+            result = client.resolveOptimizedEntry(
                 baseline = entry,
-                personalizations = personalizations,
+                selectedOptimizations = selectedOptimizations,
             )
         }
     }
 
-    // When the preview panel closes, snapshot the current personalizations so
+    // When the preview panel closes, snapshot the current selectedOptimizations so
     // the locked state reflects any overrides applied during the session.
     LaunchedEffect(isPreviewPanelOpen) {
-        if (isPersonalized && !isPreviewPanelOpen && isLocked) {
-            lockedPersonalizations = client.selectedPersonalizations.value
-            result = client.personalizeEntry(
+        if (isOptimized && !isPreviewPanelOpen && isLocked) {
+            lockedOptimizations = client.selectedOptimizations.value
+            result = client.resolveOptimizedEntry(
                 baseline = entry,
-                personalizations = lockedPersonalizations,
+                selectedOptimizations = lockedOptimizations,
             )
         }
     }
@@ -106,16 +106,16 @@ fun OptimizedEntry(
     val modifier = Modifier
         .trackViews(
             entry = entry,
-            personalization = result.personalization,
-            threshold = threshold,
-            viewTimeMs = viewTimeMs,
+            selectedOptimization = result.selectedOptimization,
+            minVisibleRatio = minVisibleRatio,
+            dwellTimeMs = dwellTimeMs,
             viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
             enabled = viewsEnabled,
             client = client,
         )
         .trackClicks(
             entry = entry,
-            personalization = result.personalization,
+            selectedOptimization = result.selectedOptimization,
             enabled = tapsEnabled,
             client = client,
             onTap = onTap,

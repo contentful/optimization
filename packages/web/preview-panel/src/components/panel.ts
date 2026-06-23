@@ -1,13 +1,8 @@
-import type {
-  AudienceEntry,
-  OptimizationEntry,
-  Profile,
-  SelectedOptimizationArray,
-} from '@contentful/optimization-web/api-schemas'
+import type { AudienceWithExperiences } from '@contentful/optimization-core/preview-support'
 import { provide } from '@lit/context'
 import { css, html, LitElement, type TemplateResult } from 'lit'
 import { property, state } from 'lit/decorators.js'
-import { overridesContext, profileContext, searchContext } from '../lib/contexts'
+import { searchContext } from '../lib/contexts'
 import { isSearchChangeEvent } from './search'
 
 /**
@@ -100,27 +95,9 @@ export function isPanel(element?: Element): element is Panel {
  * @public
  */
 export class Panel extends LitElement {
-  /** All audience entries fetched from Contentful. */
+  /** Audience groups derived by Core preview support. */
   @property({ attribute: false })
-  accessor audiences: AudienceEntry[] = []
-
-  /** All optimization entries fetched from Contentful. */
-  @property({ attribute: false })
-  accessor optimizationEntries: OptimizationEntry[] = []
-
-  /** Default optimization selections before any user overrides. */
-  @property({ attribute: false })
-  accessor defaultSelectedOptimizations: SelectedOptimizationArray = []
-
-  /** Visitor profile provided to child components via Lit context. */
-  @provide({ context: profileContext })
-  @property({ attribute: false })
-  accessor profile: Profile | undefined = undefined
-
-  /** Active variant override map provided to child components via Lit context. */
-  @provide({ context: overridesContext })
-  @property({ attribute: false })
-  accessor overrides: Map<string, number> | undefined = undefined
+  accessor audienceGroups: AudienceWithExperiences[] = []
 
   /** Search state provided to the child search component via Lit context. */
   @provide({ context: searchContext })
@@ -230,9 +207,7 @@ export class Panel extends LitElement {
         ></ctfl-opt-preview-search>
 
         <ctfl-opt-preview-audiences
-          .audiences=${this.audiences}
-          .optimizationEntries=${this.optimizationEntries}
-          .defaultSelectedOptimizations=${this.defaultSelectedOptimizations}
+          .audienceGroups=${this.audienceGroups}
         ></ctfl-opt-preview-audiences>
 
         <div class="footer">

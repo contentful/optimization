@@ -6,6 +6,7 @@ import process from 'node:process'
 const IMPLEMENTATIONS_DIRECTORY = 'implementations'
 const PACKAGE_JSON_FILENAME = 'package.json'
 const PNPM_COMMAND = 'pnpm'
+const DISABLE_VERIFY_DEPS_BEFORE_RUN_CONFIG = '--config.verify-deps-before-run=false'
 const SUCCESS_EXIT_CODE = 0
 const FAILURE_EXIT_CODE = 1
 const PLAYWRIGHT_PACKAGE_NAMES = new Set(['playwright', '@playwright/test'])
@@ -116,7 +117,7 @@ function hasExplicitFrozenLockfileFlag(args: readonly string[]): boolean {
 function runPnpm(implementation: string, args: readonly string[]): number {
   const implementationDir = `implementations/${implementation}`
   const hasLocalWorkspaceConfig = existsSync(path.join(implementationDir, 'pnpm-workspace.yaml'))
-  const commandArgs = ['--dir', implementationDir]
+  const commandArgs = ['--dir', implementationDir, DISABLE_VERIFY_DEPS_BEFORE_RUN_CONFIG]
 
   if (!hasLocalWorkspaceConfig) {
     commandArgs.push('--ignore-workspace')

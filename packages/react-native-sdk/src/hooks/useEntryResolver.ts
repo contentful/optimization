@@ -2,8 +2,8 @@ import type { ResolvedData } from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useMemo } from 'react'
-import type ContentfulOptimization from '../ContentfulOptimization'
 import { useOptimization } from '../context/OptimizationContext'
+import type { OptimizationSdk } from '../OptimizationSdk'
 
 /**
  * Helper methods for resolving Contentful entries against selected optimizations.
@@ -32,7 +32,7 @@ export interface UseEntryResolverResult {
 }
 
 function resolveEntryData(
-  sdk: ContentfulOptimization,
+  sdk: OptimizationSdk,
   entry: Entry,
   selectedOptimizations = sdk.states.selectedOptimizations.current,
 ): ResolvedData<EntrySkeletonType> {

@@ -4,6 +4,7 @@ import { PreviewOverrideManager } from '@contentful/optimization-core/preview-su
 import { PREVIEW_PANEL_SIGNALS_SYMBOL } from '@contentful/optimization-core/symbols'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOptimization } from '../../context/OptimizationContext'
+import { requireOptimizationPreviewRuntime } from '../../OptimizationSdk'
 import type { ExperienceDefinition, OverrideState, PreviewActions } from '../types'
 
 const logger = createScopedLogger('RN:Preview')
@@ -30,7 +31,7 @@ export function useProfileOverrides(): {
   overrides: OverrideState
   actions: PreviewActions
 } {
-  const contentfulOptimization = useOptimization()
+  const contentfulOptimization = requireOptimizationPreviewRuntime(useOptimization())
   const [overrides, setOverrides] = useState<OverrideState>(initialOverrideState)
   const managerRef = useRef<PreviewOverrideManager | null>(null)
 

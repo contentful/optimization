@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Contentful Personalization & Analytics</h1>
+<h1 align="center">Contentful Optimization & Analytics</h1>
 
 <h3 align="center">Optimization React Web SDK</h3>
 
@@ -59,6 +59,9 @@ Install using an NPM-compatible package manager, pnpm for example:
 ```sh
 pnpm install @contentful/optimization-react-web
 ```
+
+React and React DOM are application-owned peer dependencies. The SDK uses the React runtime already
+installed by your app instead of installing its own copy.
 
 Mount `OptimizationRoot` once near the root of your React application:
 
@@ -190,7 +193,7 @@ function ProductCta() {
 
 Use `useOptimization()` when a component needs direct access to the SDK instance itself, and prefer
 `useOptimizationActions()` when a component wants destructurable action methods such as `track()`,
-`identify()`, `page()`, `reset()`, or `consent()`.
+`identify()`, `page()`, `screen()`, `flush()`, `reset()`, or `consent()`.
 
 Use dedicated state hooks such as `useConsentState()`, `useProfileState()`, and
 `useSelectedOptimizationsState()` when components need to render current SDK state. Prefer those
@@ -213,6 +216,9 @@ function ProductCta() {
 }
 ```
 
+The direct SDK surface also exposes manual interaction calls such as `trackView()`, `trackClick()`,
+`trackHover()`, and `trackFlagView()`.
+
 ```tsx
 // Avoid destructuring SDK methods; this loses the instance binding.
 const { track } = useOptimization()
@@ -233,7 +239,7 @@ Fetch Contentful entries in the app layer with one CDA locale. For localized app
 application locale and pass it directly before passing entries to `OptimizedEntry`,
 `useEntryResolver()`, or `useOptimizedEntry()`. Do not pass all-locale CDA responses from
 `withAllLocales` or `locale=*`; these APIs expect direct single-locale field values. See
-[Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
+[Entry optimization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the broader locale model.

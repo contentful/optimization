@@ -3,17 +3,18 @@ package com.contentful.optimization.storage
 import android.content.Context
 import android.content.SharedPreferences
 import com.contentful.optimization.bridge.QuickJsContextManager
+import com.contentful.optimization.core.ConsentStoragePolicy
 import com.contentful.optimization.core.DiagnosticLogger
 import org.json.JSONArray
 import org.json.JSONObject
 
-class SharedPreferencesStore(context: Context) : PersistentStore {
+internal class SharedPreferencesStore(context: Context) : PersistentStore {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("com.contentful.optimization", Context.MODE_PRIVATE)
     private val keyPrefix = "com.contentful.optimization."
     private val cache = mutableMapOf<String, Any?>()
-    private val consentStateKeys = listOf("consent", "persistenceConsent", "debug")
-    private val profileContinuityKeys = listOf("profile", "changes", "personalizations", "anonymousId")
+    private val consentStateKeys = listOf("consent", "persistenceConsent")
+    private val profileContinuityKeys = listOf("profile", "changes", "selectedOptimizations", "anonymousId")
     private val keys = consentStateKeys + profileContinuityKeys
 
     override fun loadConsentState() {
@@ -31,7 +32,6 @@ class SharedPreferencesStore(context: Context) : PersistentStore {
             when (key) {
                 "consent", "persistenceConsent" -> cache[key] = stored
                 "anonymousId" -> cache[key] = stored
-                "debug" -> cache[key] = stored == "true"
                 else -> {
                     try {
                         cache[key] = parseJSON(stored)
@@ -73,28 +73,23 @@ class SharedPreferencesStore(context: Context) : PersistentStore {
 
     override var consent: Boolean?
         get() {
-            return when (cache["consent"] as? String) {
-                "accepted" -> true
-                "denied" -> false
-                else -> null
-            }
+            return ConsentStoragePolicy.decode(cache["consent"] as? String)
         }
         set(value) {
-            val translated = value?.let { if (it) "accepted" else "denied" }
+            val translated = ConsentStoragePolicy.encode(value)
             cache["consent"] = translated
             writeString(translated, "consent")
         }
 
     override var persistenceConsent: Boolean?
         get() {
-            return when (cache["persistenceConsent"] as? String) {
-                "accepted" -> true
-                "denied" -> false
-                else -> if (consent == true) true else null
-            }
+            return ConsentStoragePolicy.resolvePersistedPersistenceConsent(
+                ConsentStoragePolicy.decode(cache["persistenceConsent"] as? String),
+                consent,
+            )
         }
         set(value) {
-            val translated = value?.let { if (it) "accepted" else "denied" }
+            val translated = ConsentStoragePolicy.encode(value)
             cache["persistenceConsent"] = translated
             writeString(translated, "persistenceConsent")
         }
@@ -109,14 +104,14 @@ class SharedPreferencesStore(context: Context) : PersistentStore {
             writeJSON(value, "changes")
         }
 
-    override var personalizations: List<Map<String, Any>>?
+    override var selectedOptimizations: List<Map<String, Any>>?
         get() {
             @Suppress("UNCHECKED_CAST")
-            return cache["personalizations"] as? List<Map<String, Any>>
+            return cache["selectedOptimizations"] as? List<Map<String, Any>>
         }
         set(value) {
-            cache["personalizations"] = value
-            writeJSON(value, "personalizations")
+            cache["selectedOptimizations"] = value
+            writeJSON(value, "selectedOptimizations")
         }
 
     override var anonymousId: String?
@@ -124,13 +119,6 @@ class SharedPreferencesStore(context: Context) : PersistentStore {
         set(value) {
             cache["anonymousId"] = value
             writeString(value, "anonymousId")
-        }
-
-    override var debug: Boolean
-        get() = cache["debug"] as? Boolean ?: false
-        set(value) {
-            cache["debug"] = value
-            writeString(if (value) "true" else "false", "debug")
         }
 
     private fun writeJSON(value: Any?, key: String) {

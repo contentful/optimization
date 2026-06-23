@@ -27,7 +27,7 @@ import com.contentful.optimization.preview.PreviewPanelOverlay
  *   the preview panel is available via a floating action button.
  */
 @Composable
-fun OptimizationRoot(
+public fun OptimizationRoot(
     config: OptimizationConfig,
     trackViews: Boolean = true,
     trackTaps: Boolean = false,

@@ -72,10 +72,10 @@ ownership, and any business event taxonomy passed to `track()`.
 
 Tracking events use two API paths:
 
-| Path           | Methods                                                                     | Main effect                                                                                   |
-| -------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Experience API | `page()`, `identify()`, `screen()`, `track()`, sticky `trackView()`         | Evaluates or updates a profile and returns `profile`, `selectedOptimizations`, and `changes`. |
-| Insights API   | non-sticky `trackView()`, `trackClick()`, `trackHover()`, `trackFlagView()` | Sends Analytics events for entry interactions and Custom Flag observations.                   |
+| Path           | Methods                                                                     | Main effect                                                                 |
+| -------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Experience API | `page()`, `identify()`, `screen()`, `track()`, sticky `trackView()`         | Evaluates or updates a profile and returns accepted/data event results.     |
+| Insights API   | non-sticky `trackView()`, `trackClick()`, `trackHover()`, `trackFlagView()` | Sends Analytics events for entry interactions and Custom Flag observations. |
 
 The Web SDK normally starts a browser journey with `page()` or `identify()`. Those calls use the
 Experience API and populate the state that later Insights events need for attribution. If an
@@ -247,10 +247,10 @@ duplicate concurrent sends for the same element. If visibility ends while an eve
 flight, the final duration update is sent after that in-flight attempt settles.
 
 Sticky view handling is per DOM element. If the payload has `sticky: true`, the first view attempt
-for that element sends `sticky: true` to Core. After Core returns optimization data for that sticky
-view, later view events for the same element omit `sticky`. If the sticky attempt does not return
-optimization data, the detector retries sticky on the next visibility cycle for that element.
-Separately rendered elements with the same entry ID are treated as separate sticky targets.
+for that element sends `sticky: true` to Core. After Core accepts that sticky view, later view
+events for the same element omit `sticky`. If the sticky attempt is blocked, the detector retries
+sticky on the next visibility cycle for that element. Separately rendered elements with the same
+entry ID are treated as separate sticky targets.
 
 ## Click tracking mechanics
 

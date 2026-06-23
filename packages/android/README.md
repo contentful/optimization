@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Contentful Personalization & Analytics</h1>
+<h1 align="center">Contentful Optimization & Analytics</h1>
 
 <h3 align="center">Optimization Android SDK</h3>
 
@@ -82,9 +82,9 @@ val appLocale = "en-US"
 
 val optimizationConfig = OptimizationConfig(
     clientId = "your-client-id",
-    environment = "master",
+    environment = "main",
     locale = appLocale,
-    debug = BuildConfig.DEBUG,
+    logLevel = if (BuildConfig.DEBUG) OptimizationLogLevel.debug else OptimizationLogLevel.error,
 )
 
 @Composable
@@ -166,11 +166,11 @@ For the full XML Views flow, see
 
 ## When to use this package
 
-Use this package when building a native Android application that needs Contentful Personalization
-and Analytics through Kotlin APIs. The same AAR includes:
+Use this package when building a native Android application that needs Contentful Optimization and
+Analytics through Kotlin APIs. The same AAR includes:
 
 - `com.contentful.optimization.core` for the stateful `OptimizationClient`, configuration, entry
-  personalization, event tracking, and preview controls.
+  optimization, event tracking, and preview controls.
 - `com.contentful.optimization.compose` for Jetpack Compose apps.
 - `com.contentful.optimization.views` for XML Views apps.
 
@@ -187,13 +187,17 @@ tracking, screen tracking, live updates, preview-panel overrides, and shared moc
 
 ### Common options
 
-| Option        | Required? | Default  | Description                                                                            |
-| ------------- | --------- | -------- | -------------------------------------------------------------------------------------- |
-| `clientId`    | Yes       | None     | Optimization client identifier used for Experience API and Insights API calls.         |
-| `environment` | No        | `master` | Contentful environment name used by the Optimization APIs.                             |
-| `locale`      | No        | `null`   | SDK Experience API and default event locale.                                           |
-| `defaults`    | No        | `null`   | Initial persisted-state seeds such as consent, persistence consent, or profile values. |
-| `debug`       | No        | `false`  | Enables SDK diagnostic logging.                                                        |
+| Option              | Required? | Default                      | Description                                                                                        |
+| ------------------- | --------- | ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| `clientId`          | Yes       | None                         | Optimization client identifier used for Experience API and Insights API calls.                     |
+| `environment`       | No        | `main`                       | Contentful environment name used by the Optimization APIs.                                         |
+| `api`               | No        | `null`                       | `OptimizationApiConfig` for endpoint overrides, enabled Experience features, and preflight.        |
+| `locale`            | No        | `null`                       | SDK Experience API and default event locale.                                                       |
+| `defaults`          | No        | `null`                       | Initial persisted-state seeds such as consent, persistence consent, profile, or selected variants. |
+| `allowedEventTypes` | No        | Bridge default               | Event types allowed before consent is explicitly set.                                              |
+| `logLevel`          | No        | `OptimizationLogLevel.error` | Minimum native and bridge log level.                                                               |
+| `queuePolicy`       | No        | SDK defaults                 | Queue flush retry behavior, offline bounds, and queue observability callbacks.                     |
+| `onEventBlocked`    | No        | `null`                       | Callback invoked with `reason`, `method`, and `args` when consent or guard logic blocks an event.  |
 
 `OptimizationRoot` and `OptimizationManager.initialize(...)` also accept global `trackViews`,
 `trackTaps`, and `liveUpdates` defaults. `OptimizedEntry` and `OptimizedEntryView` can override
@@ -209,7 +213,7 @@ val appLocale = "en-US"
 
 val config = OptimizationConfig(
     clientId = "your-client-id",
-    environment = "master",
+    environment = "main",
     locale = appLocale,
 )
 ```
@@ -221,20 +225,20 @@ val appLocale = getAppLocale()
 
 val config = OptimizationConfig(
     clientId = "your-client-id",
-    environment = "master",
+    environment = "main",
     locale = appLocale,
 )
 ```
 
 Use the same `appLocale` when your app-owned Contentful Delivery API client fetches entries that
-will be passed to `OptimizedEntry`, `OptimizedEntryView`, or `client.personalizeEntry(...)`. The
-native SDK does not fetch Contentful entries for your app layer, so the CDA locale belongs in your
-CDA request code.
+will be passed to `OptimizedEntry`, `OptimizedEntryView`, or `client.resolveOptimizedEntry(...)`.
+The native SDK does not fetch Contentful entries for your app layer, so the CDA locale belongs in
+your CDA request code.
 
 For the full locale model, see
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md).
 For the single-locale CDA entry contract, see
-[Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
+[Entry optimization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
 
 ### Consent and persistence
 
@@ -257,9 +261,9 @@ stay session-only. For cross-SDK consent guidance, see
 [Consent management in the Optimization SDK Suite](../../documentation/concepts/consent-management-in-the-optimization-sdk-suite.md).
 
 When durable profile-continuity persistence is allowed, the Android SDK settles the
-`SharedPreferences` write for profile, changes, personalizations, and anonymous ID before publishing
-the corresponding client state. Application code and E2E tests can wait for SDK-derived state rather
-than adding storage-timing delays before relaunching.
+`SharedPreferences` write for profile, changes, selected optimizations, and anonymous ID before
+publishing the corresponding client state. Application code and E2E tests can wait for SDK-derived
+state rather than adding storage-timing delays before relaunching.
 
 ## Runtime notes
 
@@ -267,6 +271,16 @@ than adding storage-timing delays before relaunching.
   panel Activity.
 - No JavaScript bridge setup is required in consuming applications. The generated QuickJS bundle is
   packaged inside the AAR.
+- Use `client.track("Purchase Completed", mapOf("sku" to "sku-1"))` for custom business events;
+  `identify(...)`, `screen(...)`, and sticky `trackView(...)` return `EventEmissionResult` values
+  with `accepted` and optional `data`. `trackClick(...)` remains available for entry-interaction
+  flows.
+- For typed event calls, pass `IdentifyPayload`, `PageEventPayload`, `ScreenEventPayload`, or
+  `TrackEventPayload`. Map-based overloads remain available for dynamic JSON payloads.
+- Use `client.getFlag(name)` for a one-off Custom Flag read and `client.observeFlag(name)` for a
+  `StateFlow<JSONValue?>` that updates as flag values change.
+- Use `client.eventStream` and `client.blockedEventStream` for analytics debugging, tests, and
+  consent-gating diagnostics.
 - Analytics events queue while the device is offline and flush when connectivity returns or the app
   moves toward the background.
 - For bridge architecture and maintainer build details, see

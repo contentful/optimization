@@ -54,8 +54,8 @@ Instead, synchronization uses three contracts:
   exported as `ANONYMOUS_ID_COOKIE`, so both runtimes send future Experience events to the same
   profile.
 - **Experience API responses** - Calls such as `page()`, `identify()`, `screen()`, `track()`, and
-  sticky `trackView()` return `OptimizationData` containing `profile`, `selectedOptimizations`, and
-  `changes`.
+  sticky `trackView()` return event results whose `data` contains `profile`,
+  `selectedOptimizations`, and `changes` when the event is accepted and data is available.
 - **Runtime persistence** - Stateful clients cache returned profile data for their own next startup.
   The Node SDK is stateless, so the application persists only the identifier or session state it
   needs between requests.
@@ -116,7 +116,7 @@ All profile-changing Experience paths converge on `upsertProfile()`:
 - When no `profileId` is provided, the API client creates a profile with `POST /profiles`.
 - When a `profileId` is provided, the API client updates that profile with `POST /profiles/:id`.
 - The response is normalized to `OptimizationData` with `profile`, `selectedOptimizations`, and
-  `changes`.
+  `changes`, then surfaced as event result `data`.
 
 The Experience API client also exposes `getProfile(id)` for reading the current evaluated profile
 data without sending an event. That read path can refresh application state, but it does not replace
@@ -130,8 +130,8 @@ reads come from memory. When durable profile-continuity persistence consent is e
 packages mirror the same response snapshot to platform storage before the new observable in-memory
 state is published.
 
-Stateless SDKs return the same `OptimizationData` to the caller and do not retain it. The caller
-decides what to render, what to persist, and what to pass into later SDK calls.
+Stateless SDKs return event results with `accepted` and optional `data`. The caller decides what to
+render, what to persist, and what to pass into later SDK calls.
 
 ## Server-side mechanics
 
@@ -151,7 +151,7 @@ const requestOptimization = optimization.forRequest({
   profile: profileId ? { id: profileId } : undefined,
 })
 
-const optimizationData = await requestOptimization.page({
+const { accepted, data: optimizationData } = await requestOptimization.page({
   properties: { path: req.path },
 })
 ```
@@ -323,7 +323,7 @@ const requestOptimization = optimization.forRequest({
   profile: { id: anonymousId },
 })
 
-const identifyResponse = await requestOptimization.identify({
+const { accepted, data: identifyResponse } = await requestOptimization.identify({
   userId,
   traits: { authenticated: true },
 })

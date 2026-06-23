@@ -17,7 +17,7 @@ import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-class TimerStore {
+internal class TimerStore {
     private val timers = ConcurrentHashMap<Int, Job>()
 
     fun set(id: Int, job: Job) {
@@ -41,7 +41,7 @@ class TimerStore {
     }
 }
 
-fun escapeForJS(value: String): String =
+internal fun escapeForJS(value: String): String =
     value
         .replace("\\", "\\\\")
         .replace("\"", "\\\"")
@@ -50,7 +50,7 @@ fun escapeForJS(value: String): String =
         .replace("\r", "\\r")
         .replace("\t", "\\t")
 
-class NativeImpl(
+internal class NativeImpl(
     private val scope: CoroutineScope,
     private val timerStore: TimerStore,
     private val evaluateJS: suspend (String) -> Unit,

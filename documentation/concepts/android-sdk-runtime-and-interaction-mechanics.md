@@ -13,7 +13,7 @@ For step-by-step setup, see
 and
 [Integrating the Optimization Android SDK in an XML Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md).
 For the full Contentful entry contract, see
-[Entry personalization and variant resolution](./entry-personalization-and-variant-resolution.md).
+[Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md).
 
 <details>
   <summary>Table of Contents</summary>
@@ -24,7 +24,7 @@ For the full Contentful entry contract, see
 - [Configuration and locale handoff](#configuration-and-locale-handoff)
 - [State and persistence](#state-and-persistence)
 - [Consent and event gates](#consent-and-event-gates)
-- [Entry personalization boundary](#entry-personalization-boundary)
+- [Entry optimization boundary](#entry-optimization-boundary)
 - [Adapter surfaces](#adapter-surfaces)
 - [Tracking mechanics](#tracking-mechanics)
 - [Live updates and preview behavior](#live-updates-and-preview-behavior)
@@ -42,12 +42,12 @@ networking, lifecycle handling, Compose helpers, XML Views helpers, preview-pane
 public APIs.
 
 Shared optimization behavior runs inside a local QuickJS context. That bridge lets the Android SDK
-use the same personalization, profile, consent, and event-delivery behavior as the JavaScript SDKs
+use the same optimization, profile, consent, and event-delivery behavior as the JavaScript SDKs
 while exposing a Kotlin API to the application.
 
 Applications do not call the JavaScript layer directly. The public boundary is Kotlin:
 
-- `OptimizationClient` is the main facade for initialization, state, personalization, tracking, and
+- `OptimizationClient` is the main facade for initialization, state, optimization, tracking, and
   preview controls.
 - `OptimizationRoot`, `OptimizedEntry`, `OptimizationLazyColumn`, and `ScreenTrackingEffect` provide
   Compose integration helpers.
@@ -88,41 +88,48 @@ Every Android integration builds an `OptimizationConfig`:
 ```kotlin
 OptimizationConfig(
     clientId = "your-client-id",
-    environment = "master",
+    environment = "main",
     locale = "en-US",
-    debug = BuildConfig.DEBUG,
+    logLevel = if (BuildConfig.DEBUG) OptimizationLogLevel.debug else OptimizationLogLevel.error,
 )
 ```
 
-Only `clientId` is required. `environment` defaults to `"master"`. Base URL overrides belong only in
+Only `clientId` is required. `environment` defaults to `"main"`. Base URL overrides belong only in
 integrations that need non-default Experience API or Insights API endpoints.
 
 Use top-level `locale` for the SDK Experience/event locale. When the application renders localized
 Contentful entries, choose an app-owned Contentful locale and pass it to the app's Contentful
 Delivery API request before entries are passed to `OptimizedEntry`, `OptimizedEntryView`, or
-`personalizeEntry(...)`. For the full locale model, see
+`resolveOptimizedEntry(...)`. For the full locale model, see
 [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
 ## State and persistence
 
 `OptimizationClient` publishes runtime state through Kotlin flows:
 
-| Surface                    | Description                                                                   |
-| -------------------------- | ----------------------------------------------------------------------------- |
-| `state`                    | Snapshot of profile, consent, personalization readiness, and pending changes. |
-| `isInitialized`            | `true` after initialization completes.                                        |
-| `selectedPersonalizations` | The personalizations the visitor qualifies for.                               |
-| `isPreviewPanelOpen`       | `true` while the in-app preview panel is visible.                             |
-| `previewState`             | Preview override state used by the in-app preview panel.                      |
-| `events`                   | Raw event stream for debug surfaces and tests.                                |
+| Surface                  | Description                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| `state`                  | Snapshot of profile, consent, optimization readiness, and pending changes.     |
+| `isInitialized`          | `true` after initialization completes.                                         |
+| `selectedOptimizations`  | The selected optimization variants for the visitor.                            |
+| `optimizationPossible`   | Whether the current consent and allow-list configuration can produce variants. |
+| `experienceRequestState` | Outcome of the most recent Experience API request.                             |
+| `isPreviewPanelOpen`     | `true` while the in-app preview panel is visible.                              |
+| `previewState`           | Preview override state used by the in-app preview panel.                       |
+| `eventStream`            | Raw event stream for debug surfaces and tests.                                 |
+| `blockedEventStream`     | Events blocked by consent or SDK guard logic.                                  |
 
 Compose code reads these values through `collectAsState()` or effects. XML Views code usually
 collects them from lifecycle-aware coroutines.
 
+Custom Flags use the same Core-backed model as the Web SDKs: `client.getFlag(name)` returns the
+current JSON value, and `client.observeFlag(name)` returns a `StateFlow<JSONValue?>` that updates on
+distinct value changes while emitting flag-view events for delivered values.
+
 The SDK persists state with `SharedPreferences`. `StorageDefaults` can seed values such as consent,
-profile-continuity persistence consent, profile, selected changes, and personalizations on first
-launch. Seeds are applied only when no persisted value exists, so an existing user choice is not
-overwritten.
+profile-continuity persistence consent, profile, selected changes, and selected optimizations on
+first launch. Seeds are applied only when no persisted value exists, so an existing user choice is
+not overwritten.
 
 ## Consent and event gates
 
@@ -143,36 +150,36 @@ is allowed but profile continuity must remain session-only. Withdrawing consent 
 and clears SDK-managed durable profile-continuity storage while leaving active in-memory state
 available until the app resets or tears down the client.
 
-## Entry personalization boundary
+## Entry optimization boundary
 
-Entry personalization is a local decision once the app has both Contentful entry data and selected
-personalizations.
+Entry optimization is a local decision once the app has both Contentful entry data and selected
+optimizations.
 
 The application provides:
 
 - A single-locale Contentful entry map.
 - Linked optimization references and variant entries in the Contentful payload.
-- The current `selectedPersonalizations` value from the client, when resolving directly.
+- The current `selectedOptimizations` value from the client, when resolving directly.
 
 The SDK returns either the baseline entry or the resolved variant entry:
 
 ```kotlin
-val result = client.personalizeEntry(
+val result = client.resolveOptimizedEntry(
     baseline = entry,
-    personalizations = client.selectedPersonalizations.value,
+    selectedOptimizations = client.selectedOptimizations.value,
 )
 
 val resolvedEntry = result.entry
-val personalization = result.personalization
+val selectedOptimization = result.selectedOptimization
 ```
 
-`personalizeEntry(...)` does not fetch Contentful entries, evaluate audiences, call the Experience
-API, or mutate state. Compose `OptimizedEntry` and XML Views `OptimizedEntryView` wrap the same
-boundary and add component-level behavior such as variant locking, live updates, and interaction
-tracking.
+`resolveOptimizedEntry(...)` does not fetch Contentful entries, evaluate audiences, call the
+Experience API, or mutate state. Compose `OptimizedEntry` and XML Views `OptimizedEntryView` wrap
+the same boundary and add component-level behavior such as variant locking, live updates, and
+interaction tracking.
 
 For the full data model and fallback behavior, see
-[Entry personalization and variant resolution](./entry-personalization-and-variant-resolution.md).
+[Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md).
 
 ## Adapter surfaces
 
@@ -189,11 +196,13 @@ the screen you are integrating.
 
 ## Tracking mechanics
 
-The Android SDK emits mobile screen events and Contentful entry interaction events:
+The Android SDK emits mobile screen events, custom business events, and Contentful entry interaction
+events:
 
 | Event type | Compose path                   | XML Views path                     |
 | ---------- | ------------------------------ | ---------------------------------- |
 | Screen     | `ScreenTrackingEffect`         | `ScreenTracker.trackScreen(...)`   |
+| Event      | App-owned event handlers       | App-owned event handlers           |
 | Entry view | `OptimizedEntry` view tracking | `OptimizedEntryView` view tracking |
 | Entry tap  | `OptimizedEntry` tap tracking  | `OptimizedEntryView` tap tracking  |
 
@@ -203,12 +212,12 @@ Entry view tracking uses these defaults:
 - Periodic duration updates every 5 seconds while the entry remains visible.
 - Final duration update when the entry leaves view after a view event has already fired.
 
-`OptimizedEntry` and `OptimizedEntryView` can tune the visibility threshold, initial time, and
-update interval per entry. Use `OptimizationLazyColumn` in Compose and `TrackingRecyclerView` in XML
-Views when view timing needs scroll-aware visibility updates.
+`OptimizedEntry` and `OptimizedEntryView` can tune `minVisibleRatio`, `dwellTimeMs`, and
+`viewDurationUpdateIntervalMs` per entry. Use `OptimizationLazyColumn` in Compose and
+`TrackingRecyclerView` in XML Views when view timing needs scroll-aware visibility updates.
 
-Applications can also call `trackView(...)` and `trackClick(...)` directly when they need to emit
-events from a custom UI abstraction.
+Applications can also call `track(...)`, `trackView(...)`, and `trackClick(...)` directly when they
+need to emit custom business events or entry interactions from a custom UI abstraction.
 
 ## Live updates and preview behavior
 

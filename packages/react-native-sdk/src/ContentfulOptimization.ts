@@ -1,10 +1,14 @@
 import {
+  AcceptedCurrentStateTracker,
   type ConsentInput,
-  type CoreStatefulConfig,
   CoreStateful,
+  type CoreStatefulConfig,
+  type EventEmissionResult,
+  resolveStatefulDefaults,
+  type ScreenViewBuilderArgs,
   signals,
 } from '@contentful/optimization-core'
-import type { OptimizationData } from '@contentful/optimization-core/api-schemas'
+import type { OptimizationData, PartialProfile } from '@contentful/optimization-core/api-schemas'
 import { merge } from 'es-toolkit'
 import {
   OPTIMIZATION_REACT_NATIVE_SDK_NAME,
@@ -13,41 +17,16 @@ import {
 import { createAppStateChangeListener, createOnlineChangeListener } from './handlers'
 import AsyncStorageStore from './storage/AsyncStorageStore'
 
-function resolvePersistedDefault<T>(
-  configured: T | undefined,
-  canLoadPersistedContinuity: boolean,
-  readPersistedValue: () => T | undefined,
-): T | undefined {
-  if (configured !== undefined) return configured
-  if (!canLoadPersistedContinuity) return undefined
-
-  return readPersistedValue()
-}
-
 function resolveStorageDefaults(
   defaults: CoreStatefulConfig['defaults'] | undefined,
 ): NonNullable<CoreStatefulConfig['defaults']> {
-  const consent = defaults?.consent ?? AsyncStorageStore.consent
-  const persistenceConsent =
-    defaults?.persistenceConsent ?? defaults?.consent ?? AsyncStorageStore.persistenceConsent
-  const canLoadPersistedContinuity = persistenceConsent === true
-  const profile = resolvePersistedDefault(
-    defaults?.profile,
-    canLoadPersistedContinuity,
-    () => AsyncStorageStore.profile,
-  )
-  const changes = resolvePersistedDefault(
-    defaults?.changes,
-    canLoadPersistedContinuity,
-    () => AsyncStorageStore.changes,
-  )
-  const selectedOptimizations = resolvePersistedDefault(
-    defaults?.selectedOptimizations,
-    canLoadPersistedContinuity,
-    () => AsyncStorageStore.selectedOptimizations,
-  )
-
-  return { consent, persistenceConsent, profile, changes, selectedOptimizations }
+  return resolveStatefulDefaults(defaults, {
+    consent: AsyncStorageStore.consent,
+    persistenceConsent: AsyncStorageStore.persistenceConsent,
+    profile: () => AsyncStorageStore.profile,
+    changes: () => AsyncStorageStore.changes,
+    selectedOptimizations: () => AsyncStorageStore.selectedOptimizations,
+  }).defaults
 }
 
 async function mergeConfig({
@@ -57,12 +36,17 @@ async function mergeConfig({
   ...config
 }: CoreStatefulConfig): Promise<CoreStatefulConfig> {
   await AsyncStorageStore.initializeConsentState()
-  const persistenceConsent =
-    defaults?.persistenceConsent ?? defaults?.consent ?? AsyncStorageStore.persistenceConsent
+  const { canLoadPersistedContinuity, defaults: initialDefaults } = resolveStatefulDefaults(
+    defaults,
+    {
+      consent: AsyncStorageStore.consent,
+      persistenceConsent: AsyncStorageStore.persistenceConsent,
+    },
+  )
 
-  if (persistenceConsent === true) {
+  if (canLoadPersistedContinuity) {
     await AsyncStorageStore.initializeProfileContinuity()
-  } else if (persistenceConsent === false) {
+  } else if (initialDefaults.persistenceConsent === false) {
     await AsyncStorageStore.clearProfileContinuity()
   }
 
@@ -144,6 +128,19 @@ async function persistOptimizationData(data: OptimizationData): Promise<void> {
 }
 
 /**
+ * Payload for {@link ContentfulOptimization.trackCurrentScreen}.
+ *
+ * @public
+ */
+export type TrackCurrentScreenPayload = ScreenViewBuilderArgs & {
+  /**
+   * Stable screen identity used for current-screen deduplication.
+   */
+  routeKey?: string
+  profile?: PartialProfile
+}
+
+/**
  * Main entry point for the Contentful Optimization React Native SDK.
  *
  * Extends {@link CoreStateful} with React Native-specific behavior including
@@ -175,6 +172,8 @@ async function persistOptimizationData(data: OptimizationData): Promise<void> {
  * @public
  */
 class ContentfulOptimization extends CoreStateful {
+  private readonly currentScreenTracker = new AcceptedCurrentStateTracker<string>()
+
   private readonly cleanupOnlineListener: () => void
 
   private readonly cleanupAppStateListener: () => void
@@ -245,8 +244,35 @@ class ContentfulOptimization extends CoreStateful {
   }
 
   override reset(): void {
+    this.currentScreenTracker.reset()
     void AsyncStorageStore.clearProfileContinuity()
     super.reset()
+  }
+
+  /**
+   * Track the current React Native screen with route-key deduplication.
+   *
+   * @remarks
+   * Automatic screen tracking should use this helper. Manual `screen()` calls
+   * remain direct emits and are not deduplicated.
+   *
+   * @public
+   */
+  async trackCurrentScreen({
+    routeKey,
+    ...payload
+  }: TrackCurrentScreenPayload): Promise<EventEmissionResult> {
+    const key = routeKey ?? payload.screen?.name ?? payload.name
+    const result = await this.currentScreenTracker.emitIfNeeded({
+      key,
+      isAllowed: this.hasConsent('screen'),
+      emit: async () => await this.screen(payload),
+    })
+
+    if (!result.accepted) return { accepted: false }
+    if (result.data === undefined) return { accepted: true }
+
+    return { accepted: true, data: result.data }
   }
 
   /**

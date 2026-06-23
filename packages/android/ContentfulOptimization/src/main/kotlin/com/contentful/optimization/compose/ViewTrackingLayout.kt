@@ -15,11 +15,11 @@ import com.contentful.optimization.core.OptimizationClient
 import com.contentful.optimization.tracking.ViewTrackingController
 
 @Composable
-fun Modifier.trackViews(
+public fun Modifier.trackViews(
     entry: Map<String, Any>,
-    personalization: Map<String, Any>?,
-    threshold: Double,
-    viewTimeMs: Int,
+    selectedOptimization: Map<String, Any>?,
+    minVisibleRatio: Double,
+    dwellTimeMs: Int,
     viewDurationUpdateIntervalMs: Int,
     enabled: Boolean,
     client: OptimizationClient,
@@ -30,13 +30,13 @@ fun Modifier.trackViews(
     if (!enabled) return this
 
     val scrollContext = LocalScrollContext.current
-    val controller = remember(entry, personalization) {
+    val controller = remember(entry, selectedOptimization) {
         ViewTrackingController(
             client = client,
             entry = entry,
-            personalization = personalization,
-            threshold = threshold,
-            viewTimeMs = viewTimeMs,
+            selectedOptimization = selectedOptimization,
+            minVisibleRatio = minVisibleRatio,
+            dwellTimeMs = dwellTimeMs,
             viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
         )
     }

@@ -1,4 +1,4 @@
-import React, { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
   Image,
@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { LiveUpdatesProvider, useLiveUpdates } from '../../context/LiveUpdatesContext'
+import { useLiveUpdates } from '../../context/LiveUpdatesContext'
 import fabIcon from '../assets/fab-icon.png'
 import fabRipple from '../assets/fab-ripple.png'
 import { PreviewOverrideProvider } from '../context/PreviewOverrideContext'
@@ -24,43 +24,29 @@ const DRAG_DISMISS_DISTANCE = 300
 const ANIMATION_DURATION_MS = 200
 const DRAG_HANDLE_HEIGHT = 4
 
-// Ensure an ambient LiveUpdatesProvider exists so panel visibility can flip
-// OptimizedEntry into live-update mode even when the overlay is used outside
-// OptimizationRoot. If a provider is already present (e.g. via OptimizationRoot)
-// pass through so its globalLiveUpdates setting isn't shadowed.
-function WithLiveUpdatesProvider({ children }: { children: ReactNode }): React.JSX.Element {
-  const existing = useLiveUpdates()
-  if (existing) return <>{children}</>
-  return <LiveUpdatesProvider>{children}</LiveUpdatesProvider>
-}
-
 /**
- * Renders app content with a floating action button that opens the `PreviewPanel`
- * in a bottom-sheet modal. Wraps children in a `PreviewOverrideProvider` to
- * persist override state across modal open/close cycles.
+ * Renders a floating action button that opens the `PreviewPanel` in a
+ * bottom-sheet modal. Must be mounted under `OptimizationRoot` so panel
+ * visibility can enable live updates for optimized entries.
  *
  * @param props - Component props
- * @returns The app content with the floating button and modal overlay
+ * @returns The floating button and modal overlay
  *
  * @example
  * ```tsx
- * <PreviewPanelOverlay contentfulClient={contentfulClient}>
+ * <OptimizationRoot clientId="your-client-id">
  *   <App />
- * </PreviewPanelOverlay>
+ *   <PreviewPanelOverlay contentfulClient={contentfulClient} />
+ * </OptimizationRoot>
  * ```
  *
  * @public
  */
 export function PreviewPanelOverlay(props: PreviewPanelOverlayProps): React.JSX.Element {
-  return (
-    <WithLiveUpdatesProvider>
-      <PreviewPanelOverlayInner {...props} />
-    </WithLiveUpdatesProvider>
-  )
+  return <PreviewPanelOverlayInner {...props} />
 }
 
 function PreviewPanelOverlayInner({
-  children,
   fabPosition,
   ...previewPanelProps
 }: PreviewPanelOverlayProps): React.JSX.Element {
@@ -71,7 +57,8 @@ function PreviewPanelOverlayInner({
   // Sync preview panel visibility with LiveUpdatesContext
   // This enables live updates in OptimizedEntry components when the panel is open
   useEffect(() => {
-    liveUpdatesContext?.setPreviewPanelVisible(isVisible)
+    if (!liveUpdatesContext) return
+    liveUpdatesContext.setPreviewPanelVisible(isVisible)
   }, [isVisible, liveUpdatesContext])
 
   const handleOpen = useCallback(() => {
@@ -143,10 +130,15 @@ function PreviewPanelOverlayInner({
     },
   ]
 
+  if (!liveUpdatesContext) {
+    throw new Error(
+      'PreviewPanelOverlay must be rendered inside OptimizationRoot, or inside both OptimizationProvider and LiveUpdatesProvider.',
+    )
+  }
+
   return (
     <PreviewOverrideProvider>
-      <View style={styles.container}>
-        {children}
+      <View pointerEvents="box-none" style={styles.overlayContainer}>
         <View style={fabWrapperStyle}>
           <Pressable
             accessibilityLabel="Open Preview Panel"
@@ -201,8 +193,12 @@ function PreviewPanelOverlayInner({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  overlayContainer: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   fabWrapper: {
     position: 'absolute',

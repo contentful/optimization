@@ -1,7 +1,7 @@
 # Integrating the Optimization iOS SDK in a SwiftUI app
 
-Use this guide when you want to add Personalization, Analytics, screen tracking, and preview
-overrides to a SwiftUI application using the Optimization iOS SDK.
+Use this guide when you want to add Optimization, Analytics, screen tracking, and preview overrides
+to a SwiftUI application using the Optimization iOS SDK.
 
 For shared runtime behavior, consent gates, tracking thresholds, live-update precedence, and offline
 delivery, see
@@ -20,7 +20,7 @@ Use the UIKit guide instead if your app is UIKit-based:
 - [1. Add the package and create the config](#1-add-the-package-and-create-the-config)
 - [2. Initialize with OptimizationRoot](#2-initialize-with-optimizationroot)
 - [3. Handle consent](#3-handle-consent)
-- [4. Personalize entries with OptimizedEntry](#4-personalize-entries-with-optimizedentry)
+- [4. Optimize entries with OptimizedEntry](#4-optimize-entries-with-optimizedentry)
   - [Fetch entries in the expected shape](#fetch-entries-in-the-expected-shape)
   - [Render resolved entries](#render-resolved-entries)
   - [Use OptimizationScrollView for scrollable content](#use-optimizationscrollview-for-scrollable-content)
@@ -42,7 +42,7 @@ The SwiftUI integration uses the SDK's SwiftUI-native API surface:
 
 - `OptimizationRoot` initializes `OptimizationClient`, injects it into the environment, and defines
   global tracking and live-update defaults.
-- `OptimizedEntry` resolves a personalized Contentful entry and can attach view and tap tracking.
+- `OptimizedEntry` resolves an optimized Contentful entry and can attach view and tap tracking.
 - `OptimizationScrollView` provides viewport context for view tracking inside scrollable content.
 - `.trackScreen(name:)` emits screen events when SwiftUI views appear.
 - `PreviewPanelOverlay` renders a developer-only preview panel entry point.
@@ -83,9 +83,9 @@ let appLocale = "en-US"
 
 let config = OptimizationConfig(
     clientId: "your-client-id",
-    environment: "master",
+    environment: "main",
     locale: appLocale,
-    debug: true
+    logLevel: .debug
 )
 ```
 
@@ -130,9 +130,19 @@ struct AccountControls: View {
     @EnvironmentObject private var client: OptimizationClient
 
     var body: some View {
-        Button("Identify") {
-            Task {
-                try? await client.identify(userId: "user-123", traits: ["plan": "pro"])
+        VStack {
+            Button("Identify") {
+                Task {
+                    try? await client.identify(userId: "user-123", traits: ["plan": "pro"])
+                }
+            }
+            Button("Track purchase") {
+                Task {
+                    try? await client.track(
+                        event: "Purchase Completed",
+                        properties: ["sku": "sku-1"]
+                    )
+                }
             }
         }
     }
@@ -200,11 +210,11 @@ If your policy allows events but not durable continuity, call
 `client.consent(events: true, persistence: false)` and read `client.state.persistenceConsent` when
 the UI needs to show that separate state.
 
-## 4. Personalize entries with OptimizedEntry
+## 4. Optimize entries with OptimizedEntry
 
 `OptimizedEntry` is the SwiftUI component for rendering Contentful entries through the Optimization
-resolver. It passes non-personalized entries through unchanged, resolves personalized entries
-against the selected variants for the visitor, and can attach view and tap tracking.
+resolver. It passes non-optimized entries through unchanged, resolves optimized entries against the
+selected variants for the visitor, and can attach view and tap tracking.
 
 ### Fetch entries in the expected shape
 
@@ -213,7 +223,7 @@ optimization references in the payload. Pass those dictionaries to `OptimizedEnt
 
 The resolver expects the same single-locale CDA entry contract used by the other SDK runtimes. For
 details, see
-[Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
+[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
 
 ### Render resolved entries
 

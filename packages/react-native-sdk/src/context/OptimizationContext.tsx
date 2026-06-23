@@ -1,11 +1,11 @@
-import { createContext, useContext } from 'react'
-import type ContentfulOptimization from '../ContentfulOptimization'
+import { createContext, useContext, type Context } from 'react'
+import type { OptimizationSdk } from '../OptimizationSdk'
 
 /**
  * @internal
  */
 interface OptimizationContextValue {
-  sdk: ContentfulOptimization | undefined
+  sdk: OptimizationSdk | undefined
   isReady: boolean
   error: Error | undefined
 }
@@ -15,7 +15,19 @@ interface OptimizationContextValue {
  *
  * @internal
  */
-const OptimizationContext = createContext<OptimizationContextValue | null>(null)
+// The preview entry point is bundled separately; both bundles must use one context.
+const OPTIMIZATION_CONTEXT_SYMBOL = Symbol.for(
+  '@contentful/optimization-react-native/OptimizationContext',
+)
+
+const globalContextRegistry = globalThis as typeof globalThis &
+  Record<symbol, Context<OptimizationContextValue | null> | undefined>
+
+const OptimizationContext =
+  globalContextRegistry[OPTIMIZATION_CONTEXT_SYMBOL] ??
+  createContext<OptimizationContextValue | null>(null)
+
+globalContextRegistry[OPTIMIZATION_CONTEXT_SYMBOL] = OptimizationContext
 
 /**
  * Returns the {@link ContentfulOptimization} instance from the nearest {@link OptimizationProvider}.
@@ -43,7 +55,7 @@ const OptimizationContext = createContext<OptimizationContextValue | null>(null)
  *
  * @public
  */
-export function useOptimization(): ContentfulOptimization {
+export function useOptimization(): OptimizationSdk {
   const context = useContext(OptimizationContext)
 
   if (!context) {

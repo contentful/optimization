@@ -122,6 +122,7 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     expect(optimization).toBeInstanceOf(ContentfulOptimization)
     expect(optimization.locale).toBe('de-DE')
+    expect(optimization.trackHover).toBeTypeOf('function')
     expect(optimization.tracking).toBeDefined()
     rendered.unmount()
 
@@ -325,6 +326,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     const baselineEntry = createTestEntry('entry-1')
 
     expect(optimization.tracking).toBe(sdk.tracking)
+    expect(optimization.trackHover).toBe(sdk.trackHover)
     expect(resolver.resolveEntry(baselineEntry).sys.id).toBe('entry-variant')
     expect(resolver.resolveEntryData(baselineEntry)).toEqual({
       entry: {
@@ -361,20 +363,38 @@ describe('@contentful/optimization-react-web core providers', () => {
   })
 
   it('exposes bound SDK action hooks that are safe to destructure', async () => {
-    const consent = rs.fn(() => undefined)
-    const identify: OptimizationSdk['identify'] = rs.fn(async () => {
-      await Promise.resolve()
-      return undefined
+    const thisValues: unknown[] = []
+    const consent: OptimizationSdk['consent'] = rs.fn(function (this: OptimizationSdk, value) {
+      thisValues.push(this)
+      expect(value).toBe(true)
     })
-    const page: OptimizationSdk['page'] = rs.fn(async () => {
+    const flush: OptimizationSdk['flush'] = rs.fn(async function (this: OptimizationSdk) {
+      thisValues.push(this)
       await Promise.resolve()
-      return undefined
     })
-    const reset = rs.fn(() => undefined)
+    const identify: OptimizationSdk['identify'] = rs.fn(async function (this: OptimizationSdk) {
+      thisValues.push(this)
+      await Promise.resolve()
+      return { accepted: true }
+    })
+    const page: OptimizationSdk['page'] = rs.fn(async function (this: OptimizationSdk) {
+      thisValues.push(this)
+      await Promise.resolve()
+      return { accepted: true }
+    })
+    const reset: OptimizationSdk['reset'] = rs.fn(function (this: OptimizationSdk) {
+      thisValues.push(this)
+    })
+    const screen: OptimizationSdk['screen'] = rs.fn(async function (this: OptimizationSdk) {
+      thisValues.push(this)
+      await Promise.resolve()
+      return { accepted: true }
+    })
     const setLocale = rs.fn(() => undefined)
-    const track: OptimizationSdk['track'] = rs.fn(async () => {
+    const track: OptimizationSdk['track'] = rs.fn(async function (this: OptimizationSdk) {
+      thisValues.push(this)
       await Promise.resolve()
-      return undefined
+      return { accepted: true }
     })
     const trackClick: OptimizationSdk['trackClick'] = rs.fn(async () => {
       await Promise.resolve()
@@ -382,7 +402,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     })
     const trackView: OptimizationSdk['trackView'] = rs.fn(async () => {
       await Promise.resolve()
-      return undefined
+      return { accepted: true }
     })
     const captures: UseOptimizationActionsResult[] = []
 
@@ -393,9 +413,11 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     const sdk = createOptimizationSdk({
       consent,
+      flush,
       identify,
       page,
       reset,
+      screen,
       setLocale,
       track,
       trackClick,
@@ -424,16 +446,21 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(secondRender).toBe(firstRender)
 
     firstRender.consent(true)
+    await firstRender.flush()
     await firstRender.identify({ userId: 'user-1' })
     await firstRender.page({ properties: { title: 'Home' } })
     firstRender.reset()
+    await firstRender.screen({ name: 'Cart', properties: { source: 'test' } })
     await firstRender.track({ event: 'purchase', properties: { revenue: 99 } })
 
     expect(consent).toHaveBeenCalledWith(true)
+    expect(flush).toHaveBeenCalledTimes(1)
     expect(identify).toHaveBeenCalledWith({ userId: 'user-1' })
     expect(page).toHaveBeenCalledWith({ properties: { title: 'Home' } })
     expect(reset).toHaveBeenCalledTimes(1)
+    expect(screen).toHaveBeenCalledWith({ name: 'Cart', properties: { source: 'test' } })
     expect(track).toHaveBeenCalledWith({ event: 'purchase', properties: { revenue: 99 } })
+    expect(thisValues).toEqual([sdk, sdk, sdk, sdk, sdk, sdk, sdk])
 
     rendered.unmount()
   })

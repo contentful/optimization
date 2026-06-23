@@ -201,9 +201,9 @@ export async function getNextjsServerOptimizationData(
   options: NextjsServerOptimizationDataOptions,
 ): Promise<NextjsServerOptimizationData> {
   const requestOptimization = bindNextjsOptimizationRequest(sdk, options)
-  const data = await requestOptimization.page(options.pagePayload)
+  const pageResult = await requestOptimization.page(options.pagePayload)
 
-  return { data, requestOptimization }
+  return { data: pageResult.data, requestOptimization }
 }
 
 export function persistNextjsAnonymousId(

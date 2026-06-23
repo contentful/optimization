@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class PreviewViewModel(
+internal class PreviewViewModel(
     val client: OptimizationClient,
     private val contentfulClient: PreviewContentfulClient?,
     private val applicationContext: Context,

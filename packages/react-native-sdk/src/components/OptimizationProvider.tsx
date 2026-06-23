@@ -3,6 +3,7 @@ import { createScopedLogger } from '@contentful/optimization-core/logger'
 import React, { useEffect, useRef, useState, type ReactNode } from 'react'
 import ContentfulOptimization from '../ContentfulOptimization'
 import OptimizationContext from '../context/OptimizationContext'
+import type { OptimizationSdk } from '../OptimizationSdk'
 
 const logger = createScopedLogger('RN:Provider')
 
@@ -18,14 +19,14 @@ export type OnStatesReadyResult = ReturnType<() => void> | (() => void)
  *
  * @public
  */
-export type OnStatesReady = (states: ContentfulOptimization['states']) => OnStatesReadyResult
+export type OnStatesReady = (states: OptimizationSdk['states']) => OnStatesReadyResult
 
 type Cleanup = () => void
 
 interface ProviderState {
   error: Error | undefined
   isReady: boolean
-  sdk: ContentfulOptimization | undefined
+  sdk: OptimizationSdk | undefined
 }
 
 /**
@@ -63,7 +64,7 @@ export interface OptimizationProviderSdkProps {
    * Return a cleanup function to unsubscribe app-level state observers on teardown.
    */
   onStatesReady?: OnStatesReady
-  sdk: ContentfulOptimization
+  sdk: OptimizationSdk
 }
 
 /**
@@ -80,7 +81,7 @@ function toError(error: unknown): Error {
 }
 
 function getCleanup(
-  sdk: ContentfulOptimization,
+  sdk: OptimizationSdk,
   onStatesReady: OnStatesReady | undefined,
 ): Cleanup | undefined {
   const cleanup = onStatesReady?.(sdk.states)
@@ -120,7 +121,7 @@ export function OptimizationProvider(props: OptimizationProviderProps): React.JS
   const liveLocale = props.sdk === undefined ? props.locale : undefined
   const cleanupRef = useRef<Cleanup | undefined>(undefined)
   const ownsSdkRef = useRef(false)
-  const sdkRef = useRef<ContentfulOptimization | undefined>(undefined)
+  const sdkRef = useRef<OptimizationSdk | undefined>(undefined)
   const [state, setState] = useState<ProviderState>(() => ({
     error: undefined,
     isReady: !props.onStatesReady && props.sdk !== undefined,

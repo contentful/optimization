@@ -56,7 +56,6 @@ export default defineConfig({
         entry: {
           index: './src/index.ts',
           logger: './src/logger.ts',
-          constants: './src/constants.ts',
         },
       },
       output: {
@@ -88,7 +87,6 @@ export default defineConfig({
         entry: {
           index: './src/index.ts',
           logger: './src/logger.ts',
-          constants: './src/constants.ts',
         },
       },
       output: {

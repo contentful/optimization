@@ -1,14 +1,8 @@
-import type {
-  AudienceEntry,
-  OptimizationEntry,
-  SelectedOptimizationArray,
-} from '@contentful/optimization-web/api-schemas'
+import type { AudienceWithExperiences } from '@contentful/optimization-core/preview-support'
 import UFuzzy from '@leeoniya/ufuzzy'
 import { consume } from '@lit/context'
-import { groupBy } from 'es-toolkit'
 import { css, html, LitElement, nothing, type PropertyValues, type TemplateResult } from 'lit'
 import { property, state } from 'lit/decorators.js'
-import { ALL_VISITORS_FALLBACK_AUDIENCE, ALL_VISITORS_FALLBACK_AUDIENCE_ID } from '../constants'
 import { searchContext } from '../lib/contexts'
 import type { AudienceContentToggleEvent } from './audience'
 
@@ -22,8 +16,6 @@ const fuzzySearch = new UFuzzy({
 
 interface AudienceState {
   audienceContentOpenByKey: Record<string, boolean>
-  audienceOptimizations: Map<AudienceEntry, OptimizationEntry[]>
-  audienceDefaultSelectedOptimizations: Map<AudienceEntry, SelectedOptimizationArray>
 }
 
 /**
@@ -42,7 +34,7 @@ export const AUDIENCES_TAG = 'ctfl-opt-preview-audiences' as const
  * @example
  * ```ts
  * if (isAudiences(el)) {
- *   el.audiences = audienceEntries
+ *   el.audienceGroups = groups
  * }
  * ```
  *
@@ -53,92 +45,29 @@ export function isAudiences(element?: Element): element is Audiences {
 }
 
 /** @internal */
-function compareCount(a?: unknown[], b?: unknown[]): boolean {
-  return (a?.length ?? 0) < (b?.length ?? 0)
-}
-
-/** @internal */
-function compareString(a?: string, b?: string): boolean {
-  return (a ?? 'a') < (b ?? 'a')
-}
-
-/** @internal */
 function matchesSearchQuery(value: string | undefined, searchQuery: string): boolean {
   if (!value) return false
   return (fuzzySearch.filter([value], searchQuery)?.length ?? 0) > 0
 }
 
 /** @internal */
-function buildAudienceState({
-  audiences,
-  optimizationEntries,
-  defaultSelectedOptimizations,
-}: {
-  audiences: AudienceEntry[]
-  optimizationEntries: OptimizationEntry[]
-  defaultSelectedOptimizations: SelectedOptimizationArray
-}): AudienceState {
-  const audienceIdMap = audiences.reduce((audienceMap: Record<string, AudienceEntry>, audience) => {
-    audienceMap[audience.sys.id] = audience
-    return audienceMap
-  }, {})
-
-  const audienceIdOptimizationMap = groupBy(
-    [...optimizationEntries].sort((a, b) =>
-      compareString(a.fields.nt_name, b.fields.nt_name) ? -1 : 1,
-    ),
-    (optimization) => optimization.fields.nt_audience?.sys.id ?? ALL_VISITORS_FALLBACK_AUDIENCE_ID,
-  )
-
-  if (audienceIdOptimizationMap[ALL_VISITORS_FALLBACK_AUDIENCE_ID]) {
-    audienceIdMap[ALL_VISITORS_FALLBACK_AUDIENCE_ID] = ALL_VISITORS_FALLBACK_AUDIENCE
-  }
-
-  const audienceIds = Object.keys(audienceIdMap)
-    .sort((a, b) =>
-      compareString(audienceIdMap[a]?.fields.nt_name, audienceIdMap[b]?.fields.nt_name) ? 1 : -1,
-    )
-    .sort((a, b) =>
-      compareCount(audienceIdOptimizationMap[a], audienceIdOptimizationMap[b]) ? 1 : -1,
-    )
-
-  const audienceContentOpenByKey = audienceIds.reduce((acc: Record<string, boolean>, id) => {
+function buildAudienceState(audienceGroups: AudienceWithExperiences[]): AudienceState {
+  const audienceContentOpenByKey = audienceGroups.reduce((acc: Record<string, boolean>, group) => {
+    const {
+      audience: { id },
+    } = group
     acc[id] = true
     return acc
   }, {})
 
-  const audienceOptimizations = audienceIds.reduce((acc, audienceId) => {
-    const audience = audienceIdMap[audienceId] ?? ALL_VISITORS_FALLBACK_AUDIENCE
-    acc.set(audience, audienceIdOptimizationMap[audienceId] ?? [])
-    return acc
-  }, new Map<AudienceEntry, OptimizationEntry[]>())
-
-  const audienceDefaultSelectedOptimizations = Array.from(audienceOptimizations.keys()).reduce(
-    (acc, audience) => {
-      const optimizations = audienceOptimizations.get(audience)
-      acc.set(
-        audience,
-        defaultSelectedOptimizations.filter((defaultSelected) =>
-          optimizations
-            ?.map((optimization) => optimization.fields.nt_experience_id)
-            .includes(defaultSelected.experienceId),
-        ),
-      )
-      return acc
-    },
-    new Map<AudienceEntry, SelectedOptimizationArray>(),
-  )
-
   return {
     audienceContentOpenByKey,
-    audienceOptimizations,
-    audienceDefaultSelectedOptimizations,
   }
 }
 
 /**
- * Audience list container that owns audience grouping, filtering, and
- * expand/collapse state for the preview panel.
+ * Audience list container that owns filtering and expand/collapse state for
+ * the preview panel.
  *
  * Consumes the normalized {@link searchContext} value from the parent panel
  * and renders matching audience sections.
@@ -148,17 +77,9 @@ function buildAudienceState({
  * @public
  */
 export class Audiences extends LitElement {
-  /** All audience entries fetched from Contentful. */
+  /** Audience groups derived by Core preview support. */
   @property({ attribute: false })
-  accessor audiences: AudienceEntry[] = []
-
-  /** All optimization entries fetched from Contentful. */
-  @property({ attribute: false })
-  accessor optimizationEntries: OptimizationEntry[] = []
-
-  /** Default optimization selections before any user overrides. */
-  @property({ attribute: false })
-  accessor defaultSelectedOptimizations: SelectedOptimizationArray = []
+  accessor audienceGroups: AudienceWithExperiences[] = []
 
   /** Normalized search query consumed from the parent panel context. */
   @consume({ context: searchContext, subscribe: true })
@@ -168,17 +89,6 @@ export class Audiences extends LitElement {
   /** @internal */
   @state()
   private accessor _audienceContentOpenByKey: Record<string, boolean> = {}
-
-  /** @internal */
-  @state()
-  private accessor _audienceOptimizations = new Map<AudienceEntry, OptimizationEntry[]>()
-
-  /** @internal */
-  @state()
-  private accessor _audienceDefaultSelectedOptimizations = new Map<
-    AudienceEntry,
-    SelectedOptimizationArray
-  >()
 
   /** @internal */
   private get _anyAudienceContentClosed(): boolean {
@@ -191,25 +101,21 @@ export class Audiences extends LitElement {
   }
 
   /** @internal */
-  private get _filteredAudienceEntries(): Array<[AudienceEntry, OptimizationEntry[]]> {
-    const { _audienceOptimizations: audienceOptimizations } = this
+  private get _filteredAudienceGroups(): AudienceWithExperiences[] {
     const searchQuery = this.search ?? ''
-    const audienceEntries = Array.from(audienceOptimizations.entries())
 
-    if (!searchQuery) return audienceEntries
+    if (!searchQuery) return this.audienceGroups
 
-    return audienceEntries.filter(
-      ([audience, optimizations]) =>
-        matchesSearchQuery(audience.fields.nt_name, searchQuery) ||
-        optimizations.some((optimization) =>
-          matchesSearchQuery(optimization.fields.nt_name, searchQuery),
-        ),
+    return this.audienceGroups.filter(
+      ({ audience, experiences }) =>
+        matchesSearchQuery(audience.name, searchQuery) ||
+        experiences.some((experience) => matchesSearchQuery(experience.name, searchQuery)),
     )
   }
 
   /** @internal */
   private get _visibleAudienceIds(): string[] {
-    return this._filteredAudienceEntries.map(([audience]) => audience.sys.id)
+    return this._filteredAudienceGroups.map(({ audience }) => audience.id)
   }
 
   /** @internal */
@@ -240,38 +146,22 @@ export class Audiences extends LitElement {
 
   /** @internal */
   protected willUpdate(changed: PropertyValues<this>): void {
-    if (
-      changed.has('audiences') ||
-      changed.has('optimizationEntries') ||
-      changed.has('defaultSelectedOptimizations')
-    ) {
-      const audienceState = buildAudienceState({
-        audiences: this.audiences,
-        optimizationEntries: this.optimizationEntries,
-        defaultSelectedOptimizations: this.defaultSelectedOptimizations,
-      })
-      const {
-        audienceContentOpenByKey,
-        audienceOptimizations,
-        audienceDefaultSelectedOptimizations,
-      } = audienceState
+    if (changed.has('audienceGroups')) {
+      const { audienceContentOpenByKey } = buildAudienceState(this.audienceGroups)
 
       this._audienceContentOpenByKey = audienceContentOpenByKey
-      this._audienceOptimizations = audienceOptimizations
-      this._audienceDefaultSelectedOptimizations = audienceDefaultSelectedOptimizations
     }
   }
 
   /** @internal */
   protected render(): TemplateResult {
     const {
-      _filteredAudienceEntries: filteredAudienceEntries,
+      _filteredAudienceGroups: filteredAudienceGroups,
       _audienceContentOpenByKey: audienceContentOpenByKey,
-      _audienceDefaultSelectedOptimizations: audienceDefaultSelectedOptimizations,
     } = this
 
     return html`
-      ${filteredAudienceEntries.length > 1
+      ${filteredAudienceGroups.length > 1
         ? html`
             <p>
               <button
@@ -287,16 +177,12 @@ export class Audiences extends LitElement {
         : nothing}
 
       <div class="container">
-        ${filteredAudienceEntries.length
-          ? filteredAudienceEntries.map(
-              ([audience, optimizations]) => html`
+        ${filteredAudienceGroups.length
+          ? filteredAudienceGroups.map(
+              (audienceGroup) => html`
                 <ctfl-opt-preview-audience
-                  .open=${audienceContentOpenByKey[audience.sys.id] ?? true}
-                  .audience=${audience}
-                  .optimizations=${optimizations}
-                  .defaultSelectedOptimizations=${audienceDefaultSelectedOptimizations.get(
-                    audience,
-                  )}
+                  .open=${audienceContentOpenByKey[audienceGroup.audience.id] ?? true}
+                  .audienceGroup=${audienceGroup}
                   @ctfl_opt_preview_audience_content_toggle=${this._onAudienceContentToggle}
                 ></ctfl-opt-preview-audience>
               `,

@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-object PreviewTheme {
+internal object PreviewTheme {
 
     object Colors {
         object Background {
@@ -40,7 +40,7 @@ object PreviewTheme {
             val manual = Color(0xFF22C55E)
             val info = Color(0xFF6B7280)
             val experiment = Color(0xFF8B5CF6)
-            val personalization = Color(0xFF06B6D4)
+            val optimization = Color(0xFF06B6D4)
         }
 
         object Border {

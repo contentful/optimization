@@ -2,29 +2,44 @@ package com.contentful.optimization.core
 
 import android.util.Log
 
-object DiagnosticLogger {
+internal object DiagnosticLogger {
     private const val TAG = "ContentfulOptimization"
 
     @Volatile
-    private var enabled = false
+    private var level = OptimizationLogLevel.error
 
-    fun setEnabled(enabled: Boolean) {
-        this.enabled = enabled
+    fun setLevel(level: OptimizationLogLevel) {
+        this.level = level
     }
 
     fun debug(message: () -> String) {
-        if (enabled) Log.d(TAG, message())
+        if (allows(OptimizationLogLevel.debug)) Log.d(TAG, message())
     }
 
     fun info(message: () -> String) {
-        if (enabled) Log.i(TAG, message())
+        if (allows(OptimizationLogLevel.info)) Log.i(TAG, message())
     }
 
     fun warning(message: () -> String) {
-        if (enabled) Log.w(TAG, message())
+        if (allows(OptimizationLogLevel.warn)) Log.w(TAG, message())
     }
 
     fun error(message: () -> String) {
-        if (enabled) Log.e(TAG, message())
+        if (allows(OptimizationLogLevel.error)) Log.e(TAG, message())
+    }
+
+    private fun allows(messageLevel: OptimizationLogLevel): Boolean {
+        return severity(messageLevel) >= severity(level)
+    }
+
+    private fun severity(level: OptimizationLogLevel): Int {
+        return when (level) {
+            OptimizationLogLevel.fatal -> 60
+            OptimizationLogLevel.error -> 50
+            OptimizationLogLevel.warn -> 40
+            OptimizationLogLevel.info -> 30
+            OptimizationLogLevel.debug -> 20
+            OptimizationLogLevel.log -> 10
+        }
     }
 }

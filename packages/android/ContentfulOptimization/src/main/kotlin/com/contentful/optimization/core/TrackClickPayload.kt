@@ -2,7 +2,7 @@ package com.contentful.optimization.core
 
 import org.json.JSONObject
 
-data class TrackClickPayload(
+public data class TrackClickPayload(
     val componentId: String,
     val experienceId: String? = null,
     val variantIndex: Int,

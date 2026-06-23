@@ -510,7 +510,7 @@ describe('EntryViewTracker', () => {
     document.body.append(entry)
 
     const stickySuccess = {}
-    const trackView = rs.fn().mockResolvedValue(stickySuccess)
+    const trackView = rs.fn().mockResolvedValue({ accepted: true, data: stickySuccess })
     const core: EntryViewTrackingCore = { trackView }
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
@@ -555,9 +555,9 @@ describe('EntryViewTracker', () => {
     const stickySuccess = {}
     const trackView = rs
       .fn()
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(stickySuccess)
-      .mockResolvedValue(stickySuccess)
+      .mockResolvedValueOnce({ accepted: false })
+      .mockResolvedValueOnce({ accepted: true, data: stickySuccess })
+      .mockResolvedValue({ accepted: true, data: stickySuccess })
     const core: EntryViewTrackingCore = { trackView }
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 

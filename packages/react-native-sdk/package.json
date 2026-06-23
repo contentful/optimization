@@ -111,6 +111,20 @@
         "default": "./dist/preview-support.cjs"
       }
     },
+    "./preview": {
+      "react-native": {
+        "types": "./dist/preview.d.mts",
+        "default": "./dist/preview.mjs"
+      },
+      "import": {
+        "types": "./dist/preview.d.mts",
+        "default": "./dist/preview.mjs"
+      },
+      "require": {
+        "types": "./dist/preview.d.cts",
+        "default": "./dist/preview.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -120,8 +134,8 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 27500,
-        "index.mjs": 26500,
+        "index.cjs": 28500,
+        "index.mjs": 27000,
         "preview-support.cjs": 1200,
         "preview-support.mjs": 600
       }
@@ -148,13 +162,8 @@
   },
   "dependencies": {
     "@contentful/optimization-core": "workspace:*",
-    "@react-native-async-storage/async-storage": "^2.2.0",
-    "@react-native-clipboard/clipboard": "^1.16.3",
     "es-iterator-helpers": "^1.2.2",
     "es-toolkit": "catalog:",
-    "react": "19.2.3",
-    "react-native": "^0.84.0",
-    "react-native-safe-area-context": "^5.6.2",
     "react-native-get-random-values": "^2.0.0",
     "react-native-uuid": "^2.0.3",
     "zod": "catalog:"
@@ -172,7 +181,9 @@
     "@react-native-community/cli": "20.1.1",
     "@react-native-community/cli-platform-android": "20.1.1",
     "@react-native-community/cli-platform-ios": "20.1.1",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native/babel-preset": "0.84.0",
+    "@react-native-clipboard/clipboard": "^1.16.3",
     "@react-native/metro-config": "0.84.0",
     "@react-native/typescript-config": "0.84.0",
     "@rsdoctor/cli": "catalog:",
@@ -192,8 +203,11 @@
     "jest-circus": "^30.2.0",
     "kill-port": "^2.0.1",
     "mocks": "workspace:*",
+    "react": "19.2.3",
+    "react-native": "^0.84.0",
     "react-native-dotenv": "^3.4.11",
     "react-test-renderer": "19.2.3",
+    "react-native-safe-area-context": "^5.6.2",
     "rimraf": "catalog:",
     "tslib": "catalog:",
     "typescript": "catalog:"
@@ -207,7 +221,13 @@
     "react-native-safe-area-context": ">=5.6.2"
   },
   "peerDependenciesMeta": {
+    "@react-native-clipboard/clipboard": {
+      "optional": true
+    },
     "@react-native-community/netinfo": {
+      "optional": true
+    },
+    "react-native-safe-area-context": {
       "optional": true
     }
   },

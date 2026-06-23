@@ -5,6 +5,7 @@ import type {
 } from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
+import ContentfulOptimization from '../ContentfulOptimization'
 import type { OptimizationRootSdk } from '../presentation'
 import { ContentfulOptimizationRootElement } from './ContentfulOptimizationRootElement'
 import {
@@ -19,6 +20,8 @@ interface TestObservable<T> extends Observable<T> {
   emit: (value: T) => void
   subscriberCount: () => number
 }
+
+type WebRuntimeStates = ContentfulOptimization['states']
 
 function createObservable<T>(initialValue: T): TestObservable<T> {
   const subscribers = new Set<Subscriber<T>>()
@@ -55,6 +58,25 @@ function createObservable<T>(initialValue: T): TestObservable<T> {
       return subscribers.size
     },
   }
+}
+
+async function resolveAccepted(): Promise<{ accepted: true }> {
+  await Promise.resolve()
+  return { accepted: true }
+}
+
+async function resolveVoid(): Promise<void> {
+  await Promise.resolve()
+}
+
+function toContentfulOptimization<TSdk extends object>(sdk: TSdk): TSdk & ContentfulOptimization {
+  Object.setPrototypeOf(sdk, ContentfulOptimization.prototype)
+
+  if (!(sdk instanceof ContentfulOptimization)) {
+    throw new Error('Expected SDK test double to use the ContentfulOptimization prototype.')
+  }
+
+  return sdk
 }
 
 function createTestEntry(id: string): Entry {
@@ -98,7 +120,7 @@ function createSdk(
   readonly destroy: ReturnType<typeof rs.fn>
   readonly experienceRequestState: TestObservable<ExperienceRequestState>
   readonly previewPanelOpen: TestObservable<boolean>
-  readonly sdk: OptimizationRootSdk
+  readonly sdk: ContentfulOptimization
   readonly selectedOptimizations: TestObservable<SelectedOptimizationArray | undefined>
 } {
   const selectedOptimizations = createObservable<SelectedOptimizationArray | undefined>(undefined)
@@ -106,17 +128,54 @@ function createSdk(
   const experienceRequestState = createObservable<ExperienceRequestState>({ status: 'idle' })
   const previewPanelOpen = createObservable(options.previewPanelOpen ?? false)
   const destroy = rs.fn()
+  const states = {
+    blockedEventStream:
+      createObservable<WebRuntimeStates['blockedEventStream']['current']>(undefined),
+    canOptimize,
+    consent: createObservable<WebRuntimeStates['consent']['current']>(undefined),
+    eventStream: createObservable<WebRuntimeStates['eventStream']['current']>(undefined),
+    experienceRequestState,
+    flag: () => createObservable<ReturnType<WebRuntimeStates['flag']>['current']>(undefined),
+    locale: createObservable<WebRuntimeStates['locale']['current']>(undefined),
+    optimizationPossible:
+      createObservable<WebRuntimeStates['optimizationPossible']['current']>(true),
+    persistenceConsent:
+      createObservable<WebRuntimeStates['persistenceConsent']['current']>(undefined),
+    previewPanelAttached:
+      createObservable<WebRuntimeStates['previewPanelAttached']['current']>(false),
+    previewPanelOpen,
+    profile: createObservable<WebRuntimeStates['profile']['current']>(undefined),
+    selectedOptimizations,
+  } satisfies WebRuntimeStates
 
   const sdk = {
+    consent: () => undefined,
     destroy,
+    flush: resolveVoid,
+    getFlag: () => undefined,
+    getMergeTagValue: () => undefined,
+    hasConsent: () => true,
+    identify: resolveAccepted,
+    locale: undefined,
+    page: resolveAccepted,
+    reset: () => undefined,
     resolveOptimizedEntry,
+    screen: resolveAccepted,
     setLocale: () => undefined,
-    states: {
-      canOptimize,
-      experienceRequestState,
-      previewPanelOpen,
-      selectedOptimizations,
+    states,
+    track: resolveAccepted,
+    trackClick: resolveVoid,
+    trackFlagView: resolveVoid,
+    trackHover: resolveVoid,
+    tracking: {
+      clearElement: () => undefined,
+      disable: () => undefined,
+      disableElement: () => undefined,
+      enable: () => undefined,
+      enableElement: () => undefined,
     },
+    trackCurrentPage: resolveAccepted,
+    trackView: resolveAccepted,
   } satisfies OptimizationRootSdk
 
   return {
@@ -124,12 +183,12 @@ function createSdk(
     destroy,
     experienceRequestState,
     previewPanelOpen,
-    sdk,
+    sdk: toContentfulOptimization(sdk),
     selectedOptimizations,
   }
 }
 
-function createRootElement(sdk: OptimizationRootSdk): ContentfulOptimizationRootElement {
+function createRootElement(sdk: ContentfulOptimization): ContentfulOptimizationRootElement {
   const root = document.createElement('ctfl-optimization-root')
 
   if (!(root instanceof ContentfulOptimizationRootElement)) {

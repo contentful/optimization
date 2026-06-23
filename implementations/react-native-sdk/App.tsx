@@ -3,11 +3,11 @@ import { Button, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import {
-  OptimizationProvider,
+  OptimizationRoot,
   OptimizationScrollProvider,
-  PreviewPanelOverlay,
   useOptimization,
 } from '@contentful/optimization-react-native'
+import { PreviewPanelOverlay } from '@contentful/optimization-react-native/preview'
 import { createClient, type Entry } from 'contentful'
 
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
@@ -119,12 +119,7 @@ function AppContent(): React.JSX.Element {
   }
 
   return (
-    <PreviewPanelOverlay
-      contentfulClient={contentfulClient}
-      onRefresh={() => {
-        void sdk.page({ properties: { url: 'app' } })
-      }}
-    >
+    <>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={{ padding: 10, gap: 10, flexDirection: 'row', flexWrap: 'wrap' }}>
           {!isIdentified ? (
@@ -158,19 +153,21 @@ function AppContent(): React.JSX.Element {
           <AnalyticsEventDisplay />
         </OptimizationScrollProvider>
       </SafeAreaView>
-    </PreviewPanelOverlay>
+      <PreviewPanelOverlay
+        contentfulClient={contentfulClient}
+        onRefresh={() => {
+          void sdk.page({ properties: { url: 'app' } })
+        }}
+      />
+    </>
   )
 }
 
 function App(): React.JSX.Element {
   return (
-    <OptimizationProvider
-      {...ENV_CONFIG.optimization}
-      defaults={{ consent: true }}
-      logLevel="debug"
-    >
+    <OptimizationRoot {...ENV_CONFIG.optimization} defaults={{ consent: true }} logLevel="debug">
       <AppContent />
-    </OptimizationProvider>
+    </OptimizationRoot>
   )
 }
 

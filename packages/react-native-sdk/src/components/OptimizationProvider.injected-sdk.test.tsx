@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, rs } from '@rstest/core'
 import React, { act, type ReactElement } from 'react'
 import type ContentfulOptimization from '../ContentfulOptimization'
+import type { OptimizationSdk } from '../OptimizationSdk'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -110,7 +111,7 @@ describe('OptimizationProvider injected SDK performance', () => {
     ])
     const injectedSdk = createSdk()
     const testRenderer = await loadTestRenderer()
-    let capturedSdk: ContentfulOptimization | undefined = undefined
+    let capturedSdk: OptimizationSdk | undefined = undefined
     let childRendered = false
 
     function Probe(): null {

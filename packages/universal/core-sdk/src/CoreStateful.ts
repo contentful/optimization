@@ -1,6 +1,5 @@
 import type { ApiClientConfig } from '@contentful/optimization-api-client'
 import type {
-  ChangeArray,
   ExperienceEvent as ExperienceEventPayload,
   InsightsEvent as InsightsEventPayload,
   Json,
@@ -8,12 +7,16 @@ import type {
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger, logger } from '@contentful/optimization-api-client/logger'
-import type { BlockedEvent } from './BlockedEvent'
-import type { ConsentController, ConsentGuard, ConsentInput } from './Consent'
+import type { ConsentController, ConsentGuard, ConsentInput } from './consent'
 import type { CoreStatefulApiConfig } from './CoreApiConfig'
 import type { CoreConfig } from './CoreBase'
 import CoreStatefulEventEmitter from './CoreStatefulEventEmitter'
-import { type AllowedEventType, DEFAULT_ALLOWED_EVENT_TYPES, type EventType } from './EventType'
+import {
+  type AllowedEventType,
+  type BlockedEvent,
+  DEFAULT_ALLOWED_EVENT_TYPES,
+  type EventType,
+} from './events'
 import { toPositiveInt } from './lib/number'
 import { type QueueFlushPolicy, resolveQueueFlushPolicy } from './lib/queue'
 import {
@@ -23,7 +26,6 @@ import {
 import { normalizeExplicitLocale } from './locale'
 import { ExperienceQueue, type ExperienceQueueDropContext } from './queues/ExperienceQueue'
 import { InsightsQueue } from './queues/InsightsQueue'
-import { installCoreStatefulSdkSupport } from './sdk-support/CoreStatefulSdkSupport'
 import {
   batch,
   blockedEvent as blockedEventSignal,
@@ -48,12 +50,13 @@ import {
   signals,
   toObservable,
 } from './signals'
+import { resolveStatefulDefaults, type StatefulDefaults } from './StatefulDefaults'
 import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
 
 const coreLogger = createScopedLogger('CoreStateful')
 
 const OFFLINE_QUEUE_MAX_EVENTS = 100
-export type { AllowedEventType, EventType } from './EventType'
+export type { AllowedEventType, EventType } from './events'
 export type { ExperienceQueueDropContext } from './queues/ExperienceQueue'
 
 const hasDefinedValues = (record: Record<string, unknown>): boolean =>
@@ -167,18 +170,7 @@ export interface CoreStates {
  *
  * @public
  */
-export interface CoreConfigDefaults {
-  /** Global consent default applied at construction time. */
-  consent?: boolean
-  /** Durable profile-continuity persistence consent default applied at construction time. */
-  persistenceConsent?: boolean
-  /** Default active profile used for optimization and insights. */
-  profile?: Profile
-  /** Initial diff of changes produced by the service. */
-  changes?: ChangeArray
-  /** Preselected optimization variants (e.g., winning treatments). */
-  selectedOptimizations?: SelectedOptimizationArray
-}
+export interface CoreConfigDefaults extends StatefulDefaults {}
 
 /**
  * Configuration for {@link CoreStateful}.
@@ -279,12 +271,14 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     try {
       const { allowedEventTypes, defaults, getAnonymousId, onEventBlocked, queuePolicy } = config
       const {
-        changes: defaultChanges,
-        consent: defaultConsent,
-        persistenceConsent: defaultPersistenceConsent,
-        selectedOptimizations: defaultSelectedOptimizations,
-        profile: defaultProfile,
-      } = defaults ?? {}
+        defaults: {
+          changes: defaultChanges,
+          consent: defaultConsent,
+          persistenceConsent: defaultPersistenceConsent,
+          selectedOptimizations: defaultSelectedOptimizations,
+          profile: defaultProfile,
+        },
+      } = resolveStatefulDefaults(defaults)
       const resolvedQueuePolicy = resolveQueuePolicy(queuePolicy)
 
       this.allowedEventTypes = allowedEventTypes ?? DEFAULT_ALLOWED_EVENT_TYPES
@@ -304,11 +298,6 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
         onOfflineDrop: resolvedQueuePolicy.onOfflineDrop,
         stateInterceptors: this.interceptors.state,
       })
-      installCoreStatefulSdkSupport(this, {
-        pageWithEmissionResult: this.pageWithEmissionResult.bind(this),
-        screenWithEmissionResult: this.screenWithEmissionResult.bind(this),
-      })
-
       batch(() => {
         consentSignal.value = defaultConsent
         persistenceConsentSignal.value = defaultPersistenceConsent ?? defaultConsent

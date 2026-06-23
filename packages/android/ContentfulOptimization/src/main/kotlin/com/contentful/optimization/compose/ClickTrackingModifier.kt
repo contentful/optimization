@@ -10,9 +10,9 @@ import com.contentful.optimization.tracking.TrackingMetadata
 import kotlinx.coroutines.launch
 
 @Composable
-fun Modifier.trackClicks(
+public fun Modifier.trackClicks(
     entry: Map<String, Any>,
-    personalization: Map<String, Any>?,
+    selectedOptimization: Map<String, Any>?,
     enabled: Boolean,
     client: OptimizationClient,
     onTap: ((Map<String, Any>) -> Unit)? = null,
@@ -22,7 +22,7 @@ fun Modifier.trackClicks(
     val scope = rememberCoroutineScope()
     return this.clickable {
         if (client.hasConsent("trackClick")) {
-            val metadata = TrackingMetadata(entry, personalization)
+            val metadata = TrackingMetadata(entry, selectedOptimization)
             val payload = TrackClickPayload(
                 componentId = metadata.componentId,
                 experienceId = metadata.experienceId,

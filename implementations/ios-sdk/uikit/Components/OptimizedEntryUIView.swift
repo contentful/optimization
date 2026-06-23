@@ -14,10 +14,10 @@ final class OptimizedEntryUIView: UIView {
 
     private weak var scrollView: UIScrollView?
     private var trackingController: ViewTrackingController?
-    private var lockedPersonalizations: [[String: Any]]?
+    private var lockedOptimizations: [[String: Any]]?
     private var hasLocked = false
     private var resolvedEntry: [String: Any]
-    private var resolvedPersonalization: [String: Any]?
+    private var resolvedOptimization: [String: Any]?
     private var contentView: UIView?
     private var cancellables = Set<AnyCancellable>()
     private var contentOffsetObservation: NSKeyValueObservation?
@@ -97,36 +97,36 @@ final class OptimizedEntryUIView: UIView {
         return globalLiveUpdates
     }
 
-    private var effectivePersonalizations: [[String: Any]]? {
-        shouldLiveUpdate ? client.selectedPersonalizations : lockedPersonalizations
+    private var effectiveOptimizations: [[String: Any]]? {
+        shouldLiveUpdate ? client.selectedOptimizations : lockedOptimizations
     }
 
     private func resolve() {
         if isPersonalized {
-            let result = client.personalizeEntry(
+            let result = client.resolveOptimizedEntry(
                 baseline: entry,
-                personalizations: effectivePersonalizations
+                selectedOptimizations: effectiveOptimizations
             )
             resolvedEntry = result.entry
-            resolvedPersonalization = result.personalization
+            resolvedOptimization = result.selectedOptimization
         } else {
             resolvedEntry = entry
-            resolvedPersonalization = nil
+            resolvedOptimization = nil
         }
     }
 
     private func subscribeToPersonalizations() {
-        client.$selectedPersonalizations
+        client.$selectedOptimizations
             // `@Published` fires in `willSet`, so a synchronous sink would read
             // the *previous* value back off the client. Hop to the next main
-            // run-loop turn so re-resolution sees the committed personalizations.
+            // run-loop turn so re-resolution sees the committed optimizations.
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 guard let self else { return }
                 if self.shouldLiveUpdate {
                     self.rebuildContent()
-                } else if !self.hasLocked, let snapshot = self.client.selectedPersonalizations {
-                    self.lockedPersonalizations = snapshot
+                } else if !self.hasLocked, let snapshot = self.client.selectedOptimizations {
+                    self.lockedOptimizations = snapshot
                     self.hasLocked = true
                     self.rebuildContent()
                 }
@@ -141,7 +141,7 @@ final class OptimizedEntryUIView: UIView {
             .sink { [weak self] open in
                 guard let self else { return }
                 if !open, self.hasLocked {
-                    self.lockedPersonalizations = self.client.selectedPersonalizations
+                    self.lockedOptimizations = self.client.selectedOptimizations
                 }
                 self.rebuildContent()
             }
@@ -175,7 +175,7 @@ final class OptimizedEntryUIView: UIView {
         trackingController = ViewTrackingController(
             client: client,
             entry: entry,
-            personalization: resolvedPersonalization
+            selectedOptimization: resolvedOptimization
         )
         emitVisibility()
     }
@@ -243,14 +243,14 @@ final class OptimizedEntryUIView: UIView {
     }
 
     @objc private func handleTap() {
-        let metadata = TrackingMetadata(entry: entry, personalization: resolvedPersonalization)
+        let metadata = TrackingMetadata(entry: entry, selectedOptimization: resolvedOptimization)
         let payload = TrackClickPayload(
             componentId: metadata.componentId,
             experienceId: metadata.experienceId,
             variantIndex: metadata.variantIndex
         )
         Task { @MainActor in
-            _ = try? await client.trackClick(payload)
+            try? await client.trackClick(payload)
         }
     }
 }

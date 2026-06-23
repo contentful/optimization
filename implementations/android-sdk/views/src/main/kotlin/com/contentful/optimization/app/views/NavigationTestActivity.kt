@@ -90,7 +90,7 @@ class NavigationTestActivity : AppCompatActivity() {
 
     private fun observeScreenEvents() {
         lifecycleScope.launch {
-            OptimizationManager.client.events.collect { event ->
+            OptimizationManager.client.eventStream.collect { event ->
                 val type = event["type"] as? String ?: return@collect
                 if (type != "screen" && type != "screenViewEvent") return@collect
                 val name = event["name"] as? String ?: return@collect

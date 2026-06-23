@@ -25,7 +25,7 @@ fun NavigationTestScreen(onClose: () -> Unit) {
     val screenLog = remember { mutableStateListOf<String>() }
 
     LaunchedEffect(Unit) {
-        client.events.collect { event ->
+        client.eventStream.collect { event ->
             val type = event["type"] as? String
             if (type == "screen" || type == "screenViewEvent") {
                 val name = event["name"] as? String

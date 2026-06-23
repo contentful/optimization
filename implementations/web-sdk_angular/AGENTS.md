@@ -36,6 +36,19 @@ pnpm implementation:run -- web-sdk_angular implementation:test:e2e:run
 pnpm test:e2e:web-sdk_angular
 ```
 
+## Known toolchain issue
+
+- Angular's persistent compiler cache uses `lmdb` through `@angular/build`. In the Codex macOS
+  sandbox, the `@lmdb/lmdb-darwin-arm64` prebuilt binary can abort with `SIGABRT` because it uses
+  System V semaphores that the sandbox blocks.
+- Treat `ng build` or `pnpm implementation:run -- web-sdk_angular build` aborting immediately after
+  `Building...` as a sandbox/toolchain failure until proven otherwise. Do not disable Angular
+  persistent cache in `angular.json` as the repository fix.
+- Verify the cause with a minimal `lmdb.open()` probe and, with user approval, rerun the probe or
+  Angular build outside the sandbox. If the unsandboxed command passes, report the sandbox
+  limitation instead of changing app configuration. Only change dependencies or Angular config when
+  the failure reproduces outside the sandbox or an upstream package provides a verified fix.
+
 ## Validate
 
 - Run `typecheck` for TypeScript changes.

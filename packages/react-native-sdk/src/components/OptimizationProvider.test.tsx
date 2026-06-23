@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import React, { act, useEffect, type ReactElement } from 'react'
 import type ContentfulOptimization from '../ContentfulOptimization'
+import type { OptimizationSdk } from '../OptimizationSdk'
 import type { OptimizationProviderProps } from './OptimizationProvider'
 import type { OptimizationRootProps } from './OptimizationRoot'
 
@@ -168,7 +169,7 @@ function createSdk(): {
     screen: async () => {
       eventStream.emit(screenEvent)
       await Promise.resolve()
-      return undefined
+      return { accepted: true }
     },
     states: {
       eventStream: eventStream.observable,
@@ -465,7 +466,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const cleanup = rs.fn(() => {
       teardownOrder.push('cleanup')
     })
-    let capturedSdk: ContentfulOptimization | undefined = undefined
+    let capturedSdk: OptimizationSdk | undefined = undefined
 
     function Probe(): null {
       capturedSdk = useOptimization()
@@ -499,7 +500,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const { sdk: secondSdk } = createSdk()
     const firstInjectedSdk = createContentfulOptimizationStub(firstSdk)
     const secondInjectedSdk = createContentfulOptimizationStub(secondSdk)
-    let capturedSdk: ContentfulOptimization | undefined = undefined
+    let capturedSdk: OptimizationSdk | undefined = undefined
 
     function Probe(): null {
       capturedSdk = useOptimization()

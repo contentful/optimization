@@ -1,8 +1,4 @@
 import type { Properties } from '@contentful/optimization-core/api-schemas'
-import {
-  AcceptedCurrentStateTracker,
-  screenWithEmissionResult,
-} from '@contentful/optimization-core/sdk-support'
 import type React from 'react'
 import { useCallback, useEffect, useRef } from 'react'
 import * as z from 'zod/mini'
@@ -146,7 +142,6 @@ export function OptimizationNavigationContainer({
   const consent = useOptimizationConsentState(contentfulOptimization)
   const navigationRef = useRef<NavigationContainerRef>(null)
   const routeKeyRef = useRef<string | undefined>(undefined)
-  const screenTrackingStateRef = useRef(new AcceptedCurrentStateTracker<string>())
 
   const trackScreen = useCallback(
     (screenName: string, params?: Record<string, unknown>) => {
@@ -156,16 +151,12 @@ export function OptimizationNavigationContainer({
         includeParams,
       )
 
-      void screenTrackingStateRef.current
-        .emitIfNeeded({
-          key: routeKey,
-          isAllowed: contentfulOptimization.hasConsent('screen'),
-          emit: async () =>
-            await screenWithEmissionResult(contentfulOptimization, {
-              name: screenName,
-              properties,
-              screen: { name: screenName },
-            }),
+      void contentfulOptimization
+        .trackCurrentScreen({
+          routeKey,
+          name: screenName,
+          properties,
+          screen: { name: screenName },
         })
         .catch(() => undefined)
     },

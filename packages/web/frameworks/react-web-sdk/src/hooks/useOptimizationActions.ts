@@ -10,9 +10,11 @@ import { useOptimization } from './useOptimization'
  */
 export interface UseOptimizationActionsResult {
   readonly consent: OptimizationSdk['consent']
+  readonly flush: OptimizationSdk['flush']
   readonly identify: OptimizationSdk['identify']
   readonly page: OptimizationSdk['page']
   readonly reset: OptimizationSdk['reset']
+  readonly screen: OptimizationSdk['screen']
   readonly track: OptimizationSdk['track']
 }
 
@@ -21,8 +23,10 @@ export interface UseOptimizationActionsResult {
  *
  * @example
  * ```tsx
- * const { track, consent, reset } = useOptimizationActions()
+ * const { track, screen, flush, consent, reset } = useOptimizationActions()
  * await track({ event: 'purchase' })
+ * await screen({ name: 'Cart' })
+ * await flush()
  * consent(true)
  * reset()
  * ```
@@ -41,11 +45,15 @@ export function useOptimizationActions(): UseOptimizationActionsResult {
       consent: (value) => {
         sdk.consent(value)
       },
+      flush: async () => {
+        await sdk.flush()
+      },
       identify: async (payload) => await sdk.identify(payload),
       page: async (payload) => await sdk.page(payload),
       reset: () => {
         sdk.reset()
       },
+      screen: async (payload) => await sdk.screen(payload),
       track: async (payload) => await sdk.track(payload),
     }),
     [sdk],

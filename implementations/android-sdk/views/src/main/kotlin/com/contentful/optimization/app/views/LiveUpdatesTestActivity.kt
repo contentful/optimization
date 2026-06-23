@@ -109,16 +109,16 @@ class LiveUpdatesTestActivity : AppCompatActivity() {
 
     private fun loadEntry() {
         lifecycleScope.launch {
-            // Wait for the SDK to populate selectedPersonalizations before mounting any
+            // Wait for the SDK to populate selectedOptimizations before mounting any
             // OptimizedEntryView. Compose renders LiveUpdatesTestScreen inside the same
             // Activity as MainScreen, so by the time the user taps the test button, the
-            // bridge has already emitted a non-null personalizations value and the screen's
+            // bridge has already emitted a non-null optimizations value and the screen's
             // `liveUpdates = false` slots lock onto a variant on their first collect. The
             // Views impl uses a separate Activity, and without this gate the slots see the
             // initial `null` emission first and publish baseline content, then lock onto the
             // variant on the second emission — the test then sees the entry id change after
             // identify even though the slot is supposedly locked.
-            OptimizationManager.client.selectedPersonalizations.first { it != null }
+            OptimizationManager.client.selectedOptimizations.first { it != null }
             val entries = ContentfulFetcher.fetchEntries(
                 listOf("2Z2WLOx07InSewC3LUB3eX"),
                 AppConfig.defaultContentfulLocale,
