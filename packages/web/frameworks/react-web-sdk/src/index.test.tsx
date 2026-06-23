@@ -11,12 +11,17 @@ import {
   OptimizationProvider,
   OptimizationRoot,
   OptimizedEntry,
+  useCanOptimizeState,
+  useConsentState,
   useEntryResolver,
+  useEventStreamState,
   useLiveUpdates,
   useOptimization,
   useOptimizationActions,
   useOptimizationContext,
   useOptimizedEntry,
+  useProfileState,
+  useSelectedOptimizationsState,
   type OptimizationContextValue,
   type OptimizationSdk,
   type UseEntryResolverResult,
@@ -81,10 +86,15 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(OptimizationProvider).toBeTypeOf('function')
     expect(OptimizationRoot).toBeTypeOf('function')
     expect(useEntryResolver).toBeTypeOf('function')
+    expect(useCanOptimizeState).toBeTypeOf('function')
+    expect(useConsentState).toBeTypeOf('function')
+    expect(useEventStreamState).toBeTypeOf('function')
     expect(useOptimization).toBeTypeOf('function')
     expect(useOptimizationActions).toBeTypeOf('function')
     expect(useOptimizationContext).toBeTypeOf('function')
     expect(useOptimizedEntry).toBeTypeOf('function')
+    expect(useProfileState).toBeTypeOf('function')
+    expect(useSelectedOptimizationsState).toBeTypeOf('function')
     expect(useLiveUpdates).toBeTypeOf('function')
     expect(OptimizedEntry).toBeTypeOf('function')
   })
@@ -416,11 +426,13 @@ describe('@contentful/optimization-react-web core providers', () => {
     firstRender.consent(true)
     await firstRender.identify({ userId: 'user-1' })
     await firstRender.page({ properties: { title: 'Home' } })
+    firstRender.reset()
     await firstRender.track({ event: 'purchase', properties: { revenue: 99 } })
 
     expect(consent).toHaveBeenCalledWith(true)
     expect(identify).toHaveBeenCalledWith({ userId: 'user-1' })
     expect(page).toHaveBeenCalledWith({ properties: { title: 'Home' } })
+    expect(reset).toHaveBeenCalledTimes(1)
     expect(track).toHaveBeenCalledWith({ event: 'purchase', properties: { revenue: 99 } })
 
     rendered.unmount()

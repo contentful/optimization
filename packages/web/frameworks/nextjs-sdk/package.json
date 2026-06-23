@@ -1,0 +1,125 @@
+{
+  "name": "@contentful/optimization-nextjs",
+  "version": "0.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/contentful/optimization.git",
+    "directory": "packages/web/frameworks/nextjs-sdk"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./client": {
+      "import": {
+        "types": "./dist/client.d.mts",
+        "default": "./dist/client.mjs"
+      },
+      "require": {
+        "types": "./dist/client.d.cts",
+        "default": "./dist/client.cjs"
+      }
+    },
+    "./server": {
+      "import": {
+        "types": "./dist/server.d.mts",
+        "default": "./dist/server.mjs"
+      },
+      "require": {
+        "types": "./dist/server.d.cts",
+        "default": "./dist/server.cjs"
+      }
+    },
+    "./request-handler": {
+      "import": {
+        "types": "./dist/request-handler.d.mts",
+        "default": "./dist/request-handler.mjs"
+      },
+      "require": {
+        "types": "./dist/request-handler.d.cts",
+        "default": "./dist/request-handler.cjs"
+      }
+    },
+    "./tracking-attributes": {
+      "import": {
+        "types": "./dist/tracking-attributes.d.mts",
+        "default": "./dist/tracking-attributes.mjs"
+      },
+      "require": {
+        "types": "./dist/tracking-attributes.d.cts",
+        "default": "./dist/tracking-attributes.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*",
+    "THIRD_PARTY_NOTICES.txt"
+  ],
+  "buildTools": {
+    "bundleSize": {
+      "gzipBudgets": {
+        "index.cjs": 400,
+        "index.mjs": 300,
+        "client.cjs": 1200,
+        "client.mjs": 1200,
+        "server.cjs": 4500,
+        "server.mjs": 4500,
+        "request-handler.cjs": 2500,
+        "request-handler.mjs": 2500,
+        "tracking-attributes.cjs": 1200,
+        "tracking-attributes.mjs": 1200
+      }
+    }
+  },
+  "scripts": {
+    "build": "pnpm clean && pnpm build:dist",
+    "build:ci": "pnpm build:dist",
+    "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
+    "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
+    "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo ./node_modules/.cache/rspack",
+    "size:check": "pnpm build:dist && build-tools bundle-size",
+    "size:report": "build-tools bundle-size --report-only",
+    "test:unit": "rstest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@contentful/optimization-node": "workspace:*",
+    "@contentful/optimization-react-web": "workspace:*",
+    "@contentful/optimization-web": "workspace:*",
+    "react": "19.2.5"
+  },
+  "devDependencies": {
+    "@rsbuild/plugin-react": "^1.4.2",
+    "@rsdoctor/cli": "catalog:",
+    "@rslib/core": "catalog:",
+    "@rstest/core": "catalog:",
+    "@rstest/coverage-istanbul": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "^19.2.14",
+    "build-tools": "workspace:*",
+    "contentful": "catalog:",
+    "happy-dom": "catalog:",
+    "next": "^16.2.6",
+    "rimraf": "catalog:",
+    "tslib": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "next": ">=13.0.0",
+    "react": ">=18.3.1",
+    "react-dom": ">=18.3.1"
+  }
+}

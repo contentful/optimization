@@ -190,7 +190,11 @@ function ProductCta() {
 
 Use `useOptimization()` when a component needs direct access to the SDK instance itself, and prefer
 `useOptimizationActions()` when a component wants destructurable action methods such as `track()`,
-`identify()`, `page()`, or `consent()`.
+`identify()`, `page()`, `reset()`, or `consent()`.
+
+Use dedicated state hooks such as `useConsentState()`, `useProfileState()`, and
+`useSelectedOptimizationsState()` when components need to render current SDK state. Prefer those
+hooks over subscribing to `sdk.states.*` directly from component effects.
 
 Use `useEntryResolver()` when a component needs manual entry resolution without the `OptimizedEntry`
 wrapper:
@@ -347,7 +351,7 @@ Router adapters emit `page()` events for supported client-side routers:
 | ------------------ | ----------------------------------------------------------- | -------------------------------------------------------------------- |
 | React Router       | `@contentful/optimization-react-web/router/react-router`    | Mount under a React Router data router and inside `OptimizationRoot` |
 | Next.js Pages      | `@contentful/optimization-react-web/router/next-pages`      | Mount once in `pages/_app.tsx` inside `OptimizationRoot`             |
-| Next.js App Router | `@contentful/optimization-react-web/router/next-app`        | Mount in a client provider used by `app/layout.tsx`                  |
+| Next.js App Router | `@contentful/optimization-react-web/router/next-app`        | Mount in `app/layout.tsx` inside `OptimizationRoot`                  |
 | TanStack Router    | `@contentful/optimization-react-web/router/tanstack-router` | Mount under the TanStack router tree and inside `OptimizationRoot`   |
 
 All adapters support static and dynamic page payload enrichment. See the

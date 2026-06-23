@@ -20,7 +20,7 @@ import {
 
 async function renderRouter(node: ReactNode): Promise<{
   rerender: (nextNode: ReactNode) => Promise<void>
-  unmount: () => Promise<void>
+  unmount: () => void
 }> {
   const container = document.createElement('div')
   document.body.appendChild(container)
@@ -37,9 +37,8 @@ async function renderRouter(node: ReactNode): Promise<{
 
   return {
     rerender: render,
-    async unmount(): Promise<void> {
-      await act(async () => {
-        await Promise.resolve()
+    unmount(): void {
+      act(() => {
         root.unmount()
       })
       container.remove()
@@ -144,7 +143,7 @@ describe('TanStackRouterAutoPageTracker', () => {
       },
     })
 
-    await rendered.unmount()
+    rendered.unmount()
   })
 
   it('suppresses duplicate consecutive route keys and StrictMode remounts', async () => {
@@ -166,7 +165,7 @@ describe('TanStackRouterAutoPageTracker', () => {
 
     expect(page).toHaveBeenCalledTimes(1)
 
-    await rendered.unmount()
+    rendered.unmount()
   })
 
   it('merges static and dynamic payloads with route-aware context', async () => {
@@ -247,6 +246,6 @@ describe('TanStackRouterAutoPageTracker', () => {
     })
     expect(captured.current.matches).toHaveLength(matches.length)
 
-    await rendered.unmount()
+    rendered.unmount()
   })
 })

@@ -33,8 +33,8 @@ This document applies to reference implementations for:
 - Runtime SDKs when a framework-facing example is the primary integration path.
 - Meta-framework patterns that compose runtime SDKs and framework SDKs without a dedicated adapter
   package.
-- Distinct rendering or routing modalities such as CSR, SSR-primary, SSR plus CSR takeover,
-  prerendering, edge rendering, middleware routing, and hybrid server/browser flows.
+- Distinct rendering or routing modalities such as CSR, SSR, SSR plus CSR takeover, prerendering,
+  edge rendering, middleware routing, and hybrid server/browser flows.
 - Multi-shell platform references where one SDK supports multiple UI surfaces, such as native UI
   frameworks.
 
@@ -97,7 +97,7 @@ throwaway demos.
 - **REFREQ-3 Meta-framework coverage** - Each supported meta-framework pattern must have a reference
   implementation when the pattern involves distinct server/browser, routing, rendering, caching, or
   hydration decisions.
-- **REFREQ-4 Modality separation** - CSR, SSR-primary, SSR plus CSR takeover, prerendering, edge,
+- **REFREQ-4 Modality separation** - CSR, SSR, SSR plus CSR takeover, prerendering, edge,
   middleware, and hybrid modalities must have separate reference implementations when combining them
   reduces clarity or testability.
 - **REFREQ-5 Multi-shell parity** - SDKs that support multiple UI shells must demonstrate each

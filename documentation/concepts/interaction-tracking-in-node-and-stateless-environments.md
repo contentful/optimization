@@ -345,9 +345,8 @@ remains server-owned.
 
 ### React meta-framework SSR with React Web SDK tracking
 
-The
-[Next.js SSR + React Web SDK reference implementation](../../implementations/react-web-sdk+node-sdk_nextjs-ssr/README.md)
-is one concrete example of the same tracking-only browser pattern. The guidance applies to any
+The [Next.js SDK SSR reference implementation](../../implementations/nextjs-sdk_ssr/README.md) is
+one concrete example of the same tracking-only browser pattern. The guidance applies to any
 React-based meta-framework that can render React code on the server and hydrate part of that tree in
 the browser.
 
@@ -503,4 +502,4 @@ Use this checklist when implementing interaction tracking for Node-rendered HTML
 - [Interaction tracking in Web SDKs](./interaction-tracking-in-web-sdks.md)
 - [Profile synchronization between client and server](./profile-synchronization-between-client-and-server.md)
 - [Node SSR + Web SDK reference implementation](../../implementations/node-sdk+web-sdk/README.md)
-- [Next.js SSR + React Web SDK reference implementation](../../implementations/react-web-sdk+node-sdk_nextjs-ssr/README.md)
+- [Next.js SDK SSR reference implementation](../../implementations/nextjs-sdk_ssr/README.md)

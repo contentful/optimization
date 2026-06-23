@@ -1,3 +1,5 @@
+'use client'
+
 import type ContentfulOptimization from '@contentful/optimization-web'
 
 export type {
@@ -6,6 +8,7 @@ export type {
   AutoPagePayloadOptions,
   AutoPageRouteState,
 } from './auto-page/types'
+export type { InitialAutoPageEvent } from './auto-page/useAutoPageEmitter'
 export { LiveUpdatesContext } from './context/LiveUpdatesContext'
 export type { LiveUpdatesContextValue } from './context/LiveUpdatesContext'
 export { OptimizationContext } from './context/OptimizationContext'
@@ -18,6 +21,13 @@ export type { UseMergeTagResolverResult } from './hooks/useMergeTagResolver'
 export { useOptimization, useOptimizationContext } from './hooks/useOptimization'
 export { useOptimizationActions } from './hooks/useOptimizationActions'
 export type { UseOptimizationActionsResult } from './hooks/useOptimizationActions'
+export {
+  useCanOptimizeState,
+  useConsentState,
+  useEventStreamState,
+  useProfileState,
+  useSelectedOptimizationsState,
+} from './hooks/useOptimizationState'
 export { OptimizedEntry } from './optimized-entry/OptimizedEntry'
 export type {
   OptimizedEntryLoadingFallback,

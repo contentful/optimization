@@ -4,6 +4,7 @@ export {
   createOptimizationRootSdkBinding,
   disposeOptimizationRootSdkBinding,
   resolveOptimizedEntryNestingState,
+  resolveOptimizedEntryTrackingAttributes,
   resolveTrackEntryInteractionOptions,
   type CreateInjectedOptimizationRootSdkBindingOptions,
   type CreateOwnedOptimizationRootSdkBindingOptions,
@@ -12,11 +13,14 @@ export {
   type OptimizationRootSdkBinding,
   type OptimizationRootSdkConfig,
   type OptimizedEntryControllerOptions,
+  type OptimizedEntryHostAttributeValue,
   type OptimizedEntryLoadingTargetDisplay,
   type OptimizedEntryNestingState,
   type OptimizedEntrySdk,
   type OptimizedEntrySnapshot,
   type OptimizedEntrySnapshotListener,
+  type OptimizedEntryTrackingAttributeOptions,
+  type OptimizedEntryTrackingAttributes,
   type TrackEntryInteractionOptions,
 } from '../presentation'
 export {

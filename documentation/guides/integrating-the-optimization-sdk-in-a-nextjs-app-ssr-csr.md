@@ -6,7 +6,7 @@ identify, consent, and profile reset re-resolve entries immediately without a pa
 
 If instant post-identify reactivity is not required and you prefer the simpler mental model where
 the server is always the sole source of truth, use the
-[SSR-primary guide](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md) instead.
+[SSR guide](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md) instead.
 
 <details>
   <summary>Table of Contents</summary>
@@ -16,19 +16,17 @@ the server is always the sole source of truth, use the
 - [The integration flow](#the-integration-flow)
 - [1. Install the packages](#1-install-the-packages)
 - [2. Create the Node SDK singleton and a cached page helper](#2-create-the-node-sdk-singleton-and-a-cached-page-helper)
-- [3. Set up the anonymous ID cookie in middleware](#3-set-up-the-anonymous-id-cookie-in-middleware)
+- [3. Set up the anonymous ID cookie in proxy](#3-set-up-the-anonymous-id-cookie-in-proxy)
 - [4. Resolve entries on the server for first paint](#4-resolve-entries-on-the-server-for-first-paint)
   - [Add data attributes for client-side tracking](#add-data-attributes-for-client-side-tracking)
 - [5. Seed the React Web SDK with server-resolved state](#5-seed-the-react-web-sdk-with-server-resolved-state)
   - [Pass defaults from the server layout](#pass-defaults-from-the-server-layout)
 - [6. Re-resolve entries client-side after hydration](#6-re-resolve-entries-client-side-after-hydration)
-  - [Subscribing to selectedOptimizations](#subscribing-to-selectedoptimizations)
-  - [Using OptimizedEntry for fully reactive entries](#using-optimizedentry-for-fully-reactive-entries)
 - [7. Handle consent and identify from client components](#7-handle-consent-and-identify-from-client-components)
 - [Forward optimization context to third-party analytics](#forward-optimization-context-to-third-party-analytics)
 - [Understand when personalization updates](#understand-when-personalization-updates)
 - [Known gap: redundant Experience API call on hydration](#known-gap-redundant-experience-api-call-on-hydration)
-- [Choosing between SSR-primary and hybrid patterns per route](#choosing-between-ssr-primary-and-hybrid-patterns-per-route)
+- [Choosing between SSR and hybrid patterns per route](#choosing-between-ssr-and-hybrid-patterns-per-route)
 - [The server and client SDK boundary](#the-server-and-client-sdk-boundary)
 - [Reference implementations to compare against](#reference-implementations-to-compare-against)
 
@@ -37,11 +35,11 @@ the server is always the sole source of truth, use the
 
 ## Scope and capabilities
 
-The hybrid SSR + CSR takeover pattern uses the same two packages as the SSR-primary pattern, but
-gives the React Web SDK a more active role after hydration:
+The hybrid SSR + CSR takeover pattern uses the same two packages as the SSR pattern, but gives the
+React Web SDK a more active role after hydration:
 
 - `@contentful/optimization-node` — stateless, server-side. Resolves entry variants before the HTML
-  response leaves the server. Also used to seed initial optimization state into the client provider.
+  response leaves the server. Also used to seed initial optimization state into `OptimizationRoot`.
 - `@contentful/optimization-react-web` — stateful, browser-side. After hydration, takes over entry
   resolution so that profile changes (consent, identify, reset) immediately re-resolve which variant
   to render without a server roundtrip.
@@ -57,7 +55,7 @@ What this setup gives you:
   with Node SDK resolution. Interactive pages (dashboard, account settings) can be Client Components
   with React Web SDK resolution.
 
-What it does not give you (compared to the SSR-primary pattern):
+What it does not give you (compared to the SSR pattern):
 
 - Simplified mental model. There are now two resolution paths — the server path for first paint and
   the client path for subsequent interactions. Bugs that appear only after hydration can be harder
@@ -70,8 +68,8 @@ What it does not give you (compared to the SSR-primary pattern):
 
 | Concern                    | First paint (server)                              | After hydration (client)                         |
 | -------------------------- | ------------------------------------------------- | ------------------------------------------------ |
-| Profile resolution         | Middleware + Server Component (Node SDK)          | React Web SDK (automatic on init)                |
-| Entry resolution           | `sdk.resolveOptimizedEntry()` in Server Component | `resolveEntry()` via `useEntryResolver()` hook   |
+| Profile resolution         | Proxy + Server Component (Node SDK)               | React Web SDK (automatic on init)                |
+| Entry resolution           | `sdk.resolveOptimizedEntry()` in Server Component | `OptimizedEntry` with `liveUpdates={true}`       |
 | Entry fetching             | Server-side from Contentful                       | Client-side from Contentful (for new routes)     |
 | Page tracking              | N/A                                               | `NextAppAutoPageTracker` fires on route change   |
 | Interaction tracking       | N/A (data attributes rendered server-side)        | `trackEntryInteraction` observes elements        |
@@ -79,21 +77,21 @@ What it does not give you (compared to the SSR-primary pattern):
 
 In practice, the integration follows this sequence:
 
-1. Create one Node SDK instance shared across Server Components and middleware.
-2. Use Next.js middleware to maintain the anonymous ID cookie when application policy permits
-   profile continuity.
+1. Create one Node SDK instance shared across Server Components and proxy.
+2. Use Next.js proxy to maintain the anonymous ID cookie when application policy permits profile
+   continuity.
 3. In the server layout, bind request-scoped consent with `sdk.forRequest()`; the examples below use
-   accepted consent for a default-on policy and pass the result as `defaults` into the client
-   provider.
+   accepted consent for a default-on policy and pass the result as `defaults` into
+   `OptimizationRoot`.
 4. In Server Component pages, use `sdk.resolveOptimizedEntry()` for first-paint content.
-5. In Client Component pages or components, use `resolveEntry()` from `useEntryResolver()` for
+5. In Client Component pages or components, use `OptimizedEntry` with `liveUpdates={true}` for
    reactive content.
-6. Load the React Web SDK with `next/dynamic` and `ssr: false`.
+6. Import the React Web SDK's Next-compatible client entrypoints directly in your layout.
 7. Use Client Components for consent, identify, and any interactive SDK controls.
 
 The hybrid reference implementation in this repository shows that pattern in a working application:
 
-- [`implementations/react-web-sdk+node-sdk_nextjs-ssr-csr`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr-csr/README.md)
+- [`implementations/nextjs-sdk_hybrid`](../../implementations/nextjs-sdk_hybrid/README.md)
 
 ## 1. Install the packages
 
@@ -166,17 +164,17 @@ Both the layout and the page can call `getOptimizationData()` and only one defau
 to the Experience API is made per server request. If application policy depends on user choice, read
 that state before the SDK call and return `undefined` when server personalization is not permitted.
 
-## 3. Set up the anonymous ID cookie in middleware
+## 3. Set up the anonymous ID cookie in proxy
 
-Middleware runs before every request and keeps the anonymous ID cookie aligned with the default-on
-server `requestOptimization.page()` calls:
+Proxy runs before every request and keeps the anonymous ID cookie aligned with the default-on server
+`requestOptimization.page()` calls:
 
 ```ts
 import { APP_LOCALE, sdk } from '@/lib/optimization-server'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import { type NextRequest, NextResponse } from 'next/server'
 
-export async function middleware(request: NextRequest): Promise<NextResponse> {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const response = NextResponse.next()
 
   const anonymousId = request.cookies.get(ANONYMOUS_ID_COOKIE)?.value
@@ -225,7 +223,7 @@ choice, keep that consent state in a CMP, session, account preference, or cookie
 
 ## 4. Resolve entries on the server for first paint
 
-In Server Component pages, resolve entries the same way as the SSR-primary pattern:
+In Server Component pages, resolve entries the same way as the SSR pattern:
 
 ```tsx
 // app/page.tsx
@@ -289,89 +287,23 @@ identifiers.
 
 ## 5. Seed the React Web SDK with server-resolved state
 
-The key difference from the SSR-primary pattern is passing `defaults` to `OptimizationRoot`. This
-seeds the client SDK with the profile and `selectedOptimizations` the server already resolved, which
-allows `resolveEntry()` calls in Client Components to return as soon as the client provider reaches
-readiness after hydration. In normal browser rendering, the React Web provider uses layout-effect
-initialization so ready children can mount before the first visible client paint.
+The key difference from the SSR pattern is passing `defaults` to `OptimizationRoot`. This seeds the
+client SDK with the profile and `selectedOptimizations` the server already resolved, so React SDK
+entry primitives such as `OptimizedEntry` and `useOptimizedEntry()` can render from seeded state as
+soon as the SDK reaches readiness after hydration. In normal browser rendering, the React Web
+provider uses layout-effect initialization so ready children can mount before the first visible
+client paint.
 
-Create the client wrapper component:
-
-```tsx
-// components/ClientProviderWrapper.tsx
-'use client'
-
-import dynamic from 'next/dynamic'
-import { Suspense, type ReactNode } from 'react'
-import type {
-  Profile,
-  SelectedOptimizationArray,
-  ChangeArray,
-} from '@contentful/optimization-react-web/api-schemas'
-
-const OptimizationRoot = dynamic(
-  () =>
-    import('@contentful/optimization-react-web').then((mod) => ({
-      default: mod.OptimizationRoot,
-    })),
-  { ssr: false },
-)
-
-const NextAppAutoPageTracker = dynamic(
-  () =>
-    import('@contentful/optimization-react-web/router/next-app').then((mod) => ({
-      default: mod.NextAppAutoPageTracker,
-    })),
-  { ssr: false },
-)
-
-interface ClientProviderWrapperProps {
-  children: ReactNode
-  appLocale: string
-  defaults?: {
-    consent?: boolean
-    profile?: Profile
-    selectedOptimizations?: SelectedOptimizationArray
-    changes?: ChangeArray
-  }
-}
-
-export function ClientProviderWrapper({
-  children,
-  appLocale,
-  defaults,
-}: ClientProviderWrapperProps) {
-  return (
-    <OptimizationRoot
-      clientId={process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID ?? ''}
-      environment={process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
-      locale={appLocale}
-      trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
-      logLevel="error"
-      defaults={defaults}
-    >
-      <Suspense>
-        <NextAppAutoPageTracker />
-      </Suspense>
-      {children}
-    </OptimizationRoot>
-  )
-}
-```
-
-If local diagnostics need SDK state subscriptions that are attached as soon as SDK state exists and
-before the first automatically emitted `page()` event, use `OptimizationRoot`'s `onStatesReady` prop
-to subscribe to `states.eventStream` or `states.blockedEventStream`.
-
-### Pass defaults from the server layout
-
-The layout is a Server Component and can call `getOptimizationData()` to fetch the optimization
-state for the current request. Pass that data to `ClientProviderWrapper` as `defaults`:
+Mount `OptimizationRoot` and `NextAppAutoPageTracker` directly in the App Router layout. The React
+SDK package marks these entrypoints as client-compatible, so no local wrapper or dynamic import is
+needed:
 
 ```tsx
 // app/layout.tsx
-import { ClientProviderWrapper } from '@/components/ClientProviderWrapper'
 import { APP_LOCALE, getOptimizationData } from '@/lib/optimization-server'
+import { OptimizationRoot } from '@contentful/optimization-react-web'
+import { NextAppAutoPageTracker } from '@contentful/optimization-react-web/router/next-app'
+import { Suspense, type ReactNode } from 'react'
 
 function getHtmlLang(locale: string | undefined): string {
   return locale?.split('-')[0] ?? 'en'
@@ -394,14 +326,29 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={htmlLang}>
       <body>
-        <ClientProviderWrapper appLocale={APP_LOCALE} defaults={defaults}>
+        <OptimizationRoot
+          clientId={process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID ?? ''}
+          environment={process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
+          locale={APP_LOCALE}
+          trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
+          logLevel="error"
+          defaults={defaults}
+        >
+          <Suspense>
+            <NextAppAutoPageTracker />
+          </Suspense>
           {children}
-        </ClientProviderWrapper>
+        </OptimizationRoot>
       </body>
     </html>
   )
 }
 ```
+
+Wrap `NextAppAutoPageTracker` in `<Suspense>` because it uses App Router navigation hooks. If local
+diagnostics need SDK state subscriptions that are attached as soon as SDK state exists and before
+the first automatically emitted `page()` event, use `OptimizationRoot`'s `onStatesReady` prop to
+subscribe to `states.eventStream` or `states.blockedEventStream`.
 
 Because `getOptimizationData()` is wrapped with `cache()`, calling it in the layout and in a page
 Server Component on the same request makes only one API call to the Experience API for the
@@ -409,16 +356,15 @@ default-on accepted request policy.
 
 ## 6. Re-resolve entries client-side after hydration
 
-Client Components that need to re-resolve entries when the profile changes subscribe to
-`selectedOptimizations` and call `resolveEntry()` directly:
+Client Components that need to re-resolve entries when the profile changes should render
+`OptimizedEntry` with `liveUpdates={true}`. Use the server-resolved entry as `loadingFallback` so
+the hydrated output stays stable while the client SDK reaches readiness:
 
 ```tsx
 // components/HybridEntry.tsx
 'use client'
 
-import { useEntryResolver, useOptimizationContext } from '@contentful/optimization-react-web'
-import type { SelectedOptimizationArray } from '@contentful/optimization-react-web/api-schemas'
-import { useEffect, useState } from 'react'
+import { OptimizedEntry } from '@contentful/optimization-react-web'
 
 function HybridEntry({
   baselineEntry,
@@ -427,71 +373,26 @@ function HybridEntry({
   baselineEntry: ContentEntry
   serverResolvedEntry: ContentEntry
 }) {
-  const { sdk, isReady } = useOptimizationContext()
-  const { resolveEntry } = useEntryResolver()
-  const [selectedOptimizations, setSelectedOptimizations] = useState<
-    SelectedOptimizationArray | undefined
-  >(undefined)
-
-  useEffect(() => {
-    if (!sdk || !isReady) return
-
-    const subscription = sdk.states.selectedOptimizations.subscribe(setSelectedOptimizations)
-
-    return () => subscription.unsubscribe()
-  }, [sdk, isReady])
-
-  const clientReady = isReady && selectedOptimizations !== undefined
-  const resolvedEntry = clientReady
-    ? resolveEntry(baselineEntry, selectedOptimizations)
-    : serverResolvedEntry
-
-  return (
+  const renderEntry = (resolvedEntry: ContentEntry) => (
     <div data-ctfl-entry-id={resolvedEntry.sys.id} data-ctfl-baseline-id={baselineEntry.sys.id}>
       <p>{resolvedEntry.fields.title}</p>
     </div>
   )
-}
-```
 
-The component uses `serverResolvedEntry` as the initial render value. This ensures the content
-matches what the server rendered while the Web SDK initializes. Once `isReady` is `true` and
-`selectedOptimizations` is populated (either from `defaults` or from the Web SDK's first API call),
-the component switches to `resolveEntry()` for all subsequent resolution.
-
-After this point, calling `sdk.identify()`, `sdk.consent()`, or `sdk.reset()` updates
-`selectedOptimizations` in the SDK state, which triggers the `subscribe` callback, which updates
-`selectedOptimizations` in component state, which causes `resolveEntry()` to run again with the
-updated data. The result is immediate content re-resolution without a server roundtrip.
-
-### Subscribing to selectedOptimizations
-
-The subscription in the example above is the low-level imperative approach. It gives you full
-control over when to switch from server to client resolution, but requires more component state
-management.
-
-### Using OptimizedEntry for fully reactive entries
-
-For pages or components where all entries should be client-side reactive (for example, an
-interactive dashboard that does not need the SSR-first-paint guarantee), use `OptimizedEntry` with
-`liveUpdates` enabled instead:
-
-```tsx
-'use client'
-
-import { OptimizedEntry } from '@contentful/optimization-react-web'
-
-function ReactiveSection({ baselineEntry }) {
   return (
-    <OptimizedEntry baselineEntry={baselineEntry} liveUpdates={true}>
-      {(resolved) => <Card entry={resolved} />}
+    <OptimizedEntry
+      baselineEntry={baselineEntry}
+      liveUpdates={true}
+      loadingFallback={renderEntry(serverResolvedEntry)}
+    >
+      {(resolvedEntry) => renderEntry(resolvedEntry as ContentEntry)}
     </OptimizedEntry>
   )
 }
 ```
 
 `OptimizedEntry` with `liveUpdates={true}` continuously re-resolves when `selectedOptimizations`
-changes. This is the right choice for sections of the page that do not need the SSR handoff logic.
+changes. The implementation does not subscribe to SDK state or call resolver helpers directly.
 
 ## 7. Handle consent and identify from client components
 
@@ -507,8 +408,12 @@ and browser SDK consent aligned from a Client Component that reads SDK state and
 // components/InteractiveControls.tsx
 'use client'
 
-import { useOptimizationContext } from '@contentful/optimization-react-web'
-import { useEffect, useState } from 'react'
+import {
+  useConsentState,
+  useOptimizationActions,
+  useProfileState,
+} from '@contentful/optimization-react-web'
+import { useEffect, useMemo } from 'react'
 
 const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
 
@@ -518,41 +423,42 @@ function setAppConsentCookie(consented: boolean): void {
 }
 
 export function InteractiveControls() {
-  const { sdk, isReady } = useOptimizationContext()
-  const [consent, setConsent] = useState<boolean | undefined>(undefined)
+  const { consent: setConsent, identify, reset } = useOptimizationActions()
+  const consent = useConsentState()
+  const profile = useProfileState()
 
   useEffect(() => {
-    if (!sdk || !isReady) return
+    if (typeof consent === 'boolean') setAppConsentCookie(consent)
+  }, [consent])
 
-    const sub = sdk.states.consent.subscribe((value) => {
-      setConsent(value)
-      if (typeof value === 'boolean') setAppConsentCookie(value)
-    })
-
-    return () => sub.unsubscribe()
-  }, [sdk, isReady])
-
-  if (!sdk || !isReady) return null
+  const isIdentified = useMemo(
+    () => profile !== undefined && Boolean(profile.traits.identified),
+    [profile],
+  )
 
   return (
     <div>
       <button
         onClick={() => {
-          sdk.consent(consent !== true)
+          setConsent(consent !== true)
         }}
       >
         {consent === true ? 'Reject consent' : 'Accept consent'}
       </button>
-      <button onClick={() => sdk.identify({ userId: 'user-123' })}>Identify</button>
-      <button onClick={() => sdk.reset()}>Reset profile</button>
+      {!isIdentified ? (
+        <button onClick={() => void identify({ userId: 'user-123' })}>Identify</button>
+      ) : (
+        <button onClick={() => reset()}>Reset profile</button>
+      )}
     </div>
   )
 }
 ```
 
-In this pattern, unlike the SSR-primary pattern, calling `sdk.identify()` or `sdk.consent()`
-immediately updates `selectedOptimizations` in the client SDK, which causes all Client Components
-subscribed to that state to re-render with the new variant. No page refresh is required.
+In this pattern, unlike the SSR pattern, calling `identify()`, `consent()`, or `reset()` from
+`useOptimizationActions()` immediately updates `selectedOptimizations` in the client SDK. React SDK
+entry primitives using live updates then re-render with the new variant. No page refresh is
+required.
 
 The cookie write keeps the next server request aligned with the browser-side `sdk.consent()` state.
 In production, replace this with the same CMP or account-preference state that drives your browser
@@ -567,7 +473,7 @@ application decides which approved Contentful context, if any, should also be fo
 | Reporting need                             | Hybrid SSR + CSR handoff                                                             |
 | ------------------------------------------ | ------------------------------------------------------------------------------------ |
 | Server-resolved first-paint attribution    | Use request-local `OptimizationData` before passing `defaults` to the client.        |
-| Hydrated page, entry, and reactive updates | Register one React Web `states.eventStream` subscription from `onStatesReady`.       |
+| Hydrated page, entry, and reactive updates | Register one React Web `states.eventStream` subscription with `onStatesReady`.       |
 | Business event attribution                 | Add Contentful fields in the server action or Client Component handler that owns it. |
 | Consent or duplicate-delivery verification | Use `states.blockedEventStream`, `messageId` dedupe, and destination debuggers.      |
 
@@ -576,8 +482,8 @@ request-local SDK data; hydrated client activity uses a live React Web subscript
 queue. If a tag or analytics library loads after hydration, buffer forwarded payloads in application
 code with an explicit size, TTL, and drop policy.
 
-For client-side activity after hydration, add the subscription to the client provider wrapper that
-already seeds `OptimizationRoot` with server-resolved defaults:
+For client-side activity after hydration, attach the subscription through the same
+`OptimizationRoot` that receives server-resolved defaults:
 
 ```tsx
 <OptimizationRoot
@@ -632,9 +538,9 @@ identity, dedupe, and governance guidance.
 fetch `selectedOptimizations`. This is the same data the server already resolved and passed as
 `defaults`.
 
-The `defaults` prop seeds the initial state so that `resolveEntry()` works immediately on first
-render. However, the Web SDK still makes its own API call in the background to establish a live,
-reactive state for subsequent profile changes.
+The `defaults` prop seeds the initial state so that `OptimizedEntry` can render against
+server-resolved optimization state immediately. However, the Web SDK still makes its own API call in
+the background to establish a live, reactive state for subsequent profile changes.
 
 **Impact:** There is a brief window after hydration where both server-resolved defaults and the
 client's own API call may be in flight simultaneously. The `defaults` prop ensures content appears
@@ -646,7 +552,7 @@ fully prevents any visible content change. In most cases, because the server and
 against the same profile (via the shared cookie), the API call returns the same
 `selectedOptimizations` and the effective displayed content is identical.
 
-## Choosing between SSR-primary and hybrid patterns per route
+## Choosing between SSR and hybrid patterns per route
 
 The App Router lets you choose the strategy per-route. You can use the Node SDK for Server Component
 routes and the React Web SDK for Client Component routes within the same application:
@@ -655,36 +561,36 @@ routes and the React Web SDK for Client Component routes within the same applica
   `sdk.resolveOptimizedEntry()` for first-paint content. Best for routes where personalization
   decisions are based on stable profile traits, not real-time interactions.
 - **Client Component routes (React Web SDK):** interactive dashboards, account pages, flows where
-  `identify` or consent changes must be reflected immediately. Use `resolveEntry()` or
-  `OptimizedEntry` with `liveUpdates={true}`.
+  `identify` or consent changes must be reflected immediately. Use `OptimizedEntry` with
+  `liveUpdates={true}`.
 
-Mixed-strategy applications are valid and can use a single `ClientProviderWrapper` in the root
-layout to provide the React Web SDK to all client-component subtrees.
+Mixed-strategy applications are valid and can use a single `OptimizationRoot` in the root layout to
+provide the React Web SDK to all client-component subtrees.
 
 ## The server and client SDK boundary
 
-As with the SSR-primary pattern, keep this boundary strict:
+As with the SSR pattern, keep this boundary strict:
 
 - Server Components import only from `@contentful/optimization-node`.
-- Client Components (`'use client'`) import only from `@contentful/optimization-react-web`.
+- Server Component layouts may render exported React SDK Client Components such as
+  `OptimizationRoot` and `NextAppAutoPageTracker` from the SDK's Next-compatible client entrypoints.
+- Application components that call React SDK hooks, actions, or entry primitives must be Client
+  Components and begin with `'use client'`.
 
-Any file that imports from `@contentful/optimization-react-web` must begin with `'use client'`, or
-it must only be imported by files that do. Importing the React Web SDK in a Server Component causes
-runtime errors because the SDK accesses browser globals at import time.
+Do not call React SDK hooks or import browser-only Web SDK support modules from Server Components.
+The React SDK owns the provider, state hooks, and entry re-resolution; Server Components should keep
+using the Node SDK for request-scoped first-paint resolution.
 
 ## Reference implementations to compare against
 
-- [`implementations/react-web-sdk+node-sdk_nextjs-ssr-csr`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr-csr/README.md):
-  working Next.js App Router application using the hybrid SSR + CSR takeover pattern.
-  - [`middleware.ts`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr-csr/middleware.ts):
-    Edge Runtime cookie lifecycle
-  - [`lib/optimization-server.ts`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr-csr/lib/optimization-server.ts):
+- [`implementations/nextjs-sdk_hybrid`](../../implementations/nextjs-sdk_hybrid/README.md): working
+  Next.js App Router application using the hybrid SSR + CSR takeover pattern.
+  - [`proxy.ts`](../../implementations/nextjs-sdk_hybrid/proxy.ts): Edge Runtime cookie lifecycle
+  - [`lib/optimization-server.ts`](../../implementations/nextjs-sdk_hybrid/lib/optimization-server.ts):
     Node SDK singleton with `cache()`-wrapped `getOptimizationData()`
-  - [`app/layout.tsx`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr-csr/app/layout.tsx):
-    Server Component layout that fetches defaults and passes them to the client provider
-  - [`app/page.tsx`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr-csr/app/page.tsx):
-    Server Component page resolving entries for first paint
-  - [`components/ClientProviderWrapper.tsx`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr-csr/components/ClientProviderWrapper.tsx):
-    dynamic React Web SDK provider with `defaults` prop
-  - [`components/HybridEntryList.tsx`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr-csr/components/HybridEntryList.tsx):
-    Client Component switching between server-resolved and client-resolved entries
+  - [`app/layout.tsx`](../../implementations/nextjs-sdk_hybrid/app/layout.tsx): Server Component
+    layout that fetches defaults and renders `OptimizationRoot` directly
+  - [`app/page.tsx`](../../implementations/nextjs-sdk_hybrid/app/page.tsx): Server Component page
+    resolving entries for first paint
+  - [`components/HybridEntryList.tsx`](../../implementations/nextjs-sdk_hybrid/components/HybridEntryList.tsx):
+    Client Component rendering `OptimizedEntry` with a server-resolved fallback and live updates

@@ -139,6 +139,34 @@ describe('NextPagesAutoPageTracker', () => {
     await rendered.unmount()
   })
 
+  it('can skip only the initial ready render emission', async () => {
+    const page = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const sdk = createOptimizationSdk({ page })
+    const rendered = await renderTracker(<NextPagesAutoPageTracker initialPageEvent="skip" />, sdk)
+
+    expect(page).not.toHaveBeenCalled()
+
+    routerState.asPath = '/products'
+    routerState.pathname = '/products'
+
+    await rendered.rerender(<NextPagesAutoPageTracker initialPageEvent="skip" />)
+
+    expect(page).toHaveBeenCalledTimes(1)
+    expect(page).toHaveBeenCalledWith({
+      properties: {
+        path: '/products',
+        query: {},
+        search: '',
+        url: `${window.location.origin}/products`,
+      },
+    })
+
+    await rendered.unmount()
+  })
+
   it('waits until the router is ready', async () => {
     const page = rs.fn(async () => {
       await Promise.resolve()
