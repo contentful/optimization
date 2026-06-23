@@ -34,6 +34,7 @@
     "react-router-dom": "7.14.1"
   },
   "devDependencies": {
+    "e2e-web": "file:../../lib/e2e-web",
     "@rsbuild/core": "1.7.3",
     "@rsbuild/plugin-react": "1.4.5",
     "@rsdoctor/cli": "1.5.2",

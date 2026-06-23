@@ -2,7 +2,7 @@
   <div class="page-header">
     <a data-testid="link-back-home" routerLink="/">Back to Home</a>
     <h1>Page Two</h1>
-    <p class="page-header__sub">Multi-route demo — SDK state persists across navigation.</p>
+    <p class="page-header__subtitle">Multi-route demo — SDK state persists across navigation.</p>
   </div>
 
   <app-control-panel [onTrackConversion]="trackConversion" />
@@ -10,7 +10,7 @@
   @if (entries.isLoading()) {
   <p class="page-loading" data-testid="page-two-loading">Loading entries…</p>
   } @else {
-  <div class="sections-row sections-row--two">
+  <div class="sections-grid sections-grid--split">
     @if (autoEntry(); as entry) {
     <section class="page-section">
       <header class="page-section__header">

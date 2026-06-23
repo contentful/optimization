@@ -35,7 +35,6 @@ function mergeTagKey(resolved: boolean | undefined): MergeTagMode | undefined {
     [attr.data-tooltip]="title()"
     >{{ label() }}</span
   >`,
-  styleUrl: './index.scss',
 })
 export class Badge {
   readonly label = input.required<string>()
@@ -108,7 +107,6 @@ function isContentfulEntry(value: unknown): value is ContentfulEntry {
   selector: 'app-entry-card',
   imports: [NgTemplateOutlet, Badge, forwardRef(() => EntryCard)],
   templateUrl: './index.html',
-  styleUrl: './index.scss',
 })
 export class EntryCard {
   readonly entry = input.required<ContentfulEntry>()

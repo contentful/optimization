@@ -1,50 +1,24 @@
-import type { Profile } from '@contentful/optimization-web/api-schemas'
+import { PAGES } from 'e2e-web'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
-import {
-  ENTRY_IDS,
-  LIVE_UPDATES_ENTRY_ID,
-  PAGE_TWO_AUTO_ENTRY_ID,
-  PAGE_TWO_MANUAL_ENTRY_ID,
-} from './config/entries'
-import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { useOptimization } from './optimization/hooks/useOptimization'
-import { useOptimizationState } from './optimization/hooks/useOptimizationState'
 import { HomePage } from './pages/HomePage'
 import { PageTwoPage } from './pages/PageTwoPage'
 import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
 import type { ContentfulEntry } from './types/contentful'
 
 interface AppProps {
-  globalLiveUpdates: boolean
   onToggleGlobalLiveUpdates: () => void
-}
-
-function isIdentifiedProfile(profile: Profile | undefined): boolean {
-  if (profile === undefined) {
-    return false
-  }
-
-  const { traits } = profile
-  return Boolean(traits.identified)
-}
-
-function hasEntries(entries: ContentfulEntry[]): boolean {
-  return entries.length > 0
 }
 
 function toEntryMap(entries: ContentfulEntry[]): Map<string, ContentfulEntry> {
   return new Map(entries.map((entry) => [entry.sys.id, entry]))
 }
 
-export default function App({
-  globalLiveUpdates,
-  onToggleGlobalLiveUpdates,
-}: AppProps): JSX.Element {
+export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Element {
   const location = useLocation()
   const { sdk, error } = useOptimization()
-  const { consent, profile, selectedOptimizations } = useOptimizationState(sdk?.states)
 
   const [entries, setEntries] = useState<ContentfulEntry[]>([])
   const [entriesError, setEntriesError] = useState<string | null>(null)
@@ -62,25 +36,13 @@ export default function App({
       return
     }
 
-    const subscription = sdk.states.flag('boolean').subscribe(() => undefined)
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [sdk])
-
-  useEffect(() => {
-    if (sdk === undefined) {
-      return
-    }
-
     const configError = getContentfulConfigError()
     if (configError) {
       setEntriesError(configError)
       return
     }
 
-    void fetchEntries(ENTRY_IDS)
+    void fetchEntries(PAGES.home.ids)
       .then((nextEntries) => {
         setEntries(nextEntries)
         setEntriesError(
@@ -96,15 +58,10 @@ export default function App({
       })
   }, [sdk])
 
-  const isIdentified = useMemo(() => isIdentifiedProfile(profile), [profile])
   const entriesById = useMemo(() => toEntryMap(entries), [entries])
-  const selectedOptimizationCount = useMemo(
-    () => (Array.isArray(selectedOptimizations) ? selectedOptimizations.length : 0),
-    [selectedOptimizations],
-  )
-  const liveUpdatesBaselineEntry = entriesById.get(LIVE_UPDATES_ENTRY_ID)
+  const liveUpdatesBaselineEntry = entriesById.get(PAGES.home.liveUpdates)
   const hasPageTwoEntries =
-    entriesById.has(PAGE_TWO_AUTO_ENTRY_ID) && entriesById.has(PAGE_TWO_MANUAL_ENTRY_ID)
+    entriesById.has(PAGES.pageTwo.auto) && entriesById.has(PAGES.pageTwo.manual)
 
   if (error) {
     return <p>{error.message}</p>
@@ -118,7 +75,7 @@ export default function App({
     return <p>{entriesError}</p>
   }
 
-  if (!hasEntries(entries)) {
+  if (entries.length === 0) {
     return <p>Loading entries...</p>
   }
 
@@ -130,79 +87,43 @@ export default function App({
     return <p>Page Two demo entries are missing from fetched entries.</p>
   }
 
-  const handleIdentify = (): void => {
-    void sdk.identify({ userId: 'charles', traits: { identified: true } })
-  }
-
-  const handleReset = (): void => {
-    sdk.reset()
-  }
-
-  const handleConsent = (accepted: boolean): void => {
-    sdk.consent(accepted)
-  }
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <nav
-        style={{
-          display: 'flex',
-          gap: 16,
-          padding: '12px 24px',
-          borderBottom: '1px solid #e5e7eb',
-          flexShrink: 0,
-        }}
-      >
-        <Link data-testid="link-home" to={HOME_PATH}>
+    <div className="app-shell">
+      <nav className="app-nav">
+        <Link data-testid="link-home" to={PAGES.home.path}>
           Home
         </Link>
-        <Link data-testid="link-page-two" to={PAGE_TWO_PATH}>
+        <Link data-testid="link-page-two" to={PAGES.pageTwo.path}>
           Page Two
         </Link>
       </nav>
 
-      <div
-        style={{
-          flex: 1,
-          display: 'grid',
-          gridTemplateColumns: '280px 1fr',
-          minHeight: 0,
-          overflow: 'hidden',
-        }}
-      >
-        <aside style={{ borderRight: '1px solid #e5e7eb', overflowY: 'auto' }}>
+      <div className="app-body">
+        <aside className="app-sidebar">
           <AnalyticsEventDisplay />
         </aside>
-        <main style={{ padding: 24, overflowY: 'auto' }}>
+        <main className="app-main">
           <Routes>
             <Route
-              path={HOME_PATH}
+              path={PAGES.home.path}
               element={
                 <HomePage
-                  consent={consent}
                   entriesById={entriesById}
-                  globalLiveUpdates={globalLiveUpdates}
-                  isIdentified={isIdentified}
                   liveUpdatesBaselineEntry={liveUpdatesBaselineEntry}
-                  selectedOptimizationCount={selectedOptimizationCount}
-                  onConsentChange={handleConsent}
-                  onIdentify={handleIdentify}
-                  onReset={handleReset}
                   onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
                 />
               }
             />
             <Route
-              path={PAGE_TWO_PATH}
+              path={PAGES.pageTwo.path}
               element={
                 <PageTwoPage
-                  consent={consent}
                   entriesById={entriesById}
-                  isIdentified={isIdentified}
+                  onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
                 />
               }
             />
-            <Route path="*" element={<Navigate replace to={HOME_PATH} />} />
+            <Route path="*" element={<Navigate replace to={PAGES.home.path} />} />
           </Routes>
         </main>
       </div>

@@ -4,6 +4,10 @@
   "version": "0.0.0",
   "description": "Shared Playwright E2E suite for CSR web SDK implementations.",
   "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./theme.css": "./src/theme.css"
+  },
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui",

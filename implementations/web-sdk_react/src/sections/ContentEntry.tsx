@@ -1,3 +1,4 @@
+import type { EntryClickScenario } from 'e2e-web'
 import { type JSX, type RefObject, useEffect, useMemo, useRef } from 'react'
 import { RichTextRenderer } from '../components/RichTextRenderer'
 import { useOptimization } from '../optimization/hooks/useOptimization'
@@ -10,8 +11,6 @@ interface ContentEntryProps {
   entry: ContentfulEntry
   observation: 'auto' | 'manual'
 }
-
-export type EntryClickScenario = 'direct' | 'descendant' | 'ancestor'
 
 type ObservationMode = ContentEntryProps['observation']
 
@@ -163,6 +162,7 @@ function renderContentContainer({
       {...autoTrackingAttributes}
       {...manualTrackingAttributes}
       {...directClickScenarioAttributes}
+      className="entry-card"
       data-testid={`content-${baselineEntryId}`}
     >
       <div data-testid={`entry-text-${baselineEntryId}`} aria-label={fullLabel}>

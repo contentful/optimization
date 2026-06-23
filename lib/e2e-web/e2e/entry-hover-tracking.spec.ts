@@ -1,11 +1,12 @@
 import { type Page, expect, test } from '@playwright/test'
+import { CLICK_SCENARIO_IDS } from '../src/fixtures'
 
 interface HoverScenario {
   name: string
   hoverTargetTestId: string
 }
 
-const HOVER_ENTRY_BASELINE_ID = '4ib0hsHWoSOnCVdDkizE8d'
+const HOVER_ENTRY_BASELINE_ID = CLICK_SCENARIO_IDS.direct
 
 const hoverScenarios: HoverScenario[] = [
   {

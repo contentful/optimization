@@ -1,0 +1,677 @@
+/*
+ * theme.css
+ *
+ * Shared theme for all web SDK reference implementations
+ * (react-web-sdk, web-sdk_react, web-sdk_angular).
+ *
+ * Defines the common visual design — reset, design tokens, app shell layout,
+ * control panel, tracking log, entry card, and utility classes — so every
+ * implementation looks and behaves consistently without duplicating CSS.
+ *
+ * Distribution: imported via the e2e-web workspace package. Rsbuild
+ * implementations import it in main.tsx; Angular references it in angular.json.
+ *
+ * Edit lib/e2e-web/src/theme.css only.
+ */
+
+/* Reset */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Variables */
+
+:root {
+  --color-bg: #f9fafb;
+  --color-surface: #ffffff;
+  --color-border: #e5e7eb;
+  --color-text: #111827;
+  --color-text-muted: #6b7280;
+  --color-primary: #8c2eea;
+  --color-primary-hover: #7e29d3;
+  --color-nav-bg: #3b0764;
+  --color-nav-text: #f3e8ff;
+  --color-nav-link: #d8b4fe;
+  --color-nav-link-hover: #ffffff;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Base */
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+p {
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+button:hover {
+  background: var(--color-bg);
+}
+
+/* ============================================================
+   App shell
+   ============================================================ */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* Nav */
+
+nav,
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0 2rem;
+  height: 52px;
+  background: var(--color-nav-bg);
+  color: var(--color-nav-text);
+  box-shadow: var(--shadow);
+  flex-shrink: 0;
+}
+
+nav a,
+.app-nav a {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-nav-link);
+  text-decoration: none;
+  padding: 0.25rem 0;
+  border-bottom: 2px solid transparent;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+nav a:hover,
+nav a.active,
+.app-nav a:hover,
+.app-nav a.active {
+  color: var(--color-nav-link-hover);
+  border-bottom-color: var(--color-nav-link-hover);
+  text-decoration: none;
+}
+
+/* Body layout */
+
+.app-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Sidebar */
+
+.app-sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+  overflow-y: auto;
+  height: 100%;
+}
+
+/* Main content area */
+
+.app-main,
+main {
+  padding: 1.5rem 1.5rem 3rem;
+  overflow-y: auto;
+  display: grid;
+  gap: 2.5rem;
+  min-width: 0;
+}
+
+main.preview-panel-open,
+.app-main.preview-panel-open {
+  padding-right: 28rem;
+}
+
+/* ============================================================
+   Page structure
+   ============================================================ */
+
+.page-header {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.page-header__subtitle {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
+.page-loading {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.page-section {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.page-section__header {
+  margin-bottom: 1rem;
+}
+
+.page-section__header h2 {
+  margin-bottom: 0.1rem;
+}
+
+.page-section__header p {
+  font-size: 0.825rem;
+  margin: 0;
+}
+
+.sections-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.sections-grid--split {
+  grid-template-columns: repeat(2, 1fr);
+  align-items: start;
+}
+
+.entry-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* ============================================================
+   Tooltip
+   ============================================================ */
+
+[data-tooltip] {
+  position: relative;
+  cursor: default;
+}
+
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: #1e293b;
+  color: #f8fafc;
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* ============================================================
+   Control panel (utilities / status grid)
+   ============================================================ */
+
+.control-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow);
+}
+
+.control-panel__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.control-panel__fields {
+  display: grid;
+  grid-template-columns: 9rem 5rem auto;
+  gap: 0.4rem 1.5rem;
+  align-items: center;
+  justify-items: start;
+  width: fit-content;
+}
+
+.control-panel__actions {
+  margin-top: 1.25rem;
+  width: fit-content;
+}
+
+.control-panel__row-label {
+  font-size: 0.825rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.control-panel__row-value {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+/* Buttons */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.1s;
+}
+
+.btn:active {
+  transform: scale(0.95);
+}
+
+.btn--sm {
+  padding: 0.1rem 0.45rem;
+  font-size: 0.7rem;
+}
+
+.btn--secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.btn--secondary:hover {
+  background: var(--color-bg);
+}
+
+.btn--danger {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+}
+
+.btn--danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Tracking log (analytics event display)
+   ============================================================ */
+
+.tracking-log {
+  padding: 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.tracking-log__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tracking-log__header h2 {
+  margin: 0;
+}
+
+.tracking-log__badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.tracking-log__empty {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.tracking-log__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.775rem;
+}
+
+.tracking-log__table tr {
+  vertical-align: baseline;
+}
+
+.tracking-log__table td {
+  padding: 0.15rem 0.4rem 0.15rem 0;
+}
+
+.tracking-log__thead th {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  padding: 0 0.4rem 0.35rem 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tracking-log__type {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.tracking-log__type--page {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.tracking-log__type--view {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.tracking-log__type--comp {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.tracking-log__type--click {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.tracking-log__type--hover {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.tracking-log__label {
+  color: var(--color-text-muted);
+  word-break: break-all;
+}
+
+.tracking-log__duration {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.tracking-log__count {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  opacity: 0.6;
+}
+
+.tracking-log__time {
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  opacity: 0.5;
+  padding-right: 0.5rem;
+}
+
+/* ============================================================
+   Entry card
+   ============================================================ */
+
+.entry-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid #8c2eea;
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow);
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.entry-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.entry-card__badges {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.2rem;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.entry-card__badge {
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.05rem 0.25rem;
+  border-radius: 999px;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.entry-card__badge--variant,
+.entry-card__badge--mergetag {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.entry-card__badge--baseline,
+.entry-card__badge--auto {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.entry-card__badge--manual {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.entry-card__badge--mergetag-fallback {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.entry-card__badge--direct,
+.entry-card__badge--ancestor,
+.entry-card__badge--descendant {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.entry-card__badge--live-on {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.entry-card__badge--live-off {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.entry-card__badge--live-always-on {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.entry-card__badge--live-always-off {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.entry-card__ids {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.05rem 0.4rem;
+  min-width: 0;
+}
+
+.entry-card__id {
+  display: contents;
+}
+
+.entry-card__id-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  white-space: nowrap;
+  align-self: baseline;
+}
+
+.entry-card__id-value {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.entry-card__nested-children {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-left: 0.75rem;
+}
+
+/* ============================================================
+   Rich text
+   ============================================================ */
+
+.rich-text p {
+  margin-bottom: 0.4rem;
+}
+
+.rich-text h1,
+.rich-text h2,
+.rich-text h3,
+.rich-text h4,
+.rich-text h5,
+.rich-text h6 {
+  margin-bottom: 0.3rem;
+  color: var(--color-text);
+}
+
+.rich-text ul,
+.rich-text ol {
+  padding-left: 1.25rem;
+  margin-bottom: 0.4rem;
+}
+
+.rich-text blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.rich-text a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}

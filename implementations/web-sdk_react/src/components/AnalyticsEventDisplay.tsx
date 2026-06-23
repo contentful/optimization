@@ -18,6 +18,7 @@ function timeAgo(firedAt: number): string {
 interface AnalyticsEvent {
   id: string
   componentId?: string
+  count: number
   firedAt: number
   hoverId?: string
   viewId?: string
@@ -62,6 +63,7 @@ function toAnalyticsEvent(event: unknown, id: string): AnalyticsEvent | undefine
   return {
     id,
     componentId,
+    count: 1,
     firedAt: Date.now(),
     hoverId,
     viewId,
@@ -120,19 +122,12 @@ function upsertAnalyticsEvent(
   updated[existingIndex] = {
     ...nextEvent,
     id: previous[existingIndex].id,
+    count: previous[existingIndex].count + 1,
     firedAt: previous[existingIndex].firedAt,
   }
 
   return updated
 }
-
-const BADGE_COLORS: Record<string, { background: string; color: string }> = {
-  page: { background: '#dbeafe', color: '#1d4ed8' },
-  view: { background: '#dcfce7', color: '#15803d' },
-  comp: { background: '#d1fae5', color: '#065f46' },
-  hover: { background: '#f3e8ff', color: '#7e22ce' },
-}
-const BADGE_FALLBACK = { background: '#e5e7eb', color: '#374151' }
 
 function toBadgeType(event: AnalyticsEvent): string {
   if (event.type === 'component') return event.viewId ? 'view' : 'comp'
@@ -195,54 +190,31 @@ export function AnalyticsEventDisplay(): JSX.Element {
   }, [isReady, sdk])
 
   return (
-    <section data-testid="analytics-events-container">
-      <div
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}
-      >
-        <h2 style={{ margin: 0 }}>Tracking</h2>
-        <span
-          style={{
-            fontSize: '0.7rem',
-            fontWeight: 600,
-            background: '#e5e7eb',
-            color: '#6b7280',
-            padding: '0.15rem 0.5rem',
-            borderRadius: 999,
-            whiteSpace: 'nowrap',
-          }}
-        >
+    <section className="tracking-log" data-testid="analytics-events-container">
+      <div className="tracking-log__header">
+        <h2>Tracking</h2>
+        <span className="tracking-log__badge">
           <span data-testid="raw-events-count">{rawEventsCount}</span> events
         </span>
       </div>
-      {events.length === 0 ? <p data-testid="no-events-message">No events tracked yet</p> : null}
+      {events.length === 0 ? (
+        <p className="tracking-log__empty" data-testid="no-events-message">
+          No events tracked yet
+        </p>
+      ) : null}
 
       {events.length > 0 ? (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.775rem' }}>
-          <thead>
+        <table className="tracking-log__table">
+          <thead className="tracking-log__thead">
             <tr>
               {['Type', 'Value', 'Dur', 'Age', ''].map((h) => (
-                <th
-                  key={h}
-                  style={{
-                    fontSize: '0.6rem',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: '#9ca3af',
-                    padding: '0 0.4rem 0.35rem 0',
-                    textAlign: 'left',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {h}
-                </th>
+                <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {events.map((event) => {
               const badgeType = toBadgeType(event)
-              const badgeStyle = BADGE_COLORS[badgeType] ?? BADGE_FALLBACK
               const duration = toDuration(event)
 
               return (
@@ -253,65 +225,20 @@ export function AnalyticsEventDisplay(): JSX.Element {
                   data-hover-duration-ms={event.hoverDurationMs}
                   data-view-duration-ms={event.viewDurationMs}
                   data-page-url={event.pageUrl}
-                  style={{ verticalAlign: 'baseline' }}
                 >
-                  <td
-                    style={{
-                      padding: '0.15rem 0.4rem 0.15rem 0',
-                      whiteSpace: 'nowrap',
-                      fontSize: '0.7rem',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: '0.65rem',
-                        fontWeight: 600,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                        padding: '0.1rem 0.35rem',
-                        borderRadius: 4,
-                        whiteSpace: 'nowrap',
-                        ...badgeStyle,
-                      }}
-                    >
+                  <td>
+                    <span className={`tracking-log__type tracking-log__type--${badgeType}`}>
                       {badgeType}
                     </span>
                   </td>
-                  <td
-                    style={{
-                      padding: '0.15rem 0.4rem 0.15rem 0',
-                      color: '#6b7280',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      maxWidth: 200,
-                    }}
-                  >
-                    {toValue(event)}
-                  </td>
-                  <td
-                    style={{
-                      padding: '0.15rem 0.4rem 0.15rem 0',
-                      fontSize: '0.7rem',
-                      color: '#6b7280',
-                      whiteSpace: 'nowrap',
-                      opacity: 0.7,
-                    }}
-                  >
+                  <td className="tracking-log__label">{toValue(event)}</td>
+                  <td className="tracking-log__duration">
                     {duration !== undefined ? `${(duration / MS_PER_SECOND).toFixed(1)}s` : null}
                   </td>
-                  <td
-                    style={{
-                      padding: '0.15rem 0.4rem 0.15rem 0',
-                      fontSize: '0.65rem',
-                      color: '#6b7280',
-                      whiteSpace: 'nowrap',
-                      opacity: 0.5,
-                    }}
-                  >
-                    {timeAgo(event.firedAt)}
+                  <td className="tracking-log__time">{timeAgo(event.firedAt)}</td>
+                  <td className="tracking-log__count">
+                    {event.count > 1 ? `×${event.count}` : null}
                   </td>
-                  <td />
                 </tr>
               )
             })}

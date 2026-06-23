@@ -1,17 +1,17 @@
 import { useOptimization } from '@contentful/optimization-react-web'
+import { PAGES } from 'e2e-web'
 import type { JSX } from 'react'
 import { useEffect } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import type { AppOutletContext } from '../App'
-import { PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID } from '../config/entries'
-import { HOME_PATH } from '../config/routes'
+import { ControlPanel } from '../components/ControlPanel'
 import { ContentEntry } from '../sections/ContentEntry'
 
 export function PageTwoPage(): JSX.Element {
-  const { consent, entriesById, isIdentified } = useOutletContext<AppOutletContext>()
+  const { entriesById } = useOutletContext<AppOutletContext>()
   const sdk = useOptimization()
-  const pageTwoAutoEntry = entriesById.get(PAGE_TWO_AUTO_ENTRY_ID)
-  const pageTwoManualEntry = entriesById.get(PAGE_TWO_MANUAL_ENTRY_ID)
+  const pageTwoAutoEntry = entriesById.get(PAGES.pageTwo.auto)
+  const pageTwoManualEntry = entriesById.get(PAGES.pageTwo.manual)
 
   useEffect(() => {
     void sdk.trackView({
@@ -21,58 +21,46 @@ export function PageTwoPage(): JSX.Element {
     })
   }, [sdk])
 
-  const handleDemoCta = (): void => {
-    void sdk.trackView({
-      componentId: 'page-two-demo-cta',
-      viewId: crypto.randomUUID(),
-      viewDurationMs: 0,
-    })
-  }
-
   return (
-    <section data-testid="page-two-view" style={{ display: 'grid', gap: 16 }}>
-      <h2>Page Two</h2>
-      <p>
-        Demo route for SPA navigation, route context (<code>/page-two</code>), and conversion-style
-        tracking.
-      </p>
+    <div data-testid="page-two-view">
+      <div className="page-header">
+        <Link data-testid="link-back-home" to={PAGES.home.path}>
+          Back to Home
+        </Link>
+        <h1>Page Two</h1>
+        <p className="page-header__subtitle">
+          Demo route for SPA navigation, route context (<code>/page-two</code>), and
+          conversion-style tracking.
+        </p>
+      </div>
 
-      <section data-testid="page-two-status" style={{ display: 'grid', gap: 2 }}>
-        <p>{`Identified: ${isIdentified ? 'Yes' : 'No'}`}</p>
-        <p>{`Consent: ${String(consent)}`}</p>
-      </section>
-
-      <section data-testid="page-two-optimization" style={{ display: 'grid', gap: 12 }}>
-        <h3>Page Two Optimized Content</h3>
-        {pageTwoAutoEntry ? (
-          <div>
-            <p>Auto tracked example</p>
-            <ContentEntry entry={pageTwoAutoEntry} viewTracking="auto" />
+      <ControlPanel demoCTA />
+      <div className="sections-grid sections-grid--split" data-testid="page-two-optimization">
+        <section className="page-section">
+          <header className="page-section__header">
+            <h2>Auto-observed</h2>
+          </header>
+          <div className="entry-grid">
+            {pageTwoAutoEntry ? (
+              <ContentEntry entry={pageTwoAutoEntry} viewTracking="auto" />
+            ) : (
+              <p>Auto tracked entry is unavailable.</p>
+            )}
           </div>
-        ) : (
-          <p>Auto tracked entry is unavailable.</p>
-        )}
-
-        {pageTwoManualEntry ? (
-          <div>
-            <p>Manual tracked example</p>
-            <ContentEntry entry={pageTwoManualEntry} viewTracking="manual" />
+        </section>
+        <section className="page-section">
+          <header className="page-section__header">
+            <h2>Manually-observed</h2>
+          </header>
+          <div className="entry-grid">
+            {pageTwoManualEntry ? (
+              <ContentEntry entry={pageTwoManualEntry} viewTracking="manual" />
+            ) : (
+              <p>Manual tracked entry is unavailable.</p>
+            )}
           </div>
-        ) : (
-          <p>Manual tracked entry is unavailable.</p>
-        )}
-      </section>
-
-      <section data-testid="page-two-conversion" style={{ display: 'grid', gap: 8 }}>
-        <h3>Conversion Step Demo</h3>
-        <button data-testid="page-two-demo-cta" onClick={handleDemoCta} type="button">
-          Trigger Page Two CTA Event
-        </button>
-      </section>
-
-      <Link data-testid="link-back-home" to={HOME_PATH}>
-        Back to Home
-      </Link>
-    </section>
+        </section>
+      </div>
+    </div>
   )
 }

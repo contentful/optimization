@@ -1,10 +1,8 @@
 import { useOptimizationContext } from '@contentful/optimization-react-web'
-import type { Profile } from '@contentful/optimization-react-web/api-schemas'
+import { PAGES } from 'e2e-web'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useOutletContext } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
-import { ENTRY_IDS, LIVE_UPDATES_ENTRY_ID } from './config/entries'
-import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
 import type { ContentEntry } from './types/contentful'
 
@@ -13,23 +11,10 @@ interface OutletContext {
 }
 
 export interface AppOutletContext {
-  consent: boolean | undefined
   entriesById: Map<string, ContentEntry>
-  isIdentified: boolean
   liveUpdatesBaselineEntry: ContentEntry | undefined
   selectedOptimizationCount: number
-  onConsentChange: (accepted: boolean) => void
-  onIdentify: () => void
-  onReset: () => void
   onToggleGlobalLiveUpdates: () => void
-}
-
-function isIdentifiedProfile(profile: Profile | undefined): boolean {
-  if (profile === undefined) {
-    return false
-  }
-
-  return Boolean(profile.traits.identified)
 }
 
 function toEntryMap(entries: ContentEntry[]): Map<string, ContentEntry> {
@@ -40,8 +25,6 @@ export default function App(): JSX.Element {
   const { sdk, isReady, error } = useOptimizationContext()
   const { onToggleGlobalLiveUpdates } = useOutletContext<OutletContext>()
 
-  const [consent, setConsent] = useState<boolean | undefined>(undefined)
-  const [profile, setProfile] = useState<Profile | undefined>(undefined)
   const [selectedOptimizationCount, setSelectedOptimizationCount] = useState(0)
   const [entries, setEntries] = useState<ContentEntry[]>([])
 
@@ -50,34 +33,12 @@ export default function App(): JSX.Element {
       return
     }
 
-    const consentSub = sdk.states.consent.subscribe((value: boolean | undefined) => {
-      setConsent(value)
-    })
-
-    const profileSub = sdk.states.profile.subscribe((value: Profile | undefined) => {
-      setProfile(value)
-    })
-
     const selectedOptSub = sdk.states.selectedOptimizations.subscribe((value) => {
       setSelectedOptimizationCount(Array.isArray(value) ? value.length : 0)
     })
 
     return () => {
-      consentSub.unsubscribe()
-      profileSub.unsubscribe()
       selectedOptSub.unsubscribe()
-    }
-  }, [isReady, sdk])
-
-  useEffect(() => {
-    if (!sdk || !isReady) {
-      return
-    }
-
-    const sub = sdk.states.flag('boolean').subscribe(() => undefined)
-
-    return () => {
-      sub.unsubscribe()
     }
   }, [isReady, sdk])
 
@@ -91,14 +52,13 @@ export default function App(): JSX.Element {
       return
     }
 
-    void fetchEntries(ENTRY_IDS).then((nextEntries) => {
+    void fetchEntries(PAGES.home.ids).then((nextEntries) => {
       setEntries(nextEntries)
     })
   }, [isReady, sdk])
 
-  const isIdentified = useMemo(() => isIdentifiedProfile(profile), [profile])
   const entriesById = useMemo(() => toEntryMap(entries), [entries])
-  const liveUpdatesBaselineEntry = entriesById.get(LIVE_UPDATES_ENTRY_ID)
+  const liveUpdatesBaselineEntry = entriesById.get(PAGES.home.liveUpdates)
 
   if (error) {
     return <p data-testid="sdk-error">{error.message}</p>
@@ -108,43 +68,32 @@ export default function App(): JSX.Element {
     return <p data-testid="sdk-loading">Loading SDK...</p>
   }
 
-  const handleIdentify = (): void => {
-    void sdk.identify({ userId: 'charles', traits: { identified: true } })
-  }
-
-  const handleReset = (): void => {
-    sdk.reset()
-  }
-
-  const handleConsent = (accepted: boolean): void => {
-    sdk.consent(accepted)
-  }
-
   const appOutletContext: AppOutletContext = {
-    consent,
     entriesById,
-    isIdentified,
     liveUpdatesBaselineEntry,
     selectedOptimizationCount,
-    onConsentChange: handleConsent,
-    onIdentify: handleIdentify,
-    onReset: handleReset,
     onToggleGlobalLiveUpdates,
   }
 
   return (
-    <main style={{ display: 'grid', gap: 24 }}>
-      <nav style={{ display: 'flex', gap: 12 }}>
-        <Link data-testid="link-home" to={HOME_PATH}>
+    <div className="app-shell">
+      <nav className="app-nav">
+        <Link data-testid="link-home" to={PAGES.home.path}>
           Home
         </Link>
-        <Link data-testid="link-page-two" to={PAGE_TWO_PATH}>
-          Go to Page Two
+        <Link data-testid="link-page-two" to={PAGES.pageTwo.path}>
+          Page Two
         </Link>
       </nav>
 
-      <Outlet context={appOutletContext} />
-      <AnalyticsEventDisplay />
-    </main>
+      <div className="app-body">
+        <aside className="app-sidebar">
+          <AnalyticsEventDisplay />
+        </aside>
+        <main className="app-main">
+          <Outlet context={appOutletContext} />
+        </main>
+      </div>
+    </div>
   )
 }

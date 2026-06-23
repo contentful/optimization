@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { CLICK_SCENARIO_IDS, PAGES } from '../src/fixtures'
 
 test.describe('identified user', () => {
   test.use({ storageState: { cookies: [], origins: [] } })
@@ -27,7 +28,7 @@ test.describe('identified user', () => {
       ),
     ).toBeVisible()
 
-    const continentEntry = page.getByTestId('entry-text-4ib0hsHWoSOnCVdDkizE8d')
+    const continentEntry = page.getByTestId(`entry-text-${CLICK_SCENARIO_IDS.direct}`)
     await expect(
       continentEntry
         .getByText('This is a variant content entry for visitors from Europe.')
@@ -38,7 +39,7 @@ test.describe('identified user', () => {
         ),
     ).toBeVisible()
 
-    const deviceEntry = page.getByTestId('entry-text-xFwgG3oNaOcjzWiGe4vXo')
+    const deviceEntry = page.getByTestId(`entry-text-${CLICK_SCENARIO_IDS.descendant}`)
     await expect(
       deviceEntry
         .getByText('This is a variant content entry for visitors using a desktop browser.')
@@ -57,7 +58,7 @@ test.describe('identified user', () => {
 
     await expect(
       page
-        .getByTestId('entry-text-2Z2WLOx07InSewC3LUB3eX')
+        .getByTestId(`entry-text-${PAGES.home.liveUpdates}`)
         .getByText('This is a variant content entry for return visitors.'),
     ).toBeVisible()
     await expect(
