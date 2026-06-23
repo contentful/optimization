@@ -1,5 +1,5 @@
 import { OptimizedEntry, useOptimization } from '@contentful/optimization-react-web'
-import type { EntryClickScenario } from 'e2e-web/src/fixtures'
+import type { EntryClickScenario } from 'e2e-web'
 import type { JSX } from 'react'
 import { useEffect, useRef } from 'react'
 import { RichTextRenderer } from '../components/RichTextRenderer'

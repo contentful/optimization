@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core'
-import { CLICK_SCENARIOS, PAGES } from 'e2e-web/src/fixtures'
+import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 import { ControlPanel } from '../../components/control-panel'
 import { EntryCard } from '../../components/entry-card'
 import type { ContentfulEntry } from '../../services/contentful-client'

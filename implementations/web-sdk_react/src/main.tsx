@@ -1,4 +1,4 @@
-import 'e2e-web/src/theme.css'
+import 'e2e-web/theme.css'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'

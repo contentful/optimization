@@ -1,4 +1,4 @@
-import type { EntryClickScenario } from 'e2e-web/src/fixtures'
+import type { EntryClickScenario } from 'e2e-web'
 
 export type { EntryClickScenario }
 

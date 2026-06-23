@@ -30,7 +30,8 @@
       "@contentful/optimization-react-native": ["./packages/react-native-sdk/src/index.ts"],
       "@contentful/optimization-react-native/*": ["./packages/react-native-sdk/src/*"],
       "@contentful/optimization-web": ["./packages/web/web-sdk/src/index.ts"],
-      "@contentful/optimization-web/*": ["./packages/web/web-sdk/src/*"]
+      "@contentful/optimization-web/*": ["./packages/web/web-sdk/src/*"],
+      "e2e-web": ["./lib/e2e-web/src/fixtures.ts"]
     },
     "removeComments": false,
     "skipLibCheck": true,

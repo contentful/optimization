@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core'
 import { RouterLink } from '@angular/router'
-import { PAGES } from 'e2e-web/src/fixtures'
+import { PAGES } from 'e2e-web'
 import { ControlPanel } from '../../components/control-panel'
 import { EntryCard } from '../../components/entry-card'
 import type { ContentfulEntry } from '../../services/contentful-client'

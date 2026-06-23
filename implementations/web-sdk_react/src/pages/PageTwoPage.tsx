@@ -1,4 +1,4 @@
-import { PAGES } from 'e2e-web/src/fixtures'
+import { PAGES } from 'e2e-web'
 import { type JSX, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ControlPanel } from '../components/ControlPanel'

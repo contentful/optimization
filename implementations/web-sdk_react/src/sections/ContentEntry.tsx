@@ -1,4 +1,4 @@
-import type { EntryClickScenario } from 'e2e-web/src/fixtures'
+import type { EntryClickScenario } from 'e2e-web'
 import { type JSX, type RefObject, useEffect, useMemo, useRef } from 'react'
 import { RichTextRenderer } from '../components/RichTextRenderer'
 import { useOptimization } from '../optimization/hooks/useOptimization'

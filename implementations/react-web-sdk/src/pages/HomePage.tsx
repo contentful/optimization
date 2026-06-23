@@ -1,4 +1,4 @@
-import { CLICK_SCENARIOS, PAGES } from 'e2e-web/src/fixtures'
+import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 import type { JSX } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import type { AppOutletContext } from '../App'

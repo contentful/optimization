@@ -1,4 +1,4 @@
-import { PAGES } from 'e2e-web/src/fixtures'
+import { PAGES } from 'e2e-web'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'

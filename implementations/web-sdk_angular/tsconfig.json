@@ -9,7 +9,10 @@
     "noUnusedParameters": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "e2e-web": ["../../lib/e2e-web/src/fixtures.ts"]
+    }
   },
   "include": ["scripts/**/*.ts", "src/**/*.ts"]
 }

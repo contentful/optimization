@@ -1,4 +1,4 @@
-import { CLICK_SCENARIOS, PAGES } from 'e2e-web/src/fixtures'
+import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 import type { JSX } from 'react'
 import { ControlPanel } from '../components/ControlPanel'
 import { ContentEntry } from '../sections/ContentEntry'

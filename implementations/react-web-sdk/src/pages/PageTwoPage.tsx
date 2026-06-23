@@ -1,5 +1,5 @@
 import { useOptimization } from '@contentful/optimization-react-web'
-import { PAGES } from 'e2e-web/src/fixtures'
+import { PAGES } from 'e2e-web'
 import type { JSX } from 'react'
 import { useEffect } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
