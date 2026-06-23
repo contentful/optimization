@@ -20,9 +20,14 @@ server/client SDK composition; app code imports only Next.js SDK subpaths.
 ## Commands
 
 - `pnpm implementation:run -- nextjs-sdk_hybrid <script>` with `implementation:install`,
-  `typecheck`, `build`, `dev`, `serve`, or `serve:stop`.
+  `typecheck`, `lint`, `build`, `dev`, `serve`, `serve:stop`, `implementation:setup:e2e`, or
+  `implementation:test:e2e:run`.
+- Root wrappers: `pnpm setup:e2e:nextjs-sdk_hybrid` and `pnpm test:e2e:nextjs-sdk_hybrid`.
 
 ## Validate
 
 - Run `typecheck` for local code changes.
+- Run `lint` for source changes.
 - Run `build` for production bundling changes.
+- Run Playwright E2E for user-visible behavior, routing, event flow, tracking, SSR first-paint,
+  hydration handoff, client takeover, proxy cookie continuity, or SDK integration changes.

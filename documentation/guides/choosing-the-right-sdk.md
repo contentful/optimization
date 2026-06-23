@@ -9,6 +9,7 @@ Use this guide to choose the narrowest package layer that matches the runtime yo
 - [Runtime-first selection](#runtime-first-selection)
   - [Browser applications](#browser-applications)
   - [React applications on the web](#react-applications-on-the-web)
+  - [Next.js applications](#nextjs-applications)
   - [Node servers and server-side rendering](#node-servers-and-server-side-rendering)
   - [React Native applications](#react-native-applications)
   - [Native iOS applications](#native-ios-applications)
@@ -41,6 +42,15 @@ tracking.
 
 This package sits on top of `@contentful/optimization-web`, so React applications generally use the
 React layer as their application-facing entry point and rely on the Web SDK transitively.
+
+### Next.js applications
+
+Choose `@contentful/optimization-nextjs` for Next.js App Router applications that need
+server-rendered personalization, client-side tracking, or proxy-based anonymous ID cookie handling.
+
+The Next.js adapter composes `@contentful/optimization-node` on the server with
+`@contentful/optimization-react-web` on the client. Application code should import the adapter's
+server, client, and request-handler subpaths instead of wiring those lower-level packages directly.
 
 ### Node servers and server-side rendering
 
@@ -104,6 +114,7 @@ Optimization APIs and Contentful entry-shape helpers.
 - Browser application with author preview: `@contentful/optimization-web` and
   `@contentful/optimization-web-preview-panel`
 - React browser application: `@contentful/optimization-react-web`
+- Next.js App Router application: `@contentful/optimization-nextjs`
 - Native mobile application: `@contentful/optimization-react-native` for React Native,
   `ContentfulOptimization` for SwiftUI and UIKit, or `com.contentful.java:optimization-android` for
   Jetpack Compose and XML Views

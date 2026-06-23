@@ -657,6 +657,12 @@ manually.
 
 Mount the appropriate adapter once inside your provider tree.
 
+For Next.js applications that need server-side personalization, client tracking, and proxy cookie
+handling together, use the [Next.js SSR](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md)
+or [hybrid SSR + CSR takeover](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md) guide.
+The direct Next.js router adapters below are still available for React Web SDK integrations that do
+not need the Next.js adapter package.
+
 ### React router
 
 Requires `react-router-dom` >= 6.4 with a data router (`createBrowserRouter` + `RouterProvider`).

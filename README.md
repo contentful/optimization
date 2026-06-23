@@ -72,6 +72,7 @@ high-level role summary.
 | -------------------------------------------- | --------------------- | ---------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
 | `@contentful/optimization-web`               | Environment SDK       | Browser          | Stateful browser SDK for optimization, tracking, and consent       | [Web SDK](./packages/web/web-sdk/README.md)                        |
 | `@contentful/optimization-react-web`         | Framework SDK         | React on the web | React integration layer on top of the Web SDK                      | [React Web SDK](./packages/web/frameworks/react-web-sdk/README.md) |
+| `@contentful/optimization-nextjs`            | Framework SDK         | Next.js          | Next.js adapter for SSR, client tracking, and request composition  | [Next.js SDK](./packages/web/frameworks/nextjs-sdk/README.md)      |
 | `@contentful/optimization-node`              | Environment SDK       | Node.js          | Stateless Node SDK for server-side and SSR integrations            | [Node SDK](./packages/node/node-sdk/README.md)                     |
 | `@contentful/optimization-react-native`      | Environment SDK       | React Native     | React Native SDK for mobile applications                           | [React Native SDK](./packages/react-native-sdk/README.md)          |
 | `@contentful/optimization-web-preview-panel` | Tooling package       | Browser          | Preview tooling package for existing Web SDK instances             | [Web Preview Panel](./packages/web/preview-panel/README.md)        |
@@ -125,6 +126,10 @@ patterns with intentionally minimal application code.
   SDK
 - [Node SSR + Web Vanilla](./implementations/node-sdk+web-sdk/README.md) - split server/browser flow
   using Node and Web SDKs together
+- [Next.js SDK SSR](./implementations/nextjs-sdk_ssr/README.md) - Next.js App Router SSR integration
+  using the official Next.js adapter package
+- [Next.js SDK Hybrid](./implementations/nextjs-sdk_hybrid/README.md) - Next.js App Router
+  first-paint SSR with browser-side takeover after hydration
 - [React Native](./implementations/react-native-sdk/README.md) - mobile application integration for
   Android and iOS targets
 - [iOS Reference App](./implementations/ios-sdk/README.md) - native app and XCUITest surface for

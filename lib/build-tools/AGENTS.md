@@ -19,4 +19,5 @@ enforcement.
 - Always run `typecheck` and `test:unit`.
 - Run at least one downstream package build, or `pnpm build`, for build behavior, declaration
   emission, or bundle-size measurement changes.
-- Run `pnpm size:report` or `pnpm size:check` for bundle-size measurement or CLI-contract changes.
+- Run `pnpm size:report` or `pnpm size:check` for bundle-size measurement or CLI-contract changes,
+  and handle failures under the root `Bundle size` policy.

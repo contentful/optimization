@@ -24,7 +24,7 @@ inventory instead.
 ## Start here
 
 - [Choosing the right SDK](./choosing-the-right-sdk.md) - pick the narrowest published package layer
-  for a browser, React, Node, React Native, or native iOS application
+  for a browser, React, Next.js, Node, React Native, native iOS, or native Android application
 
 ## Integration guides
 
@@ -53,11 +53,10 @@ inventory instead.
   step-by-step XML Views integration guidance covering `OptimizationManager`, consent, entry
   personalization, interaction tracking, screen tracking, live updates, and the in-app preview panel
 - [Integrating the Optimization SDK in a Next.js app (SSR)](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md) -
-  step-by-step Next.js App Router guidance for the SSR pattern where the Node SDK resolves entries
-  server-side and the React Web SDK handles client-side tracking and interactive controls
+  step-by-step Next.js App Router guidance for the SSR pattern using the Next.js adapter package
 - [Integrating the Optimization SDK in a Next.js app (hybrid SSR + CSR takeover)](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md) -
   step-by-step Next.js App Router guidance for the hybrid pattern where first paint is
-  server-resolved and the React Web SDK takes over for instant client-side reactivity after
+  server-resolved and the adapter's client entry takes over for instant client-side reactivity after
   hydration
 
 ## Supplemental guides

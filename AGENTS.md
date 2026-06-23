@@ -13,7 +13,12 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
 ## Tools and source files
 
 - Use the Node version in [`.nvmrc`](./.nvmrc) and the pnpm version pinned in
-  [`package.json`](./package.json).
+  [`package.json`](./package.json). `.nvmrc` is the runtime source of truth; `nodeVersion` in
+  [`pnpm-workspace.yaml`](./pnpm-workspace.yaml) mirrors it for pnpm engine checks.
+- Do not add `useNodeVersion` or `devEngines.runtime` unless the repository intentionally changes
+  Node runtime management away from the current NVM-based workflow.
+- When `.nvmrc` and `nodeVersion` drift, suggest updating `nodeVersion`. Whenever `pnpm-lock.yaml`
+  changes, verify `.nvmrc` and `nodeVersion` still match.
 - Use `pnpm` only; prefer `pnpm <script>` when equivalent. Prefer `rg`/`rg --files` for search.
 - Edit source of truth: `src/**`, `e2e/**`, `__tests__/**`, `scripts/**`, `documentation/**`,
   `README.md`, `package.json`, `tsconfig*.json`, `rstest.config.ts`, `playwright.config.mjs`,
@@ -129,7 +134,7 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
   local `.env` files, ignored outputs, or broad process groups.
 - Own validation failures surfaced by current or recent Codex work. Inspect status, diffs,
   APIs/artifacts, and skipped checks; then fix the root cause in the right layer or report a
-  concrete blocker.
+  concrete blocker. Bundle-size failures follow the `Bundle size` policy before source edits.
 - If a downstream implementation reports stale SDK types or runtime behavior, verify upstream build,
   `pnpm build:pkgs`, and implementation install before adding local shims or casts.
 - If Rslib/Rspack reports an internal dependency-graph panic, classify stale persistent cache first:
@@ -142,16 +147,36 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
 
 - Before bundle-size investigation or changes, inspect `git status --short` and run the relevant
   `size:check` or `size:report` against the actual worktree.
+- Treat bundle-size checks as validation, not as automatic approval to rewrite source code. A budget
+  failure must be classified before editing as a current-change regression, pre-existing budget
+  drift, build or measurement issue, dependency/import mistake, intentional feature cost, or
+  unknown.
+- Use `size:report`, generated analyzer output, or the package's existing build artifacts to
+  identify concrete contributors before changing code. Do not guess at size causes.
 - For upstream package changes, treat downstream bundle-size checks as required validation. Run the
   smallest complete downstream set when it is clear, or `pnpm size:check` when the dependency impact
   crosses package families or is uncertain.
 - On failure, report the command, package or bundle, budget, actual size, and delta.
-- Do not change budgets, bundle entries, aliases, chunks, exports, or source shape solely for bundle
-  size unless the user approves that work.
+- Prefer maintainability-preserving fixes for confirmed current-change regressions or measurement
+  mistakes: remove unused imports or dependencies, fix accidental heavy import paths, restore
+  tree-shaking, reuse existing helpers instead of duplicating code, or correct build measurement.
+- Re-examine the design once when a bundle-size failure is caused by current work. Apply only
+  changes that preserve behavior, public APIs, readability, and the package's existing architecture.
+- Do not remove behavior, narrow public APIs, obscure readable code, add one-off shims, change
+  budgets, bundle entries, aliases, chunks, exports, dependency shape, or source structure when the
+  primary purpose or practical effect is satisfying a size budget unless the requester or maintainer
+  explicitly approves that exact proposal.
+- Do not infer bundle-size tradeoff approval from general requests such as "fix CI", "make checks
+  pass", "get under budget", or an implementation request.
+- Stop and surface the remaining overage when the remaining options would reduce maintainability,
+  reduce functionality, or change budget policy. Report the package or bundle, budget, actual size,
+  delta, likely cause, safe changes already attempted, and the smallest next decision for the
+  requester or maintainer.
 - Unapplied proposals must be labeled `UNAPPLIED PROPOSAL`, printed in chat, and not written into
   the project tree.
-- After approved bundle-size source changes, validate the touched package with typecheck, relevant
-  tests, build when emitted output/declarations are affected, and `size:check`.
+- After any bundle-size source changes, including approved tradeoffs, validate the touched package
+  with typecheck, relevant tests, build when emitted output/declarations are affected, and
+  `size:check`.
 
 ## Docs and README
 

@@ -55,7 +55,7 @@ catalog:
 
 engineStrict: true
 
-nodeVersion: 24.13.0
+nodeVersion: 24.15.0
 
 onlyBuiltDependencies:
   - contentful-cli
@@ -72,5 +72,3 @@ overrides:
   '@types/node': 'catalog:'
   typescript: 'catalog:'
   vitest: 'catalog:'
-
-useNodeVersion: 24.13.0

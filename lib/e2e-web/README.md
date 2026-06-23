@@ -21,7 +21,7 @@ pnpm test:e2e:ui
 pnpm test:e2e:report
 ```
 
-Supported implementations: `web-sdk_react`, `web-sdk_angular`.
+Supported implementations: `react-web-sdk`, `web-sdk_react`, `web-sdk_angular`.
 
 ## How it works
 
@@ -53,6 +53,9 @@ IMPLEMENTATION=web-sdk_angular APP_PORT=4200 pnpm --dir ../../lib/e2e-web test
 
 # web-sdk_react
 IMPLEMENTATION=web-sdk_react pnpm --dir ../../lib/e2e-web test
+
+# react-web-sdk
+IMPLEMENTATION=react-web-sdk pnpm --dir ../../lib/e2e-web test
 ```
 
 The config also starts the shared mock server (`lib/mocks`) with the same lifecycle — spun up before
