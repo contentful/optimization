@@ -2,6 +2,8 @@ import { useLiveUpdates, useOptimizationContext } from '@contentful/optimization
 import type { Profile } from '@contentful/optimization-react-web/api-schemas'
 import type { JSX } from 'react'
 import { useEffect, useMemo, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
+import type { AppOutletContext } from '../App'
 
 const ENABLE_PREVIEW_PANEL = import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
 
@@ -187,16 +189,13 @@ function ControlPanelFields({
 }
 
 interface ControlPanelProps {
-  onToggleGlobalLiveUpdates: () => void
-  onTrackConversion?: () => void
+  demoCTA?: boolean
 }
 
-export function ControlPanel({
-  onToggleGlobalLiveUpdates,
-  onTrackConversion,
-}: ControlPanelProps): JSX.Element {
+export function ControlPanel({ demoCTA: onTrackConversion }: ControlPanelProps): JSX.Element {
   const { sdk, isReady } = useOptimizationContext()
   const { globalLiveUpdates, previewPanelVisible, setPreviewPanelVisible } = useLiveUpdates()
+  const { onToggleGlobalLiveUpdates } = useOutletContext<AppOutletContext>()
 
   const [consent, setConsent] = useState<boolean | undefined>(undefined)
   const [profile, setProfile] = useState<Profile | undefined>(undefined)
@@ -225,6 +224,14 @@ export function ControlPanel({
 
   const isIdentified = useMemo(() => Boolean(profile?.traits.identified), [profile])
 
+  const handleDemoCta = (): void => {
+    void sdk?.trackView({
+      componentId: 'page-two-demo-cta',
+      viewId: crypto.randomUUID(),
+      viewDurationMs: 0,
+    })
+  }
+
   return (
     <section className="control-panel" id="utility-panel">
       <h2 className="control-panel__title">Utilities</h2>
@@ -251,18 +258,18 @@ export function ControlPanel({
         }}
       />
 
-      {onTrackConversion !== undefined ? (
+      {onTrackConversion && (
         <div className="control-panel__actions">
           <button
             className="btn btn--secondary btn--sm"
             data-testid="track-conversion-button"
-            onClick={onTrackConversion}
+            onClick={handleDemoCta}
             type="button"
           >
             Trigger custom view event
           </button>
         </div>
-      ) : null}
+      )}
     </section>
   )
 }

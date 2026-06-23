@@ -8,7 +8,7 @@ import { ControlPanel } from '../components/ControlPanel'
 import { ContentEntry } from '../sections/ContentEntry'
 
 export function PageTwoPage(): JSX.Element {
-  const { entriesById, onToggleGlobalLiveUpdates } = useOutletContext<AppOutletContext>()
+  const { entriesById } = useOutletContext<AppOutletContext>()
   const sdk = useOptimization()
   const pageTwoAutoEntry = entriesById.get(PAGES.pageTwo.auto)
   const pageTwoManualEntry = entriesById.get(PAGES.pageTwo.manual)
@@ -20,14 +20,6 @@ export function PageTwoPage(): JSX.Element {
       viewDurationMs: 0,
     })
   }, [sdk])
-
-  const handleDemoCta = (): void => {
-    void sdk.trackView({
-      componentId: 'page-two-demo-cta',
-      viewId: crypto.randomUUID(),
-      viewDurationMs: 0,
-    })
-  }
 
   return (
     <div data-testid="page-two-view">
@@ -42,11 +34,7 @@ export function PageTwoPage(): JSX.Element {
         </p>
       </div>
 
-      <ControlPanel
-        onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
-        onTrackConversion={handleDemoCta}
-      />
-
+      <ControlPanel demoCTA />
       <div className="sections-grid sections-grid--split" data-testid="page-two-optimization">
         <section className="page-section">
           <header className="page-section__header">
@@ -60,7 +48,6 @@ export function PageTwoPage(): JSX.Element {
             )}
           </div>
         </section>
-
         <section className="page-section">
           <header className="page-section__header">
             <h2>Manually-observed</h2>

@@ -58,12 +58,8 @@ function ManuallyObservedEntries({ entriesById }: ManuallyObservedEntriesProps):
 }
 
 export function HomePage(): JSX.Element {
-  const {
-    entriesById,
-    liveUpdatesBaselineEntry,
-    selectedOptimizationCount,
-    onToggleGlobalLiveUpdates,
-  } = useOutletContext<AppOutletContext>()
+  const { entriesById, liveUpdatesBaselineEntry, selectedOptimizationCount } =
+    useOutletContext<AppOutletContext>()
   const isOptimizationReady = selectedOptimizationCount > 0 || entriesById.size > 0
 
   if (!isOptimizationReady) {
@@ -79,7 +75,7 @@ export function HomePage(): JSX.Element {
         </p>
       </div>
 
-      <ControlPanel onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates} />
+      <ControlPanel />
 
       <section className="page-section" data-testid="live-updates-section">
         <header className="page-section__header">
