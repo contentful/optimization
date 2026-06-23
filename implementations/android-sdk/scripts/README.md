@@ -6,15 +6,16 @@ single command.
 
 > [!NOTE]
 >
-> These scripts forward the mock server into the emulator with `adb reverse tcp:8000 tcp:8000` so
-> the app can reach `http://localhost:8000`.
+> The apps reach the host mock server through the emulator host alias `http://10.0.2.2:8000`.
+> `run-e2e.sh` still sets `adb reverse tcp:8000 tcp:8000` as a localhost fallback, then verifies the
+> `10.0.2.2` path the apps actually use.
 
 ## Scripts
 
 | Script           | Purpose                                                              |
 | ---------------- | -------------------------------------------------------------------- |
 | `bootstrap.sh`   | Build, install, and launch the app on an emulator for local dev      |
-| `run-e2e.sh`     | Build, install, and run the UI Automator 2 instrumented E2E suite    |
+| `run-e2e.sh`     | Build, install, and run the Maestro E2E flow suite                   |
 | `prepare-env.sh` | Validate the local environment without starting anything (fast fail) |
 
 ## Prerequisites
@@ -41,20 +42,26 @@ cd implementations/android-sdk
 
 ## `run-e2e.sh`
 
-Ensures a visible emulator, starts the mock server, sets up `adb reverse`, builds and installs the
-app and test APKs, then runs the UI Automator 2 instrumented suite. Logs are written to
-`implementations/android-sdk/logs/` (`mock-server.log`, `test-results.log`).
+Ensures a visible emulator, starts the mock server, verifies the emulator can reach the host mock
+through `10.0.2.2`, builds and installs the Compose and XML Views app APKs, then runs the shared
+Maestro flow suite against both apps. Logs are written to `implementations/android-sdk/logs/`,
+including `mock-server.log`.
 
 ```sh
 cd implementations/android-sdk
 ./scripts/run-e2e.sh
 ```
 
-Run a single test class or method:
+Run one Maestro suite:
 
 ```sh
-./scripts/run-e2e.sh --test-class AnalyticsTests
-./scripts/run-e2e.sh --test-class AnalyticsTests --test-method testTracksComponentImpressionEventsForVisibleEntries
+./scripts/run-e2e.sh --flow preview-panel
+```
+
+Run only the XML Views app:
+
+```sh
+APP_PACKAGE=com.contentful.optimization.app.views ./scripts/run-e2e.sh
 ```
 
 Skip the build and reuse the installed APKs:
@@ -64,6 +71,10 @@ Skip the build and reuse the installed APKs:
 ```
 
 Run `./scripts/run-e2e.sh --help` for the full option list.
+
+The runner never launches a headless emulator. If it detects stale headless `qemu-system` emulator
+processes, it terminates those processes and restarts adb so a fresh visible emulator can take the
+device slot.
 
 ## `prepare-env.sh`
 
@@ -79,15 +90,17 @@ cd implementations/android-sdk
 
 ## Environment variables
 
-| Variable                      | Default             | `bootstrap.sh` | `run-e2e.sh` | `prepare-env.sh` | Notes                                                    |
-| ----------------------------- | ------------------- | :------------: | :----------: | :--------------: | -------------------------------------------------------- |
-| `MOCK_SERVER_PORT`            | `8000`              |       ✅       |      ✅      |        ✅        | Port for the mock API server.                            |
-| `SKIP_BUILD`                  | `false`             |       ✅       |      ✅      |        —         | Reuse the existing build instead of rebuilding.          |
-| `EMULATOR_AVD`                | `pixel_7_api35_e2e` |       —        |      ✅      |        —         | AVD to require/auto-launch; pinned to match CI.          |
-| `DISABLE_EMULATOR_ANIMATIONS` | `true`              |       —        |      ✅      |        —         | Set `false` to keep emulator animation scales unchanged. |
-| `FAIL_FAST`                   | `true`              |       —        |      ✅      |        —         | Set `false` to run the whole suite even after a failure. |
-| `STREAM_BACKGROUND_LOGS`      | `false`             |       —        |      ✅      |        —         | Set `true` to stream mock server logs to stdout.         |
-| `CI`                          | `false`             |       —        |      ✅      |        —         | Set `true` for CI mode.                                  |
+| Variable                      | Default             | `bootstrap.sh` | `run-e2e.sh` | `prepare-env.sh` | Notes                                                              |
+| ----------------------------- | ------------------- | :------------: | :----------: | :--------------: | ------------------------------------------------------------------ |
+| `MOCK_SERVER_PORT`            | `8000`              |       ✅       |      ✅      |        ✅        | Port for the mock API server.                                      |
+| `SKIP_BUILD`                  | `false`             |       ✅       |      ✅      |        —         | Reuse the existing build instead of rebuilding.                    |
+| `EMULATOR_AVD`                | `pixel_7_api35_e2e` |       —        |      ✅      |        —         | AVD to require/auto-launch; pinned to match CI.                    |
+| `APP_PACKAGE`                 | `all`               |       —        |      ✅      |        —         | `all`, `both`, or one app package such as the XML Views package.   |
+| `MAESTRO_ITERATIONS`          | `1`                 |       —        |      ✅      |        —         | Repeat the full run to measure flakiness.                          |
+| `MAESTRO_ATTEMPTS`            | `2`                 |       —        |      ✅      |        —         | Attempts per app suite before declaring failure. Set `1` for none. |
+| `DISABLE_EMULATOR_ANIMATIONS` | `true`              |       —        |      ✅      |        —         | Set `false` to keep emulator animation scales unchanged.           |
+| `STREAM_BACKGROUND_LOGS`      | `false`             |       —        |      ✅      |        —         | Set `true` to stream mock server logs to stdout.                   |
+| `CI`                          | `false`             |       —        |      ✅      |        —         | Set `true` for CI mode.                                            |
 
 ## Related
 

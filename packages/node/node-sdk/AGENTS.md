@@ -12,10 +12,11 @@ Owns Node-specific SDK behavior built on `@contentful/optimization-core`.
 ## Commands
 
 - `pnpm --filter @contentful/optimization-node <script>` with `typecheck`, `test:unit`, `build`,
-  `size:check`, or `dev`.
+  `size:check`, `size:report`, or `dev`.
 
 ## Validate
 
 - Run `typecheck`, `test:unit`, and `build`.
+- Handle bundle-size failures under the root `Bundle size` policy.
 - Validate the package-local `dev` flow when changing flows it exercises.
 - Validate `implementations/node-sdk` E2E for runtime or SSR behavior changes.

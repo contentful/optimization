@@ -33,7 +33,7 @@ between server and browser, see
   - [Initialize the Web SDK without client-side personalization](#initialize-the-web-sdk-without-client-side-personalization)
   - [Choose how the browser gets a profile](#choose-how-the-browser-gets-a-profile)
   - [Keep personalization server-owned](#keep-personalization-server-owned)
-  - [React meta-framework SSR with React Web SDK tracking](#react-meta-framework-ssr-with-react-web-sdk-tracking)
+  - [React meta-framework SSR with client tracking](#react-meta-framework-ssr-with-client-tracking)
 - [Server-only interaction tracking](#server-only-interaction-tracking)
 - [Manual browser tracking without the Web SDK](#manual-browser-tracking-without-the-web-sdk)
 - [Stateless runtime constraints](#stateless-runtime-constraints)
@@ -343,25 +343,29 @@ The Web SDK can still update browser profile state after `page()`, `identify()`,
 sticky `trackView()` calls. If the application ignores those state changes, the rendered content
 remains server-owned.
 
-### React meta-framework SSR with React Web SDK tracking
+### React meta-framework SSR with client tracking
 
 The [Next.js SDK SSR reference implementation](../../implementations/nextjs-sdk_ssr/README.md) is
-one concrete example of the same tracking-only browser pattern. The guidance applies to any
-React-based meta-framework that can render React code on the server and hydrate part of that tree in
-the browser.
+one concrete example of the same tracking-only browser pattern. In Next.js, prefer the
+`@contentful/optimization-nextjs` adapter subpaths so app code uses the adapter's server,
+request-handler, and client entries rather than wiring the lower-level Node and React Web packages
+directly. The same ownership guidance applies to any React-based meta-framework that can render
+React code on the server and hydrate part of that tree in the browser.
 
 Keep personalization server-owned by enforcing these boundaries:
 
-- Server-only modules, routes, loaders, middleware, actions, or Server Components import
-  `@contentful/optimization-node`, call `requestOptimization.page()`, call
-  `sdk.resolveOptimizedEntry(...)`, and render plain React elements.
-- Server-rendered entry wrappers include `data-ctfl-entry-id` and `data-ctfl-baseline-id`, so the
-  browser tracking runtime can observe them after hydration.
-- Client-only modules import `@contentful/optimization-react-web` for `OptimizationRoot`, router
-  page tracking, consent controls, identify controls, and automatic interaction tracking.
-- `OptimizationRoot` and router page trackers are loaded behind the framework's client-only
-  boundary, so the browser Web SDK is not instantiated during SSR. In Next.js, the reference
-  implementation uses `next/dynamic` with `ssr: false`; other frameworks need the equivalent
+- Server-only modules, routes, loaders, middleware, actions, or Server Components import server-only
+  SDK entrypoints, call the request-bound page path, call `sdk.resolveOptimizedEntry(...)`, and
+  render plain React elements. In Next.js, those imports come from
+  `@contentful/optimization-nextjs/server` and `@contentful/optimization-nextjs/request-handler`.
+- Server-rendered entry wrappers include adapter/server-generated `data-ctfl-*` tracking attributes,
+  so the browser tracking runtime can observe them after hydration.
+- Client-only modules import browser entrypoints for `OptimizationRoot`, router page tracking,
+  consent controls, identify controls, and automatic interaction tracking. In Next.js, those imports
+  come from `@contentful/optimization-nextjs/client`.
+- `OptimizationRoot` and router page trackers stay behind the framework's client-only boundary, so
+  the browser runtime is not instantiated during SSR. Next.js App Router can render the adapter's
+  Client Component exports from a Server Component layout; other frameworks need the equivalent
   client-only island, lazy hydration, or browser-only wrapper.
 - The client tree does not use `OptimizedEntry`, `useOptimizedEntry`, or browser-side
   `resolveOptimizedEntry()`.
@@ -371,18 +375,18 @@ Keep personalization server-owned by enforcing these boundaries:
 This split avoids the common accidental-client-personalization path in React apps. `OptimizedEntry`
 is the React Web SDK's browser-personalization component; using it in a hydrated client tree can
 cause the browser to resolve variants from client SDK state. For server-only personalization, render
-the resolved entry in the server-owned render path and use React Web SDK only for tracking and
+the resolved entry in the server-owned render path and use the client SDK only for tracking and
 controls.
 
 After hydration, client actions can still update the profile. For example, `sdk.identify()` can
 associate the visitor with a known user, and `sdk.consent(true)` can allow interaction tracking.
 Those actions do not change the already rendered HTML in the reference pattern. The user sees
 updated personalization on the next server request, such as a refresh or full navigation, when the
-Node SDK evaluates the updated profile and renders a new response.
+server SDK evaluates the updated profile and renders a new response.
 
 The exact framework primitive is less important than the ownership boundary. If a framework can run
 the same React module on both the server and the browser, do not put personalization and tracking
-concerns in that shared module. Keep Node SDK calls in server-only code, keep React Web SDK calls in
+concerns in that shared module. Keep server SDK calls in server-only code, keep browser SDK calls in
 client-only code, and exchange only durable handoff data such as the profile ID and rendered
 tracking attributes.
 

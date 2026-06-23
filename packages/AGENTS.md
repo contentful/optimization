@@ -36,7 +36,8 @@ For pnpm-managed packages with matching scripts, use `pnpm --filter <package-nam
 - Run unit tests when behavior, helpers, contracts, or tested code changed.
 - Run package `build` when exports, bundled runtime code, emitted declarations, or packaging
   changed.
-- Run `size:check` for runtime, export, dependency, bundler config, or bundle-shape changes.
+- Run `size:check` for runtime, export, dependency, bundler config, or bundle-shape changes, and
+  handle failures under the root `Bundle size` policy.
 - Validate package-local harnesses when changing flows they demonstrate.
 - For package changes consumed by implementations, run `pnpm build:pkgs` before implementation
   install or tests.
@@ -53,4 +54,6 @@ For pnpm-managed packages with matching scripts, use `pnpm --filter <package-nam
   such as `@contentful/optimization-node`, `@contentful/optimization-react-native`,
   `@contentful/optimization-web`, and `@contentful/optimization-js-bridge`. Web dependents such as
   `@contentful/optimization-react-web` and `@contentful/optimization-web-preview-panel` run after
-  `@contentful/optimization-web`.
+  `@contentful/optimization-web`; `@contentful/optimization-nextjs` runs after
+  `@contentful/optimization-node`, `@contentful/optimization-web`, and
+  `@contentful/optimization-react-web`.

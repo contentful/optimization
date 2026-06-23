@@ -31,8 +31,8 @@ This document applies to reference implementations for:
 
 - Framework adapter SDKs.
 - Runtime SDKs when a framework-facing example is the primary integration path.
-- Meta-framework patterns that compose runtime SDKs and framework SDKs without a dedicated adapter
-  package.
+- Meta-framework patterns that compose runtime SDKs and framework SDKs directly, plus dedicated
+  meta-framework adapters such as Next.js when they exist.
 - Distinct rendering or routing modalities such as CSR, SSR, SSR plus CSR takeover, prerendering,
   edge rendering, middleware routing, and hybrid server/browser flows.
 - Multi-shell platform references where one SDK supports multiple UI surfaces, such as native UI
@@ -69,7 +69,7 @@ throwaway demos.
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | Framework SDK reference             | Demonstrates the primary path for a framework adapter SDK package.                                                 |
 | Runtime SDK reference               | Demonstrates the primary path for a runtime SDK when no framework adapter is involved.                             |
-| Meta-framework pattern reference    | Demonstrates SDK composition in an application framework that does not require a dedicated SDK package.            |
+| Meta-framework pattern reference    | Demonstrates SDK composition or a dedicated adapter in an application framework with SSR, CSR, or hybrid modes.    |
 | Modality-specific reference         | Demonstrates one rendering or routing modality when combining modalities makes validation unclear.                 |
 | Multi-shell platform reference      | Demonstrates parity across UI shells that share one SDK, such as native UI frameworks or comparable platform APIs. |
 | Cross-runtime composition reference | Demonstrates server/browser or runtime/runtime cooperation, such as request-to-browser profile continuity.         |
@@ -209,8 +209,9 @@ pattern.
 
 ## Meta-framework pattern requirements
 
-- **REFREQ-38 Composition contract** - Meta-framework references must identify which runtime SDKs
-  and framework SDKs are composed and which application boundary owns each part of the flow.
+- **REFREQ-38 Composition contract** - Meta-framework references must identify which runtime SDKs,
+  framework SDKs, or adapter subpaths are composed and which application boundary owns each part of
+  the flow.
 - **REFREQ-39 Server/browser separation** - Server files must use server-compatible SDKs and browser
   files must use browser-compatible SDKs. The app must keep imports isolated by runtime.
 - **REFREQ-40 First paint behavior** - SSR or hybrid references must define and validate what the

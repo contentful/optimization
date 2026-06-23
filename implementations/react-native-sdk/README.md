@@ -43,7 +43,7 @@ navigation/screen tracking, offline behavior, preview-panel scenarios, and Detox
 
 ## Prerequisites
 
-- Node.js >= 20.19.0 (24.13.0 recommended to match `.nvmrc`)
+- Node.js >= 20.19.0 (24.15.0 recommended to match `.nvmrc`)
 - pnpm 10.x
 - An Android emulator available and running for Android Detox flows
 - Xcode with an iOS Simulator available for iOS Detox flows

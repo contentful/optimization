@@ -10,8 +10,9 @@ Owns the platform-agnostic optimization core used by all platform SDKs.
 ## Commands
 
 - `pnpm --filter @contentful/optimization-core <script>` with `typecheck`, `test:unit`, `build`, or
-  `size:check`.
+  `size:check` or `size:report`.
 
 ## Validate
 
 - Run `typecheck`, `test:unit`, and `build`.
+- Handle bundle-size failures under the root `Bundle size` policy.

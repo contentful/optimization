@@ -13,7 +13,7 @@ Owns the React Native SDK and package-local development harness.
 ## Commands
 
 - `pnpm --filter @contentful/optimization-react-native <script>` with `typecheck`, `test:unit`,
-  `build`, `size:check`, `dev:test`, `dev:start`, `dev:android`, or `dev:ios`.
+  `build`, `size:check`, `size:report`, `dev:test`, `dev:start`, `dev:android`, or `dev:ios`.
 - Downstream Android Detox after SDK runtime changes: `pnpm build:pkgs`, then
   `pnpm implementation:run -- react-native-sdk implementation:install`, then
   `pnpm implementation:run -- react-native-sdk test:e2e:android:full -- --test-file <file>`.
@@ -23,6 +23,7 @@ Owns the React Native SDK and package-local development harness.
 ## Validate
 
 - Run `typecheck`, `test:unit`, and `build`.
+- Handle bundle-size failures under the root `Bundle size` policy.
 - Run `dev:test` for harness behavior changes.
 - Validate `dev/` or `implementations/react-native-sdk` when SDK flows, runtime tracking, storage,
   navigation, offline behavior, or preview behavior changes.

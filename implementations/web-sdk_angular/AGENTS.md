@@ -31,11 +31,17 @@ pnpm implementation:run -- web-sdk_angular serve:mocks
 pnpm implementation:run -- web-sdk_angular dev
 pnpm implementation:run -- web-sdk_angular build
 pnpm implementation:run -- web-sdk_angular typecheck
+pnpm implementation:lint
+pnpm implementation:run -- web-sdk_angular implementation:test:e2e:run
+pnpm test:e2e:web-sdk_angular
 ```
 
 ## Validate
 
 - Run `typecheck` for TypeScript changes.
 - Run `build` for production bundling changes.
-- Run lint via `npx eslint <file>` from the implementation directory for source file changes.
+- Run lint from the monorepo root with `pnpm implementation:lint`; for a targeted source-file probe,
+  use `pnpm exec eslint implementations/web-sdk_angular/<path>`.
+- Run shared Playwright E2E for user-visible behavior, routing, event flow, tracking, preview
+  behavior, or Angular integration changes.
 - The pre-commit hook runs lint and Prettier automatically — fix any errors before committing.

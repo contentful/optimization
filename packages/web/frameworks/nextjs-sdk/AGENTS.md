@@ -14,9 +14,9 @@ client.
 ## Commands
 
 - `pnpm --filter @contentful/optimization-nextjs <script>` with `typecheck`, `test:unit`, `build`,
-  or `size:check`.
+  `size:check`, or `size:report`.
 
 ## Validate
 
 - Run `typecheck`, `test:unit`, and `build`.
-- Run `size:check`, but do not reduce maintainability solely to satisfy an initial budget.
+- Run `size:check` and handle failures under the root `Bundle size` policy.

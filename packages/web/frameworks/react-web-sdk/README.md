@@ -354,6 +354,9 @@ Router adapters emit `page()` events for supported client-side routers:
 | Next.js App Router | `@contentful/optimization-react-web/router/next-app`        | Mount in `app/layout.tsx` inside `OptimizationRoot`                  |
 | TanStack Router    | `@contentful/optimization-react-web/router/tanstack-router` | Mount under the TanStack router tree and inside `OptimizationRoot`   |
 
+For Next.js applications that need the server, client, and request-handler integration together,
+prefer the [`@contentful/optimization-nextjs`](../nextjs-sdk/README.md) adapter package.
+
 All adapters support static and dynamic page payload enrichment. See the
 [React Web integration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html#5-emit-page-events-with-supported-router-adapters)
 for router-specific examples.

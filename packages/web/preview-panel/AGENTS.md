@@ -14,9 +14,10 @@ Owns the Web preview panel micro-frontend built with Lit and integrated with
 ## Commands
 
 - `pnpm --filter @contentful/optimization-web-preview-panel <script>` with `typecheck`, `build`,
-  `size:check`, or `dev`.
+  `size:check`, `size:report`, or `dev`.
 
 ## Validate
 
 - Run `typecheck` and `build`.
+- Handle bundle-size failures under the root `Bundle size` policy.
 - Validate the package-local `dev` flow when changing panel flows it exercises.

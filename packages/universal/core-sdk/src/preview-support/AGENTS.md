@@ -5,8 +5,9 @@ mapping, fetch helpers, signals, and the `./preview-support` entry point.
 
 ## Rules
 
-- Contentful content-model knowledge (`nt_audience`, `nt_experience`, `nt_config`, ...) belongs
-  here; keep the rest of `core-sdk` free of schema knowledge.
+- Preview-specific Contentful authoring-model fetch and mapping (`nt_audience`, `nt_experience`,
+  preview model construction) belongs here. Runtime optimized-entry contract handling may still live
+  in core resolvers or schemas outside `preview-support`.
 - Keep public APIs stable for the React Native SDK re-export and the iOS JSC bridge.
 - Keep override behavior aligned with preview-panel scenario contracts and platform wrappers.
 

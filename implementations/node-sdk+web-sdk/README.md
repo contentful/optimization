@@ -62,7 +62,7 @@ between them, and local mock API usage for end-to-end validation.
 
 ## Prerequisites
 
-- Node.js >= 20.19.0 (24.13.0 recommended to match `.nvmrc`)
+- Node.js >= 20.19.0 (24.15.0 recommended to match `.nvmrc`)
 - pnpm 10.x
 
 ## Setup

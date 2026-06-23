@@ -16,9 +16,14 @@ server/client SDK composition; app code imports only Next.js SDK subpaths.
 ## Commands
 
 - `pnpm implementation:run -- nextjs-sdk_ssr <script>` with `implementation:install`, `typecheck`,
-  `build`, `dev`, `serve`, or `serve:stop`.
+  `lint`, `build`, `dev`, `serve`, `serve:stop`, `implementation:setup:e2e`, or
+  `implementation:test:e2e:run`.
+- Root wrappers: `pnpm setup:e2e:nextjs-sdk_ssr` and `pnpm test:e2e:nextjs-sdk_ssr`.
 
 ## Validate
 
 - Run `typecheck` for local code changes.
+- Run `lint` for source changes.
 - Run `build` for production bundling changes.
+- Run Playwright E2E for user-visible behavior, routing, event flow, tracking, SSR first-paint,
+  proxy cookie continuity, or SDK integration changes.

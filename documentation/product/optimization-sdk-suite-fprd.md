@@ -94,8 +94,8 @@ integration surface.
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Core SDK                          | Shared optimization engine and behavior contract.                                                                                                       |
 | Runtime SDKs                      | Web, Node, React Native, iOS, and Android.                                                                                                              |
-| Framework adapter SDKs            | Application and UI adapters: Angular, React Web, Svelte, and Vue. Mobile UI APIs: React Native. Server adapters: Express and NestJS.                    |
-| Meta-framework reference patterns | Next.js, Nuxt.js, SvelteKit, and comparable application frameworks where SDK composition can support the required integration without a dedicated SDK.  |
+| Framework adapter SDKs            | Application and UI adapters: React Web, Next.js, Angular, Svelte, and Vue. Mobile UI APIs: React Native. Server adapters: Express and NestJS.           |
+| Meta-framework reference patterns | Nuxt.js, SvelteKit, and comparable application frameworks where SDK composition can support the required integration without a dedicated SDK.           |
 | Reference implementations         | At least one per published SDK, plus pattern-specific apps for SSR, CSR, hybrid web, native UI shells, mobile/offline behavior, preview, and analytics. |
 | Supporting packages               | API Client, API Schemas, Preview Panel, native bridge packages, mocks, fixtures, and shared scenario contracts.                                         |
 
@@ -105,11 +105,11 @@ integration. It also provides framework-facing APIs, including providers, hooks,
 rendering, navigation tracking, and component-level tracking configuration.
 
 Reference implementations are intentionally pattern-oriented. Some framework targets include routing
-and rendering strategies inside the framework itself, while meta-frameworks such as Next.js,
-Nuxt.js, and SvelteKit can be validated through SDK composition rather than dedicated framework
-adapter SDKs. Any target with distinct SSR, CSR, prerendering, or hybrid modalities can have
-multiple reference implementations when those patterns are difficult or infeasible to combine in one
-application.
+and rendering strategies inside the framework itself; Next.js now has a first-party adapter for that
+composition, while other meta-frameworks such as Nuxt.js and SvelteKit can still be validated
+through SDK composition rather than dedicated framework adapter SDKs. Any target with distinct SSR,
+CSR, prerendering, or hybrid modalities can have multiple reference implementations when those
+patterns are difficult or infeasible to combine in one application.
 
 ## Core SDK requirements
 
@@ -253,9 +253,10 @@ patterns.
 - **REF-4 Framework adapter coverage** - Each framework adapter SDK must have a customer-style
   reference implementation that demonstrates framework-native setup, routing or request tracking,
   optimized rendering, live updates, preview where supported, and analytics handoff.
-- **REF-5 Meta-framework pattern coverage** - Meta-frameworks such as Next.js, Nuxt.js, and
-  SvelteKit can be supported through reference implementations instead of dedicated SDKs when SDK
-  composition covers the required behavior.
+- **REF-5 Meta-framework pattern coverage** - Meta-frameworks such as Nuxt.js and SvelteKit can be
+  supported through reference implementations instead of dedicated SDKs when SDK composition covers
+  the required behavior. When a dedicated adapter exists, such as Next.js, its reference
+  implementations must validate the adapter and the relevant rendering modalities.
 - **REF-6 Modality coverage** - CSR, SSR, prerendering, and hybrid web application patterns must
   have separate reference implementations when combining them would make the example unclear or
   technically impractical. This applies whether those modalities are built into a framework or
@@ -348,8 +349,9 @@ The suite must support these application and validation workflows:
 - Server personalization across Node, Express, and NestJS with request-scoped profile evaluation,
   middleware or route integration, SSR support, event delivery, and browser follow-up tracking where
   applicable.
-- Meta-framework reference patterns for Next.js, Nuxt.js, and SvelteKit across CSR, SSR,
-  prerendering where compatible with personalization constraints, and hybrid takeover modalities.
+- Meta-framework reference patterns for the Next.js adapter and for Nuxt.js, SvelteKit, and similar
+  targets across CSR, SSR, prerendering where compatible with personalization constraints, and
+  hybrid takeover modalities.
 - Mobile framework-facing personalization through React Native APIs with provider setup, optimized
   entries, screen tracking, interaction tracking, offline behavior, preview, and analytics handoff.
 - Native app personalization across iOS and Android with direct client APIs, native UI helpers,
