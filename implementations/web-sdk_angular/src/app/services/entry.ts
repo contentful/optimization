@@ -6,6 +6,7 @@ import {
   ElementRef,
   inject,
   signal,
+  TransferState,
   untracked,
   type Signal,
 } from '@angular/core'
@@ -14,6 +15,7 @@ import { isMergeTagEntry, type MergeTagEntry } from '@contentful/optimization-we
 import type { Document, Text } from '@contentful/rich-text-types'
 import { INLINES } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
+import { SERVER_RESOLVED_ENTRIES_KEY } from '../transfer-state-keys'
 import { isRecord } from '../utils'
 import { NgContentfulOptimization } from './optimization'
 
@@ -78,14 +80,18 @@ function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Sign
   })
 
   function track(): void {
+    const { sdk } = optimization
+    if (!sdk) return
     const { entryId, optimizationId, sticky, variantIndex } = result()
-    optimization.sdk.tracking.enableElement('views', elementRef.nativeElement, {
+    sdk.tracking.enableElement('views', elementRef.nativeElement, {
       data: { entryId, optimizationId, sticky, variantIndex },
     })
   }
 
   function clear(): void {
-    optimization.sdk.tracking.clearElement('views', elementRef.nativeElement)
+    const { sdk } = optimization
+    if (!sdk) return
+    sdk.tracking.clearElement('views', elementRef.nativeElement)
   }
 
   effect(() => {
@@ -108,6 +114,7 @@ export function injectContentfulEntry({
   manualTracking?: Signal<boolean>
 }): Signal<ResolvedEntry> {
   const optimization = inject(NgContentfulOptimization)
+  const transferState = inject(TransferState)
 
   function liveRead<T>(sig: Signal<T>): T {
     if (isLive()) return sig()
@@ -120,21 +127,41 @@ export function injectContentfulEntry({
 
   const variant = computed(() => {
     const raw = entry()
+    const { sdk } = optimization
+    if (sdk) {
+      return {
+        raw,
+        resolved: sdk.resolveOptimizedEntry(raw, liveRead(optimization.selectedOptimizations)),
+      }
+    }
+    // Server render: lift the server-resolved entry from TransferState if present
+    // so the initial HTML reflects the personalized variant. Falls back to the
+    // baseline when no handoff exists (e.g. consent denied — server skipped resolve).
+    const handoff = transferState.get(SERVER_RESOLVED_ENTRIES_KEY, undefined)
+    const slot = handoff?.[raw.sys.id]
     return {
       raw,
-      resolved: optimization.sdk.resolveOptimizedEntry(
-        raw,
-        liveRead(optimization.selectedOptimizations),
-      ),
+      resolved: {
+        entry: slot?.resolvedEntry ?? raw,
+        selectedOptimization:
+          slot?.optimizationId !== undefined
+            ? {
+                experienceId: slot.optimizationId,
+                variantIndex: slot.variantIndex ?? 0,
+                sticky: slot.sticky,
+              }
+            : undefined,
+      },
     }
   })
 
   const result = computed(() => {
     const { raw, resolved } = variant()
     const profile = liveRead(optimization.profile)
+    const { sdk } = optimization
     let mergeTagResolved: boolean | undefined = undefined
     const entry = resolveEntryMergeTags(resolved.entry, (target) => {
-      const value = profile ? optimization.sdk.getMergeTagValue(target, profile) : undefined
+      const value = sdk && profile ? sdk.getMergeTagValue(target, profile) : undefined
       if (value !== undefined) mergeTagResolved = true
       else mergeTagResolved ??= false
       return value ?? target.fields.nt_fallback

@@ -3,6 +3,7 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core'
+import { provideClientHydration, withEventReplay } from '@angular/platform-browser'
 import { provideRouter } from '@angular/router'
 import { routes } from './app.routes'
 import { provideContentfulOptimizationConfig, resolveLogLevel } from './config'
@@ -12,6 +13,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
+    provideClientHydration(withEventReplay()),
     provideRouter(routes),
     provideContentfulOptimizationConfig({
       clientId: environment.PUBLIC_NINETAILED_CLIENT_ID,

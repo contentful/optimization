@@ -3,6 +3,7 @@ import { fromSdkState } from '../utils'
 import { NgContentfulOptimization } from './optimization'
 
 function clickPreviewPanelToggle(): void {
+  if (typeof document === 'undefined') return
   const panel = document.querySelector('ctfl-opt-preview-panel')
   const btn = panel?.shadowRoot?.querySelector<HTMLButtonElement>('button.toggle-drawer')
   btn?.click()
@@ -10,13 +11,15 @@ function clickPreviewPanelToggle(): void {
 
 @Injectable({ providedIn: 'root' })
 export class NgLiveUpdates {
-  private readonly sdk = inject(NgContentfulOptimization).sdk
+  private readonly optimization = inject(NgContentfulOptimization)
 
   private readonly globalLiveUpdatesSignal = signal(false)
   private readonly previewPanelAttached = fromSdkState<boolean>(
-    this.sdk.states.previewPanelAttached,
+    () => this.optimization.sdk?.states.previewPanelAttached,
   )
-  private readonly previewPanelOpen = fromSdkState<boolean>(this.sdk.states.previewPanelOpen)
+  private readonly previewPanelOpen = fromSdkState<boolean>(
+    () => this.optimization.sdk?.states.previewPanelOpen,
+  )
 
   readonly globalLiveUpdates = this.globalLiveUpdatesSignal.asReadonly()
   readonly previewPanelVisible = computed(

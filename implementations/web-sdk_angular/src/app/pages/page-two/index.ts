@@ -30,7 +30,7 @@ export class PageTwo {
   }
 
   protected readonly trackConversion = (): void => {
-    void this.optimization.sdk.trackView({
+    void this.optimization.sdk?.trackView({
       componentId: PAGE_TWO_COMPONENT_ID,
       viewId: crypto.randomUUID(),
       viewDurationMs: 0,

@@ -1,4 +1,5 @@
-import { inject, Injectable, type OnDestroy, type Signal } from '@angular/core'
+import { isPlatformBrowser } from '@angular/common'
+import { inject, Injectable, PLATFORM_ID, signal, type OnDestroy, type Signal } from '@angular/core'
 import { NavigationEnd, Router } from '@angular/router'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
@@ -59,18 +60,36 @@ function getOrCreateInstance(
   return instance
 }
 
+/**
+ * Browser-only SDK service. The Web SDK constructor touches `localStorage` at
+ * construction time, so on the server we leave `sdk` as `undefined` and skip
+ * SDK side effects. Components dereferencing `sdk?.` are no-ops during SSR;
+ * the same components run normally after hydration once the browser SDK is
+ * constructed here.
+ */
 @Injectable({ providedIn: 'root' })
 export class NgContentfulOptimization implements OnDestroy {
-  readonly sdk: NgContentfulOptimizationInstance
+  readonly sdk: NgContentfulOptimizationInstance | undefined
   readonly consent: Signal<boolean | undefined>
   readonly profile: Signal<Profile | undefined>
   readonly selectedOptimizations: Signal<SelectedOptimizationArray | undefined>
 
-  private readonly routerSubscription: Subscription
+  private readonly routerSubscription: Subscription | undefined
 
   constructor() {
     const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
     const router = inject(Router)
+    const isBrowser = isPlatformBrowser(inject(PLATFORM_ID))
+
+    if (!isBrowser) {
+      this.sdk = undefined
+      this.consent = signal<boolean | undefined>(undefined).asReadonly()
+      this.profile = signal<Profile | undefined>(undefined).asReadonly()
+      this.selectedOptimizations = signal<SelectedOptimizationArray | undefined>(
+        undefined,
+      ).asReadonly()
+      return
+    }
 
     this.sdk = getOrCreateInstance(config)
 
@@ -79,9 +98,7 @@ export class NgContentfulOptimization implements OnDestroy {
     }
 
     this.consent = fromSdkState(this.sdk.states.consent)
-
     this.profile = fromSdkState(this.sdk.states.profile)
-
     this.selectedOptimizations = fromSdkState(this.sdk.states.selectedOptimizations)
 
     // Page events must fire on every route change including the initial load.
@@ -89,13 +106,15 @@ export class NgContentfulOptimization implements OnDestroy {
     this.routerSubscription = router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
-        void this.sdk.page({ properties: { url: window.location.origin + e.urlAfterRedirects } })
+        void this.sdk?.page({
+          properties: { url: window.location.origin + e.urlAfterRedirects },
+        })
       })
   }
 
   ngOnDestroy(): void {
-    this.routerSubscription.unsubscribe()
-    this.sdk.destroy()
+    this.routerSubscription?.unsubscribe()
+    this.sdk?.destroy()
     instance = undefined
     attachmentStarted = false
   }
