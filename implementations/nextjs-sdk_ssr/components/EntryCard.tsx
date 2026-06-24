@@ -26,7 +26,7 @@ export function EntryCard({
   const text = typeof resolvedEntry.fields.text === 'string' ? resolvedEntry.fields.text : ''
 
   const content = (
-    <div data-testid={`content-${baselineEntry.sys.id}`}>
+    <div data-ctfl-entry-id={resolvedEntry.sys.id} data-testid={`content-${baselineEntry.sys.id}`}>
       <div
         aria-label={`Entry: ${baselineEntry.sys.id}`}
         data-testid={`entry-text-${baselineEntry.sys.id}`}

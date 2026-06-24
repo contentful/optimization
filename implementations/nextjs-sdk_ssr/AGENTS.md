@@ -13,6 +13,14 @@ server/client SDK composition; app code imports only Next.js SDK subpaths.
 - Use the SDK's `OptimizationRoot` directly; do not add custom provider wrappers around it.
 - If consumed packages changed, run `pnpm build:pkgs` and reinstall before trusting results.
 
+## E2E tests
+
+- Behavioral tests (click, hover, consent, navigation, variants) run from `lib/e2e-web` with
+  `RENDERING_MODE=ssr`. The local `e2e/` directory holds only SSR-specific specs
+  (`nextjs-ssr-behavior.spec.ts`).
+- Entry cards must expose `data-ctfl-entry-id` on the `content-*` element so shared selectors work.
+- `test:e2e` delegates to `lib/e2e-web`; `playwright.config.mjs` is for the local SSR-only spec.
+
 ## Commands
 
 - `pnpm implementation:run -- nextjs-sdk_ssr <script>` with `implementation:install`, `typecheck`,
