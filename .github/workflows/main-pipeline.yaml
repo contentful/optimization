@@ -487,8 +487,6 @@ jobs:
     needs: [setup, changes, build]
     if: needs.changes.outputs.e2e_web_sdk == 'true'
     steps:
-      - uses: docker/setup-compose-action@8cccb8c14b6500aaffebff1aa49c502c34d2e5e6 # v2.1.0
-
       - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
 
       - name: Create .env from .env.example
@@ -516,7 +514,8 @@ jobs:
           path: pkgs
       - run: pnpm store prune
       - run: pnpm run implementation:web-sdk -- implementation:install -- --no-frozen-lockfile
-      - run: pnpm run implementation:web-sdk -- implementation:playwright:install -- --with-deps
+      - run: pnpm --dir lib/e2e-web install --no-frozen-lockfile
+      - run: pnpm --dir lib/e2e-web run setup:e2e
       - run: pnpm run implementation:web-sdk -- implementation:test:e2e:run
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -524,8 +523,8 @@ jobs:
         with:
           name: ci-results-web-sdk
           path: |
-            ./implementations/web-sdk/playwright-report/
-            ./implementations/web-sdk/test-results/
+            ./lib/e2e-web/playwright-report/
+            ./lib/e2e-web/test-results/
           retention-days: 1
 
   e2e-web-sdk_react:
