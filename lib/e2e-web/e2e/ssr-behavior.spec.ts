@@ -1,20 +1,26 @@
-import { expect, test } from '@playwright/test'
+import { type APIRequestContext, expect, test } from '@playwright/test'
 
 const RENDERING_MODE = (process.env.RENDERING_MODE ?? 'csr').toLowerCase()
 
-// Profile ID from lib/mocks/src/experience/data/identified-visitor.json.
-// The mock returns identified-visitor data when this ID is sent as the anonymous profile.
-const IDENTIFIED_PROFILE_ID = 'f0837a67eed5f1c93978f6d53fa948df93897137bcd048366f30ba590420754b'
+const MOCK_API_URL = 'http://localhost:8000/experience'
 
-// Entry 1JAU028vQ7v6nB2swl3NBo resolves to variant 2KIWllNZJT205BwOSkMINg for the identified
-// profile. Texts come from lib/mocks/src/contentful/data/entries/.
-const BASELINE_ENTRY_ID = '1JAU028vQ7v6nB2swl3NBo'
-const BASELINE_TEXT = 'This is a level 0 nested baseline entry.'
-const VARIANT_TEXT = 'This is a level 0 nested variant entry.'
+// Seed the mock so it returns identified-visitor data for this profile ID.
+// The mock tracks identified state in-memory via POSTed identify events.
+async function seedIdentifiedProfile(request: APIRequestContext, profileId: string): Promise<void> {
+  await request.post(
+    `${MOCK_API_URL}/v2/organizations/mock-client-id/environments/main/profiles/${profileId}`,
+    {
+      data: {
+        events: [
+          { type: 'identify', properties: { userId: 'charles', traits: { identified: true } } },
+        ],
+      },
+    },
+  )
+}
 
 const SSR_COOKIES = {
   consent: { name: 'app-personalization-consent', value: 'granted' },
-  profile: { name: 'ctfl-opt-aid', value: IDENTIFIED_PROFILE_ID },
 } as const
 
 test.describe('server-side tracking attributes', () => {
@@ -35,7 +41,7 @@ test.describe('server-side tracking attributes', () => {
     context,
     page,
   }) => {
-    await context.addCookies([{ ...SSR_COOKIES.consent, url: baseURL ?? 'http://localhost:3001' }])
+    await context.addCookies([{ ...SSR_COOKIES.consent, url: baseURL }])
     const clientExperienceRequests: string[] = []
     await page.route('**/experience/**', async (route) => {
       clientExperienceRequests.push(route.request().url())
@@ -54,38 +60,57 @@ test.describe('server-side variant resolution', () => {
   test.skip(RENDERING_MODE !== 'ssr', 'Server-side variant resolution tests only run in SSR mode.')
   test.use({ javaScriptEnabled: false })
 
-  test('renders baseline entry text when no consent cookie is set', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-
-    await expect(page.getByTestId(`entry-text-${BASELINE_ENTRY_ID}`)).toContainText(BASELINE_TEXT)
-  })
-
-  test('renders resolved variant text when consent and profile cookies are set', async ({
-    baseURL,
-    context,
-    page,
-  }) => {
+  test('displays unidentified user variants', async ({ baseURL, context, page }) => {
+    const profileId = crypto.randomUUID()
     await context.addCookies([
-      { ...SSR_COOKIES.consent, url: baseURL ?? 'http://localhost:3001' },
-      { ...SSR_COOKIES.profile, url: baseURL ?? 'http://localhost:3001' },
+      { ...SSR_COOKIES.consent, url: baseURL },
+      { name: 'ctfl-opt-aid', value: profileId, url: baseURL },
     ])
 
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
-    await expect(page.getByTestId(`entry-text-${BASELINE_ENTRY_ID}`)).toContainText(VARIANT_TEXT)
+    await expect(page.getByText('This is a level 0 nested baseline entry.')).toBeVisible()
+    await expect(page.getByText('This is a level 1 nested baseline entry.')).toBeVisible()
+    await expect(page.getByText('This is a level 2 nested baseline entry.')).toBeVisible()
+    await expect(
+      page.getByText('This is a baseline content entry for all identified or unidentified users.'),
+    ).toBeVisible()
   })
 
-  test('renders baseline text when consent is denied', async ({ baseURL, context, page }) => {
+  test('displays identified user variants', async ({ baseURL, context, page, request }) => {
+    const profileId = crypto.randomUUID()
+    await seedIdentifiedProfile(request, profileId)
     await context.addCookies([
-      { name: SSR_COOKIES.consent.name, value: 'denied', url: baseURL ?? 'http://localhost:3001' },
-      { ...SSR_COOKIES.profile, url: baseURL ?? 'http://localhost:3001' },
+      { ...SSR_COOKIES.consent, url: baseURL },
+      { name: 'ctfl-opt-aid', value: profileId, url: baseURL },
     ])
 
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
-    await expect(page.getByTestId(`entry-text-${BASELINE_ENTRY_ID}`)).toContainText(BASELINE_TEXT)
+    await expect(page.getByText('This is a level 0 nested variant entry.')).toBeVisible()
+    await expect(page.getByText('This is a level 1 nested variant entry.')).toBeVisible()
+    await expect(page.getByText('This is a level 2 nested variant entry.')).toBeVisible()
+    await expect(
+      page.getByText('This is a variant content entry for identified users.'),
+    ).toBeVisible()
+  })
+
+  test('renders baseline when consent is denied', async ({ baseURL, context, page, request }) => {
+    const profileId = crypto.randomUUID()
+    await seedIdentifiedProfile(request, profileId)
+    await context.addCookies([
+      { name: SSR_COOKIES.consent.name, value: 'denied', url: baseURL },
+      { name: 'ctfl-opt-aid', value: profileId, url: baseURL },
+    ])
+
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+
+    await expect(page.getByText('This is a level 0 nested baseline entry.')).toBeVisible()
+    await expect(
+      page.getByText('This is a variant content entry for identified users.'),
+    ).toHaveCount(0)
   })
 })
