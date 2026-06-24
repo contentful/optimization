@@ -1,27 +1,9 @@
-import { type APIRequestContext, expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { CLICK_SCENARIO_IDS, PAGES } from '../src/fixtures'
-
-const RENDERING_MODE = (process.env.RENDERING_MODE ?? 'csr').toLowerCase()
-
-const MOCK_EXPERIENCE_URL = 'http://localhost:8000/experience'
-
-// Seed the mock so it returns identified-visitor data for this profile ID.
-// The mock tracks identified state in-memory via POSTed identify events.
-async function seedIdentifiedProfile(request: APIRequestContext, profileId: string): Promise<void> {
-  await request.post(
-    `${MOCK_EXPERIENCE_URL}/v2/organizations/mock-client-id/environments/main/profiles/${profileId}`,
-    {
-      data: {
-        events: [
-          { type: 'identify', properties: { userId: 'charles', traits: { identified: true } } },
-        ],
-      },
-    },
-  )
-}
+import { onlyInModes, seedIdentifiedProfile } from './utils'
 
 test.describe('Variant Resolution (SSR, JavaScript disabled)', () => {
-  test.skip(RENDERING_MODE !== 'ssr', 'SSR variant resolution tests only run in SSR mode.')
+  onlyInModes('ssr')
   test.use({ javaScriptEnabled: false })
 
   test.describe('unidentified user', () => {

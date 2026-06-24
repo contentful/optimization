@@ -1,5 +1,6 @@
 import { type Page, expect, test } from '@playwright/test'
 import { CLICK_SCENARIO_IDS } from '../src/fixtures'
+import { scrollThroughEntries, setup } from './utils'
 
 // --- click tracking helpers ---
 
@@ -45,15 +46,6 @@ const hoverScenarios: HoverScenario[] = [
   { name: 'descendant content node', hoverTargetTestId: `entry-text-${HOVER_ENTRY_BASELINE_ID}` },
 ]
 
-async function scrollThroughEntries(page: Page): Promise<void> {
-  const entries = page.locator('[data-testid^="content-"]')
-  const entryCount = await entries.count()
-
-  for (let index = 0; index < entryCount; index += 1) {
-    await entries.nth(index).scrollIntoViewIfNeeded()
-  }
-}
-
 async function movePointerAwayFromEntries(page: Page): Promise<void> {
   await page.getByRole('heading', { name: 'Utilities' }).hover()
 }
@@ -67,14 +59,6 @@ async function readHoverDurationMs(page: Page, hoverId: string): Promise<number>
     .locator(`[data-hover-id="${hoverId}"]`)
     .getAttribute('data-hover-duration-ms')
   return value !== null ? Number.parseInt(value, 10) : Number.NaN
-}
-
-// --- shared beforeEach ---
-
-async function setup(page: Page): Promise<void> {
-  await page.goto('/')
-  await page.waitForLoadState('domcontentloaded')
-  await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
 }
 
 // --- tests ---

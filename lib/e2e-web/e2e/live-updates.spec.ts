@@ -1,6 +1,5 @@
 import { type Locator, type Page, expect, test } from '@playwright/test'
-
-const isPreviewPanelEnabled = process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
+import { isPreviewPanelEnabled } from './utils'
 
 async function getEntryId(locator: Locator): Promise<string> {
   return (await locator.getAttribute('data-test-entry-id')) ?? ''

@@ -1,12 +1,8 @@
 import { expect, test } from '@playwright/test'
-
-const RENDERING_MODE = (process.env.RENDERING_MODE ?? 'csr').toLowerCase()
+import { onlyInModes } from './utils'
 
 test.describe('Server-Rendering Behavior', () => {
-  test.skip(
-    RENDERING_MODE !== 'ssr' && RENDERING_MODE !== 'hybrid',
-    'Server-rendering behavior tests only run in ssr or hybrid mode.',
-  )
+  onlyInModes('ssr', 'hybrid')
 
   test('does not issue a client Experience request after consented SSR hydration', async ({
     baseURL,
