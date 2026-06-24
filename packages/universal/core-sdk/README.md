@@ -76,7 +76,7 @@ const requestOptimization = statelessOptimization.forRequest({
   profile: { id: 'profile-id' },
 })
 
-await requestOptimization.page()
+const { accepted, data } = await requestOptimization.page()
 ```
 
 ## When to use this package
@@ -185,6 +185,7 @@ Core exposes reusable primitives for SDK layers:
 | `CoreStateless`                 | Stateless optimization runtime for server SDKs                         |
 | Event methods                   | `identify`, `page`, `screen`, `track`, `trackView`, `trackClick`, etc. |
 | Resolution helpers              | `resolveOptimizedEntry`, `getMergeTagValue`, and `getFlag`             |
+| Current-state tracking          | `AcceptedCurrentStateTracker` for SDK-owned page or screen adapters    |
 | `states`                        | Stateful observable state streams                                      |
 | Interceptors                    | First-party hooks for event and state lifecycle customization          |
 | Queue policy and fetch helpers  | Shared retry, flush, timeout, and offline buffering behavior           |
@@ -211,15 +212,6 @@ optimization overrides, and map Contentful entries for local authoring workflows
 Application code must not use preview support directly unless it is building a first-party preview
 surface.
 
-## SDK support
-
-SDK integration helpers live under the internal [`sdk-support`](./src/sdk-support/README.md) entry.
-They are used by first-party runtime and framework SDKs to coordinate consent-aware automatic page
-and screen tracking.
-
-Application code must not use SDK support directly. Use the public event methods documented by the
-runtime SDK, such as `page()` and `screen()`.
-
 ## Related
 
 - [Choosing the right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html) -
@@ -231,4 +223,3 @@ runtime SDK, such as `page()` and `screen()`.
 - [Optimization React Native SDK](../../react-native-sdk/README.md) - mobile SDK built on
   `CoreStateful`
 - [Core preview support](./src/preview-support/README.md) - internal preview helper entry
-- [Core SDK support](./src/sdk-support/README.md) - internal SDK helper entry

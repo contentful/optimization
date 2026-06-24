@@ -11,9 +11,13 @@
  */
 
 import {
+  AcceptedCurrentStateTracker,
   CoreStateful,
   type CoreStatefulConfig,
+  type EventEmissionResult,
+  type PageViewBuilderArgs,
   effect,
+  resolveStatefulDefaults,
   signals,
 } from '@contentful/optimization-core'
 import type { App } from '@contentful/optimization-core/api-schemas'
@@ -112,41 +116,53 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
  */
 export type OptimizationTrackingApi = EntryInteractionApi
 
-function resolvePersistedDefault<T>(
-  configured: T | undefined,
-  canLoadPersistedContinuity: boolean,
-  readPersistedValue: () => T | undefined,
-): T | undefined {
-  if (configured !== undefined) return configured
-  if (!canLoadPersistedContinuity) return undefined
+/**
+ * Metadata passed to current-page payload builders.
+ *
+ * @public
+ */
+export interface CurrentPageEmissionMetadata {
+  readonly isInitialEmission: boolean
+}
 
-  return readPersistedValue()
+/**
+ * Controls how {@link ContentfulOptimization.trackCurrentPage} treats the first route.
+ *
+ * @public
+ */
+export type InitialCurrentPageEvent = 'emit' | 'skip'
+
+/**
+ * Options for {@link ContentfulOptimization.trackCurrentPage}.
+ *
+ * @public
+ */
+export interface TrackCurrentPageOptions {
+  /**
+   * Stable route identity used for current-page deduplication.
+   */
+  readonly routeKey: string
+  /**
+   * Controls the first route emission. SSR integrations can use `skip` when
+   * the server already emitted the same page event.
+   */
+  readonly initialPageEvent?: InitialCurrentPageEvent
+  /**
+   * Builds the page payload only when a page event will be emitted.
+   */
+  readonly buildPayload: (metadata: CurrentPageEmissionMetadata) => PageViewBuilderArgs | undefined
 }
 
 function resolveDefaultState(
   defaults: CoreStatefulConfig['defaults'] | undefined,
 ): NonNullable<CoreStatefulConfig['defaults']> {
-  const consent = defaults?.consent ?? LocalStore.consent
-  const persistenceConsent =
-    defaults?.persistenceConsent ?? defaults?.consent ?? LocalStore.persistenceConsent
-  const canLoadPersistedContinuity = persistenceConsent === true
-  const profile = resolvePersistedDefault(
-    defaults?.profile,
-    canLoadPersistedContinuity,
-    () => LocalStore.profile,
-  )
-  const changes = resolvePersistedDefault(
-    defaults?.changes,
-    canLoadPersistedContinuity,
-    () => LocalStore.changes,
-  )
-  const selectedOptimizations = resolvePersistedDefault(
-    defaults?.selectedOptimizations,
-    canLoadPersistedContinuity,
-    () => LocalStore.selectedOptimizations,
-  )
-
-  return { consent, persistenceConsent, changes, profile, selectedOptimizations }
+  return resolveStatefulDefaults(defaults, {
+    consent: LocalStore.consent,
+    persistenceConsent: LocalStore.persistenceConsent,
+    profile: () => LocalStore.profile,
+    changes: () => LocalStore.changes,
+    selectedOptimizations: () => LocalStore.selectedOptimizations,
+  }).defaults
 }
 
 function readInitialCookieValues(canLoadPersistedContinuity: boolean): {
@@ -238,6 +254,8 @@ function mergeConfig({
  * in a browser environment.
  */
 class ContentfulOptimization extends CoreStateful {
+  private readonly currentPageTracker = new AcceptedCurrentStateTracker<string>()
+
   /**
    * Tracked entry interaction runtime state and trackers.
    *
@@ -437,10 +455,43 @@ class ContentfulOptimization extends CoreStateful {
    * @public
    */
   reset(): void {
+    this.currentPageTracker.reset()
     this.entryInteractionRuntime.reset()
     removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
     LocalStore.reset()
     super.reset()
+  }
+
+  /**
+   * Track the current browser page with route-key deduplication.
+   *
+   * @remarks
+   * This is intended for router integrations. Manual `page()` calls remain
+   * direct emits and are not deduplicated.
+   *
+   * @public
+   */
+  async trackCurrentPage({
+    buildPayload,
+    initialPageEvent = 'emit',
+    routeKey,
+  }: TrackCurrentPageOptions): Promise<EventEmissionResult> {
+    if (initialPageEvent === 'skip' && !this.currentPageTracker.hasAccepted()) {
+      this.currentPageTracker.markAccepted(routeKey)
+      return { accepted: true }
+    }
+
+    const isInitialEmission = !this.currentPageTracker.hasAccepted()
+    const result = await this.currentPageTracker.emitIfNeeded({
+      key: routeKey,
+      isAllowed: this.hasConsent('page'),
+      emit: async () => await this.page(buildPayload({ isInitialEmission }) ?? {}),
+    })
+
+    if (!result.accepted) return { accepted: false }
+    if (result.data === undefined) return { accepted: true }
+
+    return { accepted: true, data: result.data }
   }
 
   /**

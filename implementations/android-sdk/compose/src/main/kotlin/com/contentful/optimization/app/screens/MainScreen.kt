@@ -47,8 +47,8 @@ fun MainScreen() {
     var viewportHeight by remember { mutableStateOf(0f) }
 
     LaunchedEffect(Unit) {
-        EventStore.subscribe(client.events, scope)
-        client.subscribeToFlag("boolean")
+        EventStore.subscribe(client.eventStream, scope)
+        client.observeFlag("boolean")
         try { client.page(mapOf("url" to "app")) } catch (_: Exception) {}
     }
 

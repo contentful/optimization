@@ -14,14 +14,16 @@ export {
   OPTIMIZED_ENTRY_HOST_DISPLAY,
   OptimizedEntryController,
   resolveOptimizedEntryNestingState,
-  resolveOptimizedEntryTrackingAttributes,
   type OptimizedEntryControllerOptions,
-  type OptimizedEntryHostAttributeValue,
   type OptimizedEntryLoadingTargetDisplay,
   type OptimizedEntryNestingState,
   type OptimizedEntrySdk,
   type OptimizedEntrySnapshot,
   type OptimizedEntrySnapshotListener,
+} from './OptimizedEntryController'
+export {
+  resolveOptimizedEntryTrackingAttributes,
+  type OptimizedEntryHostAttributeValue,
   type OptimizedEntryTrackingAttributeOptions,
   type OptimizedEntryTrackingAttributes,
-} from './OptimizedEntryController'
+} from './OptimizedEntryTrackingAttributes'

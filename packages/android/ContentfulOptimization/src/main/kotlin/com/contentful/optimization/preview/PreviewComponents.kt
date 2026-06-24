@@ -44,8 +44,8 @@ import com.contentful.optimization.core.VariantDistributionDTO
 
 // MARK: - Badge
 
-enum class BadgeVariant {
-    API, OVERRIDE, MANUAL, INFO, EXPERIMENT, PERSONALIZATION, QUALIFIED, PRIMARY;
+internal enum class BadgeVariant {
+    API, OVERRIDE, MANUAL, INFO, EXPERIMENT, OPTIMIZATION, QUALIFIED, PRIMARY;
 
     val backgroundColor
         @Composable get() = when (this) {
@@ -54,7 +54,7 @@ enum class BadgeVariant {
             MANUAL -> PreviewTheme.Colors.Badge.manual
             INFO -> PreviewTheme.Colors.Background.tertiary
             EXPERIMENT -> PreviewTheme.Colors.Badge.experiment
-            PERSONALIZATION -> PreviewTheme.Colors.Badge.personalization
+            OPTIMIZATION -> PreviewTheme.Colors.Badge.optimization
             QUALIFIED -> PreviewTheme.Colors.Status.qualified
             PRIMARY -> PreviewTheme.Colors.CP.normal
         }
@@ -67,7 +67,7 @@ enum class BadgeVariant {
 }
 
 @Composable
-fun PreviewBadge(label: String, variant: BadgeVariant) {
+internal fun PreviewBadge(label: String, variant: BadgeVariant) {
     Text(
         text = label,
         style = TextStyle(
@@ -83,7 +83,7 @@ fun PreviewBadge(label: String, variant: BadgeVariant) {
 
 // MARK: - Action Button
 
-enum class ActionButtonVariant {
+internal enum class ActionButtonVariant {
     ACTIVATE, DEACTIVATE, RESET, PRIMARY, SECONDARY, DESTRUCTIVE;
 
     val backgroundColor
@@ -104,7 +104,7 @@ enum class ActionButtonVariant {
 }
 
 @Composable
-fun PreviewActionButton(
+internal fun PreviewActionButton(
     label: String,
     variant: ActionButtonVariant,
     onClick: () -> Unit,
@@ -142,7 +142,7 @@ fun PreviewActionButton(
 
 // MARK: - Audience Toggle (Three-State)
 
-enum class AudienceOverrideState(val value: String) {
+internal enum class AudienceOverrideState(val value: String) {
     ON("on"), OFF("off"), DEFAULT("default");
 
     companion object {
@@ -151,7 +151,7 @@ enum class AudienceOverrideState(val value: String) {
 }
 
 @Composable
-fun AudienceToggle(
+internal fun AudienceToggle(
     value: AudienceOverrideState,
     onValueChange: (AudienceOverrideState) -> Unit,
     disabled: Boolean = false,
@@ -206,7 +206,7 @@ fun AudienceToggle(
 // MARK: - Search Bar
 
 @Composable
-fun PreviewSearchBar(
+internal fun PreviewSearchBar(
     text: String,
     onTextChange: (String) -> Unit,
     placeholder: String = "Search audiences and experiences...",
@@ -253,7 +253,7 @@ fun PreviewSearchBar(
 // MARK: - Section Card
 
 @Composable
-fun SectionCard(
+internal fun SectionCard(
     title: String,
     collapsible: Boolean = false,
     initiallyCollapsed: Boolean = false,
@@ -310,7 +310,7 @@ fun SectionCard(
 // MARK: - Qualification Indicator
 
 @Composable
-fun QualificationIndicator() {
+internal fun QualificationIndicator() {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(PreviewTheme.Spacing.xs),
@@ -334,7 +334,7 @@ fun QualificationIndicator() {
 // MARK: - JSON Viewer
 
 @Composable
-fun PreviewJsonViewer(data: String, title: String = "JSON Data") {
+internal fun PreviewJsonViewer(data: String, title: String = "JSON Data") {
     var isExpanded by remember { mutableStateOf(false) }
     val previewText = if (isExpanded) data else {
         val lines = data.split("\n")
@@ -399,7 +399,7 @@ fun PreviewJsonViewer(data: String, title: String = "JSON Data") {
 // MARK: - List Item Row
 
 @Composable
-fun ListItemRow(
+internal fun ListItemRow(
     label: String,
     value: String? = null,
     subtitle: String? = null,
@@ -459,7 +459,7 @@ fun ListItemRow(
 // MARK: - Collapse Toggle Button
 
 @Composable
-fun CollapseToggleButton(allExpanded: Boolean, onToggle: () -> Unit) {
+internal fun CollapseToggleButton(allExpanded: Boolean, onToggle: () -> Unit) {
     Text(
         text = if (allExpanded) "Collapse all" else "Expand all",
         style = TextStyle(
@@ -474,7 +474,7 @@ fun CollapseToggleButton(allExpanded: Boolean, onToggle: () -> Unit) {
 // MARK: - Variant Selector
 
 @Composable
-fun VariantSelector(
+internal fun VariantSelector(
     experience: ExperienceDefinitionDTO,
     isAudienceActive: Boolean,
     onSelectVariant: (Int) -> Unit,
@@ -558,7 +558,7 @@ fun VariantSelector(
 // MARK: - Experience Card
 
 @Composable
-fun ExperienceCard(
+internal fun ExperienceCard(
     experience: ExperienceDefinitionDTO,
     isAudienceActive: Boolean,
     onSelectVariant: (Int) -> Unit,
@@ -576,8 +576,8 @@ fun ExperienceCard(
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(PreviewTheme.Spacing.sm)) {
             PreviewBadge(
-                label = if (isExperiment) "Experiment" else "Personalization",
-                variant = if (isExperiment) BadgeVariant.EXPERIMENT else BadgeVariant.PERSONALIZATION,
+                label = if (isExperiment) "Experiment" else "Optimization",
+                variant = if (isExperiment) BadgeVariant.EXPERIMENT else BadgeVariant.OPTIMIZATION,
             )
             if (experience.isOverridden) {
                 PreviewBadge(label = "Override", variant = BadgeVariant.OVERRIDE)
@@ -605,7 +605,7 @@ fun ExperienceCard(
 // MARK: - Audience Item Header
 
 @Composable
-fun AudienceItemHeader(
+internal fun AudienceItemHeader(
     audience: AudienceWithExperiencesDTO,
     isExpanded: Boolean,
     onToggleExpand: () -> Unit,
@@ -680,7 +680,7 @@ fun AudienceItemHeader(
 // MARK: - Audience Item
 
 @Composable
-fun AudienceItem(
+internal fun AudienceItem(
     audience: AudienceWithExperiencesDTO,
     isExpanded: Boolean,
     onToggleExpand: () -> Unit,

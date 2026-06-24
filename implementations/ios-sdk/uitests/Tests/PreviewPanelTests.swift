@@ -101,16 +101,16 @@ final class PreviewPanelTests: XCTestCase {
                       "Expected consent to contain 'Accepted', got: \(text)")
     }
 
-    func testShowsCanPersonalize() {
+    func testShowsCanOptimize() {
         openPreviewPanel()
 
-        scrollToPreviewElement("debug-can-personalize")
-        let canPersonalize = findElement("debug-can-personalize", app: app)
-        XCTAssertTrue(canPersonalize.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
-                      "Debug canPersonalize element not found")
-        let text = extractText(canPersonalize)
+        scrollToPreviewElement("debug-can-optimize")
+        let canOptimize = findElement("debug-can-optimize", app: app)
+        XCTAssertTrue(canOptimize.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Debug canOptimize element not found")
+        let text = extractText(canOptimize)
         XCTAssertTrue(text.contains("Yes"),
-                      "Expected canPersonalize to contain 'Yes', got: \(text)")
+                      "Expected canOptimize to contain 'Yes', got: \(text)")
     }
 
     // MARK: - Refresh

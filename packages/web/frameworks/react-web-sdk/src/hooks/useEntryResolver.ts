@@ -3,7 +3,6 @@ import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useMemo } from 'react'
 
-import type { OptimizationSdk } from '../context/OptimizationContext'
 import { useOptimization } from './useOptimization'
 
 /**
@@ -15,7 +14,10 @@ export interface UseEntryResolverResult {
   /**
    * Resolves an entry and returns the full SDK resolver payload.
    */
-  readonly resolveOptimizedEntry: OptimizationSdk['resolveOptimizedEntry']
+  readonly resolveOptimizedEntry: (
+    entry: Entry,
+    selectedOptimizations?: SelectedOptimizationArray,
+  ) => ResolvedData<EntrySkeletonType>
   /**
    * Resolves an entry and returns only the resolved entry.
    */
@@ -49,11 +51,11 @@ export function useEntryResolver(): UseEntryResolverResult {
 
   return useMemo<UseEntryResolverResult>(
     () => ({
-      resolveOptimizedEntry: (entry, selectedOptimizations) =>
+      resolveOptimizedEntry: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) =>
         sdk.resolveOptimizedEntry(entry, selectedOptimizations),
-      resolveEntry: (entry, selectedOptimizations) =>
+      resolveEntry: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) =>
         sdk.resolveOptimizedEntry(entry, selectedOptimizations).entry,
-      resolveEntryData: (entry, selectedOptimizations) =>
+      resolveEntryData: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) =>
         sdk.resolveOptimizedEntry(entry, selectedOptimizations),
     }),
     [sdk],

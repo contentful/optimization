@@ -1,4 +1,9 @@
 import {
+  decodeConsentStorageValue,
+  encodeConsentStorageValue,
+  resolvePersistedPersistenceConsent,
+} from '@contentful/optimization-core'
+import {
   ChangeArray,
   Profile,
   SelectedOptimizationArray,
@@ -67,11 +72,6 @@ async function setEntries(entries: ReadonlyArray<[string, string]>): Promise<voi
   } catch (error: unknown) {
     logger.error(`Failed to set ${entries.map(([key]) => key).join(', ')} in AsyncStorage:`, error)
   }
-}
-
-function translateConsent(consent: boolean | undefined): string | undefined {
-  if (consent === undefined) return undefined
-  return consent ? 'accepted' : 'denied'
 }
 
 /**
@@ -143,40 +143,20 @@ class AsyncStorageStore {
    */
   get consent(): boolean | undefined {
     const value = this.cache.get(CONSENT_KEY)
-    const consent = typeof value === 'string' ? value : undefined
-
-    switch (consent) {
-      case 'accepted':
-        return true
-      case 'denied':
-        return false
-      default:
-        return undefined
-    }
+    return decodeConsentStorageValue(value)
   }
 
   set consent(consent: boolean | undefined) {
-    const translated = consent ? 'accepted' : 'denied'
-    void this.setCache(CONSENT_KEY, consent === undefined ? undefined : translated)
+    void this.setCache(CONSENT_KEY, encodeConsentStorageValue(consent))
   }
 
   get persistenceConsent(): boolean | undefined {
     const value = this.cache.get(PERSISTENCE_CONSENT_KEY)
-    const consent = typeof value === 'string' ? value : undefined
-
-    switch (consent) {
-      case 'accepted':
-        return true
-      case 'denied':
-        return false
-      default:
-        return this.consent === true ? true : undefined
-    }
+    return resolvePersistedPersistenceConsent(decodeConsentStorageValue(value), this.consent)
   }
 
   set persistenceConsent(consent: boolean | undefined) {
-    const translated = consent ? 'accepted' : 'denied'
-    void this.setCache(PERSISTENCE_CONSENT_KEY, consent === undefined ? undefined : translated)
+    void this.setCache(PERSISTENCE_CONSENT_KEY, encodeConsentStorageValue(consent))
   }
 
   /**
@@ -227,8 +207,8 @@ class AsyncStorageStore {
 
   async writeConsentState({ consent, persistenceConsent }: ConsentState): Promise<void> {
     await this.setCacheEntries([
-      [CONSENT_KEY, translateConsent(consent)],
-      [PERSISTENCE_CONSENT_KEY, translateConsent(persistenceConsent)],
+      [CONSENT_KEY, encodeConsentStorageValue(consent)],
+      [PERSISTENCE_CONSENT_KEY, encodeConsentStorageValue(persistenceConsent)],
     ])
   }
 

@@ -14,6 +14,8 @@
 
 import ContentfulOptimization from './ContentfulOptimization'
 
+export type OptimizationWebRuntime = ContentfulOptimization
+
 export * from './builders/EventBuilder'
 export {
   CAN_ADD_LISTENERS,

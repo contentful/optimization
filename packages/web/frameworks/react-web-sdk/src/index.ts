@@ -1,7 +1,8 @@
 'use client'
 
-import type ContentfulOptimization from '@contentful/optimization-web'
+import type { OptimizationSdk } from './context/OptimizationContext'
 
+export type { OptimizationWebRuntime } from '@contentful/optimization-web'
 export type {
   AutoPageEmissionContext,
   AutoPagePayload,
@@ -48,4 +49,4 @@ export type {
 } from './provider/OptimizationProvider'
 export { OptimizationRoot } from './root/OptimizationRoot'
 export type { OptimizationRootProps } from './root/OptimizationRoot'
-export type ContentfulOptimizationOrNull = ContentfulOptimization | null
+export type ContentfulOptimizationOrNull = OptimizationSdk | null

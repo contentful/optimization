@@ -19,8 +19,10 @@ final class PreviewOverrideTests: XCTestCase {
         let config = OptimizationConfig(
             clientId: "test-client",
             environment: "master",
-            experienceBaseUrl: "http://localhost:8000/experience/",
-            insightsBaseUrl: "http://localhost:8000/insights/"
+            api: OptimizationApiConfig(
+                experienceBaseUrl: "http://localhost:8000/experience/",
+                insightsBaseUrl: "http://localhost:8000/insights/"
+            )
         )
         try client.initialize(config: config)
         return client
@@ -76,11 +78,13 @@ final class PreviewOverrideTests: XCTestCase {
             __bridge.initialize({
                 clientId: "test-client",
                 environment: "master",
-                experienceBaseUrl: "http://localhost:8000/experience/",
-                insightsBaseUrl: "http://localhost:8000/insights/",
+                api: {
+                    experienceBaseUrl: "http://localhost:8000/experience/",
+                    insightsBaseUrl: "http://localhost:8000/insights/"
+                },
                 defaults: {
                     profile: \(profileScript),
-                    optimizations: [\(experiencesJSON)]
+                    selectedOptimizations: [\(experiencesJSON)]
                 }
             });
         """)
@@ -281,8 +285,8 @@ final class PreviewOverrideTests: XCTestCase {
                        "Other variant overrides should remain")
 
         // Verify the signal was restored to the default value
-        let personalizations = state?.selectedPersonalizations ?? []
-        let exp1 = personalizations.first(where: { $0.experienceId == "exp-1" })
+        let selectedOptimizations = state?.selectedOptimizations ?? []
+        let exp1 = selectedOptimizations.first(where: { $0.experienceId == "exp-1" })
         XCTAssertEqual(exp1?.variantIndex, 0,
                        "Signal should be restored to original variantIndex=0")
     }
@@ -324,9 +328,9 @@ final class PreviewOverrideTests: XCTestCase {
         // Verify the variant signal was restored to defaults. (The audience
         // qualification signal — `profile.audiences` — is not rewritten by
         // overrides today; see the plan notes.)
-        let personalizations = after?.selectedPersonalizations ?? []
-        let exp1 = personalizations.first(where: { $0.experienceId == "exp-1" })
-        let exp2 = personalizations.first(where: { $0.experienceId == "exp-2" })
+        let selectedOptimizations = after?.selectedOptimizations ?? []
+        let exp1 = selectedOptimizations.first(where: { $0.experienceId == "exp-1" })
+        let exp2 = selectedOptimizations.first(where: { $0.experienceId == "exp-2" })
         XCTAssertEqual(exp1?.variantIndex, 0, "exp-1 should be restored to original 0")
         XCTAssertEqual(exp2?.variantIndex, 1, "exp-2 should be restored to original 1")
     }
@@ -430,8 +434,10 @@ final class PreviewOverrideTests: XCTestCase {
         let config = OptimizationConfig(
             clientId: "test-client",
             environment: "master",
-            experienceBaseUrl: "http://localhost:8000/experience/",
-            insightsBaseUrl: "http://localhost:8000/insights/"
+            api: OptimizationApiConfig(
+                experienceBaseUrl: "http://localhost:8000/experience/",
+                insightsBaseUrl: "http://localhost:8000/insights/"
+            )
         )
         try client.initialize(config: config)
 
@@ -469,7 +475,7 @@ final class PreviewOverrideTests: XCTestCase {
     // MARK: - Override changes are reflected in the signals
 
     @MainActor
-    func testVariantOverrideModifiesPersonalizationsSignal() throws {
+    func testVariantOverrideModifiesOptimizationsSignal() throws {
         let client = try makeInitializedClient()
         seedSignals(
             client: client,
@@ -480,9 +486,9 @@ final class PreviewOverrideTests: XCTestCase {
         client.overrideVariant(experienceId: "exp-1", variantIndex: 3)
 
         let state = client.getPreviewState()
-        let p = state?.selectedPersonalizations?.first(where: { $0.experienceId == "exp-1" })
+        let p = state?.selectedOptimizations?.first(where: { $0.experienceId == "exp-1" })
         XCTAssertEqual(p?.variantIndex, 3,
-                       "The selectedPersonalizations signal should reflect the override")
+                       "The selectedOptimizations signal should reflect the override")
     }
 
     // MARK: - Edge cases
@@ -519,7 +525,7 @@ final class PreviewOverrideTests: XCTestCase {
 
         let state = client.getPreviewState()
         XCTAssertEqual(state?.variantOverrides ?? [:], [:])
-        let p = state?.selectedPersonalizations?.first(where: { $0.experienceId == "exp-1" })
+        let p = state?.selectedOptimizations?.first(where: { $0.experienceId == "exp-1" })
         XCTAssertEqual(p?.variantIndex, 0)
     }
 

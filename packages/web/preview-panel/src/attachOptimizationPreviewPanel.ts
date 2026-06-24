@@ -1,10 +1,15 @@
-import { PreviewOverrideManager } from '@contentful/optimization-core/preview-support'
+import {
+  PreviewOverrideManager,
+  buildPreviewModel,
+  createAudienceDefinitions,
+  createExperienceDefinitions,
+  type OverrideState,
+} from '@contentful/optimization-core/preview-support'
 import type ContentfulOptimization from '@contentful/optimization-web'
 import type {
   AudienceEntrySkeleton,
   OptimizationEntry,
   OptimizationEntrySkeleton,
-  Profile,
 } from '@contentful/optimization-web/api-schemas'
 import type { PreviewPanelSignalObject } from '@contentful/optimization-web/core-sdk'
 import { PREVIEW_PANEL_SIGNALS_SYMBOL } from '@contentful/optimization-web/symbols'
@@ -13,8 +18,8 @@ import {
   AUDIENCE_SWITCH_CHANGE,
   OPTIMIZATION_CHANGE,
   defineAudience,
-  isAudience,
   isAudienceSwitchChangeEvent,
+  type AudienceSwitchChangeDetail,
 } from './components/audience'
 import { defineAudienceSwitch } from './components/audience-switch'
 import { defineAudiences } from './components/audiences'
@@ -49,6 +54,10 @@ let previewPanelAttachment: Promise<void> | undefined = undefined
 
 const OVERRIDES_STORAGE_KEY = '__ctfl_opt_preview_overrides__'
 const storageLogger = createScopedLogger('PreviewPanelStorage')
+const EMPTY_OVERRIDES: OverrideState = {
+  audiences: {},
+  selectedOptimizations: {},
+}
 
 /** @internal */
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -135,6 +144,46 @@ function overridesToMap(
   return result
 }
 
+function resetAudienceSwitch(
+  manager: PreviewOverrideManager,
+  { audienceId, experienceIds }: AudienceSwitchChangeDetail,
+): void {
+  if (audienceId) {
+    manager.resetAudienceOverride(audienceId)
+    return
+  }
+
+  for (const experienceId of experienceIds) {
+    manager.resetOptimizationOverride(experienceId)
+  }
+}
+
+function applyAudienceSwitchChange(
+  manager: PreviewOverrideManager,
+  detail: AudienceSwitchChangeDetail,
+): void {
+  const { audienceId, experienceIds, variantChanges } = detail
+
+  if (variantChanges.length === 0) {
+    resetAudienceSwitch(manager, detail)
+    return
+  }
+
+  if (!audienceId) {
+    for (const { key, value } of variantChanges) {
+      manager.setVariantOverride(key, value)
+    }
+    return
+  }
+
+  const variantIndex = variantChanges[0]?.value ?? 0
+  if (variantIndex === 1) {
+    manager.activateAudience(audienceId, experienceIds)
+  } else {
+    manager.deactivateAudience(audienceId, experienceIds)
+  }
+}
+
 /**
  * Configuration for {@link attachOptimizationPreviewPanelToSdk}.
  *
@@ -217,6 +266,12 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
     getAllEntries<AudienceEntrySkeleton, M>(contentful, 'nt_audience'),
     getAllEntries<OptimizationEntrySkeleton, M>(contentful, 'nt_experience'),
   ])
+  const audienceEntries = audiences.filter(isAudienceEntry)
+  const panelOptimizationEntries = optimizationEntries.filter(
+    (optimization): optimization is OptimizationEntry => isOptimizationEntry(optimization),
+  )
+  const audienceDefinitions = createAudienceDefinitions(audienceEntries)
+  const experienceDefinitions = createExperienceDefinitions(panelOptimizationEntries)
 
   const panel = document.createElement(PANEL_TAG)
   if (!isPanel(panel))
@@ -224,30 +279,43 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
       '[ContentfulOptimization Preview Panel] The preview panel cannot be initialized; contact support',
     )
 
-  panel.audiences = audiences.filter(isAudienceEntry)
-  panel.optimizationEntries = optimizationEntries.filter(
-    (optimization): optimization is OptimizationEntry => isOptimizationEntry(optimization),
-  )
-  panel.overrides = new Map(initialOverrides)
-  panel.defaultSelectedOptimizations = []
+  let currentOverrides: OverrideState = EMPTY_OVERRIDES
+  const managerRef: { current: PreviewOverrideManager | undefined } = { current: undefined }
+
+  const updatePreviewModel = (): void => {
+    const { audiencesWithExperiences } = buildPreviewModel({
+      audienceDefinitions,
+      experienceDefinitions,
+      signals: {
+        profile: signals.profile.value,
+        selectedOptimizations: signals.selectedOptimizations.value,
+        consent: signals.consent.value,
+        isLoading: false,
+      },
+      overrides: currentOverrides,
+      baselineSelectedOptimizations: managerRef.current?.getBaselineSelectedOptimizations() ?? null,
+    })
+
+    panel.audienceGroups = audiencesWithExperiences
+  }
 
   const manager = new PreviewOverrideManager({
     selectedOptimizations: signals.selectedOptimizations,
     changes: signals.changes,
-    optimizationEntries: () => panel.optimizationEntries,
+    optimizationEntries: () => panelOptimizationEntries,
     profile: signals.profile,
     stateInterceptors: contentfulOptimization.interceptors.state,
     onOverridesChanged: (state) => {
+      currentOverrides = {
+        audiences: { ...state.audiences },
+        selectedOptimizations: { ...state.selectedOptimizations },
+      }
       const overridesMap = overridesToMap(state.selectedOptimizations)
-      panel.overrides = new Map(overridesMap)
       persistOverrideMap(overridesMap)
-
-      // Keep the panel UI's "default" badges in sync with whatever the manager
-      // currently considers the un-overridden API baseline.
-      const baseline = manager.getBaselineSelectedOptimizations()
-      if (baseline) panel.defaultSelectedOptimizations = [...baseline]
+      updatePreviewModel()
     },
   })
+  managerRef.current = manager
 
   panel.addEventListener(PANEL_DRAWER_TOGGLE, (event: Event) => {
     if (!isDrawerToggleEvent(event)) return
@@ -268,59 +336,19 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
     manager.setVariantOverride(experienceId, variantIndex)
   })
 
-  const onAudienceSwitchReset = (audienceId: string | undefined, experienceIds: string[]): void => {
-    if (audienceId) {
-      manager.resetAudienceOverride(audienceId)
-      return
-    }
-    for (const experienceId of experienceIds) {
-      manager.resetOptimizationOverride(experienceId)
-    }
-  }
-
-  const onAudienceSwitchActivate = (
-    audienceId: string,
-    experienceIds: string[],
-    variantIndex: number,
-  ): void => {
-    if (variantIndex === 1) {
-      manager.activateAudience(audienceId, experienceIds)
-    } else {
-      manager.deactivateAudience(audienceId, experienceIds)
-    }
-  }
-
   panel.addEventListener(AUDIENCE_SWITCH_CHANGE, (event: Event) => {
     if (!isAudienceSwitchChangeEvent(event)) return
-    const [target] = event.composedPath()
-    if (!(target instanceof Element) || !isAudience(target)) return
 
-    const audienceId = target.audience?.sys.id
-    const experienceIds = target.optimizations.map(({ fields: { nt_experience_id: id } }) => id)
-
-    if (event.detail.length === 0) {
-      onAudienceSwitchReset(audienceId, experienceIds)
-      return
-    }
-
-    if (!audienceId) {
-      for (const { key, value } of event.detail) {
-        manager.setVariantOverride(key, value)
-      }
-      return
-    }
-
-    const variantIndex = event.detail[0]?.value ?? 0
-    onAudienceSwitchActivate(audienceId, experienceIds, variantIndex)
+    applyAudienceSwitchChange(manager, event.detail)
   })
 
   panel.addEventListener(PANEL_RESET, () => {
     manager.resetAll()
   })
 
-  signals.profile.subscribe((profile: Profile | undefined) => {
-    if (profile) panel.profile = profile
-  })
+  signals.profile.subscribe(updatePreviewModel)
+  signals.selectedOptimizations.subscribe(updatePreviewModel)
+  updatePreviewModel()
 
   // Hydrate overrides loaded from storage into the manager so its state
   // interceptor and downstream signals reflect them on first render.

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type ContentfulOptimization from '../ContentfulOptimization'
+import type { OptimizationSdk } from '../OptimizationSdk'
 
 /**
  * Subscribe to Core consent so first-party automatic tracking can re-check
@@ -8,7 +8,7 @@ import type ContentfulOptimization from '../ContentfulOptimization'
  * @internal
  */
 export function useOptimizationConsentState(
-  contentfulOptimization: ContentfulOptimization,
+  contentfulOptimization: OptimizationSdk,
 ): boolean | undefined {
   const [consent, setConsent] = useState(contentfulOptimization.states.consent.current)
 

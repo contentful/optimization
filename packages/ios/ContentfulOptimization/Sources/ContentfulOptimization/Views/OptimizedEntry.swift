@@ -1,10 +1,10 @@
 import Combine
 import SwiftUI
 
-/// Unified component for tracking and personalizing Contentful entries.
+/// Unified component for tracking and optimizing Contentful entries.
 ///
-/// Handles both personalized entries (with `nt_experiences`) and non-personalized
-/// entries. For personalized entries, it resolves the correct variant based on the
+/// Handles both optimized entries (with `nt_experiences`) and non-optimized
+/// entries. For optimized entries, it resolves the correct variant based on the
 /// user's profile. For all entries, it tracks views and taps.
 ///
 /// By default, locks to the first resolved variant to prevent UI flashing.
@@ -17,8 +17,8 @@ import SwiftUI
 /// ```
 public struct OptimizedEntry<Content: View>: View {
     let entry: [String: Any]
-    let viewTimeMs: Int
-    let threshold: Double
+    let dwellTimeMs: Int
+    let minVisibleRatio: Double
     let viewDurationUpdateIntervalMs: Int
     let liveUpdates: Bool?
     let trackViews: Bool?
@@ -30,14 +30,14 @@ public struct OptimizedEntry<Content: View>: View {
     @EnvironmentObject private var client: OptimizationClient
     @Environment(\.trackingConfig) private var trackingConfig
 
-    // Variant locking state (only used for personalized entries)
-    @State private var lockedPersonalizations: [[String: Any]]?
+    // Variant locking state (only used for optimized entries)
+    @State private var lockedOptimizations: [[String: Any]]?
     @State private var isLocked: Bool = false
 
     public init(
         entry: [String: Any],
-        viewTimeMs: Int = 2000,
-        threshold: Double = 0.8,
+        dwellTimeMs: Int = 2000,
+        minVisibleRatio: Double = 0.8,
         viewDurationUpdateIntervalMs: Int = 5000,
         liveUpdates: Bool? = nil,
         trackViews: Bool? = nil,
@@ -47,8 +47,8 @@ public struct OptimizedEntry<Content: View>: View {
         @ViewBuilder content: @escaping ([String: Any]) -> Content
     ) {
         self.entry = entry
-        self.viewTimeMs = viewTimeMs
-        self.threshold = threshold
+        self.dwellTimeMs = dwellTimeMs
+        self.minVisibleRatio = minVisibleRatio
         self.viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs
         self.liveUpdates = liveUpdates
         self.trackViews = trackViews
@@ -58,7 +58,7 @@ public struct OptimizedEntry<Content: View>: View {
         self.content = content
     }
 
-    private var isPersonalized: Bool {
+    private var isOptimized: Bool {
         guard let fields = entry["fields"] as? [String: Any] else { return false }
         return fields["nt_experiences"] != nil
     }
@@ -72,8 +72,8 @@ public struct OptimizedEntry<Content: View>: View {
         return trackingConfig.liveUpdates
     }
 
-    private var effectivePersonalizations: [[String: Any]]? {
-        shouldLiveUpdate ? client.selectedPersonalizations : lockedPersonalizations
+    private var effectiveOptimizations: [[String: Any]]? {
+        shouldLiveUpdate ? client.selectedOptimizations : lockedOptimizations
     }
 
     private var viewsEnabled: Bool {
@@ -87,30 +87,30 @@ public struct OptimizedEntry<Content: View>: View {
     }
 
     public var body: some View {
-        let result: PersonalizedResult = {
-            if isPersonalized {
-                return client.personalizeEntry(
+        let result: ResolvedOptimizedEntry = {
+            if isOptimized {
+                return client.resolveOptimizedEntry(
                     baseline: entry,
-                    personalizations: effectivePersonalizations
+                    selectedOptimizations: effectiveOptimizations
                 )
             } else {
-                return PersonalizedResult(entry: entry, personalization: nil)
+                return ResolvedOptimizedEntry(entry: entry, selectedOptimization: nil)
             }
         }()
 
         content(result.entry)
             .modifier(ViewTrackingModifier(
                 entry: entry,
-                personalization: result.personalization,
-                threshold: threshold,
-                viewTimeMs: viewTimeMs,
+                selectedOptimization: result.selectedOptimization,
+                minVisibleRatio: minVisibleRatio,
+                dwellTimeMs: dwellTimeMs,
                 viewDurationUpdateIntervalMs: viewDurationUpdateIntervalMs,
                 enabled: viewsEnabled,
                 client: client
             ))
             .modifier(TapTrackingModifier(
                 entry: entry,
-                personalization: result.personalization,
+                selectedOptimization: result.selectedOptimization,
                 enabled: tapsEnabled,
                 onTap: onTap,
                 client: client
@@ -122,16 +122,16 @@ public struct OptimizedEntry<Content: View>: View {
             // queryable alongside this wrapper identifier.
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(accessibilityIdentifier ?? "")
-            .onReceive(client.$selectedPersonalizations) { newValue in
-                guard isPersonalized, !shouldLiveUpdate, !isLocked, newValue != nil else { return }
-                lockedPersonalizations = newValue
+            .onReceive(client.$selectedOptimizations) { newValue in
+                guard isOptimized, !shouldLiveUpdate, !isLocked, newValue != nil else { return }
+                lockedOptimizations = newValue
                 isLocked = true
             }
-            // When preview panel closes, snapshot the current personalizations
+            // When preview panel closes, snapshot the current selectedOptimizations
             // so the locked state reflects any overrides applied during the session.
             .onReceive(client.$isPreviewPanelOpen) { panelOpen in
-                guard isPersonalized, !panelOpen, isLocked else { return }
-                lockedPersonalizations = client.selectedPersonalizations
+                guard isOptimized, !panelOpen, isLocked else { return }
+                lockedOptimizations = client.selectedOptimizations
             }
     }
 }

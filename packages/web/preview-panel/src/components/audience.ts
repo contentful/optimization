@@ -1,13 +1,6 @@
-import type {
-  AudienceEntry,
-  OptimizationEntry,
-  Profile,
-  SelectedOptimizationArray,
-} from '@contentful/optimization-web/api-schemas'
-import { consume } from '@lit/context'
-import { css, html, LitElement, nothing, type PropertyValues, type TemplateResult } from 'lit'
-import { property, state } from 'lit/decorators.js'
-import { overridesContext, profileContext } from '../lib/contexts'
+import type { AudienceWithExperiences } from '@contentful/optimization-core/preview-support'
+import { css, html, LitElement, nothing, type TemplateResult } from 'lit'
+import { property } from 'lit/decorators.js'
 import { isAudienceSwitch } from './audience-switch'
 import type { RecordRadioGroupChangeDetail, RecordRadioGroupChangeEvent } from './optimization'
 
@@ -73,7 +66,14 @@ export const AUDIENCE_SWITCH_CHANGE = 'ctfl-opt-preview-audience-switch-change' 
  *
  * @public
  */
-export type AudienceSwitchChangeDetail = RecordRadioGroupChangeDetail[]
+export interface AudienceSwitchChangeDetail {
+  /** Audience entry ID targeted by the switch, when the group is audience-backed. */
+  audienceId?: string
+  /** Experience IDs affected by the audience-wide switch. */
+  experienceIds: string[]
+  /** Variant changes produced by the switch state. */
+  variantChanges: RecordRadioGroupChangeDetail[]
+}
 
 /**
  * Custom event carrying an {@link AudienceSwitchChangeDetail} payload.
@@ -86,7 +86,7 @@ export type AudienceSwitchChangeEvent = CustomEvent<AudienceSwitchChangeDetail>
  * Type guard that checks whether an event is an {@link AudienceSwitchChangeEvent}.
  *
  * @param event - The DOM event to check.
- * @returns `true` if the event is a `CustomEvent` with an array of `{ key, value }` pairs.
+ * @returns `true` if the event is a `CustomEvent` with audience switch target data.
  *
  * @public
  */
@@ -94,7 +94,21 @@ export function isAudienceSwitchChangeEvent(event: Event): event is AudienceSwit
   if (!(event instanceof CustomEvent)) return false
 
   const { detail } = event as CustomEvent<unknown>
-  return Array.isArray(detail) && detail.every(isRecordRadioGroupChangeDetailValue)
+  if (detail === null || typeof detail !== 'object') return false
+
+  const { audienceId, experienceIds, variantChanges } = detail as {
+    audienceId?: unknown
+    experienceIds?: unknown
+    variantChanges?: unknown
+  }
+
+  return (
+    (audienceId === undefined || typeof audienceId === 'string') &&
+    Array.isArray(experienceIds) &&
+    experienceIds.every((value) => typeof value === 'string') &&
+    Array.isArray(variantChanges) &&
+    variantChanges.every(isRecordRadioGroupChangeDetailValue)
+  )
 }
 
 /**
@@ -106,7 +120,7 @@ export function isAudienceSwitchChangeEvent(event: Event): event is AudienceSwit
  * @example
  * ```ts
  * if (isAudience(el)) {
- *   el.audience = audienceEntry
+ *   el.audienceGroup = audienceGroup
  * }
  * ```
  *
@@ -120,8 +134,8 @@ export function isAudience(element?: Element): element is Audience {
  * Collapsible audience section that groups {@link Optimization}
  * components under a single audience heading.
  *
- * Consumes the {@link profileContext} and {@link overridesContext} from the
- * parent panel to determine natural qualification and active overrides.
+ * Uses the Core preview model to render qualification, active override, and
+ * variant selection state.
  *
  * @see {@link LitElement}
  *
@@ -132,58 +146,34 @@ export class Audience extends LitElement {
   @property({ type: Boolean, reflect: true })
   accessor open = true
 
-  /** The audience entry this section represents. */
+  /** Audience group model this section represents. */
   @property({ attribute: false })
-  accessor audience: AudienceEntry | undefined = undefined
-
-  /** Optimizations that target this audience. */
-  @property({ attribute: false })
-  accessor optimizations: OptimizationEntry[] = []
-
-  /** Default selected optimizations before any overrides are applied. */
-  @property({ attribute: false })
-  accessor defaultSelectedOptimizations: SelectedOptimizationArray = []
-
-  /** Visitor profile consumed from the parent panel context. */
-  @consume({ context: profileContext, subscribe: true })
-  @property({ attribute: false })
-  accessor profile: Profile | undefined = undefined
-
-  /** Active variant overrides consumed from the parent panel context. */
-  @consume({ context: overridesContext, subscribe: true })
-  @property({ attribute: false })
-  accessor overrides: Map<string, number> | undefined = undefined
-
-  /** @internal */
-  @state()
-  accessor natural = false
-
-  /** @internal */
-  @state()
-  accessor valuesByKey: Record<string, number> = {}
-
-  /** @internal */
-  private defaultsByKey: Record<string, number> = {}
+  accessor audienceGroup: AudienceWithExperiences | undefined = undefined
 
   /** @internal */
   private get _audienceId(): string | undefined {
-    return this.audience?.sys.id
+    return this.audienceGroup?.audience.id
   }
 
   /** @internal */
   private get _audienceSwitchValue(): boolean | undefined {
-    const experienceIds = this.optimizations.map(
-      ({ fields: { nt_experience_id: experienceId } }) => experienceId,
-    )
+    switch (this.audienceGroup?.overrideState) {
+      case 'on':
+        return true
+      case 'off':
+        return false
+      default:
+        break
+    }
 
-    if (!experienceIds.some((experienceId) => this.overrides?.has(experienceId))) return
+    const experiences = this.audienceGroup?.experiences ?? []
+    if (!experiences.some(({ isOverridden }) => isOverridden)) return undefined
 
-    const audienceValues = experienceIds.map(
-      (experienceId) => this.valuesByKey[experienceId] ?? this.defaultsByKey[experienceId] ?? 0,
-    )
+    const values = experiences.map(({ currentVariantIndex }) => currentVariantIndex)
+    if (values.every((value) => value === 1)) return true
+    if (values.every((value) => value === 0)) return false
 
-    if (audienceValues.every((value) => value === 1)) return true
-    if (audienceValues.every((value) => value === 0)) return false
+    return undefined
   }
 
   /** @internal */
@@ -206,7 +196,6 @@ export class Audience extends LitElement {
     const {
       detail: { key, value },
     } = event
-    this.valuesByKey = { ...this.valuesByKey, [key]: event.detail.value }
 
     this.dispatchEvent(
       new CustomEvent<RecordRadioGroupChangeDetail>(OPTIMIZATION_CHANGE, {
@@ -225,79 +214,31 @@ export class Audience extends LitElement {
     const detail =
       currentTarget.value === undefined
         ? []
-        : this.optimizations.map(
-            ({ fields: { nt_experience_id: key } }): RecordRadioGroupChangeDetail => ({
+        : (this.audienceGroup?.experiences.map(
+            ({ id: key }): RecordRadioGroupChangeDetail => ({
               key,
               value: currentTarget.value ? 1 : 0,
             }),
-          )
-
-    this.valuesByKey = Object.fromEntries(
-      this.optimizations.map(({ fields: { nt_experience_id: experienceId } }): [string, number] => [
-        experienceId,
-        detail.find(({ key }) => key === experienceId)?.value ??
-          this.defaultsByKey[experienceId] ??
-          0,
-      ]),
-    )
+          ) ?? [])
+    const { _audienceId: audienceId } = this
+    const eventDetail: AudienceSwitchChangeDetail = {
+      ...(audienceId === undefined ? {} : { audienceId }),
+      experienceIds: this.audienceGroup?.experiences.map(({ id }) => id) ?? [],
+      variantChanges: detail,
+    }
 
     this.dispatchEvent(
       new CustomEvent<AudienceSwitchChangeDetail>(AUDIENCE_SWITCH_CHANGE, {
-        detail,
+        detail: eventDetail,
         bubbles: true,
         composed: true,
       }),
     )
   }
 
-  /** @internal */
-  private _syncNatural(): void {
-    this.natural = Boolean(this._audienceId && this.profile?.audiences.includes(this._audienceId))
-  }
-
-  /** @internal */
-  private _syncValuesByKey(): void {
-    const nextDefaults: Record<string, number> = Object.fromEntries(
-      this.optimizations
-        .map((optimization): [string, number] => {
-          const defaultSelectedOptimization = this.defaultSelectedOptimizations.find(
-            (selected) => selected.experienceId === optimization.fields.nt_experience_id,
-          )
-          if (!defaultSelectedOptimization) return ['', 0]
-          return [
-            defaultSelectedOptimization.experienceId,
-            defaultSelectedOptimization.variantIndex,
-          ]
-        })
-        .filter(([key]) => key.length > 0),
-    )
-
-    const nextValues: Record<string, number> = {}
-    for (const {
-      fields: { nt_experience_id: experienceId },
-    } of this.optimizations) {
-      nextValues[experienceId] =
-        this.overrides?.get(experienceId) ?? nextDefaults[experienceId] ?? 0
-    }
-
-    this.defaultsByKey = nextDefaults
-    this.valuesByKey = nextValues
-  }
-
-  /** @internal */
-  protected willUpdate(changed: PropertyValues<this>): void {
-    if (changed.has('profile')) this._syncNatural()
-
-    if (
-      changed.has('optimizations') ||
-      changed.has('defaultSelectedOptimizations') ||
-      changed.has('overrides')
-    )
-      this._syncValuesByKey()
-  }
-
   protected render(): TemplateResult {
     const labelId = `audience-label-${Math.random().toString(36).slice(2)}`
+    const { audienceGroup } = this
 
     return html`
       <div class="details">
@@ -317,11 +258,11 @@ export class Audience extends LitElement {
 
             <span class="audience-name" id=${labelId}>
               <ctfl-opt-preview-matched-text
-                .text=${this.audience?.fields.nt_name ?? ''}
+                .text=${audienceGroup?.audience.name ?? ''}
               ></ctfl-opt-preview-matched-text>
             </span>
 
-            ${this.natural
+            ${audienceGroup?.isQualified
               ? html`<ctfl-opt-preview-indicator
                   title="You naturally qualify for this audience."
                 ></ctfl-opt-preview-indicator>`
@@ -336,26 +277,19 @@ export class Audience extends LitElement {
         </div>
 
         <div class="content" ?hidden=${!this.open}>
-          ${this.optimizations.length
-            ? this.optimizations.map((optimization) => {
-                const {
-                  fields: { nt_experience_id: experienceId },
-                } = optimization
-
-                const value =
-                  this.valuesByKey[experienceId] ?? this.defaultsByKey[experienceId] ?? 0
-
-                return html`
+          ${audienceGroup?.experiences.length
+            ? audienceGroup.experiences.map(
+                (optimization) => html`
                   <ctfl-opt-preview-optimization
-                    .naturalValue=${this.natural ? this.defaultsByKey[experienceId] : undefined}
+                    .naturalValue=${optimization.naturalVariantIndex}
                     .optimization=${optimization}
-                    .value=${value}
+                    .value=${optimization.currentVariantIndex}
                     @change=${(event: RecordRadioGroupChangeEvent) => {
                       this._onOptimizationChange(event)
                     }}
                   ></ctfl-opt-preview-optimization>
-                `
-              })
+                `,
+              )
             : html`
                 <div class="no-content">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">

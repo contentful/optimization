@@ -129,7 +129,7 @@ const requestOptimization = optimization.forRequest({
   profile,
 })
 
-const data = await requestOptimization.page()
+const { accepted, data } = await requestOptimization.page()
 ```
 
 Node SDK event calls fail closed except for the configured `allowedEventTypes`. The Node SDK default
@@ -150,9 +150,9 @@ const requestOptimization = optimization.forRequest({
   profile,
 })
 
-const data = await requestOptimization.page()
+const { accepted, data } = await requestOptimization.page()
 
-if (requestOptimization.canPersistProfile && data?.profile.id) {
+if (accepted && requestOptimization.canPersistProfile && data?.profile.id) {
   persistProfileId(data.profile.id)
 }
 ```

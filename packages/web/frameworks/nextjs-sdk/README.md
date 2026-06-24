@@ -38,6 +38,9 @@ SDK on the server with the React Web SDK on the client; it is not a new optimiza
 pnpm add @contentful/optimization-nextjs
 ```
 
+Next.js, React, and React DOM are application-owned peer dependencies. The adapter uses the runtime
+already installed by your app instead of installing its own copy.
+
 ## Server setup
 
 ```tsx

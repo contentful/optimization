@@ -1,7 +1,7 @@
 # Integrating the Optimization iOS SDK in a UIKit app
 
-Use this guide when you want to add Personalization, Analytics, screen tracking, and preview
-overrides to a UIKit application using the Optimization iOS SDK.
+Use this guide when you want to add Optimization, Analytics, screen tracking, and preview overrides
+to a UIKit application using the Optimization iOS SDK.
 
 For shared runtime behavior, consent gates, tracking thresholds, live-update precedence, and offline
 delivery, see
@@ -20,9 +20,9 @@ Use the SwiftUI guide instead if your app is SwiftUI-based:
 - [1. Add the package and create the config](#1-add-the-package-and-create-the-config)
 - [2. Initialize in SceneDelegate](#2-initialize-in-scenedelegate)
 - [3. Handle consent](#3-handle-consent)
-- [4. Personalize entries](#4-personalize-entries)
+- [4. Optimize entries](#4-optimize-entries)
   - [Resolve entries in view code](#resolve-entries-in-view-code)
-  - [React to selected personalization changes](#react-to-selected-personalization-changes)
+  - [React to selected optimization changes](#react-to-selected-optimization-changes)
 - [5. Track entry interactions](#5-track-entry-interactions)
   - [Track taps](#track-taps)
   - [Track views](#track-views)
@@ -44,7 +44,7 @@ resolve entries and when to emit interaction tracking.
 UIKit apps typically use:
 
 - `OptimizationClient` as a long-lived object owned by `SceneDelegate` or an app-level coordinator.
-- `client.personalizeEntry(baseline:personalizations:)` during cell or view configuration.
+- `client.resolveOptimizedEntry(baseline:selectedOptimizations:)` during cell or view configuration.
 - `client.trackView(_:)` and `client.trackClick(_:)` from visibility callbacks and control actions.
 - `client.screen(name:)` from view-controller lifecycle methods.
 - `PreviewPanelViewController` behind a debug or internal-build flag.
@@ -63,12 +63,12 @@ Most UIKit integrations follow this sequence:
 4. Pass the client into the view controllers that render Contentful content.
 5. Fetch Contentful entries with linked optimization references.
 6. Resolve entries in cell or view configuration with
-   `client.personalizeEntry(baseline:personalizations:)`.
+   `client.resolveOptimizedEntry(baseline:selectedOptimizations:)`.
 7. Track taps from controls and track views from visibility-duration logic.
 8. Emit screen events from view-controller lifecycle methods.
 
-Optional additions include live-update redraws when selected personalizations change, and the
-preview panel when authors or engineers need local audience and variant overrides.
+Optional additions include live-update redraws when selected optimizations change, and the preview
+panel when authors or engineers need local audience and variant overrides.
 
 The iOS reference implementation in this repository demonstrates the same SDK behavior in SwiftUI
 and UIKit shells:
@@ -87,9 +87,9 @@ let appLocale = "en-US"
 
 let config = OptimizationConfig(
     clientId: "your-client-id",
-    environment: "master",
+    environment: "main",
     locale: appLocale,
-    debug: true
+    logLevel: .debug
 )
 ```
 
@@ -190,7 +190,7 @@ When durable profile-continuity persistence is allowed, SDK state from an Experi
 published only after the corresponding storage write has settled. Wait for SDK-derived state instead
 of adding sleeps before relaunching or terminating the app in tests.
 
-## 4. Personalize entries
+## 4. Optimize entries
 
 ### Resolve entries in view code
 
@@ -205,9 +205,9 @@ func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> U
         for: indexPath
     ) as! BlogPostCardCell
 
-    let resolved = client.personalizeEntry(
+    let resolved = client.resolveOptimizedEntry(
         baseline: posts[indexPath.row],
-        personalizations: client.selectedPersonalizations
+        selectedOptimizations: client.selectedOptimizations
     )
 
     cell.configure(with: resolved.entry)
@@ -215,18 +215,18 @@ func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> U
 }
 ```
 
-`personalizeEntry` is synchronous. It returns the baseline entry unchanged when the SDK has no
-matching selected personalization, when the entry has no optimization references, or when the linked
+`resolveOptimizedEntry` is synchronous. It returns the baseline entry unchanged when the SDK has no
+matching selected optimization, when the entry has no optimization references, or when the linked
 variant data is not present in the Contentful payload. For details, see
-[Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md).
+[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md).
 
-### React to selected personalization changes
+### React to selected optimization changes
 
-When `client.selectedPersonalizations` changes, the app decides whether visible UIKit views need to
+When `client.selectedOptimizations` changes, the app decides whether visible UIKit views need to
 re-resolve entries. A table or collection view can redraw affected cells:
 
 ```swift
-client.$selectedPersonalizations
+client.$selectedOptimizations
     .dropFirst()
     .receive(on: RunLoop.main)
     .sink { [weak self] _ in
@@ -235,8 +235,8 @@ client.$selectedPersonalizations
     .store(in: &cancellables)
 ```
 
-For locked content, capture `client.selectedPersonalizations` when the screen loads and pass that
-snapshot into each `personalizeEntry` call.
+For locked content, capture `client.selectedOptimizations` when the screen loads and pass that
+snapshot into each `resolveOptimizedEntry` call.
 
 ## 5. Track entry interactions
 
@@ -259,7 +259,18 @@ ctaView.onButtonTap = { [weak self] in
 ```
 
 Use `entry.sys.id` as `componentId`. Set `variantIndex` to `0` for the baseline entry and to the
-selected variant index when `personalizeEntry` returns personalization metadata.
+selected variant index when `resolveOptimizedEntry` returns `selectedOptimization` metadata.
+
+Use `track(event:properties:)` for custom business events:
+
+```swift
+Task { @MainActor in
+    try? await client.track(
+        event: "Purchase Completed",
+        properties: ["sku": "sku-1"]
+    )
+}
+```
 
 ### Track views
 
@@ -317,8 +328,8 @@ Task { @MainActor in
 UIKit does not lock or re-resolve entries automatically. The app chooses between two patterns:
 
 - **Live updates** - Resolve entries during cell or view configuration and redraw when
-  `selectedPersonalizations` changes.
-- **Locked variants** - Capture selected personalizations when the screen loads and keep resolving
+  `selectedOptimizations` changes.
+- **Locked variants** - Capture selected optimizations when the screen loads and keep resolving
   against that snapshot.
 
 The preview panel sets `client.isPreviewPanelOpen` while it is visible. Use that value when the app
@@ -348,7 +359,7 @@ stack without changing the rest of the app.
 ## Complete example
 
 This example combines scene-level initialization, entry resolution in table-cell configuration,
-screen tracking, selected-personalization redraws, and preview-panel mounting:
+screen tracking, selected-optimization redraws, and preview-panel mounting:
 
 ```swift
 final class HomeViewController: UIViewController {
@@ -368,7 +379,7 @@ final class HomeViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        client.$selectedPersonalizations
+        client.$selectedOptimizations
             .dropFirst()
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.tableView.reloadData() }
@@ -389,9 +400,9 @@ final class HomeViewController: UIViewController {
             for: indexPath
         ) as! BlogPostCardCell
 
-        let resolved = client.personalizeEntry(
+        let resolved = client.resolveOptimizedEntry(
             baseline: posts[indexPath.row],
-            personalizations: client.selectedPersonalizations
+            selectedOptimizations: client.selectedOptimizations
         )
 
         cell.configure(with: resolved.entry)

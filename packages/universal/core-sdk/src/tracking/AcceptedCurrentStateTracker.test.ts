@@ -36,7 +36,7 @@ describe('AcceptedCurrentStateTracker', () => {
 
   it('does not emit while the same key is already in flight', async () => {
     const tracker = new AcceptedCurrentStateTracker<string>()
-    const first = deferred<{ accepted: boolean }>()
+    const first = deferred<{ accepted: true }>()
     const emit = rs.fn().mockReturnValue(first.promise)
 
     const firstEmission = tracker.emitIfNeeded({ key: 'home', isAllowed: true, emit })
@@ -101,5 +101,22 @@ describe('AcceptedCurrentStateTracker', () => {
     })
 
     expect(emit).not.toHaveBeenCalled()
+  })
+
+  it('supports undefined as a key value', async () => {
+    const tracker = new AcceptedCurrentStateTracker<string | undefined>()
+    const emit = rs.fn().mockResolvedValue({ accepted: true })
+
+    await expect(tracker.emitIfNeeded({ key: undefined, isAllowed: true, emit })).resolves.toEqual({
+      accepted: true,
+      attempted: true,
+    })
+    await expect(tracker.emitIfNeeded({ key: undefined, isAllowed: true, emit })).resolves.toEqual({
+      accepted: false,
+      attempted: false,
+    })
+
+    expect(emit).toHaveBeenCalledTimes(1)
+    expect(tracker.hasAccepted()).toBe(true)
   })
 })

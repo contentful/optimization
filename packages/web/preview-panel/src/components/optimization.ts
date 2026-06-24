@@ -1,12 +1,9 @@
-import type { OptimizationEntry } from '@contentful/optimization-web/api-schemas'
+import type {
+  ExperienceWithState,
+  VariantDistribution,
+} from '@contentful/optimization-core/preview-support'
 import { css, html, LitElement, nothing, type TemplateResult } from 'lit'
 import { property } from 'lit/decorators.js'
-
-/** @internal */
-function getDisplayedVariantPercentages(optimization: OptimizationEntry): number[] {
-  const { distribution = [] } = optimization.fields.nt_config ?? {}
-  return Array.isArray(distribution) ? distribution : []
-}
 
 /**
  * Payload emitted by {@link Optimization} when a variant radio
@@ -81,6 +78,11 @@ const percentageFormatter = new Intl.NumberFormat(undefined, {
   style: 'percent',
 })
 
+/** @internal */
+function getVariantName(variant: VariantDistribution): string {
+  return variant.name ?? (variant.index === 0 ? 'Baseline' : `Variant ${variant.index}`)
+}
+
 /**
  * Renders a single optimization as a radio-group fieldset, allowing the
  * user to select which variant to preview.
@@ -94,7 +96,7 @@ const percentageFormatter = new Intl.NumberFormat(undefined, {
 export class Optimization extends LitElement {
   /** The optimization entry whose variants are rendered. */
   @property({ attribute: false })
-  accessor optimization: OptimizationEntry | undefined = undefined
+  accessor optimization: ExperienceWithState | undefined = undefined
 
   /** Index of the variant the visitor naturally qualifies for, if any. */
   @property({ attribute: false })
@@ -106,7 +108,7 @@ export class Optimization extends LitElement {
 
   /** @internal */
   private get _experienceId(): string | undefined {
-    return this.optimization?.fields.nt_experience_id
+    return this.optimization?.id
   }
 
   /** @internal */
@@ -140,49 +142,47 @@ export class Optimization extends LitElement {
    * @public
    */
   variantsTemplate(): TemplateResult | string {
-    if (!this.optimization) return 'None'
+    const { optimization } = this
 
-    const variantPercentages = getDisplayedVariantPercentages(this.optimization)
+    if (!optimization) return 'None'
 
-    if (!variantPercentages.length) return 'None'
+    const { distribution } = optimization
 
-    return html`
-      <div>
-        ${variantPercentages.map((percentage, index) => this.variantTemplate(percentage, index))}
-      </div>
-    `
+    if (!distribution.length) return 'None'
+
+    return html` <div>${distribution.map((variant) => this.variantTemplate(variant))}</div> `
   }
 
   /**
    * Renders a single variant as a labelled radio input.
    *
-   * @param percentage - Displayed distribution percentage for this variant (0–1).
-   * @param index - Zero-based index of the variant.
+   * @param variant - Variant distribution rendered by the preview panel.
    * @returns Template for one variant radio button, or `undefined` when the optimization is unset.
    *
    * @example
    * ```ts
-   * html`${this.variantTemplate(0.5, 1)}`
+   * html`${this.variantTemplate(variant)}`
    * ```
    *
    * @public
    */
-  variantTemplate(percentage: number, index: number): TemplateResult | undefined {
+  variantTemplate(variant: VariantDistribution): TemplateResult | undefined {
     if (!this.optimization) return
 
-    const radioId = `radiogroup-${this.optimization.sys.id}`
+    const radioId = `radiogroup-${this.optimization.id}`
+    const { index, percentage = 0 } = variant
 
     return html`
       <label>
         <span class="variant-heading">
-          <span class="variant-name">${index === 0 ? 'Baseline' : `Variant ${index}`}</span>
+          <span class="variant-name">${getVariantName(variant)}</span>
           ${this.naturalValue === index
             ? html`<ctfl-opt-preview-indicator
                 title="You naturally qualify for this variant."
               ></ctfl-opt-preview-indicator>`
             : nothing}
         </span>
-        <span class="variant-dist">${percentageFormatter.format(percentage)}</span>
+        <span class="variant-dist">${percentageFormatter.format(percentage / 100)}</span>
         <input
           type="radio"
           name="${radioId}"
@@ -203,14 +203,12 @@ export class Optimization extends LitElement {
         <legend>
           <span class="optimization-name"
             ><ctfl-opt-preview-matched-text
-              .text=${this.optimization?.fields.nt_name ?? ''}
+              .text=${this.optimization?.name ?? ''}
             ></ctfl-opt-preview-matched-text
           ></span>
 
           <span class="optimization-type">
-            ${this.optimization?.fields.nt_type === 'nt_experiment'
-              ? 'Experiment'
-              : 'Personalization'}
+            ${this.optimization?.type === 'nt_experiment' ? 'Experiment' : 'Personalization'}
           </span>
         </legend>
 

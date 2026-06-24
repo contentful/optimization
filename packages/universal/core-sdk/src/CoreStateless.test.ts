@@ -1,6 +1,6 @@
 import type { OptimizationData } from './api-schemas'
-import type { BlockedEvent } from './BlockedEvent'
 import CoreStateless from './CoreStateless'
+import type { BlockedEvent } from './events'
 
 const TRACK_CLICK_PROFILE_ERROR =
   'CoreStatelessRequest.trackClick() requires a request-bound profile id for Insights delivery.'
@@ -244,7 +244,9 @@ describe('CoreStateless', () => {
       profile: { id: 'profile-123' },
     })
 
-    await expect(requestOptimization.track({ event: 'conversion' })).resolves.toBeUndefined()
+    await expect(requestOptimization.track({ event: 'conversion' })).resolves.toEqual({
+      accepted: false,
+    })
 
     expect(upsertProfile).not.toHaveBeenCalled()
     expect(blockedEvents).toEqual([
@@ -272,7 +274,7 @@ describe('CoreStateless', () => {
       profile: { id: 'profile-123' },
     })
 
-    await expect(requestOptimization.page()).resolves.toBeUndefined()
+    await expect(requestOptimization.page()).resolves.toEqual({ accepted: false })
 
     expect(upsertProfile).not.toHaveBeenCalled()
     expect(blockedEvents).toHaveLength(1)
@@ -534,7 +536,7 @@ describe('CoreStateless', () => {
         viewDurationMs: 1000,
         viewId: 'hero-banner-view',
       }),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({ accepted: true })
 
     expect(upsertProfile).not.toHaveBeenCalled()
     expect(sendBatchEvents).toHaveBeenCalledWith([
@@ -589,8 +591,11 @@ describe('CoreStateless', () => {
     })
 
     expect(result).toEqual({
-      ...EMPTY_OPTIMIZATION_DATA,
-      profile: responseProfile,
+      accepted: true,
+      data: {
+        ...EMPTY_OPTIMIZATION_DATA,
+        profile: responseProfile,
+      },
     })
     expect(upsertProfile).toHaveBeenCalledWith(
       expect.objectContaining({

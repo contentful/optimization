@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, type ReactNode } from 'react'
+import React, { createContext, useContext, useState, type Context, type ReactNode } from 'react'
 
 /**
  * @internal
@@ -9,7 +9,19 @@ export interface LiveUpdatesContextValue {
   setPreviewPanelVisible: (visible: boolean) => void
 }
 
-const LiveUpdatesContext = createContext<LiveUpdatesContextValue | null>(null)
+// The preview entry point is bundled separately; both bundles must use one context.
+const LIVE_UPDATES_CONTEXT_SYMBOL = Symbol.for(
+  '@contentful/optimization-react-native/LiveUpdatesContext',
+)
+
+const globalContextRegistry = globalThis as typeof globalThis &
+  Record<symbol, Context<LiveUpdatesContextValue | null> | undefined>
+
+const LiveUpdatesContext =
+  globalContextRegistry[LIVE_UPDATES_CONTEXT_SYMBOL] ??
+  createContext<LiveUpdatesContextValue | null>(null)
+
+globalContextRegistry[LIVE_UPDATES_CONTEXT_SYMBOL] = LiveUpdatesContext
 
 /**
  * Returns the live updates configuration from the nearest {@link LiveUpdatesProvider}.

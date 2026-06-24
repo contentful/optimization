@@ -6,7 +6,7 @@ import type {
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { batch, computed, effect, signal, type Signal, untracked } from '@preact/signals-core'
-import type { BlockedEvent } from '../BlockedEvent'
+import type { BlockedEvent } from '../events'
 
 /**
  * Most recent optimization changes returned by the Experience API.

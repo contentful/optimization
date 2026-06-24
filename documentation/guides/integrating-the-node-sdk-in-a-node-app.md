@@ -285,15 +285,13 @@ store is equally valid. If consent is revoked, clear the same cookie or session 
 
 ## 5. Call `page()` and `identify()` at the right time
 
-The Node SDK returns optimization data from `page()`, `identify()`, `screen()`, `track()`, and
-sticky `trackView()` calls. In a typical SSR route, `page()` is the most important entry point.
+The Node SDK returns event results from `page()`, `identify()`, `screen()`, `track()`, and sticky
+`trackView()` calls. In a typical SSR route, `page()` is the most important entry point.
 
 This is a minimal Express shape:
 
 ```ts
 import type { Request } from 'express'
-import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
-
 function getAuthenticatedUserId(req: Request): string | undefined {
   const userId = req.query.userId
 
@@ -311,16 +309,18 @@ app.get('/', async (req, res) => {
     eventContext: getRequestContext(req, appLocale),
     profile: getProfileFromRequest(req),
   })
-  const pageResponse: OptimizationData | undefined = await requestOptimization.page()
+  const pageResult = await requestOptimization.page()
+  const pageResponse = pageResult.data
 
   const userId = getAuthenticatedUserId(req)
 
-  const identifyResponse = userId
+  const identifyResult = userId
     ? await requestOptimization.identify({
         userId,
         traits: { authenticated: true },
       })
     : undefined
+  const identifyResponse = identifyResult?.data
 
   if (requestOptimization.canPersistProfile) {
     persistProfile(res, identifyResponse?.profile?.id ?? pageResponse?.profile?.id)
@@ -356,7 +356,7 @@ const requestOptimization = optimization.forRequest({
   profile,
 })
 
-const data = await requestOptimization.page()
+const { accepted, data } = await requestOptimization.page()
 ```
 
 That route lets a consumer accomplish two things:
@@ -366,7 +366,7 @@ That route lets a consumer accomplish two things:
 - identity stitching: `identify()` links a known user ID to the current profile before or during the
   same request
 
-The returned `OptimizationData` usually gives you the three values you care about most:
+Accepted event result data usually gives you the three values you care about most:
 
 - `profile`: the current profile, including the profile ID to persist
 - `changes`: Custom Flag inputs
@@ -424,9 +424,10 @@ app.get('/article/:entryId', async (req, res) => {
     eventContext: getRequestContext(req, appLocale),
     profile: getProfileFromRequest(req),
   })
-  const pageResponse = appPolicyAllowsOptimizationEvent(req)
+  const pageResult = appPolicyAllowsOptimizationEvent(req)
     ? await requestOptimization.page()
     : undefined
+  const pageResponse = pageResult?.data
 
   const article = await getArticle(req.params.entryId, appLocale)
 
@@ -603,15 +604,14 @@ Your application decides which approved Contentful context, if any, should also 
 
 | Reporting need                             | Node SDK handoff                                                                 |
 | ------------------------------------------ | -------------------------------------------------------------------------------- |
-| Server-rendered exposure attribution       | Use request-local `OptimizationData` from `page()`, `identify()`, or `track()`.  |
+| Server-rendered exposure attribution       | Use request-local event result data from `page()`, `identify()`, or `track()`.   |
 | Business event attribution                 | Add Contentful fields in the server action or event collector that owns it.      |
 | Entry or variant attribution               | Use `selectedOptimization` from the same `resolveOptimizedEntry()` call.         |
 | Hybrid browser interactions                | Forward later browser activity from the Web or React Web SDK subscription path.  |
 | Consent or duplicate-delivery verification | Gate both SDK and destination calls with the same request-scoped consent policy. |
 
-The Node SDK is request-local and does not expose process-wide subscriptions. Use the
-`OptimizationData` returned by the SDK call that belongs to the request or server-side business
-event.
+The Node SDK is request-local and does not expose process-wide subscriptions. Use the event result
+data returned by the SDK call that belongs to the request or server-side business event.
 
 Keep the third-party payload in the same request or server event collector that already owns the
 business event:

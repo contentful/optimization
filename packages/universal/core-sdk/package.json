@@ -82,16 +82,6 @@
         "default": "./dist/preview-support.cjs"
       }
     },
-    "./sdk-support": {
-      "import": {
-        "types": "./dist/sdk-support.d.mts",
-        "default": "./dist/sdk-support.mjs"
-      },
-      "require": {
-        "types": "./dist/sdk-support.d.cts",
-        "default": "./dist/sdk-support.cjs"
-      }
-    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -101,12 +91,10 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 16000,
-        "index.mjs": 15500,
+        "index.cjs": 17000,
+        "index.mjs": 16000,
         "preview-support.cjs": 5300,
-        "preview-support.mjs": 5500,
-        "sdk-support.cjs": 2000,
-        "sdk-support.mjs": 1500
+        "preview-support.mjs": 5500
       }
     }
   },

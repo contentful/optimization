@@ -14,7 +14,9 @@ import com.contentful.optimization.app.views.components.ContentEntryViewBinder
 import com.contentful.optimization.app.views.components.NestedContentEntryViewBinder
 import com.contentful.optimization.app.views.components.isNestedContent
 import com.contentful.optimization.app.views.support.setTestTag
+import com.contentful.optimization.core.OptimizationApiConfig
 import com.contentful.optimization.core.OptimizationConfig
+import com.contentful.optimization.core.OptimizationLogLevel
 import com.contentful.optimization.core.StorageDefaults
 import com.contentful.optimization.preview.PreviewPanelConfig
 import com.contentful.optimization.shared.AppConfig
@@ -68,11 +70,13 @@ class MainActivity : AppCompatActivity() {
             config = OptimizationConfig(
                 clientId = AppConfig.clientId,
                 environment = AppConfig.environment,
-                experienceBaseUrl = AppConfig.experienceBaseUrl,
-                insightsBaseUrl = AppConfig.insightsBaseUrl,
+                api = OptimizationApiConfig(
+                    experienceBaseUrl = AppConfig.experienceBaseUrl,
+                    insightsBaseUrl = AppConfig.insightsBaseUrl,
+                ),
                 locale = AppConfig.defaultContentfulLocale,
                 defaults = StorageDefaults(consent = true),
-                debug = true,
+                logLevel = OptimizationLogLevel.debug,
             ),
             trackViews = true,
             trackTaps = true,
@@ -124,10 +128,10 @@ class MainActivity : AppCompatActivity() {
         // OptimizationRoot, so its content's LaunchedEffects always see an initialized client.
         // The Views impl renders immediately, so we wait for init here before driving the SDK —
         // otherwise consent/page silently no-op and the profile state flow never advances.
-        EventStore.subscribe(client.events, lifecycleScope)
+        EventStore.subscribe(client.eventStream, lifecycleScope)
         lifecycleScope.launch {
             client.isInitialized.first { it }
-            client.subscribeToFlag("boolean")
+            client.observeFlag("boolean")
             try {
                 client.page(mapOf("url" to "app"))
             } catch (_: Exception) {
@@ -172,7 +176,7 @@ class MainActivity : AppCompatActivity() {
                 // had already fired `ViewTrackingController.onBecameVisible` at the
                 // smaller height, and that height growth combined with the test's
                 // scroll-to-stats swipe dropped the visible ratio below the 0.8
-                // threshold, hitting `onBecameInvisible` while `attempts == 0` and
+                // minVisibleRatio, hitting `onBecameInvisible` while `attempts == 0` and
                 // resetting the 2s dwell cycle — so the entry's `trackView` event
                 // never fired and `component-stats-1MwiFl4z…` never appeared.
                 val resolvedBaselineTexts = entries.map { entry ->

@@ -7,7 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class AppLifecycleHandler(
+internal class AppLifecycleHandler(
     private val onBackground: suspend () -> Unit,
     private val onForeground: (() -> Unit)? = null,
 ) : DefaultLifecycleObserver {

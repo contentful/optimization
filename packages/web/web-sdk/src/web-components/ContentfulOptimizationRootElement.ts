@@ -20,11 +20,11 @@ export interface ContentfulOptimizationRootContext {
   readonly rootLiveUpdatesEnabled: boolean
   readonly isSdkReady: boolean
   readonly isPreviewPanelOpen: boolean
-  readonly sdk: OptimizationRootSdk | undefined
+  readonly sdk: ContentfulOptimization | undefined
 }
 
 export interface ContentfulOptimizationRootReadyEventDetail {
-  readonly sdk: OptimizationRootSdk
+  readonly sdk: ContentfulOptimization
 }
 
 export interface ContentfulOptimizationRootErrorEventDetail {
@@ -39,7 +39,7 @@ function parseBooleanAttribute(value: string | null): boolean {
   return value !== null && value !== 'false'
 }
 
-function getGlobalSdk(): OptimizationRootSdk | undefined {
+function getGlobalSdk(): ContentfulOptimization | undefined {
   if (typeof window === 'undefined') {
     return undefined
   }
@@ -64,7 +64,7 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
   private onStatesReadyHandler: OnStatesReady | undefined = undefined
   private previewPanelOpenSubscription: { unsubscribe: () => void } | undefined = undefined
   private sdkBinding: OptimizationRootSdkBinding | undefined = undefined
-  private assignedSdk: OptimizationRootSdk | undefined = undefined
+  private assignedSdk: ContentfulOptimization | undefined = undefined
   private readonly subscribers = new Set<OptimizationRootContextSubscriber>()
   private trackEntryInteractionOptions: TrackEntryInteractionOptions | undefined = undefined
 
@@ -147,11 +147,11 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
     this.reinitializeIfConnected()
   }
 
-  get sdk(): OptimizationRootSdk | undefined {
+  get sdk(): ContentfulOptimization | undefined {
     return this.assignedSdk
   }
 
-  set sdk(value: OptimizationRootSdk | undefined) {
+  set sdk(value: ContentfulOptimization | undefined) {
     this.assignedSdk = value
     this.reinitializeIfConnected()
   }

@@ -13,6 +13,9 @@ final class JSContextManager {
     var onStateChange: (([String: Any]) -> Void)?
     var onEvent: (([String: Any]) -> Void)?
     var onOverridesChanged: ((PreviewState) -> Void)?
+    var onEventBlocked: ((BlockedEvent) -> Void)?
+    var onFlagValueChanged: ((String, JSONValue?) -> Void)?
+    var onQueueEvent: ((QueueEvent) -> Void)?
 
     /// Creates the JSContext, loads polyfills and the UMD bundle, and calls `__bridge.initialize()`.
     func initialize(config: OptimizationConfig, anonymousId: String? = nil) throws {
@@ -27,7 +30,7 @@ final class JSContextManager {
         }
 
         // Remote JS inspection is a debugging aid only; keep it out of release builds.
-        if config.debug, #available(iOS 16.4, macOS 13.3, *) {
+        if config.logLevel == .debug || config.logLevel == .log, #available(iOS 16.4, macOS 13.3, *) {
             ctx.isInspectable = true
         }
 
@@ -68,6 +71,21 @@ final class JSContextManager {
             self?.handleOverridesChanged(json)
         }
         ctx.setObject(onOverridesChangedBlock, forKeyedSubscript: "__nativeOnOverridesChanged" as NSString)
+
+        let onEventBlockedBlock: @convention(block) (String) -> Void = { [weak self] json in
+            self?.handleEventBlocked(json)
+        }
+        ctx.setObject(onEventBlockedBlock, forKeyedSubscript: "__nativeOnEventBlocked" as NSString)
+
+        let onFlagValueChangedBlock: @convention(block) (String, String) -> Void = { [weak self] subscriptionId, json in
+            self?.handleFlagValueChanged(subscriptionId: subscriptionId, json: json)
+        }
+        ctx.setObject(onFlagValueChangedBlock, forKeyedSubscript: "__nativeOnFlagValueChanged" as NSString)
+
+        let onQueueEventBlock: @convention(block) (String) -> Void = { [weak self] json in
+            self?.handleQueueEvent(json)
+        }
+        ctx.setObject(onQueueEventBlock, forKeyedSubscript: "__nativeOnQueueEvent" as NSString)
 
         // Initialize the bridge
         let configJSON: String
@@ -224,6 +242,51 @@ final class JSContextManager {
 
         DispatchQueue.main.async { [weak self] in
             self?.onOverridesChanged?(state)
+        }
+    }
+
+    private func handleEventBlocked(_ json: String) {
+        guard let data = json.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let reason = dict["reason"] as? String,
+              let method = dict["method"] as? String
+        else { return }
+
+        let event = BlockedEvent(
+            reason: reason,
+            method: method,
+            args: dict["args"] as? [Any] ?? []
+        )
+
+        DispatchQueue.main.async { [weak self] in
+            self?.onEventBlocked?(event)
+        }
+    }
+
+    private func handleFlagValueChanged(subscriptionId: String, json: String) {
+        guard let data = json.data(using: .utf8),
+              let value = try? JSONDecoder().decode(JSONValue.self, from: data)
+        else { return }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.onFlagValueChanged?(subscriptionId, value)
+        }
+    }
+
+    private func handleQueueEvent(_ json: String) {
+        guard let data = json.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let rawType = dict["type"] as? String,
+              let type = QueueEventType(rawValue: rawType)
+        else { return }
+
+        let event = QueueEvent(
+            type: type,
+            context: dict["context"] as? [String: Any] ?? [:]
+        )
+
+        DispatchQueue.main.async { [weak self] in
+            self?.onQueueEvent?(event)
         }
     }
 }

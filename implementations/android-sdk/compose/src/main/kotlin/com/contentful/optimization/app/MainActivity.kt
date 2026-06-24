@@ -15,7 +15,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import com.contentful.optimization.app.screens.MainScreen
 import com.contentful.optimization.compose.OptimizationRoot
+import com.contentful.optimization.core.OptimizationApiConfig
 import com.contentful.optimization.core.OptimizationConfig
+import com.contentful.optimization.core.OptimizationLogLevel
 import com.contentful.optimization.core.StorageDefaults
 import com.contentful.optimization.preview.PreviewPanelConfig
 import com.contentful.optimization.shared.AppConfig
@@ -45,11 +47,13 @@ class MainActivity : ComponentActivity() {
                     config = OptimizationConfig(
                         clientId = AppConfig.clientId,
                         environment = AppConfig.environment,
-                        experienceBaseUrl = AppConfig.experienceBaseUrl,
-                        insightsBaseUrl = AppConfig.insightsBaseUrl,
+                        api = OptimizationApiConfig(
+                            experienceBaseUrl = AppConfig.experienceBaseUrl,
+                            insightsBaseUrl = AppConfig.insightsBaseUrl,
+                        ),
                         locale = AppConfig.defaultContentfulLocale,
                         defaults = StorageDefaults(consent = true),
-                        debug = true,
+                        logLevel = OptimizationLogLevel.debug,
                     ),
                     trackViews = true,
                     trackTaps = true,

@@ -66,25 +66,28 @@ prefer a build-time define in the bridge entry over forking polyfill files.
 ## Bridge method contract
 
 Native code calls only through `globalThis.__bridge`. The bridge exposes methods such as
-`initialize`, `identify`, `screen`, `page`, `trackView`, `trackClick`, `flush`, `consent`, `reset`,
-`personalizeEntry`, `getProfile`, `getState`, `getPreviewState`, and preview override mutators.
+`initialize`, `identify`, `screen`, `page`, `track`, `trackView`, `trackClick`, `flush`, `consent`,
+`reset`, `resolveOptimizedEntry`, `getProfile`, `getState`, `getPreviewState`, and preview override
+mutators.
 
 Async methods receive a payload plus success and error callback names. The JS bridge invokes one of
 those global callbacks when the underlying promise settles. This keeps the JS side identical across
 JavaScriptCore and QuickJS even though the native callback transport differs by platform.
 
-Synchronous methods, including `personalizeEntry`, `consent`, `reset`, `setOnline`,
+Synchronous methods, including `resolveOptimizedEntry`, `consent`, `reset`, `setOnline`,
 `getMergeTagValue`, `getProfile`, and preview override mutators, return JSON-compatible values
 directly from engine evaluation.
 
 ## State push-back and lifecycle
 
-During initialization, the native context manager installs three push-back globals:
+During initialization, the native context manager installs push-back globals:
 
-- `__nativeOnStateChange(json)` for profile, consent, locale, personalization, and optimization
-  state snapshots.
+- `__nativeOnStateChange(json)` for profile, consent, locale, and optimization state snapshots.
 - `__nativeOnEventEmitted(json)` for emitted Experience and Insights events.
 - `__nativeOnOverridesChanged(json)` for preview-panel audience and variant overrides.
+- `__nativeOnEventBlocked(json)` for blocked-event payloads with `reason`, `method`, and `args`.
+- `__nativeOnQueueEvent(json)` for queue observability events such as offline drops, flush failures,
+  circuit-open windows, and flush recovery.
 
 These callbacks fire synchronously inside bridge calls. Native handlers may republish on the main
 thread, but they should not defer the underlying state mutation past the method return when the

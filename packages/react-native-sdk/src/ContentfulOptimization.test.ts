@@ -446,9 +446,10 @@ describe('ContentfulOptimization locale resolution', () => {
       IDENTIFIED_OPTIMIZATION_DATA,
     )
 
-    await expect(created.identify({ userId: 'known-user' })).resolves.toEqual(
-      IDENTIFIED_OPTIMIZATION_DATA,
-    )
+    await expect(created.identify({ userId: 'known-user' })).resolves.toEqual({
+      accepted: true,
+      data: IDENTIFIED_OPTIMIZATION_DATA,
+    })
     expect(created.states.profile.current).toEqual(IDENTIFIED_PROFILE)
   })
 

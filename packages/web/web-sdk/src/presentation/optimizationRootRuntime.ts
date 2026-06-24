@@ -1,4 +1,5 @@
 import type { Observable } from '@contentful/optimization-core'
+import type ContentfulOptimization from '../ContentfulOptimization'
 import type { OptimizationWebConfig } from '../ContentfulOptimization'
 import type { AutoTrackEntryInteractionOptions } from '../entry-tracking'
 import type { OptimizedEntrySdk } from './OptimizedEntryController'
@@ -9,7 +10,10 @@ type OnStatesReadyResult = Cleanup | ReturnType<Cleanup>
 export type TrackEntryInteractionOptions = AutoTrackEntryInteractionOptions
 export type OptimizationRootSdkConfig = Omit<OptimizationWebConfig, 'autoTrackEntryInteraction'>
 
-export interface OptimizationRootSdk extends OptimizedEntrySdk {
+export interface OptimizationRootSdk
+  extends
+    OptimizedEntrySdk,
+    Partial<Omit<ContentfulOptimization, 'states' | 'resolveOptimizedEntry'>> {
   readonly states: OptimizedEntrySdk['states'] & {
     readonly previewPanelOpen: Observable<boolean>
   }

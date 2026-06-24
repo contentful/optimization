@@ -83,7 +83,7 @@ export interface OptimizationNodeConfig extends Omit<CoreStatelessConfig, 'event
  *   profile: { id: 'profile-id' },
  * })
  *
- * await requestOptimization.page()
+ * const { accepted, data } = await requestOptimization.page()
  * ```
  *
  * @see {@link CoreStateless}

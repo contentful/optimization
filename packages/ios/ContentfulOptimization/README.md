@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Contentful Personalization & Analytics</h1>
+<h1 align="center">Contentful Optimization & Analytics</h1>
 
 <h3 align="center">Optimization iOS SDK</h3>
 
@@ -73,7 +73,7 @@ struct MyApp: App {
             OptimizationRoot(
                 config: OptimizationConfig(
                     clientId: "<your-client-id>",
-                    environment: "master"
+                    environment: "main"
                 )
             ) {
                 ContentView()
@@ -84,7 +84,7 @@ struct MyApp: App {
 }
 ```
 
-Render personalized Contentful entries with `OptimizedEntry`, and track screens with the
+Render optimized Contentful entries with `OptimizedEntry`, and track screens with the
 `.trackScreen(name:)` modifier.
 
 ### UIKit / direct client
@@ -94,10 +94,12 @@ import ContentfulOptimization
 
 let client = OptimizationClient()
 try client.initialize(
-    config: OptimizationConfig(clientId: "<your-client-id>", environment: "master")
+    config: OptimizationConfig(clientId: "<your-client-id>", environment: "main")
 )
 
-let result = try await client.screen(name: "Home")
+let screenResult = try await client.screen(name: "Home")
+let optimizationData = screenResult.accepted ? screenResult.data : nil
+try await client.track(event: "Purchase Completed", properties: ["sku": "sku-1"])
 ```
 
 ## Consent
@@ -139,7 +141,7 @@ let appLocale = "en-US"
 
 let config = OptimizationConfig(
     clientId: "<your-client-id>",
-    environment: "master",
+    environment: "main",
     locale: appLocale
 )
 ```
@@ -151,19 +153,33 @@ let appLocale = getAppLocale()
 
 let config = OptimizationConfig(
     clientId: "<your-client-id>",
-    environment: "master",
+    environment: "main",
     locale: appLocale
 )
 ```
 
 Use the same `appLocale` when your app-owned Contentful Delivery API client fetches entries that
-will be passed to `OptimizedEntry` or `client.personalizeEntry(...)`. The native SDK does not fetch
-Contentful entries for your app layer, so the CDA locale belongs in your CDA request code.
+will be passed to `OptimizedEntry` or `client.resolveOptimizedEntry(...)`. The native SDK does not
+fetch Contentful entries for your app layer, so the CDA locale belongs in your CDA request code.
+
+## Runtime notes
+
+- Use `client.track(event:properties:)` for custom business events; `identify(...)`, `screen(...)`,
+  and sticky `trackView(...)` return `EventEmissionResult` values with `accepted` and optional
+  `data`. `trackClick(...)` remains available for entry-interaction flows.
+- For typed event calls, pass `IdentifyPayload`, `PageEventPayload`, `ScreenEventPayload`, or
+  `TrackEventPayload`. Dictionary-based overloads remain available for dynamic JSON payloads.
+- Use `client.getFlag(_:)` for a one-off Custom Flag read and `client.flagPublisher(_:)` for an
+  `AnyPublisher<JSONValue?, Never>` that updates as flag values change.
+- Use `client.eventStream` and `client.blockedEventStream` for analytics debugging, tests, and
+  consent-gating diagnostics.
+- Analytics events queue while the device is offline and flush when connectivity returns or the app
+  moves toward the background.
 
 For the full locale model, see
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html).
 For the single-locale CDA entry contract, see
-[Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract).
+[Entry optimization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract).
 
 See the [guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) and
 [API reference](https://contentful.github.io/optimization) for the full API, SwiftUI helpers, and

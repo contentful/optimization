@@ -43,7 +43,13 @@ interface MockScreenEmissionResult {
   readonly data?: unknown
 }
 
-const mockScreenWithEmissionResult = rs
+const mockScreen = rs
+  .fn<(payload: unknown) => Promise<MockScreenEmissionResult>>()
+  .mockResolvedValue({
+    accepted: true,
+    data: { profile: {}, changes: [], selectedOptimizations: [] },
+  })
+const mockTrackCurrentScreen = rs
   .fn<(payload: unknown) => Promise<MockScreenEmissionResult>>()
   .mockResolvedValue({
     accepted: true,
@@ -60,32 +66,12 @@ const mockConsentObservable = {
 
 const mockOptimization = {
   hasConsent: mockHasConsent,
+  screen: async (payload: unknown) => await mockScreen(payload),
   states: {
     consent: mockConsentObservable,
   },
+  trackCurrentScreen: async (payload: unknown) => await mockTrackCurrentScreen(payload),
 }
-
-rs.mock('@contentful/optimization-core/sdk-support', () => {
-  class AcceptedCurrentStateTracker {
-    async emitIfNeeded({
-      emit,
-      isAllowed,
-    }: {
-      emit: () => Promise<unknown>
-      isAllowed: boolean
-    }): Promise<unknown> {
-      if (!isAllowed) return { accepted: false, attempted: false }
-
-      return await emit()
-    }
-  }
-
-  return {
-    AcceptedCurrentStateTracker,
-    screenWithEmissionResult: async (_sdk: unknown, payload: unknown) =>
-      await mockScreenWithEmissionResult(payload),
-  }
-})
 
 // Mock useOptimization hook
 rs.mock('../context/OptimizationContext', () => ({
@@ -119,7 +105,11 @@ describe('useScreenTracking', () => {
   beforeEach(() => {
     rs.clearAllMocks()
     mockHasConsent.mockReturnValue(true)
-    mockScreenWithEmissionResult.mockResolvedValue({
+    mockScreen.mockResolvedValue({
+      accepted: true,
+      data: { profile: {}, changes: [], selectedOptimizations: [] },
+    })
+    mockTrackCurrentScreen.mockResolvedValue({
       accepted: true,
       data: { profile: {}, changes: [], selectedOptimizations: [] },
     })
@@ -137,12 +127,18 @@ describe('useScreenTracking', () => {
     // Verify trackScreen function is returned
     expect(typeof result.trackScreen).toBe('function')
 
-    // The hook should have called screen() on mount
+    // The hook should have delegated automatic tracking on mount.
     // Note: Due to the mocking of useEffect, we need to check if it was set up
     expect(mockUseEffect).toHaveBeenCalled()
+    expect(mockTrackCurrentScreen).toHaveBeenCalledWith({
+      routeKey: 'TestScreen',
+      name: 'TestScreen',
+      properties: { test: true },
+      screen: { name: 'TestScreen' },
+    })
   })
 
-  it('should call sdk screen emission helper with correct parameters', async () => {
+  it('should call sdk screen with correct parameters for manual tracking', async () => {
     const { useScreenTracking } = await import('./useScreenTracking')
 
     const { trackScreen } = useScreenTracking({
@@ -153,7 +149,7 @@ describe('useScreenTracking', () => {
 
     await trackScreen()
 
-    expect(mockScreenWithEmissionResult).toHaveBeenCalledWith({
+    expect(mockScreen).toHaveBeenCalledWith({
       name: 'TestScreen',
       properties: { customProp: 'value' },
       screen: { name: 'TestScreen' },
@@ -170,15 +166,15 @@ describe('useScreenTracking', () => {
 
     await trackScreen()
 
-    expect(mockScreenWithEmissionResult).toHaveBeenCalledWith({
+    expect(mockScreen).toHaveBeenCalledWith({
       name: 'MinimalScreen',
       properties: {},
       screen: { name: 'MinimalScreen' },
     })
   })
 
-  it('should return undefined on error', async () => {
-    mockScreenWithEmissionResult.mockRejectedValueOnce(new Error('Network error'))
+  it('should return not accepted on error', async () => {
+    mockScreen.mockRejectedValueOnce(new Error('Network error'))
 
     const { useScreenTracking } = await import('./useScreenTracking')
 
@@ -189,16 +185,16 @@ describe('useScreenTracking', () => {
 
     const result = await trackScreen()
 
-    expect(result).toBeUndefined()
+    expect(result).toEqual({ accepted: false })
   })
 
-  it('should return optimization data on success', async () => {
+  it('should return the emission result on success', async () => {
     const expectedData = {
       profile: { id: 'test-profile' },
       changes: [],
       selectedOptimizations: [],
     }
-    mockScreenWithEmissionResult.mockResolvedValueOnce({
+    mockScreen.mockResolvedValueOnce({
       accepted: true,
       data: expectedData,
     })
@@ -212,19 +208,22 @@ describe('useScreenTracking', () => {
 
     const result = await trackScreen()
 
-    expect(result).toEqual(expectedData)
+    expect(result).toEqual({ accepted: true, data: expectedData })
   })
 
-  it('should skip automatic mount tracking until screen tracking is allowed', async () => {
-    mockHasConsent.mockReturnValue(false)
-
+  it('delegates automatic mount tracking to current-screen helper', async () => {
     const { useScreenTracking } = await import('./useScreenTracking')
 
     useScreenTracking({
-      name: 'BlockedScreen',
+      name: 'CurrentScreen',
     })
 
-    expect(mockHasConsent).toHaveBeenCalledWith('screen')
-    expect(mockScreenWithEmissionResult).not.toHaveBeenCalled()
+    expect(mockTrackCurrentScreen).toHaveBeenCalledWith({
+      routeKey: 'CurrentScreen',
+      name: 'CurrentScreen',
+      properties: {},
+      screen: { name: 'CurrentScreen' },
+    })
+    expect(mockScreen).not.toHaveBeenCalled()
   })
 })

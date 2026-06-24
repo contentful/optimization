@@ -1,12 +1,10 @@
-import type { BlockedEvent } from './BlockedEvent'
 import CoreStateful, {
   type CoreStatefulConfig,
   type PreviewPanelSignalObject,
 } from './CoreStateful'
 import type { ChangeArray } from './api-schemas'
-import type { TrackBuilderArgs, ViewBuilderArgs } from './events'
+import type { BlockedEvent, TrackBuilderArgs, ViewBuilderArgs } from './events'
 import type { QueueFlushFailureContext } from './lib/queue'
-import { pageWithEmissionResult, screenWithEmissionResult } from './sdk-support'
 import { batch, signalFns, signals } from './signals'
 import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
 import { mergeTagEntry } from './test/fixtures/mergeTagEntry'
@@ -903,7 +901,7 @@ describe('CoreStateful blocked event handling', () => {
 
     core.setOnlineState(false)
 
-    await expect(pageWithEmissionResult(core, {})).resolves.toEqual({ accepted: true })
+    await expect(core.page({})).resolves.toEqual({ accepted: true })
   })
 
   it('reports blocked screen emission results without calling Experience', async () => {
@@ -915,7 +913,7 @@ describe('CoreStateful blocked event handling', () => {
     })
 
     await expect(
-      screenWithEmissionResult(core, { name: 'Home', properties: {}, screen: { name: 'Home' } }),
+      core.screen({ name: 'Home', properties: {}, screen: { name: 'Home' } }),
     ).resolves.toEqual({ accepted: false })
 
     expect(upsertProfile).not.toHaveBeenCalled()
@@ -931,7 +929,7 @@ describe('CoreStateful blocked event handling', () => {
     rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue(data)
 
     await expect(
-      screenWithEmissionResult(core, { name: 'Home', properties: {}, screen: { name: 'Home' } }),
+      core.screen({ name: 'Home', properties: {}, screen: { name: 'Home' } }),
     ).resolves.toEqual({ accepted: true, data })
   })
 

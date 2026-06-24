@@ -16,7 +16,7 @@ import androidx.recyclerview.widget.RecyclerView
  * [android.view.ViewTreeObserver.OnPreDrawListener], so this class is a redundant signal path
  * for scroll containers whose layout passes do not naturally redraw children.
  */
-class TrackingRecyclerView @JvmOverloads constructor(
+public class TrackingRecyclerView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,

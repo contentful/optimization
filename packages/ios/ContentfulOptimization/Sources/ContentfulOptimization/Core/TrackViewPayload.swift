@@ -8,6 +8,7 @@ public struct TrackViewPayload {
     public let variantIndex: Int
     public let viewDurationMs: Int
     public let sticky: Bool?
+    public let stickyTrackingKey: String?
 
     public init(
         componentId: String,
@@ -15,7 +16,8 @@ public struct TrackViewPayload {
         experienceId: String? = nil,
         variantIndex: Int,
         viewDurationMs: Int,
-        sticky: Bool? = nil
+        sticky: Bool? = nil,
+        stickyTrackingKey: String? = nil
     ) {
         self.componentId = componentId
         self.viewId = viewId
@@ -23,6 +25,7 @@ public struct TrackViewPayload {
         self.variantIndex = variantIndex
         self.viewDurationMs = viewDurationMs
         self.sticky = sticky
+        self.stickyTrackingKey = stickyTrackingKey
     }
 
     func toJSON() throws -> String {
@@ -37,6 +40,9 @@ public struct TrackViewPayload {
         }
         if let sticky = sticky {
             dict["sticky"] = sticky
+        }
+        if let stickyTrackingKey = stickyTrackingKey {
+            dict["stickyTrackingKey"] = stickyTrackingKey
         }
         let data = try JSONSerialization.data(withJSONObject: dict)
         guard let str = String(data: data, encoding: .utf8) else {

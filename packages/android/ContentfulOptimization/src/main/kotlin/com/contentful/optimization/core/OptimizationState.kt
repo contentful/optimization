@@ -1,14 +1,14 @@
 package com.contentful.optimization.core
 
-import org.json.JSONArray
-import org.json.JSONObject
-
-data class OptimizationState(
+public data class OptimizationState(
     val profile: Map<String, Any>? = null,
     val consent: Boolean? = null,
     val persistenceConsent: Boolean? = null,
-    val canPersonalize: Boolean = false,
+    val canOptimize: Boolean = false,
+    val optimizationPossible: Boolean = false,
+    val experienceRequestState: Map<String, Any> = mapOf("status" to "idle"),
     val changes: List<Map<String, Any>>? = null,
+    val selectedOptimizations: List<Map<String, Any>>? = null,
     val locale: String? = null,
 ) {
     companion object {
@@ -21,8 +21,11 @@ data class OptimizationState(
         return sortedJson(profile) == sortedJson(other.profile) &&
             consent == other.consent &&
             persistenceConsent == other.persistenceConsent &&
-            canPersonalize == other.canPersonalize &&
+            canOptimize == other.canOptimize &&
+            optimizationPossible == other.optimizationPossible &&
+            sortedJson(experienceRequestState) == sortedJson(other.experienceRequestState) &&
             sortedJson(changes) == sortedJson(other.changes) &&
+            sortedJson(selectedOptimizations) == sortedJson(other.selectedOptimizations) &&
             locale == other.locale
     }
 
@@ -30,17 +33,22 @@ data class OptimizationState(
         var result = sortedJson(profile).hashCode()
         result = 31 * result + (consent?.hashCode() ?: 0)
         result = 31 * result + (persistenceConsent?.hashCode() ?: 0)
-        result = 31 * result + canPersonalize.hashCode()
+        result = 31 * result + canOptimize.hashCode()
+        result = 31 * result + optimizationPossible.hashCode()
+        result = 31 * result + sortedJson(experienceRequestState).hashCode()
         result = 31 * result + sortedJson(changes).hashCode()
+        result = 31 * result + sortedJson(selectedOptimizations).hashCode()
         result = 31 * result + (locale?.hashCode() ?: 0)
         return result
     }
 
     private fun sortedJson(value: Any?): String {
-        if (value == null) return "null"
         return when (value) {
-            is Map<*, *> -> JSONObject(value as Map<String, Any>).toString()
-            is List<*> -> JSONArray(value).toString()
+            null, Unit -> "null"
+            is Map<*, *> -> value.entries
+                .sortedBy { it.key.toString() }
+                .joinToString(prefix = "{", postfix = "}") { "${it.key}:${sortedJson(it.value)}" }
+            is List<*> -> value.joinToString(prefix = "[", postfix = "]") { sortedJson(it) }
             else -> value.toString()
         }
     }

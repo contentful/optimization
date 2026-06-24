@@ -94,9 +94,8 @@ subscriber is registered. It immediately emits the current snapshot, then future
 not replay every prior event for late subscribers or retain events until a destination acknowledges
 them.
 
-For Node and server-rendered flows, the SDK returns request-local `OptimizationData` from the SDK
-call that produced it. Server-side analytics forwarding should use that return value in the same
-request or event collector.
+For Node and server-rendered flows, the SDK returns request-local event results. Server-side
+analytics forwarding should use the result `data` in the same request or event collector.
 
 If a destination SDK loads late, is temporarily unavailable, or requires acknowledgement before an
 event is considered delivered, put that buffering policy in application code. The application can
@@ -121,7 +120,7 @@ We recommend this default:
   Optimization profile ID as your known-user ID.
 - Use `resolveOptimizedEntry()` metadata only when you need entry-specific exposure or
   business-event attribution.
-- Use request-local `OptimizationData` in Node and SSR flows, where state subscriptions are not the
+- Use request-local event result data in Node and SSR flows, where state subscriptions are not the
   integration surface.
 
 You do not need an analytics adapter for every integration. A small mapping function is often
@@ -134,7 +133,7 @@ Use this table to choose the code location that owns the third-party handoff:
 | Stateful SDK subscriptions         | You use Web, React Web, or React Native and the SDK instance owns state.    | Subscribe to `states.eventStream`, `states.blockedEventStream`, `states.profile`, `states.selectedOptimizations`, or `states.flag(...)`. |
 | Provider-managed subscriptions     | You use React Web or React Native and want subscriptions tied to the root.  | Register app-level subscribers from the provider `onStatesReady` callback.                                                               |
 | Existing business-event code       | You need to attribute purchases, signups, or other app events to variants.  | Add Contentful metadata from `resolveOptimizedEntry()` to the existing event.                                                            |
-| Request-local Node or SSR data     | You call the Node SDK or resolve first paint on the server.                 | Use the `OptimizationData` returned by `page()`, `identify()`, `track()`, or sticky `trackView()`.                                       |
+| Request-local Node or SSR data     | You call the Node SDK or resolve first paint on the server.                 | Use the event result `data` returned by `page()`, `identify()`, `track()`, or sticky `trackView()`.                                      |
 | Destination-specific mapping layer | Your organization enforces a strict tracking plan or sends to many vendors. | Add a small mapper that normalizes SDK events before forwarding.                                                                         |
 
 Avoid starting with a broad adapter that mirrors every SDK value. Start with subscriptions and map
@@ -143,13 +142,13 @@ only the event types and fields that answer a reporting or activation question.
 Before copying a vendor example, confirm the runtime path and the code location that owns the
 forwarded event.
 
-| Runtime                 | Register subscriptions where                               | Forward Contentful context from                                                                  |
-| ----------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Web                     | After constructing the SDK instance.                       | `states.eventStream`, app-owned flag reads, or the business event that owns the user action.     |
-| React Web               | `onStatesReady` on `OptimizationRoot` or provider setup.   | Provider-managed subscriptions, React entry resolution helpers, or the action handler.           |
-| React Native            | `onStatesReady` on `OptimizationRoot` or provider setup.   | Provider-managed subscriptions, flag render paths, screen events, or tap/action handlers.        |
-| Node or server rendered | The same request or server event collector that calls SDK. | Request-local `OptimizationData` and the server-side business event or exposure collector.       |
-| Hybrid SSR and CSR      | Server request first, then browser provider subscriptions. | Server-resolved first paint from `OptimizationData`; later client activity from stateful events. |
+| Runtime                 | Register subscriptions where                               | Forward Contentful context from                                                                 |
+| ----------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Web                     | After constructing the SDK instance.                       | `states.eventStream`, app-owned flag reads, or the business event that owns the user action.    |
+| React Web               | `onStatesReady` on `OptimizationRoot` or provider setup.   | Provider-managed subscriptions, React entry resolution helpers, or the action handler.          |
+| React Native            | `onStatesReady` on `OptimizationRoot` or provider setup.   | Provider-managed subscriptions, flag render paths, screen events, or tap/action handlers.       |
+| Node or server rendered | The same request or server event collector that calls SDK. | Request-local event result data and the server-side business event or exposure collector.       |
+| Hybrid SSR and CSR      | Server request first, then browser provider subscriptions. | Server-resolved first paint from event result data; later client activity from stateful events. |
 
 Move through the integration in this order:
 
@@ -265,17 +264,18 @@ const requestOptimization = optimization.forRequest({
   profile,
 })
 
-const optimizationData = await requestOptimization.page({
+const { accepted, data: optimizationData } = await requestOptimization.page({
   properties: { path: req.path },
 })
 
 const { entry: resolvedHeroEntry, selectedOptimization } = optimization.resolveOptimizedEntry(
   baselineHeroEntry,
-  optimizationData.selectedOptimizations,
+  accepted ? optimizationData?.selectedOptimizations : undefined,
 )
 
 analytics.track('Contentful Optimization Exposure', {
-  contentful_profile_id: canForwardOptimizationProfileId ? optimizationData.profile.id : undefined,
+  contentful_profile_id:
+    accepted && canForwardOptimizationProfileId ? optimizationData?.profile.id : undefined,
   contentful_experience_id: selectedOptimization?.experienceId,
   contentful_variant_index: selectedOptimization?.variantIndex,
   contentful_variant_entry_id: selectedOptimization ? resolvedHeroEntry.sys.id : undefined,

@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Badge
 
 enum BadgeVariant {
-    case api, override_, manual, info, experiment, personalization, qualified, primary
+    case api, override_, manual, info, experiment, optimization, qualified, primary
 
     var backgroundColor: Color {
         switch self {
@@ -12,7 +12,7 @@ enum BadgeVariant {
         case .manual: return PreviewTheme.Colors.Badge.manual
         case .info: return PreviewTheme.Colors.Background.tertiary
         case .experiment: return PreviewTheme.Colors.Badge.experiment
-        case .personalization: return PreviewTheme.Colors.Badge.personalization
+        case .optimization: return PreviewTheme.Colors.Badge.optimization
         case .qualified: return PreviewTheme.Colors.Status.qualified
         case .primary: return PreviewTheme.Colors.CP.normal
         }
@@ -513,8 +513,8 @@ struct ExperienceCard: View {
             // Header with type badge and override badge
             HStack(spacing: PreviewTheme.Spacing.sm) {
                 PreviewBadge(
-                    label: isExperiment ? "Experiment" : "Personalization",
-                    variant: isExperiment ? .experiment : .personalization
+                    label: isExperiment ? "Experiment" : "Optimization",
+                    variant: isExperiment ? .experiment : .optimization
                 )
                 if experience.isOverridden {
                     PreviewBadge(label: "Override", variant: .override_)

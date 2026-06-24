@@ -46,7 +46,7 @@ import com.contentful.optimization.core.OptimizationClient
  * cannot reliably resolve nodes when the panel sits in a separate activity that takes window
  * focus mid-transition.
  */
-class PreviewPanelActivity : ComponentActivity() {
+internal class PreviewPanelActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

@@ -111,16 +111,16 @@ class PreviewPanelTests {
     }
 
     @Test
-    fun testShowsCanPersonalize() {
+    fun testShowsCanOptimize() {
         openPreviewPanel()
-        scrollToPreviewElement("debug-can-personalize")
+        scrollToPreviewElement("debug-can-optimize")
 
-        val canPersonalize = TestHelpers.findElement(device, "debug-can-personalize")
-        Assert.assertNotNull("Debug canPersonalize element not found", canPersonalize)
+        val canOptimize = TestHelpers.findElement(device, "debug-can-optimize")
+        Assert.assertNotNull("Debug canOptimize element not found", canOptimize)
 
-        val text = TestHelpers.extractText(canPersonalize!!)
+        val text = TestHelpers.extractText(canOptimize!!)
         Assert.assertTrue(
-            "Expected canPersonalize to contain 'Yes', got: $text",
+            "Expected canOptimize to contain 'Yes', got: $text",
             text.contains("Yes"),
         )
     }

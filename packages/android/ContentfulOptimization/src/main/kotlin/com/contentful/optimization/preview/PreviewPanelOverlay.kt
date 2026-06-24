@@ -28,7 +28,7 @@ import com.contentful.optimization.compose.LocalOptimizationClient
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PreviewPanelOverlay(
+public fun PreviewPanelOverlay(
     contentfulClient: PreviewContentfulClient? = null,
     content: @Composable () -> Unit,
 ) {

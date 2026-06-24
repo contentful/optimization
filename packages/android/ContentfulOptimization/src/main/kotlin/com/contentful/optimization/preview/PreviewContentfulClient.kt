@@ -9,11 +9,11 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.io.IOException
 
-interface PreviewContentfulClient {
+public interface PreviewContentfulClient {
     suspend fun getEntries(contentType: String, include: Int, skip: Int, limit: Int): ContentfulEntriesResult
 }
 
-data class ContentfulEntriesResult(
+public data class ContentfulEntriesResult(
     val items: List<Map<String, Any>>,
     val total: Int,
     val skip: Int,
@@ -21,18 +21,18 @@ data class ContentfulEntriesResult(
     val includes: ContentfulIncludes = ContentfulIncludes(),
 )
 
-data class ContentfulIncludes(
+public data class ContentfulIncludes(
     val entries: List<Map<String, Any>> = emptyList(),
 )
 
-sealed class ContentfulPreviewError(message: String) : Exception(message) {
+public sealed class ContentfulPreviewError(message: String) : Exception(message) {
     class InvalidURL : ContentfulPreviewError("Invalid Contentful API URL")
     class InvalidResponse : ContentfulPreviewError("Invalid response from Contentful API")
     class HttpError(val statusCode: Int) : ContentfulPreviewError("Contentful API returned HTTP $statusCode")
     class InvalidJSON : ContentfulPreviewError("Failed to parse Contentful API response")
 }
 
-class ContentfulHTTPPreviewClient(
+public class ContentfulHTTPPreviewClient(
     private val spaceId: String,
     private val accessToken: String,
     private val environment: String = "master",
@@ -111,7 +111,7 @@ class ContentfulHTTPPreviewClient(
 
 private const val BATCH_SIZE = 100
 
-suspend fun fetchAllEntries(
+internal suspend fun fetchAllEntries(
     client: PreviewContentfulClient,
     contentType: String,
     include: Int = 10,
@@ -138,7 +138,7 @@ suspend fun fetchAllEntries(
     )
 }
 
-suspend fun fetchAudienceAndExperienceEntries(
+internal suspend fun fetchAudienceAndExperienceEntries(
     client: PreviewContentfulClient,
 ): Pair<ContentfulEntriesResult, ContentfulEntriesResult> = coroutineScope {
     val audiences = async { fetchAllEntries(client, "nt_audience") }

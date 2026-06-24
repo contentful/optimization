@@ -20,20 +20,20 @@ internal const val VIEW_TRACKING_LOG_TAG = "ViewTracking"
  * [CoroutineScope] (typically a `kotlinx-coroutines-test` `TestScope`), a fake [LifecycleOwner]
  * (typically `TestLifecycleOwner`), a recording [onTrackView] sink, and a virtual [clock] without
  * dragging the full [OptimizationClient] (which requires a real `Context` for SharedPreferences
- * and a JNI-loaded QuickJS bridge) into the test target. The public secondary constructor below
- * preserves the prior `client: OptimizationClient` call shape used by [OptimizedEntryView]'s
- * `attachController` and the Compose `Modifier.trackViews` so production call sites are
- * unchanged. The dwell state machine (visibility threshold, 2s-then-5s timer cadence, attempts
- * counter, resetCycle on becoming-invisible-before-first-emit) lives entirely in this class
- * and is covered by `ViewTrackingControllerTest` in `src/test/`.
+ * and a JNI-loaded QuickJS bridge) into the test target. The secondary constructor preserves the
+ * `client: OptimizationClient` call shape used internally by [OptimizedEntryView]'s
+ * `attachController` and the Compose `Modifier.trackViews`. The dwell state machine (minimum
+ * visible ratio, 2s-then-5s timer cadence, attempts counter, resetCycle on
+ * becoming-invisible-before-first-emit) lives entirely in this class and is covered by
+ * `ViewTrackingControllerTest` in `src/test/`.
  */
-class ViewTrackingController internal constructor(
+internal class ViewTrackingController internal constructor(
     entry: Map<String, Any>,
-    personalization: Map<String, Any>?,
+    selectedOptimization: Map<String, Any>?,
     private val onTrackView: suspend (TrackViewPayload) -> Unit,
     private val isTrackingAllowed: () -> Boolean = { true },
-    private val threshold: Double = 0.8,
-    private val viewTimeMs: Int = 2000,
+    private val minVisibleRatio: Double = 0.8,
+    private val dwellTimeMs: Int = 2000,
     private val viewDurationUpdateIntervalMs: Int = 5000,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main),
     private val lifecycleOwner: LifecycleOwner = ProcessLifecycleOwner.get(),
@@ -48,30 +48,31 @@ class ViewTrackingController internal constructor(
     constructor(
         client: OptimizationClient,
         entry: Map<String, Any>,
-        personalization: Map<String, Any>?,
-        threshold: Double = 0.8,
-        viewTimeMs: Int = 2000,
+        selectedOptimization: Map<String, Any>?,
+        minVisibleRatio: Double = 0.8,
+        dwellTimeMs: Int = 2000,
         viewDurationUpdateIntervalMs: Int = 5000,
     ) : this(
         entry = entry,
-        personalization = personalization,
+        selectedOptimization = selectedOptimization,
         onTrackView = { payload -> client.trackView(payload) },
         isTrackingAllowed = { client.hasConsent("trackView") },
-        threshold = threshold,
-        viewTimeMs = viewTimeMs,
+        minVisibleRatio = minVisibleRatio,
+        dwellTimeMs = dwellTimeMs,
         viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
     )
 
     var isVisible: Boolean = false
         private set
 
-    private val metadata = TrackingMetadata(entry, personalization)
+    private val metadata = TrackingMetadata(entry, selectedOptimization)
 
     private var viewId: String? = null
     private var visibleSinceMs: Long? = null
     private var accumulatedMs: Double = 0.0
     private var attempts: Int = 0
     private var timerJob: Job? = null
+    private val stickyTrackingKey: String = UUID.randomUUID().toString()
 
     // Last known visibility geometry, for re-evaluation after resume.
     private var lastElementY: Float = 0f
@@ -108,7 +109,7 @@ class ViewTrackingController internal constructor(
         val visibleHeight = maxOf(0f, visibleBottom - visibleTop)
         val visibilityRatio = visibleHeight / elementHeight
 
-        val nowVisible = visibilityRatio >= threshold
+        val nowVisible = visibilityRatio >= minVisibleRatio
 
         if (nowVisible && !isVisible) {
             trackingLog {
@@ -202,7 +203,7 @@ class ViewTrackingController internal constructor(
 
     private fun scheduleNextFire() {
         flushAccumulatedTime()
-        val requiredMs = viewTimeMs.toDouble() + attempts.toDouble() * viewDurationUpdateIntervalMs.toDouble()
+        val requiredMs = dwellTimeMs.toDouble() + attempts.toDouble() * viewDurationUpdateIntervalMs.toDouble()
         val remainingMs = maxOf(0.0, requiredMs - accumulatedMs)
 
         timerJob?.cancel()
@@ -230,6 +231,7 @@ class ViewTrackingController internal constructor(
             variantIndex = metadata.variantIndex,
             viewDurationMs = accumulatedMs.toInt(),
             sticky = metadata.sticky,
+            stickyTrackingKey = stickyTrackingKey,
         )
         trackingLog {
             "EMIT componentId=${metadata.componentId} duration=${accumulatedMs.toInt()}ms attempt=$attempts"

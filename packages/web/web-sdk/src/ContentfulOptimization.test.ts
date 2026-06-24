@@ -367,8 +367,101 @@ describe('ContentfulOptimization', () => {
       .spyOn(web.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
 
-    await expect(web.page()).resolves.toEqual(EMPTY_OPTIMIZATION_DATA)
+    await expect(web.page()).resolves.toEqual({
+      accepted: true,
+      data: EMPTY_OPTIMIZATION_DATA,
+    })
     expect(upsertProfile).toHaveBeenCalledTimes(1)
+  })
+
+  it('deduplicates current-page tracking by accepted route key', async () => {
+    const web = new ContentfulOptimization(config)
+    const upsertProfile = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+
+    await expect(
+      web.trackCurrentPage({
+        routeKey: '/',
+        buildPayload: ({ isInitialEmission }) => ({
+          properties: { initial: isInitialEmission },
+        }),
+      }),
+    ).resolves.toEqual({ accepted: true, data: EMPTY_OPTIMIZATION_DATA })
+    await expect(
+      web.trackCurrentPage({
+        routeKey: '/',
+        buildPayload: () => ({ properties: { initial: false } }),
+      }),
+    ).resolves.toEqual({ accepted: false })
+    await expect(
+      web.trackCurrentPage({
+        routeKey: '/products',
+        buildPayload: ({ isInitialEmission }) => ({
+          properties: { initial: isInitialEmission },
+        }),
+      }),
+    ).resolves.toEqual({ accepted: true, data: EMPTY_OPTIMIZATION_DATA })
+
+    expect(upsertProfile).toHaveBeenCalledTimes(2)
+    expect(Reflect.get(upsertProfile.mock.calls[0]?.[0].events[0] ?? {}, 'properties')).toEqual(
+      expect.objectContaining({
+        initial: true,
+      }),
+    )
+    expect(Reflect.get(upsertProfile.mock.calls[1]?.[0].events[0] ?? {}, 'properties')).toEqual(
+      expect.objectContaining({
+        initial: false,
+      }),
+    )
+  })
+
+  it('retries current-page tracking when consent was previously blocked', async () => {
+    const web = new ContentfulOptimization({ ...config, allowedEventTypes: [] })
+    const upsertProfile = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+
+    web.consent(false)
+    await expect(
+      web.trackCurrentPage({
+        routeKey: '/blocked',
+        buildPayload: () => ({}),
+      }),
+    ).resolves.toEqual({ accepted: false })
+
+    web.consent(true)
+    await expect(
+      web.trackCurrentPage({
+        routeKey: '/blocked',
+        buildPayload: () => ({}),
+      }),
+    ).resolves.toEqual({ accepted: true, data: EMPTY_OPTIMIZATION_DATA })
+
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+  })
+
+  it('can mark an SSR-emitted initial current page as accepted', async () => {
+    const web = new ContentfulOptimization(config)
+    const upsertProfile = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+
+    await expect(
+      web.trackCurrentPage({
+        initialPageEvent: 'skip',
+        routeKey: '/',
+        buildPayload: () => ({}),
+      }),
+    ).resolves.toEqual({ accepted: true })
+    await expect(
+      web.trackCurrentPage({
+        routeKey: '/',
+        buildPayload: () => ({}),
+      }),
+    ).resolves.toEqual({ accepted: false })
+
+    expect(upsertProfile).not.toHaveBeenCalled()
   })
 
   it('forwards onEventBlocked callback to core stateful guards', async () => {

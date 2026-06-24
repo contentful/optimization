@@ -39,7 +39,6 @@ type FlagValue = Json
 export function App(): ReactElement {
   const location = useLocation()
   const sdk = useOptimization()
-  const { getFlag, getMergeTagValue } = sdk
   const { resolveEntry, resolveEntryData } = useEntryResolver()
   const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
   const { entriesById, loading: entriesLoading, error: entriesError } = useDevEntries()
@@ -90,16 +89,16 @@ export function App(): ReactElement {
 
   const handleGetFlags = (): void => {
     setFlags({
-      boolean: getFlag('boolean'),
-      'plain-text': getFlag('plain-text'),
-      number: getFlag('number'),
-      json: getFlag('json'),
+      boolean: sdk.getFlag('boolean'),
+      'plain-text': sdk.getFlag('plain-text'),
+      number: sdk.getFlag('number'),
+      json: sdk.getFlag('json'),
     })
   }
 
   const handleGetMergeTagValue = (): void => {
     if (!mergeTagEntry) return
-    setMergeTagValue(getMergeTagValue(mergeTagEntry, profile) ?? 'undefined')
+    setMergeTagValue(sdk.getMergeTagValue(mergeTagEntry, profile) ?? 'undefined')
   }
 
   const handleResolveEntry = (): void => {

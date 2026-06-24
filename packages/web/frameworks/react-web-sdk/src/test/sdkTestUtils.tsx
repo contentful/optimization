@@ -1,6 +1,10 @@
+import ContentfulOptimization from '@contentful/optimization-web'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import type { ExperienceRequestState, ResolvedData } from '@contentful/optimization-web/core-sdk'
-import { installCurrentPageTrackerSdkSupport } from '@contentful/optimization-web/sdk-support'
+import type {
+  EventEmissionResult,
+  ExperienceRequestState,
+  ResolvedData,
+} from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import type { ReactElement, ReactNode } from 'react'
 import { act } from 'react'
@@ -28,20 +32,32 @@ interface ObservableLike<T> {
   subscribeOnce: (next: (value: NonNullable<T>) => void) => Subscription
 }
 type RuntimeSubscriber<T> = (value: T) => void
+type OptimizationSdkPublic = Pick<OptimizationSdk, keyof OptimizationSdk>
+type EventMethodOverride<TMethod extends (...args: never[]) => Promise<EventEmissionResult>> = (
+  ...args: Parameters<TMethod>
+) => Promise<Awaited<ReturnType<TMethod>> | undefined>
 
-export interface RuntimeOptimization extends OptimizationSdk {
-  resolveOptimizedEntry: ResolveOptimizedEntry
-  states: OptimizationSdk['states'] & {
-    canOptimize: ObservableLike<boolean>
-    optimizationPossible: ObservableLike<boolean>
-    experienceRequestState: ObservableLike<ExperienceRequestState>
-    selectedOptimizations: ObservableLike<SelectedOptimizationState>
-  }
-}
+export type RuntimeOptimization = OptimizationSdk
 
-export type OptimizationSdkOverrides = Omit<Partial<OptimizationSdk>, 'states' | 'tracking'> & {
+export type OptimizationSdkOverrides = Omit<
+  Partial<OptimizationSdkPublic>,
+  | 'identify'
+  | 'page'
+  | 'resolveOptimizedEntry'
+  | 'screen'
+  | 'states'
+  | 'track'
+  | 'tracking'
+  | 'trackView'
+> & {
+  identify?: EventMethodOverride<OptimizationSdk['identify']>
+  page?: EventMethodOverride<OptimizationSdk['page']>
+  resolveOptimizedEntry?: ResolveOptimizedEntry
+  screen?: EventMethodOverride<OptimizationSdk['screen']>
   states?: Partial<OptimizationSdk['states']>
+  track?: EventMethodOverride<OptimizationSdk['track']>
   tracking?: Partial<OptimizationSdk['tracking']>
+  trackView?: EventMethodOverride<OptimizationSdk['trackView']>
 }
 
 export function createObservable<T>(current: T): ObservableLike<T> {
@@ -122,29 +138,105 @@ export function createOptimizableTestEntry(id: string): TestEntry {
   return entry
 }
 
+function toOptimizationSdk<TSdk extends object>(sdk: TSdk): TSdk & OptimizationSdk {
+  Object.setPrototypeOf(sdk, ContentfulOptimization.prototype)
+
+  if (!(sdk instanceof ContentfulOptimization)) {
+    throw new Error('Expected SDK test double to use the ContentfulOptimization prototype.')
+  }
+
+  return sdk
+}
+
+function isOptimizationData(value: unknown): value is EventEmissionResult['data'] {
+  if (value === null || typeof value !== 'object') return false
+
+  return (
+    typeof Reflect.get(value, 'profile') === 'object' &&
+    Array.isArray(Reflect.get(value, 'changes')) &&
+    Array.isArray(Reflect.get(value, 'selectedOptimizations'))
+  )
+}
+
+function toEventEmissionResult(value: unknown): EventEmissionResult {
+  if (value !== null && typeof value === 'object') {
+    const accepted = Reflect.get(value, 'accepted')
+
+    if (typeof accepted === 'boolean') {
+      if (!accepted) return { accepted: false }
+
+      const data = Reflect.get(value, 'data')
+
+      return isOptimizationData(data) ? { accepted: true, data } : { accepted: true }
+    }
+  }
+
+  if (isOptimizationData(value)) return { accepted: true, data: value }
+
+  return { accepted: true }
+}
+
 export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}): OptimizationSdk {
   const { states: stateOverrides, tracking: trackingOverrides, ...sdkOverrides } = overrides
+  const hasConsent = sdkOverrides.hasConsent ?? (() => true)
   const page =
     sdkOverrides.page ??
     (async () => {
       await Promise.resolve()
-      return undefined
+      return { accepted: true }
+    })
+  let acceptedRouteKey: string | undefined = undefined
+  let inFlightRouteKey: string | undefined = undefined
+  const trackCurrentPage =
+    sdkOverrides.trackCurrentPage ??
+    (async ({ buildPayload, initialPageEvent = 'emit', routeKey }) => {
+      if (initialPageEvent === 'skip' && acceptedRouteKey === undefined) {
+        acceptedRouteKey = routeKey
+        return { accepted: true }
+      }
+
+      if (!hasConsent('page') || acceptedRouteKey === routeKey || inFlightRouteKey === routeKey) {
+        return { accepted: false }
+      }
+
+      const isInitialEmission = acceptedRouteKey === undefined
+      inFlightRouteKey = routeKey
+
+      try {
+        const result = toEventEmissionResult(await page(buildPayload({ isInitialEmission })))
+        if (result.accepted) {
+          acceptedRouteKey = routeKey
+        }
+
+        return result
+      } finally {
+        if (inFlightRouteKey === routeKey) {
+          inFlightRouteKey = undefined
+        }
+      }
     })
 
-  const sdk: OptimizationSdk = {
+  const sdk = {
     consent: () => undefined,
     destroy: () => undefined,
+    flush: async () => {
+      await Promise.resolve()
+    },
     getFlag: () => undefined,
     getMergeTagValue: () => undefined,
-    hasConsent: () => true,
+    hasConsent,
     identify: async () => {
       await Promise.resolve()
-      return undefined
+      return { accepted: true }
     },
     locale: undefined,
     page,
     resolveOptimizedEntry: (entry: Entry) => ({ entry }),
     reset: () => undefined,
+    screen: async () => {
+      await Promise.resolve()
+      return { accepted: true }
+    },
     setLocale: () => undefined,
     states: {
       locale: createObservable(undefined),
@@ -164,15 +256,23 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
     },
     track: async () => {
       await Promise.resolve()
-      return undefined
+      return { accepted: true }
     },
     trackClick: async () => {
       await Promise.resolve()
       return undefined
     },
-    trackView: async () => {
+    trackFlagView: async () => {
+      await Promise.resolve()
+    },
+    trackHover: async () => {
       await Promise.resolve()
       return undefined
+    },
+    trackCurrentPage,
+    trackView: async () => {
+      await Promise.resolve()
+      return { accepted: true }
     },
     tracking: {
       clearElement: () => undefined,
@@ -185,16 +285,7 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
     ...sdkOverrides,
   }
 
-  installCurrentPageTrackerSdkSupport(sdk, {
-    pageWithEmissionResult: async (payload: Parameters<OptimizationSdk['page']>[0]) => {
-      const data = await page(payload)
-      if (data === undefined) return { accepted: true }
-
-      return { accepted: true, data }
-    },
-  })
-
-  return sdk
+  return toOptimizationSdk(sdk)
 }
 
 export function createRuntime(
@@ -298,7 +389,7 @@ export function createRuntime(
         },
       },
     },
-  }) as RuntimeOptimization
+  })
 
   async function emit(value: SelectedOptimizationState): Promise<void> {
     current = value

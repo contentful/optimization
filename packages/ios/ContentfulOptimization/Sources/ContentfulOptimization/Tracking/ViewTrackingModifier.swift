@@ -4,9 +4,9 @@ import SwiftUI
 /// and reports view events to the optimization client.
 struct ViewTrackingModifier: ViewModifier {
     let entry: [String: Any]
-    let personalization: [String: Any]?
-    let threshold: Double
-    let viewTimeMs: Int
+    let selectedOptimization: [String: Any]?
+    let minVisibleRatio: Double
+    let dwellTimeMs: Int
     let viewDurationUpdateIntervalMs: Int
     let enabled: Bool
     let client: OptimizationClient
@@ -67,9 +67,9 @@ struct ViewTrackingModifier: ViewModifier {
             controller = ViewTrackingController(
                 client: client,
                 entry: entry,
-                personalization: personalization,
-                threshold: threshold,
-                viewTimeMs: viewTimeMs,
+                selectedOptimization: selectedOptimization,
+                minVisibleRatio: minVisibleRatio,
+                dwellTimeMs: dwellTimeMs,
                 viewDurationUpdateIntervalMs: viewDurationUpdateIntervalMs
             )
         }

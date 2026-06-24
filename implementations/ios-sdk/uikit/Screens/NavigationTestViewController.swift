@@ -29,7 +29,7 @@ final class NavigationTestViewController: UINavigationController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        client.eventPublisher
+        client.eventStream
             .sink { [weak self] event in
                 guard let type = event["type"] as? String,
                       type == "screen" || type == "screenViewEvent",
@@ -232,4 +232,3 @@ private final class NavigationViewContentVC: UIViewController {
         }
     }
 }
-

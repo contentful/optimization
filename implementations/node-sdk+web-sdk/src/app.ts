@@ -1,7 +1,10 @@
 import ContentfulOptimization from '@contentful/optimization-node'
 import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
-import type { UniversalEventBuilderArgs } from '@contentful/optimization-node/core-sdk'
+import type {
+  EventEmissionResult,
+  UniversalEventBuilderArgs,
+} from '@contentful/optimization-node/core-sdk'
 import cookieParser from 'cookie-parser'
 import express, { type Express, type Request, type Response } from 'express'
 import rateLimit from 'express-rate-limit'
@@ -126,6 +129,10 @@ function getAppConsentFromCookies(cookies: unknown): boolean | undefined {
   return undefined
 }
 
+function getAcceptedOptimizationData(result: EventEmissionResult): OptimizationData | undefined {
+  return result.accepted ? result.data : undefined
+}
+
 function respond(
   res: Response,
   { appConsent, appLocale, id, optimizationData, userId }: RenderResponseOptions,
@@ -173,7 +180,7 @@ async function getProfile(
   if (!userId) {
     return {
       appLocale: APP_LOCALE,
-      optimizationData: await requestOptimization.page(),
+      optimizationData: getAcceptedOptimizationData(await requestOptimization.page()),
     }
   }
 
@@ -184,7 +191,7 @@ async function getProfile(
 
   return {
     appLocale: APP_LOCALE,
-    optimizationData: await requestOptimization.page(),
+    optimizationData: getAcceptedOptimizationData(await requestOptimization.page()),
   }
 }
 

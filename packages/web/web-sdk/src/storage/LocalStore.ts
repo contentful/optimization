@@ -1,4 +1,9 @@
 import {
+  decodeConsentStorageValue,
+  encodeConsentStorageValue,
+  resolvePersistedPersistenceConsent,
+} from '@contentful/optimization-core'
+import {
   ChangeArray,
   Profile,
   SelectedOptimizationArray,
@@ -85,15 +90,7 @@ const LocalStore = {
    * `denied`, or `undefined` when no value is stored.
    */
   get consent(): boolean | undefined {
-    const consent = localStorage.getItem(CONSENT_KEY)
-
-    switch (consent) {
-      case 'accepted':
-        return true
-      case 'denied':
-        return false
-      default:
-    }
+    return decodeConsentStorageValue(localStorage.getItem(CONSENT_KEY))
   },
 
   /**
@@ -103,28 +100,18 @@ const LocalStore = {
    * to remove the stored value.
    */
   set consent(consent: boolean | undefined) {
-    const translated = consent ? 'accepted' : 'denied'
-
-    LocalStore.setCache(CONSENT_KEY, consent === undefined ? undefined : translated)
+    LocalStore.setCache(CONSENT_KEY, encodeConsentStorageValue(consent))
   },
 
   get persistenceConsent(): boolean | undefined {
-    const consent = localStorage.getItem(PERSISTENCE_CONSENT_KEY)
-
-    switch (consent) {
-      case 'accepted':
-        return true
-      case 'denied':
-        return false
-      default:
-        return LocalStore.consent === true ? true : undefined
-    }
+    return resolvePersistedPersistenceConsent(
+      decodeConsentStorageValue(localStorage.getItem(PERSISTENCE_CONSENT_KEY)),
+      LocalStore.consent,
+    )
   },
 
   set persistenceConsent(consent: boolean | undefined) {
-    const translated = consent ? 'accepted' : 'denied'
-
-    LocalStore.setCache(PERSISTENCE_CONSENT_KEY, consent === undefined ? undefined : translated)
+    LocalStore.setCache(PERSISTENCE_CONSENT_KEY, encodeConsentStorageValue(consent))
   },
 
   /**

@@ -67,6 +67,12 @@ For offline support, also install NetInfo:
 pnpm install @react-native-community/netinfo
 ```
 
+For preview panel support, also install the preview-native peer dependencies:
+
+```sh
+pnpm install @react-native-clipboard/clipboard react-native-safe-area-context
+```
+
 Wrap the app with `OptimizationRoot` near the top of the component tree:
 
 ```tsx
@@ -115,7 +121,6 @@ Only `clientId` is required.
 | `allowedEventTypes`     | No        | `['identify', 'screen']`       | Event types allowed before consent is explicitly set                              |
 | `trackEntryInteraction` | No        | `{ views: true, taps: false }` | Default view and tap tracking for `OptimizedEntry` components                     |
 | `liveUpdates`           | No        | `false`                        | Whether optimized entries react continuously to SDK state changes                 |
-| `previewPanel`          | No        | `undefined`                    | Enables the in-app preview panel when provided with `enabled: true`               |
 | `onStatesReady`         | No        | `undefined`                    | Provider-managed app-level state subscription hook                                |
 | `getAnonymousId`        | No        | `undefined`                    | Function used to provide an anonymous ID from application-owned identity state    |
 | `queuePolicy`           | No        | SDK defaults                   | Flush retry behavior and offline queue bounds                                     |
@@ -151,6 +156,10 @@ For every prop, callback payload, and exported type, use the generated
 [React Native SDK reference](https://contentful.github.io/optimization/modules/_contentful_optimization-react-native.html).
 
 ## Core workflows
+
+Automatic navigation integrations use `trackCurrentScreen()` for current-screen deduplication.
+Direct manual `screen()` calls remain non-deduping event emits and return accepted/data event
+results.
 
 ### Provider lifecycle
 
@@ -320,9 +329,17 @@ preview panel always forces live updates on while it is open.
 Enable the preview panel only in authoring or development flows and provide a Contentful client:
 
 ```tsx
-<OptimizationRoot clientId="your-client-id" previewPanel={{ enabled: __DEV__, contentfulClient }}>
+import { PreviewPanelOverlay } from '@contentful/optimization-react-native/preview'
+;<OptimizationRoot clientId="your-client-id">
   <YourApp />
+  {__DEV__ && <PreviewPanelOverlay contentfulClient={contentfulClient} />}
 </OptimizationRoot>
+```
+
+Preview UI components and preview-specific types are exported from the preview subpath:
+
+```tsx
+import { PreviewPanelOverlay } from '@contentful/optimization-react-native/preview'
 ```
 
 ### Offline support
