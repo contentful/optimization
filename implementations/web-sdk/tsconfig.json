@@ -8,5 +8,5 @@
     "tsBuildInfoFile": "./.tsbuildinfo",
     "verbatimModuleSyntax": true
   },
-  "include": ["./*.ts", "./e2e", "./src/**/*", "./src/**/*.json"]
+  "include": ["./*.ts", "./scripts/**/*.ts"]
 }

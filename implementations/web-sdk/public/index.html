@@ -3,757 +3,317 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ContentfulOptimization Web SDK Vanilla JS Implementation E2E Test</title>
+    <title>Contentful Optimization – Vanilla JS</title>
+    <link rel="stylesheet" href="/dist/theme.css" />
+    <script>
+      /* replaced by server */
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js"></script>
     <script src="/dist/contentful-optimization-web.umd.js"></script>
     <script src="/dist/contentful-optimization-web-components.umd.js"></script>
     <script src="/dist/contentful-optimization-web-preview-panel.umd.js"></script>
-    <style>
-      * {
-        box-sizing: border-box;
-      }
-      html,
-      textarea,
-      input,
-      button {
-        font-family:
-          -apple-system,
-          BlinkMacSystemFont,
-          avenir next,
-          avenir,
-          segoe ui,
-          helvetica neue,
-          Adwaita Sans,
-          Cantarell,
-          Ubuntu,
-          roboto,
-          noto,
-          helvetica,
-          arial,
-          sans-serif;
-      }
-      h1,
-      main {
-        max-width: 1040px;
-        margin-inline: auto;
-      }
-      main {
-        display: grid;
-        grid-gap: 2rem;
-        grid-template-rows: auto 1fr;
-        grid-template-columns: 1fr auto;
-      }
-      section:first-of-type {
-        grid-column: 1 / span 2;
-      }
-      ol {
-        margin: 0;
-      }
-      summary {
-        cursor: pointer;
-      }
-      button {
-        cursor: pointer;
-
-        &:not([type]) {
-          appearance: none;
-          background: transparent;
-          border: 0;
-          padding: 0;
-          font-family: inherit;
-          font-size: inherit;
-          text-decoration: underline;
-
-          &:hover,
-          &:active {
-            color: blue;
-          }
-        }
-      }
-      #utility-panel,
-      #event-stream-panel {
-        position: sticky;
-        top: 0;
-        margin-block-start: -1px;
-        padding-block-start: 1px;
-        background: #fff;
-      }
-      #auto-observed,
-      #manually-observed {
-        display: grid;
-        grid-gap: 2rem;
-        grid-auto-rows: minmax(75dvh, auto);
-        margin-block-end: 2rem;
-
-        > button,
-        > ctfl-optimized-entry > .entry-content {
-          display: grid;
-          grid-gap: inherit;
-          grid-auto-rows: inherit;
-          width: 100%;
-          height: 100%;
-          padding: 2rem;
-          background: #eee;
-          overflow: visible;
-        }
-
-        > ctfl-optimized-entry > .entry-content--inline {
-          display: inline;
-          width: auto;
-          height: auto;
-          padding: 0;
-          background: transparent;
-        }
-
-        > button {
-          appearance: none;
-          border: 0;
-          text-align: left;
-        }
-
-        > button .entry-content {
-          display: inline;
-        }
-
-        div.nested {
-          display: grid;
-          grid-gap: inherit;
-          grid-auto-rows: inherit;
-          padding: 1rem;
-          border: 1px solid #ccc;
-          overflow: visible;
-        }
-
-        [data-e2e-entry-inline='true'] {
-          display: block;
-        }
-      }
-    </style>
   </head>
   <body>
-    <h1>ContentfulOptimization Web SDK Vanilla JS Implementation E2E Test</h1>
-
     <ctfl-optimization-root id="optimization-root">
-      <main>
-        <section id="utility-panel">
-          <h2>Utilities</h2>
+      <div class="app-shell">
+        <nav class="app-nav" id="app-nav"></nav>
 
-          <span>
-            <button id="consent" data-testid="consent-button">Accept Consent</button>
-            <button id="unconsent" data-testid="unconsent-button">Reject Consent</button>
-          </span>
-          |
-          <span>
-            <button id="identify" data-testid="live-updates-identify-button">Identify</button>
-            <button id="unidentify" data-testid="live-updates-reset-button">Reset Profile</button>
-          </span>
-          |
-          <button id="toggle-global-live-updates" data-testid="toggle-global-live-updates-button">
-            Global: OFF
-          </button>
-          |
-          <button id="manual-track" data-testid="manual-track-button">Send Track Event</button>
-
-          <p data-testid="consent-status">Consent: undefined</p>
-          <p data-testid="selected-optimizations-count">Selected Optimizations: 0</p>
-          <p data-testid="identified-status">No</p>
-          <p data-testid="global-live-updates-status">OFF</p>
-          <p data-testid="preview-panel-status">Closed</p>
-        </section>
-
-        <section>
-          <h2>Live Updates</h2>
-
-          <div id="live-updates-examples" data-testid="live-updates-examples">
-            <section data-testid="live-updates-default">
-              <h3>Default (inherits global setting)</h3>
-              <ctfl-optimized-entry
-                data-entry-id="2Z2WLOx07InSewC3LUB3eX"
-                data-live-updates-prefix="live-default"
-              ></ctfl-optimized-entry>
+        <div class="app-body">
+          <aside class="app-sidebar">
+            <section class="tracking-log" data-testid="analytics-events-container">
+              <div class="tracking-log__header">
+                <h2>Tracking</h2>
+                <span class="tracking-log__badge">
+                  <span data-testid="raw-events-count" id="raw-events-count">0</span> events
+                </span>
+              </div>
+              <p class="tracking-log__empty" data-testid="no-events-message" id="no-events-message">
+                No events tracked yet
+              </p>
+              <table class="tracking-log__table" id="tracking-table" style="display: none">
+                <thead class="tracking-log__thead">
+                  <tr>
+                    <th>Type</th>
+                    <th>Value</th>
+                    <th>Dur</th>
+                    <th>Age</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="tracking-tbody"></tbody>
+              </table>
             </section>
+          </aside>
 
-            <section data-testid="live-updates-enabled">
-              <h3>Always On (live-updates=true)</h3>
-              <ctfl-optimized-entry
-                data-entry-id="2Z2WLOx07InSewC3LUB3eX"
-                data-live-updates-prefix="live-enabled"
-                live-updates="true"
-              ></ctfl-optimized-entry>
-            </section>
-
-            <section data-testid="live-updates-locked">
-              <h3>Locked (live-updates=false)</h3>
-              <ctfl-optimized-entry
-                data-entry-id="2Z2WLOx07InSewC3LUB3eX"
-                data-live-updates-prefix="live-locked"
-                live-updates="false"
-              ></ctfl-optimized-entry>
-            </section>
-          </div>
-        </section>
-
-        <section>
-          <h2>Entries</h2>
-
-          <div id="auto-observed">
-            <ctfl-optimized-entry data-entry-id="1JAU028vQ7v6nB2swl3NBo">
-              <!-- Nested Entry -->
-            </ctfl-optimized-entry>
-            <ctfl-optimized-entry data-entry-id="1MwiFl4z7gkwqGYdvCmr8c">
-              <!-- Merge Tag "Rich Text" Entry -->
-            </ctfl-optimized-entry>
-            <ctfl-optimized-entry
-              data-testid="entry-click-direct-entry"
-              data-e2e-click-scenario="direct"
-              data-ctfl-clickable="true"
-              data-ctfl-hover-duration-update-interval-ms="1000"
-              data-entry-id="4ib0hsHWoSOnCVdDkizE8d"
-            ></ctfl-optimized-entry>
-            <ctfl-optimized-entry
-              data-testid="entry-click-descendant-entry"
-              data-e2e-click-scenario="descendant"
-              data-ctfl-hover-duration-update-interval-ms="1000"
-              data-entry-id="xFwgG3oNaOcjzWiGe4vXo"
-            ></ctfl-optimized-entry>
-            <button type="button" data-testid="entry-click-ancestor-wrapper">
-              <ctfl-optimized-entry
-                data-testid="entry-click-ancestor-entry"
-                data-e2e-click-scenario="ancestor"
-                data-e2e-entry-inline="true"
-                data-ctfl-hover-duration-update-interval-ms="1000"
-                data-entry-id="2Z2WLOx07InSewC3LUB3eX"
-              ></ctfl-optimized-entry>
-            </button>
-            <ctfl-optimized-entry data-entry-id="6zqoWXyiSrf0ja7I2WGtYj"></ctfl-optimized-entry>
-            <ctfl-optimized-entry data-entry-id="7pa5bOx8Z9NmNcr7mISvD"></ctfl-optimized-entry>
-          </div>
-
-          <div id="manually-observed">
-            <ctfl-optimized-entry
-              data-testid="manual-view-entry"
-              data-manual-view-tracking="true"
-              data-entry-id="5XHssysWUDECHzKLzoIsg1"
-              track-views="false"
-            ></ctfl-optimized-entry>
-          </div>
-        </section>
-
-        <section>
-          <div id="event-stream-panel">
-            <h2>Event Stream</h2>
-
-            <ol id="event-stream"></ol>
-            <p data-testid="events-count">Events: 0</p>
-            <p data-testid="raw-events-count">Raw Events: 0</p>
-          </div>
-        </section>
-      </main>
+          <main class="app-main" id="app-main"></main>
+        </div>
+      </div>
     </ctfl-optimization-root>
 
-    <template id="event-dialog">
-      <li>
-        <button></button>
-        <dialog>
-          <pre></pre>
-          <form method="dialog">
-            <button type="submit">Close</button>
-          </form>
-        </dialog>
-      </li>
+    <!-- ── Page templates ───────────────────────────────────────────── -->
+
+    <template id="tpl-home">
+      <div class="page-header">
+        <h1>Web SDK – Vanilla JS</h1>
+        <p class="page-header__subtitle">
+          Reference implementation of @contentful/optimization-web
+        </p>
+      </div>
+
+      <section class="control-panel" id="utility-panel">
+        <h2 class="control-panel__title">Utilities</h2>
+        <div class="control-panel__fields">
+          <span
+            class="control-panel__row-label"
+            data-tooltip="SDK tracking is active only when consent is true"
+            >Consent</span
+          >
+          <span class="control-panel__row-value" data-testid="consent-status" id="consent-status"
+            >undefined</span
+          >
+          <span id="consent-actions"></span>
+
+          <span
+            class="control-panel__row-label"
+            data-tooltip="User has been identified with a profile via the identify() call"
+            >Identified</span
+          >
+          <span
+            class="control-panel__row-value"
+            data-testid="identified-status"
+            id="identified-status"
+            >No</span
+          >
+          <span id="identify-actions"></span>
+
+          <span
+            class="control-panel__row-label"
+            data-testid="live-updates-status"
+            data-tooltip="When ON, entries re-resolve and rerender on profile changes"
+            >Live updates</span
+          >
+          <span
+            class="control-panel__row-value"
+            data-testid="global-live-updates-status"
+            id="global-live-updates-status"
+            >OFF</span
+          >
+          <button
+            class="btn btn--sm btn--secondary"
+            data-testid="toggle-global-live-updates-button"
+            id="toggle-global-live-updates-button"
+          >
+            ON
+          </button>
+
+          <span
+            class="control-panel__row-label"
+            data-tooltip="Contentful preview panel is open — forces live updates regardless of the global toggle"
+            >Preview panel</span
+          >
+          <span
+            class="control-panel__row-value"
+            data-testid="preview-panel-status"
+            id="preview-panel-status"
+            >Closed</span
+          >
+          <button
+            class="btn btn--sm btn--secondary"
+            data-testid="simulate-preview-panel-button"
+            id="simulate-preview-panel-button"
+          >
+            Open Preview Panel
+          </button>
+
+          <span
+            class="control-panel__row-label"
+            data-testid="boolean-flag-status"
+            data-tooltip="Value of the boolean feature flag from the SDK"
+            >Flag "boolean"</span
+          >
+          <span class="control-panel__row-value" id="boolean-flag-value">undefined</span>
+          <span></span>
+
+          <span
+            class="control-panel__row-label"
+            data-tooltip="Number of selected optimization variants currently applied"
+            >Active optimizations</span
+          >
+          <span
+            class="control-panel__row-value"
+            data-testid="selected-optimizations-count"
+            id="selected-optimizations-count"
+            >0</span
+          >
+          <span></span>
+        </div>
+      </section>
+
+      <section class="page-section" data-testid="live-updates-section">
+        <header class="page-section__header">
+          <h2>Live Updates</h2>
+          <p>Toggle global live updates and identify the user to verify how entries update.</p>
+        </header>
+        <div class="sections-grid" data-testid="live-updates-examples">
+          <div data-testid="live-updates-default">
+            <ctfl-optimized-entry
+              data-entry-id="2Z2WLOx07InSewC3LUB3eX"
+              data-live-updates-prefix="live-default"
+            ></ctfl-optimized-entry>
+          </div>
+          <div data-testid="live-updates-enabled">
+            <ctfl-optimized-entry
+              data-entry-id="2Z2WLOx07InSewC3LUB3eX"
+              data-live-updates-prefix="live-enabled"
+              live-updates="true"
+            ></ctfl-optimized-entry>
+          </div>
+          <div data-testid="live-updates-locked">
+            <ctfl-optimized-entry
+              data-entry-id="2Z2WLOx07InSewC3LUB3eX"
+              data-live-updates-prefix="live-locked"
+              live-updates="false"
+            ></ctfl-optimized-entry>
+          </div>
+        </div>
+      </section>
+
+      <div class="sections-grid sections-grid--split">
+        <section class="page-section">
+          <header class="page-section__header"><h2>Auto Observed Entries</h2></header>
+          <div class="entry-grid" id="auto-observed"></div>
+        </section>
+        <section class="page-section">
+          <header class="page-section__header"><h2>Manually Observed Entries</h2></header>
+          <div class="entry-grid" id="manually-observed"></div>
+        </section>
+      </div>
     </template>
 
-    <script>
-      /* --- Standard Initialization Code --- */
-
-      const APP_LOCALE = 'en-US'
-
-      // Initialize Contentful CDA SDK
-      var contentfulClient = contentful.createClient({
-        accessToken: '<!--#echo var="NGINX_CONTENTFUL_TOKEN" -->',
-        environment: '<!--#echo var="NGINX_CONTENTFUL_ENVIRONMENT" -->',
-        space: '<!--#echo var="NGINX_CONTENTFUL_SPACE_ID" -->',
-        host: '<!--#echo var="NGINX_CONTENTFUL_CDA_HOST" -->',
-        basePath: '<!--#echo var="NGINX_CONTENTFUL_BASE_PATH" -->',
-        insecure: Boolean('<!--#echo var="NGINX_CONTENTFUL_CDA_HOST" -->'),
-      })
-
-      // Initialize Contentful ContentfulOptimization Web SDK
-      window.contentfulOptimization = new ContentfulOptimization({
-        clientId: '<!--#echo var="NGINX_NINETAILED_CLIENT_ID" -->',
-        environment: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
-        logLevel: 'debug',
-        autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
-        locale: APP_LOCALE,
-        app: {
-          name: document.title,
-          version: '0.0.0',
-        },
-        api: {
-          insightsBaseUrl: '<!--#echo var="NGINX_INSIGHTS_API_BASE_URL" -->',
-          experienceBaseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->',
-        },
-      })
-
-      attachOptimizationPreviewPanel({
-        contentful: contentfulClient,
-        optimization: window.contentfulOptimization,
-        nonce: 'nonce-string',
-      })
-
-      ContentfulOptimizationWebComponents.defineContentfulOptimizationElements()
-
-      const optimizationRoot = document.getElementById('optimization-root')
-
-      /* --- Utility Functionality (for E2E) --- */
-
-      const consent = document.getElementById('consent')
-      const unconsent = document.getElementById('unconsent')
-      const consentStatus = document.querySelector('[data-testid="consent-status"]')
-      const selectedOptimizationsCount = document.querySelector(
-        '[data-testid="selected-optimizations-count"]',
-      )
-      const identifiedStatus = document.querySelector('[data-testid="identified-status"]')
-      const globalLiveUpdatesStatus = document.querySelector(
-        '[data-testid="global-live-updates-status"]',
-      )
-      const previewPanelStatus = document.querySelector('[data-testid="preview-panel-status"]')
-      const toggleGlobalLiveUpdates = document.getElementById('toggle-global-live-updates')
-      const manualTrack = document.getElementById('manual-track')
-
-      function toggleConsent(consented) {
-        if (consented === true) {
-          consent.setAttribute('style', 'display: none;')
-          unconsent.removeAttribute('style')
-        } else {
-          consent.removeAttribute('style')
-          unconsent.setAttribute('style', 'display: none;')
-        }
-
-        consentStatus.innerText = `Consent: ${String(consented)}`
-      }
-
-      consent.addEventListener('click', () => contentfulOptimization.consent(true))
-      unconsent.addEventListener('click', () => contentfulOptimization.consent(false))
-
-      const identify = document.getElementById('identify')
-      const unidentify = document.getElementById('unidentify')
-
-      function toggleIdentity(identified = false) {
-        if (identified) {
-          identify.setAttribute('style', 'display: none;')
-          unidentify.removeAttribute('style')
-        } else {
-          identify.removeAttribute('style')
-          unidentify.setAttribute('style', 'display: none;')
-        }
-
-        identifiedStatus.innerText = identified ? 'Yes' : 'No'
-      }
-
-      identify.addEventListener('click', async () => {
-        await contentfulOptimization.identify({
-          userId: 'charles',
-          traits: { identified: true },
-        })
-      })
-      unidentify.addEventListener('click', async () => {
-        contentfulOptimization.reset()
-        // Ensure we have a new profile after resetting the old one
-        await contentfulOptimization.page()
-      })
-      toggleGlobalLiveUpdates.addEventListener('click', () => {
-        optimizationRoot.liveUpdates = !optimizationRoot.liveUpdates
-      })
-      manualTrack.addEventListener('click', () => {
-        contentfulOptimization.track({
-          event: 'vanilla_web_sdk_custom_event',
-          properties: { source: 'implementations/web-sdk/public/index.html' },
-        })
-      })
-
-      optimizationRoot.subscribeOptimizationContext((context) => {
-        const globalLiveUpdatesLabel = context.rootLiveUpdatesEnabled ? 'ON' : 'OFF'
-
-        toggleGlobalLiveUpdates.innerText = `Global: ${globalLiveUpdatesLabel}`
-        globalLiveUpdatesStatus.innerText = globalLiveUpdatesLabel
-        previewPanelStatus.innerText = context.isPreviewPanelOpen ? 'Open' : 'Closed'
-      })
-
-      const eventStream = document.querySelector('#event-stream')
-      const eventsCount = document.querySelector('[data-testid="events-count"]')
-      const rawEventsCount = document.querySelector('[data-testid="raw-events-count"]')
-      const viewEventDialogs = new Map()
-      const hoverEventDialogs = new Map()
-      let rawEventCount = 0
-      function isViewHeartbeatEvent(event) {
-        return (
-          event?.type === 'component' &&
-          typeof event?.viewId === 'string' &&
-          event.viewId.length > 0 &&
-          typeof event?.viewDurationMs === 'number'
-        )
-      }
-
-      function isHoverHeartbeatEvent(event) {
-        return (
-          event?.type === 'component_hover' &&
-          typeof event?.hoverId === 'string' &&
-          event.hoverId.length > 0 &&
-          typeof event?.hoverDurationMs === 'number'
-        )
-      }
-
-      function getEventTestId(details) {
-        if (typeof details?.viewId === 'string') return `event-view-${details.viewId}`
-        if (typeof details?.hoverId === 'string') {
-          return `event-${details.type}-hover-${details.hoverId}`
-        }
-        if (typeof details?.componentId === 'string') {
-          return `event-${details.type}-${details.componentId}`
-        }
-        if (details?.type === 'page') {
-          return `event-page-${details.messageId ?? eventStream.children.length}`
-        }
-
-        return `event-${details?.type ?? 'unknown'}-${details?.messageId ?? eventStream.children.length}`
-      }
-
-      function updateEventCounters() {
-        eventsCount.innerText = `Events: ${eventStream.children.length}`
-        rawEventsCount.innerText = `Raw Events: ${rawEventCount}`
-      }
-
-      function updateEventDialog(item, button, pre, title, details) {
-        const viewId = typeof details?.viewId === 'string' ? details.viewId : undefined
-        const hoverId = typeof details?.hoverId === 'string' ? details.hoverId : undefined
-        const componentId =
-          typeof details?.componentId === 'string' ? details.componentId : undefined
-        const hoverDurationMs =
-          typeof details?.hoverDurationMs === 'number' ? details.hoverDurationMs : undefined
-
-        button.innerText = title
-        button.dataset.testid = details.componentId ?? details?.properties?.url ?? details.messageId
-        item.dataset.testid = getEventTestId(details)
-
-        if (viewId) button.dataset.viewId = viewId
-        else delete button.dataset.viewId
-
-        if (hoverId) button.dataset.hoverId = hoverId
-        else delete button.dataset.hoverId
-
-        if (componentId) button.dataset.componentId = componentId
-        else delete button.dataset.componentId
-
-        if (hoverDurationMs !== undefined) button.dataset.hoverDurationMs = String(hoverDurationMs)
-        else delete button.dataset.hoverDurationMs
-
-        pre.innerText = JSON.stringify(details, null, 2)
-      }
-
-      function createEventDialog(title, details) {
-        const template = document.querySelector('#event-dialog')
-        const clone = template.content.cloneNode(true)
-        const item = clone.querySelector('li')
-        const dialog = clone.querySelector('dialog')
-        const button = clone.querySelector('button')
-        const pre = clone.querySelector('pre')
-
-        button.commandForElement = dialog
-        button.command = 'show-modal'
-        updateEventDialog(item, button, pre, title, details)
-
-        return { fragment: clone, item, button, pre }
-      }
-
-      /* --- Standard Rendering Code --- */
-
-      function isRichText(field) {
-        return field && typeof field === 'object' && field.content !== undefined
-      }
-
-      // Barebones "Rich Text" renderer
-      // Full renderer must be customer-supplied, or rendered via ctfl Rich Text libs where possible
-      function simpleRenderRichText(field, parent) {
-        if (!field || typeof field !== 'object') return
-        if (!parent || !(parent instanceof HTMLElement)) return
-
-        if (field.nodeType === 'document') {
-          field.content.forEach((content) => simpleRenderRichText(content, parent))
-        } else if (field.nodeType === 'paragraph') {
-          const p = document.createElement('p')
-          field.content.forEach((content) => simpleRenderRichText(content, p))
-          parent.appendChild(p)
-        } else if (field.nodeType === 'text') {
-          const span = document.createElement('span')
-          span.innerText = field.value
-          parent.appendChild(span)
-        } else if (field.nodeType === 'embedded-entry-inline') {
-          const span = document.createElement('span')
-
-          // This is how we can inject MergeTag data into Rich Text
-          span.innerText = contentfulOptimization.getMergeTagValue(field.data.target)
-
-          parent.appendChild(span)
-        } else {
-          const span = document.createElement('span')
-          span.innerText = '[unknown rich text fragment]'
-          parent.appendChild(span)
-        }
-      }
-
-      const manualViewEntryElements = new Map()
-      const configuredOptimizedEntryElements = new WeakSet()
-      const entryCache = new Map()
-
-      function enableManualViewTracking(element, entry, selectedOptimization) {
-        if (!entry?.sys?.id || element.dataset.manualViewTracking !== 'true') return
-
-        contentfulOptimization.tracking.clearElement('views', element)
-        manualViewEntryElements.set(element, [entry, selectedOptimization])
-
-        contentfulOptimization.tracking.enableElement('views', element, {
-          data: {
-            entryId: entry.sys.id,
-            optimizationId: selectedOptimization?.experienceId,
-            sticky: selectedOptimization?.sticky,
-            variantIndex: selectedOptimization?.variantIndex,
-          },
-        })
-      }
-
-      function getEntryText(entry) {
-        return typeof entry.fields?.text === 'string' ? entry.fields.text : 'No content'
-      }
-
-      function getBaselineEntryId(element, fallbackEntry) {
-        return element.dataset.manualEntryId ?? element.dataset.entryId ?? fallbackEntry.sys.id
-      }
-
-      function renderLiveUpdatesEntry(element, entry) {
-        const prefix = element.dataset.liveUpdatesPrefix
-        if (!prefix) return false
-
-        const text = getEntryText(entry)
-        const content = document.createElement('div')
-        const textElement = document.createElement('p')
-        const idElement = document.createElement('p')
-
-        content.className = 'entry-content'
-        content.dataset.testid = `content-${prefix}`
-        textElement.dataset.testid = `entry-text-${prefix}`
-        textElement.ariaLabel = `${text} [Entry: ${entry.sys.id}]`
-        textElement.innerText = text
-        idElement.dataset.testid = `entry-id-${prefix}`
-        idElement.innerText = `Entry: ${entry.sys.id}`
-
-        content.append(textElement, idElement)
-        element.replaceChildren(content)
-
-        return true
-      }
-
-      function createNestedOptimizedEntry(nestedEntry) {
-        const nestedElement = document.createElement('ctfl-optimized-entry')
-
-        nestedElement.dataset.entryId = nestedEntry.sys.id
-        configureOptimizedEntryElement(nestedElement, nestedEntry)
-
-        return nestedElement
-      }
-
-      function decorateClickableEntryScenario(element, content) {
-        if (element.dataset.e2eClickScenario !== 'descendant') return
-
-        const button = document.createElement('button')
-        button.type = 'button'
-        button.dataset.testid = 'entry-click-descendant-button'
-        button.innerText = 'Trigger entry click tracking from descendant button'
-
-        content.appendChild(button)
-      }
-
-      function renderResolvedEntry(element, rawEntry, entry, selectedOptimization) {
-        if (renderLiveUpdatesEntry(element, entry)) return
-
-        const renderInline =
-          element.dataset.e2eEntryInline === 'true' || element.closest('button') !== null
-        const content = document.createElement(renderInline ? 'span' : 'div')
-        const baselineEntryId = getBaselineEntryId(element, rawEntry)
-
-        content.className = renderInline ? 'entry-content entry-content--inline' : 'entry-content'
-        content.dataset.testid = `content-${baselineEntryId}`
-
-        if (isRichText(entry.fields?.text)) {
-          simpleRenderRichText(entry.fields.text, content)
-        } else {
-          const textElement = document.createElement(renderInline ? 'span' : 'p')
-          textElement.innerText = getEntryText(entry)
-          content.appendChild(textElement)
-        }
-
-        if (entry.fields?.nested) {
-          const nested = document.createElement('div')
-          nested.className = 'nested'
-
-          for (const nestedEntry of entry.fields.nested) {
-            nested.appendChild(createNestedOptimizedEntry(nestedEntry))
-          }
-
-          content.appendChild(nested)
-        }
-
-        element.replaceChildren(content)
-        decorateClickableEntryScenario(element, content)
-
-        enableManualViewTracking(element, entry, selectedOptimization)
-      }
-
-      function handleOptimizedEntryResolved(event) {
-        if (event.target !== event.currentTarget) return
-
-        const element = event.currentTarget
-        const rawEntry = element.baselineEntry
-
-        if (!rawEntry) return
-
-        renderResolvedEntry(
-          element,
-          rawEntry,
-          event.detail.entry,
-          event.detail.selectedOptimization,
-        )
-      }
-
-      function configureOptimizedEntryElement(element, baselineEntry) {
-        if (!configuredOptimizedEntryElements.has(element)) {
-          element.addEventListener('ctfl-entry-resolved', handleOptimizedEntryResolved)
-          configuredOptimizedEntryElements.add(element)
-        }
-
-        element.baselineEntry = baselineEntry
-      }
-
-      async function fetchEntry(entryId) {
-        if (entryCache.has(entryId)) return entryCache.get(entryId)
-
-        try {
-          const entry = await contentfulClient.getEntry(entryId, {
-            include: 10,
-            locale: APP_LOCALE,
-          })
-
-          entryCache.set(entryId, entry)
-
-          return entry
-        } catch (error) {
-          console.warn(`Entry "${entryId}" could not be found in the current space`)
-
-          return undefined
-        }
-      }
-
-      async function initializeOptimizedEntries() {
-        const optimizedEntryElements = Array.from(
-          document.querySelectorAll('ctfl-optimized-entry[data-entry-id]'),
-        )
-
-        await Promise.all(
-          optimizedEntryElements.map(async (element) => {
-            const entryId = element.dataset.entryId
-            if (!entryId) return
-
-            const entry = await fetchEntry(entryId)
-            if (!entry) return
-
-            configureOptimizedEntryElement(element, entry)
-          }),
-        )
-      }
-
-      void initializeOptimizedEntries()
-
-      // Subscribe to consent state
-      contentfulOptimization.states.consent.subscribe(async (consent) => {
-        toggleConsent(consent)
-      })
-
-      // Subscribe to the event stream
-      contentfulOptimization.states.eventStream.subscribe((event) => {
-        if (!event) return
-        rawEventCount += 1
-
-        if (isViewHeartbeatEvent(event)) {
-          const existingDialog = viewEventDialogs.get(event.viewId)
-
-          if (existingDialog) {
-            updateEventDialog(
-              existingDialog.item,
-              existingDialog.button,
-              existingDialog.pre,
-              event.type,
-              event,
-            )
-            updateEventCounters()
-            return
-          }
-
-          const newDialog = createEventDialog(event.type, event)
-          viewEventDialogs.set(event.viewId, {
-            item: newDialog.item,
-            button: newDialog.button,
-            pre: newDialog.pre,
-          })
-          eventStream.appendChild(newDialog.fragment)
-          updateEventCounters()
-          return
-        }
-
-        if (isHoverHeartbeatEvent(event)) {
-          const existingDialog = hoverEventDialogs.get(event.hoverId)
-
-          if (existingDialog) {
-            updateEventDialog(
-              existingDialog.item,
-              existingDialog.button,
-              existingDialog.pre,
-              event.type,
-              event,
-            )
-            updateEventCounters()
-            return
-          }
-
-          const newDialog = createEventDialog(event.type, event)
-          hoverEventDialogs.set(event.hoverId, {
-            item: newDialog.item,
-            button: newDialog.button,
-            pre: newDialog.pre,
-          })
-          eventStream.appendChild(newDialog.fragment)
-          updateEventCounters()
-          return
-        }
-
-        eventStream.appendChild(createEventDialog(event.type, event).fragment)
-        updateEventCounters()
-      })
-
-      // Subscribe to selectedOptimizations state
-      contentfulOptimization.states.selectedOptimizations.subscribe((selectedOptimizations) => {
-        selectedOptimizationsCount.innerText = `Selected Optimizations: ${
-          Array.isArray(selectedOptimizations) ? selectedOptimizations.length : 0
-        }`
-      })
-
-      contentfulOptimization.states.profile.subscribe((profile) => {
-        toggleIdentity(Boolean(profile?.traits && Object.keys(profile.traits).length))
-      })
-
-      contentfulOptimization.states.flag('boolean').subscribe(() => undefined)
-
-      // Emit the initial page event after subscribers are attached so E2E surfaces reflect it.
-      void contentfulOptimization.page()
-    </script>
+    <template id="tpl-page-two">
+      <div data-testid="page-two-view">
+        <div class="page-header">
+          <a data-testid="link-back-home" href="/">Back to Home</a>
+          <h1>Page Two</h1>
+          <p class="page-header__subtitle">
+            Demo route for SPA navigation and conversion-style tracking.
+          </p>
+        </div>
+
+        <section class="control-panel" id="utility-panel-p2">
+          <h2 class="control-panel__title">Utilities</h2>
+          <div class="control-panel__fields">
+            <span
+              class="control-panel__row-label"
+              data-tooltip="SDK tracking is active only when consent is true"
+              >Consent</span
+            >
+            <span
+              class="control-panel__row-value"
+              data-testid="consent-status"
+              id="consent-status-p2"
+              >undefined</span
+            >
+            <span id="consent-actions-p2"></span>
+
+            <span
+              class="control-panel__row-label"
+              data-tooltip="User has been identified with a profile via the identify() call"
+              >Identified</span
+            >
+            <span
+              class="control-panel__row-value"
+              data-testid="identified-status"
+              id="identified-status-p2"
+              >No</span
+            >
+            <span id="identify-actions-p2"></span>
+
+            <span
+              class="control-panel__row-label"
+              data-testid="live-updates-status"
+              data-tooltip="When ON, entries re-resolve and rerender on profile changes"
+              >Live updates</span
+            >
+            <span
+              class="control-panel__row-value"
+              data-testid="global-live-updates-status"
+              id="global-live-updates-status-p2"
+              >OFF</span
+            >
+            <button
+              class="btn btn--sm btn--secondary"
+              data-testid="toggle-global-live-updates-button"
+              id="toggle-global-live-updates-button-p2"
+            >
+              ON
+            </button>
+
+            <span
+              class="control-panel__row-label"
+              data-tooltip="Contentful preview panel is open — forces live updates regardless of the global toggle"
+              >Preview panel</span
+            >
+            <span
+              class="control-panel__row-value"
+              data-testid="preview-panel-status"
+              id="preview-panel-status-p2"
+              >Closed</span
+            >
+            <button
+              class="btn btn--sm btn--secondary"
+              data-testid="simulate-preview-panel-button"
+              id="simulate-preview-panel-button-p2"
+            >
+              Open Preview Panel
+            </button>
+
+            <span
+              class="control-panel__row-label"
+              data-testid="boolean-flag-status"
+              data-tooltip="Value of the boolean feature flag from the SDK"
+              >Flag "boolean"</span
+            >
+            <span class="control-panel__row-value" id="boolean-flag-value-p2">undefined</span>
+            <span></span>
+
+            <span
+              class="control-panel__row-label"
+              data-tooltip="Number of selected optimization variants currently applied"
+              >Active optimizations</span
+            >
+            <span
+              class="control-panel__row-value"
+              data-testid="selected-optimizations-count"
+              id="selected-optimizations-count-p2"
+              >0</span
+            >
+            <span></span>
+          </div>
+          <div class="control-panel__actions">
+            <button
+              class="btn btn--secondary btn--sm"
+              data-testid="track-conversion-button"
+              id="track-conversion-button"
+            >
+              Trigger custom view event
+            </button>
+          </div>
+        </section>
+
+        <div class="sections-grid sections-grid--split" data-testid="page-two-optimization">
+          <section class="page-section">
+            <header class="page-section__header"><h2>Auto-observed</h2></header>
+            <div class="entry-grid" id="page-two-auto-grid"></div>
+          </section>
+          <section class="page-section">
+            <header class="page-section__header"><h2>Manually-observed</h2></header>
+            <div class="entry-grid" id="page-two-manual-grid"></div>
+          </section>
+        </div>
+      </div>
+    </template>
+
+    <script type="module" src="/js/app.js"></script>
   </body>
 </html>
