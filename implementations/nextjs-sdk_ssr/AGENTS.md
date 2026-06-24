@@ -15,11 +15,10 @@ server/client SDK composition; app code imports only Next.js SDK subpaths.
 
 ## E2E tests
 
-- Behavioral tests (click, hover, consent, navigation, variants) run from `lib/e2e-web` with
-  `RENDERING_MODE=ssr`. The local `e2e/` directory holds only SSR-specific specs
-  (`nextjs-ssr-behavior.spec.ts`).
+- All E2E tests live in `lib/e2e-web`. SSR-specific specs (`ssr-behavior.spec.ts`) are gated with
+  `test.skip(RENDERING_MODE !== 'ssr', ...)` and run automatically when `RENDERING_MODE=ssr`.
 - Entry cards must expose `data-ctfl-entry-id` on the `content-*` element so shared selectors work.
-- `test:e2e` delegates to `lib/e2e-web`; `playwright.config.mjs` is for the local SSR-only spec.
+- `test:e2e` delegates to `lib/e2e-web`.
 
 ## Commands
 

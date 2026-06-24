@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+const RENDERING_MODE = (process.env.RENDERING_MODE ?? 'csr').toLowerCase()
+
 // Profile ID from lib/mocks/src/experience/data/identified-visitor.json.
 // The mock returns identified-visitor data when this ID is sent as the anonymous profile.
 const IDENTIFIED_PROFILE_ID = 'f0837a67eed5f1c93978f6d53fa948df93897137bcd048366f30ba590420754b'
@@ -16,6 +18,8 @@ const SSR_COOKIES = {
 } as const
 
 test.describe('server-side tracking attributes', () => {
+  test.skip(RENDERING_MODE !== 'ssr', 'Server-side tracking attribute tests only run in SSR mode.')
+
   test('renders tracking attributes on first paint', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
@@ -27,10 +31,11 @@ test.describe('server-side tracking attributes', () => {
   })
 
   test('does not issue a client Experience request after consented SSR hydration', async ({
+    baseURL,
     context,
     page,
   }) => {
-    await context.addCookies([{ ...SSR_COOKIES.consent, url: 'http://localhost:3001' }])
+    await context.addCookies([{ ...SSR_COOKIES.consent, url: baseURL ?? 'http://localhost:3001' }])
     const clientExperienceRequests: string[] = []
     await page.route('**/experience/**', async (route) => {
       clientExperienceRequests.push(route.request().url())
@@ -46,6 +51,7 @@ test.describe('server-side tracking attributes', () => {
 })
 
 test.describe('server-side variant resolution', () => {
+  test.skip(RENDERING_MODE !== 'ssr', 'Server-side variant resolution tests only run in SSR mode.')
   test.use({ javaScriptEnabled: false })
 
   test('renders baseline entry text when no consent cookie is set', async ({ page }) => {
@@ -56,12 +62,13 @@ test.describe('server-side variant resolution', () => {
   })
 
   test('renders resolved variant text when consent and profile cookies are set', async ({
+    baseURL,
     context,
     page,
   }) => {
     await context.addCookies([
-      { ...SSR_COOKIES.consent, url: 'http://localhost:3001' },
-      { ...SSR_COOKIES.profile, url: 'http://localhost:3001' },
+      { ...SSR_COOKIES.consent, url: baseURL ?? 'http://localhost:3001' },
+      { ...SSR_COOKIES.profile, url: baseURL ?? 'http://localhost:3001' },
     ])
 
     await page.goto('/')
@@ -70,10 +77,10 @@ test.describe('server-side variant resolution', () => {
     await expect(page.getByTestId(`entry-text-${BASELINE_ENTRY_ID}`)).toContainText(VARIANT_TEXT)
   })
 
-  test('renders baseline text when consent is denied', async ({ context, page }) => {
+  test('renders baseline text when consent is denied', async ({ baseURL, context, page }) => {
     await context.addCookies([
-      { name: SSR_COOKIES.consent.name, value: 'denied', url: 'http://localhost:3001' },
-      { ...SSR_COOKIES.profile, url: 'http://localhost:3001' },
+      { name: SSR_COOKIES.consent.name, value: 'denied', url: baseURL ?? 'http://localhost:3001' },
+      { ...SSR_COOKIES.profile, url: baseURL ?? 'http://localhost:3001' },
     ])
 
     await page.goto('/')
