@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test'
 
 const RENDERING_MODE = (process.env.RENDERING_MODE ?? 'csr').toLowerCase()
+const isSSR = RENDERING_MODE === 'ssr'
+const isHybrid = RENDERING_MODE === 'hybrid'
 
-test.describe('server-side rendering behavior', () => {
-  test.skip(RENDERING_MODE !== 'ssr', 'SSR behavior tests only run in ssr mode.')
+test.describe('server-rendering behavior', () => {
+  test.skip(!isSSR && !isHybrid, 'Server-rendering behavior tests only run in ssr or hybrid mode.')
 
   test('does not issue a client Experience request after consented SSR hydration', async ({
     baseURL,
@@ -27,6 +29,8 @@ test.describe('server-side rendering behavior', () => {
   })
 
   test('renders server-side tracking attributes on first paint', async ({ page }) => {
+    test.skip(!isSSR, 'Tracking attributes are only present in SSR mode.')
+
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
