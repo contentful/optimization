@@ -1,14 +1,39 @@
-import { expect, test } from '@playwright/test'
+import { type APIRequestContext, expect, test } from '@playwright/test'
 import { CLICK_SCENARIO_IDS, PAGES } from '../src/fixtures'
 
-test.describe('Display (CSR Content Replacement)', () => {
-  test.describe('unidentified user', () => {
-    test.use({ storageState: { cookies: [], origins: [] } })
+const RENDERING_MODE = (process.env.RENDERING_MODE ?? 'csr').toLowerCase()
 
-    test.beforeEach(async ({ page }) => {
+const MOCK_EXPERIENCE_URL = 'http://localhost:8000/experience'
+
+// Seed the mock so it returns identified-visitor data for this profile ID.
+// The mock tracks identified state in-memory via POSTed identify events.
+async function seedIdentifiedProfile(request: APIRequestContext, profileId: string): Promise<void> {
+  await request.post(
+    `${MOCK_EXPERIENCE_URL}/v2/organizations/mock-client-id/environments/main/profiles/${profileId}`,
+    {
+      data: {
+        events: [
+          { type: 'identify', properties: { userId: 'charles', traits: { identified: true } } },
+        ],
+      },
+    },
+  )
+}
+
+test.describe('Variant Resolution (SSR)', () => {
+  test.skip(RENDERING_MODE !== 'ssr', 'SSR variant resolution tests only run in SSR mode.')
+  test.use({ javaScriptEnabled: false })
+
+  test.describe('unidentified user', () => {
+    test.beforeEach(async ({ baseURL, context, page }) => {
+      const profileId = crypto.randomUUID()
+      await context.addCookies([
+        { name: 'app-personalization-consent', value: 'granted', url: baseURL },
+        { name: 'ctfl-opt-aid', value: profileId, url: baseURL },
+      ])
+
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
-      await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
     })
 
     test('displays common variants', async ({ page }) => {
@@ -42,7 +67,6 @@ test.describe('Display (CSR Content Replacement)', () => {
     })
 
     test('displays unidentified user variants', async ({ page }) => {
-      await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
       await expect(page.getByRole('heading', { name: 'Auto Observed Entries' })).toBeVisible()
       await expect(page.getByRole('heading', { name: 'Manually Observed Entries' })).toBeVisible()
 
@@ -73,23 +97,16 @@ test.describe('Display (CSR Content Replacement)', () => {
   })
 
   test.describe('identified user', () => {
-    test.use({ storageState: { cookies: [], origins: [] } })
+    test.beforeEach(async ({ baseURL, context, page, request }) => {
+      const profileId = crypto.randomUUID()
+      await seedIdentifiedProfile(request, profileId)
+      await context.addCookies([
+        { name: 'app-personalization-consent', value: 'granted', url: baseURL },
+        { name: 'ctfl-opt-aid', value: profileId, url: baseURL },
+      ])
 
-    test.beforeEach(async ({ page }) => {
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
-      await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
-
-      await page.getByTestId('consent-button').click()
-      await expect(page.getByTestId('consent-status')).toHaveText('Yes')
-
-      await page.getByTestId('identify-button').click()
-      await expect(page.getByTestId('reset-button')).toBeVisible()
-
-      await page.reload()
-      await page.waitForLoadState('domcontentloaded')
-      await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
-      await expect(page.getByTestId('reset-button')).toBeVisible()
     })
 
     test('displays common variants', async ({ page }) => {
@@ -141,26 +158,6 @@ test.describe('Display (CSR Content Replacement)', () => {
       await expect(
         page.getByText('This is a variant content entry for identified users.'),
       ).toBeVisible()
-    })
-
-    test('reset persists unidentified state across reload', async ({ page }) => {
-      await page.getByTestId('reset-button').click()
-      await expect(page.getByTestId('identify-button')).toBeVisible()
-
-      await page.reload()
-      await page.waitForLoadState('domcontentloaded')
-      await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
-
-      await expect(page.getByTestId('identify-button')).toBeVisible()
-      await expect(
-        page.getByText(
-          'This is a baseline content entry for all identified or unidentified users.',
-        ),
-      ).toBeVisible()
-      await expect(page.getByText('This is a level 0 nested baseline entry.')).toBeVisible()
-      await expect(
-        page.getByText('This is a variant content entry for identified users.'),
-      ).toHaveCount(0)
     })
   })
 })
