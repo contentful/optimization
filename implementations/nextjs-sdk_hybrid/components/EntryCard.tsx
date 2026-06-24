@@ -1,18 +1,17 @@
 'use client'
 
 import type { ContentEntry as ContentEntryType, RichTextDocument } from '@/lib/contentful'
+import { useManualViewTracking } from '@/lib/hooks'
 import { isRecord } from '@/lib/util'
 import {
   OptimizedEntry,
   isMergeTagEntry,
   useMergeTagResolver,
-  useOptimization,
 } from '@contentful/optimization-nextjs/client'
 import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
 import { INLINES } from '@contentful/rich-text-types'
 import type { EntryClickScenario } from 'e2e-web'
 import type { JSX } from 'react'
-import { useEffect, useRef } from 'react'
 
 export type ViewTrackingMode = 'auto' | 'manual'
 
@@ -80,32 +79,8 @@ export function EntryCard({
   testId,
   viewTracking,
 }: EntryCardProps): JSX.Element {
-  const sdk = useOptimization()
-  const manuallyTrackedElement = useRef<HTMLDivElement | null>(null)
+  const updateManualViewElement = useManualViewTracking(viewTracking)
   const autoTrackViews = viewTracking === 'auto'
-
-  useEffect(
-    () => () => {
-      const { current } = manuallyTrackedElement
-      if (!current) return
-      sdk.tracking.clearElement('views', current)
-    },
-    [sdk.tracking],
-  )
-
-  const updateManualViewElement = (element: HTMLDivElement | null, entryId: string): void => {
-    const { current: previousElement } = manuallyTrackedElement
-
-    if (previousElement && previousElement !== element) {
-      sdk.tracking.clearElement('views', previousElement)
-    }
-
-    manuallyTrackedElement.current = element
-
-    if (!element || viewTracking !== 'manual') return
-
-    sdk.tracking.enableElement('views', element, { data: { entryId } })
-  }
 
   if (!viewTracking) {
     const id = testId ?? entry.sys.id

@@ -6,7 +6,7 @@ import { useEffect, type JSX } from 'react'
 
 let previewPanelAttachmentStarted = false
 
-export function PreviewPanelAttachment(): JSX.Element | null {
+export function PreviewPanel(): JSX.Element | null {
   const { isReady, sdk } = useOptimizationContext()
 
   useEffect(() => {

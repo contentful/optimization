@@ -1,5 +1,5 @@
 import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
-import { PreviewPanelAttachment } from '@/components/PreviewPanelAttachment'
+import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
 import { APP_LOCALE, optimizationConfig } from '@/lib/config'
 import { getOptimizationData } from '@/lib/optimization'
@@ -52,7 +52,7 @@ export default async function RootLayout({
           }}
         >
           <GlobalLiveUpdatesProvider>
-            <PreviewPanelAttachment />
+            <PreviewPanel />
             <NextAppAutoPageTracker initialPageEvent={defaults ? 'skip' : 'emit'} />
             <div className="app-shell">
               <nav>

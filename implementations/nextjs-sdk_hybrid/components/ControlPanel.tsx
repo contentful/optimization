@@ -2,15 +2,15 @@
 
 import { useGlobalLiveUpdatesControls } from '@/components/GlobalLiveUpdatesProvider'
 import { APP_PERSONALIZATION_CONSENT_COOKIE } from '@/lib/config'
+import { useFlagSubscription } from '@/lib/hooks'
 import {
   useConsentState,
   useLiveUpdates,
   useOptimizationActions,
-  useOptimizationContext,
   useProfileState,
   useSelectedOptimizationsState,
 } from '@contentful/optimization-nextjs/client'
-import { type JSX, useEffect, useMemo, useState } from 'react'
+import { type JSX, useEffect, useMemo } from 'react'
 
 const ENABLE_PREVIEW_PANEL = process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
 
@@ -34,25 +34,10 @@ export function ControlPanel(): JSX.Element {
   const selectedOptimizations = useSelectedOptimizationsState()
   const { globalLiveUpdates, onToggleGlobalLiveUpdates } = useGlobalLiveUpdatesControls()
   const { previewPanelVisible, setPreviewPanelVisible } = useLiveUpdates()
-  const { sdk, isReady } = useOptimizationContext()
-  const [booleanFlag, setBooleanFlag] = useState<unknown>(undefined)
-
   useEffect(() => {
-    if (typeof consent === 'boolean') {
-      setAppConsentCookie(consent)
-    }
+    if (typeof consent === 'boolean') setAppConsentCookie(consent)
   }, [consent])
-
-  useEffect(() => {
-    if (!sdk || !isReady) {
-      return
-    }
-
-    const subscription = sdk.states.flag('boolean').subscribe(setBooleanFlag)
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [isReady, sdk])
+  const booleanFlag = useFlagSubscription('boolean')
 
   const isIdentified = useMemo(
     () => profile !== undefined && Boolean(profile.traits.identified),

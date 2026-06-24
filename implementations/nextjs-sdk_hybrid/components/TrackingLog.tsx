@@ -1,13 +1,12 @@
 'use client'
 
+import { useEventStream, useTick } from '@/lib/hooks'
 import { isRecord } from '@/lib/util'
-import { useOptimizationContext } from '@contentful/optimization-nextjs/client'
-import { type JSX, useEffect, useReducer, useRef, useState } from 'react'
+import { type JSX } from 'react'
 
 const MS_PER_SECOND = 1000
 const SECONDS_PER_MINUTE = 60
 const MINUTES_PER_HOUR = 60
-const TICK_INTERVAL_SECONDS = 5
 
 function timeAgo(firedAt: number): string {
   const s = Math.floor((Date.now() - firedAt) / MS_PER_SECOND)
@@ -32,47 +31,30 @@ interface AnalyticsEvent {
 
 function toPageUrl(event: Record<string, unknown>): string | undefined {
   const { properties } = event
-  if (!isRecord(properties)) {
-    return undefined
-  }
-
+  if (!isRecord(properties)) return undefined
   const { url } = properties
-  if (typeof url !== 'string' || url.length === 0) {
-    return undefined
-  }
-
+  if (typeof url !== 'string' || url.length === 0) return undefined
   try {
-    const normalized = new URL(url, window.location.origin)
-    return normalized.pathname
+    return new URL(url, window.location.origin).pathname
   } catch {
     return url
   }
 }
 
 function toAnalyticsEvent(event: unknown, id: string): AnalyticsEvent | undefined {
-  if (!isRecord(event) || typeof event.type !== 'string') {
-    return undefined
-  }
-
-  const componentId = typeof event.componentId === 'string' ? event.componentId : undefined
-  const hoverId = typeof event.hoverId === 'string' ? event.hoverId : undefined
-  const viewId = typeof event.viewId === 'string' ? event.viewId : undefined
-  const hoverDurationMs =
-    typeof event.hoverDurationMs === 'number' ? event.hoverDurationMs : undefined
-  const pageUrl = event.type === 'page' ? toPageUrl(event) : undefined
-  const viewDurationMs = typeof event.viewDurationMs === 'number' ? event.viewDurationMs : undefined
+  if (!isRecord(event) || typeof event.type !== 'string') return undefined
 
   return {
     id,
-    componentId,
+    componentId: typeof event.componentId === 'string' ? event.componentId : undefined,
     count: 1,
     firedAt: Date.now(),
-    hoverId,
-    viewId,
-    hoverDurationMs,
-    pageUrl,
+    hoverId: typeof event.hoverId === 'string' ? event.hoverId : undefined,
+    viewId: typeof event.viewId === 'string' ? event.viewId : undefined,
+    hoverDurationMs: typeof event.hoverDurationMs === 'number' ? event.hoverDurationMs : undefined,
+    pageUrl: event.type === 'page' ? toPageUrl(event) : undefined,
     type: event.type,
-    viewDurationMs,
+    viewDurationMs: typeof event.viewDurationMs === 'number' ? event.viewDurationMs : undefined,
   }
 }
 
@@ -93,41 +75,23 @@ function isHoverHeartbeatEvent(event: AnalyticsEvent): boolean {
 }
 
 function getHeartbeatKey(event: AnalyticsEvent): string | undefined {
-  if (isViewHeartbeatEvent(event)) {
-    return `component:${event.viewId}`
-  }
-
-  if (isHoverHeartbeatEvent(event)) {
-    return `component_hover:${event.hoverId}`
-  }
-
+  if (isViewHeartbeatEvent(event)) return `component:${event.viewId}`
+  if (isHoverHeartbeatEvent(event)) return `component_hover:${event.hoverId}`
   return undefined
 }
 
-function upsertAnalyticsEvent(
-  previous: AnalyticsEvent[],
-  nextEvent: AnalyticsEvent,
-): AnalyticsEvent[] {
-  const key = getHeartbeatKey(nextEvent)
-
-  if (!key) {
-    return [nextEvent, ...previous]
-  }
-
-  const existingIndex = previous.findIndex((event) => getHeartbeatKey(event) === key)
-
-  if (existingIndex === -1) {
-    return [nextEvent, ...previous]
-  }
-
+function upsertAnalyticsEvent(previous: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] {
+  const key = getHeartbeatKey(next)
+  if (!key) return [next, ...previous]
+  const existingIndex = previous.findIndex((e) => getHeartbeatKey(e) === key)
+  if (existingIndex === -1) return [next, ...previous]
   const updated = [...previous]
   updated[existingIndex] = {
-    ...nextEvent,
+    ...next,
     id: previous[existingIndex].id,
     count: previous[existingIndex].count + 1,
     firedAt: previous[existingIndex].firedAt,
   }
-
   return updated
 }
 
@@ -153,50 +117,15 @@ function toDuration(event: AnalyticsEvent): number | undefined {
 }
 
 export function TrackingLog(): JSX.Element {
-  const { sdk, isReady } = useOptimizationContext()
-  const [events, setEvents] = useState<AnalyticsEvent[]>([])
-  const [rawEventsCount, setRawEventsCount] = useState(0)
-  const [, tick] = useReducer((n: number) => n + 1, 0)
-  const nextId = useRef(0)
-
-  useEffect(() => {
-    const id = setInterval(tick, MS_PER_SECOND * TICK_INTERVAL_SECONDS)
-    return () => {
-      clearInterval(id)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!isReady || sdk === undefined) {
-      return
-    }
-
-    const subscription = sdk.states.eventStream.subscribe((event: unknown) => {
-      const id = `event-${nextId.current}`
-      const nextEvent = toAnalyticsEvent(event, id)
-      if (!nextEvent) {
-        return
-      }
-
-      nextId.current += 1
-      setRawEventsCount((previous) => previous + 1)
-      setEvents((previous) => upsertAnalyticsEvent(previous, nextEvent))
-    })
-
-    return () => {
-      subscription.unsubscribe()
-      setEvents([])
-      setRawEventsCount(0)
-      nextId.current = 0
-    }
-  }, [isReady, sdk])
+  useTick()
+  const { events, rawCount } = useEventStream(toAnalyticsEvent, upsertAnalyticsEvent)
 
   return (
     <section className="tracking-log" data-testid="analytics-events-container">
       <div className="tracking-log__header">
         <h2>Tracking</h2>
         <span className="tracking-log__badge">
-          <span data-testid="raw-events-count">{rawEventsCount}</span> events
+          <span data-testid="raw-events-count">{rawCount}</span> events
         </span>
       </div>
       <p data-testid="events-count" style={{ display: 'none' }}>
