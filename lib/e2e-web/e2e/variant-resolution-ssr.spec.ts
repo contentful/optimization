@@ -20,7 +20,7 @@ async function seedIdentifiedProfile(request: APIRequestContext, profileId: stri
   )
 }
 
-test.describe('Variant Resolution (SSR)', () => {
+test.describe('Variant Resolution (SSR, JavaScript disabled)', () => {
   test.skip(RENDERING_MODE !== 'ssr', 'SSR variant resolution tests only run in SSR mode.')
   test.use({ javaScriptEnabled: false })
 
