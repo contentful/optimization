@@ -8,7 +8,6 @@
     "generate:env": "pnpm exec tsx scripts/generate-env.ts",
     "dev": "pnpm generate:env && ng serve",
     "build": "ng build",
-    "start": "node dist/web-sdk_angular/server/server.mjs",
     "clean": "rimraf ./dist",
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:mocks": "pm2 start --name web-sdk_angular-mocks \"pnpm --dir ../../lib/mocks serve\"",
@@ -37,7 +36,7 @@
     "@contentful/rich-text-types": "^17.2.7",
     "contentful": "^11.12.4",
     "express": "5.2.1",
-    "express-rate-limit": "8.2.1",
+    "express-rate-limit": "8.2.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.8.1"
   },
