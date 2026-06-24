@@ -19,6 +19,8 @@ export type ViewTrackingMode = 'auto' | 'manual'
 export interface EntryCardProps {
   clickScenario?: EntryClickScenario
   entry: ContentEntryType
+  liveUpdates?: boolean
+  testId?: string
   viewTracking?: ViewTrackingMode
 }
 
@@ -71,7 +73,13 @@ function RichText({ richText }: { readonly richText: RichTextDocument }): JSX.El
   return <>{documentToReactComponents(richText, renderOptions)}</>
 }
 
-export function EntryCard({ clickScenario, entry, viewTracking }: EntryCardProps): JSX.Element {
+export function EntryCard({
+  clickScenario,
+  entry,
+  liveUpdates,
+  testId,
+  viewTracking,
+}: EntryCardProps): JSX.Element {
   const sdk = useOptimization()
   const manuallyTrackedElement = useRef<HTMLDivElement | null>(null)
   const autoTrackViews = viewTracking === 'auto'
@@ -100,10 +108,12 @@ export function EntryCard({ clickScenario, entry, viewTracking }: EntryCardProps
   }
 
   if (!viewTracking) {
+    const id = testId ?? entry.sys.id
     return (
       <OptimizedEntry
         baselineEntry={entry}
         hoverDurationUpdateIntervalMs={HOVER_DURATION_UPDATE_INTERVAL_MS}
+        liveUpdates={liveUpdates}
       >
         {(resolvedEntry) => {
           const asCf = resolvedEntry as ContentEntryType
@@ -112,8 +122,8 @@ export function EntryCard({ clickScenario, entry, viewTracking }: EntryCardProps
           const nestedEntries = Array.isArray(asCf.fields.nested) ? asCf.fields.nested : []
 
           return (
-            <div>
-              <div aria-label={fullLabel} data-testid={`entry-text-${resolvedEntry.sys.id}`}>
+            <div data-test-entry-id={resolvedEntry.sys.id} data-testid={`content-${id}`}>
+              <div aria-label={fullLabel} data-testid={`entry-text-${id}`}>
                 <p>{text}</p>
                 <p>{`[Entry: ${resolvedEntry.sys.id}]`}</p>
               </div>
