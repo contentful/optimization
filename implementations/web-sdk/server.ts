@@ -26,7 +26,7 @@ const MIME: Record<string, string> = {
 }
 
 function injectEnvironment(html: string): string {
-  return html.replace('<script>/* replaced by server */</script>', ENVIRONMENT_SCRIPT)
+  return html.replace('<script data-env-placeholder></script>', ENVIRONMENT_SCRIPT)
 }
 
 function serveFile(filePath: string, res: ServerResponse): void {
