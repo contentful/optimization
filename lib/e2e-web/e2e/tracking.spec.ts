@@ -70,188 +70,190 @@ async function setup(page: Page): Promise<void> {
 
 // --- tests ---
 
-test.describe('entry click tracking', () => {
-  test.beforeEach(async ({ page }) => {
-    await setup(page)
+test.describe('Tracking', () => {
+  test.describe('Entry Click', () => {
+    test.beforeEach(async ({ page }) => {
+      await setup(page)
+    })
+
+    test('does not emit component_click events without consent', async ({ page }) => {
+      for (const scenario of clickScenarios) {
+        const target = page.getByTestId(scenario.clickTargetTestId)
+        await expect(target, `${scenario.name}: click target should render`).toBeVisible()
+        await target.scrollIntoViewIfNeeded()
+        await target.click()
+      }
+
+      await expect(page.locator('[data-testid^="event-component_click-"]')).toHaveCount(0)
+    })
+
+    test('emits component_click events for direct, descendant, and ancestor clickables after consent', async ({
+      page,
+    }) => {
+      await page.getByTestId('consent-button').click()
+      const clickEvents = page.locator('[data-testid^="event-component_click-"]')
+
+      for (const scenario of clickScenarios) {
+        const entryLocator = page.getByTestId(scenario.entryTestId)
+        await expect(entryLocator, `${scenario.name}: entry should render`).toBeVisible()
+
+        await expect
+          .poll(async () => await readResolvedEntryId(page, scenario.entryTestId), {
+            message: `${scenario.name}: resolved entry id should be available`,
+          })
+          .not.toEqual('')
+        const resolvedEntryId = await readResolvedEntryId(page, scenario.entryTestId)
+
+        const target = page.getByTestId(scenario.clickTargetTestId)
+        await target.scrollIntoViewIfNeeded()
+        await target.click()
+
+        await expect(page.getByTestId(`event-component_click-${resolvedEntryId}`)).toBeVisible()
+      }
+
+      await expect.poll(async () => await clickEvents.count()).toBe(3)
+    })
   })
 
-  test('does not emit component_click events without consent', async ({ page }) => {
-    for (const scenario of clickScenarios) {
-      const target = page.getByTestId(scenario.clickTargetTestId)
-      await expect(target, `${scenario.name}: click target should render`).toBeVisible()
-      await target.scrollIntoViewIfNeeded()
-      await target.click()
-    }
+  test.describe('Entry Hover', () => {
+    test.beforeEach(async ({ page }) => {
+      await setup(page)
+    })
 
-    await expect(page.locator('[data-testid^="event-component_click-"]')).toHaveCount(0)
-  })
+    test('does not emit entry hover events without consent', async ({ page }) => {
+      for (const scenario of hoverScenarios) {
+        const target = page.getByTestId(scenario.hoverTargetTestId)
+        await expect(target, `${scenario.name}: hover target should render`).toBeVisible()
+        await target.scrollIntoViewIfNeeded()
+        await target.hover()
+        await page.waitForTimeout(1200)
+        await movePointerAwayFromEntries(page)
+      }
 
-  test('emits component_click events for direct, descendant, and ancestor clickables after consent', async ({
-    page,
-  }) => {
-    await page.getByTestId('consent-button').click()
-    const clickEvents = page.locator('[data-testid^="event-component_click-"]')
+      await expect(page.locator('[data-hover-id]')).toHaveCount(0)
+    })
 
-    for (const scenario of clickScenarios) {
-      const entryLocator = page.getByTestId(scenario.entryTestId)
-      await expect(entryLocator, `${scenario.name}: entry should render`).toBeVisible()
+    test('emits entry hover events for entry container and descendant hovers after consent', async ({
+      page,
+    }) => {
+      await page.getByTestId('consent-button').click()
+      const hoverEvents = page.locator('[data-hover-id]')
 
-      await expect
-        .poll(async () => await readResolvedEntryId(page, scenario.entryTestId), {
-          message: `${scenario.name}: resolved entry id should be available`,
-        })
-        .not.toEqual('')
-      const resolvedEntryId = await readResolvedEntryId(page, scenario.entryTestId)
+      for (const scenario of hoverScenarios) {
+        const target = page.getByTestId(scenario.hoverTargetTestId)
+        const baselineCount = await hoverEvents.count()
 
-      const target = page.getByTestId(scenario.clickTargetTestId)
-      await target.scrollIntoViewIfNeeded()
-      await target.click()
+        await target.scrollIntoViewIfNeeded()
+        await target.hover()
 
-      await expect(page.getByTestId(`event-component_click-${resolvedEntryId}`)).toBeVisible()
-    }
+        await expect
+          .poll(async () => await hoverEvents.count(), {
+            message: `${scenario.name}: hover event count should increase`,
+          })
+          .toBeGreaterThan(baselineCount)
 
-    await expect.poll(async () => await clickEvents.count()).toBe(3)
-  })
-})
+        await movePointerAwayFromEntries(page)
+      }
 
-test.describe('entry hover tracking', () => {
-  test.beforeEach(async ({ page }) => {
-    await setup(page)
-  })
+      await expect.poll(async () => await hoverEvents.count()).toBeGreaterThanOrEqual(2)
+    })
 
-  test('does not emit entry hover events without consent', async ({ page }) => {
-    for (const scenario of hoverScenarios) {
-      const target = page.getByTestId(scenario.hoverTargetTestId)
-      await expect(target, `${scenario.name}: hover target should render`).toBeVisible()
+    test('updates hover duration while hovered and emits a final update when hover ends', async ({
+      page,
+    }) => {
+      await page.getByTestId('consent-button').click()
+
+      const target = page.getByTestId(`content-${HOVER_ENTRY_BASELINE_ID}`)
       await target.scrollIntoViewIfNeeded()
       await target.hover()
-      await page.waitForTimeout(1200)
-      await movePointerAwayFromEntries(page)
-    }
 
-    await expect(page.locator('[data-hover-id]')).toHaveCount(0)
-  })
+      const hoverEvents = page.locator('[data-hover-id]')
+      await expect(hoverEvents.first()).toBeVisible()
 
-  test('emits entry hover events for entry container and descendant hovers after consent', async ({
-    page,
-  }) => {
-    await page.getByTestId('consent-button').click()
-    const hoverEvents = page.locator('[data-hover-id]')
-
-    for (const scenario of hoverScenarios) {
-      const target = page.getByTestId(scenario.hoverTargetTestId)
-      const baselineCount = await hoverEvents.count()
-
-      await target.scrollIntoViewIfNeeded()
-      await target.hover()
+      const hoverId = await readHoverEventId(page)
+      expect(hoverId).toBeTruthy()
+      if (!hoverId) return
 
       await expect
-        .poll(async () => await hoverEvents.count(), {
-          message: `${scenario.name}: hover event count should increase`,
-        })
-        .toBeGreaterThan(baselineCount)
+        .poll(async () => await readHoverDurationMs(page, hoverId))
+        .toBeGreaterThanOrEqual(1000)
+      const firstHoverDurationMs = await readHoverDurationMs(page, hoverId)
 
+      await expect
+        .poll(async () => await readHoverDurationMs(page, hoverId))
+        .toBeGreaterThan(firstHoverDurationMs)
+      const updatedHoverDurationMs = await readHoverDurationMs(page, hoverId)
+
+      await page.waitForTimeout(300)
       await movePointerAwayFromEntries(page)
-    }
 
-    await expect.poll(async () => await hoverEvents.count()).toBeGreaterThanOrEqual(2)
+      await expect
+        .poll(async () => await readHoverDurationMs(page, hoverId))
+        .toBeGreaterThan(updatedHoverDurationMs)
+      const finalHoverDurationMs = await readHoverDurationMs(page, hoverId)
+
+      expect(finalHoverDurationMs).toBeGreaterThan(firstHoverDurationMs)
+    })
   })
 
-  test('updates hover duration while hovered and emits a final update when hover ends', async ({
-    page,
-  }) => {
-    await page.getByTestId('consent-button').click()
+  test.describe('Flag View', () => {
+    test.beforeEach(async ({ page }) => {
+      await setup(page)
+    })
 
-    const target = page.getByTestId(`content-${HOVER_ENTRY_BASELINE_ID}`)
-    await target.scrollIntoViewIfNeeded()
-    await target.hover()
+    test('does not emit flag view events without consent', async ({ page }) => {
+      const flagEvents = page.locator('[data-testid="event-component-boolean"]')
 
-    const hoverEvents = page.locator('[data-hover-id]')
-    await expect(hoverEvents.first()).toBeVisible()
+      await expect(flagEvents).toHaveCount(0)
 
-    const hoverId = await readHoverEventId(page)
-    expect(hoverId).toBeTruthy()
-    if (!hoverId) return
+      await page.getByTestId('identify-button').click()
+      await expect(page.getByTestId('reset-button')).toBeVisible()
 
-    await expect
-      .poll(async () => await readHoverDurationMs(page, hoverId))
-      .toBeGreaterThanOrEqual(1000)
-    const firstHoverDurationMs = await readHoverDurationMs(page, hoverId)
+      await expect(flagEvents).toHaveCount(0)
+    })
 
-    await expect
-      .poll(async () => await readHoverDurationMs(page, hoverId))
-      .toBeGreaterThan(firstHoverDurationMs)
-    const updatedHoverDurationMs = await readHoverDurationMs(page, hoverId)
+    test('emits flag view event on consent grant for identified user — anonymous exposure must be recorded for complete experiment analysis', async ({
+      page,
+    }) => {
+      const flagEvents = page.locator('[data-testid="event-component-boolean"]')
 
-    await page.waitForTimeout(300)
-    await movePointerAwayFromEntries(page)
+      await page.getByTestId('identify-button').click()
+      await expect(page.getByTestId('reset-button')).toBeVisible()
+      await expect(flagEvents).toHaveCount(0)
 
-    await expect
-      .poll(async () => await readHoverDurationMs(page, hoverId))
-      .toBeGreaterThan(updatedHoverDurationMs)
-    const finalHoverDurationMs = await readHoverDurationMs(page, hoverId)
+      await page.getByTestId('consent-button').click()
 
-    expect(finalHoverDurationMs).toBeGreaterThan(firstHoverDurationMs)
-  })
-})
+      await expect
+        .poll(async () => await flagEvents.count(), {
+          message: 'granting consent after identify should still emit a flag view event',
+        })
+        .toBeGreaterThan(0)
+    })
 
-test.describe('flag view tracking', () => {
-  test.beforeEach(async ({ page }) => {
-    await setup(page)
-  })
+    test('emits flag view event on consent for anonymous user, then again after identify — each profile change re-records exposure', async ({
+      page,
+    }) => {
+      const flagEvents = page.locator('[data-testid="event-component-boolean"]')
+      const baselineFlagEventCount = await flagEvents.count()
 
-  test('does not emit flag view events without consent', async ({ page }) => {
-    const flagEvents = page.locator('[data-testid="event-component-boolean"]')
+      await page.getByTestId('consent-button').click()
 
-    await expect(flagEvents).toHaveCount(0)
+      await expect
+        .poll(async () => await flagEvents.count(), {
+          message: 'consented flag subscription should emit a flag view event',
+        })
+        .toBeGreaterThan(baselineFlagEventCount)
 
-    await page.getByTestId('identify-button').click()
-    await expect(page.getByTestId('reset-button')).toBeVisible()
+      const afterConsentFlagEventCount = await flagEvents.count()
 
-    await expect(flagEvents).toHaveCount(0)
-  })
+      await page.getByTestId('identify-button').click()
+      await expect(page.getByTestId('reset-button')).toBeVisible()
 
-  test('emits flag view event on consent grant for identified user — anonymous exposure must be recorded for complete experiment analysis', async ({
-    page,
-  }) => {
-    const flagEvents = page.locator('[data-testid="event-component-boolean"]')
-
-    await page.getByTestId('identify-button').click()
-    await expect(page.getByTestId('reset-button')).toBeVisible()
-    await expect(flagEvents).toHaveCount(0)
-
-    await page.getByTestId('consent-button').click()
-
-    await expect
-      .poll(async () => await flagEvents.count(), {
-        message: 'granting consent after identify should still emit a flag view event',
-      })
-      .toBeGreaterThan(0)
-  })
-
-  test('emits flag view event on consent for anonymous user, then again after identify — each profile change re-records exposure', async ({
-    page,
-  }) => {
-    const flagEvents = page.locator('[data-testid="event-component-boolean"]')
-    const baselineFlagEventCount = await flagEvents.count()
-
-    await page.getByTestId('consent-button').click()
-
-    await expect
-      .poll(async () => await flagEvents.count(), {
-        message: 'consented flag subscription should emit a flag view event',
-      })
-      .toBeGreaterThan(baselineFlagEventCount)
-
-    const afterConsentFlagEventCount = await flagEvents.count()
-
-    await page.getByTestId('identify-button').click()
-    await expect(page.getByTestId('reset-button')).toBeVisible()
-
-    await expect
-      .poll(async () => await flagEvents.count(), {
-        message: 'profile updates should emit additional flag view events',
-      })
-      .toBeGreaterThan(afterConsentFlagEventCount)
+      await expect
+        .poll(async () => await flagEvents.count(), {
+          message: 'profile updates should emit additional flag view events',
+        })
+        .toBeGreaterThan(afterConsentFlagEventCount)
+    })
   })
 })
