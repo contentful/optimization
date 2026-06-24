@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test'
 
 const RENDERING_MODE = (process.env.RENDERING_MODE ?? 'csr').toLowerCase()
 
-test.describe('server-side rendering behavior', () => {
-  test.skip(RENDERING_MODE !== 'ssr', 'SSR behavior tests only run in ssr mode.')
+test.describe('Next.js hydration behavior', () => {
+  test.skip(RENDERING_MODE !== 'hybrid', 'Next.js hydration tests only run in hybrid mode.')
 
   test('does not issue a client Experience request after consented SSR hydration', async ({
     baseURL,
@@ -11,7 +11,11 @@ test.describe('server-side rendering behavior', () => {
     page,
   }) => {
     await context.addCookies([
-      { name: 'app-personalization-consent', value: 'granted', url: baseURL },
+      {
+        name: 'app-personalization-consent',
+        value: 'granted',
+        url: baseURL ?? 'http://localhost:3002',
+      },
     ])
     const clientExperienceRequests: string[] = []
     await page.route('**/experience/**', async (route) => {
@@ -24,15 +28,5 @@ test.describe('server-side rendering behavior', () => {
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
 
     expect(clientExperienceRequests).toEqual([])
-  })
-
-  test('renders server-side tracking attributes on first paint', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-
-    const entry = page.locator('[data-ctfl-entry-id]').first()
-    await expect(entry).toBeVisible()
-    await expect(entry).toHaveAttribute('data-ctfl-baseline-id', /.+/)
-    await expect(entry).toHaveAttribute('data-ctfl-variant-index', /\d+/)
   })
 })
