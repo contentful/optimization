@@ -45,6 +45,15 @@ const hoverScenarios: HoverScenario[] = [
   { name: 'descendant content node', hoverTargetTestId: `entry-text-${HOVER_ENTRY_BASELINE_ID}` },
 ]
 
+async function scrollThroughEntries(page: Page): Promise<void> {
+  const entries = page.locator('[data-testid^="content-"]')
+  const entryCount = await entries.count()
+
+  for (let index = 0; index < entryCount; index += 1) {
+    await entries.nth(index).scrollIntoViewIfNeeded()
+  }
+}
+
 async function movePointerAwayFromEntries(page: Page): Promise<void> {
   await page.getByRole('heading', { name: 'Utilities' }).hover()
 }
@@ -193,6 +202,34 @@ test.describe('Tracking', () => {
       const finalHoverDurationMs = await readHoverDurationMs(page, hoverId)
 
       expect(finalHoverDurationMs).toBeGreaterThan(firstHoverDurationMs)
+    })
+  })
+
+  test.describe('Consent Gating', () => {
+    test.beforeEach(async ({ page }) => {
+      await setup(page)
+    })
+
+    test('allows page events without consent but gates entry view events', async ({ page }) => {
+      const pageEvents = page.locator('[data-testid^="event-page-"]')
+      const viewEvents = page.locator('[data-testid^="event-view-"]')
+
+      await expect(pageEvents.first()).toBeVisible()
+
+      await scrollThroughEntries(page)
+      await expect(viewEvents).toHaveCount(0)
+    })
+
+    test('emits entry view events after consent is accepted', async ({ page }) => {
+      const pageEvents = page.locator('[data-testid^="event-page-"]')
+      const viewEvents = page.locator('[data-testid^="event-view-"]')
+
+      await expect(pageEvents.first()).toBeVisible()
+
+      await page.getByTestId('consent-button').click()
+      await scrollThroughEntries(page)
+
+      await expect.poll(async () => await viewEvents.count()).toBeGreaterThan(0)
     })
   })
 

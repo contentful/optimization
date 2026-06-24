@@ -15,7 +15,7 @@ async function getRecentPageEventUrls(page: Page): Promise<string[]> {
   return urls
 }
 
-test.describe('navigation page events', () => {
+test.describe('Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')

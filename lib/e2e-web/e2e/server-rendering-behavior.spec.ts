@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 const RENDERING_MODE = (process.env.RENDERING_MODE ?? 'csr').toLowerCase()
 
-test.describe('server-rendering behavior', () => {
+test.describe('Server-Rendering Behavior', () => {
   test.skip(
     RENDERING_MODE !== 'ssr' && RENDERING_MODE !== 'hybrid',
     'Server-rendering behavior tests only run in ssr or hybrid mode.',

@@ -18,7 +18,7 @@ async function waitForBaseUi(page: Page): Promise<void> {
   await expect(page.getByTestId('raw-events-count')).toBeVisible()
 }
 
-test.describe('offline queue and recovery', () => {
+test.describe('Offline Queue Recovery', () => {
   test.beforeEach(async ({ context, page }) => {
     await context.clearCookies()
     await setOffline(context, false)

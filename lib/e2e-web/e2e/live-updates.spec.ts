@@ -11,7 +11,7 @@ async function identify(page: Page): Promise<void> {
   await expect(page.getByTestId('identified-status')).toHaveText('Yes')
 }
 
-test.describe('live updates behavior', () => {
+test.describe('Live Updates', () => {
   test.beforeEach(async ({ page }) => {
     await page.context().clearCookies()
     await page.goto('/')
