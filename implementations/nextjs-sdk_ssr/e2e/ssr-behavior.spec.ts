@@ -15,8 +15,8 @@ const SSR_COOKIES = {
   profile: { name: 'ctfl-opt-aid', value: IDENTIFIED_PROFILE_ID },
 } as const
 
-test.describe('Next.js SSR behavior', () => {
-  test('renders server tracking attributes on first paint', async ({ page }) => {
+test.describe('server-side tracking attributes', () => {
+  test('renders tracking attributes on first paint', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
@@ -45,7 +45,7 @@ test.describe('Next.js SSR behavior', () => {
   })
 })
 
-test.describe('variant resolution without JavaScript', () => {
+test.describe('server-side variant resolution', () => {
   test.use({ javaScriptEnabled: false })
 
   test('renders baseline entry text when no consent cookie is set', async ({ page }) => {
@@ -55,7 +55,7 @@ test.describe('variant resolution without JavaScript', () => {
     await expect(page.getByTestId(`entry-text-${BASELINE_ENTRY_ID}`)).toContainText(BASELINE_TEXT)
   })
 
-  test('renders resolved variant text server-side when consent and profile cookies are set', async ({
+  test('renders resolved variant text when consent and profile cookies are set', async ({
     context,
     page,
   }) => {
@@ -70,10 +70,7 @@ test.describe('variant resolution without JavaScript', () => {
     await expect(page.getByTestId(`entry-text-${BASELINE_ENTRY_ID}`)).toContainText(VARIANT_TEXT)
   })
 
-  test('renders baseline text when consent is revoked after profile is set', async ({
-    context,
-    page,
-  }) => {
+  test('renders baseline text when consent is denied', async ({ context, page }) => {
     await context.addCookies([
       { name: SSR_COOKIES.consent.name, value: 'denied', url: 'http://localhost:3001' },
       { ...SSR_COOKIES.profile, url: 'http://localhost:3001' },
