@@ -143,14 +143,7 @@ export function injectContentfulEntry({
       raw,
       resolved: {
         entry: slot?.resolvedEntry ?? raw,
-        selectedOptimization:
-          slot?.optimizationId !== undefined
-            ? {
-                experienceId: slot.optimizationId,
-                variantIndex: slot.variantIndex ?? 0,
-                sticky: slot.sticky,
-              }
-            : undefined,
+        selectedOptimization: slot?.selectedOptimization ?? undefined,
       },
     }
   })

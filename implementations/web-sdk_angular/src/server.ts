@@ -1,10 +1,5 @@
 /* eslint-disable no-console */
-import {
-  AngularNodeAppEngine,
-  createNodeRequestHandler,
-  isMainModule,
-  writeResponseToNodeResponse,
-} from '@angular/ssr/node'
+import { AngularNodeAppEngine, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node'
 import express, { type Express } from 'express'
 import rateLimit from 'express-rate-limit'
 import { join } from 'node:path'
@@ -53,5 +48,4 @@ if (isMainModule(import.meta.url) || process.env.pm_id) {
   })
 }
 
-export const reqHandler = createNodeRequestHandler(app)
 export default app

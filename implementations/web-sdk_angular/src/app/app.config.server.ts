@@ -36,14 +36,14 @@ async function runServerPreflight(): Promise<void> {
 
   const serverData = await getServerOptimizationData(sdk, request, config.locale)
 
-  if (responseInit && serverData.canPersistProfile && serverData.profileId !== undefined) {
+  if (serverData.consentGranted && serverData.canPersistProfile && responseInit) {
     persistAnonymousIdCookie(responseInit, serverData.profileId)
   }
 
   const resolvedEntries = resolveServerEntries(
     sdk,
     baselines,
-    serverData.data?.selectedOptimizations,
+    serverData.consentGranted ? serverData.data.selectedOptimizations : [],
   )
   stampServerHandoff(transferState, serverData, resolvedEntries)
 }

@@ -1,7 +1,21 @@
-import { Component, computed, inject, input } from '@angular/core'
+import { Component, computed, effect, inject, input } from '@angular/core'
 import { NgLiveUpdates } from '../../services/live-updates'
 import { NgContentfulOptimization } from '../../services/optimization'
 import { fromSdkState } from '../../utils'
+
+const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
+
+/**
+ * Mirror the SDK's internal consent state into a cookie the SSR server can
+ * read on the next request. Without this, the server can't tell whether the
+ * user has granted consent and falls back to baseline rendering. Matches the
+ * pattern used by `nextjs-sdk_ssr/components/InteractiveControls.tsx`.
+ */
+function syncConsentCookie(consent: boolean): void {
+  if (typeof document === 'undefined') return
+  const value = consent ? 'granted' : 'denied'
+  document.cookie = `${APP_PERSONALIZATION_CONSENT_COOKIE}=${value}; Path=/; SameSite=Lax`
+}
 
 @Component({
   selector: 'app-control-panel',
@@ -25,6 +39,13 @@ export class ControlPanel {
   protected readonly booleanFlag = fromSdkState<unknown>(() =>
     this.optimization.sdk?.states.flag('boolean'),
   )
+
+  constructor() {
+    effect(() => {
+      const value = this.consent()
+      if (typeof value === 'boolean') syncConsentCookie(value)
+    })
+  }
 
   protected toggleConsent(): void {
     this.optimization.sdk?.consent(this.consent() !== true)

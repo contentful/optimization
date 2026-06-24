@@ -1,5 +1,13 @@
 import { isPlatformBrowser } from '@angular/common'
-import { inject, Injectable, PLATFORM_ID, signal, type OnDestroy, type Signal } from '@angular/core'
+import {
+  inject,
+  Injectable,
+  PLATFORM_ID,
+  signal,
+  TransferState,
+  type OnDestroy,
+  type Signal,
+} from '@angular/core'
 import { NavigationEnd, Router } from '@angular/router'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
@@ -11,6 +19,7 @@ import {
   NG_CONTENTFUL_OPTIMIZATION_CONFIG,
   resolveLogLevel,
 } from '../config'
+import { SERVER_OPTIMIZATION_KEY } from '../transfer-state-keys'
 import { fromSdkState } from '../utils'
 
 export type NgContentfulOptimizationInstance = ContentfulOptimization
@@ -82,11 +91,19 @@ export class NgContentfulOptimization implements OnDestroy {
     const isBrowser = isPlatformBrowser(inject(PLATFORM_ID))
 
     if (!isBrowser) {
+      // On the server, seed the read-only signals from the SSR handoff so
+      // server-rendered templates reflect the same consent/profile state the
+      // server preflight observed. Without this, JS-disabled clients would
+      // see "undefined" / "0 active optimizations" in the Utilities panel
+      // even though the entry markup is fully personalized.
+      const handoff = inject(TransferState).get(SERVER_OPTIMIZATION_KEY, undefined)
       this.sdk = undefined
-      this.consent = signal<boolean | undefined>(undefined).asReadonly()
-      this.profile = signal<Profile | undefined>(undefined).asReadonly()
+      this.consent = signal<boolean | undefined>(handoff?.consent === true).asReadonly()
+      this.profile = signal<Profile | undefined>(
+        handoff?.consent === true ? handoff.profile : undefined,
+      ).asReadonly()
       this.selectedOptimizations = signal<SelectedOptimizationArray | undefined>(
-        undefined,
+        handoff?.consent === true ? handoff.selectedOptimizations : undefined,
       ).asReadonly()
       return
     }

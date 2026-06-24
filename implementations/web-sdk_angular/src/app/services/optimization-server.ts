@@ -2,7 +2,6 @@ import type { TransferState } from '@angular/core'
 import type ContentfulOptimization from '@contentful/optimization-node'
 import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
-import type { CoreStatelessRequest } from '@contentful/optimization-node/core-sdk'
 import type { Entry } from 'contentful'
 import type { NgContentfulOptimizationConfig } from '../config'
 import { resolveLogLevel } from '../config'
@@ -18,9 +17,10 @@ const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
 /**
  * Reads a cookie value out of a Web `Request`. Mirrors the convention the
  * `nextjs-sdk_ssr` reference uses for the `app-personalization-consent` and
- * anonymous-id cookies.
+ * anonymous-id cookies. Returns `null` when the cookie is absent so callers
+ * can branch on a single contract instead of an `undefined` union.
  */
-function readCookie(request: Request, name: string): string | undefined {
+function readCookie(request: Request, name: string): string | null {
   const header = request.headers.get('cookie') ?? ''
   for (const part of header.split(';')) {
     const trimmed = part.trim()
@@ -29,7 +29,7 @@ function readCookie(request: Request, name: string): string | undefined {
     if (eq < 0) continue
     if (trimmed.slice(0, eq) === name) return trimmed.slice(eq + 1)
   }
-  return undefined
+  return null
 }
 
 /**
@@ -53,14 +53,21 @@ export async function createServerOptimization(
   })
 }
 
-export interface ServerOptimizationData {
-  readonly data: OptimizationData | undefined
-  readonly requestOptimization: CoreStatelessRequest | undefined
-  readonly consentGranted: boolean
-  readonly anonymousId: string | undefined
-  readonly profileId: string | undefined
-  readonly canPersistProfile: boolean
-}
+/**
+ * Outcome of the server-side preflight for one SSR request. Discriminated on
+ * `consentGranted` so callers either get the full personalization context or
+ * a "no SDK work happened" branch — never a half-populated value.
+ */
+export type ServerOptimizationData =
+  | {
+      readonly consentGranted: false
+    }
+  | {
+      readonly consentGranted: true
+      readonly data: OptimizationData
+      readonly profileId: string
+      readonly canPersistProfile: boolean
+    }
 
 /**
  * Run the SDK preflight for a single SSR request: bind the Node SDK to the
@@ -74,32 +81,21 @@ export async function getServerOptimizationData(
   locale: string,
 ): Promise<ServerOptimizationData> {
   const consentGranted = readCookie(request, APP_PERSONALIZATION_CONSENT_COOKIE) === 'granted'
+  if (!consentGranted) return { consentGranted: false }
+
   const anonymousId = readCookie(request, ANONYMOUS_ID_COOKIE)
-
-  if (!consentGranted) {
-    return {
-      data: undefined,
-      requestOptimization: undefined,
-      consentGranted,
-      anonymousId,
-      profileId: anonymousId,
-      canPersistProfile: false,
-    }
-  }
-
   const requestOptimization = sdk.forRequest({
     consent: { events: true, persistence: true },
     locale,
-    ...(anonymousId ? { profile: { id: anonymousId } } : {}),
+    ...(anonymousId === null ? {} : { profile: { id: anonymousId } }),
   })
   const data = await requestOptimization.page()
+  if (!data) return { consentGranted: false }
 
   return {
+    consentGranted: true,
     data,
-    requestOptimization,
-    consentGranted,
-    anonymousId,
-    profileId: data?.profile.id ?? requestOptimization.profile?.id,
+    profileId: data.profile.id,
     canPersistProfile: requestOptimization.canPersistProfile,
   }
 }
@@ -111,7 +107,7 @@ export async function getServerOptimizationData(
 export function resolveServerEntries(
   sdk: ContentfulOptimization,
   baselines: readonly Entry[],
-  selectedOptimizations: OptimizationData['selectedOptimizations'] | undefined,
+  selectedOptimizations: OptimizationData['selectedOptimizations'],
 ): Record<string, ResolvedEntryHandoff> {
   const resolved: Record<string, ResolvedEntryHandoff> = {}
   for (const baseline of baselines) {
@@ -119,9 +115,7 @@ export function resolveServerEntries(
     resolved[baseline.sys.id] = {
       baseline,
       resolvedEntry: result.entry,
-      optimizationId: result.selectedOptimization?.experienceId,
-      variantIndex: result.selectedOptimization?.variantIndex,
-      sticky: result.selectedOptimization?.sticky,
+      selectedOptimization: result.selectedOptimization ?? null,
     }
   }
   return resolved
@@ -150,12 +144,14 @@ export function stampServerHandoff(
   serverData: ServerOptimizationData,
   resolvedEntries: Record<string, ResolvedEntryHandoff>,
 ): void {
-  const handoff: ServerHandoff = {
-    consent: serverData.consentGranted,
-    profileId: serverData.profileId,
-    profile: serverData.data?.profile,
-    selectedOptimizations: serverData.data?.selectedOptimizations,
-  }
+  const handoff: ServerHandoff = serverData.consentGranted
+    ? {
+        consent: true,
+        profile: serverData.data.profile,
+        profileId: serverData.profileId,
+        selectedOptimizations: serverData.data.selectedOptimizations,
+      }
+    : { consent: false }
   transferState.set<ServerHandoff>(SERVER_OPTIMIZATION_KEY, handoff)
   transferState.set<Record<string, ResolvedEntryHandoff>>(
     SERVER_RESOLVED_ENTRIES_KEY,
