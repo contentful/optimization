@@ -1,15 +1,43 @@
 'use client'
 
-import { ContentEntry } from '@/components/ContentEntry'
-import { InteractiveControls } from '@/components/InteractiveControls'
-import { LiveUpdatesExampleEntry } from '@/components/LiveUpdatesExampleEntry'
-import { NestedContentItem } from '@/components/NestedContentItem'
+import { ControlPanel } from '@/components/ControlPanel'
+import { EntryCard } from '@/components/EntryCard'
 import type { ContentEntry as ContentEntryType } from '@/lib/contentful'
+import { OptimizedEntry } from '@contentful/optimization-nextjs/client'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 import { useMemo, type JSX } from 'react'
 
 function toEntryMap(entries: ContentEntryType[]): Map<string, ContentEntryType> {
   return new Map(entries.map((entry) => [entry.sys.id, entry]))
+}
+
+function LiveUpdatesEntry({
+  baselineEntry,
+  liveUpdates,
+  testIdPrefix,
+}: {
+  readonly baselineEntry: ContentEntryType
+  readonly liveUpdates?: boolean
+  readonly testIdPrefix: string
+}): JSX.Element {
+  return (
+    <OptimizedEntry baselineEntry={baselineEntry} liveUpdates={liveUpdates}>
+      {(resolvedEntry) => {
+        const asCf = resolvedEntry as ContentEntryType
+        const text = typeof asCf.fields.text === 'string' ? asCf.fields.text : 'No content'
+        const fullLabel = `${text} [Entry: ${resolvedEntry.sys.id}]`
+
+        return (
+          <div data-test-entry-id={resolvedEntry.sys.id} data-testid={`content-${testIdPrefix}`}>
+            <p data-testid={`entry-text-${testIdPrefix}`} aria-label={fullLabel}>
+              {text}
+            </p>
+            <p data-testid={`entry-id-${testIdPrefix}`}>Entry: {resolvedEntry.sys.id}</p>
+          </div>
+        )
+      }}
+    </OptimizedEntry>
+  )
 }
 
 function AutoObservedEntries({
@@ -21,20 +49,18 @@ function AutoObservedEntries({
     <div id="auto-observed" className="entry-grid">
       {PAGES.home.auto.map((entryId) => {
         const entry = entriesById.get(entryId)
-        if (!entry) {
-          return null
-        }
+        if (!entry) return null
 
         if (entry.sys.contentType.sys.id === 'nestedContent') {
           return (
             <section key={entry.sys.id} data-testid={`nested-content-entry-${entry.sys.id}`}>
-              <NestedContentItem entry={entry} />
+              <EntryCard entry={entry} />
             </section>
           )
         }
 
         return (
-          <ContentEntry
+          <EntryCard
             key={entry.sys.id}
             clickScenario={CLICK_SCENARIOS[entry.sys.id]}
             entry={entry}
@@ -55,11 +81,8 @@ function ManuallyObservedEntries({
     <div id="manually-observed" className="entry-grid">
       {PAGES.home.manual.map((entryId) => {
         const entry = entriesById.get(entryId)
-        if (!entry) {
-          return null
-        }
-
-        return <ContentEntry key={entry.sys.id} entry={entry} viewTracking="manual" />
+        if (!entry) return null
+        return <EntryCard key={entry.sys.id} entry={entry} viewTracking="manual" />
       })}
     </div>
   )
@@ -83,7 +106,7 @@ export function HomePage({
         </p>
       </div>
 
-      <InteractiveControls />
+      <ControlPanel />
 
       <section className="page-section" data-testid="live-updates-section">
         <header className="page-section__header">
@@ -97,7 +120,7 @@ export function HomePage({
           <div className="sections-grid" data-testid="live-updates-examples">
             <section data-testid="live-updates-default">
               <h3>Default (inherits global setting)</h3>
-              <LiveUpdatesExampleEntry
+              <LiveUpdatesEntry
                 baselineEntry={liveUpdatesBaselineEntry}
                 testIdPrefix="live-default"
               />
@@ -105,7 +128,7 @@ export function HomePage({
 
             <section data-testid="live-updates-enabled">
               <h3>Always On (liveUpdates=true)</h3>
-              <LiveUpdatesExampleEntry
+              <LiveUpdatesEntry
                 baselineEntry={liveUpdatesBaselineEntry}
                 liveUpdates={true}
                 testIdPrefix="live-enabled"
@@ -114,7 +137,7 @@ export function HomePage({
 
             <section data-testid="live-updates-locked">
               <h3>Locked (liveUpdates=false)</h3>
-              <LiveUpdatesExampleEntry
+              <LiveUpdatesEntry
                 baselineEntry={liveUpdatesBaselineEntry}
                 liveUpdates={false}
                 testIdPrefix="live-locked"

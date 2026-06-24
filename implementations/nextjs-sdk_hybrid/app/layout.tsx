@@ -1,6 +1,6 @@
-import { AnalyticsEventDisplay } from '@/components/AnalyticsEventDisplay'
 import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
 import { PreviewPanelAttachment } from '@/components/PreviewPanelAttachment'
+import { TrackingLog } from '@/components/TrackingLog'
 import { APP_LOCALE, optimizationConfig } from '@/lib/config'
 import { getOptimizationData } from '@/lib/optimization'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
@@ -65,7 +65,7 @@ export default async function RootLayout({
               </nav>
               <div className="app-body">
                 <aside className="app-sidebar">
-                  <AnalyticsEventDisplay />
+                  <TrackingLog />
                 </aside>
                 <main>{children}</main>
               </div>

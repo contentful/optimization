@@ -27,7 +27,7 @@ function displayFlagValue(value: unknown): string {
   return JSON.stringify(value)
 }
 
-export function InteractiveControls(): JSX.Element {
+export function ControlPanel(): JSX.Element {
   const { consent: setConsent, identify, reset } = useOptimizationActions()
   const consent = useConsentState()
   const profile = useProfileState()

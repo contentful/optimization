@@ -1,6 +1,6 @@
 'use client'
 
-import { ContentEntry } from '@/components/ContentEntry'
+import { EntryCard } from '@/components/EntryCard'
 import type { ContentEntry as ContentEntryType } from '@/lib/contentful'
 import {
   useConsentState,
@@ -64,7 +64,7 @@ export function PageTwoPage({
         {pageTwoAutoEntry ? (
           <div>
             <p>Auto tracked example</p>
-            <ContentEntry entry={pageTwoAutoEntry} viewTracking="auto" />
+            <EntryCard entry={pageTwoAutoEntry} viewTracking="auto" />
           </div>
         ) : (
           <p>Auto tracked entry is unavailable.</p>
@@ -73,7 +73,7 @@ export function PageTwoPage({
         {pageTwoManualEntry ? (
           <div>
             <p>Manual tracked example</p>
-            <ContentEntry entry={pageTwoManualEntry} viewTracking="manual" />
+            <EntryCard entry={pageTwoManualEntry} viewTracking="manual" />
           </div>
         ) : (
           <p>Manual tracked entry is unavailable.</p>

@@ -152,7 +152,7 @@ function toDuration(event: AnalyticsEvent): number | undefined {
   return event.hoverDurationMs ?? event.viewDurationMs
 }
 
-export function AnalyticsEventDisplay(): JSX.Element {
+export function TrackingLog(): JSX.Element {
   const { sdk, isReady } = useOptimizationContext()
   const [events, setEvents] = useState<AnalyticsEvent[]>([])
   const [rawEventsCount, setRawEventsCount] = useState(0)
