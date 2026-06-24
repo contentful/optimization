@@ -4,19 +4,19 @@
   "description": "Reference implementation for simple HTML projects",
   "license": "MIT",
   "scripts": {
-    "build": "pnpm clean && pnpm build:sdk",
-    "build:sdk": "mkdir -p ./public/dist && cp -r ./node_modules/@contentful/optimization-web/dist/. ./public/dist && cp ./node_modules/@contentful/optimization-web-preview-panel/dist/contentful-optimization-web-preview-panel.umd.js* ./public/dist",
+    "build": "pnpm clean && pnpm build:assets",
+    "build:assets": "tsx scripts/build-assets.ts",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./public/dist ./coverage ./playwright-report ./test-results .tsbuildinfo",
     "serve": "pnpm serve:mocks && pnpm serve:app",
-    "serve:app": "pnpm build && docker compose up -d",
-    "serve:app:stop": "docker compose down",
-    "serve:mocks": "pm2 start --name web-mocks \"pnpm --dir ../../lib/mocks serve\"",
-    "serve:mocks:stop": "pm2 stop web-mocks && pm2 delete web-mocks",
+    "serve:e2e": "pnpm build && tsx server.ts",
+    "serve:app": "pnpm build && pm2 start --name web-sdk-app \"tsx server.ts\"",
+    "serve:app:stop": "pm2 stop web-sdk-app && pm2 delete web-sdk-app",
+    "serve:mocks": "pm2 start --name web-sdk-mocks \"pnpm --dir ../../lib/mocks serve\"",
+    "serve:mocks:stop": "pm2 stop web-sdk-mocks && pm2 delete web-sdk-mocks",
     "serve:stop": "pnpm serve:app:stop && pnpm serve:mocks:stop",
-    "test:e2e": "sh -c 'pnpm serve && playwright test \"$@\"; E2E_RESULT=$?; pnpm serve:stop; exit $E2E_RESULT' --",
-    "test:e2e:codegen": "playwright codegen",
-    "test:e2e:report": "playwright show-report",
-    "test:e2e:ui": "playwright test --ui",
+    "test:e2e": "IMPLEMENTATION=web-sdk pnpm --dir ../../lib/e2e-web test",
+    "test:e2e:ui": "IMPLEMENTATION=web-sdk pnpm --dir ../../lib/e2e-web test:ui",
+    "test:e2e:report": "pnpm --dir ../../lib/e2e-web test:report",
     "test:unit": "echo \"No unit tests necessary\"",
     "typecheck": "tsc --noEmit"
   },
@@ -25,11 +25,12 @@
     "@contentful/optimization-web-preview-panel": "0.0.0"
   },
   "devDependencies": {
-    "@playwright/test": "1.58.0",
     "@types/node": "24.10.13",
     "dotenv": "17.3.1",
+    "e2e-web": "file:../../lib/e2e-web",
     "pm2": "6.0.14",
     "rimraf": "6.1.3",
+    "tsx": "^4.21.0",
     "typescript": "5.9.3"
   }
 }
