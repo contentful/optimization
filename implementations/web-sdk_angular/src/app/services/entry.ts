@@ -80,18 +80,18 @@ function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Sign
   })
 
   function track(): void {
-    const { sdk } = optimization
-    if (!sdk) return
-    const { entryId, optimizationId, sticky, variantIndex } = result()
-    sdk.tracking.enableElement('views', elementRef.nativeElement, {
-      data: { entryId, optimizationId, sticky, variantIndex },
+    optimization.withSdk((sdk) => {
+      const { entryId, optimizationId, sticky, variantIndex } = result()
+      sdk.tracking.enableElement('views', elementRef.nativeElement, {
+        data: { entryId, optimizationId, sticky, variantIndex },
+      })
     })
   }
 
   function clear(): void {
-    const { sdk } = optimization
-    if (!sdk) return
-    sdk.tracking.clearElement('views', elementRef.nativeElement)
+    optimization.withSdk((sdk) => {
+      sdk.tracking.clearElement('views', elementRef.nativeElement)
+    })
   }
 
   effect(() => {
@@ -127,11 +127,13 @@ export function injectContentfulEntry({
 
   const variant = computed(() => {
     const raw = entry()
-    const { sdk } = optimization
-    if (sdk) {
+    if (optimization.context.platform === 'browser') {
       return {
         raw,
-        resolved: sdk.resolveOptimizedEntry(raw, liveRead(optimization.selectedOptimizations)),
+        resolved: optimization.context.sdk.resolveOptimizedEntry(
+          raw,
+          liveRead(optimization.selectedOptimizations),
+        ),
       }
     }
     // Server render: lift the server-resolved entry from TransferState if present
@@ -139,22 +141,26 @@ export function injectContentfulEntry({
     // baseline when no handoff exists (e.g. consent denied — server skipped resolve).
     const handoff = transferState.get(SERVER_RESOLVED_ENTRIES_KEY, undefined)
     const slot = handoff?.[raw.sys.id]
+    if (slot?.isVariant) {
+      return {
+        raw,
+        resolved: { entry: slot.resolvedEntry, selectedOptimization: slot.selectedOptimization },
+      }
+    }
     return {
       raw,
-      resolved: {
-        entry: slot?.resolvedEntry ?? raw,
-        selectedOptimization: slot?.selectedOptimization ?? undefined,
-      },
+      resolved: { entry: slot?.resolvedEntry ?? raw, selectedOptimization: undefined },
     }
   })
 
   const result = computed(() => {
     const { raw, resolved } = variant()
     const profile = liveRead(optimization.profile)
-    const { sdk } = optimization
     let mergeTagResolved: boolean | undefined = undefined
     const entry = resolveEntryMergeTags(resolved.entry, (target) => {
-      const value = sdk && profile ? sdk.getMergeTagValue(target, profile) : undefined
+      const value = profile
+        ? optimization.withSdk((sdk) => sdk.getMergeTagValue(target, profile))
+        : undefined
       if (value !== undefined) mergeTagResolved = true
       else mergeTagResolved ??= false
       return value ?? target.fields.nt_fallback

@@ -14,11 +14,11 @@ export class NgLiveUpdates {
   private readonly optimization = inject(NgContentfulOptimization)
 
   private readonly globalLiveUpdatesSignal = signal(false)
-  private readonly previewPanelAttached = fromSdkState<boolean>(
-    () => this.optimization.sdk?.states.previewPanelAttached,
+  private readonly previewPanelAttached = fromSdkState<boolean>(() =>
+    this.optimization.withSdk((sdk) => sdk.states.previewPanelAttached),
   )
-  private readonly previewPanelOpen = fromSdkState<boolean>(
-    () => this.optimization.sdk?.states.previewPanelOpen,
+  private readonly previewPanelOpen = fromSdkState<boolean>(() =>
+    this.optimization.withSdk((sdk) => sdk.states.previewPanelOpen),
   )
 
   readonly globalLiveUpdates = this.globalLiveUpdatesSignal.asReadonly()

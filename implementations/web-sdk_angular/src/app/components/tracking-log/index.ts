@@ -51,8 +51,9 @@ export class TrackingLog {
 
   constructor() {
     const { optimization } = this
-    const { sdk } = optimization
-    if (!sdk) return
+    const { context } = optimization
+    if (context.platform !== 'browser') return
+    const { sdk } = context
 
     let pageSeq = 0
     let componentSeq = 0

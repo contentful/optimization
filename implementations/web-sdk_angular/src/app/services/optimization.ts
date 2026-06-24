@@ -1,17 +1,25 @@
 import { isPlatformBrowser } from '@angular/common'
 import {
+  DestroyRef,
   inject,
   Injectable,
   PLATFORM_ID,
+  provideAppInitializer,
+  REQUEST,
+  RESPONSE_INIT,
   signal,
   TransferState,
-  type OnDestroy,
+  type EnvironmentProviders,
   type Signal,
 } from '@angular/core'
 import { NavigationEnd, Router } from '@angular/router'
+import type NodeContentfulOptimizationType from '@contentful/optimization-node'
+import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
+import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import type { Subscription } from 'rxjs'
+import type { Entry } from 'contentful'
+import { PAGES } from 'e2e-web'
 import { filter } from 'rxjs/operators'
 import type { NgContentfulOptimizationConfig } from '../config'
 import {
@@ -19,10 +27,52 @@ import {
   NG_CONTENTFUL_OPTIMIZATION_CONFIG,
   resolveLogLevel,
 } from '../config'
-import { SERVER_OPTIMIZATION_KEY } from '../transfer-state-keys'
+import {
+  SERVER_OPTIMIZATION_KEY,
+  SERVER_RESOLVED_ENTRIES_KEY,
+  type ResolvedEntryHandoff,
+  type ServerHandoff,
+} from '../transfer-state-keys'
 import { fromSdkState } from '../utils'
+import { NgContentfulClient } from './contentful-client'
 
-export type NgContentfulOptimizationInstance = ContentfulOptimization
+type NgContentfulOptimizationInstance = ContentfulOptimization
+
+/**
+ * Runtime context for {@link NgContentfulOptimization}. Discriminated on
+ * `platform` so callers branch on the runtime instead of dereferencing a
+ * `sdk?` chain. The `server` branch carries no SDK because the Web SDK reads
+ * `localStorage` at construction time and cannot be instantiated server-side.
+ */
+type NgContentfulOptimizationContext =
+  | { readonly platform: 'server' }
+  | { readonly platform: 'browser'; readonly sdk: NgContentfulOptimizationInstance }
+
+/**
+ * Shared SDK-config mapping used by both the browser Web SDK constructor and
+ * the server Node SDK constructor. The two SDK classes accept the same shape
+ * for these fields, so the mapping lives here once.
+ */
+function toSdkConstructorArgs(config: NgContentfulOptimizationConfig): {
+  clientId: string
+  environment: string
+  logLevel: 'debug' | 'warn' | 'error'
+  locale: string
+  app: NgContentfulOptimizationConfig['app']
+  api: { insightsBaseUrl: string; experienceBaseUrl: string }
+} {
+  return {
+    clientId: config.clientId,
+    environment: config.environment,
+    logLevel: resolveLogLevel(config.logLevel),
+    locale: config.locale,
+    app: config.app,
+    api: {
+      insightsBaseUrl: config.insightsBaseUrl,
+      experienceBaseUrl: config.experienceBaseUrl,
+    },
+  }
+}
 
 let instance: NgContentfulOptimizationInstance | undefined = undefined
 let attachmentStarted = false
@@ -51,54 +101,45 @@ function getOrCreateInstance(
   config: NgContentfulOptimizationConfig,
 ): NgContentfulOptimizationInstance {
   instance ??= new ContentfulOptimization({
-    clientId: config.clientId,
-    environment: config.environment,
-    logLevel: resolveLogLevel(config.logLevel),
+    ...toSdkConstructorArgs(config),
     autoTrackEntryInteraction: config.autoTrackEntryInteraction ?? {
       views: true,
       clicks: true,
       hovers: true,
-    },
-    locale: config.locale,
-    app: config.app,
-    api: {
-      insightsBaseUrl: config.insightsBaseUrl,
-      experienceBaseUrl: config.experienceBaseUrl,
     },
   })
   return instance
 }
 
 /**
- * Browser-only SDK service. The Web SDK constructor touches `localStorage` at
- * construction time, so on the server we leave `sdk` as `undefined` and skip
- * SDK side effects. Components dereferencing `sdk?.` are no-ops during SSR;
- * the same components run normally after hydration once the browser SDK is
- * constructed here.
+ * Single SDK service exposed to components. On the browser it owns a real
+ * {@link ContentfulOptimization} instance; on the server it surfaces the SSR
+ * handoff so templates render the personalised state without ever touching the
+ * Web SDK (which would crash on `localStorage`).
  */
 @Injectable({ providedIn: 'root' })
-export class NgContentfulOptimization implements OnDestroy {
-  readonly sdk: NgContentfulOptimizationInstance | undefined
+export class NgContentfulOptimization {
+  readonly context: NgContentfulOptimizationContext
   readonly consent: Signal<boolean | undefined>
   readonly profile: Signal<Profile | undefined>
   readonly selectedOptimizations: Signal<SelectedOptimizationArray | undefined>
 
-  private readonly routerSubscription: Subscription | undefined
-
   constructor() {
     const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
     const router = inject(Router)
+    const destroyRef = inject(DestroyRef)
     const isBrowser = isPlatformBrowser(inject(PLATFORM_ID))
 
     if (!isBrowser) {
-      // On the server, seed the read-only signals from the SSR handoff so
-      // server-rendered templates reflect the same consent/profile state the
-      // server preflight observed. Without this, JS-disabled clients would
-      // see "undefined" / "0 active optimizations" in the Utilities panel
-      // even though the entry markup is fully personalized.
+      // Seed the read-only signals from the SSR handoff so server-rendered
+      // templates reflect the same consent/profile state the server preflight
+      // observed. Without this, JS-disabled clients would see "undefined" /
+      // "0 active optimizations" in the Utilities panel even though the entry
+      // markup is fully personalised.
       const handoff = inject(TransferState).get(SERVER_OPTIMIZATION_KEY, undefined)
-      this.sdk = undefined
-      this.consent = signal<boolean | undefined>(handoff?.consent === true).asReadonly()
+      const isGranted = handoff?.consent === true
+      this.context = { platform: 'server' }
+      this.consent = signal<boolean | undefined>(isGranted).asReadonly()
       this.profile = signal<Profile | undefined>(
         handoff?.consent === true ? handoff.profile : undefined,
       ).asReadonly()
@@ -108,31 +149,203 @@ export class NgContentfulOptimization implements OnDestroy {
       return
     }
 
-    this.sdk = getOrCreateInstance(config)
+    const sdk = getOrCreateInstance(config)
+    this.context = { platform: 'browser', sdk }
 
     if (config.previewPanel !== undefined) {
-      void attachPreviewPanel(this.sdk, config)
+      void attachPreviewPanel(sdk, config)
     }
 
-    this.consent = fromSdkState(this.sdk.states.consent)
-    this.profile = fromSdkState(this.sdk.states.profile)
-    this.selectedOptimizations = fromSdkState(this.sdk.states.selectedOptimizations)
+    this.consent = fromSdkState(sdk.states.consent)
+    this.profile = fromSdkState(sdk.states.profile)
+    this.selectedOptimizations = fromSdkState(sdk.states.selectedOptimizations)
 
     // Page events must fire on every route change including the initial load.
     // The SDK uses the current URL to resolve which experiences apply to the user.
-    this.routerSubscription = router.events
+    const routerSubscription = router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
-        void this.sdk?.page({
+        void sdk.page({
           properties: { url: window.location.origin + e.urlAfterRedirects },
         })
       })
+
+    destroyRef.onDestroy(() => {
+      routerSubscription.unsubscribe()
+      sdk.destroy()
+      instance = undefined
+      attachmentStarted = false
+    })
   }
 
-  ngOnDestroy(): void {
-    this.routerSubscription?.unsubscribe()
-    this.sdk?.destroy()
-    instance = undefined
-    attachmentStarted = false
+  /**
+   * Run an SDK side-effect on the browser. Returns the callback's value on the
+   * browser branch, and `undefined` on the server (where there is no SDK to
+   * call). Lets call sites avoid an `if (context.platform === 'browser')`
+   * narrowing dance for fire-and-forget toggles.
+   */
+  withSdk<T>(fn: (sdk: NgContentfulOptimizationInstance) => T): T | undefined {
+    return this.context.platform === 'browser' ? fn(this.context.sdk) : undefined
   }
+}
+
+// ── Server-side preflight ──────────────────────────────────────────────────
+//
+// The helpers below run only on the server (in the @angular/ssr render
+// pipeline) and dynamic-import @contentful/optimization-node so the Node SDK
+// never reaches the browser bundle. They are exposed via
+// `provideServerOptimizationInitializer()` so `app.config.server.ts` only
+// needs a single import to wire them in.
+
+const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
+
+/**
+ * Outcome of looking up a request cookie. Discriminated on `found` so the
+ * value is only accessible after the caller proves the cookie exists.
+ */
+type CookieLookup = { readonly found: false } | { readonly found: true; readonly value: string }
+
+const COOKIE_NOT_FOUND: CookieLookup = { found: false }
+
+function readCookie(request: Request, name: string): CookieLookup {
+  const header = request.headers.get('cookie') ?? ''
+  for (const part of header.split(';')) {
+    const trimmed = part.trim()
+    if (!trimmed) continue
+    const eq = trimmed.indexOf('=')
+    if (eq < 0) continue
+    if (trimmed.slice(0, eq) === name) return { found: true, value: trimmed.slice(eq + 1) }
+  }
+  return COOKIE_NOT_FOUND
+}
+
+async function createServerOptimization(
+  config: NgContentfulOptimizationConfig,
+): Promise<NodeContentfulOptimizationType> {
+  const { default: NodeContentfulOptimization } = await import('@contentful/optimization-node')
+  return new NodeContentfulOptimization(toSdkConstructorArgs(config))
+}
+
+/**
+ * Outcome of the server-side preflight for one SSR request. Discriminated on
+ * `consentGranted` so callers either get the full personalization context or
+ * a "no SDK work happened" branch — never a half-populated value.
+ */
+type ServerOptimizationData =
+  | { readonly consentGranted: false }
+  | {
+      readonly consentGranted: true
+      readonly data: OptimizationData
+      readonly profileId: string
+      readonly canPersistProfile: boolean
+    }
+
+async function getServerOptimizationData(
+  sdk: NodeContentfulOptimizationType,
+  request: Request,
+  locale: string,
+): Promise<ServerOptimizationData> {
+  const consentCookie = readCookie(request, APP_PERSONALIZATION_CONSENT_COOKIE)
+  const consentGranted = consentCookie.found && consentCookie.value === 'granted'
+  if (!consentGranted) return { consentGranted: false }
+
+  const anonymousId = readCookie(request, ANONYMOUS_ID_COOKIE)
+  const requestOptimization = sdk.forRequest({
+    consent: { events: true, persistence: true },
+    locale,
+    ...(anonymousId.found ? { profile: { id: anonymousId.value } } : {}),
+  })
+  const data = await requestOptimization.page()
+  if (!data) return { consentGranted: false }
+
+  return {
+    consentGranted: true,
+    data,
+    profileId: data.profile.id,
+    canPersistProfile: requestOptimization.canPersistProfile,
+  }
+}
+
+function resolveServerEntries(
+  sdk: NodeContentfulOptimizationType,
+  baselines: readonly Entry[],
+  selectedOptimizations: OptimizationData['selectedOptimizations'],
+): Record<string, ResolvedEntryHandoff> {
+  const resolved: Record<string, ResolvedEntryHandoff> = {}
+  for (const baseline of baselines) {
+    const result = sdk.resolveOptimizedEntry(baseline, selectedOptimizations)
+    resolved[baseline.sys.id] = result.selectedOptimization
+      ? {
+          isVariant: true,
+          baseline,
+          resolvedEntry: result.entry,
+          selectedOptimization: result.selectedOptimization,
+        }
+      : { isVariant: false, baseline, resolvedEntry: result.entry }
+  }
+  return resolved
+}
+
+function persistAnonymousIdCookie(responseInit: ResponseInit, profileId: string): void {
+  const headers =
+    responseInit.headers instanceof Headers
+      ? responseInit.headers
+      : new Headers(responseInit.headers)
+  headers.append('set-cookie', `${ANONYMOUS_ID_COOKIE}=${profileId}; Path=/; SameSite=Lax`)
+  responseInit.headers = headers
+}
+
+function stampServerHandoff(
+  transferState: TransferState,
+  serverData: ServerOptimizationData,
+  resolvedEntries: Record<string, ResolvedEntryHandoff>,
+): void {
+  const handoff: ServerHandoff = serverData.consentGranted
+    ? {
+        consent: true,
+        profile: serverData.data.profile,
+        profileId: serverData.profileId,
+        selectedOptimizations: serverData.data.selectedOptimizations,
+      }
+    : { consent: false }
+  transferState.set<ServerHandoff>(SERVER_OPTIMIZATION_KEY, handoff)
+  transferState.set<Record<string, ResolvedEntryHandoff>>(
+    SERVER_RESOLVED_ENTRIES_KEY,
+    resolvedEntries,
+  )
+}
+
+async function runServerPreflight(): Promise<void> {
+  const request = inject(REQUEST, { optional: true })
+  if (!request) return
+
+  const responseInit = inject(RESPONSE_INIT, { optional: true })
+  const transferState = inject(TransferState)
+  const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
+  const contentful = inject(NgContentfulClient)
+
+  const sdk = await createServerOptimization(config)
+  const baselineIds = [...new Set([...PAGES.home.ids, ...PAGES.pageTwo.ids])]
+  const baselines = await contentful.fetchEntries(baselineIds)
+
+  const serverData = await getServerOptimizationData(sdk, request, config.locale)
+
+  if (serverData.consentGranted && serverData.canPersistProfile && responseInit) {
+    persistAnonymousIdCookie(responseInit, serverData.profileId)
+  }
+
+  const resolvedEntries = resolveServerEntries(
+    sdk,
+    baselines,
+    serverData.consentGranted ? serverData.data.selectedOptimizations : [],
+  )
+  stampServerHandoff(transferState, serverData, resolvedEntries)
+}
+
+/**
+ * Wires the server-side SDK preflight into Angular's application
+ * initializers. Imported from `app.config.server.ts`.
+ */
+export function provideServerOptimizationInitializer(): EnvironmentProviders {
+  return provideAppInitializer(runServerPreflight)
 }

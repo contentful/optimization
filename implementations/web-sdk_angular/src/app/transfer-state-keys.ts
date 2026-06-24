@@ -24,13 +24,22 @@ export type ServerHandoff =
 /**
  * Per-baseline-entry result of `sdk.resolveOptimizedEntry()` carried across
  * the hydration boundary. The browser uses these to skip a duplicate Experience
- * API roundtrip on initial render.
+ * API roundtrip on initial render. Discriminated on `isVariant` so callers
+ * branch on the variant/baseline distinction without consulting a nullable
+ * field.
  */
-export interface ResolvedEntryHandoff {
-  readonly baseline: Entry
-  readonly resolvedEntry: Entry
-  readonly selectedOptimization: SelectedOptimization | null
-}
+export type ResolvedEntryHandoff =
+  | {
+      readonly isVariant: false
+      readonly baseline: Entry
+      readonly resolvedEntry: Entry
+    }
+  | {
+      readonly isVariant: true
+      readonly baseline: Entry
+      readonly resolvedEntry: Entry
+      readonly selectedOptimization: SelectedOptimization
+    }
 
 export const SERVER_OPTIMIZATION_KEY: StateKey<ServerHandoff> =
   makeStateKey<ServerHandoff>('ssr-optimization')

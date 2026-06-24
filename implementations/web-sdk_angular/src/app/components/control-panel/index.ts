@@ -37,7 +37,7 @@ export class ControlPanel {
   // This is an active exposure stream. Core does not mark one-off flag reads as
   // tracked until a flag-view event is actually accepted.
   protected readonly booleanFlag = fromSdkState<unknown>(() =>
-    this.optimization.sdk?.states.flag('boolean'),
+    this.optimization.withSdk((sdk) => sdk.states.flag('boolean')),
   )
 
   constructor() {
@@ -48,16 +48,22 @@ export class ControlPanel {
   }
 
   protected toggleConsent(): void {
-    this.optimization.sdk?.consent(this.consent() !== true)
+    this.optimization.withSdk((sdk) => {
+      sdk.consent(this.consent() !== true)
+    })
   }
 
   protected identify(): void {
-    void this.optimization.sdk?.identify({ userId: 'charles', traits: { identified: true } })
+    this.optimization.withSdk((sdk) => {
+      void sdk.identify({ userId: 'charles', traits: { identified: true } })
+    })
   }
 
   protected reset(): void {
-    this.optimization.sdk?.reset()
-    void this.optimization.sdk?.page()
+    this.optimization.withSdk((sdk) => {
+      sdk.reset()
+      void sdk.page()
+    })
   }
 
   protected trackConversion(): void {
