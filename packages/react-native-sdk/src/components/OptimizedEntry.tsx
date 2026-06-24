@@ -274,6 +274,7 @@ export function OptimizedEntry({
 
   const { onLayout } = useViewportTracking({
     entry: resolvedData.entry,
+    optimizationContextId: resolvedData.optimizationContextId,
     selectedOptimization: resolvedData.selectedOptimization,
     dwellTimeMs,
     minVisibleRatio,
@@ -283,6 +284,7 @@ export function OptimizedEntry({
 
   const { onTouchStart, onTouchEnd } = useTapTracking({
     entry: resolvedData.entry,
+    optimizationContextId: resolvedData.optimizationContextId,
     selectedOptimization: resolvedData.selectedOptimization,
     enabled: tapsEnabled,
     onTap,

@@ -3,7 +3,13 @@ import CoreStateful, {
   type PreviewPanelSignalObject,
 } from './CoreStateful'
 import type { ChangeArray } from './api-schemas'
-import type { BlockedEvent, TrackBuilderArgs, ViewBuilderArgs } from './events'
+import type {
+  BlockedEvent,
+  EventOptimizationContext,
+  OptimizationEventStreamEvent,
+  TrackBuilderArgs,
+  ViewBuilderArgs,
+} from './events'
 import type { QueueFlushFailureContext } from './lib/queue'
 import { batch, signalFns, signals } from './signals'
 import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
@@ -55,6 +61,12 @@ function createDeferred(): { promise: Promise<void>; resolve: () => void } {
 }
 
 class CoreStatefulTestHarness extends CoreStateful {
+  getOptimizationContextById(
+    optimizationContextId: string | undefined,
+  ): EventOptimizationContext | undefined {
+    return this.getEventOptimizationContext(optimizationContextId)
+  }
+
   getOnlineState(): boolean {
     return this.online
   }
@@ -524,12 +536,162 @@ describe('CoreStateful blocked event handling', () => {
     const result = core.resolveOptimizedEntry(optimizedEntry)
 
     expect(result.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(result.optimizationContextId).toEqual(expect.any(String))
     expect(result.selectedOptimization).toEqual(
       expect.objectContaining({
         experienceId: '2qVK4T5lnScbswoyBuGipd',
         variantIndex: 1,
       }),
     )
+  })
+
+  it('registers unique optimization contexts and clears them on reset and destroy', () => {
+    const core = createCoreStatefulHarness()
+
+    const first = core.resolveOptimizedEntry(optimizedEntry, selectedOptimizationsFixture)
+    const second = core.resolveOptimizedEntry(optimizedEntry, selectedOptimizationsFixture)
+
+    expect(first.optimizationContextId).toEqual(expect.any(String))
+    expect(second.optimizationContextId).toEqual(expect.any(String))
+    expect(second.optimizationContextId).not.toBe(first.optimizationContextId)
+    expect(core.getOptimizationContextById(first.optimizationContextId)).toEqual(
+      expect.objectContaining({
+        contextId: first.optimizationContextId,
+        baselineEntry: optimizedEntry,
+        resolvedEntry: first.entry,
+      }),
+    )
+
+    core.reset()
+
+    expect(core.getOptimizationContextById(first.optimizationContextId)).toBeUndefined()
+
+    const afterReset = core.resolveOptimizedEntry(optimizedEntry, selectedOptimizationsFixture)
+    expect(core.getOptimizationContextById(afterReset.optimizationContextId)).toBeDefined()
+
+    core.destroy()
+
+    expect(core.getOptimizationContextById(afterReset.optimizationContextId)).toBeUndefined()
+  })
+
+  it('prunes idle optimization contexts on access', () => {
+    rs.useFakeTimers()
+
+    try {
+      const core = createCoreStatefulHarness()
+      rs.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
+
+      const resolved = core.resolveOptimizedEntry(optimizedEntry, selectedOptimizationsFixture)
+      expect(core.getOptimizationContextById(resolved.optimizationContextId)).toBeDefined()
+
+      rs.setSystemTime(new Date('2026-01-01T00:30:00.001Z'))
+
+      expect(core.getOptimizationContextById(resolved.optimizationContextId)).toBeUndefined()
+    } finally {
+      rs.clearAllTimers()
+      rs.useRealTimers()
+    }
+  })
+
+  it('evicts the oldest optimization context when the registry reaches its max size', () => {
+    const core = createCoreStatefulHarness()
+    const contextIds = Array.from(
+      { length: 1001 },
+      () =>
+        core.resolveOptimizedEntry(optimizedEntry, selectedOptimizationsFixture)
+          .optimizationContextId,
+    )
+
+    expect(core.getOptimizationContextById(contextIds[0])).toBeUndefined()
+    expect(core.getOptimizationContextById(contextIds.at(-1))).toBeDefined()
+  })
+
+  it('enriches eventStream for optimized entry interactions while sending strict API events', async () => {
+    const core = createCoreStatefulHarness({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue({
+      changes: [],
+      selectedOptimizations: selectedOptimizationsFixture,
+      profile: profileFixture,
+    })
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const emittedEvents: Array<OptimizationEventStreamEvent | undefined> = []
+    const subscription = core.states.eventStream.subscribe((event) => {
+      emittedEvents.push(event)
+    })
+    const resolved = core.resolveOptimizedEntry(optimizedEntry, selectedOptimizationsFixture)
+
+    await core.trackView({
+      componentId: optimizedEntry.sys.id,
+      experienceId: resolved.selectedOptimization?.experienceId,
+      optimizationContextId: resolved.optimizationContextId,
+      sticky: true,
+      variantIndex: resolved.selectedOptimization?.variantIndex,
+      viewDurationMs: 250,
+      viewId: 'view-1',
+    })
+    await core.flush()
+
+    const enrichedEvents = emittedEvents.filter((event) => event !== undefined)
+    expect(enrichedEvents).toHaveLength(2)
+    expect(enrichedEvents).toEqual([
+      expect.objectContaining({
+        type: 'component',
+        optimization: expect.objectContaining({
+          contextId: resolved.optimizationContextId,
+          baselineEntry: optimizedEntry,
+          resolvedEntry: resolved.entry,
+          selectedOptimization: resolved.selectedOptimization,
+        }),
+      }),
+      expect.objectContaining({
+        type: 'component',
+        optimization: expect.objectContaining({
+          contextId: resolved.optimizationContextId,
+        }),
+      }),
+    ])
+
+    const experienceEvent = upsertProfile.mock.calls[0]?.[0].events[0]
+    expect(experienceEvent).not.toHaveProperty('optimization')
+    expect(experienceEvent).not.toHaveProperty('optimizationContextId')
+
+    const insightsEvent = sendBatchEvents.mock.calls[0]?.[0][0]?.events[0]
+    expect(insightsEvent).not.toHaveProperty('optimization')
+    expect(insightsEvent).not.toHaveProperty('optimizationContextId')
+
+    subscription.unsubscribe()
+  })
+
+  it('does not enrich flag-view event stream emissions', async () => {
+    const core = createCoreStateful({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    const emittedEvents: Array<OptimizationEventStreamEvent | undefined> = []
+    const subscription = core.states.eventStream.subscribe((event) => {
+      emittedEvents.push(event)
+    })
+
+    await core.trackFlagView({ componentId: 'dark-mode' })
+
+    const event = emittedEvents.at(-1)
+    expect(event).toEqual(
+      expect.objectContaining({
+        componentId: 'dark-mode',
+        componentType: 'Variable',
+        type: 'component',
+      }),
+    )
+    expect(event).not.toHaveProperty('optimization')
+
+    subscription.unsubscribe()
   })
 
   it('defaults getMergeTagValue to the profile signal', () => {

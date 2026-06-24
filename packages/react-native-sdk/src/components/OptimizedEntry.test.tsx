@@ -1,5 +1,6 @@
+import type { ResolvedData } from '@contentful/optimization-core'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
-import type { Entry } from 'contentful'
+import type { Entry, EntrySkeletonType } from 'contentful'
 import React, { act, type ReactElement } from 'react'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
@@ -11,7 +12,7 @@ const selectedOptimizations = {
   current: undefined,
   subscribe: rs.fn(() => ({ unsubscribe: rs.fn() })),
 }
-const resolveOptimizedEntry = rs.fn((entry: Entry) => ({ entry }))
+const resolveOptimizedEntry = rs.fn((entry: Entry): ResolvedData<EntrySkeletonType> => ({ entry }))
 const useViewportTracking = rs.fn((_options: Record<string, unknown>) => ({
   isVisible: false,
   onLayout: rs.fn(),
@@ -75,7 +76,6 @@ async function loadTestRenderer(): Promise<TestRendererModule> {
 
 function createEntry(id: string): Entry {
   return {
-    // @ts-expect-error -- partial mock for focused component tests
     sys: {
       id,
       type: 'Entry',
@@ -83,12 +83,13 @@ function createEntry(id: string): Entry {
       createdAt: '2025-01-01T00:00:00Z',
       updatedAt: '2025-01-01T00:00:00Z',
       environment: { sys: { id: 'master', type: 'Link', linkType: 'Environment' } },
+      publishedVersion: 1,
       space: { sys: { id: 'space1', type: 'Link', linkType: 'Space' } },
       revision: 1,
       locale: 'en-US',
     },
     fields: { title: id },
-    metadata: { tags: [] },
+    metadata: { concepts: [], tags: [] },
   }
 }
 
@@ -136,6 +137,7 @@ describe('OptimizedEntry', () => {
     const { OptimizedEntry } = await import('./OptimizedEntry')
     const testRenderer = await loadTestRenderer()
     const baselineEntry = createEntry('baseline-entry')
+    baselineEntry.fields = { ...baselineEntry.fields, nt_experiences: [] }
 
     act(() => {
       renderer = testRenderer.create(
@@ -161,6 +163,7 @@ describe('OptimizedEntry', () => {
     const { OptimizedEntry } = await import('./OptimizedEntry')
     const testRenderer = await loadTestRenderer()
     const baselineEntry = createEntry('baseline-entry')
+    baselineEntry.fields = { ...baselineEntry.fields, nt_experiences: [] }
 
     act(() => {
       renderer = testRenderer.create(
@@ -187,5 +190,33 @@ describe('OptimizedEntry', () => {
 
     expect(getCallOptions(useViewportTracking).enabled).toBe(false)
     expect(getCallOptions(useTapTracking).enabled).toBe(true)
+  })
+
+  it('passes optimizationContextId to viewport and tap tracking', async () => {
+    resolveOptimizedEntry.mockReturnValueOnce({
+      entry: createEntry('resolved-entry'),
+      optimizationContextId: 'ctx-1',
+      selectedOptimization: {
+        experienceId: 'exp-1',
+        sticky: false,
+        variantIndex: 1,
+        variants: {},
+      },
+    })
+    const { OptimizedEntry } = await import('./OptimizedEntry')
+    const testRenderer = await loadTestRenderer()
+    const baselineEntry = createEntry('baseline-entry')
+    baselineEntry.fields = { ...baselineEntry.fields, nt_experiences: [] }
+
+    act(() => {
+      renderer = testRenderer.create(
+        <OptimizedEntry baselineEntry={baselineEntry} trackTaps>
+          content
+        </OptimizedEntry>,
+      )
+    })
+
+    expect(getCallOptions(useViewportTracking).optimizationContextId).toBe('ctx-1')
+    expect(getCallOptions(useTapTracking).optimizationContextId).toBe('ctx-1')
   })
 })

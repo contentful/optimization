@@ -6,10 +6,8 @@ import type {
   MergeTagEntry,
   PartialProfile,
   Profile,
-  SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger, logger } from '@contentful/optimization-api-client/logger'
-import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { isEqual } from 'es-toolkit/predicate'
 import type { ConsentGuard } from './consent'
 import CoreBase from './CoreBase'
@@ -19,6 +17,7 @@ import type {
   BlockedEvent,
   ClickBuilderArgs,
   EventEmissionResult,
+  EventOptimizationContext,
   FlagViewBuilderArgs,
   HoverBuilderArgs,
   IdentifyBuilderArgs,
@@ -29,14 +28,12 @@ import type {
 } from './events'
 import type { ExperienceQueue } from './queues/ExperienceQueue'
 import type { InsightsQueue } from './queues/InsightsQueue'
-import type { ResolvedData } from './resolvers'
 import {
   blockedEvent as blockedEventSignal,
   changes as changesSignal,
   consent as consentSignal,
   type Observable,
   profile as profileSignal,
-  selectedOptimizations as selectedOptimizationsSignal,
   signalFns,
   toDistinctObservable,
 } from './signals'
@@ -89,37 +86,15 @@ abstract class CoreStatefulEventEmitter
   protected abstract readonly experienceQueue: ExperienceQueue
   protected abstract readonly insightsQueue: InsightsQueue
   protected abstract readonly onEventBlocked?: CoreStatefulConfig['onEventBlocked']
+  protected abstract getEventOptimizationContext(
+    optimizationContextId: string | undefined,
+  ): EventOptimizationContext | undefined
 
   override getFlag(name: string, changes: ChangeArray | undefined = changesSignal.value): Json {
     const value = super.getFlag(name, changes)
     this.attemptFlagViewTracking(name, value, changes)
 
     return value
-  }
-
-  override resolveOptimizedEntry<
-    S extends EntrySkeletonType = EntrySkeletonType,
-    L extends LocaleCode = LocaleCode,
-  >(
-    entry: Entry<S, undefined, L>,
-    selectedOptimizations?: SelectedOptimizationArray,
-  ): ResolvedData<S, undefined, L>
-  override resolveOptimizedEntry<
-    S extends EntrySkeletonType,
-    M extends ChainModifiers = ChainModifiers,
-    L extends LocaleCode = LocaleCode,
-  >(entry: Entry<S, M, L>, selectedOptimizations?: SelectedOptimizationArray): ResolvedData<S, M, L>
-  override resolveOptimizedEntry<
-    S extends EntrySkeletonType,
-    M extends ChainModifiers,
-    L extends LocaleCode = LocaleCode,
-  >(
-    entry: Entry<S, M, L>,
-    selectedOptimizations:
-      | SelectedOptimizationArray
-      | undefined = selectedOptimizationsSignal.value,
-  ): ResolvedData<S, M, L> {
-    return super.resolveOptimizedEntry(entry, selectedOptimizations)
   }
 
   override getMergeTagValue(
@@ -145,12 +120,10 @@ abstract class CoreStatefulEventEmitter
   async identify(
     payload: IdentifyBuilderArgs & { profile?: PartialProfile },
   ): Promise<EventEmissionResult> {
-    const { profile, ...builderArgs } = payload
     return await this.sendExperienceEventWithResult(
       'identify',
       [payload],
-      this.eventBuilder.buildIdentify(builderArgs),
-      profile,
+      this.eventBuilder.buildIdentify(payload),
     )
   }
 
@@ -167,12 +140,10 @@ abstract class CoreStatefulEventEmitter
   async page(
     payload: PageViewBuilderArgs & { profile?: PartialProfile } = {},
   ): Promise<EventEmissionResult> {
-    const { profile, ...builderArgs } = payload
     return await this.sendExperienceEventWithResult(
       'page',
       [payload],
-      this.eventBuilder.buildPageView(builderArgs),
-      profile,
+      this.eventBuilder.buildPageView(payload),
     )
   }
 
@@ -189,12 +160,10 @@ abstract class CoreStatefulEventEmitter
   async screen(
     payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<EventEmissionResult> {
-    const { profile, ...builderArgs } = payload
     return await this.sendExperienceEventWithResult(
       'screen',
       [payload],
-      this.eventBuilder.buildScreenView(builderArgs),
-      profile,
+      this.eventBuilder.buildScreenView(payload),
     )
   }
 
@@ -214,12 +183,10 @@ abstract class CoreStatefulEventEmitter
   async track(
     payload: TrackBuilderArgs & { profile?: PartialProfile },
   ): Promise<EventEmissionResult> {
-    const { profile, ...builderArgs } = payload
     return await this.sendExperienceEventWithResult(
       'track',
       [payload],
-      this.eventBuilder.buildTrack(builderArgs),
-      profile,
+      this.eventBuilder.buildTrack(payload),
     )
   }
 
@@ -242,7 +209,7 @@ abstract class CoreStatefulEventEmitter
   async trackView(
     payload: ViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<EventEmissionResult> {
-    const { profile, ...builderArgs } = payload
+    const optimizationContext = this.getEventOptimizationContext(payload.optimizationContextId)
     if (!this.hasConsent('trackView')) {
       this.onBlockedByConsent('trackView', [payload])
       return { accepted: false }
@@ -254,8 +221,8 @@ abstract class CoreStatefulEventEmitter
       result = await this.sendExperienceEventWithResult(
         'trackView',
         [payload],
-        this.eventBuilder.buildView(builderArgs),
-        profile,
+        this.eventBuilder.buildView(payload),
+        optimizationContext,
       )
     }
 
@@ -264,8 +231,8 @@ abstract class CoreStatefulEventEmitter
     await this.sendInsightsEvent(
       'trackView',
       [payload],
-      this.eventBuilder.buildView(builderArgs),
-      profile,
+      this.eventBuilder.buildView(payload),
+      optimizationContext,
     )
 
     return result
@@ -282,7 +249,12 @@ abstract class CoreStatefulEventEmitter
    * ```
    */
   async trackClick(payload: ClickBuilderArgs): Promise<void> {
-    await this.sendInsightsEvent('trackClick', [payload], this.eventBuilder.buildClick(payload))
+    await this.sendInsightsEvent(
+      'trackClick',
+      [payload],
+      this.eventBuilder.buildClick(payload),
+      this.getEventOptimizationContext(payload.optimizationContextId),
+    )
   }
 
   /**
@@ -296,7 +268,12 @@ abstract class CoreStatefulEventEmitter
    * ```
    */
   async trackHover(payload: HoverBuilderArgs): Promise<void> {
-    await this.sendInsightsEvent('trackHover', [payload], this.eventBuilder.buildHover(payload))
+    await this.sendInsightsEvent(
+      'trackHover',
+      [payload],
+      this.eventBuilder.buildHover(payload),
+      this.getEventOptimizationContext(payload.optimizationContextId),
+    )
   }
 
   /**
@@ -339,14 +316,14 @@ abstract class CoreStatefulEventEmitter
     method: string,
     args: readonly unknown[],
     event: ExperienceEventPayload,
-    _profile?: PartialProfile,
+    optimizationContext?: EventOptimizationContext,
   ): Promise<EventEmissionResult> {
     if (!this.hasConsent(method)) {
       this.onBlockedByConsent(method, args)
       return { accepted: false }
     }
 
-    const data = await this.experienceQueue.send(event)
+    const data = await this.experienceQueue.send(event, optimizationContext)
     if (data === undefined) return { accepted: true }
 
     return { accepted: true, data }
@@ -356,14 +333,14 @@ abstract class CoreStatefulEventEmitter
     method: string,
     args: readonly unknown[],
     event: InsightsEventPayload,
-    _profile?: PartialProfile,
+    optimizationContext?: EventOptimizationContext,
   ): Promise<void> {
     if (!this.hasConsent(method)) {
       this.onBlockedByConsent(method, args)
       return
     }
 
-    await this.insightsQueue.send(event)
+    await this.insightsQueue.send(event, optimizationContext)
   }
 
   private buildFlagViewBuilderArgs(

@@ -136,12 +136,18 @@ export const EntryInteractionBuilderArgsBase = z.extend(UniversalEventBuilderArg
   variantIndex: z.optional(z.number()),
 })
 
+interface EntryInteractionOptimizationContextArgs {
+  /** Opaque runtime-owned optimization context ID for SDK event-stream enrichment. */
+  optimizationContextId?: string
+}
+
 /**
  * Arguments shared by entry view, click, and hover events.
  *
  * @public
  */
-export type EntryInteractionBuilderArgsBase = z.infer<typeof EntryInteractionBuilderArgsBase>
+export type EntryInteractionBuilderArgsBase = z.infer<typeof EntryInteractionBuilderArgsBase> &
+  EntryInteractionOptimizationContextArgs
 
 export const ViewBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
   sticky: z.optional(z.boolean()),
@@ -154,7 +160,8 @@ export const ViewBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
  *
  * @public
  */
-export type ViewBuilderArgs = z.infer<typeof ViewBuilderArgs>
+export type ViewBuilderArgs = z.infer<typeof ViewBuilderArgs> &
+  EntryInteractionOptimizationContextArgs
 
 export const FlagViewBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
   viewId: z.optional(z.string()),
@@ -175,7 +182,8 @@ export const ClickBuilderArgs = EntryInteractionBuilderArgsBase
  *
  * @public
  */
-export type ClickBuilderArgs = z.infer<typeof ClickBuilderArgs>
+export type ClickBuilderArgs = z.infer<typeof ClickBuilderArgs> &
+  EntryInteractionOptimizationContextArgs
 
 export const HoverBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
   hoverId: z.string(),
@@ -187,7 +195,8 @@ export const HoverBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
  *
  * @public
  */
-export type HoverBuilderArgs = z.infer<typeof HoverBuilderArgs>
+export type HoverBuilderArgs = z.infer<typeof HoverBuilderArgs> &
+  EntryInteractionOptimizationContextArgs
 
 export const IdentifyBuilderArgs = z.extend(UniversalEventBuilderArgs, {
   traits: z.optional(Traits),

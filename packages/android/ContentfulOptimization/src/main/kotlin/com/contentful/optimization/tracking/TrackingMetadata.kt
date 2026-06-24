@@ -3,6 +3,7 @@ package com.contentful.optimization.tracking
 internal class TrackingMetadata(
     entry: Map<String, Any>,
     selectedOptimization: Map<String, Any>?,
+    val optimizationContextId: String? = null,
 ) {
     @Suppress("UNCHECKED_CAST")
     val componentId: String = (entry["sys"] as? Map<String, Any>)?.get("id") as? String ?: ""

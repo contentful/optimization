@@ -16,16 +16,18 @@ public fun Modifier.trackClicks(
     enabled: Boolean,
     client: OptimizationClient,
     onTap: ((Map<String, Any>) -> Unit)? = null,
+    optimizationContextId: String? = null,
 ): Modifier {
     if (!enabled) return this
 
     val scope = rememberCoroutineScope()
     return this.clickable {
         if (client.hasConsent("trackClick")) {
-            val metadata = TrackingMetadata(entry, selectedOptimization)
+            val metadata = TrackingMetadata(entry, selectedOptimization, optimizationContextId)
             val payload = TrackClickPayload(
                 componentId = metadata.componentId,
                 experienceId = metadata.experienceId,
+                optimizationContextId = metadata.optimizationContextId,
                 variantIndex = metadata.variantIndex,
             )
             scope.launch {

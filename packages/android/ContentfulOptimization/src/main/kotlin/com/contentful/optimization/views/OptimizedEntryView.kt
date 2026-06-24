@@ -81,9 +81,10 @@ public class OptimizedEntryView @JvmOverloads constructor(
     // Track the (entry, selectedOptimization) tuple the current controller was built for so we
     // don't tear it down on every optimization re-emission — that would reset the dwell
     // timer and prevent component events from ever firing. Mirrors Compose's
-    // `remember(entry, selectedOptimization)` semantics.
+    // `remember(entry, selectedOptimization, optimizationContextId)` semantics.
     private var controllerEntry: Map<String, Any>? = null
     private var controllerSelectedOptimization: Map<String, Any>? = null
+    private var controllerOptimizationContextId: String? = null
 
     private val preDrawListener = ViewTreeObserver.OnPreDrawListener {
         updateVisibility()
@@ -136,6 +137,9 @@ public class OptimizedEntryView @JvmOverloads constructor(
             it.destroy()
         }
         controller = null
+        controllerEntry = null
+        controllerSelectedOptimization = null
+        controllerOptimizationContextId = null
         trackingScope?.cancel()
         trackingScope = null
         optimizationJob = null
@@ -155,6 +159,7 @@ public class OptimizedEntryView @JvmOverloads constructor(
         controller = null
         controllerEntry = null
         controllerSelectedOptimization = null
+        controllerOptimizationContextId = null
         optimizationJob?.cancel()
         previewJob?.cancel()
         consentJob?.cancel()
@@ -235,10 +240,12 @@ public class OptimizedEntryView @JvmOverloads constructor(
             controller = null
             controllerEntry = null
             controllerSelectedOptimization = null
+            controllerOptimizationContextId = null
             return
         }
         val entry = entry ?: return
         val newSelectedOptimization = result.selectedOptimization
+        val newOptimizationContextId = result.optimizationContextId
         @Suppress("UNCHECKED_CAST")
         val entryId = (entry["sys"] as? Map<String, Any>)?.get("id") as? String ?: ""
 
@@ -246,7 +253,8 @@ public class OptimizedEntryView @JvmOverloads constructor(
         // keep it — rebuilding would reset the dwell timer mid-cycle.
         if (controller != null &&
             controllerEntry === entry &&
-            controllerSelectedOptimization == newSelectedOptimization
+            controllerSelectedOptimization == newSelectedOptimization &&
+            controllerOptimizationContextId == newOptimizationContextId
         ) {
             trackingLog { "attachController KEEP componentId=$entryId" }
             updateVisibility()
@@ -266,6 +274,7 @@ public class OptimizedEntryView @JvmOverloads constructor(
         controller = ViewTrackingController(
             client = client,
             entry = entry,
+            optimizationContextId = newOptimizationContextId,
             selectedOptimization = newSelectedOptimization,
             minVisibleRatio = minVisibleRatio,
             dwellTimeMs = dwellTimeMs,
@@ -273,6 +282,7 @@ public class OptimizedEntryView @JvmOverloads constructor(
         )
         controllerEntry = entry
         controllerSelectedOptimization = newSelectedOptimization
+        controllerOptimizationContextId = newOptimizationContextId
         updateVisibility()
     }
 
@@ -304,13 +314,18 @@ public class OptimizedEntryView @JvmOverloads constructor(
         if (OptimizationManager.client.hasConsent("trackClick")) {
             val scope = trackingScope
             if (scope != null) {
-                val metadata = TrackingMetadata(entry, lastResult?.selectedOptimization)
+                val metadata = TrackingMetadata(
+                    entry,
+                    lastResult?.selectedOptimization,
+                    lastResult?.optimizationContextId,
+                )
                 scope.launch {
                     try {
                         OptimizationManager.client.trackClick(
                             TrackClickPayload(
                                 componentId = metadata.componentId,
                                 experienceId = metadata.experienceId,
+                                optimizationContextId = metadata.optimizationContextId,
                                 variantIndex = metadata.variantIndex,
                             ),
                         )

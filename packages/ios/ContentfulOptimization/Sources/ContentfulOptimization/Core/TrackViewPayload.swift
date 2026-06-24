@@ -5,6 +5,7 @@ public struct TrackViewPayload {
     public let componentId: String
     public let viewId: String
     public let experienceId: String?
+    public let optimizationContextId: String?
     public let variantIndex: Int
     public let viewDurationMs: Int
     public let sticky: Bool?
@@ -14,6 +15,7 @@ public struct TrackViewPayload {
         componentId: String,
         viewId: String,
         experienceId: String? = nil,
+        optimizationContextId: String? = nil,
         variantIndex: Int,
         viewDurationMs: Int,
         sticky: Bool? = nil,
@@ -22,6 +24,7 @@ public struct TrackViewPayload {
         self.componentId = componentId
         self.viewId = viewId
         self.experienceId = experienceId
+        self.optimizationContextId = optimizationContextId
         self.variantIndex = variantIndex
         self.viewDurationMs = viewDurationMs
         self.sticky = sticky
@@ -37,6 +40,9 @@ public struct TrackViewPayload {
         ]
         if let experienceId = experienceId {
             dict["experienceId"] = experienceId
+        }
+        if let optimizationContextId = optimizationContextId {
+            dict["optimizationContextId"] = optimizationContextId
         }
         if let sticky = sticky {
             dict["sticky"] = sticky

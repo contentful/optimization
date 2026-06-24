@@ -10,6 +10,8 @@ export type CtflDataset = DOMStringMap & {
   ctflBaselineId?: string
   /** Optional optimization/experience ID associated with the entry. */
   ctflOptimizationId?: string
+  /** Optional opaque runtime-owned optimization context ID. */
+  ctflOptimizationContextId?: string
   /** Whether this entry interaction is sticky. */
   ctflSticky?: 'true' | 'false'
   /** Optional variant index for optimized variants (non-negative integer). */
@@ -46,6 +48,8 @@ export interface EntryData {
   entryId: string
   /** Optional optimization/experience ID. */
   optimizationId?: string
+  /** Optional opaque runtime-owned optimization context ID. */
+  optimizationContextId?: string
   /** Whether the view is sticky. */
   sticky?: boolean
   /** Optional variant index (non-negative integer). */
@@ -105,6 +109,7 @@ const resolveEntryDataFromElement = (element: Element): EntryData | undefined =>
   const {
     dataset: {
       ctflEntryId: entryId,
+      ctflOptimizationContextId: optimizationContextId,
       ctflOptimizationId: optimizationId,
       ctflSticky,
       ctflVariantIndex,
@@ -114,6 +119,7 @@ const resolveEntryDataFromElement = (element: Element): EntryData | undefined =>
   return {
     entryId,
     optimizationId,
+    optimizationContextId: asNonEmptyString(optimizationContextId),
     sticky: parseSticky(ctflSticky),
     variantIndex: parseVariantIndex(ctflVariantIndex),
   }
@@ -142,6 +148,7 @@ export function resolveTrackingPayload(
   | {
       componentId: string
       experienceId?: string
+      optimizationContextId?: string
       sticky?: boolean
       variantIndex?: number
     }
@@ -150,9 +157,12 @@ export function resolveTrackingPayload(
 
   if (!entryData) return undefined
 
+  const optimizationContextId = asNonEmptyString(entryData.optimizationContextId)
+
   return {
     componentId: entryData.entryId,
     experienceId: entryData.optimizationId,
+    ...(optimizationContextId === undefined ? {} : { optimizationContextId }),
     sticky: entryData.sticky,
     variantIndex: entryData.variantIndex,
   }

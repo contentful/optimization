@@ -339,7 +339,12 @@ describe('OptimizedEntryResolver', () => {
       const result = OptimizedEntryResolver.resolve(optimizedEntryFixture, selections)
 
       expect(result.entry).toBe(optimizedEntryFixture)
-      expect(result.selectedOptimization).toBeUndefined()
+      expect(result.selectedOptimization).toEqual(
+        expect.objectContaining({
+          experienceId: '2qVK4T5lnScbswoyBuGipd',
+          variantIndex: 0,
+        }),
+      )
 
       expect(mockedLogger.debug).toHaveBeenCalledWith(
         'Optimization',
@@ -362,7 +367,12 @@ describe('OptimizedEntryResolver', () => {
       const result = OptimizedEntryResolver.resolve(optimizedEntryFixture, selections)
 
       expect(result.entry).toBe(optimizedEntryFixture)
-      expect(result.selectedOptimization).toBeUndefined()
+      expect(result.selectedOptimization).toEqual(
+        expect.objectContaining({
+          experienceId: '2qVK4T5lnScbswoyBuGipd',
+          variantIndex: 2,
+        }),
+      )
 
       expect(mockedLogger.warn).toHaveBeenCalledWith(
         'Optimization',
@@ -382,7 +392,12 @@ describe('OptimizedEntryResolver', () => {
         const result = OptimizedEntryResolver.resolve(optimizedEntry, getSelectedOptimizations())
 
         expect(result.entry).toBe(optimizedEntry)
-        expect(result.selectedOptimization).toBeUndefined()
+        expect(result.selectedOptimization).toEqual(
+          expect.objectContaining({
+            experienceId: '2qVK4T5lnScbswoyBuGipd',
+            variantIndex: 1,
+          }),
+        )
 
         expect(mockedLogger.warn).toHaveBeenCalledWith(
           'Optimization',
@@ -415,6 +430,36 @@ describe('OptimizedEntryResolver', () => {
       expect(mockedLogger.debug).toHaveBeenCalledWith(
         'Optimization',
         `Entry ${optimizedEntryFixture.sys.id} has been resolved to variant entry 4k6ZyFQnR2POY5IJLLlJRb`,
+      )
+    })
+
+    it('returns resolved data and optimization context for a matched optimization', () => {
+      const { optimizationContext, resolvedData } = OptimizedEntryResolver.resolveWithContext(
+        optimizedEntryFixture,
+        getSelectedOptimizations(),
+      )
+
+      expect(resolvedData.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
+      expect(optimizationContext).toEqual(
+        expect.objectContaining({
+          baselineEntry: optimizedEntryFixture,
+          optimizationEntry: expect.objectContaining({
+            fields: expect.objectContaining({
+              nt_experience_id: '2qVK4T5lnScbswoyBuGipd',
+            }),
+          }),
+          resolvedEntry: resolvedData.entry,
+          selectedOptimization: expect.objectContaining({
+            experienceId: '2qVK4T5lnScbswoyBuGipd',
+            variantIndex: 1,
+          }),
+          selectedVariant: expect.objectContaining({
+            id: '4k6ZyFQnR2POY5IJLLlJRb',
+          }),
+        }),
+      )
+      expect(optimizationContext?.audienceEntry?.fields.nt_audience_id).toBe(
+        '2WzXDaWtDmstHl9p8Wufpp',
       )
     })
   })

@@ -105,6 +105,7 @@ interface TrackViewPayload {
   componentId: string
   viewId: string
   experienceId?: string
+  optimizationContextId?: string
   variantIndex: number
   viewDurationMs: number
   sticky?: boolean
@@ -114,6 +115,7 @@ interface TrackViewPayload {
 interface TrackClickPayload {
   componentId: string
   experienceId?: string
+  optimizationContextId?: string
   variantIndex: number
 }
 
@@ -269,6 +271,7 @@ const trackViewPayloadFields: readonly PayloadFieldRule[] = [
   { key: 'componentId', required: true, type: 'string' },
   { key: 'viewId', required: true, type: 'string' },
   { key: 'experienceId', type: 'string' },
+  { key: 'optimizationContextId', type: 'string' },
   { key: 'variantIndex', required: true, type: 'number' },
   { key: 'viewDurationMs', required: true, type: 'number' },
   { key: 'sticky', type: 'boolean' },
@@ -277,6 +280,7 @@ const trackViewPayloadFields: readonly PayloadFieldRule[] = [
 const trackClickPayloadFields: readonly PayloadFieldRule[] = [
   { key: 'componentId', required: true, type: 'string' },
   { key: 'experienceId', type: 'string' },
+  { key: 'optimizationContextId', type: 'string' },
   { key: 'variantIndex', required: true, type: 'number' },
 ]
 

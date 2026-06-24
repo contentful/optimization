@@ -4,6 +4,7 @@ import SwiftUI
 /// and reports view events to the optimization client.
 struct ViewTrackingModifier: ViewModifier {
     let entry: [String: Any]
+    let optimizationContextId: String?
     let selectedOptimization: [String: Any]?
     let minVisibleRatio: Double
     let dwellTimeMs: Int
@@ -13,6 +14,7 @@ struct ViewTrackingModifier: ViewModifier {
 
     @Environment(\.scrollContext) private var scrollContext
     @State private var controller: ViewTrackingController?
+    @State private var controllerOptimizationContextId: String?
     @State private var lastFrame: CGRect?
 
     func body(content: Content) -> some View {
@@ -60,18 +62,27 @@ struct ViewTrackingModifier: ViewModifier {
         guard client.hasConsent(method: "trackView") else {
             controller?.onDisappear()
             controller = nil
+            controllerOptimizationContextId = nil
             return
+        }
+
+        if controllerOptimizationContextId != optimizationContextId {
+            controller?.onDisappear()
+            controller = nil
+            controllerOptimizationContextId = nil
         }
 
         if controller == nil {
             controller = ViewTrackingController(
                 client: client,
                 entry: entry,
+                optimizationContextId: optimizationContextId,
                 selectedOptimization: selectedOptimization,
                 minVisibleRatio: minVisibleRatio,
                 dwellTimeMs: dwellTimeMs,
                 viewDurationUpdateIntervalMs: viewDurationUpdateIntervalMs
             )
+            controllerOptimizationContextId = optimizationContextId
         }
     }
 

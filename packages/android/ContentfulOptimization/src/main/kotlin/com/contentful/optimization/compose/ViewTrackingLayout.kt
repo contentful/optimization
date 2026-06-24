@@ -23,6 +23,7 @@ public fun Modifier.trackViews(
     viewDurationUpdateIntervalMs: Int,
     enabled: Boolean,
     client: OptimizationClient,
+    optimizationContextId: String? = null,
 ): Modifier {
     val state by client.state.collectAsState()
     val trackingAllowed = state.consent == true || client.hasConsent("trackView")
@@ -30,10 +31,11 @@ public fun Modifier.trackViews(
     if (!enabled) return this
 
     val scrollContext = LocalScrollContext.current
-    val controller = remember(entry, selectedOptimization) {
+    val controller = remember(entry, selectedOptimization, optimizationContextId) {
         ViewTrackingController(
             client = client,
             entry = entry,
+            optimizationContextId = optimizationContextId,
             selectedOptimization = selectedOptimization,
             minVisibleRatio = minVisibleRatio,
             dwellTimeMs = dwellTimeMs,

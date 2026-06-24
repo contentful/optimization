@@ -335,6 +335,7 @@ describe('useViewportTracking', () => {
       }
       const { onLayout } = useViewportTracking({
         entry,
+        optimizationContextId: 'ctx-viewport',
         selectedOptimization,
         dwellTimeMs: 100,
         minVisibleRatio: 0.5,
@@ -347,6 +348,7 @@ describe('useViewportTracking', () => {
       const call = getCallArg(0)
       expect(call.componentId).toBe('comp-base')
       expect(call.experienceId).toBe('exp-1')
+      expect(call.optimizationContextId).toBe('ctx-viewport')
       expect(call.variantIndex).toBe(2)
     })
   })

@@ -32,6 +32,11 @@ export interface UseViewportTrackingOptions {
   selectedOptimization?: SelectedOptimization
 
   /**
+   * Opaque runtime-owned optimization context ID for event-stream enrichment.
+   */
+  optimizationContextId?: string
+
+  /**
    * Minimum visibility ratio (0.0 - 1.0) required to consider the entry visible.
    *
    * @defaultValue `0.8`
@@ -155,9 +160,11 @@ function resetCycleState(cycle: ViewCycleState): void {
 export function extractTrackingMetadata(
   resolvedEntry: Entry,
   selectedOptimization?: SelectedOptimization,
+  optimizationContextId?: string,
 ): {
   componentId: string
   experienceId?: string
+  optimizationContextId?: string
   variantIndex: number
   sticky?: boolean
 } {
@@ -169,6 +176,7 @@ export function extractTrackingMetadata(
     return {
       componentId: componentId ?? resolvedEntry.sys.id,
       experienceId: selectedOptimization.experienceId,
+      optimizationContextId,
       variantIndex: selectedOptimization.variantIndex,
       sticky: selectedOptimization.sticky,
     }
@@ -177,6 +185,7 @@ export function extractTrackingMetadata(
   return {
     componentId: resolvedEntry.sys.id,
     experienceId: undefined,
+    optimizationContextId,
     variantIndex: 0,
     sticky: undefined,
   }
@@ -246,6 +255,7 @@ function getRemainingMsUntilNextFire(
  */
 export function useViewportTracking({
   entry,
+  optimizationContextId,
   selectedOptimization,
   minVisibleRatio,
   dwellTimeMs,
@@ -296,6 +306,8 @@ export function useViewportTracking({
   entryRef.current = entry
   const selectedOptimizationRef = useRef(selectedOptimization)
   selectedOptimizationRef.current = selectedOptimization
+  const optimizationContextIdRef = useRef(optimizationContextId)
+  optimizationContextIdRef.current = optimizationContextId
 
   const stickyStateRef = useRef<StickyState>({
     accepted: false,
@@ -335,10 +347,12 @@ export function useViewportTracking({
 
     const viewId = cycle.viewId ?? createViewId()
     const durationMs = Math.max(0, Math.round(cycle.accumulatedMs))
-    const { componentId, experienceId, variantIndex, sticky } = extractTrackingMetadata(
-      entryRef.current,
-      selectedOptimizationRef.current,
-    )
+    const { componentId, experienceId, optimizationContextId, variantIndex, sticky } =
+      extractTrackingMetadata(
+        entryRef.current,
+        selectedOptimizationRef.current,
+        optimizationContextIdRef.current,
+      )
 
     cycle.attempts += 1
 
@@ -361,6 +375,7 @@ export function useViewportTracking({
           componentId,
           viewId,
           experienceId,
+          ...(optimizationContextId === undefined ? {} : { optimizationContextId }),
           variantIndex,
           viewDurationMs: durationMs,
           sticky: shouldSendSticky ? true : undefined,
