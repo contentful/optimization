@@ -1,7 +1,7 @@
 import { createNextjsOptimization } from '@contentful/optimization-nextjs/server'
 import { optimizationConfig } from './config'
 
-const optimization = createNextjsOptimization({
+export const optimization = createNextjsOptimization({
   clientId: optimizationConfig.clientId,
   environment: optimizationConfig.environment,
   locale: optimizationConfig.locale,
@@ -12,5 +12,3 @@ const optimization = createNextjsOptimization({
     version: '0.1.0',
   },
 })
-
-export { optimization }

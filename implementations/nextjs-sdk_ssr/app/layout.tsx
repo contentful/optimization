@@ -1,5 +1,5 @@
-import { AnalyticsEventDisplay } from '@/components/AnalyticsEventDisplay'
-import { APP_LOCALE, optimizationConfig } from '@/lib/config'
+import { TrackingLog } from '@/components/TrackingLog'
+import { APP_LOCALE, APP_PERSONALIZATION_CONSENT_COOKIE, optimizationConfig } from '@/lib/config'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
@@ -13,24 +13,13 @@ export const metadata: Metadata = {
     'Next.js App Router reference: the Next.js SDK resolves entries server-side and handles client-side tracking and interactive controls.',
 }
 
-function getHtmlLang(locale: string | undefined): string {
-  return locale?.split('-')[0] ?? 'en'
-}
-
-const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
-
-export default async function RootLayout({
-  children,
-}: Readonly<{
-  children: ReactNode
-}>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const cookieStore = await cookies()
   const appConsent = cookieStore.get(APP_PERSONALIZATION_CONSENT_COOKIE)?.value === 'granted'
-  const htmlLang = getHtmlLang(APP_LOCALE)
 
   return (
-    <html lang={htmlLang} className="h-full antialiased">
-      <body className="min-h-full flex flex-col">
+    <html lang={APP_LOCALE.split('-')[0]}>
+      <body>
         <OptimizationRoot
           clientId={optimizationConfig.clientId}
           environment={optimizationConfig.environment}
@@ -46,8 +35,8 @@ export default async function RootLayout({
           <Suspense>
             <NextAppAutoPageTracker initialPageEvent={appConsent ? 'skip' : 'emit'} />
           </Suspense>
-          <main className="flex-1 p-8 max-w-3xl mx-auto w-full grid gap-6">
-            <nav className="flex gap-3">
+          <div className="app-layout">
+            <nav>
               <Link data-testid="link-home" href="/">
                 Home
               </Link>
@@ -55,9 +44,13 @@ export default async function RootLayout({
                 Go to Page Two
               </Link>
             </nav>
-            {children}
-            <AnalyticsEventDisplay />
-          </main>
+            <div className="app-body">
+              <aside className="app-sidebar">
+                <TrackingLog />
+              </aside>
+              <main>{children}</main>
+            </div>
+          </div>
         </OptimizationRoot>
       </body>
     </html>

@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@contentful/optimization-nextjs": "0.0.0",
+    "e2e-web": "file:../../lib/e2e-web",
     "@contentful/optimization-web-preview-panel": "0.0.0",
     "@contentful/rich-text-react-renderer": "16.1.6",
     "@contentful/rich-text-types": "17.2.5",

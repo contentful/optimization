@@ -1,19 +1,21 @@
-import { ENTRY_IDS, PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID } from '@/config/entries'
-import { APP_LOCALE } from '@/lib/config'
-import { fetchEntries } from '@/lib/contentful-client'
-import { optimization } from '@/lib/optimization-server'
+import { ControlPanel } from '@/components/ControlPanel'
+import { EntryCard } from '@/components/EntryCard'
+import { APP_LOCALE, APP_PERSONALIZATION_CONSENT_COOKIE } from '@/lib/config'
+import { loadPageEntries } from '@/lib/contentful'
+import { optimization } from '@/lib/optimization'
+import { toIdMap } from '@/lib/util'
 import { getNextjsServerOptimizationData } from '@contentful/optimization-nextjs/server'
+import { PAGES } from 'e2e-web'
 import { cookies, headers } from 'next/headers'
 import Link from 'next/link'
-
-const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
 
 export default async function PageTwo() {
   const cookieStore = await cookies()
   const headerStore = await headers()
   const appConsent = cookieStore.get(APP_PERSONALIZATION_CONSENT_COOKIE)?.value === 'granted'
-  const [baselineEntries, optimizationData] = await Promise.all([
-    fetchEntries(ENTRY_IDS, APP_LOCALE),
+
+  const [entries, optimizationData] = await Promise.all([
+    loadPageEntries(PAGES.pageTwo.ids),
     appConsent
       ? getNextjsServerOptimizationData(optimization, {
           consent: { events: true, persistence: true },
@@ -23,57 +25,50 @@ export default async function PageTwo() {
         }).then(({ data }) => data)
       : undefined,
   ])
-  const pageTwoAutoEntry = baselineEntries.find((entry) => entry.sys.id === PAGE_TWO_AUTO_ENTRY_ID)
-  const pageTwoManualEntry = baselineEntries.find(
-    (entry) => entry.sys.id === PAGE_TWO_MANUAL_ENTRY_ID,
-  )
-  const resolvedAutoEntry = pageTwoAutoEntry
-    ? optimization.resolveOptimizedEntry(pageTwoAutoEntry, optimizationData?.selectedOptimizations)
-        .entry
-    : pageTwoAutoEntry
-  const resolvedManualEntry = pageTwoManualEntry
-    ? optimization.resolveOptimizedEntry(
-        pageTwoManualEntry,
-        optimizationData?.selectedOptimizations,
-      ).entry
-    : pageTwoManualEntry
+
+  const entriesById = toIdMap(entries)
+  const autoEntry = entriesById.get(PAGES.pageTwo.auto)
+  const manualEntry = entriesById.get(PAGES.pageTwo.manual)
+  const autoResolved = autoEntry
+    ? optimization.resolveOptimizedEntry(autoEntry, optimizationData?.selectedOptimizations)
+    : undefined
+  const manualResolved = manualEntry
+    ? optimization.resolveOptimizedEntry(manualEntry, optimizationData?.selectedOptimizations)
+    : undefined
 
   return (
-    <section data-testid="page-two-view" className="grid gap-4">
-      <h2 className="text-lg font-medium">Page Two</h2>
+    <section data-testid="page-two-view">
+      <h2>Page Two</h2>
 
-      <section data-testid="page-two-status" className="grid gap-1">
-        <p>Server-rendered Next.js route</p>
+      <ControlPanel />
+
+      <section className="page-section" data-testid="page-two-optimization">
+        <header className="page-section__header">
+          <h3>Page Two Optimized Content</h3>
+        </header>
+        {autoEntry && autoResolved ? (
+          <div>
+            <p>Auto tracked example</p>
+            <EntryCard baselineEntry={autoEntry} resolvedData={autoResolved} viewTracking="auto" />
+          </div>
+        ) : (
+          <p>Auto tracked entry is unavailable.</p>
+        )}
+        {manualEntry && manualResolved ? (
+          <div>
+            <p>Manual tracked example</p>
+            <EntryCard
+              baselineEntry={manualEntry}
+              resolvedData={manualResolved}
+              viewTracking="manual"
+            />
+          </div>
+        ) : (
+          <p>Manual tracked entry is unavailable.</p>
+        )}
       </section>
 
-      <section data-testid="page-two-optimization" className="grid gap-3">
-        <h3>Page Two Optimized Content</h3>
-        <div>
-          <p>Auto tracked example</p>
-          <p>
-            {typeof resolvedAutoEntry?.fields.text === 'string'
-              ? resolvedAutoEntry.fields.text
-              : ''}
-          </p>
-        </div>
-        <div>
-          <p>Manual tracked example</p>
-          <p>
-            {typeof resolvedManualEntry?.fields.text === 'string'
-              ? resolvedManualEntry.fields.text
-              : ''}
-          </p>
-        </div>
-      </section>
-
-      <section data-testid="page-two-conversion" className="grid gap-2">
-        <h3>Conversion Step Demo</h3>
-        <button data-testid="page-two-demo-cta" type="button">
-          Trigger Page Two CTA Event
-        </button>
-      </section>
-
-      <Link data-testid="link-back-home" href="/">
+      <Link data-testid="link-back-home" href={PAGES.home.path}>
         Back to Home
       </Link>
     </section>
