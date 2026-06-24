@@ -1,19 +1,11 @@
 import { expect, test } from '@playwright/test'
 
 const RENDERING_MODE = (process.env.RENDERING_MODE ?? 'csr').toLowerCase()
+const isSSR = RENDERING_MODE === 'ssr'
+const isHybrid = RENDERING_MODE === 'hybrid'
 
-test.describe('server-side tracking attributes', () => {
-  test.skip(RENDERING_MODE !== 'ssr', 'Server-side tracking attribute tests only run in SSR mode.')
-
-  test('renders tracking attributes on first paint', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-
-    const entry = page.locator('[data-ctfl-entry-id]').first()
-    await expect(entry).toBeVisible()
-    await expect(entry).toHaveAttribute('data-ctfl-baseline-id', /.+/)
-    await expect(entry).toHaveAttribute('data-ctfl-variant-index', /\d+/)
-  })
+test.describe('server-side rendering behavior', () => {
+  test.skip(!isSSR && !isHybrid, 'SSR behavior tests only run in ssr or hybrid mode.')
 
   test('does not issue a client Experience request after consented SSR hydration', async ({
     baseURL,
@@ -34,5 +26,17 @@ test.describe('server-side tracking attributes', () => {
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
 
     expect(clientExperienceRequests).toEqual([])
+  })
+
+  test('renders server-side tracking attributes on first paint', async ({ page }) => {
+    test.skip(!isSSR, 'Tracking attributes are only emitted in SSR mode.')
+
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+
+    const entry = page.locator('[data-ctfl-entry-id]').first()
+    await expect(entry).toBeVisible()
+    await expect(entry).toHaveAttribute('data-ctfl-baseline-id', /.+/)
+    await expect(entry).toHaveAttribute('data-ctfl-variant-index', /\d+/)
   })
 })
