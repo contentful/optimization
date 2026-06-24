@@ -9,28 +9,22 @@ import {
 } from '@contentful/optimization-nextjs/client'
 import { PAGES } from 'e2e-web'
 import Link from 'next/link'
-import { useEffect, useMemo, type JSX } from 'react'
+import { useEffect, type JSX } from 'react'
 
 function isIdentifiedProfile(profile: ReturnType<typeof useProfileState>): boolean {
   return profile !== undefined && Boolean(profile.traits.identified)
 }
 
-function toEntryMap(entries: ContentEntryType[]): Map<string, ContentEntryType> {
-  return new Map(entries.map((entry) => [entry.sys.id, entry]))
+export interface PageTwoPageProps {
+  readonly autoEntry?: ContentEntryType
+  readonly manualEntry?: ContentEntryType
 }
 
-export function PageTwoPage({
-  baselineEntries,
-}: {
-  readonly baselineEntries: ContentEntryType[]
-}): JSX.Element {
+export function PageTwoPage({ autoEntry, manualEntry }: PageTwoPageProps): JSX.Element {
   const consent = useConsentState()
   const profile = useProfileState()
   const sdk = useOptimization()
-  const entriesById = useMemo(() => toEntryMap(baselineEntries), [baselineEntries])
   const isIdentified = isIdentifiedProfile(profile)
-  const pageTwoAutoEntry = entriesById.get(PAGES.pageTwo.auto)
-  const pageTwoManualEntry = entriesById.get(PAGES.pageTwo.manual)
 
   useEffect(() => {
     void sdk.trackView({
@@ -61,19 +55,19 @@ export function PageTwoPage({
         <header className="page-section__header">
           <h3>Page Two Optimized Content</h3>
         </header>
-        {pageTwoAutoEntry ? (
+        {autoEntry ? (
           <div>
             <p>Auto tracked example</p>
-            <EntryCard entry={pageTwoAutoEntry} viewTracking="auto" />
+            <EntryCard entry={autoEntry} viewTracking="auto" />
           </div>
         ) : (
           <p>Auto tracked entry is unavailable.</p>
         )}
 
-        {pageTwoManualEntry ? (
+        {manualEntry ? (
           <div>
             <p>Manual tracked example</p>
-            <EntryCard entry={pageTwoManualEntry} viewTracking="manual" />
+            <EntryCard entry={manualEntry} viewTracking="manual" />
           </div>
         ) : (
           <p>Manual tracked entry is unavailable.</p>

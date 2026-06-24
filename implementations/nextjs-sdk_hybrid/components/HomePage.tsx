@@ -3,21 +3,26 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { EntryCard } from '@/components/EntryCard'
 import type { ContentEntry as ContentEntryType } from '@/lib/contentful'
-import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
-import { useMemo, type JSX } from 'react'
+import type { EntryClickScenario } from 'e2e-web'
+import { type JSX } from 'react'
 
-function toEntryMap(entries: ContentEntryType[]): Map<string, ContentEntryType> {
-  return new Map(entries.map((entry) => [entry.sys.id, entry]))
+interface AutoEntry {
+  entry: ContentEntryType
+  clickScenario?: EntryClickScenario
+  nested: boolean
+}
+
+export interface HomePageProps {
+  readonly liveUpdatesEntry?: ContentEntryType
+  readonly autoEntries: AutoEntry[]
+  readonly manualEntries: ContentEntryType[]
 }
 
 export function HomePage({
-  baselineEntries,
-}: {
-  readonly baselineEntries: ContentEntryType[]
-}): JSX.Element {
-  const entriesById = useMemo(() => toEntryMap(baselineEntries), [baselineEntries])
-  const liveUpdatesBaselineEntry = entriesById.get(PAGES.home.liveUpdates)
-
+  liveUpdatesEntry,
+  autoEntries,
+  manualEntries,
+}: HomePageProps): JSX.Element {
   return (
     <>
       <div className="page-header">
@@ -38,29 +43,21 @@ export function HomePage({
             per-component control is available through the <code>liveUpdates</code> prop.
           </p>
         </header>
-        {liveUpdatesBaselineEntry ? (
+        {liveUpdatesEntry ? (
           <div className="sections-grid" data-testid="live-updates-examples">
             <section data-testid="live-updates-default">
               <h3>Default (inherits global setting)</h3>
-              <EntryCard entry={liveUpdatesBaselineEntry} testId="live-default" />
+              <EntryCard entry={liveUpdatesEntry} testId="live-default" />
             </section>
 
             <section data-testid="live-updates-enabled">
               <h3>Always On (liveUpdates=true)</h3>
-              <EntryCard
-                entry={liveUpdatesBaselineEntry}
-                liveUpdates={true}
-                testId="live-enabled"
-              />
+              <EntryCard entry={liveUpdatesEntry} liveUpdates={true} testId="live-enabled" />
             </section>
 
             <section data-testid="live-updates-locked">
               <h3>Locked (liveUpdates=false)</h3>
-              <EntryCard
-                entry={liveUpdatesBaselineEntry}
-                liveUpdates={false}
-                testId="live-locked"
-              />
+              <EntryCard entry={liveUpdatesEntry} liveUpdates={false} testId="live-locked" />
             </section>
           </div>
         ) : (
@@ -74,27 +71,20 @@ export function HomePage({
             <h2>Auto Observed Entries</h2>
           </header>
           <div id="auto-observed" className="entry-grid">
-            {PAGES.home.auto.map((entryId) => {
-              const entry = entriesById.get(entryId)
-              if (!entry) return null
-
-              if (entry.sys.contentType.sys.id === 'nestedContent') {
-                return (
-                  <section key={entry.sys.id} data-testid={`nested-content-entry-${entry.sys.id}`}>
-                    <EntryCard entry={entry} />
-                  </section>
-                )
-              }
-
-              return (
+            {autoEntries.map(({ entry, clickScenario, nested }) =>
+              nested ? (
+                <section key={entry.sys.id} data-testid={`nested-content-entry-${entry.sys.id}`}>
+                  <EntryCard entry={entry} />
+                </section>
+              ) : (
                 <EntryCard
                   key={entry.sys.id}
-                  clickScenario={CLICK_SCENARIOS[entry.sys.id]}
+                  clickScenario={clickScenario}
                   entry={entry}
                   viewTracking="auto"
                 />
-              )
-            })}
+              ),
+            )}
           </div>
         </section>
 
@@ -103,11 +93,9 @@ export function HomePage({
             <h2>Manually Observed Entries</h2>
           </header>
           <div id="manually-observed" className="entry-grid">
-            {PAGES.home.manual.map((entryId) => {
-              const entry = entriesById.get(entryId)
-              if (!entry) return null
-              return <EntryCard key={entry.sys.id} entry={entry} viewTracking="manual" />
-            })}
+            {manualEntries.map((entry) => (
+              <EntryCard key={entry.sys.id} entry={entry} viewTracking="manual" />
+            ))}
           </div>
         </section>
       </div>
