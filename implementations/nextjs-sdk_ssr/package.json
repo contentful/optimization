@@ -19,12 +19,8 @@
     "serve:stop": "pnpm serve:app:stop && pnpm serve:mocks:stop",
     "serve:e2e": "PUBLIC_APP_ENVIRONMENT=staging pnpm build && PUBLIC_APP_ENVIRONMENT=staging pnpm start",
     "test:e2e": "sh -c 'PUBLIC_APP_ENVIRONMENT=staging pnpm serve && PUBLIC_APP_ENVIRONMENT=staging RENDERING_MODE=ssr pnpm --dir ../../lib/e2e-web test \"$@\"; E2E_RESULT=$?; pnpm serve:stop; exit $E2E_RESULT' --",
-    "test:e2e:codegen": "playwright codegen",
     "test:e2e:report": "pnpm --dir ../../lib/e2e-web test:report",
     "test:e2e:ui": "RENDERING_MODE=ssr pnpm --dir ../../lib/e2e-web test:ui",
-    "implementation:playwright:install": "playwright install",
-    "implementation:playwright:install-deps": "playwright install-deps",
-    "implementation:setup:e2e": "pnpm implementation:playwright:install && pnpm implementation:playwright:install-deps",
     "test:unit": "echo \"No unit tests necessary\"",
     "typecheck": "tsc --noEmit",
     "lint": "eslint"
@@ -41,7 +37,6 @@
     "react-dom": "19.2.5"
   },
   "devDependencies": {
-    "@playwright/test": "1.58.2",
     "@tailwindcss/postcss": "4.1.11",
     "@types/node": "24.11.0",
     "@types/react": "19.2.14",
