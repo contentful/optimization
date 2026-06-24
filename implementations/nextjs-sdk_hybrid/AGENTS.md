@@ -15,14 +15,22 @@ server/client SDK composition; app code imports only Next.js SDK subpaths.
 - Use `liveUpdates={true}` on `<OptimizedEntry>` for entries that should re-resolve on profile
   changes.
 - Use the SDK's `OptimizationRoot` directly; do not add custom provider wrappers around it.
+- Entry IDs and click scenarios come from the shared `e2e-web` fixtures (`PAGES`, `CLICK_SCENARIOS`
+  from `e2e-web`). Do not duplicate these constants locally.
 - If consumed packages changed, run `pnpm build:pkgs` and reinstall before trusting results.
 
 ## Commands
 
 - `pnpm implementation:run -- nextjs-sdk_hybrid <script>` with `implementation:install`,
-  `typecheck`, `lint`, `build`, `dev`, `serve`, `serve:stop`, `implementation:setup:e2e`, or
-  `implementation:test:e2e:run`.
+  `typecheck`, `lint`, `build`, `dev`, `serve`, `serve:stop`, or `test:e2e`.
 - Root wrappers: `pnpm setup:e2e:nextjs-sdk_hybrid` and `pnpm test:e2e:nextjs-sdk_hybrid`.
+
+## E2E
+
+- Shared behavioral tests run via `lib/e2e-web` with `RENDERING_MODE=hybrid` (port 3002).
+- The local `e2e/` directory only contains hybrid-specific tests such as `nextjs-hydration.spec.ts`.
+- `test:e2e` starts the app + mocks via `serve`, then delegates to `lib/e2e-web`.
+- `test:e2e:ui` opens the shared Playwright UI with the hybrid target pre-configured.
 
 ## Validate
 

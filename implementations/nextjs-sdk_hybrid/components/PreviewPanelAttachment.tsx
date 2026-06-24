@@ -22,11 +22,11 @@ export function PreviewPanelAttachment(): JSX.Element | null {
     previewPanelAttachmentStarted = true
     void Promise.all([
       import('@contentful/optimization-web-preview-panel'),
-      import('@/lib/contentful-client'),
+      import('@/lib/contentful'),
     ])
-      .then(async ([{ default: attachOptimizationPreviewPanel }, { getContentfulClient }]) => {
+      .then(async ([{ default: attachOptimizationPreviewPanel }, { client }]) => {
         await attachOptimizationPreviewPanel({
-          contentful: getContentfulClient(),
+          contentful: client,
           nonce: undefined,
         })
       })

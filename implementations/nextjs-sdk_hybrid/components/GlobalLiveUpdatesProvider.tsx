@@ -1,15 +1,7 @@
 'use client'
 
-import { LiveUpdatesProvider, useOptimizationContext } from '@contentful/optimization-nextjs/client'
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type JSX,
-  type ReactNode,
-} from 'react'
+import { LiveUpdatesProvider } from '@contentful/optimization-nextjs/client'
+import { createContext, useContext, useMemo, useState, type JSX, type ReactNode } from 'react'
 
 interface GlobalLiveUpdatesContextValue {
   readonly globalLiveUpdates: boolean
@@ -33,7 +25,6 @@ export function GlobalLiveUpdatesProvider({
 }: {
   readonly children: ReactNode
 }): JSX.Element {
-  const { sdk, isReady } = useOptimizationContext()
   const [globalLiveUpdates, setGlobalLiveUpdates] = useState(false)
   const value = useMemo<GlobalLiveUpdatesContextValue>(
     () => ({
@@ -44,18 +35,6 @@ export function GlobalLiveUpdatesProvider({
     }),
     [globalLiveUpdates],
   )
-
-  useEffect(() => {
-    if (!sdk || !isReady) {
-      return
-    }
-
-    const subscription = sdk.states.flag('boolean').subscribe(() => undefined)
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [isReady, sdk])
 
   return (
     <GlobalLiveUpdatesContext.Provider value={value}>

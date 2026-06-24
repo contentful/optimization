@@ -1,6 +1,6 @@
+import type { ContentEntry } from '@/lib/contentful'
 import { OptimizedEntry } from '@contentful/optimization-nextjs/client'
 import type { JSX } from 'react'
-import type { ContentEntry } from '../types/contentful'
 
 interface LiveUpdatesExampleEntryProps {
   baselineEntry: ContentEntry
@@ -21,7 +21,7 @@ export function LiveUpdatesExampleEntry({
         const fullLabel = `${text} [Entry: ${resolvedEntry.sys.id}]`
 
         return (
-          <div data-testid={`content-${testIdPrefix}`}>
+          <div data-test-entry-id={resolvedEntry.sys.id} data-testid={`content-${testIdPrefix}`}>
             <p data-testid={`entry-text-${testIdPrefix}`} aria-label={fullLabel}>
               {text}
             </p>

@@ -4,11 +4,9 @@ import {
 } from '@contentful/optimization-nextjs/server'
 import { cookies, headers } from 'next/headers'
 import { cache } from 'react'
-import { APP_LOCALE, optimizationConfig } from './config'
+import { APP_LOCALE, APP_PERSONALIZATION_CONSENT_COOKIE, optimizationConfig } from './config'
 
-const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
-
-const optimization = createNextjsOptimization({
+export const optimization = createNextjsOptimization({
   clientId: optimizationConfig.clientId,
   environment: optimizationConfig.environment,
   locale: optimizationConfig.locale,
@@ -20,7 +18,8 @@ const optimization = createNextjsOptimization({
   },
 })
 
-const getOptimizationData = cache(async () => {
+// cache() deduplicates across layout and page, which Next.js renders in parallel per request
+export const getOptimizationData = cache(async () => {
   const cookieStore = await cookies()
   const headerStore = await headers()
   const appConsent = cookieStore.get(APP_PERSONALIZATION_CONSENT_COOKIE)?.value === 'granted'
@@ -36,5 +35,3 @@ const getOptimizationData = cache(async () => {
 
   return data
 })
-
-export { getOptimizationData, optimization }

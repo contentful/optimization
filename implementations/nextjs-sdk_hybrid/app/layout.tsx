@@ -2,12 +2,12 @@ import { AnalyticsEventDisplay } from '@/components/AnalyticsEventDisplay'
 import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
 import { PreviewPanelAttachment } from '@/components/PreviewPanelAttachment'
 import { APP_LOCALE, optimizationConfig } from '@/lib/config'
-import { getOptimizationData } from '@/lib/optimization-server'
+import { getOptimizationData } from '@/lib/optimization'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
+import 'e2e-web/theme.css'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { type ReactNode } from 'react'
-import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Optimization Next.js SDK Hybrid',
@@ -36,8 +36,8 @@ export default async function RootLayout({
     : undefined
 
   return (
-    <html lang={htmlLang} className="h-full antialiased">
-      <body className="min-h-full flex flex-col">
+    <html lang={htmlLang}>
+      <body>
         <OptimizationRoot
           clientId={optimizationConfig.clientId}
           environment={optimizationConfig.environment}
@@ -54,18 +54,22 @@ export default async function RootLayout({
           <GlobalLiveUpdatesProvider>
             <PreviewPanelAttachment />
             <NextAppAutoPageTracker initialPageEvent={defaults ? 'skip' : 'emit'} />
-            <main className="flex-1 p-8 max-w-3xl mx-auto w-full grid gap-6">
-              <nav className="flex gap-3">
+            <div className="app-shell">
+              <nav>
                 <Link data-testid="link-home" href="/">
                   Home
                 </Link>
                 <Link data-testid="link-page-two" href="/page-two">
-                  Go to Page Two
+                  Page Two
                 </Link>
               </nav>
-              {children}
-              <AnalyticsEventDisplay />
-            </main>
+              <div className="app-body">
+                <aside className="app-sidebar">
+                  <AnalyticsEventDisplay />
+                </aside>
+                <main>{children}</main>
+              </div>
+            </div>
           </GlobalLiveUpdatesProvider>
         </OptimizationRoot>
       </body>

@@ -52,7 +52,7 @@
     "setup:e2e:node-sdk+web-sdk": "pnpm run build:pkgs && pnpm run implementation:run -- node-sdk+web-sdk implementation:install && pnpm run implementation:run -- node-sdk+web-sdk implementation:setup:e2e",
     "setup:e2e:react-native-sdk": "pnpm run build:pkgs && pnpm run implementation:run -- react-native-sdk implementation:install && pnpm run implementation:run -- react-native-sdk implementation:setup:e2e",
     "setup:e2e:nextjs-sdk_ssr": "pnpm run build:pkgs && pnpm run implementation:run -- nextjs-sdk_ssr implementation:install && pnpm run implementation:run -- nextjs-sdk_ssr implementation:setup:e2e",
-    "setup:e2e:nextjs-sdk_hybrid": "pnpm run build:pkgs && pnpm run implementation:run -- nextjs-sdk_hybrid implementation:install && pnpm run implementation:run -- nextjs-sdk_hybrid implementation:setup:e2e",
+    "setup:e2e:nextjs-sdk_hybrid": "pnpm run build:pkgs && pnpm run implementation:run -- nextjs-sdk_hybrid implementation:install && pnpm --dir lib/e2e-web setup:e2e",
     "setup:e2e:react-web-sdk": "pnpm run build:pkgs && pnpm run implementation:run -- react-web-sdk implementation:install && pnpm run implementation:run -- react-web-sdk implementation:setup:e2e",
     "setup:e2e:web-sdk_angular": "pnpm run build:pkgs && pnpm run implementation:run -- web-sdk_angular implementation:install && pnpm --dir lib/e2e-web setup:e2e",
     "setup:e2e:web-sdk_react": "pnpm run build:pkgs && pnpm run implementation:run -- web-sdk_react implementation:install && pnpm --dir lib/e2e-web setup:e2e",

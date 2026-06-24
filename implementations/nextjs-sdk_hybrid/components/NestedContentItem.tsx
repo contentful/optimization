@@ -1,7 +1,7 @@
+import type { ContentEntry } from '@/lib/contentful'
+import { isRecord } from '@/lib/util'
 import { OptimizedEntry } from '@contentful/optimization-nextjs/client'
 import type { JSX } from 'react'
-import type { ContentEntry } from '../types/contentful'
-import { isRecord } from '../utils/typeGuards'
 
 interface NestedContentItemProps {
   entry: ContentEntry

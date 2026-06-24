@@ -1,10 +1,10 @@
+import { RichTextRenderer } from '@/components/RichTextRenderer'
+import type { ContentEntry as ContentEntryType, RichTextDocument } from '@/lib/contentful'
 import { OptimizedEntry, useOptimization } from '@contentful/optimization-nextjs/client'
+import type { EntryClickScenario } from 'e2e-web'
 import type { JSX } from 'react'
 import { useEffect, useRef } from 'react'
-import { RichTextRenderer } from '../components/RichTextRenderer'
-import type { ContentEntry as ContentEntryType, RichTextDocument } from '../types/contentful'
 
-export type EntryClickScenario = 'direct' | 'descendant' | 'ancestor'
 type ViewTrackingMode = 'auto' | 'manual'
 
 interface ContentEntryProps {
@@ -93,6 +93,7 @@ export function ContentEntry({
                     }
                   : undefined
               }
+              data-ctfl-entry-id={asCf.sys.id}
               data-testid={`content-${entry.sys.id}`}
             >
               <div data-testid={`entry-text-${entry.sys.id}`} aria-label={fullLabel}>

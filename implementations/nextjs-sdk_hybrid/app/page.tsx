@@ -1,14 +1,8 @@
 import { HomePage } from '@/components/HomePage'
-import { ENTRY_IDS } from '@/config/entries'
-import { APP_LOCALE } from '@/lib/config'
-import { fetchEntries } from '@/lib/contentful-client'
-import { getOptimizationData } from '@/lib/optimization-server'
+import { loadPageEntries } from '@/lib/contentful'
+import { PAGES } from 'e2e-web'
 
 export default async function Home() {
-  const [baselineEntries] = await Promise.all([
-    fetchEntries(ENTRY_IDS, APP_LOCALE),
-    getOptimizationData(),
-  ])
-
+  const baselineEntries = await loadPageEntries(PAGES.home.ids)
   return <HomePage baselineEntries={baselineEntries} />
 }
