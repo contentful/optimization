@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { runIf } from './utils'
 
 test.describe('Server-Rendering Behavior', () => {
-  runIf('SSR')
+  runIf('HYDRATION')
 
   test('does not issue a client Experience request after consented SSR hydration', async ({
     baseURL,
