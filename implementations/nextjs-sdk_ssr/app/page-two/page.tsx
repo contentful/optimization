@@ -1,4 +1,5 @@
 import { ControlPanel } from '@/components/ControlPanel'
+import { CustomViewTracker } from '@/components/CustomViewTracker'
 import { EntryCard } from '@/components/EntryCard'
 import { APP_LOCALE, APP_PERSONALIZATION_CONSENT_COOKIE } from '@/lib/config'
 import { loadPageEntries } from '@/lib/contentful'
@@ -38,39 +39,51 @@ export default async function PageTwo() {
 
   return (
     <section data-testid="page-two-view">
-      <h2>Page Two</h2>
+      <div className="page-header">
+        <Link data-testid="link-back-home" href={PAGES.home.path}>
+          Back to Home
+        </Link>
+        <h1>Page Two</h1>
+      </div>
 
-      <ControlPanel />
+      <CustomViewTracker componentId="page-two-hero" />
+      <ControlPanel demoCTA />
 
-      <section className="page-section" data-testid="page-two-optimization">
-        <header className="page-section__header">
-          <h3>Page Two Optimized Content</h3>
-        </header>
-        {autoEntry && autoResolved ? (
-          <div>
-            <p>Auto tracked example</p>
-            <EntryCard baselineEntry={autoEntry} resolvedData={autoResolved} viewTracking="auto" />
+      <div className="sections-grid sections-grid--split" data-testid="page-two-optimization">
+        <section className="page-section">
+          <header className="page-section__header">
+            <h2>Auto-observed</h2>
+          </header>
+          <div className="entry-grid">
+            {autoEntry && autoResolved ? (
+              <EntryCard
+                baselineEntry={autoEntry}
+                resolvedData={autoResolved}
+                viewTracking="auto"
+              />
+            ) : (
+              <p>Auto tracked entry is unavailable.</p>
+            )}
           </div>
-        ) : (
-          <p>Auto tracked entry is unavailable.</p>
-        )}
-        {manualEntry && manualResolved ? (
-          <div>
-            <p>Manual tracked example</p>
-            <EntryCard
-              baselineEntry={manualEntry}
-              resolvedData={manualResolved}
-              viewTracking="manual"
-            />
-          </div>
-        ) : (
-          <p>Manual tracked entry is unavailable.</p>
-        )}
-      </section>
+        </section>
 
-      <Link data-testid="link-back-home" href={PAGES.home.path}>
-        Back to Home
-      </Link>
+        <section className="page-section">
+          <header className="page-section__header">
+            <h2>Manually-observed</h2>
+          </header>
+          <div className="entry-grid">
+            {manualEntry && manualResolved ? (
+              <EntryCard
+                baselineEntry={manualEntry}
+                resolvedData={manualResolved}
+                viewTracking="manual"
+              />
+            ) : (
+              <p>Manual tracked entry is unavailable.</p>
+            )}
+          </div>
+        </section>
+      </div>
     </section>
   )
 }

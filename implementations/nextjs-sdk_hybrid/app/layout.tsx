@@ -1,7 +1,7 @@
 import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
-import { APP_LOCALE, optimizationConfig } from '@/lib/config'
+import { appConfig, optimizationConfig } from '@/lib/config'
 import { getOptimizationData } from '@/lib/optimization'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
 import 'e2e-web/theme.css'
@@ -26,7 +26,7 @@ export default async function RootLayout({
   children: ReactNode
 }>) {
   const optimizationData = await getOptimizationData()
-  const htmlLang = getHtmlLang(APP_LOCALE)
+  const htmlLang = getHtmlLang(appConfig.locale)
   const defaults = optimizationData
     ? {
         profile: optimizationData.profile,
@@ -41,7 +41,7 @@ export default async function RootLayout({
         <OptimizationRoot
           clientId={optimizationConfig.clientId}
           environment={optimizationConfig.environment}
-          locale={APP_LOCALE}
+          locale={appConfig.locale}
           api={optimizationConfig.api}
           trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
           logLevel="debug"

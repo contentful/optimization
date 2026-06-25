@@ -26,14 +26,7 @@ export interface EntryCardProps {
 const HOVER_DURATION_UPDATE_INTERVAL_MS = 1000
 
 function isRichTextField(field: unknown): field is RichTextDocument {
-  return (
-    typeof field === 'object' &&
-    field !== null &&
-    'nodeType' in field &&
-    (field as { nodeType: unknown }).nodeType === 'document' &&
-    'content' in field &&
-    Array.isArray((field as { content: unknown }).content)
-  )
+  return isRecord(field) && field.nodeType === 'document' && Array.isArray(field.content)
 }
 
 function isEntry(value: unknown): value is ContentEntryType {

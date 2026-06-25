@@ -1,7 +1,25 @@
 'use client'
 
-import { useOptimization, useOptimizationContext } from '@contentful/optimization-nextjs/client'
+import {
+  useConsentState,
+  useOptimization,
+  useOptimizationActions,
+  useOptimizationContext,
+} from '@contentful/optimization-nextjs/client'
 import { useEffect, useReducer, useRef, useState } from 'react'
+import { setAppConsent } from './util'
+
+export function useConsent(): {
+  consent: boolean | undefined
+  setConsent: (value: boolean) => void
+} {
+  const consent = useConsentState()
+  const { consent: setConsent } = useOptimizationActions()
+  useEffect(() => {
+    if (typeof consent === 'boolean') setAppConsent(consent)
+  }, [consent])
+  return { consent, setConsent }
+}
 
 const MS_PER_SECOND = 1000
 const TICK_INTERVAL_SECONDS = 5

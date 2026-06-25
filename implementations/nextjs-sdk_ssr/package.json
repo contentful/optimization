@@ -17,7 +17,7 @@
     "serve:mocks": "pm2 start --name nextjs-sdk-ssr-mocks \"pnpm --dir ../../lib/mocks serve\"",
     "serve:mocks:stop": "pm2 stop nextjs-sdk-ssr-mocks && pm2 delete nextjs-sdk-ssr-mocks",
     "serve:stop": "pnpm serve:app:stop && pnpm serve:mocks:stop",
-    "serve:e2e": "PUBLIC_APP_ENVIRONMENT=staging pnpm build && PUBLIC_APP_ENVIRONMENT=staging pnpm start",
+    "serve:e2e": "pnpm build && pnpm start",
     "test:e2e": "RENDERING_MODE=ssr pnpm --dir ../../lib/e2e-web test",
     "test:e2e:report": "pnpm --dir ../../lib/e2e-web test:report",
     "test:e2e:ui": "RENDERING_MODE=ssr pnpm --dir ../../lib/e2e-web test:ui",

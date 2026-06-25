@@ -1,6 +1,6 @@
 'use client'
 
-import { useOptimizationContext } from '@contentful/optimization-nextjs/client'
+import { useOptimization, useOptimizationContext } from '@contentful/optimization-nextjs/client'
 import { useEffect, useReducer, useRef, useState } from 'react'
 
 const MS_PER_SECOND = 1000
@@ -54,4 +54,42 @@ export function useEventStream<T>(
   }, [isReady, sdk])
 
   return { events, rawCount }
+}
+
+export function useFlagSubscription(flagName: string): unknown {
+  const { sdk, isReady } = useOptimizationContext()
+  const [value, setValue] = useState<unknown>(undefined)
+
+  useEffect(() => {
+    if (!sdk || !isReady) return
+    const subscription = sdk.states.flag(flagName).subscribe(setValue)
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [isReady, sdk, flagName])
+
+  return value
+}
+
+export function useManualViewTracking(
+  viewTracking: 'auto' | 'manual' | undefined,
+): (element: HTMLDivElement | null, entryId: string) => void {
+  const sdk = useOptimization()
+  const trackedElement = useRef<HTMLDivElement | null>(null)
+
+  useEffect(
+    () => () => {
+      const { current } = trackedElement
+      if (current) sdk.tracking.clearElement('views', current)
+    },
+    [sdk.tracking],
+  )
+
+  return (element: HTMLDivElement | null, entryId: string): void => {
+    const { current: previous } = trackedElement
+    if (previous && previous !== element) sdk.tracking.clearElement('views', previous)
+    trackedElement.current = element
+    if (!element || viewTracking !== 'manual') return
+    sdk.tracking.enableElement('views', element, { data: { entryId } })
+  }
 }

@@ -4,7 +4,8 @@ import {
 } from '@contentful/optimization-nextjs/server'
 import { cookies, headers } from 'next/headers'
 import { cache } from 'react'
-import { APP_LOCALE, APP_PERSONALIZATION_CONSENT_COOKIE, optimizationConfig } from './config'
+import { appConfig, optimizationConfig } from './config'
+import { getAppConsent } from './util'
 
 export const optimization = createNextjsOptimization({
   clientId: optimizationConfig.clientId,
@@ -22,15 +23,14 @@ export const optimization = createNextjsOptimization({
 export const getOptimizationData = cache(async () => {
   const cookieStore = await cookies()
   const headerStore = await headers()
-  const appConsent = cookieStore.get(APP_PERSONALIZATION_CONSENT_COOKIE)?.value === 'granted'
 
-  if (!appConsent) return undefined
+  if (!getAppConsent(cookieStore)) return undefined
 
   const { data } = await getNextjsServerOptimizationData(optimization, {
     consent: { events: true, persistence: true },
     cookies: cookieStore,
     headers: headerStore,
-    locale: APP_LOCALE,
+    locale: appConfig.locale,
   })
 
   return data

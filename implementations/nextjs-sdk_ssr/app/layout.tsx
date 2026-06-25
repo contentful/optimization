@@ -1,11 +1,13 @@
+import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
+import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
 import { APP_LOCALE, APP_PERSONALIZATION_CONSENT_COOKIE, optimizationConfig } from '@/lib/config'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
+import 'e2e-web/theme.css'
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { Suspense, type ReactNode } from 'react'
-import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Optimization Next.js SDK SSR',
@@ -32,25 +34,28 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             version: '0.1.0',
           }}
         >
-          <Suspense>
-            <NextAppAutoPageTracker initialPageEvent={appConsent ? 'skip' : 'emit'} />
-          </Suspense>
-          <div className="app-layout">
-            <nav>
-              <Link data-testid="link-home" href="/">
-                Home
-              </Link>
-              <Link data-testid="link-page-two" href="/page-two">
-                Go to Page Two
-              </Link>
-            </nav>
-            <div className="app-body">
-              <aside className="app-sidebar">
-                <TrackingLog />
-              </aside>
-              <main>{children}</main>
+          <GlobalLiveUpdatesProvider>
+            <PreviewPanel />
+            <Suspense>
+              <NextAppAutoPageTracker initialPageEvent={appConsent ? 'skip' : 'emit'} />
+            </Suspense>
+            <div className="app-shell">
+              <nav>
+                <Link data-testid="link-home" href="/">
+                  Home
+                </Link>
+                <Link data-testid="link-page-two" href="/page-two">
+                  Page Two
+                </Link>
+              </nav>
+              <div className="app-body">
+                <aside className="app-sidebar">
+                  <TrackingLog />
+                </aside>
+                <main>{children}</main>
+              </div>
             </div>
-          </div>
+          </GlobalLiveUpdatesProvider>
         </OptimizationRoot>
       </body>
     </html>

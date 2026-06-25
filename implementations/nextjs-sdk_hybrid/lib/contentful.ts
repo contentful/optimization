@@ -1,7 +1,7 @@
 import type { Document } from '@contentful/rich-text-types'
 import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { createClient } from 'contentful'
-import { APP_LOCALE } from './config'
+import { appConfig } from './config'
 
 export interface ContentEntryFields {
   text?: EntryFieldTypes.Text | EntryFieldTypes.RichText
@@ -30,7 +30,7 @@ async function fetchEntry(entryId: string): Promise<ContentEntry | undefined> {
   try {
     return await client.getEntry<ContentEntrySkeleton>(entryId, {
       include: ENTRY_INCLUDE_DEPTH,
-      locale: APP_LOCALE,
+      locale: appConfig.locale,
     })
   } catch {
     return undefined

@@ -43,7 +43,7 @@ export function EntryCard({
   )
 
   return (
-    <section data-testid={`content-entry-${baselineEntry.sys.id}`}>
+    <section className="entry-card" data-testid={`content-entry-${baselineEntry.sys.id}`}>
       <ServerOptimizedEntry
         as="div"
         baselineEntry={baselineEntry}
