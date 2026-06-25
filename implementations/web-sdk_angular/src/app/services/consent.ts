@@ -1,3 +1,6 @@
+import { DOCUMENT, isPlatformBrowser } from '@angular/common'
+import { inject, Injectable, PLATFORM_ID } from '@angular/core'
+
 /**
  * App-level consent storage.
  *
@@ -28,12 +31,20 @@ export function readConsentFromRequest(request: Request): boolean {
 }
 
 /**
- * Persist the user's consent decision to a cookie the server can read on the
- * next request. Browser-only; no-ops in SSR contexts where `document` is
- * undefined.
+ * Browser-side consent cookie writer. Uses Angular's {@link DOCUMENT} token
+ * instead of touching the global `document` directly so the dependency is
+ * explicit and easy to swap in tests. No-ops on the server, where
+ * `@angular/platform-server` provides a stub `Document` that throws on
+ * `cookie` writes.
  */
-export function writeConsentCookie(consent: boolean): void {
-  if (typeof document === 'undefined') return
-  const value = consent ? 'granted' : 'denied'
-  document.cookie = `${APP_PERSONALIZATION_CONSENT_COOKIE}=${value}; Path=/; SameSite=Lax`
+@Injectable({ providedIn: 'root' })
+export class ConsentCookie {
+  private readonly document = inject(DOCUMENT)
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID))
+
+  write(consent: boolean): void {
+    if (!this.isBrowser) return
+    const value = consent ? 'granted' : 'denied'
+    this.document.cookie = `${APP_PERSONALIZATION_CONSENT_COOKIE}=${value}; Path=/; SameSite=Lax`
+  }
 }

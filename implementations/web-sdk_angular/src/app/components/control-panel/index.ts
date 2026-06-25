@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, input } from '@angular/core'
-import { writeConsentCookie } from '../../services/consent'
+import { ConsentCookie } from '../../services/consent'
 import { NgLiveUpdates } from '../../services/live-updates'
 import { NgContentfulOptimization } from '../../services/optimization'
 import { fromSdkState } from '../../utils'
@@ -12,6 +12,7 @@ export class ControlPanel {
   readonly onTrackConversion = input<(() => void) | undefined>(undefined)
 
   private readonly optimization = inject(NgContentfulOptimization)
+  private readonly consentCookie = inject(ConsentCookie)
   protected readonly liveUpdatesService = inject(NgLiveUpdates)
 
   protected readonly consent = this.optimization.consent
@@ -33,7 +34,7 @@ export class ControlPanel {
     // concern; the SDK only consumes the resolved boolean.
     effect(() => {
       const value = this.consent()
-      if (typeof value === 'boolean') writeConsentCookie(value)
+      if (typeof value === 'boolean') this.consentCookie.write(value)
     })
   }
 
