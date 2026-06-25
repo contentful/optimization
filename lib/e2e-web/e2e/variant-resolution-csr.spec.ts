@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { CLICK_SCENARIO_IDS, PAGES } from '../src/fixtures'
-import { skipIf } from './utils'
+import { runIf } from './utils'
 
 test.describe('Variant Resolution (CSR)', () => {
   // TODO: FIXME — SSR resolves variants on the server and requires consent+cookies for the
@@ -8,7 +8,7 @@ test.describe('Variant Resolution (CSR)', () => {
   // merge tag resolution are not available in SSR mode with JavaScript disabled.
 
   test.describe('unidentified user', () => {
-    skipIf('SSR')
+    runIf('CSR')
     test.use({ storageState: { cookies: [], origins: [] } })
 
     test.beforeEach(async ({ page }) => {
