@@ -46,7 +46,7 @@ React framework package.
 | Nested personalization       | Nested `<OptimizedEntry>` composition                                                      |
 | Consent gating               | `sdk.consent()` via `useOptimizationContext()`                                             |
 | Identify / reset             | `sdk.identify()` / `sdk.reset()` via `useOptimizationContext()`                            |
-| Auto view/click/hover        | `trackEntryInteraction` on `OptimizationRoot` + `OptimizedEntry` tracking props            |
+| Auto view/click/hover        | Default `OptimizationRoot` observers + `OptimizedEntry` tracking props                     |
 | Manual view tracking         | `<OptimizedEntry trackViews={false}>` + `sdk.tracking.enableElement()`                     |
 | Flag view tracking           | `sdk.states.flag('boolean').subscribe()`                                                   |
 | Analytics event stream       | `sdk.states.eventStream.subscribe()`                                                       |
@@ -67,13 +67,14 @@ for the entry contract.
 ## Prerequisites
 
 - Node.js >= 20.19.0 (24.15.0 recommended to match `.nvmrc`)
-- pnpm 10.x
+- pnpm
 
 ## Setup
 
 From the **repository root**:
 
 ```sh
+pnpm install
 pnpm build:pkgs
 pnpm implementation:run -- react-web-sdk implementation:install
 test -f implementations/react-web-sdk/.env || cp implementations/react-web-sdk/.env.example implementations/react-web-sdk/.env
@@ -124,7 +125,7 @@ pnpm setup:e2e:react-web-sdk
 pnpm test:e2e:react-web-sdk
 ```
 
-2. Or run the Playwright flow step by step:
+2. Or run the shared Playwright flow step by step:
 
 ```sh
 pnpm implementation:run -- react-web-sdk serve
@@ -133,7 +134,7 @@ pnpm implementation:run -- react-web-sdk serve
 In another terminal:
 
 ```sh
-pnpm --dir implementations/react-web-sdk --ignore-workspace exec playwright test
+IMPLEMENTATION=react-web-sdk pnpm --dir lib/e2e-web test
 ```
 
 When finished:
@@ -142,12 +143,23 @@ When finished:
 pnpm implementation:run -- react-web-sdk serve:stop
 ```
 
-## Environment variables
+This implementation uses the shared Playwright suite from
+[`lib/e2e-web`](../../lib/e2e-web/README.md). The implementation sets `IMPLEMENTATION=react-web-sdk`
+when invoking that suite.
 
-Copy `.env.example` to `.env`:
+Use Playwright UI or codegen when needed:
 
 ```sh
-cp .env.example .env
+pnpm implementation:run -- react-web-sdk test:e2e:ui
+pnpm implementation:run -- react-web-sdk test:e2e:codegen
+```
+
+## Environment variables
+
+The setup step creates the local `.env` file if needed:
+
+```sh
+test -f implementations/react-web-sdk/.env || cp implementations/react-web-sdk/.env.example implementations/react-web-sdk/.env
 ```
 
 All variables have mock-safe defaults. To use local mock endpoints (the default), no changes are
@@ -163,10 +175,11 @@ react-web-sdk/
 │   ├── App.tsx                         # Shared layout: SDK state, entry loading, nav, AnalyticsEventDisplay
 │   ├── components/
 │   │   ├── AnalyticsEventDisplay.tsx   # Live event stream panel (persists across routes)
+│   │   ├── ControlPanel.tsx            # Consent, identify, reset, and conversion controls
 │   │   └── RichTextRenderer.tsx        # Rich text + merge tag rendering
 │   ├── config/
-│   │   ├── entries.ts                  # Entry ID constants
-│   │   └── routes.ts                   # Route path constants
+│   │   └── locale.ts                   # Application Contentful locale
+│   ├── contentful-generated.d.ts       # Generated Contentful entry skeleton types
 │   ├── pages/
 │   │   ├── HomePage.tsx                # Utility panel, live updates, entry sections
 │   │   └── PageTwoPage.tsx             # Navigation + conversion tracking demo
@@ -182,139 +195,29 @@ react-web-sdk/
 │   │   └── env.d.ts                    # import.meta.env typings
 │   └── utils/
 │       └── typeGuards.ts               # isRecord helper
-├── e2e/                                # Playwright E2E tests (parity with web-sdk_react)
 ├── index.html
 ├── .env.example
 ├── package.json
 ├── rsbuild.config.ts
 ├── tsconfig.json
-├── playwright.config.mjs
 ├── AGENTS.md
 └── README.md
 ```
 
-## SDK integration patterns
+## Integration touchpoints
 
-### Provider setup
+This implementation uses the official React Web SDK package directly. Keep API-level usage details
+in the
+[@contentful/optimization-react-web package README](../../packages/web/frameworks/react-web-sdk/README.md).
 
-```tsx
-import { OptimizationRoot } from '@contentful/optimization-react-web'
-import { ReactRouterAutoPageTracker } from '@contentful/optimization-react-web/router/react-router'
-import { useState } from 'react'
-import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
+Implementation-specific touchpoints:
 
-function RootLayout() {
-  const [liveUpdates, setLiveUpdates] = useState(false)
-
-  return (
-    <OptimizationRoot
-      clientId="your-client-id"
-      environment="main"
-      api={{
-        insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
-        experienceBaseUrl: 'https://experience.ninetailed.co/',
-      }}
-      trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
-      liveUpdates={liveUpdates}
-    >
-      <ReactRouterAutoPageTracker />
-      <Outlet context={{ onToggleLiveUpdates: () => setLiveUpdates((v) => !v) }} />
-    </OptimizationRoot>
-  )
-}
-
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <RootLayout />,
-    children: [
-      {
-        element: <AppLayout />,
-        children: [
-          { index: true, element: <HomePage /> },
-          { path: 'page-two', element: <PageTwoPage /> },
-        ],
-      },
-    ],
-  },
-])
-```
-
-### Rendering optimized content
-
-```tsx
-import { OptimizedEntry } from '@contentful/optimization-react-web'
-
-function HeroSection({ entry }) {
-  return (
-    <OptimizedEntry baselineEntry={entry}>
-      {(resolvedEntry) => <p>{resolvedEntry.fields.text}</p>}
-    </OptimizedEntry>
-  )
-}
-```
-
-### Live updates
-
-```tsx
-// Global: controlled via OptimizationRoot prop (lifted state in parent)
-<OptimizationRoot liveUpdates={globalLiveUpdates} ...>
-
-// Per-component: always live regardless of global setting
-<OptimizedEntry baselineEntry={entry} liveUpdates={true}>
-  {(resolved) => <Card entry={resolved} />}
-</OptimizedEntry>
-
-// Per-component: locked to first resolved value
-<OptimizedEntry baselineEntry={entry} liveUpdates={false}>
-  {(resolved) => <Card entry={resolved} />}
-</OptimizedEntry>
-```
-
-### Consent, identify, reset
-
-```tsx
-import { useOptimizationContext } from '@contentful/optimization-react-web'
-
-function Controls() {
-  const { sdk } = useOptimizationContext()
-
-  return (
-    <>
-      <button onClick={() => sdk.consent(true)}>Accept</button>
-      <button onClick={() => void sdk.identify({ userId: 'u1', traits: { identified: true } })}>
-        Identify
-      </button>
-      <button onClick={() => sdk.reset()}>Reset</button>
-    </>
-  )
-}
-```
-
-### Auto tracking props
-
-For entries tracked via `trackEntryInteraction`, configure Web SDK tracking behavior through
-`OptimizedEntry` props. `OptimizedEntry` derives entry metadata attributes from the resolved entry
-state.
-
-```tsx
-<OptimizedEntry baselineEntry={entry} clickable hoverDurationUpdateIntervalMs={1000}>
-  {(resolvedEntry) => <div>{String(resolvedEntry.fields.text)}</div>}
-</OptimizedEntry>
-```
-
-> [!NOTE]
->
-> The `OptimizationRoot` `trackEntryInteraction` prop activates automatic view, click, and hover
-> tracking for resolved `OptimizedEntry` elements. The SDK's MutationObserver registers elements as
-> they appear in the DOM after consent is given.
-
-### Manual view tracking
-
-For manually observed entries, this implementation still uses `OptimizedEntry` for entry resolution
-and disables automatic view tracking with `trackViews={false}`. The render prop receives the
-resolved entry, and the rendered element is registered with
-`sdk.tracking.enableElement('views', element, { data: { entryId: resolvedEntry.sys.id } })`.
+- `src/main.tsx` mounts `OptimizationRoot`, `ReactRouterAutoPageTracker`, route configuration, and
+  preview-panel attachment.
+- `src/sections/ContentEntry.tsx` demonstrates automatic tracking props and manual view tracking.
+- `src/sections/LiveUpdatesExampleEntry.tsx` compares default, locked, and always-live entry
+  resolution.
+- `src/components/ControlPanel.tsx` demonstrates consent, identify, reset, and conversion actions.
 
 ## Code orientation
 
@@ -328,8 +231,8 @@ resolved entry, and the rendered element is registered with
 | `src/components/AnalyticsEventDisplay.tsx` | Displays event stream output from `sdk.states.eventStream`     |
 | Manual `selectedOptimizations` lock logic  | `<OptimizedEntry liveUpdates={false}>`                         |
 
-**What stays the same:** `contentfulClient.ts`, entry/route config, type definitions,
-`RichTextRenderer`, E2E test files, page/section component structure.
+**What stays the same:** `contentfulClient.ts`, locale config, type definitions, `RichTextRenderer`,
+E2E test files, page/section component structure.
 
 **Key architectural difference:** `App.tsx` acts as a persistent layout (contains
 `AnalyticsEventDisplay` that stays mounted across route changes). Pages are route children that
@@ -337,9 +240,10 @@ receive state via `useOutletContext`.
 
 ## Related
 
-- [web-sdk_react](../web-sdk_react/README.md) - adapter-based reference using
-  `@contentful/optimization-web`
-- [web-sdk](../web-sdk/README.md) - vanilla JavaScript reference
+- [Web SDK React Adapter reference implementation](../web-sdk_react/README.md) - Adapter-based
+  reference using `@contentful/optimization-web`
+- [Web SDK Vanilla JS reference implementation](../web-sdk/README.md) - Vanilla JavaScript reference
+  implementation
 - [@contentful/optimization-react-web](../../packages/web/frameworks/react-web-sdk/README.md) -
-  React Web SDK
-- [@contentful/optimization-web](../../packages/web/web-sdk/README.md) - Web SDK
+  React Web SDK package
+- [@contentful/optimization-web](../../packages/web/web-sdk/README.md) - Web SDK package

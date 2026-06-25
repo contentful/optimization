@@ -196,6 +196,9 @@ Avoid vague intensifiers unless the sentence gives a specific measure or explana
 - quite
 - very
 
+`Quick start` is allowed as a documentation heading or navigation label when it introduces the
+smallest runnable path. Avoid `quick` in prose when it only claims that a task is easy or fast.
+
 ## Modal verbs
 
 Use modal verbs consistently:

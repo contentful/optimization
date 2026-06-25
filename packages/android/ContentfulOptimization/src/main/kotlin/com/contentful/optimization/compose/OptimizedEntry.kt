@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.contentful.optimization.core.ResolvedOptimizedEntry
+import com.contentful.optimization.core.resolvePreviewCloseLockState
 
 @Suppress("UNCHECKED_CAST")
 @Composable
@@ -68,9 +69,9 @@ public fun OptimizedEntry(
     // this same long-lived collector; keeping them identical is what makes
     // Compose and Views behave the same.
     //
-    // Live entries follow the latest selectedOptimizations on every emission. Locked
-    // entries freeze on the first non-null value — mirrors the iOS `onReceive`
-    // lock — and ignore later updates until the component is remounted.
+    // Live entries follow the latest selectedOptimizations on every emission. Locked entries
+    // freeze on the first non-null value or on preview-panel close, and ignore later updates
+    // until the component is remounted.
     LaunchedEffect(entry) {
         if (!isOptimized) {
             result = ResolvedOptimizedEntry(entry = entry, selectedOptimization = null)
@@ -94,13 +95,22 @@ public fun OptimizedEntry(
     // When the preview panel closes, snapshot the current selectedOptimizations so
     // the locked state reflects any overrides applied during the session.
     LaunchedEffect(isPreviewPanelOpen) {
-        if (isOptimized && !isPreviewPanelOpen && isLocked) {
-            lockedOptimizations = client.selectedOptimizations.value
-            result = client.resolveOptimizedEntry(
-                baseline = entry,
-                selectedOptimizations = lockedOptimizations,
-            )
+        val lockState = resolvePreviewCloseLockState(
+            isOptimized = isOptimized,
+            isPreviewPanelOpen = isPreviewPanelOpen,
+            nonPreviewLiveUpdates = liveUpdates ?: trackingConfig.liveUpdates,
+            hasSelectedOptimizationsOverride = false,
+            selectedOptimizations = client.selectedOptimizations.value,
+        ) ?: return@LaunchedEffect
+
+        lockedOptimizations = lockState.lockedOptimizations
+        if (lockState.shouldLock) {
+            isLocked = true
         }
+        result = client.resolveOptimizedEntry(
+            baseline = entry,
+            selectedOptimizations = lockedOptimizations,
+        )
     }
 
     val modifier = Modifier

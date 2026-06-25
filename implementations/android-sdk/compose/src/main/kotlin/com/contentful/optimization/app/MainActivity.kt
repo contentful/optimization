@@ -55,8 +55,6 @@ class MainActivity : ComponentActivity() {
                         defaults = StorageDefaults(consent = true),
                         logLevel = OptimizationLogLevel.debug,
                     ),
-                    trackViews = true,
-                    trackTaps = true,
                     previewPanel = PreviewPanelConfig(
                         contentfulClient = MockPreviewContentfulClient(),
                     ),

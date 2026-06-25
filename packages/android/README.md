@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Contentful Optimization & Analytics</h1>
+<h1 align="center">Contentful Personalization & Analytics</h1>
 
 <h3 align="center">Optimization Android SDK</h3>
 
@@ -91,8 +91,6 @@ val optimizationConfig = OptimizationConfig(
 fun AppRoot(heroEntry: Map<String, Any>) {
     OptimizationRoot(
         config = optimizationConfig,
-        trackViews = true,
-        trackTaps = false,
         previewPanel = if (BuildConfig.DEBUG) PreviewPanelConfig() else null,
     ) {
         HomeScreen(heroEntry = heroEntry)
@@ -105,7 +103,6 @@ fun HomeScreen(heroEntry: Map<String, Any>) {
 
     OptimizedEntry(
         entry = heroEntry,
-        trackTaps = true,
     ) { resolvedEntry ->
         HeroCard(entry = resolvedEntry)
     }
@@ -128,8 +125,6 @@ class MyApplication : Application() {
         OptimizationManager.initialize(
             context = this,
             config = optimizationConfig,
-            trackViews = true,
-            trackTaps = false,
             previewPanel = PreviewPanelConfig(),
         )
     }
@@ -151,7 +146,6 @@ class HomeActivity : AppCompatActivity() {
 
     fun renderHero(entry: Map<String, Any>): View {
         return OptimizedEntryView(this).apply {
-            trackTaps = true
             setContentRenderer { resolvedEntry ->
                 HeroBinder.create(context, resolvedEntry)
             }
@@ -200,8 +194,8 @@ tracking, screen tracking, live updates, preview-panel overrides, and shared moc
 | `onEventBlocked`    | No        | `null`                       | Callback invoked with `reason`, `method`, and `args` when consent or guard logic blocks an event.  |
 
 `OptimizationRoot` and `OptimizationManager.initialize(...)` also accept global `trackViews`,
-`trackTaps`, and `liveUpdates` defaults. `OptimizedEntry` and `OptimizedEntryView` can override
-those defaults per entry.
+`trackTaps`, and `liveUpdates` defaults. Entry view and tap tracking default to enabled;
+`OptimizedEntry` and `OptimizedEntryView` can override those defaults per entry.
 
 ### Locale handling
 

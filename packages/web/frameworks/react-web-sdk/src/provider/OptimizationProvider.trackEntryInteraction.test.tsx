@@ -73,8 +73,8 @@ describe('OptimizationProvider trackEntryInteraction', () => {
     )
 
     expect(requireConfig(0).autoTrackEntryInteraction).toEqual({
-      clicks: false,
-      hovers: false,
+      clicks: true,
+      hovers: true,
       views: true,
     })
 
@@ -89,7 +89,7 @@ describe('OptimizationProvider trackEntryInteraction', () => {
       <OptimizationProvider
         clientId="test-client-id"
         environment="main"
-        trackEntryInteraction={{ clicks: true, views: false }}
+        trackEntryInteraction={{ clicks: false, views: false }}
       >
         <div />
       </OptimizationProvider>,
@@ -97,8 +97,8 @@ describe('OptimizationProvider trackEntryInteraction', () => {
 
     const config = requireConfig(0)
     expect(config.autoTrackEntryInteraction).toEqual({
-      clicks: true,
-      hovers: false,
+      clicks: false,
+      hovers: true,
       views: false,
     })
     expect(config).not.toHaveProperty('trackEntryInteraction')

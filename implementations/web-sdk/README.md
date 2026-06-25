@@ -45,8 +45,7 @@ for the entry contract.
 ## Prerequisites
 
 - Node.js >= 20.19.0 (24.15.0 recommended to match `.nvmrc`)
-- pnpm 10.x
-- Docker running locally for nginx-based serving
+- pnpm
 
 ## Setup
 
@@ -70,11 +69,16 @@ Run all steps from the monorepo root.
    pnpm implementation:run -- web-sdk implementation:install
    ```
 
-4. Configure the environment in a `.env` file in `implementations/web-sdk` based on the
-   `.env.example` included file. The file is pre-populated with values that are valid only against
-   the mock server implementation. To test the implementation against a live server environment, see
-   the [mocks package](../../lib/mocks/README.md) for information on how to set up Contentful space
-   with test data.
+4. Create the local `.env` file if it does not already exist:
+
+   ```sh
+   test -f implementations/web-sdk/.env || cp implementations/web-sdk/.env.example implementations/web-sdk/.env
+   ```
+
+   The `.env.example` values are valid only against the mock server implementation. To test the
+   implementation against a live server environment, see the
+   [mocks package](../../lib/mocks/README.md) for information on how to set up Contentful space with
+   test data.
 
 ## Running locally
 
@@ -99,7 +103,9 @@ Run these commands from the monorepo root.
    ```
 
 The application can be accessed via Web browser at `http://localhost:3000`. See
-`implementations/web-sdk/package.json` for lower-level local commands.
+`implementations/web-sdk/package.json` for lower-level local commands. The local server is a
+lightweight Node.js HTTP server that reads `.env` or `.env.example`, injects those values into the
+HTML, and serves `public/`; PM2 manages the `serve` and `serve:stop` processes.
 
 ## Running E2E tests
 
@@ -126,6 +132,6 @@ E2E tests are run using Playwright.
 ## Related
 
 - [@contentful/optimization-web](../../packages/web/web-sdk/README.md) - Web SDK package
-- [Web SDK React Adapter](../web-sdk_react/README.md) - Adapter-based React example built on the Web
-  SDK
+- [Web SDK React Adapter reference implementation](../web-sdk_react/README.md) - Adapter-based React
+  reference implementation built on the Web SDK
 - [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures

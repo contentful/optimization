@@ -23,7 +23,6 @@ export const appConfig: ApplicationConfig = {
       logLevel: resolveLogLevel(environment.PUBLIC_OPTIMIZATION_LOG_LEVEL),
       locale: 'en-US',
       app: { name: 'ContentfulOptimization SDK - Angular Web Reference', version: '0.0.0' },
-      autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
       contentful: {
         accessToken: environment.PUBLIC_CONTENTFUL_TOKEN,
         environment: environment.PUBLIC_CONTENTFUL_ENVIRONMENT,

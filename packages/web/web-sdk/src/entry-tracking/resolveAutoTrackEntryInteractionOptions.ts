@@ -124,9 +124,9 @@ export function resolveAutoTrackEntryInteractionOptions(
   options?: AutoTrackEntryInteractionOptions,
 ): Record<EntryInteraction, boolean> {
   return {
-    clicks: options?.clicks ?? false,
-    views: options?.views ?? false,
-    hovers: options?.hovers ?? false,
+    clicks: options?.clicks ?? true,
+    views: options?.views ?? true,
+    hovers: options?.hovers ?? true,
   }
 }
 

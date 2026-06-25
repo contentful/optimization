@@ -1,18 +1,24 @@
+<p align="center">
+  <a href="https://www.contentful.com/developers/docs/personalization/">
+    <img alt="Contentful Logo" title="Contentful" src="../../contentful-icon.png" width="150">
+  </a>
+</p>
+
+<h1 align="center">Contentful Personalization & Analytics</h1>
+
+<h3 align="center">Android SDK Reference Implementation</h3>
+
 <div align="center">
-  <img alt="Contentful Logo" title="Contentful" src="../../contentful-icon.png" width="150">
 
-### Contentful Personalization & Analytics
-
-<h3>Android SDK Reference Implementation</h3>
-
-[Readme](./README.md) · [Guides](https://contentful.github.io/optimization/documents/Guides.html) ·
-[Reference](https://contentful.github.io/optimization/) · [Contributing](../../CONTRIBUTING.md)
+[Readme](./README.md) ·
+[Guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) ·
+[Reference](https://contentful.github.io/optimization) · [Contributing](../../CONTRIBUTING.md)
 
 </div>
 
----
-
-> [!CAUTION] Pre-release. API surface is not yet stable.
+> [!WARNING]
+>
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 This is the native Android reference implementation for the
 [Contentful Optimization Android SDK](../../packages/android/README.md). It demonstrates the
@@ -65,6 +71,9 @@ pnpm install
 pnpm --filter @contentful/optimization-js-bridge build
 ```
 
+This implementation does not use a local `.env` file. Mock API settings live in the Android app
+configuration and point emulator traffic to the host mock server through `http://10.0.2.2:8000`.
+
 ## Running locally
 
 The bootstrap script starts the mock server, builds the app, and launches it on an emulator:
@@ -93,6 +102,39 @@ To launch with a clean SDK state (clears the persisted profile on cold start):
 adb shell am start -n com.contentful.optimization.app/.MainActivity --ez reset true
 ```
 
+## Running E2E tests
+
+The E2E suite uses [Maestro](https://maestro.dev). Prefer the monorepo-root wrappers or local
+runner; they start the mock server, resolve or launch an emulator, build/install the app, and run
+the flow suite.
+
+Run both Compose and XML Views apps:
+
+```sh
+pnpm implementation:run -- android-sdk test:e2e
+```
+
+Run one app shell:
+
+```sh
+pnpm implementation:run -- android-sdk test:e2e:compose
+pnpm implementation:run -- android-sdk test:e2e:views
+```
+
+Run one Maestro suite:
+
+```sh
+pnpm implementation:run -- android-sdk test:e2e:compose -- --flow preview-panel
+```
+
+From `implementations/android-sdk/`, the equivalent local runner is:
+
+```sh
+./scripts/run-e2e.sh --flow preview-panel
+```
+
+See [`scripts/README.md`](./scripts/README.md) for emulator, AVD, and environment-variable details.
+
 ## Android Studio
 
 Open this directory (`implementations/android-sdk/`) as an Android Studio project. After Gradle
@@ -109,8 +151,8 @@ pnpm --filter @contentful/optimization-js-bridge build
 pnpm --dir lib/mocks serve
 ```
 
-The E2E suite is [Maestro](https://maestro.dev), run from the command line rather than an IDE run
-configuration — `pnpm test:e2e` (both apps) or see [`maestro/README.md`](./maestro/README.md).
+The E2E suite is run from the command line rather than an IDE run configuration; see
+[`maestro/README.md`](./maestro/README.md) for flow structure.
 
 ## Maintainer edit loop
 
@@ -141,13 +183,13 @@ pnpm --filter @contentful/optimization-js-bridge build
 
 Run the smallest check that covers the changed surface:
 
-| Change area                       | Suggested validation                                                                                                      |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Bridge TypeScript only            | `pnpm --filter @contentful/optimization-js-bridge typecheck` and `pnpm --filter @contentful/optimization-js-bridge build` |
-| Kotlin SDK or UI adapter behavior | `./gradlew :compose:assembleDebug :views:assembleDebug`                                                                   |
-| Compose or Views user flow        | `pnpm test:e2e:compose -- --flow <suite>` or `pnpm test:e2e:views -- --flow <suite>`                                      |
-| Shared preview-panel behavior     | Run the affected Maestro suite against both apps                                                                          |
-| Documentation-only README changes | Prettier on touched Markdown and `git diff --check`                                                                       |
+| Change area                       | Suggested validation                                                                                                                                     |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bridge TypeScript only            | `pnpm --filter @contentful/optimization-js-bridge typecheck` and `pnpm --filter @contentful/optimization-js-bridge build`                                |
+| Kotlin SDK or UI adapter behavior | `./gradlew :compose:assembleDebug :views:assembleDebug`                                                                                                  |
+| Compose or Views user flow        | `pnpm implementation:run -- android-sdk test:e2e:compose -- --flow <suite>` or `pnpm implementation:run -- android-sdk test:e2e:views -- --flow <suite>` |
+| Shared preview-panel behavior     | Run the affected Maestro suite against both apps                                                                                                         |
+| Documentation-only README changes | Prettier on touched Markdown and `git diff --check`                                                                                                      |
 
 Common local pitfalls:
 
@@ -163,9 +205,12 @@ Common local pitfalls:
 
 ## Related
 
-- [Android SDK](../../packages/android/README.md)
-- [Native bridge architecture](../../packages/universal/optimization-js-bridge/BRIDGE_ARCHITECTURE.md)
-- [iOS SDK Reference Implementation](../ios-sdk/README.md)
-- [React Native Reference Implementation](../react-native-sdk/README.md)
-- [Preview Panel Scenarios](../PREVIEW_PANEL_SCENARIOS.md)
-- [Mock Server](../../lib/mocks/README.md)
+- [Optimization Android SDK](../../packages/android/README.md) - Native Android SDK package
+- [Native bridge architecture](../../packages/universal/optimization-js-bridge/BRIDGE_ARCHITECTURE.md) -
+  Shared bridge runtime and build notes
+- [iOS reference app](../ios-sdk/README.md) - Native iOS reference app
+- [React Native reference implementation](../react-native-sdk/README.md) - React Native reference
+  implementation
+- [Preview panel scenario contract](../PREVIEW_PANEL_SCENARIOS.md) - Cross-platform preview-panel
+  scenario source of truth
+- [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures

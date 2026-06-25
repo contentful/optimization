@@ -70,7 +70,6 @@ function RootLayout(): ReactElement {
         experienceBaseUrl: EXPERIENCE_BASE_URL,
       }}
       locale={APP_LOCALE}
-      trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
       logLevel={resolveLogLevel()}
       app={{
         name: 'ContentfulOptimization SDK - React Web SDK Reference',

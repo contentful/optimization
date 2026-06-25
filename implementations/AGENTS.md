@@ -20,8 +20,11 @@ Applies to reference implementations and shared implementation contracts under `
 - Follow root Markdown rules and [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md).
 - Use the repo-standard header, implementation-specific `<h3>`, Readme/Guides/Reference/Contributing
   navigation, pre-release warning, and an introduction naming the demonstrated SDK packages.
-- Put `## What this demonstrates` near the top. Keep the tone procedural and example-oriented, not a
-  package API manual.
+- Use this default top-level order: header/navigation/warning, introduction naming the demonstrated
+  SDK package or native status, `## What this demonstrates`, optional near-top architecture notes,
+  `## CDA locale handling`, `## Prerequisites`, `## Setup`, `## Running locally`,
+  `## Running E2E tests`, implementation-specific maintainer notes, and `## Related`.
+- Keep the tone procedural and example-oriented, not a package API manual.
 - Use `## Prerequisites`, `## Setup`, `## Running locally`, `## Running E2E tests`, and `## Related`
   when they fit the implementation.
 - Prefer monorepo-root setup/run commands, local `.env.example` guidance, and links to demonstrated

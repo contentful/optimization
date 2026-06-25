@@ -44,10 +44,10 @@ they are not the first stop for installation or setup commands.
 - [Profile synchronization between client and server](./profile-synchronization-between-client-and-server.md) -
   explains how profile identity, profile data, cookies, browser storage, and Experience API
   responses work together when Node and Web SDK runtimes share a visitor journey.
-- [React Native SDK Interaction Tracking Mechanics](./react-native-sdk-interaction-tracking-mechanics.md) -
+- [React Native SDK interaction tracking mechanics](./react-native-sdk-interaction-tracking-mechanics.md) -
   explains how the React Native SDK observes, gates, and emits tracking events, covering event
   types, the viewport state machine, default visibility and timing, consent gating, scroll context,
-  screen tracking paths, and the configuration resolution order
+  screen tracking paths, manual tracking payloads, and the configuration resolution order.
 - [iOS SDK runtime and interaction mechanics](./ios-sdk-runtime-and-interaction-mechanics.md) -
   explains how the iOS SDK runs shared optimization behavior through a native bridge, how SwiftUI
   and UIKit integrations share runtime state, and how consent, optimization, tracking, preview

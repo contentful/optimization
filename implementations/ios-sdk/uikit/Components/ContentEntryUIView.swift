@@ -12,7 +12,6 @@ final class ContentEntryUIView: UIView {
             client: client,
             entry: entry,
             scrollView: scrollView,
-            trackTaps: true,
             accessibilityIdentifier: "content-entry-\(entryId)"
         ) { resolved in
             EntryContentView(entry: resolved, entryId: entryId, client: client)

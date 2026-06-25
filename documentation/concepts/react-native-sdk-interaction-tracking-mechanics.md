@@ -1,80 +1,117 @@
+---
+title: React Native SDK interaction tracking mechanics
+---
+
 # React Native SDK interaction tracking mechanics
 
-Use this concept document to understand exactly _what_ the `@contentful/optimization-react-native`
-SDK is tracking, _when_ each event fires, and _how_ it leaves the device. Every number, state
-transition, and gate is grounded in SDK source so you can reason about tracking behavior without
-running a live experiment.
+Use this concept document to understand what the `@contentful/optimization-react-native` SDK tracks,
+when each event fires, and how events leave the device. The goal is to make tracking behavior
+predictable before you debug an entry view, tap, screen, or custom event in a running app.
 
-The companion
-[Integrating the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
-walks through setup, consent, and screen wiring at a tutorial level. Read that first for "how do I
-plug the SDK in?" — come back here for "why isn't my entry view firing?"
+For step-by-step setup, see
+[Integrating the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md).
+For the entry resolution model that supplies tracking metadata, see
+[Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md).
 
-## What you get out of the box
+## Runtime boundary
 
-If you drop `OptimizationRoot` at the top, wrap `NavigationContainer` in
-`OptimizationNavigationContainer`, and wrap Contentful entries in `<OptimizedEntry />`, you get:
+This document applies to React Native applications that use `@contentful/optimization-react-native`.
+The package is a stateful mobile runtime built on the shared Core SDK. It adds React providers,
+hooks, `OptimizedEntry`, React Navigation helpers, AsyncStorage persistence, NetInfo connectivity
+handling, and app lifecycle flushing.
 
-- **Entry view tracking** — initial event after 2 s at ≥ 80% visibility, periodic updates every 5 s
-  while visible, final event on scroll-away / unmount.
-- **Screen tracking** on every navigation change.
-- **Identify/screen events before consent** (blocked events: everything else until consent is
-  `true`).
-- **Offline queueing and background flushing** when `@react-native-community/netinfo` is installed.
-- **Persistence across launches** via AsyncStorage for consent state and, when persistence consent
-  permits it, profile-continuity values such as profile, anonymous ID, and selected optimizations.
+The SDK does not own application routing, consent UI, identity policy, Contentful entry fetching, or
+final rendering. Applications fetch entries, choose locales, render UI, and call `consent(...)` from
+their own policy layer. The SDK observes mounted React Native components and sends events through
+the shared Core event pipeline.
 
-Things you still have to enable yourself:
+## Prerequisites and runtime constraints
 
-- **Tap tracking** — off by default. Opt in via `trackEntryInteraction={{ taps: true }}`,
-  `trackTaps`, or an `onTap` callback.
-- **Accurate scroll-based view tracking** — wrap the scroll view in `<OptimizationScrollProvider>`.
-- **Consent UI** — the SDK exposes `consent(true | false)`; the banner is yours.
-- **Manual tracking for non-Contentful surfaces** — `optimization.trackView` / `trackClick`.
+Decide these policies before initialization because they control which events can leave the device
+and which state can survive a process restart:
+
+| Constraint           | React Native behavior                                                                                                                                                                                                                                                                                      |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Consent              | Consent starts as unset unless `defaults.consent` or persisted SDK consent provides a value. Until event consent is `true`, the React Native default allow-list permits `identify` and `screen`; entry views, taps, `page`, and custom `track` events do not emit unless `allowedEventTypes` permits them. |
+| Persistence consent  | Boolean `consent(true)` and `consent(false)` update event consent and durable profile-continuity persistence consent together. Use object-form consent when event emission and durable profile continuity follow separate policy decisions.                                                                |
+| Allowed event types  | `allowedEventTypes` replaces the React Native default pre-consent allow-list. Keep it narrow and align it with the application's privacy review. For interaction tracking, use `component` for entry views, `component_click` for taps, and `flag` or `component` for Custom Flag views.                   |
+| Active profile       | Insights events need a current Optimization profile. Hydrate a persisted or default profile, or bootstrap one through an Experience path such as `identify`, `screen`, `page`, `track`, or a sticky entry view before relying on entry views, taps, or flag views.                                         |
+| Scroll context       | View tracking needs both entry layout and viewport position. Wrap scrollable screens in `OptimizationScrollProvider`; otherwise the hook assumes `scrollY = 0` and only screen-height visibility is considered.                                                                                            |
+| Storage availability | AsyncStorage persists SDK consent and, when persistence consent is `true`, profile-continuity values such as profile, anonymous ID, selected optimizations, and pending changes. Live state reads use in-memory SDK state after startup.                                                                   |
+| Preview mode         | The preview panel is an application opt-in surface. Mount it only in authoring or development flows; opening it forces live entry updates so audience and variant overrides are visible immediately.                                                                                                       |
+| Offline behavior     | Insights queueing and offline Experience buffering are in memory. NetInfo lets the SDK pause flushing while offline and resume on reconnect. Background or inactive app transitions trigger a `flush()` and AsyncStorage drain, but the SDK does not provide a durable outbox across process death.        |
+| Configured defaults  | Startup defaults apply before provider children mount. Use `defaults={{ consent: true }}` only for default-on application policies; do not set default consent later from a child effect because child tracking effects can run before that policy is applied.                                             |
+
+## Mental model
+
+If you mount `OptimizationRoot`, wrap React Navigation with `OptimizationNavigationContainer`, and
+wrap Contentful entries in `<OptimizedEntry />`, the SDK gives you these tracking behaviors:
+
+- **Entry view tracking** - Initial event after 2 s at 80% or greater visibility, periodic updates
+  every 5 s while visible, and a final event when visibility ends after an event has already fired.
+- **Screen tracking** - A `screen` event on every active route change.
+- **Default pre-consent `identify` and `screen` events** - The React Native default allows these
+  events before event consent. A custom `allowedEventTypes` list can allow fewer, more, or different
+  event types.
+- **Profile-gated Insights events** - Entry views, taps, and flag views are Insights events. They
+  need a current profile from an Experience path before the Insights queue accepts them.
+- **Offline queueing and background flushing** - When `@react-native-community/netinfo` is
+  installed, Insights events and offline Experience events flush after connectivity returns and when
+  the app moves toward the background.
+- **Persistence across launches** - AsyncStorage restores consent state and, when persistence
+  consent permits it, profile-continuity values such as profile, anonymous ID, and selected
+  optimizations.
+
+Applications still own these choices:
+
+- **Tap tracking opt-out** - Taps are tracked by default. Disable them with
+  `trackEntryInteraction={{ taps: false }}` or `trackTaps={false}` when an entry must not emit tap
+  events.
+- **Scroll-aware view tracking** - Wrap scrollable content in `<OptimizationScrollProvider>`.
+- **Consent UI** - The SDK exposes `consent(true | false | { events, persistence })`; the banner or
+  CMP integration belongs to the application.
+- **Manual tracking for non-Contentful surfaces** - Use `track({ event, properties })`,
+  `trackView({ componentId, viewId, viewDurationMs, ... })`, or `trackClick(...)` from the SDK
+  instance.
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [What you get out of the box](#what-you-get-out-of-the-box)
-- [1. Events the SDK emits](#1-events-the-sdk-emits)
+- [Runtime boundary](#runtime-boundary)
+- [Prerequisites and runtime constraints](#prerequisites-and-runtime-constraints)
+- [Mental model](#mental-model)
+- [Events the SDK emits](#events-the-sdk-emits)
   - [Automatic events](#automatic-events)
   - [Manual events](#manual-events)
-  - [Wire type mapping](#wire-type-mapping)
-- [2. How events flow from the device](#2-how-events-flow-from-the-device)
-  - [The two APIs](#the-two-apis)
+- [Event delivery from the device](#event-delivery-from-the-device)
+  - [API paths](#api-paths)
   - [Queueing, flushing, and offline](#queueing-flushing-and-offline)
   - [Persistence via AsyncStorage](#persistence-via-asyncstorage)
-- [3. Consent gating](#3-consent-gating)
-  - ["Why is nothing tracking?"](#why-is-nothing-tracking)
-- [4. Entry view tracking mechanics](#4-entry-view-tracking-mechanics)
+- [Consent gating](#consent-gating)
+  - [Why is nothing tracking?](#why-is-nothing-tracking)
+- [Entry view tracking mechanics](#entry-view-tracking-mechanics)
   - [Default visibility and timing](#default-visibility-and-timing)
   - [The visibility state machine](#the-visibility-state-machine)
   - [Initial, periodic, and final events](#initial-periodic-and-final-events)
   - [App backgrounding and cleanup](#app-backgrounding-and-cleanup)
-- [5. Scroll context and viewport resolution](#5-scroll-context-and-viewport-resolution)
+- [Scroll context and viewport resolution](#scroll-context-and-viewport-resolution)
   - [Inside OptimizationScrollProvider](#inside-optimizationscrollprovider)
   - [Outside OptimizationScrollProvider](#outside-optimizationscrollprovider)
-- [6. Tap tracking semantics](#6-tap-tracking-semantics)
-- [7. Screen tracking paths](#7-screen-tracking-paths)
+- [Tap tracking semantics](#tap-tracking-semantics)
+- [Screen tracking paths](#screen-tracking-paths)
   - [OptimizationNavigationContainer](#optimizationnavigationcontainer)
   - [useScreenTracking](#usescreentracking)
   - [useScreenTrackingCallback](#usescreentrackingcallback)
-- [8. The configuration surface](#8-the-configuration-surface)
-  - [OptimizationRoot props](#optimizationroot-props)
-  - [OptimizedEntry props](#optimizedentry-props)
-  - [SDK init config](#sdk-init-config)
-  - [Resolution order](#resolution-order)
-- [9. Manual tracking API](#9-manual-tracking-api)
-  - [Payload shapes](#payload-shapes)
-  - [When to reach for manual tracking](#when-to-reach-for-manual-tracking)
-- [10. Putting it together](#10-putting-it-together)
-- [Reference](#reference)
+- [Configuration guidance](#configuration-guidance)
+- [Manual tracking guidance](#manual-tracking-guidance)
+- [Lifecycle summary](#lifecycle-summary)
+- [Related documentation](#related-documentation)
 
 <!-- mtoc-end -->
 </details>
 
-## 1. Events the SDK emits
+## Events the SDK emits
 
 "Tracking" in the React Native SDK is a small, fixed set of event types. Some are fired by the SDK
 as a side effect of component rendering and user behavior; others are explicit method calls you make
@@ -82,57 +119,39 @@ from application code.
 
 ### Automatic events
 
-These are emitted by the SDK without an application-level call, as long as consent allows and the
-relevant provider/component is mounted.
+These are emitted by the SDK without an application-level call when consent or `allowedEventTypes`
+permits the event type and the relevant provider or component is mounted. Insights-backed automatic
+events also need an active profile.
 
-| Event                             | When it fires                                                                                                              | Required wiring                                                                                             |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Screen view**                   | Each time the active navigation route changes.                                                                             | `<OptimizationNavigationContainer>` wrapping `NavigationContainer` (or `useScreenTracking` on each screen). |
-| **Entry view (initial)**          | When a wrapped entry has accumulated enough visible time (default 2000 ms at ≥ 80% visibility).                            | `<OptimizedEntry baselineEntry={entry}>` with view tracking enabled (the default).                          |
-| **Entry view (periodic updates)** | Every `viewDurationUpdateIntervalMs` (default 5000 ms) while the entry remains visible.                                    | Same as above.                                                                                              |
-| **Entry view (final)**            | When visibility ends (scrolled away, unmounted, or app backgrounded) _if_ at least one event already fired.                | Same as above.                                                                                              |
-| **Entry tap**                     | On touch end, when the touch moved less than 10 points from touch start, on a wrapped entry.                               | `<OptimizedEntry>` with tap tracking enabled (off by default; opt in via `trackTaps` or `onTap`).           |
-| **Flag view**                     | Internally emitted when a flag value changes (deduplicated via deep equality). Not strictly an interaction; worth knowing. | Any `getFlag(...)` call or `states.flag(...)` subscription.                                                 |
+| Event                             | When it fires                                                                                                | Required wiring                                                                                             |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| **Screen view**                   | Each time the active navigation route changes.                                                               | `<OptimizationNavigationContainer>` wrapping `NavigationContainer` (or `useScreenTracking` on each screen). |
+| **Entry view (initial)**          | When a wrapped entry has accumulated enough visible time (default 2000 ms at ≥ 80% visibility).              | `<OptimizedEntry baselineEntry={entry}>` with view tracking enabled (the default).                          |
+| **Entry view (periodic updates)** | Every `viewDurationUpdateIntervalMs` (default 5000 ms) while the entry remains visible.                      | Same as above.                                                                                              |
+| **Entry view (final)**            | When visibility ends (scrolled away, unmounted, or app backgrounded) _if_ at least one event already fired.  | Same as above.                                                                                              |
+| **Entry tap**                     | On touch end, when the touch moved less than 10 points from touch start, on a wrapped entry.                 | `<OptimizedEntry>` with tap tracking enabled (the default; opt out with `trackTaps={false}`).               |
+| **Flag view**                     | Attempted when a flag value is read or a subscribed value is delivered; accepted emissions are deduplicated. | Any `getFlag(...)` call or `states.flag(...)` subscription.                                                 |
 
 ### Manual events
 
-Call these on the SDK instance from `useOptimization()`. Use them for screens or components that
-don't fit the `OptimizedEntry` pattern, or for business events unrelated to a Contentful entry.
+Use these SDK instance methods from `useOptimization()` when a screen, component, or business event
+doesn't fit the `OptimizedEntry` pattern. The generated reference owns full argument shapes.
 
-| Method       | Purpose                                                                                                     |
-| ------------ | ----------------------------------------------------------------------------------------------------------- |
-| `identify`   | Associates a known user ID and traits with the profile. Always allowed before consent.                      |
-| `page`       | Emits a `page` event. `screen` is the mobile idiom; `page` is rarely used in RN.                            |
-| `screen`     | Emits a `screen` event. What `useScreenTracking` and `OptimizationNavigationContainer` call under the hood. |
-| `track`      | Emits a generic `track` event for arbitrary business actions.                                               |
-| `trackView`  | Manually emits an entry view event.                                                                         |
-| `trackClick` | Manually emits an entry click/tap event (wire type `component_click`).                                      |
+| SDK method         | Delivery path and consequence                                                                                                     |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `identify`         | Experience path. Associates a known user ID and traits with the profile and can bootstrap the active profile.                     |
+| `screen`           | Experience path. Adds route context to the profile; React Native allows it before consent by default unless configured otherwise. |
+| `page` and `track` | Experience path. Use for non-navigation context or business events.                                                               |
+| `trackView`        | Insights path as wire type `component`; when `sticky: true`, also sends a sticky view through Experience.                         |
+| `trackClick`       | Insights path as wire type `component_click`.                                                                                     |
 
-```tsx
-const optimization = useOptimization()
-await optimization.identify('user-123', { plan: 'pro' })
-await optimization.track('Added to Cart', { sku: 'ABC' })
-await optimization.trackView({ componentId: 'entry-123', experienceId: 'exp-456', variantIndex: 0 })
-```
+React hook helpers can call those SDK methods for you. `useScreenTrackingCallback` is a hook, not an
+SDK instance method; it returns an imperative callback for dynamic screen names, calls `screen`
+directly, and does not apply current-route deduplication.
 
-At the wire level, "automatic" and "manual" events funnel through the same emission pipeline.
+## Event delivery from the device
 
-### Wire type mapping
-
-The on-the-wire event types used by the Insights API do not always match the public method name. In
-particular:
-
-| Method       | Wire event type                                                  |
-| ------------ | ---------------------------------------------------------------- |
-| `trackView`  | `component`                                                      |
-| `trackClick` | `component_click`                                                |
-| `trackHover` | `component_hover` (not emitted by RN; included for completeness) |
-
-These wire types are shared across SDK runtimes.
-
-## 2. How events flow from the device
-
-### The two APIs
+### API paths
 
 The SDK talks to two HTTP endpoints, both defaulting to Ninetailed hosts:
 
@@ -141,38 +160,51 @@ The SDK talks to two HTTP endpoints, both defaulting to Ninetailed hosts:
 | **Experience API** | `https://experience.ninetailed.co/`      | Profile evaluation and updates for identify, page, screen, track, sticky entry views, and variant resolution. |
 | **Insights API**   | `https://ingest.insights.ninetailed.co/` | Fire-and-forget Analytics interaction events: entry views, taps or clicks, and flag views.                    |
 
-Both are configurable via the `api` config on the SDK (see section 8).
+Both are configurable through SDK `api` configuration. The
+[React Native SDK README](../../packages/react-native-sdk/README.md#common-configuration) and
+[generated reference](https://contentful.github.io/optimization/modules/_contentful_optimization-react-native.html)
+own the full configuration surface.
 
 A single user action can touch either or both APIs. `trackView({ sticky: true })` delivers through
-Experience first (sticky views become part of the profile) then through Insights. Plain `trackView`
-only hits Insights; `identify` only touches Experience.
+Experience first because sticky views become part of the profile, then through Insights. Plain
+`trackView` only hits Insights; `identify` only touches Experience.
+
+Insights delivery has one extra gate after consent: the SDK must have a current profile. If an entry
+view, tap, or flag view reaches `InsightsQueue` before `sdk.states.profile.current` exists, the
+queue logs a warning and drops the event before it can be batched. In practice, hydrate a persisted
+profile, call `identify`, emit `screen`, or send another Experience event before depending on
+Insights-backed interaction data.
 
 Third-party analytics integrations that need one exposure for a sticky view must dedupe by semantic
 fields such as `viewId`, `componentId`, `experienceId`, and `variantIndex`, not by `messageId`.
 
 ### Queueing, flushing, and offline
 
-Both APIs are fronted by an in-memory queue in the core SDK. Events are enqueued, never sent
-synchronously. Insights events are batched and POSTed; Experience events are per-request but the
-queue handles offline replay and circuit breaking. Retry/backoff is configurable via
-`queuePolicy.flush`.
+Insights and Experience use different delivery shapes:
 
-The React Native SDK layers RN-specific behavior on top:
+- **Insights events** are queued by profile in memory and batched for the Insights API. Consent,
+  active profile state, online state, and flush policy all affect whether they leave the device.
+- **Experience events** call `upsertProfile` immediately while online. When offline, the SDK buffers
+  them in memory and replays them through `upsertProfile` after reconnect. Retry and backoff are
+  configurable via `queuePolicy.flush`.
 
-1. **Online/offline detection** via `@react-native-community/netinfo`. When offline, the queue
-   buffers; when `isInternetReachable` (preferred) or `isConnected` flips back to `true`, the SDK
-   resumes flushing. If NetInfo is not installed the SDK logs a warning and stays always-online —
-   you keep tracking but lose offline durability.
+The React Native SDK layers React Native-specific behavior on top:
+
+1. **Online/offline detection** via `@react-native-community/netinfo`. When offline, the SDK buffers
+   eligible in-memory events; when `isInternetReachable` (preferred) or `isConnected` flips back to
+   `true`, the SDK resumes flushing. If NetInfo is not installed, the SDK logs a warning and stays
+   always online. Tracking continues, but offline durability is reduced.
 2. **Background flushing.** On `AppState` transition to `background` or `inactive`, the SDK calls
    `flush()` and drains pending AsyncStorage persistence before the OS might suspend the process.
 3. **Final view event on background.** If an entry is mid-visibility-cycle when the app backgrounds,
    `useViewportTracking` pauses, emits a final view event if at least one event already fired, and
    resets.
 
-The offline queue has a cap (`queuePolicy.offlineMaxEvents`) and a drop callback
-(`queuePolicy.onOfflineDrop`). See the
-[README](../../packages/react-native-sdk/README.md#common-configuration) for the common queue
-configuration entry point.
+`queuePolicy.offlineMaxEvents` caps offline Experience events, and `queuePolicy.onOfflineDrop` is
+called when older offline Experience events are dropped to honor that cap. Insights events share the
+flush policy, but these two offline drop controls belong to the Experience queue. See the
+[React Native SDK README](../../packages/react-native-sdk/README.md#common-configuration) for the
+common queue configuration entry point.
 
 ### Persistence via AsyncStorage
 
@@ -180,18 +212,18 @@ configuration entry point.
 
 | Key                       | Contents                                 |
 | ------------------------- | ---------------------------------------- |
-| `CONSENT_KEY`             | `'accepted'` / `'denied'` / absent.      |
-| `PERSISTENCE_CONSENT_KEY` | `'accepted'` / `'denied'` / absent.      |
+| `CONSENT_KEY`             | `'accepted'`, `'denied'`, or absent.     |
+| `PERSISTENCE_CONSENT_KEY` | `'accepted'`, `'denied'`, or absent.     |
 | `DEBUG_FLAG_KEY`          | Forces `logLevel` to `'debug'` when set. |
 
 Profile-continuity values persist and reload only when persistence consent allows durable storage:
 
-| Key                                | Contents                                                                           |
-| ---------------------------------- | ---------------------------------------------------------------------------------- |
-| `PROFILE_CACHE_KEY`                | The aggregated profile returned from the Experience API.                           |
-| `SELECTED_OPTIMIZATIONS_CACHE_KEY` | Current audience/variant assignments. Drives which variant renders on next launch. |
-| `ANONYMOUS_ID_KEY`                 | Stable anonymous identifier until `identify` is called.                            |
-| `CHANGES_CACHE_KEY`                | Pending profile changes.                                                           |
+| Key                                | Contents                                                                                                                                          |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PROFILE_CACHE_KEY`                | The aggregated profile returned from the Experience API.                                                                                          |
+| `SELECTED_OPTIMIZATIONS_CACHE_KEY` | Current audience/variant assignments. Drives which variant renders on next launch.                                                                |
+| `ANONYMOUS_ID_KEY`                 | Profile-continuity identifier used for future Experience requests; updated from Experience response `profile.id`, including `identify` responses. |
+| `CHANGES_CACHE_KEY`                | Pending profile changes.                                                                                                                          |
 
 Persistence is best-effort; write failures keep the SDK running on in-memory state. Structured
 values are schema-validated on load; malformed JSON is evicted.
@@ -207,24 +239,25 @@ through `sdk.states`. If AsyncStorage rejects a write, the SDK logs the failure 
 in-memory state only after that failure has been handled.
 
 Why this matters for tracking: when persistence consent permits durable profile continuity, selected
-optimizations persist, so a user placed in Variant B continues to see it on the next launch and
-view/tap events carry the correct `experienceId` / `variantIndex` without re-round-tripping
+optimizations persist, so a user placed in Variant B continues to see it on the next launch. View
+and tap events carry the correct `experienceId` and `variantIndex` without re-round-tripping
 Experience first.
 
-## 3. Consent gating
+## Consent gating
 
 The SDK gates event emission behind a three-valued consent state: `true`, `false`, or `undefined`
-(unset). This is the most common cause of "tracking isn't working" during integration — without
-`defaults.consent: true` or a banner that calls `optimization.consent(true)`, everything except
-`identify` and `screen` is dropped silently at the SDK boundary.
+(unset). This is the most common cause of "tracking isn't working" during integration. Without
+`defaults.consent: true` or a banner that calls `optimization.consent(true)`, the SDK emits only
+event types permitted by `allowedEventTypes`. React Native permits `identify` and `screen` by
+default.
 
-| Consent     | Behavior                                                                                                         |
-| ----------- | ---------------------------------------------------------------------------------------------------------------- |
-| `undefined` | Only `allowedEventTypes` emit. RN default: `['identify', 'screen']`. All view/tap/track/page events are blocked. |
-| `true`      | All event types emit.                                                                                            |
-| `false`     | Same as `undefined` — only `allowedEventTypes` emit. Persists until `consent(true)` is called again.             |
+| Consent     | Behavior                                                                                                                                                        |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `undefined` | Only `allowedEventTypes` emit. React Native default: `['identify', 'screen']`. Entry views, taps, track, and page events do not emit unless explicitly allowed. |
+| `true`      | All event types can emit, subject to other runtime gates such as active profile state for Insights events.                                                      |
+| `false`     | Same as `undefined`: only `allowedEventTypes` emit. Persists until `consent(true)` is called again.                                                             |
 
-To widen the default pre-consent allow-list, pass `allowedEventTypes` to `OptimizationRoot`:
+To change the default pre-consent allow-list, pass `allowedEventTypes` to `OptimizationRoot`:
 
 ```tsx
 <OptimizationRoot clientId={CLIENT_ID} allowedEventTypes={['identify', 'screen', 'page']}>
@@ -239,27 +272,34 @@ start emitting events.
 
 When consent flips:
 
-- **`consent(true)`** — new events flow normally. Blocked events are _not_ retroactively replayed;
-  they were dropped at the guard (you can observe this via `onEventBlocked`). Event consent and
-  durable profile-continuity persistence consent persist to AsyncStorage.
-- **`consent({ events: true, persistence: false })`** — new events flow normally, but profile,
+- **`consent(true)`** - New events flow normally. Blocked events are _not_ retroactively replayed;
+  they were dropped at the guard. SDK method calls that reach Core report consent blocks through
+  `onEventBlocked` and `states.blockedEventStream`; some automatic React Native paths skip before
+  calling Core and do not produce blocked-event diagnostics. Event consent and durable
+  profile-continuity persistence consent persist to AsyncStorage.
+- **`consent({ events: true, persistence: false })`** - New events flow normally, but profile,
   selected optimizations, changes, and the anonymous ID stay session-only until persistence consent
   is granted.
-- **`consent(false)`** — the allow-list gate re-engages. In-flight events that already cleared the
+- **`consent(false)`** - The allow-list gate re-engages. Queued events that already cleared the
   guard are purged from SDK queues. SDK-managed durable profile-continuity storage is cleared.
 
 ### "Why is nothing tracking?"
 
-Four checks, in order of likelihood:
+Five checks, in order of likelihood:
 
-1. **Consent.** Without `defaults.consent: true` or a user accept, only `identify`/`screen` go out.
-   Set `logLevel: 'info'` to see blocked events in the console.
-2. **Tap tracking opt-in.** Views default to `true`, taps default to `false`.
-3. **Visibility requirement.** Defaults are strict (80% for 2 s). Scroll-by content never fires.
-4. **No scroll context.** An entry below the fold without `<OptimizationScrollProvider>` will never
-   pass the visibility requirement — `scrollY` is assumed `0`.
+1. **Consent.** Without `defaults.consent: true`, user acceptance, or a matching `allowedEventTypes`
+   entry, the SDK does not emit the event. Set `logLevel: 'info'` to see Core-blocked SDK method
+   calls in the console, but also check automatic React Native guards because entry views, taps, and
+   current-screen tracking can skip before Core is called.
+2. **Active profile.** Insights-backed views, taps, and flag views drop before batching when no
+   current profile exists.
+3. **Tap tracking opt-out.** Views and taps default to `true`; check for root or per-entry
+   `taps: false` or `trackTaps={false}` overrides.
+4. **Visibility requirement.** Defaults are strict (80% for 2 s). Scroll-by content never fires.
+5. **No scroll context.** An entry below the fold without `<OptimizationScrollProvider>` will never
+   pass the visibility requirement because `scrollY` is assumed `0`.
 
-## 4. Entry view tracking mechanics
+## Entry view tracking mechanics
 
 This section describes the internals of `useViewportTracking`, the hook `<OptimizedEntry />` uses
 under the hood.
@@ -268,23 +308,23 @@ under the hood.
 
 The default entry view settings are:
 
-| Constant                                   | Value  | Meaning                                                                                                             |
-| ------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------- |
-| `DEFAULT_THRESHOLD`                        | `0.8`  | Minimum visibility ratio (0.0 – 1.0). An entry is "visible" when at least 80% of its height is within the viewport. |
-| `DEFAULT_VIEW_TIME_MS`                     | `2000` | Minimum accumulated visible time (ms) before the **initial** view event fires. A.k.a. the "dwell time".             |
-| `DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS` | `5000` | Interval (ms) between **periodic** duration update events after the initial event.                                  |
+| Constant                                   | Value  | Meaning                                                                                                              |
+| ------------------------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------- |
+| `DEFAULT_MIN_VISIBLE_RATIO`                | `0.8`  | Minimum visibility ratio (0.0 to 1.0). An entry is "visible" when at least 80% of its height is within the viewport. |
+| `DEFAULT_DWELL_TIME_MS`                    | `2000` | Minimum accumulated visible time (ms) before the **initial** view event fires.                                       |
+| `DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS` | `5000` | Interval (ms) between **periodic** duration update events after the initial event.                                   |
 
 Tap tracking has one additional requirement:
 
-| Constant                 | Value | Meaning                                                                                                                         |
-| ------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `TAP_DISTANCE_THRESHOLD` | `10`  | Maximum pixel distance between `touchStart` and `touchEnd`. Beyond this, the gesture is classified as a scroll/drag, not a tap. |
+| Constant                 | Value | Meaning                                                                                                                            |
+| ------------------------ | ----- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `TAP_DISTANCE_THRESHOLD` | `10`  | Maximum pixel distance between `touchStart` and `touchEnd`. Beyond this, the gesture is classified as a scroll or drag, not a tap. |
 
 ### The visibility state machine
 
-Each mounted `<OptimizedEntry>` runs a small state machine keyed on a "visibility cycle" — a cycle
-starts when the entry goes not-visible → visible, and ends when it transitions back or unmounts.
-State lives in refs (not React state) to avoid re-rendering on every scroll tick:
+Each mounted `<OptimizedEntry>` runs a small state machine keyed on a "visibility cycle". A cycle
+starts when the entry goes from not visible to visible, and ends when it transitions back or
+unmounts. State lives in refs (not React state) to avoid re-rendering on every scroll tick:
 
 ```ts
 interface ViewCycleState {
@@ -299,10 +339,10 @@ On every scroll tick or layout change, `checkVisibility()` computes the overlap 
 measured `{y, height}` and the current viewport `{scrollY, viewportHeight}` to derive a
 `visibilityRatio`, and compares it to `minVisibleRatio`:
 
-- **not-visible → visible** — `onVisibilityStart` resets the cycle, mints a fresh `viewId`, sets
+- **Not visible to visible** - `onVisibilityStart` resets the cycle, mints a fresh `viewId`, sets
   `visibleSince = now`, and schedules the next fire.
-- **visible → not-visible** — `onVisibilityEnd` clears the fire timer, pauses accumulation, emits a
-  **final** event if `attempts > 0`, and resets the cycle.
+- **Visible to not visible** - `onVisibilityEnd` clears the fire timer, records the final
+  accumulated duration, emits a **final** event if `attempts > 0`, and resets the cycle.
 
 ### Initial, periodic, and final events
 
@@ -323,9 +363,10 @@ So with defaults:
 | Periodic #N | `2000 + N * 5000` ms accumulated visible |
 | Final       | At `onVisibilityEnd`, if `attempts > 0`  |
 
-"Accumulated" is load-bearing: if the user scrolls away at 1.5 s and back 10 s later, the timer
-resumes from 1.5 s and takes another 0.5 s to fire the initial event. Pause/resume is driven by
-`visibleSince` being set/cleared.
+Accumulation applies only inside the current visibility cycle. Leaving visibility ends the cycle,
+clears the fire timer, and resets accumulated time after any eligible final event is emitted. If the
+user scrolls away at 1.5 s and returns later, the return starts a fresh dwell timer from 0 ms with a
+new `viewId`.
 
 A few consequences:
 
@@ -336,27 +377,27 @@ A few consequences:
 - **Each event carries `viewDurationMs`**, computed from the cycle's accumulated time at the moment
   of emission. The sequence of events for a 12 s continuous view is: initial (~2000 ms), periodic
   (~7000 ms), periodic (~12 000 ms), final (~12 000 ms).
-- **Each event also carries `viewId`** — the UUID for the cycle. All events in one cycle share a
+- **Each event also carries `viewId`**, the UUID for the cycle. All events in one cycle share a
   `viewId`; a new cycle gets a fresh one. Use `viewId` downstream to correlate.
 
 ### App backgrounding and cleanup
 
 Two additional transitions matter:
 
-1. **AppState → background or inactive.** The hook listens to `AppState` changes. On transition to
-   background/inactive, it clears the fire timer, pauses accumulation, and — if `attempts > 0` —
-   emits a final event before resetting the cycle and marking `isVisibleRef.current = false`. When
-   the app becomes `active` again, it re-checks visibility from scratch, which will start a new
-   cycle if the entry is still on screen.
+1. **AppState background or inactive transition.** The hook listens to `AppState` changes. On
+   transition to `background` or `inactive`, it clears the fire timer, pauses accumulation, and
+   emits a final event before resetting the cycle and marking `isVisibleRef.current = false` when
+   `attempts > 0`. When the app becomes `active` again, it re-checks visibility from scratch, which
+   starts a new cycle if the entry is still on screen.
 
 2. **Component unmount.** The unmount cleanup clears the fire timer and, if the cycle had any
    successful events (`attempts > 0`), flushes a final view event synchronously.
 
-Combined, these guarantees mean that as long as the initial event fired, a final event (with a
-matching `viewId` and the true total duration) will always follow — whether visibility ends
-naturally, the user backgrounds the app, or the component unmounts.
+Combined, these transitions mean that when the initial event has fired, the hook emits a final event
+with the same `viewId` and the cycle duration when visibility ends naturally, the user backgrounds
+the app, or the component unmounts.
 
-## 5. Scroll context and viewport resolution
+## Scroll context and viewport resolution
 
 `useViewportTracking` needs the entry's position (`{y, height}` from `onLayout`) and the viewport
 (`{scrollY, viewportHeight}`). Where the viewport comes from depends on whether the entry sits
@@ -384,63 +425,59 @@ demonstrates this scroll-provider pattern in its entry list.
 
 ### Outside OptimizationScrollProvider
 
-With no scroll context, the hook falls back to screen dimensions — `scrollY = 0`, viewport =
+With no scroll context, the hook falls back to screen dimensions: `scrollY = 0` and viewport =
 `Dimensions.get('window').height` with an orientation listener.
 
-This is correct for full-screen non-scrollable layouts, hero/banner content always on screen, and
-modal content. It is _wrong_ for anything below the fold in a `ScrollView` — wrap those.
+This is correct for full-screen non-scrollable layouts, hero or banner content always on screen, and
+modal content. It is _wrong_ for anything below the fold in a `ScrollView`; wrap those.
 
-## 6. Tap tracking semantics
+## Tap tracking semantics
 
 Tap tracking is implemented by `useTapTracking`. Behavior:
 
-1. The wrapping `View` gets `onTouchStart` / `onTouchEnd` (not `onPress`). Raw touch events mean
+1. The wrapping `View` gets `onTouchStart` and `onTouchEnd`, not `onPress`. Raw touch events mean
    **taps are captured even when a child `Pressable` also handles the press**. A `Pressable` wrapper
    gives the child's `onPress` precedence.
 2. `onTouchStart` records `{ pageX, pageY }`.
 3. `onTouchEnd` computes Euclidean distance from start to end. Under `TAP_DISTANCE_THRESHOLD` (10
-   points) → tap; over → scroll/drag, ignored.
-4. On tap: `optimization.trackClick({ componentId, experienceId, variantIndex })` (wire type
-   `component_click`). If `onTap` was passed on `<OptimizedEntry>`, it's also invoked synchronously
-   with the resolved entry.
+   points) is a tap; over 10 points is treated as a scroll or drag and ignored.
+4. On a valid tap, the hook checks `hasConsent('trackClick')`. When allowed, it calls
+   `optimization.trackClick({ componentId, experienceId, variantIndex })` (wire type
+   `component_click`) for the Analytics event. If `onTap` was passed on `<OptimizedEntry>`, the hook
+   also invokes that application callback synchronously with the resolved entry, even when the
+   Analytics tap event is not emitted.
 
-Tap tracking is **off by default**. Enable via
-`<OptimizationRoot trackEntryInteraction={{ taps: true }}>`, `<OptimizedEntry trackTaps>`, or
-implicitly by passing `onTap`.
+Tap tracking is **on by default**. Disable it with
+`<OptimizationRoot trackEntryInteraction={{ taps: false }}>` or
+`<OptimizedEntry trackTaps={false}>`. Passing `onTap` keeps tap tracking enabled unless
+`trackTaps={false}` is set on the entry. `onTap` is application behavior, not Analytics emission, so
+a consent guard for `trackClick` can skip the event while the app callback still runs.
 
-## 7. Screen tracking paths
+## Screen tracking paths
 
-Screen tracking emits `screen` events, which are allowed before consent and feed into route-based
-profile attribution. The SDK gives you three paths.
+Screen tracking emits Experience `screen` events. React Native allows these events before consent by
+default, and the SDK uses them for route-based profile attribution. A custom `allowedEventTypes`
+list can make screen tracking stricter.
 
 ### OptimizationNavigationContainer
 
-The highest-automation path. Wrap `NavigationContainer` in `<OptimizationNavigationContainer>` and a
-`screen` event fires automatically on every active-route change, including the initial ready.
+The highest-automation path wraps React Navigation's `NavigationContainer` and emits a `screen`
+event when the active route identity changes, including the initial ready event when allowed by
+consent or `allowedEventTypes`.
 
-```tsx
-<OptimizationRoot clientId={CLIENT_ID}>
-  <OptimizationNavigationContainer>
-    {(navigationProps) => (
-      <NavigationContainer {...navigationProps}>
-        <Stack.Navigator>
-          <Stack.Screen name="Home" component={HomeScreen} />
-          <Stack.Screen name="BlogPostDetail" component={BlogPostDetailScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    )}
-  </OptimizationNavigationContainer>
-</OptimizationRoot>
-```
-
-`onReady` fires the initial screen event; `onStateChange` compares the current route name to the
-previous and emits a new screen event when they differ. `includeParams: true` includes the route
-params in the event's `properties`, which are JSON-validated before being attached.
+Internally, the container builds a route key from the current route name. When `includeParams: true`
+is set, it JSON-validates route params, attaches them to event `properties`, and includes them in
+the route key. `onStateChange` compares the previous route key with the current route key, so two
+routes with the same name can still emit separate screen events when params are included. The
+container calls `trackCurrentScreen`, which deduplicates accepted current-route emissions. When
+`screen` is not allowed, the underlying current-state tracker treats the emission as
+`attempted: false` before Core is called, so that skip does not produce an `onEventBlocked` or
+blocked-stream diagnostic.
 
 ### useScreenTracking
 
-Per-screen hook for apps not using React Navigation, or when you want fine-grained control over when
-the event fires (e.g. after data loads).
+Per-screen hook for apps not using React Navigation, or when you want control over when the event
+fires, such as after data loads.
 
 ```tsx
 function DetailsScreen() {
@@ -455,214 +492,94 @@ function DetailsScreen() {
 }
 ```
 
-With `trackOnMount: true` (the default), it fires once on mount. The hook also resets its internal
-tracking state whenever `name` changes, so renaming the screen mid-life re-fires.
+With `trackOnMount: true` (the default), the hook calls `trackCurrentScreen` with the screen name as
+the route key when the descriptor is ready. Changing the name changes the key and can emit again. If
+automatic tracking is not allowed, the underlying current-state tracker treats the emission as
+`attempted: false` without a Core blocked-event diagnostic. The returned `trackScreen` function
+calls `screen` directly for manual retracking and is not current-route deduplicated.
 
 ### useScreenTrackingCallback
 
 Returns a stable `(name, properties?) => void` callback for imperative screen tracking with names
-that aren't known at render time (deep links, dynamic titles, navigation state transforms).
-`OptimizationNavigationContainer` uses this internally.
+that aren't known at render time (deep links, dynamic titles, navigation state transforms). It calls
+`screen` directly and does not apply route-key deduplication.
 
 ```tsx
 const trackScreen = useScreenTrackingCallback()
 trackScreen('Deep Linked Article', { slug, source: 'email' })
 ```
 
-## 8. The configuration surface
+## Configuration guidance
 
-All interaction-tracking behavior is controlled at one of three layers: SDK init config,
-`OptimizationRoot` props, or per-component `<OptimizedEntry>` props. Lower layers override higher
-ones.
+Tracking configuration is a set of gates and precedence rules, not a separate tracking system. Use
+the [React Native SDK README](../../packages/react-native-sdk/README.md#common-configuration) and
+[generated reference](https://contentful.github.io/optimization/modules/_contentful_optimization-react-native.html)
+for exhaustive prop and type details.
 
-### OptimizationRoot props
+- `allowedEventTypes` replaces the React Native default pre-consent list. Use `[]` for strict
+  opt-in, or a narrow custom list when legal and privacy review permits specific pre-consent events.
+  Use `component` for entry views, `component_click` for taps, and `flag` or `component` for Custom
+  Flag views.
+- `<OptimizedEntry>` view and tap props override `OptimizationRoot` `trackEntryInteraction`
+  defaults. `onTap` keeps tap tracking enabled unless the entry sets `trackTaps={false}` and can run
+  even when `trackClick` is not allowed.
+- The preview panel forces live entry updates while it is open so authoring overrides can render
+  immediately.
+- `queuePolicy.flush` controls shared retry, backoff, and circuit behavior. `offlineMaxEvents` and
+  `onOfflineDrop` apply to the offline Experience buffer.
 
-| Prop                          | Type                   | Default                        | Controls                                                                                                            |
-| ----------------------------- | ---------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `trackEntryInteraction`       | `{ views?, taps? }`    | `{ views: true, taps: false }` | Default view/tap tracking for every `<OptimizedEntry>`. Omitted keys fall back to the defaults.                     |
-| `liveUpdates`                 | `boolean`              | `false`                        | Global live-updates default. When `false`, `<OptimizedEntry>` locks to the first variant it sees.                   |
-| `onStatesReady`               | `(states) => cleanup`  | `undefined`                    | Registers app-level state subscribers when SDK state is ready.                                                      |
-| `defaults.consent`            | `boolean \| undefined` | `undefined`                    | Initial consent state at startup. Overridden by `consent()` calls at runtime.                                       |
-| `defaults.persistenceConsent` | `boolean \| undefined` | `undefined`                    | Initial durable profile-continuity persistence consent. Boolean `defaults.consent` seeds both when this is omitted. |
-| `allowedEventTypes`           | `EventType[]`          | `['identify', 'screen']`       | Event types permitted while consent is `undefined` or `false`.                                                      |
-
-The "`{ views: true, taps: false }`" default is the root interaction-tracking context default. Use
-`onStatesReady` when diagnostics or app-level observers should attach as soon as SDK state exists
+Use `onStatesReady` when diagnostics or app-level observers must attach as soon as SDK state exists
 and before provider children can emit `screen`, `eventStream`, or `blockedEventStream` updates.
-Component-local state should still subscribe from hooks and effects under the provider.
 
-### OptimizedEntry props
+## Manual tracking guidance
 
-| Prop                           | Type                                     | Default     | Controls                                                                                               |
-| ------------------------------ | ---------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------ |
-| `trackViews`                   | `boolean \| undefined`                   | `undefined` | Per-entry override for view tracking. `undefined` inherits from `trackEntryInteraction.views`.         |
-| `trackTaps`                    | `boolean \| undefined`                   | `undefined` | Per-entry override for tap tracking. `undefined` inherits from `trackEntryInteraction.taps`.           |
-| `onTap`                        | `(resolved) => void`                     | `undefined` | Implicitly enables tap tracking unless `trackTaps` is explicitly `false`. Fires after the click event. |
-| `minVisibleRatio`              | `number (0.0 – 1.0)`                     | `0.8`       | Visibility ratio required to consider the entry visible.                                               |
-| `dwellTimeMs`                  | `number`                                 | `2000`      | Dwell time before the initial view event.                                                              |
-| `viewDurationUpdateIntervalMs` | `number`                                 | `5000`      | Interval between periodic duration updates after the initial event.                                    |
-| `liveUpdates`                  | `boolean \| undefined`                   | `undefined` | Per-entry live-updates override. See resolution order below.                                           |
-| `baselineEntry`                | `Entry`                                  | (required)  | The baseline or optimized Contentful entry.                                                            |
-| `children`                     | `ReactNode \| ((resolved) => ReactNode)` | (required)  | Render prop receives the resolved variant; static children are rendered as-is.                         |
+Manual tracking uses the same consent gates, profile requirements, and delivery paths as automatic
+tracking. Reach for it when the event is meaningful but no `<OptimizedEntry>` lifecycle matches the
+surface:
 
-Each default is defined by the SDK component and tracking hook behavior.
+- Use `trackView` for a screen-wide or manually timed entry view. Provide a stable `viewId` and
+  measured `viewDurationMs`; automatic entry tracking generates those values for each visibility
+  cycle.
+- Use `trackClick` when a non-Contentful wrapper still represents a component click or tap that
+  Analytics must count.
+- Use `track` for business events unrelated to a Contentful entry. This follows the Experience path
+  and can update the profile while online.
 
-### SDK init config
+For anything backed by a Contentful entry and visible in the viewport, prefer `<OptimizedEntry>`. It
+owns the initial, periodic, and final sequencing, final-on-unmount behavior, final-on-background
+behavior, and `viewId` correlation.
 
-Beyond the layer above, the full `CoreStatefulConfig` is accepted as `OptimizationRoot` props (since
-`OptimizationRootProps extends CoreStatefulConfig`). The ones that directly shape tracking:
+## Lifecycle summary
 
-| Config option                  | Default                                  | Controls                                                                                        |
-| ------------------------------ | ---------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `api.experienceBaseUrl`        | `https://experience.ninetailed.co/`      | Where sticky views, identify, and variant resolution go.                                        |
-| `api.insightsBaseUrl`          | `https://ingest.insights.ninetailed.co/` | Where all fire-and-forget interaction events go.                                                |
-| `api.beaconHandler`            | `undefined`                              | Optional custom beacon; takes over batch delivery to Insights if provided.                      |
-| `fetchOptions.requestTimeout`  | `3000`                                   | Max ms per request before abort.                                                                |
-| `fetchOptions.retries`         | `1`                                      | Retry attempts on failure.                                                                      |
-| `queuePolicy.flush`            | See README                               | Backoff, circuit breaker, and retry callbacks for the flush loop.                               |
-| `queuePolicy.offlineMaxEvents` | —                                        | Cap on the offline buffer; overflow triggers `onOfflineDrop`.                                   |
-| `onEventBlocked`               | `undefined`                              | Callback when an event is blocked by the consent guard. Useful for surfacing misconfigurations. |
-| `eventBuilder.channel`         | `'mobile'`                               | Channel tag on every event. RN SDK sets this; no need to change.                                |
-| `logLevel`                     | `'error'`                                | Set to `'debug'` to see every gate decision.                                                    |
+For a scrollable list screen with navigation and entry cards, tracking flows in this order:
 
-The full configuration reference lives in the
-[React Native SDK README](../../packages/react-native-sdk/README.md#common-configuration).
+- **Startup** - The SDK hydrates consent and, when persistence consent allows it, profile-continuity
+  state from AsyncStorage before provider children mount.
+- **Navigation** - `OptimizationNavigationContainer` or `useScreenTracking` sends a `screen`
+  Experience event. While online, that event calls `upsertProfile` immediately and can establish the
+  active profile needed by Insights.
+- **Entry rendering** - `OptimizedEntry` resolves variants from current selected optimizations and
+  attaches view and tap tracking metadata.
+- **View cycle** - A card that stays at least 80% visible for 2 s emits the initial Insights view,
+  then periodic updates every 5 s, then a final view when visibility ends if at least one view event
+  already fired.
+- **Tap** - A short touch movement on the wrapped entry emits a `component_click` Insights event
+  when `trackClick` is allowed and calls the application `onTap` handler when provided, even when
+  the Analytics event is skipped.
+- **Background or offline** - Backgrounding triggers a final view for active cycles and asks queues
+  to flush. Offline Insights events and offline Experience events remain in memory and replay on
+  reconnect if the process survives.
 
-### Resolution order
-
-**View tracking enabled?**
-
-1. If `<OptimizedEntry trackViews={true|false}>`, use that.
-2. Else use `trackEntryInteraction.views` from `OptimizationRoot`.
-3. Else use the default (`true`).
-
-**Tap tracking enabled?**
-
-1. If `<OptimizedEntry trackTaps={true|false}>`, use that.
-2. Else if `<OptimizedEntry onTap={...}>` is provided, use `true`.
-3. Else use `trackEntryInteraction.taps` from `OptimizationRoot`.
-4. Else use the default (`false`).
-
-**Live updates enabled?**
-
-1. If the preview panel is open — always `true`, cannot be overridden.
-2. Else if `<OptimizedEntry liveUpdates={true|false}>`, use that.
-3. Else use `OptimizationRoot.liveUpdates`.
-4. Else default (`false`; the entry locks to its first variant).
-
-## 9. Manual tracking API
-
-For content that doesn't fit `<OptimizedEntry>` — custom screens, server-rendered fragments,
-non-Contentful components — call tracking methods directly on the SDK instance. These hit the same
-wire pipeline, consent gates, and offline queue.
-
-```tsx
-const optimization = useOptimization()
-
-useEffect(() => {
-  void optimization.trackView({
-    componentId: contentfulId,
-    experienceId,
-    variantIndex: 0,
-    viewDurationMs: 0,
-  })
-}, [contentfulId, experienceId, optimization])
-```
-
-### Payload shapes
-
-```ts
-optimization.trackView({
-  componentId: string,
-  viewId?: string,              // UUID; correlates events in a cycle
-  experienceId?: string,
-  variantIndex?: number,        // 0 for baseline
-  viewDurationMs?: number,
-  sticky?: boolean,             // When true, also routes through Experience API
-  profile?: PartialProfile,
-})
-
-optimization.trackClick({
-  componentId: string,
-  experienceId?: string,
-  variantIndex?: number,
-})
-```
-
-### When to reach for manual tracking
-
-- **Screen-wide entry views without viewport-visibility semantics** — `trackView` from `useEffect`
-  on mount.
-- **Non-Contentful UI that counts as a component click** — `trackClick` from a `Pressable`'s
-  `onPress`.
-- **Business events unrelated to a Contentful entry** — `track('Added To Cart', { sku })`.
-
-For anything backed by a Contentful entry, prefer `<OptimizedEntry>` — it handles the state machine,
-initial/periodic/final sequencing, final-on-unmount, final-on-background, and `viewId` correlation
-for you.
-
-## 10. Putting it together
-
-A fully-instrumented list screen combines every mechanism in this guide:
-
-```tsx
-;<OptimizationRoot
-  clientId={OPTIMIZATION_CLIENT_ID}
-  defaults={{ consent: true }}
-  trackEntryInteraction={{ views: true, taps: true }}
->
-  <OptimizationNavigationContainer>
-    {(navigationProps) => (
-      <NavigationContainer {...navigationProps}>
-        <Stack.Navigator>
-          <Stack.Screen name="Home" component={HomeScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    )}
-  </OptimizationNavigationContainer>
-  <PreviewPanelOverlay contentfulClient={contentfulClient} />
-</OptimizationRoot>
-
-function HomeScreen({ navigation }) {
-  const { posts } = useContentfulData()
-  return (
-    <OptimizationScrollProvider>
-      {posts.map((post) => (
-        <OptimizedEntry
-          key={post.sys.id}
-          baselineEntry={post}
-          onTap={() => navigation.navigate('BlogPostDetail', { post })}
-        >
-          <BlogPostCard post={post} />
-        </OptimizedEntry>
-      ))}
-    </OptimizationScrollProvider>
-  )
-}
-```
-
-What fires:
-
-- **On launch** — consent is seeded `true`, so view/tap events flow immediately.
-- **Every route change** — a `screen` event via `OptimizationNavigationContainer`.
-- **Per card scrolled into view for ≥ 2 s** — initial entry view, periodic updates every 5 s, final
-  event on scroll-away / unmount.
-- **Per card tapped** — a `component_click` event plus the `onTap` callback.
-- **On backgrounding mid-view** — a final view event for any card mid-cycle; the queue flushes
-  before the OS suspends the process.
-- **Offline** — events buffer; they replay on reconnect.
-
-If application policy depends on user choice, omit `defaults={{ consent: true }}` and call
-`optimization.consent(true)` from the application-owned consent UI. Until that happens, view and tap
-events wait behind the consent gate.
-
-For the broader integration walkthrough, read the
-[React Native SDK integration guide](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md).
-
-## Reference
+## Related documentation
 
 - [React Native SDK README](../../packages/react-native-sdk/README.md) - Package-level orientation
   and common configuration.
+- [Core state management](./core-state-management.md) - Shared state, consent, persistence, event
+  queues, and observable mechanics used by the React Native SDK.
+- [Consent management in the Optimization SDK Suite](./consent-management-in-the-optimization-sdk-suite.md) -
+  Cross-SDK consent, persistence consent, allow-list, and withdrawal policy guidance.
+- [Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md) -
+  Contentful entry contract, variant fallback behavior, and local resolution mechanics.
 - [React Native reference implementation](../../implementations/react-native-sdk/README.md) -
   Working app that exercises the React Native SDK API surface in this monorepo.
 - [Integrating the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md) -

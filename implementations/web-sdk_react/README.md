@@ -68,22 +68,34 @@ for the entry contract.
 ## Prerequisites
 
 - Node.js >= 20.19.0 (24.15.0 recommended to match `.nvmrc`)
-- pnpm 10.x
+- pnpm
 
 ## Setup
 
 From the **repository root**:
 
-1. Build SDK packages, which is required for local development:
+1. Install pnpm packages:
+
+```sh
+pnpm install
+```
+
+2. Build SDK packages, which is required for local development:
 
 ```sh
 pnpm build:pkgs
 ```
 
-2. Install implementation dependencies:
+3. Install implementation dependencies:
 
 ```sh
 pnpm implementation:run -- web-sdk_react implementation:install
+```
+
+4. Create the local `.env` file if it does not already exist:
+
+```sh
+test -f implementations/web-sdk_react/.env || cp implementations/web-sdk_react/.env.example implementations/web-sdk_react/.env
 ```
 
 ## Running locally
@@ -132,7 +144,7 @@ pnpm setup:e2e:web-sdk_react
 pnpm test:e2e:web-sdk_react
 ```
 
-2. Or run the Playwright flow step by step:
+2. Or run the shared Playwright flow step by step:
 
 ```sh
 pnpm implementation:run -- web-sdk_react serve
@@ -141,7 +153,7 @@ pnpm implementation:run -- web-sdk_react serve
 In another terminal:
 
 ```sh
-pnpm --dir implementations/web-sdk_react --ignore-workspace exec playwright test
+IMPLEMENTATION=web-sdk_react pnpm --dir lib/e2e-web test
 ```
 
 When finished:
@@ -150,19 +162,23 @@ When finished:
 pnpm implementation:run -- web-sdk_react serve:stop
 ```
 
-3. Use Playwright UI or codegen when needed:
+This implementation uses the shared Playwright suite from
+[`lib/e2e-web`](../../lib/e2e-web/README.md). The implementation sets `IMPLEMENTATION=web-sdk_react`
+when invoking that suite.
+
+3. Use Playwright UI or the report viewer when needed:
 
 ```sh
 pnpm implementation:run -- web-sdk_react test:e2e:ui
-pnpm implementation:run -- web-sdk_react test:e2e:codegen
+pnpm implementation:run -- web-sdk_react test:e2e:report
 ```
 
 ## Environment variables
 
-Copy `.env.example` to `.env` and configure:
+The setup step creates the local `.env` file if needed:
 
 ```sh
-cp .env.example .env
+test -f implementations/web-sdk_react/.env || cp implementations/web-sdk_react/.env.example implementations/web-sdk_react/.env
 ```
 
 See `.env.example` for available configuration options. The implementation reads from
@@ -186,7 +202,6 @@ web-sdk_react/
 │   │   └── components/
 │   ├── pages/                # Route pages
 │   └── components/           # UI components
-├── e2e/                      # Playwright E2E tests
 ├── public/                   # Static assets
 ├── index.html                # HTML template
 ├── rsbuild.config.ts         # Rsbuild configuration
@@ -194,61 +209,28 @@ web-sdk_react/
 └── package.json
 ```
 
-## SDK integration patterns
+## Adapter touchpoints
 
-This implementation demonstrates how to build a React adapter for `@contentful/optimization-web`.
-Key patterns include:
+This implementation demonstrates a local React adapter over `@contentful/optimization-web`. Use the
+[@contentful/optimization-web package README](../../packages/web/web-sdk/README.md) for API-level
+Web SDK workflows, and compare against the
+[React Web SDK reference implementation](../react-web-sdk/README.md) for the preferred official
+React package integration.
 
-### Provider setup
+Implementation-specific touchpoints:
 
-```tsx
-import { OptimizationProvider } from './optimization'
-
-function App() {
-  return (
-    <OptimizationProvider>
-      <YourApp />
-    </OptimizationProvider>
-  )
-}
-```
-
-### Using hooks
-
-```tsx
-import { useOptimizationResolver, useOptimization } from './optimization'
-
-function MyComponent() {
-  const { sdk, isReady } = useOptimization()
-  const { resolveEntry } = useOptimizationResolver()
-  const resolved = resolveEntry(baseEntry)
-
-  // ...
-}
-```
-
-### Analytics tracking
-
-```tsx
-import { useAnalytics } from './optimization'
-
-function TrackedComponent() {
-  const { trackView } = useAnalytics()
-
-  useEffect(() => {
-    void trackView({ componentId: 'component-id' })
-  }, [])
-
-  // ...
-}
-```
+- `src/optimization/OptimizationProvider.tsx` owns Web SDK lifecycle and provider state.
+- `src/optimization/hooks/` exposes local hooks for SDK access, entry resolution, and analytics
+  actions.
+- `src/optimization/components/` contains adapter components that keep app pages free of direct Web
+  SDK setup code.
 
 ## Related
 
 - [React Web SDK reference implementation](../react-web-sdk/README.md) - Primary React
   implementation using the official React SDK package
-- [React Native Implementation](../react-native-sdk/README.md) - Reference implementation for React
-  Native
-- [Web Vanilla Implementation](../web-sdk/README.md) - Reference implementation for vanilla
-  JavaScript
+- [React Native reference implementation](../react-native-sdk/README.md) - React Native reference
+  implementation
+- [Web SDK Vanilla JS reference implementation](../web-sdk/README.md) - Vanilla JavaScript reference
+  implementation
 - [@contentful/optimization-web](../../packages/web/web-sdk/README.md) - Web SDK package

@@ -10,6 +10,7 @@
 
 <div align="center">
 
+[Readme](./README.md) ·
 [Guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) ·
 [Reference](https://contentful.github.io/optimization) · [Contributing](../../CONTRIBUTING.md)
 
@@ -19,14 +20,13 @@
 >
 > The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
-Reference implementation of `@contentful/optimization-web` for Angular applications. Demonstrates
-all SDK integration patterns — entry resolution, auto and manual tracking, consent, identify/reset,
-live updates, nested entries, rich text with merge tags, feature flags, analytics event display, and
-the preview panel.
+Reference implementation demonstrating `@contentful/optimization-web` usage in an Angular
+application. It uses Angular services and standalone components directly with the Web SDK, without
+an Angular-specific SDK adapter.
 
 ## What this demonstrates
 
-- SDK initialisation as a singleton Angular service
+- SDK initialization as a singleton Angular service
 - Page tracking on every route change via the Angular router
 - Entry resolution with variant/baseline display
 - Auto-tracking via `data-ctfl-*` DOM attributes
@@ -42,33 +42,69 @@ the preview panel.
 - Analytics event display with heartbeat deduplication
 - Multi-route navigation with conversion tracking
 
+## CDA locale handling
+
+This app configures one locale in `app.config.ts`, passes it as the Web SDK top-level `locale`, and
+passes it directly to Contentful CDA `getEntry()` calls through `ContentfulClient`. Do not use
+`contentful.js` `withAllLocales` or raw CDA `locale=*` for entries passed to SDK resolution; SDK
+entry resolution expects direct single-locale fields such as `fields.nt_experiences` and
+`fields.nt_variants`. See
+[Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
+for the broader locale model and
+[Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
+for the entry contract.
+
 ## Prerequisites
 
-- Node.js ^24.15.0 (to match `.nvmrc`)
-- pnpm 10.x
+- Node.js >= 20.19.0 (24.15.0 recommended to match `.nvmrc`)
+- pnpm
 
-## Quick start
+## Setup
 
-From the **repository root**:
+From the monorepo root:
 
 ```sh
+pnpm install
 pnpm build:pkgs
 pnpm implementation:run -- web-sdk_angular implementation:install
-pnpm implementation:run -- web-sdk_angular serve:mocks
-pnpm implementation:run -- web-sdk_angular dev
+test -f implementations/web-sdk_angular/.env || cp implementations/web-sdk_angular/.env.example implementations/web-sdk_angular/.env
 ```
 
-The app is available at `http://localhost:4200`. The mock server must be running for entry data and
-variant resolution to work.
+The `.env.example` values are mock-safe defaults. To use local mock Contentful endpoints, keep
+`PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000` and `PUBLIC_CONTENTFUL_BASE_PATH=contentful`.
 
-Other commands from the **repository root**:
+## Running locally
+
+From the monorepo root:
+
+1. Start the mock API server:
+
+   ```sh
+   pnpm implementation:run -- web-sdk_angular serve:mocks
+   ```
+
+2. In another terminal, start the Angular development server:
+
+   ```sh
+   pnpm implementation:run -- web-sdk_angular dev
+   ```
+
+The app is available at `http://localhost:4200`.
+
+When finished, stop the PM2-managed mock server:
+
+```sh
+pnpm implementation:run -- web-sdk_angular serve:mocks:stop
+```
+
+Other local commands from the monorepo root:
 
 ```sh
 pnpm implementation:run -- web-sdk_angular build
 pnpm implementation:run -- web-sdk_angular typecheck
 ```
 
-Or equivalently from the **implementation directory**:
+The equivalent implementation-directory commands are:
 
 ```sh
 pnpm dev
@@ -76,14 +112,60 @@ pnpm build
 pnpm typecheck
 ```
 
-## Environment variables
+The `dev`, `build`, and `typecheck` scripts generate `src/environments/environment.ts` from `.env`
+or `.env.example` before running Angular or TypeScript tooling.
 
-Copy `.env.example` to `.env`:
+## Running E2E tests
+
+Run the full E2E setup and test suite from the monorepo root:
 
 ```sh
-cp .env.example .env
+pnpm setup:e2e:web-sdk_angular
+pnpm test:e2e:web-sdk_angular
 ```
+
+This implementation uses the shared Playwright suite from
+[`lib/e2e-web`](../../lib/e2e-web/README.md). The implementation sets
+`IMPLEMENTATION=web-sdk_angular` and `APP_PORT=4200` when invoking the shared suite.
+
+Use Playwright UI or the report viewer when needed:
+
+```sh
+pnpm implementation:run -- web-sdk_angular test:e2e:ui
+pnpm implementation:run -- web-sdk_angular test:e2e:report
+```
+
+## Environment variables
+
+The setup step creates the local `.env` file if needed:
+
+```sh
+test -f implementations/web-sdk_angular/.env || cp implementations/web-sdk_angular/.env.example implementations/web-sdk_angular/.env
+```
+
+The app generates `src/environments/environment.ts` from `.env` or `.env.example` before `dev`,
+`build`, and `typecheck` run. Preview panel attachment is gated behind
+`PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`; set it to `true` for development demos that need preview
+panel behavior.
+
+## Code orientation
+
+| File or area                            | Purpose                                                      |
+| --------------------------------------- | ------------------------------------------------------------ |
+| `src/app/app.config.ts`                 | Angular providers and SDK configuration                      |
+| `src/app/services/optimization.ts`      | Web SDK singleton, consent, state, and event-stream glue     |
+| `src/app/services/contentful-client.ts` | Single-locale Contentful CDA reads                           |
+| `src/app/components/entry-card/`        | Optimized entry display and automatic/manual tracking markup |
+| `src/app/components/control-panel/`     | Consent, identify, reset, live updates, and preview controls |
+| `src/app/components/tracking-log/`      | Analytics event stream display                               |
+| `src/app/pages/`                        | Home and page-two route demonstrations                       |
 
 ## Related
 
-- [@contentful/optimization-web](../../packages/web/web-sdk/README.md) — Web SDK
+- [@contentful/optimization-web](../../packages/web/web-sdk/README.md) - Web SDK package
+- [Web SDK Vanilla JS reference implementation](../web-sdk/README.md) - Static browser integration
+  for the Web SDK
+- [Web SDK React Adapter reference implementation](../web-sdk_react/README.md) - React adapter built
+  directly on top of the Web SDK
+- [Shared web E2E suite](../../lib/e2e-web/README.md) - Playwright suite shared by CSR web
+  implementations

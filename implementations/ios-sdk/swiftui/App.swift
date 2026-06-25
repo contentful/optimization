@@ -27,8 +27,6 @@ struct OptimizationDemoApp: App {
                     defaults: StorageDefaults(consent: true),
                     logLevel: .debug
                 ),
-                trackViews: true,
-                trackTaps: true,
                 previewPanel: PreviewPanelConfig(
                     contentfulClient: MockPreviewContentfulClient()
                 )

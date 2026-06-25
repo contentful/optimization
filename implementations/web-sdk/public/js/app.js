@@ -25,7 +25,6 @@ window.contentfulOptimization = new ContentfulOptimization({
   clientId: window.ENVIRONMENT.PUBLIC_NINETAILED_CLIENT_ID,
   environment: window.ENVIRONMENT.PUBLIC_NINETAILED_ENVIRONMENT,
   logLevel: 'debug',
-  autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
   locale: 'en-US',
   app: { name: document.title, version: '0.0.0' },
   api: {

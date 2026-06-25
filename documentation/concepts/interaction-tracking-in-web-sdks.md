@@ -22,19 +22,21 @@ For server-owned rendering, see
 
 - [Tracking boundary](#tracking-boundary)
 - [Layer responsibilities](#layer-responsibilities)
+- [Runtime prerequisites and defaults](#runtime-prerequisites-and-defaults)
 - [Event paths](#event-paths)
 - [Consent and profile gates](#consent-and-profile-gates)
 - [Tracked entry metadata](#tracked-entry-metadata)
 - [Runtime control and precedence](#runtime-control-and-precedence)
 - [DOM discovery](#dom-discovery)
 - [View tracking mechanics](#view-tracking-mechanics)
+  - [`display: contents` wrappers](#display-contents-wrappers)
 - [Click tracking mechanics](#click-tracking-mechanics)
 - [Hover tracking mechanics](#hover-tracking-mechanics)
 - [React Web mechanics](#react-web-mechanics)
 - [Delivery and flushing](#delivery-and-flushing)
 - [Debugging model](#debugging-model)
 - [Design boundaries](#design-boundaries)
-- [Reference](#reference)
+- [Related docs](#related-docs)
 
 <!-- mtoc-end -->
 </details>
@@ -68,6 +70,24 @@ allowed, which event type it becomes, and which queue receives it.
 The application still owns Contentful fetching, rendering policy, consent UX, identity policy, route
 ownership, and any business event taxonomy passed to `track()`.
 
+## Runtime prerequisites and defaults
+
+This document applies to the browser Web SDK and the React Web layer. The Web SDK surface is the
+`ContentfulOptimization` instance and its `tracking.*` APIs. React Web passes tracking-related props
+through `OptimizationRoot`, renders metadata with `OptimizedEntry`, and exposes the same underlying
+SDK instance through hooks.
+
+Before relying on automatic entry interaction tracking, account for these runtime conditions:
+
+| Concern                     | Default or prerequisite                                                                                                                                                                               |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Profile state               | Call `page()` or `identify()` before relying on Insights events. Insights delivery needs a current profile in SDK state.                                                                              |
+| Consent                     | Browser SDKs allow `identify` and `page` before consent by default. Other event types need accepted consent or an explicit `allowedEventTypes` entry.                                                 |
+| Automatic tracking          | Entry view, click, and hover detectors are configured on by default, but each detector starts only when the matching event type is allowed by consent or `allowedEventTypes`.                         |
+| Persistence                 | Consent is read from `localStorage` during startup. Profile-continuity state and the anonymous ID cookie are persisted only when persistence consent permits it.                                      |
+| Storage and offline support | Browser storage writes are best-effort. If a storage write fails, live SDK state continues in memory for the current runtime. Experience events queue while offline up to the configured queue limit. |
+| Startup defaults            | `defaults` can seed consent, persistence consent, profile, selected optimizations, and related state before application events run.                                                                   |
+
 ## Event paths
 
 Tracking events use two API paths:
@@ -91,6 +111,11 @@ The entry interaction methods map to these wire event types:
 | `trackHover()`    | `component_hover`                            | Pointer or mouse hover listener, or direct application call.             |
 | `trackFlagView()` | `component` with `componentType: 'Variable'` | `getFlag()` and `states.flag(name)` reads from stateful Core.            |
 
+When configuring `allowedEventTypes`, entry views require `component`, clicks require
+`component_click`, and hovers require `component_hover`. Custom Flag views can use `flag` or
+`component`; use `flag` when the pre-consent allow-list must admit Custom Flag views without also
+admitting entry views.
+
 Sticky entry views touch both paths. When `trackView({ sticky: true, ... })` is called, Core sends
 the view through Experience first, then sends an Insights view event. Non-sticky views only use
 Insights.
@@ -106,11 +131,16 @@ event type is allow-listed, Core blocks non-allowed event types such as `track`,
 
 Consent affects two parts of automatic entry tracking:
 
-- **Observer startup** - Auto-enabled entry interaction detectors start only when consent is `true`.
-  Calling `consent(false)` stops those auto-enabled detectors.
+- **Observer startup** - Entry interaction detectors are enabled by default, but they start only
+  when consent or `allowedEventTypes` permits the matching event type. A manual
+  `tracking.enableElement(...)` override can force observation while global automatic tracking is
+  off, but only after that interaction type is allowed. Before consent or allow-list admission, the
+  detector stays stopped and automatic tracking does not call Core, so no automatic blocked-event
+  payload is produced for that element. Calling `consent(false)` stops detectors that are not
+  otherwise allow-listed.
 - **Event delivery** - Every event call still passes through Core's consent guard. Manual
-  `tracking.enableElement(...)` can force an element detector to run, but emitted events are still
-  blocked unless consent or `allowedEventTypes` permits the event type.
+  application calls, such as `trackView()` or `trackClick()`, are still blocked unless consent or
+  `allowedEventTypes` permits the event type.
 
 This means a typical browser integration needs both:
 
@@ -118,8 +148,10 @@ This means a typical browser integration needs both:
 2. Consent or an explicit event allow-list for the interaction event types the application wants to
    send.
 
-Blocked events are observable through `onEventBlocked` and `states.blockedEventStream`. Events that
-are blocked by consent are not replayed later when consent changes.
+Blocked events are observable through `onEventBlocked` and `states.blockedEventStream`. Individual
+payloads blocked by consent are not replayed later when consent changes. SDK-owned current-state
+surfaces, such as active page or Custom Flag state, can emit fresh events after consent opens when
+the underlying state is still current and the event has not already been accepted.
 
 ## Tracked entry metadata
 
@@ -130,6 +162,7 @@ non-empty `data-ctfl-entry-id` attribute.
 | --------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `data-ctfl-entry-id`                          | Required. Becomes `componentId` in entry interaction events.                                         |
 | `data-ctfl-optimization-id`                   | Optional. Becomes `experienceId`.                                                                    |
+| `data-ctfl-optimization-context-id`           | Optional. Runtime-owned context for follow-up event enrichment and diagnostics.                      |
 | `data-ctfl-sticky`                            | Optional. `true` sends the first successful view for the element through the sticky Experience path. |
 | `data-ctfl-variant-index`                     | Optional. Non-negative integer used as `variantIndex`; invalid or unsafe values are ignored.         |
 | `data-ctfl-track-views`                       | Optional. `true` or `false` override for view observation when the view detector is running.         |
@@ -143,15 +176,22 @@ The tracking payload uses the resolved entry ID, not the baseline entry ID. When
 needs the baseline ID for rerendering, store it separately, for example in `data-ctfl-baseline-id`.
 The Web SDK does not use `data-ctfl-baseline-id` in event payloads.
 
+`optimizationContextId` is SDK-owned runtime context. Core uses it to enrich follow-up event stream
+emissions and diagnostics with the resolved entry and selected optimization context before building
+API events. It is not an Experience API or Insights API event field.
+
 Manual element observation can provide the same metadata without DOM attributes:
 
 ```ts
+const resolved = optimization.resolveOptimizedEntry(baselineEntry)
+
 optimization.tracking.enableElement('views', element, {
   data: {
-    entryId: resolvedEntry.sys.id,
-    optimizationId: selectedOptimization?.experienceId,
-    sticky: selectedOptimization?.sticky,
-    variantIndex: selectedOptimization?.variantIndex,
+    entryId: resolved.entry.sys.id,
+    optimizationContextId: resolved.optimizationContextId,
+    optimizationId: resolved.selectedOptimization?.experienceId,
+    sticky: resolved.selectedOptimization?.sticky,
+    variantIndex: resolved.selectedOptimization?.variantIndex,
   },
 })
 ```
@@ -161,15 +201,13 @@ data is missing or invalid, the detector falls back to the element attributes.
 
 ## Runtime control and precedence
 
-Automatic tracking is opt-in. If `autoTrackEntryInteraction` is omitted, all automatic interaction
-types default to `false`:
+Automatic tracking defaults to enabled for entry views, clicks, and hovers. Pass `false` for any
+interaction type that the application does not observe:
 
 ```ts
 const optimization = new ContentfulOptimization({
   clientId: 'your-client-id',
   autoTrackEntryInteraction: {
-    views: true,
-    clicks: true,
     hovers: false,
   },
 })
@@ -200,18 +238,20 @@ The Web SDK has one shared entry element registry. When an interaction detector 
 does two things:
 
 - Seeds the initial set from `document.querySelectorAll('[data-ctfl-entry-id]')`.
-- Subscribes to a `MutationObserver` that watches child additions and removals in the document
-  subtree.
+- Subscribes to a `MutationObserver` that watches child additions, child removals, and
+  `data-ctfl-entry-id` attribute mutations in the document subtree.
 
 When a tracked element is added, the registry notifies the running view, click, and hover detectors.
 When a tracked element is removed, the registry notifies those detectors so they can unobserve the
 element or stop treating it as tracked.
 
-The registry observes element existence, not arbitrary attribute changes. Entry payload attributes
-such as `data-ctfl-entry-id` are read when an event fires, so updated IDs can affect later payloads.
-Per-element tracking overrides such as `data-ctfl-track-views` and interval attributes are resolved
-when the element is added to the detector. If an existing mounted element needs dynamic override
-changes, use the `tracking.*Element(...)` API or remount the tracked element.
+The registry observes element existence and `data-ctfl-entry-id` mutations, not arbitrary attribute
+changes. Payload attributes such as `data-ctfl-optimization-id`,
+`data-ctfl-optimization-context-id`, and `data-ctfl-variant-index` are read when an event fires, so
+updated values can affect later payloads. Per-element tracking overrides such as
+`data-ctfl-track-views` and interval attributes are resolved when the element is added to the
+detector. If an existing mounted element needs dynamic non-entry-ID override changes, use the
+`tracking.*Element(...)` API or remount the tracked element.
 
 ## View tracking mechanics
 
@@ -252,6 +292,18 @@ events for the same element omit `sticky`. If the sticky attempt is blocked, the
 sticky on the next visibility cycle for that element. Separately rendered elements with the same
 entry ID are treated as separate sticky targets.
 
+### `display: contents` wrappers
+
+React Web renders `OptimizedEntry` with `display: contents` by default so the wrapper can carry
+tracking metadata without adding a layout box. Because the wrapper has no box of its own, view
+tracking resolves what rendered area to measure.
+
+When the wrapper has one rendered element child and no visible text, the view detector observes that
+child element. When the wrapper contains multiple rendered boxes or visible text, the detector uses
+virtual measurement of the wrapper contents against the viewport and clipping ancestors. The
+detector remeasures when the rendered subtree, `class`, `hidden`, or `style` changes, and when
+resize or scroll can change virtual visibility.
+
 ## Click tracking mechanics
 
 Click tracking uses one document-level capture listener. It does not call `preventDefault()` or
@@ -266,7 +318,7 @@ The click detector treats these paths as clickable:
 
 - `a[href]`
 - `button`
-- non-hidden `input`
+- `input` except `type="hidden"`
 - `select`
 - `textarea`
 - `summary`
@@ -332,8 +384,10 @@ The wrapper receives:
 
 ```html
 <div
+  data-ctfl-baseline-id="baseline-entry-id"
   data-ctfl-entry-id="resolved-entry-id"
   data-ctfl-optimization-id="experience-id"
+  data-ctfl-optimization-context-id="optimization-context-id"
   data-ctfl-sticky="true"
   data-ctfl-variant-index="1"
   data-ctfl-duplication-scope="session"
@@ -372,11 +426,13 @@ The Web SDK wires browser lifecycle events into this queue model:
 - `visibilitychange`, `pagehide`, and `beforeunload` call `flush()` once per hide cycle.
 - Insights delivery uses the configured beacon handler, which defaults to `navigator.sendBeacon()`.
 
-Browser persistence is best-effort. Consent is read from `localStorage` at startup when available.
-Profile-continuity values such as profile, selected optimizations, Custom Flag changes, and
-anonymous ID are read only when persistence consent permits it. The anonymous ID is also persisted
-in the `ctfl-opt-aid` cookie and migrated from the legacy anonymous ID cookie when profile
-continuity is enabled.
+Browser storage writes are best-effort. If a `localStorage` write fails, live SDK state continues in
+memory for the current runtime while durable continuity is limited. At startup, the SDK reads
+consent from `localStorage` and resolves configured defaults with any profile-continuity values it
+is allowed to load. Profile-continuity values such as profile, selected optimizations, Custom Flag
+changes, and anonymous ID are read only when persistence consent permits it. The anonymous ID is
+also persisted in the `ctfl-opt-aid` cookie and migrated from the legacy anonymous ID cookie when
+profile continuity is enabled.
 
 ## Debugging model
 
@@ -387,7 +443,8 @@ When an expected interaction does not appear, check the gates in this order:
 2. **Consent** - Confirm `states.consent.current === true` or configure `allowedEventTypes` for the
    event types that must emit before consent.
 3. **Detector startup** - Confirm React Web `trackEntryInteraction`, lower-level Web SDK
-   `autoTrackEntryInteraction`, or `tracking.enable(...)` is enabled for the relevant interaction.
+   `autoTrackEntryInteraction`, `tracking.disable(...)`, or `data-ctfl-track-*="false"` has not
+   opted the relevant interaction out.
 4. **Element metadata** - Confirm the tracked element is an HTML or SVG element with non-empty
    `data-ctfl-entry-id`, or that `enableElement(...)` supplies valid `data.entryId`.
 5. **View threshold** - Confirm the element stays above `minVisibleRatio` for `dwellTimeMs`.
@@ -400,7 +457,7 @@ When an expected interaction does not appear, check the gates in this order:
 
 For local diagnostics, subscribe to `states.eventStream` and `states.blockedEventStream`, and use
 `onEventBlocked` for consent-gating visibility. In React Web, use `onStatesReady` on
-`OptimizationRoot` when those subscribers should be attached as soon as SDK state exists and before
+`OptimizationRoot` when those subscribers must be attached as soon as SDK state exists and before
 provider children can emit router `page()` events or entry interactions.
 
 ## Design boundaries
@@ -411,18 +468,18 @@ The Web SDKs do not own every part of tracking:
 - They do not decide whether a user has granted consent.
 - They do not infer a browser view from server rendering alone.
 - They do not make non-clickable markup clickable.
-- They do not replay events blocked before consent.
+- They do not replay individual event payloads blocked before consent.
 - They do not guarantee persistence in browsers that deny storage access.
 
 Keep these boundaries explicit when integrating or changing tracking behavior. Detection belongs to
 the browser runtime, event semantics belong to Core, and application-specific policy stays in the
 application.
 
-## Reference
+## Related docs
 
 - [Core state management](./core-state-management.md) - Core state, consent, queues, observables,
   and event streams.
-- [Entry personalization and variant resolution](./entry-personalization-and-variant-resolution.md) -
+- [Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md) -
   How resolved entries and selected optimization metadata are produced before tracking metadata is
   rendered.
 - [Interaction tracking in Node and stateless environments](./interaction-tracking-in-node-and-stateless-environments.md) -
@@ -435,3 +492,5 @@ application.
   Step-by-step browser integration flow.
 - [Integrating the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md) -
   Step-by-step React integration flow.
+- [Forwarding Optimization SDK context to analytics and tag-management tools](../guides/forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
+  Consent-aware forwarding, sticky-view dedupe, and Custom Flag analytics handoff.
