@@ -33,7 +33,7 @@ test.describe('Offline Queue Recovery', () => {
   })
 
   test('continues tracking Insights API events while offline', async ({ context, page }) => {
-    skipIf('SSR')
+    skipIf('SSR', 'HYDRATION')
     const baselineCount = await getRawEventsCount(page)
 
     await setOffline(context, true)
@@ -44,7 +44,7 @@ test.describe('Offline Queue Recovery', () => {
   })
 
   test('recovers gracefully when network is restored', async ({ context, page }) => {
-    skipIf('SSR')
+    skipIf('SSR', 'HYDRATION')
     await setOffline(context, true)
     await page.getByTestId('link-page-two').click()
     await expect(page.getByTestId('page-two-view')).toBeVisible()
