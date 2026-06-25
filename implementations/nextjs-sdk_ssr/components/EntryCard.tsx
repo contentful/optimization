@@ -18,6 +18,7 @@ interface EntryCardProps {
   clickScenario?: EntryClickScenario
   getMergeTagValue?: MergeTagResolver
   manualTracking: boolean
+  resolveEntry?: (entry: ContentEntry) => ServerTrackingResolvedData
   resolvedData: ServerTrackingResolvedData
 }
 
@@ -51,6 +52,7 @@ export function EntryCard({
   clickScenario,
   getMergeTagValue,
   manualTracking,
+  resolveEntry,
   resolvedData,
 }: EntryCardProps): JSX.Element {
   const resolvedEntry = resolvedData.entry as ContentEntry
@@ -88,7 +90,8 @@ export function EntryCard({
               getMergeTagValue={getMergeTagValue}
               key={nestedEntry.sys.id}
               manualTracking={false}
-              resolvedData={{ entry: nestedEntry }}
+              resolveEntry={resolveEntry}
+              resolvedData={resolveEntry ? resolveEntry(nestedEntry) : { entry: nestedEntry }}
             />
           ))}
         </div>

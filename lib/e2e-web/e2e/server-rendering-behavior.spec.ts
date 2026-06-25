@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test'
-import { onlyInModes } from './utils'
+import { runIf } from './utils'
 
 test.describe('Server-Rendering Behavior', () => {
-  onlyInModes('ssr', 'hybrid')
+  runIf('SSR')
 
   test('does not issue a client Experience request after consented SSR hydration', async ({
     baseURL,

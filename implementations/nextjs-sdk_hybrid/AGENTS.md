@@ -27,7 +27,7 @@ server/client SDK composition; app code imports only Next.js SDK subpaths.
 
 ## E2E
 
-- Shared behavioral tests run via `lib/e2e-web` with `RENDERING_MODE=hybrid` (port 3002).
+- Shared behavioral tests run via `lib/e2e-web` with `E2E_FLAGS=CSR,SSR` (port 3002).
 - The local `e2e/` directory only contains hybrid-specific tests such as `nextjs-hydration.spec.ts`.
 - `test:e2e` starts the app + mocks via `serve`, then delegates to `lib/e2e-web`.
 - `test:e2e:ui` opens the shared Playwright UI with the hybrid target pre-configured.

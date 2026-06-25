@@ -10,8 +10,6 @@
   },
   "scripts": {
     "test": "playwright test",
-    "test:ssr": "RENDERING_MODE=ssr playwright test",
-    "test:hybrid": "RENDERING_MODE=hybrid playwright test",
     "test:ui": "playwright test --ui",
     "test:report": "playwright show-report",
     "playwright:install": "playwright install",

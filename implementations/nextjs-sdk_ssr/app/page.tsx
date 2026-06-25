@@ -2,10 +2,13 @@ import { ControlPanel } from '@/components/ControlPanel'
 import { EntryCard } from '@/components/EntryCard'
 import { LiveEntryCard } from '@/components/LiveEntryCard'
 import { appConfig } from '@/lib/config'
-import { loadPageEntries } from '@/lib/contentful'
+import { type ContentEntry, loadPageEntries } from '@/lib/contentful'
 import { optimization } from '@/lib/optimization'
 import { getAppConsent, toIdMap } from '@/lib/util'
-import { getNextjsServerOptimizationData } from '@contentful/optimization-nextjs/server'
+import {
+  type ServerTrackingResolvedData,
+  getNextjsServerOptimizationData,
+} from '@contentful/optimization-nextjs/server'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 import { cookies, headers } from 'next/headers'
 
@@ -36,6 +39,8 @@ export default async function Home() {
   const profile = optimizationData?.profile
   const getMergeTagValue = (entry: unknown): string | undefined =>
     optimization.getMergeTagValue(entry as never, profile)
+  const resolveEntry = (entry: ContentEntry): ServerTrackingResolvedData =>
+    optimization.resolveOptimizedEntry(entry, optimizationData?.selectedOptimizations)
 
   const liveUpdatesEntry = entriesById.get(PAGES.home.liveUpdates)
 
@@ -98,6 +103,7 @@ export default async function Home() {
                   clickScenario={CLICK_SCENARIOS[id]}
                   getMergeTagValue={getMergeTagValue}
                   manualTracking={false}
+                  resolveEntry={resolveEntry}
                   resolvedData={resolvedData}
                 />,
               ]
@@ -120,6 +126,7 @@ export default async function Home() {
                   baselineEntry={entry}
                   getMergeTagValue={getMergeTagValue}
                   manualTracking={true}
+                  resolveEntry={resolveEntry}
                   resolvedData={resolvedData}
                 />,
               ]

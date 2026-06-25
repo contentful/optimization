@@ -1,14 +1,29 @@
 import { type APIRequestContext, type Page, expect, test } from '@playwright/test'
 
-export const RENDERING_MODE = (process.env.RENDERING_MODE ?? 'csr').toLowerCase()
+export type E2EFlag = 'CSR' | 'SSR'
+
+const E2E_FLAGS = new Set(
+  (process.env.E2E_FLAGS ?? 'CSR')
+    .toUpperCase()
+    .split(',')
+    .map((f) => f.trim()),
+)
+
 export const isPreviewPanelEnabled = process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
 
-export function isRenderingMode(...modes: string[]): boolean {
-  return modes.includes(RENDERING_MODE)
+export function hasFlag(flag: E2EFlag): boolean {
+  return E2E_FLAGS.has(flag)
 }
 
-export function onlyInModes(...modes: string[]): void {
-  test.skip(!isRenderingMode(...modes), `Only runs in ${modes.join(' or ')} mode.`)
+export function runIf(...flags: E2EFlag[]): void {
+  test.skip(!flags.some((f) => E2E_FLAGS.has(f)), `Only runs with flag: ${flags.join(' or ')}.`)
+}
+
+export function skipIf(...flags: E2EFlag[]): void {
+  test.skip(
+    flags.some((f) => E2E_FLAGS.has(f)),
+    `Skipped when flag present: ${flags.join(' or ')}.`,
+  )
 }
 
 export function onlyWithPreviewPanel(): void {

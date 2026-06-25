@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { CLICK_SCENARIO_IDS, PAGES } from '../src/fixtures'
-import { onlyInModes, seedIdentifiedProfile } from './utils'
+import { seedIdentifiedProfile, skipIf } from './utils'
 
 test.describe('Variant Resolution (SSR, JavaScript disabled)', () => {
-  onlyInModes('ssr')
+  skipIf('CSR')
   test.use({ javaScriptEnabled: false })
 
   test.describe('unidentified user', () => {

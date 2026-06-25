@@ -15,8 +15,8 @@ server/client SDK composition; app code imports only Next.js SDK subpaths.
 
 ## E2E tests
 
-- All E2E tests live in `lib/e2e-web`. SSR-specific specs (`ssr-behavior.spec.ts`) are gated with
-  `test.skip(RENDERING_MODE !== 'ssr', ...)` and run automatically when `RENDERING_MODE=ssr`.
+- All E2E tests live in `lib/e2e-web`. SSR-specific specs are gated with `runIf('SSR')` and run
+  automatically when `E2E_FLAGS=SSR`.
 - Entry cards must expose `data-ctfl-entry-id` on the `content-*` element so shared selectors work.
 - `test:e2e` delegates to `lib/e2e-web`.
 
