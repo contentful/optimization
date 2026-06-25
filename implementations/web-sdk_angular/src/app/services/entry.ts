@@ -80,7 +80,7 @@ function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Sign
   })
 
   function track(): void {
-    optimization.withSdk((sdk) => {
+    optimization.ifBrowser((sdk) => {
       const { entryId, optimizationId, sticky, variantIndex } = result()
       sdk.tracking.enableElement('views', elementRef.nativeElement, {
         data: { entryId, optimizationId, sticky, variantIndex },
@@ -89,7 +89,7 @@ function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Sign
   }
 
   function clear(): void {
-    optimization.withSdk((sdk) => {
+    optimization.ifBrowser((sdk) => {
       sdk.tracking.clearElement('views', elementRef.nativeElement)
     })
   }
@@ -140,16 +140,9 @@ export function injectContentfulEntry({
     // so the initial HTML reflects the personalized variant. Falls back to the
     // baseline when no handoff exists (e.g. consent denied — server skipped resolve).
     const handoff = transferState.get(SERVER_RESOLVED_ENTRIES_KEY, undefined)
-    const slot = handoff?.[raw.sys.id]
-    if (slot?.isVariant) {
-      return {
-        raw,
-        resolved: { entry: slot.resolvedEntry, selectedOptimization: slot.selectedOptimization },
-      }
-    }
     return {
       raw,
-      resolved: { entry: slot?.resolvedEntry ?? raw, selectedOptimization: undefined },
+      resolved: handoff?.[raw.sys.id] ?? { entry: raw, selectedOptimization: undefined },
     }
   })
 
@@ -159,7 +152,7 @@ export function injectContentfulEntry({
     let mergeTagResolved: boolean | undefined = undefined
     const entry = resolveEntryMergeTags(resolved.entry, (target) => {
       const value = profile
-        ? optimization.withSdk((sdk) => sdk.getMergeTagValue(target, profile))
+        ? optimization.ifBrowser((sdk) => sdk.getMergeTagValue(target, profile))
         : undefined
       if (value !== undefined) mergeTagResolved = true
       else mergeTagResolved ??= false

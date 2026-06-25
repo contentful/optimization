@@ -29,21 +29,29 @@ import {
   resolveLogLevel,
 } from '../config'
 import {
+  SERVER_BASELINES_KEY,
   SERVER_OPTIMIZATION_KEY,
   SERVER_RESOLVED_ENTRIES_KEY,
-  type ResolvedEntryHandoff,
+  type ResolvedEntryData,
   type ServerHandoff,
 } from '../transfer-state-keys'
 import { fromSdkState } from '../utils'
+import { readConsentFromRequest } from './consent'
 import { NgContentfulClient } from './contentful-client'
 
 type NgContentfulOptimizationInstance = ContentfulOptimization
 
 /**
- * Runtime context for {@link NgContentfulOptimization}. Discriminated on
- * `platform` so callers branch on the runtime instead of dereferencing a
- * `sdk?` chain. The `server` branch carries no SDK because the Web SDK reads
- * `localStorage` at construction time and cannot be instantiated server-side.
+ * Runtime context exposed by the {@link NgContentfulOptimization} service.
+ * The `sdk` here is the **browser** SDK (`@contentful/optimization-web`),
+ * which reads `localStorage` at construction time and therefore cannot be
+ * instantiated server-side. Discriminating on `platform` lets callers branch
+ * on the runtime without dereferencing an optional chain.
+ *
+ * The **Node** SDK (`@contentful/optimization-node`) does run server-side,
+ * but it is intentionally not surfaced through this service — it is owned by
+ * the preflight at the bottom of this file and only its **results** cross
+ * into the browser bundle via `TransferState`.
  */
 type NgContentfulOptimizationContext =
   | { readonly platform: 'server' }
@@ -185,7 +193,7 @@ export class NgContentfulOptimization {
    * call). Lets call sites avoid an `if (context.platform === 'browser')`
    * narrowing dance for fire-and-forget toggles.
    */
-  withSdk<T>(fn: (sdk: NgContentfulOptimizationInstance) => T): T | undefined {
+  ifBrowser<T>(fn: (sdk: NgContentfulOptimizationInstance) => T): T | undefined {
     return this.context.platform === 'browser' ? fn(this.context.sdk) : undefined
   }
 }
@@ -198,26 +206,21 @@ export class NgContentfulOptimization {
 // `provideServerOptimizationInitializer()` so `app.config.server.ts` only
 // needs a single import to wire them in.
 
-const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
-
 /**
- * Outcome of looking up a request cookie. Discriminated on `found` so the
- * value is only accessible after the caller proves the cookie exists.
+ * Read the SDK anonymous-id cookie from the inbound request. Returns the raw
+ * value when present so it can be passed to `forRequest({ profile })` for
+ * cross-request profile continuity.
  */
-type CookieLookup = { readonly found: false } | { readonly found: true; readonly value: string }
-
-const COOKIE_NOT_FOUND: CookieLookup = { found: false }
-
-function readCookie(request: Request, name: string): CookieLookup {
+function readAnonymousId(request: Request): string | undefined {
   const header = request.headers.get('cookie') ?? ''
   for (const part of header.split(';')) {
     const trimmed = part.trim()
     if (!trimmed) continue
     const eq = trimmed.indexOf('=')
     if (eq < 0) continue
-    if (trimmed.slice(0, eq) === name) return { found: true, value: trimmed.slice(eq + 1) }
+    if (trimmed.slice(0, eq) === ANONYMOUS_ID_COOKIE) return trimmed.slice(eq + 1)
   }
-  return COOKIE_NOT_FOUND
+  return undefined
 }
 
 async function createServerOptimization(
@@ -244,17 +247,16 @@ type ServerOptimizationData =
 async function getServerOptimizationData(
   sdk: NodeContentfulOptimizationType,
   request: Request,
+  consentGranted: boolean,
   locale: string,
 ): Promise<ServerOptimizationData> {
-  const consentCookie = readCookie(request, APP_PERSONALIZATION_CONSENT_COOKIE)
-  const consentGranted = consentCookie.found && consentCookie.value === 'granted'
   if (!consentGranted) return { consentGranted: false }
 
-  const anonymousId = readCookie(request, ANONYMOUS_ID_COOKIE)
+  const anonymousId = readAnonymousId(request)
   const requestOptimization: CoreStatelessRequest = sdk.forRequest({
     consent: { events: true, persistence: true },
     locale,
-    ...(anonymousId.found ? { profile: { id: anonymousId.value } } : {}),
+    ...(anonymousId === undefined ? {} : { profile: { id: anonymousId } }),
   })
   const data: OptimizationData | undefined = await requestOptimization.page()
   if (!data) return { consentGranted: false }
@@ -271,18 +273,10 @@ function resolveServerEntries(
   sdk: NodeContentfulOptimizationType,
   baselines: readonly Entry[],
   selectedOptimizations: OptimizationData['selectedOptimizations'],
-): Record<string, ResolvedEntryHandoff> {
-  const resolved: Record<string, ResolvedEntryHandoff> = {}
+): Record<string, ResolvedEntryData> {
+  const resolved: Record<string, ResolvedEntryData> = {}
   for (const baseline of baselines) {
-    const result = sdk.resolveOptimizedEntry(baseline, selectedOptimizations)
-    resolved[baseline.sys.id] = result.selectedOptimization
-      ? {
-          isVariant: true,
-          baseline,
-          resolvedEntry: result.entry,
-          selectedOptimization: result.selectedOptimization,
-        }
-      : { isVariant: false, baseline, resolvedEntry: result.entry }
+    resolved[baseline.sys.id] = sdk.resolveOptimizedEntry(baseline, selectedOptimizations)
   }
   return resolved
 }
@@ -299,7 +293,8 @@ function persistAnonymousIdCookie(responseInit: ResponseInit, profileId: string)
 function stampServerHandoff(
   transferState: TransferState,
   serverData: ServerOptimizationData,
-  resolvedEntries: Record<string, ResolvedEntryHandoff>,
+  baselines: readonly Entry[],
+  resolvedEntries: Record<string, ResolvedEntryData>,
 ): void {
   const handoff: ServerHandoff = serverData.consentGranted
     ? {
@@ -310,10 +305,11 @@ function stampServerHandoff(
       }
     : { consent: false }
   transferState.set<ServerHandoff>(SERVER_OPTIMIZATION_KEY, handoff)
-  transferState.set<Record<string, ResolvedEntryHandoff>>(
-    SERVER_RESOLVED_ENTRIES_KEY,
-    resolvedEntries,
+  transferState.set<Record<string, Entry>>(
+    SERVER_BASELINES_KEY,
+    Object.fromEntries(baselines.map((baseline) => [baseline.sys.id, baseline])),
   )
+  transferState.set<Record<string, ResolvedEntryData>>(SERVER_RESOLVED_ENTRIES_KEY, resolvedEntries)
 }
 
 async function runServerPreflight(): Promise<void> {
@@ -325,11 +321,12 @@ async function runServerPreflight(): Promise<void> {
   const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
   const contentful = inject(NgContentfulClient)
 
+  const consentGranted = readConsentFromRequest(request)
   const sdk = await createServerOptimization(config)
   const baselineIds = [...new Set([...PAGES.home.ids, ...PAGES.pageTwo.ids])]
   const baselines = await contentful.fetchEntries(baselineIds)
 
-  const serverData = await getServerOptimizationData(sdk, request, config.locale)
+  const serverData = await getServerOptimizationData(sdk, request, consentGranted, config.locale)
 
   if (serverData.consentGranted && serverData.canPersistProfile && responseInit) {
     persistAnonymousIdCookie(responseInit, serverData.profileId)
@@ -340,7 +337,7 @@ async function runServerPreflight(): Promise<void> {
     baselines,
     serverData.consentGranted ? serverData.data.selectedOptimizations : [],
   )
-  stampServerHandoff(transferState, serverData, resolvedEntries)
+  stampServerHandoff(transferState, serverData, baselines, resolvedEntries)
 }
 
 /**

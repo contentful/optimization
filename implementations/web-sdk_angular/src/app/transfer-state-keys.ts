@@ -1,10 +1,9 @@
 import { makeStateKey, type StateKey } from '@angular/core'
-import type {
-  Profile,
-  SelectedOptimization,
-  SelectedOptimizationArray,
-} from '@contentful/optimization-web/api-schemas'
-import type { Entry } from 'contentful'
+import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
+import type { Entry, EntrySkeletonType } from 'contentful'
+
+export type ResolvedEntryData = ResolvedData<EntrySkeletonType>
 
 /**
  * Snapshot of the personalization context resolved server-side. Stamped into
@@ -21,28 +20,22 @@ export type ServerHandoff =
       readonly selectedOptimizations: SelectedOptimizationArray
     }
 
-/**
- * Per-baseline-entry result of `sdk.resolveOptimizedEntry()` carried across
- * the hydration boundary. The browser uses these to skip a duplicate Experience
- * API roundtrip on initial render. Discriminated on `isVariant` so callers
- * branch on the variant/baseline distinction without consulting a nullable
- * field.
- */
-export type ResolvedEntryHandoff =
-  | {
-      readonly isVariant: false
-      readonly baseline: Entry
-      readonly resolvedEntry: Entry
-    }
-  | {
-      readonly isVariant: true
-      readonly baseline: Entry
-      readonly resolvedEntry: Entry
-      readonly selectedOptimization: SelectedOptimization
-    }
-
 export const SERVER_OPTIMIZATION_KEY: StateKey<ServerHandoff> =
   makeStateKey<ServerHandoff>('ssr-optimization')
 
-export const SERVER_RESOLVED_ENTRIES_KEY: StateKey<Record<string, ResolvedEntryHandoff>> =
-  makeStateKey<Record<string, ResolvedEntryHandoff>>('ssr-resolved-entries')
+/**
+ * Server-resolved entries keyed by baseline entry id. The value is the raw
+ * `sdk.resolveOptimizedEntry()` output (`{ entry, selectedOptimization? }`)
+ * — no additional restructuring — so browser hydration can consume the SDK's
+ * native shape directly.
+ */
+export const SERVER_RESOLVED_ENTRIES_KEY: StateKey<Record<string, ResolvedEntryData>> =
+  makeStateKey<Record<string, ResolvedEntryData>>('ssr-resolved-entries')
+
+/**
+ * Baseline CDA entries keyed by id. Carried separately from the resolved
+ * payload so the browser can skip a duplicate CDA fetch on hydration without
+ * conflating the original entry with the resolved variant.
+ */
+export const SERVER_BASELINES_KEY: StateKey<Record<string, Entry>> =
+  makeStateKey<Record<string, Entry>>('ssr-baselines')

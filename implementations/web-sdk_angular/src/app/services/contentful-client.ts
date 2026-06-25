@@ -1,7 +1,7 @@
 import { inject, Injectable, resource, TransferState, type ResourceRef } from '@angular/core'
 import type { ContentfulClientApi, Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { getOrCreateBaseClient, NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
-import { SERVER_RESOLVED_ENTRIES_KEY } from '../transfer-state-keys'
+import { SERVER_BASELINES_KEY } from '../transfer-state-keys'
 
 export interface ContentEntryFields {
   text?: EntryFieldTypes.Text | EntryFieldTypes.RichText
@@ -43,11 +43,11 @@ export class NgContentfulClient {
   loadEntries = (ids: readonly string[]): ResourceRef<Map<string, ContentfulEntry> | undefined> =>
     resource({
       loader: async (): Promise<Map<string, ContentfulEntry>> => {
-        const handoff = this.transferState.get(SERVER_RESOLVED_ENTRIES_KEY, undefined)
-        if (handoff && ids.every((id) => Object.hasOwn(handoff, id))) {
+        const baselines = this.transferState.get(SERVER_BASELINES_KEY, undefined)
+        if (baselines && ids.every((id) => Object.hasOwn(baselines, id))) {
           // Hydration path: server already fetched these baselines and stamped
           // them into TransferState. Skip the duplicate CDA roundtrip.
-          return new Map(ids.map((id) => [id, handoff[id].baseline as Entry<ContentEntrySkeleton>]))
+          return new Map(ids.map((id) => [id, baselines[id] as Entry<ContentEntrySkeleton>]))
         }
         const list = await this.fetchEntries<ContentEntrySkeleton>(ids)
         return new Map(list.map((entry) => [entry.sys.id, entry]))

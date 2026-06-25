@@ -15,10 +15,10 @@ export class NgLiveUpdates {
 
   private readonly globalLiveUpdatesSignal = signal(false)
   private readonly previewPanelAttached = fromSdkState<boolean>(() =>
-    this.optimization.withSdk((sdk) => sdk.states.previewPanelAttached),
+    this.optimization.ifBrowser((sdk) => sdk.states.previewPanelAttached),
   )
   private readonly previewPanelOpen = fromSdkState<boolean>(() =>
-    this.optimization.withSdk((sdk) => sdk.states.previewPanelOpen),
+    this.optimization.ifBrowser((sdk) => sdk.states.previewPanelOpen),
   )
 
   readonly globalLiveUpdates = this.globalLiveUpdatesSignal.asReadonly()
