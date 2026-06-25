@@ -8,7 +8,11 @@ import 'e2e-web/theme.css'
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
-import { Suspense, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
+
+// NextAppAutoPageTracker calls useSearchParams(), which suspends during static rendering.
+// force-dynamic ensures the layout always renders at request time so no Suspense boundary is needed.
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Optimization Next.js SDK SSR',
@@ -37,9 +41,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         >
           <GlobalLiveUpdatesProvider>
             <PreviewPanel />
-            <Suspense>
-              <NextAppAutoPageTracker initialPageEvent={appConsent ? 'skip' : 'emit'} />
-            </Suspense>
+            <NextAppAutoPageTracker initialPageEvent={appConsent ? 'skip' : 'emit'} />
             <div className="app-shell">
               <nav>
                 <Link data-testid="link-home" href="/">
