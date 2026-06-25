@@ -3,11 +3,10 @@ import { CLICK_SCENARIO_IDS, PAGES } from '../src/fixtures'
 import { runIf } from './utils'
 
 test.describe('Variant Resolution (CSR)', () => {
-  // TODO: FIXME — SSR resolves variants on the server and requires consent+cookies for the
-  // Experience API. Client-side interactivity (consent button, identify button) and no-consent
-  // merge tag resolution are not available in SSR mode with JavaScript disabled.
-
   test.describe('unidentified user', () => {
+    // TODO: FIXME — SSR resolves variants on the server and requires consent+cookies for the
+    // Experience API. Client-side interactivity (consent button, identify button) and no-consent
+    // merge tag resolution are not available in SSR mode with JavaScript disabled.
     runIf('CSR')
     test.use({ storageState: { cookies: [], origins: [] } })
 
