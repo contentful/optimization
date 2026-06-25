@@ -16,6 +16,7 @@ import { NavigationEnd, Router } from '@angular/router'
 import type NodeContentfulOptimizationType from '@contentful/optimization-node'
 import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
+import type { CoreStatelessRequest } from '@contentful/optimization-node/core-sdk'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { Entry } from 'contentful'
@@ -250,12 +251,12 @@ async function getServerOptimizationData(
   if (!consentGranted) return { consentGranted: false }
 
   const anonymousId = readCookie(request, ANONYMOUS_ID_COOKIE)
-  const requestOptimization = sdk.forRequest({
+  const requestOptimization: CoreStatelessRequest = sdk.forRequest({
     consent: { events: true, persistence: true },
     locale,
     ...(anonymousId.found ? { profile: { id: anonymousId.value } } : {}),
   })
-  const data = await requestOptimization.page()
+  const data: OptimizationData | undefined = await requestOptimization.page()
   if (!data) return { consentGranted: false }
 
   return {
