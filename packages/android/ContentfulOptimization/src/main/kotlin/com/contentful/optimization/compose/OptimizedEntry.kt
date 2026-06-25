@@ -106,6 +106,7 @@ public fun OptimizedEntry(
     val modifier = Modifier
         .trackViews(
             entry = entry,
+            optimizationContextId = result.optimizationContextId,
             selectedOptimization = result.selectedOptimization,
             minVisibleRatio = minVisibleRatio,
             dwellTimeMs = dwellTimeMs,
@@ -115,6 +116,7 @@ public fun OptimizedEntry(
         )
         .trackClicks(
             entry = entry,
+            optimizationContextId = result.optimizationContextId,
             selectedOptimization = result.selectedOptimization,
             enabled = tapsEnabled,
             client = client,

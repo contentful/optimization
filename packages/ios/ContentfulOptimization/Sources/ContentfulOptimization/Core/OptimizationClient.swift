@@ -357,7 +357,11 @@ public final class OptimizationClient: ObservableObject {
         selectedOptimizations: [[String: Any]]? = nil
     ) -> ResolvedOptimizedEntry {
         guard isInitialized else {
-            return ResolvedOptimizedEntry(entry: baseline, selectedOptimization: nil)
+            return ResolvedOptimizedEntry(
+                entry: baseline,
+                selectedOptimization: nil,
+                optimizationContextId: nil
+            )
         }
 
         do {
@@ -376,16 +380,29 @@ public final class OptimizationClient: ObservableObject {
             else {
                 let entryId = (baseline["sys"] as? [String: Any])?["id"] as? String ?? "unknown"
                 log.warning("[resolveOptimizedEntry] Failed to parse bridge result for entry \(entryId)")
-                return ResolvedOptimizedEntry(entry: baseline, selectedOptimization: nil)
+                return ResolvedOptimizedEntry(
+                    entry: baseline,
+                    selectedOptimization: nil,
+                    optimizationContextId: nil
+                )
             }
 
             let entry = dict["entry"] as? [String: Any] ?? baseline
             let selectedOptimization = dict["selectedOptimization"] as? [String: Any]
-            return ResolvedOptimizedEntry(entry: entry, selectedOptimization: selectedOptimization)
+            let optimizationContextId = dict["optimizationContextId"] as? String
+            return ResolvedOptimizedEntry(
+                entry: entry,
+                selectedOptimization: selectedOptimization,
+                optimizationContextId: optimizationContextId
+            )
         } catch {
             let entryId = (baseline["sys"] as? [String: Any])?["id"] as? String ?? "unknown"
             log.error("[resolveOptimizedEntry] Serialization error for entry \(entryId): \(error.localizedDescription)")
-            return ResolvedOptimizedEntry(entry: baseline, selectedOptimization: nil)
+            return ResolvedOptimizedEntry(
+                entry: baseline,
+                selectedOptimization: nil,
+                optimizationContextId: nil
+            )
         }
     }
 

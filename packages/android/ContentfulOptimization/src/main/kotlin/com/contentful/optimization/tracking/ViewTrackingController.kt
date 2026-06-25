@@ -38,6 +38,7 @@ internal class ViewTrackingController internal constructor(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main),
     private val lifecycleOwner: LifecycleOwner = ProcessLifecycleOwner.get(),
     private val clock: () -> Long = { System.currentTimeMillis() },
+    optimizationContextId: String? = null,
 ) : DefaultLifecycleObserver {
 
     /**
@@ -52,8 +53,10 @@ internal class ViewTrackingController internal constructor(
         minVisibleRatio: Double = 0.8,
         dwellTimeMs: Int = 2000,
         viewDurationUpdateIntervalMs: Int = 5000,
+        optimizationContextId: String? = null,
     ) : this(
         entry = entry,
+        optimizationContextId = optimizationContextId,
         selectedOptimization = selectedOptimization,
         onTrackView = { payload -> client.trackView(payload) },
         isTrackingAllowed = { client.hasConsent("trackView") },
@@ -65,7 +68,7 @@ internal class ViewTrackingController internal constructor(
     var isVisible: Boolean = false
         private set
 
-    private val metadata = TrackingMetadata(entry, selectedOptimization)
+    private val metadata = TrackingMetadata(entry, selectedOptimization, optimizationContextId)
 
     private var viewId: String? = null
     private var visibleSinceMs: Long? = null
@@ -228,6 +231,7 @@ internal class ViewTrackingController internal constructor(
             componentId = metadata.componentId,
             viewId = currentViewId,
             experienceId = metadata.experienceId,
+            optimizationContextId = metadata.optimizationContextId,
             variantIndex = metadata.variantIndex,
             viewDurationMs = accumulatedMs.toInt(),
             sticky = metadata.sticky,

@@ -1106,6 +1106,7 @@ final class OptimizationClientTests: XCTestCase {
             componentId: "comp-1",
             viewId: "view-1",
             experienceId: "exp-1",
+            optimizationContextId: "ctx-1",
             variantIndex: 2,
             viewDurationMs: 1500,
             sticky: true,
@@ -1119,6 +1120,7 @@ final class OptimizationClientTests: XCTestCase {
         XCTAssertEqual(dict["componentId"] as? String, "comp-1")
         XCTAssertEqual(dict["viewId"] as? String, "view-1")
         XCTAssertEqual(dict["experienceId"] as? String, "exp-1")
+        XCTAssertEqual(dict["optimizationContextId"] as? String, "ctx-1")
         XCTAssertEqual(dict["variantIndex"] as? Int, 2)
         XCTAssertEqual(dict["viewDurationMs"] as? Int, 1500)
         XCTAssertEqual(dict["sticky"] as? Bool, true)
@@ -1139,6 +1141,7 @@ final class OptimizationClientTests: XCTestCase {
 
         XCTAssertEqual(dict.count, 4)
         XCTAssertNil(dict["experienceId"])
+        XCTAssertNil(dict["optimizationContextId"])
         XCTAssertNil(dict["sticky"])
         XCTAssertNil(dict["stickyTrackingKey"])
     }
@@ -1147,6 +1150,7 @@ final class OptimizationClientTests: XCTestCase {
         let payload = TrackClickPayload(
             componentId: "comp-1",
             experienceId: "exp-1",
+            optimizationContextId: "ctx-1",
             variantIndex: 1
         )
 
@@ -1156,6 +1160,7 @@ final class OptimizationClientTests: XCTestCase {
 
         XCTAssertEqual(dict["componentId"] as? String, "comp-1")
         XCTAssertEqual(dict["experienceId"] as? String, "exp-1")
+        XCTAssertEqual(dict["optimizationContextId"] as? String, "ctx-1")
         XCTAssertEqual(dict["variantIndex"] as? Int, 1)
     }
 
@@ -1171,6 +1176,7 @@ final class OptimizationClientTests: XCTestCase {
 
         XCTAssertEqual(dict.count, 2)
         XCTAssertNil(dict["experienceId"])
+        XCTAssertNil(dict["optimizationContextId"])
     }
 
     func testTypedEventPayloadsToJSON() throws {
@@ -1721,6 +1727,7 @@ final class OptimizationClientTests: XCTestCase {
         let result = client.resolveOptimizedEntry(baseline: baseline)
         XCTAssertEqual(result.entry["sys"] as? [String: String], ["id": "entry-1"])
         XCTAssertNil(result.selectedOptimization)
+        XCTAssertNil(result.optimizationContextId)
     }
 
     // MARK: - TimerStore Isolation Tests

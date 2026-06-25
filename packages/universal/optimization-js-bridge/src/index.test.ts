@@ -112,4 +112,65 @@ describe('bridge contract', () => {
     expect(onSuccess).not.toHaveBeenCalled()
     expect(onError).toHaveBeenCalledWith('trackClick payload must include a string "componentId".')
   })
+
+  it('accepts optimizationContextId on native tracking payloads', async () => {
+    bridge.initialize({
+      clientId: 'test-client',
+      environment: 'main',
+      allowedEventTypes: ['component', 'component_click'],
+      defaults: {
+        consent: true,
+        profile: {
+          audiences: [],
+          id: 'profile-1',
+          location: {},
+          random: 0,
+          session: {
+            activeSessionLength: 0,
+            averageSessionLength: 0,
+            count: 1,
+            id: 'session-1',
+            isReturningVisitor: false,
+            landingPage: {
+              path: '',
+              query: {},
+              referrer: '',
+              search: '',
+              url: '',
+            },
+          },
+          stableId: 'profile-1',
+          traits: {},
+        },
+      },
+    })
+    const viewCallbacks = createCallbacks()
+    const clickCallbacks = createCallbacks()
+
+    bridge.trackView(
+      {
+        componentId: 'component-1',
+        optimizationContextId: 'ctx-1',
+        variantIndex: 0,
+        viewDurationMs: 1,
+        viewId: 'view-1',
+      },
+      viewCallbacks.onSuccess,
+      viewCallbacks.onError,
+    )
+    bridge.trackClick(
+      {
+        componentId: 'component-1',
+        optimizationContextId: 'ctx-1',
+        variantIndex: 0,
+      },
+      clickCallbacks.onSuccess,
+      clickCallbacks.onError,
+    )
+
+    await Promise.resolve()
+
+    expect(viewCallbacks.onError).not.toHaveBeenCalled()
+    expect(clickCallbacks.onError).not.toHaveBeenCalled()
+  })
 })

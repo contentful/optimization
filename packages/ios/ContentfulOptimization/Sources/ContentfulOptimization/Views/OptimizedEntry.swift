@@ -94,13 +94,18 @@ public struct OptimizedEntry<Content: View>: View {
                     selectedOptimizations: effectiveOptimizations
                 )
             } else {
-                return ResolvedOptimizedEntry(entry: entry, selectedOptimization: nil)
+                return ResolvedOptimizedEntry(
+                    entry: entry,
+                    selectedOptimization: nil,
+                    optimizationContextId: nil
+                )
             }
         }()
 
         content(result.entry)
             .modifier(ViewTrackingModifier(
                 entry: entry,
+                optimizationContextId: result.optimizationContextId,
                 selectedOptimization: result.selectedOptimization,
                 minVisibleRatio: minVisibleRatio,
                 dwellTimeMs: dwellTimeMs,
@@ -110,6 +115,7 @@ public struct OptimizedEntry<Content: View>: View {
             ))
             .modifier(TapTrackingModifier(
                 entry: entry,
+                optimizationContextId: result.optimizationContextId,
                 selectedOptimization: result.selectedOptimization,
                 enabled: tapsEnabled,
                 onTap: onTap,

@@ -33,6 +33,11 @@ export interface UseTapTrackingOptions {
   selectedOptimization?: SelectedOptimization
 
   /**
+   * Opaque runtime-owned optimization context ID for event-stream enrichment.
+   */
+  optimizationContextId?: string
+
+  /**
    * Whether tap tracking is enabled for this entry.
    */
   enabled: boolean
@@ -94,6 +99,7 @@ export interface UseTapTrackingReturn {
  */
 export function useTapTracking({
   entry,
+  optimizationContextId,
   selectedOptimization,
   enabled,
   onTap,
@@ -126,16 +132,19 @@ export function useTapTracking({
       if (distance >= TAP_DISTANCE_THRESHOLD) return
 
       if (optimizationRef.current.hasConsent('trackClick')) {
-        const { componentId, experienceId, variantIndex } = extractTrackingMetadata(
-          entry,
-          selectedOptimization,
-        )
+        const {
+          componentId,
+          experienceId,
+          optimizationContextId: contextId,
+          variantIndex,
+        } = extractTrackingMetadata(entry, selectedOptimization, optimizationContextId)
 
         logger.info(`Tap detected on ${componentId}, emitting entry tap event`)
 
         void optimizationRef.current.trackClick({
           componentId,
           experienceId,
+          ...(contextId === undefined ? {} : { optimizationContextId: contextId }),
           variantIndex,
         })
       }
@@ -144,7 +153,7 @@ export function useTapTracking({
         onTap(entry)
       }
     },
-    [entry, onTap, selectedOptimization],
+    [entry, onTap, optimizationContextId, selectedOptimization],
   )
 
   if (!enabled) {

@@ -9,13 +9,19 @@ import Foundation
 public struct TrackingMetadata {
     public let componentId: String
     public let experienceId: String?
+    public let optimizationContextId: String?
     public let variantIndex: Int
     public let sticky: Bool?
 
-    public init(entry: [String: Any], selectedOptimization: [String: Any]?) {
+    public init(
+        entry: [String: Any],
+        optimizationContextId: String? = nil,
+        selectedOptimization: [String: Any]?
+    ) {
         let sys = entry["sys"] as? [String: Any]
         self.componentId = sys?["id"] as? String ?? ""
         self.experienceId = selectedOptimization?["experienceId"] as? String
+        self.optimizationContextId = optimizationContextId
         self.variantIndex = selectedOptimization?["variantIndex"] as? Int ?? 0
         self.sticky = selectedOptimization?["sticky"] as? Bool
     }
@@ -76,13 +82,18 @@ public final class ViewTrackingController {
     public init(
         client: OptimizationClient,
         entry: [String: Any],
+        optimizationContextId: String? = nil,
         selectedOptimization: [String: Any]?,
         minVisibleRatio: Double = 0.8,
         dwellTimeMs: Int = 2000,
         viewDurationUpdateIntervalMs: Int = 5000
     ) {
         self.client = client
-        self.metadata = TrackingMetadata(entry: entry, selectedOptimization: selectedOptimization)
+        self.metadata = TrackingMetadata(
+            entry: entry,
+            optimizationContextId: optimizationContextId,
+            selectedOptimization: selectedOptimization
+        )
         self.minVisibleRatio = minVisibleRatio
         self.dwellTimeMs = dwellTimeMs
         self.viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs
@@ -243,6 +254,7 @@ public final class ViewTrackingController {
             componentId: metadata.componentId,
             viewId: viewId,
             experienceId: metadata.experienceId,
+            optimizationContextId: metadata.optimizationContextId,
             variantIndex: metadata.variantIndex,
             viewDurationMs: Int(accumulatedMs),
             sticky: metadata.sticky,

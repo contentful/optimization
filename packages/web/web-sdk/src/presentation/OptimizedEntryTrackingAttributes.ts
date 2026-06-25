@@ -61,6 +61,7 @@ export function resolveOptimizedEntryTrackingAttributes(
     'data-ctfl-entry-id': entryId,
     'data-ctfl-hover-duration-update-interval-ms': hoverDurationUpdateIntervalMs,
     'data-ctfl-optimization-id': selectedOptimization?.experienceId,
+    'data-ctfl-optimization-context-id': resolvedData.optimizationContextId,
     'data-ctfl-sticky': selectedOptimization?.sticky,
     'data-ctfl-track-clicks': trackClicks,
     'data-ctfl-track-hovers': trackHovers,

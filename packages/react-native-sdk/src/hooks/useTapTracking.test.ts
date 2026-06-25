@@ -129,6 +129,27 @@ describe('useTapTracking', () => {
     expect(onTap).toHaveBeenCalledWith(entry)
   })
 
+  it('should forward optimizationContextId when provided', async () => {
+    const { useTapTracking } = await import('./useTapTracking')
+    const entry = createMockEntry('entry-clickable')
+
+    const { onTouchStart, onTouchEnd } = useTapTracking({
+      entry,
+      enabled: true,
+      optimizationContextId: 'ctx-tap',
+    })
+
+    onTouchStart?.(createTouchEvent(10, 10))
+    onTouchEnd?.(createTouchEvent(11, 11))
+
+    expect(mockTrackClick).toHaveBeenCalledWith({
+      componentId: 'entry-clickable',
+      experienceId: undefined,
+      optimizationContextId: 'ctx-tap',
+      variantIndex: 0,
+    })
+  })
+
   it('should skip click payloads before trackClick is allowed but still invoke onTap', async () => {
     mockHasConsent.mockReturnValue(false)
     const { useTapTracking } = await import('./useTapTracking')

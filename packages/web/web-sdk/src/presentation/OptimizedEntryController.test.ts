@@ -168,6 +168,7 @@ describe('OptimizedEntryController', () => {
   it('creates host attributes from the resolved presentation snapshot', () => {
     const runtime = createSdk((entry, selectedOptimizations) => ({
       entry: selectedOptimizations ? variantA : entry,
+      optimizationContextId: selectedOptimizations ? 'ctx-1' : undefined,
       selectedOptimization: selectedOptimizations?.[0],
     }))
     const controller = new OptimizedEntryController({
@@ -192,6 +193,7 @@ describe('OptimizedEntryController', () => {
 
     expect(controller.getSnapshot().hostAttributes).toMatchObject({
       'data-ctfl-entry-id': 'variant-a',
+      'data-ctfl-optimization-context-id': 'ctx-1',
       'data-ctfl-optimization-id': 'exp-hero',
       'data-ctfl-sticky': true,
       'data-ctfl-variant-index': 1,

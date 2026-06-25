@@ -299,7 +299,12 @@ public class OptimizationClient(private val applicationContext: Context) {
             val entry = dict["entry"] as? Map<String, Any> ?: baseline
             @Suppress("UNCHECKED_CAST")
             val selectedOptimization = dict["selectedOptimization"] as? Map<String, Any>
-            ResolvedOptimizedEntry(entry = entry, selectedOptimization = selectedOptimization)
+            val optimizationContextId = dict["optimizationContextId"] as? String
+            ResolvedOptimizedEntry(
+                entry = entry,
+                selectedOptimization = selectedOptimization,
+                optimizationContextId = optimizationContextId,
+            )
         } catch (_: Exception) {
             ResolvedOptimizedEntry(entry = baseline, selectedOptimization = null)
         }
