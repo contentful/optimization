@@ -91,6 +91,7 @@ export function EntryCard({
               }
               className="entry-card"
               data-ctfl-entry-id={resolvedEntry.sys.id}
+              data-test-entry-id={resolvedEntry.sys.id}
               data-testid={`content-${id}`}
             >
               <div
