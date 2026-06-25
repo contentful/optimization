@@ -4,9 +4,6 @@ import { runIf, seedIdentifiedProfile } from './utils'
 
 test.describe('Variant Resolution (CSR)', () => {
   test.describe('unidentified user', () => {
-    // TODO: FIXME — SSR resolves variants on the server and requires consent+cookies for the
-    // Experience API. Client-side interactivity (consent button, identify button) and no-consent
-    // merge tag resolution are not available in SSR mode with JavaScript disabled.
     runIf('CSR')
     test.use({ storageState: { cookies: [], origins: [] } })
 
