@@ -13,7 +13,7 @@ if ((${#packages[@]} == 0)); then
 fi
 
 for package_file in "${packages[@]}"; do
-  if ! tar -tzf "$package_file" | grep -qx 'package/THIRD_PARTY_NOTICES.txt'; then
+  if ! tar -tzf "$package_file" package/THIRD_PARTY_NOTICES.txt >/dev/null 2>&1; then
     echo "$package_file is missing package/THIRD_PARTY_NOTICES.txt." >&2
     exit 1
   fi
