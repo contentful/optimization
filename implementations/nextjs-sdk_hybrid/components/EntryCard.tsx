@@ -76,36 +76,38 @@ export function EntryCard({
         liveUpdates={liveUpdates}
         trackViews={autoTracking ? undefined : false}
       >
-        {(resolvedEntry) => {
-          const asCf = resolvedEntry as ContentEntryType
-          const richTextField = Object.values(asCf.fields).find(isRichTextField)
-          const nestedEntries = Array.isArray(asCf.fields.nested) ? asCf.fields.nested : []
-          const nested = nestedEntries.filter(isEntry)
+        {(resolvedEntry: ContentEntryType) => {
+          const richText = Object.values(resolvedEntry.fields).find(isRichTextField)
+          const nested = Array.isArray(resolvedEntry.fields.nested)
+            ? resolvedEntry.fields.nested.filter(isEntry)
+            : []
 
           const content = (
             <div
               ref={
                 manualTracking
-                  ? (element) => {
-                      updateManualViewElement(element, asCf.sys.id)
-                    }
+                  ? (el) => updateManualViewElement(el, resolvedEntry.sys.id)
                   : undefined
               }
               className="entry-card"
-              data-ctfl-entry-id={asCf.sys.id}
+              data-ctfl-entry-id={resolvedEntry.sys.id}
               data-testid={`content-${id}`}
             >
               <div
-                aria-label={`Entry: ${asCf.sys.id}`}
-                className={richTextField ? 'rich-text' : undefined}
+                aria-label={`Entry: ${resolvedEntry.sys.id}`}
+                className={richText ? 'rich-text' : undefined}
                 data-testid={`entry-text-${id}`}
               >
-                {richTextField ? (
-                  <>{documentToReactComponents(richTextField, renderOptions)}</>
+                {richText ? (
+                  <>{documentToReactComponents(richText, renderOptions)}</>
                 ) : (
-                  <p>{typeof asCf.fields.text === 'string' ? asCf.fields.text : 'No content'}</p>
+                  <p>
+                    {typeof resolvedEntry.fields.text === 'string'
+                      ? resolvedEntry.fields.text
+                      : 'No content'}
+                  </p>
                 )}
-                <p>{`[Entry: ${asCf.sys.id}]`}</p>
+                <p>{`[Entry: ${resolvedEntry.sys.id}]`}</p>
               </div>
 
               {clickScenario === 'descendant' ? (
