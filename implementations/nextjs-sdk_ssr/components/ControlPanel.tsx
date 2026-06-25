@@ -10,7 +10,7 @@ import {
   useProfileState,
   useSelectedOptimizationsState,
 } from '@contentful/optimization-nextjs/client'
-import { type JSX, useMemo } from 'react'
+import type { JSX } from 'react'
 
 export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): JSX.Element {
   const sdk = useOptimization()
@@ -21,11 +21,7 @@ export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): 
   const { globalLiveUpdates, onToggleGlobalLiveUpdates } = useGlobalLiveUpdatesControls()
   const { previewPanelVisible, setPreviewPanelVisible } = useLiveUpdates()
   const booleanFlag = useFlagSubscription('boolean')
-
-  const isIdentified = useMemo(
-    () => profile !== undefined && Boolean(profile.traits.identified),
-    [profile],
-  )
+  const isIdentified = Boolean(profile?.traits.identified)
 
   return (
     <section className="control-panel" id="utility-panel">
