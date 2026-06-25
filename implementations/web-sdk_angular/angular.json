@@ -58,7 +58,10 @@
           },
           "defaultConfiguration": "development",
           "options": {
-            "port": 4200
+            "port": 4200,
+            "prebundle": {
+              "exclude": ["e2e-web"]
+            }
           }
         }
       }

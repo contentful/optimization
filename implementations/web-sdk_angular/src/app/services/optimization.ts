@@ -258,7 +258,9 @@ async function getServerOptimizationData(
     locale,
     ...(anonymousId === undefined ? {} : { profile: { id: anonymousId } }),
   })
-  const data: OptimizationData | undefined = await requestOptimization.page()
+  const pageResult = await requestOptimization.page()
+  if (!pageResult.accepted) return { consentGranted: false }
+  const data: OptimizationData | undefined = pageResult.data
   if (!data) return { consentGranted: false }
 
   return {
