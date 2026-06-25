@@ -1,5 +1,3 @@
-import type { Entry } from 'contentful'
-
 import type { OptimizationSdk } from '../context/OptimizationContext'
 
 function noop(): void {
@@ -48,35 +46,40 @@ const SSR_TRACKING: OptimizationSdk['tracking'] = {
   enableElement: noop,
 }
 
-export const SSR_STUB: OptimizationSdk = {
-  consent: noop,
-  destroy: noop,
-  getFlag: () => undefined,
-  getMergeTagValue: () => undefined,
-  hasConsent: () => false,
-  identify: async () => {
-    await Promise.resolve()
-    return undefined
-  },
-  locale: undefined,
-  page: async () => {
-    await Promise.resolve()
-    return undefined
-  },
-  reset: noop,
-  resolveOptimizedEntry: (_entry: Entry) => ({ entry: _entry }),
-  setLocale: () => undefined,
-  states: SSR_STATES,
-  track: async () => {
-    await Promise.resolve()
-    return undefined
-  },
-  trackClick: async () => {
-    await Promise.resolve()
-  },
-  trackView: async () => {
-    await Promise.resolve()
-    return undefined
-  },
-  tracking: SSR_TRACKING,
+function makeSsrStub(): OptimizationSdk {
+  const stub: OptimizationSdk = {
+    consent: noop,
+    destroy: noop,
+    getFlag: () => undefined,
+    getMergeTagValue: () => undefined,
+    hasConsent: () => false,
+    identify: async (_payload) => {
+      await Promise.resolve()
+      return undefined
+    },
+    locale: undefined,
+    page: async (_payload) => {
+      await Promise.resolve()
+      return undefined
+    },
+    reset: noop,
+    resolveOptimizedEntry: (entry, _selectedOptimizations) => ({ entry }),
+    setLocale: () => undefined,
+    states: SSR_STATES,
+    track: async (_payload) => {
+      await Promise.resolve()
+      return undefined
+    },
+    trackClick: async (_payload) => {
+      await Promise.resolve()
+    },
+    trackView: async (_payload) => {
+      await Promise.resolve()
+      return undefined
+    },
+    tracking: SSR_TRACKING,
+  }
+  return stub
 }
+
+export const SSR_STUB: OptimizationSdk = makeSsrStub()
