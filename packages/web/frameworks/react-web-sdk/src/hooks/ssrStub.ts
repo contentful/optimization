@@ -53,27 +53,27 @@ function makeSsrStub(): OptimizationSdk {
     getFlag: () => undefined,
     getMergeTagValue: () => undefined,
     hasConsent: () => false,
-    identify: async (_payload) => {
+    identify: async (_payload?) => {
       await Promise.resolve()
       return undefined
     },
     locale: undefined,
-    page: async (_payload) => {
+    page: async (_payload?) => {
       await Promise.resolve()
       return undefined
     },
     reset: noop,
-    resolveOptimizedEntry: (entry, _selectedOptimizations) => ({ entry }),
+    resolveOptimizedEntry: (_entry, _selectedOptimizations?) => ({ entry: _entry }),
     setLocale: () => undefined,
     states: SSR_STATES,
-    track: async (_payload) => {
+    track: async (_payload?) => {
       await Promise.resolve()
       return undefined
     },
-    trackClick: async (_payload) => {
+    trackClick: async (_payload?) => {
       await Promise.resolve()
     },
-    trackView: async (_payload) => {
+    trackView: async (_payload?) => {
       await Promise.resolve()
       return undefined
     },
