@@ -3,7 +3,7 @@
 import { useOptimization } from '@contentful/optimization-nextjs/client'
 import { useEffect } from 'react'
 
-export function TrackView({ componentId }: { readonly componentId: string }): null {
+export function CustomViewTracker({ componentId }: { readonly componentId: string }): null {
   const sdk = useOptimization()
 
   useEffect(() => {

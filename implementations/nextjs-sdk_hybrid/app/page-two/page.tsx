@@ -1,7 +1,6 @@
 import { ControlPanel } from '@/components/ControlPanel'
+import { CustomViewTracker } from '@/components/CustomViewTracker'
 import { EntryCard } from '@/components/EntryCard'
-import { TrackView } from '@/components/TrackView'
-import { TrackViewButton } from '@/components/TrackViewButton'
 import { loadPageEntries } from '@/lib/contentful'
 import { toIdMap } from '@/lib/util'
 import { PAGES } from 'e2e-web'
@@ -14,47 +13,43 @@ export default async function PageTwo() {
 
   return (
     <section data-testid="page-two-view">
-      <h2>Page Two</h2>
+      <div className="page-header">
+        <Link data-testid="link-back-home" href={PAGES.home.path}>
+          Back to Home
+        </Link>
+        <h1>Page Two</h1>
+      </div>
 
-      <TrackView componentId="page-two-hero" />
-      <ControlPanel />
+      <CustomViewTracker componentId="page-two-hero" />
+      <ControlPanel demoCTA />
 
-      <section className="page-section" data-testid="page-two-optimization">
-        <header className="page-section__header">
-          <h3>Page Two Optimized Content</h3>
-        </header>
-        {autoEntry ? (
-          <div>
-            <p>Auto tracked example</p>
-            <EntryCard entry={autoEntry} viewTracking="auto" />
+      <div className="sections-grid sections-grid--split" data-testid="page-two-optimization">
+        <section className="page-section">
+          <header className="page-section__header">
+            <h2>Auto-observed</h2>
+          </header>
+          <div className="entry-grid">
+            {autoEntry ? (
+              <EntryCard entry={autoEntry} viewTracking="auto" />
+            ) : (
+              <p>Auto tracked entry is unavailable.</p>
+            )}
           </div>
-        ) : (
-          <p>Auto tracked entry is unavailable.</p>
-        )}
-        {manualEntry ? (
-          <div>
-            <p>Manual tracked example</p>
-            <EntryCard entry={manualEntry} viewTracking="manual" />
+        </section>
+
+        <section className="page-section">
+          <header className="page-section__header">
+            <h2>Manually-observed</h2>
+          </header>
+          <div className="entry-grid">
+            {manualEntry ? (
+              <EntryCard entry={manualEntry} viewTracking="manual" />
+            ) : (
+              <p>Manual tracked entry is unavailable.</p>
+            )}
           </div>
-        ) : (
-          <p>Manual tracked entry is unavailable.</p>
-        )}
-      </section>
-
-      <section className="page-section" data-testid="page-two-conversion">
-        <header className="page-section__header">
-          <h3>Conversion Step Demo</h3>
-        </header>
-        <div className="control-panel__actions">
-          <TrackViewButton componentId="page-two-demo-cta" testId="track-conversion-button">
-            Trigger custom view event
-          </TrackViewButton>
-        </div>
-      </section>
-
-      <Link data-testid="link-back-home" href={PAGES.home.path}>
-        Back to Home
-      </Link>
+        </section>
+      </div>
     </section>
   )
 }

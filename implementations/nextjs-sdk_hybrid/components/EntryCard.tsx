@@ -97,14 +97,22 @@ export function EntryCard({
           const nestedEntries = Array.isArray(asCf.fields.nested) ? asCf.fields.nested : []
 
           return (
-            <div data-test-entry-id={resolvedEntry.sys.id} data-testid={`content-${id}`}>
+            <div
+              className="entry-card"
+              data-test-entry-id={resolvedEntry.sys.id}
+              data-testid={`content-${id}`}
+            >
               <div aria-label={fullLabel} data-testid={`entry-text-${id}`}>
                 <p>{text}</p>
                 <p>{`[Entry: ${resolvedEntry.sys.id}]`}</p>
               </div>
-              {nestedEntries.filter(isEntry).map((nestedEntry) => (
-                <EntryCard entry={nestedEntry} key={nestedEntry.sys.id} />
-              ))}
+              {nestedEntries.filter(isEntry).length > 0 ? (
+                <div className="entry-card__nested-children">
+                  {nestedEntries.filter(isEntry).map((nestedEntry) => (
+                    <EntryCard entry={nestedEntry} key={nestedEntry.sys.id} />
+                  ))}
+                </div>
+              ) : null}
             </div>
           )
         }}
@@ -136,10 +144,15 @@ export function EntryCard({
                     }
                   : undefined
               }
+              className="entry-card"
               data-ctfl-entry-id={asCf.sys.id}
               data-testid={`content-${entry.sys.id}`}
             >
-              <div aria-label={entryLabel} data-testid={`entry-text-${entry.sys.id}`}>
+              <div
+                aria-label={entryLabel}
+                className={richTextField ? 'rich-text' : undefined}
+                data-testid={`entry-text-${entry.sys.id}`}
+              >
                 {richTextField ? (
                   <RichText richText={richTextField} />
                 ) : (

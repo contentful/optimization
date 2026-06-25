@@ -6,6 +6,7 @@ import { useFlagSubscription } from '@/lib/hooks'
 import {
   useConsentState,
   useLiveUpdates,
+  useOptimization,
   useOptimizationActions,
   useProfileState,
   useSelectedOptimizationsState,
@@ -27,7 +28,8 @@ function displayFlagValue(value: unknown): string {
   return JSON.stringify(value)
 }
 
-export function ControlPanel(): JSX.Element {
+export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): JSX.Element {
+  const sdk = useOptimization()
   const { consent: setConsent, identify, reset } = useOptimizationActions()
   const consent = useConsentState()
   const profile = useProfileState()
@@ -178,6 +180,25 @@ export function ControlPanel(): JSX.Element {
         </span>
         <span />
       </div>
+
+      {demoCTA ? (
+        <div className="control-panel__actions">
+          <button
+            className="btn btn--secondary btn--sm"
+            data-testid="track-conversion-button"
+            onClick={() => {
+              void sdk.trackView({
+                componentId: 'page-two-demo-cta',
+                viewId: crypto.randomUUID(),
+                viewDurationMs: 0,
+              })
+            }}
+            type="button"
+          >
+            Trigger custom view event
+          </button>
+        </div>
+      ) : null}
     </section>
   )
 }
