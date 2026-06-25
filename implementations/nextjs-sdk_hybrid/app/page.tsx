@@ -69,12 +69,7 @@ export default async function Home() {
                 ]
               }
               return [
-                <EntryCard
-                  key={entry.sys.id}
-                  clickScenario={CLICK_SCENARIOS[id]}
-                  entry={entry}
-                  viewTracking="auto"
-                />,
+                <EntryCard key={entry.sys.id} clickScenario={CLICK_SCENARIOS[id]} entry={entry} />,
               ]
             })}
           </div>
@@ -88,7 +83,7 @@ export default async function Home() {
             {PAGES.home.manual.flatMap((id) => {
               const entry = entriesById.get(id)
               if (!entry) return []
-              return [<EntryCard key={entry.sys.id} entry={entry} viewTracking="manual" />]
+              return [<EntryCard key={entry.sys.id} entry={entry} manualTracking />]
             })}
           </div>
         </section>

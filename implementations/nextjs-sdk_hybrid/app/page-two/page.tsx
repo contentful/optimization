@@ -30,7 +30,7 @@ export default async function PageTwo() {
           </header>
           <div className="entry-grid">
             {autoEntry ? (
-              <EntryCard entry={autoEntry} viewTracking="auto" />
+              <EntryCard entry={autoEntry} />
             ) : (
               <p>Auto tracked entry is unavailable.</p>
             )}
@@ -43,7 +43,7 @@ export default async function PageTwo() {
           </header>
           <div className="entry-grid">
             {manualEntry ? (
-              <EntryCard entry={manualEntry} viewTracking="manual" />
+              <EntryCard entry={manualEntry} manualTracking />
             ) : (
               <p>Manual tracked entry is unavailable.</p>
             )}

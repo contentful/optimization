@@ -90,7 +90,7 @@ export function useFlagSubscription(flagName: string): unknown {
 }
 
 export function useManualViewTracking(
-  viewTracking: 'auto' | 'manual' | undefined,
+  manualTracking: boolean | undefined,
 ): (element: HTMLDivElement | null, entryId: string) => void {
   const sdk = useOptimization()
   const trackedElement = useRef<HTMLDivElement | null>(null)
@@ -107,7 +107,7 @@ export function useManualViewTracking(
     const { current: previous } = trackedElement
     if (previous && previous !== element) sdk.tracking.clearElement('views', previous)
     trackedElement.current = element
-    if (!element || viewTracking !== 'manual') return
+    if (!element || !manualTracking) return
     sdk.tracking.enableElement('views', element, { data: { entryId } })
   }
 }
