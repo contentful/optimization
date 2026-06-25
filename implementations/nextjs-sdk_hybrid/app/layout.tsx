@@ -1,7 +1,7 @@
 import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
-import { appConfig, optimizationConfig } from '@/lib/config'
+import { appConfig } from '@/lib/config'
 import { getOptimizationData } from '@/lib/optimization'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
 import 'e2e-web/theme.css'
@@ -39,10 +39,10 @@ export default async function RootLayout({
     <html lang={htmlLang}>
       <body>
         <OptimizationRoot
-          clientId={optimizationConfig.clientId}
-          environment={optimizationConfig.environment}
+          clientId={appConfig.clientId}
+          environment={appConfig.environment}
           locale={appConfig.locale}
-          api={optimizationConfig.api}
+          api={appConfig.api}
           trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
           logLevel="debug"
           defaults={defaults}

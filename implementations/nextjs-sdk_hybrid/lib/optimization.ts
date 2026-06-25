@@ -4,15 +4,15 @@ import {
 } from '@contentful/optimization-nextjs/server'
 import { cookies, headers } from 'next/headers'
 import { cache } from 'react'
-import { appConfig, optimizationConfig } from './config'
+import { appConfig } from './config'
 import { getAppConsent } from './util'
 
 export const optimization = createNextjsOptimization({
-  clientId: optimizationConfig.clientId,
-  environment: optimizationConfig.environment,
-  locale: optimizationConfig.locale,
+  clientId: appConfig.clientId,
+  environment: appConfig.environment,
+  locale: appConfig.locale,
   logLevel: 'debug',
-  api: optimizationConfig.api,
+  api: appConfig.api,
   app: {
     name: 'Contentful Optimization Next.js SDK Hybrid (Server)',
     version: '0.1.0',

@@ -33,6 +33,10 @@ export default async function Home() {
     ]),
   )
 
+  const profile = optimizationData?.profile
+  const getMergeTagValue = (entry: unknown): string | undefined =>
+    optimization.getMergeTagValue(entry as never, profile)
+
   const liveUpdatesEntry = entriesById.get(PAGES.home.liveUpdates)
 
   return (
@@ -92,8 +96,9 @@ export default async function Home() {
                   key={id}
                   baselineEntry={entry}
                   clickScenario={CLICK_SCENARIOS[id]}
-                  resolvedData={resolvedData}
+                  getMergeTagValue={getMergeTagValue}
                   manualTracking={false}
+                  resolvedData={resolvedData}
                 />,
               ]
             })}
@@ -113,8 +118,9 @@ export default async function Home() {
                 <EntryCard
                   key={id}
                   baselineEntry={entry}
-                  resolvedData={resolvedData}
+                  getMergeTagValue={getMergeTagValue}
                   manualTracking={true}
+                  resolvedData={resolvedData}
                 />,
               ]
             })}
