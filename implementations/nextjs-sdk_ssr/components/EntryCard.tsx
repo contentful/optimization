@@ -12,17 +12,17 @@ interface EntryCardProps {
   baselineEntry: ContentEntry
   clickScenario?: EntryClickScenario
   resolvedData: ServerTrackingResolvedData
-  viewTracking: 'auto' | 'manual'
+  manualTracking: boolean
 }
 
 export function EntryCard({
   baselineEntry,
   clickScenario,
   resolvedData,
-  viewTracking,
+  manualTracking,
 }: EntryCardProps): JSX.Element {
   const resolvedEntry = resolvedData.entry as ContentEntry
-  const autoTrackViews = viewTracking === 'auto'
+  const autoTrackViews = !manualTracking
   const text = typeof resolvedEntry.fields.text === 'string' ? resolvedEntry.fields.text : ''
 
   const content = (

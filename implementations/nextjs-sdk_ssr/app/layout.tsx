@@ -1,7 +1,7 @@
 import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
-import { APP_LOCALE, APP_PERSONALIZATION_CONSENT_COOKIE, optimizationConfig } from '@/lib/config'
+import { appConfig, optimizationConfig } from '@/lib/config'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
 import 'e2e-web/theme.css'
 import type { Metadata } from 'next'
@@ -17,15 +17,15 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const cookieStore = await cookies()
-  const appConsent = cookieStore.get(APP_PERSONALIZATION_CONSENT_COOKIE)?.value === 'granted'
+  const appConsent = cookieStore.get(appConfig.personalizationConsentCookie)?.value === 'granted'
 
   return (
-    <html lang={APP_LOCALE.split('-')[0]}>
+    <html lang={appConfig.locale.split('-')[0]}>
       <body>
         <OptimizationRoot
           clientId={optimizationConfig.clientId}
           environment={optimizationConfig.environment}
-          locale={APP_LOCALE}
+          locale={appConfig.locale}
           api={optimizationConfig.api}
           trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
           logLevel="debug"

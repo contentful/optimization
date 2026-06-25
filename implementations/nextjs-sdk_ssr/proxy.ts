@@ -1,13 +1,12 @@
-import { APP_LOCALE, APP_PERSONALIZATION_CONSENT_COOKIE } from '@/lib/config'
+import { appConfig } from '@/lib/config'
 import { optimization } from '@/lib/optimization'
+import { getAppConsent } from '@/lib/util'
 import { createNextjsOptimizationRequestHandler } from '@contentful/optimization-nextjs/request-handler'
-import type { NextRequest } from 'next/server'
 
 export const proxy = createNextjsOptimizationRequestHandler(optimization, {
-  getLocale: () => APP_LOCALE,
+  getLocale: () => appConfig.locale,
   resolveConsent: ({ request }) => {
-    const granted =
-      (request as NextRequest).cookies.get(APP_PERSONALIZATION_CONSENT_COOKIE)?.value === 'granted'
+    const granted = getAppConsent(request.cookies)
     return { events: granted, persistence: granted }
   },
   shouldRequestOptimization: ({ consent }) =>

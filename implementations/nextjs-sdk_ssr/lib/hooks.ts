@@ -1,7 +1,25 @@
 'use client'
 
-import { useOptimization, useOptimizationContext } from '@contentful/optimization-nextjs/client'
+import {
+  useConsentState,
+  useOptimization,
+  useOptimizationActions,
+  useOptimizationContext,
+} from '@contentful/optimization-nextjs/client'
 import { useEffect, useReducer, useRef, useState } from 'react'
+import { setAppConsent } from './util'
+
+export function useConsent(): {
+  consent: boolean | undefined
+  setConsent: (value: boolean) => void
+} {
+  const consent = useConsentState()
+  const { consent: setConsent } = useOptimizationActions()
+  useEffect(() => {
+    if (typeof consent === 'boolean') setAppConsent(consent)
+  }, [consent])
+  return { consent, setConsent }
+}
 
 const MS_PER_SECOND = 1000
 const TICK_INTERVAL_SECONDS = 5
@@ -72,7 +90,7 @@ export function useFlagSubscription(flagName: string): unknown {
 }
 
 export function useManualViewTracking(
-  viewTracking: 'auto' | 'manual' | undefined,
+  manualTracking: boolean | undefined,
 ): (element: HTMLDivElement | null, entryId: string) => void {
   const sdk = useOptimization()
   const trackedElement = useRef<HTMLDivElement | null>(null)
@@ -89,7 +107,7 @@ export function useManualViewTracking(
     const { current: previous } = trackedElement
     if (previous && previous !== element) sdk.tracking.clearElement('views', previous)
     trackedElement.current = element
-    if (!element || viewTracking !== 'manual') return
+    if (!element || !manualTracking) return
     sdk.tracking.enableElement('views', element, { data: { entryId } })
   }
 }

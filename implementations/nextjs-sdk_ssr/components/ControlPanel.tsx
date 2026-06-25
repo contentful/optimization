@@ -1,44 +1,25 @@
 'use client'
 
 import { useGlobalLiveUpdatesControls } from '@/components/GlobalLiveUpdatesProvider'
-import { APP_PERSONALIZATION_CONSENT_COOKIE } from '@/lib/config'
-import { useFlagSubscription } from '@/lib/hooks'
+import { appConfig } from '@/lib/config'
+import { useConsent, useFlagSubscription } from '@/lib/hooks'
 import {
-  useConsentState,
   useLiveUpdates,
   useOptimization,
   useOptimizationActions,
   useProfileState,
   useSelectedOptimizationsState,
 } from '@contentful/optimization-nextjs/client'
-import { type JSX, useEffect, useMemo } from 'react'
-
-const ENABLE_PREVIEW_PANEL = process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
-
-function setAppConsentCookie(consented: boolean): void {
-  const value = consented ? 'granted' : 'denied'
-  document.cookie = `${APP_PERSONALIZATION_CONSENT_COOKIE}=${value}; Path=/; SameSite=Lax`
-}
-
-function displayFlagValue(value: unknown): string {
-  if (value === undefined) return 'undefined'
-  if (typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string') {
-    return String(value)
-  }
-  return JSON.stringify(value)
-}
+import { type JSX, useMemo } from 'react'
 
 export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): JSX.Element {
   const sdk = useOptimization()
-  const { consent: setConsent, identify, reset } = useOptimizationActions()
-  const consent = useConsentState()
+  const { identify, reset } = useOptimizationActions()
+  const { consent, setConsent } = useConsent()
   const profile = useProfileState()
   const selectedOptimizations = useSelectedOptimizationsState()
   const { globalLiveUpdates, onToggleGlobalLiveUpdates } = useGlobalLiveUpdatesControls()
   const { previewPanelVisible, setPreviewPanelVisible } = useLiveUpdates()
-  useEffect(() => {
-    if (typeof consent === 'boolean') setAppConsentCookie(consent)
-  }, [consent])
   const booleanFlag = useFlagSubscription('boolean')
 
   const isIdentified = useMemo(
@@ -144,7 +125,7 @@ export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): 
         <span className="control-panel__row-value" data-testid="preview-panel-status">
           {previewPanelVisible ? 'Open' : 'Closed'}
         </span>
-        {ENABLE_PREVIEW_PANEL ? (
+        {appConfig.previewPanelEnabled ? (
           <button
             className="btn btn--sm btn--secondary"
             data-testid="simulate-preview-panel-button"
@@ -166,7 +147,7 @@ export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): 
         >
           Flag &quot;boolean&quot;
         </span>
-        <span className="control-panel__row-value">{displayFlagValue(booleanFlag)}</span>
+        <span className="control-panel__row-value">{String(booleanFlag ?? 'undefined')}</span>
         <span />
 
         <span

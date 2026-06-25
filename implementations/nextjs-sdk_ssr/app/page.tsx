@@ -1,10 +1,10 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { EntryCard } from '@/components/EntryCard'
 import { LiveEntryCard } from '@/components/LiveEntryCard'
-import { APP_LOCALE, APP_PERSONALIZATION_CONSENT_COOKIE } from '@/lib/config'
+import { appConfig } from '@/lib/config'
 import { loadPageEntries } from '@/lib/contentful'
 import { optimization } from '@/lib/optimization'
-import { toIdMap } from '@/lib/util'
+import { getAppConsent, toIdMap } from '@/lib/util'
 import { getNextjsServerOptimizationData } from '@contentful/optimization-nextjs/server'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 import { cookies, headers } from 'next/headers'
@@ -12,16 +12,15 @@ import { cookies, headers } from 'next/headers'
 export default async function Home() {
   const cookieStore = await cookies()
   const headerStore = await headers()
-  const appConsent = cookieStore.get(APP_PERSONALIZATION_CONSENT_COOKIE)?.value === 'granted'
 
   const [entries, optimizationData] = await Promise.all([
     loadPageEntries(PAGES.home.ids),
-    appConsent
+    getAppConsent(cookieStore)
       ? getNextjsServerOptimizationData(optimization, {
           consent: { events: true, persistence: true },
           cookies: cookieStore,
           headers: headerStore,
-          locale: APP_LOCALE,
+          locale: appConfig.locale,
         }).then(({ data }) => data)
       : undefined,
   ])
@@ -94,7 +93,7 @@ export default async function Home() {
                   baselineEntry={entry}
                   clickScenario={CLICK_SCENARIOS[id]}
                   resolvedData={resolvedData}
-                  viewTracking="auto"
+                  manualTracking={false}
                 />,
               ]
             })}
@@ -115,7 +114,7 @@ export default async function Home() {
                   key={id}
                   baselineEntry={entry}
                   resolvedData={resolvedData}
-                  viewTracking="manual"
+                  manualTracking={true}
                 />,
               ]
             })}
