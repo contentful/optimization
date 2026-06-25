@@ -2,6 +2,7 @@ import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvide
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
 import { appConfig, optimizationConfig } from '@/lib/config'
+import { getAppConsent } from '@/lib/util'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
 import 'e2e-web/theme.css'
 import type { Metadata } from 'next'
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const cookieStore = await cookies()
-  const appConsent = cookieStore.get(appConfig.personalizationConsentCookie)?.value === 'granted'
+  const appConsent = getAppConsent(cookieStore)
 
   return (
     <html lang={appConfig.locale.split('-')[0]}>
