@@ -11,6 +11,10 @@ export function onlyInModes(...modes: string[]): void {
   test.skip(!isRenderingMode(...modes), `Only runs in ${modes.join(' or ')} mode.`)
 }
 
+export function onlyWithPreviewPanel(): void {
+  test.skip(!isPreviewPanelEnabled, 'Preview panel is disabled for this build.')
+}
+
 const MOCK_EXPERIENCE_URL = 'http://localhost:8000/experience'
 
 export async function setup(page: Page): Promise<void> {
