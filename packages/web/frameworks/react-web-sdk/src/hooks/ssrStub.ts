@@ -1,7 +1,11 @@
+import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
+import type { Entry, EntrySkeletonType } from 'contentful'
+
 import type { OptimizationSdk } from '../context/OptimizationContext'
 
 function noop(): void {
-  // intentional no-op for SSR stub subscriptions
+  // intentional no-op
 }
 
 interface StubSubscription {
@@ -53,7 +57,7 @@ function makeSsrStub(): OptimizationSdk {
     getFlag: () => undefined,
     getMergeTagValue: () => undefined,
     hasConsent: () => false,
-    identify: async (_payload?) => {
+    identify: async (_payload) => {
       await Promise.resolve()
       return undefined
     },
@@ -63,17 +67,20 @@ function makeSsrStub(): OptimizationSdk {
       return undefined
     },
     reset: noop,
-    resolveOptimizedEntry: (_entry, _selectedOptimizations?) => ({ entry: _entry }),
+    resolveOptimizedEntry: (
+      _entry: Entry,
+      _selectedOptimizations?: SelectedOptimizationArray,
+    ): ResolvedData<EntrySkeletonType> => ({ entry: _entry }),
     setLocale: () => undefined,
     states: SSR_STATES,
-    track: async (_payload?) => {
+    track: async (_payload) => {
       await Promise.resolve()
       return undefined
     },
-    trackClick: async (_payload?) => {
+    trackClick: async (_payload) => {
       await Promise.resolve()
     },
-    trackView: async (_payload?) => {
+    trackView: async (_payload) => {
       await Promise.resolve()
       return undefined
     },
