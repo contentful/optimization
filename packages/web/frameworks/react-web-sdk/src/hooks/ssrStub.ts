@@ -1,5 +1,5 @@
-import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
+import ContentfulOptimization from '@contentful/optimization-web'
+import type { EventEmissionResult, ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 
 import type { OptimizationSdk } from '../context/OptimizationContext'
@@ -50,42 +50,50 @@ const SSR_TRACKING: OptimizationSdk['tracking'] = {
   enableElement: noop,
 }
 
+const NOT_ACCEPTED: EventEmissionResult = { accepted: false }
+
 function makeSsrStub(): OptimizationSdk {
-  const stub: OptimizationSdk = {
+  const stub = {
     consent: noop,
     destroy: noop,
     getFlag: () => undefined,
     getMergeTagValue: () => undefined,
     hasConsent: () => false,
-    identify: async (_payload) => {
+    identify: async () => {
       await Promise.resolve()
-      return undefined
+      return NOT_ACCEPTED
     },
     locale: undefined,
-    page: async (_payload?) => {
+    page: async () => {
       await Promise.resolve()
-      return undefined
+      return NOT_ACCEPTED
     },
     reset: noop,
-    resolveOptimizedEntry: (
-      _entry: Entry,
-      _selectedOptimizations?: SelectedOptimizationArray,
-    ): ResolvedData<EntrySkeletonType> => ({ entry: _entry }),
+    resolveOptimizedEntry: (_entry: Entry): ResolvedData<EntrySkeletonType> => ({
+      entry: _entry,
+    }),
     setLocale: () => undefined,
     states: SSR_STATES,
-    track: async (_payload) => {
+    track: async () => {
       await Promise.resolve()
-      return undefined
+      return NOT_ACCEPTED
     },
-    trackClick: async (_payload) => {
+    trackClick: async () => {
       await Promise.resolve()
     },
-    trackView: async (_payload) => {
+    trackView: async () => {
       await Promise.resolve()
-      return undefined
+      return NOT_ACCEPTED
     },
     tracking: SSR_TRACKING,
   }
+
+  Object.setPrototypeOf(stub, ContentfulOptimization.prototype)
+
+  if (!(stub instanceof ContentfulOptimization)) {
+    throw new Error('Expected SSR stub to use the ContentfulOptimization prototype.')
+  }
+
   return stub
 }
 
