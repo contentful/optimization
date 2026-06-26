@@ -3,8 +3,9 @@ import { CLICK_SCENARIO_IDS, PAGES } from '../src/fixtures'
 import { runIf, seedIdentifiedProfile, skipIf } from './utils'
 
 test.describe('Variant Resolution (CSR)', () => {
+  runIf('CSR')
+
   test.describe('unidentified user', () => {
-    runIf('CSR')
     test.use({ storageState: { cookies: [], origins: [] } })
 
     test.beforeEach(async ({ page }) => {
