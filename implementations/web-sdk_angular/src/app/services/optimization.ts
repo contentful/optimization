@@ -38,9 +38,10 @@ import {
   type ResolvedEntryData,
   type ServerHandoff,
 } from '../transfer-state-keys'
-import { fromSdkState } from '../utils'
+import { fromSdkState, isRecord } from '../utils'
 import { readConsentFromRequest } from './consent'
 import { NgContentfulClient } from './contentful-client'
+import { resolveEntryMergeTags } from './merge-tags'
 
 type NgContentfulOptimizationInstance = ContentfulOptimization
 
@@ -302,14 +303,45 @@ async function getServerOptimizationData(
   }
 }
 
+function isEntryShape(value: unknown): value is Entry {
+  if (!isRecord(value)) return false
+  if (!isRecord(value.sys) || typeof value.sys.id !== 'string') return false
+  return isRecord(value.fields)
+}
+
+/**
+ * Resolve baselines against the SSR `selectedOptimizations`, then walk each
+ * rich-text field and substitute inline merge-tag entries using the SDK's
+ * `getMergeTagValue`. Shipping fully-resolved entries through `TransferState`
+ * lets JS-disabled clients see the variant content AND the personalised merge
+ * tags on first paint, not just the placeholder text.
+ *
+ * Nested entries (`fields.nested[]`) often appear only on the *resolved*
+ * variant rather than on the baseline, so we recurse after each
+ * `resolveOptimizedEntry` call to cover per-level Personalization
+ * assignments inside the chosen variant.
+ */
 function resolveServerEntries(
   sdk: NodeContentfulOptimizationType,
   baselines: readonly Entry[],
   selectedOptimizations: OptimizationData['selectedOptimizations'],
+  profile: Profile | undefined,
 ): Record<string, ResolvedEntryData> {
   const resolved: Record<string, ResolvedEntryData> = {}
-  for (const baseline of baselines) {
-    resolved[baseline.sys.id] = sdk.resolveOptimizedEntry(baseline, selectedOptimizations)
+  const queue: Entry[] = [...baselines]
+  for (let entry = queue.shift(); entry !== undefined; entry = queue.shift()) {
+    if (Object.hasOwn(resolved, entry.sys.id)) continue
+    const result = sdk.resolveOptimizedEntry(entry, selectedOptimizations)
+    const entryWithMergeTags = profile
+      ? resolveEntryMergeTags(result.entry, (target) => sdk.getMergeTagValue(target, profile))
+      : result.entry
+    resolved[entry.sys.id] = { ...result, entry: entryWithMergeTags }
+    const nested: unknown = entryWithMergeTags.fields.nested
+    if (Array.isArray(nested)) {
+      for (const child of nested) {
+        if (isEntryShape(child)) queue.push(child)
+      }
+    }
   }
   return resolved
 }
@@ -369,6 +401,7 @@ async function runServerPreflight(): Promise<void> {
     sdk,
     baselines,
     serverData.consentGranted ? serverData.data.selectedOptimizations : [],
+    serverData.consentGranted ? serverData.data.profile : undefined,
   )
   stampServerHandoff(transferState, serverData, baselines, resolvedEntries)
 }
