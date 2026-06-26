@@ -150,14 +150,11 @@ export class NgContentfulOptimization {
       // observed. Without this, JS-disabled clients would see "undefined" /
       // "0 active optimizations" in the Utilities panel even though the entry
       // markup is fully personalised.
-      const isGranted = handoff?.consent === true
       this.context = { platform: 'server' }
-      this.consent = signal<boolean | undefined>(isGranted).asReadonly()
-      this.profile = signal<Profile | undefined>(
-        handoff?.consent === true ? handoff.profile : undefined,
-      ).asReadonly()
+      this.consent = signal<boolean | undefined>(handoff?.consent).asReadonly()
+      this.profile = signal<Profile | undefined>(handoff?.profile).asReadonly()
       this.selectedOptimizations = signal<SelectedOptimizationArray | undefined>(
-        handoff?.consent === true ? handoff.selectedOptimizations : undefined,
+        handoff?.selectedOptimizations,
       ).asReadonly()
       return
     }
@@ -178,7 +175,7 @@ export class NgContentfulOptimization {
     // for the same route (consent was granted server-side) — without this
     // skip, analytics double-counts the SSR landing page. Subsequent
     // navigations always emit.
-    let skipNextPage = handoff?.consent === true
+    let skipNextPage = handoff?.consent ?? false
     const routerSubscription = router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
