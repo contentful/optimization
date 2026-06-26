@@ -481,7 +481,6 @@ ones.
 | ----------------------------- | ---------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
 | `trackEntryInteraction`       | `{ views?, taps? }`    | `{ views: true, taps: false }` | Default view/tap tracking for every `<OptimizedEntry>`. Omitted keys fall back to the defaults.                     |
 | `liveUpdates`                 | `boolean`              | `false`                        | Global live-updates default. When `false`, `<OptimizedEntry>` locks to the first variant it sees.                   |
-| `previewPanel`                | `PreviewPanelConfig`   | `undefined`                    | Forces `liveUpdates = true` whenever the panel is open (cannot be overridden).                                      |
 | `onStatesReady`               | `(states) => cleanup`  | `undefined`                    | Registers app-level state subscribers when SDK state is ready.                                                      |
 | `defaults.consent`            | `boolean \| undefined` | `undefined`                    | Initial consent state at startup. Overridden by `consent()` calls at runtime.                                       |
 | `defaults.persistenceConsent` | `boolean \| undefined` | `undefined`                    | Initial durable profile-continuity persistence consent. Boolean `defaults.consent` seeds both when this is omitted. |
@@ -611,7 +610,6 @@ A fully-instrumented list screen combines every mechanism in this guide:
   clientId={OPTIMIZATION_CLIENT_ID}
   defaults={{ consent: true }}
   trackEntryInteraction={{ views: true, taps: true }}
-  previewPanel={{ enabled: __DEV__, contentfulClient }}
 >
   <OptimizationNavigationContainer>
     {(navigationProps) => (
@@ -622,6 +620,7 @@ A fully-instrumented list screen combines every mechanism in this guide:
       </NavigationContainer>
     )}
   </OptimizationNavigationContainer>
+  <PreviewPanelOverlay contentfulClient={contentfulClient} />
 </OptimizationRoot>
 
 function HomeScreen({ navigation }) {

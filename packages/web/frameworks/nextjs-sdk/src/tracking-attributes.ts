@@ -2,7 +2,7 @@ import {
   resolveOptimizedEntryTrackingAttributes,
   type OptimizedEntryTrackingAttributeOptions,
   type OptimizedEntryTrackingAttributes,
-} from '@contentful/optimization-web/sdk-support'
+} from '@contentful/optimization-web/tracking-attributes'
 
 type ResolveTrackingAttributeArgs = Parameters<typeof resolveOptimizedEntryTrackingAttributes>
 

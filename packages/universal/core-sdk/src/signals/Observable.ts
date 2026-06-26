@@ -19,11 +19,12 @@ export interface Subscription {
  */
 export interface Observable<T> {
   /**
-   * Deep-cloned snapshot of the current signal value.
+   * Snapshot of the current signal value.
    *
    * @remarks
-   * A clone is returned to prevent accidental in-place mutations from leaking
-   * back into internal signal state.
+   * Core state observables return deep-cloned snapshots by default to prevent accidental in-place
+   * mutations from leaking back into internal signal state. High-volume event-stream observables may
+   * return immutable event references to avoid cloning large Contentful entry graphs.
    */
   readonly current: T
   /**
@@ -33,7 +34,8 @@ export interface Observable<T> {
    * @returns A {@link Subscription} used to stop observing updates.
    *
    * @remarks
-   * Values are deep-cloned before being passed to `next`.
+   * Core state observable values are deep-cloned before being passed to `next` by default.
+   * High-volume event streams may pass immutable event references.
    */
   subscribe: (next: (v: T) => void) => Subscription
   /**
@@ -43,7 +45,8 @@ export interface Observable<T> {
    * @returns A {@link Subscription} that can cancel before the first emission.
    *
    * @remarks
-   * Values are deep-cloned before being passed to `next`.
+   * Core state observable values are deep-cloned before being passed to `next` by default.
+   * High-volume event streams may pass immutable event references.
    */
   subscribeOnce: (next: (v: NonNullable<T>) => void) => Subscription
 }
@@ -57,28 +60,36 @@ function toError(value: unknown): Error {
   return new Error(`Subscriber threw non-Error value: ${String(value)}`)
 }
 
+type SnapshotFn<T> = (value: T) => T
+
 /**
  * Wrap a signal-like object with the local {@link Observable} contract.
  *
  * @typeParam T - Signal value type.
  * @param s - Signal-like source exposing a `value` property.
+ * @param snapshot - Optional snapshot function. Defaults to deep-cloning values.
  * @returns Observable adapter for the given signal source.
  *
  * @remarks
- * All emitted values and `current` snapshots are deep-cloned to isolate
- * subscriber-side mutation from internal Core state.
+ * Emitted values and `current` snapshots are deep-cloned by default to isolate
+ * subscriber-side mutation from internal Core state. Pass an identity snapshot
+ * only for event streams where values are immutable SDK emissions and may
+ * contain large Contentful entry graphs.
  *
  * @public
  */
-export function toObservable<T>(s: { value: T }): Observable<T> {
+export function toObservable<T>(
+  s: { value: T },
+  snapshot: SnapshotFn<T> = cloneDeep as SnapshotFn<T>,
+): Observable<T> {
   return {
     get current() {
-      return cloneDeep(s.value)
+      return snapshot(s.value)
     },
 
     subscribe(next) {
       const dispose = effect(() => {
-        next(cloneDeep(s.value))
+        next(snapshot(s.value))
       })
 
       return { unsubscribe: dispose }
@@ -106,7 +117,9 @@ export function toObservable<T>(s: { value: T }): Observable<T> {
 
         let callbackError: Error | null = null
         try {
-          next(cloneDeep(value))
+          const snapshotValue = snapshot(value)
+          if (!isNonNullish(snapshotValue)) return
+          next(snapshotValue)
         } catch (error) {
           callbackError = toError(error)
         }

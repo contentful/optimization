@@ -46,58 +46,54 @@ interface MockScreenEmissionResult {
   readonly data?: unknown
 }
 
-const mockScreenWithEmissionResult = rs
+const mockTrackCurrentScreen = rs
   .fn<(payload: unknown) => Promise<MockScreenEmissionResult>>()
   .mockResolvedValue({
     accepted: true,
     data: { profile: {}, changes: [], selectedOptimizations: [] },
   })
-const mockHasConsent = rs.fn(() => true)
+const mockHasConsent = rs.fn((_method: string) => true)
+let acceptedRouteKey: string | undefined = undefined
+let inFlightRouteKey: string | undefined = undefined
+function getRouteKey(payload: unknown): string | undefined {
+  if (payload === null || typeof payload !== 'object') return undefined
+
+  const routeKey = Reflect.get(payload, 'routeKey')
+
+  return typeof routeKey === 'string' ? routeKey : undefined
+}
+
 const mockOptimization = {
   hasConsent: mockHasConsent,
+  trackCurrentScreen: async (payload: unknown) => {
+    const routeKey = getRouteKey(payload)
+
+    if (
+      !mockHasConsent('screen') ||
+      acceptedRouteKey === routeKey ||
+      inFlightRouteKey === routeKey
+    ) {
+      return { accepted: false }
+    }
+
+    inFlightRouteKey = routeKey
+
+    try {
+      const result = await mockTrackCurrentScreen(payload)
+      if (result.accepted) {
+        acceptedRouteKey = routeKey
+      }
+
+      return result
+    } finally {
+      if (inFlightRouteKey === routeKey) {
+        inFlightRouteKey = undefined
+      }
+    }
+  },
 }
 
 let consentSnapshot: boolean | undefined = undefined
-
-rs.mock('@contentful/optimization-core/sdk-support', () => {
-  class AcceptedCurrentStateTracker {
-    private acceptedKey: string | undefined
-    private inFlightKey: string | undefined
-
-    async emitIfNeeded({
-      emit,
-      isAllowed,
-      key,
-    }: {
-      emit: () => Promise<{ accepted: boolean }>
-      isAllowed: boolean
-      key: string
-    }): Promise<unknown> {
-      if (!isAllowed || this.acceptedKey === key || this.inFlightKey === key) {
-        return { accepted: false, attempted: false }
-      }
-
-      this.inFlightKey = key
-      try {
-        const result = await emit()
-        if (result.accepted && this.inFlightKey === key) {
-          this.acceptedKey = key
-        }
-        return result
-      } finally {
-        if (this.inFlightKey === key) {
-          this.inFlightKey = undefined
-        }
-      }
-    }
-  }
-
-  return {
-    AcceptedCurrentStateTracker,
-    screenWithEmissionResult: async (_sdk: unknown, payload: unknown) =>
-      await mockScreenWithEmissionResult(payload),
-  }
-})
 
 rs.mock('../context/OptimizationContext', () => ({
   useOptimization: () => mockOptimization,
@@ -196,8 +192,10 @@ describe('OptimizationNavigationContainer', () => {
   void beforeEach(() => {
     rs.clearAllMocks()
     consentSnapshot = undefined
+    acceptedRouteKey = undefined
+    inFlightRouteKey = undefined
     mockHasConsent.mockReturnValue(true)
-    mockScreenWithEmissionResult.mockResolvedValue({
+    mockTrackCurrentScreen.mockResolvedValue({
       accepted: true,
       data: { profile: {}, changes: [], selectedOptimizations: [] },
     })
@@ -279,14 +277,15 @@ describe('OptimizationNavigationContainer', () => {
       await flushPromises()
     })
 
-    expect(mockScreenWithEmissionResult).not.toHaveBeenCalled()
+    expect(mockTrackCurrentScreen).not.toHaveBeenCalled()
 
     consentSnapshot = true
     mockHasConsent.mockReturnValue(true)
     await updateContainer(OptimizationNavigationContainer)
 
-    expect(mockScreenWithEmissionResult).toHaveBeenCalledTimes(1)
-    expect(mockScreenWithEmissionResult).toHaveBeenCalledWith({
+    expect(mockTrackCurrentScreen).toHaveBeenCalledTimes(1)
+    expect(mockTrackCurrentScreen).toHaveBeenCalledWith({
+      routeKey: 'Home',
       name: 'Home',
       properties: { name: 'Home' },
       screen: { name: 'Home' },
@@ -295,13 +294,13 @@ describe('OptimizationNavigationContainer', () => {
     consentSnapshot = undefined
     await updateContainer(OptimizationNavigationContainer)
 
-    expect(mockScreenWithEmissionResult).toHaveBeenCalledTimes(1)
+    expect(mockTrackCurrentScreen).toHaveBeenCalledTimes(1)
   })
 
   it('retries the current route when the previous emission was not accepted', async () => {
     const { OptimizationNavigationContainer } = await import('./OptimizationNavigationContainer')
 
-    mockScreenWithEmissionResult
+    mockTrackCurrentScreen
       .mockResolvedValueOnce({ accepted: false, data: undefined })
       .mockResolvedValueOnce({
         accepted: true,
@@ -316,12 +315,12 @@ describe('OptimizationNavigationContainer', () => {
       await flushPromises()
     })
 
-    expect(mockScreenWithEmissionResult).toHaveBeenCalledTimes(1)
+    expect(mockTrackCurrentScreen).toHaveBeenCalledTimes(1)
 
     consentSnapshot = true
     await updateContainer(OptimizationNavigationContainer)
 
-    expect(mockScreenWithEmissionResult).toHaveBeenCalledTimes(2)
+    expect(mockTrackCurrentScreen).toHaveBeenCalledTimes(2)
   })
 
   it('does not duplicate a current route while its screen event is in flight', async () => {
@@ -331,7 +330,7 @@ describe('OptimizationNavigationContainer', () => {
       data: { profile: object; changes: unknown[]; selectedOptimizations: unknown[] }
     }>()
 
-    mockScreenWithEmissionResult.mockReturnValueOnce(deferred.promise)
+    mockTrackCurrentScreen.mockReturnValueOnce(deferred.promise)
 
     await renderContainer(OptimizationNavigationContainer)
     setCurrentRoute(getProps(), { name: 'Home' })
@@ -340,12 +339,12 @@ describe('OptimizationNavigationContainer', () => {
       getProps().onReady()
     })
 
-    expect(mockScreenWithEmissionResult).toHaveBeenCalledTimes(1)
+    expect(mockTrackCurrentScreen).toHaveBeenCalledTimes(1)
 
     consentSnapshot = true
     await updateContainer(OptimizationNavigationContainer)
 
-    expect(mockScreenWithEmissionResult).toHaveBeenCalledTimes(1)
+    expect(mockTrackCurrentScreen).toHaveBeenCalledTimes(1)
 
     await act(async () => {
       deferred.resolve({

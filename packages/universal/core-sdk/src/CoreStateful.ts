@@ -1,19 +1,23 @@
 import type { ApiClientConfig } from '@contentful/optimization-api-client'
 import type {
-  ChangeArray,
-  ExperienceEvent as ExperienceEventPayload,
-  InsightsEvent as InsightsEventPayload,
   Json,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger, logger } from '@contentful/optimization-api-client/logger'
-import type { BlockedEvent } from './BlockedEvent'
-import type { ConsentController, ConsentGuard, ConsentInput } from './Consent'
+import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
+import type { ConsentController, ConsentGuard, ConsentInput } from './consent'
 import type { CoreStatefulApiConfig } from './CoreApiConfig'
 import type { CoreConfig } from './CoreBase'
 import CoreStatefulEventEmitter from './CoreStatefulEventEmitter'
-import { type AllowedEventType, DEFAULT_ALLOWED_EVENT_TYPES, type EventType } from './EventType'
+import {
+  type AllowedEventType,
+  type BlockedEvent,
+  DEFAULT_ALLOWED_EVENT_TYPES,
+  type EventOptimizationContext,
+  type EventType,
+  type OptimizationEventStreamEvent,
+} from './events'
 import { toPositiveInt } from './lib/number'
 import { type QueueFlushPolicy, resolveQueueFlushPolicy } from './lib/queue'
 import {
@@ -23,7 +27,7 @@ import {
 import { normalizeExplicitLocale } from './locale'
 import { ExperienceQueue, type ExperienceQueueDropContext } from './queues/ExperienceQueue'
 import { InsightsQueue } from './queues/InsightsQueue'
-import { installCoreStatefulSdkSupport } from './sdk-support/CoreStatefulSdkSupport'
+import type { ResolvedData } from './resolvers'
 import {
   batch,
   blockedEvent as blockedEventSignal,
@@ -48,13 +52,20 @@ import {
   signals,
   toObservable,
 } from './signals'
+import { resolveStatefulDefaults, type StatefulDefaults } from './StatefulDefaults'
 import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
 
 const coreLogger = createScopedLogger('CoreStateful')
 
 const OFFLINE_QUEUE_MAX_EVENTS = 100
-export type { AllowedEventType, EventType } from './EventType'
+const OPTIMIZATION_CONTEXT_MAX_ENTRIES = 1000
+const OPTIMIZATION_CONTEXT_IDLE_TTL_MS = 1_800_000
+export type { AllowedEventType, EventType } from './events'
 export type { ExperienceQueueDropContext } from './queues/ExperienceQueue'
+
+type PendingEventOptimizationContext = Omit<EventOptimizationContext, 'contextId'>
+
+type RegisteredOptimizationContext = [context: EventOptimizationContext, lastAccessedAt: number]
 
 const hasDefinedValues = (record: Record<string, unknown>): boolean =>
   Object.values(record).some((value) => value !== undefined)
@@ -145,7 +156,7 @@ export interface CoreStates {
   /** Stream of the most recent blocked event payload. */
   blockedEventStream: Observable<BlockedEvent | undefined>
   /** Stream of the most recent event emitted. */
-  eventStream: Observable<InsightsEventPayload | ExperienceEventPayload | undefined>
+  eventStream: Observable<OptimizationEventStreamEvent | undefined>
   /** Live view of the SDK Experience API/event locale. */
   locale: Observable<string | undefined>
   /** Key-scoped observable for a single Custom Flag value. */
@@ -167,18 +178,7 @@ export interface CoreStates {
  *
  * @public
  */
-export interface CoreConfigDefaults {
-  /** Global consent default applied at construction time. */
-  consent?: boolean
-  /** Durable profile-continuity persistence consent default applied at construction time. */
-  persistenceConsent?: boolean
-  /** Default active profile used for optimization and insights. */
-  profile?: Profile
-  /** Initial diff of changes produced by the service. */
-  changes?: ChangeArray
-  /** Preselected optimization variants (e.g., winning treatments). */
-  selectedOptimizations?: SelectedOptimizationArray
-}
+export interface CoreConfigDefaults extends StatefulDefaults {}
 
 /**
  * Configuration for {@link CoreStateful}.
@@ -235,6 +235,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   protected readonly experienceQueue: ExperienceQueue
   protected readonly insightsQueue: InsightsQueue
   protected readonly onEventBlocked?: CoreStatefulConfig['onEventBlocked']
+  private readonly optimizationContexts = new Map<string, RegisteredOptimizationContext>()
 
   private readonly optimizationPossibleSignal = signalFns.computed<boolean>(() => {
     if (consentSignal.value === true) return true
@@ -249,7 +250,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     flag: (name: string): Observable<Json> => this.getFlagObservable(name),
     consent: toObservable(consentSignal),
     persistenceConsent: toObservable(persistenceConsentSignal),
-    eventStream: toObservable(eventSignal),
+    eventStream: toObservable(eventSignal, (event) => event),
     locale: toObservable(localeSignal),
     canOptimize: toObservable(canOptimizeSignal),
     optimizationPossible: toObservable(this.optimizationPossibleSignal),
@@ -279,12 +280,14 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     try {
       const { allowedEventTypes, defaults, getAnonymousId, onEventBlocked, queuePolicy } = config
       const {
-        changes: defaultChanges,
-        consent: defaultConsent,
-        persistenceConsent: defaultPersistenceConsent,
-        selectedOptimizations: defaultSelectedOptimizations,
-        profile: defaultProfile,
-      } = defaults ?? {}
+        defaults: {
+          changes: defaultChanges,
+          consent: defaultConsent,
+          persistenceConsent: defaultPersistenceConsent,
+          selectedOptimizations: defaultSelectedOptimizations,
+          profile: defaultProfile,
+        },
+      } = resolveStatefulDefaults(defaults)
       const resolvedQueuePolicy = resolveQueuePolicy(queuePolicy)
 
       this.allowedEventTypes = allowedEventTypes ?? DEFAULT_ALLOWED_EVENT_TYPES
@@ -304,11 +307,6 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
         onOfflineDrop: resolvedQueuePolicy.onOfflineDrop,
         stateInterceptors: this.interceptors.state,
       })
-      installCoreStatefulSdkSupport(this, {
-        pageWithEmissionResult: this.pageWithEmissionResult.bind(this),
-        screenWithEmissionResult: this.screenWithEmissionResult.bind(this),
-      })
-
       batch(() => {
         consentSignal.value = defaultConsent
         persistenceConsentSignal.value = defaultPersistenceConsent ?? defaultConsent
@@ -370,10 +368,94 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     this.experienceQueue.clearQueuedEvents()
   }
 
+  override resolveOptimizedEntry<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(
+    entry: Entry<S, undefined, L>,
+    selectedOptimizations?: SelectedOptimizationArray,
+  ): ResolvedData<S, undefined, L>
+  override resolveOptimizedEntry<
+    S extends EntrySkeletonType,
+    M extends ChainModifiers = ChainModifiers,
+    L extends LocaleCode = LocaleCode,
+  >(entry: Entry<S, M, L>, selectedOptimizations?: SelectedOptimizationArray): ResolvedData<S, M, L>
+  override resolveOptimizedEntry<
+    S extends EntrySkeletonType,
+    M extends ChainModifiers,
+    L extends LocaleCode = LocaleCode,
+  >(
+    entry: Entry<S, M, L>,
+    selectedOptimizations:
+      | SelectedOptimizationArray
+      | undefined = selectedOptimizationsSignal.value,
+  ): ResolvedData<S, M, L> {
+    const { optimizationContext, resolvedData } = this.optimizedEntryResolver.resolveWithContext<
+      S,
+      M,
+      L
+    >(entry, selectedOptimizations)
+
+    if (!optimizationContext) return resolvedData
+
+    return {
+      ...resolvedData,
+      optimizationContextId: this.registerOptimizationContext(optimizationContext),
+    }
+  }
+
+  protected getEventOptimizationContext(
+    optimizationContextId: string | undefined,
+  ): EventOptimizationContext | undefined {
+    if (optimizationContextId === undefined) return undefined
+
+    const now = Date.now()
+    this.pruneOptimizationContexts(now)
+
+    const registered = this.optimizationContexts.get(optimizationContextId)
+    if (!registered) return undefined
+
+    const [context] = registered
+    registered[1] = now
+    this.optimizationContexts.delete(optimizationContextId)
+    this.optimizationContexts.set(optimizationContextId, registered)
+
+    return context
+  }
+
+  private registerOptimizationContext(
+    context: PendingEventOptimizationContext,
+  ): EventOptimizationContext['contextId'] {
+    const now = Date.now()
+    this.pruneOptimizationContexts(now)
+
+    while (this.optimizationContexts.size >= OPTIMIZATION_CONTEXT_MAX_ENTRIES) {
+      const oldestContext = this.optimizationContexts.keys().next()
+      if (oldestContext.done) break
+      this.optimizationContexts.delete(oldestContext.value)
+    }
+
+    const contextId = crypto.randomUUID()
+
+    const eventContext: EventOptimizationContext = { contextId, ...context }
+    this.optimizationContexts.set(contextId, [eventContext, now])
+
+    return contextId
+  }
+
+  private pruneOptimizationContexts(now = Date.now()): void {
+    for (const [contextId, [, lastAccessedAt]] of this.optimizationContexts) {
+      if (now - lastAccessedAt > OPTIMIZATION_CONTEXT_IDLE_TTL_MS) {
+        this.optimizationContexts.delete(contextId)
+      }
+    }
+  }
+
   destroy(): void {
     if (this.destroyed) return
 
     this.destroyed = true
+    this.optimizationContexts.clear()
     void this.insightsQueue.flush({ force: true }).catch((error: unknown) => {
       logger.warn('Failed to flush insights queue during destroy()', String(error))
     })
@@ -386,6 +468,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   }
 
   reset(): void {
+    this.optimizationContexts.clear()
     batch(() => {
       blockedEventSignal.value = undefined
       eventSignal.value = undefined

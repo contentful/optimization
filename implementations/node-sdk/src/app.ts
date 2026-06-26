@@ -4,7 +4,10 @@ import {
   type OptimizationData,
   type SelectedOptimization,
 } from '@contentful/optimization-node/api-schemas'
-import type { UniversalEventBuilderArgs } from '@contentful/optimization-node/core-sdk'
+import type {
+  EventEmissionResult,
+  UniversalEventBuilderArgs,
+} from '@contentful/optimization-node/core-sdk'
 import { documentToHtmlString } from '@contentful/rich-text-html-renderer'
 import { INLINES, type Document } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
@@ -113,6 +116,10 @@ function isRichText(field?: unknown): field is Document {
   )
 }
 
+function getAcceptedOptimizationData(result: EventEmissionResult): OptimizationData | undefined {
+  return result.accepted ? result.data : undefined
+}
+
 const entryIds: string[] = [
   '1MwiFl4z7gkwqGYdvCmr8c', // Rich Text field Entry with Merge Tag
   '4ib0hsHWoSOnCVdDkizE8d',
@@ -179,15 +186,17 @@ app.get('/', limiter, async (req, res) => {
   const userId = isNonEmptyString(req.query.userId) ? req.query.userId.trim() : undefined
   const optimizationResponse: OptimizationData | undefined = isNonEmptyString(userId)
     ? await (async (): Promise<OptimizationData> => {
-        const pageResponse = await requestOptimization.page()
-        const identifyResponse = await requestOptimization.identify({
-          userId,
-          traits: { identified: true },
-        })
+        const pageResponse = getAcceptedOptimizationData(await requestOptimization.page())
+        const identifyResponse = getAcceptedOptimizationData(
+          await requestOptimization.identify({
+            userId,
+            traits: { identified: true },
+          }),
+        )
 
         return identifyResponse ?? pageResponse ?? failOptimizationResponse()
       })()
-    : await requestOptimization.page()
+    : getAcceptedOptimizationData(await requestOptimization.page())
 
   if (optimizationResponse === undefined) {
     throw new Error('Expected Optimization data for consented Node SDK request.')

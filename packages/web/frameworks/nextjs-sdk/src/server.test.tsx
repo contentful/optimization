@@ -95,7 +95,16 @@ function createRequestOptimizationStub(value: RequestOptimizationStub): CoreStat
 }
 
 function createSdk(
-  page = rs.fn(async () => await Promise.resolve({ profile: { id: 'profile-from-api' } })),
+  page = rs.fn(
+    async () =>
+      await Promise.resolve({
+        accepted: true,
+        data: {
+          ...optimizationData,
+          profile: { ...optimizationData.profile, id: 'profile-from-api' },
+        },
+      }),
+  ),
 ): CreatedSdk {
   const forRequest = rs.fn((options: unknown) => ({
     canPersistProfile: true,
@@ -203,7 +212,16 @@ describe('Next.js server helpers', () => {
   })
 
   it('calls page through the request-bound Node SDK', async () => {
-    const page = rs.fn(async () => await Promise.resolve({ profile: { id: 'profile-from-page' } }))
+    const page = rs.fn(
+      async () =>
+        await Promise.resolve({
+          accepted: true,
+          data: {
+            ...optimizationData,
+            profile: { ...optimizationData.profile, id: 'profile-from-page' },
+          },
+        }),
+    )
     const { sdk } = createSdk(page)
 
     const result = await getNextjsServerOptimizationData(sdk, {
@@ -212,7 +230,7 @@ describe('Next.js server helpers', () => {
     })
 
     expect(page).toHaveBeenCalledWith({ properties: { path: '/home' } })
-    expect(result.data).toEqual({ profile: { id: 'profile-from-page' } })
+    expect(result.data?.profile.id).toBe('profile-from-page')
   })
 
   it('persists anonymous ID when the Node request allows persistence', () => {

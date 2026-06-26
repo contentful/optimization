@@ -39,7 +39,7 @@ enum PreviewTheme {
             static let manual = Color(pt_hex: 0x22C55E)
             static let info = Color(pt_hex: 0x6B7280)
             static let experiment = Color(pt_hex: 0x8B5CF6)
-            static let personalization = Color(pt_hex: 0x06B6D4)
+            static let optimization = Color(pt_hex: 0x06B6D4)
         }
 
         enum Border {

@@ -40,7 +40,7 @@ rs.mock('@contentful/optimization-core/logger', () => ({
   }),
 }))
 
-const mockTrackView = rs.fn().mockResolvedValue(undefined)
+const mockTrackView = rs.fn().mockResolvedValue({ accepted: true })
 const mockHasConsent = rs.fn(() => true)
 const mockConsentObservable = {
   current: undefined,
@@ -335,6 +335,7 @@ describe('useViewportTracking', () => {
       }
       const { onLayout } = useViewportTracking({
         entry,
+        optimizationContextId: 'ctx-viewport',
         selectedOptimization,
         dwellTimeMs: 100,
         minVisibleRatio: 0.5,
@@ -347,6 +348,7 @@ describe('useViewportTracking', () => {
       const call = getCallArg(0)
       expect(call.componentId).toBe('comp-base')
       expect(call.experienceId).toBe('exp-1')
+      expect(call.optimizationContextId).toBe('ctx-viewport')
       expect(call.variantIndex).toBe(2)
     })
   })
@@ -363,7 +365,7 @@ describe('useViewportTracking', () => {
         sticky: true,
       }
 
-      mockTrackView.mockResolvedValue({})
+      mockTrackView.mockResolvedValue({ accepted: true, data: {} })
 
       const { onLayout } = useViewportTracking({
         entry,
@@ -384,7 +386,7 @@ describe('useViewportTracking', () => {
       expect(getCallArg(1).sticky).toBeUndefined()
     })
 
-    it('should retry sticky until trackView resolves with a value', async () => {
+    it('should retry sticky until trackView is accepted', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('sticky-retry-entry')
 
@@ -395,7 +397,10 @@ describe('useViewportTracking', () => {
         sticky: true,
       }
 
-      mockTrackView.mockResolvedValueOnce(undefined).mockResolvedValueOnce({}).mockResolvedValue({})
+      mockTrackView
+        .mockResolvedValueOnce({ accepted: false })
+        .mockResolvedValueOnce({ accepted: true, data: {} })
+        .mockResolvedValue({ accepted: true, data: {} })
 
       const { onLayout } = useViewportTracking({
         entry,
@@ -419,6 +424,38 @@ describe('useViewportTracking', () => {
       expect(getCallArg(2).sticky).toBeUndefined()
     })
 
+    it('should dedupe sticky after an accepted queued trackView without data', async () => {
+      const { useViewportTracking } = await import('./useViewportTracking')
+      const entry = createMockEntry('sticky-queued-entry')
+
+      const selectedOptimization: SelectedOptimization = {
+        experienceId: 'exp-sticky-queued',
+        variantIndex: 1,
+        variants: { 'sticky-queued-baseline-entry': 'sticky-queued-entry' },
+        sticky: true,
+      }
+
+      mockTrackView.mockResolvedValue({ accepted: true })
+
+      const { onLayout } = useViewportTracking({
+        entry,
+        selectedOptimization,
+        dwellTimeMs: 100,
+        viewDurationUpdateIntervalMs: 200,
+        minVisibleRatio: 0.5,
+      })
+
+      onLayout(createLayoutEvent())
+
+      rs.advanceTimersByTime(100)
+      await Promise.resolve()
+      rs.advanceTimersByTime(200)
+
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
+      expect(getCallArg(0).sticky).toBe(true)
+      expect(getCallArg(1).sticky).toBeUndefined()
+    })
+
     it('should dedupe sticky independently per rendered entry instance', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('sticky-shared-entry')
@@ -430,7 +467,7 @@ describe('useViewportTracking', () => {
         sticky: true,
       }
 
-      mockTrackView.mockResolvedValue({})
+      mockTrackView.mockResolvedValue({ accepted: true, data: {} })
 
       const first = useViewportTracking({
         entry,

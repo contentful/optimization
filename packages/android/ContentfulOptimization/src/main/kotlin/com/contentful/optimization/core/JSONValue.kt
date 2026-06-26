@@ -3,7 +3,7 @@ package com.contentful.optimization.core
 import org.json.JSONArray
 import org.json.JSONObject
 
-sealed class JSONValue {
+public sealed class JSONValue {
     data object Null : JSONValue()
     data class Bool(val value: Boolean) : JSONValue()
     data class Number(val value: Double) : JSONValue()
@@ -35,6 +35,7 @@ sealed class JSONValue {
     companion object {
         fun fromAny(value: Any?): JSONValue = when (value) {
             null, JSONObject.NULL -> Null
+            Unit -> Null
             is Boolean -> Bool(value)
             is Int -> Number(value.toDouble())
             is Long -> Number(value.toDouble())

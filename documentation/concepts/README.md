@@ -28,7 +28,7 @@ they are not the first stop for installation or setup commands.
 - [Consent management in the Optimization SDK Suite](./consent-management-in-the-optimization-sdk-suite.md) -
   explains how SDK consent state, event allow-lists, blocked-event diagnostics, persistence, and
   application-owned CMP policy work together to support consent-aware integrations.
-- [Entry personalization and variant resolution](./entry-personalization-and-variant-resolution.md) -
+- [Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md) -
   explains how the SDK resolves a Contentful baseline entry to the selected entry variant, including
   data model expectations, fallback behavior, resolution paths, and preview overrides.
 - [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md) -
@@ -39,8 +39,8 @@ they are not the first stop for installation or setup commands.
   profile, DOM, and delivery mechanics.
 - [Interaction tracking in Node and stateless environments](./interaction-tracking-in-node-and-stateless-environments.md) -
   explains what the Node SDK can track from a stateless server runtime, when browser observation is
-  required, how the Web SDK can track server-generated HTML without owning personalization, and what
-  a manual client-side tracking implementation must replace.
+  required, how the Web SDK can track server-generated HTML without owning optimization, and what a
+  manual client-side tracking implementation must replace.
 - [Profile synchronization between client and server](./profile-synchronization-between-client-and-server.md) -
   explains how profile identity, profile data, cookies, browser storage, and Experience API
   responses work together when Node and Web SDK runtimes share a visitor journey.
@@ -50,9 +50,9 @@ they are not the first stop for installation or setup commands.
   screen tracking paths, and the configuration resolution order
 - [iOS SDK runtime and interaction mechanics](./ios-sdk-runtime-and-interaction-mechanics.md) -
   explains how the iOS SDK runs shared optimization behavior through a native bridge, how SwiftUI
-  and UIKit integrations share runtime state, and how consent, personalization, tracking, preview
+  and UIKit integrations share runtime state, and how consent, optimization, tracking, preview
   overrides, and offline delivery work
 - [Android SDK runtime and interaction mechanics](./android-sdk-runtime-and-interaction-mechanics.md) -
   explains how the Android SDK runs shared optimization behavior through QuickJS, how Compose and
-  XML Views integrations share runtime state, and how consent, personalization, tracking, preview
+  XML Views integrations share runtime state, and how consent, optimization, tracking, preview
   overrides, and offline delivery work

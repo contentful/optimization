@@ -19,7 +19,7 @@
     "build:dist": "rslib build",
     "postbuild": "mkdir -p ../../ios/ContentfulOptimization/Sources/ContentfulOptimization/Resources ../../android/ContentfulOptimization/src/main/assets && cp dist/optimization-ios-bridge.umd.js ../../ios/ContentfulOptimization/Sources/ContentfulOptimization/Resources/ && cp dist/optimization-android-bridge.umd.js ../../android/ContentfulOptimization/src/main/assets/",
     "clean": "rimraf ./.rslib ./dist ./coverage .tsbuildinfo ./node_modules/.cache/rspack",
-    "test:unit": "echo 'No tests yet'",
+    "test:unit": "rstest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@rslib/core": "catalog:",
+    "@rstest/core": "catalog:",
     "@types/node": "catalog:",
     "build-tools": "workspace:*",
     "rimraf": "catalog:",

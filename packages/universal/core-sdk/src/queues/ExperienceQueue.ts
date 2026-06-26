@@ -8,6 +8,7 @@ import {
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import { isEqual } from 'es-toolkit/predicate'
 import type { LifecycleInterceptors } from '../CoreBase'
+import type { EventOptimizationContext, OptimizationEventStreamEvent } from '../events'
 import { QueueFlushRuntime, type ResolvedQueueFlushPolicy } from '../lib/queue'
 import {
   batch,
@@ -110,11 +111,20 @@ export class ExperienceQueue {
     this.flushRuntime.reset()
   }
 
-  async send(event: ExperienceEventPayload): Promise<OptimizationData | undefined> {
+  async send(
+    event: ExperienceEventPayload,
+    optimizationContext?: EventOptimizationContext,
+  ): Promise<OptimizationData | undefined> {
     const intercepted = await this.eventInterceptors.run(event)
     const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)
 
-    eventSignal.value = validEvent
+    eventSignal.value =
+      optimizationContext === undefined
+        ? validEvent
+        : ({
+            ...validEvent,
+            optimization: optimizationContext,
+          } satisfies OptimizationEventStreamEvent)
 
     if (onlineSignal.value) return await this.upsertProfile([validEvent])
 

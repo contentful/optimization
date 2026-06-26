@@ -1,4 +1,4 @@
-# Mirrors PreviewPanelTests.testShowsCanPersonalize — the debug canPersonalize row
+# Mirrors PreviewPanelTests.testShowsCanOptimize - the debug canOptimize row
 # shows "Yes". Scroll it into view, then assert the rendered status text.
 appId: ${APP_ID}
 ---
@@ -11,6 +11,6 @@ appId: ${APP_ID}
 - tapOn: 'preview-panel-fab'
 - assertVisible: 'Preview Panel'
 - scrollUntilVisible:
-    element: 'debug-can-personalize'
+    element: 'debug-can-optimize'
     direction: DOWN
 - assertVisible: '.*Yes.*'

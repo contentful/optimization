@@ -1,4 +1,8 @@
 import {
+  getRemainingMsUntilNextEntryViewFire,
+  resolveEntryViewTimingOptions,
+} from '@contentful/optimization-core'
+import {
   type Interval,
   NOW,
   Num,
@@ -77,12 +81,11 @@ export interface ElementState {
 export const initElementViewObserverOptions = (
   options?: ElementViewObserverOptions,
 ): EffectiveObserverOptions => ({
-  dwellTimeMs: Num.nonNeg(options?.dwellTimeMs, DEFAULTS.DWELL_MS),
-  viewDurationUpdateIntervalMs: Num.nonNeg(
-    options?.viewDurationUpdateIntervalMs,
-    DEFAULTS.VIEW_DURATION_UPDATE_INTERVAL_MS,
-  ),
-  minVisibleRatio: Num.clamp01(options?.minVisibleRatio, DEFAULTS.RATIO),
+  ...resolveEntryViewTimingOptions(options, {
+    dwellTimeMs: DEFAULTS.DWELL_MS,
+    viewDurationUpdateIntervalMs: DEFAULTS.VIEW_DURATION_UPDATE_INTERVAL_MS,
+    minVisibleRatio: DEFAULTS.RATIO,
+  }),
   root: options?.root ?? null,
   rootMargin: options?.rootMargin ?? '0px',
 })
@@ -92,13 +95,11 @@ export const createElementState = (
   observerOptions: EffectiveObserverOptions,
   elementOptions?: ElementViewElementOptions,
 ): ElementState => {
-  const opts: PerElementEffectiveOptions = {
-    dwellTimeMs: Num.nonNeg(elementOptions?.dwellTimeMs, observerOptions.dwellTimeMs),
-    viewDurationUpdateIntervalMs: Num.nonNeg(
-      elementOptions?.viewDurationUpdateIntervalMs,
-      observerOptions.viewDurationUpdateIntervalMs,
-    ),
-  }
+  const { dwellTimeMs, viewDurationUpdateIntervalMs } = resolveEntryViewTimingOptions(
+    elementOptions,
+    observerOptions,
+  )
+  const opts: PerElementEffectiveOptions = { dwellTimeMs, viewDurationUpdateIntervalMs }
 
   const hasWeakRef = typeof WeakRef === 'function'
 
@@ -142,9 +143,9 @@ export const resetVisibilityCycle = (state: ElementState): void => {
   clearFireTimer(state)
 }
 
-export const getRemainingMsUntilNextFire = (state: ElementState, elapsedMs: number): number => {
-  const requiredElapsedMs =
-    state.opts.dwellTimeMs + state.attempts * state.opts.viewDurationUpdateIntervalMs
-
-  return requiredElapsedMs - elapsedMs
-}
+export const getRemainingMsUntilNextFire = (state: ElementState, elapsedMs: number): number =>
+  getRemainingMsUntilNextEntryViewFire({
+    ...state.opts,
+    attempts: state.attempts,
+    accumulatedMs: elapsedMs,
+  })

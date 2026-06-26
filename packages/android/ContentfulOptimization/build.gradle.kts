@@ -1,4 +1,14 @@
 import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import java.util.zip.ZipFile
 
 plugins {
@@ -69,6 +79,46 @@ kotlin {
     }
 }
 
+abstract class CopyThirdPartyNoticesAssets : DefaultTask() {
+    @get:Input
+    abstract val noticesFilePath: Property<String>
+
+    @get:Input
+    abstract val requireNotices: Property<Boolean>
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val licenseFile: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun copyNotices() {
+        val noticesFile = project.file(noticesFilePath.get())
+        val outputDir = outputDirectory.get().asFile
+
+        outputDir.deleteRecursively()
+        outputDir.mkdirs()
+
+        if (!noticesFile.isFile) {
+            check(!requireNotices.get()) {
+                "Missing $noticesFile. Run pnpm notices:generate:android before publishing."
+            }
+            logger.lifecycle("Skipping Android third-party notices asset because $noticesFile does not exist.")
+            return
+        }
+
+        val license = licenseFile.get().asFile
+        check(license.isFile) {
+            "Missing $license."
+        }
+
+        noticesFile.copyTo(outputDir.resolve("THIRD_PARTY_NOTICES.txt"), overwrite = true)
+        license.copyTo(outputDir.resolve("LICENSE"), overwrite = true)
+    }
+}
+
 // Rebuild the shared JS bridge before this SDK module compiles, so that editing
 // TypeScript under packages/universal/optimization-js-bridge/src/ and clicking
 // Build in Android Studio refreshes src/main/assets/optimization-android-bridge.umd.js
@@ -98,57 +148,29 @@ val requireThirdPartyNotices =
     providers.gradleProperty("contentful.optimization.requireThirdPartyNotices")
         .map { it.toBoolean() }
         .orElse(false)
-val licenseFile = repoRoot.resolve("LICENSE")
+val licenseSourceFile = repoRoot.resolve("LICENSE")
 val generatedThirdPartyNoticesAssetsDir =
     layout.buildDirectory.dir("generated/third-party-notices/assets")
-val copyThirdPartyNotices = tasks.register("copyThirdPartyNotices") {
-    val noticesOutputFile = generatedThirdPartyNoticesAssetsDir.map {
-        it.file("THIRD_PARTY_NOTICES.txt")
-    }
-    val licenseOutputFile = generatedThirdPartyNoticesAssetsDir.map { it.file("LICENSE") }
-    val existingThirdPartyNoticesFile = providers.provider {
-        thirdPartyNoticesFile.get().takeIf { it.isFile }
-    }
-
-    inputs.property("thirdPartyNoticesFilePath", thirdPartyNoticesFile.map { it.absolutePath })
-    inputs.property("requireThirdPartyNotices", requireThirdPartyNotices)
+val existingThirdPartyNoticesFile = providers.provider {
+    thirdPartyNoticesFile.get().takeIf { it.isFile }
+}
+val copyThirdPartyNotices = tasks.register<CopyThirdPartyNoticesAssets>("copyThirdPartyNotices") {
+    noticesFilePath.set(thirdPartyNoticesFile.map { it.absolutePath })
+    requireNotices.set(requireThirdPartyNotices)
+    licenseFile.set(layout.file(providers.provider { licenseSourceFile }))
+    outputDirectory.set(generatedThirdPartyNoticesAssetsDir)
     inputs.file(existingThirdPartyNoticesFile)
         .withPropertyName("thirdPartyNoticesFile")
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .optional(true)
-    inputs.file(licenseFile)
-        .withPropertyName("licenseFile")
-        .withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.files(noticesOutputFile, licenseOutputFile)
-
-    doLast {
-        val noticesFile = thirdPartyNoticesFile.get()
-        val outputDir = generatedThirdPartyNoticesAssetsDir.get().asFile
-        val noticesTargetFile = noticesOutputFile.get().asFile
-        val licenseTargetFile = licenseOutputFile.get().asFile
-
-        outputDir.deleteRecursively()
-
-        if (!noticesFile.isFile) {
-            check(!requireThirdPartyNotices.get()) {
-                "Missing $noticesFile. Run pnpm notices:generate:android before publishing."
-            }
-            logger.lifecycle("Skipping Android third-party notices asset because $noticesFile does not exist.")
-            return@doLast
-        }
-
-        check(licenseFile.isFile) {
-            "Missing $licenseFile."
-        }
-
-        outputDir.mkdirs()
-        noticesFile.copyTo(noticesTargetFile, overwrite = true)
-        licenseFile.copyTo(licenseTargetFile, overwrite = true)
-    }
 }
-android.sourceSets.getByName("main").assets.srcDir(generatedThirdPartyNoticesAssetsDir)
-tasks.matching { it.name == "packageReleaseAssets" }.configureEach {
-    dependsOn(copyThirdPartyNotices)
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            copyThirdPartyNotices,
+            CopyThirdPartyNoticesAssets::outputDirectory,
+        )
+    }
 }
 
 val verifyThirdPartyNoticesInReleaseAar = tasks.register("verifyThirdPartyNoticesInReleaseAar") {
@@ -210,7 +232,7 @@ mavenPublishing {
         name.set("Contentful Optimization Android SDK")
         description.set(
             "Native Android (Kotlin) SDK for the Contentful Optimization product: " +
-                "personalization, audience qualification, view/click tracking, and preview overrides."
+                "optimization, audience qualification, view/click tracking, and preview overrides."
         )
         inceptionYear.set("2026")
         url.set("https://github.com/contentful/optimization")

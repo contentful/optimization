@@ -23,6 +23,7 @@ import type { CoreStatefulConfig } from '@contentful/optimization-core'
  * @public
  */
 export type OptimizationConfig = CoreStatefulConfig
+export type { OptimizationPreviewRuntime, OptimizationSdk } from './OptimizationSdk'
 
 export { OptimizationProvider } from './components/OptimizationProvider'
 export type {
@@ -81,15 +82,5 @@ export type {
   OptimizationNavigationContainerProps,
 } from './components/OptimizationNavigationContainer'
 
-export { PreviewPanel as OptimizationPreviewPanel } from './preview/components/PreviewPanel'
-export { PreviewPanelOverlay } from './preview/components/PreviewPanelOverlay'
-export type {
-  ContentfulClient,
-  ContentfulEntry,
-  ContentfulEntryCollection,
-  PreviewPanelConfig,
-  PreviewPanelOverlayProps,
-  PreviewPanelProps,
-} from './preview/types'
-
 export { default as ContentfulOptimization } from './ContentfulOptimization'
+export type { TrackCurrentScreenPayload } from './ContentfulOptimization'

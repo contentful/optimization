@@ -1,3 +1,4 @@
+import Combine
 import ContentfulOptimization
 import SwiftUI
 
@@ -7,6 +8,7 @@ struct MainScreen: View {
     @State private var showNavigationTest = false
     @State private var showLiveUpdatesTest = false
     @State private var flagSubscribed = false
+    @State private var flagCancellable: AnyCancellable?
 
     /// Derived from the SDK profile so a rehydrated identified profile renders
     /// the reset control after a cold start, and so the control only flips once
@@ -80,13 +82,13 @@ struct MainScreen: View {
         }
         .task {
             // Subscribe the event store before any event can fire. The flag-view
-            // event emits synchronously on `subscribeToFlag`, so a later
+            // event emits during `flagPublisher` observation, so a later
             // subscription (e.g. in a child view's onAppear) would miss it —
-            // `eventPublisher` is a PassthroughSubject and does not buffer.
-            EventStore.shared.subscribe(to: client.eventPublisher)
+            // `eventStream` is a PassthroughSubject and does not buffer.
+            EventStore.shared.subscribe(to: client.eventStream)
             if !flagSubscribed {
                 flagSubscribed = true
-                client.subscribeToFlag("boolean")
+                flagCancellable = client.flagPublisher("boolean").sink { _ in }
             }
             _ = try? await client.page(properties: ["url": "app"])
         }

@@ -14,8 +14,11 @@ import {
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
+import type { EventOptimizationContext } from '../events'
 
 const logger = createScopedLogger('Optimization')
+
+type PendingEventOptimizationContext = Omit<EventOptimizationContext, 'contextId'>
 
 /**
  * Result returned by {@link OptimizedEntryResolver.resolve}.
@@ -32,8 +35,27 @@ export interface ResolvedData<
 > {
   /** The baseline or resolved variant entry. */
   entry: Entry<S, M, L>
-  /** The selected optimization metadata, if a non-baseline variant was chosen. */
+  /** The selected optimization metadata, if a matching optimization was selected. */
   selectedOptimization?: SelectedOptimization
+  /** Opaque runtime-owned optimization context ID for entry interaction tracking. */
+  optimizationContextId?: string
+}
+
+/**
+ * Result returned by {@link OptimizedEntryResolver.resolveWithContext}.
+ *
+ * @typeParam S - Entry skeleton type.
+ * @typeParam M - Chain modifiers.
+ * @typeParam L - Locale code.
+ * @internal
+ */
+export interface ResolvedDataWithOptimizationContext<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> {
+  readonly resolvedData: ResolvedData<S, M, L>
+  readonly optimizationContext?: PendingEventOptimizationContext
 }
 
 /**
@@ -82,16 +104,42 @@ function resolve<
   M extends ChainModifiers,
   L extends LocaleCode = LocaleCode,
 >(entry: Entry<S, M, L>, selectedOptimizations?: SelectedOptimizationArray): ResolvedData<S, M, L> {
+  return resolveWithContext(entry, selectedOptimizations).resolvedData
+}
+
+function resolveWithContext<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  L extends LocaleCode = LocaleCode,
+>(
+  entry: Entry<S, undefined, L>,
+  selectedOptimizations?: SelectedOptimizationArray,
+): ResolvedDataWithOptimizationContext<S, undefined, L>
+function resolveWithContext<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+>(
+  entry: Entry<S, M, L>,
+  selectedOptimizations?: SelectedOptimizationArray,
+): ResolvedDataWithOptimizationContext<S, M, L>
+function resolveWithContext<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+>(
+  entry: Entry<S, M, L>,
+  selectedOptimizations?: SelectedOptimizationArray,
+): ResolvedDataWithOptimizationContext<S, M, L> {
   logger.debug(`Resolving optimized entry for baseline entry ${entry.sys.id}`)
 
   if (!selectedOptimizations?.length) {
     logger.warn(`${RESOLUTION_WARNING_BASE} no selectedOptimizations exist for the current profile`)
-    return { entry }
+    return { resolvedData: { entry } }
   }
 
   if (!isOptimizedEntry(entry)) {
     logger.warn(`${RESOLUTION_WARNING_BASE} entry ${entry.sys.id} is not optimized`)
-    return { entry }
+    return { resolvedData: { entry } }
   }
 
   const optimizationEntry = OptimizedEntryResolver.getOptimizationEntry(
@@ -106,7 +154,7 @@ function resolve<
     logger.warn(
       `${RESOLUTION_WARNING_BASE} could not find an optimization entry for ${entry.sys.id}`,
     )
-    return { entry }
+    return { resolvedData: { entry } }
   }
 
   const selectedOptimization = OptimizedEntryResolver.getSelectedOptimization(
@@ -117,12 +165,35 @@ function resolve<
     true,
   )
 
-  const selectedVariantIndex = selectedOptimization?.variantIndex ?? 0
+  if (!selectedOptimization) {
+    return { resolvedData: { entry } }
+  }
+
+  const {
+    fields: { nt_audience: audienceEntry },
+  } = optimizationEntry
+
+  const resolveTo = (
+    resolvedEntry: Entry<S, M, L>,
+    selectedVariant?: EntryReplacementVariant,
+  ): ResolvedDataWithOptimizationContext<S, M, L> => ({
+    resolvedData: { entry: resolvedEntry, selectedOptimization },
+    optimizationContext: {
+      selectedOptimization,
+      optimizationEntry,
+      ...(audienceEntry ? { audienceEntry } : {}),
+      baselineEntry: entry,
+      resolvedEntry,
+      ...(selectedVariant ? { selectedVariant } : {}),
+    } satisfies PendingEventOptimizationContext,
+  })
+
+  const { variantIndex: selectedVariantIndex } = selectedOptimization
 
   if (selectedVariantIndex === 0) {
     logger.debug(`Resolved optimization entry for entry ${entry.sys.id} is baseline`)
 
-    return { entry }
+    return resolveTo(entry)
   }
 
   const selectedVariant = OptimizedEntryResolver.getSelectedVariant(
@@ -138,7 +209,7 @@ function resolve<
     logger.warn(
       `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${entry.sys.id}`,
     )
-    return { entry }
+    return resolveTo(entry)
   }
 
   const selectedVariantEntry = OptimizedEntryResolver.getSelectedVariantEntry<S, M, L>(
@@ -153,14 +224,14 @@ function resolve<
     logger.warn(
       `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${entry.sys.id}`,
     )
-    return { entry }
+    return resolveTo(entry, selectedVariant)
   } else {
     logger.debug(
       `Entry ${entry.sys.id} has been resolved to variant entry ${selectedVariantEntry.sys.id}`,
     )
   }
 
-  return { entry: selectedVariantEntry, selectedOptimization }
+  return resolveTo(selectedVariantEntry, selectedVariant)
 }
 
 /**
@@ -356,6 +427,7 @@ const OptimizedEntryResolver = {
   },
 
   resolve,
+  resolveWithContext,
 }
 
 export default OptimizedEntryResolver

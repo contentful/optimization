@@ -46,7 +46,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 @Composable
-fun PreviewPanelContent(
+internal fun PreviewPanelContent(
     contentfulClient: PreviewContentfulClient? = null,
 ) {
     val client = LocalOptimizationClient.current
@@ -176,7 +176,7 @@ private fun PreviewPanelMain(viewModel: PreviewViewModel) {
             ProfileSection(previewState?.profile)
 
             // Debug section
-            DebugSection(previewState?.consent, previewState?.canPersonalize ?: false, client)
+            DebugSection(previewState?.consent, previewState?.canOptimize ?: false, client)
 
             // Overrides section
             OverridesSection(
@@ -474,7 +474,7 @@ private fun ProfileEmptyText(text: String) {
 @Composable
 private fun DebugSection(
     consent: Boolean?,
-    canPersonalize: Boolean,
+    canOptimize: Boolean,
     client: com.contentful.optimization.core.OptimizationClient,
 ) {
     val scope = rememberCoroutineScope()
@@ -508,10 +508,10 @@ private fun DebugSection(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .semantics { contentDescription = "debug-can-personalize" },
+                    .semantics { contentDescription = "debug-can-optimize" },
             ) {
                 Text(
-                    text = "Can Personalize",
+                    text = "Can Optimize",
                     style = TextStyle(
                         fontSize = PreviewTheme.FontSize.sm,
                         fontWeight = FontWeight.Medium,
@@ -520,7 +520,7 @@ private fun DebugSection(
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = if (canPersonalize) "Yes" else "No",
+                    text = if (canOptimize) "Yes" else "No",
                     style = TextStyle(fontSize = PreviewTheme.FontSize.sm, color = PreviewTheme.Colors.TextColor.secondary),
                 )
             }

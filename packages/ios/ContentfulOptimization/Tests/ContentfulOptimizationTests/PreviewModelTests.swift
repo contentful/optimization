@@ -13,8 +13,10 @@ final class PreviewModelTests: XCTestCase {
         let config = OptimizationConfig(
             clientId: "test-client",
             environment: "master",
-            experienceBaseUrl: "http://localhost:8000/experience/",
-            insightsBaseUrl: "http://localhost:8000/insights/"
+            api: OptimizationApiConfig(
+                experienceBaseUrl: "http://localhost:8000/experience/",
+                insightsBaseUrl: "http://localhost:8000/insights/"
+            )
         )
         try client.initialize(config: config)
         return client
@@ -106,10 +108,12 @@ final class PreviewModelTests: XCTestCase {
             __bridge.initialize({
                 clientId: "test-client",
                 environment: "master",
-                experienceBaseUrl: "http://localhost:8000/experience/",
-                insightsBaseUrl: "http://localhost:8000/insights/",
+                api: {
+                    experienceBaseUrl: "http://localhost:8000/experience/",
+                    insightsBaseUrl: "http://localhost:8000/insights/"
+                },
                 defaults: {
-                    optimizations: [
+                    selectedOptimizations: [
                         {"experienceId":"\(experienceId)","variantIndex":\(variantIndex)}
                     ]
                 }

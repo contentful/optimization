@@ -1,12 +1,11 @@
 import type {
-  InsightsEvent as AnalyticsEvent,
   ChangeArray,
-  ExperienceEvent as OptimizationEvent,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { batch, computed, effect, signal, type Signal, untracked } from '@preact/signals-core'
-import type { BlockedEvent } from '../BlockedEvent'
+import type { BlockedEvent } from '../events'
+import type { OptimizationEventStreamEvent } from '../events/OptimizationEventStreamEvent'
 
 /**
  * Most recent optimization changes returned by the Experience API.
@@ -41,8 +40,8 @@ export const persistenceConsent = signal<boolean | undefined>()
  *
  * @public
  */
-export const event: Signal<AnalyticsEvent | OptimizationEvent | undefined> = signal<
-  AnalyticsEvent | OptimizationEvent | undefined
+export const event: Signal<OptimizationEventStreamEvent | undefined> = signal<
+  OptimizationEventStreamEvent | undefined
 >()
 
 /**

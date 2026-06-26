@@ -9,10 +9,11 @@ import {
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type CoreStateless from './CoreStateless'
 import type { CoreStatelessInsightsOptions, CoreStatelessRequestOptions } from './CoreStateless'
-import type { AllowedEventType } from './EventType'
 import { PartialProfile, type OptimizationData } from './api-schemas'
 import type {
+  AllowedEventType,
   ClickBuilderArgs,
+  EventEmissionResult,
   FlagViewBuilderArgs,
   HoverBuilderArgs,
   IdentifyBuilderArgs,
@@ -175,7 +176,7 @@ export class CoreStatelessRequest {
 
   async identify(
     payload: StatelessExperiencePayload<IdentifyBuilderArgs>,
-  ): Promise<OptimizationData | undefined> {
+  ): Promise<EventEmissionResult> {
     return await this.sendExperienceEvent(
       'identify',
       [payload],
@@ -185,7 +186,7 @@ export class CoreStatelessRequest {
 
   async page(
     payload: StatelessExperiencePayload<PageViewBuilderArgs> = {},
-  ): Promise<OptimizationData | undefined> {
+  ): Promise<EventEmissionResult> {
     return await this.sendExperienceEvent(
       'page',
       [payload],
@@ -195,7 +196,7 @@ export class CoreStatelessRequest {
 
   async screen(
     payload: StatelessExperiencePayload<ScreenViewBuilderArgs>,
-  ): Promise<OptimizationData | undefined> {
+  ): Promise<EventEmissionResult> {
     return await this.sendExperienceEvent(
       'screen',
       [payload],
@@ -203,9 +204,7 @@ export class CoreStatelessRequest {
     )
   }
 
-  async track(
-    payload: StatelessExperiencePayload<TrackBuilderArgs>,
-  ): Promise<OptimizationData | undefined> {
+  async track(payload: StatelessExperiencePayload<TrackBuilderArgs>): Promise<EventEmissionResult> {
     return await this.sendExperienceEvent(
       'track',
       [payload],
@@ -215,19 +214,22 @@ export class CoreStatelessRequest {
 
   async trackView(
     payload: StatelessStickyTrackViewPayload | StatelessNonStickyTrackViewPayload,
-  ): Promise<OptimizationData | undefined> {
+  ): Promise<EventEmissionResult> {
     if (!this.hasConsent('component')) {
       this.reportBlockedEvent('trackView', [payload])
-      return undefined
+      return { accepted: false }
     }
 
     const builderArgs = this.withEventContext(payload)
-    let result: OptimizationData | undefined = undefined
+    let result: EventEmissionResult = { accepted: true }
     let { currentProfile: insightsProfile } = this
 
     if (payload.sticky) {
-      result = await this.sendAllowedExperienceEvent(this.core.eventBuilder.buildView(builderArgs))
-      const { profile } = result
+      const data = await this.sendAllowedExperienceEvent(
+        this.core.eventBuilder.buildView(builderArgs),
+      )
+      const { profile } = data
+      result = { accepted: true, data }
       insightsProfile = profile
     }
 
@@ -298,13 +300,15 @@ export class CoreStatelessRequest {
     method: RequestExperienceMethod,
     args: readonly unknown[],
     event: ExperienceEventPayload,
-  ): Promise<OptimizationData | undefined> {
+  ): Promise<EventEmissionResult> {
     if (!this.hasConsent(method)) {
       this.reportBlockedEvent(method, args)
-      return undefined
+      return { accepted: false }
     }
 
-    return await this.sendAllowedExperienceEvent(event)
+    const data = await this.sendAllowedExperienceEvent(event)
+
+    return { accepted: true, data }
   }
 
   private async sendAllowedExperienceEvent(

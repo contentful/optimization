@@ -54,6 +54,7 @@ Run commands from the monorepo root:
 
 ```sh
 pnpm --filter @contentful/optimization-js-bridge typecheck
+pnpm --filter @contentful/optimization-js-bridge test:unit
 pnpm --filter @contentful/optimization-js-bridge build
 ```
 

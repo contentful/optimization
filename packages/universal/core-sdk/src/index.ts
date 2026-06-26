@@ -20,8 +20,7 @@ export {
   type Subscription,
 } from './signals'
 
-export type * from './BlockedEvent'
-export type { ConsentController, ConsentGuard, ConsentInput } from './Consent'
+export * from './consent'
 export * from './constants'
 export type * from './CoreApiConfig'
 export * from './CoreBase'
@@ -29,7 +28,6 @@ export * from './CoreStateful'
 export * from './CoreStateless'
 export * from './CoreStatelessRequest'
 export * from './events'
-export * from './EventType'
 export * from './lib/decorators'
 export * from './lib/interceptor'
 export type {
@@ -41,7 +39,9 @@ export * from './locale'
 export type { ExperienceQueue } from './queues/ExperienceQueue'
 export type { InsightsQueue } from './queues/InsightsQueue'
 export * from './resolvers'
+export * from './StatefulDefaults'
 export * from './symbols'
+export * from './tracking'
 
 export { default as CoreStateful } from './CoreStateful'
 export { default as CoreStateless } from './CoreStateless'

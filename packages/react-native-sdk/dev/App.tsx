@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import type { ContentfulOptimization } from '@contentful/optimization-react-native'
 import { OptimizationRoot } from '@contentful/optimization-react-native'
 import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native/api-schemas'
+import { PreviewPanelOverlay } from '@contentful/optimization-react-native/preview'
 import type { Entry } from 'contentful'
 import { createClient } from 'contentful'
 import { LoadingScreen } from './components/LoadingScreen'
@@ -263,8 +264,9 @@ function App(): React.JSX.Element {
 
   if (currentScreen === 'optimization' && sdk && demoEntries) {
     return (
-      <OptimizationRoot instance={sdk} previewPanel={{ enabled: true, contentfulClient }}>
+      <OptimizationRoot instance={sdk}>
         <OptimizationDemoScreen colors={colors} onBack={handleBack} demoEntries={demoEntries} />
+        <PreviewPanelOverlay contentfulClient={contentfulClient} />
       </OptimizationRoot>
     )
   }
@@ -275,7 +277,7 @@ function App(): React.JSX.Element {
 
   if (currentScreen === 'tracking' && sdk && optimizedEntry && productEntry) {
     return (
-      <OptimizationRoot instance={sdk} previewPanel={{ enabled: true, contentfulClient }}>
+      <OptimizationRoot instance={sdk}>
         <TestTrackingScreen
           colors={colors}
           onBack={handleBack}
@@ -283,6 +285,7 @@ function App(): React.JSX.Element {
           optimizedEntry={optimizedEntry}
           productEntry={productEntry}
         />
+        <PreviewPanelOverlay contentfulClient={contentfulClient} />
       </OptimizationRoot>
     )
   }
@@ -296,7 +299,7 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <OptimizationRoot instance={sdk} previewPanel={{ enabled: true, contentfulClient }}>
+    <OptimizationRoot instance={sdk}>
       <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -350,6 +353,7 @@ function App(): React.JSX.Element {
           </View>
         </ScrollView>
       </SafeAreaView>
+      <PreviewPanelOverlay contentfulClient={contentfulClient} />
     </OptimizationRoot>
   )
 }

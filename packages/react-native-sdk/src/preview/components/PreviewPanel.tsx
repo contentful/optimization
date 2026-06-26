@@ -48,12 +48,13 @@ function PreviewPanelHeader({ consent }: { consent: boolean | undefined }): Reac
  * @returns The rendered preview panel
  *
  * @remarks
- * Must be used within a `PreviewOverrideProvider` (typically provided by
- * {@link PreviewPanelOverlay} or {@link OptimizationRoot}).
+ * Must be used within a `PreviewOverrideProvider`. Prefer
+ * {@link PreviewPanelOverlay}, which supplies that provider and modal chrome.
  *
  * @example
  * ```tsx
- * import { OptimizationPreviewPanel, OptimizationProvider } from '@contentful/optimization-react-native'
+ * import { OptimizationRoot } from '@contentful/optimization-react-native'
+ * import { PreviewPanelOverlay } from '@contentful/optimization-react-native/preview'
  * import { createClient } from 'contentful'
  *
  * const contentfulClient = createClient({
@@ -63,10 +64,10 @@ function PreviewPanelHeader({ consent }: { consent: boolean | undefined }): Reac
  *
  * function App() {
  *   return (
- *     <OptimizationProvider clientId="your-client-id" environment="main">
+ *     <OptimizationRoot clientId="your-client-id" environment="main">
  *       <YourAppContent />
- *       <OptimizationPreviewPanel contentfulClient={contentfulClient} />
- *     </OptimizationProvider>
+ *       <PreviewPanelOverlay contentfulClient={contentfulClient} />
+ *     </OptimizationRoot>
  *   )
  * }
  * ```
@@ -84,8 +85,8 @@ export function PreviewPanel({
   const previewState = usePreviewState()
   const { profile, selectedOptimizations, consent, isLoading } = previewState
 
-  // Get overrides from context (provided by PreviewOverrideProvider via PreviewPanelOverlay)
-  // Throws an error if used outside of PreviewPanelOverlay
+  // Get overrides from context (provided by PreviewPanelOverlay).
+  // Throws an error if used outside of PreviewOverrideProvider.
   const { overrides, actions } = usePreviewOverrides()
 
   // Contentful entries state (using custom hook)

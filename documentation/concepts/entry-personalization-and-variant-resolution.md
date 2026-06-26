@@ -1,8 +1,8 @@
 ---
-title: Entry personalization and variant resolution
+title: Entry optimization and variant resolution
 ---
 
-# Entry personalization and variant resolution
+# Entry optimization and variant resolution
 
 Use this document to understand how the Optimization SDK Suite resolves a Contentful baseline entry
 to the entry variant selected for a visitor. It explains the runtime contract shared by the Core,
@@ -287,8 +287,8 @@ The shared method is `resolveOptimizedEntry(entry, selectedOptimizations?)`. It 
 }
 ```
 
-The Node SDK is stateless. Pass the request-local `selectedOptimizations` returned by `page()`,
-`identify()`, `screen()`, `track()`, or sticky `trackView()`.
+The Node SDK is stateless. Pass the request-local `selectedOptimizations` from the `data` returned
+by `page()`, `identify()`, `screen()`, `track()`, or sticky `trackView()`.
 
 ```ts
 const requestOptimization = optimization.forRequest({
@@ -296,12 +296,12 @@ const requestOptimization = optimization.forRequest({
   profile,
 })
 
-const optimizationData = await requestOptimization.page({
+const { accepted, data: optimizationData } = await requestOptimization.page({
   properties: { path: req.path },
 })
 const { entry, selectedOptimization } = optimization.resolveOptimizedEntry(
   baselineEntry,
-  optimizationData?.selectedOptimizations,
+  accepted ? optimizationData?.selectedOptimizations : undefined,
 )
 ```
 
@@ -309,21 +309,21 @@ The Web and React Native SDKs are stateful. If callers omit `selectedOptimizatio
 resolve from their `selectedOptimizations` state. Passing an explicit array is still useful for
 server-provided or request-local data because it avoids depending on ambient SDK state.
 
-Provide optimization data before expecting personalized content. `page()`, `identify()`, `screen()`,
+Provide optimization data before expecting optimized content. `page()`, `identify()`, `screen()`,
 `track()`, and sticky `trackView()` can return the selected optimization data used by this method.
 
 The iOS SDK exposes the same local boundary through
-`OptimizationClient.personalizeEntry(baseline:personalizations:)`. UIKit apps usually pass
-`client.selectedPersonalizations` during cell or view configuration. The method returns a
-`PersonalizedResult` containing the resolved `entry` and optional `personalization` metadata, and
-returns the baseline unchanged when no selected personalization matches the entry.
+`OptimizationClient.resolveOptimizedEntry(baseline:selectedOptimizations:)`. UIKit apps usually pass
+`client.selectedOptimizations` during cell or view configuration. The method returns a
+`ResolvedOptimizedEntry` containing the resolved `entry` and optional `selectedOptimization`
+metadata, and returns the baseline unchanged when no selected optimization matches the entry.
 
 The Android SDK exposes the same local boundary through
-`OptimizationClient.personalizeEntry(baseline = ..., personalizations = ...)`. XML Views apps
-usually rely on `OptimizedEntryView` or pass `client.selectedPersonalizations.value` when resolving
-directly. The method returns a `PersonalizedResult` containing the resolved `entry` and optional
-`personalization` metadata, and returns the baseline unchanged when no selected personalization
-matches the entry.
+`OptimizationClient.resolveOptimizedEntry(baseline = ..., selectedOptimizations = ...)`. XML Views
+apps usually rely on `OptimizedEntryView` or pass `client.selectedOptimizations.value` when
+resolving directly. The method returns a `ResolvedOptimizedEntry` containing the resolved `entry`
+and optional `selectedOptimization` metadata, and returns the baseline unchanged when no selected
+optimization matches the entry.
 
 ### Render with framework components
 
@@ -357,13 +357,13 @@ React Native does not render DOM data attributes. It passes the resolved entry a
 metadata directly into its viewport and tap tracking hooks.
 
 SwiftUI uses the same resolver inside `OptimizedEntry`. The component passes non-optimized entries
-through unchanged, resolves optimized entries from the client's selected personalizations, can lock
-to the first resolved variant, can re-resolve when live updates are enabled, and can attach iOS view
+through unchanged, resolves optimized entries from the client's selected optimizations, can lock to
+the first resolved variant, can re-resolve when live updates are enabled, and can attach iOS view
 and tap tracking for the resolved entry.
 
 Android Compose uses the same resolver inside `OptimizedEntry`, and Android XML Views use it inside
 `OptimizedEntryView`. Both adapters pass non-optimized entries through unchanged, resolve optimized
-entries from the client's selected personalizations, can lock to the first resolved variant, can
+entries from the client's selected optimizations, can lock to the first resolved variant, can
 re-resolve when live updates are enabled, and can attach Android view and tap tracking for the
 resolved entry.
 

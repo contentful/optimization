@@ -9,7 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class NetworkMonitor(
+internal class NetworkMonitor(
     context: Context,
     private val onConnectivityChanged: (isOnline: Boolean) -> Unit,
     private val onReconnected: suspend () -> Unit,

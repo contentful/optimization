@@ -6,9 +6,8 @@ protocol PersistentStore {
     var consent: Bool? { get set }
     var persistenceConsent: Bool? { get set }
     var changes: [[String: Any]]? { get set }
-    var personalizations: [[String: Any]]? { get set }
+    var selectedOptimizations: [[String: Any]]? { get set }
     var anonymousId: String? { get set }
-    var debug: Bool { get set }
 
     func loadConsentState()
     func loadProfileContinuity()

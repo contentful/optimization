@@ -25,7 +25,7 @@ struct NavigationTestScreen: View {
                 destinationView(for: destination)
             }
         }
-        .onReceive(client.eventPublisher) { event in
+        .onReceive(client.eventStream) { event in
             guard let type = event["type"] as? String,
                   type == "screen" || type == "screenViewEvent",
                   let name = event["name"] as? String

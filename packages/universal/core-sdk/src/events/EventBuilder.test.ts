@@ -38,3 +38,23 @@ describe('EventBuilder.buildScreenView', () => {
     expect(event.context.gdpr.isConsentGiven).toBe(false)
   })
 })
+
+describe('EventBuilder entry interactions', () => {
+  it('accepts optimizationContextId without adding it to API events', () => {
+    const view = builder.buildView({
+      componentId: 'entry-1',
+      optimizationContextId: 'ctx-1',
+      variantIndex: 1,
+      viewDurationMs: 100,
+      viewId: 'view-1',
+    })
+    const click = builder.buildClick({
+      componentId: 'entry-1',
+      optimizationContextId: 'ctx-1',
+      variantIndex: 1,
+    })
+
+    expect(view).not.toHaveProperty('optimizationContextId')
+    expect(click).not.toHaveProperty('optimizationContextId')
+  })
+})

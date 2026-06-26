@@ -1,16 +1,31 @@
-import type { EventEmissionResult } from '../EventEmissionResult'
+import type { EventEmissionResult } from '../events'
 
+/**
+ * Options for {@link AcceptedCurrentStateTracker}.
+ *
+ * @public
+ */
 export interface AcceptedCurrentStateTrackerOptions<TKey> {
   readonly isEqual?: (left: TKey, right: TKey) => boolean
 }
 
+/**
+ * Emission inputs for {@link AcceptedCurrentStateTracker.emitIfNeeded}.
+ *
+ * @public
+ */
 export interface AcceptedCurrentStateEmissionOptions<TKey, TData> {
   readonly key: TKey
   readonly isAllowed: boolean
   readonly emit: () => Promise<EventEmissionResult<TData>>
 }
 
-export interface AcceptedCurrentStateEmissionResult<TData> extends EventEmissionResult<TData> {
+/**
+ * Result returned by {@link AcceptedCurrentStateTracker.emitIfNeeded}.
+ *
+ * @public
+ */
+export type AcceptedCurrentStateEmissionResult<TData> = EventEmissionResult<TData> & {
   readonly attempted: boolean
 }
 
@@ -33,22 +48,8 @@ export class AcceptedCurrentStateTracker<TKey> {
     return this.accepted !== undefined
   }
 
-  shouldTrack(key: TKey, isAllowed: boolean): boolean {
-    return isAllowed && !this.matchesAcceptedKey(key) && !this.matchesInFlightKey(key)
-  }
-
-  markInFlight(key: TKey): void {
-    this.inFlight = { key }
-  }
-
   markAccepted(key: TKey): void {
     this.accepted = { key }
-  }
-
-  clearInFlight(key: TKey): void {
-    if (this.matchesInFlightKey(key)) {
-      this.inFlight = undefined
-    }
   }
 
   reset(): void {
@@ -63,29 +64,27 @@ export class AcceptedCurrentStateTracker<TKey> {
   }: AcceptedCurrentStateEmissionOptions<TKey, TData>): Promise<
     AcceptedCurrentStateEmissionResult<TData>
   > {
-    if (!this.shouldTrack(key, isAllowed)) {
+    if (!isAllowed || this.matches(this.accepted, key) || this.matches(this.inFlight, key)) {
       return { accepted: false, attempted: false }
     }
 
-    this.markInFlight(key)
+    this.inFlight = { key }
 
     try {
       const result = await emit()
-      if (result.accepted && this.matchesInFlightKey(key)) {
+      if (result.accepted && this.matches(this.inFlight, key)) {
         this.markAccepted(key)
       }
 
       return { ...result, attempted: true }
     } finally {
-      this.clearInFlight(key)
+      if (this.matches(this.inFlight, key)) {
+        this.inFlight = undefined
+      }
     }
   }
 
-  private matchesAcceptedKey(key: TKey): boolean {
-    return this.accepted !== undefined && this.isEqual(this.accepted.key, key)
-  }
-
-  private matchesInFlightKey(key: TKey): boolean {
-    return this.inFlight !== undefined && this.isEqual(this.inFlight.key, key)
+  private matches(state: { key: TKey } | undefined, key: TKey): boolean {
+    return state !== undefined && this.isEqual(state.key, key)
   }
 }

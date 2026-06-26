@@ -20,7 +20,7 @@ to a React Native (or Expo) application using `@contentful/optimization-react-na
   - [Reading and reacting to consent state](#reading-and-reacting-to-consent-state)
   - [Revoking consent](#revoking-consent)
   - [Optional consent policy controls](#optional-consent-policy-controls)
-- [3. Personalize entries with OptimizedEntry](#3-personalize-entries-with-optimizedentry)
+- [3. Optimize entries with OptimizedEntry](#3-optimize-entries-with-optimizedentry)
   - [Fetch the entry with `include: 10`](#fetch-the-entry-with-include-10)
   - [Render the variant with a render prop](#render-the-variant-with-a-render-prop)
   - [Pass-through for non-optimized entries](#pass-through-for-non-optimized-entries)
@@ -102,17 +102,22 @@ For offline support (recommended), also install:
 pnpm add @react-native-community/netinfo
 ```
 
+For preview panel support, also install:
+
+```sh
+pnpm add @react-native-clipboard/clipboard react-native-safe-area-context
+```
+
 The SDK uses AsyncStorage to persist consent and, when persistence consent permits it, profile state
 and selected optimizations across app launches. `netinfo` is optional but lets the SDK queue events
 while the device is offline and flush them automatically when connectivity returns.
 
 > [!NOTE]
 >
-> The Optimization SDK depends on native modules (e.g. `@react-native-clipboard/clipboard` for the
-> preview panel). Expo apps using Optimization need a custom dev build (`expo run:ios` /
-> `expo run:android`) — Expo Go is not enough. The in-tree React Native reference implementation
-> [README](../../implementations/react-native-sdk/README.md) documents the monorepo setup and E2E
-> commands.
+> The preview panel depends on native modules. Expo apps using Optimization preview need a custom
+> dev build (`expo run:ios` / `expo run:android`) — Expo Go is not enough. The in-tree React Native
+> reference implementation [README](../../implementations/react-native-sdk/README.md) documents the
+> monorepo setup and E2E commands.
 
 ### The minimum setup
 
@@ -135,44 +140,48 @@ export default function App() {
 That is the minimum viable setup. `clientId` is the only required prop; everything else falls back
 to safe defaults (environment defaults to `'main'`, channel to `'mobile'`, etc.).
 
-A fuller application usually adds environment-specific config, optional preview panel settings, and
+A fuller application usually adds environment-specific config, optional preview panel mounting, and
 navigation integration:
 
 ```tsx
-<OptimizationRoot
+import { PreviewPanelOverlay } from '@contentful/optimization-react-native/preview'
+
+function NavigationShell() {
+  return (
+    <OptimizationNavigationContainer>
+      {(navigationProps) => (
+        <NavigationContainer {...navigationProps}>
+          {/* ...stack/tab navigators... */}
+        </NavigationContainer>
+      )}
+    </OptimizationNavigationContainer>
+  )
+}
+
+;<OptimizationRoot
   clientId={OPTIMIZATION_CLIENT_ID}
   environment={OPTIMIZATION_ENVIRONMENT}
   locale="en-US"
   logLevel={__DEV__ ? 'info' : 'warn'}
-  previewPanel={{
-    enabled: __DEV__,
-    contentfulClient: client,
-  }}
 >
-  <OptimizationNavigationContainer>
-    {(navigationProps) => (
-      <NavigationContainer {...navigationProps}>
-        {/* ...stack/tab navigators... */}
-      </NavigationContainer>
-    )}
-  </OptimizationNavigationContainer>
+  <NavigationShell />
+  {__DEV__ && <PreviewPanelOverlay contentfulClient={contentfulClient} />}
 </OptimizationRoot>
 ```
 
 Common props on `OptimizationRoot`:
 
-| Prop                    | Type                         | Required | Default                        | Description                                                           |
-| ----------------------- | ---------------------------- | -------- | ------------------------------ | --------------------------------------------------------------------- |
-| `clientId`              | `string`                     | Yes      | N/A                            | Your Contentful Optimization client identifier                        |
-| `environment`           | `string`                     | No       | `'main'`                       | Optimization environment to read from                                 |
-| `defaults`              | `{ consent?: boolean, ... }` | No       | `undefined`                    | Initial values applied at startup (e.g. `consent: true`)              |
-| `allowedEventTypes`     | `EventType[]`                | No       | `['identify', 'screen']`       | Event types allowed before consent is explicitly set                  |
-| `logLevel`              | `LogLevels`                  | No       | `'error'`                      | Minimum console log level                                             |
-| `previewPanel`          | `PreviewPanelConfig`         | No       | `undefined`                    | Enables the in-app preview panel; see [Preview Panel](#preview-panel) |
-| `liveUpdates`           | `boolean`                    | No       | `false`                        | Global live-updates default for `<OptimizedEntry />`                  |
-| `locale`                | `string`                     | No       | `undefined`                    | SDK Experience API and default event locale                           |
-| `trackEntryInteraction` | `{ views?, taps? }`          | No       | `{ views: true, taps: false }` | Default interaction tracking for `<OptimizedEntry />`                 |
-| `onStatesReady`         | `(states) => cleanup`        | No       | `undefined`                    | Attach app-level state subscribers when SDK state is ready            |
+| Prop                    | Type                         | Required | Default                        | Description                                                |
+| ----------------------- | ---------------------------- | -------- | ------------------------------ | ---------------------------------------------------------- |
+| `clientId`              | `string`                     | Yes      | N/A                            | Your Contentful Optimization client identifier             |
+| `environment`           | `string`                     | No       | `'main'`                       | Optimization environment to read from                      |
+| `defaults`              | `{ consent?: boolean, ... }` | No       | `undefined`                    | Initial values applied at startup (e.g. `consent: true`)   |
+| `allowedEventTypes`     | `EventType[]`                | No       | `['identify', 'screen']`       | Event types allowed before consent is explicitly set       |
+| `logLevel`              | `LogLevels`                  | No       | `'error'`                      | Minimum console log level                                  |
+| `liveUpdates`           | `boolean`                    | No       | `false`                        | Global live-updates default for `<OptimizedEntry />`       |
+| `locale`                | `string`                     | No       | `undefined`                    | SDK Experience API and default event locale                |
+| `trackEntryInteraction` | `{ views?, taps? }`          | No       | `{ views: true, taps: false }` | Default interaction tracking for `<OptimizedEntry />`      |
+| `onStatesReady`         | `(states) => cleanup`        | No       | `undefined`                    | Attach app-level state subscribers when SDK state is ready |
 
 The full configuration reference (API endpoints, fetch retries, queue policy, event-builder
 overrides) is documented in the
@@ -356,7 +365,7 @@ Use these options only when your application policy needs a stricter or split co
 - Call `optimization.consent({ events: true, persistence: false })` when events are allowed but
   durable profile continuity must stay session-only.
 
-## 3. Personalize entries with OptimizedEntry
+## 3. Optimize entries with OptimizedEntry
 
 `<OptimizedEntry />` is the unified component for resolving optimized variants and tracking
 interactions on Contentful entries. It:
@@ -390,7 +399,7 @@ when the app changes language after initialization, then refetch Contentful entr
 locale and rerun the app's normal profile refresh flow. `contentful.js` `withAllLocales` and raw CDA
 `locale=*` return locale-keyed fields; the SDK resolver expects a standard single-locale CDA entry
 shape where `fields.nt_experiences` and `fields.nt_variants` are direct field values. See
-[Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
+[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md)
 for the broader locale model.
@@ -785,11 +794,13 @@ Native counterpart to the Web preview panel.
 
 ### Enabling the preview panel
 
-Pass a `previewPanel` config to `OptimizationRoot`. You must also pass an initialized Contentful
-client so the panel can fetch audience and experience entries:
+Import `PreviewPanelOverlay` from the preview subpath and mount it under `OptimizationRoot`,
+alongside your app content. You must also pass an initialized Contentful client so the panel can
+fetch audience and experience entries:
 
 ```tsx
 import { OptimizationRoot } from '@contentful/optimization-react-native'
+import { PreviewPanelOverlay } from '@contentful/optimization-react-native/preview'
 import { createClient } from 'contentful'
 
 const contentfulClient = createClient({
@@ -800,40 +811,37 @@ const contentfulClient = createClient({
 
 export default function App() {
   return (
-    <OptimizationRoot
-      clientId="your-client-id"
-      previewPanel={{
-        enabled: __DEV__,
-        contentfulClient,
-      }}
-    >
+    <OptimizationRoot clientId="your-client-id">
       <YourApp />
+      {__DEV__ && <PreviewPanelOverlay contentfulClient={contentfulClient} />}
     </OptimizationRoot>
   )
 }
 ```
 
-With `enabled: true`, a floating action button appears on top of your app. Tap it to open the panel
-drawer.
+When `PreviewPanelOverlay` is mounted, a floating action button appears on top of your app. Tap it
+to open the panel drawer.
 
 For real apps, gate on `__DEV__` (or another build flag) so the FAB doesn't appear in production.
+
+Preview UI components and preview-specific types are exported from the preview subpath:
+
+```tsx
+import { PreviewPanelOverlay } from '@contentful/optimization-react-native/preview'
+```
 
 ### Customizing the floating action button
 
 Use `fabPosition` and `showHeader` to fine-tune placement and chrome:
 
 ```tsx
-<OptimizationRoot
-  clientId="your-client-id"
-  previewPanel={{
-    enabled: __DEV__,
-    contentfulClient,
-    fabPosition: { bottom: 50, right: 20 },
-    showHeader: true,
-    onVisibilityChange: (visible) => console.log('preview panel visible:', visible),
-  }}
->
-  <YourApp />
+<OptimizationRoot clientId="your-client-id">
+  <PreviewPanelOverlay
+    contentfulClient={contentfulClient}
+    fabPosition={{ bottom: 50, right: 20 }}
+    showHeader={true}
+    onVisibilityChange={(visible) => console.log('preview panel visible:', visible)}
+  />
 </OptimizationRoot>
 ```
 

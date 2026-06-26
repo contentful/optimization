@@ -1,9 +1,6 @@
-import type { OptimizationData, Properties } from '@contentful/optimization-core/api-schemas'
+import type { EventEmissionResult } from '@contentful/optimization-core'
+import type { Properties } from '@contentful/optimization-core/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
-import {
-  AcceptedCurrentStateTracker,
-  screenWithEmissionResult,
-} from '@contentful/optimization-core/sdk-support'
 import { useCallback, useEffect, useRef } from 'react'
 import { useOptimization } from '../context/OptimizationContext'
 import { useOptimizationConsentState } from './useOptimizationConsentState'
@@ -44,7 +41,7 @@ export interface UseScreenTrackingReturn {
    * Manually trigger screen tracking.
    * Useful when `trackOnMount` is `false` or for re-tracking.
    */
-  trackScreen: () => Promise<OptimizationData | undefined>
+  trackScreen: () => Promise<EventEmissionResult>
 }
 
 const EMPTY_PROPERTIES: Properties = {}
@@ -119,8 +116,6 @@ export function useScreenTracking({
 }: UseScreenTrackingOptions): UseScreenTrackingReturn {
   const contentfulOptimization = useOptimization()
   const consent = useOptimizationConsentState(contentfulOptimization)
-  const autoTrackingStateRef = useRef(new AcceptedCurrentStateTracker<string>())
-
   // Store contentfulOptimization in a ref to prevent unnecessary callback recreations
   const optimizationRef = useRef(contentfulOptimization)
   optimizationRef.current = contentfulOptimization
@@ -132,7 +127,7 @@ export function useScreenTracking({
   const propertiesRef = useRef(properties)
   propertiesRef.current = properties
 
-  const trackScreen = useCallback(async (): Promise<OptimizationData | undefined> => {
+  const trackScreen = useCallback(async (): Promise<EventEmissionResult> => {
     const { current: currentName } = nameRef
     const { current: currentProperties } = propertiesRef
     const { current: currentOptimization } = optimizationRef
@@ -140,16 +135,14 @@ export function useScreenTracking({
     logger.info(`Tracking screen: "${currentName}"`)
 
     try {
-      const result = await screenWithEmissionResult(currentOptimization, {
+      return await currentOptimization.screen({
         name: currentName,
         properties: currentProperties,
         screen: { name: currentName },
       })
-
-      return result.data
     } catch (error) {
       logger.error(`Failed to track screen "${currentName}":`, error)
-      return undefined
+      return { accepted: false }
     }
   }, [])
 
@@ -163,16 +156,12 @@ export function useScreenTracking({
     const { current: currentProperties } = propertiesRef
     const { current: currentOptimization } = optimizationRef
 
-    void autoTrackingStateRef.current
-      .emitIfNeeded({
-        key: currentName,
-        isAllowed: currentOptimization.hasConsent('screen'),
-        emit: async () =>
-          await screenWithEmissionResult(currentOptimization, {
-            name: currentName,
-            properties: currentProperties,
-            screen: { name: currentName },
-          }),
+    void currentOptimization
+      .trackCurrentScreen({
+        routeKey: currentName,
+        name: currentName,
+        properties: currentProperties,
+        screen: { name: currentName },
       })
       .catch((error: unknown) => {
         logger.error(`Failed to track screen "${currentName}":`, error)

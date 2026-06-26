@@ -1,7 +1,6 @@
 package com.contentful.optimization.views
 
 import com.contentful.optimization.core.OptimizationClient
-import com.contentful.optimization.tracking.ScreenTrackingState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,10 +23,9 @@ import kotlinx.coroutines.launch
  * Failures (including the client not yet being initialized) are swallowed — same contract as
  * the Compose `ScreenTrackingEffect`.
  */
-object ScreenTracker {
+public object ScreenTracker {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val trackingState = ScreenTrackingState()
     private var currentScreenName: String? = null
     private var observedClient: OptimizationClient? = null
     private var stateJob: Job? = null
@@ -49,7 +47,6 @@ object ScreenTracker {
         stateJob = null
         observedClient = null
         currentScreenName = null
-        trackingState.reset()
     }
 
     private fun observeConsent(client: OptimizationClient) {
@@ -66,17 +63,6 @@ object ScreenTracker {
 
     private suspend fun trackCurrentScreenIfAllowed(client: OptimizationClient) {
         val screenName = currentScreenName ?: return
-        val trackingAllowed = client.getState().consent == true || client.hasConsent("screen")
-
-        if (!trackingState.shouldTrack(screenName, trackingAllowed)) return
-
-        trackingState.markInFlight(screenName)
-        try {
-            if (client.screenWithEmissionResult(name = screenName).accepted) {
-                trackingState.markAccepted(screenName)
-            }
-        } finally {
-            trackingState.clearInFlight(screenName)
-        }
+        client.trackCurrentScreen(name = screenName)
     }
 }

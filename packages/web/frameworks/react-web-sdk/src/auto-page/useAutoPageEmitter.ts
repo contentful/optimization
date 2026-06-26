@@ -1,7 +1,3 @@
-import {
-  getCurrentPageTracker,
-  resetCurrentPageTrackerState,
-} from '@contentful/optimization-web/sdk-support'
 import { useEffect } from 'react'
 import { useOptimization } from '../hooks/useOptimization'
 import { useConsentState } from '../hooks/useOptimizationState'
@@ -63,22 +59,16 @@ export function useAutoPageEmitter({
       return
     }
 
-    const tracker = getCurrentPageTracker(sdk)
-
-    if (initialPageEvent === 'skip' && !tracker.hasAccepted()) {
-      tracker.markAccepted(routeKey)
-      return
-    }
-
-    void tracker
-      .emitIfNeeded(sdk, {
-        buildPayload,
+    void sdk
+      .trackCurrentPage({
+        initialPageEvent,
         routeKey,
+        buildPayload,
       })
       .catch(() => undefined)
   }, [buildPayload, consent, enabled, initialPageEvent, routeKey, sdk])
 }
 
 export function resetAutoPageEmitterState(): void {
-  resetCurrentPageTrackerState()
+  // Current-page state is owned by each Web SDK instance.
 }

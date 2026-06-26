@@ -437,7 +437,7 @@ application decides which approved Contentful context, if any, should also be fo
 
 | Reporting need                             | Hybrid SSR + CSR handoff                                                             |
 | ------------------------------------------ | ------------------------------------------------------------------------------------ |
-| Server-resolved first-paint attribution    | Use request-local `OptimizationData` before passing `defaults` to the client.        |
+| Server-resolved first-paint attribution    | Use request-local event result data before passing `defaults` to the client.         |
 | Hydrated page, entry, and reactive updates | Register one React Web `states.eventStream` subscription with `onStatesReady`.       |
 | Business event attribution                 | Add Contentful fields in the server action or Client Component handler that owns it. |
 | Consent or duplicate-delivery verification | Use `states.blockedEventStream`, `messageId` dedupe, and destination debuggers.      |

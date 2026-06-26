@@ -3,12 +3,15 @@ import type {
   ExperienceApiClientRequestOptions,
   InsightsApiClientRequestOptions,
 } from '@contentful/optimization-api-client'
-import type { BlockedEvent } from './BlockedEvent'
 import type { CoreStatelessApiConfig } from './CoreApiConfig'
 import CoreBase, { type CoreConfig } from './CoreBase'
 import { CoreStatelessRequest, type CoreStatelessForRequestOptions } from './CoreStatelessRequest'
-import { DEFAULT_ALLOWED_EVENT_TYPES, type AllowedEventType } from './EventType'
-import type { EventBuilderConfig } from './events'
+import {
+  DEFAULT_ALLOWED_EVENT_TYPES,
+  type AllowedEventType,
+  type BlockedEvent,
+  type EventBuilderConfig,
+} from './events'
 import { normalizeExplicitLocale } from './locale'
 
 /**
@@ -72,7 +75,7 @@ export type {
   StatelessNonStickyTrackViewPayload,
   StatelessStickyTrackViewPayload,
 } from './CoreStatelessRequest'
-export type { AllowedEventType, EventType } from './EventType'
+export type { AllowedEventType, EventType } from './events'
 
 const hasDefinedValues = (record: Record<string, unknown>): boolean =>
   Object.values(record).some((value) => value !== undefined)

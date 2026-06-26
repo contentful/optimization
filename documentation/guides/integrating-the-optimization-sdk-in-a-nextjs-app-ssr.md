@@ -393,12 +393,12 @@ Use this optional step when your Next.js app already sends events to a tag manag
 platform, or analytics destination. The Optimization SDK still sends events to Contentful. Your
 application decides which approved Contentful context, if any, should also be forwarded.
 
-| Reporting need                             | SSR handoff                                                                              |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| Server-rendered first-paint attribution    | Use request-local `OptimizationData` and `selectedOptimization` in the Server Component. |
-| Hydrated page and entry interaction events | Register one React Web `states.eventStream` subscription with `onStatesReady`.           |
-| Business event attribution                 | Add Contentful fields in the server action or Client Component handler that owns it.     |
-| Consent or duplicate-delivery verification | Use `states.blockedEventStream`, `messageId` dedupe, and destination debuggers.          |
+| Reporting need                             | SSR handoff                                                                             |
+| ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| Server-rendered first-paint attribution    | Use request-local event result data and `selectedOptimization` in the Server Component. |
+| Hydrated page and entry interaction events | Register one React Web `states.eventStream` subscription with `onStatesReady`.          |
+| Business event attribution                 | Add Contentful fields in the server action or Client Component handler that owns it.    |
+| Consent or duplicate-delivery verification | Use `states.blockedEventStream`, `messageId` dedupe, and destination debuggers.         |
 
 Treat server and browser analytics forwarding as separate handoffs. Server-rendered attribution uses
 request-local SDK data; hydrated client activity uses a live React Web subscription, not a replay

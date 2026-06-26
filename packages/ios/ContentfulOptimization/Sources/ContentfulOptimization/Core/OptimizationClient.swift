@@ -2,9 +2,23 @@ import Combine
 import Foundation
 import JavaScriptCore
 
-struct EventEmissionResult {
-    let accepted: Bool
-    let data: [String: Any]?
+public struct EventEmissionResult {
+    public let accepted: Bool
+    public let data: [String: Any]?
+
+    public init(accepted: Bool, data: [String: Any]? = nil) {
+        self.accepted = accepted
+        self.data = data
+    }
+}
+
+private extension Optional where Wrapped == [String: Any] {
+    func toEventEmissionResult() -> EventEmissionResult {
+        EventEmissionResult(
+            accepted: self?["accepted"] as? Bool ?? false,
+            data: self?["data"] as? [String: Any]
+        )
+    }
 }
 
 /// The main public entry point for the Contentful Optimization SDK.
@@ -17,15 +31,17 @@ struct EventEmissionResult {
 /// let client = OptimizationClient()
 /// try await client.initialize(config: OptimizationConfig(
 ///     clientId: "my-client-id",
-///     environment: "master",
-///     experienceBaseUrl: "https://example.com/experience/",
-///     insightsBaseUrl: "https://example.com/insights/"
+///     environment: "main",
+///     api: OptimizationApiConfig(
+///         experienceBaseUrl: "https://example.com/experience/",
+///         insightsBaseUrl: "https://example.com/insights/"
+///     )
 /// ))
 /// ```
 @MainActor
 public final class OptimizationClient: ObservableObject {
 
-    /// The current bridge state (profile, consent, canPersonalize, changes).
+    /// The current bridge state (profile, consent, canOptimize, changes).
     @Published public private(set) var state = OptimizationState.empty
 
     /// Whether the SDK has been successfully initialized.
@@ -34,8 +50,14 @@ public final class OptimizationClient: ObservableObject {
     /// Current SDK locale for Experience API requests and event context.
     @Published public private(set) var locale: String? = nil
 
-    /// The currently selected personalizations, updated reactively from JS signals.
-    @Published public private(set) var selectedPersonalizations: [[String: Any]]?
+    /// The currently selected optimizations, updated reactively from JS signals.
+    @Published public private(set) var selectedOptimizations: [[String: Any]]?
+
+    /// Whether the current consent and allow-list configuration can produce optimizations.
+    @Published public private(set) var optimizationPossible = false
+
+    /// Outcome of the most recent Experience API request.
+    @Published public private(set) var experienceRequestState: [String: Any] = ["status": "idle"]
 
     /// Whether the preview panel is currently open.
     /// When `true`, ``OptimizedEntry`` components switch to live update mode
@@ -58,10 +80,19 @@ public final class OptimizationClient: ObservableObject {
     private var networkMonitor: NetworkMonitor?
 
     private let eventSubject = PassthroughSubject<[String: Any], Never>()
+    private let blockedEventSubject = PassthroughSubject<BlockedEvent, Never>()
+    private var flagSubjects: [String: CurrentValueSubject<JSONValue?, Never>] = [:]
+    private var flagSubscriptionIdsByName: [String: String] = [:]
+    private var flagNamesBySubscriptionId: [String: String] = [:]
 
-    /// A publisher that emits analytics/personalization events from the JS bridge.
-    public var eventPublisher: AnyPublisher<[String: Any], Never> {
+    /// A publisher that emits analytics and optimization events from the JS bridge.
+    public var eventStream: AnyPublisher<[String: Any], Never> {
         eventSubject.eraseToAnyPublisher()
+    }
+
+    /// A publisher that emits events blocked by consent or SDK guard logic.
+    public var blockedEventStream: AnyPublisher<BlockedEvent, Never> {
+        blockedEventSubject.eraseToAnyPublisher()
     }
 
     private let log = DiagnosticLogger.shared
@@ -73,6 +104,10 @@ public final class OptimizationClient: ObservableObject {
         bridge.onEvent = { [weak self] dict in
             self?.eventSubject.send(dict)
         }
+        bridge.onFlagValueChanged = { [weak self] subscriptionId, value in
+            guard let self, let name = self.flagNamesBySubscriptionId[subscriptionId] else { return }
+            self.flagSubjects[name]?.send(value)
+        }
         bridge.onOverridesChanged = { [weak self] state in
             self?.previewState = state
         }
@@ -82,9 +117,9 @@ public final class OptimizationClient: ObservableObject {
 
     /// Initialize the SDK with the given configuration.
     public func initialize(config: OptimizationConfig) throws {
-        log.setEnabled(config.debug)
+        log.setLevel(config.logLevel)
         log.info("[init] Starting SDK initialization (clientId=\(config.clientId), env=\(config.environment))")
-        if let url = config.experienceBaseUrl {
+        if let url = config.api?.experienceBaseUrl {
             log.debug("[init] experienceBaseUrl=\(url)")
         } else {
             log.debug("[init] experienceBaseUrl=<default>")
@@ -92,46 +127,60 @@ public final class OptimizationClient: ObservableObject {
 
         // Load consent state before touching profile-continuity storage.
         store.loadConsentState()
+        clearFlagObservers()
         var mergedConfig = config
-        let configuredDefaultConsent = config.defaults?.consent
-        if mergedConfig.defaults == nil {
-            mergedConfig.defaults = StorageDefaults()
-        }
-        if mergedConfig.defaults?.consent == nil, let storedConsent = store.consent {
-            mergedConfig.defaults?.consent = storedConsent
-        }
-        let requestedPersistenceConsent =
-            mergedConfig.defaults?.persistenceConsent
-            ?? configuredDefaultConsent
-            ?? store.persistenceConsent
-            ?? mergedConfig.defaults?.consent
-        mergedConfig.defaults?.persistenceConsent = requestedPersistenceConsent
-        let canLoadPersistedContinuity = mergedConfig.defaults?.persistenceConsent == true
+        let persistedConsentDefaults = StorageDefaults(
+            consent: store.consent,
+            persistenceConsent: store.persistenceConsent
+        )
+        let initialDefaults = resolveStatefulDefaults(
+            configured: config.defaults,
+            persisted: persistedConsentDefaults
+        )
         let storedAnonymousId: String?
-        if canLoadPersistedContinuity {
+        let persistedDefaults: StorageDefaults
+        if initialDefaults.canLoadPersistedContinuity {
             store.loadProfileContinuity()
             storedAnonymousId = store.anonymousId
-
-            if mergedConfig.defaults?.profile == nil, let storedProfile = store.profile {
-                mergedConfig.defaults?.profile = storedProfile
-            }
-            if mergedConfig.defaults?.changes == nil, let storedChanges = store.changes {
-                mergedConfig.defaults?.changes = storedChanges
-            }
-            if mergedConfig.defaults?.personalizations == nil, let storedP = store.personalizations {
-                mergedConfig.defaults?.personalizations = storedP
-            }
+            persistedDefaults = StorageDefaults(
+                consent: store.consent,
+                persistenceConsent: store.persistenceConsent,
+                profile: store.profile,
+                changes: store.changes,
+                selectedOptimizations: store.selectedOptimizations
+            )
         } else {
             storedAnonymousId = nil
-            if mergedConfig.defaults?.persistenceConsent == false {
+            if initialDefaults.defaults.persistenceConsent == false {
                 store.clearProfileContinuity()
             }
+            persistedDefaults = persistedConsentDefaults
         }
+        mergedConfig.defaults = resolveStatefulDefaults(
+            configured: config.defaults,
+            persisted: persistedDefaults
+        ).defaults
         locale = try mergedConfig.normalizedLocale()
 
         // Wire up JS bridge logging
         bridge.onLog = { [weak self] level, msg in
             self?.log.debug("[js:\(level)] \(msg)")
+        }
+        bridge.onEventBlocked = { [weak self] event in
+            self?.blockedEventSubject.send(event)
+            config.onEventBlocked?(event)
+        }
+        bridge.onQueueEvent = { event in
+            switch event.type {
+            case .offlineDrop:
+                config.queuePolicy?.onOfflineDrop?(event)
+            case .flushFailure:
+                config.queuePolicy?.onFlushFailure?(event)
+            case .circuitOpen:
+                config.queuePolicy?.onCircuitOpen?(event)
+            case .flushRecovered:
+                config.queuePolicy?.onFlushRecovered?(event)
+            }
         }
 
         try bridge.initialize(config: mergedConfig, anonymousId: storedAnonymousId)
@@ -146,69 +195,114 @@ public final class OptimizationClient: ObservableObject {
     }
 
     /// Identify a user. Returns the server response as a dictionary.
+    public func identify(_ payload: IdentifyPayload) async throws -> EventEmissionResult {
+        try await bridgeCallAsyncJSON(method: "identify") {
+            try payload.toJSON()
+        }.toEventEmissionResult()
+    }
+
+    /// Identify a user. Returns the server response as a dictionary.
     public func identify(
         userId: String,
         traits: [String: Any]? = nil
-    ) async throws -> [String: Any]? {
+    ) async throws -> EventEmissionResult {
         try await bridgeCallAsyncJSON(method: "identify") {
             var payloadDict: [String: Any] = ["userId": userId]
             if let traits = traits {
                 payloadDict["traits"] = traits
             }
             return try serializeJSON(payloadDict)
-        }
+        }.toEventEmissionResult()
     }
 
     /// Track a page view. Returns the server response as a dictionary.
-    public func page(properties: [String: Any]? = nil) async throws -> [String: Any]? {
+    public func page(_ payload: PageEventPayload) async throws -> EventEmissionResult {
+        try await bridgeCallAsyncJSON(method: "page") {
+            try payload.toJSON()
+        }.toEventEmissionResult()
+    }
+
+    /// Track a page view. Returns the server response as a dictionary.
+    public func page(properties: [String: Any]? = nil) async throws -> EventEmissionResult {
         try await bridgeCallAsyncJSON(method: "page") {
             try serializeJSON(properties ?? [:])
-        }
+        }.toEventEmissionResult()
     }
 
     /// Track a screen view. Returns the server response as a dictionary.
-    public func screen(name: String, properties: [String: Any]? = nil) async throws -> [String: Any]? {
+    public func screen(_ payload: ScreenEventPayload) async throws -> EventEmissionResult {
+        try await bridgeCallAsyncJSON(method: "screen") {
+            try payload.toJSON()
+        }.toEventEmissionResult()
+    }
+
+    /// Track a screen view. Returns the server response as a dictionary.
+    public func screen(name: String, properties: [String: Any]? = nil) async throws -> EventEmissionResult {
         try await bridgeCallAsyncJSON(method: "screen") {
             var payloadDict: [String: Any] = ["name": name]
             if let properties = properties {
                 payloadDict["properties"] = properties
             }
             return try serializeJSON(payloadDict)
-        }
+        }.toEventEmissionResult()
     }
 
-    func screenWithEmissionResult(name: String, properties: [String: Any]? = nil) async throws -> EventEmissionResult {
-        let result = try await bridgeCallAsyncJSON(method: "screenWithEmissionResult") {
-            var payloadDict: [String: Any] = ["name": name]
+    /// Track a custom business event. Returns the server response as a dictionary.
+    public func track(_ payload: TrackEventPayload) async throws -> EventEmissionResult {
+        try await bridgeCallAsyncJSON(method: "track") {
+            try payload.toJSON()
+        }.toEventEmissionResult()
+    }
+
+    /// Track a custom business event. Returns the server response as a dictionary.
+    public func track(event: String, properties: [String: Any]? = nil) async throws -> EventEmissionResult {
+        try await bridgeCallAsyncJSON(method: "track") {
+            var payloadDict: [String: Any] = ["event": event]
             if let properties = properties {
                 payloadDict["properties"] = properties
             }
             return try serializeJSON(payloadDict)
-        }
-
-        return EventEmissionResult(
-            accepted: result?["accepted"] as? Bool ?? false,
-            data: result?["data"] as? [String: Any]
-        )
+        }.toEventEmissionResult()
     }
 
-    /// Flush pending analytics and personalization events.
+    /// Track the current screen with bridge-owned deduplication and retry after blocked attempts.
+    public func trackCurrentScreen(_ payload: ScreenEventPayload) async throws -> EventEmissionResult {
+        try await bridgeCallAsyncJSON(method: "trackCurrentScreen") {
+            try payload.toJSON()
+        }.toEventEmissionResult()
+    }
+
+    /// Track the current screen with bridge-owned deduplication and retry after blocked attempts.
+    public func trackCurrentScreen(
+        name: String,
+        properties: [String: Any]? = nil,
+        routeKey: String? = nil
+    ) async throws -> EventEmissionResult {
+        try await bridgeCallAsyncJSON(method: "trackCurrentScreen") {
+            var payloadDict: [String: Any] = ["name": name]
+            payloadDict["routeKey"] = routeKey ?? name
+            if let properties = properties {
+                payloadDict["properties"] = properties
+            }
+            return try serializeJSON(payloadDict)
+        }.toEventEmissionResult()
+    }
+
+    /// Flush pending analytics and optimization events.
     public func flush() async throws {
         try await bridgeCallAsyncVoid(method: "flush", payload: "")
     }
 
     /// Track a view event. Returns the server response as a dictionary.
-    public func trackView(_ payload: TrackViewPayload) async throws -> [String: Any]? {
+    public func trackView(_ payload: TrackViewPayload) async throws -> EventEmissionResult {
         try await bridgeCallAsyncJSON(method: "trackView") {
             try payload.toJSON()
-        }
+        }.toEventEmissionResult()
     }
 
-    /// Track a click event. Returns the server response as a dictionary.
-    public func trackClick(_ payload: TrackClickPayload) async throws -> [String: Any]? {
-        try await bridgeCallAsyncJSON(method: "trackClick") {
-            try payload.toJSON()
-        }
+    /// Track a click event.
+    public func trackClick(_ payload: TrackClickPayload) async throws {
+        try await bridgeCallAsyncVoid(method: "trackClick", payload: try payload.toJSON())
     }
 
     /// Set the consent state.
@@ -228,7 +322,7 @@ public final class OptimizationClient: ObservableObject {
         bridgeCallSyncWhenInitialized(method: "consent", args: "{\(fields.joined(separator: ","))}")
     }
 
-    /// Reset the SDK state (clears profile, changes, selected personalizations).
+    /// Reset the SDK state (clears profile, changes, selected optimizations).
     public func reset() {
         guard isInitialized else { return }
         bridgeCallSyncWhenInitialized(method: "reset")
@@ -257,41 +351,58 @@ public final class OptimizationClient: ObservableObject {
         return sdkLocale
     }
 
-    /// Personalize a Contentful entry using the current personalization state.
-    public func personalizeEntry(
+    /// Resolve a Contentful entry using the current selected optimization state.
+    public func resolveOptimizedEntry(
         baseline: [String: Any],
-        personalizations: [[String: Any]]? = nil
-    ) -> PersonalizedResult {
+        selectedOptimizations: [[String: Any]]? = nil
+    ) -> ResolvedOptimizedEntry {
         guard isInitialized else {
-            return PersonalizedResult(entry: baseline, personalization: nil)
+            return ResolvedOptimizedEntry(
+                entry: baseline,
+                selectedOptimization: nil,
+                optimizationContextId: nil
+            )
         }
 
         do {
             let baselineJSON = try serializeJSON(baseline)
             var args = baselineJSON
-            if let personalizations = personalizations {
-                let pJSON = try serializeJSON(personalizations)
-                args = "\(baselineJSON), \(pJSON)"
+            if let selectedOptimizations {
+                let selectedOptimizationsJSON = try serializeJSON(selectedOptimizations)
+                args = "\(baselineJSON), \(selectedOptimizationsJSON)"
             }
 
-            guard let result = bridgeCallSyncWhenInitialized(method: "personalizeEntry", args: args),
+            guard let result = bridgeCallSyncWhenInitialized(method: "resolveOptimizedEntry", args: args),
                   !result.isNull && !result.isUndefined,
                   let str = result.toString(),
                   let data = str.data(using: .utf8),
                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
             else {
                 let entryId = (baseline["sys"] as? [String: Any])?["id"] as? String ?? "unknown"
-                log.warning("[personalize] Failed to parse bridge result for entry \(entryId)")
-                return PersonalizedResult(entry: baseline, personalization: nil)
+                log.warning("[resolveOptimizedEntry] Failed to parse bridge result for entry \(entryId)")
+                return ResolvedOptimizedEntry(
+                    entry: baseline,
+                    selectedOptimization: nil,
+                    optimizationContextId: nil
+                )
             }
 
             let entry = dict["entry"] as? [String: Any] ?? baseline
-            let personalization = dict["personalization"] as? [String: Any]
-            return PersonalizedResult(entry: entry, personalization: personalization)
+            let selectedOptimization = dict["selectedOptimization"] as? [String: Any]
+            let optimizationContextId = dict["optimizationContextId"] as? String
+            return ResolvedOptimizedEntry(
+                entry: entry,
+                selectedOptimization: selectedOptimization,
+                optimizationContextId: optimizationContextId
+            )
         } catch {
             let entryId = (baseline["sys"] as? [String: Any])?["id"] as? String ?? "unknown"
-            log.error("[personalize] Serialization error for entry \(entryId): \(error.localizedDescription)")
-            return PersonalizedResult(entry: baseline, personalization: nil)
+            log.error("[resolveOptimizedEntry] Serialization error for entry \(entryId): \(error.localizedDescription)")
+            return ResolvedOptimizedEntry(
+                entry: baseline,
+                selectedOptimization: nil,
+                optimizationContextId: nil
+            )
         }
     }
 
@@ -314,14 +425,39 @@ public final class OptimizationClient: ObservableObject {
         }
     }
 
-    /// Subscribe to a feature flag by name.
-    ///
-    /// Subscribing emits a flag-view (`component`) analytics event through the
-    /// SDK event stream, and again on each distinct flag value change — mirroring
-    /// the React Native `sdk.states.flag(name).subscribe(...)` contract.
-    public func subscribeToFlag(_ name: String) {
+    /// Resolve a feature flag value by name.
+    public func getFlag(_ name: String) -> JSONValue? {
+        guard isInitialized else { return nil }
         let escaped = NativePolyfills.escapeForJS(name)
-        bridgeCallSyncWhenInitialized(method: "flag", args: "'\(escaped)'")
+        guard let result = bridgeCallSyncWhenInitialized(method: "getFlag", args: "'\(escaped)'"),
+              !result.isUndefined,
+              let str = result.toString()
+        else { return nil }
+        return Self.parseJSONValue(str)
+    }
+
+    /// Observe a feature flag value by name.
+    public func flagPublisher(_ name: String) -> AnyPublisher<JSONValue?, Never> {
+        if let subject = flagSubjects[name] {
+            return subject.eraseToAnyPublisher()
+        }
+
+        let subject = CurrentValueSubject<JSONValue?, Never>(nil)
+        flagSubjects[name] = subject
+
+        guard isInitialized else {
+            return subject.eraseToAnyPublisher()
+        }
+
+        let subscriptionId = UUID().uuidString
+        flagSubscriptionIdsByName[name] = subscriptionId
+        flagNamesBySubscriptionId[subscriptionId] = name
+        bridgeCallSyncWhenInitialized(
+            method: "observeFlag",
+            args: "'\(NativePolyfills.escapeForJS(subscriptionId))', '\(NativePolyfills.escapeForJS(name))'"
+        )
+
+        return subject.eraseToAnyPublisher()
     }
 
     /// Get the current profile synchronously.
@@ -434,7 +570,7 @@ public final class OptimizationClient: ObservableObject {
         do {
             let state = try JSONDecoder().decode(PreviewState.self, from: data)
             let hasProfile = state.profile?.objectValue != nil
-            log.debug("[preview] getPreviewState: profile=\(hasProfile ? "present" : "nil"), canPersonalize=\(state.canPersonalize)")
+            log.debug("[preview] getPreviewState: profile=\(hasProfile ? "present" : "nil"), canOptimize=\(state.canOptimize)")
             return state
         } catch {
             log.warning("[preview] Failed to decode preview state: \(error.localizedDescription)")
@@ -451,18 +587,24 @@ public final class OptimizationClient: ObservableObject {
         networkMonitor?.stop()
         networkMonitor = nil
 
+        for subscriptionId in flagSubscriptionIdsByName.values {
+            bridge.callSync(method: "unobserveFlag", args: "'\(NativePolyfills.escapeForJS(subscriptionId))'")
+        }
+        clearFlagObservers()
         bridge.destroy()
         isInitialized = false
         state = .empty
         locale = nil
-        selectedPersonalizations = nil
+        selectedOptimizations = nil
+        optimizationPossible = false
+        experienceRequestState = ["status": "idle"]
     }
 
     // MARK: - Testing
 
     /// Test-only hook to observe bridge log messages (including JS exceptions).
     /// Not part of the public API contract.
-    public func testOnlySetLogHandler(_ handler: @escaping (String, String) -> Void) {
+    func testOnlySetLogHandler(_ handler: @escaping (String, String) -> Void) {
         bridge.onLog = { [weak self] level, msg in
             self?.log.debug("[js:\(level)] \(msg)")
             handler(level, msg)
@@ -472,7 +614,7 @@ public final class OptimizationClient: ObservableObject {
     /// Test-only: evaluate a JS script in the bridge context. Returns the string result.
     /// Not part of the public API contract.
     @discardableResult
-    public func testOnlyEvaluateScript(_ script: String) -> String? {
+    func testOnlyEvaluateScript(_ script: String) -> String? {
         bridge.context?.evaluateScript(script)?.toString()
     }
 
@@ -529,12 +671,15 @@ public final class OptimizationClient: ObservableObject {
         let consent = dict["consent"] as? Bool
         let persistenceConsent = dict["persistenceConsent"] as? Bool
         let locale = dict["locale"] as? String
-        let personalizations = Self.extractJSONArray(dict["selectedPersonalizations"])
+        let selectedOptimizations = Self.extractJSONArray(dict["selectedOptimizations"])
+        let optimizationPossible = dict["optimizationPossible"] as? Bool ?? false
+        let experienceRequestState =
+            Self.extractJSONValue(dict["experienceRequestState"]) ?? ["status": "idle"]
 
         if let profile = profile {
             log.info("[state] Profile updated with \(profile.keys.sorted().joined(separator: ", "))")
         } else {
-            log.debug("[state] State update received (profile=nil, consent=\(consent.map(String.init) ?? "nil"), canPersonalize=\(dict["canPersonalize"] as? Bool ?? false))")
+            log.debug("[state] State update received (profile=nil, consent=\(consent.map(String.init) ?? "nil"), canOptimize=\(dict["canOptimize"] as? Bool ?? false))")
         }
 
         self.locale = locale
@@ -542,8 +687,8 @@ public final class OptimizationClient: ObservableObject {
         if let changes = changes {
             log.debug("[state] Changes: \(changes.count) entries")
         }
-        if let personalizations = personalizations {
-            log.debug("[state] Personalizations: \(personalizations.count) entries")
+        if let selectedOptimizations {
+            log.debug("[state] Selected optimizations: \(selectedOptimizations.count) entries")
         }
 
         // Persist state to storage
@@ -552,21 +697,32 @@ public final class OptimizationClient: ObservableObject {
         if persistenceConsent == true {
             store.profile = profile
             store.changes = changes
-            store.personalizations = personalizations
+            store.selectedOptimizations = selectedOptimizations
             store.anonymousId = (profile?["id"] as? String) ?? store.anonymousId
         } else if persistenceConsent == false {
             store.clearProfileContinuity()
         }
 
-        self.selectedPersonalizations = personalizations
+        self.selectedOptimizations = selectedOptimizations
+        self.optimizationPossible = optimizationPossible
+        self.experienceRequestState = experienceRequestState
         state = OptimizationState(
             profile: profile,
             consent: consent,
             persistenceConsent: persistenceConsent,
-            canPersonalize: dict["canPersonalize"] as? Bool ?? false,
+            canOptimize: dict["canOptimize"] as? Bool ?? false,
+            optimizationPossible: optimizationPossible,
+            experienceRequestState: experienceRequestState,
             changes: changes,
+            selectedOptimizations: selectedOptimizations,
             locale: locale
         )
+    }
+
+    private func clearFlagObservers() {
+        flagSubjects.removeAll()
+        flagSubscriptionIdsByName.removeAll()
+        flagNamesBySubscriptionId.removeAll()
     }
 
     /// Extracts a JSON-compatible dictionary from a value that may be NSNull, nil, or a dict.
@@ -593,6 +749,18 @@ public final class OptimizationClient: ObservableObject {
             return dict
         } catch {
             DiagnosticLogger.shared.warning("[parse] JSON parse failed: \(error.localizedDescription) — input: \(json.prefix(200))")
+            return nil
+        }
+    }
+
+    private static func parseJSONValue(_ json: String) -> JSONValue? {
+        guard json != "undefined",
+              let data = json.data(using: .utf8)
+        else { return nil }
+        do {
+            return try JSONDecoder().decode(JSONValue.self, from: data)
+        } catch {
+            DiagnosticLogger.shared.warning("[parse] JSON value parse failed: \(error.localizedDescription) — input: \(json.prefix(200))")
             return nil
         }
     }

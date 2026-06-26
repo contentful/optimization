@@ -2,7 +2,7 @@ package com.contentful.optimization.bridge
 
 import java.util.concurrent.atomic.AtomicInteger
 
-class BridgeCallbackManager {
+internal class BridgeCallbackManager {
     private val nextId = AtomicInteger(1)
     private val callbacks = mutableMapOf<String, (String) -> Unit>()
 

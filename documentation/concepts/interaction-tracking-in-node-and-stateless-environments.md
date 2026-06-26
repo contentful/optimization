@@ -96,10 +96,10 @@ were pure data lookups.
 
 Tracking uses two API paths with different semantics:
 
-| Path           | Methods                                                                     | Purpose                                                        | Profile behavior                                                                        |
-| -------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Experience API | `page()`, `identify()`, `screen()`, `track()`, sticky `trackView()`         | Evaluates or updates a profile and returns `OptimizationData`. | Uses the profile ID bound with `forRequest()`. If absent, the API can create a profile. |
-| Insights API   | non-sticky `trackView()`, `trackClick()`, `trackHover()`, `trackFlagView()` | Sends fire-and-forget Analytics interaction events.            | Requires a request-bound profile because there is no ambient SDK state.                 |
+| Path           | Methods                                                                     | Purpose                                                                 | Profile behavior                                                                        |
+| -------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Experience API | `page()`, `identify()`, `screen()`, `track()`, sticky `trackView()`         | Evaluates or updates a profile and returns accepted/data event results. | Uses the profile ID bound with `forRequest()`. If absent, the API can create a profile. |
+| Insights API   | non-sticky `trackView()`, `trackClick()`, `trackHover()`, `trackFlagView()` | Sends fire-and-forget Analytics interaction events.                     | Requires a request-bound profile because there is no ambient SDK state.                 |
 
 Sticky entry views are the exception that touches both paths. In Node, `trackView({ sticky: true })`
 sends a view event through Experience first, then sends the paired Insights event using the profile
@@ -153,7 +153,7 @@ const requestOptimization = optimization.forRequest({
   profile: profileId ? { id: profileId } : undefined,
 })
 
-const pageResponse = await requestOptimization.page()
+const { accepted, data: pageResponse } = await requestOptimization.page()
 ```
 
 Use server-side `track()` for server-known business events:

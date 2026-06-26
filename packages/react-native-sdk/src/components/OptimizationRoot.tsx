@@ -5,8 +5,6 @@ import {
   type TrackEntryInteractionOptions,
 } from '../context/InteractionTrackingContext'
 import { LiveUpdatesProvider } from '../context/LiveUpdatesContext'
-import type { PreviewPanelConfig } from '../preview'
-import { PreviewPanelOverlay } from '../preview/components/PreviewPanelOverlay'
 import type { OnStatesReady } from './OptimizationProvider'
 import { OptimizationProvider } from './OptimizationProvider'
 
@@ -18,12 +16,6 @@ import { OptimizationProvider } from './OptimizationProvider'
  * @public
  */
 export interface OptimizationRootProps extends CoreStatefulConfig {
-  /**
-   * Optional configuration for the preview panel.
-   * When provided with `enabled: true`, the preview panel will be available.
-   */
-  previewPanel?: PreviewPanelConfig
-
   /**
    * Whether {@link OptimizedEntry} components react to state changes in real time.
    *
@@ -73,7 +65,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
 
 /**
  * Recommended top-level wrapper that combines {@link OptimizationProvider} with optional
- * preview panel, live updates, and interaction tracking support.
+ * live updates and interaction tracking support.
  *
  * Handles SDK initialization internally — pass config properties directly as props.
  *
@@ -95,21 +87,6 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
  *   <App />
  * </OptimizationRoot>
  * ```
- * @example With preview panel
- * ```tsx
- * <OptimizationRoot
- *   clientId="your-client-id"
- *   environment="main"
- *   previewPanel={{
- *     enabled: __DEV__,
- *     contentfulClient,
- *     fabPosition: { bottom: 50, right: 20 },
- *   }}
- * >
- *   <App />
- * </OptimizationRoot>
- * ```
- *
  * @example With global live updates
  * ```tsx
  * <OptimizationRoot clientId="your-client-id" environment="main" liveUpdates={true}>
@@ -123,31 +100,17 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
  * @public
  */
 export function OptimizationRoot({
-  previewPanel,
   liveUpdates = false,
   trackEntryInteraction,
   onStatesReady,
   children,
   ...config
 }: OptimizationRootProps): React.JSX.Element {
-  const content = previewPanel?.enabled ? (
-    <PreviewPanelOverlay
-      contentfulClient={previewPanel.contentfulClient}
-      fabPosition={previewPanel.fabPosition}
-      onVisibilityChange={previewPanel.onVisibilityChange}
-      showHeader={previewPanel.showHeader}
-    >
-      {children}
-    </PreviewPanelOverlay>
-  ) : (
-    <>{children}</>
-  )
-
   return (
     <OptimizationProvider {...config} onStatesReady={onStatesReady}>
       <LiveUpdatesProvider globalLiveUpdates={liveUpdates}>
         <InteractionTrackingProvider trackEntryInteraction={trackEntryInteraction}>
-          {content}
+          {children}
         </InteractionTrackingProvider>
       </LiveUpdatesProvider>
     </OptimizationProvider>

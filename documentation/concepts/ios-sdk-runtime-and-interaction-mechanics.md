@@ -13,7 +13,7 @@ For step-by-step setup, see
 and
 [Integrating the Optimization iOS SDK in a UIKit app](../guides/integrating-the-optimization-ios-sdk-in-a-uikit-app.md).
 For the full Contentful entry contract, see
-[Entry personalization and variant resolution](./entry-personalization-and-variant-resolution.md).
+[Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md).
 
 <details>
   <summary>Table of Contents</summary>
@@ -24,7 +24,7 @@ For the full Contentful entry contract, see
 - [Configuration and locale handoff](#configuration-and-locale-handoff)
 - [State and persistence](#state-and-persistence)
 - [Consent and event gates](#consent-and-event-gates)
-- [Entry personalization boundary](#entry-personalization-boundary)
+- [Entry optimization boundary](#entry-optimization-boundary)
 - [Tracking mechanics](#tracking-mechanics)
 - [Live updates and preview behavior](#live-updates-and-preview-behavior)
 - [Offline and app lifecycle delivery](#offline-and-app-lifecycle-delivery)
@@ -40,12 +40,12 @@ such as persistence, networking, lifecycle handling, SwiftUI helpers, UIKit prev
 presentation, and app-facing public APIs.
 
 Shared optimization behavior runs inside a local JavaScriptCore context. That bridge lets the iOS
-SDK use the same personalization, profile, consent, and event-delivery behavior as the JavaScript
-SDKs while exposing a Swift API to the application.
+SDK use the same optimization, profile, consent, and event-delivery behavior as the JavaScript SDKs
+while exposing a Swift API to the application.
 
 Applications do not call the JavaScript layer directly. The public boundary is Swift:
 
-- `OptimizationClient` is the main facade for initialization, state, personalization, tracking, and
+- `OptimizationClient` is the main facade for initialization, state, optimization, tracking, and
   preview controls.
 - `OptimizationRoot`, `OptimizedEntry`, `OptimizationScrollView`, and `.trackScreen(name:)` provide
   SwiftUI integration helpers.
@@ -80,19 +80,19 @@ Every iOS integration builds an `OptimizationConfig`:
 ```swift
 OptimizationConfig(
     clientId: "your-client-id",
-    environment: "master",
+    environment: "main",
     locale: "en-US",
-    debug: true
+    logLevel: .debug
 )
 ```
 
-Only `clientId` is required. `environment` defaults to `"master"`. Base URL overrides belong only in
+Only `clientId` is required. `environment` defaults to `"main"`. Base URL overrides belong only in
 integrations that need non-default Experience API or Insights API endpoints.
 
 Use top-level `locale` for the SDK Experience/event locale. When the application renders localized
 Contentful entries, choose an app-owned Contentful locale and pass it to the app's Contentful
-Delivery API request before entries are passed to `OptimizedEntry` or `personalizeEntry(...)`. For
-the full locale model, see
+Delivery API request before entries are passed to `OptimizedEntry` or `resolveOptimizedEntry(...)`.
+For the full locale model, see
 [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
 ## State and persistence
@@ -100,24 +100,31 @@ the full locale model, see
 `OptimizationClient` is an `ObservableObject`. It publishes runtime state that SwiftUI and UIKit
 code can observe:
 
-| Surface                    | Description                                                                   |
-| -------------------------- | ----------------------------------------------------------------------------- |
-| `state`                    | Snapshot of profile, consent, personalization readiness, and pending changes. |
-| `isInitialized`            | `true` after initialization completes.                                        |
-| `selectedPersonalizations` | The personalizations the visitor qualifies for.                               |
-| `isPreviewPanelOpen`       | `true` while the in-app preview panel is visible.                             |
-| `eventPublisher`           | Raw event stream for debug surfaces and tests.                                |
+| Surface                  | Description                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| `state`                  | Snapshot of profile, consent, optimization readiness, and pending changes.     |
+| `isInitialized`          | `true` after initialization completes.                                         |
+| `selectedOptimizations`  | The selected optimization variants for the visitor.                            |
+| `optimizationPossible`   | Whether the current consent and allow-list configuration can produce variants. |
+| `experienceRequestState` | Outcome of the most recent Experience API request.                             |
+| `isPreviewPanelOpen`     | `true` while the in-app preview panel is visible.                              |
+| `eventStream`            | Raw event stream for debug surfaces and tests.                                 |
+| `blockedEventStream`     | Events blocked by consent or SDK guard logic.                                  |
 
 SwiftUI code reads these values through `@EnvironmentObject`. UIKit code can subscribe through
-Combine publishers such as `client.$state` and `client.$selectedPersonalizations`.
+Combine publishers such as `client.$state` and `client.$selectedOptimizations`.
+
+Custom Flags use the same Core-backed model as the Web SDKs: `client.getFlag(_:)` returns the
+current JSON value, and `client.flagPublisher(_:)` returns an `AnyPublisher<JSONValue?, Never>` that
+updates on distinct value changes while emitting flag-view events for delivered values.
 
 The SDK persists state with `UserDefaults`. `StorageDefaults` can seed values such as consent,
-profile-continuity persistence consent, profile, selected changes, and personalizations on first
-launch. Seeds are applied only when no persisted value exists, so an existing user choice is not
-overwritten.
+profile-continuity persistence consent, profile, selected changes, and selected optimizations on
+first launch. Seeds are applied only when no persisted value exists, so an existing user choice is
+not overwritten.
 
 When durable profile-continuity persistence is allowed, the client writes profile-continuity values
-to `UserDefaults` before publishing the corresponding state snapshot and selected personalizations.
+to `UserDefaults` before publishing the corresponding state snapshot and selected optimizations.
 Application code and XCUITest flows can wait for SDK-derived state rather than adding storage-timing
 delays before relaunching.
 
@@ -147,45 +154,47 @@ profile-continuity persistence consent. Withdrawing consent purges SDK queues an
 durable profile-continuity storage while leaving active in-memory state available until the app
 resets or tears down the client.
 
-## Entry personalization boundary
+## Entry optimization boundary
 
-Entry personalization is a local, synchronous decision once the app has both Contentful entry data
-and selected personalizations.
+Entry optimization is a local, synchronous decision once the app has both Contentful entry data and
+selected optimizations.
 
 The application provides:
 
 - A single-locale Contentful entry dictionary.
 - Linked optimization references and variant entries in the Contentful payload.
-- The current `selectedPersonalizations` value from the client, when resolving directly.
+- The current `selectedOptimizations` value from the client, when resolving directly.
 
 The SDK returns either the baseline entry or the resolved variant entry:
 
 ```swift
-let result = client.personalizeEntry(
+let result = client.resolveOptimizedEntry(
     baseline: entry,
-    personalizations: client.selectedPersonalizations
+    selectedOptimizations: client.selectedOptimizations
 )
 
 let resolvedEntry = result.entry
-let personalization = result.personalization
+let selectedOptimization = result.selectedOptimization
 ```
 
-`personalizeEntry` does not fetch Contentful entries, evaluate audiences, call the Experience API,
-or mutate state. SwiftUI `OptimizedEntry` wraps the same boundary and adds component-level behavior
-such as variant locking, live updates, and interaction tracking.
+`resolveOptimizedEntry` does not fetch Contentful entries, evaluate audiences, call the Experience
+API, or mutate state. SwiftUI `OptimizedEntry` wraps the same boundary and adds component-level
+behavior such as variant locking, live updates, and interaction tracking.
 
 For the full data model and fallback behavior, see
-[Entry personalization and variant resolution](./entry-personalization-and-variant-resolution.md).
+[Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md).
 
 ## Tracking mechanics
 
-The iOS SDK emits mobile screen events and Contentful entry interaction events:
+The iOS SDK emits mobile screen events, custom business events, and Contentful entry interaction
+events:
 
-| Event type | SwiftUI path                   | UIKit path                      |
-| ---------- | ------------------------------ | ------------------------------- |
-| Screen     | `.trackScreen(name:)`          | `client.screen(name:)`          |
-| Entry view | `OptimizedEntry` view tracking | App-computed `TrackViewPayload` |
-| Entry tap  | `OptimizedEntry` tap tracking  | App-emitted `TrackClickPayload` |
+| Event type | SwiftUI path                   | UIKit path                        |
+| ---------- | ------------------------------ | --------------------------------- |
+| Screen     | `.trackScreen(name:)`          | `client.screen(name:)`            |
+| Event      | App-owned event handlers       | `client.track(event:properties:)` |
+| Entry view | `OptimizedEntry` view tracking | App-computed `TrackViewPayload`   |
+| Entry tap  | `OptimizedEntry` tap tracking  | App-emitted `TrackClickPayload`   |
 
 SwiftUI entry view tracking uses these defaults:
 
@@ -193,12 +202,13 @@ SwiftUI entry view tracking uses these defaults:
 - Periodic duration updates every 5 seconds while the entry remains visible.
 - Final duration update when the entry leaves view after a view event has already fired.
 
-`OptimizedEntry` can tune the visibility threshold, initial time, and update interval per entry.
-Wrap scrollable content in `OptimizationScrollView` when view timing needs an accurate viewport.
+`OptimizedEntry` can tune `minVisibleRatio`, `dwellTimeMs`, and `viewDurationUpdateIntervalMs` per
+entry. Wrap scrollable content in `OptimizationScrollView` when view timing needs an accurate
+viewport.
 
 UIKit does not have automatic component visibility tracking. UIKit apps compute visibility and
 duration through their own table, collection, or view-controller callbacks, then emit
-`TrackViewPayload` and `TrackClickPayload` directly.
+`client.track(event:properties:)`, `TrackViewPayload`, and `TrackClickPayload` directly.
 
 ## Live updates and preview behavior
 
@@ -220,8 +230,8 @@ When the preview panel is open, all SwiftUI `OptimizedEntry` components update l
 variant overrides apply immediately. When the panel closes, SwiftUI components keep the previewed
 variant as the locked value.
 
-UIKit apps choose their own live-update policy. Redraw views when `client.selectedPersonalizations`
-changes for live behavior, or keep a selected-personalizations snapshot for locked behavior. Use
+UIKit apps choose their own live-update policy. Redraw views when `client.selectedOptimizations`
+changes for live behavior, or keep a selected-optimizations snapshot for locked behavior. Use
 `client.isPreviewPanelOpen` when the app needs to redraw in live mode only while previewing.
 
 ## Offline and app lifecycle delivery

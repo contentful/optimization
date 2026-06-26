@@ -27,7 +27,7 @@ to own the browser SDK integration without React abstractions.
   - [Revoking consent](#revoking-consent)
   - [Optional consent policy controls](#optional-consent-policy-controls)
   - [Consent-gated rendering](#consent-gated-rendering)
-- [3. Personalize entries with OptimizedEntry](#3-personalize-entries-with-optimizedentry)
+- [3. Optimize entries with OptimizedEntry](#3-optimize-entries-with-optimizedentry)
   - [Basic usage](#basic-usage)
   - [Loading fallback](#loading-fallback)
   - [Direct ReactNode children](#direct-reactnode-children)
@@ -82,7 +82,7 @@ In practice, most React integrations follow this high-level sequence:
 2. Read the SDK through hooks such as `useOptimization()` or `useOptimizationContext()`.
 3. Apply the application's consent policy: seed `defaults={{ consent: true }}` for default-on
    integrations, or call `consent(true | false)` from a consent UI or CMP callback.
-4. Render personalized entries with `OptimizedEntry` or `useOptimizedEntry`.
+4. Render optimized entries with `OptimizedEntry` or `useOptimizedEntry`.
 5. Enable automatic or manual entry interaction tracking where needed.
 6. Add a router adapter so `page()` events follow client-side navigation.
 
@@ -400,7 +400,7 @@ function PersonalizedSection({ entry }) {
 }
 ```
 
-## 3. Personalize entries with OptimizedEntry
+## 3. Optimize entries with OptimizedEntry
 
 `OptimizedEntry` resolves a baseline Contentful entry to an optimized variant using the current
 optimization state and renders the result.
@@ -442,7 +442,7 @@ Experience API responses and event context should match the rendered content. `c
 `withAllLocales` and raw CDA `locale=*` return locale-keyed fields; the SDK resolver works with the
 standard single-locale CDA entry shape where `fields.nt_experiences` and `fields.nt_variants` are
 direct field values. See
-[Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
+[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md)
 for the broader locale model.
@@ -463,7 +463,7 @@ When `loadingFallback` is provided, it renders while optimization state is unres
 ```tsx
 <OptimizedEntry
   baselineEntry={baselineEntry}
-  loadingFallback={() => <Skeleton label="Loading personalized content" />}
+  loadingFallback={() => <Skeleton label="Loading optimized content" />}
 >
   {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
 </OptimizedEntry>
@@ -648,6 +648,9 @@ Available interaction tracking methods:
 | `clearElement(interaction, element)`         | Remove a manual override; fall back to automatic |
 
 Supported `interaction` values: `'views'`, `'clicks'`, `'hovers'`.
+
+For direct event emission from custom interaction logic, `useOptimization()` also exposes
+`trackView()`, `trackClick()`, and `trackHover()` on the SDK instance.
 
 ## 5. Emit page events with supported router adapters
 

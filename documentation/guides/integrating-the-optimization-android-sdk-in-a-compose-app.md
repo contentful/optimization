@@ -1,7 +1,7 @@
 # Integrating the Optimization Android SDK in a Jetpack Compose app
 
-Use this guide when you want to add Personalization, Analytics, screen tracking, and preview
-overrides to a native Android application built with Jetpack Compose.
+Use this guide when you want to add Optimization, Analytics, screen tracking, and preview overrides
+to a native Android application built with Jetpack Compose.
 
 For shared runtime behavior, consent gates, tracking thresholds, live-update precedence, and offline
 delivery, see
@@ -18,7 +18,7 @@ Use the XML Views guide instead if your app is View-based:
 - [1. Add the package and create the config](#1-add-the-package-and-create-the-config)
 - [2. Initialize with OptimizationRoot](#2-initialize-with-optimizationroot)
 - [3. Handle consent](#3-handle-consent)
-- [4. Personalize entries with OptimizedEntry](#4-personalize-entries-with-optimizedentry)
+- [4. Optimize entries with OptimizedEntry](#4-optimize-entries-with-optimizedentry)
   - [Fetch entries in the expected shape](#fetch-entries-in-the-expected-shape)
   - [Render resolved entries](#render-resolved-entries)
   - [Use OptimizationLazyColumn for scrollable content](#use-optimizationlazycolumn-for-scrollable-content)
@@ -40,7 +40,7 @@ The Compose integration uses the SDK's Compose-native API surface:
 
 - `OptimizationRoot` initializes `OptimizationClient`, provides it through Compose locals, and
   defines global tracking and live-update defaults.
-- `OptimizedEntry` resolves a personalized Contentful entry and can attach view and tap tracking.
+- `OptimizedEntry` resolves an optimized Contentful entry and can attach view and tap tracking.
 - `OptimizationLazyColumn` provides viewport context for view tracking inside lazy lists.
 - `ScreenTrackingEffect` emits screen events from a composable screen.
 - `PreviewPanelConfig` enables a developer-only preview panel entry point.
@@ -90,9 +90,9 @@ val appLocale = "en-US"
 
 val optimizationConfig = OptimizationConfig(
     clientId = "your-client-id",
-    environment = "master",
+    environment = "main",
     locale = appLocale,
-    debug = BuildConfig.DEBUG,
+    logLevel = if (BuildConfig.DEBUG) OptimizationLogLevel.debug else OptimizationLogLevel.error,
 )
 ```
 
@@ -131,17 +131,31 @@ fun AccountControls() {
     val client = LocalOptimizationClient.current
     val scope = rememberCoroutineScope()
 
-    Button(
-        onClick = {
-            scope.launch {
-                client.identify(
-                    userId = "user-123",
-                    traits = mapOf("plan" to "pro"),
-                )
-            }
-        },
-    ) {
-        Text("Identify")
+    Column {
+        Button(
+            onClick = {
+                scope.launch {
+                    client.identify(
+                        userId = "user-123",
+                        traits = mapOf("plan" to "pro"),
+                    )
+                }
+            },
+        ) {
+            Text("Identify")
+        }
+        Button(
+            onClick = {
+                scope.launch {
+                    client.track(
+                        event = "Purchase Completed",
+                        properties = mapOf("sku" to "sku-1"),
+                    )
+                }
+            },
+        ) {
+            Text("Track purchase")
+        }
     }
 }
 ```
@@ -208,11 +222,11 @@ of adding sleeps before relaunching or terminating the app in tests.
 Use `client.consent(events = true, persistence = false)` when events are allowed but durable profile
 continuity must stay session-only.
 
-## 4. Personalize entries with OptimizedEntry
+## 4. Optimize entries with OptimizedEntry
 
 `OptimizedEntry` is the Compose component for rendering Contentful entries through the Optimization
-resolver. It passes non-personalized entries through unchanged, resolves personalized entries
-against the selected variants for the visitor, and can attach view and tap tracking.
+resolver. It passes non-optimized entries through unchanged, resolves optimized entries against the
+selected variants for the visitor, and can attach view and tap tracking.
 
 ### Fetch entries in the expected shape
 
@@ -238,7 +252,7 @@ fun HomeScreen(contentfulClient: ContentfulDeliveryClient) {
 
 The resolver expects the same single-locale CDA entry contract used by the other SDK runtimes. For
 details, see
-[Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
+[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
 
 ### Render resolved entries
 
@@ -248,7 +262,7 @@ fun HeroSection(entry: Map<String, Any>) {
     OptimizedEntry(
         entry = entry,
         trackTaps = true,
-        accessibilityIdentifier = "home-hero-personalization",
+        accessibilityIdentifier = "home-hero-optimization",
     ) { resolvedEntry ->
         HeroCard(entry = resolvedEntry)
     }

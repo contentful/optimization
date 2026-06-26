@@ -1,6 +1,6 @@
 import { type APIRequestContext, type Page, expect, test } from '@playwright/test'
 
-export type E2EFlag = 'CSR' | 'SSR' | 'HYDRATION'
+export type E2EFlag = 'CSR' | 'SSR' | 'HYDRATION' | 'SKIP_NO_JS'
 
 const E2E_FLAGS = new Set(
   (process.env.E2E_FLAGS ?? 'CSR')

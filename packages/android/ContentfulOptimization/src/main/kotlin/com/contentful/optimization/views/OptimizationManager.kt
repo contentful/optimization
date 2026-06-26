@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicReference
  * [com.contentful.optimization.preview.PreviewPanelActivity], extended to cover the whole SDK
  * rather than just the preview panel.
  */
-object OptimizationManager {
+public object OptimizationManager {
 
     private val clientRef = AtomicReference<OptimizationClient?>(null)
     private val previewClientRef = AtomicReference<PreviewContentfulClient?>(null)

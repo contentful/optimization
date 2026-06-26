@@ -1,3 +1,9 @@
+import {
+  getRemainingMsUntilNextEntryViewFire,
+  resolveEntryViewTimingOptions,
+  shouldRememberStickyEntryViewResult,
+  shouldSendStickyEntryView,
+} from '@contentful/optimization-core'
 import type { SelectedOptimization } from '@contentful/optimization-core/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import type { Entry } from 'contentful'
@@ -24,6 +30,11 @@ export interface UseViewportTrackingOptions {
    * Selected optimization data for variant tracking. Omit for baseline/non-optimized entries.
    */
   selectedOptimization?: SelectedOptimization
+
+  /**
+   * Opaque runtime-owned optimization context ID for event-stream enrichment.
+   */
+  optimizationContextId?: string
 
   /**
    * Minimum visibility ratio (0.0 - 1.0) required to consider the entry visible.
@@ -94,6 +105,12 @@ interface ViewCycleState {
   attempts: number
 }
 
+interface StickyState {
+  accepted: boolean
+  inFlight: boolean
+  generation: number
+}
+
 const createInitialCycleState = (): ViewCycleState => ({
   viewId: null,
   visibleSince: null,
@@ -143,9 +160,11 @@ function resetCycleState(cycle: ViewCycleState): void {
 export function extractTrackingMetadata(
   resolvedEntry: Entry,
   selectedOptimization?: SelectedOptimization,
+  optimizationContextId?: string,
 ): {
   componentId: string
   experienceId?: string
+  optimizationContextId?: string
   variantIndex: number
   sticky?: boolean
 } {
@@ -157,6 +176,7 @@ export function extractTrackingMetadata(
     return {
       componentId: componentId ?? resolvedEntry.sys.id,
       experienceId: selectedOptimization.experienceId,
+      optimizationContextId,
       variantIndex: selectedOptimization.variantIndex,
       sticky: selectedOptimization.sticky,
     }
@@ -165,6 +185,7 @@ export function extractTrackingMetadata(
   return {
     componentId: resolvedEntry.sys.id,
     experienceId: undefined,
+    optimizationContextId,
     variantIndex: 0,
     sticky: undefined,
   }
@@ -183,8 +204,12 @@ function getRemainingMsUntilNextFire(
   dwellTimeMs: number,
   updateIntervalMs: number,
 ): number {
-  const requiredMs = dwellTimeMs + cycle.attempts * updateIntervalMs
-  return requiredMs - cycle.accumulatedMs
+  return getRemainingMsUntilNextEntryViewFire({
+    dwellTimeMs,
+    viewDurationUpdateIntervalMs: updateIntervalMs,
+    attempts: cycle.attempts,
+    accumulatedMs: cycle.accumulatedMs,
+  })
 }
 
 /**
@@ -230,12 +255,21 @@ function getRemainingMsUntilNextFire(
  */
 export function useViewportTracking({
   entry,
+  optimizationContextId,
   selectedOptimization,
-  minVisibleRatio = DEFAULT_MIN_VISIBLE_RATIO,
-  dwellTimeMs = DEFAULT_DWELL_TIME_MS,
+  minVisibleRatio,
+  dwellTimeMs,
   enabled = true,
-  viewDurationUpdateIntervalMs = DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS,
+  viewDurationUpdateIntervalMs,
 }: UseViewportTrackingOptions): UseViewportTrackingReturn {
+  const timing = resolveEntryViewTimingOptions(
+    { dwellTimeMs, minVisibleRatio, viewDurationUpdateIntervalMs },
+    {
+      dwellTimeMs: DEFAULT_DWELL_TIME_MS,
+      minVisibleRatio: DEFAULT_MIN_VISIBLE_RATIO,
+      viewDurationUpdateIntervalMs: DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS,
+    },
+  )
   const contentfulOptimization = useOptimization()
   const consent = useOptimizationConsentState(contentfulOptimization)
   const viewTrackingAllowed = contentfulOptimization.hasConsent('trackView')
@@ -272,13 +306,20 @@ export function useViewportTracking({
   entryRef.current = entry
   const selectedOptimizationRef = useRef(selectedOptimization)
   selectedOptimizationRef.current = selectedOptimization
+  const optimizationContextIdRef = useRef(optimizationContextId)
+  optimizationContextIdRef.current = optimizationContextId
 
-  const stickySuccessRef = useRef(false)
-  const stickyInFlightRef = useRef(false)
+  const stickyStateRef = useRef<StickyState>({
+    accepted: false,
+    inFlight: false,
+    generation: 0,
+  })
 
   useEffect(() => {
-    stickySuccessRef.current = false
-    stickyInFlightRef.current = false
+    const { current: stickyState } = stickyStateRef
+    stickyState.accepted = false
+    stickyState.inFlight = false
+    stickyState.generation += 1
   }, [entry, selectedOptimization])
 
   logger.debug(`Hook initialized for ${entryId}`)
@@ -306,10 +347,12 @@ export function useViewportTracking({
 
     const viewId = cycle.viewId ?? createViewId()
     const durationMs = Math.max(0, Math.round(cycle.accumulatedMs))
-    const { componentId, experienceId, variantIndex, sticky } = extractTrackingMetadata(
-      entryRef.current,
-      selectedOptimizationRef.current,
-    )
+    const { componentId, experienceId, optimizationContextId, variantIndex, sticky } =
+      extractTrackingMetadata(
+        entryRef.current,
+        selectedOptimizationRef.current,
+        optimizationContextIdRef.current,
+      )
 
     cycle.attempts += 1
 
@@ -317,32 +360,40 @@ export function useViewportTracking({
       `Emitting view event #${cycle.attempts} for ${componentId} (viewDurationMs=${durationMs}, viewId=${viewId})`,
     )
 
-    const shouldSendSticky =
-      sticky === true && !stickySuccessRef.current && !stickyInFlightRef.current
+    const { current: stickyState } = stickyStateRef
+    const { generation: stickyGeneration } = stickyState
+    const shouldSendSticky = shouldSendStickyEntryView(
+      sticky,
+      stickyState.accepted || stickyState.inFlight,
+    )
 
-    if (shouldSendSticky) {
-      stickyInFlightRef.current = true
-    }
+    if (shouldSendSticky) stickyState.inFlight = true
 
     void (async () => {
       try {
-        const data = await optimizationRef.current.trackView({
+        const result = await optimizationRef.current.trackView({
           componentId,
           viewId,
           experienceId,
+          ...(optimizationContextId === undefined ? {} : { optimizationContextId }),
           variantIndex,
           viewDurationMs: durationMs,
           sticky: shouldSendSticky ? true : undefined,
         })
 
-        if (shouldSendSticky && data !== undefined) {
-          stickySuccessRef.current = true
+        if (stickyStateRef.current.generation !== stickyGeneration) return
+
+        if (
+          shouldSendSticky &&
+          shouldRememberStickyEntryViewResult(shouldSendSticky, result.accepted)
+        ) {
+          stickyStateRef.current.accepted = true
         }
       } catch (error) {
         logger.error(`Failed to emit view event for ${componentId} (viewId=${viewId})`, error)
       } finally {
-        if (shouldSendSticky) {
-          stickyInFlightRef.current = false
+        if (stickyStateRef.current.generation === stickyGeneration && shouldSendSticky) {
+          stickyStateRef.current.inFlight = false
         }
       }
     })()
@@ -361,8 +412,8 @@ export function useViewportTracking({
 
     const remainingMs = getRemainingMsUntilNextFire(
       cycle,
-      dwellTimeMs,
-      viewDurationUpdateIntervalMs,
+      timing.dwellTimeMs,
+      timing.viewDurationUpdateIntervalMs,
     )
 
     if (remainingMs <= 0) {
@@ -382,7 +433,7 @@ export function useViewportTracking({
       emitViewEvent()
       scheduleNextFire()
     }, remainingMs)
-  }, [clearFireTimer, dwellTimeMs, emitViewEvent, viewDurationUpdateIntervalMs])
+  }, [clearFireTimer, timing.dwellTimeMs, emitViewEvent, timing.viewDurationUpdateIntervalMs])
 
   const onVisibilityStart = useCallback(() => {
     if (!enabled || !viewTrackingAllowedRef.current) return
@@ -462,10 +513,10 @@ export function useViewportTracking({
       `${entryId} visibility check ${contextType}:
   Element: y=${elementY.toFixed(0)}, bottom=${elementBottom.toFixed(0)}
   Viewport: scrollY=${scrollY.toFixed(0)}, height=${viewportHeight.toFixed(0)}, top=${viewportTop.toFixed(0)}, bottom=${viewportBottom.toFixed(0)}
-  Visible: height=${visibleHeight.toFixed(0)}, ratio=${visibilityRatio.toFixed(2)}, minVisibleRatio=${minVisibleRatio}`,
+  Visible: height=${visibleHeight.toFixed(0)}, ratio=${visibilityRatio.toFixed(2)}, minVisibleRatio=${timing.minVisibleRatio}`,
     )
 
-    const isNowVisible = viewTrackingAllowedRef.current && visibilityRatio >= minVisibleRatio
+    const isNowVisible = viewTrackingAllowedRef.current && visibilityRatio >= timing.minVisibleRatio
     const { current: wasVisible } = isVisibleRef
     isVisibleRef.current = isNowVisible
 
@@ -489,7 +540,7 @@ export function useViewportTracking({
   }, [
     canCheckVisibility,
     entryId,
-    minVisibleRatio,
+    timing.minVisibleRatio,
     scrollY,
     viewportHeight,
     onVisibilityStart,

@@ -250,7 +250,7 @@ optimization.consent(true)
 
 optimization.consent({ events: true, persistence: false })
 
-const data = await optimization.page({
+const { accepted, data } = await optimization.page({
   properties: { path: window.location.pathname },
 })
 ```
@@ -259,8 +259,11 @@ The startup default and boolean consent calls grant or withdraw both event emiss
 profile continuity by default. Object-form consent lets events emit while keeping profile, selected
 optimizations, changes, and the anonymous ID session-only until persistence consent is granted.
 
-`page()`, `identify()`, `screen()`, `track()`, and sticky `trackView()` calls can return
-optimization data containing `profile`, `selectedOptimizations`, and `changes`.
+`page()`, `identify()`, `screen()`, `track()`, and sticky `trackView()` calls return an event
+result. `{ accepted: false }` means consent or SDK guards blocked the event.
+`{ accepted: true, data }` means the SDK accepted the event; accepted queued or offline events may
+not have data yet. Router integrations that need current-route deduplication can call
+`trackCurrentPage()`. Direct manual `page()` calls remain non-deduping event emits.
 
 ### Content resolution
 
@@ -268,10 +271,12 @@ Fetch Contentful entries in your application layer, then use the SDK to resolve 
 variant:
 
 ```ts
-const optimizationData = await optimization.page({ properties: { path: location.pathname } })
+const { accepted, data: optimizationData } = await optimization.page({
+  properties: { path: location.pathname },
+})
 const resolvedEntry = optimization.resolveOptimizedEntry(
   baselineEntry,
-  optimizationData?.selectedOptimizations,
+  accepted ? optimizationData?.selectedOptimizations : undefined,
 )
 ```
 

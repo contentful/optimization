@@ -20,16 +20,18 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import org.json.JSONTokener
+import java.util.UUID
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-internal data class EventEmissionResult(
+public data class EventEmissionResult(
     val accepted: Boolean,
     val data: Map<String, Any>?,
 )
 
-class OptimizationClient(private val applicationContext: Context) {
+public class OptimizationClient(private val applicationContext: Context) {
 
     private val _state = MutableStateFlow(OptimizationState.EMPTY)
     val state: StateFlow<OptimizationState> = _state.asStateFlow()
@@ -40,8 +42,14 @@ class OptimizationClient(private val applicationContext: Context) {
     var locale: String? = null
         private set
 
-    private val _selectedPersonalizations = MutableStateFlow<List<Map<String, Any>>?>(null)
-    val selectedPersonalizations: StateFlow<List<Map<String, Any>>?> = _selectedPersonalizations.asStateFlow()
+    private val _selectedOptimizations = MutableStateFlow<List<Map<String, Any>>?>(null)
+    val selectedOptimizations: StateFlow<List<Map<String, Any>>?> = _selectedOptimizations.asStateFlow()
+
+    private val _optimizationPossible = MutableStateFlow(false)
+    val optimizationPossible: StateFlow<Boolean> = _optimizationPossible.asStateFlow()
+
+    private val _experienceRequestState = MutableStateFlow<Map<String, Any>>(mapOf("status" to "idle"))
+    val experienceRequestState: StateFlow<Map<String, Any>> = _experienceRequestState.asStateFlow()
 
     private val _isPreviewPanelOpen = MutableStateFlow(false)
     val isPreviewPanelOpen: StateFlow<Boolean> = _isPreviewPanelOpen.asStateFlow()
@@ -49,16 +57,20 @@ class OptimizationClient(private val applicationContext: Context) {
     private val _previewState = MutableStateFlow<PreviewState?>(null)
     val previewState: StateFlow<PreviewState?> = _previewState.asStateFlow()
 
-    // `replay` lets a UI collector that subscribes slightly after startup still
-    // receive the one-shot flag-view event emitted synchronously by subscribeToFlag.
-    private val _events = MutableSharedFlow<Map<String, Any>>(replay = 64, extraBufferCapacity = 64)
-    val events: SharedFlow<Map<String, Any>> = _events.asSharedFlow()
+    private val _eventStream = MutableSharedFlow<Map<String, Any>>(replay = 64, extraBufferCapacity = 64)
+    val eventStream: SharedFlow<Map<String, Any>> = _eventStream.asSharedFlow()
+
+    private val _blockedEventStream = MutableSharedFlow<BlockedEvent>(replay = 64, extraBufferCapacity = 64)
+    val blockedEventStream: SharedFlow<BlockedEvent> = _blockedEventStream.asSharedFlow()
 
     private val bridge = QuickJsContextManager()
     private val store = SharedPreferencesStore(applicationContext)
     private var appLifecycleHandler: AppLifecycleHandler? = null
     private var networkMonitor: NetworkMonitor? = null
     private val log = DiagnosticLogger
+    private val flagFlows = mutableMapOf<String, MutableStateFlow<JSONValue?>>()
+    private val flagSubscriptionIdsByName = mutableMapOf<String, String>()
+    private val flagNamesBySubscriptionId = mutableMapOf<String, String>()
 
     init {
         bridge.onStateChange = { dict -> handleStateUpdate(dict) }
@@ -66,7 +78,13 @@ class OptimizationClient(private val applicationContext: Context) {
             if (dict["type"] == "component") {
                 Log.i("EventTrace", "bridge.onEvent component cid=${dict["componentId"]}")
             }
-            _events.tryEmit(dict)
+            _eventStream.tryEmit(dict)
+        }
+        bridge.onFlagValueChanged = { subscriptionId, value ->
+            val name = flagNamesBySubscriptionId[subscriptionId]
+            if (name != null) {
+                flagFlows[name]?.value = value
+            }
         }
         bridge.onOverridesChanged = { state -> _previewState.value = state }
     }
@@ -74,38 +92,53 @@ class OptimizationClient(private val applicationContext: Context) {
     // MARK: - Public API
 
     suspend fun initialize(config: OptimizationConfig) {
-        log.setEnabled(config.debug)
+        log.setLevel(config.logLevel)
         log.info { "[init] Starting SDK initialization (clientId=${config.clientId}, env=${config.environment})" }
 
         store.loadConsentState()
+        clearFlagObservers()
         val sdkLocale = config.normalizedLocale()
-        val configuredDefaultConsent = config.defaults?.consent
+        val persistedConsentDefaults = StorageDefaults(
+            consent = store.consent,
+            persistenceConsent = store.persistenceConsent,
+        )
+        val initialDefaults = resolveStatefulDefaults(config.defaults, persistedConsentDefaults)
         var storedAnonymousId: String? = null
-        val mergedConfig = config.copy(
-            defaults = (config.defaults ?: StorageDefaults()).let { d ->
-                val requestedPersistenceConsent =
-                    d.persistenceConsent ?: configuredDefaultConsent ?: store.persistenceConsent ?: d.consent
-                val persistenceConsent = requestedPersistenceConsent
-                val canLoadPersistedContinuity = persistenceConsent == true
-                if (canLoadPersistedContinuity) {
-                    store.loadProfileContinuity()
-                    storedAnonymousId = store.anonymousId
-                } else if (persistenceConsent == false) {
-                    store.clearProfileContinuity()
-                }
-
-                d.copy(
-                    consent = d.consent ?: store.consent,
-                    persistenceConsent = persistenceConsent,
-                    profile = d.profile ?: if (canLoadPersistedContinuity) store.profile else null,
-                    changes = d.changes ?: if (canLoadPersistedContinuity) store.changes else null,
-                    personalizations = d.personalizations ?: if (canLoadPersistedContinuity) store.personalizations else null,
-                )
+        val persistedDefaults = if (initialDefaults.canLoadPersistedContinuity) {
+            store.loadProfileContinuity()
+            storedAnonymousId = store.anonymousId
+            StorageDefaults(
+                consent = store.consent,
+                persistenceConsent = store.persistenceConsent,
+                profile = store.profile,
+                changes = store.changes,
+                selectedOptimizations = store.selectedOptimizations,
+            )
+        } else {
+            if (initialDefaults.defaults.persistenceConsent == false) {
+                store.clearProfileContinuity()
             }
+            persistedConsentDefaults
+        }
+        val resolvedDefaults = resolveStatefulDefaults(config.defaults, persistedDefaults)
+        val mergedConfig = config.copy(
+            defaults = resolvedDefaults.defaults,
         )
         locale = sdkLocale
 
         bridge.onLog = { level, msg -> log.debug { "[js:$level] $msg" } }
+        bridge.onEventBlocked = { event ->
+            _blockedEventStream.tryEmit(event)
+            config.onEventBlocked?.invoke(event)
+        }
+        bridge.onQueueEvent = { event ->
+            when (event.type) {
+                QueueEventType.offlineDrop -> config.queuePolicy?.onOfflineDrop?.invoke(event)
+                QueueEventType.flushFailure -> config.queuePolicy?.onFlushFailure?.invoke(event)
+                QueueEventType.circuitOpen -> config.queuePolicy?.onCircuitOpen?.invoke(event)
+                QueueEventType.flushRecovered -> config.queuePolicy?.onFlushRecovered?.invoke(event)
+            }
+        }
 
         bridge.initialize(mergedConfig, applicationContext.assets, storedAnonymousId)
         _isInitialized.value = true
@@ -121,61 +154,86 @@ class OptimizationClient(private val applicationContext: Context) {
         )
     }
 
+    suspend fun identify(payload: IdentifyPayload): EventEmissionResult {
+        return bridgeCallAsyncJSON("identify") { payload.toJSON() }.toEventEmissionResult()
+    }
+
     suspend fun identify(
         userId: String,
         traits: Map<String, Any>? = null,
-    ): Map<String, Any>? {
+    ): EventEmissionResult {
         return bridgeCallAsyncJSON("identify") {
             val obj = JSONObject()
             obj.put("userId", userId)
             traits?.let { obj.put("traits", JSONObject(it)) }
             obj.toString()
-        }
+        }.toEventEmissionResult()
     }
 
-    suspend fun page(properties: Map<String, Any>? = null): Map<String, Any>? {
+    suspend fun page(payload: PageEventPayload): EventEmissionResult {
+        return bridgeCallAsyncJSON("page") { payload.toJSON() }.toEventEmissionResult()
+    }
+
+    suspend fun page(properties: Map<String, Any>? = null): EventEmissionResult {
         return bridgeCallAsyncJSON("page") {
             JSONObject(properties ?: emptyMap<String, Any>()).toString()
-        }
+        }.toEventEmissionResult()
     }
 
-    suspend fun screen(name: String, properties: Map<String, Any>? = null): Map<String, Any>? {
+    suspend fun screen(payload: ScreenEventPayload): EventEmissionResult {
+        return bridgeCallAsyncJSON("screen") { payload.toJSON() }.toEventEmissionResult()
+    }
+
+    suspend fun screen(name: String, properties: Map<String, Any>? = null): EventEmissionResult {
         return bridgeCallAsyncJSON("screen") {
             val obj = JSONObject()
             obj.put("name", name)
             properties?.let { obj.put("properties", JSONObject(it)) }
             obj.toString()
-        }
+        }.toEventEmissionResult()
     }
 
-    internal suspend fun screenWithEmissionResult(
+    suspend fun track(payload: TrackEventPayload): EventEmissionResult {
+        return bridgeCallAsyncJSON("track") { payload.toJSON() }.toEventEmissionResult()
+    }
+
+    suspend fun track(event: String, properties: Map<String, Any>? = null): EventEmissionResult {
+        return bridgeCallAsyncJSON("track") {
+            val obj = JSONObject()
+            obj.put("event", event)
+            properties?.let { obj.put("properties", JSONObject(it)) }
+            obj.toString()
+        }.toEventEmissionResult()
+    }
+
+    suspend fun trackCurrentScreen(payload: ScreenEventPayload): EventEmissionResult {
+        return bridgeCallAsyncJSON("trackCurrentScreen") { payload.toJSON() }.toEventEmissionResult()
+    }
+
+    suspend fun trackCurrentScreen(
         name: String,
         properties: Map<String, Any>? = null,
+        routeKey: String = name,
     ): EventEmissionResult {
-        val result = bridgeCallAsyncJSON("screenWithEmissionResult") {
+        return bridgeCallAsyncJSON("trackCurrentScreen") {
             val obj = JSONObject()
+            obj.put("routeKey", routeKey)
             obj.put("name", name)
             properties?.let { obj.put("properties", JSONObject(it)) }
             obj.toString()
-        } ?: return EventEmissionResult(accepted = false, data = null)
-
-        @Suppress("UNCHECKED_CAST")
-        return EventEmissionResult(
-            accepted = result["accepted"] as? Boolean ?: false,
-            data = result["data"] as? Map<String, Any>,
-        )
+        }.toEventEmissionResult()
     }
 
     suspend fun flush() {
         bridgeCallAsyncVoid("flush", "")
     }
 
-    suspend fun trackView(payload: TrackViewPayload): Map<String, Any>? {
-        return bridgeCallAsyncJSON("trackView") { payload.toJSON() }
+    suspend fun trackView(payload: TrackViewPayload): EventEmissionResult {
+        return bridgeCallAsyncJSON("trackView") { payload.toJSON() }.toEventEmissionResult()
     }
 
-    suspend fun trackClick(payload: TrackClickPayload): Map<String, Any>? {
-        return bridgeCallAsyncJSON("trackClick") { payload.toJSON() }
+    suspend fun trackClick(payload: TrackClickPayload) {
+        bridgeCallAsyncVoid("trackClick", payload.toJSON())
     }
 
     fun consent(accept: Boolean) {
@@ -212,38 +270,43 @@ class OptimizationClient(private val applicationContext: Context) {
         return sdkLocale
     }
 
-    suspend fun personalizeEntry(
+    suspend fun resolveOptimizedEntry(
         baseline: Map<String, Any>,
-        personalizations: List<Map<String, Any>>? = null,
-    ): PersonalizedResult {
+        selectedOptimizations: List<Map<String, Any>>? = null,
+    ): ResolvedOptimizedEntry {
         if (!_isInitialized.value) {
-            return PersonalizedResult(entry = baseline, personalization = null)
+            return ResolvedOptimizedEntry(entry = baseline, selectedOptimization = null)
         }
 
         return try {
             val baselineJSON = JSONObject(baseline).toString()
-            val args = if (personalizations != null) {
-                val pJSON = JSONArray(personalizations).toString()
+            val args = if (selectedOptimizations != null) {
+                val pJSON = JSONArray(selectedOptimizations).toString()
                 "$baselineJSON, $pJSON"
             } else {
                 baselineJSON
             }
 
-            val resultStr = bridge.callSync("personalizeEntry", args)
+            val resultStr = bridge.callSync("resolveOptimizedEntry", args)
             if (resultStr == null || resultStr == "null" || resultStr == "undefined") {
-                return PersonalizedResult(entry = baseline, personalization = null)
+                return ResolvedOptimizedEntry(entry = baseline, selectedOptimization = null)
             }
 
             val dict = parseJSONDict(resultStr)
-                ?: return PersonalizedResult(entry = baseline, personalization = null)
+                ?: return ResolvedOptimizedEntry(entry = baseline, selectedOptimization = null)
 
             @Suppress("UNCHECKED_CAST")
             val entry = dict["entry"] as? Map<String, Any> ?: baseline
             @Suppress("UNCHECKED_CAST")
-            val personalization = dict["personalization"] as? Map<String, Any>
-            PersonalizedResult(entry = entry, personalization = personalization)
+            val selectedOptimization = dict["selectedOptimization"] as? Map<String, Any>
+            val optimizationContextId = dict["optimizationContextId"] as? String
+            ResolvedOptimizedEntry(
+                entry = entry,
+                selectedOptimization = selectedOptimization,
+                optimizationContextId = optimizationContextId,
+            )
         } catch (_: Exception) {
-            PersonalizedResult(entry = baseline, personalization = null)
+            ResolvedOptimizedEntry(entry = baseline, selectedOptimization = null)
         }
     }
 
@@ -258,9 +321,31 @@ class OptimizationClient(private val applicationContext: Context) {
         }
     }
 
-    /** Subscribe to a feature flag by name. Emits a flag-view `component` event. */
-    fun subscribeToFlag(name: String) {
-        bridgeCallSyncWhenInitialized("flag", "'${escapeForJS(name)}'")
+    /** Resolve a feature flag value by name. Emits a flag-view `component` event. */
+    fun getFlag(name: String): JSONValue? {
+        if (!_isInitialized.value) return null
+        val escapedName = escapeForJS(name)
+        val result = runBlocking(bridge.quickJsDispatcher) {
+            bridge.callSync("getFlag", "'$escapedName'")
+        }
+        return parseJSONValue(result)
+    }
+
+    /** Observe a feature flag value by name. Emits flag-view events for delivered values. */
+    fun observeFlag(name: String): StateFlow<JSONValue?> {
+        requireInitialized()
+        flagFlows[name]?.let { return it.asStateFlow() }
+
+        val flow = MutableStateFlow<JSONValue?>(null)
+        val subscriptionId = UUID.randomUUID().toString()
+        flagFlows[name] = flow
+        flagSubscriptionIdsByName[name] = subscriptionId
+        flagNamesBySubscriptionId[subscriptionId] = name
+        bridgeCallSyncWhenInitialized(
+            "observeFlag",
+            "'${escapeForJS(subscriptionId)}', '${escapeForJS(name)}'",
+        )
+        return flow.asStateFlow()
     }
 
     suspend fun getProfile(): Map<String, Any>? {
@@ -340,23 +425,29 @@ class OptimizationClient(private val applicationContext: Context) {
         networkMonitor?.stop()
         networkMonitor = null
 
+        for (subscriptionId in flagSubscriptionIdsByName.values) {
+            bridge.callSync("unobserveFlag", "'${escapeForJS(subscriptionId)}'")
+        }
+        clearFlagObservers()
         bridge.destroy()
         _isInitialized.value = false
         _state.value = OptimizationState.EMPTY
         locale = null
-        _selectedPersonalizations.value = null
+        _selectedOptimizations.value = null
+        _optimizationPossible.value = false
+        _experienceRequestState.value = mapOf("status" to "idle")
     }
 
     // MARK: - Testing
 
-    suspend fun testOnlySetLogHandler(handler: (String, String) -> Unit) {
+    internal suspend fun testOnlySetLogHandler(handler: (String, String) -> Unit) {
         bridge.onLog = { level, msg ->
             log.debug { "[js:$level] $msg" }
             handler(level, msg)
         }
     }
 
-    suspend fun testOnlyEvaluateScript(script: String): String? {
+    internal suspend fun testOnlyEvaluateScript(script: String): String? {
         return bridge.evaluate(script)
     }
 
@@ -405,6 +496,14 @@ class OptimizationClient(private val applicationContext: Context) {
         }
     }
 
+    private fun Map<String, Any>?.toEventEmissionResult(): EventEmissionResult {
+        @Suppress("UNCHECKED_CAST")
+        return EventEmissionResult(
+            accepted = this?.get("accepted") as? Boolean ?: false,
+            data = this?.get("data") as? Map<String, Any>,
+        )
+    }
+
     private suspend fun bridgeCallAsyncVoid(method: String, payload: String) {
         requireInitialized()
         withContext(Dispatchers.Main) {
@@ -430,7 +529,12 @@ class OptimizationClient(private val applicationContext: Context) {
         val persistenceConsent = dict["persistenceConsent"] as? Boolean
         val locale = dict["locale"] as? String
         @Suppress("UNCHECKED_CAST")
-        val personalizations = extractJSONArray(dict["selectedPersonalizations"]) as? List<Map<String, Any>>
+        val selectedOptimizations = extractJSONArray(dict["selectedOptimizations"]) as? List<Map<String, Any>>
+        val optimizationPossible = dict["optimizationPossible"] as? Boolean ?: false
+        @Suppress("UNCHECKED_CAST")
+        val experienceRequestState =
+            extractJSONValue(dict["experienceRequestState"]) as? Map<String, Any>
+                ?: mapOf("status" to "idle")
 
         this.locale = locale
 
@@ -439,22 +543,33 @@ class OptimizationClient(private val applicationContext: Context) {
         if (persistenceConsent == true) {
             store.profile = profile
             store.changes = changes
-            store.personalizations = personalizations
+            store.selectedOptimizations = selectedOptimizations
             @Suppress("UNCHECKED_CAST")
             store.anonymousId = (profile?.get("id") as? String) ?: store.anonymousId
         } else if (persistenceConsent == false) {
             store.clearProfileContinuity()
         }
 
-        _selectedPersonalizations.value = personalizations
+        _selectedOptimizations.value = selectedOptimizations
+        _optimizationPossible.value = optimizationPossible
+        _experienceRequestState.value = experienceRequestState
         _state.value = OptimizationState(
             profile = profile,
             consent = consent,
             persistenceConsent = persistenceConsent,
-            canPersonalize = dict["canPersonalize"] as? Boolean ?: false,
+            canOptimize = dict["canOptimize"] as? Boolean ?: false,
+            optimizationPossible = optimizationPossible,
+            experienceRequestState = experienceRequestState,
             changes = changes,
+            selectedOptimizations = selectedOptimizations,
             locale = locale,
         )
+    }
+
+    private fun clearFlagObservers() {
+        flagFlows.clear()
+        flagSubscriptionIdsByName.clear()
+        flagNamesBySubscriptionId.clear()
     }
 
     companion object {
@@ -468,12 +583,22 @@ class OptimizationClient(private val applicationContext: Context) {
             return value
         }
 
-        fun parseJSONDict(json: String): Map<String, Any>? {
+        internal fun parseJSONDict(json: String): Map<String, Any>? {
             if (json == "null") return null
             return try {
                 QuickJsContextManager.jsonObjectToMap(JSONObject(json))
             } catch (_: Exception) {
                 DiagnosticLogger.warning { "[parse] JSON parse failed — input: ${json.take(200)}" }
+                null
+            }
+        }
+
+        private fun parseJSONValue(json: String?): JSONValue? {
+            if (json == null || json == "undefined") return null
+            return try {
+                JSONValue.fromAny(JSONTokener(json).nextValue())
+            } catch (_: Exception) {
+                DiagnosticLogger.warning { "[parse] JSON value parse failed — input: ${json.take(200)}" }
                 null
             }
         }

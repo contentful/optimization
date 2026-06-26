@@ -88,7 +88,9 @@ async function renderRequest(
     profile: { id: profileId },
   })
 
-  return await requestOptimization.page()
+  const { accepted, data } = await requestOptimization.page()
+
+  return accepted ? data : undefined
 }
 ```
 
@@ -185,11 +187,11 @@ app.get('/products/:slug', async (req, res) => {
     },
     profile: { id: req.cookies.profileId },
   })
-  const optimizationData = await requestOptimization.page({
+  const { accepted, data: optimizationData } = await requestOptimization.page({
     properties: { path: req.path },
   })
 
-  if (requestOptimization.canPersistProfile && optimizationData?.profile.id) {
+  if (accepted && requestOptimization.canPersistProfile && optimizationData?.profile.id) {
     persistProfileId(res, optimizationData.profile.id)
   }
 

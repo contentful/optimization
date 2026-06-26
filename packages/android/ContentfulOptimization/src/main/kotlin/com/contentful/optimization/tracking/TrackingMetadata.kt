@@ -1,12 +1,13 @@
 package com.contentful.optimization.tracking
 
-class TrackingMetadata(
+internal class TrackingMetadata(
     entry: Map<String, Any>,
-    personalization: Map<String, Any>?,
+    selectedOptimization: Map<String, Any>?,
+    val optimizationContextId: String? = null,
 ) {
     @Suppress("UNCHECKED_CAST")
     val componentId: String = (entry["sys"] as? Map<String, Any>)?.get("id") as? String ?: ""
-    val experienceId: String? = personalization?.get("experienceId") as? String
-    val variantIndex: Int = personalization?.get("variantIndex") as? Int ?: 0
-    val sticky: Boolean? = personalization?.get("sticky") as? Boolean
+    val experienceId: String? = selectedOptimization?.get("experienceId") as? String
+    val variantIndex: Int = selectedOptimization?.get("variantIndex") as? Int ?: 0
+    val sticky: Boolean? = selectedOptimization?.get("sticky") as? Boolean
 }

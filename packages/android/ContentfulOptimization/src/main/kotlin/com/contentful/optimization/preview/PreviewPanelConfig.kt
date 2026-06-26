@@ -12,7 +12,7 @@ package com.contentful.optimization.preview
  *   entries. When provided, the panel displays rich audience and experience definitions; when
  *   `null`, the panel falls back to basic data from the SDK.
  */
-data class PreviewPanelConfig(
+public data class PreviewPanelConfig(
     val enabled: Boolean = true,
     val contentfulClient: PreviewContentfulClient? = null,
 )

@@ -36,9 +36,11 @@ final class MainViewController: UIViewController {
         configureScrollView()
         layout()
 
-        EventStore.shared.subscribe(to: client.eventPublisher)
+        EventStore.shared.subscribe(to: client.eventStream)
         analyticsView.bind(to: EventStore.shared)
-        client.subscribeToFlag("boolean")
+        client.flagPublisher("boolean")
+            .sink { _ in }
+            .store(in: &cancellables)
 
         client.$state
             .map { $0.profile }

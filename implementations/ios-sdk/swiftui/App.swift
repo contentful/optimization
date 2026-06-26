@@ -19,11 +19,13 @@ struct OptimizationDemoApp: App {
                 config: OptimizationConfig(
                     clientId: AppConfig.clientId,
                     environment: AppConfig.environment,
-                    experienceBaseUrl: AppConfig.experienceBaseUrl,
-                    insightsBaseUrl: AppConfig.insightsBaseUrl,
+                    api: OptimizationApiConfig(
+                        experienceBaseUrl: AppConfig.experienceBaseUrl,
+                        insightsBaseUrl: AppConfig.insightsBaseUrl
+                    ),
                     locale: AppConfig.defaultContentfulLocale,
                     defaults: StorageDefaults(consent: true),
-                    debug: true
+                    logLevel: .debug
                 ),
                 trackViews: true,
                 trackTaps: true,

@@ -1,14 +1,18 @@
 package com.contentful.optimization.bridge
 
 import android.content.res.AssetManager
-import com.dokar.quickjs.QuickJs
-import com.dokar.quickjs.binding.define
+import com.contentful.optimization.core.BlockedEvent
 import com.contentful.optimization.core.DiagnosticLogger
+import com.contentful.optimization.core.JSONValue
 import com.contentful.optimization.core.OptimizationConfig
 import com.contentful.optimization.core.OptimizationError
 import com.contentful.optimization.core.PreviewState
+import com.contentful.optimization.core.QueueEvent
+import com.contentful.optimization.core.QueueEventType
 import com.contentful.optimization.polyfills.NativeImpl
 import com.contentful.optimization.polyfills.TimerStore
+import com.dokar.quickjs.QuickJs
+import com.dokar.quickjs.binding.define
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +23,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.util.concurrent.Executors
 
-class QuickJsContextManager {
+internal class QuickJsContextManager {
     private var quickJs: QuickJs? = null
     private val callbackManager = BridgeCallbackManager()
     private var timerStore: TimerStore? = null
@@ -34,6 +38,9 @@ class QuickJsContextManager {
     var onStateChange: ((Map<String, Any>) -> Unit)? = null
     var onEvent: ((Map<String, Any>) -> Unit)? = null
     var onOverridesChanged: ((PreviewState) -> Unit)? = null
+    var onEventBlocked: ((BlockedEvent) -> Unit)? = null
+    var onFlagValueChanged: ((String, JSONValue?) -> Unit)? = null
+    var onQueueEvent: ((QueueEvent) -> Unit)? = null
 
     suspend fun initialize(config: OptimizationConfig, assets: AssetManager, anonymousId: String? = null) {
         withContext(quickJsDispatcher) {
@@ -111,6 +118,18 @@ class QuickJsContextManager {
             globalThis.__nativeOnOverridesChanged = function(json) {
                 __native.log("__overridesChanged__", json);
             };
+            globalThis.__nativeOnEventBlocked = function(json) {
+                __native.log("__eventBlocked__", json);
+            };
+            globalThis.__nativeOnFlagValueChanged = function(subscriptionId, json) {
+                __native.log("__flagValueChanged__", JSON.stringify({
+                    subscriptionId: subscriptionId,
+                    value: JSON.parse(json)
+                }));
+            };
+            globalThis.__nativeOnQueueEvent = function(json) {
+                __native.log("__queueEvent__", json);
+            };
             """.trimIndent(),
             "callback-registration.js"
         )
@@ -121,6 +140,9 @@ class QuickJsContextManager {
                 "__stateChange__" -> handleStateChange(msg)
                 "__eventEmitted__" -> handleEvent(msg)
                 "__overridesChanged__" -> handleOverridesChanged(msg)
+                "__eventBlocked__" -> handleEventBlocked(msg)
+                "__flagValueChanged__" -> handleFlagValueChanged(msg)
+                "__queueEvent__" -> handleQueueEvent(msg)
                 else -> originalOnLog?.invoke(level, msg)
             }
         }
@@ -277,6 +299,44 @@ class QuickJsContextManager {
     private fun handleOverridesChanged(json: String) {
         val state = PreviewState.fromJSON(json) ?: return
         onOverridesChanged?.invoke(state)
+    }
+
+    private fun handleEventBlocked(json: String) {
+        val dict = parseJSONDict(json) ?: return
+        val reason = dict["reason"] as? String ?: return
+        val method = dict["method"] as? String ?: return
+        @Suppress("UNCHECKED_CAST")
+        val args = dict["args"] as? List<Any> ?: emptyList()
+
+        onEventBlocked?.invoke(
+            BlockedEvent(
+                reason = reason,
+                method = method,
+                args = args,
+            )
+        )
+    }
+
+    private fun handleFlagValueChanged(json: String) {
+        val dict = parseJSONDict(json) ?: return
+        val subscriptionId = dict["subscriptionId"] as? String ?: return
+        val value = if (dict.containsKey("value")) JSONValue.fromAny(dict["value"]) else null
+        onFlagValueChanged?.invoke(subscriptionId, value)
+    }
+
+    private fun handleQueueEvent(json: String) {
+        val dict = parseJSONDict(json) ?: return
+        val rawType = dict["type"] as? String ?: return
+        val type = QueueEventType.fromWireValue(rawType) ?: return
+        @Suppress("UNCHECKED_CAST")
+        val context = dict["context"] as? Map<String, Any> ?: emptyMap()
+
+        onQueueEvent?.invoke(
+            QueueEvent(
+                type = type,
+                context = context,
+            )
+        )
     }
 
     private fun parseJSONDict(json: String): Map<String, Any>? {
