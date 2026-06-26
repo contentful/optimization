@@ -16,7 +16,10 @@ import { NavigationEnd, Router } from '@angular/router'
 import type NodeContentfulOptimizationType from '@contentful/optimization-node'
 import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
-import type { CoreStatelessRequest } from '@contentful/optimization-node/core-sdk'
+import type {
+  CoreStatelessRequest,
+  UniversalEventBuilderArgs,
+} from '@contentful/optimization-node/core-sdk'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { Entry } from 'contentful'
@@ -137,7 +140,9 @@ export class NgContentfulOptimization {
     const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
     const router = inject(Router)
     const destroyRef = inject(DestroyRef)
+    const transferState = inject(TransferState)
     const isBrowser = isPlatformBrowser(inject(PLATFORM_ID))
+    const handoff = transferState.get(SERVER_OPTIMIZATION_KEY, undefined)
 
     if (!isBrowser) {
       // Seed the read-only signals from the SSR handoff so server-rendered
@@ -145,7 +150,6 @@ export class NgContentfulOptimization {
       // observed. Without this, JS-disabled clients would see "undefined" /
       // "0 active optimizations" in the Utilities panel even though the entry
       // markup is fully personalised.
-      const handoff = inject(TransferState).get(SERVER_OPTIMIZATION_KEY, undefined)
       const isGranted = handoff?.consent === true
       this.context = { platform: 'server' }
       this.consent = signal<boolean | undefined>(isGranted).asReadonly()
@@ -169,11 +173,19 @@ export class NgContentfulOptimization {
     this.profile = fromSdkState(sdk.states.profile)
     this.selectedOptimizations = fromSdkState(sdk.states.selectedOptimizations)
 
-    // Page events must fire on every route change including the initial load.
-    // The SDK uses the current URL to resolve which experiences apply to the user.
+    // Page events fire on every route change. The first NavigationEnd after
+    // hydration is skipped when the server preflight already emitted page()
+    // for the same route (consent was granted server-side) — without this
+    // skip, analytics double-counts the SSR landing page. Subsequent
+    // navigations always emit.
+    let skipNextPage = handoff?.consent === true
     const routerSubscription = router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
+        if (skipNextPage) {
+          skipNextPage = false
+          return
+        }
         void sdk.page({
           properties: { url: window.location.origin + e.urlAfterRedirects },
         })
@@ -244,6 +256,27 @@ type ServerOptimizationData =
       readonly canPersistProfile: boolean
     }
 
+/**
+ * Build an event context for the SSR `forRequest()` call so the server-side
+ * page event carries the current route. Without this, route-targeted
+ * experiences resolve against an empty page context and miss on first paint.
+ * Mirrors `createNextjsRequestContext` from the Next.js adapter.
+ */
+function createServerEventContext(request: Request, locale: string): UniversalEventBuilderArgs {
+  const url = new URL(request.url)
+  return {
+    locale,
+    userAgent: request.headers.get('user-agent') ?? undefined,
+    page: {
+      path: url.pathname,
+      query: Object.fromEntries(url.searchParams),
+      referrer: request.headers.get('referer') ?? '',
+      search: url.search,
+      url: request.url,
+    },
+  }
+}
+
 async function getServerOptimizationData(
   sdk: NodeContentfulOptimizationType,
   request: Request,
@@ -256,6 +289,7 @@ async function getServerOptimizationData(
   const requestOptimization: CoreStatelessRequest = sdk.forRequest({
     consent: { events: true, persistence: true },
     locale,
+    eventContext: createServerEventContext(request, locale),
     ...(anonymousId === undefined ? {} : { profile: { id: anonymousId } }),
   })
   const pageResult = await requestOptimization.page()
