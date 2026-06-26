@@ -1,13 +1,13 @@
-import { AnalyticsEventDisplay } from '@/components/AnalyticsEventDisplay'
 import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
-import { PreviewPanelAttachment } from '@/components/PreviewPanelAttachment'
-import { APP_LOCALE, optimizationConfig } from '@/lib/config'
-import { getOptimizationData } from '@/lib/optimization-server'
+import { PreviewPanel } from '@/components/PreviewPanel'
+import { TrackingLog } from '@/components/TrackingLog'
+import { appConfig } from '@/lib/config'
+import { getOptimizationData } from '@/lib/optimization'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
+import 'e2e-web/theme.css'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { type ReactNode } from 'react'
-import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Optimization Next.js SDK Hybrid',
@@ -26,7 +26,7 @@ export default async function RootLayout({
   children: ReactNode
 }>) {
   const optimizationData = await getOptimizationData()
-  const htmlLang = getHtmlLang(APP_LOCALE)
+  const htmlLang = getHtmlLang(appConfig.locale)
   const defaults = optimizationData
     ? {
         profile: optimizationData.profile,
@@ -36,13 +36,13 @@ export default async function RootLayout({
     : undefined
 
   return (
-    <html lang={htmlLang} className="h-full antialiased">
-      <body className="min-h-full flex flex-col">
+    <html lang={htmlLang}>
+      <body>
         <OptimizationRoot
-          clientId={optimizationConfig.clientId}
-          environment={optimizationConfig.environment}
-          locale={APP_LOCALE}
-          api={optimizationConfig.api}
+          clientId={appConfig.clientId}
+          environment={appConfig.environment}
+          locale={appConfig.locale}
+          api={appConfig.api}
           trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
           logLevel="debug"
           defaults={defaults}
@@ -52,20 +52,24 @@ export default async function RootLayout({
           }}
         >
           <GlobalLiveUpdatesProvider>
-            <PreviewPanelAttachment />
+            <PreviewPanel />
             <NextAppAutoPageTracker initialPageEvent={defaults ? 'skip' : 'emit'} />
-            <main className="flex-1 p-8 max-w-3xl mx-auto w-full grid gap-6">
-              <nav className="flex gap-3">
+            <div className="app-shell">
+              <nav>
                 <Link data-testid="link-home" href="/">
                   Home
                 </Link>
                 <Link data-testid="link-page-two" href="/page-two">
-                  Go to Page Two
+                  Page Two
                 </Link>
               </nav>
-              {children}
-              <AnalyticsEventDisplay />
-            </main>
+              <div className="app-body">
+                <aside className="app-sidebar">
+                  <TrackingLog />
+                </aside>
+                <main>{children}</main>
+              </div>
+            </div>
           </GlobalLiveUpdatesProvider>
         </OptimizationRoot>
       </body>

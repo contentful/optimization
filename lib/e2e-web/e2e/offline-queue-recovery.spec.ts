@@ -1,4 +1,5 @@
 import { type BrowserContext, type Page, expect, test } from '@playwright/test'
+import { skipIf } from './utils'
 
 async function getRawEventsCount(page: Page): Promise<number> {
   const text = await page.getByTestId('raw-events-count').innerText()
@@ -18,7 +19,7 @@ async function waitForBaseUi(page: Page): Promise<void> {
   await expect(page.getByTestId('raw-events-count')).toBeVisible()
 }
 
-test.describe('offline queue and recovery', () => {
+test.describe('Offline Queue Recovery', () => {
   test.beforeEach(async ({ context, page }) => {
     await context.clearCookies()
     await setOffline(context, false)
@@ -32,6 +33,7 @@ test.describe('offline queue and recovery', () => {
   })
 
   test('continues tracking Insights API events while offline', async ({ context, page }) => {
+    skipIf('SSR', 'HYDRATION')
     const baselineCount = await getRawEventsCount(page)
 
     await setOffline(context, true)
@@ -42,6 +44,7 @@ test.describe('offline queue and recovery', () => {
   })
 
   test('recovers gracefully when network is restored', async ({ context, page }) => {
+    skipIf('SSR', 'HYDRATION')
     await setOffline(context, true)
     await page.getByTestId('link-page-two').click()
     await expect(page.getByTestId('page-two-view')).toBeVisible()

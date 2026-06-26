@@ -1,147 +1,139 @@
-import { InteractiveControls } from '@/components/InteractiveControls'
-import { AUTO_OBSERVED_ENTRY_IDS, ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '@/config/entries'
-import { APP_LOCALE } from '@/lib/config'
-import { fetchEntries } from '@/lib/contentful-client'
-import { optimization } from '@/lib/optimization-server'
-import type { ContentEntry } from '@/types/contentful'
+import { ControlPanel } from '@/components/ControlPanel'
+import { EntryCard } from '@/components/EntryCard'
+import { LiveEntryCard } from '@/components/LiveEntryCard'
+import { appConfig } from '@/lib/config'
+import { type ContentEntry, loadPageEntries } from '@/lib/contentful'
+import { optimization } from '@/lib/optimization'
+import { getAppConsent, toIdMap } from '@/lib/util'
 import {
-  ServerOptimizedEntry,
-  getNextjsServerOptimizationData,
   type ServerTrackingResolvedData,
+  getNextjsServerOptimizationData,
 } from '@contentful/optimization-nextjs/server'
+import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 import { cookies, headers } from 'next/headers'
-
-const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
-const HOVER_DURATION_UPDATE_INTERVAL_MS = 1000
-type EntryClickScenario = 'direct' | 'descendant' | 'ancestor'
-
-const AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> = {
-  '4ib0hsHWoSOnCVdDkizE8d': 'direct',
-  xFwgG3oNaOcjzWiGe4vXo: 'descendant',
-  '2Z2WLOx07InSewC3LUB3eX': 'ancestor',
-}
-
-function getEntryText(entry: ContentEntry): string {
-  return typeof entry.fields.text === 'string' ? entry.fields.text : 'No content'
-}
-
-function ServerRenderedEntry({
-  baselineEntry,
-  clickScenario,
-  resolvedData,
-  viewTracking,
-}: {
-  baselineEntry: ContentEntry
-  clickScenario?: EntryClickScenario
-  resolvedData: ServerTrackingResolvedData
-  viewTracking: 'auto' | 'manual'
-}) {
-  const resolvedEntry = resolvedData.entry as ContentEntry
-  const autoTrackViews = viewTracking === 'auto'
-  const content = (
-    <div data-testid={`content-${baselineEntry.sys.id}`}>
-      <p data-testid={`entry-text-${baselineEntry.sys.id}`}>{getEntryText(resolvedEntry)}</p>
-      <p className="text-xs text-zinc-400 mt-2">{`[Entry: ${baselineEntry.sys.id}]`}</p>
-
-      {clickScenario === 'descendant' ? (
-        <button data-testid="entry-click-descendant-button" type="button">
-          Trigger entry click tracking from descendant button
-        </button>
-      ) : null}
-    </div>
-  )
-
-  return (
-    <section data-testid={`content-entry-${baselineEntry.sys.id}`}>
-      <ServerOptimizedEntry
-        as="div"
-        baselineEntry={baselineEntry}
-        clickable={autoTrackViews && clickScenario === 'direct'}
-        hoverDurationUpdateIntervalMs={
-          autoTrackViews ? HOVER_DURATION_UPDATE_INTERVAL_MS : undefined
-        }
-        resolvedData={resolvedData}
-        trackViews={autoTrackViews ? undefined : false}
-        className="rounded-lg border border-zinc-200 p-4"
-      >
-        {autoTrackViews && clickScenario === 'ancestor' ? (
-          <div data-ctfl-clickable="true" data-testid="entry-click-ancestor-wrapper">
-            {content}
-          </div>
-        ) : (
-          content
-        )}
-      </ServerOptimizedEntry>
-    </section>
-  )
-}
 
 export default async function Home() {
   const cookieStore = await cookies()
   const headerStore = await headers()
 
-  const appConsent = cookieStore.get(APP_PERSONALIZATION_CONSENT_COOKIE)?.value === 'granted'
-  const [baselineEntries, optimizationData] = await Promise.all([
-    fetchEntries(ENTRY_IDS, APP_LOCALE),
-    appConsent
+  const [entries, optimizationData] = await Promise.all([
+    loadPageEntries(PAGES.home.ids),
+    getAppConsent(cookieStore)
       ? getNextjsServerOptimizationData(optimization, {
           consent: { events: true, persistence: true },
           cookies: cookieStore,
           headers: headerStore,
-          locale: APP_LOCALE,
+          locale: appConfig.locale,
         }).then(({ data }) => data)
       : undefined,
   ])
 
-  const resolvedEntryById = new Map(
-    baselineEntries.map((entry) => [
+  const entriesById = toIdMap(entries)
+  const resolvedById = new Map(
+    entries.map((entry) => [
       entry.sys.id,
       optimization.resolveOptimizedEntry(entry, optimizationData?.selectedOptimizations),
     ]),
   )
 
+  const profile = optimizationData?.profile
+  const getMergeTagValue = (entry: unknown): string | undefined =>
+    optimization.getMergeTagValue(entry as never, profile)
+  const resolveEntry = (entry: ContentEntry): ServerTrackingResolvedData =>
+    optimization.resolveOptimizedEntry(entry, optimizationData?.selectedOptimizations)
+
+  const liveUpdatesEntry = entriesById.get(PAGES.home.liveUpdates)
+
   return (
     <>
-      <InteractiveControls />
+      <div className="page-header">
+        <h1>Next.js SDK SSR</h1>
+        <p className="page-header__subtitle">
+          Reference implementation of @contentful/optimization-nextjs (SSR entry resolution +
+          client-side tracking)
+        </p>
+      </div>
 
-      <section>
-        <h2 className="text-lg font-medium mb-3">Auto Observed Entries</h2>
-        <div id="auto-observed" className="grid gap-3">
-          {AUTO_OBSERVED_ENTRY_IDS.map((entryId) => {
-            const entry = baselineEntries.find((candidate) => candidate.sys.id === entryId)
-            const resolvedData = resolvedEntryById.get(entryId)
+      <ControlPanel />
 
-            return entry && resolvedData ? (
-              <ServerRenderedEntry
-                key={entry.sys.id}
-                baselineEntry={entry}
-                clickScenario={AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID[entry.sys.id]}
-                resolvedData={resolvedData}
-                viewTracking="auto"
-              />
-            ) : null
-          })}
-        </div>
+      <section className="page-section" data-testid="live-updates-section">
+        <header className="page-section__header">
+          <h2>Live Updates</h2>
+          <p>
+            Toggle global live updates and identify the user to verify how entries update. Optional
+            per-component control is available through the <code>liveUpdates</code> prop.
+          </p>
+        </header>
+        {liveUpdatesEntry ? (
+          <div className="sections-grid" data-testid="live-updates-examples">
+            <section data-testid="live-updates-default">
+              <h3>Default (inherits global setting)</h3>
+              <LiveEntryCard entry={liveUpdatesEntry} testId="live-default" />
+            </section>
+
+            <section data-testid="live-updates-enabled">
+              <h3>Always On (liveUpdates=true)</h3>
+              <LiveEntryCard entry={liveUpdatesEntry} liveUpdates={true} testId="live-enabled" />
+            </section>
+
+            <section data-testid="live-updates-locked">
+              <h3>Locked (liveUpdates=false)</h3>
+              <LiveEntryCard entry={liveUpdatesEntry} liveUpdates={false} testId="live-locked" />
+            </section>
+          </div>
+        ) : (
+          <p data-testid="live-updates-loading">Loading live updates entries...</p>
+        )}
       </section>
 
-      <section>
-        <h2 className="text-lg font-medium mb-3">Manually Observed Entries</h2>
-        <div id="manually-observed" className="grid gap-3">
-          {MANUALLY_OBSERVED_ENTRY_IDS.map((entryId) => {
-            const entry = baselineEntries.find((candidate) => candidate.sys.id === entryId)
-            const resolvedData = resolvedEntryById.get(entryId)
+      <div className="sections-grid sections-grid--split">
+        <section className="page-section" data-testid="auto-observed-section">
+          <header className="page-section__header">
+            <h2>Auto Observed Entries</h2>
+          </header>
+          <div id="auto-observed" className="entry-grid">
+            {PAGES.home.auto.flatMap((id) => {
+              const entry = entriesById.get(id)
+              const resolvedData = resolvedById.get(id)
+              if (!entry || !resolvedData) return []
+              return [
+                <EntryCard
+                  key={id}
+                  baselineEntry={entry}
+                  clickScenario={CLICK_SCENARIOS[id]}
+                  getMergeTagValue={getMergeTagValue}
+                  manualTracking={false}
+                  resolveEntry={resolveEntry}
+                  resolvedData={resolvedData}
+                />,
+              ]
+            })}
+          </div>
+        </section>
 
-            return entry && resolvedData ? (
-              <ServerRenderedEntry
-                key={entry.sys.id}
-                baselineEntry={entry}
-                resolvedData={resolvedData}
-                viewTracking="manual"
-              />
-            ) : null
-          })}
-        </div>
-      </section>
+        <section className="page-section" data-testid="manually-observed-section">
+          <header className="page-section__header">
+            <h2>Manually Observed Entries</h2>
+          </header>
+          <div id="manually-observed" className="entry-grid">
+            {PAGES.home.manual.flatMap((id) => {
+              const entry = entriesById.get(id)
+              const resolvedData = resolvedById.get(id)
+              if (!entry || !resolvedData) return []
+              return [
+                <EntryCard
+                  key={id}
+                  baselineEntry={entry}
+                  getMergeTagValue={getMergeTagValue}
+                  manualTracking={true}
+                  resolveEntry={resolveEntry}
+                  resolvedData={resolvedData}
+                />,
+              ]
+            })}
+          </div>
+        </section>
+      </div>
     </>
   )
 }

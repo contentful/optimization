@@ -13,6 +13,15 @@ server/client SDK composition; app code imports only Next.js SDK subpaths.
 - Use the SDK's `OptimizationRoot` directly; do not add custom provider wrappers around it.
 - If consumed packages changed, run `pnpm build:pkgs` and reinstall before trusting results.
 
+## E2E tests
+
+- All E2E tests live in `lib/e2e-web`. Hydration-specific specs are gated with `runIf('HYDRATION')`
+  and run automatically when `E2E_FLAGS=CSR,HYDRATION`. This implementation uses
+  `E2E_FLAGS=SSR,SKIP_NO_JS`: SSR enables the SSR suite, and `SKIP_NO_JS` skips the
+  JavaScript-disabled variant resolution suite (`Variant Resolution (SSR, JavaScript disabled)`).
+- Entry cards must expose `data-ctfl-entry-id` on the `content-*` element so shared selectors work.
+- `test:e2e` delegates to `lib/e2e-web`.
+
 ## Commands
 
 - `pnpm implementation:run -- nextjs-sdk_ssr <script>` with `implementation:install`, `typecheck`,

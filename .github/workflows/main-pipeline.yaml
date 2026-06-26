@@ -704,8 +704,8 @@ jobs:
       - run: pnpm store prune
       - run:
           pnpm run implementation:nextjs-sdk_ssr -- implementation:install -- --no-frozen-lockfile
-      - run:
-          pnpm run implementation:nextjs-sdk_ssr -- implementation:playwright:install -- --with-deps
+      - run: pnpm --dir lib/e2e-web install --no-frozen-lockfile
+      - run: pnpm --dir lib/e2e-web run setup:e2e
       - run: pnpm run implementation:nextjs-sdk_ssr -- implementation:test:e2e:run
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -713,8 +713,8 @@ jobs:
         with:
           name: ci-results-nextjs-sdk-ssr
           path: |
-            ./implementations/nextjs-sdk_ssr/playwright-report/
-            ./implementations/nextjs-sdk_ssr/test-results/
+            ./lib/e2e-web/playwright-report/
+            ./lib/e2e-web/test-results/
           retention-days: 1
 
   e2e-nextjs-sdk-hybrid:
@@ -754,9 +754,8 @@ jobs:
       - run:
           pnpm run implementation:nextjs-sdk_hybrid -- implementation:install --
           --no-frozen-lockfile
-      - run:
-          pnpm run implementation:nextjs-sdk_hybrid -- implementation:playwright:install --
-          --with-deps
+      - run: pnpm --dir lib/e2e-web install --no-frozen-lockfile
+      - run: pnpm --dir lib/e2e-web run setup:e2e
       - run: pnpm run implementation:nextjs-sdk_hybrid -- implementation:test:e2e:run
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -764,8 +763,8 @@ jobs:
         with:
           name: ci-results-nextjs-sdk-hybrid
           path: |
-            ./implementations/nextjs-sdk_hybrid/playwright-report/
-            ./implementations/nextjs-sdk_hybrid/test-results/
+            ./lib/e2e-web/playwright-report/
+            ./lib/e2e-web/test-results/
           retention-days: 1
 
   e2e-react-native-android-build:
