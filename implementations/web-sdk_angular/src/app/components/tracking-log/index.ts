@@ -50,9 +50,14 @@ export class TrackingLog {
   })
 
   constructor() {
+    const { optimization } = this
+    const { context } = optimization
+    if (context.platform !== 'browser') return
+    const { sdk } = context
+
     let pageSeq = 0
     let componentSeq = 0
-    const sub = this.optimization.sdk.states.eventStream.subscribe((raw) => {
+    const sub = sdk.states.eventStream.subscribe((raw) => {
       if (raw != null) {
         this.rawEventsCount.update((n) => n + 1)
       }
