@@ -6,9 +6,9 @@ title: Entry optimization and variant resolution
 
 Use this document to understand how the Optimization SDK Suite resolves a Contentful baseline entry
 to the entry variant selected for a visitor. It explains the runtime contract shared by the Core,
-Web, React Web, React Native, and Node SDKs. Because rendered entries can also contain MergeTag
-entries, it also calls out where profile-dependent MergeTag value resolution differs from entry
-replacement.
+Web, React Web, React Native, Node, iOS, and Android SDKs. Because rendered entries can also contain
+MergeTag entries, it also calls out where profile-dependent MergeTag value resolution differs from
+entry replacement.
 
 For installation and package setup, use the relevant integration guide. For state propagation before
 resolution, see [Core state management](./core-state-management.md). For a broader explanation of
@@ -20,6 +20,8 @@ Contentful and SDK Experience/event locale handling, see
 <!-- mtoc-start -->
 
 - [Resolution boundary](#resolution-boundary)
+- [Runtime support](#runtime-support)
+- [Inputs and constraints](#inputs-and-constraints)
 - [Single-locale CDA entry contract](#single-locale-cda-entry-contract)
 - [Data model](#data-model)
   - [Baseline entry](#baseline-entry)
@@ -35,19 +37,20 @@ Contentful and SDK Experience/event locale handling, see
   - [Resolve directly with SDK methods](#resolve-directly-with-sdk-methods)
   - [Render with framework components](#render-with-framework-components)
   - [Preview selected variants](#preview-selected-variants)
+- [Related documentation](#related-documentation)
 
 <!-- mtoc-end -->
 </details>
 
 ## Resolution boundary
 
-Entry variant resolution is a local, synchronous decision. The resolver does not fetch Contentful
+Entry variant resolution is a local, non-networked decision. The resolver does not fetch Contentful
 entries, call the Experience API, evaluate audiences, allocate traffic, or mutate SDK state. It
 receives:
 
 - A baseline Contentful entry from the application layer.
-- A `selectedOptimizations` array from the Experience API or from state maintained by a stateful
-  SDK.
+- A `selectedOptimizations` array from SDK-normalized Experience API data or from state maintained
+  by a stateful SDK.
 - Linked optimization entries and variant entries already present in the Contentful payload.
 
 The Experience API owns profile evaluation and returns the selected experience and variant metadata.
@@ -61,10 +64,55 @@ profile or request.
 ```text
 Application fetches Contentful baseline entry
   -> Application or SDK emits an Experience event
-  -> Experience API returns selectedOptimizations
+  -> SDK event result exposes data.selectedOptimizations
   -> SDK resolver matches selectedOptimizations to entry.fields.nt_experiences
   -> SDK returns baseline or linked variant entry for rendering
 ```
+
+Raw Experience API responses name selected experiences in `data.experiences`. SDK event methods and
+the API client normalize that field to `data.selectedOptimizations` before application code passes
+it to entry resolution.
+
+## Runtime support
+
+Entry resolution is available across the Optimization SDK Suite, but the public surface depends on
+the runtime:
+
+| Runtime      | Direct API                                                                         | Component or native rendering API                            |
+| ------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Core         | `CoreStateful.resolveOptimizedEntry()` and `CoreStateless.resolveOptimizedEntry()` | None                                                         |
+| Web          | `ContentfulOptimization.resolveOptimizedEntry()`                                   | `ctfl-optimized-entry` Web Component                         |
+| React Web    | `useEntryResolver()` and the underlying Web SDK method                             | `useOptimizedEntry()` and `OptimizedEntry`                   |
+| React Native | `useEntryResolver()` and the underlying React Native SDK method                    | `OptimizedEntry`                                             |
+| Node         | `ContentfulOptimization.resolveOptimizedEntry()`                                   | None                                                         |
+| iOS          | `OptimizationClient.resolveOptimizedEntry(baseline:selectedOptimizations:)`        | SwiftUI `OptimizedEntry`; UIKit can call the client directly |
+| Android      | `suspend OptimizationClient.resolveOptimizedEntry(...)`                            | Compose `OptimizedEntry`; XML Views `OptimizedEntryView`     |
+
+Next.js uses the Node server and React Web client surfaces, plus Next.js adapter components such as
+`ServerOptimizedEntry` for server-rendered entries.
+
+## Inputs and constraints
+
+Usable entry selections depend on runtime state before the resolver runs:
+
+- **Selected optimization source** - `selectedOptimizations` comes from accepted Experience API
+  responses, configured defaults, or persisted defaults that a stateful runtime loads during
+  startup. Blocked events do not produce fresh selection data.
+- **Consent and allowed event types** - Event consent and `allowedEventTypes` decide which
+  Experience events can emit before consent is accepted. If a page, screen, identify, track, or
+  sticky view event is blocked, entry resolution uses the current in-memory selections, configured
+  defaults, persisted selections, or `undefined`.
+- **Persistence consent** - Durable profile-continuity loading, including persisted
+  `selectedOptimizations`, happens only when persistence consent resolves to `true`. Configured
+  defaults can still seed one runtime instance without enabling durable storage.
+- **Offline and failed requests** - Accepted queued or offline events might not return data yet, and
+  failed Experience requests do not publish newer selections. Stateful components can render from
+  `undefined`, previous, or default selections until a successful response updates state.
+- **Preview overrides** - Preview tooling mutates `selectedOptimizations` by applying audience or
+  variant overrides. The resolver still receives an ordinary selection array and follows the same
+  local matching rules.
+- **Resolution boundary** - Entry resolution stays local and fail-soft. It does not retry events,
+  fetch Contentful entries, override consent policy, or throw for personalization misses.
 
 ## Single-locale CDA entry contract
 
@@ -80,6 +128,8 @@ time, so locale-keyed maps do not match the `OptimizedEntry` schema and resoluti
 baseline entry.
 
 Fetch the entry with a single CDA locale and enough include depth for optimization links:
+
+JavaScript runtimes / TypeScript:
 
 ```ts
 const appLocale = getAppLocale()
@@ -103,6 +153,8 @@ it does not modify Contentful client requests for you. For the full locale model
 
 For entries that will be passed to the Optimization SDK resolver, use a concrete locale instead of
 the CDA wildcard locale:
+
+JavaScript runtimes / TypeScript:
 
 ```ts
 // These patterns return all locales and produce locale-keyed fields.
@@ -136,8 +188,10 @@ contains the optimization metadata the resolver needs:
 | `nt_config`        | Defines entry-replacement components. Traffic, distribution, and stickiness are upstream allocation metadata. |
 | `nt_variants`      | Contains the resolved Contentful entries that can replace the baseline entry.                                 |
 
-Only `EntryReplacement` components participate in entry resolution. `InlineVariable` components are
-resolved through the Custom Flag and `changes` flow, not through `resolveOptimizedEntry()`.
+Components with `type: "EntryReplacement"` participate in entry resolution. Components with omitted
+`type` are also treated as `EntryReplacement` components for backward-compatible Contentful
+payloads. `InlineVariable` components are resolved through the Custom Flag and `changes` flow, not
+through `resolveOptimizedEntry()`.
 
 ### Selected optimization
 
@@ -148,10 +202,13 @@ resolved through the Custom Flag and `changes` flow, not through `resolveOptimiz
 | `experienceId` | Matches `optimizationEntry.fields.nt_experience_id`.                                     |
 | `variantIndex` | Selects the baseline or one of the configured variants.                                  |
 | `variants`     | Maps baseline entry IDs to variant entry IDs. The entry resolver does not read this map. |
-| `sticky`       | Returned as metadata on successful variant resolution and used by tracking surfaces.     |
+| `sticky`       | Returned as metadata for matched selections and used by tracking surfaces.               |
 
 The resolver uses `experienceId` and `variantIndex`. It returns the full `SelectedOptimization` as
-metadata only when it resolves to a non-baseline variant.
+metadata after it matches an attached optimization entry, including `variantIndex: 0` baseline
+selections and variant fallback cases that happen after that match. It does not return selected
+metadata when no selection exists, the entry is not optimized, or no selected experience matches an
+attached optimization entry.
 
 ### Merge tags and localized profile values
 
@@ -164,33 +221,42 @@ Stateful SDKs use their current SDK locale as the default Experience API locale 
 context locale. Apps can change that value with `setLocale()` or, in React providers, by changing
 the provider `locale` prop. Locale changes update SDK state only; fetch content or call `page()`,
 `screen()`, or `identify()` again when the rendered data needs to refresh. Stateless server code
-should pass the application locale through `forRequest({ locale: appLocale })`.
+passes the application locale through `forRequest({ locale: appLocale })`.
 
-That request locale is not a Contentful CDA locale. The Experience API validates locale tag syntax
-and uses its own default when the query parameter is omitted. If the locale tag is invalid, the API
-request can fail validation before a profile response is returned. If the tag is valid but a
-specific location translation is not available, localized location values may remain untranslated.
+That request locale is not a Contentful CDA locale. SDK top-level `locale`, stateful `setLocale()`,
+and Node `forRequest({ locale })` normalize valid explicit locale values and reject invalid explicit
+values before the request. When the SDK locale is omitted, the Experience API `locale` query
+parameter is omitted and the API uses its own default. Advanced low-level Experience API client
+locale options are passed through as query parameters; invalid values on that low-level path can
+fail API validation before a profile response is returned. If the tag is valid but a specific
+location translation is not available, localized location values can remain untranslated.
 
 ## Resolution flow
 
 The shared Core resolver follows one path for every SDK package:
 
-1. Return the baseline entry when `selectedOptimizations` is missing or empty.
-2. Return the baseline entry when the input entry does not have an `nt_experiences` field in the
-   expected shape.
+1. Return the baseline entry without selected metadata when `selectedOptimizations` is missing or
+   empty.
+2. Return the baseline entry without selected metadata when the input entry does not have an
+   `nt_experiences` field in the expected shape.
 3. Filter `entry.fields.nt_experiences` to fully resolved optimization entries.
 4. Select the first optimization entry whose `nt_experience_id` appears in `selectedOptimizations`.
-5. Find the matching `SelectedOptimization` for that optimization entry.
-6. Treat `variantIndex: 0` or a missing selection as baseline.
-7. Find the `EntryReplacement` component whose `baseline.id` equals the baseline entry `sys.id` and
-   whose baseline is not hidden.
-8. Select the configured variant at `variantIndex - 1`.
-9. Find the linked Contentful variant entry in `optimizationEntry.fields.nt_variants` by the
-   selected variant ID.
-10. Return the variant entry and `selectedOptimization` metadata when all checks pass.
+5. Return the baseline entry without selected metadata when no selected experience matches an
+   attached optimization entry.
+6. Find the matching `SelectedOptimization` for that optimization entry.
+7. Treat `variantIndex: 0` as a baseline selection and return the baseline entry with
+   `selectedOptimization` metadata.
+8. Find the `EntryReplacement` component, including components with omitted `type`, whose
+   `baseline.id` equals the baseline entry `sys.id` and whose baseline is not hidden.
+9. Select the configured variant at `variantIndex - 1`.
+10. Find the linked Contentful variant entry in `optimizationEntry.fields.nt_variants` by the
+    selected variant ID.
+11. Return the variant entry and `selectedOptimization` metadata when all checks pass.
 
-Resolution returns entry objects from the Contentful payload. Applications can cache raw Contentful
-payloads across requests, but profile-resolved entries are request-local or session-local decisions.
+If steps 8 to 10 fail after a `SelectedOptimization` has matched, the resolver returns the baseline
+entry with the matched `selectedOptimization` metadata. Resolution returns entry objects from the
+Contentful payload. Applications can cache raw Contentful payloads across requests, but
+profile-resolved entries are request-local or session-local decisions.
 
 Running resolution only chooses which entry to render. Stateful packages listen for optimization
 state changes around that decision, then choose again when their live-update rules allow it.
@@ -243,19 +309,19 @@ before reading from the configured variant array.
 ### Fallback behavior
 
 Resolution is fail-soft. Invalid, incomplete, or unmatched data returns the baseline entry instead
-of throwing.
+of throwing. The selected metadata result distinguishes a baseline selection from a miss:
 
-| Condition                                         | Result         |
-| ------------------------------------------------- | -------------- |
-| No `selectedOptimizations`                        | Baseline entry |
-| Entry is not optimized                            | Baseline entry |
-| `nt_experiences` contains only unresolved links   | Baseline entry |
-| No selected experience matches an attached entry  | Baseline entry |
-| Selected `variantIndex` is `0`                    | Baseline entry |
-| No relevant `EntryReplacement` component exists   | Baseline entry |
-| Selected variant index is out of range            | Baseline entry |
-| Variant ID exists in config but not `nt_variants` | Baseline entry |
-| Variant entry is still an unresolved link         | Baseline entry |
+| Condition                                         | Entry result   | `selectedOptimization` result |
+| ------------------------------------------------- | -------------- | ----------------------------- |
+| No `selectedOptimizations`                        | Baseline entry | `undefined`                   |
+| Entry is not optimized                            | Baseline entry | `undefined`                   |
+| `nt_experiences` contains only unresolved links   | Baseline entry | `undefined`                   |
+| No selected experience matches an attached entry  | Baseline entry | `undefined`                   |
+| Selected `variantIndex` is `0`                    | Baseline entry | Matched selection             |
+| No relevant `EntryReplacement` component exists   | Baseline entry | Matched selection             |
+| Selected variant index is out of range            | Baseline entry | Matched selection             |
+| Variant ID exists in config but not `nt_variants` | Baseline entry | Matched selection             |
+| Variant entry is still an unresolved link         | Baseline entry | Matched selection             |
 
 Consumers must not rely on exceptions to detect personalization misses. Render the baseline entry
 when no variant resolves; baseline fallback is expected behavior, not an error state.
@@ -280,15 +346,25 @@ matched `nt_config` component and the resolved `nt_variants` entries in the Cont
 
 The shared method is `resolveOptimizedEntry(entry, selectedOptimizations?)`. It returns:
 
+JavaScript runtimes / TypeScript:
+
 ```ts
 {
   entry: Entry
   selectedOptimization?: SelectedOptimization
+  optimizationContextId?: string
 }
 ```
 
+`optimizationContextId` is an opaque SDK-owned value. Stateful SDK methods register it when a
+matched optimization produces interaction context, so entry view, click, hover, or tap tracking can
+enrich follow-up events without recomputing the resolution context. It is optional because stateless
+resolution and unmatched fallbacks do not register interaction context.
+
 The Node SDK is stateless. Pass the request-local `selectedOptimizations` from the `data` returned
 by `page()`, `identify()`, `screen()`, `track()`, or sticky `trackView()`.
+
+Node server runtime / TypeScript:
 
 ```ts
 const requestOptimization = optimization.forRequest({
@@ -305,9 +381,9 @@ const { entry, selectedOptimization } = optimization.resolveOptimizedEntry(
 )
 ```
 
-The Web and React Native SDKs are stateful. If callers omit `selectedOptimizations`, those SDKs
-resolve from their `selectedOptimizations` state. Passing an explicit array is still useful for
-server-provided or request-local data because it avoids depending on ambient SDK state.
+The Web, React Web, and React Native SDKs are stateful. If callers omit `selectedOptimizations`,
+those SDKs resolve from their `selectedOptimizations` state. Passing an explicit array is still
+useful for server-provided or request-local data because it avoids depending on ambient SDK state.
 
 Provide optimization data before expecting optimized content. `page()`, `identify()`, `screen()`,
 `track()`, and sticky `trackView()` can return the selected optimization data used by this method.
@@ -316,19 +392,30 @@ The iOS SDK exposes the same local boundary through
 `OptimizationClient.resolveOptimizedEntry(baseline:selectedOptimizations:)`. UIKit apps usually pass
 `client.selectedOptimizations` during cell or view configuration. The method returns a
 `ResolvedOptimizedEntry` containing the resolved `entry` and optional `selectedOptimization`
-metadata, and returns the baseline unchanged when no selected optimization matches the entry.
-
-The Android SDK exposes the same local boundary through
-`OptimizationClient.resolveOptimizedEntry(baseline = ..., selectedOptimizations = ...)`. XML Views
-apps usually rely on `OptimizedEntryView` or pass `client.selectedOptimizations.value` when
-resolving directly. The method returns a `ResolvedOptimizedEntry` containing the resolved `entry`
-and optional `selectedOptimization` metadata, and returns the baseline unchanged when no selected
+metadata and `optimizationContextId`, and returns the baseline unchanged when no selected
 optimization matches the entry.
+
+The Android SDK exposes the same local, non-networked boundary through
+`suspend OptimizationClient.resolveOptimizedEntry(baseline = ..., selectedOptimizations = ...)`.
+Call it from a coroutine when resolving directly, or use Compose `OptimizedEntry` or XML Views
+`OptimizedEntryView` so the adapter owns the coroutine call. Direct callers can pass
+`client.selectedOptimizations.value`. The method returns a `ResolvedOptimizedEntry` containing the
+resolved `entry` and optional `selectedOptimization` metadata and `optimizationContextId`, and
+returns the baseline unchanged when no selected optimization matches the entry.
 
 ### Render with framework components
 
-Use framework components when rendering is already inside a supported React tree. They subscribe to
-SDK state, call the same shared resolver, and pass the resolved entry to your rendering code.
+Use framework components or native view adapters when rendering is already inside a supported
+framework tree or native view adapter. These surfaces subscribe to SDK state, call the same shared
+resolver, and pass the resolved entry to your rendering code.
+
+The Web SDK `ctfl-optimized-entry` custom element uses the same `OptimizedEntryController` as the
+framework adapters. Assign the structured Contentful entry through the `baselineEntry` property, and
+provide an SDK through either an ancestor or explicit `ctfl-optimization-root` binding or the
+element's `sdk` property. The element honors `live-updates`, `track-clicks`, `track-hovers`, and
+`track-views` attributes, applies `data-ctfl-*` tracking attributes to the host, and emits
+`ctfl-entry-loading` and `ctfl-entry-resolved` events as the controller state changes. The Web SDK
+README owns setup details for defining the custom elements and assigning property-only values.
 
 React Web wraps resolution in `useOptimizedEntry()` and `OptimizedEntry`. `OptimizedEntry`:
 
@@ -350,7 +437,7 @@ React Native uses the same resolver inside its `OptimizedEntry` component. The c
 - Subscribes to `states.selectedOptimizations` only for optimized entries.
 - Locks to the first selected optimization set by default.
 - Re-resolves when `liveUpdates` is enabled globally, per component, or by the preview panel.
-- Passes the resolved entry to render-prop children.
+- Renders static children unchanged or calls a render prop with the resolved entry.
 - Sends view and tap tracking metadata from the resolved entry and `selectedOptimization`.
 
 React Native does not render DOM data attributes. It passes the resolved entry and optimization
@@ -359,13 +446,14 @@ metadata directly into its viewport and tap tracking hooks.
 SwiftUI uses the same resolver inside `OptimizedEntry`. The component passes non-optimized entries
 through unchanged, resolves optimized entries from the client's selected optimizations, can lock to
 the first resolved variant, can re-resolve when live updates are enabled, and can attach iOS view
-and tap tracking for the resolved entry.
+and tap tracking using the baseline entry identity with `selectedOptimization` and
+`optimizationContextId` metadata.
 
 Android Compose uses the same resolver inside `OptimizedEntry`, and Android XML Views use it inside
 `OptimizedEntryView`. Both adapters pass non-optimized entries through unchanged, resolve optimized
 entries from the client's selected optimizations, can lock to the first resolved variant, can
-re-resolve when live updates are enabled, and can attach Android view and tap tracking for the
-resolved entry.
+re-resolve when live updates are enabled, and can attach Android view and tap tracking using the
+baseline entry identity with `selectedOptimization` and `optimizationContextId` metadata.
 
 ### Preview selected variants
 
@@ -377,3 +465,45 @@ index.
 Because the resolver uses `variantIndex`, preview overrides can append synthetic selected
 optimization records with an empty `variants` map. This works as long as the matching
 `nt_experience` entry and variant entries are present in the Contentful payload.
+
+## Related documentation
+
+Use these concept docs for mechanics that often affect entry resolution:
+
+- [Core state management](./core-state-management.md) explains state propagation before stateful
+  runtimes resolve entries.
+- [Consent management in the Optimization SDK Suite](./consent-management-in-the-optimization-sdk-suite.md)
+  explains event and persistence consent gates.
+- [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md)
+  explains the difference between Contentful CDA locales and SDK Experience/event locales.
+- [Profile synchronization between client and server](./profile-synchronization-between-client-and-server.md)
+  explains how Node and browser runtimes share `profile`, `selectedOptimizations`, and `changes`.
+- [Interaction tracking in Web SDKs](./interaction-tracking-in-web-sdks.md),
+  [Interaction tracking in Node and stateless environments](./interaction-tracking-in-node-and-stateless-environments.md),
+  [React Native SDK interaction tracking mechanics](./react-native-sdk-interaction-tracking-mechanics.md),
+  [iOS SDK runtime and interaction mechanics](./ios-sdk-runtime-and-interaction-mechanics.md), and
+  [Android SDK runtime and interaction mechanics](./android-sdk-runtime-and-interaction-mechanics.md)
+  explain how resolved entry metadata is used for tracking.
+
+Use these guides for SDK-specific integration paths:
+
+- [Integrating the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md)
+- [Integrating the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md)
+- [Integrating the React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
+- [Integrating the Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md)
+- [Integrating the Optimization iOS SDK in a SwiftUI app](../guides/integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
+- [Integrating the Optimization iOS SDK in a UIKit app](../guides/integrating-the-optimization-ios-sdk-in-a-uikit-app.md)
+- [Integrating the Optimization Android SDK in a Jetpack Compose app](../guides/integrating-the-optimization-android-sdk-in-a-compose-app.md)
+- [Integrating the Optimization Android SDK in an XML Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md)
+- [Integrating the Optimization SDK in a Next.js app with SSR](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md)
+- [Integrating the Optimization SDK in a Next.js app with SSR and CSR](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md)
+
+Use these package READMEs when you need runtime-specific API orientation:
+
+- [Optimization Core SDK](../../packages/universal/core-sdk/README.md)
+- [Optimization Web SDK](../../packages/web/web-sdk/README.md)
+- [Optimization React Web SDK](../../packages/web/frameworks/react-web-sdk/README.md)
+- [Optimization React Native SDK](../../packages/react-native-sdk/README.md)
+- [Optimization Node SDK](../../packages/node/node-sdk/README.md)
+- [Optimization iOS SDK](../../packages/ios/ContentfulOptimization/README.md)
+- [Optimization Android SDK](../../packages/android/README.md)

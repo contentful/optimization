@@ -1,17 +1,17 @@
 # e2e-web
 
-Shared Playwright E2E suite for CSR web SDK implementations. The suite owns the test specs as a
-single source of truth — each implementation runs them against its own dev server via the
-`IMPLEMENTATION` env var, so tracking and consent behaviour is verified consistently across React
-and Angular without duplicating spec files.
+Shared Playwright E2E suite for browser-based Web SDK reference implementations. The suite owns the
+test specs as a single source of truth; each implementation runs them against its own dev server via
+the `IMPLEMENTATION` env var, so tracking and consent behavior is verified consistently across
+vanilla, React, and Angular implementations without duplicating spec files.
 
 ## Running tests
 
 ```sh
-# First-time setup — installs Playwright browsers, run once from the repo root
+# First-time setup, run once from the repo root
 pnpm --dir lib/e2e-web setup:e2e
 
-# Run the full suite (from an implementation directory)
+# Run the full suite from an implementation directory
 pnpm test:e2e
 
 # Open the interactive UI runner
@@ -21,66 +21,75 @@ pnpm test:e2e:ui
 pnpm test:e2e:report
 ```
 
-Supported implementations: `react-web-sdk`, `web-sdk_react`, `web-sdk_angular`.
+Supported implementations: `web-sdk`, `react-web-sdk`, `web-sdk_react`, and `web-sdk_angular`.
+
+Root wrappers are available for the current implementations:
+
+```sh
+pnpm test:e2e:web-sdk
+pnpm test:e2e:react-web-sdk
+pnpm test:e2e:web-sdk_react
+pnpm test:e2e:web-sdk_angular
+```
 
 ## How it works
 
 `playwright.config.mjs` uses two env vars to know which app to test:
 
-- `IMPLEMENTATION` — the folder name under `implementations/` (e.g. `web-sdk_angular`). The config
-  uses this to resolve the implementation directory and registers its `serve:e2e` script as a
-  Playwright `webServer`. Playwright starts the server automatically before the suite runs and shuts
-  it down after — or reuses it if it is already listening on the port. This means no manual pm2
-  process tracking: you can run `pnpm test:e2e` from a cold start and the app comes up, tests run,
-  and the process is cleaned up without any extra steps. Playwright browsers are installed once in
-  `lib/e2e-web` via `setup:e2e` and shared across all implementations — no per-implementation
-  install, no duplicating Playwright config, test scripts, or spec files. The value is validated
-  against `/^[a-z0-9_-]+$/` and resolved to an absolute path before use, so it is never interpolated
-  directly into a shell command.
-- `APP_PORT` — the port the app listens on. Defaults to `3000`. Angular dev server uses `4200`, so
-  it must be set explicitly. Having a configurable port also makes it possible to run E2E suites for
-  multiple implementations in parallel — each on its own port with no conflicts.
+- `IMPLEMENTATION` - folder name under `implementations/`, such as `web-sdk_angular`. The config
+  validates the value against `/^[a-z0-9_-]+$/`, resolves it to an absolute path, loads the
+  implementation `.env` file when present, and registers that implementation's `serve:e2e` script as
+  the Playwright app `webServer`.
+- `APP_PORT` - port the app listens on. It defaults to `3000`; Angular sets `APP_PORT=4200`.
 
-The config also loads the implementation's `.env` file via `process.loadEnvFile()` before the suite
-runs, so vars like `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL` are available to both the test process
-and the app server without any manual forwarding.
+The config also starts the shared mock server from `lib/mocks` as a Playwright `webServer`. Both web
+servers use `reuseExistingServer: true`, so Playwright can reuse a server that is already listening
+or start it for a cold run and clean up the child process afterward.
 
-Each implementation sets both in its own `test:e2e` script:
+Each implementation owns its own app startup behavior through `serve:e2e`, including any build step,
+dev server command, fixed port, and environment handling. The shared suite only needs the app to be
+reachable at `APP_PORT` and the mock API server to be reachable at `http://localhost:8000`.
+
+Current implementation scripts point the shared suite at the right app:
 
 ```sh
-# web-sdk_angular
-IMPLEMENTATION=web-sdk_angular APP_PORT=4200 pnpm --dir ../../lib/e2e-web test
+# web-sdk
+IMPLEMENTATION=web-sdk pnpm --dir ../../lib/e2e-web test
+
+# react-web-sdk
+IMPLEMENTATION=react-web-sdk pnpm --dir ../../lib/e2e-web test
 
 # web-sdk_react
 IMPLEMENTATION=web-sdk_react pnpm --dir ../../lib/e2e-web test
 
-# react-web-sdk
-IMPLEMENTATION=react-web-sdk pnpm --dir ../../lib/e2e-web test
+# web-sdk_angular
+IMPLEMENTATION=web-sdk_angular APP_PORT=4200 pnpm --dir ../../lib/e2e-web test
 ```
 
-The config also starts the shared mock server (`lib/mocks`) with the same lifecycle — spun up before
-the suite and reused if already running. Each implementation registers its own `serve:e2e` command,
-so the server startup behaviour (port, build step, env) is fully owned by that implementation.
+Playwright browsers are installed once in `lib/e2e-web` and shared across all implementations. Run
+`pnpm --dir lib/e2e-web setup:e2e` from the repo root before running any implementation suite for
+the first time.
 
 ## Adding a new implementation
 
-Two changes are needed in the implementation's `package.json` — no new dependencies, no new spec
-files, no Playwright config:
+Add scripts to the implementation `package.json`; no new Playwright config or duplicated spec files
+are needed:
 
 ```jsonc
 // implementations/my-web-sdk/package.json
 {
   "scripts": {
-    // Builds and starts the app on a fixed port for Playwright to target
+    // Builds and starts the app on a fixed port for Playwright to target.
     "serve:e2e": "<your build + serve command>",
 
-    // Points the shared suite at this implementation; .env is loaded automatically
+    // Points the shared suite at this implementation. Set APP_PORT when it is not 3000.
     "test:e2e": "IMPLEMENTATION=my-web-sdk pnpm --dir ../../lib/e2e-web test",
+    "test:e2e:codegen": "IMPLEMENTATION=my-web-sdk pnpm --dir ../../lib/e2e-web test:codegen",
+    "test:e2e:ui": "IMPLEMENTATION=my-web-sdk pnpm --dir ../../lib/e2e-web test:ui",
+    "test:e2e:report": "pnpm --dir ../../lib/e2e-web test:report",
   },
 }
 ```
 
-Then align UI labels and `data-testid` attributes with the selectors used in the specs.
-
-Playwright browsers are installed once in `lib/e2e-web` and shared — run `pnpm setup:e2e` there once
-before running any implementation's suite for the first time.
+Then align visible labels, interaction behavior, and `data-testid` attributes with the selectors
+used in the shared specs.

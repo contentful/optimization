@@ -64,7 +64,7 @@ export function ContentEntry({ entry }: ContentEntryProps): React.JSX.Element {
 
   return (
     <View testID={`content-entry-${entry.sys.id}`}>
-      <OptimizedEntry baselineEntry={entry} trackTaps>
+      <OptimizedEntry baselineEntry={entry}>
         {(resolvedEntry) => (
           <View testID={`content-${entry.sys.id}`}>
             {renderContent(resolvedEntry, entry.sys.id)}

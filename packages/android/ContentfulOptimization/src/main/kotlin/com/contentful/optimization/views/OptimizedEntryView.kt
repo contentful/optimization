@@ -8,6 +8,7 @@ import android.view.ViewTreeObserver
 import android.widget.FrameLayout
 import com.contentful.optimization.core.ResolvedOptimizedEntry
 import com.contentful.optimization.core.TrackClickPayload
+import com.contentful.optimization.core.resolvePreviewCloseLockState
 import com.contentful.optimization.tracking.TrackingMetadata
 import com.contentful.optimization.tracking.VIEW_TRACKING_LOG_TAG
 import com.contentful.optimization.tracking.ViewTrackingController
@@ -197,15 +198,24 @@ public class OptimizedEntryView @JvmOverloads constructor(
 
         previewJob = scope.launch {
             client.isPreviewPanelOpen.collect { open ->
-                if (!open && isOptimized && isLocked) {
-                    lockedOptimizations = client.selectedOptimizations.value
-                    publishResult(
-                        client.resolveOptimizedEntry(
-                            baseline = entry,
-                            selectedOptimizations = lockedOptimizations,
-                        ),
-                    )
+                val lockState = resolvePreviewCloseLockState(
+                    isOptimized = isOptimized,
+                    isPreviewPanelOpen = open,
+                    nonPreviewLiveUpdates = liveUpdates ?: OptimizationManager.liveUpdates,
+                    hasSelectedOptimizationsOverride = explicitOverride != null,
+                    selectedOptimizations = client.selectedOptimizations.value,
+                ) ?: return@collect
+
+                lockedOptimizations = lockState.lockedOptimizations
+                if (lockState.shouldLock) {
+                    isLocked = true
                 }
+                publishResult(
+                    client.resolveOptimizedEntry(
+                        baseline = entry,
+                        selectedOptimizations = lockedOptimizations,
+                    ),
+                )
             }
         }
 

@@ -17,7 +17,7 @@ export type EntryInteraction = 'views' | 'taps'
  *
  * @remarks
  * Omitted keys fall back to their defaults: `views` defaults to `true`,
- * `taps` defaults to `false`.
+ * `taps` defaults to `true`.
  *
  * @public
  */
@@ -36,7 +36,7 @@ export interface InteractionTrackingContextValue {
 }
 
 const DEFAULT_VIEWS = true
-const DEFAULT_TAPS = false
+const DEFAULT_TAPS = true
 
 const InteractionTrackingContext = createContext<InteractionTrackingContextValue>({
   views: DEFAULT_VIEWS,
@@ -81,7 +81,7 @@ interface InteractionTrackingProviderProps {
  * @remarks
  * Typically wrapped by {@link OptimizationRoot} -- not used directly.
  * Resolves partial `trackEntryInteraction` options against defaults
- * (`views: true`, `taps: false`).
+ * (`views: true`, `taps: true`).
  *
  * @internal
  */

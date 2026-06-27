@@ -111,21 +111,21 @@ that need platform-native integration surfaces.
 `OptimizationRoot` accepts Core stateful configuration directly, plus React Native-specific props.
 Only `clientId` is required.
 
-| Option                  | Required? | Default                        | Description                                                                       |
-| ----------------------- | --------- | ------------------------------ | --------------------------------------------------------------------------------- |
-| `clientId`              | Yes       | N/A                            | Shared API key for Experience API and Insights API requests                       |
-| `environment`           | No        | `'main'`                       | Contentful environment identifier                                                 |
-| `api`                   | No        | See API options below          | Experience API and Insights API endpoint and request options                      |
-| `locale`                | No        | `undefined`                    | SDK Experience API and default event locale                                       |
-| `defaults`              | No        | `undefined`                    | Initial state, commonly including consent, persistence consent, or profile values |
-| `allowedEventTypes`     | No        | `['identify', 'screen']`       | Event types allowed before consent is explicitly set                              |
-| `trackEntryInteraction` | No        | `{ views: true, taps: false }` | Default view and tap tracking for `OptimizedEntry` components                     |
-| `liveUpdates`           | No        | `false`                        | Whether optimized entries react continuously to SDK state changes                 |
-| `onStatesReady`         | No        | `undefined`                    | Provider-managed app-level state subscription hook                                |
-| `getAnonymousId`        | No        | `undefined`                    | Function used to provide an anonymous ID from application-owned identity state    |
-| `queuePolicy`           | No        | SDK defaults                   | Flush retry behavior and offline queue bounds                                     |
-| `logLevel`              | No        | `'error'`                      | Minimum log level for the default console sink                                    |
-| `onEventBlocked`        | No        | `undefined`                    | Callback invoked when consent or guard logic blocks an event                      |
+| Option                  | Required? | Default                       | Description                                                                       |
+| ----------------------- | --------- | ----------------------------- | --------------------------------------------------------------------------------- |
+| `clientId`              | Yes       | N/A                           | Shared API key for Experience API and Insights API requests                       |
+| `environment`           | No        | `'main'`                      | Contentful environment identifier                                                 |
+| `api`                   | No        | See API options below         | Experience API and Insights API endpoint and request options                      |
+| `locale`                | No        | `undefined`                   | SDK Experience API and default event locale                                       |
+| `defaults`              | No        | `undefined`                   | Initial state, commonly including consent, persistence consent, or profile values |
+| `allowedEventTypes`     | No        | `['identify', 'screen']`      | Event types allowed before consent is explicitly set                              |
+| `trackEntryInteraction` | No        | `{ views: true, taps: true }` | Default view and tap tracking for `OptimizedEntry` components                     |
+| `liveUpdates`           | No        | `false`                       | Whether optimized entries react continuously to SDK state changes                 |
+| `onStatesReady`         | No        | `undefined`                   | Provider-managed app-level state subscription hook                                |
+| `getAnonymousId`        | No        | `undefined`                   | Function used to provide an anonymous ID from application-owned identity state    |
+| `queuePolicy`           | No        | SDK defaults                  | Flush retry behavior and offline queue bounds                                     |
+| `logLevel`              | No        | `'error'`                     | Minimum log level for the default console sink                                    |
+| `onEventBlocked`        | No        | `undefined`                   | Callback invoked when consent or guard logic blocks an event                      |
 
 Common `api` options:
 
@@ -248,11 +248,12 @@ function HeroData({ entry }) {
 ### Track entry interactions
 
 Entry tracking records views and taps for Contentful entries, not arbitrary UI components. Global
-defaults live on `OptimizationRoot`; individual `OptimizedEntry` components can override them:
+defaults live on `OptimizationRoot` and observe both views and taps by default. Individual
+`OptimizedEntry` components can override them:
 
 ```tsx
-<OptimizationRoot clientId="your-client-id" trackEntryInteraction={{ views: true, taps: true }}>
-  <OptimizedEntry baselineEntry={entry} trackViews={true} trackTaps={false}>
+<OptimizationRoot clientId="your-client-id" trackEntryInteraction={{ taps: false }}>
+  <OptimizedEntry baselineEntry={entry} trackTaps={true}>
     {(resolvedEntry) => <Card entry={resolvedEntry} />}
   </OptimizedEntry>
 </OptimizationRoot>
@@ -353,7 +354,7 @@ queued events and drains pending AsyncStorage persistence. Tune queue bounds and
 
 - `ContentfulOptimization.create(...)` is asynchronous. Prefer `OptimizationRoot` when React needs
   to own initialization.
-- View tracking defaults to enabled; tap tracking defaults to disabled.
+- View and tap tracking default to enabled.
 - Live updates default to disabled so entries lock to the first resolved value unless enabled
   globally, per component, or by the preview panel.
 - React Native compatibility polyfills are imported automatically for Iterator Helpers,

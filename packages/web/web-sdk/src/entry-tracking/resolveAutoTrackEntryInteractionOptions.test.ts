@@ -1,18 +1,18 @@
 import { resolveAutoTrackEntryInteractionOptions } from './resolveAutoTrackEntryInteractionOptions'
 
 describe('resolveAutoTrackEntryInteractionOptions', () => {
-  it('defaults auto-track values to false when omitted', () => {
+  it('defaults auto-track values to true when omitted', () => {
     expect(resolveAutoTrackEntryInteractionOptions()).toEqual({
-      clicks: false,
-      hovers: false,
-      views: false,
+      clicks: true,
+      hovers: true,
+      views: true,
     })
   })
 
-  it('applies provided values while preserving defaults for omitted keys', () => {
-    expect(resolveAutoTrackEntryInteractionOptions({ views: true })).toEqual({
+  it('applies opt-out values while preserving defaults for omitted keys', () => {
+    expect(resolveAutoTrackEntryInteractionOptions({ clicks: false })).toEqual({
       clicks: false,
-      hovers: false,
+      hovers: true,
       views: true,
     })
   })

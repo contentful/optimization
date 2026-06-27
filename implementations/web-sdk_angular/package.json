@@ -7,7 +7,7 @@
   "scripts": {
     "generate:env": "pnpm exec tsx scripts/generate-env.ts",
     "dev": "pnpm generate:env && ng serve",
-    "build": "ng build",
+    "build": "pnpm generate:env && ng build",
     "clean": "rimraf ./dist",
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:mocks": "pm2 start --name web-sdk_angular-mocks \"pnpm --dir ../../lib/mocks serve\"",
@@ -15,12 +15,13 @@
     "serve:e2e": "pnpm dev",
     "serve:app": "pm2 start --name web-sdk_angular-app \"pnpm dev\"",
     "serve:app:stop": "pm2 stop web-sdk_angular-app && pm2 delete web-sdk_angular-app",
-    "serve:stop": "pnpm serve:app:stop && pnpm serve:mocks:stop",
+    "serve:stop": "pnpm serve:app:stop; pnpm serve:mocks:stop",
     "test:e2e": "IMPLEMENTATION=web-sdk_angular APP_PORT=4200 pnpm --dir ../../lib/e2e-web test",
+    "test:e2e:codegen": "IMPLEMENTATION=web-sdk_angular APP_PORT=4200 pnpm --dir ../../lib/e2e-web test:codegen",
     "test:e2e:ui": "IMPLEMENTATION=web-sdk_angular APP_PORT=4200 pnpm --dir ../../lib/e2e-web test:ui",
     "test:e2e:report": "pnpm --dir ../../lib/e2e-web test:report",
     "test:unit": "echo \"No unit tests necessary\"",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "pnpm generate:env && tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@angular/common": "^22.0.0",
@@ -30,9 +31,9 @@
     "@angular/platform-server": "^22.0.0",
     "@angular/router": "^22.0.0",
     "@angular/ssr": "^22.0.0",
-    "@contentful/optimization-node": "*",
-    "@contentful/optimization-web": "*",
-    "@contentful/optimization-web-preview-panel": "*",
+    "@contentful/optimization-node": "0.0.0",
+    "@contentful/optimization-web": "0.0.0",
+    "@contentful/optimization-web-preview-panel": "0.0.0",
     "@contentful/rich-text-types": "^17.2.7",
     "contentful": "^11.12.4",
     "express": "5.2.1",

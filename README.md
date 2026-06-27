@@ -118,6 +118,8 @@ Reference implementations exist to exercise critical flows end to end and to doc
 patterns with intentionally minimal application code.
 
 - [Web Vanilla](./implementations/web-sdk/README.md) - static browser integration for the Web SDK
+- [Web SDK Angular](./implementations/web-sdk_angular/README.md) - Angular integration using the Web
+  SDK directly
 - [React Web](./implementations/react-web-sdk/README.md) - primary React browser integration using
   the official React Web SDK package
 - [Web SDK React Adapter](./implementations/web-sdk_react/README.md) - adapter-based React example

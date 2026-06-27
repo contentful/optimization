@@ -33,7 +33,7 @@ export type OptimizationProviderConfigProps = PropsWithChildren<
     /**
      * Controls automatic entry interaction tracking for OptimizedEntry components.
      *
-     * @defaultValue `{ views: true, clicks: false, hovers: false }`
+     * @defaultValue `{ views: true, clicks: true, hovers: true }`
      */
     readonly trackEntryInteraction?: TrackEntryInteractionOptions
     /**

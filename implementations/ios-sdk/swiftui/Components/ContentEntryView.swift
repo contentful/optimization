@@ -14,7 +14,6 @@ struct ContentEntryView: View {
     var body: some View {
         OptimizedEntry(
             entry: entry,
-            trackTaps: true,
             accessibilityIdentifier: "content-entry-\(entryId)"
         ) { resolvedEntry in
             EntryContent(entry: resolvedEntry, entryId: entryId, client: client)

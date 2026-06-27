@@ -109,7 +109,7 @@ Importing `@contentful/optimization-web/web-components` is side-effect-free. Cus
 registered only when `defineContentfulOptimizationElements()` runs, and the main
 `@contentful/optimization-web` entrypoint does not export or register them.
 
-Use `<ctfl-optimization-root>` once around the entries that should share one SDK instance:
+Use `<ctfl-optimization-root>` once around the entries that share one SDK instance:
 
 ```html
 <ctfl-optimization-root client-id="your-client-id" environment="main" locale="en-US">
@@ -127,7 +127,7 @@ const entry = document.querySelector('ctfl-optimized-entry')
 
 root.defaults = { consent: true }
 root.api = { preflight: false }
-root.trackEntryInteraction = { views: true, clicks: true }
+root.trackEntryInteraction = { hovers: false }
 root.onStatesReady = (states) => {
   const subscription = states.profile.subscribe((profile) => {
     console.log(profile?.id)
@@ -181,21 +181,21 @@ with React providers, hooks, router adapters, and entry-rendering primitives.
 The Web SDK communicates with the Experience API for profile and optimization selection, and with
 the Insights API for event ingestion.
 
-| Option                      | Required? | Default                                          | Description                                                                       |
-| --------------------------- | --------- | ------------------------------------------------ | --------------------------------------------------------------------------------- |
-| `clientId`                  | Yes       | N/A                                              | Shared API key for Experience API and Insights API requests                       |
-| `environment`               | No        | `'main'`                                         | Contentful environment identifier                                                 |
-| `api`                       | No        | See API options below                            | Experience API and Insights API endpoint and request options                      |
-| `app`                       | No        | `undefined`                                      | Application metadata attached to outgoing event context                           |
-| `locale`                    | No        | `undefined`                                      | SDK Experience API and default event locale                                       |
-| `defaults`                  | No        | `undefined`                                      | Initial state, commonly including consent, persistence consent, or profile values |
-| `allowedEventTypes`         | No        | `['identify', 'page']`                           | Event types allowed before consent is explicitly set                              |
-| `autoTrackEntryInteraction` | No        | `{ views: false, clicks: false, hovers: false }` | Opt-in automatic tracking for entry views, clicks, and hovers                     |
-| `cookie`                    | No        | `{ domain: undefined, expires: 365 }`            | Anonymous ID cookie settings                                                      |
-| `getAnonymousId`            | No        | `undefined`                                      | Function used to provide an anonymous ID from application-owned identity state    |
-| `queuePolicy`               | No        | SDK defaults                                     | Flush retry behavior and offline queue bounds                                     |
-| `logLevel`                  | No        | `'error'`                                        | Minimum log level for the default console sink                                    |
-| `onEventBlocked`            | No        | `undefined`                                      | Callback invoked when consent or guard logic blocks an event                      |
+| Option                      | Required? | Default                                       | Description                                                                       |
+| --------------------------- | --------- | --------------------------------------------- | --------------------------------------------------------------------------------- |
+| `clientId`                  | Yes       | N/A                                           | Shared API key for Experience API and Insights API requests                       |
+| `environment`               | No        | `'main'`                                      | Contentful environment identifier                                                 |
+| `api`                       | No        | See API options below                         | Experience API and Insights API endpoint and request options                      |
+| `app`                       | No        | `undefined`                                   | Application metadata attached to outgoing event context                           |
+| `locale`                    | No        | `undefined`                                   | SDK Experience API and default event locale                                       |
+| `defaults`                  | No        | `undefined`                                   | Initial state, commonly including consent, persistence consent, or profile values |
+| `allowedEventTypes`         | No        | `['identify', 'page']`                        | Event types allowed before consent is explicitly set                              |
+| `autoTrackEntryInteraction` | No        | `{ views: true, clicks: true, hovers: true }` | Opt-out automatic tracking for entry views, clicks, and hovers                    |
+| `cookie`                    | No        | `{ domain: undefined, expires: 365 }`         | Anonymous ID cookie settings                                                      |
+| `getAnonymousId`            | No        | `undefined`                                   | Function used to provide an anonymous ID from application-owned identity state    |
+| `queuePolicy`               | No        | SDK defaults                                  | Flush retry behavior and offline queue bounds                                     |
+| `logLevel`                  | No        | `'error'`                                     | Minimum log level for the default console sink                                    |
+| `onEventBlocked`            | No        | `undefined`                                   | Callback invoked when consent or guard logic blocks an event                      |
 
 Common `api` options:
 
@@ -214,7 +214,7 @@ responses.
 
 Choose the application Contentful locale in your router, i18n layer, or app configuration. Pass that
 value directly to Contentful CDA requests. Use the top-level SDK `locale` when Experience API
-responses and event context should use the same language. See
+responses and event context need to use the same language. See
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the full locale model.
 
@@ -261,7 +261,7 @@ optimizations, changes, and the anonymous ID session-only until persistence cons
 
 `page()`, `identify()`, `screen()`, `track()`, and sticky `trackView()` calls return an event
 result. `{ accepted: false }` means consent or SDK guards blocked the event.
-`{ accepted: true, data }` means the SDK accepted the event; accepted queued or offline events may
+`{ accepted: true, data }` means the SDK accepted the event; accepted queued or offline events might
 not have data yet. Router integrations that need current-route deduplication can call
 `trackCurrentPage()`. Direct manual `page()` calls remain non-deduping event emits.
 
@@ -284,7 +284,7 @@ Fetch entries with one CDA locale in the app layer. For localized apps, configur
 locale and pass it directly before calling `getEntry()` or `getEntries()`. Do not pass all-locale
 CDA responses from `withAllLocales` or `locale=*`; the resolver expects direct single-locale field
 values. See
-[Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
+[Entry optimization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the broader locale model.
@@ -296,12 +296,13 @@ stateful, so reading a flag also emits flag-view tracking.
 
 ### Entry interaction tracking
 
-Enable automatic tracking when entry elements follow the standard data-attribute pattern:
+Automatic tracking is enabled when entry elements follow the standard data-attribute pattern. Pass
+`false` for any interaction type that your application does not want to observe:
 
 ```ts
 const optimization = new ContentfulOptimization({
   clientId: 'your-client-id',
-  autoTrackEntryInteraction: { views: true, clicks: true, hovers: false },
+  autoTrackEntryInteraction: { hovers: false },
 })
 ```
 
@@ -310,12 +311,16 @@ Use manual element overrides when the DOM structure does not fit automatic obser
 ```ts
 optimization.tracking.enableElement('views', element, {
   data: {
-    componentId: 'entry-id',
-    experienceId: 'experience-id',
-    variantIndex: 0,
+    entryId: resolvedEntry.entry.sys.id,
+    optimizationId: resolvedEntry.selectedOptimization?.experienceId,
+    optimizationContextId: resolvedEntry.optimizationContextId,
+    variantIndex: resolvedEntry.selectedOptimization?.variantIndex ?? 0,
   },
 })
 ```
+
+`optimizationContextId` is SDK-owned context for follow-up event enrichment and diagnostics. It is
+not an API event payload field.
 
 For detection thresholds, data attributes, click and hover behavior, and manual overrides, use the
 [Web SDK integration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-web-sdk-in-a-web-app.html#7-track-entry-interactions-and-follow-up-events).
@@ -331,8 +336,9 @@ const unsubscribe = optimization.states.profile.subscribe((profile) => {
 ```
 
 Common state streams include `consent`, `persistenceConsent`, `profile`, `selectedOptimizations`,
-`changes`, `blockedEventStream`, `eventStream`, and preview-panel state. Use the generated reference
-for the complete `states` surface.
+`blockedEventStream`, `eventStream`, and preview-panel state. Optimization changes are internal
+state consumed through flag and entry resolution, not an `optimization.states.changes` stream. Use
+the generated reference for the complete `states` surface.
 
 ## Runtime notes
 

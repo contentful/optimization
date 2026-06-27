@@ -24,7 +24,6 @@ fun ContentEntryView(entry: Map<String, Any>) {
 
     OptimizedEntry(
         entry = entry,
-        trackTaps = true,
         accessibilityIdentifier = "content-entry-$entryId",
     ) { resolvedEntry ->
         EntryContent(entry = resolvedEntry, entryId = entryId)

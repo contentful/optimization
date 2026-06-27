@@ -133,7 +133,7 @@ export interface OptimizedEntryProps {
 
   /**
    * Optional callback invoked with the resolved entry after a tap tracking event is emitted.
-   * When provided, implicitly enables tap tracking unless `trackTaps` is explicitly `false`.
+   * When provided, keeps tap tracking enabled unless `trackTaps` is explicitly `false`.
    *
    * @defaultValue `undefined`
    */
@@ -191,9 +191,9 @@ function resolveTapsEnabled(
  * </OptimizedEntry>
  * ```
  *
- * @example With tap tracking
+ * @example With tap handling
  * ```tsx
- * <OptimizedEntry baselineEntry={entry} trackTaps>
+ * <OptimizedEntry baselineEntry={entry}>
  *   {(resolvedEntry) => (
  *     <Pressable onPress={() => navigate(resolvedEntry)}>
  *       <Card title={resolvedEntry.fields.title} />

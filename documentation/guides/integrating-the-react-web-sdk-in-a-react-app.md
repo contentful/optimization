@@ -1,286 +1,249 @@
 # Integrating the Optimization React Web SDK in a React app
 
-Use this guide when you want to add personalization and analytics to a React web application using
-`@contentful/optimization-react-web`.
+Use this guide when you want to add browser-side personalization and analytics to a React
+application with `@contentful/optimization-react-web`.
 
-The React Web SDK wraps `@contentful/optimization-web` with React-specific providers, hooks,
-components, and router adapters so React applications can integrate optimization without managing
-SDK lifecycle and DOM wiring manually.
+The React Web SDK wraps `@contentful/optimization-web` with React providers, hooks, entry-rendering
+components, live-update state, and router adapters. Your application still owns Contentful entry
+fetching, consent policy, identity policy, routing, and final rendering.
 
-Use the lower-level Web SDK guide instead when your application is not React-based or when you want
-to own the browser SDK integration without React abstractions.
+Use the lower-level Web SDK guide instead when your app is not React-based or when you want to own
+the browser SDK lifecycle without React abstractions.
+
+## Quick start
+
+This path assumes your application policy permits Optimization by default. If your app requires
+explicit opt-in, wire the consent section before you emit events or render personalized content.
+
+1. Install the React Web SDK in an existing React app. Add `contentful` only if your app does not
+   already have a Contentful Delivery API client.
+
+   **Copy this:**
+
+   ```sh
+   pnpm add @contentful/optimization-react-web contentful
+   ```
+
+2. Mount `OptimizationRoot` once, emit a page event so the SDK can evaluate route-based
+   optimizations, fetch one single-locale Contentful entry with linked optimization data, and render
+   it through `OptimizedEntry`.
+
+   Set `PUBLIC_HERO_ENTRY_ID` to the baseline entry ID for the first optimized entry, or replace
+   `HERO_ENTRY_ID` with an app-owned constant.
+
+   **Adapt this to your use case:**
+
+   ```tsx
+   import {
+     OptimizationRoot,
+     OptimizedEntry,
+     useOptimizationActions,
+   } from '@contentful/optimization-react-web'
+   import { createClient, type Entry } from 'contentful'
+   import { useEffect, useState } from 'react'
+
+   const APP_LOCALE = 'en-US'
+   const HERO_ENTRY_ID = import.meta.env.PUBLIC_HERO_ENTRY_ID
+   const INCLUDE_DEPTH = 10
+
+   const contentfulClient = createClient({
+     accessToken: import.meta.env.PUBLIC_CONTENTFUL_TOKEN,
+     environment: import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'main',
+     space: import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID,
+   })
+
+   function HomePage() {
+     const { page } = useOptimizationActions()
+     const [entry, setEntry] = useState<Entry | undefined>()
+
+     useEffect(() => {
+       // Emit after the provider is ready so the SDK can resolve route-based optimizations.
+       void page()
+     }, [page])
+
+     useEffect(() => {
+       void contentfulClient
+         .getEntry(HERO_ENTRY_ID, {
+           // Resolve linked optimization and variant entries before passing the entry to React Web.
+           include: INCLUDE_DEPTH,
+           locale: APP_LOCALE,
+         })
+         .then(setEntry)
+     }, [])
+
+     if (!entry) return null
+
+     return (
+       <OptimizedEntry baselineEntry={entry}>
+         {(resolvedEntry) => (
+           <article>
+             <h1>{String(resolvedEntry.fields.title ?? '')}</h1>
+           </article>
+         )}
+       </OptimizedEntry>
+     )
+   }
+
+   export function App() {
+     return (
+       <OptimizationRoot
+         clientId={import.meta.env.PUBLIC_CONTENTFUL_OPTIMIZATION_CLIENT_ID}
+         environment={import.meta.env.PUBLIC_CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main'}
+         locale={APP_LOCALE}
+         // Use accepted startup consent only when your application policy permits it.
+         defaults={{ consent: true }}
+       >
+         <HomePage />
+       </OptimizationRoot>
+     )
+   }
+   ```
+
+3. Verify the hero renders from the selected variant when the visitor matches an optimization, or
+   from the baseline entry when no optimization is selected.
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Scope and capabilities](#scope-and-capabilities)
-- [The integration flow](#the-integration-flow)
-- [1. Install and initialize with OptimizationRoot](#1-install-and-initialize-with-optimizationroot)
-  - [Access the SDK instance with hooks](#access-the-sdk-instance-with-hooks)
-  - [Subscribe to SDK state from the provider](#subscribe-to-sdk-state-from-the-provider)
-  - [Provide a pre-built SDK instance when needed](#provide-a-pre-built-sdk-instance-when-needed)
-- [2. Handle consent in React](#2-handle-consent-in-react)
-  - [Default-on consent](#default-on-consent)
-  - [Updating consent](#updating-consent)
-  - [Reading consent state](#reading-consent-state)
-  - [Revoking consent](#revoking-consent)
-  - [Optional consent policy controls](#optional-consent-policy-controls)
-  - [Consent-gated rendering](#consent-gated-rendering)
-- [3. Optimize entries with OptimizedEntry](#3-optimize-entries-with-optimizedentry)
-  - [Basic usage](#basic-usage)
-  - [Loading fallback](#loading-fallback)
-  - [Direct ReactNode children](#direct-reactnode-children)
-  - [Wrapper element](#wrapper-element)
-  - [Nested composition](#nested-composition)
-  - [Imperative hook alternative](#imperative-hook-alternative)
-- [4. Track entry interactions from React](#4-track-entry-interactions-from-react)
-  - [Automatic tracking via OptimizedEntry](#automatic-tracking-via-optimizedentry)
-  - [Manual tracking via the tracking API](#manual-tracking-via-the-tracking-api)
-- [5. Emit page events with supported router adapters](#5-emit-page-events-with-supported-router-adapters)
-  - [React router](#react-router)
-  - [Next.js pages router](#nextjs-pages-router)
-  - [Next.js app router](#nextjs-app-router)
-  - [TanStack router](#tanstack-router)
-  - [Page payload enrichment](#page-payload-enrichment)
-- [Forward optimization context to third-party analytics](#forward-optimization-context-to-third-party-analytics)
-- [Live updates](#live-updates)
-  - [Global live updates](#global-live-updates)
-  - [Per-component live updates](#per-component-live-updates)
-  - [Preview panel override](#preview-panel-override)
-  - [Resolution priority](#resolution-priority)
-- [Preview panel](#preview-panel)
-  - [Attaching the preview panel](#attaching-the-preview-panel)
-  - [Content security policy support](#content-security-policy-support)
-  - [Preview panel and live updates](#preview-panel-and-live-updates)
+- [Required setup](#required-setup)
+- [Core integration](#core-integration)
+  - [Install and initialize the React provider](#install-and-initialize-the-react-provider)
+  - [Consent and privacy-policy handoff](#consent-and-privacy-policy-handoff)
+  - [Contentful entry fetching and locale shape](#contentful-entry-fetching-and-locale-shape)
+  - [Entry resolution and fallback rendering](#entry-resolution-and-fallback-rendering)
+  - [Page events and route tracking](#page-events-and-route-tracking)
+  - [Entry interaction tracking](#entry-interaction-tracking)
+  - [Identity, profile state, and reset](#identity-profile-state-and-reset)
+- [Optional integrations](#optional-integrations)
+  - [Merge tags and Custom Flags](#merge-tags-and-custom-flags)
+  - [Live updates](#live-updates)
+  - [Analytics forwarding](#analytics-forwarding)
+  - [Preview panel](#preview-panel)
+- [Advanced integrations](#advanced-integrations)
+  - [Existing SDK instance ownership](#existing-sdk-instance-ownership)
+  - [Strict consent, storage, and delivery controls](#strict-consent-storage-and-delivery-controls)
+  - [Runtime boundaries](#runtime-boundaries)
+- [Production checks](#production-checks)
+- [Troubleshooting](#troubleshooting)
 - [Reference implementations to compare against](#reference-implementations-to-compare-against)
 
 <!-- mtoc-end -->
 </details>
 
-## Scope and capabilities
+## Required setup
 
-The React Web SDK is the React-specific package in the Optimization SDK Suite. It lets consumers:
+Use this table as the setup inventory for the guide:
 
-- initialize and own a browser SDK instance through `OptimizationRoot` or explicit providers
-- personalize Contentful entries with `OptimizedEntry` and `useOptimizedEntry`
-- read consent, profile, flags, and selected optimizations from React-friendly hooks and state
-- enable automatic entry interaction tracking without hand-authoring all `data-ctfl-*` attributes
-- emit page events automatically through supported router adapters
-- opt into live updates and attach the preview panel for authoring workflows
-- fall back to the underlying Web SDK instance when lower-level control is needed
+| Setup item                                                                                | Category                       | Required for quick start | Where to configure                                                                             |
+| ----------------------------------------------------------------------------------------- | ------------------------------ | ------------------------ | ---------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-react-web` plus app-owned React and React DOM peer dependencies | Required for first integration | Yes                      | Application package dependencies                                                               |
+| Optimization client ID and environment                                                    | Required for first integration | Yes                      | `OptimizationRoot` props, usually from runtime environment variables                           |
+| Experience API and Insights API endpoint overrides                                        | Common but policy-dependent    | No                       | `api` prop when using non-default production, staging, or mock endpoints                       |
+| Contentful Delivery API client, space, environment, and access token                      | Required for first integration | Yes                      | Application-owned Contentful fetching layer                                                    |
+| Contentful optimized entry ID used by the first rendered entry                            | Required for first integration | Yes                      | Runtime environment variable such as `PUBLIC_HERO_ENTRY_ID`, or an app-owned entry ID constant |
+| Contentful entries with linked optimization and variant data                              | Required for first integration | Yes                      | Contentful content model and entries rendered by the app                                       |
+| Single Contentful CDA locale and `include: 10` for optimized entries                      | Required for first integration | Yes                      | `getEntry()` or `getEntries()` calls before passing entries to the SDK                         |
+| `OptimizationRoot` mounted once around the React tree that uses SDK hooks                 | Required for first integration | Yes                      | React app root, layout, or router root                                                         |
+| Page event emission on initial render, plus route changes for routed apps                 | Required for first integration | Yes                      | Router adapter under `OptimizationRoot`, or an app-owned `page()` effect                       |
+| Entry rendering through `OptimizedEntry` or `useOptimizedEntry`                           | Required for first integration | Yes                      | React components that render Contentful entries                                                |
+| Consent startup policy and user-choice wiring                                             | Common but policy-dependent    | Conditional              | `defaults`, `allowedEventTypes`, and application consent UI or CMP callbacks                   |
+| Entry interaction tracking for views, clicks, and hovers                                  | Common but policy-dependent    | No                       | `trackEntryInteraction` on `OptimizationRoot` and per-entry tracking props                     |
+| User identity, profile continuity, and reset policy                                       | Common but policy-dependent    | No                       | Account, session, or identity components that call `identify()` and `reset()`                  |
+| Router package for an adapter such as React Router, Next.js, or TanStack Router           | Optional                       | No                       | App router dependencies and the matching `@contentful/optimization-react-web/router/*` subpath |
+| Merge tag and Custom Flag rendering                                                       | Optional                       | No                       | Components that read profile-backed merge tags or flags                                        |
+| Analytics forwarding destination                                                          | Optional                       | No                       | `onStatesReady` subscriptions and application-owned analytics code                             |
+| Preview panel package                                                                     | Optional                       | No                       | Environment-gated dynamic import of `@contentful/optimization-web-preview-panel`               |
+| Strict pre-consent event policy, cookie settings, queue policy, and CSP nonce             | Advanced or production-only    | No                       | `OptimizationRoot` config and preview-panel attach options                                     |
+| Externally owned Web SDK instance                                                         | Advanced or production-only    | No                       | `OptimizationProvider sdk={...}` with `LiveUpdatesProvider`                                    |
 
-The React Web SDK is still browser-side and stateful because it sits on top of
-`@contentful/optimization-web`. Your application still fetches Contentful entries, decides how
-consent works, decides when a user becomes known, and controls where personalized content renders.
+The React Web SDK does not fetch Contentful entries. Fetch entries in your application layer, then
+pass the resulting single-locale entry objects to the SDK components and hooks.
 
-## The integration flow
+## Core integration
 
-In practice, most React integrations follow this high-level sequence:
+### Install and initialize the React provider
 
-1. Wrap the app with `OptimizationRoot` or `OptimizationProvider` + `LiveUpdatesProvider`.
-2. Read the SDK through hooks such as `useOptimization()` or `useOptimizationContext()`.
-3. Apply the application's consent policy: seed `defaults={{ consent: true }}` for default-on
-   integrations, or call `consent(true | false)` from a consent UI or CMP callback.
-4. Render optimized entries with `OptimizedEntry` or `useOptimizedEntry`.
-5. Enable automatic or manual entry interaction tracking where needed.
-6. Add a router adapter so `page()` events follow client-side navigation.
+**Integration category:** Required for first integration
 
-Optional additions include live updates when entries need to continuously react to optimization
-state changes, and the preview panel when the application needs authoring or preview overrides.
+`OptimizationRoot` is the normal React entry point. It composes `OptimizationProvider` and
+`LiveUpdatesProvider`, creates the underlying Web SDK instance after React commit, withholds
+children until the SDK is ready, and destroys the owned SDK instance on unmount.
 
-The React-focused reference implementations in this repository show those patterns in working
-applications:
+1. Install the package in the application that owns the React tree.
+2. Mount `OptimizationRoot` once around all components that call React Web SDK hooks.
+3. Pass `clientId`, `environment`, and the application locale that matches your Contentful fetches.
+4. Pass `api` endpoints only when your app uses non-default Experience API or Insights API hosts.
+5. Use `useOptimizationActions()` for destructurable SDK actions. Use `useOptimization()` when a
+   component needs the SDK instance itself.
 
-- [React Web SDK reference](../../implementations/react-web-sdk/README.md)
-- [Custom React Adapter Over Web SDK](../../implementations/web-sdk_react/README.md)
-
-## 1. Install and initialize with OptimizationRoot
-
-Install the React Web SDK:
-
-```sh
-pnpm add @contentful/optimization-react-web
-```
-
-Wrap your application tree with `OptimizationRoot`. This is the recommended entry point that
-composes the `OptimizationProvider` and `LiveUpdatesProvider` internally:
+**Adapt this to your use case:**
 
 ```tsx
-import { OptimizationRoot } from '@contentful/optimization-react-web'
+import { OptimizationRoot, useOptimizationActions } from '@contentful/optimization-react-web'
+import type { ReactNode } from 'react'
 
-function App() {
+function PurchaseButton() {
+  // Bound action hooks are safe to destructure from React components.
+  const { track } = useOptimizationActions()
+
   return (
-    <OptimizationRoot clientId="your-client-id">
-      <YourApp />
+    <button
+      onClick={() => {
+        void track({ event: 'purchase' })
+      }}
+      type="button"
+    >
+      Buy now
+    </button>
+  )
+}
+
+export function AppRoot({ children }: { children: ReactNode }) {
+  return (
+    <OptimizationRoot
+      clientId={import.meta.env.PUBLIC_CONTENTFUL_OPTIMIZATION_CLIENT_ID}
+      environment={import.meta.env.PUBLIC_CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main'}
+      locale="en-US"
+      app={{
+        name: 'my-react-app',
+        version: '1.0.0',
+      }}
+      // Override API endpoints only for non-default staging, production, or mock hosts.
+      api={{
+        experienceBaseUrl: import.meta.env.PUBLIC_EXPERIENCE_API_BASE_URL,
+        insightsBaseUrl: import.meta.env.PUBLIC_INSIGHTS_API_BASE_URL,
+      }}
+      logLevel="warn"
+    >
+      {children}
     </OptimizationRoot>
   )
 }
 ```
 
-That is the minimum viable setup. `OptimizationRoot` initializes the underlying Web SDK instance
-after React commit, outside render, renders no children while the SDK is pending, and destroys the
-instance on unmount. In normal browser rendering, initialization uses a layout-effect path so ready
-children can mount before the first visible paint.
+Do not destructure methods from the object returned by `useOptimization()`. Those methods rely on
+the SDK instance binding. `useOptimizationActions()` returns bound actions that are safe to
+destructure, including `consent`, `flush`, `identify`, `page`, `reset`, `screen`, and `track`. Use
+`useOptimizationContext()` when a component needs `{ sdk, isReady, error }` for diagnostics or error
+rendering before the SDK is ready.
 
-Available configuration props:
+### Consent and privacy-policy handoff
 
-| Prop                    | Type                           | Required | Default                                         | Description                                                          |
-| ----------------------- | ------------------------------ | -------- | ----------------------------------------------- | -------------------------------------------------------------------- |
-| `clientId`              | `string`                       | Yes      | N/A                                             | Your Contentful Optimization client identifier                       |
-| `environment`           | `string`                       | No       | `'main'`                                        | Contentful environment                                               |
-| `api`                   | `CoreApiConfig`                | No       | See below                                       | Experience API and Insights API configuration                        |
-| `app`                   | `App`                          | No       | —                                               | Application metadata attached to events                              |
-| `locale`                | `string`                       | No       | `undefined`                                     | SDK Experience API and default event locale                          |
-| `defaults`              | `CoreConfigDefaults`           | No       | `undefined`                                     | Initial consent, persistence consent, profile, or optimization state |
-| `allowedEventTypes`     | `EventType[]`                  | No       | `['identify', 'page']`                          | Event types allowed before consent is explicitly set                 |
-| `trackEntryInteraction` | `TrackEntryInteractionOptions` | No       | `{ views: true, clicks: false, hovers: false }` | Automatic entry interaction tracking options                         |
-| `cookie`                | `CookieAttributes`             | No       | `{ domain: undefined, expires: 365 }`           | Anonymous ID cookie settings inherited from the Web SDK              |
-| `logLevel`              | `LogLevels`                    | No       | `'error'`                                       | Minimum log level for console output                                 |
-| `liveUpdates`           | `boolean`                      | No       | `false`                                         | Enable global live updates                                           |
-| `onStatesReady`         | `(states) => cleanup`          | No       | —                                               | Attach app-level state subscribers when SDK state is ready           |
+**Integration category:** Common but policy-dependent
 
-A more complete initialization with explicit API endpoints and interaction tracking:
+Consent policy belongs to your application. The SDK stores event consent, stores separate
+profile-continuity persistence consent, and blocks non-allowed event types until event consent is
+accepted.
 
-```tsx
-<OptimizationRoot
-  clientId="your-client-id"
-  environment="main"
-  api={{
-    insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
-    experienceBaseUrl: 'https://experience.ninetailed.co/',
-  }}
-  locale="en-US"
-  trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
-  logLevel="warn"
-  app={{
-    name: 'my-react-app',
-    version: '1.0.0',
-  }}
-  liveUpdates={false}
->
-  <YourApp />
-</OptimizationRoot>
-```
+1. If policy permits Optimization by default, seed accepted consent during provider setup.
+2. If policy depends on user choice, leave consent unset and call `consent(true | false)` from the
+   banner, CMP callback, or account settings flow that owns the user's decision.
+3. Use object-form consent only when events and durable profile continuity have different policy
+   decisions.
+4. Use state hooks to render consent state in React UI.
 
-Choose the application Contentful locale in your router, i18n layer, or app configuration. Pass that
-value to Contentful CDA requests and use the provider `locale` prop when Experience API responses
-and events should use the same language.
-
-Changing the provider `locale` prop after initialization calls `optimization.setLocale(nextLocale)`
-and updates `optimization.locale` plus `optimization.states.locale`. It does not fetch content or
-refresh profile state; call `page`, `identify`, or CDA methods again when your app needs localized
-data refreshed. For the full locale model, see
-[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
-
-### Access the SDK instance with hooks
-
-Inside the provider tree, use hooks to interact with the SDK:
-
-- `useOptimization()` returns the initialized SDK surface. It throws if the provider is missing or
-  the SDK is not ready.
-- `useOptimizationContext()` returns `{ sdk, isReady, error }` without requiring readiness, which is
-  useful for low-level diagnostics and error handling.
-
-```tsx
-import {
-  useEntryResolver,
-  useOptimization,
-  useOptimizationActions,
-  useOptimizationContext,
-} from '@contentful/optimization-react-web'
-
-function MyComponent() {
-  const { consent, identify, page, track } = useOptimizationActions()
-  const optimization = useOptimization()
-  const { resolveEntry } = useEntryResolver()
-
-  optimization.getFlag('hero-copy')
-  // SDK is guaranteed to be ready here
-}
-
-function ConditionalComponent() {
-  const { sdk, isReady, error } = useOptimizationContext()
-
-  if (error) return <p>SDK failed: {error.message}</p>
-  if (!isReady) return <p>Loading...</p>
-
-  return <p>SDK ready</p>
-}
-```
-
-### Subscribe to SDK state from the provider
-
-Use `onStatesReady` when application code needs SDK state subscriptions that line up with provider
-initialization. In React Web, avoid using `window.contentfulOptimization` as the coordination point
-for these subscriptions: it may not exist yet, or it may have existed long enough for router, page,
-or blocked-event data to be missed.
-
-```tsx
-<OptimizationRoot
-  clientId="your-client-id"
-  onStatesReady={(states) => {
-    const subscriptions = [
-      states.eventStream.subscribe((event) => {
-        if (event) devToolsPanel.logEvent(event)
-      }),
-      states.blockedEventStream.subscribe((blocked) => {
-        if (blocked) devToolsPanel.logBlockedEvent(blocked)
-      }),
-    ]
-
-    return () => {
-      subscriptions.forEach((subscription) => subscription.unsubscribe())
-    }
-  }}
->
-  <ReactRouterAutoPageTracker />
-  <YourApp />
-</OptimizationRoot>
-```
-
-`onStatesReady` receives only the `states` surface. It runs as soon as the provider has initialized
-SDK state and before children mount, so subscriptions can observe events emitted by child effects
-such as router page tracking. Use regular hooks and React effects for component-local state.
-
-### Provide a pre-built SDK instance when needed
-
-If you need to manage the SDK instance outside of React, pass it directly via the `sdk` prop on
-`OptimizationProvider` instead of using config props:
-
-```tsx
-import { OptimizationProvider, LiveUpdatesProvider } from '@contentful/optimization-react-web'
-import ContentfulOptimization from '@contentful/optimization-web'
-
-const optimization = new ContentfulOptimization({ clientId: 'your-client-id' })
-
-function App() {
-  return (
-    <OptimizationProvider sdk={optimization}>
-      <LiveUpdatesProvider>
-        <YourApp />
-      </LiveUpdatesProvider>
-    </OptimizationProvider>
-  )
-}
-```
-
-When using the `sdk` prop without `onStatesReady`, children render immediately because the SDK is
-already available and no provider-managed subscriber setup is required. If `onStatesReady` is
-provided, the provider waits until those subscribers are attached before children mount. In both
-cases, the provider does not own the injected instance lifecycle and will not call `destroy()` on
-unmount.
-
-## 2. Handle consent in React
-
-React applications usually choose one startup policy: seed accepted consent when application policy
-permits Optimization by default, or leave SDK consent unset and connect application-owned controls
-to `consent(true | false)`.
-
-### Default-on consent
-
-If your application policy permits Optimization by default and you do not render an end-user consent
-UI, seed accepted consent on `OptimizationRoot`:
+**Copy this:**
 
 ```tsx
 <OptimizationRoot clientId="your-client-id" defaults={{ consent: true }}>
@@ -288,397 +251,193 @@ UI, seed accepted consent on `OptimizationRoot`:
 </OptimizationRoot>
 ```
 
-That starts all gated SDK events immediately and permits durable profile-continuity storage for
-profile, selected optimizations, changes, and the anonymous ID.
-
-### Updating consent
-
-When your application policy depends on user choice, call `consent()` from the banner, CMP callback,
-or account settings flow that owns the user's choice:
+**Adapt this to your use case:**
 
 ```tsx
-import { useOptimizationActions } from '@contentful/optimization-react-web'
+import { useConsentState, useOptimizationActions } from '@contentful/optimization-react-web'
 
-function ConsentBanner() {
+function ConsentControls() {
+  const consentState = useConsentState()
   const { consent } = useOptimizationActions()
 
   return (
     <div>
-      <p>Allow personalized experiences and analytics?</p>
-      <button onClick={() => consent(true)}>Accept</button>
-      <button onClick={() => consent(false)}>Reject</button>
+      <span>Consent: {String(consentState)}</span>
+      <button onClick={() => consent(true)} type="button">
+        Accept
+      </button>
+      <button onClick={() => consent(false)} type="button">
+        Reject
+      </button>
+      {/* Accept events while keeping durable profile continuity disabled. */}
+      <button onClick={() => consent({ events: true, persistence: false })} type="button">
+        Events only
+      </button>
     </div>
   )
 }
 ```
 
-When consent is accepted (`true`), all event types are permitted and any auto-enabled entry
-interaction trackers are started. When consent is rejected (`false`), auto-enabled interaction
-trackers are disabled and non-allowed event types are blocked.
-
-By default, only `identify` and `page` events are allowed before consent is explicitly set. All
-other event types are blocked until consent is granted or the event type is allow-listed. For
-cross-SDK consent policy guidance, see
+Boolean consent calls update event consent and durable profile-continuity consent together. By
+default, the Web SDK permits only `identify` and `page` before consent is explicitly set. Configure
+`allowedEventTypes={[]}` when your application needs strict opt-in before any Optimization event.
+For the cross-SDK policy model, see
 [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
 
-### Reading consent state
+### Contentful entry fetching and locale shape
 
-Subscribe to consent state changes using the SDK's `states` observable:
+**Integration category:** Required for first integration
 
-```tsx
-import { useOptimizationContext } from '@contentful/optimization-react-web'
-import { useEffect, useState } from 'react'
+The SDK resolves entries after your app fetches them from Contentful. It expects the standard
+single-locale CDA entry shape with direct field values, including linked optimization fields such as
+`fields.nt_experiences` and `fields.nt_variants`.
 
-function ConsentStatus() {
-  const { sdk, isReady } = useOptimizationContext()
-  const [consent, setConsent] = useState<boolean | undefined>(undefined)
+1. Choose the application Contentful locale in your router, i18n layer, or app configuration.
+2. Pass that locale to Contentful CDA requests.
+3. Pass the same locale to `OptimizationRoot` when Experience API responses and event context need
+   to match rendered content.
+4. Fetch optimized entries with `include: 10` so linked optimization and variant entries are
+   resolved before React renders.
+5. Do not pass `withAllLocales` or raw CDA `locale=*` responses to `OptimizedEntry`,
+   `useOptimizedEntry`, or `useEntryResolver()`.
 
-  useEffect(() => {
-    if (!sdk || !isReady) return
-
-    const sub = sdk.states.consent.subscribe((value) => {
-      setConsent(value)
-    })
-
-    return () => sub.unsubscribe()
-  }, [sdk, isReady])
-
-  return <p>Consent: {String(consent)}</p>
-}
-```
-
-### Revoking consent
-
-To revoke consent after it was previously accepted:
+**Copy this:**
 
 ```tsx
-import { useOptimizationActions } from '@contentful/optimization-react-web'
+import { createClient } from 'contentful'
 
-function RevokeConsent() {
-  const { consent } = useOptimizationActions()
+const APP_LOCALE = 'en-US'
+const INCLUDE_DEPTH = 10
 
-  return <button onClick={() => consent(false)}>Revoke Consent</button>
-}
-```
-
-### Optional consent policy controls
-
-Use these options only when your application policy needs a stricter or split consent model:
-
-- Set `allowedEventTypes={[]}` for strict opt-in before any Optimization event can emit.
-- Call `consent({ events: true, persistence: false })` when events are allowed but durable profile
-  continuity must stay session-only.
-
-### Consent-gated rendering
-
-A common pattern is to gate personalization features on consent:
-
-```tsx
-function PersonalizedSection({ entry }) {
-  const { sdk, isReady } = useOptimizationContext()
-  const [hasConsent, setHasConsent] = useState(false)
-
-  useEffect(() => {
-    if (!sdk || !isReady) return
-
-    const sub = sdk.states.consent.subscribe((value) => {
-      setHasConsent(value === true)
-    })
-
-    return () => sub.unsubscribe()
-  }, [sdk, isReady])
-
-  if (!hasConsent) {
-    return <BaselineContent entry={entry} />
-  }
-
-  return (
-    <OptimizedEntry baselineEntry={entry}>
-      {(resolved) => <PersonalizedContent entry={resolved} />}
-    </OptimizedEntry>
-  )
-}
-```
-
-## 3. Optimize entries with OptimizedEntry
-
-`OptimizedEntry` resolves a baseline Contentful entry to an optimized variant using the current
-optimization state and renders the result.
-
-### Basic usage
-
-Pass a baseline entry fetched from Contentful (with `include: 10` and a single CDA locale to resolve
-linked optimization data) and a render prop that receives the resolved entry:
-
-```tsx
-const appLocale = getAppLocale()
-
-const baselineEntry = await contentfulClient.getEntry(entryId, {
-  include: 10,
-  locale: appLocale,
+const contentfulClient = createClient({
+  accessToken: import.meta.env.PUBLIC_CONTENTFUL_TOKEN,
+  environment: import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'main',
+  space: import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID,
 })
+
+export async function fetchOptimizedEntry(entryId: string) {
+  return await contentfulClient.getEntry(entryId, {
+    // Resolve linked optimization and variant entries before rendering.
+    include: INCLUDE_DEPTH,
+    // Keep CDA locale aligned with the OptimizationRoot locale.
+    locale: APP_LOCALE,
+  })
+}
 ```
+
+When the locale changes after provider initialization, `OptimizationRoot` calls
+`optimization.setLocale(nextLocale)`. That updates SDK Experience API and event locale state. Your
+application still needs to refetch Contentful entries, call `page()` or `identify()` again when
+needed, and rerender localized content. For the full locale model, see
+[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
+
+### Entry resolution and fallback rendering
+
+**Integration category:** Required for first integration
+
+`OptimizedEntry` resolves a baseline Contentful entry against selected optimization state and
+renders either the selected variant or the baseline entry.
+
+1. Pass the baseline entry fetched by your application.
+2. Use a render prop when the rendered UI depends on the resolved entry.
+3. Use `loadingFallback` when you want custom loading UI while optimization state is unresolved.
+4. Use `useOptimizedEntry()` only when a component needs direct access to loading, readiness, or
+   selected-optimization metadata.
+
+**Adapt this to your use case:**
 
 ```tsx
 import { OptimizedEntry } from '@contentful/optimization-react-web'
+import type { Entry } from 'contentful'
 
-function HeroSection({ baselineEntry }) {
+function HeroSection({ baselineEntry }: { baselineEntry: Entry }) {
   return (
-    <OptimizedEntry baselineEntry={baselineEntry}>
+    <OptimizedEntry baselineEntry={baselineEntry} loadingFallback={() => <p>Loading...</p>}>
       {(resolvedEntry) => (
-        <div>
-          <h1>{resolvedEntry.fields.title}</h1>
-          <p>{resolvedEntry.fields.description}</p>
-        </div>
+        <article>
+          <h1>{String(resolvedEntry.fields.title ?? '')}</h1>
+          <p>{String(resolvedEntry.fields.description ?? '')}</p>
+        </article>
       )}
     </OptimizedEntry>
   )
 }
 ```
 
-For localized apps, derive `appLocale` from your router, i18n layer, or application state and pass
-it directly to Contentful CDA requests. Keep the provider `locale` prop aligned when localized
-Experience API responses and event context should match the rendered content. `contentful.js`
-`withAllLocales` and raw CDA `locale=*` return locale-keyed fields; the SDK resolver works with the
-standard single-locale CDA entry shape where `fields.nt_experiences` and `fields.nt_variants` are
-direct field values. See
-[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
-for the entry contract and
-[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md)
-for the broader locale model.
+`OptimizedEntry` wraps content in a layout-neutral `div` with `display: contents` by default. Use
+the `as` prop when the wrapper must be another element, such as `span`. `OptimizedEntry` can also
+receive direct React node children when the markup does not need to read the resolved entry. In that
+case, the wrapper still resolves entry metadata and emits tracking attributes after loading
+completes.
 
-The component automatically determines readiness:
+Without a custom `loadingFallback`, `OptimizedEntry` uses the baseline render output as a hidden
+loading-layout target while optimization state is unresolved, then reveals baseline content if
+resolution is still unavailable after 5 seconds.
 
-- entries with optimization references (`nt_experiences`) render when `canOptimize` is `true`
-- entries without optimization references render after the SDK is initialized
+For optimized entries, unresolved means the SDK has not received a successful or failed Experience
+API outcome and selected optimizations are not available. Entries without optimization references
+render after SDK initialization.
 
-By default, `OptimizedEntry` locks to the first non-`undefined` optimization state it receives. This
-means that once an entry resolves to a variant, it stays locked to that variant for the lifetime of
-the component (unless live updates are enabled).
-
-### Loading fallback
-
-When `loadingFallback` is provided, it renders while optimization state is unresolved:
-
-```tsx
-<OptimizedEntry
-  baselineEntry={baselineEntry}
-  loadingFallback={() => <Skeleton label="Loading optimized content" />}
->
-  {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
-</OptimizedEntry>
-```
-
-For optimized entries, unresolved means the SDK has not yet reached a successful or failed
-Experience API outcome. That includes the initial pre-request window before the first eligible event
-is sent. If the state is still unresolved after 5 seconds, the component reveals baseline content so
-the loading UI does not persist forever.
-
-When no `loadingFallback` is provided, a default loading UI wraps the baseline content until
-optimization readiness is available. The baseline content is initially hidden to preserve layout and
-is revealed after that same 5 second timeout if the optimization state is still unresolved. Entries
-without optimization references skip loading and render directly.
-
-### Direct ReactNode children
-
-`OptimizedEntry` also accepts direct `ReactNode` children when you do not need to read the resolved
-entry:
-
-```tsx
-<OptimizedEntry baselineEntry={baselineEntry}>
-  <StaticContent />
-</OptimizedEntry>
-```
-
-In this case, the component still resolves the entry and emits tracking data attributes on the
-wrapper, but the child content does not change based on the resolved variant.
-
-### Wrapper element
-
-The wrapper element defaults to `div` with `display: contents` to remain layout-neutral. Use the
-`as` prop to change it:
-
-```tsx
-<OptimizedEntry baselineEntry={baselineEntry} as="span">
-  {(resolvedEntry) => <InlineContent entry={resolvedEntry} />}
-</OptimizedEntry>
-```
-
-### Nested composition
-
-Nested optimized entries are supported through explicit composition:
-
-```tsx
-<OptimizedEntry baselineEntry={parentEntry}>
-  {(resolvedParent) => (
-    <ParentSection entry={resolvedParent}>
-      <OptimizedEntry baselineEntry={childEntry}>
-        {(resolvedChild) => <ChildSection entry={resolvedChild} />}
-      </OptimizedEntry>
-    </ParentSection>
-  )}
-</OptimizedEntry>
-```
-
-Nesting guard: nested wrappers with the same baseline entry ID as an ancestor are invalid and are
-blocked at runtime. Nested wrappers with different baseline entry IDs remain supported.
-
-### Imperative hook alternative
-
-When you need more control, use `useOptimizedEntry` directly:
+**Adapt this to your use case:**
 
 ```tsx
 import { useOptimizedEntry } from '@contentful/optimization-react-web'
+import type { Entry } from 'contentful'
 
-function CustomEntry({ baselineEntry }) {
-  const { entry, isLoading, isReady, canOptimize, resolvedData } = useOptimizedEntry({
+function DebuggableHero({ baselineEntry }: { baselineEntry: Entry }) {
+  const { entry, isLoading, selectedOptimization } = useOptimizedEntry({
     baselineEntry,
+    // React to profile or preview changes instead of locking to the first resolved value.
     liveUpdates: true,
   })
 
-  if (isLoading) return <Skeleton />
+  if (isLoading) return <p>Loading...</p>
 
   return (
-    <div>
-      <h1>{entry.fields.title}</h1>
-      {resolvedData.selectedOptimization && (
-        <span>Variant: {resolvedData.selectedOptimization.variantIndex}</span>
-      )}
-    </div>
+    <article data-variant-index={selectedOptimization?.variantIndex}>
+      <h1>{String(entry.fields.title ?? '')}</h1>
+    </article>
   )
 }
 ```
 
-`useOptimizedEntry` returns:
+Nested optimized entries are supported when each nested wrapper has a different baseline entry ID.
+The SDK blocks a nested `OptimizedEntry` that repeats the same baseline entry ID as an ancestor to
+avoid duplicate resolution loops. For deeper mechanics, see
+[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md).
 
-| Property                | Type                                     | Description                                             |
-| ----------------------- | ---------------------------------------- | ------------------------------------------------------- |
-| `entry`                 | `Entry`                                  | The resolved entry (variant or baseline)                |
-| `isLoading`             | `boolean`                                | `true` while optimization readiness is unresolved       |
-| `isReady`               | `boolean`                                | `true` when the SDK is initialized                      |
-| `canOptimize`           | `boolean`                                | `true` when selected optimizations are available        |
-| `selectedOptimization`  | `SelectedOptimization \| undefined`      | The matched optimization for this entry, if any         |
-| `resolvedData`          | `ResolvedData<EntrySkeletonType>`        | Full resolution result including entry and optimization |
-| `selectedOptimizations` | `SelectedOptimizationArray \| undefined` | The locked (or live) selected optimizations snapshot    |
+### Page events and route tracking
 
-## 4. Track entry interactions from React
+**Integration category:** Required for first integration
 
-`OptimizedEntry` emits data attributes on its wrapper element that the Web SDK uses for automatic
-entry interaction tracking (views, clicks, and hovers).
+The SDK needs page events to evaluate the route-like experience the visitor is viewing. React Web
+provides router adapters for common client-side routers and `useOptimizationActions().page()` for
+manual emission.
 
-For the lower-level runtime mechanics behind those attributes and the Web SDK detectors, see
-[Interaction tracking in Web SDKs](../concepts/interaction-tracking-in-web-sdks.md).
+1. Mount one page tracker inside `OptimizationRoot` and inside the router context it reads.
+2. Use the adapter that matches your router.
+3. Use `pagePayload` for static event fields and `getPagePayload` for fields derived from the route
+   context.
+4. For applications without a supported router, call `page()` from an app-owned route-change effect.
 
-### Automatic tracking via OptimizedEntry
+| Router               | Import path                                                 | Mounting rule                                                          |
+| -------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------- |
+| React Router         | `@contentful/optimization-react-web/router/react-router`    | Mount under a React Router data router that supports `useMatches()`    |
+| Next.js Pages Router | `@contentful/optimization-react-web/router/next-pages`      | Mount once in `pages/_app.tsx`; the adapter waits for `router.isReady` |
+| Next.js App Router   | `@contentful/optimization-react-web/router/next-app`        | Mount in a `'use client'` provider under the App Router tree           |
+| TanStack Router      | `@contentful/optimization-react-web/router/tanstack-router` | Mount under the TanStack router tree                                   |
 
-When resolved content renders, the wrapper element receives:
-
-- `data-ctfl-entry-id` — always present
-- `data-ctfl-optimization-id` — present when the entry is optimized
-- `data-ctfl-sticky` — present when the optimization specifies stickiness
-- `data-ctfl-variant-index` — present when the entry is optimized
-- `data-ctfl-duplication-scope` — present when the optimization specifies a duplication scope
-
-To make the Web SDK automatically track interactions with these attributed elements, enable
-auto-tracking at initialization:
+**Adapt this to your use case:**
 
 ```tsx
-<OptimizationRoot
-  clientId="your-client-id"
-  trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
->
-  <YourApp />
-</OptimizationRoot>
-```
-
-With this setup, any `OptimizedEntry` that renders resolved content will be automatically detected
-and tracked for entry views, clicks, and hovers without additional code.
-
-When `loadingFallback` is shown, resolved-content tracking attributes are not emitted, so loading
-states are not tracked.
-
-### Manual tracking via the tracking API
-
-For entries that are not rendered through `OptimizedEntry`, use `sdk.tracking` from
-`useOptimization()`:
-
-```tsx
-import { useEntryResolver, useOptimization } from '@contentful/optimization-react-web'
-import { useEffect, useRef } from 'react'
-
-function ManuallyTrackedEntry({ entry }) {
-  const sdk = useOptimization()
-  const { resolveEntry, resolveEntryData } = useEntryResolver()
-  const containerRef = useRef(null)
-  const resolvedEntry = resolveEntry(entry)
-  const { selectedOptimization } = resolveEntryData(entry)
-
-  useEffect(() => {
-    const element = containerRef.current
-    if (!element) return
-
-    sdk.tracking.enableElement('views', element, {
-      data: {
-        entryId: resolvedEntry.sys.id,
-        optimizationId: selectedOptimization?.experienceId,
-        sticky: selectedOptimization?.sticky,
-        variantIndex: selectedOptimization?.variantIndex,
-      },
-    })
-
-    return () => {
-      sdk.tracking.clearElement('views', element)
-    }
-  }, [sdk.tracking, resolvedEntry.sys.id, selectedOptimization])
-
-  return (
-    <div ref={containerRef}>
-      <p>{resolvedEntry.fields.text}</p>
-    </div>
-  )
-}
-```
-
-Available interaction tracking methods:
-
-| Method                                       | Description                                      |
-| -------------------------------------------- | ------------------------------------------------ |
-| `enableElement(interaction, element, opts?)` | Force-enable tracking for an element             |
-| `disableElement(interaction, element)`       | Force-disable tracking for an element            |
-| `clearElement(interaction, element)`         | Remove a manual override; fall back to automatic |
-
-Supported `interaction` values: `'views'`, `'clicks'`, `'hovers'`.
-
-For direct event emission from custom interaction logic, `useOptimization()` also exposes
-`trackView()`, `trackClick()`, and `trackHover()` on the SDK instance.
-
-## 5. Emit page events with supported router adapters
-
-The React Web SDK ships router-specific auto page trackers as isolated subpath exports. Each adapter
-automatically emits `page()` events when the route changes, so you do not need to call `page()`
-manually.
-
-Mount the appropriate adapter once inside your provider tree.
-
-For Next.js applications that need server-side personalization, client tracking, and proxy cookie
-handling together, use the [Next.js SSR](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md)
-or [hybrid SSR + CSR takeover](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md) guide.
-The direct Next.js router adapters below are still available for React Web SDK integrations that do
-not need the Next.js adapter package.
-
-### React router
-
-Requires `react-router-dom` >= 6.4 with a data router (`createBrowserRouter` + `RouterProvider`).
-The adapter depends on `useMatches()`, so it does not work with a plain `BrowserRouter`.
-
-```tsx
-import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 import { OptimizationRoot } from '@contentful/optimization-react-web'
 import { ReactRouterAutoPageTracker } from '@contentful/optimization-react-web/router/react-router'
+import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 
 function RootLayout() {
   return (
     <OptimizationRoot clientId="your-client-id">
+      {/* Keep one tracker per router tree to avoid duplicate route page events. */}
       <ReactRouterAutoPageTracker />
       <Outlet />
     </OptimizationRoot>
@@ -691,83 +450,22 @@ const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: 'about', element: <AboutPage /> },
+      { path: 'products', element: <ProductsPage /> },
     ],
   },
 ])
 
-function App() {
+export function App() {
   return <RouterProvider router={router} />
 }
 ```
 
-Emits on first render and on `pathname + search + hash` changes.
+Router adapters emit on the first eligible render and on route-key changes. The Web SDK deduplicates
+identical consecutive route keys, including React Strict Mode remounts. Next.js Pages and Next.js
+App adapters also accept `initialPageEvent="skip"` for integrations where a server-side path already
+emitted the first page event.
 
-### Next.js pages router
-
-```tsx
-import type { AppProps } from 'next/app'
-import { OptimizationRoot } from '@contentful/optimization-react-web'
-import { NextPagesAutoPageTracker } from '@contentful/optimization-react-web/router/next-pages'
-
-export default function App({ Component, pageProps }: AppProps) {
-  return (
-    <OptimizationRoot clientId="your-client-id">
-      <NextPagesAutoPageTracker />
-      <Component {...pageProps} />
-    </OptimizationRoot>
-  )
-}
-```
-
-Mount once in the Pages Router application root. The adapter waits for `router.isReady`, emits on
-the first eligible render and on route changes, and suppresses duplicate consecutive `router.asPath`
-values.
-
-### Next.js app router
-
-```tsx
-'use client'
-
-import { OptimizationRoot } from '@contentful/optimization-react-web'
-import { NextAppAutoPageTracker } from '@contentful/optimization-react-web/router/next-app'
-
-export function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <OptimizationRoot clientId="your-client-id">
-      <NextAppAutoPageTracker />
-      {children}
-    </OptimizationRoot>
-  )
-}
-```
-
-Mount in a `'use client'` component inside your App Router provider tree. Emits on first render and
-on `pathname + search` changes.
-
-### TanStack router
-
-```tsx
-import { Outlet } from '@tanstack/react-router'
-import { OptimizationRoot } from '@contentful/optimization-react-web'
-import { TanStackRouterAutoPageTracker } from '@contentful/optimization-react-web/router/tanstack-router'
-
-function RootLayout() {
-  return (
-    <OptimizationRoot clientId="your-client-id">
-      <TanStackRouterAutoPageTracker />
-      <Outlet />
-    </OptimizationRoot>
-  )
-}
-```
-
-Mount inside the TanStack router tree and inside the optimization provider tree, typically in your
-root route component. Emits on first render and on TanStack Router `location.href` changes.
-
-### Page payload enrichment
-
-All router adapters support static and dynamic page payload enrichment:
+**Follow this pattern:**
 
 ```tsx
 <ReactRouterAutoPageTracker
@@ -777,6 +475,7 @@ All router adapters support static and dynamic page payload enrichment:
     },
   }}
   getPagePayload={({ context, isInitialEmission }) => ({
+    // Later payload layers override router-derived values on key conflicts.
     locale: isInitialEmission ? 'en-US' : undefined,
     properties: {
       path: context.url,
@@ -786,54 +485,300 @@ All router adapters support static and dynamic page payload enrichment:
 />
 ```
 
-- `pagePayload` is included in every auto-emitted page event (static).
-- `getPagePayload` runs once per emitted page event with route-aware context (dynamic).
-- Static and dynamic payloads are deep-merged. When the same field exists in both, the dynamic
-  payload wins.
+Router-derived payload, static `pagePayload`, and dynamic `getPagePayload` are deep-merged in that
+order. Later values win on key conflicts.
 
-The `context` shape varies by adapter:
+### Entry interaction tracking
 
-| Adapter         | Context fields                                                                   |
-| --------------- | -------------------------------------------------------------------------------- |
-| React Router    | `hash`, `location`, `matches`, `pathname`, `routeKey`, `search`, `url`           |
-| Next.js Pages   | `asPath`, `pathname`, `query`, `routeKey`, `router`                              |
-| Next.js App     | `pathname`, `routeKey`, `router`, `search`, `searchParams`, `url`                |
-| TanStack Router | `hash`, `location`, `matches`, `pathname`, `routeKey`, `router`, `search`, `url` |
+**Integration category:** Common but policy-dependent
 
-## Forward optimization context to third-party analytics
+`OptimizedEntry` emits the Web SDK's `data-ctfl-*` attributes on resolved content. The Web SDK can
+then track entry views, clicks, and hovers automatically.
 
-Use this optional step when your React app already sends events to a tag manager, customer-data
-platform, or analytics destination. The Optimization SDK still sends events to Contentful. Your
-application decides which approved Contentful context, if any, should also be forwarded.
+1. Leave the default view, click, and hover interactions enabled when your consent policy permits
+   them; use `trackEntryInteraction` only to opt out of interaction types the app must not observe.
+2. Use `clickable`, `trackViews`, `trackClicks`, `trackHovers`, and duration props when one entry
+   needs per-component behavior.
+3. Use `sdk.tracking.enableElement()` only when the DOM structure does not fit automatic
+   observation.
+4. Avoid tracking loading fallbacks as content exposure. `OptimizedEntry` omits resolved tracking
+   attributes while the loading fallback is shown.
 
-| Reporting need                             | React Web SDK handoff                                                           |
-| ------------------------------------------ | ------------------------------------------------------------------------------- |
-| SDK page, custom, view, click, or hover    | Register one `states.eventStream` subscription from `onStatesReady`.            |
-| Business event attribution                 | Add Contentful fields in the button, form, or route action that owns the event. |
-| Entry or variant attribution               | Use the resolved entry metadata from `OptimizedEntry` or `useOptimizedEntry`.   |
-| Custom Flag attribution                    | Forward from the component or hook path that reads or renders the flag.         |
-| Consent or duplicate-delivery verification | Use `states.blockedEventStream`, `messageId` dedupe, and destination debuggers. |
-
-`eventStream` is a live handoff, not a replay queue. Register the subscription at provider
-initialization; if the analytics destination is not ready yet, buffer forwarded payloads in
-application code with an explicit size, TTL, and drop policy.
-
-When `OptimizationRoot` owns SDK setup, attach app-level analytics subscriptions with
-`onStatesReady` so router adapters and child effects cannot emit events before the subscriber is
-registered:
+**Adapt this to your use case:**
 
 ```tsx
+<OptimizationRoot clientId="your-client-id" trackEntryInteraction={{ hovers: false }}>
+  <OptimizedEntry
+    baselineEntry={entry}
+    clickable
+    hoverDurationUpdateIntervalMs={1000}
+    viewDurationUpdateIntervalMs={1000}
+  >
+    {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
+  </OptimizedEntry>
+</OptimizationRoot>
+```
+
+When `trackEntryInteraction` is omitted, the React provider enables view, click, and hover tracking.
+The wrapper attributes include baseline entry ID, resolved entry ID, variant index, optimization ID
+when a variant is selected, sticky state, duplication scope when present, and a generated
+optimization context ID used by follow-up events.
+
+For manual element tracking, resolve entry metadata with `useOptimizedEntry()`. `useEntryResolver()`
+is a direct resolver helper and does not rerender the component when selected optimizations change.
+
+**Adapt this to your use case:**
+
+```tsx
+import { useOptimization, useOptimizedEntry } from '@contentful/optimization-react-web'
+import type { Entry } from 'contentful'
+import { useEffect, useRef } from 'react'
+
+function ManuallyTrackedEntry({ baselineEntry }: { baselineEntry: Entry }) {
+  const sdk = useOptimization()
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const {
+    entry,
+    isLoading,
+    resolvedData: { optimizationContextId },
+    selectedOptimization,
+  } = useOptimizedEntry({
+    baselineEntry,
+    // Subscribe to SDK state so manual tracking uses current variant metadata.
+    liveUpdates: true,
+  })
+
+  useEffect(() => {
+    const element = containerRef.current
+    if (!element || isLoading) return
+
+    sdk.tracking.enableElement('views', element, {
+      // Explicit data is used when automatic data-ctfl-* attributes are not on this element.
+      data: {
+        entryId: entry.sys.id,
+        optimizationContextId,
+        optimizationId: selectedOptimization?.experienceId,
+        sticky: selectedOptimization?.sticky,
+        variantIndex: selectedOptimization?.variantIndex,
+      },
+    })
+
+    return () => {
+      // Clear the override so recycled DOM nodes do not keep stale entry data.
+      sdk.tracking.clearElement('views', element)
+    }
+  }, [
+    entry.sys.id,
+    isLoading,
+    optimizationContextId,
+    sdk.tracking,
+    selectedOptimization?.experienceId,
+    selectedOptimization?.sticky,
+    selectedOptimization?.variantIndex,
+  ])
+
+  if (isLoading) return null
+
+  return <div ref={containerRef}>{String(entry.fields.title ?? '')}</div>
+}
+```
+
+For detector behavior, data attributes, and duplicate-delivery concerns, see
+[Interaction tracking in Web SDKs](../concepts/interaction-tracking-in-web-sdks.md).
+
+### Identity, profile state, and reset
+
+**Integration category:** Common but policy-dependent
+
+Identify a visitor only when your application knows the user or has policy-approved traits to send.
+Reset profile state when the active visitor changes, logs out, or must no longer share the previous
+profile state.
+
+1. Call `identify()` from the account, session, or profile event that owns the identity decision.
+2. Render SDK state with dedicated hooks such as `useProfileState()` and
+   `useSelectedOptimizationsState()`.
+3. Call `reset()` when identity changes require clearing profile, selected optimizations, changes,
+   and route dedupe state. Consent state is preserved.
+4. Re-emit `page()` or `identify()` after reset when the app needs fresh optimization state.
+
+**Adapt this to your use case:**
+
+```tsx
+import {
+  useOptimizationActions,
+  useProfileState,
+  useSelectedOptimizationsState,
+} from '@contentful/optimization-react-web'
+
+function AccountState() {
+  const { identify, reset } = useOptimizationActions()
+  const profile = useProfileState()
+  const selectedOptimizations = useSelectedOptimizationsState()
+
+  return (
+    <div>
+      <span>Profile: {profile?.id ?? 'anonymous'}</span>
+      <span>Optimizations: {selectedOptimizations?.length ?? 0}</span>
+      <button
+        onClick={() => {
+          void identify({ userId: 'user-123', traits: { plan: 'pro' } })
+        }}
+        type="button"
+      >
+        Identify
+      </button>
+      <button onClick={() => reset()} type="button">
+        Reset
+      </button>
+    </div>
+  )
+}
+```
+
+For cross-runtime identity behavior, see
+[Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md).
+
+## Optional integrations
+
+### Merge tags and Custom Flags
+
+**Integration category:** Optional
+
+Use merge tags when Contentful Rich Text contains embedded personalization fields. Use Custom Flags
+when application UI branches on a named flag rather than an optimized entry.
+
+1. Use `useMergeTagResolver()` in the component that renders Rich Text embedded entries.
+2. Use `optimization.getFlag(name)` only for direct reads, such as event handlers or render paths
+   that don't need to update when the flag changes.
+3. Subscribe to `optimization.states.flag(name)` when React UI must rerender after profile, route,
+   or preview changes update the flag value.
+4. Treat flag reads as analytics exposure. In the stateful Web runtime, reading a flag can emit
+   flag-view tracking when consent allows it.
+
+**Adapt this to your use case:**
+
+```tsx
+import { useMergeTagResolver, useOptimization } from '@contentful/optimization-react-web'
+import type { Entry } from 'contentful'
+import { useEffect, useState } from 'react'
+
+function PersonalizedRichText({ mergeTagEntry }: { mergeTagEntry: Entry }) {
+  const { getMergeTagValue } = useMergeTagResolver()
+
+  return <span>{getMergeTagValue(mergeTagEntry) ?? ''}</span>
+}
+
+function DirectFlaggedBanner() {
+  const optimization = useOptimization()
+  // Direct reads are nonreactive; this component does not subscribe to later flag changes.
+  const showBanner = optimization.getFlag('seasonal-banner') === true
+
+  return showBanner ? <SeasonalBanner /> : null
+}
+
+function ReactiveFlaggedBanner() {
+  const optimization = useOptimization()
+  const [showBanner, setShowBanner] = useState(false)
+
+  useEffect(() => {
+    const seasonalBannerFlag = optimization.states.flag('seasonal-banner')
+    const subscription = seasonalBannerFlag.subscribe((value) => {
+      setShowBanner(value === true)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [optimization])
+
+  return showBanner ? <SeasonalBanner /> : null
+}
+```
+
+Merge tag values follow the localized profile fields returned by the Experience API. Keep the SDK
+locale aligned with the Contentful entry locale when the rendered language matters.
+
+### Live updates
+
+**Integration category:** Optional
+
+Live updates control whether `OptimizedEntry` and `useOptimizedEntry()` keep reacting to SDK state
+changes or lock to the first resolved selected-optimization state.
+
+1. Leave `liveUpdates` unset for the default locked behavior.
+2. Set `liveUpdates` on `OptimizationRoot` when all entries that inherit the global setting need to
+   update as profile or preview state changes.
+3. Set `liveUpdates` on a specific `OptimizedEntry` when that entry needs a different behavior.
+4. Expect the preview panel to force live updates while it is open.
+
+**Follow this pattern:**
+
+```tsx
+<OptimizationRoot clientId="your-client-id" liveUpdates={globalLiveUpdates}>
+  <OptimizedEntry baselineEntry={entry}>
+    {(resolvedEntry) => <InheritsGlobalSetting entry={resolvedEntry} />}
+  </OptimizedEntry>
+
+  <OptimizedEntry baselineEntry={entry} liveUpdates={true}>
+    {(resolvedEntry) => <AlwaysLive entry={resolvedEntry} />}
+  </OptimizedEntry>
+
+  <OptimizedEntry baselineEntry={entry} liveUpdates={false}>
+    {(resolvedEntry) => <LockedAfterFirstResolution entry={resolvedEntry} />}
+  </OptimizedEntry>
+</OptimizationRoot>
+```
+
+The effective order is preview panel open, component `liveUpdates` prop, root `liveUpdates` prop,
+then the default locked behavior.
+
+### Analytics forwarding
+
+**Integration category:** Optional
+
+Use analytics forwarding when your app already sends approved events to a tag manager, customer-data
+platform, or analytics destination. The Optimization SDK still sends events to Contentful.
+
+1. Subscribe to `states.eventStream` in `onStatesReady` so router adapters and child effects cannot
+   emit before the forwarding subscriber exists.
+2. Filter the event fields your governance policy permits.
+3. Deduplicate exact event records by `messageId` before forwarding so current snapshots, subscriber
+   remounts, retries, or duplicate browser deliveries do not resend the same SDK event record.
+4. Store forwarded message IDs in module or app state so remounts do not forward the same event
+   again. If the destination must receive only future SDK events, read the current `messageId`
+   before subscribing and skip that event.
+5. Add semantic exposure dedupe when the destination wants one exposure for a sticky view or view
+   lifecycle. Use fields such as `viewId`, `componentId`, `experienceId`, and `variantIndex`.
+6. Subscribe to `states.blockedEventStream` when you need diagnostics for events blocked by consent
+   or `allowedEventTypes`.
+
+In this example, `canForwardSdkEvent()` enforces your governance and consent allow-list,
+`shouldForwardContentfulEvent()` applies destination-specific semantic dedupe, and
+`pickContentfulEventProperties()` maps only approved fields.
+
+**Follow this pattern:**
+
+```tsx
+const forwardedMessageIds = new Set<string>()
+
 <OptimizationRoot
   clientId="your-client-id"
   onStatesReady={(states) => {
-    const forwardedMessageIds = new Set<string>()
+    // Register before children mount so router and child events can be observed.
+    const initialMessageId = states.eventStream.current?.messageId
 
     const eventSubscription = states.eventStream.subscribe((event) => {
       if (!event) return
+      // Deduplicate locally before forwarding to external destinations.
       if (forwardedMessageIds.has(event.messageId)) return
+      if (event.messageId === initialMessageId) {
+        forwardedMessageIds.add(event.messageId)
+        return
+      }
       if (!canForwardSdkEvent(event)) return
 
       forwardedMessageIds.add(event.messageId)
+      if (!shouldForwardContentfulEvent(event)) return
 
       analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
     })
@@ -848,185 +793,214 @@ registered:
 
 Use
 [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
-for the `canForwardSdkEvent` and `pickContentfulEventProperties` helpers, vendor mappings, consent,
-identity, dedupe, and governance guidance.
+for vendor mappings, consent boundaries, helper functions, and dedupe guidance.
 
-## Live updates
+### Preview panel
 
-Live updates control whether `OptimizedEntry` (and `useOptimizedEntry`) continuously reacts to
-optimization state changes or locks to the first resolved state.
+**Integration category:** Optional
 
-### Global live updates
+The preview panel is a separate browser package for authoring and staging workflows. It appends a
+Lit-based panel to `document.body`, uses an existing Contentful Delivery API client, and talks to
+the Web SDK through the browser preview bridge.
 
-Set `liveUpdates` on `OptimizationRoot` to enable live updates for all `OptimizedEntry` components
-that do not specify their own `liveUpdates` prop:
+1. Install `@contentful/optimization-web-preview-panel`.
+2. Gate the dynamic import behind an environment variable so production bundles can remove it.
+3. Attach the panel after the Web SDK instance exists. `onStatesReady` is a good React Web setup
+   point.
+4. Pass a CSP nonce when strict Content Security Policy rules require one.
+
+**Adapt this to your use case:**
 
 ```tsx
-function App() {
-  const [globalLiveUpdates, setGlobalLiveUpdates] = useState(false)
+import { createScopedLogger } from '@contentful/optimization-react-web/logger'
+import { OptimizationRoot } from '@contentful/optimization-react-web'
 
+const previewPanelLogger = createScopedLogger('PreviewPanel')
+let previewPanelAttachmentStarted = false
+
+function attachPreviewPanel(): void {
+  // Keep preview code behind an environment gate so production bundles can remove it.
+  if (import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL !== 'true') return
+  if (previewPanelAttachmentStarted) return
+
+  previewPanelAttachmentStarted = true
+
+  void import('@contentful/optimization-web-preview-panel')
+    .then(async ({ default: attachOptimizationPreviewPanel }) => {
+      await attachOptimizationPreviewPanel({
+        contentful: contentfulClient,
+        nonce: import.meta.env.PUBLIC_CSP_NONCE,
+      })
+    })
+    .catch((error: unknown) => {
+      previewPanelAttachmentStarted = false
+      previewPanelLogger.warn('Failed to attach the preview panel.', error)
+    })
+}
+
+export function App() {
   return (
-    <OptimizationRoot clientId="your-client-id" liveUpdates={globalLiveUpdates}>
-      <button onClick={() => setGlobalLiveUpdates((prev) => !prev)}>
-        Toggle Live Updates: {globalLiveUpdates ? 'ON' : 'OFF'}
-      </button>
+    // onStatesReady runs after the SDK exists and before child effects can emit events.
+    <OptimizationRoot clientId="your-client-id" onStatesReady={attachPreviewPanel}>
       <YourApp />
     </OptimizationRoot>
   )
 }
 ```
 
-### Per-component live updates
+By default, the attach function uses `window.contentfulOptimization`, which the Web SDK-owned
+provider instance creates in the browser. If your app injects an SDK instance that is not available
+through that singleton, pass `optimization` to `attachOptimizationPreviewPanel(...)`.
 
-Override the global setting on individual `OptimizedEntry` components:
+## Advanced integrations
 
-```tsx
-<OptimizedEntry baselineEntry={entry} liveUpdates={true}>
-  {(resolved) => <AlwaysLiveContent entry={resolved} />}
-</OptimizedEntry>
+### Existing SDK instance ownership
 
-<OptimizedEntry baselineEntry={entry} liveUpdates={false}>
-  {(resolved) => <LockedContent entry={resolved} />}
-</OptimizedEntry>
+**Integration category:** Advanced or production-only
 
-<OptimizedEntry baselineEntry={entry}>
-  {(resolved) => <InheritsGlobalSetting entry={resolved} />}
-</OptimizedEntry>
-```
+Use `OptimizationProvider` directly when an application or framework adapter must create and own the
+Web SDK instance outside React.
 
-### Preview panel override
+1. Create the Web SDK instance outside the provider.
+2. Pass it through `OptimizationProvider sdk={optimization}`.
+3. Wrap children with `LiveUpdatesProvider` if components use `OptimizedEntry`, `useOptimizedEntry`,
+   or `useLiveUpdates`.
+4. Destroy the injected SDK instance in the owner that created it. The provider does not call
+   `destroy()` for injected instances.
 
-When the preview panel is open, live updates are forced on for all `OptimizedEntry` components
-regardless of their `liveUpdates` prop or the global setting. This allows the preview panel to apply
-variant overrides in real time.
-
-### Resolution priority
-
-The effective live updates state is resolved in this order:
-
-1. If the preview panel is open → live updates are **on**
-2. If the component has an explicit `liveUpdates` prop → that value is used
-3. If neither → the global `liveUpdates` from `OptimizationRoot` is used
-4. If nothing is set → live updates default to **off** (locked to first resolved state)
+**Adapt this to your use case:**
 
 ```tsx
-import { useLiveUpdates } from '@contentful/optimization-react-web'
+import ContentfulOptimization from '@contentful/optimization-web'
+import { LiveUpdatesProvider, OptimizationProvider } from '@contentful/optimization-react-web'
 
-function LiveUpdatesStatus() {
-  const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
+const optimization = new ContentfulOptimization({
+  clientId: 'your-client-id',
+  environment: 'main',
+})
 
+function App() {
   return (
-    <div>
-      <p>Global live updates: {globalLiveUpdates ? 'ON' : 'OFF'}</p>
-      <p>Preview panel visible: {previewPanelVisible ? 'Yes' : 'No'}</p>
-    </div>
+    <OptimizationProvider sdk={optimization}>
+      <LiveUpdatesProvider>
+        <YourApp />
+      </LiveUpdatesProvider>
+    </OptimizationProvider>
   )
 }
 ```
 
-## Preview panel
+Injected SDK children render immediately unless `onStatesReady` is provided. When `onStatesReady` is
+provided, the provider waits for those subscribers to attach before children mount.
 
-The preview panel is a Web Component-based micro-frontend that lets content authors override
-optimization variant selections locally without modifying production state. It is distributed as a
-separate package.
+### Strict consent, storage, and delivery controls
 
-### Attaching the preview panel
+**Integration category:** Advanced or production-only
 
-Install the preview panel package:
+Use these controls when legal, infrastructure, or production reliability requirements need behavior
+beyond the default setup.
+
+1. Set `allowedEventTypes={[]}` when no Optimization event can emit before explicit consent.
+2. Use `cookie` when the anonymous ID cookie needs a specific domain or expiration.
+3. Use `queuePolicy` when the default retry and offline queue behavior does not match application
+   limits.
+4. Use `onEventBlocked` and `states.blockedEventStream` for diagnostics when consent or
+   `allowedEventTypes` block events.
+5. Use event return values, SDK logs, queue callbacks, detector state, or app-owned diagnostics for
+   other guard or suppression cases.
+6. Pass preview-panel `nonce` or set `window.litNonce` before attaching the panel when CSP requires
+   nonced styles.
+
+**Follow this pattern:**
+
+```tsx
+<OptimizationRoot
+  clientId="your-client-id"
+  // Blocks all Optimization events before explicit consent is accepted.
+  allowedEventTypes={[]}
+  cookie={{
+    domain: '.example.com',
+    expires: 180,
+  }}
+  queuePolicy={{
+    offlineMaxEvents: 100,
+  }}
+  onEventBlocked={(event) => {
+    diagnostics.logBlockedOptimizationEvent(event)
+  }}
+>
+  <YourApp />
+</OptimizationRoot>
+```
+
+The Web SDK stores consent and, when persistence consent permits it, profile continuity state in
+browser storage. If storage writes fail, the SDK continues with in-memory state.
+
+### Runtime boundaries
+
+**Integration category:** Advanced or production-only
+
+React Web is a browser-side React package. Classify these concerns before adding extra packages or
+custom adapters:
+
+- Server-side personalization, proxy cookie handling, and SSR-to-browser takeover belong in the
+  Next.js SSR or hybrid SSR + CSR guides, not in this React Web-only guide.
+- Direct Web Components are part of `@contentful/optimization-web`, not the React Web rendering
+  surface. React components can use `OptimizedEntry` instead of custom elements.
+- The React Web SDK does not replace your Contentful CDA client, router, consent UI, identity
+  system, or analytics destination.
+- The preview panel is intended for authoring, development, and staging workflows. Gate it from
+  production bundles unless your release policy explicitly allows it.
+
+## Production checks
+
+Before releasing a React Web SDK integration, verify these checks:
+
+- Credentials and runtime configuration: `clientId`, environment, Contentful space, Contentful
+  access token, CDA host, Experience API URL, Insights API URL, and locale all point to the intended
+  environment.
+- Consent behavior: default-on or opt-in behavior matches application policy, `allowedEventTypes`
+  matches the pre-consent posture, and consent revocation blocks non-allowed events.
+- Event delivery: first page event, route-change page event, identify event, and any enabled view,
+  click, hover, flag, or custom tracking event appear in the expected SDK event stream or
+  destination debugger.
+- Content fallback behavior: entries without optimization references render baseline content,
+  optimized entries stop showing loading fallback after readiness or the 5-second baseline reveal,
+  and all-locale CDA responses are not passed to entry resolvers.
+- Duplicate tracking prevention: one page tracker is mounted per router tree, Strict Mode remounts
+  do not duplicate page events, analytics forwarding deduplicates exact records by `messageId`,
+  sticky-view exposure forwarding uses semantic dedupe when the destination wants one exposure, and
+  manual element tracking clears overrides on unmount.
+- Privacy and governance: forwarded analytics fields are approved, durable profile continuity uses
+  policy-approved consent, reset runs when identity changes, and preview panel code is environment
+  gated.
+- Local validation path: run your app's typecheck, build, and route or interaction smoke tests. In
+  this repository, the React Web reference implementation uses these checks.
+
+**Copy this:**
 
 ```sh
-pnpm add @contentful/optimization-web-preview-panel
+pnpm implementation:run -- react-web-sdk typecheck
+pnpm implementation:run -- react-web-sdk build
 ```
 
-Import and attach it after the SDK is initialized. The preview panel requires both a Contentful
-client (for fetching audience and optimization entries) and the SDK instance. Pass the unmodified
-Contentful Delivery API client.
+## Troubleshooting
 
-```tsx
-import { useOptimizationContext } from '@contentful/optimization-react-web'
-import { useEffect } from 'react'
-import { createClient } from 'contentful'
-
-const contentfulClient = createClient({
-  accessToken: 'your-delivery-token',
-  environment: 'main',
-  space: 'your-space-id',
-})
-
-function PreviewPanelLoader() {
-  const { sdk, isReady } = useOptimizationContext()
-
-  useEffect(() => {
-    if (!sdk || !isReady) return
-
-    void import('@contentful/optimization-web-preview-panel').then(
-      ({ default: attachOptimizationPreviewPanel }) => {
-        attachOptimizationPreviewPanel({
-          contentful: contentfulClient,
-          optimization: sdk,
-          nonce: undefined,
-        }).catch((error) => {
-          if (error.message?.includes('already been attached')) return
-          console.error(error)
-        })
-      },
-    )
-  }, [sdk, isReady])
-
-  return null
-}
-```
-
-Mount `PreviewPanelLoader` inside your provider tree. The panel appends itself to `document.body`
-and renders a toggle button to open and close the drawer.
-
-The preview panel is intentionally tightly coupled to Web SDK internals. It uses symbol-keyed
-preview bridges and state interceptors to read and mutate internal state for local preview
-overrides. This coupling is deliberate and required for preview behavior parity.
-
-### Content security policy support
-
-In environments with strict CSP policies, pass a nonce:
-
-```tsx
-attachOptimizationPreviewPanel({
-  contentful: contentfulClient,
-  optimization: sdk,
-  nonce: 'your-csp-nonce',
-})
-```
-
-Alternatively, set the nonce on `window` before attaching:
-
-```ts
-window.litNonce = nonce
-```
-
-### Preview panel and live updates
-
-When the preview panel is open, the `LiveUpdatesProvider` detects the `previewPanelOpen` state from
-the SDK and forces live updates on for all `OptimizedEntry` components. This allows variant
-selections made in the preview panel to be reflected immediately in the rendered content.
-
-The `useLiveUpdates()` hook exposes the `previewPanelVisible` state:
-
-```tsx
-import { useLiveUpdates } from '@contentful/optimization-react-web'
-
-function DebugPanel() {
-  const { previewPanelVisible } = useLiveUpdates()
-
-  return <p>Preview panel: {previewPanelVisible ? 'Open' : 'Closed'}</p>
-}
-```
+| Symptom                                                       | Likely cause                                                                                                                                                                         | Fix                                                                                                           |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `useOptimization must be used within an OptimizationProvider` | A hook is rendering outside `OptimizationRoot` or `OptimizationProvider`                                                                                                             | Move the provider above that component tree                                                                   |
+| `ContentfulOptimization is already initialized`               | The app created more than one owned Web SDK instance in the same browser runtime                                                                                                     | Keep one `OptimizationRoot`, or inject a single shared SDK instance                                           |
+| `OptimizedEntry` renders baseline content only                | No page or identify event has produced selected optimizations, consent blocks the event, the entry has no optimization references, or the Contentful response uses all-locale fields | Verify consent, page event emission, entry links, `include: 10`, and single-locale CDA fetches                |
+| Automatic view, click, or hover events are missing            | Consent is not accepted, the interaction is opted out, the element is still in loading fallback, or the DOM target lacks the resolved attributes                                     | Check `trackEntryInteraction`, per-entry tracking props, consent state, and rendered `data-ctfl-*` attributes |
+| Router page events fire more than expected                    | More than one tracker is mounted for the same router tree or manual `page()` calls duplicate adapter emissions                                                                       | Keep one adapter per router tree and centralize manual page emission                                          |
+| Preview panel does not attach                                 | The package is not installed, the environment gate is false, the attach function runs before the Web SDK exists, or no singleton is available for an injected SDK                    | Attach from `onStatesReady`, verify the gate, and pass `optimization` when using an injected SDK instance     |
 
 ## Reference implementations to compare against
 
-Two reference implementations demonstrate these patterns in working applications:
-
-- [`implementations/react-web-sdk`](../../implementations/react-web-sdk/README.md): uses
-  `@contentful/optimization-react-web` directly with `OptimizationRoot`, `OptimizedEntry`, and
-  `ReactRouterAutoPageTracker`
-- [`implementations/web-sdk_react`](../../implementations/web-sdk_react/README.md): builds a custom
-  React adapter layer on top of `@contentful/optimization-web` for applications that need full
-  control over the integration
+- [React Web SDK reference implementation](../../implementations/react-web-sdk/README.md) - Uses
+  `OptimizationRoot`, `ReactRouterAutoPageTracker`, `OptimizedEntry`, live updates, merge tags,
+  automatic and manual entry tracking, event-stream display, and environment-gated preview panel
+  attachment.
+- [Custom React Adapter Over Web SDK](../../implementations/web-sdk_react/README.md) - Builds a
+  custom adapter on top of `@contentful/optimization-web` for comparison when an application needs
+  full control instead of the official React Web SDK surface.

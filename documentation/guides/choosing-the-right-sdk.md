@@ -1,124 +1,98 @@
 # Choosing the right SDK
 
-Use this guide to choose the narrowest package layer that matches the runtime you are building for.
+Use this guide when you need to select the Optimization SDK package or native package that matches
+an application runtime before following an integration guide.
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Runtime-first selection](#runtime-first-selection)
-  - [Browser applications](#browser-applications)
-  - [React applications on the web](#react-applications-on-the-web)
-  - [Next.js applications](#nextjs-applications)
-  - [Node servers and server-side rendering](#node-servers-and-server-side-rendering)
-  - [React Native applications](#react-native-applications)
-  - [Native iOS applications](#native-ios-applications)
-  - [Native Android applications](#native-android-applications)
-- [Lower-level building blocks](#lower-level-building-blocks)
-  - [`@contentful/optimization-core`](#contentfuloptimization-core)
-  - [`@contentful/optimization-api-client`](#contentfuloptimization-api-client)
-  - [`@contentful/optimization-api-schemas`](#contentfuloptimization-api-schemas)
-- [Common package combinations](#common-package-combinations)
+- [Recommendation](#recommendation)
+- [Decision table](#decision-table)
+- [Alternatives](#alternatives)
+- [Follow-up guides](#follow-up-guides)
 
 <!-- mtoc-end -->
 </details>
 
-## Runtime-first selection
+## Recommendation
 
-### Browser applications
+Choose the highest-level SDK that matches the app runtime. Framework and native SDKs own the
+runtime-specific setup around providers, hooks, screen or route tracking, persistence, preview
+tooling, and platform defaults. Use lower-level packages only when you are building SDK layers,
+tooling, tests, or first-party integrations that need shared SDK primitives or raw API access.
 
-Choose `@contentful/optimization-web` when the application runs in the browser and needs stateful,
-client-side optimization behavior such as consent handling, event delivery, and automatic entry
-interaction tracking.
+For mixed server and browser applications, use the adapter when one exists. Next.js App Router apps
+use `@contentful/optimization-nextjs`; the adapter composes the Node SDK on the server with the
+React Web SDK on the client and exposes Next.js-specific `server`, `client`, `request-handler`, and
+`tracking-attributes` subpaths. Non-Next.js server-rendered apps can combine
+`@contentful/optimization-node` on the server with `@contentful/optimization-web` or
+`@contentful/optimization-react-web` in the browser.
 
-Add `@contentful/optimization-web-preview-panel` when the same browser runtime also needs local
-preview tooling for optimization overrides.
+Angular, Vue, Svelte, Web Components, and custom browser framework apps use
+`@contentful/optimization-web`. Nest.js and other Node server frameworks use
+`@contentful/optimization-node` unless the app is a Next.js App Router app covered by the Next.js
+adapter.
 
-### React applications on the web
+For mobile apps, choose `@contentful/optimization-react-native` when the mobile app is built with
+JavaScript or TypeScript in React Native. Choose the native iOS or Android SDK only for
+platform-native apps that can accept alpha native API and setup changes.
 
-Choose `@contentful/optimization-react-web` when the application is already built with React and
-benefits from provider composition, hooks, `OptimizedEntry`, and router-specific automatic page
-tracking.
+> [!WARNING]
+>
+> Public package READMEs mark the Optimization SDK Suite as pre-release alpha. Plan for breaking
+> changes while adopting these packages.
 
-This package sits on top of `@contentful/optimization-web`, so React applications generally use the
-React layer as their application-facing entry point and rely on the Web SDK transitively.
+## Decision table
 
-### Next.js applications
+Use this table to choose the primary package and the next integration guide:
 
-Choose `@contentful/optimization-nextjs` for Next.js App Router applications that need
-server-rendered personalization, client-side tracking, or proxy-based anonymous ID cookie handling.
+| Reader need                                                                                                | Choose                                     | Why                                                                                                                                                                          | Next guide                                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Nest.js app, Node server, server function, or SSR layer outside the Next.js adapter                        | `@contentful/optimization-node`            | It provides stateless, request-scoped profile evaluation, event emission, entry resolution, and caching guidance for Node runtimes.                                          | [Integrating the Optimization Node SDK in a Node app](./integrating-the-node-sdk-in-a-node-app.md)                                                     |
+| Angular, Vue, Svelte, Web Components, non-React browser app, or custom browser framework app               | `@contentful/optimization-web`             | It owns browser consent state, anonymous ID persistence, automatic entry interaction tracking, browser event delivery, and Web Components.                                   | [Integrating the Optimization Web SDK in a web app](./integrating-the-web-sdk-in-a-web-app.md)                                                         |
+| React browser app outside Next.js App Router server or request-handler integration                         | `@contentful/optimization-react-web`       | It wraps the Web SDK with React providers, hooks, router page tracking, optimized entry rendering, interaction tracking, and live update semantics.                          | [Integrating the Optimization React Web SDK in a React app](./integrating-the-react-web-sdk-in-a-react-app.md)                                         |
+| Next.js App Router app with server-personalized first paint that stays static after hydration              | `@contentful/optimization-nextjs`          | It uses Next.js server, client, and request-handler entrypoints for SSR personalization, tracking markup, browser-side tracking, and anonymous ID continuity.                | [Integrating the Optimization Next.js SDK in a Next.js app (SSR)](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md)                           |
+| Next.js App Router app with server-personalized first paint and browser re-resolution after hydration      | `@contentful/optimization-nextjs`          | It keeps the personalized initial HTML and then lets the browser SDK own reactive entry resolution, live updates, route events, and preview-panel attachment.                | [Integrating the Optimization Next.js SDK in a Next.js app (hybrid SSR + CSR takeover)](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md) |
+| React Native app                                                                                           | `@contentful/optimization-react-native`    | It provides a stateful JavaScript mobile runtime with React providers, hooks, `OptimizedEntry`, screen tracking, optional offline-aware delivery, and preview-panel support. | [Integrating the Optimization React Native SDK in a React Native app](./integrating-the-react-native-sdk-in-a-react-native-app.md)                     |
+| Native iOS app built with SwiftUI that accepts alpha native API and setup changes                          | `ContentfulOptimization` Swift Package     | It provides native Swift APIs, SwiftUI helpers, persistence, networking, lifecycle handling, screen tracking, entry rendering, and preview-panel UI.                         | [Integrating the Optimization iOS SDK in a SwiftUI app](./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)                                    |
+| Native iOS app built with UIKit or direct client ownership that accepts alpha native API and setup changes | `ContentfulOptimization` Swift Package     | It exposes the same native iOS runtime through direct client APIs and UIKit-compatible preview, screen tracking, and entry-rendering patterns.                               | [Integrating the Optimization iOS SDK in a UIKit app](./integrating-the-optimization-ios-sdk-in-a-uikit-app.md)                                        |
+| Native Android app built with Jetpack Compose that accepts alpha native API and setup changes              | `com.contentful.java:optimization-android` | The Android AAR includes the stateful Kotlin client, Compose UI helpers, screen tracking, entry optimization, preview controls, and offline event delivery.                  | [Integrating the Optimization Android SDK in a Jetpack Compose app](./integrating-the-optimization-android-sdk-in-a-compose-app.md)                    |
+| Native Android app built with Android Views or XML layouts that accepts alpha native API and setup changes | `com.contentful.java:optimization-android` | The same Android AAR includes Android Views helpers such as `OptimizationManager`, `OptimizedEntryView`, `ScreenTracker`, preview controls, and the stateful client.         | [Integrating the Optimization Android SDK in an Android Views app](./integrating-the-optimization-android-sdk-in-a-views-app.md)                       |
 
-The Next.js adapter composes `@contentful/optimization-node` on the server with
-`@contentful/optimization-react-web` on the client. Application code should import the adapter's
-server, client, and request-handler subpaths instead of wiring those lower-level packages directly.
+## Alternatives
 
-### Node servers and server-side rendering
+- **Browser preview panel** - Add `@contentful/optimization-web-preview-panel` to a Web SDK or React
+  Web SDK integration when the browser app needs author preview overrides. It attaches to an
+  existing Contentful client and Web SDK instance; it is not a standalone SDK.
+- **Core SDK** - Use `@contentful/optimization-core` when building or maintaining an SDK layer that
+  needs the shared state machine, event builders, queues, resolvers, interceptors, or preview
+  support. Application integrations start with a platform SDK.
+- **API client** - Use `@contentful/optimization-api-client` when building SDK layers, tooling,
+  tests, or first-party integrations that need direct Experience API or Insights API transport
+  without SDK state, consent handling, event builders, entry resolution, tracking, or platform
+  defaults.
+- **API schemas** - Use `@contentful/optimization-api-schemas` when you need shared runtime
+  validation schemas or inferred TypeScript types for Contentful CDA, Experience API, and Insights
+  API payloads.
+- **Native JavaScript bridge** - `@contentful/optimization-js-bridge` is internal bridge
+  infrastructure for the native iOS and Android SDKs. Native applications use the
+  `ContentfulOptimization` Swift Package or `com.contentful.java:optimization-android` instead.
 
-Choose `@contentful/optimization-node` when optimization decisions are resolved in a stateless Node
-environment such as a server, an SSR layer, or a server-side function.
+## Follow-up guides
 
-The Node SDK intentionally avoids runtime-managed state. Consent, identity persistence, and other
-long-lived user concerns must remain in the host application or an upstream platform layer.
+After choosing the package, follow the matching guide:
 
-### React Native applications
-
-Choose `@contentful/optimization-react-native` for React Native applications that need stateful
-optimization behavior on mobile, including offline-aware event handling and React Native-specific
-tracking utilities.
-
-### Native iOS applications
-
-Choose the `ContentfulOptimization` Swift Package for native SwiftUI or UIKit applications that need
-stateful optimization behavior on iOS, including native persistence, screen tracking, entry
-personalization, interaction tracking, and the in-app preview panel.
-
-The native iOS SDK is separate from `@contentful/optimization-react-native`. Use React Native when
-the application is built with React Native, and use the Swift Package when the application is built
-with SwiftUI or UIKit.
-
-### Native Android applications
-
-Choose `com.contentful.java:optimization-android` for native Android applications that need stateful
-optimization behavior on Android, including native persistence, screen tracking, entry
-personalization, interaction tracking, and the in-app preview panel.
-
-The native Android SDK is separate from `@contentful/optimization-react-native`. Use React Native
-when the application is built with React Native, and use the Android SDK when the application is
-built with Jetpack Compose or XML Views.
-
-## Lower-level building blocks
-
-Choose one of the lower layers only when the environment SDKs are too opinionated for the use case
-or when you are building a new SDK layer inside this repository.
-
-### `@contentful/optimization-core`
-
-Use Core when building another SDK layer or when you need the shared optimization domain logic
-without committing to a specific runtime integration surface.
-
-- `CoreStateful` is the basis for browser and mobile-style runtimes.
-- `CoreStateless` is the basis for server-side runtimes.
-
-### `@contentful/optimization-api-client`
-
-Use the API client when the goal is direct Experience API and Insights API access without the higher
-level state, tracking, or entry-resolution behavior exposed by the SDK layers.
-
-### `@contentful/optimization-api-schemas`
-
-Use the schema package when you only need runtime validation and inferred TypeScript types for the
-Optimization APIs and Contentful entry-shape helpers.
-
-## Common package combinations
-
-- Browser application with author preview: `@contentful/optimization-web` and
-  `@contentful/optimization-web-preview-panel`
-- React browser application: `@contentful/optimization-react-web`
-- Next.js App Router application: `@contentful/optimization-nextjs`
-- Native mobile application: `@contentful/optimization-react-native` for React Native,
-  `ContentfulOptimization` for SwiftUI and UIKit, or `com.contentful.java:optimization-android` for
-  Jetpack Compose and XML Views
-- Server-rendered application with browser follow-up tracking: `@contentful/optimization-node` on
-  the server and `@contentful/optimization-web` in the browser
-- Custom internal SDK layer: `@contentful/optimization-core`, optionally with
-  `@contentful/optimization-api-client` and `@contentful/optimization-api-schemas`
+| Runtime or task                                | Guide                                                                                                                                                       |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node servers and server-side rendering         | [Integrating the Optimization Node SDK in a Node app](./integrating-the-node-sdk-in-a-node-app.md)                                                          |
+| Browser apps without React                     | [Integrating the Optimization Web SDK in a web app](./integrating-the-web-sdk-in-a-web-app.md)                                                              |
+| React browser apps                             | [Integrating the Optimization React Web SDK in a React app](./integrating-the-react-web-sdk-in-a-react-app.md)                                              |
+| Next.js App Router SSR                         | [Integrating the Optimization Next.js SDK in a Next.js app (SSR)](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md)                                |
+| Next.js App Router hybrid SSR and CSR takeover | [Integrating the Optimization Next.js SDK in a Next.js app (hybrid SSR + CSR takeover)](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md)      |
+| React Native apps                              | [Integrating the Optimization React Native SDK in a React Native app](./integrating-the-react-native-sdk-in-a-react-native-app.md)                          |
+| iOS SwiftUI apps                               | [Integrating the Optimization iOS SDK in a SwiftUI app](./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)                                         |
+| iOS UIKit apps                                 | [Integrating the Optimization iOS SDK in a UIKit app](./integrating-the-optimization-ios-sdk-in-a-uikit-app.md)                                             |
+| Android Jetpack Compose apps                   | [Integrating the Optimization Android SDK in a Jetpack Compose app](./integrating-the-optimization-android-sdk-in-a-compose-app.md)                         |
+| Android Views apps                             | [Integrating the Optimization Android SDK in an Android Views app](./integrating-the-optimization-android-sdk-in-a-views-app.md)                            |
+| Analytics and tag-management forwarding        | [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) |

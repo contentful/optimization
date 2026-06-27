@@ -172,7 +172,7 @@ describe('OptimizedEntry', () => {
     })
 
     expect(getCallOptions(useViewportTracking).enabled).toBe(true)
-    expect(getCallOptions(useTapTracking).enabled).toBe(false)
+    expect(getCallOptions(useTapTracking).enabled).toBe(true)
   })
 
   it('applies per-entry view and tap tracking overrides', async () => {
@@ -190,6 +190,23 @@ describe('OptimizedEntry', () => {
 
     expect(getCallOptions(useViewportTracking).enabled).toBe(false)
     expect(getCallOptions(useTapTracking).enabled).toBe(true)
+  })
+
+  it('allows per-entry tap tracking opt out', async () => {
+    const { OptimizedEntry } = await import('./OptimizedEntry')
+    const testRenderer = await loadTestRenderer()
+    const baselineEntry = createEntry('baseline-entry')
+
+    act(() => {
+      renderer = testRenderer.create(
+        <OptimizedEntry baselineEntry={baselineEntry} trackTaps={false}>
+          content
+        </OptimizedEntry>,
+      )
+    })
+
+    expect(getCallOptions(useViewportTracking).enabled).toBe(true)
+    expect(getCallOptions(useTapTracking).enabled).toBe(false)
   })
 
   it('passes optimizationContextId to viewport and tap tracking', async () => {

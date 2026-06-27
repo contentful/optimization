@@ -33,7 +33,7 @@ app.set('views', path.join(__dirname, '.'))
 const config = {
   contentful: {
     accessToken: process.env.PUBLIC_CONTENTFUL_TOKEN,
-    environment: process.env.PUBLIC_NINETAILED_ENVIRONMENT,
+    environment: process.env.PUBLIC_CONTENTFUL_ENVIRONMENT,
     space: process.env.PUBLIC_CONTENTFUL_SPACE_ID,
     host: process.env.PUBLIC_CONTENTFUL_CDA_HOST,
     basePath: process.env.PUBLIC_CONTENTFUL_BASE_PATH,

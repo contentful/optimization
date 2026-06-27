@@ -39,7 +39,7 @@ public object OptimizationManager {
 
     /** Default applied to [OptimizedEntryView.trackTaps] when the per-view value is null. */
     @Volatile
-    var trackTaps: Boolean = false
+    var trackTaps: Boolean = true
         private set
 
     /** Default applied to [OptimizedEntryView.liveUpdates] when the per-view value is null. */
@@ -66,12 +66,16 @@ public object OptimizationManager {
      * Construct and initialize the [OptimizationClient]. Idempotent — subsequent calls update
      * the global tracking defaults and preview-panel client but do not recreate the underlying
      * client.
+     *
+     * Entry view and tap tracking both default to enabled. Pass `trackViews = false` or
+     * `trackTaps = false` to opt out globally, or override individual [OptimizedEntryView]
+     * instances.
      */
     fun initialize(
         context: Context,
         config: OptimizationConfig,
         trackViews: Boolean = true,
-        trackTaps: Boolean = false,
+        trackTaps: Boolean = true,
         liveUpdates: Boolean = false,
         previewPanel: PreviewPanelConfig? = null,
     ) {
