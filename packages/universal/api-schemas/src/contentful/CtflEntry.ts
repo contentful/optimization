@@ -4,13 +4,15 @@ import * as z from 'zod/mini'
  * Base Zod schema for entry fields.
  *
  * @remarks
- * This is modeled as a catch-all map from string keys to JSON-compatible values.
- * The strong typing ot consumer-specified Contentful Entry fields is not
- * validated by these schemas.
+ * This is modeled as a catch-all map from string keys to pass-through values.
+ * The strong typing of consumer-specified Contentful Entry fields is not
+ * validated by these schemas. Arbitrary field values are intentionally treated
+ * as pass-through data so resolved Contentful entry graphs can contain circular
+ * references without recursive schema traversal.
  *
  * @public
  */
-export const EntryFields = z.catchall(z.object({}), z.json())
+export const EntryFields = z.catchall(z.object({}), z.any())
 
 /**
  * TypeScript type inferred from {@link EntryFields}.
@@ -175,8 +177,8 @@ export type EntrySys = z.infer<typeof EntrySys>
  * Zod schema describing a generic Contentful entry.
  *
  * @remarks
- * This model is intentionally loose: `fields` is any JSON-compliant object and
- * `metadata` is modeled as a catch-all object that must contain an array of
+ * This model is intentionally loose: arbitrary `fields` values are pass-through
+ * data and `metadata` is modeled as an object that must contain an array of
  * {@link TagLink} tags.
  *
  * @public
