@@ -19,7 +19,7 @@ export const optimization = createNextjsOptimization({
   },
 })
 
-// cache() deduplicates across layout and page, which Next.js renders in parallel per request
+// cache() deduplicates repeated calls for the same request during one render.
 export const getOptimizationData = cache(async () => {
   const cookieStore = await cookies()
   const headerStore = await headers()

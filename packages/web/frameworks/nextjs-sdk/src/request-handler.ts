@@ -1,149 +1,114 @@
 import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server'
 import {
-  bindNextjsOptimizationRequest,
-  getNextjsServerOptimizationData,
-  persistNextjsAnonymousId,
-  type BindNextjsOptimizationRequestOptions,
-  type ContentfulOptimization,
-  type CoreStatelessRequestConsent,
-  type PageViewBuilderArgs,
-  type PersistNextjsAnonymousIdOptions,
-  type UniversalEventBuilderArgs,
-} from './server'
+  NEXTJS_OPTIMIZATION_REQUEST_HEADER_PREFIX,
+  NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER,
+} from './request-context'
 
 export type MaybePromise<T> = T | Promise<T>
+
+const NEXTJS_MIDDLEWARE_OVERRIDE_HEADERS = 'x-middleware-override-headers'
+const NEXTJS_MIDDLEWARE_REQUEST_HEADER_PREFIX = 'x-middleware-request-'
 
 export type NextjsOptimizationRequestHandler = (
   request: NextRequest,
   responseOrEvent?: NextResponse | NextFetchEvent,
-) => Promise<NextResponse>
+) => MaybePromise<NextResponse>
 
-export interface NextjsOptimizationRequestBaseContext {
-  readonly request: NextRequest
-  readonly response: NextResponse
+export function createNextjsOptimizationContextHandler(): NextjsOptimizationRequestHandler {
+  return (request, responseOrEvent) => {
+    const response = getExistingNextResponse(responseOrEvent)
+    const requestHeaders = createForwardedRequestHeaders(request, response)
+
+    if (!response) {
+      return NextResponse.next({ request: { headers: requestHeaders } })
+    }
+
+    applyNextjsOptimizationRequestContext(response, requestHeaders)
+    return response
+  }
 }
 
-export interface NextjsOptimizationRequestContext extends NextjsOptimizationRequestBaseContext {
-  readonly consent: CoreStatelessRequestConsent
+function getExistingNextResponse(
+  responseOrEvent: NextResponse | NextFetchEvent | undefined,
+): NextResponse | undefined {
+  return responseOrEvent instanceof Response ? responseOrEvent : undefined
 }
 
-export interface CreateNextjsOptimizationRequestHandlerOptions
-  extends
-    Omit<
-      BindNextjsOptimizationRequestOptions,
-      'consent' | 'cookies' | 'eventContext' | 'headers' | 'locale' | 'profile' | 'request'
-    >,
-    PersistNextjsAnonymousIdOptions {
-  readonly errorPolicy?: 'continue' | 'throw'
-  readonly getEventContext?: (
-    context: NextjsOptimizationRequestContext,
-  ) => MaybePromise<UniversalEventBuilderArgs | undefined>
-  readonly getLocale?: (
-    context: NextjsOptimizationRequestContext,
-  ) => MaybePromise<string | undefined>
-  readonly getPagePayload?: (
-    context: NextjsOptimizationRequestContext,
-  ) => MaybePromise<PageViewBuilderArgs | undefined>
-  readonly onError?: (
-    error: unknown,
-    context: NextjsOptimizationRequestBaseContext,
-  ) => MaybePromise<void>
-  readonly resolveConsent: (
-    context: NextjsOptimizationRequestBaseContext,
-  ) => MaybePromise<CoreStatelessRequestConsent>
-  readonly shouldHandleRequest?: (
-    context: NextjsOptimizationRequestContext,
-  ) => MaybePromise<boolean>
-  readonly shouldRequestOptimization?: (
-    context: NextjsOptimizationRequestContext,
-  ) => MaybePromise<boolean>
+function applyNextjsOptimizationRequestContext(
+  response: NextResponse,
+  requestHeaders: Headers,
+): void {
+  const forwardedHeaderNames = Array.from(requestHeaders.keys())
+
+  clearForwardedRequestHeaders(response)
+
+  for (const [name, value] of requestHeaders) {
+    response.headers.set(`${NEXTJS_MIDDLEWARE_REQUEST_HEADER_PREFIX}${name}`, value)
+  }
+
+  response.headers.set(NEXTJS_MIDDLEWARE_OVERRIDE_HEADERS, forwardedHeaderNames.join(','))
 }
 
-export function createNextjsOptimizationRequestHandler(
-  sdk: ContentfulOptimization,
-  options: CreateNextjsOptimizationRequestHandlerOptions,
-): NextjsOptimizationRequestHandler {
-  return async (request, responseOrEvent) => {
-    const response = getRequestHandlerResponse(responseOrEvent)
-    const baseContext: NextjsOptimizationRequestBaseContext = { request, response }
+function createForwardedRequestHeaders(request: NextRequest, response?: NextResponse): Headers {
+  const requestHeaders =
+    createExistingForwardedRequestHeaders(response) ?? new Headers(request.headers)
 
-    try {
-      const consent = await options.resolveConsent(baseContext)
-      const context: NextjsOptimizationRequestContext = { ...baseContext, consent }
+  sanitizeForwardedRequestHeaders(requestHeaders, request.url)
 
-      if ((await options.shouldHandleRequest?.(context)) === false) {
-        return response
-      }
+  return requestHeaders
+}
 
-      const requestOptions = await createRequestOptions(options, context)
+function createExistingForwardedRequestHeaders(
+  response: NextResponse | undefined,
+): Headers | undefined {
+  if (!response) {
+    return undefined
+  }
 
-      if ((await options.shouldRequestOptimization?.(context)) === false) {
-        persistNextjsAnonymousId(
-          response,
-          bindNextjsOptimizationRequest(sdk, requestOptions),
-          undefined,
-          options,
-        )
-        return response
-      }
+  const overrideHeaderNames = response.headers.get(NEXTJS_MIDDLEWARE_OVERRIDE_HEADERS)
 
-      const pagePayload = await options.getPagePayload?.(context)
-      const { data, requestOptimization } = await getNextjsServerOptimizationData(sdk, {
-        ...requestOptions,
-        pagePayload,
-      })
+  if (overrideHeaderNames === null) {
+    return undefined
+  }
 
-      persistNextjsAnonymousId(response, requestOptimization, data, options)
+  const requestHeaders = new Headers()
 
-      return response
-    } catch (error) {
-      await handleRequestHandlerError(error, baseContext, options)
-      return response
+  for (const name of overrideHeaderNames.split(',')) {
+    const requestHeaderName = name.trim()
+
+    if (!requestHeaderName) {
+      continue
+    }
+
+    const value = response.headers.get(
+      `${NEXTJS_MIDDLEWARE_REQUEST_HEADER_PREFIX}${requestHeaderName}`,
+    )
+
+    if (value !== null) {
+      requestHeaders.set(requestHeaderName, value)
     }
   }
+
+  return requestHeaders
 }
 
-function getRequestHandlerResponse(
-  responseOrEvent: NextResponse | NextFetchEvent | undefined,
-): NextResponse {
-  return isNextResponse(responseOrEvent) ? responseOrEvent : NextResponse.next()
-}
-
-function isNextResponse(
-  responseOrEvent: NextResponse | NextFetchEvent | undefined,
-): responseOrEvent is NextResponse {
-  return responseOrEvent instanceof Response
-}
-
-async function createRequestOptions(
-  options: CreateNextjsOptimizationRequestHandlerOptions,
-  context: NextjsOptimizationRequestContext,
-): Promise<BindNextjsOptimizationRequestOptions> {
-  return {
-    anonymousIdCookieName: options.anonymousIdCookieName,
-    consent: context.consent,
-    eventContext: await options.getEventContext?.(context),
-    experienceOptions: options.experienceOptions,
-    insightsOptions: options.insightsOptions,
-    locale: await options.getLocale?.(context),
-    request: context.request,
-  }
-}
-
-async function handleRequestHandlerError(
-  error: unknown,
-  context: NextjsOptimizationRequestBaseContext,
-  options: CreateNextjsOptimizationRequestHandlerOptions,
-): Promise<void> {
-  try {
-    await options.onError?.(error, context)
-  } catch (_error) {
-    // Fail-open mode should not let observability callbacks block the request.
+function sanitizeForwardedRequestHeaders(requestHeaders: Headers, requestUrl: string): void {
+  for (const name of Array.from(requestHeaders.keys())) {
+    if (name.toLowerCase().startsWith(NEXTJS_OPTIMIZATION_REQUEST_HEADER_PREFIX)) {
+      requestHeaders.delete(name)
+    }
   }
 
-  if (options.errorPolicy === 'throw') {
-    throw error instanceof Error
-      ? error
-      : new Error('Next.js optimization request handler failed.', { cause: error })
+  requestHeaders.set(NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER, requestUrl)
+}
+
+function clearForwardedRequestHeaders(response: NextResponse): void {
+  for (const name of Array.from(response.headers.keys())) {
+    if (
+      name === NEXTJS_MIDDLEWARE_OVERRIDE_HEADERS ||
+      name.toLowerCase().startsWith(NEXTJS_MIDDLEWARE_REQUEST_HEADER_PREFIX)
+    ) {
+      response.headers.delete(name)
+    }
   }
 }

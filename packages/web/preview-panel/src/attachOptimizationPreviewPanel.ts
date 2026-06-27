@@ -1,3 +1,4 @@
+import { getPreviewPanelBridge } from '@contentful/optimization-core/bridge-support'
 import {
   PreviewOverrideManager,
   buildPreviewModel,
@@ -11,8 +12,6 @@ import type {
   OptimizationEntry,
   OptimizationEntrySkeleton,
 } from '@contentful/optimization-web/api-schemas'
-import type { PreviewPanelSignalObject } from '@contentful/optimization-web/core-sdk'
-import { PREVIEW_PANEL_SIGNALS_SYMBOL } from '@contentful/optimization-web/symbols'
 import type { ChainModifiers, ContentfulClientApi, Entry } from 'contentful'
 import {
   AUDIENCE_SWITCH_CHANGE,
@@ -240,16 +239,16 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
 
   if (nonce !== undefined) window.litNonce = nonce
 
-  const previewPanelSignalObject: PreviewPanelSignalObject = {}
-
-  contentfulOptimization.registerPreviewPanel(previewPanelSignalObject)
-
-  const signals = Reflect.get(previewPanelSignalObject, PREVIEW_PANEL_SIGNALS_SYMBOL)
-
-  if (!signals)
-    throw new Error(
-      '[ContentfulOptimization Preview Panel] The preview panel failed to find optimization states',
-    )
+  const bridge = getPreviewPanelBridge(contentfulOptimization)
+  const {
+    changes,
+    consent,
+    previewPanelAttached,
+    previewPanelOpen,
+    profile,
+    selectedOptimizations,
+    stateInterceptors,
+  } = bridge
 
   const initialOverrides = loadOverridesFromStorage()
 
@@ -287,9 +286,9 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
       audienceDefinitions,
       experienceDefinitions,
       signals: {
-        profile: signals.profile.value,
-        selectedOptimizations: signals.selectedOptimizations.value,
-        consent: signals.consent.value,
+        profile: profile.value,
+        selectedOptimizations: selectedOptimizations.value,
+        consent: consent.value,
         isLoading: false,
       },
       overrides: currentOverrides,
@@ -300,11 +299,11 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
   }
 
   const manager = new PreviewOverrideManager({
-    selectedOptimizations: signals.selectedOptimizations,
-    changes: signals.changes,
+    selectedOptimizations,
+    changes,
     optimizationEntries: () => panelOptimizationEntries,
-    profile: signals.profile,
-    stateInterceptors: contentfulOptimization.interceptors.state,
+    profile,
+    stateInterceptors,
     onOverridesChanged: (state) => {
       currentOverrides = {
         audiences: { ...state.audiences },
@@ -324,7 +323,7 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
       detail: { value: open },
     } = event
 
-    signals.previewPanelOpen.value = open
+    previewPanelOpen.value = open
   })
 
   panel.addEventListener(OPTIMIZATION_CHANGE, (event: Event) => {
@@ -346,8 +345,8 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
     manager.resetAll()
   })
 
-  signals.profile.subscribe(updatePreviewModel)
-  signals.selectedOptimizations.subscribe(updatePreviewModel)
+  profile.subscribe(updatePreviewModel)
+  selectedOptimizations.subscribe(updatePreviewModel)
   updatePreviewModel()
 
   // Hydrate overrides loaded from storage into the manager so its state
@@ -358,7 +357,7 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
 
   document.body.appendChild(panel)
 
-  signals.previewPanelAttached.value = true
+  previewPanelAttached.value = true
 }
 
 /**

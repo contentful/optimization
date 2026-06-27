@@ -20,8 +20,11 @@ import {
   type UniversalEventProperties,
   type ViewEvent,
 } from '@contentful/optimization-api-client/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import { merge } from 'es-toolkit/object'
 import * as z from 'zod/mini'
+
+const eventBuilderLogger = createScopedLogger('EventBuilder')
 
 /**
  * Configuration options for creating an {@link EventBuilder} instance.
@@ -227,6 +230,25 @@ export const PageViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
  * @public
  */
 export type PageViewBuilderArgs = z.infer<typeof PageViewBuilderArgs>
+
+const PAGE_CONTEXT_CONFLICT_KEYS = ['path', 'query', 'search', 'url'] as const
+
+function warnIfPageContextConflicts(explicitPage: Page | undefined, properties: Page): void {
+  if (!explicitPage) return
+
+  const conflictingKeys = PAGE_CONTEXT_CONFLICT_KEYS.filter((key) => {
+    const { [key]: explicitValue } = explicitPage
+    const { [key]: propertyValue } = properties
+
+    return JSON.stringify(explicitValue) !== JSON.stringify(propertyValue)
+  })
+
+  if (conflictingKeys.length === 0) return
+
+  eventBuilderLogger.warn(
+    `Explicit page context differs from page event properties for: ${conflictingKeys.join(', ')}`,
+  )
+}
 
 export const ScreenViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
   name: z.string(),
@@ -629,11 +651,15 @@ class EventBuilder {
       },
       properties,
     )
+    warnIfPageContextConflicts(universal.page, merged)
 
     const {
       context: { screen: _, ...universalContext },
       ...universalProperties
-    } = this.buildUniversalEventProperties(universal)
+    } = this.buildUniversalEventProperties({
+      ...universal,
+      page: universal.page ?? merged,
+    })
 
     const context = parseWithFriendlyError(PageEventContext, universalContext)
 

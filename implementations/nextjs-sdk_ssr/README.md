@@ -34,35 +34,34 @@ implementation does not import, configure, or externalize lower-level SDK packag
 ## What this demonstrates
 
 Use this implementation when you need a server-rendered Next.js example where personalized content
-is resolved before hydration. It demonstrates:
+is resolved before browser startup. It demonstrates:
 
 - Server-rendered personalized first paint with `getNextjsServerOptimizationData()`
 - Server-rendered tracking markup with `ServerOptimizedEntry`
-- Anonymous ID continuity through `createNextjsOptimizationRequestHandler()`
+- Request URL capture through `createNextjsOptimizationContextHandler()`
 - Browser-side page, view, click, and hover tracking through the adapter client entry
 - `initialPageEvent="skip"` when the server already resolved the same initial page
 
-In this SSR pattern, content is static after hydration. Client actions such as consent, identify,
-and reset update browser SDK state and analytics, but server-rendered content changes only on the
-next server request.
+In this SSR pattern, content is static after browser startup. Client actions such as consent,
+identify, and reset update browser SDK state and analytics, but server-rendered content changes only
+on the next server request.
 
 ## Architecture
 
 ```text
 Request
   proxy.ts
-    createNextjsOptimizationRequestHandler()
-      reads app consent and anonymous ID
-      calls page() when consent allows
-      persists or clears the anonymous ID cookie
+    createNextjsOptimizationContextHandler()
+      forwards sanitized request URL context for Server Components
 
   app/page.tsx
     fetches CDA entries
-    calls getNextjsServerOptimizationData()
+    calls getNextjsServerOptimizationData() with cookies() and headers()
     resolves entries through the request-bound SDK
+    renders NextjsOptimizationState near optimized content for server-to-browser state handoff
     renders children through ServerOptimizedEntry
 
-Hydration
+Browser startup
   app/layout.tsx
     mounts OptimizationRoot from @contentful/optimization-nextjs/client
     passes initialPageEvent="skip" only after consented server page resolution
@@ -75,7 +74,7 @@ Hydration
 ## CDA locale handling
 
 The implementation defines one `APP_LOCALE`, passes it to the Next.js SDK server helpers, uses it
-for event context, and passes it directly to Contentful CDA fetches. The hydrated provider receives
+for event context, and passes it directly to Contentful CDA fetches. The browser provider receives
 the same locale value. Do not use `contentful.js` `withAllLocales` or raw CDA `locale=*`; SDK entry
 resolution expects direct single-locale fields such as `fields.nt_experiences` and
 `fields.nt_variants`.
@@ -135,7 +134,7 @@ pnpm test:e2e:nextjs-sdk_ssr
 
 The E2E suite mirrors the shared React SDK interaction and navigation tests that apply to
 SSR-rendered markup, with additional Next.js SSR checks for server first paint, tracking attributes,
-proxy cookie continuity, and skipped duplicate initial page events.
+proxy request URL context, and skipped duplicate initial page events.
 
 Use Playwright UI or codegen when needed:
 

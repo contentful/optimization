@@ -34,6 +34,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             name: 'Contentful Optimization Next.js SDK SSR (Client)',
             version: '0.1.0',
           }}
+          defaults={{ consent: appConsent, persistenceConsent: appConsent }}
         >
           <GlobalLiveUpdatesProvider>
             <PreviewPanel />

@@ -42,14 +42,14 @@
         "default": "./dist/constants.cjs"
       }
     },
-    "./symbols": {
+    "./bridge-support": {
       "import": {
-        "types": "./dist/symbols.d.mts",
-        "default": "./dist/symbols.mjs"
+        "types": "./dist/bridge-support.d.mts",
+        "default": "./dist/bridge-support.mjs"
       },
       "require": {
-        "types": "./dist/symbols.d.cts",
-        "default": "./dist/symbols.cjs"
+        "types": "./dist/bridge-support.d.cts",
+        "default": "./dist/bridge-support.cjs"
       }
     },
     "./api-client": {
@@ -91,8 +91,10 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 18000,
-        "index.mjs": 17000,
+        "index.cjs": 18300,
+        "index.mjs": 17800,
+        "bridge-support.cjs": 1200,
+        "bridge-support.mjs": 2100,
         "preview-support.cjs": 5300,
         "preview-support.mjs": 5500
       }

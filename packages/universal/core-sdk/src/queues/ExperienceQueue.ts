@@ -6,20 +6,17 @@ import {
   type OptimizationData,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
-import { isEqual } from 'es-toolkit/predicate'
 import type { LifecycleInterceptors } from '../CoreBase'
 import type { EventOptimizationContext, OptimizationEventStreamEvent } from '../events'
 import { QueueFlushRuntime, type ResolvedQueueFlushPolicy } from '../lib/queue'
 import {
-  batch,
-  changes as changesSignal,
   event as eventSignal,
   experienceRequestState as experienceRequestStateSignal,
   online as onlineSignal,
   profile as profileSignal,
-  selectedOptimizations as selectedOptimizationsSignal,
   type ExperienceRequestFailureReason,
 } from '../signals'
+import { applyOptimizationDataToSignals } from '../state/applyOptimizationDataToSignals'
 
 const coreLogger = createScopedLogger('CoreStateful')
 
@@ -238,7 +235,7 @@ export class ExperienceQueue {
         events,
       })
 
-      await this.updateOutputSignals(data)
+      await applyOptimizationDataToSignals(data, this.stateInterceptors)
 
       return data
     } catch (error) {
@@ -248,22 +245,5 @@ export class ExperienceQueue {
       }
       throw error
     }
-  }
-
-  private async updateOutputSignals(data: OptimizationData): Promise<void> {
-    const intercepted = await this.stateInterceptors.run(data)
-    const { changes, profile, selectedOptimizations } = intercepted
-
-    // success must be written inside this batch because experienceRequestState transitions
-    // to 'success' atomically with selectedOptimizations so consumers never observe
-    // a render where !pending is true but canOptimize is still false
-    batch(() => {
-      if (!isEqual(changesSignal.value, changes)) changesSignal.value = changes
-      if (!isEqual(profileSignal.value, profile)) profileSignal.value = profile
-      if (!isEqual(selectedOptimizationsSignal.value, selectedOptimizations)) {
-        selectedOptimizationsSignal.value = selectedOptimizations
-      }
-      experienceRequestStateSignal.value = { status: 'success' }
-    })
   }
 }
