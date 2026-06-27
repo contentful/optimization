@@ -11,17 +11,12 @@ import {
   type Signal,
 } from '@angular/core'
 
-import { isMergeTagEntry, type MergeTagEntry } from '@contentful/optimization-web/api-schemas'
-import type { Document, Text } from '@contentful/rich-text-types'
-import { INLINES } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
 import { SERVER_RESOLVED_ENTRIES_KEY } from '../transfer-state-keys'
-import { isRecord } from '../utils'
+import { resolveEntryMergeTags } from './merge-tags'
 import { NgContentfulOptimization } from './optimization'
 
 export type ObservationMode = 'auto' | 'manual'
-
-type MergeTagResolver = (target: MergeTagEntry) => string | undefined
 
 export interface ResolvedEntry {
   entry: Entry
@@ -31,41 +26,6 @@ export interface ResolvedEntry {
   sticky: boolean | undefined
   variantIndex: number | undefined
   mergeTagResolved: boolean | undefined
-}
-
-function isRichTextDocument(value: unknown): value is Document {
-  return isRecord(value) && value.nodeType === 'document'
-}
-
-function resolveNode(node: unknown, resolveMergeTag: MergeTagResolver): unknown {
-  if (!isRecord(node)) return node
-  const { data } = node
-  if (node.nodeType === INLINES.EMBEDDED_ENTRY && isRecord(data)) {
-    const { target } = data
-    if (isMergeTagEntry(target)) {
-      return {
-        nodeType: 'text',
-        value: resolveMergeTag(target) ?? '',
-        marks: [],
-        data: {},
-      } satisfies Text
-    }
-  }
-  if (Array.isArray(node.content)) {
-    return { ...node, content: node.content.map((child) => resolveNode(child, resolveMergeTag)) }
-  }
-  return node
-}
-
-function resolveEntryMergeTags(entry: Entry, resolveMergeTag: MergeTagResolver): Entry {
-  return Object.assign({}, entry, {
-    fields: Object.fromEntries(
-      Object.entries(entry.fields).map(([key, value]) => [
-        key,
-        isRichTextDocument(value) ? resolveNode(value, resolveMergeTag) : value,
-      ]),
-    ),
-  }) as Entry
 }
 
 function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Signal<boolean>): void {
