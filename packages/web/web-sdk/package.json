@@ -42,14 +42,14 @@
         "default": "./dist/constants.cjs"
       }
     },
-    "./symbols": {
+    "./bridge-support": {
       "import": {
-        "types": "./dist/symbols.d.mts",
-        "default": "./dist/symbols.mjs"
+        "types": "./dist/bridge-support.d.mts",
+        "default": "./dist/bridge-support.mjs"
       },
       "require": {
-        "types": "./dist/symbols.d.cts",
-        "default": "./dist/symbols.cjs"
+        "types": "./dist/bridge-support.d.cts",
+        "default": "./dist/bridge-support.cjs"
       }
     },
     "./presentation": {
@@ -123,6 +123,8 @@
         "contentful-optimization-web.umd.js": 34500,
         "index.cjs": 12500,
         "index.mjs": 12500,
+        "bridge-support.cjs": 1200,
+        "bridge-support.mjs": 1200,
         "contentful-optimization-web-components.umd.js": 39000,
         "presentation.cjs": 3200,
         "presentation.mjs": 3200,

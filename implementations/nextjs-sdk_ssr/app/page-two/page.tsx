@@ -5,14 +5,14 @@ import { appConfig } from '@/lib/config'
 import { loadPageEntries } from '@/lib/contentful'
 import { optimization } from '@/lib/optimization'
 import { getAppConsent, toIdMap } from '@/lib/util'
+import { NextjsOptimizationState } from '@contentful/optimization-nextjs/client'
 import { getNextjsServerOptimizationData } from '@contentful/optimization-nextjs/server'
 import { PAGES } from 'e2e-web'
 import { cookies, headers } from 'next/headers'
 import Link from 'next/link'
 
 export default async function PageTwo() {
-  const cookieStore = await cookies()
-  const headerStore = await headers()
+  const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
 
   const [entries, optimizationData] = await Promise.all([
     loadPageEntries(PAGES.pageTwo.ids),
@@ -47,6 +47,7 @@ export default async function PageTwo() {
 
       <CustomViewTracker componentId="page-two-hero" />
       <ControlPanel demoCTA />
+      <NextjsOptimizationState data={optimizationData} />
 
       <div className="sections-grid sections-grid--split" data-testid="page-two-optimization">
         <section className="page-section">

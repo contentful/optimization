@@ -39,6 +39,83 @@ describe('EventBuilder.buildScreenView', () => {
   })
 })
 
+describe('EventBuilder.buildPageView', () => {
+  it('uses merged page event properties as context.page when no explicit page context is provided', () => {
+    const event = new EventBuilder({
+      channel: 'web',
+      library: { name: '@contentful/optimization-web', version: '0.0.1' },
+      getPageProperties: () => ({
+        path: '/',
+        query: {},
+        referrer: '',
+        search: '',
+        title: 'Home',
+        url: 'https://example.test/',
+      }),
+    }).buildPageView({
+      properties: {
+        path: '/products',
+        query: { audience: 'beta' },
+        search: '?audience=beta',
+        url: 'https://example.test/products?audience=beta',
+      },
+    })
+
+    expect(event.properties).toEqual(
+      expect.objectContaining({
+        path: '/products',
+        query: { audience: 'beta' },
+        search: '?audience=beta',
+        title: 'Home',
+        url: 'https://example.test/products?audience=beta',
+      }),
+    )
+    expect(event.context.page).toEqual(event.properties)
+  })
+
+  it('preserves explicit page context precedence over merged page event properties', () => {
+    const explicitPage = {
+      path: '/context',
+      query: { audience: 'context' },
+      referrer: '',
+      search: '?audience=context',
+      title: 'Context',
+      url: 'https://example.test/context?audience=context',
+    }
+    const event = new EventBuilder({
+      channel: 'web',
+      library: { name: '@contentful/optimization-web', version: '0.0.1' },
+      getPageProperties: () => ({
+        path: '/',
+        query: {},
+        referrer: '',
+        search: '',
+        title: 'Home',
+        url: 'https://example.test/',
+      }),
+    }).buildPageView({
+      page: explicitPage,
+      properties: {
+        path: '/properties',
+        query: { audience: 'properties' },
+        search: '?audience=properties',
+        url: 'https://example.test/properties?audience=properties',
+      },
+    })
+
+    expect(event.context.page).toEqual(explicitPage)
+    expect(event.properties).toEqual(
+      expect.objectContaining({
+        path: '/properties',
+        query: { audience: 'properties' },
+        search: '?audience=properties',
+        title: 'Home',
+        url: 'https://example.test/properties?audience=properties',
+      }),
+    )
+  })
+})
+
 describe('EventBuilder entry interactions', () => {
   it('accepts optimizationContextId without adding it to API events', () => {
     const view = builder.buildView({

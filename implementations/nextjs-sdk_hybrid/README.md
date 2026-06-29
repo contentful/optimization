@@ -21,8 +21,8 @@
 > The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 Reference implementation demonstrating `@contentful/optimization-nextjs` in a Next.js App Router
-application with personalized server first paint and browser-side takeover after hydration. The app
-imports only Next.js SDK subpaths:
+application with personalized server first paint and browser-side takeover after state handoff. The
+app imports only Next.js SDK subpaths:
 
 - `@contentful/optimization-nextjs/server` in Server Components and server-only modules
 - `@contentful/optimization-nextjs/client` in Client Components
@@ -34,37 +34,39 @@ configure, or externalize lower-level SDK packages directly.
 ## What this demonstrates
 
 Use this implementation when you need a Next.js example where the server personalizes first paint
-and the browser SDK owns reactive updates after hydration. It demonstrates:
+and the browser SDK owns reactive updates after server-to-browser state handoff. It demonstrates:
 
 - Personalized server-rendered first paint
-- Hydration handoff through `OptimizationRoot` defaults
-- Client-side takeover with `OptimizedEntry` after hydration
+- Server-to-browser state handoff through `NextjsOptimizationState`
+- Client-side takeover with `OptimizedEntry` after browser startup
 - Live re-resolution after consent, identify, reset, and client-side route changes
 - `initialPageEvent="skip"` only when the server already resolved the same initial page
 - Preview panel attachment as developer/editor tooling in development, preview, and staging app
   environments
 
 This hybrid pattern keeps the initial HTML stable and personalized, then lets the browser SDK own
-reactive entry resolution after hydration.
+reactive entry resolution after state handoff.
 
 ## Architecture
 
 ```text
 First request
   proxy.ts
-    createNextjsOptimizationRequestHandler()
-      reads app consent and anonymous ID
-      calls page() when consent allows
-      persists or clears the anonymous ID cookie
+    createNextjsOptimizationContextHandler()
+      forwards sanitized request URL context for Server Components
 
   lib/optimization-server.ts
     createNextjsOptimization()
     getNextjsServerOptimizationData()
 
-  app/layout.tsx
-    passes server profile, changes, and selected optimizations as OptimizationRoot defaults
+  app/page.tsx and app/page-two/page.tsx
+    call getNextjsServerOptimizationData() with cookies() and headers()
+    render NextjsOptimizationState near server-rendered optimized content
 
-After hydration
+  app/layout.tsx
+    owns one OptimizationRoot for browser takeover and route tracking
+
+Browser runtime
   NextAppAutoPageTracker emits route page events
   OptimizedEntry resolves entries from current selectedOptimizations
   LiveUpdatesProvider controls reactive re-resolution
@@ -73,7 +75,7 @@ After hydration
 ## CDA locale handling
 
 The implementation defines one `APP_LOCALE`, passes it to the Next.js SDK server helpers, uses it
-for event context, and passes it directly to Contentful CDA fetches. Hydrated client resolution
+for event context, and passes it directly to Contentful CDA fetches. Browser client resolution
 reuses the single-locale entries supplied by the server. Do not use `contentful.js` `withAllLocales`
 or raw CDA `locale=*`; SDK entry resolution expects direct single-locale fields such as
 `fields.nt_experiences` and `fields.nt_variants`.
@@ -86,7 +88,8 @@ and
 ## Route strategy
 
 Use Server Components for first-paint-sensitive routes and Client Components for routes where
-instant personalization reactions matter after hydration. This implementation demonstrates both:
+instant personalization reactions matter after browser startup. This implementation demonstrates
+both:
 
 - The home route fetches entries server-side and passes them into client rendering
 - The page-two route demonstrates client navigation and browser-observable page events
@@ -146,8 +149,8 @@ pnpm test:e2e:nextjs-sdk_hybrid
 
 The E2E suite mirrors the React SDK reference implementation first: same shared scenarios,
 assertions, fixtures, and structure where behavior is shared. It adds Next.js-specific browser tests
-only for hydration, proxy cookie continuity, server first paint, full reload server re-resolution,
-`ServerOptimizedEntry` attributes, and skipped duplicate initial page events.
+only for server-to-browser state handoff, proxy request URL context, server first paint, full reload
+server re-resolution, `ServerOptimizedEntry` attributes, and skipped duplicate initial page events.
 
 Use Playwright UI or codegen when needed:
 
@@ -158,7 +161,7 @@ pnpm implementation:run -- nextjs-sdk_hybrid test:e2e:codegen
 
 ## Related
 
-- [Next.js SDK SSR](../nextjs-sdk_ssr/README.md) - Static-after-hydration SSR reference
+- [Next.js SDK SSR](../nextjs-sdk_ssr/README.md) - Static-after-browser-startup SSR reference
   implementation
 - [React Web SDK reference implementation](../react-web-sdk/README.md) - Browser-side React
   integration using the React Web SDK
