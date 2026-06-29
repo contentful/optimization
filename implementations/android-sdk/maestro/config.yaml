@@ -1,8 +1,7 @@
 # Maestro workspace config. `maestro test <dir>` only runs flows in the TOP level of
 # the target directory by default; our flows live one level down in per-suite folders
 # (preview-panel/, screen-tracking/, …). This inclusion pattern makes `maestro test
-# implementations/android-sdk/maestro` discover every suite's flows (and ignore the
-# top-level README.md), which is how both CI (e2e-android-maestro) and scripts/run-e2e.sh
-# invoke it.
+# implementations/android-sdk/maestro` discover every suite's flows while ignoring
+# top-level files such as README.md and the CI-only ci-healthcheck.yaml warm-up flow.
 flows:
   - '*/*.yaml'
