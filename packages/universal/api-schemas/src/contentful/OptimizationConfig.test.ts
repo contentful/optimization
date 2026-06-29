@@ -1,4 +1,10 @@
-import { normalizeOptimizationConfig, OptimizationEntry, type OptimizationConfig } from '.'
+import {
+  CtflEntry,
+  normalizeOptimizationConfig,
+  OptimizationEntry,
+  OptimizedEntry,
+  type OptimizationConfig,
+} from '.'
 
 const optimizationEntryBase = {
   metadata: {
@@ -43,6 +49,43 @@ const optimizationEntryBase = {
   },
 }
 
+const entryBase = {
+  metadata: {
+    tags: [],
+    concepts: [],
+  },
+  sys: {
+    type: 'Entry',
+    contentType: {
+      sys: {
+        type: 'Link',
+        linkType: 'ContentType',
+        id: 'article',
+      },
+    },
+    publishedVersion: 1,
+    id: 'entry-id',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    revision: 1,
+    space: {
+      sys: {
+        type: 'Link',
+        linkType: 'Space',
+        id: 'space-id',
+      },
+    },
+    environment: {
+      sys: {
+        type: 'Link',
+        linkType: 'Environment',
+        id: 'master',
+      },
+    },
+  },
+  fields: {},
+}
+
 describe('normalizeOptimizationConfig', () => {
   it('returns runtime-safe defaults for nullish configs', () => {
     expect(normalizeOptimizationConfig(undefined)).toEqual({
@@ -75,6 +118,52 @@ describe('normalizeOptimizationConfig', () => {
   })
 })
 
+describe('CtflEntry', () => {
+  it('passes through arbitrary consumer fields without recursively validating them', () => {
+    const parent = {
+      ...entryBase,
+      fields: {},
+    }
+    const child = {
+      ...entryBase,
+      sys: {
+        ...entryBase.sys,
+        id: 'child-entry-id',
+      },
+      fields: {
+        richText: {
+          nodeType: 'document',
+          data: {},
+          content: [
+            {
+              nodeType: 'embedded-entry-block',
+              data: { target: parent },
+              content: [],
+            },
+          ],
+        },
+      },
+    }
+    parent.fields = {
+      relatedEntry: child,
+    }
+
+    expect(CtflEntry.safeParse(parent).success).toBe(true)
+  })
+
+  it('still validates Contentful system metadata', () => {
+    expect(
+      CtflEntry.safeParse({
+        ...entryBase,
+        sys: {
+          ...entryBase.sys,
+          id: 123,
+        },
+      }).success,
+    ).toBe(false)
+  })
+})
+
 describe('OptimizationEntry', () => {
   it('does not fabricate nt_config during parsing', () => {
     const result = OptimizationEntry.safeParse(optimizationEntryBase)
@@ -84,5 +173,44 @@ describe('OptimizationEntry', () => {
     if (!result.success) throw new Error('Expected OptimizationEntry to parse')
 
     expect(result.data.fields.nt_config).toBeUndefined()
+  })
+
+  it('still validates optimization-owned config fields', () => {
+    expect(
+      OptimizationEntry.safeParse({
+        ...optimizationEntryBase,
+        fields: {
+          ...optimizationEntryBase.fields,
+          nt_config: {
+            components: [
+              {
+                type: 'EntryReplacement',
+                baseline: { id: 123 },
+                variants: [],
+              },
+            ],
+          },
+        },
+      }).success,
+    ).toBe(false)
+  })
+})
+
+describe('OptimizedEntry', () => {
+  it('still requires valid optimization references', () => {
+    expect(
+      OptimizedEntry.safeParse({
+        ...entryBase,
+        fields: {
+          nt_experiences: [
+            {
+              sys: {
+                id: 'missing-link-shape',
+              },
+            },
+          ],
+        },
+      }).success,
+    ).toBe(false)
   })
 })

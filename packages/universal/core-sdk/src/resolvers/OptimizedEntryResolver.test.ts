@@ -1,5 +1,6 @@
 // OptimizedEntryResolver.test.ts
 import {
+  isEntry,
   isEntryReplacementComponent,
   isEntryReplacementVariant,
   isOptimizationEntry,
@@ -11,7 +12,7 @@ import {
   type SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { describe, expect, it, rs } from '@rstest/core'
-import type { Entry } from 'contentful'
+import type { Entry, EntrySkeletonType } from 'contentful'
 
 import { mockLogger } from 'mocks'
 import { optimizedEntry as optimizedEntryFixture } from '../test/fixtures/optimizedEntry'
@@ -21,6 +22,8 @@ import OptimizedEntryResolver from './OptimizedEntryResolver'
 const mockedLogger = rs.mocked(mockLogger)
 
 const RESOLUTION_WARNING_BASE = 'Could not resolve optimized entry variant:'
+
+type TestEntry = Entry<EntrySkeletonType, undefined>
 
 const getOptimizedEntry = (): OptimizedEntry => {
   if (!isOptimizedEntry(optimizedEntryFixture)) {
@@ -65,6 +68,100 @@ const getEuropeVariantConfig = (): EntryReplacementVariant => {
 
   return maybeVariant
 }
+
+const createTestEntry = (id: string, fields: Record<string, unknown> = {}): TestEntry => {
+  const entry: unknown = {
+    fields,
+    metadata: { tags: [] },
+    sys: {
+      type: 'Entry',
+      id,
+      contentType: {
+        sys: {
+          type: 'Link',
+          linkType: 'ContentType',
+          id: 'testContentType',
+        },
+      },
+      publishedVersion: 1,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      revision: 1,
+      space: {
+        sys: {
+          type: 'Link',
+          linkType: 'Space',
+          id: 'testSpace',
+        },
+      },
+      environment: {
+        sys: {
+          type: 'Link',
+          linkType: 'Environment',
+          id: 'testEnvironment',
+        },
+      },
+    },
+  }
+
+  if (!isEntry<EntrySkeletonType, undefined>(entry)) {
+    throw new Error(`Expected test entry ${id} to match the Contentful entry schema`)
+  }
+
+  return entry
+}
+
+const createRichTextLinkedEntryDocument = (target: TestEntry): Record<string, unknown> => ({
+  nodeType: 'document',
+  data: {},
+  content: [
+    {
+      nodeType: 'embedded-entry-block',
+      data: { target },
+      content: [],
+    },
+  ],
+})
+
+const createOptimizationEntry = ({
+  baselineEntry,
+  variantEntry,
+}: {
+  baselineEntry: TestEntry
+  variantEntry: TestEntry
+}): TestEntry =>
+  createTestEntry('experience-entry', {
+    nt_name: 'Personalized featured post',
+    nt_type: 'nt_personalization',
+    nt_experience_id: 'experience-entry',
+    nt_config: {
+      components: [
+        {
+          type: 'EntryReplacement',
+          baseline: { id: baselineEntry.sys.id },
+          variants: [{ id: variantEntry.sys.id }],
+        },
+      ],
+    },
+    nt_variants: [variantEntry],
+  })
+
+const createSelectedOptimizations = ({
+  baselineEntry,
+  variantEntry,
+}: {
+  baselineEntry: TestEntry
+  variantEntry: TestEntry
+}): SelectedOptimizationArray => [
+  {
+    experienceId: 'experience-entry',
+    variantIndex: 1,
+    variants: {
+      [baselineEntry.sys.id]: variantEntry.sys.id,
+    },
+    sticky: false,
+  },
+]
 
 describe('OptimizedEntryResolver', () => {
   describe('getOptimizationEntry', () => {
@@ -430,6 +527,61 @@ describe('OptimizedEntryResolver', () => {
       expect(mockedLogger.debug).toHaveBeenCalledWith(
         'Optimization',
         `Entry ${optimizedEntryFixture.sys.id} has been resolved to variant entry 4k6ZyFQnR2POY5IJLLlJRb`,
+      )
+    })
+
+    it('resolves the selected variant when an unrelated rich-text linked entry graph contains a cycle', () => {
+      const baselineFields: Record<string, unknown> = {}
+      const baselineEntry = createTestEntry('baseline-entry', baselineFields)
+      const variantEntry = createTestEntry('variant-entry', {
+        internalTitle: 'Selected variant',
+      })
+      const linkedEntry = createTestEntry('linked-entry', {
+        text: createRichTextLinkedEntryDocument(baselineEntry),
+      })
+      const optimizationEntry = createOptimizationEntry({ baselineEntry, variantEntry })
+      baselineFields.nt_experiences = [optimizationEntry]
+      baselineFields.featuredPosts = [linkedEntry]
+
+      const result = OptimizedEntryResolver.resolve(
+        baselineEntry,
+        createSelectedOptimizations({ baselineEntry, variantEntry }),
+      )
+
+      expect(result.entry).toBe(variantEntry)
+      expect(result.selectedOptimization).toEqual(
+        expect.objectContaining({
+          experienceId: 'experience-entry',
+          variantIndex: 1,
+        }),
+      )
+    })
+
+    it('resolves the selected variant when the variant entry contains a rich-text linked entry cycle', () => {
+      const baselineFields: Record<string, unknown> = {}
+      const variantFields: Record<string, unknown> = {
+        internalTitle: 'Selected variant',
+      }
+      const baselineEntry = createTestEntry('baseline-entry', baselineFields)
+      const variantEntry = createTestEntry('variant-entry', variantFields)
+      const linkedEntry = createTestEntry('variant-linked-entry', {
+        text: createRichTextLinkedEntryDocument(variantEntry),
+      })
+      variantFields.featuredPosts = [linkedEntry]
+      const optimizationEntry = createOptimizationEntry({ baselineEntry, variantEntry })
+      baselineFields.nt_experiences = [optimizationEntry]
+
+      const result = OptimizedEntryResolver.resolve(
+        baselineEntry,
+        createSelectedOptimizations({ baselineEntry, variantEntry }),
+      )
+
+      expect(result.entry).toBe(variantEntry)
+      expect(result.selectedOptimization).toEqual(
+        expect.objectContaining({
+          experienceId: 'experience-entry',
+          variantIndex: 1,
+        }),
       )
     })
 
