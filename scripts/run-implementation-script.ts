@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { isRecord } from './typeGuards'
 
 const IMPLEMENTATIONS_DIRECTORY = 'implementations'
 const PACKAGE_JSON_FILENAME = 'package.json'
@@ -21,10 +22,6 @@ interface ImplementationConfig {
   name: string
   scripts: ReadonlySet<string>
   usesPlaywright: boolean
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }
 
 function toStringRecord(value: unknown): Record<string, string> {

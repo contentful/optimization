@@ -4,6 +4,8 @@ import { Text } from 'react-native'
 import type { ContentfulOptimization } from '@contentful/optimization-react-native'
 import {
   isMergeTagEntry,
+  isRecord,
+  isUnresolvedEntryLink,
   type MergeTagEntry,
 } from '@contentful/optimization-react-native/api-schemas'
 import { createScopedLogger, type ScopedLogger } from '@contentful/optimization-react-native/logger'
@@ -37,22 +39,8 @@ interface RichTextRendererProps {
 
 type RenderedRichTextNode = string | null | React.ReactElement
 
-function isLink(target: unknown): boolean {
-  if (typeof target !== 'object' || target === null) {
-    return false
-  }
-
-  const { sys } = target as { sys?: unknown }
-  if (typeof sys !== 'object' || sys === null) {
-    return false
-  }
-
-  const { type } = sys as { type?: unknown }
-  return type === 'Link'
-}
-
 function isEmbeddedEntryInline(node: RichTextNode): node is EmbeddedEntryInlineNode {
-  return node.nodeType === 'embedded-entry-inline'
+  return node.nodeType === 'embedded-entry-inline' && isRecord(node.data) && 'target' in node.data
 }
 
 function renderTextNode(node: RichTextNode): string | null {
@@ -92,15 +80,7 @@ function resolveMergeTagValue(includedEntry: MergeTagEntry, sdk: ContentfulOptim
 }
 
 function getLinkId(link: unknown): string {
-  if (typeof link !== 'object' || link === null || !('sys' in link)) {
-    return 'unknown'
-  }
-  const { sys } = link as { sys?: unknown }
-  if (typeof sys !== 'object' || sys === null || !('id' in sys)) {
-    return 'unknown'
-  }
-  const { id } = sys as { id?: unknown }
-  return typeof id === 'string' ? id : 'unknown'
+  return isUnresolvedEntryLink(link) ? link.sys.id : 'unknown'
 }
 
 function renderEmbeddedEntry(node: EmbeddedEntryInlineNode, sdk: ContentfulOptimization): string {
@@ -108,7 +88,7 @@ function renderEmbeddedEntry(node: EmbeddedEntryInlineNode, sdk: ContentfulOptim
     data: { target: includedEntry },
   } = node
 
-  if (isLink(includedEntry)) {
+  if (isUnresolvedEntryLink(includedEntry)) {
     return logAndReturnFallback(
       `Target is still a Link after Contentful SDK resolution: ${getLinkId(includedEntry)}. This should not happen when using getEntry() with include parameter.`,
     )

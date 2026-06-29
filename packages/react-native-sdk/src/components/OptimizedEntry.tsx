@@ -1,6 +1,6 @@
 import type { ResolvedData } from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
-import { isOptimizedEntry } from '@contentful/optimization-core/api-schemas'
+import { isResolvedOptimizedEntry } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import React, { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
@@ -224,7 +224,7 @@ export function OptimizedEntry({
   const liveUpdatesContext = useLiveUpdates()
   const interactionTracking = useInteractionTracking()
 
-  const isOptimized = isOptimizedEntry(baselineEntry)
+  const isOptimized = isResolvedOptimizedEntry(baselineEntry)
 
   const shouldLiveUpdate =
     liveUpdatesContext?.previewPanelVisible === true ||

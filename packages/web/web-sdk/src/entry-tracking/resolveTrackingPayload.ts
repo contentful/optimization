@@ -1,3 +1,5 @@
+import { isHtmlOrSvgElement } from './isHtmlOrSvgElement'
+
 /**
  * Data attributes used by the Web SDK to identify and configure tracked entries.
  *
@@ -59,11 +61,6 @@ export interface EntryData {
 const asNonEmptyString = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined
   return value.trim() ? value : undefined
-}
-
-const isHtmlOrSvgElement = (value: unknown): value is HTMLElement | SVGElement => {
-  if (typeof HTMLElement === 'undefined' || typeof SVGElement === 'undefined') return false
-  return value instanceof HTMLElement || value instanceof SVGElement
 }
 
 /**

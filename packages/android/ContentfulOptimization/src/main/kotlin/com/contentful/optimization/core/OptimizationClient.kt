@@ -6,6 +6,7 @@ import com.contentful.optimization.bridge.QuickJsContextManager
 import com.contentful.optimization.handlers.AppLifecycleHandler
 import com.contentful.optimization.handlers.NetworkMonitor
 import com.contentful.optimization.polyfills.escapeForJS
+import com.contentful.optimization.preview.ContentfulEntriesResult
 import com.contentful.optimization.storage.SharedPreferencesStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -398,11 +399,11 @@ public class OptimizationClient(private val applicationContext: Context) {
     }
 
     suspend fun loadDefinitions(
-        audiences: List<Map<String, Any>>,
-        experiences: List<Map<String, Any>>,
+        audiences: ContentfulEntriesResult,
+        experiences: ContentfulEntriesResult,
     ) {
-        val audienceJSON = JSONArray(audiences).toString()
-        val experienceJSON = JSONArray(experiences).toString()
+        val audienceJSON = JSONObject(audiences.toBridgePayload()).toString()
+        val experienceJSON = JSONObject(experiences.toBridgePayload()).toString()
         bridge.callSync("loadDefinitions", "$audienceJSON, $experienceJSON")
     }
 

@@ -10,6 +10,7 @@ import { StatusBar, StyleSheet, Text, TouchableOpacity, useColorScheme, View } f
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { OptimizationScrollProvider, OptimizedEntry } from '@contentful/optimization-react-native'
+import { isRichTextDocument } from '@contentful/optimization-react-native/api-schemas'
 import type { Entry } from 'contentful'
 import type { DemoEntries } from './utils/sdkHelpers'
 
@@ -39,7 +40,7 @@ function getFieldText(field: unknown): string {
     return field
   }
 
-  if (field && typeof field === 'object' && 'nodeType' in field && field.nodeType === 'document') {
+  if (isRichTextDocument(field)) {
     return '[Rich Text Content]'
   }
 

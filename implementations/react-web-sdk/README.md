@@ -193,8 +193,6 @@ react-web-sdk/
 │   ├── types/
 │   │   ├── contentful.ts               # Entry type definitions
 │   │   └── env.d.ts                    # import.meta.env typings
-│   └── utils/
-│       └── typeGuards.ts               # isRecord helper
 ├── index.html
 ├── .env.example
 ├── package.json

@@ -21,7 +21,11 @@ import type {
   UniversalEventBuilderArgs,
 } from '@contentful/optimization-node/core-sdk'
 import ContentfulOptimization from '@contentful/optimization-web'
-import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import {
+  isResolvedContentfulEntry,
+  type Profile,
+  type SelectedOptimizationArray,
+} from '@contentful/optimization-web/api-schemas'
 import type { Entry } from 'contentful'
 import { PAGES } from 'e2e-web'
 import { filter } from 'rxjs/operators'
@@ -38,7 +42,7 @@ import {
   type ResolvedEntryData,
   type ServerHandoff,
 } from '../transfer-state-keys'
-import { fromSdkState, isRecord } from '../utils'
+import { fromSdkState } from '../utils'
 import { readConsentFromRequest } from './consent'
 import { NgContentfulClient } from './contentful-client'
 import { resolveEntryMergeTags } from './merge-tags'
@@ -303,12 +307,6 @@ async function getServerOptimizationData(
   }
 }
 
-function isEntryShape(value: unknown): value is Entry {
-  if (!isRecord(value)) return false
-  if (!isRecord(value.sys) || typeof value.sys.id !== 'string') return false
-  return isRecord(value.fields)
-}
-
 /**
  * Resolve baselines against the SSR `selectedOptimizations`, then walk each
  * rich-text field and substitute inline merge-tag entries using the SDK's
@@ -339,7 +337,7 @@ function resolveServerEntries(
     const nested: unknown = entryWithMergeTags.fields.nested
     if (Array.isArray(nested)) {
       for (const child of nested) {
-        if (isEntryShape(child)) queue.push(child)
+        if (isResolvedContentfulEntry(child)) queue.push(child)
       }
     }
   }

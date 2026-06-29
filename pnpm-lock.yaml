@@ -510,6 +510,9 @@ importers:
 
   packages/universal/api-schemas:
     dependencies:
+      '@contentful/rich-text-types':
+        specifier: 'catalog:'
+        version: 17.2.5
       contentful:
         specifier: 'catalog:'
         version: 11.10.5(debug@4.3.7)

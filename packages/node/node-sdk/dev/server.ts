@@ -1,5 +1,5 @@
 import { documentToHtmlString } from '@contentful/rich-text-html-renderer'
-import { type Document, INLINES } from '@contentful/rich-text-types'
+import { INLINES } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
 import * as contentful from 'contentful'
 import express, { type Express } from 'express'
@@ -8,7 +8,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ContentfulOptimization from '../src'
 import type { PartialProfile, Profile, SelectedOptimization } from '../src/api-schemas'
-import { isMergeTagEntry } from '../src/api-schemas'
+import { isMergeTagEntry, isRichTextDocument } from '../src/api-schemas'
 
 /* eslint-disable @typescript-eslint/naming-convention -- standardized var names */
 const __filename = fileURLToPath(import.meta.url)
@@ -109,15 +109,6 @@ function cloneContentEntry(entry: Entry<ContentEntrySkeleton>): Entry<ContentEnt
 
 function isNonEmptyString(s?: unknown): s is string {
   return s !== undefined && typeof s === 'string' && s.trim().length > 0
-}
-
-function isRichText(field?: unknown): field is Document {
-  return (
-    typeof field === 'object' &&
-    field !== null &&
-    'nodeType' in field &&
-    field.nodeType === 'document'
-  )
 }
 
 function updateState({
@@ -258,7 +249,7 @@ app.get('/', limiter, async (req, res) => {
         selectedOptimizations,
       )
 
-      if (isRichText(optimizedEntry.entry.fields.text)) {
+      if (isRichTextDocument(optimizedEntry.entry.fields.text)) {
         optimizedEntry.entry.fields.text = documentToHtmlString(optimizedEntry.entry.fields.text, {
           renderNode: {
             [INLINES.EMBEDDED_ENTRY]: (node) => {

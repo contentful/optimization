@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { isRecord } from './typeGuards'
 
 const README_FILE_NAME = 'README.md'
 const README_BASE_URL = 'https://publish-readme.invalid'
@@ -35,10 +36,6 @@ interface PackageJsonLike {
 
 function getReadmePath(packageDir: string): string {
   return path.resolve(packageDir, README_FILE_NAME)
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }
 
 function isNodeErrorWithCode(error: unknown, code: string): error is NodeJS.ErrnoException {

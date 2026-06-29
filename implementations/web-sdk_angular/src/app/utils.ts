@@ -1,9 +1,5 @@
 import { DestroyRef, effect, inject, signal, type Signal } from '@angular/core'
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
 export interface SdkObservable<T> {
   subscribe: (fn: (v: T) => void) => { unsubscribe: () => void }
 }

@@ -1,6 +1,6 @@
+import { isRecord } from '@contentful/optimization-web/api-schemas'
 import { type JSX, useEffect, useReducer, useRef, useState } from 'react'
 import { useOptimization } from '../optimization/hooks/useOptimization'
-import { isRecord } from '../utils/typeGuards'
 
 const MS_PER_SECOND = 1000
 const SECONDS_PER_MINUTE = 60

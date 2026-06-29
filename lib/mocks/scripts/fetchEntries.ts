@@ -1,5 +1,6 @@
 /* eslint-disable no-console -- CLI */
 
+import { isRecord, isResolvedContentfulEntry } from '@contentful/optimization-api-schemas'
 import type { Entry } from 'contentful'
 import { get } from 'es-toolkit/compat'
 import fs from 'fs-extra'
@@ -23,14 +24,6 @@ const CONTENTFUL_CONFIG_PATH = './.contentfulrc.json'
 // -----------------------------------
 // Type guards & safe accessors
 // -----------------------------------
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function isEntry(value: unknown): value is Entry {
-  return isRecord(value) && 'fields' in value
-}
 
 function firstLocaleValue(valueByLocale: unknown): unknown {
   if (!isRecord(valueByLocale)) return undefined
@@ -130,11 +123,7 @@ async function getContentfulConfig(): Promise<{
 function getEntriesFromExport(parsed: unknown): readonly Entry[] {
   const entries: unknown = get(parsed, ['entries'])
   if (!Array.isArray(entries)) return [] as const
-  const result: Entry[] = []
-  for (const item of entries) {
-    if (isEntry(item)) result.push(item)
-  }
-  return result
+  return entries.filter(isResolvedContentfulEntry)
 }
 
 async function readExportEntries(): Promise<readonly Entry[]> {

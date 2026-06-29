@@ -1,7 +1,7 @@
+import { isRecord, isResolvedContentfulEntry } from '@contentful/optimization-web/api-schemas'
 import { useMemo, type JSX } from 'react'
 import { useOptimizationResolver } from '../optimization/hooks/useOptimizationResolver'
-import type { ContentfulEntry } from '../types/contentful'
-import { isRecord } from '../utils/typeGuards'
+import type { ContentEntrySkeleton, ContentfulEntry } from '../types/contentful'
 
 interface NestedContentItemProps {
   entry: ContentfulEntry
@@ -11,15 +11,6 @@ interface SelectedOptimizationMeta {
   experienceId?: string
   sticky?: boolean
   variantIndex?: number
-}
-
-function isEntry(value: unknown): value is ContentfulEntry {
-  return (
-    isRecord(value) &&
-    isRecord(value.sys) &&
-    typeof value.sys.id === 'string' &&
-    isRecord(value.fields)
-  )
 }
 
 function getSelectedOptimizationMeta(value: unknown): SelectedOptimizationMeta {
@@ -49,7 +40,7 @@ export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Elemen
   )
 
   const nestedEntries = Array.isArray(resolvedEntry.fields.nested)
-    ? resolvedEntry.fields.nested
+    ? resolvedEntry.fields.nested.filter(isResolvedContentfulEntry<ContentEntrySkeleton>)
     : []
 
   const text = renderText(resolvedEntry)
@@ -69,9 +60,9 @@ export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Elemen
         <p>{`[Entry: ${resolvedEntry.sys.id}]`}</p>
       </div>
 
-      {nestedEntries.filter(isEntry).length > 0 ? (
+      {nestedEntries.length > 0 ? (
         <div className="entry-card__nested-children">
-          {nestedEntries.filter(isEntry).map((nestedEntry) => (
+          {nestedEntries.map((nestedEntry) => (
             <NestedContentItem key={nestedEntry.sys.id} entry={nestedEntry} />
           ))}
         </div>

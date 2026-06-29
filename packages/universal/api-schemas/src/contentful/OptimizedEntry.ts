@@ -1,27 +1,55 @@
+import type {
+  ChainModifiers,
+  Entry,
+  EntryFieldTypes,
+  EntrySkeletonType,
+  LocaleCode,
+} from 'contentful'
 import * as z from 'zod/mini'
-import { CtflEntry, EntryFields } from './CtflEntry'
-import { OptimizationEntryArray } from './OptimizationEntry'
+import type { OptimizationEntryArray, OptimizationEntrySkeleton } from './OptimizationEntry'
 
 /**
- * Zod schema describing a Contentful entry that has attached optimizations.
- *
- * @remarks
- * Extends {@link CtflEntry} and adds `nt_experiences` to the `fields` object.
+ * Zod schema describing the optimization-owned fields attached to an optimized entry.
  *
  * @public
  */
-export const OptimizedEntry = z.extend(CtflEntry, {
-  fields: z.extend(EntryFields, {
-    /**
-     * Optimization or experimentation experiences attached to this entry.
-     */
-    nt_experiences: OptimizationEntryArray,
-  }),
+export const OptimizedEntryFields = z.object({
+  /**
+   * Optimization or experimentation experiences attached to this entry.
+   */
+  nt_experiences: z.array(z.unknown()),
 })
 
 /**
- * TypeScript type inferred from {@link OptimizedEntry}.
+ * Runtime field values for an optimized Contentful entry.
  *
  * @public
  */
-export type OptimizedEntry = z.infer<typeof OptimizedEntry>
+export interface OptimizedEntryFields<
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> {
+  nt_experiences: OptimizationEntryArray<M, L>
+}
+
+/**
+ * Contentful SDK skeleton for an entry with attached Optimization experiences.
+ *
+ * @public
+ */
+export type OptimizedEntrySkeleton = EntrySkeletonType<{
+  nt_experiences: EntryFieldTypes.Array<EntryFieldTypes.EntryLink<OptimizationEntrySkeleton>>
+}>
+
+/**
+ * Resolved Contentful entry with attached Optimization experiences.
+ *
+ * @public
+ */
+export type OptimizedEntry<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = Omit<Entry<S, M, L>, 'fields'> & {
+  fields: Entry<S, M, L>['fields'] & OptimizedEntryFields<M, L>
+}

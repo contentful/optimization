@@ -1,19 +1,10 @@
 import { OptimizedEntry } from '@contentful/optimization-react-web'
+import { isResolvedContentfulEntry } from '@contentful/optimization-react-web/api-schemas'
 import type { JSX } from 'react'
-import type { ContentEntry } from '../types/contentful'
-import { isRecord } from '../utils/typeGuards'
+import type { ContentEntry, ContentEntrySkeleton } from '../types/contentful'
 
 interface NestedContentItemProps {
   entry: ContentEntry
-}
-
-function isEntry(value: unknown): value is ContentEntry {
-  return (
-    isRecord(value) &&
-    isRecord(value.sys) &&
-    typeof value.sys.id === 'string' &&
-    isRecord(value.fields)
-  )
 }
 
 function renderText(entry: ContentEntry): string {
@@ -25,7 +16,9 @@ export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Elemen
     <OptimizedEntry baselineEntry={entry} hoverDurationUpdateIntervalMs={1000}>
       {(resolvedEntry) => {
         const asCf = resolvedEntry as ContentEntry
-        const nestedEntries = Array.isArray(asCf.fields.nested) ? asCf.fields.nested : []
+        const nestedEntries = Array.isArray(asCf.fields.nested)
+          ? asCf.fields.nested.filter(isResolvedContentfulEntry<ContentEntrySkeleton>)
+          : []
         const text = renderText(asCf)
         const fullLabel = `${text} [Entry: ${resolvedEntry.sys.id}]`
 
@@ -36,9 +29,9 @@ export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Elemen
               <p>{`[Entry: ${resolvedEntry.sys.id}]`}</p>
             </div>
 
-            {nestedEntries.filter(isEntry).length > 0 ? (
+            {nestedEntries.length > 0 ? (
               <div className="entry-card__nested-children">
-                {nestedEntries.filter(isEntry).map((nestedEntry) => (
+                {nestedEntries.map((nestedEntry) => (
                   <NestedContentItem key={nestedEntry.sys.id} entry={nestedEntry} />
                 ))}
               </div>

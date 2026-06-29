@@ -1,7 +1,9 @@
 import type { ResolvedData } from '@contentful/optimization-core'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import type { Entry, EntrySkeletonType } from 'contentful'
-import React, { act, type ReactElement } from 'react'
+import React, { act } from 'react'
+import { loadTestRenderer } from '../test/testRenderer'
+import { isRecord } from '../test/typeGuards'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -45,33 +47,6 @@ rs.mock('../hooks/useTapTracking', () => ({
 
 interface TestRenderer {
   unmount: () => void
-}
-
-interface TestRendererModule {
-  create: (element: ReactElement) => TestRenderer
-}
-
-function isTestRendererModule(value: unknown): value is TestRendererModule {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  return typeof Reflect.get(value, 'create') === 'function'
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-async function loadTestRenderer(): Promise<TestRendererModule> {
-  const moduleName = 'react-test-renderer'
-  const testRendererModule: unknown = await import(moduleName)
-
-  if (!isTestRendererModule(testRendererModule)) {
-    throw new Error('Expected react-test-renderer to expose create().')
-  }
-
-  return testRendererModule
 }
 
 function createEntry(id: string): Entry {
@@ -135,7 +110,7 @@ describe('OptimizedEntry', () => {
 
   it('passes baselineEntry and renamed view timing props to viewport tracking', async () => {
     const { OptimizedEntry } = await import('./OptimizedEntry')
-    const testRenderer = await loadTestRenderer()
+    const testRenderer = await loadTestRenderer<TestRenderer>()
     const baselineEntry = createEntry('baseline-entry')
     baselineEntry.fields = { ...baselineEntry.fields, nt_experiences: [] }
 
@@ -161,7 +136,7 @@ describe('OptimizedEntry', () => {
 
   it('uses React Native interaction tracking defaults', async () => {
     const { OptimizedEntry } = await import('./OptimizedEntry')
-    const testRenderer = await loadTestRenderer()
+    const testRenderer = await loadTestRenderer<TestRenderer>()
     const baselineEntry = createEntry('baseline-entry')
     baselineEntry.fields = { ...baselineEntry.fields, nt_experiences: [] }
 
@@ -177,7 +152,7 @@ describe('OptimizedEntry', () => {
 
   it('applies per-entry view and tap tracking overrides', async () => {
     const { OptimizedEntry } = await import('./OptimizedEntry')
-    const testRenderer = await loadTestRenderer()
+    const testRenderer = await loadTestRenderer<TestRenderer>()
     const baselineEntry = createEntry('baseline-entry')
 
     act(() => {
@@ -194,7 +169,7 @@ describe('OptimizedEntry', () => {
 
   it('allows per-entry tap tracking opt out', async () => {
     const { OptimizedEntry } = await import('./OptimizedEntry')
-    const testRenderer = await loadTestRenderer()
+    const testRenderer = await loadTestRenderer<TestRenderer>()
     const baselineEntry = createEntry('baseline-entry')
 
     act(() => {
@@ -221,7 +196,7 @@ describe('OptimizedEntry', () => {
       },
     })
     const { OptimizedEntry } = await import('./OptimizedEntry')
-    const testRenderer = await loadTestRenderer()
+    const testRenderer = await loadTestRenderer<TestRenderer>()
     const baselineEntry = createEntry('baseline-entry')
     baselineEntry.fields = { ...baselineEntry.fields, nt_experiences: [] }
 

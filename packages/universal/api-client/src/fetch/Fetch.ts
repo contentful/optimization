@@ -13,14 +13,15 @@ import { createProtectedFetchMethod } from './createProtectedFetchMethod'
  *
  * @example
  * ```ts
- * const method: FetchMethod = async (url, init) => {
- *   return fetch(url, init)
+ * const method: FetchMethod = async (input, init) => {
+ *   return fetch(input, init)
  * }
  * ```
  *
  * @public
  */
-export type FetchMethod = (url: string | URL, init: RequestInit) => Promise<Response>
+export type FetchInput = string | Request
+export type FetchMethod = (input: FetchInput, init?: RequestInit) => Promise<Response>
 
 /**
  * Base options shared across fetch method factories.

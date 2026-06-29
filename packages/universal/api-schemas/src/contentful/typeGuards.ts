@@ -1,43 +1,158 @@
-import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
-import { CtflEntry } from './CtflEntry'
-import { MergeTagEntry } from './MergeTagEntry'
+import type {
+  Document as RichTextDocument,
+  Node as RichTextNode,
+} from '@contentful/rich-text-types'
+import type {
+  ChainModifiers,
+  Entry,
+  EntrySkeletonType,
+  LocaleCode,
+  UnresolvedLink,
+} from 'contentful'
+import { AudienceEntryFields, type AudienceEntry } from './AudienceEntry'
+import { MergeTagEntryFields, type MergeTagEntry } from './MergeTagEntry'
 import {
-  type EntryReplacementComponent,
   EntryReplacementVariant,
+  type EntryReplacementComponent,
   type InlineVariableComponent,
   type OptimizationComponent,
 } from './OptimizationConfig'
-import { OptimizationEntry } from './OptimizationEntry'
-import { OptimizedEntry } from './OptimizedEntry'
+import { OptimizationEntryFields, type OptimizationEntry } from './OptimizationEntry'
+import { OptimizedEntryFields, type OptimizedEntry } from './OptimizedEntry'
+
+const RICH_TEXT_DOCUMENT_NODE_TYPE = 'document'
 
 /**
- * Type guard that checks whether the given value is a Contentful {@link Entry},
- * passing through the specified skeleton, chain modifiers, and locale.
+ * Type guard that checks whether the given value is a non-array object record.
  *
- * @typeParam S - The entry skeleton type.
- * @typeParam M - The chain modifiers type. Defaults to {@link ChainModifiers}.
- * @typeParam L - The locale code type. Defaults to {@link LocaleCode}.
- *
- * @param entry - The value to test.
- * @returns `true` if the object conforms to {@link CtflEntry} and can be treated
- * as a typed {@link Entry}, otherwise `false`.
- *
- * @example
- * ```ts
- * const entry = await client.getEntry('my-entry-id');
- * if (isEntry<MySkeleton>(entry)) {
- *   console.log(entry.fields.myField);
- * }
- * ```
+ * @param value - The value to test.
+ * @returns `true` when the value is an object, non-null, and not an array.
  *
  * @public
  */
-export function isEntry<
-  S extends EntrySkeletonType,
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** @internal */
+function getRecord(value: unknown, key: string): Record<string, unknown> | undefined {
+  if (!isRecord(value)) return undefined
+
+  const { [key]: candidate } = value
+  return isRecord(candidate) ? candidate : undefined
+}
+
+/** @internal */
+function getString(value: unknown, key: string): string | undefined {
+  if (!isRecord(value)) return undefined
+
+  const { [key]: candidate } = value
+  return typeof candidate === 'string' ? candidate : undefined
+}
+
+/** @internal */
+function getContentTypeId(entry: Entry): string {
+  return entry.sys.contentType.sys.id
+}
+
+/**
+ * Type guard that checks whether the given value has the structural shape of a Contentful Rich Text
+ * node.
+ *
+ * @param value - The value to test.
+ * @returns `true` when the value has `nodeType` and object `data` fields, with array `content` when
+ * present.
+ *
+ * @public
+ */
+export function isRichTextNode(value: unknown): value is RichTextNode {
+  return (
+    isRecord(value) &&
+    typeof value.nodeType === 'string' &&
+    isRecord(value.data) &&
+    (value.content === undefined || Array.isArray(value.content))
+  )
+}
+
+/**
+ * Type guard that checks whether the given value has the structural shape of a Contentful Rich Text
+ * document.
+ *
+ * @param value - The value to test.
+ * @returns `true` when the value is a Rich Text document node with array content.
+ *
+ * @public
+ */
+export function isRichTextDocument(value: unknown): value is RichTextDocument {
+  if (!isRichTextNode(value) || value.nodeType !== RICH_TEXT_DOCUMENT_NODE_TYPE) return false
+
+  const content = isRecord(value) ? value.content : undefined
+  return Array.isArray(content)
+}
+
+/**
+ * Type guard that checks whether the given value is an unresolved Contentful entry link.
+ *
+ * @param value - The value to test.
+ * @returns `true` when the value is an unresolved `Entry` link.
+ *
+ * @public
+ */
+export function isUnresolvedEntryLink(value: unknown): value is UnresolvedLink<'Entry'> {
+  const sys = getRecord(value, 'sys')
+
+  return (
+    getString(sys, 'type') === 'Link' &&
+    getString(sys, 'linkType') === 'Entry' &&
+    getString(sys, 'id') !== undefined
+  )
+}
+
+/**
+ * Type guard that checks whether the given value is a resolved Contentful entry.
+ *
+ * @remarks
+ * This distinguishes resolved entries from unresolved links. It intentionally
+ * checks only the structural fields required by SDK resolution and does not
+ * validate a consumer-provided entry skeleton.
+ *
+ * @param value - The value to test.
+ * @returns `true` when the value has the resolved Contentful entry shape.
+ *
+ * @public
+ */
+export function isResolvedContentfulEntry<
+  S extends EntrySkeletonType = EntrySkeletonType,
   M extends ChainModifiers = ChainModifiers,
   L extends LocaleCode = LocaleCode,
->(entry: unknown): entry is Entry<S, M, L> {
-  return CtflEntry.safeParse(entry).success
+>(value: unknown): value is Entry<S, M, L> {
+  const sys = getRecord(value, 'sys')
+  const contentType = getRecord(sys, 'contentType')
+  const contentTypeSys = getRecord(contentType, 'sys')
+
+  return (
+    getString(sys, 'type') === 'Entry' &&
+    getString(sys, 'id') !== undefined &&
+    getString(contentTypeSys, 'id') !== undefined &&
+    isRecord(getRecord(value, 'metadata')) &&
+    isRecord(getRecord(value, 'fields'))
+  )
+}
+
+/**
+ * Type guard for a resolved {@link AudienceEntry}.
+ *
+ * @param entry - Value to test.
+ * @returns `true` if the value is a resolved `nt_audience` entry with valid Optimization fields.
+ *
+ * @public
+ */
+export function isResolvedAudienceEntry(entry: unknown): entry is AudienceEntry {
+  return (
+    isResolvedContentfulEntry(entry) &&
+    getContentTypeId(entry) === 'nt_audience' &&
+    AudienceEntryFields.safeParse(entry.fields).success
+  )
 }
 
 /**
@@ -102,51 +217,75 @@ export function isInlineVariableComponent(
 }
 
 /**
- * Type guard for {@link OptimizationEntry}.
+ * Type guard for a resolved {@link OptimizationEntry}.
  *
  * @param entry - Contentful entry or link to test.
- * @returns `true` if the value conforms to {@link OptimizationEntry}, otherwise `false`.
- *
- * @example
- * ```ts
- * if (isOptimizationEntry(entry)) {
- *   console.log(entry.fields.nt_name);
- * }
- * ```
+ * @returns `true` if the value is a resolved optimization entry, otherwise `false`.
  *
  * @public
  */
-export function isOptimizationEntry(entry: unknown): entry is OptimizationEntry {
-  return OptimizationEntry.safeParse(entry).success
+export function isResolvedOptimizationEntry(entry: unknown): entry is OptimizationEntry {
+  if (!isResolvedContentfulEntry(entry) || getContentTypeId(entry) !== 'nt_experience') {
+    return false
+  }
+
+  const fieldsResult = OptimizationEntryFields.safeParse(entry.fields)
+
+  if (!fieldsResult.success) return false
+
+  const { data: fields } = fieldsResult
+  const { nt_audience: audienceEntry, nt_variants: variants } = fields
+  const audienceReferenceIsValid =
+    audienceEntry === undefined ||
+    audienceEntry === null ||
+    isUnresolvedEntryLink(audienceEntry) ||
+    isResolvedAudienceEntry(audienceEntry)
+  const variantReferencesAreValid =
+    variants === undefined ||
+    variants.every(
+      (variant) => isUnresolvedEntryLink(variant) || isResolvedContentfulEntry(variant),
+    )
+
+  return audienceReferenceIsValid && variantReferencesAreValid
 }
 
 /**
- * Type guard for {@link OptimizedEntry}.
+ * Type guard for a resolved {@link OptimizedEntry}.
  *
  * @param entry - Contentful entry to test.
- * @returns `true` if the entry conforms to {@link OptimizedEntry}, otherwise `false`.
- *
- * @example
- * ```ts
- * if (isOptimizedEntry(entry)) {
- *   console.log(entry.fields.nt_experiences);
- * }
- * ```
+ * @returns `true` if the entry is resolved and has Optimization experience references.
  *
  * @public
  */
-export function isOptimizedEntry(entry: unknown): entry is OptimizedEntry {
-  return OptimizedEntry.safeParse(entry).success
+export function isResolvedOptimizedEntry<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+>(entry: unknown): entry is OptimizedEntry<S, M, L> {
+  if (!isResolvedContentfulEntry(entry)) return false
+
+  const fieldsResult = OptimizedEntryFields.safeParse(entry.fields)
+
+  if (!fieldsResult.success) return false
+
+  return fieldsResult.data.nt_experiences.every(
+    (optimizationEntry) =>
+      isUnresolvedEntryLink(optimizationEntry) || isResolvedOptimizationEntry(optimizationEntry),
+  )
 }
 
 /**
  * Type guard for {@link MergeTagEntry}.
  *
  * @param entry - Value to test.
- * @returns `true` if the value conforms to {@link MergeTagEntry}, otherwise `false`.
+ * @returns `true` if the value is a resolved Merge Tag entry, otherwise `false`.
  *
  * @public
  */
 export function isMergeTagEntry(entry: unknown): entry is MergeTagEntry {
-  return MergeTagEntry.safeParse(entry).success
+  return (
+    isResolvedContentfulEntry(entry) &&
+    getContentTypeId(entry) === 'nt_mergetag' &&
+    MergeTagEntryFields.safeParse(entry.fields).success
+  )
 }

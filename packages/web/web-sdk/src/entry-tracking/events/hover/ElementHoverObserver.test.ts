@@ -1,4 +1,5 @@
 import { advance, deferred, makeElement, setDocumentVisibility } from '../../../test/helpers'
+import { isRecord } from '../../../test/typeGuards'
 import * as ElementHover from './element-hover-observer-support'
 import ElementHoverObserver from './ElementHoverObserver'
 
@@ -9,16 +10,12 @@ interface Meta {
   data?: unknown
 }
 
-function isRecord(x: unknown): x is Record<string, unknown> {
-  return typeof x === 'object' && x !== null
-}
-
-function isMeta(x: unknown): x is Meta {
+function isMeta(value: unknown): value is Meta {
   return (
-    isRecord(x) &&
-    typeof x.totalHoverMs === 'number' &&
-    typeof x.hoverId === 'string' &&
-    typeof x.attempts === 'number'
+    isRecord(value) &&
+    typeof value.totalHoverMs === 'number' &&
+    typeof value.hoverId === 'string' &&
+    typeof value.attempts === 'number'
   )
 }
 

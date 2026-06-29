@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import React, { act, useEffect, type ReactElement } from 'react'
 import type ContentfulOptimization from '../ContentfulOptimization'
 import type { OptimizationSdk } from '../OptimizationSdk'
+import { loadTestRenderer } from '../test/testRenderer'
 import type { OptimizationProviderProps } from './OptimizationProvider'
 import type { OptimizationRootProps } from './OptimizationRoot'
 
@@ -40,10 +41,6 @@ interface TestRenderer {
   update: (element: ReactElement) => void
 }
 
-interface TestRendererModule {
-  create: (element: ReactElement) => TestRenderer
-}
-
 type EventStream = ContentfulOptimization['states']['eventStream']
 type EventPayload = NonNullable<EventStream['current']>
 type TestSdk = Pick<ContentfulOptimization, 'destroy' | 'screen' | 'setLocale'> & {
@@ -73,25 +70,6 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   render(): React.ReactNode {
     return this.state.hasError ? null : this.props.children
   }
-}
-
-function isTestRendererModule(value: unknown): value is TestRendererModule {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  return typeof Reflect.get(value, 'create') === 'function'
-}
-
-async function loadTestRenderer(): Promise<TestRendererModule> {
-  const moduleName = 'react-test-renderer'
-  const testRendererModule: unknown = await import(moduleName)
-
-  if (!isTestRendererModule(testRendererModule)) {
-    throw new Error('Expected react-test-renderer to expose create().')
-  }
-
-  return testRendererModule
 }
 
 function createDeferred<T>(): Deferred<T> {
@@ -227,7 +205,7 @@ function createContentfulOptimizationStub(sdk: TestSdk): ContentfulOptimization 
 }
 
 async function renderWithAct(element: ReactElement): Promise<TestRenderer> {
-  const testRenderer = await loadTestRenderer()
+  const testRenderer = await loadTestRenderer<TestRenderer>()
   let nextRenderer: TestRenderer | undefined = undefined
 
   await act(async () => {
@@ -331,7 +309,7 @@ describe('OptimizationProvider onStatesReady', () => {
       return null
     }
 
-    const testRenderer = await loadTestRenderer()
+    const testRenderer = await loadTestRenderer<TestRenderer>()
     act(() => {
       renderer = testRenderer.create(
         <OptimizationProvider clientId="test-client-id">
@@ -397,7 +375,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const onStatesReady = rs.fn()
     createOptimization.mockReturnValue(deferred.promise)
 
-    const testRenderer = await loadTestRenderer()
+    const testRenderer = await loadTestRenderer<TestRenderer>()
     act(() => {
       renderer = testRenderer.create(
         <OptimizationProvider clientId="test-client-id" onStatesReady={onStatesReady}>

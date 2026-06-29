@@ -1,17 +1,17 @@
-import { isMergeTagEntry, type MergeTagEntry } from '@contentful/optimization-web/api-schemas'
-import { INLINES, type Document, type Text } from '@contentful/rich-text-types'
+import {
+  isMergeTagEntry,
+  isRecord,
+  isRichTextDocument,
+  type MergeTagEntry,
+} from '@contentful/optimization-web/api-schemas'
+import { INLINES, type Text } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
-import { isRecord } from '../utils'
 
 /**
  * Resolves the substitution value for a single merge-tag entry. Returning
  * `undefined` lets the walker fall back to `target.fields.nt_fallback`.
  */
 export type MergeTagResolver = (target: MergeTagEntry) => string | undefined
-
-function isRichTextDocument(value: unknown): value is Document {
-  return isRecord(value) && value.nodeType === 'document'
-}
 
 function resolveNode(node: unknown, resolveMergeTag: MergeTagResolver): unknown {
   if (!isRecord(node)) return node

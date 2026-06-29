@@ -2,21 +2,11 @@ import React from 'react'
 import { Text, View } from 'react-native'
 
 import { OptimizedEntry } from '@contentful/optimization-react-native'
+import { isResolvedContentfulEntry } from '@contentful/optimization-react-native/api-schemas'
 import type { Entry } from 'contentful'
 
 interface NestedContentItemProps {
   entry: Entry
-}
-
-function isEntry(value: unknown): value is Entry {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'sys' in value &&
-    typeof value.sys === 'object' &&
-    value.sys !== null &&
-    'id' in value.sys
-  )
 }
 
 function renderNestedContentItem(resolvedEntry: Entry): React.JSX.Element {
@@ -32,7 +22,7 @@ function renderNestedContentItem(resolvedEntry: Entry): React.JSX.Element {
         <Text>{text}</Text>
         <Text>{`[Entry: ${resolvedEntry.sys.id}]`}</Text>
       </View>
-      {nestedEntries.filter(isEntry).map((nestedEntry) => (
+      {nestedEntries.filter(isResolvedContentfulEntry).map((nestedEntry) => (
         <OptimizedEntry key={nestedEntry.sys.id} baselineEntry={nestedEntry}>
           {renderNestedContentItem}
         </OptimizedEntry>

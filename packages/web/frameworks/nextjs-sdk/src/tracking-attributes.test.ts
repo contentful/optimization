@@ -1,3 +1,4 @@
+import { isRecord } from '@contentful/optimization-node/api-schemas'
 import type { ServerTrackingBaselineEntry, ServerTrackingResolvedData } from './tracking-attributes'
 import { getServerTrackingAttributes } from './tracking-attributes'
 
@@ -36,22 +37,18 @@ function createResolvedData(): ServerTrackingResolvedData {
   throw new Error('Expected test resolved data to satisfy the tracking contract.')
 }
 
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
 function isServerTrackingBaselineEntry(value: unknown): value is ServerTrackingBaselineEntry {
-  if (!isObjectRecord(value)) return false
+  if (!isRecord(value)) return false
   const { sys } = value
 
-  return isObjectRecord(sys) && typeof sys.id === 'string'
+  return isRecord(sys) && typeof sys.id === 'string'
 }
 
 function isServerTrackingResolvedData(value: unknown): value is ServerTrackingResolvedData {
-  if (!isObjectRecord(value)) return false
+  if (!isRecord(value)) return false
   const { entry, selectedOptimization } = value
 
-  return isServerTrackingBaselineEntry(entry) && isObjectRecord(selectedOptimization)
+  return isServerTrackingBaselineEntry(entry) && isRecord(selectedOptimization)
 }
 
 describe('getServerTrackingAttributes', () => {

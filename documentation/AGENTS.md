@@ -40,5 +40,4 @@ Applies to authored documentation under `documentation/`.
 
 ## Validate
 
-- Run Prettier on touched Markdown files and `git diff --check`.
 - For moved or newly linked documents, verify repository-local relative links resolve.

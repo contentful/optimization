@@ -1,10 +1,11 @@
+import { isRecord, isRichTextDocument } from '@contentful/optimization-web/api-schemas'
+import type { Document as RichTextDocument } from '@contentful/rich-text-types'
 import type { EntryClickScenario } from 'e2e-web'
 import { type JSX, type RefObject, useEffect, useMemo, useRef } from 'react'
 import { RichTextRenderer } from '../components/RichTextRenderer'
 import { useOptimization } from '../optimization/hooks/useOptimization'
 import { useOptimizationResolver } from '../optimization/hooks/useOptimizationResolver'
-import type { ContentfulEntry, RichTextDocument } from '../types/contentful'
-import { isRecord } from '../utils/typeGuards'
+import type { ContentfulEntry } from '../types/contentful'
 
 interface ContentEntryProps {
   clickScenario?: EntryClickScenario
@@ -73,17 +74,6 @@ function hasTrackingApi(value: unknown): value is TrackingApiOwner {
   if (!isRecord(tracking)) return false
 
   return typeof tracking.enableElement === 'function' && typeof tracking.clearElement === 'function'
-}
-
-function isRichTextField(field: unknown): field is RichTextDocument {
-  return (
-    typeof field === 'object' &&
-    field !== null &&
-    'nodeType' in field &&
-    (field as { nodeType: unknown }).nodeType === 'document' &&
-    'content' in field &&
-    Array.isArray((field as { content: unknown }).content)
-  )
 }
 
 function getSelectedOptimizationMeta(value: unknown): SelectedOptimizationMeta {
@@ -242,7 +232,7 @@ export function ContentEntry({
     }
   }, [experienceId, isReady, observation, resolvedEntry.sys.id, sdk, sticky, variantIndex])
 
-  const richTextField = Object.values(resolvedEntry.fields).find(isRichTextField)
+  const richTextField = Object.values(resolvedEntry.fields).find(isRichTextDocument)
 
   const fullLabel = `Entry: ${resolvedEntry.sys.id}`
 

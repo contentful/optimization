@@ -44,6 +44,16 @@ public struct ContentfulEntriesResult {
         self.limit = limit
         self.includes = includes
     }
+
+    var bridgePayload: [String: Any] {
+        [
+            "items": items,
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "includes": includes.bridgePayload,
+        ]
+    }
 }
 
 /// Linked/included entries from a Contentful response.
@@ -53,6 +63,10 @@ public struct ContentfulIncludes {
 
     public init(entries: [[String: Any]] = []) {
         self.entries = entries
+    }
+
+    var bridgePayload: [String: Any] {
+        ["Entry": entries]
     }
 }
 

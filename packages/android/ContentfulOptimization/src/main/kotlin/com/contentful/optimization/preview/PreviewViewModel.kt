@@ -43,16 +43,9 @@ internal class PreviewViewModel(
         try {
             val (audiences, experiences) = fetchAudienceAndExperienceEntries(contentful)
 
-            @Suppress("UNCHECKED_CAST")
-            val experienceEntriesWithIncludes = experiences.items.map { item ->
-                val copy = item.toMutableMap()
-                copy["includes"] = mapOf("Entry" to experiences.includes.entries)
-                copy
-            }
-
             client.loadDefinitions(
-                audiences = audiences.items,
-                experiences = experienceEntriesWithIncludes,
+                audiences = audiences,
+                experiences = experiences,
             )
             client.refreshPreviewState()
 

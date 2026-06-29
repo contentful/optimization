@@ -37,7 +37,7 @@ import {
 | `buildPreviewModel`                            | Builds the UI view model from definitions, SDK signals, and overrides   |
 | Entry mappers                                  | Convert Contentful audience and experience entries into preview shapes  |
 | Contentful fetch helpers                       | Fetch paginated `nt_audience` and `nt_experience` entries               |
-| Types and constants                            | Preview DTOs, override state shapes, minimal Contentful types, and IDs  |
+| Types and constants                            | Preview DTOs, override state shapes, Contentful SDK types, and IDs      |
 
 The toolkit pairs with `@contentful/optimization-core/bridge-support`: first-party hosts call
 `getPreviewPanelBridge()` to read the signal handles and state interceptor access needed by
@@ -62,9 +62,9 @@ preview-support helpers.
   and natural variant state, and sorts the result deterministically for preview UI display.
 - Entry mappers encode the Optimization Contentful content-model contract for `nt_audience`,
   `nt_experience`, and `nt_config`, including variant distribution percentages and display names
-  sourced from linked entries.
+  sourced from collection-level included entries.
 - Contentful fetch helpers page through `nt_audience` and `nt_experience` entries using a minimal
-  `getEntries` contract. This package does not depend on the Contentful SDK directly.
+  `ContentfulClientApi#getEntries` contract.
 
 ## What belongs elsewhere
 

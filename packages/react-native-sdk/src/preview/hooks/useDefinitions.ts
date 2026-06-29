@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { AudienceDefinition, ContentfulEntry, ExperienceDefinition } from '../types'
+import type { AudienceDefinition, ContentfulEntryCollection, ExperienceDefinition } from '../types'
 import { createAudienceDefinitions, createExperienceDefinitions } from '../utils'
 
 interface UseDefinitionsResult {
@@ -13,15 +13,15 @@ interface UseDefinitionsResult {
  * Creates memoized audience/experience definitions and name lookup maps
  * from raw Contentful entries.
  *
- * @param audienceEntries - Raw Contentful `nt_audience` entries (Contentful content type IDs created by the Optimization platform)
- * @param experienceEntries - Raw Contentful `nt_experience` entries (Contentful content type IDs created by the Optimization platform)
+ * @param audienceEntries - Raw Contentful `nt_audience` entry collection (Contentful content type IDs created by the Optimization platform)
+ * @param experienceEntries - Raw Contentful `nt_experience` entry collection (Contentful content type IDs created by the Optimization platform)
  * @returns Definitions arrays and name maps
  *
  * @internal
  */
 export function useDefinitions(
-  audienceEntries: ContentfulEntry[],
-  experienceEntries: ContentfulEntry[],
+  audienceEntries: ContentfulEntryCollection,
+  experienceEntries: ContentfulEntryCollection,
 ): UseDefinitionsResult {
   const audienceDefinitions = useMemo(
     () => createAudienceDefinitions(audienceEntries),
