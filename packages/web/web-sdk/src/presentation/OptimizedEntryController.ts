@@ -20,6 +20,7 @@ export interface OptimizedEntrySdk {
   readonly states: {
     readonly canOptimize: Observable<boolean>
     readonly experienceRequestState: Observable<ExperienceRequestStateLike>
+    readonly optimizationPossible: Observable<boolean>
     readonly selectedOptimizations: Observable<SelectedOptimizationArray | undefined>
   }
   resolveOptimizedEntry: (
@@ -196,6 +197,7 @@ export class OptimizedEntryController {
   private canOptimize = false
   private connected = false
   private hasExperienceRequestSettled = false
+  private optimizationPossible = true
   private listener: OptimizedEntrySnapshotListener | undefined = undefined
   private baselineRevealTimeout: ReturnType<typeof setTimeout> | undefined = undefined
   private options: NormalizedOptimizedEntryControllerOptions
@@ -241,6 +243,7 @@ export class OptimizedEntryController {
     if (sdkChanged || !nextOptions.sdk || !nextOptions.isSdkStateReady) {
       this.canOptimize = false
       this.hasExperienceRequestSettled = false
+      this.optimizationPossible = true
       this.selectedOptimizations = undefined
     }
 
@@ -288,14 +291,17 @@ export class OptimizedEntryController {
     }
 
     const { states } = sdk
-    const { canOptimize, experienceRequestState, selectedOptimizations } = states
+    const { canOptimize, experienceRequestState, optimizationPossible, selectedOptimizations } =
+      states
     const { current: currentSelectedOptimizations } = selectedOptimizations
     const { current: currentCanOptimize } = canOptimize
     const { current: currentExperienceRequestState } = experienceRequestState
+    const { current: currentOptimizationPossible } = optimizationPossible
 
     this.acceptSelectedOptimizations(currentSelectedOptimizations)
     this.canOptimize = currentCanOptimize
     this.hasExperienceRequestSettled = isExperienceRequestSettled(currentExperienceRequestState)
+    this.optimizationPossible = currentOptimizationPossible
 
     this.subscriptions = [
       selectedOptimizations.subscribe((nextSelectedOptimizations) => {
@@ -309,6 +315,10 @@ export class OptimizedEntryController {
       }),
       experienceRequestState.subscribe((state) => {
         this.hasExperienceRequestSettled = isExperienceRequestSettled(state)
+        this.updateSnapshot()
+      }),
+      optimizationPossible.subscribe((nextOptimizationPossible) => {
+        this.optimizationPossible = nextOptimizationPossible
         this.updateSnapshot()
       }),
     ]
@@ -334,7 +344,10 @@ export class OptimizedEntryController {
     const requiresOptimization = hasOptimizationReferences(this.options.baselineEntry)
     const hasResolvedOptimizations = this.selectedOptimizations !== undefined
     const isContentReady =
-      !requiresOptimization || this.hasExperienceRequestSettled || hasResolvedOptimizations
+      !requiresOptimization ||
+      !this.optimizationPossible ||
+      this.hasExperienceRequestSettled ||
+      hasResolvedOptimizations
 
     return !isContentReady
   }

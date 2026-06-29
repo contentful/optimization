@@ -90,24 +90,29 @@ function createSdk(
     entry: Entry,
     selectedOptimizations: SelectedOptimizationArray | undefined,
   ) => ResolvedData<EntrySkeletonType>,
+  { initialOptimizationPossible = true }: { initialOptimizationPossible?: boolean } = {},
 ): {
   readonly canOptimize: TestObservable<boolean>
   readonly experienceRequestState: TestObservable<ExperienceRequestState>
+  readonly optimizationPossible: TestObservable<boolean>
   readonly sdk: OptimizedEntrySdk
   readonly selectedOptimizations: TestObservable<SelectedOptimizationArray | undefined>
 } {
   const selectedOptimizations = createObservable<SelectedOptimizationArray | undefined>(undefined)
   const canOptimize = createObservable(false)
   const experienceRequestState = createObservable<ExperienceRequestState>({ status: 'idle' })
+  const optimizationPossible = createObservable(initialOptimizationPossible)
 
   return {
     canOptimize,
     experienceRequestState,
+    optimizationPossible,
     sdk: {
       resolveOptimizedEntry,
       states: {
         canOptimize,
         experienceRequestState,
+        optimizationPossible,
         selectedOptimizations,
       },
     },
@@ -266,6 +271,54 @@ describe('OptimizedEntryController', () => {
       },
       selectedOptimizations: variantOneState,
     })
+
+    controller.disconnect()
+  })
+
+  it('immediately shows baseline when optimization is not possible (consent undefined, empty allowedEventTypes)', () => {
+    const runtime = createSdk((entry) => ({ entry }), { initialOptimizationPossible: false })
+    const controller = new OptimizedEntryController({
+      isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+
+    expect(controller.getSnapshot()).toMatchObject({
+      isLoading: false,
+      entry: optimizedBaseline,
+      loadingPresentation: {
+        showLoadingFallback: false,
+      },
+    })
+
+    controller.disconnect()
+  })
+
+  it('immediately shows baseline when optimization is not possible (consent false, empty allowedEventTypes)', () => {
+    const runtime = createSdk((entry) => ({ entry }), { initialOptimizationPossible: false })
+    const controller = new OptimizedEntryController({
+      isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+
+    expect(controller.getSnapshot().isLoading).toBe(false)
+
+    // If consent is later granted (optimizationPossible flips true), revert to loading
+    // until the Experience API settles
+    runtime.optimizationPossible.emit(true)
+
+    expect(controller.getSnapshot().isLoading).toBe(true)
+
+    runtime.experienceRequestState.emit({ status: 'success' })
+
+    expect(controller.getSnapshot().isLoading).toBe(false)
 
     controller.disconnect()
   })
