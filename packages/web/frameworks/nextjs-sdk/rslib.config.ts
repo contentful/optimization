@@ -28,6 +28,7 @@ const clientEntries = {
 } as const
 
 const serverEntries = {
+  esr: './src/esr.ts',
   index: './src/index.ts',
   'request-handler': './src/request-handler.ts',
   server: './src/server.tsx',

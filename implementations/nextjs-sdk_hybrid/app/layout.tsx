@@ -2,12 +2,13 @@ import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvide
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
 import { appConfig } from '@/lib/config'
-import { getOptimizationData } from '@/lib/optimization'
+import { getAppConsent } from '@/lib/util'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
 import 'e2e-web/theme.css'
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
-import { type ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 
 export const metadata: Metadata = {
   title: 'Optimization Next.js SDK Hybrid',
@@ -25,15 +26,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: ReactNode
 }>) {
-  const optimizationData = await getOptimizationData()
+  const cookieStore = await cookies()
+  const appConsent = getAppConsent(cookieStore)
   const htmlLang = getHtmlLang(appConfig.locale)
-  const defaults = optimizationData
-    ? {
-        profile: optimizationData.profile,
-        selectedOptimizations: optimizationData.selectedOptimizations,
-        changes: optimizationData.changes,
-      }
-    : undefined
 
   return (
     <html lang={htmlLang}>
@@ -45,15 +40,17 @@ export default async function RootLayout({
           api={appConfig.api}
           trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
           logLevel="debug"
-          defaults={defaults}
           app={{
             name: 'Contentful Optimization Next.js SDK Hybrid (Client)',
             version: '0.1.0',
           }}
+          defaults={{ consent: appConsent, persistenceConsent: appConsent }}
         >
           <GlobalLiveUpdatesProvider>
             <PreviewPanel />
-            <NextAppAutoPageTracker initialPageEvent={defaults ? 'skip' : 'emit'} />
+            <Suspense>
+              <NextAppAutoPageTracker initialPageEvent={appConsent ? 'skip' : 'emit'} />
+            </Suspense>
             <div className="app-shell">
               <nav>
                 <Link data-testid="link-home" href="/">

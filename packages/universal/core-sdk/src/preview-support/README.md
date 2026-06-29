@@ -29,19 +29,19 @@ import {
 
 ## Package surface
 
-| Surface                                  | Purpose                                                                 |
-| ---------------------------------------- | ----------------------------------------------------------------------- |
-| `registerPreviewPanel` on `CoreStateful` | Wires first-party preview consumers into internal SDK signals           |
-| `PreviewOverrideManager`                 | Owns audience and variant override state and applies state interceptors |
-| `applyOptimizationOverrides`             | Pure merge helper for applying override maps to selected optimizations  |
-| `buildPreviewModel`                      | Builds the UI view model from definitions, SDK signals, and overrides   |
-| Entry mappers                            | Convert Contentful audience and experience entries into preview shapes  |
-| Contentful fetch helpers                 | Fetch paginated `nt_audience` and `nt_experience` entries               |
-| Types and constants                      | Preview DTOs, override state shapes, minimal Contentful types, and IDs  |
+| Surface                                        | Purpose                                                                 |
+| ---------------------------------------------- | ----------------------------------------------------------------------- |
+| `@contentful/optimization-core/bridge-support` | Wires first-party preview consumers into internal SDK signals           |
+| `PreviewOverrideManager`                       | Owns audience and variant override state and applies state interceptors |
+| `applyOptimizationOverrides`                   | Pure merge helper for applying override maps to selected optimizations  |
+| `buildPreviewModel`                            | Builds the UI view model from definitions, SDK signals, and overrides   |
+| Entry mappers                                  | Convert Contentful audience and experience entries into preview shapes  |
+| Contentful fetch helpers                       | Fetch paginated `nt_audience` and `nt_experience` entries               |
+| Types and constants                            | Preview DTOs, override state shapes, minimal Contentful types, and IDs  |
 
-The toolkit pairs with `registerPreviewPanel`: hosts register a plain object, read the
-`PREVIEW_PANEL_SIGNALS_SYMBOL` and `PREVIEW_PANEL_SIGNAL_FNS_SYMBOL` bridge values, and pass signal
-snapshots into the preview-support helpers.
+The toolkit pairs with `@contentful/optimization-core/bridge-support`: first-party hosts call
+`getPreviewPanelBridge()` to read the signal handles and state interceptor access needed by
+preview-support helpers.
 
 > [!IMPORTANT]
 >

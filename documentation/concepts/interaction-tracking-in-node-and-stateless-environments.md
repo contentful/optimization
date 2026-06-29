@@ -73,10 +73,12 @@ Apply these constraints before choosing server-only, hybrid, or manual tracking:
   `allowedEventTypes` also accepts `flag` as a Custom Flag view selector. `component` allows both
   entry views and flag views before consent; `flag` narrows pre-consent admission to Custom Flag
   views without entry views.
-- Browser Insights delivery needs a current Web SDK profile. The profile can come from
-  `defaults.profile`, browser-persisted profile state that persistence consent allows the SDK to
-  load, or a browser Experience API call such as `page()`, `identify()`, `track()`, or sticky
-  `trackView()`.
+- Browser Insights delivery needs a current Web SDK profile. In direct Web SDK initialization, the
+  profile can come from `defaults.profile`. In React Web and Next.js provider handoff, pass
+  server-returned Optimization data through `serverOptimizationState`. In Next.js page-level
+  handoff, render `NextjsOptimizationState` under existing SDK context. The profile can also come
+  from browser-persisted profile state that persistence consent allows the SDK to load, or a browser
+  Experience API call such as `page()`, `identify()`, `track()`, or sticky `trackView()`.
 - Browser storage is best-effort. The Web SDK uses `localStorage` and the `ctfl-opt-aid` cookie when
   persistence consent permits continuity; if storage fails or is unavailable, continuity is limited
   to in-memory state.
@@ -382,9 +384,11 @@ Browser Insights events need a current Web SDK profile. A readable `ctfl-opt-aid
 browser the anonymous ID, but the Web SDK's Insights queue uses the current profile signal for event
 delivery. Choose one of these patterns before enabling interaction tracking:
 
-- **Bootstrap the server profile.** Serialize the `profile` returned by the server's `page()` or
-  `identify()` call and pass it as `defaults.profile`. Use this when the same server response
-  already rendered personalized HTML from that profile.
+- **Bootstrap the server profile.** For direct Web SDK initialization, serialize the `profile`
+  returned by the server's `page()` or `identify()` call and pass it as `defaults.profile`. For
+  React Web and Next.js, pass the server `OptimizationData` through `serverOptimizationState`, or
+  render `NextjsOptimizationState` under an existing SDK context when a Next.js page owns the data.
+  Use this when the same server response already rendered personalized HTML from that profile.
 - **Re-evaluate in the browser.** Persist `ctfl-opt-aid` on the server, initialize the Web SDK in
   the browser, call `page()` after your consent policy allows it, then enable tracking after the
   page response populates browser profile state.
@@ -395,9 +399,9 @@ delivery. Choose one of these patterns before enabling interaction tracking:
 
 In Next.js SSR integrations, `initialPageEvent="skip"` intentionally avoids the initial browser
 Experience API `page()` request when the server already emitted that page event. If that skip leaves
-the browser without `defaults.profile` and without a prior persisted browser profile, automatic
-entry views, clicks, and hovers cannot deliver until a later browser Experience API call populates
-profile state.
+the browser without `serverOptimizationState` or `NextjsOptimizationState`, and without a prior
+persisted browser profile, automatic entry views, clicks, and hovers cannot deliver until a later
+browser Experience API call populates profile state.
 
 If the Web SDK must read `ctfl-opt-aid`, do not mark that cookie as `HttpOnly`. Configure `path`,
 `domain`, and `SameSite` so the server route and browser code refer to the same profile.

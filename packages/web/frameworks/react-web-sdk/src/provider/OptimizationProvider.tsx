@@ -1,4 +1,6 @@
 import ContentfulOptimization from '@contentful/optimization-web'
+import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
+import { hydrateOptimizationData } from '@contentful/optimization-web/bridge-support'
 import {
   createOptimizationRootSdkBinding,
   disposeOptimizationRootSdkBinding,
@@ -28,31 +30,45 @@ interface ProviderState {
   readonly sdk: OptimizationSdk | undefined
 }
 
+interface ServerOptimizationStateProps {
+  /**
+   * Server-returned Optimization state to apply before provider children mount.
+   *
+   * @remarks
+   * Use this for server-to-browser state handoff. Keep `defaults` for configuration and default
+   * state such as consent policy.
+   */
+  readonly serverOptimizationState?: OptimizationData
+}
+
 export type OptimizationProviderConfigProps = PropsWithChildren<
-  OptimizationProviderBaseConfigProps & {
+  OptimizationProviderBaseConfigProps &
+    ServerOptimizationStateProps & {
+      /**
+       * Controls automatic entry interaction tracking for OptimizedEntry components.
+       *
+       * @defaultValue `{ views: true, clicks: true, hovers: true }`
+       */
+      readonly trackEntryInteraction?: TrackEntryInteractionOptions
+      /**
+       * Called once the SDK state surface is initialized and before provider children mount.
+       * Return a cleanup function to unsubscribe app-level state observers on teardown.
+       */
+      readonly onStatesReady?: OnStatesReady
+      readonly sdk?: never
+    }
+>
+
+export type OptimizationProviderSdkProps = PropsWithChildren<
+  ServerOptimizationStateProps & {
     /**
-     * Controls automatic entry interaction tracking for OptimizedEntry components.
-     *
-     * @defaultValue `{ views: true, clicks: true, hovers: true }`
-     */
-    readonly trackEntryInteraction?: TrackEntryInteractionOptions
-    /**
-     * Called once the SDK state surface is initialized and before provider children mount.
+     * Called with the injected SDK state surface before provider children mount.
      * Return a cleanup function to unsubscribe app-level state observers on teardown.
      */
     readonly onStatesReady?: OnStatesReady
-    readonly sdk?: never
+    readonly sdk: OptimizationSdk
   }
 >
-
-export type OptimizationProviderSdkProps = PropsWithChildren<{
-  /**
-   * Called with the injected SDK state surface before provider children mount.
-   * Return a cleanup function to unsubscribe app-level state observers on teardown.
-   */
-  readonly onStatesReady?: OnStatesReady
-  readonly sdk: OptimizationSdk
-}>
 
 export type OptimizationProviderProps =
   | OptimizationProviderConfigProps
@@ -63,18 +79,24 @@ function toError(error: unknown): Error {
 }
 
 function createInjectedSdkBinding(props: OptimizationProviderSdkProps): ProviderSdkBinding {
-  const { onStatesReady, sdk } = props
+  const { sdk } = props
 
-  return createOptimizationRootSdkBinding({ onStatesReady, sdk })
+  return createOptimizationRootSdkBinding({ sdk })
 }
 
 function createOwnedSdkBinding(props: OptimizationProviderConfigProps): ProviderSdkBinding {
-  const { children: _children, onStatesReady, sdk: _sdk, trackEntryInteraction, ...config } = props
+  const {
+    children: _children,
+    onStatesReady: _onStatesReady,
+    sdk: _sdk,
+    serverOptimizationState: _serverOptimizationState,
+    trackEntryInteraction,
+    ...config
+  } = props
 
   return createOptimizationRootSdkBinding({
     config,
     createSdk: (sdkConfig) => new ContentfulOptimization(sdkConfig),
-    onStatesReady,
     trackEntryInteraction,
   })
 }
@@ -83,35 +105,134 @@ function disposeSdkBinding(sdkBinding: ProviderSdkBinding | undefined): void {
   disposeOptimizationRootSdkBinding(sdkBinding)
 }
 
+function bindOnStatesReady(
+  sdkBinding: ProviderSdkBinding,
+  onStatesReady: OnStatesReady | undefined,
+): ProviderSdkBinding {
+  const cleanup = onStatesReady?.(sdkBinding.sdk.states)
+
+  if (typeof cleanup !== 'function') {
+    return sdkBinding
+  }
+
+  return { ...sdkBinding, cleanup }
+}
+
+async function initializeServerOptimizationState(
+  sdkBinding: ProviderSdkBinding,
+  serverOptimizationState: OptimizationData,
+  onStatesReady: OnStatesReady | undefined,
+): Promise<ProviderSdkBinding> {
+  try {
+    await hydrateOptimizationData(sdkBinding.sdk, serverOptimizationState)
+
+    return bindOnStatesReady(sdkBinding, onStatesReady)
+  } catch (error: unknown) {
+    disposeSdkBinding(sdkBinding)
+    throw error
+  }
+}
+
+function initializeProviderSdk(
+  props: OptimizationProviderProps,
+): ProviderSdkBinding | Promise<ProviderSdkBinding> {
+  const sdkBinding =
+    props.sdk === undefined ? createOwnedSdkBinding(props) : createInjectedSdkBinding(props)
+
+  if (props.serverOptimizationState === undefined) {
+    try {
+      return bindOnStatesReady(sdkBinding, props.onStatesReady)
+    } catch (error: unknown) {
+      disposeSdkBinding(sdkBinding)
+      throw error
+    }
+  }
+
+  return initializeServerOptimizationState(
+    sdkBinding,
+    props.serverOptimizationState,
+    props.onStatesReady,
+  )
+}
+
+function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
+  return value instanceof Promise
+}
+
+function canUseInjectedSdkDuringInitialRender(props: OptimizationProviderProps): boolean {
+  return (
+    props.sdk !== undefined &&
+    props.onStatesReady === undefined &&
+    props.serverOptimizationState === undefined
+  )
+}
+
 export function OptimizationProvider(props: OptimizationProviderProps): ReactElement | null {
   const { children } = props
   const initialPropsRef = useRef(props)
   const liveLocale = props.sdk === undefined ? props.locale : undefined
+  const canRenderInjectedSdk = canUseInjectedSdkDuringInitialRender(props)
   const [state, setState] = useState<ProviderState>(() => ({
     error: undefined,
-    isReady: !props.onStatesReady && props.sdk !== undefined,
-    sdk: props.onStatesReady ? undefined : props.sdk,
+    isReady: canRenderInjectedSdk,
+    sdk: canRenderInjectedSdk ? props.sdk : undefined,
   }))
 
   useLayoutEffect(() => {
     const { current: initialProps } = initialPropsRef
 
-    if (initialProps.sdk && !initialProps.onStatesReady) {
+    if (canUseInjectedSdkDuringInitialRender(initialProps)) {
       return
     }
 
-    try {
-      const sdkBinding =
-        initialProps.sdk === undefined
-          ? createOwnedSdkBinding(initialProps)
-          : createInjectedSdkBinding(initialProps)
-      setState({ error: undefined, isReady: true, sdk: sdkBinding.sdk })
+    const setupState = { disposed: false }
+    let sdkBinding: ProviderSdkBinding | undefined = undefined
+    let disposedBinding: ProviderSdkBinding | undefined = undefined
 
-      return () => {
-        disposeSdkBinding(sdkBinding)
+    function disposeOnce(binding: ProviderSdkBinding | undefined): void {
+      if (binding === undefined || binding === disposedBinding) return
+
+      disposeSdkBinding(binding)
+      disposedBinding = binding
+    }
+
+    function setInitializedState(initializedBinding: ProviderSdkBinding): void {
+      if (setupState.disposed) {
+        disposeOnce(initializedBinding)
+        return
       }
+
+      sdkBinding = initializedBinding
+      setState({ error: undefined, isReady: true, sdk: initializedBinding.sdk })
+    }
+
+    function setInitializationError(error: unknown): void {
+      if (!setupState.disposed) {
+        setState({ error: toError(error), isReady: false, sdk: undefined })
+      }
+    }
+
+    try {
+      const initializedBinding = initializeProviderSdk(initialProps)
+
+      if (!isPromiseLike(initializedBinding)) {
+        setInitializedState(initializedBinding)
+
+        return () => {
+          setupState.disposed = true
+          disposeOnce(sdkBinding)
+        }
+      }
+
+      void initializedBinding.then(setInitializedState, setInitializationError)
     } catch (error: unknown) {
-      setState({ error: toError(error), isReady: false, sdk: undefined })
+      setInitializationError(error)
+      return
+    }
+
+    return () => {
+      setupState.disposed = true
+      disposeOnce(sdkBinding)
     }
   }, [])
 

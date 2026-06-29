@@ -36,11 +36,11 @@ export type {
   QueueFlushRecoveredContext,
 } from './lib/queue'
 export * from './locale'
+export * from './page-context'
 export type { ExperienceQueue } from './queues/ExperienceQueue'
 export type { InsightsQueue } from './queues/InsightsQueue'
 export * from './resolvers'
 export * from './StatefulDefaults'
-export * from './symbols'
 export * from './tracking'
 
 export { default as CoreStateful } from './CoreStateful'

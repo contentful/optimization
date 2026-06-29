@@ -154,6 +154,44 @@ describe('CoreStateless', () => {
     )
   })
 
+  it('forwards request page query context to request-bound page events', async () => {
+    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const requestOptimization = core.forRequest({
+      consent: true,
+      eventContext: {
+        page: {
+          path: '/products',
+          query: { audience: 'beta' },
+          referrer: 'https://example.test/from',
+          search: '?audience=beta',
+          title: 'Products',
+          url: 'https://example.test/products?audience=beta',
+        },
+      },
+      profile: { id: 'profile-123' },
+    })
+
+    await requestOptimization.page()
+
+    expect(upsertProfile.mock.calls[0]?.[0].events[0]).toEqual(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          page: {
+            path: '/products',
+            query: { audience: 'beta' },
+            referrer: 'https://example.test/from',
+            search: '?audience=beta',
+            title: 'Products',
+            url: 'https://example.test/products?audience=beta',
+          },
+        }),
+      }),
+    )
+  })
+
   it('keeps request event locale and advanced Experience request locale separate', async () => {
     const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
     const upsertProfile = rs

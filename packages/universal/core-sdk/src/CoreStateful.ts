@@ -6,6 +6,7 @@ import type {
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger, logger } from '@contentful/optimization-api-client/logger'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
+import { installCoreBridgeCapabilities } from './bridge-support/capabilities'
 import type { ConsentController, ConsentGuard, ConsentInput } from './consent'
 import type { CoreStatefulApiConfig } from './CoreApiConfig'
 import type { CoreConfig } from './CoreBase'
@@ -47,13 +48,9 @@ import {
   profile as profileSignal,
   selectedOptimizations as selectedOptimizationsSignal,
   signalFns,
-  type SignalFns,
-  type Signals,
-  signals,
   toObservable,
 } from './signals'
 import { resolveStatefulDefaults, type StatefulDefaults } from './StatefulDefaults'
-import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
 
 const coreLogger = createScopedLogger('CoreStateful')
 
@@ -126,18 +123,6 @@ const resolveQueuePolicy = (policy: QueuePolicy | undefined): ResolvedQueuePolic
   offlineMaxEvents: toPositiveInt(policy?.offlineMaxEvents, OFFLINE_QUEUE_MAX_EVENTS),
   onOfflineDrop: policy?.onOfflineDrop,
 })
-
-/**
- * Symbol-keyed signal bridge shared between core and first-party preview tooling.
- *
- * @public
- */
-export interface PreviewPanelSignalObject {
-  /** Signals instance populated by {@link CoreStateful.registerPreviewPanel}. */
-  [PREVIEW_PANEL_SIGNALS_SYMBOL]?: Signals | null | undefined
-  /** Signal helper functions populated by {@link CoreStateful.registerPreviewPanel}. */
-  [PREVIEW_PANEL_SIGNAL_FNS_SYMBOL]?: SignalFns | null | undefined
-}
 
 /**
  * Combined observable state exposed by the stateful core.
@@ -307,6 +292,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
         onOfflineDrop: resolvedQueuePolicy.onOfflineDrop,
         stateInterceptors: this.interceptors.state,
       })
+      installCoreBridgeCapabilities(this, this.interceptors.state)
       batch(() => {
         consentSignal.value = defaultConsent
         persistenceConsentSignal.value = defaultPersistenceConsent ?? defaultConsent
@@ -520,11 +506,6 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
 
   protected set online(isOnline: boolean) {
     onlineSignal.value = isOnline
-  }
-
-  registerPreviewPanel(previewPanel: PreviewPanelSignalObject): void {
-    Reflect.set(previewPanel, PREVIEW_PANEL_SIGNALS_SYMBOL, signals)
-    Reflect.set(previewPanel, PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, signalFns)
   }
 }
 

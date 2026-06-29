@@ -5,6 +5,7 @@ import { appConfig } from '@/lib/config'
 import { type ContentEntry, loadPageEntries } from '@/lib/contentful'
 import { optimization } from '@/lib/optimization'
 import { getAppConsent, toIdMap } from '@/lib/util'
+import { NextjsOptimizationState } from '@contentful/optimization-nextjs/client'
 import {
   type ServerTrackingResolvedData,
   getNextjsServerOptimizationData,
@@ -13,8 +14,7 @@ import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 import { cookies, headers } from 'next/headers'
 
 export default async function Home() {
-  const cookieStore = await cookies()
-  const headerStore = await headers()
+  const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
 
   const [entries, optimizationData] = await Promise.all([
     loadPageEntries(PAGES.home.ids),
@@ -55,6 +55,7 @@ export default async function Home() {
       </div>
 
       <ControlPanel />
+      <NextjsOptimizationState data={optimizationData} />
 
       <section className="page-section" data-testid="live-updates-section">
         <header className="page-section__header">

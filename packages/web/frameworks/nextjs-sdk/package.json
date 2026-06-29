@@ -42,6 +42,16 @@
         "default": "./dist/server.cjs"
       }
     },
+    "./esr": {
+      "import": {
+        "types": "./dist/esr.d.mts",
+        "default": "./dist/esr.mjs"
+      },
+      "require": {
+        "types": "./dist/esr.d.cts",
+        "default": "./dist/esr.cjs"
+      }
+    },
     "./request-handler": {
       "import": {
         "types": "./dist/request-handler.d.mts",
@@ -75,6 +85,8 @@
         "index.mjs": 300,
         "client.cjs": 1200,
         "client.mjs": 1200,
+        "esr.cjs": 4200,
+        "esr.mjs": 4200,
         "server.cjs": 4500,
         "server.mjs": 4500,
         "request-handler.cjs": 2500,
@@ -108,6 +120,7 @@
     "@rstest/coverage-istanbul": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "build-tools": "workspace:*",
     "contentful": "catalog:",
     "happy-dom": "catalog:",
