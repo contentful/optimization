@@ -1,7 +1,4 @@
-import {
-  type OptimizationData,
-  type ServerTrackingResolvedData,
-} from '@contentful/optimization-nextjs/server'
+import { type ServerTrackingResolvedData } from '@contentful/optimization-nextjs/server'
 import {
   buildEntryRegistry,
   extendEntryRegistry,
@@ -11,17 +8,15 @@ import {
 import { getOptimizationData, optimization } from './optimization'
 import { resolveEntryLinks } from './util'
 
-type SelectedOptimizations = Parameters<typeof optimization.resolveOptimizedEntry>[1]
-
 export interface PageEntry {
   baselineEntry: ContentEntry
   resolvedData: ServerTrackingResolvedData
 }
 
 export interface ResolvedPageData {
-  registry: Map<string, ContentEntry>
   resolvedById: Map<string, PageEntry>
-  optimizationData: OptimizationData | undefined
+  getMergeTagValue: (entry: unknown) => string | undefined
+  resolveEntry: (entry: ContentEntry) => ServerTrackingResolvedData
 }
 
 export async function loadPageData(entryIds: readonly string[]): Promise<ResolvedPageData> {
@@ -51,21 +46,13 @@ export async function loadPageData(entryIds: readonly string[]): Promise<Resolve
     }),
   )
 
-  return { registry, resolvedById, optimizationData }
-}
+  const getMergeTagValue = (entry: unknown) =>
+    optimization.getMergeTagValue(entry as never, optimizationData?.profile)
 
-export function makeResolveEntry(
-  selectedOptimizations: SelectedOptimizations,
-  registry: Map<string, ContentEntry>,
-): (entry: ContentEntry) => ServerTrackingResolvedData {
-  return (entry) => {
+  const resolveEntry = (entry: ContentEntry): ServerTrackingResolvedData => {
     const resolved = optimization.resolveOptimizedEntry(entry, selectedOptimizations)
     return { ...resolved, entry: resolveEntryLinks(resolved.entry as ContentEntry, registry) }
   }
-}
 
-export function makeGetMergeTagValue(
-  profile: Parameters<typeof optimization.getMergeTagValue>[1],
-): (entry: unknown) => string | undefined {
-  return (entry) => optimization.getMergeTagValue(entry as never, profile)
+  return { resolvedById, getMergeTagValue, resolveEntry }
 }

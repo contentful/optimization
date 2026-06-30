@@ -1,13 +1,10 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { EntryCard } from '@/components/EntryCard'
-import { loadPageData, makeGetMergeTagValue, makeResolveEntry } from '@/lib/resolution'
+import { loadPageData } from '@/lib/resolution'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 
 export default async function Home() {
-  const { registry, resolvedById, optimizationData } = await loadPageData(PAGES.home.ids)
-
-  const getMergeTagValue = makeGetMergeTagValue(optimizationData?.profile)
-  const resolveEntry = makeResolveEntry(optimizationData?.selectedOptimizations, registry)
+  const { resolvedById, getMergeTagValue, resolveEntry } = await loadPageData(PAGES.home.ids)
 
   const liveUpdatesEntry = resolvedById.get(PAGES.home.liveUpdates)?.baselineEntry
 
