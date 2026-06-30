@@ -1,7 +1,7 @@
 'use client'
 
 import { useEventStream, useTick } from '@/lib/hooks'
-import { isRecord } from '@contentful/optimization-nextjs/api-schemas'
+import { isRecord } from '@/lib/util'
 import { type JSX } from 'react'
 
 const MS_PER_SECOND = 1000

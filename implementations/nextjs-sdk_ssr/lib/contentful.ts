@@ -2,6 +2,7 @@ import type { Document } from '@contentful/rich-text-types'
 import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { createClient } from 'contentful'
 import { appConfig } from './config'
+import { collectLinkIds, toIdMap } from './util'
 
 export interface ContentEntryFields {
   text?: EntryFieldTypes.Text | EntryFieldTypes.RichText
@@ -39,4 +40,36 @@ async function fetchEntry(entryId: string): Promise<ContentEntry | undefined> {
 export async function loadPageEntries(entryIds: readonly string[]): Promise<ContentEntry[]> {
   const results = await Promise.all(entryIds.map(fetchEntry))
   return results.filter((entry): entry is ContentEntry => entry !== undefined)
+}
+
+export async function extendEntryRegistry(
+  registry: Map<string, ContentEntry>,
+  entries: ContentEntry[],
+): Promise<void> {
+  const queue = new Set<string>()
+  for (const entry of entries) {
+    for (const id of collectLinkIds(entry)) {
+      if (!registry.has(id)) queue.add(id)
+    }
+  }
+  while (queue.size > 0) {
+    const fetched = await loadPageEntries([...queue])
+    queue.clear()
+    for (const entry of fetched) {
+      if (!registry.has(entry.sys.id)) {
+        registry.set(entry.sys.id, entry)
+        for (const id of collectLinkIds(entry)) {
+          if (!registry.has(id)) queue.add(id)
+        }
+      }
+    }
+  }
+}
+
+export async function buildEntryRegistry(
+  entries: ContentEntry[],
+): Promise<Map<string, ContentEntry>> {
+  const registry = toIdMap(entries)
+  await extendEntryRegistry(registry, entries)
+  return registry
 }
