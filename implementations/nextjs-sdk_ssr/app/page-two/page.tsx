@@ -6,11 +6,10 @@ import { PAGES } from 'e2e-web'
 import Link from 'next/link'
 
 export default async function PageTwo() {
-  const [{ hasConsent, isIdentified, activeOptimizationsCount }, [auto, manual]] =
-    await Promise.all([
-      optimization.getServerState(),
-      optimization.getEntries([PAGES.pageTwo.auto, PAGES.pageTwo.manual]),
-    ])
+  const [serverState, [auto, manual]] = await Promise.all([
+    optimization.getServerState(),
+    optimization.getEntries([PAGES.pageTwo.auto, PAGES.pageTwo.manual]),
+  ])
 
   return (
     <section data-testid="page-two-view">
@@ -22,12 +21,7 @@ export default async function PageTwo() {
       </div>
 
       <CustomViewTracker componentId="page-two-hero" />
-      <ControlPanel
-        demoCTA
-        initialConsent={hasConsent}
-        initialIsIdentified={isIdentified}
-        initialActiveOptimizationsCount={activeOptimizationsCount}
-      />
+      <ControlPanel demoCTA serverState={serverState} />
 
       <div className="sections-grid sections-grid--split" data-testid="page-two-optimization">
         <section className="page-section">

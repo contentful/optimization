@@ -2,39 +2,22 @@
 
 import { useGlobalLiveUpdatesControls } from '@/components/GlobalLiveUpdatesProvider'
 import { appConfig } from '@/lib/config'
-import { useConsent, useFlagSubscription } from '@/lib/hooks'
-import {
-  useLiveUpdates,
-  useOptimization,
-  useOptimizationActions,
-  useProfileState,
-  useSelectedOptimizationsState,
-} from '@contentful/optimization-nextjs/client'
+import { type ControlPanelServerState, useControlPanel } from '@/lib/hooks'
+
+import { useLiveUpdates } from '@contentful/optimization-nextjs/client'
 import type { JSX } from 'react'
 
 interface ControlPanelProps {
   readonly demoCTA?: boolean
-  readonly initialConsent?: boolean
-  readonly initialIsIdentified?: boolean
-  readonly initialActiveOptimizationsCount?: number
+  readonly serverState?: ControlPanelServerState
 }
 
-export function ControlPanel({
-  demoCTA,
-  initialConsent,
-  initialIsIdentified = false,
-  initialActiveOptimizationsCount = 0,
-}: ControlPanelProps = {}): JSX.Element {
-  const sdk = useOptimization()
-  const { identify, reset } = useOptimizationActions()
-  const { consent, setConsent } = useConsent(initialConsent)
-  const profile = useProfileState()
-  const selectedOptimizations = useSelectedOptimizationsState()
+export function ControlPanel({ demoCTA, serverState }: ControlPanelProps = {}): JSX.Element {
   const { globalLiveUpdates, onToggleGlobalLiveUpdates } = useGlobalLiveUpdatesControls()
   const { previewPanelVisible, setPreviewPanelVisible } = useLiveUpdates()
-  const booleanFlag = useFlagSubscription('boolean')
-  const isIdentified = profile ? Boolean(profile.traits.identified) : initialIsIdentified
-  const activeCount = selectedOptimizations?.length ?? initialActiveOptimizationsCount
+  const { sdk, identify, reset, consent, setConsent, profile, activeCount, booleanFlag } =
+    useControlPanel(serverState)
+  const isIdentified = Boolean(profile?.traits.identified)
 
   return (
     <section className="control-panel" id="utility-panel">

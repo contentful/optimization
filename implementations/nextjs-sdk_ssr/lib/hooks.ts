@@ -2,23 +2,55 @@
 
 import {
   useConsentState,
+  useOptimization,
   useOptimizationActions,
   useOptimizationContext,
+  useProfileState,
+  useSelectedOptimizationsState,
 } from '@contentful/optimization-nextjs/client'
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { setAppConsent } from './util'
 
-export function useConsent(initial?: boolean): {
-  consent: boolean | undefined
-  setConsent: (value: boolean) => void
-} {
+type Profile = ReturnType<typeof useProfileState>
+
+export interface ControlPanelServerState {
+  readonly hasConsent?: boolean
+  readonly profile?: Profile
+  readonly activeOptimizationsCount?: number
+}
+
+export function useControlPanel(serverState: ControlPanelServerState = {}) {
+  const sdk = useOptimization()
+  const { identify, reset, consent: setConsent } = useOptimizationActions()
   const sdkConsent = useConsentState()
-  const { consent: setConsent } = useOptimizationActions()
-  const consent = sdkConsent ?? initial
+  const profile = useProfileState() ?? serverState.profile
+  const selectedOptimizations = useSelectedOptimizationsState()
+  const { sdk: sdkCtx, isReady } = useOptimizationContext()
+  const [booleanFlag, setBooleanFlag] = useState<unknown>(undefined)
+
+  useEffect(() => {
+    if (!sdkCtx || !isReady) return
+    const subscription = sdkCtx.states.flag('boolean').subscribe(setBooleanFlag)
+    return () => subscription.unsubscribe()
+  }, [isReady, sdkCtx])
+
+  const consent = sdkConsent ?? serverState.hasConsent
+  const activeCount = selectedOptimizations?.length ?? serverState.activeOptimizationsCount ?? 0
+
   useEffect(() => {
     if (typeof consent === 'boolean') setAppConsent(consent)
   }, [consent])
-  return { consent, setConsent }
+
+  return {
+    sdk,
+    identify,
+    reset,
+    consent,
+    setConsent,
+    profile,
+    activeCount,
+    booleanFlag,
+  }
 }
 
 const MS_PER_SECOND = 1000
@@ -72,19 +104,4 @@ export function useEventStream<T>(
   }, [isReady, sdk])
 
   return { events, rawCount }
-}
-
-export function useFlagSubscription(flagName: string): unknown {
-  const { sdk, isReady } = useOptimizationContext()
-  const [value, setValue] = useState<unknown>(undefined)
-
-  useEffect(() => {
-    if (!sdk || !isReady) return
-    const subscription = sdk.states.flag(flagName).subscribe(setValue)
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [isReady, sdk, flagName])
-
-  return value
 }
