@@ -24,9 +24,10 @@ export function useControlPanel(serverState: ControlPanelServerState = {}) {
   const sdk = useOptimization()
   const { identify, reset, consent: setConsent } = useOptimizationActions()
   const sdkConsent = useConsentState()
-  const profile = useProfileState() ?? serverState.profile
+  const clientProfile = useProfileState()
   const selectedOptimizations = useSelectedOptimizationsState()
   const { sdk: sdkCtx, isReady } = useOptimizationContext()
+  const profile = isReady ? clientProfile : (clientProfile ?? serverState.profile)
   const [booleanFlag, setBooleanFlag] = useState<unknown>(undefined)
 
   useEffect(() => {
