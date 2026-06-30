@@ -6,12 +6,10 @@ import { PAGES } from 'e2e-web'
 import Link from 'next/link'
 
 export default async function PageTwo() {
-  const { entriesById, resolvedById } = await loadPageData(PAGES.pageTwo.ids)
+  const { resolvedById } = await loadPageData(PAGES.pageTwo.ids)
 
-  const autoEntry = entriesById.get(PAGES.pageTwo.auto)
-  const manualEntry = entriesById.get(PAGES.pageTwo.manual)
-  const autoResolved = autoEntry ? resolvedById.get(PAGES.pageTwo.auto) : undefined
-  const manualResolved = manualEntry ? resolvedById.get(PAGES.pageTwo.manual) : undefined
+  const auto = resolvedById.get(PAGES.pageTwo.auto)
+  const manual = resolvedById.get(PAGES.pageTwo.manual)
 
   return (
     <section data-testid="page-two-view">
@@ -31,10 +29,10 @@ export default async function PageTwo() {
             <h2>Auto-observed</h2>
           </header>
           <div className="entry-grid">
-            {autoEntry && autoResolved ? (
+            {auto ? (
               <EntryCard
-                baselineEntry={autoEntry}
-                resolvedData={autoResolved}
+                baselineEntry={auto.baselineEntry}
+                resolvedData={auto.resolvedData}
                 manualTracking={false}
               />
             ) : (
@@ -48,10 +46,10 @@ export default async function PageTwo() {
             <h2>Manually-observed</h2>
           </header>
           <div className="entry-grid">
-            {manualEntry && manualResolved ? (
+            {manual ? (
               <EntryCard
-                baselineEntry={manualEntry}
-                resolvedData={manualResolved}
+                baselineEntry={manual.baselineEntry}
+                resolvedData={manual.resolvedData}
                 manualTracking={true}
               />
             ) : (

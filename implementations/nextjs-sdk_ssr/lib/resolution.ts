@@ -9,14 +9,18 @@ import {
   type ContentEntry,
 } from './contentful'
 import { getOptimizationData, optimization } from './optimization'
-import { resolveEntryLinks, toIdMap } from './util'
+import { resolveEntryLinks } from './util'
 
 type SelectedOptimizations = Parameters<typeof optimization.resolveOptimizedEntry>[1]
 
+export interface PageEntry {
+  baselineEntry: ContentEntry
+  resolvedData: ServerTrackingResolvedData
+}
+
 export interface ResolvedPageData {
   registry: Map<string, ContentEntry>
-  entriesById: Map<string, ContentEntry>
-  resolvedById: Map<string, ServerTrackingResolvedData>
+  resolvedById: Map<string, PageEntry>
   optimizationData: OptimizationData | undefined
 }
 
@@ -27,7 +31,6 @@ export async function loadPageData(entryIds: readonly string[]): Promise<Resolve
   ])
   const selectedOptimizations = optimizationData?.selectedOptimizations
   const registry = await buildEntryRegistry(entries)
-  const entriesById = toIdMap(entries)
 
   const resolvedVariants = entries.map((entry) =>
     optimization.resolveOptimizedEntry(entry, selectedOptimizations),
@@ -38,14 +41,17 @@ export async function loadPageData(entryIds: readonly string[]): Promise<Resolve
   )
 
   const resolvedById = new Map(
-    entries.map((entry, i) => {
+    entries.map((baselineEntry, i) => {
       const resolved = resolvedVariants[i]!
       const resolvedEntry = resolveEntryLinks(resolved.entry as ContentEntry, registry)
-      return [entry.sys.id, { ...resolved, entry: resolvedEntry }] as const
+      return [
+        baselineEntry.sys.id,
+        { baselineEntry, resolvedData: { ...resolved, entry: resolvedEntry } },
+      ] as const
     }),
   )
 
-  return { registry, entriesById, resolvedById, optimizationData }
+  return { registry, resolvedById, optimizationData }
 }
 
 export function makeResolveEntry(

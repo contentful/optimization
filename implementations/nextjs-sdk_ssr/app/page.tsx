@@ -4,14 +4,12 @@ import { loadPageData, makeGetMergeTagValue, makeResolveEntry } from '@/lib/reso
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 
 export default async function Home() {
-  const { registry, entriesById, resolvedById, optimizationData } = await loadPageData(
-    PAGES.home.ids,
-  )
+  const { registry, resolvedById, optimizationData } = await loadPageData(PAGES.home.ids)
 
   const getMergeTagValue = makeGetMergeTagValue(optimizationData?.profile)
   const resolveEntry = makeResolveEntry(optimizationData?.selectedOptimizations, registry)
 
-  const liveUpdatesEntry = entriesById.get(PAGES.home.liveUpdates)
+  const liveUpdatesEntry = resolvedById.get(PAGES.home.liveUpdates)?.baselineEntry
 
   return (
     <>
@@ -62,18 +60,17 @@ export default async function Home() {
           </header>
           <div id="auto-observed" className="entry-grid">
             {PAGES.home.auto.flatMap((id) => {
-              const entry = entriesById.get(id)
-              const resolvedData = resolvedById.get(id)
-              if (!entry || !resolvedData) return []
+              const pageEntry = resolvedById.get(id)
+              if (!pageEntry) return []
               return [
                 <EntryCard
                   key={id}
-                  baselineEntry={entry}
+                  baselineEntry={pageEntry.baselineEntry}
                   clickScenario={CLICK_SCENARIOS[id]}
                   getMergeTagValue={getMergeTagValue}
                   manualTracking={false}
                   resolveEntry={resolveEntry}
-                  resolvedData={resolvedData}
+                  resolvedData={pageEntry.resolvedData}
                 />,
               ]
             })}
@@ -86,17 +83,16 @@ export default async function Home() {
           </header>
           <div id="manually-observed" className="entry-grid">
             {PAGES.home.manual.flatMap((id) => {
-              const entry = entriesById.get(id)
-              const resolvedData = resolvedById.get(id)
-              if (!entry || !resolvedData) return []
+              const pageEntry = resolvedById.get(id)
+              if (!pageEntry) return []
               return [
                 <EntryCard
                   key={id}
-                  baselineEntry={entry}
+                  baselineEntry={pageEntry.baselineEntry}
                   getMergeTagValue={getMergeTagValue}
                   manualTracking={true}
                   resolveEntry={resolveEntry}
-                  resolvedData={resolvedData}
+                  resolvedData={pageEntry.resolvedData}
                 />,
               ]
             })}
