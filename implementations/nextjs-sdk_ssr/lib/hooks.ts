@@ -13,11 +13,12 @@ import { setAppConsent } from './util'
 
 type Profile = ReturnType<typeof useProfileState>
 
-export interface ControlPanelServerState {
-  readonly hasConsent?: boolean
+type ServerDefaults = {
   readonly profile?: Profile
-  readonly activeOptimizationsCount?: number
+  readonly selectedOptimizations?: readonly unknown[]
 }
+
+export type ControlPanelServerState = ServerDefaults & { readonly hasConsent?: boolean }
 
 export function useControlPanel(serverState: ControlPanelServerState = {}) {
   const sdk = useOptimization()
@@ -35,7 +36,8 @@ export function useControlPanel(serverState: ControlPanelServerState = {}) {
   }, [isReady, sdkCtx])
 
   const consent = sdkConsent ?? serverState.hasConsent
-  const activeCount = selectedOptimizations?.length ?? serverState.activeOptimizationsCount ?? 0
+  const activeCount =
+    selectedOptimizations?.length ?? serverState.selectedOptimizations?.length ?? 0
 
   useEffect(() => {
     if (typeof consent === 'boolean') setAppConsent(consent)

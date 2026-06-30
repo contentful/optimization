@@ -122,19 +122,18 @@ class ServerOptimization {
 
   public async getServerState() {
     const { data, hasConsent } = await this.fetchOptimizationData()
+    const defaults = data
+      ? {
+          profile: data.profile,
+          ...(hasConsent
+            ? { selectedOptimizations: data.selectedOptimizations, changes: data.changes }
+            : {}),
+        }
+      : undefined
     return {
-      defaults: data
-        ? {
-            profile: data.profile,
-            ...(hasConsent
-              ? { selectedOptimizations: data.selectedOptimizations, changes: data.changes }
-              : {}),
-          }
-        : undefined,
+      ...defaults,
       initialPageEvent: hasConsent ? ('skip' as const) : ('emit' as const),
       hasConsent,
-      profile: data?.profile,
-      activeOptimizationsCount: hasConsent ? (data?.selectedOptimizations?.length ?? 0) : 0,
     }
   }
 

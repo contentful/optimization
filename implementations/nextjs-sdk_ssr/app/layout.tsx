@@ -18,7 +18,8 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const { defaults, initialPageEvent } = await optimization.getServerState()
+  const { profile, selectedOptimizations, changes, initialPageEvent, hasConsent } =
+    await optimization.getServerState()
 
   return (
     <html lang={appConfig.locale.split('-')[0]}>
@@ -30,7 +31,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           api={appConfig.api}
           trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
           logLevel="debug"
-          defaults={defaults}
+          defaults={
+            (profile ?? selectedOptimizations)
+              ? { profile, ...(hasConsent ? { selectedOptimizations, changes } : {}) }
+              : undefined
+          }
           app={{
             name: 'Contentful Optimization Next.js SDK SSR (Client)',
             version: '0.1.0',
