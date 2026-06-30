@@ -7,8 +7,8 @@ import { INLINES } from '@contentful/rich-text-types'
 import { cookies, headers } from 'next/headers'
 import { cache } from 'react'
 import { appConfig } from './config'
-import { fetchEntry, type ContentEntry, type RichTextDocument } from './contentful'
-import { getAppConsent, isEntry, isRecord } from './util'
+import { fetchEntry, type ContentEntry } from './contentful'
+import { getAppConsent, isEntry, isRecord, isRichTextField } from './util'
 
 type Profile = Parameters<ReturnType<typeof createNextjsOptimization>['getMergeTagValue']>[1]
 type SelectedOptimizations = Parameters<
@@ -79,12 +79,10 @@ class ServerOptimization {
     }
 
     return Object.fromEntries(
-      Object.entries(fields).map(([key, value]) => {
-        if (isRecord(value) && value.nodeType === 'document' && Array.isArray(value.content)) {
-          return [key, resolveNode(value) as RichTextDocument]
-        }
-        return [key, value]
-      }),
+      Object.entries(fields).map(([key, value]) => [
+        key,
+        isRichTextField(value) ? resolveNode(value) : value,
+      ]),
     ) as ContentEntry['fields']
   }
 

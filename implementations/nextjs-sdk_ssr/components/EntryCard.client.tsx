@@ -7,7 +7,7 @@ import type { JSX } from 'react'
 interface EntryCardClientProps {
   entry: ContentEntry
   liveUpdates?: boolean
-  testId: string
+  testId?: string
 }
 
 export function EntryCardClient({ entry, liveUpdates, testId }: EntryCardClientProps): JSX.Element {

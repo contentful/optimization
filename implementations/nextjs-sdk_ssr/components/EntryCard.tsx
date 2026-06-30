@@ -1,7 +1,7 @@
 import { EntryCardClient } from '@/components/EntryCard.client'
-import type { ContentEntry, RichTextDocument } from '@/lib/contentful'
+import type { ContentEntry } from '@/lib/contentful'
 import type { Entry } from '@/lib/optimization'
-import { isRecord } from '@/lib/util'
+import { isRecord, isRichTextField } from '@/lib/util'
 import { ServerOptimizedEntry } from '@contentful/optimization-nextjs/server'
 import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
 import { INLINES } from '@contentful/rich-text-types'
@@ -10,26 +10,12 @@ import type { JSX } from 'react'
 
 const HOVER_DURATION_UPDATE_INTERVAL_MS = 1000
 
-interface EntryCardServerProps {
-  entry: Entry
-  clickScenario?: EntryClickScenario
-  manualTracking: boolean
-  liveUpdates?: never
-  testId?: never
-}
-
-interface EntryCardClientProps {
-  entry: ContentEntry
+interface EntryCardProps {
+  entry: ContentEntry | Entry
   liveUpdates?: boolean
-  testId: string
-  clickScenario?: never
-  manualTracking?: never
-}
-
-type EntryCardProps = EntryCardServerProps | EntryCardClientProps
-
-function isRichTextField(field: unknown): field is RichTextDocument {
-  return isRecord(field) && field.nodeType === 'document' && Array.isArray(field.content)
+  testId?: string
+  clickScenario?: EntryClickScenario
+  manualTracking?: boolean
 }
 
 const RENDER_OPTIONS: Options = {
@@ -43,8 +29,9 @@ const RENDER_OPTIONS: Options = {
 }
 
 export function EntryCard(props: EntryCardProps): JSX.Element {
-  if (!('baselineEntry' in props.entry)) {
-    const { entry, liveUpdates, testId } = props as EntryCardClientProps
+  const { entry, liveUpdates, testId, clickScenario, manualTracking } = props
+
+  if (!('baselineEntry' in entry)) {
     return (
       <section className="entry-card" data-testid={`content-entry-${testId}`}>
         <EntryCardClient entry={entry} liveUpdates={liveUpdates} testId={testId} />
@@ -52,7 +39,6 @@ export function EntryCard(props: EntryCardProps): JSX.Element {
     )
   }
 
-  const { entry, clickScenario, manualTracking } = props as EntryCardServerProps
   const { baselineEntry, resolvedData, resolvedEntry } = entry
   const autoTrackViews = !manualTracking
   const richText = Object.values(resolvedEntry.fields).find(isRichTextField)

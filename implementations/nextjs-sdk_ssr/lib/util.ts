@@ -1,5 +1,5 @@
 import { appConfig } from './config'
-import type { ContentEntry } from './contentful'
+import type { ContentEntry, RichTextDocument } from './contentful'
 
 export function setAppConsent(consented: boolean): void {
   const value = consented ? 'granted' : 'denied'
@@ -21,4 +21,8 @@ export function isEntry(value: unknown): value is ContentEntry {
     typeof value.sys.id === 'string' &&
     isRecord(value.fields)
   )
+}
+
+export function isRichTextField(field: unknown): field is RichTextDocument {
+  return isRecord(field) && field.nodeType === 'document' && Array.isArray(field.content)
 }
