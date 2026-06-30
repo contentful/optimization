@@ -5,7 +5,7 @@ import {
 import { cookies, headers } from 'next/headers'
 import { cache } from 'react'
 import { appConfig } from './config'
-import { getAppConsent } from './consent'
+import { getAppConsent } from './util'
 
 export const optimization = createNextjsOptimization({
   clientId: appConfig.clientId,

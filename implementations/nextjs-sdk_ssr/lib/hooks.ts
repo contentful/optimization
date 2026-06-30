@@ -2,12 +2,11 @@
 
 import {
   useConsentState,
-  useOptimization,
   useOptimizationActions,
   useOptimizationContext,
 } from '@contentful/optimization-nextjs/client'
 import { useEffect, useReducer, useRef, useState } from 'react'
-import { setAppConsent } from './consent'
+import { setAppConsent } from './util'
 
 export function useConsent(): {
   consent: boolean | undefined
@@ -87,27 +86,4 @@ export function useFlagSubscription(flagName: string): unknown {
   }, [isReady, sdk, flagName])
 
   return value
-}
-
-export function useManualViewTracking(
-  manualTracking: boolean | undefined,
-): (element: HTMLDivElement | null, entryId: string) => void {
-  const sdk = useOptimization()
-  const trackedElement = useRef<HTMLDivElement | null>(null)
-
-  useEffect(
-    () => () => {
-      const { current } = trackedElement
-      if (current) sdk.tracking.clearElement('views', current)
-    },
-    [sdk.tracking],
-  )
-
-  return (element: HTMLDivElement | null, entryId: string): void => {
-    const { current: previous } = trackedElement
-    if (previous && previous !== element) sdk.tracking.clearElement('views', previous)
-    trackedElement.current = element
-    if (!element || !manualTracking) return
-    sdk.tracking.enableElement('views', element, { data: { entryId } })
-  }
 }

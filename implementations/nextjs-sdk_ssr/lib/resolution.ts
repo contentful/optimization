@@ -32,29 +32,30 @@ export interface ResolvedPageData {
   get(id: string): Entry | undefined
 }
 
-function substituteMergeTags(doc: RichTextDocument, profile: Profile): RichTextDocument {
-  const walk = (node: unknown): unknown => {
-    if (!isRecord(node)) return node
-    if (node.nodeType === INLINES.EMBEDDED_ENTRY && isRecord(node.data) && 'target' in node.data) {
-      const value = optimization.getMergeTagValue(node.data.target as never, profile) ?? ''
-      return { ...node, data: { ...node.data, resolvedValue: value } }
-    }
-    if (Array.isArray(node.content)) return { ...node, content: node.content.map(walk) }
-    return node
+function resolveMergeTagNode(node: unknown, profile: Profile): unknown {
+  if (!isRecord(node)) return node
+  if (node.nodeType === INLINES.EMBEDDED_ENTRY && isRecord(node.data) && 'target' in node.data) {
+    const value = optimization.getMergeTagValue(node.data.target as never, profile) ?? ''
+    return { ...node, data: { ...node.data, resolvedValue: value } }
   }
-  return walk(doc) as RichTextDocument
+  if (Array.isArray(node.content)) {
+    return { ...node, content: node.content.map((child) => resolveMergeTagNode(child, profile)) }
+  }
+  return node
 }
 
-function applyMergeTags(entry: ContentEntry, profile: Profile): ContentEntry {
-  const fields = Object.fromEntries(
-    Object.entries(entry.fields).map(([key, value]) => {
+function resolveMergeTags(
+  fields: ContentEntry['fields'],
+  profile: Profile,
+): ContentEntry['fields'] {
+  return Object.fromEntries(
+    Object.entries(fields).map(([key, value]) => {
       if (isRecord(value) && value.nodeType === 'document' && Array.isArray(value.content)) {
-        return [key, substituteMergeTags(value as unknown as RichTextDocument, profile)]
+        return [key, resolveMergeTagNode(value, profile) as RichTextDocument]
       }
       return [key, value]
     }),
   ) as ContentEntry['fields']
-  return { ...entry, fields }
 }
 
 function buildEntry(
@@ -63,34 +64,35 @@ function buildEntry(
   registry: Map<string, ContentEntry>,
   profile: Profile,
   visited: Set<string>,
+  preResolved?: ReturnType<typeof optimization.resolveOptimizedEntry>,
 ): Entry {
   visited.add(baselineEntry.sys.id)
 
+  const resolved =
+    preResolved ?? optimization.resolveOptimizedEntry(baselineEntry, selectedOptimizations)
   const resolvedData = {
-    ...optimization.resolveOptimizedEntry(baselineEntry, selectedOptimizations),
-    entry: resolveEntryLinks(
-      optimization.resolveOptimizedEntry(baselineEntry, selectedOptimizations)
-        .entry as ContentEntry,
-      registry,
-    ),
+    ...resolved,
+    entry: resolveEntryLinks(resolved.entry as ContentEntry, registry),
   } as ServerTrackingResolvedData
 
-  const withMergeTags = applyMergeTags(resolvedData.entry as ContentEntry, profile)
+  const resolvedEntry = resolvedData.entry as ContentEntry
+  const fields = resolveMergeTags(resolvedEntry.fields, profile)
 
-  const nestedBaselines = Array.isArray(withMergeTags.fields.nested)
-    ? withMergeTags.fields.nested.filter(isEntry)
-    : []
-
-  const nested = nestedBaselines
+  const nested = (Array.isArray(fields.nested) ? fields.nested.filter(isEntry) : [])
     .filter((n) => !visited.has(n.sys.id))
     .map((n) => buildEntry(n, selectedOptimizations, registry, profile, new Set(visited)))
 
-  const resolvedEntry: ResolvedEntry = {
-    ...withMergeTags,
-    fields: { ...withMergeTags.fields, nested: nested.length > 0 ? nested : undefined },
+  return {
+    baselineEntry,
+    resolvedData,
+    resolvedEntry: {
+      ...resolvedEntry,
+      fields: {
+        ...fields,
+        nested: nested.length > 0 ? nested : undefined,
+      } as unknown as ResolvedEntry['fields'],
+    },
   }
-
-  return { baselineEntry, resolvedData, resolvedEntry }
 }
 
 export async function loadPageData(entryIds: readonly string[]): Promise<ResolvedPageData> {
@@ -111,18 +113,14 @@ export async function loadPageData(entryIds: readonly string[]): Promise<Resolve
   )
 
   const byId = new Map(
-    entries.map((entry) => [
+    entries.map((entry, i) => [
       entry.sys.id,
-      buildEntry(entry, selectedOptimizations, registry, profile, new Set()),
+      buildEntry(entry, selectedOptimizations, registry, profile, new Set(), resolvedVariants[i]),
     ]),
   )
 
   return {
-    resolve: (ids) =>
-      ids.flatMap((id) => {
-        const e = byId.get(id)
-        return e ? [e] : []
-      }),
+    resolve: (ids) => ids.map((id) => byId.get(id)).filter((e): e is Entry => e !== undefined),
     get: (id) => byId.get(id),
   }
 }
