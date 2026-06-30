@@ -4,7 +4,7 @@ import { loadPageData } from '@/lib/resolution'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 
 export default async function Home() {
-  const { resolvedById, getMergeTagValue, resolveEntry } = await loadPageData(PAGES.home.ids)
+  const { resolvedById } = await loadPageData(PAGES.home.ids)
 
   const liveUpdatesEntry = resolvedById.get(PAGES.home.liveUpdates)?.baselineEntry
 
@@ -64,9 +64,7 @@ export default async function Home() {
                   key={id}
                   baselineEntry={pageEntry.baselineEntry}
                   clickScenario={CLICK_SCENARIOS[id]}
-                  getMergeTagValue={getMergeTagValue}
                   manualTracking={false}
-                  resolveEntry={resolveEntry}
                   resolvedData={pageEntry.resolvedData}
                 />,
               ]
@@ -86,9 +84,7 @@ export default async function Home() {
                 <EntryCard
                   key={id}
                   baselineEntry={pageEntry.baselineEntry}
-                  getMergeTagValue={getMergeTagValue}
                   manualTracking={true}
-                  resolveEntry={resolveEntry}
                   resolvedData={pageEntry.resolvedData}
                 />,
               ]

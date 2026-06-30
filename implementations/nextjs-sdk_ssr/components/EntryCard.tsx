@@ -1,6 +1,6 @@
 import { EntryCardClient } from '@/components/EntryCard.client'
 import type { ContentEntry, RichTextDocument } from '@/lib/contentful'
-import { isRecord } from '@/lib/util'
+import { isEntry, isRecord } from '@/lib/util'
 import {
   ServerOptimizedEntry,
   type ServerTrackingResolvedData,
@@ -12,14 +12,10 @@ import type { JSX } from 'react'
 
 const HOVER_DURATION_UPDATE_INTERVAL_MS = 1000
 
-type MergeTagResolver = (entry: unknown) => string | undefined
-
 interface EntryCardServerProps {
   baselineEntry: ContentEntry
   clickScenario?: EntryClickScenario
-  getMergeTagValue?: MergeTagResolver
   manualTracking: boolean
-  resolveEntry?: (entry: ContentEntry) => ServerTrackingResolvedData
   resolvedData: ServerTrackingResolvedData
   entry?: never
   liveUpdates?: never
@@ -32,9 +28,7 @@ interface EntryCardClientProps {
   testId: string
   baselineEntry?: never
   clickScenario?: never
-  getMergeTagValue?: never
   manualTracking?: never
-  resolveEntry?: never
   resolvedData?: never
 }
 
@@ -44,25 +38,14 @@ function isRichTextField(field: unknown): field is RichTextDocument {
   return isRecord(field) && field.nodeType === 'document' && Array.isArray(field.content)
 }
 
-function isEntry(value: unknown): value is ContentEntry {
-  return (
-    isRecord(value) &&
-    isRecord(value.sys) &&
-    typeof value.sys.id === 'string' &&
-    isRecord(value.fields)
-  )
-}
-
-function buildRenderOptions(getMergeTagValue?: MergeTagResolver): Options {
-  return {
-    renderNode: {
-      [INLINES.EMBEDDED_ENTRY]: (node): string => {
-        const { data } = node
-        if (!isRecord(data) || !('target' in data)) return ''
-        return getMergeTagValue?.(data.target) ?? ''
-      },
+const RENDER_OPTIONS: Options = {
+  renderNode: {
+    [INLINES.EMBEDDED_ENTRY]: (node): string => {
+      const { data } = node
+      if (!isRecord(data)) return ''
+      return typeof data.resolvedValue === 'string' ? data.resolvedValue : ''
     },
-  }
+  },
 }
 
 export function EntryCard(props: EntryCardProps): JSX.Element {
@@ -78,21 +61,13 @@ export function EntryCard(props: EntryCardProps): JSX.Element {
     )
   }
 
-  const {
-    baselineEntry,
-    clickScenario,
-    getMergeTagValue,
-    manualTracking,
-    resolveEntry,
-    resolvedData,
-  } = props
+  const { baselineEntry, clickScenario, manualTracking, resolvedData } = props
   const resolvedEntry = resolvedData.entry as ContentEntry
   const autoTrackViews = !manualTracking
   const richText = Object.values(resolvedEntry.fields).find(isRichTextField)
   const nested = Array.isArray(resolvedEntry.fields.nested)
     ? resolvedEntry.fields.nested.filter(isEntry)
     : []
-  const renderOptions = buildRenderOptions(getMergeTagValue)
 
   const content = (
     <div data-ctfl-entry-id={resolvedEntry.sys.id} data-testid={`content-${baselineEntry.sys.id}`}>
@@ -102,7 +77,7 @@ export function EntryCard(props: EntryCardProps): JSX.Element {
         data-testid={`entry-text-${baselineEntry.sys.id}`}
       >
         {richText ? (
-          <>{documentToReactComponents(richText, renderOptions)}</>
+          <>{documentToReactComponents(richText, RENDER_OPTIONS)}</>
         ) : (
           <p>{typeof resolvedEntry.fields.text === 'string' ? resolvedEntry.fields.text : ''}</p>
         )}
@@ -117,12 +92,10 @@ export function EntryCard(props: EntryCardProps): JSX.Element {
         <div className="entry-card__nested-children">
           {nested.map((nestedEntry) => (
             <EntryCard
-              baselineEntry={nestedEntry}
-              getMergeTagValue={getMergeTagValue}
               key={nestedEntry.sys.id}
+              baselineEntry={nestedEntry}
               manualTracking={false}
-              resolveEntry={resolveEntry}
-              resolvedData={resolveEntry ? resolveEntry(nestedEntry) : { entry: nestedEntry }}
+              resolvedData={{ entry: nestedEntry }}
             />
           ))}
         </div>

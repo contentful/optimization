@@ -14,7 +14,7 @@ function isLink(value: unknown): value is { sys: { type: 'Link'; linkType: 'Entr
   )
 }
 
-function isEntry(value: unknown): value is ContentEntry {
+export function isEntry(value: unknown): value is ContentEntry {
   return (
     isRecord(value) &&
     isRecord(value.sys) &&
