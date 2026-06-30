@@ -1,6 +1,6 @@
 import { EntryCardClient } from '@/components/EntryCard.client'
 import type { ContentEntry, RichTextDocument } from '@/lib/contentful'
-import type { PageEntry } from '@/lib/resolution'
+import type { Entry } from '@/lib/resolution'
 import { isRecord } from '@/lib/util'
 import { ServerOptimizedEntry } from '@contentful/optimization-nextjs/server'
 import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
@@ -11,7 +11,7 @@ import type { JSX } from 'react'
 const HOVER_DURATION_UPDATE_INTERVAL_MS = 1000
 
 interface EntryCardServerProps {
-  entry: PageEntry
+  entry: Entry
   clickScenario?: EntryClickScenario
   manualTracking: boolean
   liveUpdates?: never
@@ -56,7 +56,7 @@ export function EntryCard(props: EntryCardProps): JSX.Element {
   const { baselineEntry, resolvedData, resolvedEntry } = entry
   const autoTrackViews = !manualTracking
   const richText = Object.values(resolvedEntry.fields).find(isRichTextField)
-  const nested: PageEntry[] = resolvedEntry.fields.nested ?? []
+  const nested: Entry[] = resolvedEntry.fields.nested ?? []
 
   const content = (
     <div data-ctfl-entry-id={resolvedEntry.sys.id} data-testid={`content-${baselineEntry.sys.id}`}>

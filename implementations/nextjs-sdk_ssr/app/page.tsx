@@ -4,9 +4,9 @@ import { loadPageData } from '@/lib/resolution'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 
 export default async function Home() {
-  const { resolvedById } = await loadPageData(PAGES.home.ids)
+  const data = await loadPageData(PAGES.home.ids)
 
-  const liveUpdatesEntry = resolvedById.get(PAGES.home.liveUpdates)?.baselineEntry
+  const liveUpdatesEntry = data.get(PAGES.home.liveUpdates)?.baselineEntry
 
   return (
     <>
@@ -56,18 +56,14 @@ export default async function Home() {
             <h2>Auto Observed Entries</h2>
           </header>
           <div id="auto-observed" className="entry-grid">
-            {PAGES.home.auto.flatMap((id) => {
-              const pageEntry = resolvedById.get(id)
-              if (!pageEntry) return []
-              return [
-                <EntryCard
-                  key={id}
-                  entry={pageEntry}
-                  clickScenario={CLICK_SCENARIOS[id]}
-                  manualTracking={false}
-                />,
-              ]
-            })}
+            {data.resolve(PAGES.home.auto).map((entry) => (
+              <EntryCard
+                key={entry.baselineEntry.sys.id}
+                entry={entry}
+                clickScenario={CLICK_SCENARIOS[entry.baselineEntry.sys.id]}
+                manualTracking={false}
+              />
+            ))}
           </div>
         </section>
 
@@ -76,11 +72,9 @@ export default async function Home() {
             <h2>Manually Observed Entries</h2>
           </header>
           <div id="manually-observed" className="entry-grid">
-            {PAGES.home.manual.flatMap((id) => {
-              const pageEntry = resolvedById.get(id)
-              if (!pageEntry) return []
-              return [<EntryCard key={id} entry={pageEntry} manualTracking={true} />]
-            })}
+            {data.resolve(PAGES.home.manual).map((entry) => (
+              <EntryCard key={entry.baselineEntry.sys.id} entry={entry} manualTracking={true} />
+            ))}
           </div>
         </section>
       </div>

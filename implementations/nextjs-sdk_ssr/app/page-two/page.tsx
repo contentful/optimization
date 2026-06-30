@@ -6,10 +6,10 @@ import { PAGES } from 'e2e-web'
 import Link from 'next/link'
 
 export default async function PageTwo() {
-  const { resolvedById } = await loadPageData(PAGES.pageTwo.ids)
+  const data = await loadPageData(PAGES.pageTwo.ids)
 
-  const auto = resolvedById.get(PAGES.pageTwo.auto)
-  const manual = resolvedById.get(PAGES.pageTwo.manual)
+  const auto = data.get(PAGES.pageTwo.auto)
+  const manual = data.get(PAGES.pageTwo.manual)
 
   return (
     <section data-testid="page-two-view">

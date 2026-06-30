@@ -15,20 +15,21 @@ type SelectedOptimizations = Parameters<typeof optimization.resolveOptimizedEntr
 
 export interface ResolvedEntry extends Omit<ContentEntry, 'fields'> {
   fields: Omit<ContentEntry['fields'], 'nested'> & {
-    nested?: PageEntry[]
+    nested?: Entry[]
   }
 }
 
-export interface PageEntry {
+export interface Entry {
   baselineEntry: ContentEntry
   /** Raw resolved data for the SDK (ServerOptimizedEntry). entry is a vanilla ContentEntry. */
   resolvedData: ServerTrackingResolvedData
-  /** Resolved entry for rendering — fields.nested contains resolved PageEntry children. */
+  /** Resolved entry for rendering — fields.nested contains resolved Entry children. */
   resolvedEntry: ResolvedEntry
 }
 
 export interface ResolvedPageData {
-  resolvedById: Map<string, PageEntry>
+  resolve(ids: readonly string[]): Entry[]
+  get(id: string): Entry | undefined
 }
 
 function substituteMergeTags(doc: RichTextDocument, profile: Profile): RichTextDocument {
@@ -56,13 +57,13 @@ function applyMergeTags(entry: ContentEntry, profile: Profile): ContentEntry {
   return { ...entry, fields }
 }
 
-function buildPageEntry(
+function buildEntry(
   baselineEntry: ContentEntry,
   selectedOptimizations: SelectedOptimizations,
   registry: Map<string, ContentEntry>,
   profile: Profile,
   visited: Set<string>,
-): PageEntry {
+): Entry {
   visited.add(baselineEntry.sys.id)
 
   const resolvedData = {
@@ -82,7 +83,7 @@ function buildPageEntry(
 
   const nested = nestedBaselines
     .filter((n) => !visited.has(n.sys.id))
-    .map((n) => buildPageEntry(n, selectedOptimizations, registry, profile, new Set(visited)))
+    .map((n) => buildEntry(n, selectedOptimizations, registry, profile, new Set(visited)))
 
   const resolvedEntry: ResolvedEntry = {
     ...withMergeTags,
@@ -109,12 +110,19 @@ export async function loadPageData(entryIds: readonly string[]): Promise<Resolve
     resolvedVariants.map((r) => r.entry as ContentEntry),
   )
 
-  const resolvedById = new Map(
+  const byId = new Map(
     entries.map((entry) => [
       entry.sys.id,
-      buildPageEntry(entry, selectedOptimizations, registry, profile, new Set()),
+      buildEntry(entry, selectedOptimizations, registry, profile, new Set()),
     ]),
   )
 
-  return { resolvedById }
+  return {
+    resolve: (ids) =>
+      ids.flatMap((id) => {
+        const e = byId.get(id)
+        return e ? [e] : []
+      }),
+    get: (id) => byId.get(id),
+  }
 }
