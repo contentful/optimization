@@ -1,6 +1,14 @@
-import { type ServerTrackingResolvedData } from '@contentful/optimization-nextjs/server'
-import { buildEntryRegistry, extendEntryRegistry, type ContentEntry } from './contentful'
-import { optimization } from './optimization'
+import {
+  type OptimizationData,
+  type ServerTrackingResolvedData,
+} from '@contentful/optimization-nextjs/server'
+import {
+  buildEntryRegistry,
+  extendEntryRegistry,
+  loadPageEntries,
+  type ContentEntry,
+} from './contentful'
+import { getOptimizationData, optimization } from './optimization'
 import { resolveEntryLinks, toIdMap } from './util'
 
 type SelectedOptimizations = Parameters<typeof optimization.resolveOptimizedEntry>[1]
@@ -9,12 +17,15 @@ export interface ResolvedPageData {
   registry: Map<string, ContentEntry>
   entriesById: Map<string, ContentEntry>
   resolvedById: Map<string, ServerTrackingResolvedData>
+  optimizationData: OptimizationData | undefined
 }
 
-export async function resolveOptimizedEntries(
-  entries: ContentEntry[],
-  selectedOptimizations: SelectedOptimizations,
-): Promise<ResolvedPageData> {
+export async function loadPageData(entryIds: readonly string[]): Promise<ResolvedPageData> {
+  const [entries, { data: optimizationData }] = await Promise.all([
+    loadPageEntries(entryIds),
+    getOptimizationData(),
+  ])
+  const selectedOptimizations = optimizationData?.selectedOptimizations
   const registry = await buildEntryRegistry(entries)
   const entriesById = toIdMap(entries)
 
@@ -34,7 +45,7 @@ export async function resolveOptimizedEntries(
     }),
   )
 
-  return { registry, entriesById, resolvedById }
+  return { registry, entriesById, resolvedById, optimizationData }
 }
 
 export function makeResolveEntry(

@@ -1,22 +1,12 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { CustomViewTracker } from '@/components/CustomViewTracker'
 import { EntryCard } from '@/components/EntryCard'
-import { loadPageEntries } from '@/lib/contentful'
-import { getOptimizationData } from '@/lib/optimization'
-import { resolveOptimizedEntries } from '@/lib/resolution'
+import { loadPageData } from '@/lib/resolution'
 import { PAGES } from 'e2e-web'
 import Link from 'next/link'
 
 export default async function PageTwo() {
-  const [entries, { data: optimizationData }] = await Promise.all([
-    loadPageEntries(PAGES.pageTwo.ids),
-    getOptimizationData(),
-  ])
-
-  const { entriesById, resolvedById } = await resolveOptimizedEntries(
-    entries,
-    optimizationData?.selectedOptimizations,
-  )
+  const { entriesById, resolvedById } = await loadPageData(PAGES.pageTwo.ids)
 
   const autoEntry = entriesById.get(PAGES.pageTwo.auto)
   const manualEntry = entriesById.get(PAGES.pageTwo.manual)
