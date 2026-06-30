@@ -1,5 +1,6 @@
 import { createScopedLogger } from '../logger'
 import type { BaseFetchMethodOptions, FetchMethod, FetchMethodCallbackOptions } from './Fetch'
+import { fetchInputToString } from './fetchInputToString'
 
 const logger = createScopedLogger('ApiClient:Retry')
 
@@ -104,12 +105,12 @@ interface RetryFetchCallbackOptions extends RetryFetchMethodOptions {
   /**
    * Initialization options passed to the `fetch` implementation.
    */
-  init: RequestInit
+  init: Parameters<FetchMethod>[1]
 
   /**
    * Request URL.
    */
-  url: string | URL
+  url: Parameters<FetchMethod>[0]
 }
 
 /**
@@ -131,19 +132,21 @@ function createRetryFetchCallback({
   url,
 }: RetryFetchCallbackOptions) {
   return async () => {
+    const urlLabel = fetchInputToString(url)
+
     try {
       const response = await fetchMethod(url, init)
 
       if (response.status === RETRY_RESPONSE_STATUS) {
         throw new HttpError(
-          `${apiName} API request to "${url.toString()}" failed with status: "[${response.status}] ${response.statusText}".`,
+          `${apiName} API request to "${urlLabel}" failed with status: "[${response.status}] ${response.statusText}".`,
           RETRY_RESPONSE_STATUS,
         )
       }
 
       if (!response.ok) {
         const httpError = new Error(
-          `Request to "${url.toString()}" failed with status: [${response.status}] ${response.statusText} - traceparent: ${response.headers.get('traceparent')}`,
+          `Request to "${urlLabel}" failed with status: [${response.status}] ${response.statusText} - traceparent: ${response.headers.get('traceparent')}`,
         )
         logger.error('Request failed with non-OK status:', httpError)
 
@@ -152,7 +155,7 @@ function createRetryFetchCallback({
         return
       }
 
-      logger.debug(`Response from "${url.toString()}":`, response)
+      logger.debug(`Response from "${urlLabel}":`, response)
 
       return response
     } catch (error) {
@@ -160,7 +163,7 @@ function createRetryFetchCallback({
         throw error
       }
 
-      logger.error(`Request to "${url.toString()}" failed:`, error)
+      logger.error(`Request to "${urlLabel}" failed:`, error)
 
       controller.abort()
     }
@@ -225,7 +228,7 @@ export function createRetryFetchMethod({
   onFailedAttempt,
   retries = DEFAULT_RETRY_COUNT,
 }: RetryFetchMethodOptions = {}): FetchMethod {
-  return async (url: string | URL, init: RequestInit) => {
+  return async (url, init) => {
     const controller = new AbortController()
     const maxAttempts = retries + 1
     const attemptFetch = createRetryFetchCallback({
@@ -267,6 +270,6 @@ export function createRetryFetchMethod({
       }
     }
 
-    throw new Error(`${apiName} API request to "${url.toString()}" may not be retried.`)
+    throw new Error(`${apiName} API request to "${fetchInputToString(url)}" may not be retried.`)
   }
 }

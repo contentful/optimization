@@ -7,6 +7,7 @@ import type { SelectedOptimizationArray } from '@contentful/optimization-core/ap
 import type { Entry, EntrySkeletonType } from 'contentful'
 import ContentfulOptimization from '../ContentfulOptimization'
 import type { OptimizationRootSdk } from '../presentation'
+import { isRecord } from '../test/typeGuards'
 import { ContentfulOptimizationRootElement } from './ContentfulOptimizationRootElement'
 import {
   ContentfulOptimizedEntryElement,
@@ -210,10 +211,6 @@ function createEntryElement(baselineEntry: Entry): ContentfulOptimizedEntryEleme
   entry.baselineEntry = baselineEntry
 
   return entry
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }
 
 function isEntryDetail(value: unknown): value is ContentfulOptimizedEntryEventDetail {

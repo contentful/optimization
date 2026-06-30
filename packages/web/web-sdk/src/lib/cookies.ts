@@ -1,8 +1,25 @@
 const EXPIRED_UTC = 'Thu, 01 Jan 1970 00:00:00 GMT'
 const MS_IN_DAY = 86_400_000
 
-interface CookieAttributes {
+/**
+ * Supported cookie attributes for the Web SDK.
+ *
+ * @public
+ * @remarks
+ * These options are used when persisting the anonymous ID cookie.
+ */
+export interface CookieAttributes {
+  /**
+   * Cookie domain attribute.
+   *
+   * @remarks
+   * If omitted, the browser will scope the cookie to the current host.
+   */
   domain?: string
+
+  /**
+   * Determines the expiration date of the cookie as the number of days until the cookie expires.
+   */
   expires?: number
 }
 

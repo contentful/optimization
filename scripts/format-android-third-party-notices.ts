@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs'
+import { isRecord } from './typeGuards'
 
 interface Scm {
   url?: string
@@ -33,10 +34,6 @@ if (!inputPath || !outputPath) {
 const report: unknown = JSON.parse(readFileSync(inputPath, 'utf8'))
 const libraries = getLibraries(report)
 const licenses = getLicenses(report)
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 function isOptionalString(value: unknown): boolean {
   return typeof value === 'string' || value === undefined

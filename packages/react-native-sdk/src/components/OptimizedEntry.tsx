@@ -1,6 +1,6 @@
 import type { ResolvedData } from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
-import { isOptimizedEntry } from '@contentful/optimization-core/api-schemas'
+import { isResolvedOptimizedEntry } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import React, { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
@@ -133,7 +133,7 @@ export interface OptimizedEntryProps {
 
   /**
    * Optional callback invoked with the resolved entry after a tap tracking event is emitted.
-   * When provided, implicitly enables tap tracking unless `trackTaps` is explicitly `false`.
+   * When provided, keeps tap tracking enabled unless `trackTaps` is explicitly `false`.
    *
    * @defaultValue `undefined`
    */
@@ -191,9 +191,9 @@ function resolveTapsEnabled(
  * </OptimizedEntry>
  * ```
  *
- * @example With tap tracking
+ * @example With tap handling
  * ```tsx
- * <OptimizedEntry baselineEntry={entry} trackTaps>
+ * <OptimizedEntry baselineEntry={entry}>
  *   {(resolvedEntry) => (
  *     <Pressable onPress={() => navigate(resolvedEntry)}>
  *       <Card title={resolvedEntry.fields.title} />
@@ -224,7 +224,7 @@ export function OptimizedEntry({
   const liveUpdatesContext = useLiveUpdates()
   const interactionTracking = useInteractionTracking()
 
-  const isOptimized = isOptimizedEntry(baselineEntry)
+  const isOptimized = isResolvedOptimizedEntry(baselineEntry)
 
   const shouldLiveUpdate =
     liveUpdatesContext?.previewPanelVisible === true ||

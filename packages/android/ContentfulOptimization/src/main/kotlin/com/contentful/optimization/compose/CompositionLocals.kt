@@ -8,9 +8,15 @@ public val LocalOptimizationClient = staticCompositionLocalOf<OptimizationClient
     error("No OptimizationClient provided. Wrap your content in OptimizationRoot.")
 }
 
+/**
+ * Global tracking defaults for Compose entry components.
+ *
+ * Entry view and tap tracking both default to enabled. Pass `false` for either value to opt out
+ * globally, or override individual `OptimizedEntry` composables.
+ */
 public data class TrackingConfig(
     val trackViews: Boolean = true,
-    val trackTaps: Boolean = false,
+    val trackTaps: Boolean = true,
     val liveUpdates: Boolean = false,
 )
 

@@ -80,12 +80,7 @@ export const sweepOrphans = <TState extends ObserverLifecycleState>(
       continue
     }
 
-    const isConnected =
-      typeof (element as Element & { isConnected?: boolean }).isConnected === 'boolean'
-        ? (element as Element & { isConnected?: boolean }).isConnected
-        : typeof document !== 'undefined' && document.contains(element)
-
-    if (!isConnected) {
+    if (!element.isConnected) {
       safeAutoUnobserve(element, state, { activeStates, states }, unobserve)
     }
   }

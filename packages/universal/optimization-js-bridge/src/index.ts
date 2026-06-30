@@ -12,9 +12,10 @@ import {
   shouldSendStickyEntryView,
   signals,
 } from '@contentful/optimization-core'
+import { isRecord } from '@contentful/optimization-core/api-schemas'
 import {
   type AudienceDefinition,
-  type ContentfulEntry,
+  type ContentfulEntryCollection,
   createAudienceDefinitions,
   createExperienceDefinitions,
   createExperienceNameMap,
@@ -189,8 +190,8 @@ interface Bridge {
   resetVariantOverride: (experienceId: string) => void
   resetAllOverrides: () => void
   loadDefinitions: (
-    audienceEntries: ContentfulEntry[],
-    experienceEntries: ContentfulEntry[],
+    audienceEntries: ContentfulEntryCollection,
+    experienceEntries: ContentfulEntryCollection,
   ) => string
   getPreviewState: () => string
 }
@@ -215,9 +216,6 @@ const serializeEventEmissionResult = (result: EventEmissionResult): string => {
   return JSON.stringify({ accepted: true, data: result.data })
 }
 
-const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
 type PayloadFieldType = 'boolean' | 'number' | 'object' | 'string'
 
 interface PayloadFieldRule {
@@ -229,14 +227,14 @@ interface PayloadFieldRule {
 const fieldArticle = (type: PayloadFieldType): 'a' | 'an' => (type === 'object' ? 'an' : 'a')
 
 const isFieldType = (value: unknown, type: PayloadFieldType): boolean =>
-  type === 'object' ? isObjectRecord(value) : typeof value === type
+  type === 'object' ? isRecord(value) : typeof value === type
 
 const validatePayload = (
   method: string,
   payload: unknown,
   fields: readonly PayloadFieldRule[],
 ): string | null => {
-  if (!isObjectRecord(payload)) return `${method} payload must be an object.`
+  if (!isRecord(payload)) return `${method} payload must be an object.`
 
   for (const { key, required, type } of fields) {
     const value = payload[key]

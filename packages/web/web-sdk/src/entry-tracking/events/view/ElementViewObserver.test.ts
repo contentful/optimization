@@ -6,6 +6,7 @@ import {
   makeElement,
   setDocumentVisibility,
 } from '../../../test/helpers'
+import { isRecord } from '../../../test/typeGuards'
 import * as ElementView from './element-view-observer-support'
 import ElementViewObserver from './ElementViewObserver'
 
@@ -16,16 +17,12 @@ interface Meta {
   data?: unknown
 }
 
-function isRecord(x: unknown): x is Record<string, unknown> {
-  return typeof x === 'object' && x !== null
-}
-
-function isMeta(x: unknown): x is Meta {
+function isMeta(value: unknown): value is Meta {
   return (
-    isRecord(x) &&
-    typeof x.totalVisibleMs === 'number' &&
-    typeof x.viewId === 'string' &&
-    typeof x.attempts === 'number'
+    isRecord(value) &&
+    typeof value.totalVisibleMs === 'number' &&
+    typeof value.viewId === 'string' &&
+    typeof value.attempts === 'number'
   )
 }
 

@@ -1,13 +1,15 @@
 'use client'
 
-import type { ContentEntry as ContentEntryType, RichTextDocument } from '@/lib/contentful'
+import type { ContentEntrySkeleton, ContentEntry as ContentEntryType } from '@/lib/contentful'
 import { useManualViewTracking } from '@/lib/hooks'
-import { isRecord } from '@/lib/util'
 import {
-  OptimizedEntry,
   isMergeTagEntry,
-  useMergeTagResolver,
-} from '@contentful/optimization-nextjs/client'
+  isRecord,
+  isResolvedContentfulEntry,
+  isRichTextDocument,
+  isUnresolvedEntryLink,
+} from '@contentful/optimization-nextjs/api-schemas'
+import { OptimizedEntry, useMergeTagResolver } from '@contentful/optimization-nextjs/client'
 import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
 import { INLINES } from '@contentful/rich-text-types'
 import type { EntryClickScenario } from 'e2e-web'
@@ -23,19 +25,6 @@ export interface EntryCardProps {
 
 const HOVER_DURATION_UPDATE_INTERVAL_MS = 1000
 
-function isRichTextField(field: unknown): field is RichTextDocument {
-  return isRecord(field) && field.nodeType === 'document' && Array.isArray(field.content)
-}
-
-function isEntry(value: unknown): value is ContentEntryType {
-  return (
-    isRecord(value) &&
-    isRecord(value.sys) &&
-    typeof value.sys.id === 'string' &&
-    isRecord(value.fields)
-  )
-}
-
 function useRichTextRenderer(): Options {
   const { getMergeTagValue } = useMergeTagResolver()
   return {
@@ -44,11 +33,7 @@ function useRichTextRenderer(): Options {
         const { data } = node
         if (!isRecord(data) || !('target' in data)) return '[Merge Tag]'
         const { target } = data
-        if (
-          (isRecord(target) && isRecord(target.sys) && target.sys.type === 'Link') ||
-          !isMergeTagEntry(target)
-        )
-          return '[Merge Tag]'
+        if (isUnresolvedEntryLink(target) || !isMergeTagEntry(target)) return '[Merge Tag]'
         return getMergeTagValue(target) ?? ''
       },
     },
@@ -77,9 +62,9 @@ export function EntryCard({
         trackViews={autoTracking ? undefined : false}
       >
         {(resolvedEntry: ContentEntryType) => {
-          const richText = Object.values(resolvedEntry.fields).find(isRichTextField)
+          const richText = Object.values(resolvedEntry.fields).find(isRichTextDocument)
           const nested = Array.isArray(resolvedEntry.fields.nested)
-            ? resolvedEntry.fields.nested.filter(isEntry)
+            ? resolvedEntry.fields.nested.filter(isResolvedContentfulEntry<ContentEntrySkeleton>)
             : []
 
           const content = (

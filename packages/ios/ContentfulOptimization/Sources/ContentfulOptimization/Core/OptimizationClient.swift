@@ -527,16 +527,16 @@ public final class OptimizationClient: ObservableObject {
         bridgeCallSyncWhenInitialized(method: "resetAllOverrides")
     }
 
-    /// Hand Contentful audience and experience entries to the JS core SDK so it
+    /// Hand Contentful audience and experience entry collections to the JS core SDK so it
     /// can run the shared entry mappers and serve a pre-baked preview model via
     /// ``getPreviewState()``. Call this once on panel open after fetching entries
     /// from Contentful via ``PreviewContentfulClient``.
     public func loadDefinitions(
-        audiences: [[String: Any]],
-        experiences: [[String: Any]]
+        audiences: ContentfulEntriesResult,
+        experiences: ContentfulEntriesResult
     ) throws {
-        let audienceData = try JSONSerialization.data(withJSONObject: audiences, options: [])
-        let experienceData = try JSONSerialization.data(withJSONObject: experiences, options: [])
+        let audienceData = try JSONSerialization.data(withJSONObject: audiences.bridgePayload, options: [])
+        let experienceData = try JSONSerialization.data(withJSONObject: experiences.bridgePayload, options: [])
         guard
             let audienceJSON = String(data: audienceData, encoding: .utf8),
             let experienceJSON = String(data: experienceData, encoding: .utf8)

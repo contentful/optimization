@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Contentful Optimization & Analytics</h1>
+<h1 align="center">Contentful Personalization & Analytics</h1>
 
 <h3 align="center">Optimization iOS SDK</h3>
 
@@ -41,7 +41,7 @@ In `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/contentful/optimization.swift.git", from: "0.1.0"),
+    .package(url: "https://github.com/contentful/optimization.swift.git", from: "<version>"),
 ],
 targets: [
     .target(
@@ -55,6 +55,10 @@ targets: [
 
 Or in Xcode: **File > Add Package Dependencies…** and paste
 `https://github.com/contentful/optimization.swift`.
+
+Choose the latest released tag from
+[`contentful/optimization.swift`](https://github.com/contentful/optimization.swift/tags) and use
+that value for `<version>`.
 
 ## Quick start
 
@@ -173,6 +177,8 @@ fetch Contentful entries for your app layer, so the CDA locale belongs in your C
   `AnyPublisher<JSONValue?, Never>` that updates as flag values change.
 - Use `client.eventStream` and `client.blockedEventStream` for analytics debugging, tests, and
   consent-gating diagnostics.
+- SwiftUI entry view and tap tracking default to enabled. Pass `trackViews: false` or
+  `trackTaps: false` to `OptimizationRoot` or `OptimizedEntry` when a screen or entry must opt out.
 - Analytics events queue while the device is offline and flush when connectivity returns or the app
   moves toward the background.
 

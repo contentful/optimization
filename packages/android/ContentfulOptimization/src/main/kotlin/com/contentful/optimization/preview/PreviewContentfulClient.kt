@@ -19,11 +19,21 @@ public data class ContentfulEntriesResult(
     val skip: Int,
     val limit: Int,
     val includes: ContentfulIncludes = ContentfulIncludes(),
-)
+) {
+    internal fun toBridgePayload(): Map<String, Any> = mapOf(
+        "items" to items,
+        "total" to total,
+        "skip" to skip,
+        "limit" to limit,
+        "includes" to includes.toBridgePayload(),
+    )
+}
 
 public data class ContentfulIncludes(
     val entries: List<Map<String, Any>> = emptyList(),
-)
+) {
+    internal fun toBridgePayload(): Map<String, Any> = mapOf("Entry" to entries)
+}
 
 public sealed class ContentfulPreviewError(message: String) : Exception(message) {
     class InvalidURL : ContentfulPreviewError("Invalid Contentful API URL")

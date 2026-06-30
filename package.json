@@ -12,7 +12,7 @@
     "docs:generate": "typedoc",
     "docs:watch": "typedoc --watch",
     "format:check": "prettier . --check",
-    "format:fix": "prettier . --check --write",
+    "format:fix": "prettier . --write",
     "implementation:install": "pnpm run build:pkgs && pnpm run implementation:run -- --all -- implementation:install",
     "implementation:ios-sdk": "pnpm run implementation:run -- ios-sdk",
     "implementation:node-sdk": "pnpm run implementation:run -- node-sdk",

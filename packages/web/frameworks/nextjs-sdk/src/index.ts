@@ -6,6 +6,7 @@
  *
  * - `@contentful/optimization-nextjs/client`
  * - `@contentful/optimization-nextjs/server`
+ * - `@contentful/optimization-nextjs/esr`
  * - `@contentful/optimization-nextjs/request-handler`
  * - `@contentful/optimization-nextjs/tracking-attributes`
  *

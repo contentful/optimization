@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, extname, relative, resolve, sep } from 'node:path'
 import { gzipSync } from 'node:zlib'
+import { isRecord } from './typeGuards'
 
 export interface BundleSizeResult {
   files: string[]
@@ -30,10 +31,6 @@ const LOCAL_IMPORT_PATTERN =
   /\bimport\s*(?:[^'"]*?from\s*)?['"]([^'"]+)['"]|\bexport\s*[^'"]*?from\s*['"]([^'"]+)['"]|\brequire\(\s*['"]([^'"]+)['"]\s*\)/g
 const PARSEABLE_EXTENSIONS = new Set(['.cjs', '.js', '.mjs'])
 const RESOLVABLE_EXTENSIONS = ['', '.mjs', '.cjs', '.js', '.css', '.json']
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
 
 function hasPositiveNumberValues(value: unknown): value is Record<string, number> {
   return (

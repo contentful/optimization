@@ -10,6 +10,11 @@ client.
 - Do not import `@contentful/optimization-core` directly.
 - Keep server entries free of client directives and browser-only assumptions.
 - Keep client entries marked with `"use client"` and free of Node-only imports.
+- Next.js middleware/proxy helpers in this package MUST be safely chainable. When an existing
+  `NextResponse` is provided, preserve it and all non-SDK chain state on it: rewrites, redirects,
+  cookies, response headers, and request overrides encoded in `x-middleware-override-headers` plus
+  `x-middleware-request-*`. Only remove or replace SDK-owned request context such as `x-ctfl-opt-*`,
+  and always cover composition with a prior `NextResponse.next({ request: { headers } })` in tests.
 
 ## Commands
 

@@ -75,8 +75,8 @@ export function resolveTrackEntryInteractionOptions(
   trackEntryInteraction: TrackEntryInteractionOptions | undefined,
 ): Required<AutoTrackEntryInteractionOptions> {
   return {
-    clicks: trackEntryInteraction?.clicks ?? false,
-    hovers: trackEntryInteraction?.hovers ?? false,
+    clicks: trackEntryInteraction?.clicks ?? true,
+    hovers: trackEntryInteraction?.hovers ?? true,
     views: trackEntryInteraction?.views ?? true,
   }
 }

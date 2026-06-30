@@ -1,6 +1,7 @@
 import ContentfulOptimization from '@contentful/optimization-web'
+import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
 import { beforeEach, describe, expect, it, rs } from '@rstest/core'
-import { act } from 'react'
+import { act, type ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
 import { resetAutoPageEmitterState, useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
@@ -8,6 +9,7 @@ import type { OptimizationContextValue } from '../context/OptimizationContext'
 import {
   OptimizationProvider,
   type OptimizationProviderProps,
+  OptimizationRoot,
   type OptimizationRootProps,
   type OptimizationSdk,
   useOptimization,
@@ -67,6 +69,86 @@ function createPageEvent(): EventPayload {
   }
 }
 
+function createServerOptimizationState(profileId: string): OptimizationData {
+  return {
+    changes: [],
+    selectedOptimizations: [],
+    profile: {
+      id: profileId,
+      stableId: profileId,
+      random: 0.5,
+      audiences: [],
+      traits: {},
+      location: {},
+      session: {
+        id: `${profileId}-session`,
+        isReturningVisitor: false,
+        landingPage: {
+          path: '/',
+          query: {},
+          referrer: '',
+          search: '',
+          title: '',
+          url: 'http://localhost/',
+        },
+        count: 1,
+        activeSessionLength: 0,
+        averageSessionLength: 0,
+      },
+    },
+  }
+}
+
+interface ClientRenderOptions {
+  readonly beforeRender?: boolean
+}
+
+interface ClientRenderResult {
+  readonly unmount: () => void
+}
+
+function createClientRoot(): {
+  render: (element: ReactElement) => void
+  renderAsync: (element: ReactElement, options?: ClientRenderOptions) => Promise<void>
+} & ClientRenderResult {
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  const root = createRoot(container)
+
+  return {
+    render(element) {
+      act(() => {
+        root.render(element)
+      })
+    },
+    async renderAsync(element, { beforeRender = false } = {}) {
+      await act(async () => {
+        if (beforeRender) await Promise.resolve()
+        root.render(element)
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+    },
+    unmount() {
+      act(() => {
+        root.unmount()
+      })
+      container.remove()
+    },
+  }
+}
+
+async function renderClientAsync(
+  element: ReactElement,
+  { beforeRender = false }: ClientRenderOptions = {},
+): Promise<ClientRenderResult> {
+  const clientRoot = createClientRoot()
+
+  await clientRoot.renderAsync(element, { beforeRender })
+
+  return clientRoot
+}
+
 describe('OptimizationProvider onStatesReady', () => {
   beforeEach(() => {
     resetAutoPageEmitterState()
@@ -121,33 +203,135 @@ describe('OptimizationProvider onStatesReady', () => {
         },
       },
     })
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-    const root = createRoot(container)
-
-    await act(async () => {
-      await Promise.resolve()
-      root.render(
-        <OptimizationProvider
-          sdk={sdk}
-          onStatesReady={(states) =>
-            states.eventStream.subscribe((event) => {
-              if (event) observedEvents.push(event)
-            }).unsubscribe
-          }
-        >
-          <TestAutoPageEmitter />
-        </OptimizationProvider>,
-      )
-    })
+    const rendered = await renderClientAsync(
+      <OptimizationProvider
+        sdk={sdk}
+        onStatesReady={(states) =>
+          states.eventStream.subscribe((event) => {
+            if (event) observedEvents.push(event)
+          }).unsubscribe
+        }
+      >
+        <TestAutoPageEmitter />
+      </OptimizationProvider>,
+      { beforeRender: true },
+    )
 
     expect(page).toHaveBeenCalledTimes(1)
     expect(observedEvents).toEqual([pageEvent])
 
-    act(() => {
-      root.unmount()
-    })
-    container.remove()
+    rendered.unmount()
+  })
+
+  it('applies serverOptimizationState to owned SDK instances before onStatesReady and child render', async () => {
+    const serverOptimizationState = createServerOptimizationState('owned-server-profile')
+    const setupOrder: string[] = []
+    let profileFromOnStatesReady: OptimizationData['profile'] | undefined = undefined
+    let profileFromChild: OptimizationData['profile'] | undefined = undefined
+
+    function Probe(): null {
+      setupOrder.push('child')
+      profileFromChild = useOptimization().states.profile.current
+      return null
+    }
+
+    const rendered = await renderClientAsync(
+      <OptimizationProvider
+        clientId={testConfig.clientId}
+        environment={testConfig.environment}
+        api={testConfig.api}
+        serverOptimizationState={serverOptimizationState}
+        onStatesReady={(states) => {
+          setupOrder.push('onStatesReady')
+          profileFromOnStatesReady = states.profile.current
+        }}
+      >
+        <Probe />
+      </OptimizationProvider>,
+    )
+
+    expect(setupOrder).toEqual(['onStatesReady', 'child'])
+    expect(profileFromOnStatesReady).toEqual(serverOptimizationState.profile)
+    expect(profileFromChild).toEqual(serverOptimizationState.profile)
+    rendered.unmount()
+  })
+
+  it('applies serverOptimizationState to injected SDK instances before child render', async () => {
+    const serverOptimizationState = createServerOptimizationState('injected-server-profile')
+    const sdk = new ContentfulOptimization(testConfig)
+    let profileFromChild: OptimizationData['profile'] | undefined = undefined
+
+    function Probe(): null {
+      profileFromChild = useOptimization().states.profile.current
+      return null
+    }
+
+    const rendered = await renderClientAsync(
+      <OptimizationProvider sdk={sdk} serverOptimizationState={serverOptimizationState}>
+        <Probe />
+      </OptimizationProvider>,
+    )
+
+    expect(profileFromChild).toEqual(serverOptimizationState.profile)
+    rendered.unmount()
+    sdk.destroy()
+  })
+
+  it('applies serverOptimizationState to injected SDK instances before onStatesReady and child render', async () => {
+    const serverOptimizationState = createServerOptimizationState('injected-ready-profile')
+    const sdk = new ContentfulOptimization(testConfig)
+    const setupOrder: string[] = []
+    let profileFromOnStatesReady: OptimizationData['profile'] | undefined = undefined
+    let profileFromChild: OptimizationData['profile'] | undefined = undefined
+
+    function Probe(): null {
+      setupOrder.push('child')
+      profileFromChild = useOptimization().states.profile.current
+      return null
+    }
+
+    const rendered = await renderClientAsync(
+      <OptimizationProvider
+        sdk={sdk}
+        serverOptimizationState={serverOptimizationState}
+        onStatesReady={(states) => {
+          setupOrder.push('onStatesReady')
+          profileFromOnStatesReady = states.profile.current
+        }}
+      >
+        <Probe />
+      </OptimizationProvider>,
+    )
+
+    expect(setupOrder).toEqual(['onStatesReady', 'child'])
+    expect(profileFromOnStatesReady).toEqual(serverOptimizationState.profile)
+    expect(profileFromChild).toEqual(serverOptimizationState.profile)
+    rendered.unmount()
+    sdk.destroy()
+  })
+
+  it('passes serverOptimizationState through OptimizationRoot before child render', async () => {
+    const serverOptimizationState = createServerOptimizationState('root-server-profile')
+    let profileFromChild: OptimizationData['profile'] | undefined = undefined
+
+    function Probe(): null {
+      profileFromChild = useOptimization().states.profile.current
+      return null
+    }
+
+    const rendered = await renderClientAsync(
+      <OptimizationRoot
+        clientId={testConfig.clientId}
+        environment={testConfig.environment}
+        api={testConfig.api}
+        serverOptimizationState={serverOptimizationState}
+      >
+        <Probe />
+      </OptimizationRoot>,
+    )
+
+    expect(profileFromChild).toEqual(serverOptimizationState.profile)
+    rendered.unmount()
   })
 
   it('does not construct owned sdk instances during server render', () => {
@@ -199,38 +383,29 @@ describe('OptimizationProvider onStatesReady', () => {
   it('preserves injected sdk context identity across unchanged provider rerenders', () => {
     const sdk = createOptimizationSdk()
     const capturedContexts: OptimizationContextValue[] = []
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-    const root = createRoot(container)
+    const rendered = createClientRoot()
 
     function Probe(): null {
       capturedContexts.push(useOptimizationContext())
       return null
     }
 
-    act(() => {
-      root.render(
-        <OptimizationProvider sdk={sdk}>
-          <Probe />
-        </OptimizationProvider>,
-      )
-    })
+    rendered.render(
+      <OptimizationProvider sdk={sdk}>
+        <Probe />
+      </OptimizationProvider>,
+    )
 
-    act(() => {
-      root.render(
-        <OptimizationProvider sdk={sdk}>
-          <Probe />
-        </OptimizationProvider>,
-      )
-    })
+    rendered.render(
+      <OptimizationProvider sdk={sdk}>
+        <Probe />
+      </OptimizationProvider>,
+    )
 
     expect(capturedContexts).toHaveLength(2)
     expect(capturedContexts[1]).toBe(capturedContexts[0])
 
-    act(() => {
-      root.unmount()
-    })
-    container.remove()
+    rendered.unmount()
   })
 
   it('does not render injected sdk children during server render when state setup must run first', () => {
@@ -258,29 +433,25 @@ describe('OptimizationProvider onStatesReady', () => {
     const error = new Error('states setup failed')
     let capturedContext: OptimizationContextValue | null = null
     const destroySpy = rs.spyOn(ContentfulOptimization.prototype, 'destroy')
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-    const root = createRoot(container)
+    const rendered = createClientRoot()
 
     function Probe(): null {
       capturedContext = useOptimizationContext()
       return null
     }
 
-    act(() => {
-      root.render(
-        <OptimizationProvider
-          clientId={testConfig.clientId}
-          environment={testConfig.environment}
-          api={testConfig.api}
-          onStatesReady={() => {
-            throw error
-          }}
-        >
-          <Probe />
-        </OptimizationProvider>,
-      )
-    })
+    rendered.render(
+      <OptimizationProvider
+        clientId={testConfig.clientId}
+        environment={testConfig.environment}
+        api={testConfig.api}
+        onStatesReady={() => {
+          throw error
+        }}
+      >
+        <Probe />
+      </OptimizationProvider>,
+    )
 
     expect(capturedContext).toEqual({
       sdk: undefined,
@@ -290,10 +461,7 @@ describe('OptimizationProvider onStatesReady', () => {
     expect(destroySpy).toHaveBeenCalledTimes(1)
     expect(window.contentfulOptimization).toBeUndefined()
     destroySpy.mockRestore()
-    act(() => {
-      root.unmount()
-    })
-    container.remove()
+    rendered.unmount()
   })
 
   it('runs callback cleanup for injected SDK instances without taking teardown ownership', () => {
@@ -301,34 +469,27 @@ describe('OptimizationProvider onStatesReady', () => {
     const destroySpy = rs.spyOn(sdk, 'destroy')
     const cleanup = rs.fn()
     let capturedOptimization: ReturnType<typeof useOptimization> | undefined = undefined
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-    const root = createRoot(container)
+    const rendered = createClientRoot()
 
     function Probe(): null {
       capturedOptimization = useOptimization()
       return null
     }
 
-    act(() => {
-      root.render(
-        <OptimizationProvider sdk={sdk} onStatesReady={() => cleanup}>
-          <Probe />
-        </OptimizationProvider>,
-      )
-    })
+    rendered.render(
+      <OptimizationProvider sdk={sdk} onStatesReady={() => cleanup}>
+        <Probe />
+      </OptimizationProvider>,
+    )
 
     const optimization = requireOptimizationSdk(capturedOptimization)
 
     expect(optimization).toBe(sdk)
 
-    act(() => {
-      root.unmount()
-    })
+    rendered.unmount()
 
     expect(cleanup).toHaveBeenCalledTimes(1)
     expect(destroySpy).not.toHaveBeenCalled()
-    container.remove()
   })
 
   it('runs onStatesReady cleanup before owned sdk teardown', () => {
@@ -340,33 +501,26 @@ describe('OptimizationProvider onStatesReady', () => {
         order.push('destroy')
         originalDestroy.call(this)
       })
-    const container = document.createElement('div')
-    document.body.append(container)
-    const root = createRoot(container)
+    const rendered = createClientRoot()
 
-    act(() => {
-      root.render(
-        <OptimizationProvider
-          clientId={testConfig.clientId}
-          environment={testConfig.environment}
-          api={testConfig.api}
-          onStatesReady={() => () => {
-            order.push('cleanup')
-          }}
-        >
-          <div />
-        </OptimizationProvider>,
-      )
-    })
+    rendered.render(
+      <OptimizationProvider
+        clientId={testConfig.clientId}
+        environment={testConfig.environment}
+        api={testConfig.api}
+        onStatesReady={() => () => {
+          order.push('cleanup')
+        }}
+      >
+        <div />
+      </OptimizationProvider>,
+    )
 
-    act(() => {
-      root.unmount()
-    })
+    rendered.unmount()
 
     expect(order).toEqual(['cleanup', 'destroy'])
     expect(destroySpy).toHaveBeenCalledTimes(1)
     destroySpy.mockRestore()
-    container.remove()
   })
 
   it('captures provider props on first mount until the key changes', () => {
@@ -375,40 +529,31 @@ describe('OptimizationProvider onStatesReady', () => {
     const firstReady = rs.fn()
     const secondReady = rs.fn()
     let capturedOptimization: ReturnType<typeof useOptimization> | undefined = undefined
-    const container = document.createElement('div')
-    document.body.append(container)
-    const root = createRoot(container)
+    const rendered = createClientRoot()
 
     function Probe(): null {
       capturedOptimization = useOptimization()
       return null
     }
 
-    act(() => {
-      root.render(
-        <OptimizationProvider sdk={firstSdk} onStatesReady={firstReady}>
-          <Probe />
-        </OptimizationProvider>,
-      )
-    })
+    rendered.render(
+      <OptimizationProvider sdk={firstSdk} onStatesReady={firstReady}>
+        <Probe />
+      </OptimizationProvider>,
+    )
 
     expect(requireOptimizationSdk(capturedOptimization)).toBe(firstSdk)
 
-    act(() => {
-      root.render(
-        <OptimizationProvider sdk={secondSdk} onStatesReady={secondReady}>
-          <Probe />
-        </OptimizationProvider>,
-      )
-    })
+    rendered.render(
+      <OptimizationProvider sdk={secondSdk} onStatesReady={secondReady}>
+        <Probe />
+      </OptimizationProvider>,
+    )
 
     expect(requireOptimizationSdk(capturedOptimization)).toBe(firstSdk)
     expect(firstReady).toHaveBeenCalledTimes(1)
     expect(secondReady).not.toHaveBeenCalled()
 
-    act(() => {
-      root.unmount()
-    })
-    container.remove()
+    rendered.unmount()
   })
 })

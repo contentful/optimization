@@ -1455,7 +1455,7 @@ final class OptimizationClientTests: XCTestCase {
     func testTrackingConfigDefaults() {
         let config = TrackingConfig()
         XCTAssertTrue(config.trackViews)
-        XCTAssertFalse(config.trackTaps)
+        XCTAssertTrue(config.trackTaps)
         XCTAssertFalse(config.liveUpdates)
     }
 
@@ -1464,6 +1464,13 @@ final class OptimizationClientTests: XCTestCase {
         XCTAssertFalse(config.trackViews)
         XCTAssertTrue(config.trackTaps)
         XCTAssertTrue(config.liveUpdates)
+    }
+
+    func testTrackingConfigOptOutValues() {
+        let config = TrackingConfig(trackViews: false, trackTaps: false)
+        XCTAssertFalse(config.trackViews)
+        XCTAssertFalse(config.trackTaps)
+        XCTAssertFalse(config.liveUpdates)
     }
 
     // MARK: - Phase 3: ScrollContext Tests

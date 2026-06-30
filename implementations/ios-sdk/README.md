@@ -61,7 +61,8 @@ CDA requests when they should stay aligned.
 - Xcode with an iOS Simulator available.
 - pnpm workspace dependencies installed from the monorepo root.
 - XcodeGen for changes that add, rename, or move iOS source files.
-- The mock server running at `http://localhost:8000`.
+- The mock server at `http://localhost:8000` for manual `xcodebuild` and raw Xcode flows. The local
+  bootstrap and E2E runner scripts start the mock server themselves.
 
 ## Project generation
 
@@ -75,11 +76,17 @@ xcodegen generate
 
 ## Setup
 
-From the monorepo root, start the mock API server before running UI tests:
+From the monorepo root, start the mock API server before manual Xcode or raw `xcodebuild` flows:
 
 ```sh
 pnpm serve:mocks
 ```
+
+You can skip this manual mock-server step when using `./scripts/bootstrap.sh` or
+`./scripts/run-e2e.sh`; both scripts start the mock server and clean up their own child process.
+
+This implementation does not use a local `.env` file. Mock API settings live in shared iOS app
+configuration and point simulator traffic to `http://localhost:8000`.
 
 ## Running locally
 
@@ -106,6 +113,65 @@ Useful environment variables:
 
 Unlike the Android app, no port forwarding is required: the iOS Simulator shares the host network,
 so the app reaches the mock server at `localhost:8000` directly.
+
+## Running E2E tests
+
+Prefer the local runner from `implementations/ios-sdk/`. It runs preflight checks, builds the JS
+bridge, generates the Xcode project, starts the mock server, resolves a simulator, runs XCUITest,
+and cleans up its child processes:
+
+```sh
+./scripts/run-e2e.sh
+APP_SHELL=both ./scripts/run-e2e.sh
+ONLY_TESTING=OptimizationAppUITestsSwiftUI/PreviewPanelOverridesTests ./scripts/run-e2e.sh
+```
+
+From the monorepo root, use the release build/run wrappers when you need the CI-style split flow:
+
+```sh
+pnpm implementation:run -- ios-sdk test:e2e:ios:build:release
+IOS_SCHEME=SwiftUI pnpm implementation:run -- ios-sdk test:e2e:ios:run:release
+IOS_SCHEME=UIKit pnpm implementation:run -- ios-sdk test:e2e:ios:run:release
+```
+
+The split run commands expect the mock server to already be running at `http://localhost:8000`.
+
+For lower-level debugging, raw `xcodebuild` remains available. Run the full suite against both app
+shells from `implementations/ios-sdk/`:
+
+```sh
+xcodebuild test \
+  -project OptimizationApp.xcodeproj \
+  -scheme OptimizationAppSwiftUI \
+  -destination 'platform=iOS Simulator,name=iPhone 16'
+
+xcodebuild test \
+  -project OptimizationApp.xcodeproj \
+  -scheme OptimizationAppUIKit \
+  -destination 'platform=iOS Simulator,name=iPhone 16'
+```
+
+Run a single test class against the SwiftUI shell:
+
+```sh
+xcodebuild test \
+  -project OptimizationApp.xcodeproj \
+  -scheme OptimizationAppSwiftUI \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -only-testing:OptimizationAppUITestsSwiftUI/PreviewPanelOverridesTests
+```
+
+### Adding new test files
+
+Add the `.swift` file to `uitests/Tests/` and run `xcodegen generate`. Both UI test bundles pick up
+the file from the generated project.
+
+## Preview panel tests
+
+The preview-panel override suite mirrors the React Native Detox suite in
+`implementations/react-native-sdk/e2e/preview-panel-overrides.test.js`. Both reference the shared
+contract document at `implementations/PREVIEW_PANEL_SCENARIOS.md`. Keep scenario names and fixture
+IDs identical across platforms so cross-platform regressions are visible in CI diffs.
 
 ## Maintainer edit loop
 
@@ -143,7 +209,7 @@ Run the smallest check that covers the changed surface:
 | Change area                              | Suggested validation                                                                                                      |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | Bridge TypeScript only                   | `pnpm --filter @contentful/optimization-js-bridge typecheck` and `pnpm --filter @contentful/optimization-js-bridge build` |
-| Swift package behavior                   | Targeted `xcodebuild test` for the affected app shell or XCUITest class                                                   |
+| Swift package behavior                   | Targeted `./scripts/run-e2e.sh` for the affected app shell or XCUITest class                                              |
 | Preview-panel or cross-platform behavior | Targeted preview-panel XCUITest plus the matching shared scenario contract review                                         |
 | Documentation-only README changes        | Prettier on touched Markdown and `git diff --check`                                                                       |
 
@@ -158,49 +224,12 @@ Common local pitfalls:
   than the checked-out bridge source.
 - Substitute another available simulator if the local Xcode runtime does not include `iPhone 16`.
 
-## Running E2E tests
-
-Run the full suite against both app shells from `implementations/ios-sdk/`:
-
-```sh
-xcodebuild test \
-  -project OptimizationApp.xcodeproj \
-  -scheme OptimizationAppSwiftUI \
-  -destination 'platform=iOS Simulator,name=iPhone 16'
-
-xcodebuild test \
-  -project OptimizationApp.xcodeproj \
-  -scheme OptimizationAppUIKit \
-  -destination 'platform=iOS Simulator,name=iPhone 16'
-```
-
-Run a single test class against the SwiftUI shell:
-
-```sh
-xcodebuild test \
-  -project OptimizationApp.xcodeproj \
-  -scheme OptimizationAppSwiftUI \
-  -destination 'platform=iOS Simulator,name=iPhone 16' \
-  -only-testing:OptimizationAppUITestsSwiftUI/PreviewPanelOverridesTests
-```
-
-### Adding new test files
-
-Add the `.swift` file to `uitests/Tests/` and run `xcodegen generate`. Both UI test bundles pick up
-the file from the generated project.
-
-## Preview panel tests
-
-The preview-panel override suite mirrors the React Native Detox suite in
-`implementations/react-native-sdk/e2e/preview-panel-overrides.test.js`. Both reference the shared
-contract document at `implementations/PREVIEW_PANEL_SCENARIOS.md`. Keep scenario names and fixture
-IDs identical across platforms so cross-platform regressions are visible in CI diffs.
-
 ## Related
 
-- [iOS SDK package status](../../packages/ios/README.md) - Planned native iOS SDK status marker
-- [iOS SDK code map](../../packages/ios/CODE_MAP.md) - Maintainer architecture map for the native
-  iOS package
+- [Optimization iOS SDK package status](../../packages/ios/README.md) - Planned native iOS SDK
+  status marker
+- [Optimization iOS SDK code map](../../packages/ios/CODE_MAP.md) - Maintainer architecture map for
+  the native iOS package
 - [Native bridge architecture](../../packages/universal/optimization-js-bridge/BRIDGE_ARCHITECTURE.md) -
   Shared bridge runtime and build notes
 - [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures

@@ -25,6 +25,12 @@ This is a reference implementation using both the
 [Optimization Web SDK](../../packages/web/web-sdk/README.md), and is part of the
 [Contentful Optimization SDK Suite](../../README.md).
 
+## What this demonstrates
+
+Use this implementation when you need a hybrid SSR/browser example. It demonstrates a stateless Node
+SDK server flow, a stateful Web SDK browser flow, consent-aware cookie-based profile continuity
+between them, and local mock API usage for end-to-end validation.
+
 On the server side, the stateless Node SDK is created once at module load and each request passes
 its request-scoped options directly to stateless event methods. The demo stores application-owned
 consent in a server-readable cookie and writes the shared anonymous ID cookie only when consent
@@ -54,16 +60,10 @@ for the broader locale model and
 [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
 for the entry contract.
 
-## What this demonstrates
-
-Use this implementation when you need a hybrid SSR/browser example. It demonstrates a stateless Node
-SDK server flow, a stateful Web SDK browser flow, consent-aware cookie-based profile continuity
-between them, and local mock API usage for end-to-end validation.
-
 ## Prerequisites
 
 - Node.js >= 20.19.0 (24.15.0 recommended to match `.nvmrc`)
-- pnpm 10.x
+- pnpm
 
 ## Setup
 
@@ -87,11 +87,16 @@ Run all steps from the monorepo root.
    pnpm implementation:run -- node-sdk+web-sdk implementation:install
    ```
 
-4. Configure the environment in a `.env` file in `implementations/node-sdk+web-sdk` based on the
-   `.env.example` included file. The file is pre-populated with values that are valid only against
-   the mock server implementation. To test the implementation against a live server environment, see
-   the [mocks package](../../lib/mocks/README.md) for information on how to set up Contentful space
-   with test data.
+4. Create the local `.env` file if it does not already exist:
+
+   ```sh
+   test -f implementations/node-sdk+web-sdk/.env || cp implementations/node-sdk+web-sdk/.env.example implementations/node-sdk+web-sdk/.env
+   ```
+
+   The `.env.example` values are valid only against the mock server implementation. To test the
+   implementation against a live server environment, see the
+   [mocks package](../../lib/mocks/README.md) for information on how to set up Contentful space with
+   test data.
 
 ## Running locally
 
@@ -144,5 +149,7 @@ E2E tests are run using Playwright.
 
 - [@contentful/optimization-node](../../packages/node/node-sdk/README.md) - Node SDK package
 - [@contentful/optimization-web](../../packages/web/web-sdk/README.md) - Web SDK package
-- [Node SSR Only](../node-sdk/README.md) - Server-only reference implementation
-- [Web Vanilla](../web-sdk/README.md) - Browser-only reference implementation
+- [Node SDK reference implementation](../node-sdk/README.md) - Server-only reference implementation
+- [Web SDK Vanilla JS reference implementation](../web-sdk/README.md) - Browser-only reference
+  implementation
+- [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures

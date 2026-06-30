@@ -146,27 +146,23 @@ export function useScreenTracking({
     }
   }, [])
 
-  // Track on mount if enabled
+  // Track automatically when the supplied screen descriptor changes.
   useEffect(() => {
     if (!trackOnMount) {
       return
     }
 
-    const { current: currentName } = nameRef
-    const { current: currentProperties } = propertiesRef
-    const { current: currentOptimization } = optimizationRef
-
-    void currentOptimization
+    void contentfulOptimization
       .trackCurrentScreen({
-        routeKey: currentName,
-        name: currentName,
-        properties: currentProperties,
-        screen: { name: currentName },
+        routeKey: name,
+        name,
+        properties,
+        screen: { name },
       })
       .catch((error: unknown) => {
-        logger.error(`Failed to track screen "${currentName}":`, error)
+        logger.error(`Failed to track screen "${name}":`, error)
       })
-  }, [consent, contentfulOptimization, trackOnMount])
+  }, [consent, contentfulOptimization, name, properties, trackOnMount])
 
   return { trackScreen }
 }

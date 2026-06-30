@@ -16,9 +16,16 @@ import { NavigationEnd, Router } from '@angular/router'
 import type NodeContentfulOptimizationType from '@contentful/optimization-node'
 import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
-import type { CoreStatelessRequest } from '@contentful/optimization-node/core-sdk'
+import type {
+  CoreStatelessRequest,
+  UniversalEventBuilderArgs,
+} from '@contentful/optimization-node/core-sdk'
 import ContentfulOptimization from '@contentful/optimization-web'
-import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import {
+  isResolvedContentfulEntry,
+  type Profile,
+  type SelectedOptimizationArray,
+} from '@contentful/optimization-web/api-schemas'
 import type { Entry } from 'contentful'
 import { PAGES } from 'e2e-web'
 import { filter } from 'rxjs/operators'
@@ -38,6 +45,7 @@ import {
 import { fromSdkState } from '../utils'
 import { readConsentFromRequest } from './consent'
 import { NgContentfulClient } from './contentful-client'
+import { resolveEntryMergeTags } from './merge-tags'
 
 type NgContentfulOptimizationInstance = ContentfulOptimization
 
@@ -137,7 +145,9 @@ export class NgContentfulOptimization {
     const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
     const router = inject(Router)
     const destroyRef = inject(DestroyRef)
+    const transferState = inject(TransferState)
     const isBrowser = isPlatformBrowser(inject(PLATFORM_ID))
+    const handoff = transferState.get(SERVER_OPTIMIZATION_KEY, undefined)
 
     if (!isBrowser) {
       // Seed the read-only signals from the SSR handoff so server-rendered
@@ -145,15 +155,11 @@ export class NgContentfulOptimization {
       // observed. Without this, JS-disabled clients would see "undefined" /
       // "0 active optimizations" in the Utilities panel even though the entry
       // markup is fully personalised.
-      const handoff = inject(TransferState).get(SERVER_OPTIMIZATION_KEY, undefined)
-      const isGranted = handoff?.consent === true
       this.context = { platform: 'server' }
-      this.consent = signal<boolean | undefined>(isGranted).asReadonly()
-      this.profile = signal<Profile | undefined>(
-        handoff?.consent === true ? handoff.profile : undefined,
-      ).asReadonly()
+      this.consent = signal<boolean | undefined>(handoff?.consent).asReadonly()
+      this.profile = signal<Profile | undefined>(handoff?.profile).asReadonly()
       this.selectedOptimizations = signal<SelectedOptimizationArray | undefined>(
-        handoff?.consent === true ? handoff.selectedOptimizations : undefined,
+        handoff?.selectedOptimizations,
       ).asReadonly()
       return
     }
@@ -169,11 +175,19 @@ export class NgContentfulOptimization {
     this.profile = fromSdkState(sdk.states.profile)
     this.selectedOptimizations = fromSdkState(sdk.states.selectedOptimizations)
 
-    // Page events must fire on every route change including the initial load.
-    // The SDK uses the current URL to resolve which experiences apply to the user.
+    // Page events fire on every route change. The first NavigationEnd after
+    // hydration is skipped when the server preflight already emitted page()
+    // for the same route (consent was granted server-side) — without this
+    // skip, analytics double-counts the SSR landing page. Subsequent
+    // navigations always emit.
+    let skipNextPage = handoff?.consent ?? false
     const routerSubscription = router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
+        if (skipNextPage) {
+          skipNextPage = false
+          return
+        }
         void sdk.page({
           properties: { url: window.location.origin + e.urlAfterRedirects },
         })
@@ -244,6 +258,27 @@ type ServerOptimizationData =
       readonly canPersistProfile: boolean
     }
 
+/**
+ * Build an event context for the SSR `forRequest()` call so the server-side
+ * page event carries the current route. Without this, route-targeted
+ * experiences resolve against an empty page context and miss on first paint.
+ * Mirrors `createNextjsRequestContext` from the Next.js adapter.
+ */
+function createServerEventContext(request: Request, locale: string): UniversalEventBuilderArgs {
+  const url = new URL(request.url)
+  return {
+    locale,
+    userAgent: request.headers.get('user-agent') ?? undefined,
+    page: {
+      path: url.pathname,
+      query: Object.fromEntries(url.searchParams),
+      referrer: request.headers.get('referer') ?? '',
+      search: url.search,
+      url: request.url,
+    },
+  }
+}
+
 async function getServerOptimizationData(
   sdk: NodeContentfulOptimizationType,
   request: Request,
@@ -256,6 +291,7 @@ async function getServerOptimizationData(
   const requestOptimization: CoreStatelessRequest = sdk.forRequest({
     consent: { events: true, persistence: true },
     locale,
+    eventContext: createServerEventContext(request, locale),
     ...(anonymousId === undefined ? {} : { profile: { id: anonymousId } }),
   })
   const pageResult = await requestOptimization.page()
@@ -271,14 +307,39 @@ async function getServerOptimizationData(
   }
 }
 
+/**
+ * Resolve baselines against the SSR `selectedOptimizations`, then walk each
+ * rich-text field and substitute inline merge-tag entries using the SDK's
+ * `getMergeTagValue`. Shipping fully-resolved entries through `TransferState`
+ * lets JS-disabled clients see the variant content AND the personalised merge
+ * tags on first paint, not just the placeholder text.
+ *
+ * Nested entries (`fields.nested[]`) often appear only on the *resolved*
+ * variant rather than on the baseline, so we recurse after each
+ * `resolveOptimizedEntry` call to cover per-level Personalization
+ * assignments inside the chosen variant.
+ */
 function resolveServerEntries(
   sdk: NodeContentfulOptimizationType,
   baselines: readonly Entry[],
   selectedOptimizations: OptimizationData['selectedOptimizations'],
+  profile: Profile | undefined,
 ): Record<string, ResolvedEntryData> {
   const resolved: Record<string, ResolvedEntryData> = {}
-  for (const baseline of baselines) {
-    resolved[baseline.sys.id] = sdk.resolveOptimizedEntry(baseline, selectedOptimizations)
+  const queue: Entry[] = [...baselines]
+  for (let entry = queue.shift(); entry !== undefined; entry = queue.shift()) {
+    if (Object.hasOwn(resolved, entry.sys.id)) continue
+    const result = sdk.resolveOptimizedEntry(entry, selectedOptimizations)
+    const entryWithMergeTags = profile
+      ? resolveEntryMergeTags(result.entry, (target) => sdk.getMergeTagValue(target, profile))
+      : result.entry
+    resolved[entry.sys.id] = { ...result, entry: entryWithMergeTags }
+    const nested: unknown = entryWithMergeTags.fields.nested
+    if (Array.isArray(nested)) {
+      for (const child of nested) {
+        if (isResolvedContentfulEntry(child)) queue.push(child)
+      }
+    }
   }
   return resolved
 }
@@ -338,6 +399,7 @@ async function runServerPreflight(): Promise<void> {
     sdk,
     baselines,
     serverData.consentGranted ? serverData.data.selectedOptimizations : [],
+    serverData.consentGranted ? serverData.data.profile : undefined,
   )
   stampServerHandoff(transferState, serverData, baselines, resolvedEntries)
 }

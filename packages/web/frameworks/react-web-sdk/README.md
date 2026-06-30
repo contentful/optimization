@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Contentful Optimization & Analytics</h1>
+<h1 align="center">Contentful Personalization & Analytics</h1>
 
 <h3 align="center">Optimization React Web SDK</h3>
 
@@ -78,7 +78,7 @@ function App() {
 ```
 
 For a single-locale app that fetches Contentful entries, pass the application locale to the SDK when
-Experience API responses and events should use the same language:
+Experience API responses and events need to use the same language:
 
 ```tsx
 <OptimizationRoot clientId="your-client-id" environment="main" locale="en-US">
@@ -98,25 +98,26 @@ or custom framework adapters.
 `OptimizationRoot` accepts the Web SDK configuration props directly and adds React-specific props
 such as `liveUpdates` and `onStatesReady`.
 
-| Prop                    | Required? | Default                                         | Description                                                                       |
-| ----------------------- | --------- | ----------------------------------------------- | --------------------------------------------------------------------------------- |
-| `clientId`              | Yes       | N/A                                             | Shared API key for Experience API and Insights API requests                       |
-| `environment`           | No        | `'main'`                                        | Contentful environment identifier                                                 |
-| `api`                   | No        | Web SDK defaults                                | Experience API and Insights API endpoint and request options                      |
-| `app`                   | No        | `undefined`                                     | Application metadata attached to outgoing event context                           |
-| `locale`                | No        | `undefined`                                     | SDK Experience API and default event locale                                       |
-| `defaults`              | No        | `undefined`                                     | Initial state, commonly including consent, persistence consent, or profile values |
-| `allowedEventTypes`     | No        | `['identify', 'page']`                          | Event types allowed before consent is explicitly set                              |
-| `trackEntryInteraction` | No        | `{ views: true, clicks: false, hovers: false }` | Automatic entry interaction tracking for `OptimizedEntry` elements                |
-| `cookie`                | No        | `{ domain: undefined, expires: 365 }`           | Anonymous ID cookie settings inherited from the Web SDK                           |
-| `liveUpdates`           | No        | `false`                                         | Whether `OptimizedEntry` components react continuously to SDK state               |
-| `onStatesReady`         | No        | `undefined`                                     | Provider-managed app-level state subscription hook                                |
-| `queuePolicy`           | No        | SDK defaults                                    | Flush retry behavior and offline queue bounds                                     |
-| `logLevel`              | No        | `'error'`                                       | Minimum log level for the default console sink                                    |
-| `onEventBlocked`        | No        | `undefined`                                     | Callback invoked when consent or guard logic blocks an event                      |
+| Prop                      | Required? | Default                                       | Description                                                                |
+| ------------------------- | --------- | --------------------------------------------- | -------------------------------------------------------------------------- |
+| `clientId`                | Yes       | N/A                                           | Shared API key for Experience API and Insights API requests                |
+| `environment`             | No        | `'main'`                                      | Contentful environment identifier                                          |
+| `api`                     | No        | Web SDK defaults                              | Experience API and Insights API endpoint and request options               |
+| `app`                     | No        | `undefined`                                   | Application metadata attached to outgoing event context                    |
+| `locale`                  | No        | `undefined`                                   | SDK Experience API and default event locale                                |
+| `defaults`                | No        | `undefined`                                   | Configuration/default state such as consent or persistence consent         |
+| `serverOptimizationState` | No        | `undefined`                                   | Server-returned Optimization state to apply before provider children mount |
+| `allowedEventTypes`       | No        | `['identify', 'page']`                        | Event types allowed before consent is explicitly set                       |
+| `trackEntryInteraction`   | No        | `{ views: true, clicks: true, hovers: true }` | Automatic entry interaction tracking for `OptimizedEntry` elements         |
+| `cookie`                  | No        | `{ domain: undefined, expires: 365 }`         | Anonymous ID cookie settings inherited from the Web SDK                    |
+| `liveUpdates`             | No        | `false`                                       | Whether `OptimizedEntry` components react continuously to SDK state        |
+| `onStatesReady`           | No        | `undefined`                                   | Provider-managed app-level state subscription hook                         |
+| `queuePolicy`             | No        | SDK defaults                                  | Flush retry behavior and offline queue bounds                              |
+| `logLevel`                | No        | `'error'`                                     | Minimum log level for the default console sink                             |
+| `onEventBlocked`          | No        | `undefined`                                   | Callback invoked when consent or guard logic blocks an event               |
 
-Use `OptimizationProvider` directly only when an application or framework adapter must own a
-pre-built SDK instance:
+Use `OptimizationProvider` directly when an application or framework adapter needs direct provider
+control, including integrations that supply an SDK instance:
 
 ```tsx
 <OptimizationProvider sdk={optimization}>
@@ -128,20 +129,36 @@ Injected SDK instances render children immediately unless `onStatesReady` is pro
 `onStatesReady` is provided, the provider waits until those state subscribers are attached before
 children mount, and still leaves SDK teardown to the owner that created the instance.
 
+For server-to-browser state handoff, pass server-returned Optimization data through
+`serverOptimizationState` on `OptimizationRoot` or `OptimizationProvider`. Keep `defaults` for
+configuration or default state such as consent policy:
+
+```tsx
+<OptimizationRoot
+  clientId="your-client-id"
+  defaults={{ consent: true }}
+  environment="main"
+  serverOptimizationState={optimizationData}
+>
+  <YourApp />
+</OptimizationRoot>
+```
+
 For every Web SDK option that passes through this package, use the
 [Web SDK README](../../web-sdk/README.md#common-configuration) and generated
 [reference documentation](https://contentful.github.io/optimization).
 
 Choose the application Contentful locale in your router, i18n layer, or app configuration. Pass that
 value directly to Contentful CDA requests, and pass the same value to the provider `locale` prop
-when Experience API responses and event context should use the same language. See
+when Experience API responses and event context need to use the same language. See
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the full locale model.
 
-For provider-owned SDK instances, changing the `locale` prop calls `sdk.setLocale()` after
-initialization while the rest of the SDK config remains initialization-scoped. Locale updates do not
-fetch content or refresh profile state; trigger your app's normal `page()`, `identify()`, route
-loader, or CDA fetch flow when localized data needs to change.
+For SDK instances created from provider/root configuration, changing the `locale` prop calls
+`sdk.setLocale()` after initialization while the rest of the SDK config remains
+initialization-scoped. Locale updates do not fetch content or refresh profile state; trigger your
+app's normal `page()`, `identify()`, route loader, or CDA fetch flow when localized data needs to
+change.
 
 ## Core workflows
 
@@ -170,7 +187,7 @@ function ConsentButton() {
 
 Boolean consent calls control both event emission and durable profile-continuity persistence by
 default. Use `sdk.consent({ events: true, persistence: false })` when events are allowed but
-continuity should stay session-only. For cross-SDK consent guidance, see
+continuity needs to stay session-only. For cross-SDK consent guidance, see
 [Consent management in the Optimization SDK Suite](../../../../documentation/concepts/consent-management-in-the-optimization-sdk-suite.md).
 
 ### Provider and hook access
@@ -262,8 +279,8 @@ its resolved value follows the localized profile values returned by the Experien
 ### Provider-managed state subscriptions
 
 Use `onStatesReady` when application code needs to subscribe to SDK state as part of provider
-initialization. This avoids coordinating with `window.contentfulOptimization`, which may not exist
-yet when application code runs or may have already emitted data by the time a later effect
+initialization. This avoids coordinating with `window.contentfulOptimization`, which might not exist
+yet when application code runs or might have already emitted data by the time a later effect
 subscribes.
 
 ```tsx
@@ -318,14 +335,12 @@ baseline until that timeout elapses. The React Web guide covers those variants i
 
 ### Entry interaction tracking
 
-`OptimizedEntry` emits the Web SDK's `data-ctfl-*` tracking attributes for resolved entries. Enable
-automatic tracking in the root config when views, clicks, or hovers must be detected by the Web SDK:
+`OptimizedEntry` emits the Web SDK's `data-ctfl-*` tracking attributes for resolved entries. The
+root config observes views, clicks, and hovers by default; pass `false` for any interaction type
+that your application does not want to observe:
 
 ```tsx
-<OptimizationRoot
-  clientId="your-client-id"
-  trackEntryInteraction={{ views: true, clicks: true, hovers: false }}
->
+<OptimizationRoot clientId="your-client-id" trackEntryInteraction={{ hovers: false }}>
   <YourApp />
 </OptimizationRoot>
 ```
@@ -344,8 +359,8 @@ Use `OptimizedEntry` props to configure Web SDK entry-tracking attributes withou
 </OptimizedEntry>
 ```
 
-`OptimizedEntry` derives entry ID, baseline ID, optimization ID, sticky state, variant index, and
-duplication scope from the resolved entry state.
+`OptimizedEntry` derives entry ID, baseline ID, optimization ID, optimization context ID, sticky
+state, variant index, and duplication scope from the resolved entry state.
 
 Use `sdk.tracking.enableElement(...)` from `useOptimization()` for manual element overrides.
 
@@ -393,7 +408,7 @@ elements, and this package does not import or register Web Components.
 
 Use the optional `@contentful/optimization-web/web-components` subpath only when a non-React app or
 a deliberate custom-element island needs vanilla custom elements. Framework wrappers around those
-elements should assign complex DOM properties such as `baselineEntry`, `defaults`, `api`, `sdk`, and
+elements must assign complex DOM properties such as `baselineEntry`, `defaults`, `api`, `sdk`, and
 callbacks after hydration, and listen for entry lifecycle events instead of trying to emulate React
 render props. See the [Web SDK README](../../web-sdk/README.md#usage-with-web-components) for raw
 custom-element and UMD usage.

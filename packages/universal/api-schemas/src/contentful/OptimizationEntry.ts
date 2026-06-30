@@ -1,6 +1,13 @@
+import type {
+  ChainModifiers,
+  Entry,
+  EntryFieldTypes,
+  EntrySkeletonType,
+  LocaleCode,
+  UnresolvedLink,
+} from 'contentful'
 import * as z from 'zod/mini'
-import { AudienceEntry } from './AudienceEntry'
-import { CtflEntry, EntryFields, Link } from './CtflEntry'
+import type { AudienceEntry, AudienceEntrySkeleton } from './AudienceEntry'
 import { OptimizationConfig } from './OptimizationConfig'
 
 /**
@@ -25,15 +32,15 @@ export const OptimizationType = z.union([
 export type OptimizationType = z.infer<typeof OptimizationType>
 
 /**
- * Zod schema describing the fields of an Optimization entry.
+ * Zod schema describing the optimization-owned fields of an Optimization entry.
  *
  * @remarks
- * Extends the generic {@link EntryFields} with optimization-specific
- * properties such as name, description, type, config, audience, and variants.
+ * Contentful references are checked structurally by the entry type guards. This
+ * schema owns only scalar and JSON fields whose shape belongs to Optimization.
  *
  * @public
  */
-export const OptimizationEntryFields = z.extend(EntryFields, {
+export const OptimizationEntryFields = z.object({
   /**
    * The name of the optimization (Short Text).
    */
@@ -58,21 +65,14 @@ export const OptimizationEntryFields = z.extend(EntryFields, {
   nt_config: z.optional(z.nullable(OptimizationConfig)),
 
   /**
-   * The audience of the optimization (Audience).
-   *
-   * @remarks
-   * Optional and nullable; when omitted or `null`, the optimization can apply
-   * to all users.
+   * The audience reference of the optimization.
    */
-  nt_audience: z.optional(z.nullable(AudienceEntry)),
+  nt_audience: z.optional(z.nullable(z.unknown())),
 
   /**
-   * All used variants of the optimization (Contentful references to other Content Types).
-   *
-   * @remarks
-   * Modeled as an array of Contentful links or resolved entries.
+   * All used variants of the optimization.
    */
-  nt_variants: z.optional(z.array(z.union([Link, CtflEntry]))),
+  nt_variants: z.optional(z.array(z.unknown())),
 
   /**
    * The optimization/experience ID related to this optimization entry.
@@ -81,58 +81,59 @@ export const OptimizationEntryFields = z.extend(EntryFields, {
 })
 
 /**
- * TypeScript type inferred from {@link OptimizationEntryFields}.
+ * Runtime field values for an Optimization entry.
  *
  * @public
  */
-export type OptimizationEntryFields = z.infer<typeof OptimizationEntryFields>
+export interface OptimizationEntryFields<
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> {
+  nt_name: string
+  nt_description?: string | null
+  nt_type: OptimizationType
+  nt_config?: OptimizationConfig | null
+  nt_audience?: AudienceEntry<M, L> | UnresolvedLink<'Entry'> | null
+  nt_variants?: Array<Entry<EntrySkeletonType, M, L> | UnresolvedLink<'Entry'>>
+  nt_experience_id: string
+}
 
 /**
- * Zod schema describing an Optimization entry, which is associated with an {@link OptimizedEntry } via its `fields.nt_experiences`.
+ * Contentful SDK skeleton for the `nt_experience` content type.
  *
  * @public
  */
-export const OptimizationEntry = z.extend(CtflEntry, {
-  fields: OptimizationEntryFields,
-})
+export type OptimizationEntrySkeleton = EntrySkeletonType<
+  {
+    nt_name: EntryFieldTypes.Symbol
+    nt_description: EntryFieldTypes.Symbol
+    nt_type: EntryFieldTypes.Symbol<OptimizationType>
+    nt_config: EntryFieldTypes.Object
+    nt_audience: EntryFieldTypes.EntryLink<AudienceEntrySkeleton>
+    nt_variants: EntryFieldTypes.Array<EntryFieldTypes.EntryLink<EntrySkeletonType>>
+    nt_experience_id: EntryFieldTypes.Symbol
+  },
+  'nt_experience'
+>
 
 /**
- * TypeScript type inferred from {@link OptimizationEntry}.
+ * Resolved Contentful Optimization entry.
  *
  * @public
  */
-export type OptimizationEntry = z.infer<typeof OptimizationEntry>
+export type OptimizationEntry<
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = Omit<Entry<OptimizationEntrySkeleton, M, L>, 'fields'> & {
+  fields: OptimizationEntryFields<M, L>
+}
 
 /**
- * Zod schema describing an Optimization entry "skeleton".
+ * Optimization entry references as returned in optimized entry fields.
  *
  * @public
  */
-export const OptimizationEntrySkeleton = z.object({
-  contentTypeId: z.literal('nt_experience'),
-  fields: OptimizationEntryFields,
-})
-
-/**
- * TypeScript type inferred from {@link OptimizationEntrySkeleton}.
- *
- * @public
- */
-export type OptimizationEntrySkeleton = z.infer<typeof OptimizationEntrySkeleton>
-
-/**
- * Zod schema describing an array of optimization entries or links.
- *
- * @remarks
- * Each element can be a {@link Link} or a fully resolved {@link OptimizationEntry}.
- *
- * @public
- */
-export const OptimizationEntryArray = z.array(z.union([Link, OptimizationEntry]))
-
-/**
- * TypeScript type inferred from {@link OptimizationEntryArray}.
- *
- * @public
- */
-export type OptimizationEntryArray = z.infer<typeof OptimizationEntryArray>
+export type OptimizationEntryArray<
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = Array<OptimizationEntry<M, L> | UnresolvedLink<'Entry'>>

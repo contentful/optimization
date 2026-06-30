@@ -7,18 +7,16 @@ export type ResolvedEntryData = ResolvedData<EntrySkeletonType>
 
 /**
  * Snapshot of the personalization context resolved server-side. Stamped into
- * `TransferState` during SSR and read by browser code on hydration.
+ * `TransferState` during SSR and read by browser code on hydration. The
+ * personalization fields are present only when consent was granted server-side
+ * and the preflight successfully fetched `OptimizationData`.
  */
-export type ServerHandoff =
-  | {
-      readonly consent: false
-    }
-  | {
-      readonly consent: true
-      readonly profile: Profile
-      readonly profileId: string
-      readonly selectedOptimizations: SelectedOptimizationArray
-    }
+export interface ServerHandoff {
+  readonly consent: boolean
+  readonly profile?: Profile
+  readonly profileId?: string
+  readonly selectedOptimizations?: SelectedOptimizationArray
+}
 
 export const SERVER_OPTIMIZATION_KEY: StateKey<ServerHandoff> =
   makeStateKey<ServerHandoff>('ssr-optimization')

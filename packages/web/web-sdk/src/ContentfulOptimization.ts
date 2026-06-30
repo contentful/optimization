@@ -13,12 +13,12 @@
 import {
   AcceptedCurrentStateTracker,
   CoreStateful,
-  type CoreStatefulConfig,
-  type EventEmissionResult,
-  type PageViewBuilderArgs,
   effect,
   resolveStatefulDefaults,
   signals,
+  type CoreStatefulConfig,
+  type EventEmissionResult,
+  type PageViewBuilderArgs,
 } from '@contentful/optimization-core'
 import type { App } from '@contentful/optimization-core/api-schemas'
 import { ANONYMOUS_ID_COOKIE_LEGACY } from '@contentful/optimization-core/constants'
@@ -35,8 +35,10 @@ import {
   createOnlineChangeListener,
   createVisibilityChangeListener,
 } from './handlers'
-import { getCookie, removeCookie, setCookie } from './lib/cookies'
+import { getCookie, removeCookie, setCookie, type CookieAttributes } from './lib/cookies'
 import { LocalStore } from './storage'
+
+export type { CookieAttributes } from './lib/cookies'
 
 declare global {
   interface Window {
@@ -45,28 +47,6 @@ declare global {
     /** Singleton instance created by the Web SDK initializer. */
     contentfulOptimization?: ContentfulOptimization
   }
-}
-
-/**
- * Supported cookie attributes for the Web SDK.
- *
- * @public
- * @remarks
- * These options are used when persisting the anonymous ID cookie.
- */
-export interface CookieAttributes {
-  /**
-   * Cookie domain attribute.
-   *
-   * @remarks
-   * If omitted, the browser will scope the cookie to the current host.
-   */
-  domain?: string
-
-  /**
-   * Determines the expiration date of the cookie as the number of days until the cookie expires.
-   */
-  expires?: number
 }
 
 /**
@@ -96,7 +76,7 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
    * @remarks
    * Supports entry interactions via the `views`, `clicks`, and `hovers` interactions.
    *
-   * @defaultValue `{ views: false, clicks: false, hovers: false }`
+   * @defaultValue `{ views: true, clicks: true, hovers: true }`
    */
   autoTrackEntryInteraction?: AutoTrackEntryInteractionOptions
 
@@ -305,7 +285,7 @@ class ContentfulOptimization extends CoreStateful {
    * const optimization = new ContentfulOptimization({
    *   clientId: 'abc-123',
    *   environment: 'main',
-   *   autoTrackEntryInteraction: { views: true },
+   *   autoTrackEntryInteraction: { clicks: false },
    * })
    * ```
    */
@@ -364,6 +344,7 @@ class ContentfulOptimization extends CoreStateful {
       } = signals
 
       LocalStore.persistenceConsent = value
+      if (value === true) this.initializeFromCurrentCookieValues()
       if (value === false) {
         removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
         removeCookie(ANONYMOUS_ID_COOKIE_LEGACY, this.cookieAttributes)
@@ -397,6 +378,12 @@ class ContentfulOptimization extends CoreStateful {
     if (typeof window !== 'undefined') window.contentfulOptimization ??= this
   }
 
+  private initializeFromCurrentCookieValues(): void {
+    const { cookieValue, legacyCookieValue } = readInitialCookieValues(true)
+
+    this.initializeFromCookieValues(cookieValue, legacyCookieValue)
+  }
+
   /**
    * Initialize anonymous ID state from cookies.
    *
@@ -406,8 +393,8 @@ class ContentfulOptimization extends CoreStateful {
    *
    * @remarks
    * Reads the legacy anonymous ID cookie (if present), migrates to the current cookie,
-   * and ensures SDK state is reset when the persisted anonymous ID differs from the
-   * in-memory value.
+   * and ensures SDK state is reset when the persisted anonymous ID differs from both the
+   * in-memory value and the active profile.
    *
    * @internal
    */
@@ -415,7 +402,7 @@ class ContentfulOptimization extends CoreStateful {
     if (legacyCookieValue) removeCookie(ANONYMOUS_ID_COOKIE_LEGACY, this.cookieAttributes)
 
     if (cookieValue && cookieValue !== LocalStore.anonymousId) {
-      this.reset()
+      if (cookieValue !== signals.profile.value?.id) this.reset()
       this.setAnonymousId(cookieValue)
     }
   }

@@ -25,12 +25,14 @@ import com.contentful.optimization.preview.PreviewPanelOverlay
  *
  * @param previewPanel Optional preview panel configuration. When provided with `enabled = true`,
  *   the preview panel is available via a floating action button.
+ * @param trackViews Global default for entry view tracking. Defaults to `true`.
+ * @param trackTaps Global default for entry tap tracking. Defaults to `true`.
  */
 @Composable
 public fun OptimizationRoot(
     config: OptimizationConfig,
     trackViews: Boolean = true,
-    trackTaps: Boolean = false,
+    trackTaps: Boolean = true,
     liveUpdates: Boolean = false,
     previewPanel: PreviewPanelConfig? = null,
     modifier: Modifier = Modifier,

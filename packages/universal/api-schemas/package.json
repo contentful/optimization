@@ -49,6 +49,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@contentful/rich-text-types": "catalog:",
     "contentful": "catalog:",
     "zod": "catalog:"
   },

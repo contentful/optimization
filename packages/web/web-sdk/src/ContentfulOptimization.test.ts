@@ -2,6 +2,7 @@ import { batch, signals, type CoreConfig } from '@contentful/optimization-core'
 import type { OptimizationData, Profile } from '@contentful/optimization-core/api-schemas'
 import {
   ANONYMOUS_ID_COOKIE,
+  ANONYMOUS_ID_COOKIE_LEGACY,
   ANONYMOUS_ID_KEY,
   CONSENT_KEY,
   PERSISTENCE_CONSENT_KEY,
@@ -9,6 +10,7 @@ import {
 } from '@contentful/optimization-core/constants'
 import ContentfulOptimization from './ContentfulOptimization'
 import { OPTIMIZATION_WEB_SDK_NAME } from './constants'
+import { getCookie, removeCookie, setCookie } from './lib/cookies'
 
 const CLIENT_ID = 'key_123'
 const ENVIRONMENT = 'main'
@@ -101,6 +103,8 @@ describe('ContentfulOptimization', () => {
   beforeEach(() => {
     delete window.contentfulOptimization
     localStorage.clear()
+    removeCookie(ANONYMOUS_ID_COOKIE)
+    removeCookie(ANONYMOUS_ID_COOKIE_LEGACY)
     batch(() => {
       signals.blockedEvent.value = undefined
       signals.changes.value = undefined
@@ -169,45 +173,45 @@ describe('ContentfulOptimization', () => {
     subscription.unsubscribe()
   })
 
-  it('defaults autoTrackEntryInteraction.views/clicks/hovers to false when omitted', () => {
+  it('defaults autoTrackEntryInteraction.views/clicks/hovers to true when omitted', () => {
     const web = new ContentfulOptimization(config)
 
-    expect(getAutoTrackEntryViews(web)).toBe(false)
-    expect(getAutoTrackEntryClicks(web)).toBe(false)
-    expect(getAutoTrackEntryHovers(web)).toBe(false)
-  })
-
-  it('uses autoTrackEntryInteraction.views=true when configured', () => {
-    const web = new ContentfulOptimization({
-      ...config,
-      autoTrackEntryInteraction: { views: true },
-    })
-
     expect(getAutoTrackEntryViews(web)).toBe(true)
-    expect(getAutoTrackEntryClicks(web)).toBe(false)
-    expect(getAutoTrackEntryHovers(web)).toBe(false)
+    expect(getAutoTrackEntryClicks(web)).toBe(true)
+    expect(getAutoTrackEntryHovers(web)).toBe(true)
   })
 
-  it('uses autoTrackEntryInteraction.clicks=true when configured', () => {
+  it('uses autoTrackEntryInteraction.views=false when configured', () => {
     const web = new ContentfulOptimization({
       ...config,
-      autoTrackEntryInteraction: { clicks: true },
+      autoTrackEntryInteraction: { views: false },
     })
 
     expect(getAutoTrackEntryViews(web)).toBe(false)
     expect(getAutoTrackEntryClicks(web)).toBe(true)
-    expect(getAutoTrackEntryHovers(web)).toBe(false)
+    expect(getAutoTrackEntryHovers(web)).toBe(true)
   })
 
-  it('uses autoTrackEntryInteraction.hovers=true when configured', () => {
+  it('uses autoTrackEntryInteraction.clicks=false when configured', () => {
     const web = new ContentfulOptimization({
       ...config,
-      autoTrackEntryInteraction: { hovers: true },
+      autoTrackEntryInteraction: { clicks: false },
     })
 
-    expect(getAutoTrackEntryViews(web)).toBe(false)
+    expect(getAutoTrackEntryViews(web)).toBe(true)
     expect(getAutoTrackEntryClicks(web)).toBe(false)
     expect(getAutoTrackEntryHovers(web)).toBe(true)
+  })
+
+  it('uses autoTrackEntryInteraction.hovers=false when configured', () => {
+    const web = new ContentfulOptimization({
+      ...config,
+      autoTrackEntryInteraction: { hovers: false },
+    })
+
+    expect(getAutoTrackEntryViews(web)).toBe(true)
+    expect(getAutoTrackEntryClicks(web)).toBe(true)
+    expect(getAutoTrackEntryHovers(web)).toBe(false)
   })
 
   it('supports generic interaction APIs for entry view tracking', () => {
@@ -339,6 +343,97 @@ describe('ContentfulOptimization', () => {
 
     expect(localStorage.getItem(PROFILE_CACHE_KEY)).toBeNull()
     expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBe(DEFAULT_PROFILE.id)
+  })
+
+  it('preserves SSR optimization defaults when adopting a matching anonymous ID cookie', () => {
+    const serverAnonymousId = 'server-anonymous-id'
+    const serverProfile = {
+      ...DEFAULT_PROFILE,
+      id: serverAnonymousId,
+      stableId: serverAnonymousId,
+    }
+    const selectedOptimizations: OptimizationData['selectedOptimizations'] = [
+      {
+        experienceId: 'experience-id',
+        variantIndex: 1,
+        variants: { baseline: 'variant' },
+        sticky: false,
+      },
+    ]
+    const changes: OptimizationData['changes'] = [
+      {
+        key: 'boolean',
+        type: 'Variable',
+        value: true,
+        meta: {
+          experienceId: 'experience-id',
+          variantIndex: 1,
+        },
+      },
+    ]
+    setCookie(ANONYMOUS_ID_COOKIE, serverAnonymousId)
+
+    const web = new ContentfulOptimization({
+      ...config,
+      defaults: {
+        changes,
+        consent: true,
+        profile: serverProfile,
+        selectedOptimizations,
+      },
+    })
+
+    expect(web.states.profile.current).toEqual(serverProfile)
+    expect(web.states.selectedOptimizations.current).toEqual(selectedOptimizations)
+    expect(web.states.consent.current).toBe(true)
+    expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBe(serverAnonymousId)
+    expect(getCookie(ANONYMOUS_ID_COOKIE)).toBe(serverAnonymousId)
+  })
+
+  it('adopts an SSR anonymous ID cookie when persistence consent is granted after initialization', async () => {
+    const serverAnonymousId = 'server-anonymous-id'
+    const serverProfile = {
+      ...DEFAULT_PROFILE,
+      id: serverAnonymousId,
+      stableId: serverAnonymousId,
+    }
+    setCookie(ANONYMOUS_ID_COOKIE, serverAnonymousId)
+
+    const web = new ContentfulOptimization(config)
+    const upsertProfile = rs.spyOn(web.api.experience, 'upsertProfile').mockResolvedValue({
+      ...EMPTY_OPTIMIZATION_DATA,
+      profile: serverProfile,
+    })
+
+    expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBeNull()
+
+    web.consent({ persistence: true })
+
+    expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBe(serverAnonymousId)
+    expect(getCookie(ANONYMOUS_ID_COOKIE)).toBe(serverAnonymousId)
+
+    await web.page()
+
+    expect(upsertProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profileId: serverAnonymousId,
+      }),
+    )
+    expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBe(serverAnonymousId)
+    expect(getCookie(ANONYMOUS_ID_COOKIE)).toBe(serverAnonymousId)
+  })
+
+  it('adopts a legacy anonymous ID cookie when persistence consent is granted after initialization', () => {
+    const legacyAnonymousId = 'legacy-anonymous-id'
+    setCookie(ANONYMOUS_ID_COOKIE_LEGACY, legacyAnonymousId)
+
+    const web = new ContentfulOptimization(config)
+
+    web.consent({ persistence: true })
+
+    expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBe(legacyAnonymousId)
+    expect(getCookie(ANONYMOUS_ID_COOKIE)).toBe(legacyAnonymousId)
+    expect(getCookie(ANONYMOUS_ID_COOKIE_LEGACY)).toBeUndefined()
   })
 
   it('does not load persisted profile continuity when persistence consent is denied', () => {

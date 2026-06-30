@@ -5,502 +5,155 @@ title: Forwarding Optimization SDK context to analytics and tag-management tools
 # Forwarding Optimization SDK context to analytics and tag-management tools
 
 Use this guide when your application already sends events to an analytics, tag-management,
-customer-data, or product-analytics system and you are adding the Optimization SDK. It helps you
-forward Contentful optimization context without building a new analytics layer around the SDK.
+customer-data, replay, or product-analytics destination and you want to attach approved Optimization
+SDK context to those events.
 
-Start by choosing the runtime handoff that matches your SDK integration. Then use the shared
-mapping, validation, and vendor examples in this guide to keep third-party analytics behavior
-consistent across browser, mobile, Node, and server-rendered flows.
+By the end, you can forward one approved SDK event or context signal to an app-owned destination
+without changing which events the SDK sends to Contentful.
+
+This guide supplements the SDK integration guides. It does not install a vendor SDK, define a full
+tracking plan, or replace Contentful Analytics delivery. The Optimization SDK still sends its own
+events to Contentful. Your application decides which Contentful context, if any, can also reach a
+third-party destination.
+
+## Do you need this?
+
+Use this guide when one of these statements is true:
+
+- A report needs to break down existing events by Contentful experience, variant, entry, or Custom
+  Flag value.
+- A tag manager or CDP needs a small set of `contentful_*` fields for routing or enrichment.
+- A server-rendered or native app already has an analytics event owner and needs request-local or
+  runtime-local Optimization context.
+
+Skip this guide when you only need Contentful Personalization and Analytics. The SDK already sends
+page, screen, entry interaction, Custom Flag, and profile-updating events to Contentful when your
+integration and consent policy allow them.
+
+## Quick start
+
+Start with one app-level subscription in a stateful JavaScript runtime. Register it near SDK
+initialization, gate it with your destination consent policy, keep the message-ID cache outside the
+subscriber lifecycle, and forward only primitive fields.
+
+**Adapt this to your use case:**
+
+```ts
+// Keep this cache in module or app-singleton scope so remounts do not reset it.
+const forwardedMessageIds = new Set<string>()
+
+// Skip the synchronous current snapshot when this handoff forwards only later SDK events.
+const initialMessageId = optimization.states.eventStream.current?.messageId
+
+// Subscribe once near SDK initialization so child or router events can be observed.
+const subscription = optimization.states.eventStream.subscribe((event) => {
+  if (!event) return
+
+  // The observable can emit the current snapshot when a subscriber registers.
+  if (forwardedMessageIds.has(event.messageId)) return
+  if (event.messageId === initialMessageId) {
+    forwardedMessageIds.add(event.messageId)
+    return
+  }
+
+  // Apply the destination's consent policy before leaving your application boundary.
+  if (!appPolicyAllowsThirdPartyAnalytics()) return
+
+  forwardedMessageIds.add(event.messageId)
+
+  // Forward only the approved primitive fields that your analytics owner expects.
+  analytics.track(`Contentful ${event.type}`, {
+    contentful_event_type: event.type,
+    contentful_message_id: event.messageId,
+    contentful_component_id: event.componentId,
+    contentful_component_type: event.componentType,
+    contentful_experience_id: event.experienceId,
+    contentful_variant_index: event.variantIndex,
+    contentful_view_id: event.viewId,
+    contentful_hover_id: event.hoverId,
+  })
+})
+```
+
+Keep the returned `subscription` for teardown in tests, hot reloads, or route-level provider
+unmounts. The message-ID cache, not the subscription object, prevents re-forwarding across
+subscriber or provider remounts. Remove the initial snapshot guard when forwarding the current
+accepted SDK event at subscription time is intentional. Verify one SDK activity creates one intended
+destination event before adding more vendors or fields. Use the helper in the default recipe when
+the destination rejects `undefined` values or when exposure reports need view and hover
+deduplication.
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Scope and responsibilities](#scope-and-responsibilities)
-  - [Third-party analytics delivery model](#third-party-analytics-delivery-model)
-- [Choose your runtime entry point](#choose-your-runtime-entry-point)
-- [Runtime handoff patterns](#runtime-handoff-patterns)
-  - [Stateful SDK subscriptions](#stateful-sdk-subscriptions)
-  - [Register provider-managed subscriptions](#register-provider-managed-subscriptions)
-  - [Forward SDK events from `eventStream`](#forward-sdk-events-from-eventstream)
-  - [Use request-local data in Node and SSR](#use-request-local-data-in-node-and-ssr)
-  - [Filter semantic exposures before forwarding](#filter-semantic-exposures-before-forwarding)
-  - [Forward profile and flag state](#forward-profile-and-flag-state)
-  - [Use selected optimizations for readiness, not exposure by itself](#use-selected-optimizations-for-readiness-not-exposure-by-itself)
-  - [Diagnose blocked events](#diagnose-blocked-events)
-- [Enrich business events](#enrich-business-events)
-- [Normalize and map Contentful context](#normalize-and-map-contentful-context)
-  - [Normalize SDK events](#normalize-sdk-events)
-  - [Build context from a resolved entry](#build-context-from-a-resolved-entry)
-- [Vendor examples](#vendor-examples)
-  - [Google Analytics](#google-analytics)
-  - [Google Tag Manager](#google-tag-manager)
-  - [Adobe Analytics](#adobe-analytics)
-  - [Adobe Experience Platform](#adobe-experience-platform)
-  - [Contentsquare](#contentsquare)
-  - [Segment](#segment)
-  - [Amplitude](#amplitude)
-  - [Heap](#heap)
-  - [Mixpanel](#mixpanel)
-  - [PostHog](#posthog)
-- [Validate delivery and prevent duplicates](#validate-delivery-and-prevent-duplicates)
-- [Data governance checklist](#data-governance-checklist)
+- [Default recipe](#default-recipe)
+- [Runtime or vendor variants](#runtime-or-vendor-variants)
+  - [Stateful JavaScript runtimes](#stateful-javascript-runtimes)
+  - [Node and Next.js server runtimes](#node-and-nextjs-server-runtimes)
+  - [Native mobile runtimes](#native-mobile-runtimes)
+  - [Destination variants](#destination-variants)
+- [Validate the integration](#validate-the-integration)
+- [Governance notes](#governance-notes)
 - [Related guides and concepts](#related-guides-and-concepts)
 
 <!-- mtoc-end -->
 </details>
 
-## Scope and responsibilities
+## Default recipe
 
-Start by separating what the Optimization SDK Suite does from what your analytics destination does.
-The SDK keeps Contentful Personalization and Analytics working. Your integration forwards only the
-approved optimization context that your third-party destination needs.
+Use the same pattern for every destination:
 
-The Optimization SDK Suite sends these events to Contentful:
-
-- `page()`, `identify()`, `screen()`, `track()`, and sticky `trackView()` use the Experience API to
-  update or evaluate a profile and return optimization data.
-- `trackView()` also uses the Insights API for Contentful Analytics entry-view tracking. Sticky
-  views send an Experience event first, then a paired Insights event. Non-sticky views only use
-  Insights.
-- `trackClick()`, `trackHover()`, and `trackFlagView()` use the Insights API for Contentful
-  Analytics.
-- `resolveOptimizedEntry()`, `getMergeTagValue()`, and `getFlag()` use SDK state or request-local
-  optimization data to decide what to render.
-
-Your third-party integration is separate. It can listen to SDK state, mirror SDK events, or add
-selected Contentful metadata to your existing analytics calls.
-
-| Area                     | What the SDK does                                                                                                       | What you decide and implement                                                                            |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Contentful events        | Sends Experience API and Insights API events that power Contentful Personalization and Analytics.                       | Which event fields, if any, you forward to another analytics system.                                     |
-| Stateful subscriptions   | Exposes `states.eventStream`, `states.blockedEventStream`, `states.profile`, `states.selectedOptimizations`, and flags. | Which subscriptions to register, where to register them, and how to map their payloads.                  |
-| Rendering                | Resolves entries, merge tags, and flags from SDK state or request-local optimization data.                              | When rendered content counts as an exposure for your analytics model.                                    |
-| Consent                  | Provides consent APIs and blocked-event diagnostics.                                                                    | The consent policy, the default state, and which destinations can receive mirrored events.               |
-| Identity                 | Accepts known-user IDs and traits through SDK identity APIs.                                                            | Which stable user ID your analytics destination uses, how traits are filtered, and when identity resets. |
-| Third-party destinations | Does not install, configure, or fan out vendor analytics calls.                                                         | Vendor SDK setup, tag-manager rules, CDP mappings, tracking plans, and privacy filters.                  |
-
-This guide does not replace vendor implementation documentation. Use each vendor's official
-instructions for SDK installation, workspace setup, schema configuration, consent mode, regional
-endpoints, and privacy controls alongside the SDK-specific patterns below.
-
-### Third-party analytics delivery model
-
-The SDK exposes live state and request-local results. It does not provide a durable third-party
-analytics delivery queue.
-
-For stateful SDKs, `states.eventStream` lets application code observe SDK events from the point a
-subscriber is registered. It immediately emits the current snapshot, then future updates. It does
-not replay every prior event for late subscribers or retain events until a destination acknowledges
-them.
-
-For Node and server-rendered flows, the SDK returns request-local event results. Server-side
-analytics forwarding should use the result `data` in the same request or event collector.
-
-If a destination SDK loads late, is temporarily unavailable, or requires acknowledgement before an
-event is considered delivered, put that buffering policy in application code. The application can
-choose the queue size, TTL, consent behavior, retry policy, and drop behavior that match its
-analytics requirements.
-
-## Choose your runtime entry point
-
-Choose the simplest handoff that matches the SDK runtime and the event your reports need. For
-stateful SDKs, subscribe first and add custom code only where a subscription does not have the
-context you need. For Node and server-rendered flows, use request-local SDK data from the same
-request that rendered or emitted the event.
-
-We recommend this default:
-
-- Register one app-level `states.eventStream` subscription and forward the SDK events your
-  destination needs. For entry exposure reporting, collapse SDK path records and duration updates
-  into one semantic third-party exposure unless your tracking plan requires path-level mirroring.
-- Forward Custom Flag values from the same app-owned flag read or render path. Use
-  `states.flag(name)` only when that subscription is already how the app reads the flag.
-- Use `states.profile` only for profile availability or approved profile metadata. Do not treat the
-  Optimization profile ID as your known-user ID.
-- Use `resolveOptimizedEntry()` metadata only when you need entry-specific exposure or
-  business-event attribution.
-- Use request-local event result data in Node and SSR flows, where state subscriptions are not the
-  integration surface.
-
-You do not need an analytics adapter for every integration. A small mapping function is often
-enough.
-
-Use this table to choose the code location that owns the third-party handoff:
-
-| Path                               | Use it when                                                                 | Integration shape                                                                                                                        |
-| ---------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Stateful SDK subscriptions         | You use Web, React Web, or React Native and the SDK instance owns state.    | Subscribe to `states.eventStream`, `states.blockedEventStream`, `states.profile`, `states.selectedOptimizations`, or `states.flag(...)`. |
-| Provider-managed subscriptions     | You use React Web or React Native and want subscriptions tied to the root.  | Register app-level subscribers from the provider `onStatesReady` callback.                                                               |
-| Existing business-event code       | You need to attribute purchases, signups, or other app events to variants.  | Add Contentful metadata from `resolveOptimizedEntry()` to the existing event.                                                            |
-| Request-local Node or SSR data     | You call the Node SDK or resolve first paint on the server.                 | Use the event result `data` returned by `page()`, `identify()`, `track()`, or sticky `trackView()`.                                      |
-| Destination-specific mapping layer | Your organization enforces a strict tracking plan or sends to many vendors. | Add a small mapper that normalizes SDK events before forwarding.                                                                         |
-
-Avoid starting with a broad adapter that mirrors every SDK value. Start with subscriptions and map
-only the event types and fields that answer a reporting or activation question.
-
-Before copying a vendor example, confirm the runtime path and the code location that owns the
-forwarded event.
-
-| Runtime                 | Register subscriptions where                               | Forward Contentful context from                                                                 |
-| ----------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Web                     | After constructing the SDK instance.                       | `states.eventStream`, app-owned flag reads, or the business event that owns the user action.    |
-| React Web               | `onStatesReady` on `OptimizationRoot` or provider setup.   | Provider-managed subscriptions, React entry resolution helpers, or the action handler.          |
-| React Native            | `onStatesReady` on `OptimizationRoot` or provider setup.   | Provider-managed subscriptions, flag render paths, screen events, or tap/action handlers.       |
-| Node or server rendered | The same request or server event collector that calls SDK. | Request-local event result data and the server-side business event or exposure collector.       |
-| Hybrid SSR and CSR      | Server request first, then browser provider subscriptions. | Server-resolved first paint from event result data; later client activity from stateful events. |
-
-Move through the integration in this order:
-
-1. Choose whether the integration can use state subscriptions or needs request-local data.
-2. Register SDK subscriptions once at the app or provider boundary when the runtime is stateful.
-3. Add Contentful metadata to your own business events only when reports need attribution by
+1. Pick the event owner. Use state streams for stateful clients, request-local event results for
+   Node and server rendering, and existing business-event code for purchases, signups, leads, or
+   other app-defined actions.
+2. Gate forwarding with the same application or CMP decision that controls the destination. SDK
+   consent controls SDK event emission, not vendor consent modes.
+3. Deduplicate event-stream forwarding by `messageId`. Keep the cache outside the subscriber or
+   provider lifecycle so remounts can recognize the same current snapshot. When a subscriber must
+   forward only events emitted after it registers, record `states.eventStream.current?.messageId`
+   before subscribing and skip that first message ID.
+4. Collapse view and hover duration records before sending exposure or funnel events to a
+   third-party destination. SDK view and hover tracking can emit multiple records with the same
+   `viewId` or `hoverId`. Sticky `trackView()` also emits an Experience event and a paired Insights
+   event for the same view.
+5. Map only stable, primitive values. Prefer `contentful_*` property names unless your tracking plan
+   already defines destination-specific names.
+6. Attach Contentful context to existing business events only when the report needs attribution by
    experience, variant, entry, or flag.
-4. Map the subscription or request-local payload into each destination's event schema.
-5. Validate consent, identity, duplicate handling, and destination payloads before release.
 
-## Runtime handoff patterns
+`states.selectedOptimizations` is useful for readiness checks and coarse segmentation, but it is not
+an exposure event by itself. It tells you which experiences are active for the current profile, not
+which entry rendered or which user interaction occurred.
 
-### Stateful SDK subscriptions
+The SDK event stream is a live handoff, not a durable third-party delivery queue. Stateful
+JavaScript observables emit the current value when a subscriber registers, then later updates. They
+do not replay the full history, and a new empty `Set` inside a new subscriber does not know which
+current `messageId` an earlier subscriber already forwarded. Keep the message-ID cache in
+longer-lived app state, or seed an initial message ID to skip when only later events belong in the
+destination. iOS uses a Combine `PassthroughSubject`, and Android exposes a `SharedFlow` with a
+finite recent-event replay buffer. Register native collectors before the page, screen, flag, or
+entry interaction events that you need to own instead of treating either stream as a durable
+analytics queue.
 
-Stateful SDK subscriptions are the default path for browser and mobile integrations. Register them
-once near SDK initialization, not inside every component that renders optimized content.
+Optimized entry interaction events can include an `optimization` object on the event-stream payload.
+That object is runtime-only enrichment for application subscribers; the SDK does not send it to the
+Experience API or Insights API event payload. The enrichment can include the selected optimization,
+the Optimization entry, the audience entry, the baseline entry, the resolved entry, and selected
+variant metadata. Treat it as read-only and potentially large. Forward only approved primitive
+fields, such as audience name or experience name, instead of forwarding the full object or complete
+Contentful entries.
 
-In React Web and React Native, prefer `onStatesReady` when your provider owns SDK setup. In plain
-Web apps, subscribe after constructing the SDK instance.
+The `optimization` object is optional. It appears when the SDK can connect an interaction event to
+an optimized entry resolution context. It is absent on events without that context, including
+standalone Custom Flag view events.
 
-### Register provider-managed subscriptions
-
-Use `onStatesReady` to attach app-level subscriptions before provider children can emit SDK events.
-Return a cleanup function so hot reloads, tests, and route-level provider teardown do not leave
-stale subscribers behind.
-
-```tsx
-<OptimizationRoot
-  clientId="your-client-id"
-  environment="main"
-  onStatesReady={(states) => {
-    const forwardedMessageIds = new Set<string>()
-
-    const eventSubscription = states.eventStream.subscribe((event) => {
-      if (!event) return
-      if (forwardedMessageIds.has(event.messageId)) return
-      if (!canForwardSdkEvent(event)) return
-
-      forwardedMessageIds.add(event.messageId)
-
-      analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
-    })
-
-    const blockedSubscription = states.blockedEventStream.subscribe((blocked) => {
-      if (!blocked) return
-
-      console.debug('Contentful event blocked', {
-        method: blocked.method,
-        reason: blocked.reason,
-      })
-    })
-
-    return () => {
-      eventSubscription.unsubscribe()
-      blockedSubscription.unsubscribe()
-    }
-  }}
->
-  <App />
-</OptimizationRoot>
-```
-
-Use the same callback shape with React Web or React Native provider roots. Keep destination setup,
-consent checks, and privacy filters in your application code around the forwarded call.
-
-### Forward SDK events from `eventStream`
-
-`states.eventStream` emits each SDK event that passes through the SDK. Use it when you want a tag
-manager, CDP, or analytics tool to receive the same high-level SDK activity that Contentful
-receives.
+**Copy this:**
 
 ```ts
-const forwardedMessageIds = new Set<string>()
-
-const subscription = optimization.states.eventStream.subscribe((event) => {
-  if (!event) return
-  if (forwardedMessageIds.has(event.messageId)) return
-  if (!canForwardSdkEvent(event)) return
-
-  forwardedMessageIds.add(event.messageId)
-
-  analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
-})
-```
-
-`subscribe()` emits the current value immediately. Dedupe by `messageId` when your subscriber can
-mount more than once or when a destination does not accept repeated payloads.
-
-`eventStream` is a live handoff, not a replay queue. Register the subscription at SDK or provider
-initialization. If the analytics destination is not ready yet, buffer forwarded payloads in
-application code with an explicit size, TTL, and drop policy.
-
-Use this path for:
-
-- SDK page and screen events.
-- SDK `track()` events.
-- Entry view and hover events emitted by Web SDK interaction tracking.
-- Entry click or mobile tap events emitted by Web, React Web, or React Native interaction tracking.
-- Sticky view events that also update the Experience API profile.
-- Custom Flag view events emitted by `getFlag()` or `states.flag(name)`.
-
-### Use request-local data in Node and SSR
-
-The Node SDK is stateless, so use the data returned by the SDK call that belongs to the current
-request. The same rule applies when a server-rendered page resolves first-paint content.
-
-Node and SSR flows do not expose process-wide subscriptions. Keep third-party forwarding tied to the
-request or server-side business event that produced the SDK data.
-
-```ts
-const requestOptimization = optimization.forRequest({
-  consent: true,
-  profile,
-})
-
-const { accepted, data: optimizationData } = await requestOptimization.page({
-  properties: { path: req.path },
-})
-
-const { entry: resolvedHeroEntry, selectedOptimization } = optimization.resolveOptimizedEntry(
-  baselineHeroEntry,
-  accepted ? optimizationData?.selectedOptimizations : undefined,
-)
-
-analytics.track('Contentful Optimization Exposure', {
-  contentful_profile_id:
-    accepted && canForwardOptimizationProfileId ? optimizationData?.profile.id : undefined,
-  contentful_experience_id: selectedOptimization?.experienceId,
-  contentful_variant_index: selectedOptimization?.variantIndex,
-  contentful_variant_entry_id: selectedOptimization ? resolvedHeroEntry.sys.id : undefined,
-  contentful_baseline_entry_id: baselineHeroEntry.sys.id,
-})
-```
-
-Forward server-side payloads from the same request or event collector that owns your existing
-server-side analytics. Do not depend on browser state subscriptions to explain server-rendered
-content unless you bootstrap the browser with the same `OptimizationData`.
-
-### Filter semantic exposures before forwarding
-
-> [!IMPORTANT] View and hover tracking can emit heartbeat events for the same observed view or hover
-> so Contentful Analytics can measure duration. Sticky views also emit one Experience event and one
-> paired Insights event for the same view. Many third-party analytics tools count each forwarded
-> call as a new event. Filter, summarize, or throttle these SDK records before sending them to a
-> funnel, exposure, or product-analytics destination.
-
-For exposure and funnel reporting, forward one semantic exposure for each `viewId` or `hoverId` and
-drop later records for that same view or hover. This collapses both duration updates and sticky
-Experience/Insights pairs. If a destination supports engagement duration, aggregate by `viewId` or
-`hoverId` and send the maximum observed or final `viewDurationMs` or `hoverDurationMs` value
-instead.
-
-```ts
-const forwardedExposureKeys = new Set<string>()
-
-function canForwardSdkEvent(event: {
-  type: string
-  componentType?: string
-  componentId?: string
-  experienceId?: string
-  variantIndex?: number
-  viewId?: string
-  hoverId?: string
-}): boolean {
-  const semanticId = event.viewId ?? event.hoverId
-  const isEntryExposure =
-    (event.type === 'component' &&
-      event.componentType !== 'Variable' &&
-      event.viewId !== undefined) ||
-    (event.type === 'component_hover' && event.hoverId !== undefined)
-
-  if (!isEntryExposure || semanticId === undefined) return true
-
-  const exposureKey = [
-    event.type,
-    event.componentId,
-    event.experienceId,
-    event.variantIndex,
-    semanticId,
-  ].join(':')
-
-  if (forwardedExposureKeys.has(exposureKey)) return false
-
-  forwardedExposureKeys.add(exposureKey)
-  return true
-}
-```
-
-This filter is separate from `messageId` dedupe. `messageId` dedupe prevents the same SDK event from
-being forwarded again when a subscriber remounts. Semantic exposure filtering prevents distinct SDK
-records for the same observed view or hover from being counted as repeated exposures or
-interactions. Sticky `trackView()` records have distinct `messageId` values, so `messageId` dedupe
-does not collapse the Experience and Insights records for a single sticky view.
-
-### Forward profile and flag state
-
-Use `states.profile` when your destination needs to know that a profile exists, or when your policy
-allows the Optimization profile ID as destination metadata.
-
-```ts
-optimization.states.profile.subscribe((profile) => {
-  if (!profile) return
-  if (!canForwardOptimizationProfileId) return
-
-  analytics.track('Contentful Optimization Profile Ready', {
-    contentful_profile_id: profile.id,
-  })
-})
-```
-
-Use your application user ID for vendor identity calls. Do not call `analytics.identify()` with
-`profile.id` as the known-user ID.
-
-For Custom Flags, forward third-party analytics from the same code path that already reads or
-renders the flag. The SDK emits Contentful flag-view tracking when `states.flag(name)` delivers a
-value, when `states.flag(name).current` is read, or when `getFlag(name)` returns a changed value. Do
-not add an analytics-only flag subscription unless you intentionally want that additional Contentful
-flag-view observation.
-
-```ts
-optimization.states.flag('pricing-layout').subscribe((value) => {
-  if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
-    return
-  }
-
-  renderPricingLayout(value)
-
-  analytics.track('Contentful Flag Evaluated', {
-    contentful_flag_key: 'pricing-layout',
-    contentful_flag_value: value,
-  })
-})
-```
-
-### Use selected optimizations for readiness, not exposure by itself
-
-`states.selectedOptimizations` tells you which experiences and variants are active for the current
-profile. It does not tell you which Contentful entry your application rendered.
-
-Use it for readiness, diagnostics, or coarse segmentation:
-
-```ts
-optimization.states.selectedOptimizations.subscribe((selectedOptimizations) => {
-  if (!selectedOptimizations) return
-
-  analytics.track('Contentful Optimizations Ready', {
-    contentful_experience_ids: selectedOptimizations.map(({ experienceId }) => experienceId),
-  })
-})
-```
-
-Do not treat this subscription as an exposure event by itself. For exposure, use the SDK interaction
-events from `eventStream`, or add entry-specific metadata from the render path.
-
-### Diagnose blocked events
-
-Subscribe to `states.blockedEventStream` while testing consent and destination gating. It shows
-which SDK method was blocked and why.
-
-```ts
-optimization.states.blockedEventStream.subscribe((blocked) => {
-  if (!blocked) return
-
-  console.debug('Contentful event blocked', {
-    method: blocked.method,
-    reason: blocked.reason,
-  })
-})
-```
-
-Use `onEventBlocked` at SDK construction time when you need one startup diagnostic hook instead of a
-dynamic subscription. Blocked SDK events are not replayed later when consent changes, so use this
-diagnostic path only for debugging and validation, not as a deferred delivery queue.
-
-## Enrich business events
-
-Your business event remains the primary analytics event. Add Contentful fields only when the report
-needs to break the event down by experience, variant, entry, or flag.
-
-In stateful Web and React Native SDKs, `resolveOptimizedEntry()` can use current SDK state when you
-omit the `selectedOptimizations` argument:
-
-```ts
-const { entry: resolvedHeroEntry, selectedOptimization } =
-  optimization.resolveOptimizedEntry(baselineHeroEntry)
-
-renderHero(resolvedHeroEntry)
-
-analytics.track('Quote Requested', {
-  plan: 'enterprise',
-  contentful_experience_id: selectedOptimization?.experienceId,
-  contentful_variant_index: selectedOptimization?.variantIndex,
-  contentful_variant_entry_id: selectedOptimization ? resolvedHeroEntry.sys.id : undefined,
-  contentful_baseline_entry_id: baselineHeroEntry.sys.id,
-})
-```
-
-`baselineHeroEntry` is the Contentful entry your application fetched. `resolvedHeroEntry` is the
-entry your application rendered. `selectedOptimization` is the SDK metadata that explains the
-selected experience and variant.
-
-For React Web, the same metadata is available when you use helpers or components that return
-resolved entry data. Keep the analytics call beside the user action you are measuring, not inside a
-global subscription.
-
-## Normalize and map Contentful context
-
-Most destinations need one of these payload shapes:
-
-- An SDK event from `states.eventStream`, normalized by a small mapper.
-- A flag event from the app-owned flag read or render path.
-- A business event with Contentful properties from `resolveOptimizedEntry()`.
-- A request-local server event with fields from `OptimizationData`.
-
-Use stable names and primitive values. When you do not already have a naming convention, use
-`contentful_*` property names.
-
-| Property                       | Source                                                                                                     |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| `contentful_event_type`        | `event.type` from `states.eventStream`.                                                                    |
-| `contentful_message_id`        | `event.messageId` from `states.eventStream`, useful for dedupe.                                            |
-| `contentful_profile_id`        | `profile.id` from `states.profile` or `optimizationData.profile.id`, only when policy allows forwarding.   |
-| `contentful_experience_id`     | `event.experienceId` or `selectedOptimization.experienceId`.                                               |
-| `contentful_variant_index`     | `event.variantIndex` or `selectedOptimization.variantIndex`.                                               |
-| `contentful_component_id`      | `event.componentId`, a rendered entry ID, or a Custom Flag key.                                            |
-| `contentful_component_type`    | `event.componentType`, such as `Entry` or `Variable`.                                                      |
-| `contentful_view_id`           | `event.viewId`, useful when grouping semantic view records.                                                |
-| `contentful_view_duration_ms`  | `event.viewDurationMs`, useful when a destination accepts summarized view duration.                        |
-| `contentful_hover_id`          | `event.hoverId`, useful when grouping semantic hover records.                                              |
-| `contentful_hover_duration_ms` | `event.hoverDurationMs`, useful when a destination accepts summarized hover duration.                      |
-| `contentful_variant_entry_id`  | The resolved entry ID when entry personalization selected a variant.                                       |
-| `contentful_baseline_entry_id` | The baseline entry ID your application fetched before resolution.                                          |
-| `contentful_flag_key`          | The flag key from the app-owned flag read path.                                                            |
-| `contentful_flag_value`        | A primitive flag value after filtering strings, numbers, and booleans from the returned Custom Flag value. |
-
-Do not send the full `profile`, full `changes`, audience membership lists, raw traits, full
-Contentful entry payloads, or rich text content to a third-party analytics destination unless your
-approved data policy explicitly allows that destination.
-
-Use helpers when more than one destination needs the same mapping or when your tracking plan needs
-stable names. Keep them small.
-
-### Normalize SDK events
-
-This helper keeps the `states.eventStream` subscriber short and avoids forwarding whole SDK event
-objects by default.
-
-```ts
-function pickContentfulEventProperties(event: {
+type OptimizationAnalyticsEvent = {
   type: string
   messageId: string
-  userId?: string
   componentId?: string
   componentType?: string
   experienceId?: string
@@ -509,11 +162,53 @@ function pickContentfulEventProperties(event: {
   viewDurationMs?: number
   hoverId?: string
   hoverDurationMs?: number
-}): Record<string, string | number | undefined> {
-  return {
+  optimization?: {
+    audienceEntry?: {
+      fields?: {
+        nt_name?: string
+      }
+    }
+    optimizationEntry?: {
+      fields?: {
+        nt_name?: string
+        nt_type?: string
+      }
+    }
+  }
+}
+
+const forwardedSemanticInteractions = new Set<string>()
+
+function shouldForwardContentfulEvent(event: OptimizationAnalyticsEvent): boolean {
+  const semanticId = event.viewId ?? event.hoverId
+
+  if ((event.type !== 'component' && event.type !== 'component_hover') || !semanticId) {
+    return true
+  }
+
+  // Collapse repeated duration updates for the same view or hover interaction.
+  const key = [
+    event.type,
+    event.componentType,
+    event.componentId,
+    event.experienceId,
+    event.variantIndex,
+    semanticId,
+  ].join(':')
+
+  if (forwardedSemanticInteractions.has(key)) return false
+
+  forwardedSemanticInteractions.add(key)
+  return true
+}
+
+function pickContentfulEventProperties(
+  event: OptimizationAnalyticsEvent,
+): Record<string, string | number | undefined> {
+  // Shape the payload to primitive fields instead of forwarding full SDK payloads.
+  return dropUndefined({
     contentful_event_type: event.type,
     contentful_message_id: event.messageId,
-    contentful_user_id: event.userId,
     contentful_component_id: event.componentId,
     contentful_component_type: event.componentType,
     contentful_experience_id: event.experienceId,
@@ -522,392 +217,339 @@ function pickContentfulEventProperties(event: {
     contentful_view_duration_ms: event.viewDurationMs,
     contentful_hover_id: event.hoverId,
     contentful_hover_duration_ms: event.hoverDurationMs,
-  }
+    contentful_audience_name: event.optimization?.audienceEntry?.fields?.nt_name,
+    contentful_experience_name: event.optimization?.optimizationEntry?.fields?.nt_name,
+    contentful_experience_type: event.optimization?.optimizationEntry?.fields?.nt_type,
+  })
+}
+
+function dropUndefined<TValue>(values: Record<string, TValue | undefined>): Record<string, TValue> {
+  return Object.fromEntries(
+    Object.entries(values).filter(([, value]) => value !== undefined),
+  ) as Record<string, TValue>
 }
 ```
 
-If the destination does not accept `undefined` values, remove them before sending the payload.
+If a destination can store engagement duration, aggregate by `viewId` or `hoverId` and send the
+maximum or final duration value instead of dropping later duration records.
 
-### Build context from a resolved entry
+For Custom Flags, forward analytics from the same code path that reads or renders the flag. In
+stateful SDKs, `getFlag()` and `states.flag(name)` or native flag observers can emit Contentful
+flag-view tracking. Do not add an analytics-only flag subscription unless you intentionally want
+that additional Contentful flag-view observation.
 
-Use this helper only when you need to repeat business-event or server-side attribution in several
-places.
+## Runtime or vendor variants
 
-```ts
-function pickResolvedEntryContext(input: {
-  baselineEntryId: string
-  resolvedEntryId: string
-  selectedOptimization?: {
-    experienceId: string
-    variantIndex: number
-    sticky?: boolean
-  }
-}): Record<string, string | number | boolean | undefined> {
-  return {
-    contentful_experience_id: input.selectedOptimization?.experienceId,
-    contentful_variant_index: input.selectedOptimization?.variantIndex,
-    contentful_variant_entry_id: input.selectedOptimization ? input.resolvedEntryId : undefined,
-    contentful_baseline_entry_id: input.baselineEntryId,
-    contentful_sticky: input.selectedOptimization?.sticky,
-  }
+### Stateful JavaScript runtimes
+
+Applies when you use the Web SDK, React Web SDK, React Native SDK, or the Next.js client entrypoint
+and the SDK instance owns observable state.
+
+For plain Web SDK integrations, subscribe directly on the SDK instance. For React Web, React Native,
+and Next.js client integrations, prefer `onStatesReady` on the provider root so the subscription
+exists before child components can emit SDK events.
+
+**Adapt this to your use case:**
+
+```tsx
+const forwardedMessageIds = new Set<string>()
+
+function AppOptimizationRoot() {
+  return (
+    <OptimizationRoot
+      clientId="your-client-id"
+      environment="main"
+      onStatesReady={(states) => {
+        const initialMessageId = states.eventStream.current?.messageId
+
+        // onStatesReady runs before provider children mount, so child SDK events can be observed.
+        const eventSubscription = states.eventStream.subscribe((event) => {
+          if (!event) return
+
+          // Guard against the current snapshot and provider remounts.
+          if (forwardedMessageIds.has(event.messageId)) return
+          if (event.messageId === initialMessageId) {
+            forwardedMessageIds.add(event.messageId)
+            return
+          }
+
+          // Keep vendor consent separate from the SDK's Contentful event consent gate.
+          if (!appPolicyAllowsThirdPartyAnalytics()) return
+          if (!shouldForwardContentfulEvent(event)) return
+
+          forwardedMessageIds.add(event.messageId)
+
+          // The analytics layer owns destination naming and property registration.
+          analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
+        })
+
+        const blockedSubscription = states.blockedEventStream.subscribe((blocked) => {
+          if (!blocked) return
+
+          // Blocked events are diagnostic only and are not replayed after consent changes.
+          console.debug('Contentful event blocked', {
+            method: blocked.method,
+            reason: blocked.reason,
+          })
+        })
+
+        return () => {
+          eventSubscription.unsubscribe()
+          blockedSubscription.unsubscribe()
+        }
+      })
+    >
+      <App />
+    </OptimizationRoot>
+  )
 }
 ```
 
-## Vendor examples
+Use `states.blockedEventStream` or `onEventBlocked` for diagnostics. Blocked events are dropped at
+the SDK boundary and are not replayed when consent changes.
 
-The examples below show the SDK subscription and the destination call together. Subscription
-examples include `messageId` dedupe and use `canForwardSdkEvent(event)` from
-[Filter semantic exposures before forwarding](#filter-semantic-exposures-before-forwarding). They
-also use `pickContentfulEventProperties(event)` from [Normalize SDK events](#normalize-sdk-events).
-Business-event examples use `pickResolvedEntryContext(...)` from
-[Build context from a resolved entry](#build-context-from-a-resolved-entry).
+### Node and Next.js server runtimes
 
-Use the examples as starting shapes, then replace event names, custom dimensions, and destination
-property names with the names in your tracking plan.
+Applies when a Node route, server action, middleware/proxy flow, or Next.js Server Component already
+called a request-bound SDK method and owns the analytics event for that request.
 
-| Destination               | Use this example when                                     | Primary call shown           |
-| ------------------------- | --------------------------------------------------------- | ---------------------------- |
-| Google Analytics          | Your app owns `gtag.js` calls.                            | `gtag('event', ...)`         |
-| Google Tag Manager        | Tags and routing rules live in GTM.                       | `window.dataLayer.push(...)` |
-| Adobe Analytics           | Your site owns AppMeasurement variables.                  | `s.tl(...)`                  |
-| Adobe Experience Platform | Events go through Adobe Edge Network or datastreams.      | `alloy('sendEvent', ...)`    |
-| Contentsquare             | You segment experience analytics or replay by variant.    | `window._uxa.push(...)`      |
-| Segment                   | Segment is your central fan-out layer.                    | `analytics.track(...)`       |
-| Amplitude                 | Funnels or cohorts need Contentful experience properties. | `amplitude.track(...)`       |
-| Heap                      | You use autocapture plus explicit Contentful metadata.    | `heap.track(...)`            |
-| Mixpanel                  | Product analytics depends on explicit event tracking.     | `mixpanel.track(...)`        |
-| PostHog                   | Product analytics, replay, or funnels sit beside the SDK. | `posthog.capture(...)`       |
+Use the `data` from the same accepted SDK call that rendered the response or handled the server
+event. For Next.js helpers, `getNextjsServerOptimizationData()` returns the same `OptimizationData`
+shape in its `data` field. Browser state streams cannot explain a server-rendered first paint unless
+you intentionally hydrate the browser with the same Optimization data.
 
-### Google Analytics
-
-Use Google Analytics directly when your app already uses `gtag.js` and your code owns event calls.
+**Adapt this to your use case:**
 
 ```ts
-const forwardedMessageIds = new Set<string>()
+const pageResult = await requestOptimization.page({
+  properties: { path: req.path },
+})
 
-optimization.states.eventStream.subscribe((event) => {
-  if (!event) return
-  if (forwardedMessageIds.has(event.messageId)) return
-  if (!canForwardSdkEvent(event)) return
+const optimizationData = pageResult.accepted ? pageResult.data : undefined
 
-  forwardedMessageIds.add(event.messageId)
+// Resolve the entry and analytics context from the same request-local Optimization data.
+const { entry: resolvedHeroEntry, selectedOptimization } = optimization.resolveOptimizedEntry(
+  baselineHeroEntry,
+  optimizationData?.selectedOptimizations,
+)
 
-  gtag('event', `contentful_${event.type}`, pickContentfulEventProperties(event))
+if (appPolicyAllowsThirdPartyAnalytics()) {
+  // The server event owner decides which Contentful fields belong on this business event.
+  analytics.track(
+    'Quote Requested',
+    dropUndefined({
+      plan: 'enterprise',
+      contentful_profile_id: canForwardOptimizationProfileId
+        ? optimizationData?.profile.id
+        : undefined,
+      contentful_experience_id: selectedOptimization?.experienceId,
+      contentful_variant_index: selectedOptimization?.variantIndex,
+      contentful_variant_entry_id: selectedOptimization ? resolvedHeroEntry.sys.id : undefined,
+      contentful_baseline_entry_id: baselineHeroEntry.sys.id,
+    }),
+  )
+}
+```
+
+In stateless runtimes, Insights-only calls such as non-sticky `trackView()`, `trackClick()`,
+`trackHover()`, and `trackFlagView()` need a request-bound profile. Sticky `trackView()` returns
+Optimization data from the Experience path before sending the paired Insights event.
+
+### Native mobile runtimes
+
+Applies when an iOS or Android app uses the native SDK and an app-owned analytics layer already
+collects events.
+
+Subscribe from the screen or application owner that outlives the interactions you want to observe.
+On iOS, `eventStream` is a Combine publisher backed by a `PassthroughSubject`, so subscribe before
+calling `page()`, `screen()`, `flagPublisher(...)`, or rendering tracked entries. On Android,
+collect `client.eventStream` from a lifecycle-aware coroutine scope and cancel that scope with the
+owning screen or activity.
+
+#### iOS
+
+Applies when a SwiftUI view model, UIKit controller, scene delegate, or app-level analytics owner
+holds the `AnyCancellable`. Shape the dictionary before calling the vendor SDK because native events
+can include fields that your destination has not approved.
+
+**Follow this pattern:**
+
+```swift
+private var analyticsCancellable: AnyCancellable?
+
+func contentfulAnalyticsProperties(from event: [String: Any]) -> [String: Any] {
+    let optimization = event["optimization"] as? [String: Any]
+    let audience = optimization?["audienceEntry"] as? [String: Any]
+    let audienceFields = audience?["fields"] as? [String: Any]
+    let experience = optimization?["optimizationEntry"] as? [String: Any]
+    let experienceFields = experience?["fields"] as? [String: Any]
+
+    [
+        "contentful_event_type": event["type"],
+        "contentful_message_id": event["messageId"],
+        "contentful_component_id": event["componentId"],
+        "contentful_component_type": event["componentType"],
+        "contentful_experience_id": event["experienceId"],
+        "contentful_variant_index": event["variantIndex"],
+        "contentful_view_id": event["viewId"],
+        "contentful_hover_id": event["hoverId"],
+        "contentful_audience_name": audienceFields?["nt_name"],
+        "contentful_experience_name": experienceFields?["nt_name"],
+        "contentful_experience_type": experienceFields?["nt_type"],
+    ].compactMapValues { $0 }
+}
+
+analyticsCancellable = client.eventStream.sink { event in
+    // Apply destination consent and payload shaping before forwarding outside the app.
+    guard appPolicyAllowsThirdPartyAnalytics() else { return }
+
+    analytics.track(
+        "Contentful \(event["type"] as? String ?? "event")",
+        properties: contentfulAnalyticsProperties(from: event)
+    )
+}
+```
+
+#### Android
+
+Applies when a Compose screen, XML activity, or app-level analytics owner can collect from a
+lifecycle-aware coroutine scope. Android keeps a finite recent-event replay buffer, so apply
+`messageId` or semantic deduplication before forwarding if the collector can restart.
+
+**Follow this pattern:**
+
+```kotlin
+lifecycleScope.launch {
+    client.eventStream.collect { event ->
+        // Apply destination consent and payload shaping before forwarding outside the app.
+        forwardOptimizationEvent(event)
+    }
+}
+```
+
+Native events arrive as dictionary or map payloads with the same wire fields, such as `type`,
+`messageId`, `componentId`, `experienceId`, `variantIndex`, `viewId`, and duration fields. Optimized
+entry interaction events can also include the same optional `optimization` enrichment object. Keep
+the same mapping and consent rules that you use for JavaScript destinations, and prefer approved
+display strings, such as audience name, over full nested objects.
+
+### Destination variants
+
+Use the destination shape that matches your analytics architecture:
+
+| Destination group                     | Applies when                                                                     | Handoff pattern                                                                    |
+| ------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Direct analytics SDKs                 | Your app owns calls such as GA, Segment, Amplitude, Mixpanel, or PostHog events. | Call the destination's track or capture method with mapped `contentful_*` fields.  |
+| Tag managers and data layers          | GTM or another tag manager owns routing and vendor tags.                         | Push one normalized object and map variables inside the tag manager.               |
+| CDPs and event buses                  | Segment, Adobe Experience Platform, or a warehouse pipeline fans out events.     | Keep Contentful fields in a namespaced object or approved tracking-plan schema.    |
+| Replay and experience analytics tools | Contentsquare, Heap, or session replay tools need segmentation by variant.       | Send short, non-personal segment fields and avoid broad profile or entry payloads. |
+
+#### GTM and dataLayer
+
+Applies when Google Tag Manager owns routing to one or multiple vendor tags. Push one normalized
+object and register the corresponding data-layer variables inside the tag manager.
+
+**Follow this pattern:**
+
+```ts
+window.dataLayer = window.dataLayer ?? []
+
+window.dataLayer.push({
+  // The tag manager owns routing from this normalized object to vendor tags.
+  event: `contentful_${event.type}`,
+  ...pickContentfulEventProperties(event),
 })
 ```
 
-For a business event, add Contentful context from the render or action path:
+#### Adobe Web SDK
+
+Applies when Adobe Web SDK forwards event data to Adobe Experience Platform or downstream Adobe
+reporting. Keep the Contentful fields namespaced unless your approved tracking plan maps them to
+specific XDM fields.
+
+**Follow this pattern:**
 
 ```ts
-const context = pickResolvedEntryContext({
-  baselineEntryId: baselineHeroEntry.sys.id,
-  resolvedEntryId: resolvedHeroEntry.sys.id,
-  selectedOptimization,
-})
-
-gtag('event', 'quote_requested', {
-  plan: 'enterprise',
-  ...context,
-})
-```
-
-Register the parameters that your reports need as custom dimensions or metrics. Coordinate enhanced
-measurement and SPA page-view tracking with your SDK page calls so route changes are not counted
-twice.
-
-### Google Tag Manager
-
-Use Google Tag Manager when your tags live outside your app bundle. Push one normalized object into
-the data layer and map fields to tags in GTM.
-
-```ts
-window.dataLayer = window.dataLayer || []
-const forwardedMessageIds = new Set<string>()
-
-optimization.states.eventStream.subscribe((event) => {
-  if (!event) return
-  if (forwardedMessageIds.has(event.messageId)) return
-  if (!canForwardSdkEvent(event)) return
-
-  forwardedMessageIds.add(event.messageId)
-
-  window.dataLayer.push({
-    event: `contentful_${event.type}`,
-    ...pickContentfulEventProperties(event),
-  })
-})
-```
-
-Create a Custom Event trigger for the `contentful_*` event name and map each required field to a
-Data Layer Variable.
-
-### Adobe Analytics
-
-Use Adobe Analytics AppMeasurement when your site owns report suites, eVars, props, and events
-through the `s` object.
-
-```ts
-const forwardedMessageIds = new Set<string>()
-
-optimization.states.eventStream.subscribe((event) => {
-  if (!event) return
-  if (forwardedMessageIds.has(event.messageId)) return
-  if (!canForwardSdkEvent(event)) return
-
-  forwardedMessageIds.add(event.messageId)
-
-  const properties = pickContentfulEventProperties(event)
-
-  s.tl(true, 'o', `Contentful ${event.type}`, {
-    eVar21: properties.contentful_experience_id,
-    eVar22: String(properties.contentful_variant_index ?? ''),
-    eVar23: properties.contentful_component_id,
-    events: 'event42',
-    linkTrackVars: 'eVar21,eVar22,eVar23,events',
-    linkTrackEvents: 'event42',
-  })
-})
-```
-
-Replace `eVar21`, `eVar22`, `eVar23`, and `event42` with the variables reserved for Contentful
-reporting. Prefer variable overrides for one event so Contentful context does not leak onto
-unrelated calls.
-
-### Adobe Experience Platform
-
-Use Adobe Experience Platform Web SDK when you collect events through Adobe Edge Network, map data
-to XDM, or forward data through datastreams.
-
-```ts
-const forwardedMessageIds = new Set<string>()
-
-optimization.states.eventStream.subscribe((event) => {
-  if (!event) return
-  if (forwardedMessageIds.has(event.messageId)) return
-  if (!canForwardSdkEvent(event)) return
-
-  forwardedMessageIds.add(event.messageId)
-
-  alloy('sendEvent', {
-    type: `contentful.${event.type}`,
-    data: {
-      contentful: {
-        optimization: pickContentfulEventProperties(event),
-      },
+alloy('sendEvent', {
+  type: `contentful.${event.type}`,
+  data: {
+    contentful: {
+      // Keep Contentful context namespaced when the destination fans out events.
+      optimization: pickContentfulEventProperties(event),
     },
-  })
+  },
 })
 ```
 
-Put fields that are part of your XDM schema in `xdm`. Put other approved metadata in `data` and map
-it in the datastream or destination rules.
+Register destination-specific custom dimensions, event properties, XDM fields, or data-layer
+variables before relying on reports. Keep vendor autocapture from duplicating SDK page, screen,
+click, tap, hover, or exposure events unless your tracking plan intentionally counts both.
 
-### Contentsquare
+## Validate the integration
 
-Use Contentsquare when you need experience analytics, zoning, session replay segmentation, or
-analysis by Contentful variant.
+Verify the recipe before release:
 
-```ts
-const forwardedMessageIds = new Set<string>()
+- The SDK integration still sends expected events to Contentful when consent allows it.
+- The third-party destination receives only the intended `contentful_*` fields.
+- Denied or withdrawn consent blocks both SDK-gated events and third-party forwarding according to
+  your application policy.
+- `states.blockedEventStream`, native `blockedEventStream`, or `onEventBlocked` shows expected
+  blocked methods during consent tests.
+- Subscriber or provider remounts do not resend the same current `messageId`; either the cache
+  outlives the subscriber or the initial snapshot is intentionally skipped.
+- View and hover records are collapsed, summarized, or intentionally mirrored before reaching
+  third-party exposure and funnel reports.
+- Sticky view tracking produces one intended downstream exposure, not one Experience exposure plus
+  one Insights exposure.
+- Server-rendered first paint and browser follow-up tracking have one owner for each event in the
+  tracking plan.
+- Known-user identity uses your application user ID. The Optimization profile ID is metadata only
+  when your policy allows forwarding it.
+- Event-stream `optimization` enrichment is reduced to approved primitive fields, such as audience
+  name or experience name, before it leaves the application boundary.
+- Full profile objects, audience membership lists, raw `changes`, complete Contentful entries, and
+  rich text bodies are absent from destination payloads unless the destination is explicitly
+  approved for that data.
 
-optimization.states.eventStream.subscribe((event) => {
-  if (!event) return
-  if (forwardedMessageIds.has(event.messageId)) return
-  if (event.type !== 'component') return
-  if (!canForwardSdkEvent(event)) return
+## Governance notes
 
-  forwardedMessageIds.add(event.messageId)
+Treat this recipe as a data-routing decision, not as an SDK requirement.
 
-  const properties = pickContentfulEventProperties(event)
-  if (properties.contentful_experience_id === undefined) return
+The application owns the tracking plan, consent record, destination consent modes, retention rules,
+and deletion or suppression flows. SDK consent is a runtime gate for SDK events. It does not
+configure Google Consent Mode, tag-manager consent, warehouse routing, replay masking, ad-platform
+sharing, or product-analytics opt-out behavior.
 
-  window._uxa = window._uxa || []
+Use the Optimization profile ID carefully. It is a profile-continuity identifier, not your known
+user ID. Use your application user ID for vendor `identify()` calls, and forward the Optimization
+profile ID only as approved event metadata.
 
-  window._uxa.push([
-    'trackDynamicVariable',
-    {
-      key: 'Contentful Optimization',
-      value: `${properties.contentful_experience_id}:${properties.contentful_variant_index}`,
-    },
-  ])
-
-  window._uxa.push(['trackPageEvent', 'Contentful Optimization Exposure'])
-})
-```
-
-Keep dynamic variable values short and non-personal. Configure masking, replay, and personal-data
-controls before forwarding user or page-level metadata.
-
-### Segment
-
-Use Segment when it is your central fan-out layer.
-
-```ts
-const forwardedMessageIds = new Set<string>()
-
-optimization.states.eventStream.subscribe((event) => {
-  if (!event) return
-  if (forwardedMessageIds.has(event.messageId)) return
-  if (!canForwardSdkEvent(event)) return
-
-  forwardedMessageIds.add(event.messageId)
-
-  analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
-})
-```
-
-For a business event:
-
-```ts
-const context = pickResolvedEntryContext({
-  baselineEntryId: baselineHeroEntry.sys.id,
-  resolvedEntryId: resolvedHeroEntry.sys.id,
-  selectedOptimization,
-})
-
-analytics.track('Quote Requested', {
-  plan: 'enterprise',
-  ...context,
-})
-```
-
-Keep the Segment tracking plan as the source of truth for event names and property types. Use
-destination filters or consent controls when only some downstream tools can receive Contentful
-context.
-
-### Amplitude
-
-Use Amplitude when you analyze funnels, cohorts, retention, or experiment outcomes by Contentful
-experience or variant.
-
-```ts
-const forwardedMessageIds = new Set<string>()
-
-optimization.states.eventStream.subscribe((event) => {
-  if (!event) return
-  if (forwardedMessageIds.has(event.messageId)) return
-  if (!canForwardSdkEvent(event)) return
-
-  forwardedMessageIds.add(event.messageId)
-
-  amplitude.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
-})
-```
-
-Use event properties for experience and variant metadata. Use user properties only for stable
-traits, not per-exposure variant metadata.
-
-### Heap
-
-Use Heap when you rely on automatic behavioral capture but still need explicit Contentful metadata.
-
-```ts
-const forwardedMessageIds = new Set<string>()
-
-optimization.states.eventStream.subscribe((event) => {
-  if (!event) return
-  if (forwardedMessageIds.has(event.messageId)) return
-  if (!canForwardSdkEvent(event)) return
-
-  forwardedMessageIds.add(event.messageId)
-
-  heap.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
-})
-```
-
-Use `heap.track()` for SDK events that Heap cannot infer from autocapture. Use
-`heap.addEventProperties()` only when the context must apply to later Heap events, and clear it when
-the context is no longer active.
-
-### Mixpanel
-
-Use Mixpanel when product analytics depends on explicit event tracking and user-profile enrichment.
-
-```ts
-const forwardedMessageIds = new Set<string>()
-
-optimization.states.eventStream.subscribe((event) => {
-  if (!event) return
-  if (forwardedMessageIds.has(event.messageId)) return
-  if (!canForwardSdkEvent(event)) return
-
-  forwardedMessageIds.add(event.messageId)
-
-  mixpanel.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
-})
-```
-
-Use event properties for experience and variant fields. Use super properties only when the current
-Contentful context must attach to every later event in the session, and unregister them when the
-context changes.
-
-### PostHog
-
-Use PostHog when you want product analytics, feature-usage analysis, session replay, or funnels
-alongside Contentful Personalization.
-
-```ts
-const forwardedMessageIds = new Set<string>()
-
-optimization.states.eventStream.subscribe((event) => {
-  if (!event) return
-  if (forwardedMessageIds.has(event.messageId)) return
-  if (!canForwardSdkEvent(event)) return
-
-  forwardedMessageIds.add(event.messageId)
-
-  posthog.capture(`contentful_${event.type}`, pickContentfulEventProperties(event))
-})
-```
-
-Use PostHog autocapture intentionally. Disable or filter it when it duplicates explicit Optimization
-interaction events. Use PostHog opt-in and opt-out controls with the same consent decision that
-drives `optimization.consent()`.
-
-## Validate delivery and prevent duplicates
-
-Validate the integration in the browser console, network panel, vendor debugger, and Contentful
-Analytics reports before releasing it.
-
-Check for these issues:
-
-- The subscription is registered once for each SDK instance.
-- One SDK activity creates one intended third-party event, unless your tracking plan intentionally
-  mirrors path-level records.
-- `messageId` dedupe prevents repeated forwarding when subscribers remount.
-- View and hover records are filtered, grouped, or summarized before they reach third-party funnel,
-  exposure, or product analytics reports.
-- Vendor autocapture does not duplicate SDK page, click, tap, hover, or exposure events.
-- Consent denial blocks both Optimization non-allowed events and third-party analytics events, and
-  blocked-event diagnostics show the expected SDK method and reason.
-- Known-user identity uses your application user ID, not the Optimization anonymous profile ID.
-- Logout or profile switching resets SDK state and vendor identity state as your app requires.
-- Full profile objects, audience memberships, personal data, and raw entry payloads are not present
-  in third-party event payloads unless approved.
-
-## Data governance checklist
-
-Before releasing a third-party analytics integration, confirm these points:
-
-- Your event contract is documented in your tracking plan.
-- Contentful fields sent to third-party tools are limited to approved IDs, labels, and primitive
-  metadata.
-- The Optimization profile ID is sent only when policy allows it.
-- Known-user identity uses your own stable user ID.
-- Consent state controls both the Optimization SDK and the third-party destination.
-- Vendor autocapture does not duplicate subscription-forwarded SDK events.
-- Server-side and browser-side paths use the same event names and property casing when they report
-  the same behavior.
-- Debug logging, network inspection, and vendor dashboards confirm the expected payloads.
+Keep server, browser, and native event names aligned when they describe the same business behavior.
+When the same user action can happen in more than one runtime, document which runtime owns the
+third-party event and which runtime only sends Contentful SDK events.
 
 ## Related guides and concepts
 
+Use these guides when you need the SDK setup that this recipe assumes:
+
 - [Choosing the right SDK](./choosing-the-right-sdk.md)
-- [Integrating the Optimization Web SDK in a web app](./integrating-the-web-sdk-in-a-web-app.md)
 - [Integrating the Optimization Node SDK in a Node app](./integrating-the-node-sdk-in-a-node-app.md)
+- [Integrating the Optimization Web SDK in a web app](./integrating-the-web-sdk-in-a-web-app.md)
 - [Integrating the Optimization React Web SDK in a React app](./integrating-the-react-web-sdk-in-a-react-app.md)
+- [Integrating the Optimization SDK in a Next.js app (SSR)](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md)
+- [Integrating the Optimization SDK in a Next.js app (hybrid SSR + CSR takeover)](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md)
 - [Integrating the Optimization React Native SDK in a React Native app](./integrating-the-react-native-sdk-in-a-react-native-app.md)
+- [Integrating the Optimization iOS SDK in a SwiftUI app](./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
+- [Integrating the Optimization iOS SDK in a UIKit app](./integrating-the-optimization-ios-sdk-in-a-uikit-app.md)
+- [Integrating the Optimization Android SDK in a Compose app](./integrating-the-optimization-android-sdk-in-a-compose-app.md)
+- [Integrating the Optimization Android SDK in a Views app](./integrating-the-optimization-android-sdk-in-a-views-app.md)
+
+Use these concepts for mechanics behind the recipe:
+
+- [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md)
 - [Interaction tracking in Web SDKs](../concepts/interaction-tracking-in-web-sdks.md)
 - [Interaction tracking in Node and stateless environments](../concepts/interaction-tracking-in-node-and-stateless-environments.md)
+- [React Native SDK interaction tracking mechanics](../concepts/react-native-sdk-interaction-tracking-mechanics.md)
+- [iOS SDK runtime and interaction mechanics](../concepts/ios-sdk-runtime-and-interaction-mechanics.md)
+- [Android SDK runtime and interaction mechanics](../concepts/android-sdk-runtime-and-interaction-mechanics.md)
 - [Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md)
-- [React Native SDK Interaction Tracking Mechanics](../concepts/react-native-sdk-interaction-tracking-mechanics.md)

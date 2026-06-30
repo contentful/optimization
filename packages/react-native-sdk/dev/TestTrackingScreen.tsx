@@ -15,6 +15,7 @@ import {
   OptimizedEntry,
   useScreenTracking,
 } from '@contentful/optimization-react-native'
+import { isRichTextDocument } from '@contentful/optimization-react-native/api-schemas'
 import type { Entry } from 'contentful'
 
 interface ThemeColors {
@@ -44,7 +45,7 @@ function getFieldText(field: unknown): string {
   }
 
   // Handle rich text document
-  if (field && typeof field === 'object' && 'nodeType' in field && field.nodeType === 'document') {
+  if (isRichTextDocument(field)) {
     return '[Rich Text Content]'
   }
 

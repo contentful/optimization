@@ -1,7 +1,8 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { copyFileSync, existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { isRecord } from './typeGuards'
 
 const IMPLEMENTATIONS_DIRECTORY = 'implementations'
 const PACKAGE_JSON_FILENAME = 'package.json'
@@ -10,15 +11,17 @@ const DISABLE_VERIFY_DEPS_BEFORE_RUN_CONFIG = '--config.verify-deps-before-run=f
 const SUCCESS_EXIT_CODE = 0
 const FAILURE_EXIT_CODE = 1
 const PLAYWRIGHT_PACKAGE_NAMES = new Set(['playwright', '@playwright/test'])
+const ACTIONS_REQUIRING_ENV_FILE = new Set([
+  'implementation:setup:e2e',
+  'implementation:test:e2e:run',
+  'serve',
+  'test:e2e',
+])
 
 interface ImplementationConfig {
   name: string
   scripts: ReadonlySet<string>
   usesPlaywright: boolean
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }
 
 function toStringRecord(value: unknown): Record<string, string> {
@@ -140,6 +143,19 @@ function runPnpm(implementation: string, args: readonly string[]): number {
   return result.status ?? FAILURE_EXIT_CODE
 }
 
+function ensureImplementationEnvFile(implementation: string): void {
+  const implementationDir = path.join(IMPLEMENTATIONS_DIRECTORY, implementation)
+  const envPath = path.join(implementationDir, '.env')
+  const envExamplePath = path.join(implementationDir, '.env.example')
+
+  if (existsSync(envPath) || !existsSync(envExamplePath)) {
+    return
+  }
+
+  copyFileSync(envExamplePath, envPath)
+  process.stdout.write(`\n> created ${envPath} from .env.example\n`)
+}
+
 function runScript(
   implementation: string,
   scriptName: string,
@@ -245,6 +261,18 @@ function runAction(
   }
 }
 
+function runRequestedAction(
+  implementation: ImplementationConfig,
+  requestedAction: string,
+  actionArgs: readonly string[],
+): number {
+  if (ACTIONS_REQUIRING_ENV_FILE.has(requestedAction)) {
+    ensureImplementationEnvFile(implementation.name)
+  }
+
+  return runAction(implementation, requestedAction, actionArgs)
+}
+
 function main(rawArgv: readonly string[]): number {
   const implementations = readImplementationConfigs()
   const implementationNames = implementations.map((implementation) => implementation.name)
@@ -293,7 +321,7 @@ function main(rawArgv: readonly string[]): number {
       return FAILURE_EXIT_CODE
     }
 
-    const exitCode = runAction(implementation, action, actionArgs)
+    const exitCode = runRequestedAction(implementation, action, actionArgs)
     if (exitCode !== SUCCESS_EXIT_CODE) {
       return exitCode
     }

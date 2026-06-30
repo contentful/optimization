@@ -1000,7 +1000,7 @@ jobs:
             exit 1
           fi
 
-      - name: Run Maestro E2E (emulator, clean boot)
+      - name: Run Maestro E2E (emulator)
         uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
         with:
           api-level: ${{ env.API_LEVEL }}
@@ -1013,18 +1013,14 @@ jobs:
           cores: 3
           ram-size: 6144M
           disk-size: 8G
-          disable-animations: true
-          emulator-options: ${{ env.EMULATOR_OPTIONS }} -no-snapshot-load -no-snapshot-save
+          emulator-options: ${{ env.EMULATOR_OPTIONS }}
           script: |
             echo "Installing Maestro CLI ($MAESTRO_VERSION)..."
             curl -Ls "https://get.maestro.mobile.dev" | bash
             echo "Installing ${{ matrix.app }} APK (${{ matrix.apk }})..."
-            echo "Removing any cached install of ${{ matrix.package }} to avoid signature mismatches from the cached AVD..."
+            echo "Removing any existing install of ${{ matrix.package }} to avoid signature mismatches..."
             adb uninstall ${{ matrix.package }} >/dev/null 2>&1 || true
             adb install -r android-apks/${{ matrix.apk }}
-            echo "Starting background logcat capture (diagnostics on failure)..."
-            adb logcat -c || true
-            nohup adb logcat -v threadtime > /tmp/android-logcat.txt 2>&1 &
             echo "Running Maestro flows for ${{ matrix.package }} ($MAESTRO_ITERATIONS iteration(s); only failed flows are retried)..."
             bash implementations/android-sdk/scripts/ci-maestro-run.sh ${{ matrix.package }}
 

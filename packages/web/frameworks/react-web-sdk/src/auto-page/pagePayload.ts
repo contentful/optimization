@@ -1,8 +1,5 @@
+import { isRecord } from '@contentful/optimization-web/api-schemas'
 import type { AutoPageEmissionContext, AutoPagePayload, AutoPagePayloadOptions } from './types'
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 function mergeRecords(
   base: Record<string, unknown>,
@@ -13,8 +10,7 @@ function mergeRecords(
   for (const [key, value] of Object.entries(override)) {
     const { [key]: previous } = result
 
-    result[key] =
-      isPlainObject(previous) && isPlainObject(value) ? mergeRecords(previous, value) : value
+    result[key] = isRecord(previous) && isRecord(value) ? mergeRecords(previous, value) : value
   }
 
   return result

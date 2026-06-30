@@ -1,4 +1,9 @@
-import type { AudienceEntry, OptimizationEntry } from '@contentful/optimization-web/api-schemas'
+import type { ContentfulEntryCollection } from '@contentful/optimization-core/preview-support'
+import {
+  isRecord,
+  type AudienceEntry,
+  type OptimizationEntry,
+} from '@contentful/optimization-web/api-schemas'
 import type {
   ChainModifiers,
   ContentfulClientApi,
@@ -9,13 +14,33 @@ import type {
 
 const DEFAULT_PAGE_SIZE = 100
 
-type CursorQuery<S extends EntrySkeletonType, M extends ChainModifiers> = Partial<
-  EntriesQueriesWithCursor<S, M>
->
+interface CursorQuery {
+  include?: number
+}
 
 interface CursorResponse<S extends EntrySkeletonType, M extends ChainModifiers> {
   items: Array<Entry<S, M>>
+  includes?: {
+    Entry?: Array<Entry<EntrySkeletonType, M>>
+  }
   pages?: { next?: string }
+}
+
+/** @internal */
+function getContentTypeId(entry: unknown): string | undefined {
+  if (!isRecord(entry)) return undefined
+
+  const { sys } = entry
+  if (!isRecord(sys)) return undefined
+
+  const { contentType } = sys
+  if (!isRecord(contentType)) return undefined
+
+  const { sys: contentTypeSys } = contentType
+  if (!isRecord(contentTypeSys)) return undefined
+
+  const { id } = contentTypeSys
+  return typeof id === 'string' ? id : undefined
 }
 
 /**
@@ -31,8 +56,8 @@ interface CursorResponse<S extends EntrySkeletonType, M extends ChainModifiers> 
  *
  * @public
  */
-export function isAudienceEntry(audience: Entry): audience is AudienceEntry {
-  return audience.sys.contentType.sys.id === 'nt_audience'
+export function isAudienceEntry(audience: unknown): audience is AudienceEntry {
+  return getContentTypeId(audience) === 'nt_audience'
 }
 
 /**
@@ -48,14 +73,13 @@ export function isAudienceEntry(audience: Entry): audience is AudienceEntry {
  *
  * @public
  */
-export function isOptimizationEntry(optimization: Entry): optimization is OptimizationEntry {
-  return optimization.sys.contentType.sys.id === 'nt_experience'
+export function isOptimizationEntry(optimization: unknown): optimization is OptimizationEntry {
+  return getContentTypeId(optimization) === 'nt_experience'
 }
 
 /**
  * Fetches all entries of a given content type using cursor-based pagination.
  *
- * @typeParam S - The entry skeleton type constraining the content type query.
  * @typeParam M - Chain modifiers for the Contentful client.
  * @param client - Contentful client instance.
  * @param contentTypeId - The content type ID to query.
@@ -67,41 +91,49 @@ export function isOptimizationEntry(optimization: Entry): optimization is Optimi
  *
  * @example
  * ```ts
- * const audiences = await getAllEntries<AudienceEntrySkeleton>(client, 'nt_audience')
+ * const audiences = await getAllEntries(client, 'nt_audience')
  * ```
  *
  * @public
  */
-export async function getAllEntries<
-  S extends EntrySkeletonType,
-  M extends ChainModifiers = ChainModifiers,
->(
+export async function getAllEntries<M extends ChainModifiers = ChainModifiers>(
   client: ContentfulClientApi<M>,
-  contentTypeId: S['contentTypeId'],
-  query: CursorQuery<S, M> = {},
+  contentTypeId: string,
+  query: CursorQuery = {},
   pageSize = DEFAULT_PAGE_SIZE,
-): Promise<Array<Entry<S, M>>> {
-  const items: Array<Entry<S, M>> = []
+): Promise<ContentfulEntryCollection<M>> {
+  const items: Array<Entry<EntrySkeletonType, M>> = []
+  const includedEntries = new Map<string, Entry<EntrySkeletonType, M>>()
   let pageNext: string | undefined = undefined
 
   // Widen only for the merge step (prevents excessive type instantiation).
-  const queryRecord: Record<string, unknown> = query
+  const queryRecord: Record<string, unknown> = { ...query }
 
   do {
-    const requestQuery: EntriesQueriesWithCursor<S, M> = {
+    const requestQuery: EntriesQueriesWithCursor<EntrySkeletonType, M> = {
       ...queryRecord,
       content_type: contentTypeId,
       limit: pageSize,
       ...(pageNext === undefined ? {} : { pageNext }),
     }
 
-    const res: CursorResponse<S, M> = await client.getEntriesWithCursor<S>(requestQuery)
+    const res: CursorResponse<EntrySkeletonType, M> =
+      await client.getEntriesWithCursor(requestQuery)
 
     items.push(...res.items)
+    res.includes?.Entry?.forEach((entry) => {
+      includedEntries.set(entry.sys.id, entry)
+    })
 
     const next: string | undefined = res.pages?.next
     pageNext = next
   } while (pageNext !== undefined)
 
-  return items
+  return {
+    items,
+    total: items.length,
+    skip: 0,
+    limit: items.length,
+    includes: includedEntries.size ? { Entry: [...includedEntries.values()] } : undefined,
+  }
 }

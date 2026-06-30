@@ -23,6 +23,8 @@ between server and browser, see
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
+- [Runtime decision summary](#runtime-decision-summary)
+- [Constraints that decide delivery](#constraints-that-decide-delivery)
 - [The core boundary](#the-core-boundary)
 - [What stateless tracking means](#what-stateless-tracking-means)
 - [Event paths](#event-paths)
@@ -39,10 +41,51 @@ between server and browser, see
 - [Stateless runtime constraints](#stateless-runtime-constraints)
 - [Architecture choices](#architecture-choices)
 - [Implementation checklist](#implementation-checklist)
-- [Reference](#reference)
+- [Related docs](#related-docs)
 
 <!-- mtoc-end -->
 </details>
+
+## Runtime decision summary
+
+Choose the runtime path before designing the event flow. The SDK that renders or observes the
+interaction decides which facts are available.
+
+| Path                                        | Runtime responsibility                                                                                                                                                                                                                                                                                                                         | Use when                                                                                                                             |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `@contentful/optimization-node`             | Bind request consent, locale, profile, and page context; call Experience API methods; resolve entries; emit server-known events.                                                                                                                                                                                                               | Server rendering owns personalization, and the event is a request fact or server-observed business action.                           |
+| `@contentful/optimization-web`              | Own browser consent state, profile state, storage, automatic DOM observation, browser queues, and Insights delivery.                                                                                                                                                                                                                           | Non-React or custom browser code needs view, click, hover, route, or manual element tracking after HTML reaches the page.            |
+| `@contentful/optimization-react-web`        | Wrap the Web SDK with React browser providers, hooks, router trackers, and `OptimizedEntry` from `@contentful/optimization-react-web`.                                                                                                                                                                                                         | React browser apps need framework-owned state, route page tracking, entry wrappers, or browser-side entry personalization.           |
+| `@contentful/optimization-nextjs`           | Own Next.js adapter surfaces: server helpers and `ServerOptimizedEntry` from `@contentful/optimization-nextjs/server`, request helpers from `@contentful/optimization-nextjs/request-handler`, tracking helpers from `@contentful/optimization-nextjs/tracking-attributes`, and client wrappers from `@contentful/optimization-nextjs/client`. | Next.js apps need server-owned personalization, request and cookie helpers, SSR tracking attributes, and client tracking boundaries. |
+| First-party browser collector plus Node SDK | Observe browser interactions in application code, post observations to an app endpoint, validate policy, and call request-bound Node SDK tracking methods.                                                                                                                                                                                     | The browser cannot run the Web SDK, but the app can own DOM observation, payload mapping, profile continuity, and retries.           |
+
+## Constraints that decide delivery
+
+Apply these constraints before choosing server-only, hybrid, or manual tracking:
+
+- Consent is application policy. The SDK blocks events unless consent or `allowedEventTypes` permits
+  the event type.
+- Persistence consent decides whether profile continuity can survive beyond the current runtime.
+  Persist `ctfl-opt-aid`, browser profile state, selected optimizations, and changes only when that
+  policy permits durable continuity.
+- Browser entry interactions use the wire event types `component`, `component_click`, and
+  `component_hover`. Custom Flag views use `component` with `componentType: 'Variable'`, but
+  `allowedEventTypes` also accepts `flag` as a Custom Flag view selector. `component` allows both
+  entry views and flag views before consent; `flag` narrows pre-consent admission to Custom Flag
+  views without entry views.
+- Browser Insights delivery needs a current Web SDK profile. In direct Web SDK initialization, the
+  profile can come from `defaults.profile`. In React Web and Next.js provider handoff, pass
+  server-returned Optimization data through `serverOptimizationState`. In Next.js page-level
+  handoff, render `NextjsOptimizationState` under existing SDK context. The profile can also come
+  from browser-persisted profile state that persistence consent allows the SDK to load, or a browser
+  Experience API call such as `page()`, `identify()`, `track()`, or sticky `trackView()`.
+- Browser storage is best-effort. The Web SDK uses `localStorage` and the `ctfl-opt-aid` cookie when
+  persistence consent permits continuity; if storage fails or is unavailable, continuity is limited
+  to in-memory state.
+- Serverless memory and background work are not durable stores. Await important server-side event
+  calls before the response completes, or hand them to an application-owned durable queue.
+- Offline browser queues are best-effort and browser-owned. They cannot make the original server
+  request observe a later view, click, or hover.
 
 ## The core boundary
 
@@ -82,7 +125,7 @@ does not retain profile, consent, page, cookie, session, or browser-storage stat
 In practice, the application must supply:
 
 - the current profile ID, usually from `ANONYMOUS_ID_COOKIE` (`ctfl-opt-aid`) or a session
-- the application policy decision for whether the server should call the SDK
+- the application policy decision for whether the server can call the SDK
 - page context such as `path`, `url`, `referrer`, `query`, and locale
 - user agent and optional IP override when server-side evaluation needs client request metadata
 - the selected entry metadata needed for entry interaction events
@@ -108,12 +151,12 @@ requires a request-bound profile ID.
 
 The interaction wire event types are:
 
-| SDK method        | Wire type                                    | Common meaning                 |
-| ----------------- | -------------------------------------------- | ------------------------------ |
-| `trackView()`     | `component`                                  | Entry or Custom Flag exposure. |
-| `trackClick()`    | `component_click`                            | Entry click.                   |
-| `trackHover()`    | `component_hover`                            | Entry hover.                   |
-| `trackFlagView()` | `component` with `componentType: 'Variable'` | Custom Flag exposure.          |
+| SDK method        | Wire type                                    | Common meaning        |
+| ----------------- | -------------------------------------------- | --------------------- |
+| `trackView()`     | `component`                                  | Entry exposure.       |
+| `trackClick()`    | `component_click`                            | Entry click.          |
+| `trackHover()`    | `component_hover`                            | Entry hover.          |
+| `trackFlagView()` | `component` with `componentType: 'Variable'` | Custom Flag exposure. |
 
 ## Server-side tracking capabilities
 
@@ -128,7 +171,7 @@ fail closed except for the configured `allowedEventTypes`; the Node default perm
 `page` before consent and labels those events as not consented.
 
 Choose an application locale from your router, i18n, or request logic. Use that same value for CDA
-fetches and pass it to `forRequest({ locale })` when Experience API responses and events should use
+fetches and pass it to `forRequest({ locale })` when Experience API responses and events need to use
 that locale. For the broader locale model, see
 [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
@@ -153,13 +196,24 @@ const requestOptimization = optimization.forRequest({
   profile: profileId ? { id: profileId } : undefined,
 })
 
-const { accepted, data: pageResponse } = await requestOptimization.page()
+const pageResult = await requestOptimization.page()
+const pageResponse = pageResult.accepted ? pageResult.data : undefined
+
+if (!pageResponse) {
+  renderBaselineResponse()
+  return
+}
 ```
 
 Use server-side `track()` for server-known business events:
 
 ```ts
 const appLocale = getAppLocale(req)
+
+if (!pageResponse) {
+  return
+}
+
 const requestOptimization = optimization.forRequest({
   consent: true,
   locale: appLocale,
@@ -183,6 +237,16 @@ visibility, use browser tracking.
 import { randomUUID } from 'node:crypto'
 
 const appLocale = getAppLocale(req)
+
+if (!pageResponse) {
+  return
+}
+
+const { entry: resolvedEntry, selectedOptimization } = optimization.resolveOptimizedEntry(
+  baselineEntry,
+  pageResponse.selectedOptimizations,
+)
+
 const requestOptimization = optimization.forRequest({
   consent: true,
   locale: appLocale,
@@ -240,43 +304,53 @@ of tracking that can only be measured in the browser.
 
 ### Render tracking metadata on resolved entries
 
-For each rendered entry, put the resolved entry ID on the element that represents the visible
-Contentful entry. When the entry came from an optimization, include the selected optimization
-metadata.
+Use SDK helpers when available instead of copying the attribute map into application code. In
+Next.js, `ServerOptimizedEntry` renders the Web SDK tracking attributes from the baseline entry and
+the `ResolvedData` returned by `resolveOptimizedEntry()`. For custom SSR wrappers, call
+`getServerTrackingAttributes()` from `@contentful/optimization-nextjs/tracking-attributes`. Non-Next
+runtimes can call `resolveOptimizedEntryTrackingAttributes()` from
+`@contentful/optimization-web/tracking-attributes` when they already have the same baseline entry
+and resolved data shape.
 
-```html
-<article
-  data-ctfl-entry-id="resolved-entry-id"
-  data-ctfl-optimization-id="experience-id"
-  data-ctfl-sticky="true"
-  data-ctfl-variant-index="1"
->
-  ...
-</article>
+```tsx
+import { getServerTrackingAttributes } from '@contentful/optimization-nextjs/tracking-attributes'
+
+const trackingAttributes = getServerTrackingAttributes(baselineEntry, resolvedData, {
+  clickable: true,
+  trackHovers: false,
+})
+
+return <article {...trackingAttributes}>...</article>
 ```
 
-`data-ctfl-entry-id` is required for automatic tracking. The other attributes are optional and
-belong only on optimized entries:
+Those helpers stay aligned with the current Web and React Web tracking attributes, including
+per-element control attributes such as `data-ctfl-track-views`, `data-ctfl-track-clicks`,
+`data-ctfl-track-hovers`, `data-ctfl-clickable`, `data-ctfl-view-duration-update-interval-ms`, and
+`data-ctfl-hover-duration-update-interval-ms`.
 
-| Attribute                   | Purpose                                                         |
-| --------------------------- | --------------------------------------------------------------- |
-| `data-ctfl-entry-id`        | Resolved Contentful entry ID used as `componentId`.             |
-| `data-ctfl-optimization-id` | Experience ID used as `experienceId`.                           |
-| `data-ctfl-sticky`          | `true` when the selected optimization marks the view as sticky. |
-| `data-ctfl-variant-index`   | Selected variant index.                                         |
-| `data-ctfl-track-views`     | Per-element view tracking override.                             |
-| `data-ctfl-track-clicks`    | Per-element click tracking override.                            |
-| `data-ctfl-track-hovers`    | Per-element hover tracking override.                            |
-| `data-ctfl-clickable`       | Marks a non-semantic descendant or wrapper as clickable.        |
+If an application renders raw attributes manually, keep the stable browser tracking payload contract
+separate from SDK control metadata:
 
-If the server also needs a stable baseline ID for later browser rerenders, use a separate
-application-owned attribute such as `data-ctfl-baseline-id`. The tracking payload uses the resolved
-entry ID.
+| Attribute                           | Payload role                                                                                              |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `data-ctfl-entry-id`                | Required for automatic entry tracking. The browser tracker sends this resolved entry ID as `componentId`. |
+| `data-ctfl-optimization-id`         | Optional optimized-entry metadata sent as `experienceId`.                                                 |
+| `data-ctfl-optimization-context-id` | Optional SDK-owned context for event enrichment and diagnostics. It is not a public API event field.      |
+| `data-ctfl-duplication-scope`       | Optional helper-emitted SDK optimization metadata. The Web SDK interaction payload does not use it.       |
+| `data-ctfl-sticky`                  | Optional `true` value that marks entry views as sticky.                                                   |
+| `data-ctfl-variant-index`           | Optional selected variant index.                                                                          |
+
+`data-ctfl-baseline-id` is SDK-recognized metadata for the baseline entry associated with the
+resolved entry. It is not used as `componentId`, and the browser tracker does not send it in
+interaction event payloads. The tracking payload uses the resolved entry ID from
+`data-ctfl-entry-id`.
 
 ### Initialize the Web SDK without client-side personalization
 
-This browser code enables tracking but does not fetch entries or resolve variants. It assumes the
-Web SDK constructor is provided by your browser bundle or approved script delivery path:
+This browser code uses the Web SDK's default browser observation for views and clicks, opts out of
+hover observation, and does not fetch entries or resolve variants. It assumes the Web SDK
+constructor is provided by your browser bundle or approved script delivery path. Browser interaction
+delivery depends on consent or `allowedEventTypes` and a current Web SDK profile:
 
 ```html
 <script>
@@ -288,11 +362,7 @@ Web SDK constructor is provided by your browser bundle or approved script delive
       consent: window.__OPTIMIZATION_CONSENT__,
       profile: window.__OPTIMIZATION_DATA__?.profile,
     },
-    autoTrackEntryInteraction: {
-      views: true,
-      clicks: true,
-      hovers: false,
-    },
+    autoTrackEntryInteraction: { hovers: false },
   })
 
   document.querySelector('#accept-consent')?.addEventListener('click', () => {
@@ -314,9 +384,11 @@ Browser Insights events need a current Web SDK profile. A readable `ctfl-opt-aid
 browser the anonymous ID, but the Web SDK's Insights queue uses the current profile signal for event
 delivery. Choose one of these patterns before enabling interaction tracking:
 
-- **Bootstrap the server profile.** Serialize the `profile` returned by the server's `page()` or
-  `identify()` call and pass it as `defaults.profile`. Use this when the same server response
-  already rendered personalized HTML from that profile.
+- **Bootstrap the server profile.** For direct Web SDK initialization, serialize the `profile`
+  returned by the server's `page()` or `identify()` call and pass it as `defaults.profile`. For
+  React Web and Next.js, pass the server `OptimizationData` through `serverOptimizationState`, or
+  render `NextjsOptimizationState` under an existing SDK context when a Next.js page owns the data.
+  Use this when the same server response already rendered personalized HTML from that profile.
 - **Re-evaluate in the browser.** Persist `ctfl-opt-aid` on the server, initialize the Web SDK in
   the browser, call `page()` after your consent policy allows it, then enable tracking after the
   page response populates browser profile state.
@@ -324,6 +396,12 @@ delivery. Choose one of these patterns before enabling interaction tracking:
   profile, custom browser code can send interaction observations to your server, and the server can
   call the Node SDK with the request's profile ID. This is a manual tracking architecture, not the
   Web SDK auto-tracking path.
+
+In Next.js SSR integrations, `initialPageEvent="skip"` intentionally avoids the initial browser
+Experience API `page()` request when the server already emitted that page event. If that skip leaves
+the browser without `serverOptimizationState` or `NextjsOptimizationState`, and without a prior
+persisted browser profile, automatic entry views, clicks, and hovers cannot deliver until a later
+browser Experience API call populates profile state.
 
 If the Web SDK must read `ctfl-opt-aid`, do not mark that cookie as `HttpOnly`. Configure `path`,
 `domain`, and `SameSite` so the server route and browser code refer to the same profile.
@@ -369,8 +447,10 @@ Keep personalization server-owned by enforcing these boundaries:
   client-only island, lazy hydration, or browser-only wrapper.
 - The client tree does not use `OptimizedEntry`, `useOptimizedEntry`, or browser-side
   `resolveOptimizedEntry()`.
-- The client SDK is not initialized with `defaults.selectedOptimizations`, so browser state cannot
-  re-resolve the already rendered entries.
+- Client rendering does not consume `defaults.selectedOptimizations` or
+  `states.selectedOptimizations` to choose entry variants. When persistence consent is true, the Web
+  SDK can load persisted selected optimizations for state continuity, but tracking-only client code
+  must not use browser selected-optimization state to render already server-rendered entries.
 
 This split avoids the common accidental-client-personalization path in React apps. `OptimizedEntry`
 is the React Web SDK's browser-personalization component; using it in a hydrated client tree can
@@ -499,11 +579,15 @@ Use this checklist when implementing interaction tracking for Node-rendered HTML
 - If avoiding the Web SDK, scope the manual solution as a browser tracking system, not as a small
   API-call wrapper.
 
-## Reference
+## Related docs
 
 - [Node SDK integration guide](../guides/integrating-the-node-sdk-in-a-node-app.md)
 - [Web SDK integration guide](../guides/integrating-the-web-sdk-in-a-web-app.md)
+- [Next.js SSR guide](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md)
 - [Interaction tracking in Web SDKs](./interaction-tracking-in-web-sdks.md)
 - [Profile synchronization between client and server](./profile-synchronization-between-client-and-server.md)
+- [Optimization Web SDK README](../../packages/web/web-sdk/README.md)
+- [Optimization React Web SDK README](../../packages/web/frameworks/react-web-sdk/README.md)
+- [Optimization Next.js SDK README](../../packages/web/frameworks/nextjs-sdk/README.md)
 - [Node SSR + Web SDK reference implementation](../../implementations/node-sdk+web-sdk/README.md)
 - [Next.js SDK SSR reference implementation](../../implementations/nextjs-sdk_ssr/README.md)

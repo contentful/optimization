@@ -29,6 +29,7 @@ Shared Playwright E2E package for web SDK reference implementations.
 - `IMPLEMENTATION=nextjs-sdk_hybrid pnpm --dir lib/e2e-web test`
 - `IMPLEMENTATION=nextjs-sdk_ssr pnpm --dir lib/e2e-web test`
 - `IMPLEMENTATION=react-web-sdk pnpm --dir lib/e2e-web test`
+- `pnpm --dir lib/e2e-web test:codegen`
 - `pnpm --dir lib/e2e-web test:ui`
 - `pnpm --dir lib/e2e-web test:report`
 - `pnpm --dir lib/e2e-web test:unit`

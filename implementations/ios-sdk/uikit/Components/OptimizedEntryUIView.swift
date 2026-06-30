@@ -29,7 +29,7 @@ final class OptimizedEntryUIView: UIView {
         scrollView: UIScrollView?,
         liveUpdates: Bool? = nil,
         globalLiveUpdates: Bool = false,
-        trackTaps: Bool = false,
+        trackTaps: Bool = true,
         trackViews: Bool = true,
         accessibilityIdentifier: String? = nil,
         contentBuilder: @escaping (_ resolved: [String: Any]) -> UIView

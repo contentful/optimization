@@ -33,7 +33,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
    * components can override each interaction type with their `trackViews`
    * and `trackTaps` props.
    *
-   * @defaultValue `{ views: true, taps: false }`
+   * @defaultValue `{ views: true, taps: true }`
    *
    * @remarks
    * Mirrors React Web's `trackEntryInteraction` pattern. Uses `taps`
@@ -43,7 +43,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
    * ```tsx
    * <OptimizationRoot
    *   clientId="your-client-id"
-   *   trackEntryInteraction={{ views: true, taps: true }}
+   *   trackEntryInteraction={{ taps: false }}
    * >
    *   <App />
    * </OptimizationRoot>
@@ -78,11 +78,11 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
  *   <App />
  * </OptimizationRoot>
  * ```
- * @example With interaction tracking
+ * @example With tap tracking opt out
  * ```tsx
  * <OptimizationRoot
  *   clientId="your-client-id"
- *   trackEntryInteraction={{ views: true, taps: true }}
+ *   trackEntryInteraction={{ taps: false }}
  * >
  *   <App />
  * </OptimizationRoot>

@@ -1,8 +1,6 @@
-import CoreStateful, {
-  type CoreStatefulConfig,
-  type PreviewPanelSignalObject,
-} from './CoreStateful'
+import CoreStateful, { type CoreStatefulConfig } from './CoreStateful'
 import type { ChangeArray } from './api-schemas'
+import { getPreviewPanelBridge, hydrateOptimizationData } from './bridge-support'
 import type {
   BlockedEvent,
   EventOptimizationContext,
@@ -11,8 +9,7 @@ import type {
   ViewBuilderArgs,
 } from './events'
 import type { QueueFlushFailureContext } from './lib/queue'
-import { batch, signalFns, signals } from './signals'
-import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
+import { batch, signals } from './signals'
 import { mergeTagEntry } from './test/fixtures/mergeTagEntry'
 import { optimizedEntry } from './test/fixtures/optimizedEntry'
 import { profile as profileFixture } from './test/fixtures/profile'
@@ -1120,13 +1117,43 @@ describe('CoreStateful blocked event handling', () => {
     openSubscription.unsubscribe()
   })
 
-  it('registers preview bridge values on symbol keys', () => {
+  it('exposes first-party preview bridge values through bridge support', () => {
     const core = createCoreStateful()
-    const previewBridge: PreviewPanelSignalObject = {}
 
-    core.registerPreviewPanel(previewBridge)
+    const bridge = getPreviewPanelBridge(core)
 
-    expect(previewBridge[PREVIEW_PANEL_SIGNALS_SYMBOL]).toBe(signals)
-    expect(previewBridge[PREVIEW_PANEL_SIGNAL_FNS_SYMBOL]).toBe(signalFns)
+    expect(bridge.profile).toBe(signals.profile)
+    expect(bridge.selectedOptimizations).toBe(signals.selectedOptimizations)
+    expect(bridge.changes).toBe(signals.changes)
+    expect(bridge.previewPanelAttached).toBe(signals.previewPanelAttached)
+    expect(bridge.previewPanelOpen).toBe(signals.previewPanelOpen)
+    expect(bridge.stateInterceptors).toBe(core.interceptors.state)
+    expect('registerPreviewPanel' in core).toBe(false)
+  })
+
+  it('hydrates optimization data through bridge support and applies state interceptors', async () => {
+    const core = createCoreStateful()
+    const data = {
+      changes: FLAG_CHANGES,
+      selectedOptimizations: selectedOptimizationsFixture,
+      profile: profileFixture,
+    }
+    core.interceptors.state.add((incoming) => ({
+      ...incoming,
+      profile: {
+        ...incoming.profile,
+        traits: { ...incoming.profile.traits, bridged: true },
+      },
+    }))
+
+    await hydrateOptimizationData(core, data)
+
+    expect(signals.changes.value).toEqual(FLAG_CHANGES)
+    expect(signals.selectedOptimizations.value).toEqual(selectedOptimizationsFixture)
+    expect(signals.profile.value).toEqual({
+      ...profileFixture,
+      traits: { ...profileFixture.traits, bridged: true },
+    })
+    expect(signals.experienceRequestState.value).toEqual({ status: 'success' })
   })
 })

@@ -215,20 +215,4 @@ describe('sweepOrphans', () => {
 
     connected.remove()
   })
-
-  it('falls back to document.contains when isConnected is unavailable', () => {
-    const detached = document.createElement('div')
-    Object.defineProperty(detached, 'isConnected', { configurable: true, value: undefined })
-    const state = makeState({ strongRef: detached })
-    const collection = makeCollection()
-    collection.activeStates.add(state)
-    collection.states.set(detached, state)
-    const unobserve = rs.fn()
-    const containsSpy = rs.spyOn(document, 'contains').mockReturnValue(false)
-
-    sweepOrphans(collection, unobserve)
-
-    expect(containsSpy).toHaveBeenCalledWith(detached)
-    expect(unobserve).toHaveBeenCalledWith(detached)
-  })
 })

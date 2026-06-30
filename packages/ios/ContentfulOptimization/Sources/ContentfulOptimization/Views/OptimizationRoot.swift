@@ -4,6 +4,8 @@ import SwiftUI
 ///
 /// Wrap your app content in this view to provide the optimization client and tracking configuration
 /// to all descendant ``OptimizedEntry`` components.
+/// Entry view and tap tracking default to enabled; pass `trackViews: false` or `trackTaps: false`
+/// to opt out globally.
 ///
 /// ```swift
 /// OptimizationRoot(config: OptimizationConfig(clientId: "my-id")) {
@@ -35,7 +37,7 @@ public struct OptimizationRoot<Content: View>: View {
     public init(
         config: OptimizationConfig,
         trackViews: Bool = true,
-        trackTaps: Bool = false,
+        trackTaps: Bool = true,
         liveUpdates: Bool = false,
         previewPanel: PreviewPanelConfig? = nil,
         @ViewBuilder content: @escaping () -> Content

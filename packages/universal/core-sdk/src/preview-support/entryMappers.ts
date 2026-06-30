@@ -3,9 +3,11 @@ import type {
   OptimizationConfig,
   OptimizationEntryFields,
 } from '@contentful/optimization-api-client/api-schemas'
+import type { ChainModifiers } from 'contentful'
 import type {
   AudienceDefinition,
   ContentfulEntry,
+  ContentfulEntryCollection,
   ExperienceDefinition,
   VariantDistribution,
 } from './definitions'
@@ -74,7 +76,7 @@ function hasOptimizationFields(fields: unknown): fields is ExperienceNameFields 
 }
 
 /** @internal */
-function getVariantName(entry: ContentfulEntry): string | undefined {
+function getVariantName<M extends ChainModifiers>(entry: ContentfulEntry<M>): string | undefined {
   const fields: unknown = entry.fields
   if (hasVariantFields(fields)) {
     return fields.internalTitle ?? fields.title ?? fields.name
@@ -99,18 +101,14 @@ function getVariantRefForIndex(index: number, config: OptimizationConfig): strin
 }
 
 /** @internal */
-function buildVariantEntryMap(experienceEntries: ContentfulEntry[]): Map<string, ContentfulEntry> {
-  const variantMap = new Map<string, ContentfulEntry>()
+function buildVariantEntryMap<M extends ChainModifiers>(
+  experienceCollection: ContentfulEntryCollection<M>,
+): Map<string, ContentfulEntry<M>> {
+  const variantMap = new Map<string, ContentfulEntry<M>>()
+  const includedEntries = experienceCollection.includes?.Entry ?? []
 
-  experienceEntries.forEach((entry) => {
-    const entryWithIncludes = entry as ContentfulEntry & {
-      includes?: { Entry?: ContentfulEntry[] }
-    }
-    const includedEntries = entryWithIncludes.includes?.Entry ?? []
-
-    includedEntries.forEach((includedEntry) => {
-      variantMap.set(includedEntry.sys.id, includedEntry)
-    })
+  includedEntries.forEach((includedEntry) => {
+    variantMap.set(includedEntry.sys.id, includedEntry)
   })
 
   return variantMap
@@ -119,13 +117,15 @@ function buildVariantEntryMap(experienceEntries: ContentfulEntry[]): Map<string,
 /**
  * Creates {@link AudienceDefinition} instances from Contentful `nt_audience` entries.
  *
- * @param entries - Contentful entries of type `nt_audience`
+ * @param collection - Contentful entry collection of type `nt_audience`
  * @returns Array of audience definitions
  *
  * @public
  */
-export function createAudienceDefinitions(entries: ContentfulEntry[]): AudienceDefinition[] {
-  return entries.map((entry) => {
+export function createAudienceDefinitions<M extends ChainModifiers>(
+  collection: ContentfulEntryCollection<M>,
+): AudienceDefinition[] {
+  return collection.items.map((entry) => {
     const fields: unknown = entry.fields
     if (hasAudienceFields(fields)) {
       return {
@@ -145,15 +145,17 @@ export function createAudienceDefinitions(entries: ContentfulEntry[]): AudienceD
  * Creates {@link ExperienceDefinition} instances from Contentful `nt_experience` entries,
  * including variant distribution with names extracted from linked entries.
  *
- * @param entries - Contentful entries of type `nt_experience`
+ * @param collection - Contentful entry collection of type `nt_experience`
  * @returns Array of experience definitions with full variant information
  *
  * @public
  */
-export function createExperienceDefinitions(entries: ContentfulEntry[]): ExperienceDefinition[] {
-  const variantEntryMap = buildVariantEntryMap(entries)
+export function createExperienceDefinitions<M extends ChainModifiers>(
+  collection: ContentfulEntryCollection<M>,
+): ExperienceDefinition[] {
+  const variantEntryMap = buildVariantEntryMap(collection)
 
-  return entries.map((entry) => {
+  return collection.items.map((entry) => {
     const fields: unknown = entry.fields
     if (!hasExperienceFields(fields)) {
       return {
@@ -194,15 +196,17 @@ export function createExperienceDefinitions(entries: ContentfulEntry[]): Experie
 /**
  * Creates a lookup map of experience IDs to their human-readable names.
  *
- * @param entries - Contentful entries of type `nt_experience`
+ * @param collection - Contentful entry collection of type `nt_experience`
  * @returns Record mapping experience IDs to display names
  *
  * @public
  */
-export function createExperienceNameMap(entries: ContentfulEntry[]): Record<string, string> {
+export function createExperienceNameMap<M extends ChainModifiers>(
+  collection: ContentfulEntryCollection<M>,
+): Record<string, string> {
   const nameMap: Record<string, string> = {}
 
-  entries.forEach((entry) => {
+  collection.items.forEach((entry) => {
     const fields: unknown = entry.fields
     if (hasOptimizationFields(fields)) {
       const id = fields.nt_personalization_id ?? fields.nt_experience_id ?? entry.sys.id

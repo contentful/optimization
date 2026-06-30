@@ -1,15 +1,22 @@
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import { useEffect, useState } from 'react'
-import type { ContentfulClient, ContentfulEntry } from '../types'
+import type { ContentfulClient, ContentfulEntryCollection } from '../types'
 import { fetchAudienceAndExperienceEntries } from '../utils'
 
 const logger = createScopedLogger('RN:Preview')
 
 interface ContentfulEntriesState {
-  audienceEntries: ContentfulEntry[]
-  experienceEntries: ContentfulEntry[]
+  audienceEntries: ContentfulEntryCollection
+  experienceEntries: ContentfulEntryCollection
   isLoading: boolean
   error: string | null
+}
+
+const EMPTY_ENTRY_COLLECTION: ContentfulEntryCollection = {
+  items: [],
+  limit: 0,
+  skip: 0,
+  total: 0,
 }
 
 /**
@@ -21,8 +28,10 @@ interface ContentfulEntriesState {
  * @internal
  */
 export function useContentfulEntries(contentfulClient: ContentfulClient): ContentfulEntriesState {
-  const [audienceEntries, setAudienceEntries] = useState<ContentfulEntry[]>([])
-  const [experienceEntries, setExperienceEntries] = useState<ContentfulEntry[]>([])
+  const [audienceEntries, setAudienceEntries] =
+    useState<ContentfulEntryCollection>(EMPTY_ENTRY_COLLECTION)
+  const [experienceEntries, setExperienceEntries] =
+    useState<ContentfulEntryCollection>(EMPTY_ENTRY_COLLECTION)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

@@ -1,11 +1,12 @@
 import {
   type EntryReplacementComponent,
   type EntryReplacementVariant,
-  isEntry,
   isEntryReplacementComponent,
   isEntryReplacementVariant,
-  isOptimizationEntry,
-  isOptimizedEntry,
+  isResolvedAudienceEntry,
+  isResolvedContentfulEntry,
+  isResolvedOptimizationEntry,
+  isResolvedOptimizedEntry,
   normalizeOptimizationConfig,
   type OptimizationEntry,
   type OptimizedEntry,
@@ -64,6 +65,18 @@ export interface ResolvedDataWithOptimizationContext<
  * @internal
  */
 const RESOLUTION_WARNING_BASE = 'Could not resolve optimized entry variant:'
+
+/** @internal */
+function isResolvedEntryForBaseline<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+>(value: unknown, baselineEntry: Entry<S, M, L>): value is Entry<S, M, L> {
+  return (
+    isResolvedContentfulEntry(value) &&
+    value.sys.contentType.sys.id === baselineEntry.sys.contentType.sys.id
+  )
+}
 
 /**
  * Resolve the selected entry (baseline or variant) for an optimized entry
@@ -137,18 +150,15 @@ function resolveWithContext<
     return { resolvedData: { entry } }
   }
 
-  if (!isOptimizedEntry(entry)) {
+  if (!isResolvedOptimizedEntry(entry)) {
     logger.warn(`${RESOLUTION_WARNING_BASE} entry ${entry.sys.id} is not optimized`)
     return { resolvedData: { entry } }
   }
 
-  const optimizationEntry = OptimizedEntryResolver.getOptimizationEntry(
-    {
-      optimizedEntry: entry,
-      selectedOptimizations,
-    },
-    true,
-  )
+  const optimizationEntry = OptimizedEntryResolver.getOptimizationEntry({
+    optimizedEntry: entry,
+    selectedOptimizations,
+  })
 
   if (!optimizationEntry) {
     logger.warn(
@@ -157,36 +167,39 @@ function resolveWithContext<
     return { resolvedData: { entry } }
   }
 
-  const selectedOptimization = OptimizedEntryResolver.getSelectedOptimization(
-    {
-      optimizationEntry,
-      selectedOptimizations,
-    },
-    true,
-  )
+  const selectedOptimization = OptimizedEntryResolver.getSelectedOptimization({
+    optimizationEntry,
+    selectedOptimizations,
+  })
 
   if (!selectedOptimization) {
     return { resolvedData: { entry } }
   }
 
   const {
-    fields: { nt_audience: audienceEntry },
+    fields: { nt_audience: maybeAudienceEntry },
   } = optimizationEntry
 
   const resolveTo = (
     resolvedEntry: Entry<S, M, L>,
     selectedVariant?: EntryReplacementVariant,
-  ): ResolvedDataWithOptimizationContext<S, M, L> => ({
-    resolvedData: { entry: resolvedEntry, selectedOptimization },
-    optimizationContext: {
-      selectedOptimization,
-      optimizationEntry,
-      ...(audienceEntry ? { audienceEntry } : {}),
-      baselineEntry: entry,
-      resolvedEntry,
-      ...(selectedVariant ? { selectedVariant } : {}),
-    } satisfies PendingEventOptimizationContext,
-  })
+  ): ResolvedDataWithOptimizationContext<S, M, L> => {
+    const audienceEntry = isResolvedAudienceEntry(maybeAudienceEntry)
+      ? maybeAudienceEntry
+      : undefined
+
+    return {
+      resolvedData: { entry: resolvedEntry, selectedOptimization },
+      optimizationContext: {
+        selectedOptimization,
+        optimizationEntry,
+        ...(audienceEntry ? { audienceEntry } : {}),
+        baselineEntry: entry,
+        resolvedEntry,
+        ...(selectedVariant ? { selectedVariant } : {}),
+      } satisfies PendingEventOptimizationContext,
+    }
+  }
 
   const { variantIndex: selectedVariantIndex } = selectedOptimization
 
@@ -196,14 +209,11 @@ function resolveWithContext<
     return resolveTo(entry)
   }
 
-  const selectedVariant = OptimizedEntryResolver.getSelectedVariant(
-    {
-      optimizedEntry: entry,
-      optimizationEntry,
-      selectedVariantIndex,
-    },
-    true,
-  )
+  const selectedVariant = OptimizedEntryResolver.getSelectedVariant({
+    optimizedEntry: entry,
+    optimizationEntry,
+    selectedVariantIndex,
+  })
 
   if (!selectedVariant) {
     logger.warn(
@@ -212,13 +222,11 @@ function resolveWithContext<
     return resolveTo(entry)
   }
 
-  const selectedVariantEntry = OptimizedEntryResolver.getSelectedVariantEntry<S, M, L>(
-    {
-      optimizationEntry,
-      selectedVariant,
-    },
-    true,
-  )
+  const selectedVariantEntry = OptimizedEntryResolver.getSelectedVariantEntry<S, M, L>({
+    optimizedEntry: entry,
+    optimizationEntry,
+    selectedVariant,
+  })
 
   if (!selectedVariantEntry) {
     logger.warn(
@@ -252,7 +260,6 @@ const OptimizedEntryResolver = {
    * Find the optimization entry corresponding to one of the selected experiences.
    *
    * @param params - Object containing the baseline optimized entry and the selections.
-   * @param skipValidation - When `true`, skip type/shape validation for perf.
    * @returns The matching {@link OptimizationEntry}, or `undefined` if not found/invalid.
    * @remarks
    * An optimization entry is an optimization configuration object supplied in an
@@ -266,21 +273,17 @@ const OptimizedEntryResolver = {
    * })
    * ```
    */
-  getOptimizationEntry(
-    {
-      optimizedEntry,
-      selectedOptimizations,
-    }: {
-      optimizedEntry: OptimizedEntry
-      selectedOptimizations: SelectedOptimizationArray
-    },
-    skipValidation = false,
-  ): OptimizationEntry | undefined {
-    if (!skipValidation && (!selectedOptimizations.length || !isOptimizedEntry(optimizedEntry)))
-      return
+  getOptimizationEntry({
+    optimizedEntry,
+    selectedOptimizations,
+  }: {
+    optimizedEntry: OptimizedEntry
+    selectedOptimizations: SelectedOptimizationArray
+  }): OptimizationEntry | undefined {
+    if (!selectedOptimizations.length || !isResolvedOptimizedEntry(optimizedEntry)) return
 
     const optimizationEntry = optimizedEntry.fields.nt_experiences
-      .filter((maybeOptimization) => isOptimizationEntry(maybeOptimization))
+      .filter((maybeOptimization) => isResolvedOptimizationEntry(maybeOptimization))
       .find((optimizationEntry) =>
         selectedOptimizations.some(
           ({ experienceId }) => experienceId === optimizationEntry.fields.nt_experience_id,
@@ -294,7 +297,6 @@ const OptimizedEntryResolver = {
    * Look up the selection metadata for a specific optimization entry.
    *
    * @param params - Object with the target optimization entry and selections.
-   * @param skipValidation - When `true`, skip type checks.
    * @returns The matching {@link SelectedOptimization}, if present.
    * @remarks
    * Selected optimizations are supplied by the Experience API in the
@@ -307,21 +309,14 @@ const OptimizedEntryResolver = {
    * })
    * ```
    */
-  getSelectedOptimization(
-    {
-      optimizationEntry,
-      selectedOptimizations,
-    }: {
-      optimizationEntry: OptimizationEntry
-      selectedOptimizations: SelectedOptimizationArray
-    },
-    skipValidation = false,
-  ): SelectedOptimization | undefined {
-    if (
-      !skipValidation &&
-      (!selectedOptimizations.length || !isOptimizationEntry(optimizationEntry))
-    )
-      return
+  getSelectedOptimization({
+    optimizationEntry,
+    selectedOptimizations,
+  }: {
+    optimizationEntry: OptimizationEntry
+    selectedOptimizations: SelectedOptimizationArray
+  }): SelectedOptimization | undefined {
+    if (!selectedOptimizations.length || !isResolvedOptimizationEntry(optimizationEntry)) return
 
     const selectedOptimization = selectedOptimizations.find(
       ({ experienceId }) => experienceId === optimizationEntry.fields.nt_experience_id,
@@ -334,7 +329,6 @@ const OptimizedEntryResolver = {
    * Get the replacement variant config for the given selection index.
    *
    * @param params - Baseline entry, optimization entry, and 1‑based variant index.
-   * @param skipValidation - When `true`, skip type checks.
    * @returns The {@link EntryReplacementVariant} for the component, if any.
    * @remarks
    * Entry replacement variants are variant configurations specified in a
@@ -349,21 +343,18 @@ const OptimizedEntryResolver = {
    * })
    * ```
    */
-  getSelectedVariant(
-    {
-      optimizedEntry,
-      optimizationEntry,
-      selectedVariantIndex,
-    }: {
-      optimizedEntry: OptimizedEntry
-      optimizationEntry: OptimizationEntry
-      selectedVariantIndex: number
-    },
-    skipValidation = false,
-  ): EntryReplacementVariant | undefined {
+  getSelectedVariant({
+    optimizedEntry,
+    optimizationEntry,
+    selectedVariantIndex,
+  }: {
+    optimizedEntry: OptimizedEntry
+    optimizationEntry: OptimizationEntry
+    selectedVariantIndex: number
+  }): EntryReplacementVariant | undefined {
     if (
-      !skipValidation &&
-      (!isOptimizedEntry(optimizedEntry) || !isOptimizationEntry(optimizationEntry))
+      !isResolvedOptimizedEntry(optimizedEntry) ||
+      !isResolvedOptimizationEntry(optimizationEntry)
     )
       return
 
@@ -386,7 +377,6 @@ const OptimizedEntryResolver = {
    * @typeParam M - Chain modifiers.
    * @typeParam L - Locale code.
    * @param params - Optimization entry and selected variant.
-   * @param skipValidation - When `true`, skip type checks.
    * @returns The resolved entry typed as {@link Entry} or `undefined`.
    * @remarks
    * An optimized entry will resolve either to the baseline (the entry
@@ -403,27 +393,28 @@ const OptimizedEntryResolver = {
     S extends EntrySkeletonType,
     M extends ChainModifiers = ChainModifiers,
     L extends LocaleCode = LocaleCode,
-  >(
-    {
-      optimizationEntry,
-      selectedVariant,
-    }: {
-      optimizationEntry: OptimizationEntry
-      selectedVariant: EntryReplacementVariant
-    },
-    skipValidation = false,
-  ): Entry<S, M, L> | undefined {
+  >({
+    optimizedEntry,
+    optimizationEntry,
+    selectedVariant,
+  }: {
+    optimizedEntry: Entry<S, M, L>
+    optimizationEntry: OptimizationEntry
+    selectedVariant: EntryReplacementVariant
+  }): Entry<S, M, L> | undefined {
     if (
-      !skipValidation &&
-      (!isOptimizationEntry(optimizationEntry) || !isEntryReplacementVariant(selectedVariant))
+      !isResolvedOptimizationEntry(optimizationEntry) ||
+      !isEntryReplacementVariant(selectedVariant)
     )
       return
 
-    const selectedVariantEntry = optimizationEntry.fields.nt_variants?.find(
+    const selectedVariantReference = optimizationEntry.fields.nt_variants?.find(
       (variant) => variant.sys.id === selectedVariant.id,
     )
 
-    return isEntry<S, M, L>(selectedVariantEntry) ? selectedVariantEntry : undefined
+    if (!isResolvedEntryForBaseline(selectedVariantReference, optimizedEntry)) return
+
+    return selectedVariantReference
   },
 
   resolve,

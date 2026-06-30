@@ -60,7 +60,7 @@ persistence, networking, lifecycle handling, SwiftUI views, and preview-panel UI
 
 Use this directory when working on the native iOS SDK, SwiftUI integration, JavaScriptCore bridge
 handoff, preview-panel behavior, or cross-platform native validation. Application teams that need a
-stable mobile integration can start with the JavaScript
+JavaScript mobile integration can start with the
 [`@contentful/optimization-react-native`](../react-native-sdk/README.md) package.
 
 ## Package layout
@@ -94,6 +94,6 @@ locally before `swift build`/`swift test` with `pnpm run ios:bridge`, or use the
   bridge runtime and build notes
 - [iOS reference app](../../implementations/ios-sdk/README.md) - Native app and XCUITest surface for
   bridge and preview-panel validation
-- [React Native SDK](../react-native-sdk/README.md) - Current stable mobile-facing JavaScript SDK
+- [React Native SDK](../react-native-sdk/README.md) - JavaScript mobile-facing SDK
 - [Core SDK](../universal/core-sdk/README.md) - Shared optimization foundation used through the
   bridge

@@ -40,7 +40,6 @@ object ContentEntryViewBinder {
 
         val view = OptimizedEntryView(context).apply {
             accessibilityIdentifier = "content-entry-$entryId"
-            trackTaps = true
         }
         view.setContentRenderer { resolvedEntry ->
             val text = if (resolvedBaselineText != null && entryId(resolvedEntry) == entryId) {

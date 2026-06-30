@@ -510,6 +510,9 @@ importers:
 
   packages/universal/api-schemas:
     dependencies:
+      '@contentful/rich-text-types':
+        specifier: 'catalog:'
+        version: 17.2.5
       contentful:
         specifier: 'catalog:'
         version: 11.10.5(debug@4.3.7)
@@ -661,6 +664,9 @@ importers:
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
       build-tools:
         specifier: workspace:*
         version: link:../../../../lib/build-tools

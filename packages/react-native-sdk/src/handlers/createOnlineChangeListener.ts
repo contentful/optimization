@@ -1,3 +1,4 @@
+import { isRecord } from '@contentful/optimization-core/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 
 const logger = createScopedLogger('RN:Network')
@@ -22,17 +23,14 @@ interface NetInfoModule {
   }
 }
 
-const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
 const isNetInfoModule = (mod: unknown): mod is NetInfoModule => {
-  if (!isObjectRecord(mod)) {
+  if (!isRecord(mod)) {
     return false
   }
 
   const { default: defaultExport } = mod
 
-  return isObjectRecord(defaultExport) && typeof defaultExport.addEventListener === 'function'
+  return isRecord(defaultExport) && typeof defaultExport.addEventListener === 'function'
 }
 
 const loadNetInfoModule = async (): Promise<NetInfoModule> => {

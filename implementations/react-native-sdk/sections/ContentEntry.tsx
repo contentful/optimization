@@ -2,6 +2,7 @@ import React from 'react'
 import { Text, View } from 'react-native'
 
 import { OptimizedEntry, useOptimization } from '@contentful/optimization-react-native'
+import { isRichTextDocument } from '@contentful/optimization-react-native/api-schemas'
 import type { Entry } from 'contentful'
 
 import { getRichTextContent, RichTextRenderer } from '../components/RichTextRenderer'
@@ -10,33 +11,10 @@ interface ContentEntryProps {
   entry: Entry
 }
 
-interface RichTextNode {
-  nodeType: string
-  data?: unknown
-  content?: RichTextNode[]
-  value?: string
-}
-
-interface RichTextField {
-  nodeType: 'document'
-  content: RichTextNode[]
-}
-
-function isRichTextField(field: unknown): field is RichTextField {
-  return (
-    typeof field === 'object' &&
-    field !== null &&
-    'nodeType' in field &&
-    (field as { nodeType: unknown }).nodeType === 'document' &&
-    'content' in field &&
-    Array.isArray((field as { content: unknown }).content)
-  )
-}
-
 export function ContentEntry({ entry }: ContentEntryProps): React.JSX.Element {
   const sdk = useOptimization()
   const renderContent = (contentEntry: Entry, baselineId: string): React.JSX.Element => {
-    const richTextField = Object.values(contentEntry.fields).find(isRichTextField)
+    const richTextField = Object.values(contentEntry.fields).find(isRichTextDocument)
 
     if (richTextField) {
       const textContent = getRichTextContent(richTextField, sdk)
@@ -64,7 +42,7 @@ export function ContentEntry({ entry }: ContentEntryProps): React.JSX.Element {
 
   return (
     <View testID={`content-entry-${entry.sys.id}`}>
-      <OptimizedEntry baselineEntry={entry} trackTaps>
+      <OptimizedEntry baselineEntry={entry}>
         {(resolvedEntry) => (
           <View testID={`content-${entry.sys.id}`}>
             {renderContent(resolvedEntry, entry.sys.id)}

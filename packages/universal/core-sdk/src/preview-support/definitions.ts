@@ -1,4 +1,12 @@
 import type { OptimizationType } from '@contentful/optimization-api-client/api-schemas'
+import type {
+  ChainModifiers,
+  EntriesQueries,
+  Entry,
+  EntryCollection,
+  EntrySkeletonType,
+  LocaleCode,
+} from 'contentful'
 
 /**
  * Audience definition from the optimization platform.
@@ -102,44 +110,32 @@ export interface PreviewData {
 }
 
 /**
- * Simplified Contentful entry structure for mapping entries to preview panel definitions.
+ * Contentful SDK entry structure for mapping entries to preview panel definitions.
  *
  * @public
  */
-export interface ContentfulEntry {
-  sys: {
-    id: string
-    contentType?: {
-      sys: {
-        id: string
-      }
-    }
-  }
-  fields: Record<string, unknown>
-}
+export type ContentfulEntry<
+  M extends ChainModifiers = undefined,
+  L extends LocaleCode = LocaleCode,
+> = Entry<EntrySkeletonType, M, L>
 
 /**
- * Entry collection response from the Contentful client, including pagination metadata.
+ * Entry collection response from the Contentful client.
  *
  * @public
  */
-export interface ContentfulEntryCollection {
-  items: ContentfulEntry[]
-  total: number
-  skip: number
-  limit: number
-}
+export type ContentfulEntryCollection<
+  M extends ChainModifiers = undefined,
+  L extends LocaleCode = LocaleCode,
+> = EntryCollection<EntrySkeletonType, M, L>
 
 /**
- * Minimal Contentful client interface required by the preview panel.
+ * Contentful client surface required by the preview panel.
  *
  * @public
  */
-export interface ContentfulClient {
-  getEntries: (query: {
-    content_type: string
-    include?: number
-    skip?: number
-    limit?: number
-  }) => Promise<ContentfulEntryCollection>
+export interface ContentfulClient<M extends ChainModifiers = undefined> {
+  getEntries: (
+    query?: EntriesQueries<EntrySkeletonType, M>,
+  ) => Promise<ContentfulEntryCollection<M>>
 }

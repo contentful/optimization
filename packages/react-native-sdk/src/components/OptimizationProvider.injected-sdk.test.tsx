@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, rs } from '@rstest/core'
 import React, { act, type ReactElement } from 'react'
 import type ContentfulOptimization from '../ContentfulOptimization'
 import type { OptimizationSdk } from '../OptimizationSdk'
+import { loadTestRenderer } from '../test/testRenderer'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -16,10 +17,6 @@ rs.mock('../ContentfulOptimization', () => ({
 interface TestRenderer {
   unmount: () => void
   update: (element: ReactElement) => void
-}
-
-interface TestRendererModule {
-  create: (element: ReactElement) => TestRenderer
 }
 
 interface Subscription {
@@ -46,25 +43,6 @@ function isContentfulOptimization(value: SdkStub): value is SdkStub & Contentful
     typeof value.states.eventStream.subscribe === 'function' &&
     typeof value.states.eventStream.subscribeOnce === 'function'
   )
-}
-
-function isTestRendererModule(value: unknown): value is TestRendererModule {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  return typeof Reflect.get(value, 'create') === 'function'
-}
-
-async function loadTestRenderer(): Promise<TestRendererModule> {
-  const moduleName = 'react-test-renderer'
-  const testRendererModule: unknown = await import(moduleName)
-
-  if (!isTestRendererModule(testRendererModule)) {
-    throw new Error('Expected react-test-renderer to expose create().')
-  }
-
-  return testRendererModule
 }
 
 function createSdk(): ContentfulOptimization {
@@ -110,7 +88,7 @@ describe('OptimizationProvider injected SDK performance', () => {
       import('../context/OptimizationContext'),
     ])
     const injectedSdk = createSdk()
-    const testRenderer = await loadTestRenderer()
+    const testRenderer = await loadTestRenderer<TestRenderer>()
     let capturedSdk: OptimizationSdk | undefined = undefined
     let childRendered = false
 
@@ -140,7 +118,7 @@ describe('OptimizationProvider injected SDK performance', () => {
     ])
     const injectedSdk = createSdk()
     const capturedContexts: unknown[] = []
-    const testRenderer = await loadTestRenderer()
+    const testRenderer = await loadTestRenderer<TestRenderer>()
 
     function Probe(): null {
       capturedContexts.push(React.useContext(OptimizationContext))

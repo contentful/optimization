@@ -1,13 +1,9 @@
-import type { PreviewPanelSignalObject } from '@contentful/optimization-core'
-import { createScopedLogger } from '@contentful/optimization-core/logger'
+import { getPreviewPanelBridge } from '@contentful/optimization-core/bridge-support'
 import { PreviewOverrideManager } from '@contentful/optimization-core/preview-support'
-import { PREVIEW_PANEL_SIGNALS_SYMBOL } from '@contentful/optimization-core/symbols'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOptimization } from '../../context/OptimizationContext'
 import { requireOptimizationPreviewRuntime } from '../../OptimizationSdk'
 import type { ExperienceDefinition, OverrideState, PreviewActions } from '../types'
-
-const logger = createScopedLogger('RN:Preview')
 
 const initialOverrideState: OverrideState = {
   audiences: {},
@@ -36,24 +32,13 @@ export function useProfileOverrides(): {
   const managerRef = useRef<PreviewOverrideManager | null>(null)
 
   useEffect(() => {
-    // Create a preview panel compatible object to receive signals
-    const previewPanelObject: PreviewPanelSignalObject = {}
-
-    // Register with the SDK to get signal access
-    contentfulOptimization.registerPreviewPanel(previewPanelObject)
-    const signals = Reflect.get(previewPanelObject, PREVIEW_PANEL_SIGNALS_SYMBOL)
-
-    if (!signals) {
-      logger.warn('Failed to obtain signals from SDK registration')
-      return
-    }
-
-    logger.info('Registered with SDK, signals access obtained')
+    const { profile, selectedOptimizations, stateInterceptors } =
+      getPreviewPanelBridge(contentfulOptimization)
 
     const manager = new PreviewOverrideManager({
-      selectedOptimizations: signals.selectedOptimizations,
-      profile: signals.profile,
-      stateInterceptors: contentfulOptimization.interceptors.state,
+      selectedOptimizations,
+      profile,
+      stateInterceptors,
       onOverridesChanged: (state) => {
         setOverrides({ ...state })
       },

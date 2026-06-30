@@ -14,7 +14,7 @@
     "serve:app:stop": "pm2 stop esr-app && pm2 delete esr-app",
     "serve:mocks": "pm2 start --name esr-mocks \"pnpm --dir ../../lib/mocks serve\"",
     "serve:mocks:stop": "pm2 stop esr-mocks && pm2 delete esr-mocks",
-    "serve:stop": "pnpm serve:app:stop && pnpm serve:mocks:stop",
+    "serve:stop": "pnpm serve:app:stop; pnpm serve:mocks:stop",
     "test:e2e": "sh -c 'pnpm serve && playwright test \"$@\"; E2E_RESULT=$?; pnpm serve:stop; exit $E2E_RESULT' --",
     "test:e2e:codegen": "playwright codegen",
     "test:e2e:report": "playwright show-report",

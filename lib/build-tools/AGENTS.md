@@ -8,7 +8,9 @@ enforcement.
 - Treat changes here as high-impact; helper behavior can affect many packages.
 - Keep CLI contracts stable unless the task explicitly changes them.
 - Prefer fixing shared build logic here over downstream one-off workarounds.
-- Bundle-size thresholds belong in package `package.json` under `buildTools.bundleSize.gzipBudgets`.
+- Bundle-size thresholds are read from package `package.json` under
+  `buildTools.bundleSize.gzipBudgets`; the root `Bundle size` policy controls whether they may be
+  changed.
 
 ## Commands
 

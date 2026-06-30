@@ -1,313 +1,245 @@
 # Integrating the Optimization React Native SDK in a React Native app
 
-Use this guide when you want to add personalization, analytics, screen tracking, and a preview panel
-to a React Native (or Expo) application using `@contentful/optimization-react-native`.
+Use this guide when you want to add mobile personalization, Analytics events, screen tracking, and
+optional preview tooling to a React Native or Expo application with
+`@contentful/optimization-react-native`.
+
+The React Native SDK builds on the Optimization Core SDK and adds React Native providers, hooks,
+entry rendering, viewport and tap tracking, AsyncStorage persistence, optional offline delivery, and
+an in-app preview panel. Your application still owns Contentful Delivery API fetching, consent
+policy, identity policy, navigation, and final rendering.
+
+## Quick start
+
+Use this path when your application policy permits Optimization to start with accepted consent. If
+your policy requires an end-user choice first, complete the consent handoff section before sending
+events or rendering personalized content.
+
+1. Install the React Native SDK, its required AsyncStorage peer dependency, and a Contentful
+   delivery client if your app does not already have one.
+
+   **Copy this:**
+
+   ```sh
+   pnpm add @contentful/optimization-react-native @react-native-async-storage/async-storage contentful
+   ```
+
+2. Mount `OptimizationRoot`, emit one screen event for profile context, fetch one single-locale
+   Contentful entry with linked optimization data, and render the resolved entry ID through
+   `OptimizedEntry`.
+
+   **Copy this:**
+
+   ```tsx
+   import { useEffect, useState } from 'react'
+   import { Text } from 'react-native'
+   import {
+     OptimizationRoot,
+     OptimizedEntry,
+     useScreenTracking,
+   } from '@contentful/optimization-react-native'
+   import { createClient, type Entry } from 'contentful'
+
+   const APP_LOCALE = 'en-US'
+
+   const contentfulClient = createClient({
+     accessToken: 'your-contentful-delivery-token',
+     environment: 'main',
+     space: 'your-space-id',
+   })
+
+   function HomeScreen() {
+     const [entry, setEntry] = useState<Entry | undefined>()
+
+     // Automatic screen tracking uses current-screen dedupe.
+     useScreenTracking({ name: 'Home' })
+
+     useEffect(() => {
+       void contentfulClient
+         .getEntry('hero-entry-id', {
+           include: 10, // Resolve optimization and variant links before SDK resolution.
+           locale: APP_LOCALE, // Keep CDA entries and SDK context on the same locale.
+         })
+         .then(setEntry)
+     }, [])
+
+     if (!entry) return null
+
+     // OptimizedEntry passes the selected variant or baseline fallback to the renderer.
+     return (
+       <OptimizedEntry baselineEntry={entry}>
+         {(resolvedEntry) => <Text>{`Resolved entry: ${resolvedEntry.sys.id}`}</Text>}
+       </OptimizedEntry>
+     )
+   }
+
+   export function App() {
+     // Use default accepted consent only when your application policy permits it.
+     return (
+       <OptimizationRoot
+         clientId="your-optimization-client-id"
+         environment="main"
+         locale={APP_LOCALE}
+         defaults={{ consent: true }}
+       >
+         <HomeScreen />
+       </OptimizationRoot>
+     )
+   }
+   ```
+
+3. Verify the first run. The app displays a resolved entry ID for either the selected variant or the
+   baseline fallback.
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Scope and capabilities](#scope-and-capabilities)
-- [The integration flow](#the-integration-flow)
-- [1. Install and initialize with minimal configuration](#1-install-and-initialize-with-minimal-configuration)
-  - [Install peer dependencies](#install-peer-dependencies)
-  - [The minimum setup](#the-minimum-setup)
-  - [Access the SDK instance with hooks](#access-the-sdk-instance-with-hooks)
-  - [Subscribe to SDK state from the provider](#subscribe-to-sdk-state-from-the-provider)
-- [2. Handle consent](#2-handle-consent)
-  - [Defaulting consent to `true`](#defaulting-consent-to-true)
-  - [Gating consent on a banner](#gating-consent-on-a-banner)
-  - [Reading and reacting to consent state](#reading-and-reacting-to-consent-state)
-  - [Revoking consent](#revoking-consent)
-  - [Optional consent policy controls](#optional-consent-policy-controls)
-- [3. Optimize entries with OptimizedEntry](#3-optimize-entries-with-optimizedentry)
-  - [Fetch the entry with `include: 10`](#fetch-the-entry-with-include-10)
-  - [Render the variant with a render prop](#render-the-variant-with-a-render-prop)
-  - [Pass-through for non-optimized entries](#pass-through-for-non-optimized-entries)
-- [4. Interaction tracking with OptimizedEntry](#4-interaction-tracking-with-optimizedentry)
-  - [Global defaults via OptimizationRoot](#global-defaults-via-optimizationroot)
-  - [Per-component overrides](#per-component-overrides)
-  - [Custom visibility and dwell timing](#custom-visibility-and-dwell-timing)
-  - [Use OptimizationScrollProvider for scrollable screens](#use-optimizationscrollprovider-for-scrollable-screens)
-- [5. Screen tracking](#5-screen-tracking)
-  - [Automatic tracking with OptimizationNavigationContainer](#automatic-tracking-with-optimizationnavigationcontainer)
-  - [Per-screen tracking with `useScreenTracking`](#per-screen-tracking-with-usescreentracking)
-  - [Dynamic names with `useScreenTrackingCallback`](#dynamic-names-with-usescreentrackingcallback)
-- [Forward optimization context to third-party analytics](#forward-optimization-context-to-third-party-analytics)
-- [Live updates](#live-updates)
-  - [Default behavior](#default-behavior)
-  - [Global live updates](#global-live-updates)
-  - [Per-component live updates](#per-component-live-updates)
-  - [Resolution priority](#resolution-priority)
-- [Preview panel](#preview-panel)
-  - [Enabling the preview panel](#enabling-the-preview-panel)
-  - [Customizing the floating action button](#customizing-the-floating-action-button)
-  - [Preview panel and live updates](#preview-panel-and-live-updates)
+- [Required setup](#required-setup)
+- [Core integration](#core-integration)
+  - [Install and initialize `OptimizationRoot`](#install-and-initialize-optimizationroot)
+  - [Consent and privacy-policy handoff](#consent-and-privacy-policy-handoff)
+  - [Contentful entry fetching and locale shape](#contentful-entry-fetching-and-locale-shape)
+  - [Entry resolution and fallback rendering](#entry-resolution-and-fallback-rendering)
+  - [Screen and navigation tracking](#screen-and-navigation-tracking)
+  - [Entry interaction tracking](#entry-interaction-tracking)
+  - [Identity, profile continuity, and reset](#identity-profile-continuity-and-reset)
+- [Optional integrations](#optional-integrations)
+  - [Merge tags and Custom Flags](#merge-tags-and-custom-flags)
+  - [Live updates](#live-updates)
+  - [Preview panel](#preview-panel)
+  - [Offline event delivery](#offline-event-delivery)
+  - [Analytics forwarding](#analytics-forwarding)
+- [Advanced integrations](#advanced-integrations)
+  - [Explicit SDK instance ownership](#explicit-sdk-instance-ownership)
+  - [Strict event admission and queue controls](#strict-event-admission-and-queue-controls)
+  - [Platform build boundaries](#platform-build-boundaries)
+- [Production checks](#production-checks)
+- [Troubleshooting](#troubleshooting)
 - [Reference implementations to compare against](#reference-implementations-to-compare-against)
 
 <!-- mtoc-end -->
 </details>
 
-## Scope and capabilities
+## Required setup
 
-The React Native SDK builds on the Optimization Core Library and adds React Native-specific
-providers, hooks, and components. It lets consumers:
+Use this setup inventory before you move beyond the quick start:
 
-- initialize and own a mobile SDK instance through `OptimizationRoot` or explicit providers
-- persist consent and, when persistence consent permits it, profile state, selected optimizations,
-  and anonymous identity with AsyncStorage
-- personalize Contentful entries with `OptimizedEntry`
-- emit entry view and tap tracking from React Native components
-- emit screen events through React Navigation adapters or screen-level hooks
-- opt into live updates and attach the in-app preview panel for authoring workflows
-- queue events while offline when NetInfo is available
+| Setup item                                                                | Category                       | Required for quick start | Where to configure                                                                     |
+| ------------------------------------------------------------------------- | ------------------------------ | ------------------------ | -------------------------------------------------------------------------------------- |
+| React Native app with compatible React and React Native peer dependencies | Required for first integration | Yes                      | Application package dependencies                                                       |
+| `@contentful/optimization-react-native` package                           | Required for first integration | Yes                      | Application package dependencies                                                       |
+| `@react-native-async-storage/async-storage` peer dependency               | Required for first integration | Yes                      | Application package dependencies and native install flow                               |
+| Contentful Delivery API client                                            | Required for first integration | Yes                      | Application package dependencies and app-owned Contentful client factory               |
+| Optimization client ID and environment                                    | Required for first integration | Yes                      | `OptimizationRoot`, `OptimizationProvider`, or `ContentfulOptimization.create(...)`    |
+| Experience API and Insights API endpoint overrides                        | Common but policy-dependent    | No                       | `api` SDK config for staging, mock, or non-default hosts                               |
+| Contentful space, environment, access token, and CDA host                 | Required for first integration | Yes                      | Application-owned Contentful fetching layer                                            |
+| Optimized Contentful entries with resolved `nt_experiences` and variants  | Required for first integration | Yes                      | Contentful content model and CDA `include` depth                                       |
+| Single Contentful CDA locale and SDK Experience/event locale              | Required for first integration | Yes                      | App locale policy, Contentful `getEntry()` calls, and SDK `locale`                     |
+| `OptimizationRoot` mounted once around SDK consumers                      | Required for first integration | Yes                      | React Native app root or navigation root                                               |
+| Screen, route, or lifecycle integration                                   | Required for first integration | Yes                      | `useScreenTracking`, `useScreenTrackingCallback`, or `OptimizationNavigationContainer` |
+| Entry rendering through `OptimizedEntry` or `useEntryResolver`            | Required for first integration | Yes                      | React Native components that render Contentful entries                                 |
+| Consent startup policy and user-choice wiring                             | Common but policy-dependent    | Conditional              | SDK `defaults`, `allowedEventTypes`, and application consent UI or CMP callbacks       |
+| Entry view and tap tracking policy                                        | Common but policy-dependent    | Conditional              | `trackEntryInteraction` on `OptimizationRoot` and per-entry tracking props             |
+| User identity, profile continuity, and reset policy                       | Common but policy-dependent    | No                       | Authentication, account, or settings flows that call `identify()` and `reset()`        |
+| React Navigation integration                                              | Optional                       | No                       | App navigation dependencies and `OptimizationNavigationContainer`                      |
+| `@react-native-community/netinfo` for offline detection                   | Optional                       | No                       | Application package dependencies and native install flow                               |
+| Preview peer dependencies                                                 | Optional                       | No                       | `@react-native-clipboard/clipboard` and `react-native-safe-area-context`               |
+| Merge tag and Custom Flag rendering                                       | Optional                       | No                       | App-owned Rich Text, flag, or feature-rendering components                             |
+| Analytics forwarding destination                                          | Optional                       | No                       | `onStatesReady` subscriptions and application-owned analytics code                     |
+| Strict pre-consent allowlist, queue policy, and diagnostics               | Advanced or production-only    | No                       | SDK `allowedEventTypes`, `queuePolicy`, `onEventBlocked`, and `logLevel`               |
+| Preview release gating and custom native builds                           | Advanced or production-only    | No                       | Build flags, Expo custom dev builds, and release configuration                         |
 
-The React Native SDK does not replace your Contentful delivery client. Your application still
-fetches Contentful entries, decides how consent works, decides when a user becomes known, and
-controls where personalized content renders.
+The React Native SDK does not fetch Contentful entries. Fetch entries in your application layer,
+then pass single-locale entry objects to SDK components and hooks.
 
-## The integration flow
+## Core integration
 
-Most React Native integrations follow this sequence:
+### Install and initialize `OptimizationRoot`
 
-1. Install the SDK and its required peer dependencies.
-2. Wrap the app in `OptimizationRoot` with the minimum config (`clientId`).
-3. Decide how consent behaves: default-on when application policy permits it, or gated by a UI
-   prompt.
-4. Wrap each personalizable Contentful entry in `<OptimizedEntry>`.
-5. Enable view and/or tap tracking for the entries you care about.
-6. Wrap scrollable screens in `<OptimizationScrollProvider>` so viewport tracking is accurate.
-7. Add screen tracking either automatically with `OptimizationNavigationContainer` or per screen
-   with `useScreenTracking`.
+**Integration category:** Required for first integration
 
-Optional additions include live updates when entries need to continuously react to optimization
-state changes, and the preview panel when the application needs authoring or preview overrides.
+`OptimizationRoot` is the normal React Native entry point. It creates the SDK instance, waits for
+AsyncStorage-backed state setup, runs `onStatesReady` when provided, then renders provider children.
+It also composes live-update and interaction-tracking context for descendant components.
 
-The React Native reference implementation in this repository shows those patterns in a working
-application:
+1. Install `@contentful/optimization-react-native` and `@react-native-async-storage/async-storage`.
+2. Mount one `OptimizationRoot` around all components that call React Native SDK hooks.
+3. Pass `clientId` from runtime configuration. Pass `environment` when you do not use the default
+   Contentful environment, `main`.
+4. Pass `locale` when Experience API responses and event context must use the same app locale as
+   your Contentful entry fetches.
+5. Pass `api` endpoint overrides only for staging, mocks, or non-default production hosts.
 
-- [`implementations/react-native-sdk`](../../implementations/react-native-sdk/README.md)
-
-## 1. Install and initialize with minimal configuration
-
-### Install peer dependencies
-
-```sh
-pnpm add @contentful/optimization-react-native @react-native-async-storage/async-storage
-```
-
-For offline support (recommended), also install:
-
-```sh
-pnpm add @react-native-community/netinfo
-```
-
-For preview panel support, also install:
-
-```sh
-pnpm add @react-native-clipboard/clipboard react-native-safe-area-context
-```
-
-The SDK uses AsyncStorage to persist consent and, when persistence consent permits it, profile state
-and selected optimizations across app launches. `netinfo` is optional but lets the SDK queue events
-while the device is offline and flush them automatically when connectivity returns.
-
-> [!NOTE]
->
-> The preview panel depends on native modules. Expo apps using Optimization preview need a custom
-> dev build (`expo run:ios` / `expo run:android`) — Expo Go is not enough. The in-tree React Native
-> reference implementation [README](../../implementations/react-native-sdk/README.md) documents the
-> monorepo setup and E2E commands.
-
-### The minimum setup
-
-Wrap your app's root in `<OptimizationRoot>`. This is the recommended entry point — it composes the
-`OptimizationProvider`, `LiveUpdatesProvider`, and `InteractionTrackingProvider` for you and manages
-the SDK instance lifecycle.
+**Adapt this to your use case:**
 
 ```tsx
 import { OptimizationRoot } from '@contentful/optimization-react-native'
+import type { ReactNode } from 'react'
 
-export default function App() {
+export function AppRoot({ children }: { children: ReactNode }) {
+  // Override API hosts only for staging, mocks, or non-default production hosts.
   return (
-    <OptimizationRoot clientId="your-client-id">
-      <YourApp />
+    <OptimizationRoot
+      clientId="your-optimization-client-id"
+      environment="main"
+      locale="en-US"
+      api={{
+        experienceBaseUrl: 'https://experience.ninetailed.co/',
+        insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
+      }}
+      logLevel="warn"
+    >
+      {children}
     </OptimizationRoot>
   )
 }
 ```
 
-That is the minimum viable setup. `clientId` is the only required prop; everything else falls back
-to safe defaults (environment defaults to `'main'`, channel to `'mobile'`, etc.).
+Use `useOptimization()` under the provider when a component needs the SDK instance. The hook throws
+outside `OptimizationRoot` or `OptimizationProvider`, and the provider-owned path withholds children
+until the SDK is ready.
 
-A fuller application usually adds environment-specific config, optional preview panel mounting, and
-navigation integration:
+### Consent and privacy-policy handoff
 
-```tsx
-import { PreviewPanelOverlay } from '@contentful/optimization-react-native/preview'
+**Integration category:** Common but policy-dependent
 
-function NavigationShell() {
-  return (
-    <OptimizationNavigationContainer>
-      {(navigationProps) => (
-        <NavigationContainer {...navigationProps}>
-          {/* ...stack/tab navigators... */}
-        </NavigationContainer>
-      )}
-    </OptimizationNavigationContainer>
-  )
-}
+Consent policy belongs to your application. The SDK stores event consent, stores separate durable
+profile-continuity persistence consent, and blocks non-allowed event types until event consent is
+accepted.
 
-;<OptimizationRoot
-  clientId={OPTIMIZATION_CLIENT_ID}
-  environment={OPTIMIZATION_ENVIRONMENT}
-  locale="en-US"
-  logLevel={__DEV__ ? 'info' : 'warn'}
->
-  <NavigationShell />
-  {__DEV__ && <PreviewPanelOverlay contentfulClient={contentfulClient} />}
-</OptimizationRoot>
-```
+1. If application policy permits Optimization by default and you do not render a user consent UI,
+   seed accepted consent during SDK initialization.
+2. If consent depends on user choice, leave `defaults.consent` unset and call
+   `optimization.consent(true | false)` from the application-owned banner, CMP callback, or settings
+   flow.
+3. Use object-form consent when events are permitted but profile continuity must stay session-only.
+4. Configure `allowedEventTypes` only after privacy review approves which events can emit before
+   consent.
+5. Subscribe to `states.blockedEventStream` during development when you need to verify blocked
+   calls.
 
-Common props on `OptimizationRoot`:
-
-| Prop                    | Type                         | Required | Default                        | Description                                                |
-| ----------------------- | ---------------------------- | -------- | ------------------------------ | ---------------------------------------------------------- |
-| `clientId`              | `string`                     | Yes      | N/A                            | Your Contentful Optimization client identifier             |
-| `environment`           | `string`                     | No       | `'main'`                       | Optimization environment to read from                      |
-| `defaults`              | `{ consent?: boolean, ... }` | No       | `undefined`                    | Initial values applied at startup (e.g. `consent: true`)   |
-| `allowedEventTypes`     | `EventType[]`                | No       | `['identify', 'screen']`       | Event types allowed before consent is explicitly set       |
-| `logLevel`              | `LogLevels`                  | No       | `'error'`                      | Minimum console log level                                  |
-| `liveUpdates`           | `boolean`                    | No       | `false`                        | Global live-updates default for `<OptimizedEntry />`       |
-| `locale`                | `string`                     | No       | `undefined`                    | SDK Experience API and default event locale                |
-| `trackEntryInteraction` | `{ views?, taps? }`          | No       | `{ views: true, taps: false }` | Default interaction tracking for `<OptimizedEntry />`      |
-| `onStatesReady`         | `(states) => cleanup`        | No       | `undefined`                    | Attach app-level state subscribers when SDK state is ready |
-
-The full configuration reference (API endpoints, fetch retries, queue policy, event-builder
-overrides) is documented in the
-[React Native SDK README](../../packages/react-native-sdk/README.md#common-configuration).
-
-Choose the application Contentful locale in your navigation, i18n, or app configuration layer. Pass
-that value to Contentful CDA requests and use the provider `locale` prop when Experience API
-responses and events should use the same language.
-
-Changing the provider `locale` prop after initialization calls `optimization.setLocale(nextLocale)`
-and updates `optimization.locale` plus `optimization.states.locale`. It does not fetch content or
-refresh profile state; call `screen`, `identify`, or CDA methods again when your app needs localized
-data refreshed. For the full locale model, see
-[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
-
-### Access the SDK instance with hooks
-
-Inside the provider tree, use `useOptimization()` to interact with the SDK directly:
+**Copy this:**
 
 ```tsx
-import { useOptimization } from '@contentful/optimization-react-native'
-
-function MyComponent() {
-  const optimization = useOptimization()
-
-  const handlePress = async () => {
-    await optimization.identify('user-123', { plan: 'pro' })
-  }
-
-  return <Button onPress={handlePress} title="Identify" />
-}
-```
-
-`useOptimization()` throws if used outside an `OptimizationProvider` / `OptimizationRoot`, and is
-guaranteed to return a ready SDK instance — `OptimizationProvider` does not render its children
-until the SDK has finished initializing.
-
-React Native provider-owned initialization is async: the provider renders no children while platform
-state setup is pending, runs any `onStatesReady` callback, and then renders children. This matches
-the React Web provider contract, but React Native cannot use the Web layout-effect timing because
-SDK creation depends on async storage and platform APIs.
-
-### Subscribe to SDK state from the provider
-
-Use `onStatesReady` when application code needs SDK state subscriptions that line up with provider
-initialization. The provider calls it after async SDK state setup completes and before child screen,
-navigation, or entry effects can emit events.
-
-```tsx
-<OptimizationRoot
-  clientId="your-client-id"
-  onStatesReady={(states) => {
-    const subscriptions = [
-      states.eventStream.subscribe((event) => {
-        if (event) devToolsPanel.logEvent(event)
-      }),
-      states.blockedEventStream.subscribe((blocked) => {
-        if (blocked) devToolsPanel.logBlockedEvent(blocked)
-      }),
-    ]
-
-    return () => {
-      subscriptions.forEach((subscription) => subscription.unsubscribe())
-    }
-  }}
->
-  <OptimizationNavigationContainer>
-    {(navigationProps) => (
-      <NavigationContainer {...navigationProps}>{/* navigators */}</NavigationContainer>
-    )}
-  </OptimizationNavigationContainer>
-</OptimizationRoot>
-```
-
-`onStatesReady` receives only the `states` surface. Use regular hooks and React effects for
-component-local state.
-
-Use `OptimizationProvider` directly with a pre-built `sdk` only when an application or framework
-adapter owns initialization. Without `onStatesReady`, children render immediately because the SDK is
-already available. When `onStatesReady` is provided, the provider waits until those subscribers are
-attached before children mount and runs the returned cleanup on unmount. In both cases, it does not
-call `destroy()` on the injected SDK.
-
-## 2. Handle consent
-
-React Native applications usually choose one startup policy: seed accepted consent when application
-policy permits Optimization by default, or leave SDK consent unset and connect application-owned
-controls to `consent(true | false)`.
-
-### Defaulting consent to `true`
-
-If your application policy permits Optimization by default and you do not render an end-user consent
-prompt, set `defaults.consent: true` so events flow immediately:
-
-```tsx
-<OptimizationRoot clientId="your-client-id" defaults={{ consent: true }}>
+// Use this only when policy allows Optimization to start accepted.
+<OptimizationRoot clientId="your-optimization-client-id" defaults={{ consent: true }}>
   <YourApp />
 </OptimizationRoot>
 ```
 
-The default is applied once at startup; user input later takes precedence. It also permits durable
-profile-continuity storage for profile, selected optimizations, changes, and the anonymous ID. Set
-this default during SDK initialization rather than from a component effect so the persistence policy
-is in place before child effects, screen tracking, or manual `identify()` calls can run.
-
-When durable profile-continuity persistence is allowed, SDK state from an Experience response is
-published only after the corresponding AsyncStorage write for that same response snapshot has
-settled or failed gracefully. This affects durability timing, not the live source of truth: after
-startup hydration, SDK state and rendered SDK-derived UI read from in-memory SDK state. Wait for
-SDK-derived state or UI instead of adding sleeps before relaunching or terminating the app in tests.
-
-### Gating consent on a banner
-
-When your application policy depends on user choice, leave `defaults.consent` unset and call
-`consent()` from your banner UI:
+**Adapt this to your use case:**
 
 ```tsx
+import { Button, View } from 'react-native'
 import { useOptimization } from '@contentful/optimization-react-native'
-import { View, Text, Button } from 'react-native'
 
-function ConsentBanner() {
+function ConsentControls() {
   const optimization = useOptimization()
 
   return (
     <View>
-      <Text>Allow personalized experiences and analytics?</Text>
+      {/* Boolean consent updates event consent and durable profile-continuity consent together. */}
       <Button title="Accept" onPress={() => optimization.consent(true)} />
       <Button title="Reject" onPress={() => optimization.consent(false)} />
     </View>
@@ -315,314 +247,125 @@ function ConsentBanner() {
 }
 ```
 
-When consent is accepted (`true`), all event types are permitted. When consent is rejected
-(`false`), non-allowed event types are blocked and `<OptimizedEntry />` view/tap tracking will be
-silently dropped at the SDK boundary. Consent state persists across app launches via AsyncStorage.
+By default, React Native permits `identify` and `screen` before event consent is accepted. Entry
+views, entry taps, `page`, and custom `track` events are blocked until consent is accepted or their
+event types are allow-listed. Boolean consent calls control both event emission and durable profile
+continuity. Use `optimization.consent({ events: true, persistence: false })` when events can emit
+but profile, selected optimizations, changes, and anonymous identity must stay session-only.
 
-By default, only `identify` and `screen` events are allowed before consent is explicitly set. All
-other event types, including entry view/tap tracking, are blocked until consent is granted or the
-event type is allow-listed. For cross-SDK consent policy guidance, see
+For cross-SDK policy details, see
 [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
 
-### Reading and reacting to consent state
+### Contentful entry fetching and locale shape
 
-Subscribe to the SDK's consent observable when you need to render UI conditionally:
+**Integration category:** Required for first integration
 
-```tsx
-import { useOptimization } from '@contentful/optimization-react-native'
-import { useEffect, useState } from 'react'
-import { Text } from 'react-native'
+Your app owns Contentful fetching. The SDK resolver expects a standard single-locale Contentful CDA
+entry payload where optimized fields are direct values, not locale-keyed maps.
 
-function ConsentStatus() {
-  const optimization = useOptimization()
-  const [consent, setConsent] = useState<boolean | undefined>(undefined)
+1. Choose the application Contentful locale in your app configuration, i18n layer, or navigation
+   layer.
+2. Pass that locale to Contentful CDA requests that feed SDK entry resolution.
+3. Request enough link depth for `nt_experiences`, optimization config, and linked variant entries.
+   `include: 10` is the repository reference implementation's pattern.
+4. Pass the same locale to SDK `locale` when Experience API responses and event context must use the
+   same language.
+5. Do not pass `contentful.js` `withAllLocales` results or raw CDA `locale=*` responses to
+   `OptimizedEntry` or `useEntryResolver`.
 
-  useEffect(() => {
-    const sub = optimization.states.consent.subscribe(setConsent)
-    return () => sub.unsubscribe()
-  }, [optimization])
-
-  return <Text>Consent: {String(consent)}</Text>
-}
-```
-
-A common pattern is to gate personalized content rendering on consent and fall back to the baseline
-entry while consent is missing or rejected.
-
-### Revoking consent
-
-To revoke consent after it was previously accepted, just call `consent(false)`:
+**Copy this:**
 
 ```tsx
-optimization.consent(false)
-```
+const APP_LOCALE = 'en-US'
 
-### Optional consent policy controls
-
-Use these options only when your application policy needs a stricter or split consent model:
-
-- Set `allowedEventTypes={[]}` for strict opt-in before any Optimization event can emit.
-- Call `optimization.consent({ events: true, persistence: false })` when events are allowed but
-  durable profile continuity must stay session-only.
-
-## 3. Optimize entries with OptimizedEntry
-
-`<OptimizedEntry />` is the unified component for resolving optimized variants and tracking
-interactions on Contentful entries. It:
-
-- Detects whether the entry has `nt_experiences` (i.e. is optimized) and resolves the correct
-  variant for the current user profile.
-- Passes non-optimized entries through unchanged (so you can blanket-wrap a list and only the
-  optimized entries actually personalize).
-- Emits view tracking when the entry satisfies the visibility and dwell-time requirements.
-- Emits tap tracking when enabled.
-
-### Fetch the entry with `include: 10`
-
-For variant data to resolve, the entry must be fetched with linked optimization references included.
-Use `include: 10` and one CDA locale on Contentful's Delivery API call:
-
-```tsx
-const appLocale = getAppLocale()
-
-const cta = await contentfulClient.getEntry(CTA_ENTRY_ID, {
-  include: 10,
-  locale: appLocale,
+const entry = await contentfulClient.getEntry('hero-entry-id', {
+  include: 10, // Resolve optimization and variant links before SDK resolution.
+  locale: APP_LOCALE, // Keep CDA entries and SDK context on the same locale.
 })
 ```
 
-The [React Native reference implementation](../../implementations/react-native-sdk/README.md)
-centralizes this Contentful fetching pattern in its application helper layer.
+Changing the provider `locale` prop after initialization calls `sdk.setLocale(nextLocale)`. After
+the locale update, Experience API requests and event context use the new locale, but the SDK does
+not refetch Contentful entries or refresh profile state. Refetch entries and run your normal
+`screen()`, `identify()`, or profile refresh path when localized data must update.
 
-Your app owns the Contentful locale used for CDA fetches. Use `optimization.setLocale(nextLocale)`
-when the app changes language after initialization, then refetch Contentful entries with the new CDA
-locale and rerun the app's normal profile refresh flow. `contentful.js` `withAllLocales` and raw CDA
-`locale=*` return locale-keyed fields; the SDK resolver expects a standard single-locale CDA entry
-shape where `fields.nt_experiences` and `fields.nt_variants` are direct field values. See
-[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
-for the entry contract and
-[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md)
-for the broader locale model.
+For the entry contract, see
+[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
+For the broader locale model, see
+[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
 
-### Render the variant with a render prop
+### Entry resolution and fallback rendering
 
-Pass the baseline entry to `<OptimizedEntry>` and render with a render prop that receives the
-resolved entry:
+**Integration category:** Required for first integration
+
+`OptimizedEntry` resolves the selected Contentful variant for the current profile and passes
+non-optimized entries through unchanged. Invalid, incomplete, or unmatched optimization data falls
+back to the baseline entry instead of throwing.
+
+1. Pass the baseline Contentful entry to `OptimizedEntry`.
+2. Use a render prop when the child needs the resolved baseline or variant entry.
+3. Use static children only when you need entry tracking but not variant data in the child.
+4. Use `useEntryResolver()` when a component needs the same resolution behavior without the wrapper
+   component.
+
+**Adapt this to your use case:**
 
 ```tsx
-import { OptimizedEntry } from '@contentful/optimization-react-native'
+import { OptimizedEntry, useEntryResolver } from '@contentful/optimization-react-native'
+import type { Entry } from 'contentful'
 
-function HeroSection({ baselineEntry }) {
+function HeroSection({ baselineEntry }: { baselineEntry: Entry }) {
   return (
     <OptimizedEntry baselineEntry={baselineEntry}>
-      {(resolvedEntry) => <CTAHeader entry={resolvedEntry} />}
+      {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
     </OptimizedEntry>
   )
 }
-```
 
-`resolvedEntry` is either the resolved variant (when the SDK has selected one for the current
-profile) or the baseline entry (when no variant qualifies). Either way, `resolvedEntry.fields` has
-the same shape as the baseline — so the renderer downstream doesn't need to know whether it's seeing
-a variant or not.
-
-Use `useEntryResolver()` when a component needs the same resolution behavior without the
-`OptimizedEntry` wrapper:
-
-```tsx
-import { useEntryResolver } from '@contentful/optimization-react-native'
-
-function HeroData({ baselineEntry }) {
+function HeroData({ baselineEntry }: { baselineEntry: Entry }) {
   const { resolveEntry } = useEntryResolver()
+  // resolveEntry uses current selected optimizations and falls back to baseline content.
   const resolvedEntry = resolveEntry(baselineEntry)
 
-  return <CTAHeader entry={resolvedEntry} />
+  return <HeroCard entry={resolvedEntry} />
 }
 ```
 
-### Pass-through for non-optimized entries
+The resolved entry has the same field shape as the baseline entry. Downstream renderers can render
+the fields without branching on whether the SDK returned a variant.
 
-When you only want to track an entry (no variant resolution), pass static children instead of a
-render prop:
+### Screen and navigation tracking
 
-```tsx
-<OptimizedEntry baselineEntry={blogPost}>
-  <BlogPostCard post={blogPost} onPress={...} />
-</OptimizedEntry>
-```
+**Integration category:** Required for first integration
 
-This is the same tracking pattern used by the
-[React Native reference implementation](../../implementations/react-native-sdk/README.md): entries
-are wrapped so the SDK can track views/taps, while non-optimized content passes through unchanged.
+Screen events update the mobile profile and route-aware event context. The SDK gives you a React
+Navigation adapter and two hook paths.
 
-## 4. Interaction tracking with OptimizedEntry
+1. Use `OptimizationNavigationContainer` when your app uses React Navigation and you want automatic
+   events for active route changes.
+2. Use `useScreenTracking()` inside a screen when the app does not use React Navigation or when the
+   event must wait for screen data.
+3. Use `useScreenTrackingCallback()` for imperative tracking when the screen name comes from a deep
+   link, navigation state transform, or another runtime value.
+4. Avoid tracking the same route with both the navigation adapter and a screen hook.
+5. Set `includeParams` on `OptimizationNavigationContainer` only when route params are approved for
+   event payloads. Params are JSON-validated before they are attached.
 
-`<OptimizedEntry />` tracks two interactions: **views** (the entry was at least N% visible for at
-least M ms) and **taps** (the user tapped the entry). View tracking is enabled by default; tap
-tracking is opt-in.
-
-For the deeper event timing, visibility ratio, consent-gating, and viewport-state details, see
-[React Native SDK Interaction Tracking Mechanics](../concepts/react-native-sdk-interaction-tracking-mechanics.md).
-
-### Global defaults via OptimizationRoot
-
-Set a global default for all `<OptimizedEntry />` components via `trackEntryInteraction` on the
-root:
-
-```tsx
-<OptimizationRoot clientId="your-client-id" trackEntryInteraction={{ views: true, taps: true }}>
-  <YourApp />
-</OptimizationRoot>
-```
-
-The default is `{ views: true, taps: false }`.
-
-### Per-component overrides
-
-Override the global setting on individual entries with `trackViews` and `trackTaps`.
-
-Track taps on a CTA, regardless of the global setting:
-
-```tsx
-<OptimizedEntry baselineEntry={cta} trackTaps>
-  {(resolved) => <CTAHeader entry={resolved} />}
-</OptimizedEntry>
-```
-
-Disable view tracking for a high-frequency entry:
-
-```tsx
-<OptimizedEntry baselineEntry={feedItem} trackViews={false}>
-  <FeedItemCard item={feedItem} />
-</OptimizedEntry>
-```
-
-You can also pass `onTap` to receive the resolved entry after a tap is tracked. Providing `onTap`
-implicitly enables tap tracking unless `trackTaps={false}` is explicit:
-
-```tsx
-<OptimizedEntry
-  baselineEntry={cta}
-  onTap={(resolved) => navigation.navigate('CTA', { id: resolved.sys.id })}
->
-  {(resolved) => <CTAHeader entry={resolved} />}
-</OptimizedEntry>
-```
-
-### Custom visibility and dwell timing
-
-By default, view tracking fires when the entry is **80% visible for 2000 ms**. Customize per-entry:
-
-```tsx
-<OptimizedEntry
-  baselineEntry={hero}
-  minVisibleRatio={0.5} // 50% visible
-  dwellTimeMs={1000} // for 1 second
->
-  {(resolved) => <Hero entry={resolved} />}
-</OptimizedEntry>
-```
-
-After the initial view event, the SDK emits periodic view-duration update events every 5000 ms by
-default; configure with `viewDurationUpdateIntervalMs`.
-
-### Use OptimizationScrollProvider for scrollable screens
-
-Inside a scrolling container, viewport-based view tracking needs to know the actual scroll position.
-Wrap the scrollable screen in `<OptimizationScrollProvider>`:
-
-```tsx
-import { OptimizationScrollProvider, OptimizedEntry } from '@contentful/optimization-react-native'
-
-function BlogPostDetailScreen({ post }) {
-  return (
-    <OptimizationScrollProvider>
-      <OptimizedEntry baselineEntry={post}>
-        <ArticleBody post={post} />
-      </OptimizedEntry>
-    </OptimizationScrollProvider>
-  )
-}
-```
-
-The [React Native reference implementation](../../implementations/react-native-sdk/README.md) wraps
-its entry list in `OptimizationScrollProvider` before rendering optimized entries.
-
-Without `OptimizationScrollProvider`, the SDK assumes scroll position is always `0` and the viewport
-equals the screen. That's fine for a single full-screen component, but for content that appears
-below the fold, wrap the screen so tracking fires when the user scrolls the entry into view.
-
-## 5. Screen tracking
-
-Screen tracking emits a `screen` event each time the user navigates to a new screen. The SDK uses
-these events to update profile attribution and route-aware properties.
-
-### Automatic tracking with OptimizationNavigationContainer
-
-If you use React Navigation, the easiest setup is `<OptimizationNavigationContainer />`, which wraps
-`<NavigationContainer />` and emits a `screen` event on every active route change:
+**Adapt this to your use case:**
 
 ```tsx
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import { useEffect } from 'react'
 import {
-  OptimizationRoot,
   OptimizationNavigationContainer,
+  useScreenTracking,
 } from '@contentful/optimization-react-native'
 
 const Stack = createNativeStackNavigator()
 
-export default function App() {
-  return (
-    <OptimizationRoot clientId="your-client-id">
-      <OptimizationNavigationContainer>
-        {(navigationProps) => (
-          <NavigationContainer {...navigationProps}>
-            <Stack.Navigator>
-              <Stack.Screen name="Home" component={HomeScreen} />
-              <Stack.Screen name="BlogPostDetail" component={BlogPostDetailScreen} />
-            </Stack.Navigator>
-          </NavigationContainer>
-        )}
-      </OptimizationNavigationContainer>
-    </OptimizationRoot>
-  )
-}
-```
-
-The [React Native reference implementation](../../implementations/react-native-sdk/README.md)
-exercises this adapter in its navigation test flow. The render-prop pattern means the wrapper does
-not depend on `@react-navigation/native` directly — navigation props are passed through to your real
-`NavigationContainer`.
-
-Available props:
-
-| Prop            | Required | Default | Description                                                    |
-| --------------- | -------- | ------- | -------------------------------------------------------------- |
-| `children`      | Yes      | N/A     | Render prop receiving `ref`, `onReady`, and `onStateChange`    |
-| `onStateChange` | No       | —       | Called after screen tracking fires on navigation state changes |
-| `onReady`       | No       | —       | Called after the initial screen tracking on container ready    |
-| `includeParams` | No       | `false` | Whether to include route params in the screen event properties |
-
-### Per-screen tracking with `useScreenTracking`
-
-If you don't use React Navigation, or if you want fine-grained control, call `useScreenTracking`
-inside each screen component:
-
-```tsx
-import { useScreenTracking } from '@contentful/optimization-react-native'
-
-function HomeScreen() {
-  useScreenTracking({ name: 'Home' })
-  return <View>...</View>
-}
-```
-
-By default this fires once on mount. To delay tracking until data is loaded, pass
-`trackOnMount: false` and call `trackScreen()` manually:
-
-```tsx
-function DetailsScreen() {
+function DetailsScreen({ dataLoaded }: { dataLoaded: boolean }) {
+  // Disable mount tracking when the screen event must wait for app data.
   const { trackScreen } = useScreenTracking({
     name: 'Details',
     trackOnMount: false,
@@ -634,237 +377,494 @@ function DetailsScreen() {
     }
   }, [dataLoaded, trackScreen])
 
-  return <View>...</View>
+  return <DetailsContent />
+}
+
+function NavigationShell() {
+  return (
+    // Use the navigation adapter as the single automatic route-tracking path.
+    <OptimizationNavigationContainer>
+      {(navigationProps) => (
+        <NavigationContainer {...navigationProps}>
+          <Stack.Navigator>
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Details" component={DetailsScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      )}
+    </OptimizationNavigationContainer>
+  )
 }
 ```
 
-### Dynamic names with `useScreenTrackingCallback`
+The automatic navigation path uses `trackCurrentScreen()` for current-screen deduplication. Direct
+manual `screen()` calls are still direct event emits.
 
-When the screen name isn't known at render time (e.g. derived from navigation state or a deep-link),
-use `useScreenTrackingCallback` to get a stable callback you can fire on demand:
+To verify screen tracking, open one tracked screen and confirm one accepted `screen` event through
+SDK logs, `states.eventStream`, or your approved event inspection path.
+
+### Entry interaction tracking
+
+**Integration category:** Common but policy-dependent
+
+Entry interaction tracking records views and taps for Contentful entries. View and tap tracking are
+enabled by default on `OptimizedEntry`.
+
+1. Decide whether entry view and tap events are allowed by your application's Analytics and privacy
+   policy.
+2. Set root defaults with `trackEntryInteraction` only when most entries need to opt out of a
+   default interaction.
+3. Override an individual entry with `trackViews`, `trackTaps`, or `onTap`.
+4. Wrap scrollable screens with `OptimizationScrollProvider` so view tracking uses the actual scroll
+   position.
+5. Tune `minVisibleRatio`, `dwellTimeMs`, and `viewDurationUpdateIntervalMs` only when product
+   analytics requirements differ from the defaults.
+
+**Adapt this to your use case:**
 
 ```tsx
-import { useScreenTrackingCallback } from '@contentful/optimization-react-native'
+<OptimizationRoot clientId="your-optimization-client-id" defaults={{ consent: true }}>
+  {/* Scroll context lets view tracking use the actual scroll viewport. */}
+  <OptimizationScrollProvider>
+    <OptimizedEntry
+      baselineEntry={entry}
+      dwellTimeMs={1000}
+      minVisibleRatio={0.5}
+      onTap={(resolvedEntry) => {
+        navigation.navigate('EntryDetail', { id: resolvedEntry.sys.id })
+      }}
+    >
+      {(resolvedEntry) => <EntryCard entry={resolvedEntry} />}
+    </OptimizedEntry>
+  </OptimizationScrollProvider>
+</OptimizationRoot>
+```
 
-function DynamicScreen({ screenName }: { screenName: string }) {
-  const trackScreenView = useScreenTrackingCallback()
+The default view threshold is 80% visibility for 2000 ms. After the first view event, periodic
+duration updates emit every 5000 ms while the entry remains visible. Without
+`OptimizationScrollProvider`, the SDK assumes `scrollY` is `0` and uses the screen height as the
+viewport, which is appropriate only for non-scrollable or already-visible layouts.
+
+For event timing, scroll context, tap distance, and backgrounding mechanics, see
+[React Native SDK interaction tracking mechanics](../concepts/react-native-sdk-interaction-tracking-mechanics.md).
+
+### Identity, profile continuity, and reset
+
+**Integration category:** Common but policy-dependent
+
+Identity policy belongs to your application. The SDK can send known-user traits, maintain
+profile-continuity state, and reset its in-memory profile state, but it does not decide when a user
+becomes known or how account data is governed.
+
+1. Call `identify({ userId, traits })` after authentication or account state proves the user's
+   identity.
+2. Keep traits limited to values approved for Optimization profile use.
+3. Call `reset()` on sign-out, account switch, or privacy reset flows that must clear SDK profile
+   state.
+4. Use object-form consent when profile continuity persistence must differ from event consent.
+5. Implement any web, server, or account continuity handoff in application code. React Native uses
+   AsyncStorage and does not provide a built-in browser-cookie handoff.
+
+**Adapt this to your use case:**
+
+```tsx
+import { Button, View } from 'react-native'
+import { useOptimization } from '@contentful/optimization-react-native'
+
+function AccountControls() {
+  const optimization = useOptimization()
+
+  return (
+    <View>
+      <Button
+        title="Identify"
+        onPress={() => {
+          // identify links the app-owned user ID to the current mobile profile.
+          void optimization.identify({
+            userId: 'user-123',
+            traits: { plan: 'pro' },
+          })
+        }}
+      />
+      <Button title="Reset" onPress={() => optimization.reset()} />
+    </View>
+  )
+}
+```
+
+AsyncStorage persists consent state and, when persistence consent permits it, profile, selected
+optimizations, changes, and anonymous identity across app launches. It does not persist SDK event
+queues. Live SDK state after startup comes from in-memory SDK state, not repeated AsyncStorage
+reads.
+
+For advanced anonymous ID ownership, pass `getAnonymousId` to `OptimizationRoot` or
+`ContentfulOptimization.create(...)` only when your app owns an approved anonymous ID that
+Optimization can use. Otherwise, omit it and rely on the React Native SDK's AsyncStorage-backed
+anonymous ID default.
+
+## Optional integrations
+
+### Merge tags and Custom Flags
+
+**Integration category:** Optional
+
+Use merge tags and Custom Flags when your app renders profile-backed Rich Text values or feature
+values returned in the Experience API `changes` data. Entry replacement and flag rendering are
+separate decisions: `OptimizedEntry` chooses an entry variant, while flags and merge tags read
+profile-backed values from SDK state.
+
+1. Resolve merge tags inside your app-owned Rich Text renderer with the SDK instance returned by
+   `useOptimization()`.
+2. Subscribe to `sdk.states.flag(name)` when a component needs to rerender as a flag value changes.
+3. Treat flag values and merge-tag values as profile-dependent runtime data, not as static
+   Contentful content.
+
+**Adapt this to your use case:**
+
+```tsx
+import { useEffect, useState } from 'react'
+import { Text } from 'react-native'
+import { useOptimization } from '@contentful/optimization-react-native'
+
+function PromoFlag() {
+  const optimization = useOptimization()
+  const [enabled, setEnabled] = useState(false)
 
   useEffect(() => {
-    trackScreenView(screenName, { source: 'deep-link' })
-  }, [screenName, trackScreenView])
-
-  return <View>...</View>
-}
-```
-
-## Forward optimization context to third-party analytics
-
-Use this optional step when your mobile app already sends events to a customer-data platform,
-product analytics destination, or vendor SDK. The Optimization SDK still sends events to Contentful.
-Your application decides which approved Contentful context, if any, should also be forwarded.
-
-| Reporting need                              | React Native SDK handoff                                                         |
-| ------------------------------------------- | -------------------------------------------------------------------------------- |
-| SDK screen, custom, view, tap, or flag view | Register one `states.eventStream` subscription from `onStatesReady`.             |
-| Business event attribution                  | Add Contentful fields in the tap handler or screen action that owns the event.   |
-| Entry or variant attribution                | Use the resolved entry metadata from `OptimizedEntry` or the action render path. |
-| Custom Flag attribution                     | Forward from the same component or hook path that reads or renders the flag.     |
-| Consent or duplicate-delivery verification  | Use `states.blockedEventStream`, `messageId` dedupe, and destination debuggers.  |
-
-`eventStream` is a live handoff, not a replay queue. Register the subscription at provider
-initialization; if the analytics destination is not ready yet, buffer forwarded payloads in
-application code with an explicit size, TTL, and drop policy.
-
-Attach app-level analytics subscriptions with `onStatesReady` so screen, navigation, and entry
-effects cannot emit SDK events before the subscriber is registered:
-
-```tsx
-<OptimizationRoot
-  clientId="your-client-id"
-  onStatesReady={(states) => {
-    const forwardedMessageIds = new Set<string>()
-
-    const eventSubscription = states.eventStream.subscribe((event) => {
-      if (!event) return
-      if (forwardedMessageIds.has(event.messageId)) return
-      if (!canForwardSdkEvent(event)) return
-
-      forwardedMessageIds.add(event.messageId)
-
-      analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
+    // Subscribe once per flag value that must rerender as profile state changes.
+    const subscription = optimization.states.flag('show-promo').subscribe((value) => {
+      setEnabled(value === true)
     })
 
-    return () => eventSubscription.unsubscribe()
-  }}
->
-  <OptimizationNavigationContainer>
-    {(navigationProps) => (
-      <NavigationContainer {...navigationProps}>{/* navigators */}</NavigationContainer>
-    )}
-  </OptimizationNavigationContainer>
-</OptimizationRoot>
-```
+    return () => subscription.unsubscribe()
+  }, [optimization])
 
-Use
-[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
-for the `canForwardSdkEvent` and `pickContentfulEventProperties` helpers, vendor mappings, consent,
-identity, dedupe, and governance guidance.
-
-## Live updates
-
-### Default behavior
-
-By default, `<OptimizedEntry />` **locks to the first variant it receives** for the lifetime of the
-component. If a user later qualifies for a different variant mid-session (e.g. after `identify()`),
-they continue to see the original variant until the component unmounts. This prevents UI flashing
-when audience membership changes while the user is viewing content.
-
-### Global live updates
-
-Set `liveUpdates` on `OptimizationRoot` to enable real-time updates for every `<OptimizedEntry />`
-in the app:
-
-```tsx
-<OptimizationRoot clientId="your-client-id" liveUpdates>
-  <YourApp />
-</OptimizationRoot>
-```
-
-### Per-component live updates
-
-Override the global setting on individual entries.
-
-Always react to changes immediately:
-
-```tsx
-<OptimizedEntry baselineEntry={dashboard} liveUpdates>
-  {(resolved) => <Dashboard entry={resolved} />}
-</OptimizedEntry>
-```
-
-Lock to the first variant, even when global `liveUpdates` is enabled:
-
-```tsx
-<OptimizedEntry baselineEntry={hero} liveUpdates={false}>
-  {(resolved) => <Hero entry={resolved} />}
-</OptimizedEntry>
-```
-
-Inherit the global setting:
-
-```tsx
-<OptimizedEntry baselineEntry={banner}>{(resolved) => <Banner entry={resolved} />}</OptimizedEntry>
-```
-
-### Resolution priority
-
-The effective live-updates state for a given `<OptimizedEntry />` is resolved in this order (highest
-to lowest priority):
-
-1. **Preview panel open** — always forces live updates on (cannot be overridden).
-2. **Component `liveUpdates` prop** — explicit per-component override.
-3. **`OptimizationRoot` `liveUpdates` prop** — global setting.
-4. **Default** — locked to first variant (`false`).
-
-| Preview panel | Global setting | Component prop | Result           |
-| ------------- | -------------- | -------------- | ---------------- |
-| Open          | any            | any            | Live updates ON  |
-| Closed        | `true`         | `undefined`    | Live updates ON  |
-| Closed        | `false`        | `true`         | Live updates ON  |
-| Closed        | `true`         | `false`        | Live updates OFF |
-| Closed        | `false`        | `undefined`    | Live updates OFF |
-
-To read the current state programmatically, use `useLiveUpdates()`:
-
-```tsx
-import { useLiveUpdates } from '@contentful/optimization-react-native'
-
-function StatusBadge() {
-  const liveUpdates = useLiveUpdates()
-  const isLive = liveUpdates?.globalLiveUpdates ?? false
-  return <Text>{isLive ? 'Live' : 'Locked'}</Text>
+  return enabled ? <Text>Promo</Text> : null
 }
 ```
 
-## Preview panel
+For the deeper data model, see
+[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#merge-tags-and-localized-profile-values).
 
-The preview panel is an in-app developer surface that lets you browse audiences, override variant
-selection, and inspect the current profile — all without modifying real user data. It's the React
-Native counterpart to the Web preview panel.
+### Live updates
 
-### Enabling the preview panel
+**Integration category:** Optional
 
-Import `PreviewPanelOverlay` from the preview subpath and mount it under `OptimizationRoot`,
-alongside your app content. You must also pass an initialized Contentful client so the panel can
-fetch audience and experience entries:
+By default, `OptimizedEntry` locks to the first selected variant it receives for that component
+lifetime. This prevents visible content changes when profile state changes while the user is viewing
+the entry.
+
+1. Set `liveUpdates` on `OptimizationRoot` when all optimized entries in the app can react to
+   profile and variant changes.
+2. Set `liveUpdates` on an individual `OptimizedEntry` when only one section can update in place.
+3. Use `useLiveUpdates()` only for UI that needs to display or react to the live-update state.
+4. Remember that the preview panel forces live updates while it is open.
+
+**Adapt this to your use case:**
 
 ```tsx
-import { OptimizationRoot } from '@contentful/optimization-react-native'
+<OptimizationRoot clientId="your-optimization-client-id" liveUpdates>
+  {/* Per-entry false keeps this section locked even when root live updates are enabled. */}
+  <OptimizedEntry baselineEntry={dashboardEntry} liveUpdates={false}>
+    {(resolvedEntry) => <Dashboard entry={resolvedEntry} />}
+  </OptimizedEntry>
+</OptimizationRoot>
+```
+
+Live-update resolution order is preview panel open, component `liveUpdates` prop, `OptimizationRoot`
+`liveUpdates` prop, then the default locked behavior.
+
+### Preview panel
+
+**Integration category:** Optional
+
+The preview panel is an in-app authoring and debugging surface. It fetches `nt_audience` and
+`nt_experience` entries through the Contentful client you provide, lets users override audiences and
+variants locally, and forces live updates while the panel is open.
+
+1. Install the preview peer dependencies before importing the preview subpath.
+2. Mount `PreviewPanelOverlay` under `OptimizationRoot`.
+3. Pass a Contentful client that can fetch the space and environment containing Optimization
+   audience and experience entries.
+4. Gate the panel behind `__DEV__` or an equivalent internal build flag.
+5. Provide `onRefresh` when the panel must trigger a fresh Experience API request after overrides.
+
+**Copy this:**
+
+```sh
+pnpm add @react-native-clipboard/clipboard react-native-safe-area-context
+```
+
+**Adapt this to your use case:**
+
+```tsx
+import { OptimizationRoot, useOptimization } from '@contentful/optimization-react-native'
 import { PreviewPanelOverlay } from '@contentful/optimization-react-native/preview'
 import { createClient } from 'contentful'
 
 const contentfulClient = createClient({
-  space: 'your-space-id',
-  accessToken: 'your-delivery-token',
+  accessToken: 'your-contentful-delivery-token',
   environment: 'main',
+  space: 'your-space-id',
 })
 
-export default function App() {
+function AppContent() {
+  const optimization = useOptimization()
+
   return (
-    <OptimizationRoot clientId="your-client-id">
+    <>
       <YourApp />
-      {__DEV__ && <PreviewPanelOverlay contentfulClient={contentfulClient} />}
+      {/* Gate preview UI out of production builds. */}
+      {__DEV__ && (
+        <PreviewPanelOverlay
+          contentfulClient={contentfulClient}
+          onRefresh={() => {
+            // Refresh selected optimizations after local preview overrides change.
+            void optimization.screen({
+              name: 'Preview Refresh',
+              properties: {},
+              screen: { name: 'Preview Refresh' },
+            })
+          }}
+        />
+      )}
+    </>
+  )
+}
+
+export function App() {
+  return (
+    <OptimizationRoot clientId="your-optimization-client-id">
+      <AppContent />
     </OptimizationRoot>
   )
 }
 ```
 
-When `PreviewPanelOverlay` is mounted, a floating action button appears on top of your app. Tap it
-to open the panel drawer.
+`PreviewPanelOverlay` must be rendered inside `OptimizationRoot`, or inside both
+`OptimizationProvider` and `LiveUpdatesProvider`. Expo apps that use preview native modules need a
+custom dev build, such as `expo run:ios` or `expo run:android`; Expo Go is not enough.
 
-For real apps, gate on `__DEV__` (or another build flag) so the FAB doesn't appear in production.
+### Offline event delivery
 
-Preview UI components and preview-specific types are exported from the preview subpath:
+**Integration category:** Optional
 
-```tsx
-import { PreviewPanelOverlay } from '@contentful/optimization-react-native/preview'
+When `@react-native-community/netinfo` is installed, the SDK listens for connectivity changes.
+NetInfo gates flushing while the app is offline and resumes flushing when the device is reachable.
+Offline replay is in memory while the JavaScript process remains alive; NetInfo does not create a
+durable event outbox. When NetInfo is absent, the SDK logs a warning and runs without offline
+detection.
+
+1. Install NetInfo when the app must replay in-memory SDK events after offline periods.
+2. Keep queue sizing and drop policy aligned with product Analytics requirements.
+3. Verify that app backgrounding flushes queues and drains pending AsyncStorage writes on your
+   supported platforms. AsyncStorage persistence covers consent and profile continuity, not event
+   queues.
+
+**Copy this:**
+
+```sh
+pnpm add @react-native-community/netinfo
 ```
 
-### Customizing the floating action button
+The SDK also listens for React Native `AppState` transitions to `background` or `inactive` and calls
+`flush()` before the operating system can suspend the process.
 
-Use `fabPosition` and `showHeader` to fine-tune placement and chrome:
+### Analytics forwarding
+
+**Integration category:** Optional
+
+Use Analytics forwarding when your mobile app already sends events to a customer-data platform,
+product analytics destination, or vendor SDK. The Optimization SDK still sends its own events to
+Contentful. Your application decides which approved Contentful context can also be forwarded.
+
+1. Attach app-level subscriptions with `onStatesReady` so subscribers register before child effects
+   can emit screen, entry, or blocked-event updates.
+2. Read `states.eventStream` for SDK events that were accepted.
+3. Read `states.blockedEventStream` to verify consent and `allowedEventTypes` blocks during
+   development.
+4. Dedupe forwarded events by `messageId` or by destination-specific semantic keys when one user
+   action produces multiple event deliveries.
+5. Store forwarded message IDs in module or app state so remounts do not forward the same event
+   again. If the destination must receive only future SDK events, read the current `messageId`
+   before subscribing and skip that event.
+6. Apply the same consent, privacy, and data-minimization policy to forwarded payloads that you
+   apply to first-party SDK events.
+
+**Adapt this to your use case:**
 
 ```tsx
-<OptimizationRoot clientId="your-client-id">
-  <PreviewPanelOverlay
-    contentfulClient={contentfulClient}
-    fabPosition={{ bottom: 50, right: 20 }}
-    showHeader={true}
-    onVisibilityChange={(visible) => console.log('preview panel visible:', visible)}
-  />
+const forwardedMessageIds = new Set<string>()
+
+<OptimizationRoot
+  clientId="your-optimization-client-id"
+  onStatesReady={(states) => {
+    // Register before child effects emit screen, entry, or flag events.
+    const initialMessageId = states.eventStream.current?.messageId
+
+    const subscription = states.eventStream.subscribe((event) => {
+      if (!event) return
+      if (forwardedMessageIds.has(event.messageId)) return
+      if (event.messageId === initialMessageId) {
+        forwardedMessageIds.add(event.messageId)
+        return
+      }
+      if (!canForwardSdkEvent(event)) return
+
+      forwardedMessageIds.add(event.messageId)
+      analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
+    })
+
+    return () => subscription.unsubscribe()
+  }}
+>
+  <YourApp />
 </OptimizationRoot>
 ```
 
-### Preview panel and live updates
+Use
+[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
+for destination mapping, consent, identity, dedupe, and governance guidance.
 
-When the preview panel is open, **all** `<OptimizedEntry />` components automatically enable live
-updates, regardless of their `liveUpdates` prop or the global setting. This is what makes "override
-audience → see variant change immediately" work in the panel without a screen reload.
+## Advanced integrations
 
-You can read the current panel visibility via `useLiveUpdates()`:
+### Explicit SDK instance ownership
+
+**Integration category:** Advanced or production-only
+
+Use explicit instance ownership only when a framework adapter, test harness, or application service
+must create the SDK before React renders. `OptimizationRoot` is the preferred path for normal React
+Native apps.
+
+1. Create the SDK with `ContentfulOptimization.create(config)`.
+2. Pass the instance to `OptimizationProvider sdk={sdk}`.
+3. Wrap the tree in the exported `LiveUpdatesProvider` only when preview tooling or global
+   live-update state must work without `OptimizationRoot`.
+4. Call `destroy()` from the owner when the instance is no longer needed. `OptimizationProvider`
+   does not destroy an injected SDK.
+5. Do not create a second active React Native SDK instance without destroying the first one.
+6. Use per-entry `trackViews` and `trackTaps` for interaction policy in injected-provider flows;
+   `trackEntryInteraction` is an `OptimizationRoot` convenience.
+
+**Follow this pattern:**
 
 ```tsx
-import { useLiveUpdates } from '@contentful/optimization-react-native'
+import { ContentfulOptimization, OptimizationProvider } from '@contentful/optimization-react-native'
 
-function DebugBadge() {
-  const liveUpdates = useLiveUpdates()
-  return <Text>Preview panel: {liveUpdates?.previewPanelVisible ? 'open' : 'closed'}</Text>
+const sdk = await ContentfulOptimization.create({
+  clientId: 'your-optimization-client-id',
+  environment: 'main',
+  locale: 'en-US',
+})
+// The owner that creates an injected SDK must call sdk.destroy() during teardown.
+
+function App() {
+  return (
+    <OptimizationProvider sdk={sdk}>
+      <YourApp />
+    </OptimizationProvider>
+  )
 }
 ```
 
+### Strict event admission and queue controls
+
+**Integration category:** Advanced or production-only
+
+Use strict controls when privacy review, regulated deployments, or constrained mobile networks need
+behavior beyond the default React Native settings.
+
+1. Set `allowedEventTypes={[]}` when no event can emit before explicit event consent.
+2. Use `onEventBlocked` to surface consent or guard failures in diagnostics.
+3. Configure `queuePolicy.offlineMaxEvents` and `queuePolicy.onOfflineDrop` when the offline
+   Experience buffer must have explicit bounds and observability.
+4. Configure `queuePolicy.flush` only when retry, backoff, or circuit-breaker settings need to
+   differ from SDK defaults across shared Insights and Experience delivery.
+5. Use `api` endpoint overrides and `fetchOptions` for staging, mocks, request timeouts, and retry
+   callbacks.
+
+**Adapt this to your use case:**
+
+```tsx
+// Empty allow-list means no event emits before explicit consent.
+<OptimizationRoot
+  clientId="your-optimization-client-id"
+  allowedEventTypes={[]}
+  onEventBlocked={(blocked) => {
+    diagnostics.log('Optimization event blocked', blocked)
+  }}
+  queuePolicy={{
+    // Bound the offline Experience buffer for constrained mobile networks.
+    offlineMaxEvents: 50,
+    onOfflineDrop: ({ droppedCount }) => {
+      diagnostics.log('Dropped offline Experience events', { droppedCount })
+    },
+  }}
+  fetchOptions={{
+    requestTimeout: 3000,
+    retries: 1,
+  }}
+>
+  <YourApp />
+</OptimizationRoot>
+```
+
+### Platform build boundaries
+
+**Integration category:** Advanced or production-only
+
+React Native platform setup determines which optional SDK behavior is available at runtime.
+
+1. Run native install steps for AsyncStorage and any optional native peer dependency you add.
+2. Use a custom Expo dev build for preview panel dependencies; Expo Go cannot load the required
+   native modules.
+3. Keep preview UI out of production builds with build flags or internal distribution channels.
+4. For Android local mocks, rewrite host `localhost` URLs to the emulator host alias from
+   application configuration.
+5. For release builds, verify that the Contentful CDA host, Experience API host, and Insights API
+   host point to the intended environment.
+
+## Production checks
+
+Before release, verify these checks in the app build and environment that will ship:
+
+- **Credentials and runtime configuration** - The app uses the intended Optimization `clientId`,
+  Optimization environment, API hosts, Contentful space, Contentful environment, CDA token, and app
+  locale. Android emulator-only localhost rewrites are not present in production configuration.
+- **Consent behavior** - Default accepted consent is used only when policy permits it. User-choice
+  flows call `consent(true | false)`, object-form consent matches the persistence policy, and
+  rejected consent blocks non-allowed event types.
+- **Event delivery** - Screen, identify, entry view, entry tap, Custom Flag, and forwarded Analytics
+  events appear in the expected destinations. In-memory offline replay and background flushing are
+  verified when NetInfo is installed.
+- **Content fallback behavior** - Optimized entries are fetched with one CDA locale and enough link
+  depth. Non-optimized, unmatched, or incomplete entries render baseline content instead of blank
+  UI.
+- **Duplicate tracking prevention** - One `OptimizationRoot` owns the app runtime, each route uses
+  one screen-tracking path, and the app does not wrap the same rendered entry multiple times for one
+  impression. Forwarded events are deduped before leaving the app.
+- **Privacy and governance** - Forwarded Analytics payloads are allow-listed, profile traits are
+  approved, preview UI is absent from production builds, and persisted profile continuity matches
+  consent records.
+- **Local validation path** - Compare behavior against the React Native reference implementation and
+  run the smallest meaningful app validation for the changed flow, such as typecheck, lint, or a
+  targeted Detox file through the repository runner.
+
+## Troubleshooting
+
+| Symptom                                 | Check                                                                                                                                                | Fix                                                                                                                                                                               |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Provider children do not render         | SDK initialization failed, or another active React Native SDK instance already exists                                                                | Check `logLevel` output, keep one active SDK instance, and call `destroy()` before replacement instances                                                                          |
+| Entry views do not appear               | Consent is unset or rejected, `trackViews` is false, visibility timing has not elapsed, or scrollable view-tracking content has no scroll context    | Accept consent, inspect `trackViews` overrides, wait for the dwell threshold, and wrap scrollable view-tracking content in `OptimizationScrollProvider`                           |
+| Entry taps do not appear                | Consent is unset or rejected, `trackTaps` is false, tap movement exceeds the tap threshold, or child touch handling prevents the tap from completing | Accept consent, inspect `trackTaps` and `onTap` overrides, keep touch movement within the tap threshold, and verify touch handling still lets `OptimizedEntry` receive tap events |
+| Entries always render baseline content  | The entry was fetched with all locales, unresolved links, insufficient include depth, or no selected optimization state                              | Fetch one CDA locale with linked optimization data and emit `screen()` or `identify()` before expecting profile-selected variants                                                 |
+| Screen events are missing or duplicated | The app mixes `OptimizationNavigationContainer`, `useScreenTracking`, and manual `screen()` for the same route                                       | Use one screen-tracking path per route and reserve manual `screen()` for custom lifecycle cases                                                                                   |
+| Preview panel fails to open             | Preview peer dependencies are missing, the panel is outside `OptimizationRoot`, or the build uses Expo Go                                            | Install preview peers, mount the panel under `OptimizationRoot`, and use a custom native dev build                                                                                |
+| Offline replay does not happen          | NetInfo is not installed, the in-memory queue is full, the JavaScript process restarted, or the app is testing against always-online mocks           | Install NetInfo, configure queue bounds, and test a real offline-to-online transition without restarting the app process                                                          |
+
 ## Reference implementations to compare against
 
-- [React Native reference implementation](../../implementations/react-native-sdk/README.md): the
-  in-tree React Native app that is built and tested alongside the SDK itself. It demonstrates
-  provider setup, consent bootstrap, page emission, entry rendering, scroll provider usage,
-  `OptimizedEntry` rendering plus tap tracking, navigation tracking, and live-updates behavior.
+- [React Native reference implementation](../../implementations/react-native-sdk/README.md) - The
+  in-tree React Native app that demonstrates provider setup, consent bootstrap, CDA locale handling,
+  optimized entry rendering, scroll provider usage, tap tracking, navigation tracking, live updates,
+  preview panel behavior, offline behavior, and Detox E2E coverage.
