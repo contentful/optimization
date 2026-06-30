@@ -1,6 +1,6 @@
 import { appConfig } from '@/lib/config'
+import { getAppConsent } from '@/lib/consent'
 import { optimization } from '@/lib/optimization'
-import { getAppConsent } from '@/lib/util'
 import { createNextjsOptimizationRequestHandler } from '@contentful/optimization-nextjs/request-handler'
 
 export const proxy = createNextjsOptimizationRequestHandler(optimization, {

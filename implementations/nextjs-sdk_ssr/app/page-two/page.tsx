@@ -1,40 +1,29 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { CustomViewTracker } from '@/components/CustomViewTracker'
 import { EntryCard } from '@/components/EntryCard'
-import { appConfig } from '@/lib/config'
 import { loadPageEntries } from '@/lib/contentful'
-import { optimization } from '@/lib/optimization'
-import { getAppConsent, toIdMap } from '@/lib/util'
-import { getNextjsServerOptimizationData } from '@contentful/optimization-nextjs/server'
+import { loadOptimizationData, resolveOptimizedEntries } from '@/lib/resolution'
 import { PAGES } from 'e2e-web'
-import { cookies, headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 
 export default async function PageTwo() {
   const cookieStore = await cookies()
-  const headerStore = await headers()
 
   const [entries, optimizationData] = await Promise.all([
     loadPageEntries(PAGES.pageTwo.ids),
-    getAppConsent(cookieStore)
-      ? getNextjsServerOptimizationData(optimization, {
-          consent: { events: true, persistence: true },
-          cookies: cookieStore,
-          headers: headerStore,
-          locale: appConfig.locale,
-        }).then(({ data }) => data)
-      : undefined,
+    loadOptimizationData(cookieStore),
   ])
 
-  const entriesById = toIdMap(entries)
+  const { entriesById, resolvedById } = await resolveOptimizedEntries(
+    entries,
+    optimizationData?.selectedOptimizations,
+  )
+
   const autoEntry = entriesById.get(PAGES.pageTwo.auto)
   const manualEntry = entriesById.get(PAGES.pageTwo.manual)
-  const autoResolved = autoEntry
-    ? optimization.resolveOptimizedEntry(autoEntry, optimizationData?.selectedOptimizations)
-    : undefined
-  const manualResolved = manualEntry
-    ? optimization.resolveOptimizedEntry(manualEntry, optimizationData?.selectedOptimizations)
-    : undefined
+  const autoResolved = autoEntry ? resolvedById.get(PAGES.pageTwo.auto) : undefined
+  const manualResolved = manualEntry ? resolvedById.get(PAGES.pageTwo.manual) : undefined
 
   return (
     <section data-testid="page-two-view">

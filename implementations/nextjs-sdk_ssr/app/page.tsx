@@ -1,46 +1,31 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { EntryCard } from '@/components/EntryCard'
 import { LiveEntryCard } from '@/components/LiveEntryCard'
-import { appConfig } from '@/lib/config'
-import { type ContentEntry, loadPageEntries } from '@/lib/contentful'
-import { optimization } from '@/lib/optimization'
-import { getAppConsent, toIdMap } from '@/lib/util'
+import { loadPageEntries } from '@/lib/contentful'
 import {
-  type ServerTrackingResolvedData,
-  getNextjsServerOptimizationData,
-} from '@contentful/optimization-nextjs/server'
+  loadOptimizationData,
+  makeGetMergeTagValue,
+  makeResolveEntry,
+  resolveOptimizedEntries,
+} from '@/lib/resolution'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
-import { cookies, headers } from 'next/headers'
+import { cookies } from 'next/headers'
 
 export default async function Home() {
   const cookieStore = await cookies()
-  const headerStore = await headers()
 
   const [entries, optimizationData] = await Promise.all([
     loadPageEntries(PAGES.home.ids),
-    getAppConsent(cookieStore)
-      ? getNextjsServerOptimizationData(optimization, {
-          consent: { events: true, persistence: true },
-          cookies: cookieStore,
-          headers: headerStore,
-          locale: appConfig.locale,
-        }).then(({ data }) => data)
-      : undefined,
+    loadOptimizationData(cookieStore),
   ])
 
-  const entriesById = toIdMap(entries)
-  const resolvedById = new Map(
-    entries.map((entry) => [
-      entry.sys.id,
-      optimization.resolveOptimizedEntry(entry, optimizationData?.selectedOptimizations),
-    ]),
+  const { registry, entriesById, resolvedById } = await resolveOptimizedEntries(
+    entries,
+    optimizationData?.selectedOptimizations,
   )
 
-  const profile = optimizationData?.profile
-  const getMergeTagValue = (entry: unknown): string | undefined =>
-    optimization.getMergeTagValue(entry as never, profile)
-  const resolveEntry = (entry: ContentEntry): ServerTrackingResolvedData =>
-    optimization.resolveOptimizedEntry(entry, optimizationData?.selectedOptimizations)
+  const getMergeTagValue = makeGetMergeTagValue(optimizationData?.profile)
+  const resolveEntry = makeResolveEntry(optimizationData?.selectedOptimizations, registry)
 
   const liveUpdatesEntry = entriesById.get(PAGES.home.liveUpdates)
 

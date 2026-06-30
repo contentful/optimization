@@ -7,7 +7,7 @@ import {
   useOptimizationContext,
 } from '@contentful/optimization-nextjs/client'
 import { useEffect, useReducer, useRef, useState } from 'react'
-import { setAppConsent } from './util'
+import { setAppConsent } from './consent'
 
 export function useConsent(): {
   consent: boolean | undefined

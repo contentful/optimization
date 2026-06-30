@@ -2,7 +2,7 @@ import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvide
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
 import { appConfig } from '@/lib/config'
-import { getAppConsent } from '@/lib/util'
+import { getAppConsent } from '@/lib/consent'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
 import 'e2e-web/theme.css'
 import type { Metadata } from 'next'
