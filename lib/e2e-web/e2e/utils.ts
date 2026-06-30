@@ -53,12 +53,29 @@ export async function seedIdentifiedProfile(
   request: APIRequestContext,
   profileId: string,
 ): Promise<void> {
+  const now = new Date().toISOString()
   await request.post(
     `${MOCK_EXPERIENCE_URL}/v2/organizations/mock-client-id/environments/main/profiles/${profileId}`,
     {
       data: {
         events: [
-          { type: 'identify', properties: { userId: 'charles', traits: { identified: true } } },
+          {
+            channel: 'web',
+            context: {
+              app: { name: 'e2e-seed', version: '0.0.0' },
+              campaign: {},
+              gdpr: { isConsentGiven: true },
+              library: { name: 'e2e-seed', version: '0.0.0' },
+              locale: 'en-US',
+            },
+            messageId: profileId,
+            originalTimestamp: now,
+            sentAt: now,
+            timestamp: now,
+            type: 'identify',
+            userId: 'charles',
+            traits: { identified: true },
+          },
         ],
       },
     },

@@ -16,9 +16,8 @@ server/client SDK composition; app code imports only Next.js SDK subpaths.
 ## E2E tests
 
 - All E2E tests live in `lib/e2e-web`. Hydration-specific specs are gated with `runIf('HYDRATION')`
-  and run automatically when `E2E_FLAGS=CSR,HYDRATION`. This implementation uses
-  `E2E_FLAGS=SSR,SKIP_NO_JS`: SSR enables the SSR suite, and `SKIP_NO_JS` skips the
-  JavaScript-disabled variant resolution suite (`Variant Resolution (SSR, JavaScript disabled)`).
+  and run automatically when `E2E_FLAGS=CSR,HYDRATION`. The `SSR` flag is intentionally omitted
+  because full SSR variant resolution has a known bug.
 - Entry cards must expose `data-ctfl-entry-id` on the `content-*` element so shared selectors work.
 - `test:e2e` delegates to `lib/e2e-web`.
 
