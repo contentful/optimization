@@ -12,16 +12,29 @@ import {
 } from '@contentful/optimization-nextjs/client'
 import type { JSX } from 'react'
 
-export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): JSX.Element {
+interface ControlPanelProps {
+  readonly demoCTA?: boolean
+  readonly initialConsent?: boolean
+  readonly initialIsIdentified?: boolean
+  readonly initialActiveOptimizationsCount?: number
+}
+
+export function ControlPanel({
+  demoCTA,
+  initialConsent,
+  initialIsIdentified = false,
+  initialActiveOptimizationsCount = 0,
+}: ControlPanelProps = {}): JSX.Element {
   const sdk = useOptimization()
   const { identify, reset } = useOptimizationActions()
-  const { consent, setConsent } = useConsent()
+  const { consent, setConsent } = useConsent(initialConsent)
   const profile = useProfileState()
   const selectedOptimizations = useSelectedOptimizationsState()
   const { globalLiveUpdates, onToggleGlobalLiveUpdates } = useGlobalLiveUpdatesControls()
   const { previewPanelVisible, setPreviewPanelVisible } = useLiveUpdates()
   const booleanFlag = useFlagSubscription('boolean')
-  const isIdentified = Boolean(profile?.traits.identified)
+  const isIdentified = profile ? Boolean(profile.traits.identified) : initialIsIdentified
+  const activeCount = selectedOptimizations?.length ?? initialActiveOptimizationsCount
 
   return (
     <section className="control-panel" id="utility-panel">
@@ -153,7 +166,7 @@ export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): 
           Active optimizations
         </span>
         <span className="control-panel__row-value" data-testid="selected-optimizations-count">
-          {selectedOptimizations?.length ?? 0}
+          {activeCount}
         </span>
         <span />
       </div>

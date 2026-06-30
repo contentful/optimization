@@ -8,12 +8,13 @@ import {
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { setAppConsent } from './util'
 
-export function useConsent(): {
+export function useConsent(initial?: boolean): {
   consent: boolean | undefined
   setConsent: (value: boolean) => void
 } {
-  const consent = useConsentState()
+  const sdkConsent = useConsentState()
   const { consent: setConsent } = useOptimizationActions()
+  const consent = sdkConsent ?? initial
   useEffect(() => {
     if (typeof consent === 'boolean') setAppConsent(consent)
   }, [consent])

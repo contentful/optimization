@@ -132,6 +132,9 @@ class ServerOptimization {
           }
         : undefined,
       initialPageEvent: hasConsent ? ('skip' as const) : ('emit' as const),
+      hasConsent,
+      isIdentified: Boolean(data?.profile?.traits.identified),
+      activeOptimizationsCount: hasConsent ? (data?.selectedOptimizations?.length ?? 0) : 0,
     }
   }
 

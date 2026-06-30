@@ -4,11 +4,13 @@ import { optimization } from '@/lib/optimization'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 
 export default async function Home() {
-  const [liveUpdates, auto, manual] = await Promise.all([
-    optimization.getEntry(PAGES.home.liveUpdates),
-    optimization.getEntries(PAGES.home.auto),
-    optimization.getEntries(PAGES.home.manual),
-  ])
+  const [{ hasConsent, isIdentified, activeOptimizationsCount }, liveUpdates, auto, manual] =
+    await Promise.all([
+      optimization.getServerState(),
+      optimization.getEntry(PAGES.home.liveUpdates),
+      optimization.getEntries(PAGES.home.auto),
+      optimization.getEntries(PAGES.home.manual),
+    ])
 
   const liveUpdatesEntry = liveUpdates?.baselineEntry
 
@@ -22,7 +24,11 @@ export default async function Home() {
         </p>
       </div>
 
-      <ControlPanel />
+      <ControlPanel
+        initialConsent={hasConsent}
+        initialIsIdentified={isIdentified}
+        initialActiveOptimizationsCount={activeOptimizationsCount}
+      />
 
       <section className="page-section" data-testid="live-updates-section">
         <header className="page-section__header">
