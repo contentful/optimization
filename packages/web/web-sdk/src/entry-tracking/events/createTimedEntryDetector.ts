@@ -3,6 +3,8 @@ import type { EntryInteraction } from '../resolveAutoTrackEntryInteractionOption
 import { resolveEntryInteractionElementOverride } from '../resolveEntryInteractionElementOverride'
 import { resolveTrackingPayload } from '../resolveTrackingPayload'
 
+export { isHtmlOrSvgElement } from '../isHtmlOrSvgElement'
+
 interface TimedObserver<TElementOptions> {
   observe: (element: Element, options?: TElementOptions) => void
   unobserve: (element: Element) => void
@@ -39,12 +41,6 @@ interface CreateTimedEntryDetectorOptions<
     info: TInfo,
     element: Element,
   ) => Promise<void>
-}
-
-export const isHtmlOrSvgElement = (element: Element): element is HTMLElement | SVGElement => {
-  if (typeof HTMLElement === 'undefined' || typeof SVGElement === 'undefined') return false
-
-  return element instanceof HTMLElement || element instanceof SVGElement
 }
 
 export const parseNonNegativeNumber = (raw: string | undefined): number | undefined => {

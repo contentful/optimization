@@ -32,6 +32,16 @@
         "default": "./dist/client.cjs"
       }
     },
+    "./api-schemas": {
+      "import": {
+        "types": "./dist/api-schemas.d.mts",
+        "default": "./dist/api-schemas.mjs"
+      },
+      "require": {
+        "types": "./dist/api-schemas.d.cts",
+        "default": "./dist/api-schemas.cjs"
+      }
+    },
     "./server": {
       "import": {
         "types": "./dist/server.d.mts",

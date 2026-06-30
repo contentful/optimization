@@ -1,5 +1,6 @@
 import { createScopedLogger } from '../logger'
 import type { BaseFetchMethodOptions, FetchMethod, FetchMethodCallbackOptions } from './Fetch'
+import { fetchInputToString } from './fetchInputToString'
 
 const logger = createScopedLogger('ApiClient:Timeout')
 
@@ -9,6 +10,11 @@ const logger = createScopedLogger('ApiClient:Timeout')
  * @internal
  */
 const DEFAULT_REQUEST_TIMEOUT = 3000
+
+/** @internal */
+function isFetchAbortSignal(signal: unknown): signal is NonNullable<RequestInit['signal']> {
+  return typeof signal === 'object' && signal !== null
+}
 
 /**
  * Configuration options for {@link createTimeoutFetchMethod}.
@@ -69,21 +75,29 @@ export function createTimeoutFetchMethod({
   onRequestTimeout,
   requestTimeout = DEFAULT_REQUEST_TIMEOUT,
 }: TimeoutFetchMethodOptions = {}): FetchMethod {
-  return async (url: string | URL, init: RequestInit) => {
+  return async (url, init) => {
     const controller = new AbortController()
 
     const id = setTimeout(() => {
       if (typeof onRequestTimeout === 'function') {
         onRequestTimeout({ apiName })
       } else {
-        logger.error(`Request to "${url.toString()}" timed out`, new Error('Request timeout'))
+        logger.error(
+          `Request to "${fetchInputToString(url)}" timed out`,
+          new Error('Request timeout'),
+        )
       }
 
       controller.abort()
     }, requestTimeout)
 
-    const requestInit: RequestInit = { ...init }
-    Object.assign(requestInit, { signal: controller.signal })
+    const { signal } = controller
+
+    if (!isFetchAbortSignal(signal)) {
+      throw new Error('AbortController signal is not compatible with fetch.')
+    }
+
+    const requestInit = { ...init, signal }
 
     const response = await fetchMethod(url, requestInit)
 

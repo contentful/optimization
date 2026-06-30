@@ -1,8 +1,14 @@
 import {
-  CtflEntry,
+  isMergeTagEntry,
+  isRecord,
+  isResolvedContentfulEntry,
+  isResolvedOptimizationEntry,
+  isResolvedOptimizedEntry,
+  isRichTextDocument,
+  isRichTextNode,
+  isUnresolvedEntryLink,
   normalizeOptimizationConfig,
-  OptimizationEntry,
-  OptimizedEntry,
+  OptimizationEntryFields,
   type OptimizationConfig,
 } from '.'
 
@@ -86,6 +92,34 @@ const entryBase = {
   fields: {},
 }
 
+const mergeTagEntryBase = {
+  ...entryBase,
+  sys: {
+    ...entryBase.sys,
+    contentType: {
+      sys: {
+        type: 'Link',
+        linkType: 'ContentType',
+        id: 'nt_mergetag',
+      },
+    },
+    id: 'merge-tag-entry-id',
+  },
+  fields: {
+    nt_name: 'Location',
+    nt_fallback: 'Nowhere',
+    nt_mergetag_id: 'traits_location',
+  },
+}
+
+const unresolvedEntryLink = {
+  sys: {
+    type: 'Link',
+    linkType: 'Entry',
+    id: 'entry-link-id',
+  },
+}
+
 describe('normalizeOptimizationConfig', () => {
   it('returns runtime-safe defaults for nullish configs', () => {
     expect(normalizeOptimizationConfig(undefined)).toEqual({
@@ -118,8 +152,19 @@ describe('normalizeOptimizationConfig', () => {
   })
 })
 
-describe('CtflEntry', () => {
-  it('passes through arbitrary consumer fields without recursively validating them', () => {
+describe('Contentful entry guards', () => {
+  it('treats records as non-null non-array objects only', () => {
+    expect(isRecord({})).toBe(true)
+    expect(isRecord(Object.create(null))).toBe(true)
+    expect(isRecord([])).toBe(false)
+    expect(isRecord(null)).toBe(false)
+    expect(isRecord('value')).toBe(false)
+    expect(isRecord(1)).toBe(false)
+    expect(isRecord(true)).toBe(false)
+    expect(isRecord(undefined)).toBe(false)
+  })
+
+  it('recognizes resolved entries without recursively validating consumer fields', () => {
     const parent = {
       ...entryBase,
       fields: {},
@@ -148,58 +193,118 @@ describe('CtflEntry', () => {
       relatedEntry: child,
     }
 
-    expect(CtflEntry.safeParse(parent).success).toBe(true)
+    expect(isResolvedContentfulEntry(parent)).toBe(true)
   })
 
-  it('still validates Contentful system metadata', () => {
+  it('rejects unresolved links as resolved entries', () => {
     expect(
-      CtflEntry.safeParse({
-        ...entryBase,
+      isResolvedContentfulEntry({
         sys: {
-          ...entryBase.sys,
-          id: 123,
+          type: 'Link',
+          linkType: 'Entry',
+          id: 'entry-id',
         },
-      }).success,
+      }),
     ).toBe(false)
+  })
+
+  it('continues recognizing unresolved entry links', () => {
+    expect(isUnresolvedEntryLink(unresolvedEntryLink)).toBe(true)
+    expect(
+      isUnresolvedEntryLink({ sys: { type: 'Link', linkType: 'Asset', id: 'asset-id' } }),
+    ).toBe(false)
+    expect(isUnresolvedEntryLink({ sys: { type: 'Entry', id: 'entry-id' } })).toBe(false)
+  })
+
+  it('continues recognizing merge-tag entries', () => {
+    expect(isMergeTagEntry(mergeTagEntryBase)).toBe(true)
+    expect(
+      isMergeTagEntry({
+        ...mergeTagEntryBase,
+        fields: {
+          nt_name: 'Location',
+          nt_fallback: 'Nowhere',
+        },
+      }),
+    ).toBe(false)
+    expect(isMergeTagEntry(entryBase)).toBe(false)
+  })
+})
+
+describe('Rich Text guards', () => {
+  it('recognizes Rich Text documents and nodes', () => {
+    const textNode = {
+      nodeType: 'text',
+      value: 'Hello',
+      marks: [],
+      data: {},
+    }
+    const paragraphNode = {
+      nodeType: 'paragraph',
+      data: {},
+      content: [textNode],
+    }
+    const document = {
+      nodeType: 'document',
+      data: {},
+      content: [paragraphNode],
+    }
+
+    expect(isRichTextNode(textNode)).toBe(true)
+    expect(isRichTextNode(paragraphNode)).toBe(true)
+    expect(isRichTextNode(document)).toBe(true)
+    expect(isRichTextDocument(document)).toBe(true)
+  })
+
+  it('rejects non-Rich Text and malformed Rich Text values', () => {
+    expect(isRichTextNode(null)).toBe(false)
+    expect(isRichTextNode([])).toBe(false)
+    expect(isRichTextNode({ nodeType: 'paragraph', data: {}, content: {} })).toBe(false)
+    expect(isRichTextNode({ nodeType: 'paragraph', content: [] })).toBe(false)
+    expect(isRichTextNode({ data: {}, content: [] })).toBe(false)
+    expect(isRichTextDocument({ nodeType: 'paragraph', data: {}, content: [] })).toBe(false)
+    expect(isRichTextDocument({ nodeType: 'document', data: {}, content: {} })).toBe(false)
+    expect(isRichTextDocument({ nodeType: 'document', data: {} })).toBe(false)
   })
 })
 
 describe('OptimizationEntry', () => {
   it('does not fabricate nt_config during parsing', () => {
-    const result = OptimizationEntry.safeParse(optimizationEntryBase)
+    const result = OptimizationEntryFields.safeParse(optimizationEntryBase.fields)
 
     expect(result.success).toBe(true)
 
-    if (!result.success) throw new Error('Expected OptimizationEntry to parse')
+    if (!result.success) throw new Error('Expected OptimizationEntryFields to parse')
 
-    expect(result.data.fields.nt_config).toBeUndefined()
+    expect(result.data.nt_config).toBeUndefined()
   })
 
   it('still validates optimization-owned config fields', () => {
     expect(
-      OptimizationEntry.safeParse({
-        ...optimizationEntryBase,
-        fields: {
-          ...optimizationEntryBase.fields,
-          nt_config: {
-            components: [
-              {
-                type: 'EntryReplacement',
-                baseline: { id: 123 },
-                variants: [],
-              },
-            ],
-          },
+      OptimizationEntryFields.safeParse({
+        ...optimizationEntryBase.fields,
+        nt_config: {
+          components: [
+            {
+              type: 'EntryReplacement',
+              baseline: { id: 123 },
+              variants: [],
+            },
+          ],
         },
       }).success,
     ).toBe(false)
+  })
+
+  it('recognizes resolved optimization entries with valid Contentful references', () => {
+    expect(isResolvedOptimizationEntry(optimizationEntryBase)).toBe(true)
   })
 })
 
 describe('OptimizedEntry', () => {
   it('still requires valid optimization references', () => {
     expect(
-      OptimizedEntry.safeParse({
+      isResolvedOptimizedEntry({
         ...entryBase,
         fields: {
           nt_experiences: [
@@ -210,7 +315,7 @@ describe('OptimizedEntry', () => {
             },
           ],
         },
-      }).success,
+      }),
     ).toBe(false)
   })
 })

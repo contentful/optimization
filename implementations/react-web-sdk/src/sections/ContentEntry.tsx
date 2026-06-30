@@ -1,9 +1,10 @@
 import { OptimizedEntry, useOptimization } from '@contentful/optimization-react-web'
+import { isRichTextDocument } from '@contentful/optimization-react-web/api-schemas'
 import type { EntryClickScenario } from 'e2e-web'
 import type { JSX } from 'react'
 import { useEffect, useRef } from 'react'
 import { RichTextRenderer } from '../components/RichTextRenderer'
-import type { ContentEntry as ContentEntryType, RichTextDocument } from '../types/contentful'
+import type { ContentEntry as ContentEntryType } from '../types/contentful'
 
 type ViewTrackingMode = 'auto' | 'manual'
 
@@ -14,17 +15,6 @@ interface ContentEntryProps {
 }
 
 const HOVER_DURATION_UPDATE_INTERVAL_MS = 1000
-
-function isRichTextField(field: unknown): field is RichTextDocument {
-  return (
-    typeof field === 'object' &&
-    field !== null &&
-    'nodeType' in field &&
-    (field as { nodeType: unknown }).nodeType === 'document' &&
-    'content' in field &&
-    Array.isArray((field as { content: unknown }).content)
-  )
-}
 
 function getEntryText(entry: ContentEntryType): string {
   return typeof entry.fields.text === 'string' ? entry.fields.text : 'No content'
@@ -81,7 +71,7 @@ export function ContentEntry({
       >
         {(resolvedEntry) => {
           const asCf = resolvedEntry as ContentEntryType
-          const richTextField = Object.values(asCf.fields).find(isRichTextField)
+          const richTextField = Object.values(asCf.fields).find(isRichTextDocument)
           const fullLabel = `Entry: ${asCf.sys.id}`
 
           const content = (

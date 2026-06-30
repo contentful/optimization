@@ -1,5 +1,9 @@
-import type { ContentEntry, RichTextDocument } from '@/lib/contentful'
-import { isRecord } from '@/lib/util'
+import type { ContentEntry, ContentEntrySkeleton } from '@/lib/contentful'
+import {
+  isRecord,
+  isResolvedContentfulEntry,
+  isRichTextDocument,
+} from '@contentful/optimization-nextjs/api-schemas'
 import {
   ServerOptimizedEntry,
   type ServerTrackingResolvedData,
@@ -20,19 +24,6 @@ interface EntryCardProps {
   manualTracking: boolean
   resolveEntry?: (entry: ContentEntry) => ServerTrackingResolvedData
   resolvedData: ServerTrackingResolvedData
-}
-
-function isRichTextField(field: unknown): field is RichTextDocument {
-  return isRecord(field) && field.nodeType === 'document' && Array.isArray(field.content)
-}
-
-function isEntry(value: unknown): value is ContentEntry {
-  return (
-    isRecord(value) &&
-    isRecord(value.sys) &&
-    typeof value.sys.id === 'string' &&
-    isRecord(value.fields)
-  )
 }
 
 function buildRenderOptions(getMergeTagValue?: MergeTagResolver): Options {
@@ -57,9 +48,9 @@ export function EntryCard({
 }: EntryCardProps): JSX.Element {
   const resolvedEntry = resolvedData.entry as ContentEntry
   const autoTrackViews = !manualTracking
-  const richText = Object.values(resolvedEntry.fields).find(isRichTextField)
+  const richText = Object.values(resolvedEntry.fields).find(isRichTextDocument)
   const nested = Array.isArray(resolvedEntry.fields.nested)
-    ? resolvedEntry.fields.nested.filter(isEntry)
+    ? resolvedEntry.fields.nested.filter(isResolvedContentfulEntry<ContentEntrySkeleton>)
     : []
   const renderOptions = buildRenderOptions(getMergeTagValue)
 

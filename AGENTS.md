@@ -20,9 +20,12 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
 - When `.nvmrc` and `nodeVersion` drift, suggest updating `nodeVersion`. Whenever `pnpm-lock.yaml`
   changes, verify `.nvmrc` and `nodeVersion` still match.
 - Use `pnpm` only; prefer `pnpm <script>` when equivalent. Prefer `rg`/`rg --files` for search.
-- Edit source of truth: `src/**`, `e2e/**`, `__tests__/**`, `scripts/**`, `documentation/**`,
-  `README.md`, `package.json`, `tsconfig*.json`, `rstest.config.ts`, `playwright.config.mjs`,
-  `eslint.config.ts`, `.prettierrc`, and `.github/workflows/**`.
+- Edit source of truth for normal source, docs, config, and test changes: `src/**`, `e2e/**`,
+  `__tests__/**`, `scripts/**`, `documentation/**`, `README.md`, `package.json`, `tsconfig*.json`,
+  `rstest.config.ts`, `playwright.config.mjs`, `eslint.config.ts`, `.prettierrc`, and
+  `.github/workflows/**`.
+- Bundle-size budget values inside `package.json` are release policy, not ordinary source config.
+  The `Bundle size` policy controls whether they may be changed.
 - Treat `dist/**`, `coverage/**`, `docs/**`, `pkgs/**`, `.rslib/**`, `.rsdoctor/**`,
   `node_modules/**`, and local `.env` files as generated or local-only unless the task explicitly
   targets them.
@@ -50,9 +53,14 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
   implementation, or shared tooling edits, include lint before claiming validation is complete.
 - If no local lint script exists, use the nearest aggregate command: `pnpm lint` for `lib/` or
   `packages/`; `pnpm implementation:lint` for `implementations/`.
-- Run Prettier on touched Markdown or expected-format files. Use `git diff --check` only when
-  touched files are not fully covered by Prettier or are especially whitespace-sensitive, such as
-  shell scripts, Gradle files, patch files, or mixed generated-adjacent text.
+- Prefer `pnpm format:fix` from the repository root for Prettier-covered files. Run it before manual
+  formatting changes and before final format validation.
+- Do not manually edit whitespace, wrapping, quote style, import ordering, or Markdown formatting
+  that Prettier can produce. If formatting is the only issue, let Prettier fix it.
+- Use targeted Prettier only when repo-wide formatting is blocked or would modify unrelated dirty
+  worktree changes; report that fallback.
+- Use `git diff --check` only for files not covered by Prettier or especially whitespace-sensitive
+  files such as shell scripts, Gradle files, patch files, or mixed generated-adjacent text.
 - Validate package and implementation changes in dependency order: source package typecheck/tests,
   source package build, `pnpm build:pkgs` when implementations consume it, implementation install,
   then downstream checks.
@@ -147,8 +155,9 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
 
 - Before bundle-size investigation or changes, inspect `git status --short` and run the relevant
   `size:check` or `size:report` against the actual worktree.
-- Treat bundle-size checks as validation, not as automatic approval to rewrite source code. A budget
-  failure must be classified before editing as a current-change regression, pre-existing budget
+- Treat bundle-size checks as validation evidence. A budget failure is not approval to rewrite
+  source code, remove behavior, or change budget policy.
+- Classify a budget failure before editing as a current-change regression, pre-existing budget
   drift, build or measurement issue, dependency/import mistake, intentional feature cost, or
   unknown.
 - Use `size:report`, generated analyzer output, or the package's existing build artifacts to
@@ -157,21 +166,25 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
   smallest complete downstream set when it is clear, or `pnpm size:check` when the dependency impact
   crosses package families or is uncertain.
 - On failure, report the command, package or bundle, budget, actual size, and delta.
-- Prefer maintainability-preserving fixes for confirmed current-change regressions or measurement
-  mistakes: remove unused imports or dependencies, fix accidental heavy import paths, restore
-  tree-shaking, reuse existing helpers instead of duplicating code, or correct build measurement.
+- Allowed remediation is limited to confirmed current-change regressions, dependency/import
+  mistakes, and measurement issues. Prefer maintainability-preserving fixes: remove unused imports
+  or dependencies, fix accidental heavy import paths, restore tree-shaking, reuse existing helpers
+  instead of duplicating code, or correct build measurement.
 - Re-examine the design once when a bundle-size failure is caused by current work. Apply only
   changes that preserve behavior, public APIs, readability, and the package's existing architecture.
-- Do not remove behavior, narrow public APIs, obscure readable code, add one-off shims, change
-  budgets, bundle entries, aliases, chunks, exports, dependency shape, or source structure when the
-  primary purpose or practical effect is satisfying a size budget unless the requester or maintainer
-  explicitly approves that exact proposal.
+- Approval-only changes are not remediation. Do not edit `buildTools.bundleSize.gzipBudgets`, budget
+  values, bundle entries, aliases, chunks, exports, dependency shape, or budget policy; do not
+  remove behavior, narrow public APIs, obscure readable code, add one-off shims, or change source
+  structure for bundle size unless the requester or maintainer explicitly approves that exact
+  proposal.
 - Do not infer bundle-size tradeoff approval from general requests such as "fix CI", "make checks
   pass", "get under budget", or an implementation request.
 - Stop and surface the remaining overage when the remaining options would reduce maintainability,
-  reduce functionality, or change budget policy. Report the package or bundle, budget, actual size,
-  delta, likely cause, safe changes already attempted, and the smallest next decision for the
-  requester or maintainer.
+  reduce functionality, change public behavior, change budget policy, or require an approval-only
+  change. Also stop for pre-existing budget drift, intentional feature cost, unknown causes, or
+  overages left after allowed remediation. Report the package or bundle, budget, actual size, delta,
+  likely cause, safe changes already attempted, and the smallest next decision for the requester or
+  maintainer.
 - Unapplied proposals must be labeled `UNAPPLIED PROPOSAL`, printed in chat, and not written into
   the project tree.
 - After any bundle-size source changes, including approved tradeoffs, validate the touched package

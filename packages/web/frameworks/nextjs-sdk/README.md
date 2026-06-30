@@ -28,6 +28,7 @@ SDK on the server with the React Web SDK on the client; it is not a new optimiza
 | Runtime         | Import path                                           | Responsibility                                       |
 | --------------- | ----------------------------------------------------- | ---------------------------------------------------- |
 | Client          | `@contentful/optimization-nextjs/client`              | React SDK providers, hooks, components, and trackers |
+| Schemas         | `@contentful/optimization-nextjs/api-schemas`         | Shared API types, schemas, and structural guards     |
 | Server          | `@contentful/optimization-nextjs/server`              | Node SDK creation, request binding, and SSR wrapper  |
 | ESR             | `@contentful/optimization-nextjs/esr`                 | Edge/request-rendered data and response persistence  |
 | Request handler | `@contentful/optimization-nextjs/request-handler`     | Next middleware/proxy request context forwarding     |

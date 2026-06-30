@@ -1,7 +1,12 @@
 import { NgTemplateOutlet } from '@angular/common'
 import { Component, computed, forwardRef, inject, input } from '@angular/core'
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser'
-import { BLOCKS, INLINES, type Document } from '@contentful/rich-text-types'
+import {
+  isRecord,
+  isResolvedContentfulEntry,
+  isRichTextDocument,
+} from '@contentful/optimization-web/api-schemas'
+import { BLOCKS, INLINES } from '@contentful/rich-text-types'
 import {
   BADGE_MAP,
   type BadgeKey,
@@ -9,10 +14,9 @@ import {
   type LiveMode,
   type MergeTagMode,
 } from '../../fixtures'
-import type { ContentfulEntry } from '../../services/contentful-client'
+import type { ContentEntrySkeleton, ContentfulEntry } from '../../services/contentful-client'
 import { injectContentfulEntry } from '../../services/entry'
 import { NgLiveUpdates } from '../../services/live-updates'
-import { isRecord } from '../../utils'
 
 // — Badge —
 
@@ -43,10 +47,6 @@ export class Badge {
 }
 
 // — Rich text renderer —
-
-function isRichTextField(field: unknown): field is Document {
-  return isRecord(field) && field.nodeType === 'document' && Array.isArray(field.content)
-}
 
 function escape(text: string): string {
   return text
@@ -94,15 +94,6 @@ function renderNode(node: unknown): string {
 
 // — Entry card —
 
-function isContentfulEntry(value: unknown): value is ContentfulEntry {
-  return (
-    isRecord(value) &&
-    isRecord(value.sys) &&
-    typeof value.sys.id === 'string' &&
-    isRecord(value.fields)
-  )
-}
-
 @Component({
   selector: 'app-entry-card',
   imports: [NgTemplateOutlet, Badge, forwardRef(() => EntryCard)],
@@ -133,7 +124,7 @@ export class EntryCard {
   protected readonly isVariant = computed(() => this.resolved().optimizationId !== undefined)
   protected readonly richTextHtml = computed<SafeHtml | undefined>(() => {
     const { entry } = this.resolved()
-    const doc = Object.values(entry.fields).find(isRichTextField)
+    const doc = Object.values(entry.fields).find(isRichTextDocument)
     if (!doc) return undefined
     return this.sanitizer.bypassSecurityTrustHtml(renderNode(doc))
   })
@@ -143,7 +134,9 @@ export class EntryCard {
   })
   protected readonly nestedEntries = computed(() => {
     const nested: unknown = this.resolved().entry.fields.nested
-    return Array.isArray(nested) ? nested.filter(isContentfulEntry) : []
+    return Array.isArray(nested)
+      ? nested.filter(isResolvedContentfulEntry<ContentEntrySkeleton>)
+      : []
   })
   protected readonly badges = computed(() => {
     const r = this.resolved()

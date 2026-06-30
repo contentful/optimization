@@ -166,13 +166,14 @@ request handler forwards sanitized request context headers for Server Components
 The adapter exposes runtime-specific subpaths. Keep imports on these subpaths so Server Components
 do not import browser code and Client Components do not import server-only code.
 
-| Import path                                           | Runtime                                       | Responsibility                                                                                       |
-| ----------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `@contentful/optimization-nextjs/server`              | Server Components and server-only modules     | SDK creation, request binding, and server entry resolution wrapper                                   |
-| `@contentful/optimization-nextjs/esr`                 | Route handlers, edge functions, and ESR flows | Request-rendered Optimization data and explicit response persistence                                 |
-| `@contentful/optimization-nextjs/request-handler`     | Next.js proxy or middleware                   | Request context capture and SDK-owned request header sanitization                                    |
-| `@contentful/optimization-nextjs/client`              | Client Components and browser layout children | React provider, state handoff marker, hooks, App Router page tracker, and entry interaction tracking |
-| `@contentful/optimization-nextjs/tracking-attributes` | Shared server-rendering helpers               | Lower-level SSR `data-ctfl-*` tracking attributes                                                    |
+| Import path                                           | Runtime                                       | Responsibility                                                                                                    |
+| ----------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-nextjs/server`              | Server Components and server-only modules     | SDK creation, request binding, and server entry resolution wrapper                                                |
+| `@contentful/optimization-nextjs/esr`                 | Route handlers, edge functions, and ESR flows | Request-rendered Optimization data and explicit response persistence                                              |
+| `@contentful/optimization-nextjs/request-handler`     | Next.js proxy or middleware                   | Request context capture and SDK-owned request header sanitization                                                 |
+| `@contentful/optimization-nextjs/client`              | Client Components and browser layout children | React provider, state handoff marker, hooks, App Router page tracker, and entry interaction tracking              |
+| `@contentful/optimization-nextjs/api-schemas`         | Shared schema helpers                         | API types plus structural guards such as `isMergeTagEntry`, `isRichTextDocument`, and `isResolvedContentfulEntry` |
+| `@contentful/optimization-nextjs/tracking-attributes` | Shared server-rendering helpers               | Lower-level SSR `data-ctfl-*` tracking attributes                                                                 |
 
 1. Create the server SDK once at module level with `createNextjsOptimization()`.
 2. Pass shared values such as `clientId`, `environment`, `locale`, endpoint overrides, app metadata,

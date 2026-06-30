@@ -24,6 +24,10 @@
 #   MAESTRO_BIN        Path to the maestro binary (default: $HOME/.maestro/bin/maestro)
 #   MAESTRO_FLOWS_DIR  Flows directory (default: implementations/android-sdk/maestro)
 #   MAESTRO_ATTEMPTS   Total attempts per app, full + surgical retries (default: 3)
+#   MAESTRO_HEALTHCHECK_ATTEMPTS
+#                    Total pre-suite Maestro/ADB bootstrap attempts (default: 3)
+#   MAESTRO_HEALTHCHECK_FLOW
+#                    CI-only warm-up flow (default: $MAESTRO_FLOWS_DIR/ci-healthcheck.yaml)
 #   MAESTRO_ITERATIONS Repeat the whole per-app loop N times for flake sweeps (default: 1)
 #   MOCK_SERVER_PORT   Host mock server port (default: 8000)
 
@@ -31,21 +35,26 @@ set -uo pipefail
 
 MAESTRO="${MAESTRO_BIN:-$HOME/.maestro/bin/maestro}"
 FLOWS_DIR="${MAESTRO_FLOWS_DIR:-implementations/android-sdk/maestro}"
+HEALTHCHECK_FLOW="${MAESTRO_HEALTHCHECK_FLOW:-${FLOWS_DIR}/ci-healthcheck.yaml}"
 MOCK_SERVER_PORT="${MOCK_SERVER_PORT:-8000}"
 # Total attempts per app: 1 full run + (ATTEMPTS-1) surgical retries of only the failed
 # flows. Surgical retries are cheap (a flow or two), so default to a couple of them to
 # absorb the genuinely flaky network-recovery flows.
 ATTEMPTS="${MAESTRO_ATTEMPTS:-3}"
+HEALTHCHECK_ATTEMPTS="${MAESTRO_HEALTHCHECK_ATTEMPTS:-3}"
 ITERATIONS="${MAESTRO_ITERATIONS:-1}"
 # If more than this many flows fail at once, treat it as systemic (not a flake) and do
 # not retry — re-running a large set only deepens an emulator wedge.
 MAX_RETRY_FLOWS="${MAX_RETRY_FLOWS:-8}"
 # Most recent Maestro run's combined output, parsed to recover the failed-flow set.
 LAST_OUT="${TMPDIR:-/tmp}/ci-maestro-out.txt"
+HEALTHCHECK_OUT="${TMPDIR:-/tmp}/ci-maestro-healthcheck-out.txt"
 MAESTRO_TESTS_DIR="${MAESTRO_TESTS_DIR:-$HOME/.maestro/tests}"
+LOGCAT_FILE="${ANDROID_LOGCAT_FILE:-/tmp/android-logcat.txt}"
 
 SYSTEM_DIALOG_RE="Process system isn.t responding|Application isn.t responding|android:id/aerr_(close|wait)"
 DEVICE_HEALTH_RE="Unable to clear state|Unable to launch app|pm list packages|PackageManager|device offline|adb: device offline|device unauthorized|No connected devices"
+BOOTSTRAP_HEALTH_RE="${DEVICE_HEALTH_RE}|UNAVAILABLE|host:transport|Not able to reach the gRPC server"
 
 wait_for_device_boot() {
     echo "[ci-maestro] waiting for adb device and Android boot completion..."
@@ -141,6 +150,29 @@ verify_mock_reachable() {
     return 1
 }
 
+start_logcat_capture() {
+    local mode="${1:-append}"
+    if [ -z "${LOGCAT_FILE}" ]; then
+        return 0
+    fi
+
+    if pgrep -f "adb logcat -v threadtime" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    echo "[ci-maestro] starting background logcat capture..."
+    if [ "${mode}" = "reset" ]; then
+        adb logcat -c || true
+        nohup adb logcat -v threadtime > "${LOGCAT_FILE}" 2>&1 &
+    else
+        nohup adb logcat -v threadtime >> "${LOGCAT_FILE}" 2>&1 &
+    fi
+}
+
+ensure_logcat_capture() {
+    start_logcat_capture "append"
+}
+
 prepare_device() {
     wait_for_device_boot || return 1
     wait_for_package_manager || return 1
@@ -148,6 +180,7 @@ prepare_device() {
     configure_device_settings || return 1
     configure_adb_reverse
     verify_mock_reachable || return 1
+    start_logcat_capture "reset"
 }
 
 latest_maestro_output_dir() {
@@ -168,6 +201,35 @@ has_infrastructure_failure() {
     return 1
 }
 
+healthcheck_has_bootstrap_failure() {
+    if [ -f "${HEALTHCHECK_OUT}" ] && grep -qiE "${BOOTSTRAP_HEALTH_RE}|${SYSTEM_DIALOG_RE}" "${HEALTHCHECK_OUT}" 2>/dev/null; then
+        return 0
+    fi
+
+    return 1
+}
+
+print_healthcheck_diagnostics() {
+    echo "::group::Android Maestro healthcheck diagnostics"
+    if [ -f "${HEALTHCHECK_OUT}" ]; then
+        echo "[ci-maestro] Healthcheck output signals:"
+        grep -niE "${BOOTSTRAP_HEALTH_RE}|${SYSTEM_DIALOG_RE}" "${HEALTHCHECK_OUT}" 2>/dev/null | head -80 || true
+    fi
+
+    local latest_dir
+    latest_dir="$(latest_maestro_output_dir || true)"
+    if [ -n "${latest_dir}" ]; then
+        echo "[ci-maestro] Latest Maestro output directory: ${latest_dir}"
+        grep -R -niE "${BOOTSTRAP_HEALTH_RE}|${SYSTEM_DIALOG_RE}" "${latest_dir}" 2>/dev/null | head -80 || true
+    fi
+
+    if [ -f "${LOGCAT_FILE}" ]; then
+        echo "[ci-maestro] logcat signals:"
+        grep -niE "ANR in|FATAL EXCEPTION|not responding|Unable to clear state|pm list packages|PackageManager|device offline|lowmemorykiller|Process .* died|Low on memory" "${LOGCAT_FILE}" 2>/dev/null | head -80 || true
+    fi
+    echo "::endgroup::"
+}
+
 print_failure_diagnostics() {
     echo "::group::Android Maestro infrastructure diagnostics"
     if [ -f "${LAST_OUT}" ]; then
@@ -182,9 +244,9 @@ print_failure_diagnostics() {
         grep -R -niE "${SYSTEM_DIALOG_RE}" "${latest_dir}" 2>/dev/null | head -80 || true
     fi
 
-    if [ -f /tmp/android-logcat.txt ]; then
+    if [ -f "${LOGCAT_FILE}" ]; then
         echo "[ci-maestro] logcat signals:"
-        grep -niE "ANR in|FATAL EXCEPTION|not responding|Unable to clear state|pm list packages|PackageManager|device offline|lowmemorykiller|Process .* died|Low on memory" /tmp/android-logcat.txt 2>/dev/null | head -80 || true
+        grep -niE "ANR in|FATAL EXCEPTION|not responding|Unable to clear state|pm list packages|PackageManager|device offline|lowmemorykiller|Process .* died|Low on memory" "${LOGCAT_FILE}" 2>/dev/null | head -80 || true
     fi
     echo "::endgroup::"
 }
@@ -207,6 +269,16 @@ run_maestro() {
     shift
     if [ "$#" -eq 0 ]; then set -- "${FLOWS_DIR}"; fi
     "${MAESTRO}" test -e APP_ID="${app}" "$@" 2>&1 | tee "${LAST_OUT}"
+}
+
+run_maestro_healthcheck() {
+    local app="$1"
+    if [ ! -f "${HEALTHCHECK_FLOW}" ]; then
+        echo "::error::Maestro healthcheck flow not found: ${HEALTHCHECK_FLOW}"
+        return 1
+    fi
+
+    "${MAESTRO}" test -e APP_ID="${app}" "${HEALTHCHECK_FLOW}" 2>&1 | tee "${HEALTHCHECK_OUT}"
 }
 
 # Names of the flows that failed in the most recent run, parsed from Maestro's
@@ -238,6 +310,49 @@ cooldown() {
     adb shell svc data enable >/dev/null 2>&1 || true
     adb shell am kill-all >/dev/null 2>&1 || true
     sleep 8
+}
+
+recover_after_healthcheck_failure() {
+    echo "[ci-maestro] recovering from Maestro/ADB healthcheck failure..."
+    adb reconnect offline >/dev/null 2>&1 || true
+    wait_for_device_boot || return 1
+    wait_for_package_manager || return 1
+    restore_network_state
+    configure_device_settings || return 1
+    configure_adb_reverse
+    verify_mock_reachable || return 1
+    ensure_logcat_capture
+    sleep 3
+}
+
+warm_up_maestro() {
+    local app="$1" attempt=1
+
+    while [ "${attempt}" -le "${HEALTHCHECK_ATTEMPTS}" ]; do
+        echo "--- Maestro healthcheck: ${app} (attempt ${attempt}/${HEALTHCHECK_ATTEMPTS}) ---"
+        if run_maestro_healthcheck "${app}"; then
+            echo "[ci-maestro] Maestro healthcheck passed"
+            ensure_logcat_capture
+            return 0
+        fi
+
+        if ! healthcheck_has_bootstrap_failure; then
+            echo "::error::${app}: Maestro healthcheck failed without Android bootstrap failure signals"
+            print_healthcheck_diagnostics
+            return 1
+        fi
+
+        print_healthcheck_diagnostics
+
+        if [ "${attempt}" -ge "${HEALTHCHECK_ATTEMPTS}" ]; then
+            echo "::error::${app}: Maestro/ADB bootstrap did not stabilize after ${HEALTHCHECK_ATTEMPTS} healthcheck attempt(s)"
+            return 1
+        fi
+
+        echo "::warning::${app}: Maestro/ADB bootstrap not ready; retrying healthcheck"
+        recover_after_healthcheck_failure || return 1
+        attempt=$((attempt + 1))
+    done
 }
 
 # Restart the Android framework between apps. A full session's worth of clearState
@@ -328,6 +443,10 @@ main() {
             fi
             first=0
             prepare_device || {
+                rc=1
+                continue
+            }
+            warm_up_maestro "${app}" || {
                 rc=1
                 continue
             }

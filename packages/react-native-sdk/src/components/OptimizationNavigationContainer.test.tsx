@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import React, { act, type ReactElement } from 'react'
+import { loadTestRenderer } from '../test/testRenderer'
 import type {
   NavigationContainerRef,
   OptimizationNavigationContainerProps,
@@ -108,32 +109,9 @@ interface TestRenderer {
   update: (element: ReactElement) => void
 }
 
-interface TestRendererModule {
-  create: (element: ReactElement) => TestRenderer
-}
-
 type NavigationRenderProps = Parameters<OptimizationNavigationContainerProps['children']>[0]
 type OptimizationNavigationContainerComponent =
   React.ComponentType<OptimizationNavigationContainerProps>
-
-function isTestRendererModule(value: unknown): value is TestRendererModule {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  return typeof Reflect.get(value, 'create') === 'function'
-}
-
-async function loadTestRenderer(): Promise<TestRendererModule> {
-  const moduleName = 'react-test-renderer'
-  const testRendererModule: unknown = await import(moduleName)
-
-  if (!isTestRendererModule(testRendererModule)) {
-    throw new Error('Expected react-test-renderer to expose create().')
-  }
-
-  return testRendererModule
-}
 
 async function flushPromises(): Promise<void> {
   await Promise.resolve()
@@ -222,7 +200,7 @@ describe('OptimizationNavigationContainer', () => {
   async function renderContainer(
     OptimizationNavigationContainer: OptimizationNavigationContainerComponent,
   ): Promise<void> {
-    const testRenderer = await loadTestRenderer()
+    const testRenderer = await loadTestRenderer<TestRenderer>()
 
     await act(async () => {
       renderer = testRenderer.create(

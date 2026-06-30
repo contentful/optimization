@@ -1,6 +1,7 @@
 import ContentfulOptimization, { type OptimizationNodeConfig } from '@contentful/optimization-node'
 import {
   isMergeTagEntry,
+  isRichTextDocument,
   type OptimizationData,
   type SelectedOptimization,
 } from '@contentful/optimization-node/api-schemas'
@@ -9,7 +10,7 @@ import type {
   UniversalEventBuilderArgs,
 } from '@contentful/optimization-node/core-sdk'
 import { documentToHtmlString } from '@contentful/rich-text-html-renderer'
-import { INLINES, type Document } from '@contentful/rich-text-types'
+import { INLINES } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
 import * as contentful from 'contentful'
 import express, { type Express, type Request } from 'express'
@@ -105,15 +106,6 @@ function cloneContentEntry(entry: ContentEntry): ContentEntry {
 
 function isNonEmptyString(s?: unknown): s is string {
   return s !== undefined && typeof s === 'string' && s.trim().length > 0
-}
-
-function isRichText(field?: unknown): field is Document {
-  return (
-    typeof field === 'object' &&
-    field !== null &&
-    'nodeType' in field &&
-    field.nodeType === 'document'
-  )
 }
 
 function getAcceptedOptimizationData(result: EventEmissionResult): OptimizationData | undefined {
@@ -226,7 +218,7 @@ app.get('/', limiter, async (req, res) => {
       selectedOptimizations,
     )
 
-    if (isRichText(optimizedEntry.entry.fields.text)) {
+    if (isRichTextDocument(optimizedEntry.entry.fields.text)) {
       optimizedEntry.entry.fields.text = documentToHtmlString(optimizedEntry.entry.fields.text, {
         renderNode: {
           [INLINES.EMBEDDED_ENTRY]: (node) => {

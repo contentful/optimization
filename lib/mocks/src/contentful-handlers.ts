@@ -1,12 +1,9 @@
+import { isRecord } from '@contentful/optimization-api-schemas'
 import { http, type HttpHandler, HttpResponse } from 'msw'
 import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const BASE_DIR = './src/contentful/data/entries'
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 function getContentTypeId(entry: Record<string, unknown>): string | undefined {
   const { sys } = entry

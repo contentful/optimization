@@ -28,6 +28,7 @@ const clientEntries = {
 } as const
 
 const serverEntries = {
+  'api-schemas': './src/api-schemas.ts',
   esr: './src/esr.ts',
   index: './src/index.ts',
   'request-handler': './src/request-handler.ts',

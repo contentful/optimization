@@ -155,7 +155,7 @@
     "dev:ios": "cd dev && react-native run-ios",
     "dev:start": "cd dev && react-native start",
     "dev:start:clean": "kill-port 8081 && cd dev && react-native start --reset-cache",
-    "dev:test": "jest --config dev/jest.config.js",
+    "dev:test": "jest --config dev/jest.config.cjs --passWithNoTests",
     "dev:setup:ios": "./dev/scripts/run-dev-dashboard.sh --ios",
     "dev:setup:android": "./dev/scripts/run-dev-dashboard.sh --android",
     "dev:setup:servers": "./dev/scripts/run-dev-dashboard.sh --no-app"

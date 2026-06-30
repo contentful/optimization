@@ -1,10 +1,10 @@
 // OptimizedEntryResolver.test.ts
 import {
-  isEntry,
   isEntryReplacementComponent,
   isEntryReplacementVariant,
-  isOptimizationEntry,
-  isOptimizedEntry,
+  isResolvedContentfulEntry,
+  isResolvedOptimizationEntry,
+  isResolvedOptimizedEntry,
   type EntryReplacementComponent,
   type EntryReplacementVariant,
   type OptimizationEntry,
@@ -12,7 +12,7 @@ import {
   type SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { describe, expect, it, rs } from '@rstest/core'
-import type { Entry, EntrySkeletonType } from 'contentful'
+import type { Entry, EntrySkeletonType, UnresolvedLink } from 'contentful'
 
 import { mockLogger } from 'mocks'
 import { optimizedEntry as optimizedEntryFixture } from '../test/fixtures/optimizedEntry'
@@ -26,7 +26,7 @@ const RESOLUTION_WARNING_BASE = 'Could not resolve optimized entry variant:'
 type TestEntry = Entry<EntrySkeletonType, undefined>
 
 const getOptimizedEntry = (): OptimizedEntry => {
-  if (!isOptimizedEntry(optimizedEntryFixture)) {
+  if (!isResolvedOptimizedEntry(optimizedEntryFixture)) {
     throw new Error('Fixture optimizedEntry is not an OptimizedEntry')
   }
 
@@ -39,7 +39,7 @@ const getEuropeOptimizationEntry = (): OptimizationEntry => {
   const optimizedEntry = getOptimizedEntry()
   const experience = optimizedEntry.fields.nt_experiences.find(
     (maybeExperience): maybeExperience is OptimizationEntry =>
-      isOptimizationEntry(maybeExperience) &&
+      isResolvedOptimizationEntry(maybeExperience) &&
       maybeExperience.fields.nt_experience_id === '2qVK4T5lnScbswoyBuGipd',
   )
 
@@ -69,7 +69,11 @@ const getEuropeVariantConfig = (): EntryReplacementVariant => {
   return maybeVariant
 }
 
-const createTestEntry = (id: string, fields: Record<string, unknown> = {}): TestEntry => {
+const createTestEntry = (
+  id: string,
+  fields: Record<string, unknown> = {},
+  contentTypeId = 'testContentType',
+): TestEntry => {
   const entry: unknown = {
     fields,
     metadata: { tags: [] },
@@ -80,7 +84,7 @@ const createTestEntry = (id: string, fields: Record<string, unknown> = {}): Test
         sys: {
           type: 'Link',
           linkType: 'ContentType',
-          id: 'testContentType',
+          id: contentTypeId,
         },
       },
       publishedVersion: 1,
@@ -104,7 +108,7 @@ const createTestEntry = (id: string, fields: Record<string, unknown> = {}): Test
     },
   }
 
-  if (!isEntry<EntrySkeletonType, undefined>(entry)) {
+  if (!isResolvedContentfulEntry<EntrySkeletonType, undefined>(entry)) {
     throw new Error(`Expected test entry ${id} to match the Contentful entry schema`)
   }
 
@@ -123,6 +127,14 @@ const createRichTextLinkedEntryDocument = (target: TestEntry): Record<string, un
   ],
 })
 
+const createUnresolvedEntryLink = (id: string): UnresolvedLink<'Entry'> => ({
+  sys: {
+    type: 'Link',
+    linkType: 'Entry',
+    id,
+  },
+})
+
 const createOptimizationEntry = ({
   baselineEntry,
   variantEntry,
@@ -130,21 +142,25 @@ const createOptimizationEntry = ({
   baselineEntry: TestEntry
   variantEntry: TestEntry
 }): TestEntry =>
-  createTestEntry('experience-entry', {
-    nt_name: 'Personalized featured post',
-    nt_type: 'nt_personalization',
-    nt_experience_id: 'experience-entry',
-    nt_config: {
-      components: [
-        {
-          type: 'EntryReplacement',
-          baseline: { id: baselineEntry.sys.id },
-          variants: [{ id: variantEntry.sys.id }],
-        },
-      ],
+  createTestEntry(
+    'experience-entry',
+    {
+      nt_name: 'Personalized featured post',
+      nt_type: 'nt_personalization',
+      nt_experience_id: 'experience-entry',
+      nt_config: {
+        components: [
+          {
+            type: 'EntryReplacement',
+            baseline: { id: baselineEntry.sys.id },
+            variants: [{ id: variantEntry.sys.id }],
+          },
+        ],
+      },
+      nt_variants: [variantEntry],
     },
-    nt_variants: [variantEntry],
-  })
+    'nt_experience',
+  )
 
 const createSelectedOptimizations = ({
   baselineEntry,
@@ -169,13 +185,10 @@ describe('OptimizedEntryResolver', () => {
       const optimizedEntry = getOptimizedEntry()
       const selectedOptimizations = getSelectedOptimizations()
 
-      const result = OptimizedEntryResolver.getOptimizationEntry(
-        {
-          optimizedEntry,
-          selectedOptimizations,
-        },
-        false,
-      )
+      const result = OptimizedEntryResolver.getOptimizationEntry({
+        optimizedEntry,
+        selectedOptimizations,
+      })
 
       expect(result).toBeDefined()
       expect(result?.fields.nt_experience_id).toBe('2qVK4T5lnScbswoyBuGipd')
@@ -184,13 +197,10 @@ describe('OptimizedEntryResolver', () => {
     it('returns undefined when there are no selected optimizations', () => {
       const optimizedEntry = getOptimizedEntry()
 
-      const result = OptimizedEntryResolver.getOptimizationEntry(
-        {
-          optimizedEntry,
-          selectedOptimizations: [],
-        },
-        false,
-      )
+      const result = OptimizedEntryResolver.getOptimizationEntry({
+        optimizedEntry,
+        selectedOptimizations: [],
+      })
 
       expect(result).toBeUndefined()
     })
@@ -205,13 +215,10 @@ describe('OptimizedEntryResolver', () => {
           selection.experienceId !== '6KfLDCdA75BGwr5HfSeXac',
       )
 
-      const result = OptimizedEntryResolver.getOptimizationEntry(
-        {
-          optimizedEntry,
-          selectedOptimizations,
-        },
-        true,
-      )
+      const result = OptimizedEntryResolver.getOptimizationEntry({
+        optimizedEntry,
+        selectedOptimizations,
+      })
 
       expect(result).toBeUndefined()
     })
@@ -222,13 +229,10 @@ describe('OptimizedEntryResolver', () => {
       const optimizationEntry = getEuropeOptimizationEntry()
       const selectedOptimizations = getSelectedOptimizations()
 
-      const result = OptimizedEntryResolver.getSelectedOptimization(
-        {
-          optimizationEntry,
-          selectedOptimizations,
-        },
-        false,
-      )
+      const result = OptimizedEntryResolver.getSelectedOptimization({
+        optimizationEntry,
+        selectedOptimizations,
+      })
 
       expect(result).toBeDefined()
       expect(result?.experienceId).toBe(optimizationEntry.fields.nt_experience_id)
@@ -238,13 +242,10 @@ describe('OptimizedEntryResolver', () => {
     it('returns undefined when no selected optimizations are provided', () => {
       const optimizationEntry = getEuropeOptimizationEntry()
 
-      const result = OptimizedEntryResolver.getSelectedOptimization(
-        {
-          optimizationEntry,
-          selectedOptimizations: [],
-        },
-        false,
-      )
+      const result = OptimizedEntryResolver.getSelectedOptimization({
+        optimizationEntry,
+        selectedOptimizations: [],
+      })
 
       expect(result).toBeUndefined()
     })
@@ -256,13 +257,10 @@ describe('OptimizedEntryResolver', () => {
         (selection) => selection.experienceId !== optimizationEntry.fields.nt_experience_id,
       )
 
-      const result = OptimizedEntryResolver.getSelectedOptimization(
-        {
-          optimizationEntry,
-          selectedOptimizations,
-        },
-        true,
-      )
+      const result = OptimizedEntryResolver.getSelectedOptimization({
+        optimizationEntry,
+        selectedOptimizations,
+      })
 
       expect(result).toBeUndefined()
     })
@@ -273,14 +271,11 @@ describe('OptimizedEntryResolver', () => {
       const optimizedEntry = getOptimizedEntry()
       const optimizationEntry = getEuropeOptimizationEntry()
 
-      const result = OptimizedEntryResolver.getSelectedVariant(
-        {
-          optimizedEntry,
-          optimizationEntry,
-          selectedVariantIndex: 1,
-        },
-        false,
-      )
+      const result = OptimizedEntryResolver.getSelectedVariant({
+        optimizedEntry,
+        optimizationEntry,
+        selectedVariantIndex: 1,
+      })
 
       expect(result).toBeDefined()
       expect(result?.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
@@ -301,14 +296,11 @@ describe('OptimizedEntryResolver', () => {
       originalConfig.components = []
 
       try {
-        const result = OptimizedEntryResolver.getSelectedVariant(
-          {
-            optimizedEntry,
-            optimizationEntry,
-            selectedVariantIndex: 1,
-          },
-          true,
-        )
+        const result = OptimizedEntryResolver.getSelectedVariant({
+          optimizedEntry,
+          optimizationEntry,
+          selectedVariantIndex: 1,
+        })
 
         expect(result).toBeUndefined()
       } finally {
@@ -321,14 +313,11 @@ describe('OptimizedEntryResolver', () => {
       const optimizedEntry = getOptimizedEntry()
       const optimizationEntry = getEuropeOptimizationEntry()
 
-      const result = OptimizedEntryResolver.getSelectedVariant(
-        {
-          optimizedEntry,
-          optimizationEntry,
-          selectedVariantIndex: 999,
-        },
-        true,
-      )
+      const result = OptimizedEntryResolver.getSelectedVariant({
+        optimizedEntry,
+        optimizationEntry,
+        selectedVariantIndex: 999,
+      })
 
       expect(result).toBeUndefined()
     })
@@ -336,10 +325,12 @@ describe('OptimizedEntryResolver', () => {
 
   describe('getSelectedVariantEntry', () => {
     it('returns the variant entry corresponding to the selected replacement variant', () => {
+      const optimizedEntry = getOptimizedEntry()
       const optimizationEntry = getEuropeOptimizationEntry()
       const selectedVariant = getEuropeVariantConfig()
 
       const result = OptimizedEntryResolver.getSelectedVariantEntry({
+        optimizedEntry,
         optimizationEntry,
         selectedVariant,
       })
@@ -349,6 +340,7 @@ describe('OptimizedEntryResolver', () => {
     })
 
     it('returns undefined when the variant entry cannot be found by id', () => {
+      const optimizedEntry = getOptimizedEntry()
       const optimizationEntry = getEuropeOptimizationEntry()
       const selectedVariant = getEuropeVariantConfig()
 
@@ -358,11 +350,33 @@ describe('OptimizedEntryResolver', () => {
       }
 
       const result = OptimizedEntryResolver.getSelectedVariantEntry({
+        optimizedEntry,
         optimizationEntry,
         selectedVariant: nonMatchingVariant,
       })
 
       expect(result).toBeUndefined()
+    })
+
+    it('returns undefined when the selected variant is still an unresolved link', () => {
+      const optimizedEntry = getOptimizedEntry()
+      const optimizationEntry = getEuropeOptimizationEntry()
+      const selectedVariant = getEuropeVariantConfig()
+      const originalVariants = optimizationEntry.fields.nt_variants
+
+      optimizationEntry.fields.nt_variants = [createUnresolvedEntryLink(selectedVariant.id)]
+
+      try {
+        const result = OptimizedEntryResolver.getSelectedVariantEntry({
+          optimizedEntry,
+          optimizationEntry,
+          selectedVariant,
+        })
+
+        expect(result).toBeUndefined()
+      } finally {
+        optimizationEntry.fields.nt_variants = originalVariants
+      }
     })
   })
 

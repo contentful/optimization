@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { isRecord } from './typeGuards'
 
 interface PackageManifest {
   dependencies: Record<string, string>
@@ -223,10 +224,6 @@ function findDuplicates(values: string[]): string[] {
   }
 
   return [...duplicates].sort((left, right) => left.localeCompare(right))
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function fail(message: string): never {

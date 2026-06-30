@@ -1,9 +1,7 @@
 import { RsdoctorRspackPlugin } from '@rsdoctor/rspack-plugin'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
+import { isRecord } from './typeGuards'
 
 /**
  * Conditionally adds the Rsdoctor Rspack plugin to the build config when the

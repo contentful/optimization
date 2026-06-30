@@ -6,7 +6,6 @@ import { hydrateOptimizationData } from '@contentful/optimization-web/bridge-sup
 import { useLayoutEffect } from 'react'
 
 export * from '@contentful/optimization-react-web'
-export { isMergeTagEntry } from '@contentful/optimization-react-web/api-schemas'
 export {
   NextAppAutoPageTracker,
   type NextAppAutoPageContext,

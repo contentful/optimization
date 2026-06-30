@@ -1,10 +1,13 @@
 import { useMergeTagResolver } from '@contentful/optimization-react-web'
-import { isMergeTagEntry } from '@contentful/optimization-react-web/api-schemas'
+import {
+  isMergeTagEntry,
+  isRecord,
+  isUnresolvedEntryLink,
+} from '@contentful/optimization-react-web/api-schemas'
 import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
 import { INLINES } from '@contentful/rich-text-types'
 import type { JSX } from 'react'
 import type { RichTextDocument } from '../types/contentful'
-import { isRecord } from '../utils/typeGuards'
 
 interface RichTextNode {
   nodeType: string
@@ -21,16 +24,8 @@ type GetMergeTagValue = ReturnType<typeof useMergeTagResolver>['getMergeTagValue
 
 const EMBEDDED_ENTRY_NODE_TYPE = 'embedded-entry-inline'
 
-function isLink(target: unknown): target is { sys: { type: 'Link' } } {
-  if (!isRecord(target) || !isRecord(target.sys)) {
-    return false
-  }
-
-  return target.sys.type === 'Link'
-}
-
 function getMergeTagText(target: unknown, getMergeTagValue: GetMergeTagValue): string {
-  if (isLink(target) || !isMergeTagEntry(target)) {
+  if (isUnresolvedEntryLink(target) || !isMergeTagEntry(target)) {
     return '[Merge Tag]'
   }
 

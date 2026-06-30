@@ -1,19 +1,18 @@
 import {
   type ChangeArray,
-  OptimizationEntry,
+  isResolvedOptimizationEntry,
+  type OptimizationEntry,
 } from '@contentful/optimization-api-client/api-schemas'
 import { applyChangeOverrides } from './applyChangeOverrides'
 import type { OptimizationOverride } from './types'
 
-// Build OptimizationEntry fixtures via the public Zod schema so we exercise
-// applyChangeOverrides against real entry shapes without unsafe type casts.
 function buildEntry(
   experienceId: string,
   key: string,
   baseline: unknown,
   variant: unknown,
 ): OptimizationEntry {
-  return OptimizationEntry.parse({
+  const entry: unknown = {
     metadata: { tags: [], concepts: [] },
     sys: {
       space: { sys: { type: 'Link', linkType: 'Space', id: 's' } },
@@ -44,7 +43,13 @@ function buildEntry(
         distribution: [0, 1],
       },
     },
-  })
+  }
+
+  if (!isResolvedOptimizationEntry(entry)) {
+    throw new Error(`Expected ${experienceId} fixture to be a resolved optimization entry`)
+  }
+
+  return entry
 }
 
 const ENTRIES: readonly OptimizationEntry[] = [

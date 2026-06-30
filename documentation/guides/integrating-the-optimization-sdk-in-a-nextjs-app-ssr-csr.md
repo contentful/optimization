@@ -315,12 +315,13 @@ requests for you.
 The Next.js adapter is a glue package. Keep application imports on the adapter subpaths instead of
 importing lower-level Node, Web, or React Web packages directly.
 
-| Import path                                       | Runtime                                       | Responsibility                                                                                                |
-| ------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `@contentful/optimization-nextjs/server`          | Server Components and server-only modules     | Server SDK creation, request binding, server resolution, server-owned page calls, and SSR tracking attributes |
-| `@contentful/optimization-nextjs/esr`             | Route handlers, edge functions, and ESR flows | Request-rendered Optimization data and explicit response persistence                                          |
-| `@contentful/optimization-nextjs/request-handler` | Next.js proxy or middleware                   | Request URL capture and SDK-owned request header sanitization                                                 |
-| `@contentful/optimization-nextjs/client`          | Client Components and takeover islands        | React provider, hooks, entry primitives, live updates, and Next.js page route tracker                         |
+| Import path                                       | Runtime                                       | Responsibility                                                                                                    |
+| ------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-nextjs/server`          | Server Components and server-only modules     | Server SDK creation, request binding, server resolution, server-owned page calls, and SSR tracking attributes     |
+| `@contentful/optimization-nextjs/esr`             | Route handlers, edge functions, and ESR flows | Request-rendered Optimization data and explicit response persistence                                              |
+| `@contentful/optimization-nextjs/request-handler` | Next.js proxy or middleware                   | Request URL capture and SDK-owned request header sanitization                                                     |
+| `@contentful/optimization-nextjs/client`          | Client Components and takeover islands        | React provider, hooks, entry primitives, live updates, and Next.js page route tracker                             |
+| `@contentful/optimization-nextjs/api-schemas`     | Shared schema helpers                         | API types plus structural guards such as `isMergeTagEntry`, `isRichTextDocument`, and `isResolvedContentfulEntry` |
 
 1. Install `@contentful/optimization-nextjs` in the Next.js app.
 2. Import server helpers only from the `/server` subpath in server-only modules and Server
@@ -329,7 +330,8 @@ importing lower-level Node, Web, or React Web packages directly.
    subpath in Client Components or layouts rendering Client Components.
 4. Import `createNextjsOptimizationContextHandler()` only from the `/request-handler` subpath in
    proxy or middleware code.
-5. Keep Client Components that call SDK hooks marked with `'use client'`.
+5. Import schema guards and API types from the `/api-schemas` subpath, not from `/client`.
+6. Keep Client Components that call SDK hooks marked with `'use client'`.
 
 **Copy this:**
 

@@ -19,9 +19,17 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import type { ContentfulOptimization } from '@contentful/optimization-react-native'
 import { OptimizationRoot } from '@contentful/optimization-react-native'
-import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native/api-schemas'
+import {
+  isMergeTagEntry,
+  isRecord,
+  isRichTextDocument,
+  isRichTextNode,
+  isUnresolvedEntryLink,
+  type MergeTagEntry,
+  type Profile,
+} from '@contentful/optimization-react-native/api-schemas'
 import { PreviewPanelOverlay } from '@contentful/optimization-react-native/preview'
-import type { Entry } from 'contentful'
+import type { Entry, UnresolvedLink } from 'contentful'
 import { createClient } from 'contentful'
 import { LoadingScreen } from './components/LoadingScreen'
 import { MergeTagDetailCard } from './components/MergeTagDetailCard'
@@ -59,61 +67,34 @@ interface EntryWithIncludes extends Entry {
   }
 }
 
-function isMergeTagEntry(entry: Entry): entry is MergeTagEntry {
-  return entry.sys.contentType.sys.id === 'nt_mergetag'
-}
-
-function isRichTextField(field: unknown): field is { nodeType: string } {
-  return (
-    typeof field === 'object' &&
-    field !== null &&
-    'nodeType' in field &&
-    field.nodeType === 'document'
-  )
-}
-
 interface EmbeddedNode {
   nodeType: string
-  data: { target: { sys: { id: string } } }
+  data: { target: UnresolvedLink<'Entry'> }
   content?: unknown[]
 }
 
-// eslint-disable-next-line complexity -- Type guard requires checking multiple nested properties
 function isEmbeddedNode(node: unknown): node is EmbeddedNode {
   return (
-    typeof node === 'object' &&
-    node !== null &&
-    'nodeType' in node &&
+    isRichTextNode(node) &&
     node.nodeType === 'embedded-entry-inline' &&
-    'data' in node &&
-    typeof node.data === 'object' &&
-    node.data !== null &&
-    'target' in node.data &&
-    typeof node.data.target === 'object' &&
-    node.data.target !== null &&
-    'sys' in node.data.target &&
-    typeof node.data.target.sys === 'object' &&
-    node.data.target.sys !== null &&
-    'id' in node.data.target.sys &&
-    typeof node.data.target.sys.id === 'string'
+    isUnresolvedEntryLink(node.data.target)
   )
 }
 
-function findMergeTagEntries(richTextField: {
-  nodeType: string
-  content?: unknown[]
-}): EmbeddedNode[] {
+function findMergeTagEntries(richTextField: unknown): EmbeddedNode[] {
   const embeddedNodes: EmbeddedNode[] = []
 
   function traverse(node: unknown): void {
-    if (typeof node !== 'object' || node === null) return
+    if (!isRichTextNode(node)) return
 
     if (isEmbeddedNode(node)) {
       embeddedNodes.push(node)
     }
 
-    if ('content' in node && Array.isArray(node.content)) {
-      node.content.forEach(traverse)
+    if (isRecord(node) && Array.isArray(node.content)) {
+      for (const child of node.content) {
+        traverse(child)
+      }
     }
   }
 
@@ -184,7 +165,7 @@ function App(): React.JSX.Element {
     if (!mergeTagEntry || !profile || !sdk) return
 
     const { fields } = mergeTagEntry
-    const richTextField = Object.values(fields).find(isRichTextField)
+    const richTextField = Object.values(fields).find(isRichTextDocument)
 
     if (richTextField) {
       const embeddedNodes = findMergeTagEntries(richTextField)

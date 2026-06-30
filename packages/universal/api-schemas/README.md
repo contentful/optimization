@@ -49,7 +49,10 @@ pnpm install @contentful/optimization-api-schemas
 Import schemas or helpers from the package:
 
 ```ts
-import { isOptimizedEntry, normalizeOptimizationConfig } from '@contentful/optimization-api-schemas'
+import {
+  isResolvedOptimizedEntry,
+  normalizeOptimizationConfig,
+} from '@contentful/optimization-api-schemas'
 ```
 
 Consult [Zod's documentation](https://zod.dev/basics) for more information on working with
@@ -65,17 +68,19 @@ application integrations must use an environment SDK instead of importing schema
 
 ### Contentful CDA helpers
 
-These helpers identify and normalize Contentful entries for optimization:
+These helpers identify and normalize Optimization-owned Contentful fields:
 
 | Export                        | Purpose                                                         |
 | ----------------------------- | --------------------------------------------------------------- |
-| `CtflEntry`                   | Generic Contentful entry schema                                 |
-| `OptimizedEntry`              | Entry schema with associated optimization entries               |
-| `OptimizationEntry`           | Optimization entry schema referenced by `fields.nt_experiences` |
+| `OptimizedEntry`              | Contentful SDK entry type with associated optimization entries  |
+| `OptimizationEntry`           | Contentful SDK entry type referenced by `fields.nt_experiences` |
 | `OptimizationConfig`          | Optimization configuration schema from `fields.nt_config`       |
-| `isEntry`                     | Type guard for Contentful Entry values                          |
-| `isOptimizedEntry`            | Type guard for optimized entries                                |
-| `isOptimizationEntry`         | Type guard for optimization entries                             |
+| `isRecord`                    | Structural guard for non-array object records                   |
+| `isRichTextDocument`          | Structural guard for Contentful Rich Text documents             |
+| `isRichTextNode`              | Structural guard for Contentful Rich Text nodes                 |
+| `isResolvedContentfulEntry`   | Structural guard for resolved Contentful Entry values           |
+| `isResolvedOptimizedEntry`    | Structural guard for resolved optimized entries                 |
+| `isResolvedOptimizationEntry` | Structural guard for resolved optimization entries              |
 | `normalizeOptimizationConfig` | Fills omitted optimization config fields with SDK-safe defaults |
 
 These schemas model the SDK's single-locale CDA entry contract. Fetch entries in the app layer with

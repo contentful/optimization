@@ -1,3 +1,4 @@
+import { isRecord } from '@contentful/optimization-node/api-schemas'
 import type { NextRequest, NextResponse } from 'next/server'
 import {
   DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE,
@@ -79,7 +80,7 @@ function getNextjsEsrRequestCookies(request: NextjsEsrRequest): NextjsCookieRead
 }
 
 function isNextjsCookieReader(value: unknown): value is NextjsCookieReader {
-  return isObjectRecord(value) && typeof value.get === 'function'
+  return isRecord(value) && typeof value.get === 'function'
 }
 
 function readCookieHeaderValue(cookieHeader: string, cookieName: string): string | undefined {
@@ -189,15 +190,11 @@ function serializeSameSite(
 }
 
 function isNextResponseLike(response: NextjsEsrResponse): response is NextResponse {
-  if (!isObjectRecord(response)) return false
+  if (!isRecord(response)) return false
 
   return (
-    isObjectRecord(response.cookies) &&
+    isRecord(response.cookies) &&
     typeof response.cookies.delete === 'function' &&
     typeof response.cookies.set === 'function'
   )
-}
-
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }

@@ -13,12 +13,12 @@
 import {
   AcceptedCurrentStateTracker,
   CoreStateful,
-  type CoreStatefulConfig,
-  type EventEmissionResult,
-  type PageViewBuilderArgs,
   effect,
   resolveStatefulDefaults,
   signals,
+  type CoreStatefulConfig,
+  type EventEmissionResult,
+  type PageViewBuilderArgs,
 } from '@contentful/optimization-core'
 import type { App } from '@contentful/optimization-core/api-schemas'
 import { ANONYMOUS_ID_COOKIE_LEGACY } from '@contentful/optimization-core/constants'
@@ -35,8 +35,10 @@ import {
   createOnlineChangeListener,
   createVisibilityChangeListener,
 } from './handlers'
-import { getCookie, removeCookie, setCookie } from './lib/cookies'
+import { getCookie, removeCookie, setCookie, type CookieAttributes } from './lib/cookies'
 import { LocalStore } from './storage'
+
+export type { CookieAttributes } from './lib/cookies'
 
 declare global {
   interface Window {
@@ -45,28 +47,6 @@ declare global {
     /** Singleton instance created by the Web SDK initializer. */
     contentfulOptimization?: ContentfulOptimization
   }
-}
-
-/**
- * Supported cookie attributes for the Web SDK.
- *
- * @public
- * @remarks
- * These options are used when persisting the anonymous ID cookie.
- */
-export interface CookieAttributes {
-  /**
-   * Cookie domain attribute.
-   *
-   * @remarks
-   * If omitted, the browser will scope the cookie to the current host.
-   */
-  domain?: string
-
-  /**
-   * Determines the expiration date of the cookie as the number of days until the cookie expires.
-   */
-  expires?: number
 }
 
 /**

@@ -8,8 +8,6 @@ import { OPTIMIZATION_NODE_SDK_NAME, OPTIMIZATION_NODE_SDK_VERSION } from './con
 
 const DEFAULT_NODE_ALLOWED_EVENT_TYPES: EventType[] = ['identify', 'page']
 
-type NodeEventBuilderConfig = Partial<Omit<NonNullable<CoreStatelessConfig['eventBuilder']>, 'app'>>
-
 /**
  * Public Node event-builder overrides accepted by {@link OptimizationNodeConfig.eventBuilder}.
  *
@@ -105,11 +103,7 @@ class ContentfulOptimization extends CoreStateless {
    * ```
    */
   constructor({ app, allowedEventTypes, eventBuilder, ...config }: OptimizationNodeConfig) {
-    const {
-      library,
-      getConsent: _getConsent,
-      ...eventBuilderConfig
-    } = (eventBuilder ?? {}) as NodeEventBuilderConfig
+    const { library, ...eventBuilderConfig } = eventBuilder ?? {}
 
     super({
       ...config,
@@ -117,13 +111,13 @@ class ContentfulOptimization extends CoreStateless {
       eventBuilder: {
         app,
         channel: 'server',
+        ...eventBuilderConfig,
         library: {
           name: OPTIMIZATION_NODE_SDK_NAME,
           version: OPTIMIZATION_NODE_SDK_VERSION,
           ...library,
         },
         getConsent: () => false,
-        ...eventBuilderConfig,
       },
     })
   }

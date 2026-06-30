@@ -7,12 +7,8 @@ import {
   type OverrideState,
 } from '@contentful/optimization-core/preview-support'
 import type ContentfulOptimization from '@contentful/optimization-web'
-import type {
-  AudienceEntrySkeleton,
-  OptimizationEntry,
-  OptimizationEntrySkeleton,
-} from '@contentful/optimization-web/api-schemas'
-import type { ChainModifiers, ContentfulClientApi, Entry } from 'contentful'
+import { isRecord, type OptimizationEntry } from '@contentful/optimization-web/api-schemas'
+import type { ChainModifiers, ContentfulClientApi } from 'contentful'
 import {
   AUDIENCE_SWITCH_CHANGE,
   OPTIMIZATION_CHANGE,
@@ -34,7 +30,7 @@ import {
   isPanel,
 } from './components/panel'
 import { defineSearch } from './components/search'
-import { getAllEntries, isAudienceEntry, isOptimizationEntry } from './lib/entries'
+import { getAllEntries, isOptimizationEntry } from './lib/entries'
 import { createScopedLogger } from './logger'
 
 declare global {
@@ -56,11 +52,6 @@ const storageLogger = createScopedLogger('PreviewPanelStorage')
 const EMPTY_OVERRIDES: OverrideState = {
   audiences: {},
   selectedOptimizations: {},
-}
-
-/** @internal */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
 /** @internal */
@@ -261,16 +252,16 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
   defineAudiences()
   definePanel()
 
-  const [audiences, optimizationEntries]: [Entry[], Entry[]] = await Promise.all([
-    getAllEntries<AudienceEntrySkeleton, M>(contentful, 'nt_audience'),
-    getAllEntries<OptimizationEntrySkeleton, M>(contentful, 'nt_experience'),
+  const [audienceCollection, optimizationCollection] = await Promise.all([
+    getAllEntries(contentful, 'nt_audience'),
+    getAllEntries(contentful, 'nt_experience', { include: 10 }),
   ])
-  const audienceEntries = audiences.filter(isAudienceEntry)
-  const panelOptimizationEntries = optimizationEntries.filter(
-    (optimization): optimization is OptimizationEntry => isOptimizationEntry(optimization),
-  )
-  const audienceDefinitions = createAudienceDefinitions(audienceEntries)
-  const experienceDefinitions = createExperienceDefinitions(panelOptimizationEntries)
+  const panelOptimizationEntries: OptimizationEntry[] = []
+  optimizationCollection.items.forEach((entry) => {
+    if (isOptimizationEntry(entry)) panelOptimizationEntries.push(entry)
+  })
+  const audienceDefinitions = createAudienceDefinitions(audienceCollection)
+  const experienceDefinitions = createExperienceDefinitions(optimizationCollection)
 
   const panel = document.createElement(PANEL_TAG)
   if (!isPanel(panel))

@@ -1,15 +1,18 @@
+import type {
+  ChainModifiers,
+  Entry,
+  EntryFieldTypes,
+  EntrySkeletonType,
+  LocaleCode,
+} from 'contentful'
 import * as z from 'zod/mini'
-import { CtflEntry, EntryFields } from './CtflEntry'
 
 /**
- * Zod schema describing the fields of an Audience entry.
- *
- * @remarks
- * Extends the base {@link EntryFields} with audience-specific properties.
+ * Zod schema describing the optimization-owned fields of an Audience entry.
  *
  * @public
  */
-export const AudienceEntryFields = z.extend(EntryFields, {
+export const AudienceEntryFields = z.object({
   /**
    * The internal id of the audience (Short Text).
    *
@@ -36,44 +39,34 @@ export const AudienceEntryFields = z.extend(EntryFields, {
 })
 
 /**
- * TypeScript type inferred from {@link AudienceEntryFields}.
+ * Runtime field values inferred from {@link AudienceEntryFields}.
  *
  * @public
  */
 export type AudienceEntryFields = z.infer<typeof AudienceEntryFields>
 
 /**
- * Zod schema for a Contentful Audience entry, including system metadata.
- *
- * @remarks
- * Extends the generic {@link CtflEntry} with {@link AudienceEntryFields} as the `fields` payload.
+ * Contentful SDK skeleton for the `nt_audience` content type.
  *
  * @public
  */
-export const AudienceEntry = z.extend(CtflEntry, {
-  fields: AudienceEntryFields,
-})
+export type AudienceEntrySkeleton = EntrySkeletonType<
+  {
+    nt_audience_id: EntryFieldTypes.Symbol
+    nt_name: EntryFieldTypes.Symbol
+    nt_description: EntryFieldTypes.Symbol
+  },
+  'nt_audience'
+>
 
 /**
- * TypeScript type inferred from {@link AudienceEntry}.
+ * Resolved Contentful Audience entry.
  *
  * @public
  */
-export type AudienceEntry = z.infer<typeof AudienceEntry>
-
-/**
- * Zod "skeleton" schema for a Contentful Audience entry, including `contentTypeId`.
- *
- * @public
- */
-export const AudienceEntrySkeleton = z.object({
-  contentTypeId: z.literal('nt_audience'),
-  fields: AudienceEntryFields,
-})
-
-/**
- * TypeScript type inferred from {@link AudienceEntrySkeleton}.
- *
- * @public
- */
-export type AudienceEntrySkeleton = z.infer<typeof AudienceEntrySkeleton>
+export type AudienceEntry<
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = Omit<Entry<AudienceEntrySkeleton, M, L>, 'fields'> & {
+  fields: AudienceEntryFields
+}

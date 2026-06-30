@@ -40,6 +40,16 @@ final class PreviewModelTests: XCTestCase {
         return ["sys": ["id": "sys-\(id)"], "fields": fields]
     }
 
+    private func entriesResult(_ items: [[String: Any]], includes: [[String: Any]] = []) -> ContentfulEntriesResult {
+        ContentfulEntriesResult(
+            items: items,
+            total: items.count,
+            skip: 0,
+            limit: items.count,
+            includes: ContentfulIncludes(entries: includes)
+        )
+    }
+
     @MainActor
     func testPreviewModelIsNullBeforeLoadDefinitions() throws {
         let client = try makeInitializedClient()
@@ -54,10 +64,10 @@ final class PreviewModelTests: XCTestCase {
         let client = try makeInitializedClient()
 
         try client.loadDefinitions(
-            audiences: [audienceEntry(id: "aud-1", name: "Audience One")],
-            experiences: [
+            audiences: entriesResult([audienceEntry(id: "aud-1", name: "Audience One")]),
+            experiences: entriesResult([
                 experienceEntry(id: "exp-1", name: "Experience One", audienceId: "aud-1"),
-            ]
+            ])
         )
 
         let state = client.getPreviewState()
@@ -83,10 +93,10 @@ final class PreviewModelTests: XCTestCase {
         let client = try makeInitializedClient()
 
         try client.loadDefinitions(
-            audiences: [audienceEntry(id: "aud-1", name: "Audience One")],
-            experiences: [
+            audiences: entriesResult([audienceEntry(id: "aud-1", name: "Audience One")]),
+            experiences: entriesResult([
                 experienceEntry(id: "exp-1", name: "Experience One", audienceId: "aud-1"),
-            ]
+            ])
         )
 
         client.overrideAudience(id: "aud-1", qualified: true, experienceIds: ["exp-1"])
@@ -127,10 +137,10 @@ final class PreviewModelTests: XCTestCase {
         seedSelectedOptimization(client: client, experienceId: "exp-1", variantIndex: 0)
 
         try client.loadDefinitions(
-            audiences: [audienceEntry(id: "aud-1", name: "Audience One")],
-            experiences: [
+            audiences: entriesResult([audienceEntry(id: "aud-1", name: "Audience One")]),
+            experiences: entriesResult([
                 experienceEntry(id: "exp-1", name: "Experience One", audienceId: "aud-1"),
-            ]
+            ])
         )
 
         // Before override: defaults should surface as currentVariantIndex = 0,
@@ -158,10 +168,10 @@ final class PreviewModelTests: XCTestCase {
         let client = try makeInitializedClient()
 
         try client.loadDefinitions(
-            audiences: [],
-            experiences: [
+            audiences: entriesResult([]),
+            experiences: entriesResult([
                 experienceEntry(id: "exp-global", name: "Global Experience", audienceId: nil),
-            ]
+            ])
         )
 
         let state = client.getPreviewState()

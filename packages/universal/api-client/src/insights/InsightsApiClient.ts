@@ -177,7 +177,7 @@ export default class InsightsApiClient extends ApiClientBase {
     logger.debug(`"${requestName}" request body:`, body)
 
     try {
-      await this.fetch(url, {
+      await this.fetch(url.toString(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,0 +1,13 @@
+# CI-only Maestro warm-up flow. This file intentionally lives at the top level of
+# maestro/ so config.yaml's normal `*/*.yaml` suite discovery does not include it.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- extendedWaitUntil:
+    visible:
+      id: 'identify-button'
+    timeout: 30000
+- stopApp

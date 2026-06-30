@@ -35,18 +35,9 @@ final class PreviewViewModel: ObservableObject {
         do {
             let results = try await fetchAudienceAndExperienceEntries(client: contentfulClient)
 
-            // Embed per-entry includes so JS `buildVariantEntryMap` can resolve
-            // variant entry names from linked references. Contentful CDA returns
-            // includes at the top level; JS expects them nested under each entry.
-            let experienceEntriesWithIncludes: [[String: Any]] = results.experiences.items.map { item in
-                var copy = item
-                copy["includes"] = ["Entry": results.experiences.includes.entries]
-                return copy
-            }
-
             try client.loadDefinitions(
-                audiences: results.audiences.items,
-                experiences: experienceEntriesWithIncludes
+                audiences: results.audiences,
+                experiences: results.experiences
             )
             client.refreshPreviewState()
 
