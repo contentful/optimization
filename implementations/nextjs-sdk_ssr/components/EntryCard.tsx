@@ -2,10 +2,7 @@ import { EntryCardClient } from '@/components/EntryCard.client'
 import type { ContentEntry, RichTextDocument } from '@/lib/contentful'
 import type { PageEntry } from '@/lib/resolution'
 import { isRecord } from '@/lib/util'
-import {
-  ServerOptimizedEntry,
-  type ServerTrackingResolvedData,
-} from '@contentful/optimization-nextjs/server'
+import { ServerOptimizedEntry } from '@contentful/optimization-nextjs/server'
 import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
 import { INLINES } from '@contentful/rich-text-types'
 import type { EntryClickScenario } from 'e2e-web'
@@ -14,12 +11,9 @@ import type { JSX } from 'react'
 const HOVER_DURATION_UPDATE_INTERVAL_MS = 1000
 
 interface EntryCardServerProps {
-  baselineEntry: ContentEntry
+  entry: PageEntry
   clickScenario?: EntryClickScenario
   manualTracking: boolean
-  resolvedData: ServerTrackingResolvedData
-  resolvedEntry: PageEntry['resolvedEntry']
-  entry?: never
   liveUpdates?: never
   testId?: never
 }
@@ -28,11 +22,8 @@ interface EntryCardClientProps {
   entry: ContentEntry
   liveUpdates?: boolean
   testId: string
-  baselineEntry?: never
   clickScenario?: never
   manualTracking?: never
-  resolvedData?: never
-  resolvedEntry?: never
 }
 
 type EntryCardProps = EntryCardServerProps | EntryCardClientProps
@@ -52,19 +43,17 @@ const RENDER_OPTIONS: Options = {
 }
 
 export function EntryCard(props: EntryCardProps): JSX.Element {
-  if (props.entry !== undefined) {
+  if (!('baselineEntry' in props.entry)) {
+    const { entry, liveUpdates, testId } = props as EntryCardClientProps
     return (
-      <section className="entry-card" data-testid={`content-entry-${props.testId}`}>
-        <EntryCardClient
-          entry={props.entry}
-          liveUpdates={props.liveUpdates}
-          testId={props.testId}
-        />
+      <section className="entry-card" data-testid={`content-entry-${testId}`}>
+        <EntryCardClient entry={entry} liveUpdates={liveUpdates} testId={testId} />
       </section>
     )
   }
 
-  const { baselineEntry, clickScenario, manualTracking, resolvedData, resolvedEntry } = props
+  const { entry, clickScenario, manualTracking } = props as EntryCardServerProps
+  const { baselineEntry, resolvedData, resolvedEntry } = entry
   const autoTrackViews = !manualTracking
   const richText = Object.values(resolvedEntry.fields).find(isRichTextField)
   const nested: PageEntry[] = resolvedEntry.fields.nested ?? []
@@ -93,10 +82,8 @@ export function EntryCard(props: EntryCardProps): JSX.Element {
           {nested.map((nestedEntry) => (
             <EntryCard
               key={nestedEntry.baselineEntry.sys.id}
-              baselineEntry={nestedEntry.baselineEntry}
+              entry={nestedEntry}
               manualTracking={false}
-              resolvedData={nestedEntry.resolvedData}
-              resolvedEntry={nestedEntry.resolvedEntry}
             />
           ))}
         </div>

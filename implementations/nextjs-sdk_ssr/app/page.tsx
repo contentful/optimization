@@ -62,11 +62,9 @@ export default async function Home() {
               return [
                 <EntryCard
                   key={id}
-                  baselineEntry={pageEntry.baselineEntry}
+                  entry={pageEntry}
                   clickScenario={CLICK_SCENARIOS[id]}
                   manualTracking={false}
-                  resolvedData={pageEntry.resolvedData}
-                  resolvedEntry={pageEntry.resolvedEntry}
                 />,
               ]
             })}
@@ -81,15 +79,7 @@ export default async function Home() {
             {PAGES.home.manual.flatMap((id) => {
               const pageEntry = resolvedById.get(id)
               if (!pageEntry) return []
-              return [
-                <EntryCard
-                  key={id}
-                  baselineEntry={pageEntry.baselineEntry}
-                  manualTracking={true}
-                  resolvedData={pageEntry.resolvedData}
-                  resolvedEntry={pageEntry.resolvedEntry}
-                />,
-              ]
+              return [<EntryCard key={id} entry={pageEntry} manualTracking={true} />]
             })}
           </div>
         </section>
