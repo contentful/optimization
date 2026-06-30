@@ -31,11 +31,12 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           api={appConfig.api}
           trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
           logLevel="debug"
-          defaults={
-            (profile ?? selectedOptimizations)
-              ? { profile, ...(hasConsent ? { selectedOptimizations, changes } : {}) }
-              : undefined
-          }
+          defaults={{
+            consent: hasConsent,
+            persistenceConsent: hasConsent,
+            ...(profile ? { profile } : {}),
+            ...(hasConsent && selectedOptimizations ? { selectedOptimizations, changes } : {}),
+          }}
           app={{
             name: 'Contentful Optimization Next.js SDK SSR (Client)',
             version: '0.1.0',
