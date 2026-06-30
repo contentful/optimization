@@ -2,7 +2,7 @@ import type { Document } from '@contentful/rich-text-types'
 import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { createClient } from 'contentful'
 import { appConfig } from './config'
-import { collectLinkIds, toIdMap } from './util'
+import { collectLinkIds } from './util'
 
 export interface ContentEntryFields {
   text?: EntryFieldTypes.Text | EntryFieldTypes.RichText
@@ -64,12 +64,4 @@ export async function extendEntryRegistry(
       }
     }
   }
-}
-
-export async function buildEntryRegistry(
-  entries: ContentEntry[],
-): Promise<Map<string, ContentEntry>> {
-  const registry = toIdMap(entries)
-  await extendEntryRegistry(registry, entries)
-  return registry
 }

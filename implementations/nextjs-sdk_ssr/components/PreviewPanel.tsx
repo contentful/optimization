@@ -2,36 +2,27 @@
 
 import { appConfig } from '@/lib/config'
 import { useOptimizationContext } from '@contentful/optimization-nextjs/client'
-import { useEffect, type JSX } from 'react'
-
-let previewPanelAttachmentStarted = false
+import { useEffect, useRef, type JSX } from 'react'
 
 export function PreviewPanel(): JSX.Element | null {
   const { isReady, sdk } = useOptimizationContext()
+  const started = useRef(false)
 
   useEffect(() => {
-    if (
-      !appConfig.previewPanelEnabled ||
-      !isReady ||
-      sdk === undefined ||
-      previewPanelAttachmentStarted
-    ) {
+    if (!appConfig.previewPanelEnabled || !isReady || sdk === undefined || started.current) {
       return
     }
 
-    previewPanelAttachmentStarted = true
+    started.current = true
     void Promise.all([
       import('@contentful/optimization-web-preview-panel'),
       import('@/lib/contentful'),
     ])
       .then(async ([{ default: attachOptimizationPreviewPanel }, { client }]) => {
-        await attachOptimizationPreviewPanel({
-          contentful: client,
-          nonce: undefined,
-        })
+        await attachOptimizationPreviewPanel({ contentful: client, nonce: undefined })
       })
       .catch((error: unknown) => {
-        previewPanelAttachmentStarted = false
+        started.current = false
         console.warn('Failed to attach the Contentful Optimization preview panel.', error)
       })
   }, [isReady, sdk])

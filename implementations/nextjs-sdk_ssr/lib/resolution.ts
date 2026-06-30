@@ -1,14 +1,13 @@
 import { type ServerTrackingResolvedData } from '@contentful/optimization-nextjs/server'
 import { INLINES } from '@contentful/rich-text-types'
 import {
-  buildEntryRegistry,
   extendEntryRegistry,
   loadPageEntries,
   type ContentEntry,
   type RichTextDocument,
 } from './contentful'
 import { getOptimizationData, optimization } from './optimization'
-import { isEntry, isRecord, resolveEntryLinks } from './util'
+import { isEntry, isRecord, resolveEntryLinks, toIdMap } from './util'
 
 type Profile = Parameters<typeof optimization.getMergeTagValue>[1]
 type SelectedOptimizations = Parameters<typeof optimization.resolveOptimizedEntry>[1]
@@ -102,15 +101,15 @@ export async function loadPageData(entryIds: readonly string[]): Promise<Resolve
   ])
   const selectedOptimizations = optimizationData?.selectedOptimizations
   const profile = optimizationData?.profile
-  const registry = await buildEntryRegistry(entries)
-
   const resolvedVariants = entries.map((entry) =>
     optimization.resolveOptimizedEntry(entry, selectedOptimizations),
   )
-  await extendEntryRegistry(
-    registry,
-    resolvedVariants.map((r) => r.entry as ContentEntry),
-  )
+
+  const registry = toIdMap(entries)
+  await extendEntryRegistry(registry, [
+    ...entries,
+    ...resolvedVariants.map((r) => r.entry as ContentEntry),
+  ])
 
   const byId = new Map(
     entries.map((entry, i) => [
