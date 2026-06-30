@@ -159,8 +159,9 @@ describe('@contentful/optimization-react-web core providers', () => {
       </OptimizationProvider>,
     )
 
-    expect(markup).toBe('')
-    expect(renderedChild).toBe(false)
+    // Children render during SSR; the SDK constructor must never run on the server.
+    expect(markup).toMatchInlineSnapshot(`""`)
+    expect(renderedChild).toBe(true)
     expect(window.contentfulOptimization).toBeUndefined()
   })
 
@@ -546,7 +547,10 @@ describe('@contentful/optimization-react-web core providers', () => {
     renderClient(<FirstScenario />).unmount()
     renderClient(<SecondScenario />).unmount()
 
-    expect(results).toEqual([true, false, true])
+    // Children render twice per mount: once in the initial state (isReady: false) and once after
+    // useLayoutEffect fires and sets the owned SDK (isReady: true). The liveUpdates values are
+    // stable across both renders since they come from provider props, not SDK readiness.
+    expect(results).toEqual([true, false, true, false, true, true])
   })
 
   it('destroys the optimization singleton on provider unmount', () => {
