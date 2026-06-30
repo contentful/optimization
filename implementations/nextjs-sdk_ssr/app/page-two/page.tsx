@@ -2,14 +2,15 @@ import { ControlPanel } from '@/components/ControlPanel'
 import { CustomViewTracker } from '@/components/CustomViewTracker'
 import { EntryCard } from '@/components/EntryCard'
 import { loadPageEntries } from '@/lib/contentful'
-import { loadOptimizationData, resolveOptimizedEntries } from '@/lib/resolution'
+import { getOptimizationData } from '@/lib/optimization'
+import { resolveOptimizedEntries } from '@/lib/resolution'
 import { PAGES } from 'e2e-web'
 import Link from 'next/link'
 
 export default async function PageTwo() {
-  const [entries, optimizationData] = await Promise.all([
+  const [entries, { data: optimizationData }] = await Promise.all([
     loadPageEntries(PAGES.pageTwo.ids),
-    loadOptimizationData(),
+    getOptimizationData(),
   ])
 
   const { entriesById, resolvedById } = await resolveOptimizedEntries(

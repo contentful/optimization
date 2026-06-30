@@ -1,18 +1,14 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { EntryCard } from '@/components/EntryCard'
 import { loadPageEntries } from '@/lib/contentful'
-import {
-  loadOptimizationData,
-  makeGetMergeTagValue,
-  makeResolveEntry,
-  resolveOptimizedEntries,
-} from '@/lib/resolution'
+import { getOptimizationData } from '@/lib/optimization'
+import { makeGetMergeTagValue, makeResolveEntry, resolveOptimizedEntries } from '@/lib/resolution'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 
 export default async function Home() {
-  const [entries, optimizationData] = await Promise.all([
+  const [entries, { data: optimizationData }] = await Promise.all([
     loadPageEntries(PAGES.home.ids),
-    loadOptimizationData(),
+    getOptimizationData(),
   ])
 
   const { registry, entriesById, resolvedById } = await resolveOptimizedEntries(

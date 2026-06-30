@@ -7,13 +7,15 @@ import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimizati
 import 'e2e-web/theme.css'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Suspense, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 
 export const metadata: Metadata = {
   title: 'Optimization Next.js SDK SSR',
   description:
     'Next.js App Router reference: the Next.js SDK resolves entries server-side and handles client-side tracking and interactive controls.',
 }
+
+export const dynamic = 'force-dynamic'
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const { data: optimizationData, hasConsent } = await getOptimizationData()
@@ -47,9 +49,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         >
           <GlobalLiveUpdatesProvider>
             <PreviewPanel />
-            <Suspense>
-              <NextAppAutoPageTracker initialPageEvent={hasConsent ? 'skip' : 'emit'} />
-            </Suspense>
+            <NextAppAutoPageTracker initialPageEvent={hasConsent ? 'skip' : 'emit'} />
             <div className="app-shell">
               <nav>
                 <Link data-testid="link-home" href="/">
