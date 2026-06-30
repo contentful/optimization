@@ -14,13 +14,14 @@ export function EntryCardClient({ entry, liveUpdates, testId }: EntryCardClientP
   return (
     <OptimizedEntry baselineEntry={entry} liveUpdates={liveUpdates}>
       {({ fields, sys: { id } }) => (
-        <div
-          aria-label={`${fields.text ?? ''} [Entry: ${id}]`}
-          data-test-entry-id={id}
-          data-testid={`entry-text-${testId}`}
-        >
-          <p>{String(fields.text ?? '')}</p>
-          <p>{`[Entry: ${id}]`}</p>
+        <div data-test-entry-id={id} data-testid={`content-${testId}`}>
+          <div
+            aria-label={`${fields.text ?? ''} [Entry: ${id}]`}
+            data-testid={`entry-text-${testId}`}
+          >
+            <p>{String(fields.text ?? '')}</p>
+            <p>{`[Entry: ${id}]`}</p>
+          </div>
         </div>
       )}
     </OptimizedEntry>
