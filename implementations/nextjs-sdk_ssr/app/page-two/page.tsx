@@ -6,10 +6,7 @@ import { PAGES } from 'e2e-web'
 import Link from 'next/link'
 
 export default async function PageTwo() {
-  const [auto, manual] = await Promise.all([
-    optimization.getEntry(PAGES.pageTwo.auto),
-    optimization.getEntry(PAGES.pageTwo.manual),
-  ])
+  const [auto, manual] = await optimization.getEntries([PAGES.pageTwo.auto, PAGES.pageTwo.manual])
 
   return (
     <section data-testid="page-two-view">

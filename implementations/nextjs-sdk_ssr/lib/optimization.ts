@@ -30,6 +30,8 @@ export interface Entry {
 }
 
 class ServerOptimization {
+  // --- private ---
+
   private readonly sdk = createNextjsOptimization({
     clientId: appConfig.clientId,
     environment: appConfig.environment,
@@ -42,7 +44,7 @@ class ServerOptimization {
     },
   })
 
-  readonly getOptimizationData = cache(async () => {
+  private readonly fetchOptimizationData = cache(async () => {
     const cookieStore = await cookies()
     const headerStore = await headers()
     const hasConsent = getAppConsent(cookieStore)
@@ -56,29 +58,30 @@ class ServerOptimization {
     return { data, hasConsent }
   })
 
-  private resolveMergeTagNode(node: unknown, profile: Profile): unknown {
-    if (!isRecord(node)) return node
-    if (node.nodeType === INLINES.EMBEDDED_ENTRY && isRecord(node.data) && 'target' in node.data) {
-      const value = this.sdk.getMergeTagValue(node.data.target as never, profile) ?? ''
-      return { ...node, data: { ...node.data, resolvedValue: value } }
-    }
-    if (Array.isArray(node.content)) {
-      return {
-        ...node,
-        content: node.content.map((child) => this.resolveMergeTagNode(child, profile)),
-      }
-    }
-    return node
-  }
-
   private resolveMergeTags(
     fields: ContentEntry['fields'],
     profile: Profile,
   ): ContentEntry['fields'] {
+    const resolveNode = (node: unknown): unknown => {
+      if (!isRecord(node)) return node
+      if (
+        node.nodeType === INLINES.EMBEDDED_ENTRY &&
+        isRecord(node.data) &&
+        'target' in node.data
+      ) {
+        const value = this.sdk.getMergeTagValue(node.data.target as never, profile) ?? ''
+        return { ...node, data: { ...node.data, resolvedValue: value } }
+      }
+      if (Array.isArray(node.content)) {
+        return { ...node, content: node.content.map(resolveNode) }
+      }
+      return node
+    }
+
     return Object.fromEntries(
       Object.entries(fields).map(([key, value]) => {
         if (isRecord(value) && value.nodeType === 'document' && Array.isArray(value.content)) {
-          return [key, this.resolveMergeTagNode(value, profile) as RichTextDocument]
+          return [key, resolveNode(value) as RichTextDocument]
         }
         return [key, value]
       }),
@@ -90,12 +93,10 @@ class ServerOptimization {
     selectedOptimizations: SelectedOptimizations,
     profile: Profile,
     visited: Set<string>,
-    preResolved?: ReturnType<typeof this.sdk.resolveOptimizedEntry>,
   ): Entry {
     visited.add(baselineEntry.sys.id)
 
-    const resolved =
-      preResolved ?? this.sdk.resolveOptimizedEntry(baselineEntry, selectedOptimizations)
+    const resolved = this.sdk.resolveOptimizedEntry(baselineEntry, selectedOptimizations)
     const resolvedData = resolved as ServerTrackingResolvedData
     const resolvedEntry = resolvedData.entry as ContentEntry
     const fields = this.resolveMergeTags(resolvedEntry.fields, profile)
@@ -117,14 +118,31 @@ class ServerOptimization {
     }
   }
 
-  async getEntry(id: string): Promise<Entry | undefined> {
+  // --- public ---
+
+  public async getServerState() {
+    const { data, hasConsent } = await this.fetchOptimizationData()
+    return {
+      defaults: data
+        ? {
+            profile: data.profile,
+            ...(hasConsent
+              ? { selectedOptimizations: data.selectedOptimizations, changes: data.changes }
+              : {}),
+          }
+        : undefined,
+      initialPageEvent: hasConsent ? ('skip' as const) : ('emit' as const),
+    }
+  }
+
+  public async getEntry(id: string): Promise<Entry | undefined> {
     const entry = await fetchEntry(id)
     if (!entry) return undefined
-    const { data } = await this.getOptimizationData()
+    const { data } = await this.fetchOptimizationData()
     return this.buildEntry(entry, data?.selectedOptimizations, data?.profile, new Set())
   }
 
-  async getEntries(ids: readonly string[]): Promise<Entry[]> {
+  public async getEntries(ids: readonly string[]): Promise<Entry[]> {
     const results = await Promise.all(ids.map((id) => this.getEntry(id)))
     return results.filter((e): e is Entry => e !== undefined)
   }

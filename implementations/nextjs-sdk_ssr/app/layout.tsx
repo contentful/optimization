@@ -18,18 +18,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const { data: optimizationData, hasConsent } = await optimization.getOptimizationData()
-  const defaults = optimizationData
-    ? {
-        profile: optimizationData.profile,
-        ...(hasConsent
-          ? {
-              selectedOptimizations: optimizationData.selectedOptimizations,
-              changes: optimizationData.changes,
-            }
-          : {}),
-      }
-    : undefined
+  const { defaults, initialPageEvent } = await optimization.getServerState()
 
   return (
     <html lang={appConfig.locale.split('-')[0]}>
@@ -49,7 +38,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         >
           <GlobalLiveUpdatesProvider>
             <PreviewPanel />
-            <NextAppAutoPageTracker initialPageEvent={hasConsent ? 'skip' : 'emit'} />
+            <NextAppAutoPageTracker initialPageEvent={initialPageEvent} />
             <div className="app-shell">
               <nav>
                 <Link data-testid="link-home" href="/">
