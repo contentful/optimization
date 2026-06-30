@@ -33,6 +33,7 @@ export default async function PageTwo() {
               <EntryCard
                 baselineEntry={auto.baselineEntry}
                 resolvedData={auto.resolvedData}
+                resolvedEntry={auto.resolvedEntry}
                 manualTracking={false}
               />
             ) : (
@@ -50,6 +51,7 @@ export default async function PageTwo() {
               <EntryCard
                 baselineEntry={manual.baselineEntry}
                 resolvedData={manual.resolvedData}
+                resolvedEntry={manual.resolvedEntry}
                 manualTracking={true}
               />
             ) : (

@@ -66,6 +66,7 @@ export default async function Home() {
                   clickScenario={CLICK_SCENARIOS[id]}
                   manualTracking={false}
                   resolvedData={pageEntry.resolvedData}
+                  resolvedEntry={pageEntry.resolvedEntry}
                 />,
               ]
             })}
@@ -86,6 +87,7 @@ export default async function Home() {
                   baselineEntry={pageEntry.baselineEntry}
                   manualTracking={true}
                   resolvedData={pageEntry.resolvedData}
+                  resolvedEntry={pageEntry.resolvedEntry}
                 />,
               ]
             })}

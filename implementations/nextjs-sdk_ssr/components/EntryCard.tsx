@@ -1,6 +1,7 @@
 import { EntryCardClient } from '@/components/EntryCard.client'
 import type { ContentEntry, RichTextDocument } from '@/lib/contentful'
-import { isEntry, isRecord } from '@/lib/util'
+import type { PageEntry } from '@/lib/resolution'
+import { isRecord } from '@/lib/util'
 import {
   ServerOptimizedEntry,
   type ServerTrackingResolvedData,
@@ -17,6 +18,7 @@ interface EntryCardServerProps {
   clickScenario?: EntryClickScenario
   manualTracking: boolean
   resolvedData: ServerTrackingResolvedData
+  resolvedEntry: PageEntry['resolvedEntry']
   entry?: never
   liveUpdates?: never
   testId?: never
@@ -30,6 +32,7 @@ interface EntryCardClientProps {
   clickScenario?: never
   manualTracking?: never
   resolvedData?: never
+  resolvedEntry?: never
 }
 
 type EntryCardProps = EntryCardServerProps | EntryCardClientProps
@@ -61,13 +64,10 @@ export function EntryCard(props: EntryCardProps): JSX.Element {
     )
   }
 
-  const { baselineEntry, clickScenario, manualTracking, resolvedData } = props
-  const resolvedEntry = resolvedData.entry as ContentEntry
+  const { baselineEntry, clickScenario, manualTracking, resolvedData, resolvedEntry } = props
   const autoTrackViews = !manualTracking
   const richText = Object.values(resolvedEntry.fields).find(isRichTextField)
-  const nested = Array.isArray(resolvedEntry.fields.nested)
-    ? resolvedEntry.fields.nested.filter(isEntry)
-    : []
+  const nested: PageEntry[] = resolvedEntry.fields.nested ?? []
 
   const content = (
     <div data-ctfl-entry-id={resolvedEntry.sys.id} data-testid={`content-${baselineEntry.sys.id}`}>
@@ -92,10 +92,11 @@ export function EntryCard(props: EntryCardProps): JSX.Element {
         <div className="entry-card__nested-children">
           {nested.map((nestedEntry) => (
             <EntryCard
-              key={nestedEntry.sys.id}
-              baselineEntry={nestedEntry}
+              key={nestedEntry.baselineEntry.sys.id}
+              baselineEntry={nestedEntry.baselineEntry}
               manualTracking={false}
-              resolvedData={{ entry: nestedEntry }}
+              resolvedData={nestedEntry.resolvedData}
+              resolvedEntry={nestedEntry.resolvedEntry}
             />
           ))}
         </div>
