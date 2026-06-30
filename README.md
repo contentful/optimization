@@ -59,9 +59,11 @@ For step-by-step implementation docs, start with the [Guides](./documentation/gu
 index. For behavior explanations, start with the [Concepts](./documentation/concepts/README.md)
 index.
 
-Package README files listed below are package-level guides and API surface summaries. Generated
+Package README files listed below are package-level guides and API surface summaries. For packages
+included in the TypeDoc build, generated
 [reference documentation](https://contentful.github.io/optimization) remains the source of truth for
-exported API signatures.
+exported API signatures. The Next.js package is not yet included there; use its package README for
+that surface.
 
 ## Published packages
 

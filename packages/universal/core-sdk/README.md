@@ -144,19 +144,21 @@ decisions, and debug state are tracked separately.
 
 Common `api` options:
 
-| Option              | Applies to | Default                                    | Description                                     |
-| ------------------- | ---------- | ------------------------------------------ | ----------------------------------------------- |
-| `experienceBaseUrl` | All        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                 |
-| `insightsBaseUrl`   | All        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                   |
-| `enabledFeatures`   | All        | `['ip-enrichment', 'location']`            | Experience API features for each request        |
-| `beaconHandler`     | Stateful   | `undefined`                                | Custom handler for enqueueing Insights batches  |
-| `ip`                | Stateful   | `undefined`                                | IP address override for Experience API analysis |
-| `plainText`         | Stateful   | `false`                                    | Sends performance-critical endpoints as text    |
-| `preflight`         | Stateful   | `false`                                    | Aggregates a profile state without storing it   |
+| Option              | Applies to | Default                                    | Description                                       |
+| ------------------- | ---------- | ------------------------------------------ | ------------------------------------------------- |
+| `experienceBaseUrl` | All        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                   |
+| `insightsBaseUrl`   | All        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                     |
+| `enabledFeatures`   | All        | `['ip-enrichment', 'location']`            | Experience API features for each request          |
+| `ip`                | Stateful   | `undefined`                                | IP address override for Experience API analysis   |
+| `plainText`         | Stateful   | `true` for single-profile mutations        | Sends single-profile Experience mutations as text |
+| `preflight`         | Stateful   | `false`                                    | Aggregates a profile state without storing it     |
+
+When `plainText` is omitted, single-profile Experience mutation/event requests use `text/plain`.
+Pass `plainText: false` to send JSON. Experience batch profile updates still default to JSON.
 
 In stateless environments, pass `ip`, `locale`, `plainText`, and `preflight` as `experienceOptions`
 when creating the request-bound client instead of constructor config. Pass request-specific Insights
-API options, such as `beaconHandler`, as `insightsOptions`.
+API options, such as a last-chance `beacon` sender, as `insightsOptions`.
 
 Core-backed stateful SDKs can accept an initial top-level `locale` and runtime `setLocale(locale)`
 calls. They expose that SDK Experience API and default event locale through the live `locale` getter

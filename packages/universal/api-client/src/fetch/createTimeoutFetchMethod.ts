@@ -1,6 +1,7 @@
 import { createScopedLogger } from '../logger'
 import type { BaseFetchMethodOptions, FetchMethod, FetchMethodCallbackOptions } from './Fetch'
 import { fetchInputToString } from './fetchInputToString'
+import { resolveFetchMethod } from './resolveFetchMethod'
 
 const logger = createScopedLogger('ApiClient:Timeout')
 
@@ -71,10 +72,12 @@ export interface TimeoutFetchMethodOptions extends BaseFetchMethodOptions {
  */
 export function createTimeoutFetchMethod({
   apiName = 'Optimization',
-  fetchMethod = fetch,
+  fetchMethod,
   onRequestTimeout,
   requestTimeout = DEFAULT_REQUEST_TIMEOUT,
 }: TimeoutFetchMethodOptions = {}): FetchMethod {
+  const resolvedFetchMethod = resolveFetchMethod(fetchMethod)
+
   return async (url, init) => {
     const controller = new AbortController()
 
@@ -99,7 +102,7 @@ export function createTimeoutFetchMethod({
 
     const requestInit = { ...init, signal }
 
-    const response = await fetchMethod(url, requestInit)
+    const response = await resolvedFetchMethod(url, requestInit)
 
     clearTimeout(id)
 

@@ -42,7 +42,8 @@ export interface BaseFetchMethodOptions {
    *
    * @remarks
    * This is useful for providing polyfills, mocks, or instrumented fetch
-   * implementations.
+   * implementations. It is required in runtimes that do not provide
+   * `globalThis.fetch`.
    */
   fetchMethod?: FetchMethod
 }

@@ -1,7 +1,10 @@
 import type { Observable } from '@contentful/optimization-core'
 import type ContentfulOptimization from '../ContentfulOptimization'
 import type { OptimizationWebConfig } from '../ContentfulOptimization'
-import type { AutoTrackEntryInteractionOptions } from '../entry-tracking'
+import {
+  resolveAutoTrackEntryInteractionOptions,
+  type AutoTrackEntryInteractionOptions,
+} from '../entry-tracking/resolveAutoTrackEntryInteractionOptions'
 import type { OptimizedEntrySdk } from './OptimizedEntryController'
 
 type Cleanup = () => void
@@ -74,11 +77,7 @@ function createOwnedSdkBinding<TSdk extends OptimizationRootSdk>(
 export function resolveTrackEntryInteractionOptions(
   trackEntryInteraction: TrackEntryInteractionOptions | undefined,
 ): Required<AutoTrackEntryInteractionOptions> {
-  return {
-    clicks: trackEntryInteraction?.clicks ?? true,
-    hovers: trackEntryInteraction?.hovers ?? true,
-    views: trackEntryInteraction?.views ?? true,
-  }
+  return resolveAutoTrackEntryInteractionOptions(trackEntryInteraction)
 }
 
 export function createOptimizationRootSdkBinding<TSdk extends OptimizationRootSdk>(

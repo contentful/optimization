@@ -25,25 +25,6 @@ interface AudienceState {
  */
 export const AUDIENCES_TAG = 'ctfl-opt-preview-audiences' as const
 
-/**
- * Type guard that checks whether an element is an {@link Audiences}.
- *
- * @param element - The element to check.
- * @returns `true` if the element's tag matches {@link AUDIENCES_TAG}.
- *
- * @example
- * ```ts
- * if (isAudiences(el)) {
- *   el.audienceGroups = groups
- * }
- * ```
- *
- * @public
- */
-export function isAudiences(element?: Element): element is Audiences {
-  return element?.tagName === AUDIENCES_TAG.toUpperCase()
-}
-
 /** @internal */
 function matchesSearchQuery(value: string | undefined, searchQuery: string): boolean {
   if (!value) return false
@@ -284,20 +265,4 @@ export class Audiences extends LitElement {
       color: rgb(156, 163, 175);
     }
   `
-}
-
-/**
- * Registers the {@link Audiences} custom element if not already defined.
- *
- * @example
- * ```ts
- * defineAudiences()
- * ```
- *
- * @public
- */
-export function defineAudiences(): void {
-  if (!customElements.get(AUDIENCES_TAG)) {
-    customElements.define(AUDIENCES_TAG, Audiences)
-  }
 }

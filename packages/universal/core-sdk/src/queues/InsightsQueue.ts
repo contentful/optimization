@@ -1,3 +1,4 @@
+import type { InsightsApiClientRequestOptions } from '@contentful/optimization-api-client'
 import {
   InsightsEvent as InsightsEventSchema,
   parseWithFriendlyError,
@@ -25,8 +26,15 @@ interface InsightsQueueOptions {
   eventInterceptors: LifecycleInterceptors['event']
   flushPolicy: ResolvedQueueFlushPolicy
   insightsApi: {
-    sendBatchEvents: (batches: BatchInsightsEventArray) => Promise<boolean>
+    sendBatchEvents: (
+      batches: BatchInsightsEventArray,
+      options?: InsightsApiClientRequestOptions,
+    ) => Promise<boolean>
   }
+}
+
+interface InsightsQueueFlushOptions extends InsightsApiClientRequestOptions {
+  force?: boolean
 }
 
 /**
@@ -117,8 +125,8 @@ export class InsightsQueue {
     this.reconcilePeriodicFlushTimer()
   }
 
-  async flush(options: { force?: boolean } = {}): Promise<void> {
-    const { force = false } = options
+  async flush(options: InsightsQueueFlushOptions = {}): Promise<void> {
+    const { force = false, beacon } = options
 
     if (this.flushRuntime.shouldSkip({ force, isOnline: !!onlineSignal.value })) return
 
@@ -135,7 +143,7 @@ export class InsightsQueue {
     this.flushRuntime.markFlushStarted()
 
     try {
-      const sendSuccess = await this.trySendBatches(batches)
+      const sendSuccess = await this.trySendBatches(batches, beacon ? { beacon } : undefined)
 
       if (sendSuccess) {
         this.queuedInsightsByProfile.clear()
@@ -162,9 +170,14 @@ export class InsightsQueue {
     return batches
   }
 
-  private async trySendBatches(batches: BatchInsightsEventArray): Promise<boolean> {
+  private async trySendBatches(
+    batches: BatchInsightsEventArray,
+    options: InsightsApiClientRequestOptions | undefined,
+  ): Promise<boolean> {
     try {
-      return await this.insightsApi.sendBatchEvents(batches)
+      if (options === undefined) return await this.insightsApi.sendBatchEvents(batches)
+
+      return await this.insightsApi.sendBatchEvents(batches, options)
     } catch (error) {
       coreLogger.warn('Insights queue flush request threw an error', error)
       return false

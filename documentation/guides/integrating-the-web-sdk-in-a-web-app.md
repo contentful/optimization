@@ -105,7 +105,7 @@ The full guide uses these setup items:
 | ------------------------------------------------------------------- | ------------------------------ | ------------------------ | ------------------------------------------------------------------------------------ |
 | `@contentful/optimization-web` package                              | Required for first integration | Yes                      | Application package manager                                                          |
 | Contentful delivery client package                                  | Required for first integration | Yes                      | Application package manager and Contentful client factory                            |
-| Optimization client ID and environment                              | Required for first integration | Yes                      | Runtime configuration passed to `new ContentfulOptimization(...)`                    |
+| Optimization client ID and optional non-`main` environment          | Required for first integration | Yes                      | Runtime configuration passed to `new ContentfulOptimization(...)`                    |
 | Contentful space, environment, and access token                     | Required for first integration | Yes                      | Application-owned Contentful client configuration                                    |
 | Non-default Contentful CDA host                                     | Common but policy-dependent    | No                       | Application-owned Contentful client host or endpoint configuration                   |
 | Application Contentful locale and SDK Experience/event locale       | Required for first integration | Yes                      | Router, i18n layer, and SDK `locale`                                                 |
@@ -141,8 +141,8 @@ across components, route handlers, and interaction handlers.
 1. Install `@contentful/optimization-web` and the Contentful delivery client your app uses.
 2. Read runtime configuration from your bundler, server-injected environment, or deployment
    configuration.
-3. Pass the Optimization `clientId`, `environment`, optional API base URLs, `locale`, and app
-   metadata to the constructor.
+3. Pass the Optimization `clientId`, optional non-`main` `environment`, optional API base URLs,
+   `locale`, and app metadata to the constructor.
 4. Keep the instance in a module-level binding or another singleton container. The browser runtime
    attaches it to `window.contentfulOptimization` and throws if another instance is already active.
 5. Call `destroy()` only for explicit teardown paths such as tests, hot reload, or a framework root
@@ -662,7 +662,9 @@ import {
 defineContentfulOptimizationElements()
 
 const root = document.querySelector<ContentfulOptimizationRootElement>('ctfl-optimization-root')
-const entry = document.querySelector<ContentfulOptimizedEntryElement>('ctfl-optimized-entry')
+const entry = document.querySelector<ContentfulOptimizedEntryElement>(
+  'ctfl-optimized-entry[data-entry-id]',
+)
 
 if (root) {
   // Structured SDK options must be assigned as properties, not string attributes.
@@ -670,8 +672,13 @@ if (root) {
   root.trackEntryInteraction = { hovers: false }
 }
 
-if (entry) {
-  // Contentful entries are structured objects, so baselineEntry is property-only.
+if (entry?.dataset.entryId) {
+  const baselineEntry = await contentfulClient.getEntry(entry.dataset.entryId, {
+    include: 10,
+    locale: APP_LOCALE,
+  })
+
+  // The SDK resolves after app code supplies the structured baseline entry object.
   entry.baselineEntry = baselineEntry
   entry.addEventListener('ctfl-entry-resolved', (event) => {
     const { detail } = event as CustomEvent<ContentfulOptimizedEntryEventDetail>
@@ -685,9 +692,11 @@ if (entry) {
 
 ```html
 <ctfl-optimization-root client-id="your-optimization-client-id" environment="main" locale="en-US">
-  <ctfl-optimized-entry id="hero-entry"></ctfl-optimized-entry>
+  <ctfl-optimized-entry data-entry-id="hero-entry-id"></ctfl-optimized-entry>
 </ctfl-optimization-root>
 ```
+
+The `data-entry-id` attribute above is app-owned lookup metadata, not SDK fetch configuration.
 
 `@contentful/optimization-web/web-components` is side-effect-free. Custom elements are registered
 only when `defineContentfulOptimizationElements()` runs. If the root owns the SDK instance,
@@ -728,13 +737,8 @@ read preview content, and talks to an existing Web SDK instance through the brow
 **Adapt this to your use case:**
 
 ```ts
-let previewPanelAttachmentStarted = false
-
 function attachPreviewPanel(): void {
   if (import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL !== 'true') return
-  if (previewPanelAttachmentStarted) return
-
-  previewPanelAttachmentStarted = true
 
   void import('@contentful/optimization-web-preview-panel')
     .then(async ({ default: attachOptimizationPreviewPanel }) => {
@@ -746,7 +750,6 @@ function attachPreviewPanel(): void {
       })
     })
     .catch((error: unknown) => {
-      previewPanelAttachmentStarted = false
       console.warn('Failed to attach the Contentful Optimization preview panel.', error)
     })
 }

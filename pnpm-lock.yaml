@@ -249,9 +249,6 @@ importers:
       '@contentful/optimization-core':
         specifier: workspace:*
         version: link:../../universal/core-sdk
-      es-toolkit:
-        specifier: 'catalog:'
-        version: 1.46.0
     devDependencies:
       '@contentful/rich-text-html-renderer':
         specifier: 'catalog:'
@@ -464,12 +461,6 @@ importers:
       '@contentful/optimization-api-schemas':
         specifier: workspace:*
         version: link:../api-schemas
-      es-toolkit:
-        specifier: 'catalog:'
-        version: 1.46.0
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6
     devDependencies:
       '@microsoft/api-extractor':
         specifier: 'catalog:'
@@ -773,9 +764,6 @@ importers:
       contentful:
         specifier: 'catalog:'
         version: 11.10.5(debug@4.3.7)
-      es-toolkit:
-        specifier: 'catalog:'
-        version: 1.46.0
       lit:
         specifier: ^3.3.2
         version: 3.3.2

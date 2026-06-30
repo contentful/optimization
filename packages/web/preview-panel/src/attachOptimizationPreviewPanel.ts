@@ -8,30 +8,34 @@ import {
 } from '@contentful/optimization-core/preview-support'
 import type ContentfulOptimization from '@contentful/optimization-web'
 import { isRecord, type OptimizationEntry } from '@contentful/optimization-web/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-web/logger'
 import type { ChainModifiers, ContentfulClientApi } from 'contentful'
 import {
   AUDIENCE_SWITCH_CHANGE,
+  AUDIENCE_TAG,
+  Audience,
   OPTIMIZATION_CHANGE,
-  defineAudience,
   isAudienceSwitchChangeEvent,
   type AudienceSwitchChangeDetail,
 } from './components/audience'
-import { defineAudienceSwitch } from './components/audience-switch'
-import { defineAudiences } from './components/audiences'
-import { defineIndicator } from './components/indicator'
-import { defineMatchedText } from './components/matched-text'
-import { defineOptimization, isRecordRadioGroupChangeEvent } from './components/optimization'
+import { AUDIENCE_SWITCH_TAG, AudienceSwitch } from './components/audience-switch'
+import { AUDIENCES_TAG, Audiences } from './components/audiences'
+import { INDICATOR_TAG, Indicator } from './components/indicator'
+import { MATCHED_TEXT_TAG, MatchedText } from './components/matched-text'
+import {
+  OPTIMIZATION_TAG,
+  Optimization,
+  isRecordRadioGroupChangeEvent,
+} from './components/optimization'
 import {
   PANEL_DRAWER_TOGGLE,
   PANEL_RESET,
   PANEL_TAG,
-  definePanel,
+  Panel,
   isDrawerToggleEvent,
-  isPanel,
 } from './components/panel'
-import { defineSearch } from './components/search'
+import { SEARCH_TAG, Search } from './components/search'
 import { getAllEntries, isOptimizationEntry } from './lib/entries'
-import { createScopedLogger } from './logger'
 
 declare global {
   interface Window {
@@ -52,6 +56,22 @@ const storageLogger = createScopedLogger('PreviewPanelStorage')
 const EMPTY_OVERRIDES: OverrideState = {
   audiences: {},
   selectedOptimizations: {},
+}
+const PREVIEW_PANEL_ELEMENTS: Array<readonly [string, CustomElementConstructor]> = [
+  [INDICATOR_TAG, Indicator],
+  [MATCHED_TEXT_TAG, MatchedText],
+  [OPTIMIZATION_TAG, Optimization],
+  [SEARCH_TAG, Search],
+  [AUDIENCE_SWITCH_TAG, AudienceSwitch],
+  [AUDIENCE_TAG, Audience],
+  [AUDIENCES_TAG, Audiences],
+  [PANEL_TAG, Panel],
+]
+
+function definePreviewPanelComponents(): void {
+  for (const [tag, elementClass] of PREVIEW_PANEL_ELEMENTS) {
+    if (!customElements.get(tag)) customElements.define(tag, elementClass)
+  }
 }
 
 /** @internal */
@@ -243,14 +263,7 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
 
   const initialOverrides = loadOverridesFromStorage()
 
-  defineIndicator()
-  defineMatchedText()
-  defineOptimization()
-  defineSearch()
-  defineAudienceSwitch()
-  defineAudience()
-  defineAudiences()
-  definePanel()
+  definePreviewPanelComponents()
 
   const [audienceCollection, optimizationCollection] = await Promise.all([
     getAllEntries(contentful, 'nt_audience'),
@@ -264,7 +277,7 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
   const experienceDefinitions = createExperienceDefinitions(optimizationCollection)
 
   const panel = document.createElement(PANEL_TAG)
-  if (!isPanel(panel))
+  if (!(panel instanceof Panel))
     throw new Error(
       '[ContentfulOptimization Preview Panel] The preview panel cannot be initialized; contact support',
     )

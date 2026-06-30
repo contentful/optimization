@@ -11,7 +11,7 @@
  */
 
 import { createScopedLogger } from '@contentful/optimization-core/logger'
-import { safeCallAsync } from '../../../lib'
+import { safeCallAsync } from '../../../lib/safeCall'
 import {
   ensureSweeper,
   finalizeDroppedState,

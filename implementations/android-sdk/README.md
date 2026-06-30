@@ -127,11 +127,13 @@ Run one Maestro suite:
 pnpm implementation:run -- android-sdk test:e2e:compose -- --flow preview-panel
 ```
 
-From `implementations/android-sdk/`, the equivalent local runner is:
+From `implementations/android-sdk/`, the equivalent Compose-only local runner is:
 
 ```sh
-./scripts/run-e2e.sh --flow preview-panel
+APP_PACKAGE=com.contentful.optimization.app ./scripts/run-e2e.sh --flow preview-panel
 ```
+
+Omit `APP_PACKAGE` to run the same suite against both Compose and XML Views.
 
 See [`scripts/README.md`](./scripts/README.md) for emulator, AVD, and environment-variable details.
 
@@ -158,8 +160,8 @@ The E2E suite is run from the command line rather than an IDE run configuration;
 
 Use this app when you need a debuggable native Android surface for changes in
 `packages/android/ContentfulOptimization` or the shared JS bridge. The Gradle project includes the
-SDK module from the workspace through a composite build, so app builds compile the Kotlin source and
-package the local bridge asset rather than a published AAR.
+SDK module from the workspace as an included Gradle subproject, so app builds compile the Kotlin
+source and package the local bridge asset rather than a published AAR.
 
 The normal loop is:
 

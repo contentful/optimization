@@ -21,31 +21,33 @@
 > The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 Reference implementation demonstrating `@contentful/optimization-nextjs` in a Next.js App Router
-application with personalized server first paint and browser-side takeover after state handoff. The
-app imports only Next.js SDK subpaths:
+application with server-provided Optimization state handoff and browser-side entry resolution after
+startup. For SDK runtime APIs, app code imports Next.js SDK package subpaths:
 
 - `@contentful/optimization-nextjs/server` in Server Components and server-only modules
 - `@contentful/optimization-nextjs/client` in Client Components
+- `@contentful/optimization-nextjs/api-schemas` in components that need SDK schema guards
 - `@contentful/optimization-nextjs/request-handler` in proxy
 
-The Next.js SDK adapter delegates server work internally, so this implementation does not import,
-configure, or externalize lower-level SDK packages directly.
+The Next.js SDK adapter delegates server and browser SDK work internally, so this implementation
+does not import, configure, or externalize lower-level SDK packages directly for Optimization
+runtime work.
 
 ## What this demonstrates
 
-Use this implementation when you need a Next.js example where the server personalizes first paint
-and the browser SDK owns reactive updates after server-to-browser state handoff. It demonstrates:
+Use this implementation when you need a Next.js example where the server fetches Contentful entries
+and Optimization state, then the browser SDK resolves entries and owns reactive updates after state
+handoff. It demonstrates:
 
-- Personalized server-rendered first paint
+- Server request context forwarding through proxy
 - Server-to-browser state handoff through `NextjsOptimizationState`
-- Client-side takeover with `OptimizedEntry` after browser startup
+- Browser-side entry resolution with `OptimizedEntry` after browser startup
 - Live re-resolution after consent, identify, reset, and client-side route changes
-- `initialPageEvent="skip"` only when the server already resolved the same initial page
-- Preview panel attachment as developer/editor tooling in development, preview, and staging app
-  environments
+- `initialPageEvent="skip"` when the server request helper already emitted the initial page event
+- Preview panel attachment behind `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`
 
-This hybrid pattern keeps the initial HTML stable and personalized, then lets the browser SDK own
-reactive entry resolution after state handoff.
+This hybrid pattern keeps App Router server fetching in place, hands Optimization state to the
+browser, and lets the browser SDK own entry resolution and reactive updates after startup.
 
 ## Architecture
 
@@ -55,18 +57,20 @@ First request
     createNextjsOptimizationContextHandler()
       forwards sanitized request URL context for Server Components
 
-  lib/optimization-server.ts
+  lib/optimization.ts
     createNextjsOptimization()
-    getNextjsServerOptimizationData()
+    getOptimizationData()
+      calls getNextjsServerOptimizationData() with cookies() and headers()
 
   app/page.tsx and app/page-two/page.tsx
-    call getNextjsServerOptimizationData() with cookies() and headers()
-    render NextjsOptimizationState near server-rendered optimized content
+    fetch CDA entries server-side
+    render NextjsOptimizationState with server Optimization data
 
   app/layout.tsx
     owns one OptimizationRoot for browser takeover and route tracking
 
 Browser runtime
+  NextjsOptimizationState hydrates Optimization data into the nearest runtime
   NextAppAutoPageTracker emits route page events
   OptimizedEntry resolves entries from current selectedOptimizations
   LiveUpdatesProvider controls reactive re-resolution
@@ -74,11 +78,11 @@ Browser runtime
 
 ## CDA locale handling
 
-The implementation defines one `APP_LOCALE`, passes it to the Next.js SDK server helpers, uses it
-for event context, and passes it directly to Contentful CDA fetches. Browser client resolution
-reuses the single-locale entries supplied by the server. Do not use `contentful.js` `withAllLocales`
-or raw CDA `locale=*`; SDK entry resolution expects direct single-locale fields such as
-`fields.nt_experiences` and `fields.nt_variants`.
+The implementation defines one locale at `appConfig.locale`, passes it to the Next.js SDK server
+helpers, uses it for event context, and passes it directly to Contentful CDA fetches. Browser client
+resolution reuses the single-locale entries supplied by the server. Do not use `contentful.js`
+`withAllLocales` or raw CDA `locale=*`; SDK entry resolution expects direct single-locale fields
+such as `fields.nt_experiences` and `fields.nt_variants`.
 
 See
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
@@ -87,9 +91,9 @@ and
 
 ## Route strategy
 
-Use Server Components for first-paint-sensitive routes and Client Components for routes where
-instant personalization reactions matter after browser startup. This implementation demonstrates
-both:
+Use Server Components for routes that fetch Contentful entries and request Optimization state, and
+Client Components for entry surfaces that resolve and react after browser startup. This
+implementation demonstrates both:
 
 - The home route fetches entries server-side and passes them into client rendering
 - The page-two route demonstrates client navigation and browser-observable page events
@@ -134,9 +138,9 @@ pnpm implementation:run -- nextjs-sdk_hybrid serve
 pnpm implementation:run -- nextjs-sdk_hybrid serve:stop
 ```
 
-The preview panel attaches when `PUBLIC_APP_ENVIRONMENT` or `VERCEL_ENV` resolves to `development`,
-`preview`, or `staging`. Production builds without one of those app environments leave the panel
-out.
+The preview panel attaches when `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL` is `true`. The default
+`.env.example` keeps it disabled for mock-safe local runs; enable the flag only for development,
+preview, or staging builds where editor tooling is intended.
 
 ## Running E2E tests
 
@@ -147,10 +151,11 @@ pnpm setup:e2e:nextjs-sdk_hybrid
 pnpm test:e2e:nextjs-sdk_hybrid
 ```
 
-The E2E suite mirrors the React SDK reference implementation first: same shared scenarios,
-assertions, fixtures, and structure where behavior is shared. It adds Next.js-specific browser tests
-only for server-to-browser state handoff, proxy request URL context, server first paint, full reload
-server re-resolution, `ServerOptimizedEntry` attributes, and skipped duplicate initial page events.
+The E2E suite reuses the shared `lib/e2e-web` browser scenarios for CSR and hydration behavior under
+the hybrid app configuration. It covers shared variant resolution, tracking, navigation, live
+updates, offline queue recovery, and the hybrid-specific hydration check that a consented server
+handoff does not issue a duplicate client Experience request. Package unit tests cover lower-level
+Next.js adapter request-context, `ServerOptimizedEntry`, and initial page-event helper behavior.
 
 Use Playwright UI or codegen when needed:
 

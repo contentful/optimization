@@ -129,13 +129,12 @@ Only `clientId` is required.
 
 Common `api` options:
 
-| Option              | Required? | Default                                    | Description                                                    |
-| ------------------- | --------- | ------------------------------------------ | -------------------------------------------------------------- |
-| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                |
-| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                  |
-| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Experience API features to apply to each request               |
-| `preflight`         | No        | `false`                                    | Aggregate a new profile state without storing it               |
-| `beaconHandler`     | No        | `undefined`                                | Custom handler for enqueueing Insights API batches when needed |
+| Option              | Required? | Default                                    | Description                                      |
+| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------ |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                  |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                    |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Experience API features to apply to each request |
+| `preflight`         | No        | `false`                                    | Aggregate a new profile state without storing it |
 
 Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalTimeout`,
 `onFailedAttempt`, and `onRequestTimeout`. Default retries intentionally apply only to HTTP `503`

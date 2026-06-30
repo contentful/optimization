@@ -22,16 +22,6 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
-    },
-    "./logger": {
-      "import": {
-        "types": "./dist/logger.d.mts",
-        "default": "./dist/logger.mjs"
-      },
-      "require": {
-        "types": "./dist/logger.d.cts",
-        "default": "./dist/logger.cjs"
-      }
     }
   },
   "files": [
@@ -65,7 +55,6 @@
     "@leeoniya/ufuzzy": "^1.0.19",
     "@lit/context": "^1.1.6",
     "contentful": "catalog:",
-    "es-toolkit": "catalog:",
     "lit": "^3.3.2"
   },
   "devDependencies": {

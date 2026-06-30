@@ -436,6 +436,23 @@ describe('ContentfulOptimization', () => {
     expect(getCookie(ANONYMOUS_ID_COOKIE_LEGACY)).toBeUndefined()
   })
 
+  it('writes the current anonymous ID cookie when migrating a matching legacy cookie', () => {
+    const legacyAnonymousId = 'legacy-anonymous-id'
+    localStorage.setItem(ANONYMOUS_ID_KEY, legacyAnonymousId)
+    setCookie(ANONYMOUS_ID_COOKIE_LEGACY, legacyAnonymousId)
+    const web = new ContentfulOptimization(config)
+    const initializeFromCookieValues: unknown = Reflect.get(web, 'initializeFromCookieValues')
+
+    if (typeof initializeFromCookieValues !== 'function') {
+      throw new Error('initializeFromCookieValues is unavailable')
+    }
+
+    initializeFromCookieValues.call(web, legacyAnonymousId, legacyAnonymousId)
+
+    expect(getCookie(ANONYMOUS_ID_COOKIE)).toBe(legacyAnonymousId)
+    expect(getCookie(ANONYMOUS_ID_COOKIE_LEGACY)).toBeUndefined()
+  })
+
   it('does not load persisted profile continuity when persistence consent is denied', () => {
     localStorage.setItem(PERSISTENCE_CONSENT_KEY, 'denied')
     localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(DEFAULT_PROFILE))
@@ -573,6 +590,39 @@ describe('ContentfulOptimization', () => {
         method: 'track',
       }),
     )
+  })
+
+  it('uses normal Insights delivery for explicit flushes', async () => {
+    const web = new ContentfulOptimization({
+      ...config,
+      defaults: { consent: true, profile: DEFAULT_PROFILE },
+    })
+    const sendBatchEvents = rs.spyOn(web.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+
+    await web.trackClick({ componentId: 'hero-banner' })
+    await web.flush()
+
+    expect(sendBatchEvents).toHaveBeenCalledWith(expect.any(Array))
+    expect(sendBatchEvents.mock.calls[0]?.[1]).toBeUndefined()
+  })
+
+  it('uses Beacon for lifecycle Insights flushes', async () => {
+    const web = new ContentfulOptimization({
+      ...config,
+      defaults: { consent: true, profile: DEFAULT_PROFILE },
+    })
+    const sendBeacon = rs.spyOn(window.navigator, 'sendBeacon').mockReturnValue(true)
+    const sendBatchEvents = rs.spyOn(web.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+
+    await web.trackClick({ componentId: 'hero-banner' })
+    window.dispatchEvent(new Event('pagehide'))
+    await Promise.resolve()
+    await Promise.resolve()
+
+    const beacon = sendBatchEvents.mock.calls[0]?.[1]?.beacon
+    expect(typeof beacon).toBe('function')
+    expect(beacon?.('/collect', '[]')).toBe(true)
+    expect(sendBeacon).toHaveBeenCalledWith('/collect', '[]')
   })
 
   it('allows creating a new instance after destroy', () => {

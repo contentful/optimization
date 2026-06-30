@@ -1,8 +1,8 @@
 // tests/utils.ts
 import { rs } from '@rstest/core'
+import { ENTRY_ID_ATTRIBUTE, ENTRY_SELECTOR } from '../constants'
 import type { EntryInteractionDetector } from '../entry-tracking/EntryInteractionDetector'
-import ElementExistenceObserver from '../entry-tracking/registry/ElementExistenceObserver'
-import { EntryElementRegistry } from '../entry-tracking/registry/EntryElementRegistry'
+import { isEntryElement, type EntryElement } from '../entry-tracking/resolveTrackingPayload'
 
 interface IOEntryInit {
   target: Element
@@ -188,8 +188,6 @@ export function deferred<T = void>(): {
 }
 
 interface EntryTrackingHarness<TStartOptions = never, TElementOptions = never> {
-  readonly entryElementRegistry: EntryElementRegistry
-  readonly entryExistenceObserver: ElementExistenceObserver
   readonly tracker: {
     start: (options?: TStartOptions) => void
     stop: () => void
@@ -201,25 +199,95 @@ interface EntryTrackingHarness<TStartOptions = never, TElementOptions = never> {
   readonly cleanup: () => void
 }
 
+function collectCandidateElements(
+  nodes: Iterable<Node>,
+  requireConnected: boolean,
+  target: Set<Element>,
+): void {
+  for (const node of nodes) {
+    if (node instanceof Element) {
+      if (!requireConnected || node.isConnected) target.add(node)
+      node.querySelectorAll('*').forEach((element) => {
+        if (!requireConnected || element.isConnected) target.add(element)
+      })
+      continue
+    }
+
+    if (!(node instanceof DocumentFragment)) continue
+
+    node.querySelectorAll('*').forEach((element) => {
+      if (!requireConnected || element.isConnected) target.add(element)
+    })
+  }
+}
+
 export function createEntryTrackingHarness<TStartOptions = never, TElementOptions = never>(
   detector: EntryInteractionDetector<TStartOptions, TElementOptions>,
 ): EntryTrackingHarness<TStartOptions, TElementOptions> {
-  const entryExistenceObserver = new ElementExistenceObserver()
-  const entryElementRegistry = new EntryElementRegistry(entryExistenceObserver)
-  let cleanupRegistrySubscription: (() => void) | undefined = undefined
+  const trackedEntries = new Map<Element, EntryElement>()
+  let mutationObserver: MutationObserver | undefined = undefined
+
+  const addEntry = (element: Element): void => {
+    if (!isEntryElement(element) || trackedEntries.has(element)) return
+
+    trackedEntries.set(element, element)
+    detector.onEntryAdded?.(element)
+  }
+
+  const removeEntry = (element: Element): void => {
+    const entryElement = trackedEntries.get(element)
+    if (!entryElement) return
+
+    trackedEntries.delete(element)
+    detector.onEntryRemoved?.(entryElement)
+  }
+
+  const processMutationRecords = (records: readonly MutationRecord[]): void => {
+    const addedNodes = new Set<Node>()
+    const removedNodes = new Set<Node>()
+
+    records.forEach((record) => {
+      if (record.type === 'attributes' && record.attributeName === ENTRY_ID_ATTRIBUTE) {
+        removedNodes.add(record.target)
+        addedNodes.add(record.target)
+        return
+      }
+
+      record.addedNodes.forEach((node) => {
+        if (removedNodes.delete(node)) return
+        addedNodes.add(node)
+      })
+      record.removedNodes.forEach((node) => {
+        if (addedNodes.delete(node)) return
+        removedNodes.add(node)
+      })
+    })
+
+    const removedElements = new Set<Element>()
+    const addedElements = new Set<Element>()
+    collectCandidateElements(removedNodes, false, removedElements)
+    collectCandidateElements(addedNodes, true, addedElements)
+    removedElements.forEach(removeEntry)
+    addedElements.forEach(addEntry)
+  }
 
   const tracker = {
     start: (options?: TStartOptions): void => {
       detector.start(options)
-      cleanupRegistrySubscription = entryElementRegistry.subscribe({
-        onAdded: detector.onEntryAdded,
-        onRemoved: detector.onEntryRemoved,
-        onError: detector.onError,
+      mutationObserver?.disconnect()
+      mutationObserver = new MutationObserver(processMutationRecords)
+      mutationObserver.observe(document, {
+        attributeFilter: [ENTRY_ID_ATTRIBUTE],
+        attributes: true,
+        childList: true,
+        subtree: true,
       })
+      document.querySelectorAll(ENTRY_SELECTOR).forEach(addEntry)
     },
     stop: (): void => {
-      cleanupRegistrySubscription?.()
-      cleanupRegistrySubscription = undefined
+      mutationObserver?.disconnect()
+      mutationObserver = undefined
+      trackedEntries.clear()
       detector.stop()
     },
     setAuto: (enabled: boolean): void => {
@@ -237,13 +305,9 @@ export function createEntryTrackingHarness<TStartOptions = never, TElementOption
   }
 
   return {
-    entryElementRegistry,
-    entryExistenceObserver,
     tracker,
     cleanup: (): void => {
       tracker.stop()
-      entryElementRegistry.disconnect()
-      entryExistenceObserver.disconnect()
     },
   }
 }

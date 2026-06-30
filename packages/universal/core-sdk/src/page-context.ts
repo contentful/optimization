@@ -12,19 +12,9 @@ export function createPageContextFromUrl(
 
   return {
     path: url.pathname,
-    query: toQueryDictionary(url.searchParams),
+    query: Object.fromEntries(url.searchParams),
     referrer: referrer ?? '',
     search: url.search,
     url: url.toString(),
   }
-}
-
-function toQueryDictionary(searchParams: URLSearchParams): Record<string, string> {
-  const query: Record<string, string> = {}
-
-  searchParams.forEach((value, key) => {
-    query[key] = value
-  })
-
-  return query
 }

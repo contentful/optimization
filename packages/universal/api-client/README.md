@@ -84,27 +84,30 @@ Common Experience API options:
 | Option            | Required? | Default                               | Description                                     |
 | ----------------- | --------- | ------------------------------------- | ----------------------------------------------- |
 | `baseUrl`         | No        | `'https://experience.ninetailed.co/'` | Base URL for the Experience API                 |
-| `enabledFeatures` | No        | `['ip-enrichment', 'location']`       | Experience API features for each request        |
+| `enabledFeatures` | No        | `['ip-enrichment', 'location']`       | Experience API features for mutation requests   |
 | `ip`              | No        | `undefined`                           | IP address override for Experience API analysis |
 | `locale`          | No        | API default                           | Locale query parameter for localized responses  |
-| `plainText`       | No        | `false`                               | Sends performance-critical endpoints as text    |
+| `plainText`       | No        | Endpoint-specific                     | Sends single-profile mutation endpoints as text |
 | `preflight`       | No        | `false`                               | Aggregates a profile state without storing it   |
 
-All Experience options except `baseUrl` can also be provided per request. `locale` is sent as the
-Experience API `locale` query parameter and can localize profile fields such as `location.city` and
-`location.country`. Higher-level SDK merge-tag helpers resolve against the profile values returned
-by the Experience API, so applications that render localized Contentful entries commonly pass the
-same locale used for the CDA entry fetch. Pass a valid locale tag; invalid locale syntax can fail
-Experience API request validation. See
+Experience mutation request options except `baseUrl` can also be provided per mutation request.
+`getProfile` is a read request and only uses `locale` from per-call options; mutation-only options
+such as `enabledFeatures`, `ip`, `plainText`, and `preflight` do not apply. Single-profile mutation
+requests default to `plainText: true` and send `text/plain` unless overridden. Batch profile updates
+with `upsertManyProfiles` are the JSON-default exception and use `plainText: false` by default.
+`locale` is sent as the Experience API `locale` query parameter and can localize profile fields such
+as `location.city` and `location.country`. Higher-level SDK merge-tag helpers resolve against the
+profile values returned by the Experience API, so applications that render localized Contentful
+entries commonly pass the same locale used for the CDA entry fetch. Pass a valid locale tag; invalid
+locale syntax can fail Experience API request validation. See
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for how this request locale relates to Contentful and SDK-resolved locales.
 
 Common Insights API options:
 
-| Option          | Required? | Default                                    | Description                                           |
-| --------------- | --------- | ------------------------------------------ | ----------------------------------------------------- |
-| `baseUrl`       | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                         |
-| `beaconHandler` | No        | `undefined`                                | Custom handler for enqueueing event batches if needed |
+| Option    | Required? | Default                                    | Description                   |
+| --------- | --------- | ------------------------------------------ | ----------------------------- |
+| `baseUrl` | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API |
 
 Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalTimeout`,
 `onFailedAttempt`, and `onRequestTimeout`. Default retries intentionally apply only to HTTP `503`
@@ -137,13 +140,16 @@ Common methods include `getProfile`, `createProfile`, `updateProfile`, `upsertPr
 Insights API methods are scoped to `client.insights` and send analytics event batches:
 
 ```ts
-await client.insights.sendBatchEvents({
-  profile,
-  events: [viewEvent],
-})
+await client.insights.sendBatchEvents([
+  {
+    profile,
+    events: [viewEvent],
+  },
+])
 ```
 
-Insights endpoints do not return response data.
+Insights endpoints do not return response data. For last-chance browser lifecycle delivery, pass a
+per-call `beacon` sender that receives the request URL and already serialized body.
 
 ### Fetch helpers
 

@@ -617,21 +617,26 @@ export async function GET(request: Request) {
 }
 ```
 
-### Unsupported SSR concerns and hybrid handoff
+### Client islands and hybrid handoff
 
 **Integration category:** Advanced or production-only
 
-The SSR pattern intentionally keeps entry resolution on the server. These concerns are not part of
-this guide's runtime pattern:
+The SSR pattern keeps `ServerOptimizedEntry` content server-authoritative. Content resolved and
+rendered on the server stays fixed after browser startup until the next server request. Client-side
+SDK actions such as `identify()`, `consent()`, `reset()`, live updates, or preview-panel changes do
+not rewrite that server-rendered markup in place.
 
-- Browser-side `OptimizedEntry` re-resolution after identify, consent, or reset.
-- `liveUpdates` for continuously changing optimized entries.
-- Preview-panel takeover that forces client-side variant changes.
-- SPA-only pages where the browser owns every entry decision after initial load.
+SSR routes can still include browser-owned islands when the page needs a localized reactive area.
+Render those islands with the client entry, such as `OptimizedEntry`, `useOptimizedEntry()`, or
+`LiveUpdatesProvider`, and treat that island as browser-owned after hydration. This is useful for
+secondary widgets, preview/editor tools, or content blocks where `liveUpdates` and preview-panel
+variant changes are acceptable without changing the route's primary server-first content model.
 
-Use the hybrid guide when any of those concerns are product requirements. Keep SSR routes for pages
-where first-paint stability, SEO-friendly HTML, and a server-authoritative content decision matter
-more than immediate browser-side content changes.
+Use the hybrid guide when browser takeover is the route's main content model: the same primary entry
+must render server-personalized HTML for first paint and then continue re-resolving in the browser
+after identify, consent, reset, live-update, or preview-panel changes. Keep this SSR guide for
+routes where first-paint stability, SEO-friendly HTML, and server-authoritative primary content
+matter more than immediate browser-side changes to the main content.
 
 ## Production checks
 

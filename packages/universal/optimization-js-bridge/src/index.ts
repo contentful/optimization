@@ -208,6 +208,8 @@ let experienceNameMap: Record<string, string> = {}
 let anonymousId: string | undefined = undefined
 const currentScreenTracker = new AcceptedCurrentStateTracker<string>()
 const acceptedStickyViewKeys = new Set<string>()
+const SDK_NOT_INITIALIZED_ERROR = 'SDK not initialized. Call initialize() first.'
+const NULL_JSON = JSON.stringify(null)
 
 const serializeEventEmissionResult = (result: EventEmissionResult): string => {
   if (!result.accepted) return JSON.stringify({ accepted: false })
@@ -291,6 +293,70 @@ const rejectInvalidPayload = (
   return true
 }
 
+const getCurrentInstance = (onError: (error: string) => void): CoreStateful | null => {
+  if (instance) return instance
+  onError(SDK_NOT_INITIALIZED_ERROR)
+  return null
+}
+
+const bridgeErrorMessage = (err: unknown): string =>
+  err instanceof Error ? err.message : String(err)
+
+const reportBridgeTask = <T>(
+  task: Promise<T>,
+  onSuccess: (json: string) => void,
+  onError: (error: string) => void,
+  serialize: (result: T) => string,
+): void => {
+  task
+    .then((result) => {
+      onSuccess(serialize(result))
+    })
+    .catch((err: unknown) => {
+      onError(bridgeErrorMessage(err))
+    })
+}
+
+const runBridgeTask = <T>(
+  onSuccess: (json: string) => void,
+  onError: (error: string) => void,
+  run: (currentInstance: CoreStateful) => Promise<T>,
+  serialize: (result: T) => string,
+): void => {
+  const currentInstance = getCurrentInstance(onError)
+  if (!currentInstance) return
+
+  reportBridgeTask(run(currentInstance), onSuccess, onError, serialize)
+}
+
+const runValidatedBridgeTask = <T>(
+  method: string,
+  payload: unknown,
+  fields: readonly PayloadFieldRule[],
+  onSuccess: (json: string) => void,
+  onError: (error: string) => void,
+  run: (currentInstance: CoreStateful) => Promise<T>,
+  serialize: (result: T) => string,
+): void => {
+  const currentInstance = getCurrentInstance(onError)
+  if (!currentInstance) return
+  if (rejectInvalidPayload(validatePayload(method, payload, fields), onError)) return
+
+  reportBridgeTask(run(currentInstance), onSuccess, onError, serialize)
+}
+
+const readBridgeState = (): BridgeState => ({
+  profile: signals.profile.value ?? null,
+  consent: signals.consent.value,
+  persistenceConsent: signals.persistenceConsent.value,
+  canOptimize: signals.canOptimize.value,
+  optimizationPossible: instance?.states.optimizationPossible.current ?? false,
+  experienceRequestState: signals.experienceRequestState.value,
+  changes: signals.changes.value ?? null,
+  locale: signals.locale.value ?? null,
+  selectedOptimizations: signals.selectedOptimizations.value ?? null,
+})
+
 const bridge: Bridge = {
   initialize(config: BridgeConfig) {
     if (instance) {
@@ -367,19 +433,7 @@ const bridge: Bridge = {
         anonymousId = profile.id
       }
 
-      const state: BridgeState = {
-        profile: profile ?? null,
-        consent: signals.consent.value,
-        persistenceConsent,
-        canOptimize: signals.canOptimize.value,
-        optimizationPossible: instance?.states.optimizationPossible.current ?? false,
-        experienceRequestState: signals.experienceRequestState.value,
-        changes: signals.changes.value ?? null,
-        locale: signals.locale.value ?? null,
-        selectedOptimizations: signals.selectedOptimizations.value ?? null,
-      }
-
-      nativeGlobal.__nativeOnStateChange?.(JSON.stringify(state))
+      nativeGlobal.__nativeOnStateChange?.(JSON.stringify(readBridgeState()))
     })
 
     disposeEventEffect = effect(() => {
@@ -393,136 +447,95 @@ const bridge: Bridge = {
   },
 
   identify(payload, onSuccess, onError) {
-    if (!instance) {
-      onError('SDK not initialized. Call initialize() first.')
-      return
-    }
-    if (rejectInvalidPayload(validatePayload('identify', payload, identifyPayloadFields), onError))
-      return
-
-    instance
-      .identify(payload)
-      .then((result) => {
-        onSuccess(serializeEventEmissionResult(result))
-      })
-      .catch((err: unknown) => {
-        onError(err instanceof Error ? err.message : String(err))
-      })
+    runValidatedBridgeTask(
+      'identify',
+      payload,
+      identifyPayloadFields,
+      onSuccess,
+      onError,
+      (currentInstance) => currentInstance.identify(payload),
+      serializeEventEmissionResult,
+    )
   },
 
   page(payload, onSuccess, onError) {
-    if (!instance) {
-      onError('SDK not initialized. Call initialize() first.')
-      return
-    }
-    if (rejectInvalidPayload(validatePayload('page', payload, []), onError)) return
-
-    instance
-      .page(payload)
-      .then((result) => {
-        onSuccess(serializeEventEmissionResult(result))
-      })
-      .catch((err: unknown) => {
-        onError(err instanceof Error ? err.message : String(err))
-      })
+    runValidatedBridgeTask(
+      'page',
+      payload,
+      [],
+      onSuccess,
+      onError,
+      (currentInstance) => currentInstance.page(payload),
+      serializeEventEmissionResult,
+    )
   },
 
   screen(payload, onSuccess, onError) {
-    if (!instance) {
-      onError('SDK not initialized. Call initialize() first.')
-      return
-    }
-    if (rejectInvalidPayload(validatePayload('screen', payload, screenPayloadFields), onError))
-      return
-
-    instance
-      .screen({
-        name: payload.name,
-        properties: payload.properties ?? {},
-      })
-      .then((result) => {
-        onSuccess(serializeEventEmissionResult(result))
-      })
-      .catch((err: unknown) => {
-        onError(err instanceof Error ? err.message : String(err))
-      })
+    runValidatedBridgeTask(
+      'screen',
+      payload,
+      screenPayloadFields,
+      onSuccess,
+      onError,
+      (currentInstance) =>
+        currentInstance.screen({
+          name: payload.name,
+          properties: payload.properties ?? {},
+        }),
+      serializeEventEmissionResult,
+    )
   },
 
   trackCurrentScreen(payload, onSuccess, onError) {
-    if (!instance) {
-      onError('SDK not initialized. Call initialize() first.')
-      return
-    }
-    if (
-      rejectInvalidPayload(
-        validatePayload('trackCurrentScreen', payload, screenPayloadFields),
-        onError,
-      )
+    runValidatedBridgeTask(
+      'trackCurrentScreen',
+      payload,
+      screenPayloadFields,
+      onSuccess,
+      onError,
+      (currentInstance) =>
+        currentScreenTracker.emitIfNeeded({
+          key: payload.routeKey ?? payload.name,
+          isAllowed: currentInstance.hasConsent('screen'),
+          emit: () =>
+            currentInstance.screen({
+              name: payload.name,
+              properties: payload.properties ?? {},
+            }),
+        }),
+      serializeEventEmissionResult,
     )
-      return
-
-    const currentInstance = instance
-
-    currentScreenTracker
-      .emitIfNeeded({
-        key: payload.routeKey ?? payload.name,
-        isAllowed: currentInstance.hasConsent('screen'),
-        emit: async () =>
-          await currentInstance.screen({
-            name: payload.name,
-            properties: payload.properties ?? {},
-          }),
-      })
-      .then((result) => {
-        onSuccess(serializeEventEmissionResult(result))
-      })
-      .catch((err: unknown) => {
-        onError(err instanceof Error ? err.message : String(err))
-      })
   },
 
   track(payload, onSuccess, onError) {
-    if (!instance) {
-      onError('SDK not initialized. Call initialize() first.')
-      return
-    }
-    if (rejectInvalidPayload(validatePayload('track', payload, trackPayloadFields), onError)) return
-
-    instance
-      .track({
-        ...payload,
-        event: payload.event,
-        properties: payload.properties ?? {},
-      })
-      .then((result) => {
-        onSuccess(serializeEventEmissionResult(result))
-      })
-      .catch((err: unknown) => {
-        onError(err instanceof Error ? err.message : String(err))
-      })
+    runValidatedBridgeTask(
+      'track',
+      payload,
+      trackPayloadFields,
+      onSuccess,
+      onError,
+      (currentInstance) =>
+        currentInstance.track({
+          ...payload,
+          event: payload.event,
+          properties: payload.properties ?? {},
+        }),
+      serializeEventEmissionResult,
+    )
   },
 
   flush(onSuccess, onError) {
-    if (!instance) {
-      onError('SDK not initialized. Call initialize() first.')
-      return
-    }
-
-    instance
-      .flush()
-      .then(() => {
-        onSuccess(JSON.stringify(null))
-      })
-      .catch((err: unknown) => {
-        onError(err instanceof Error ? err.message : String(err))
-      })
+    runBridgeTask(
+      onSuccess,
+      onError,
+      (currentInstance) => currentInstance.flush(),
+      () => NULL_JSON,
+    )
   },
 
   trackView(payload, onSuccess, onError) {
-    if (!instance) {
-      onError('SDK not initialized. Call initialize() first.')
-      return
-    }
+    const currentInstance = getCurrentInstance(onError)
+    if (!currentInstance) return
     if (
       rejectInvalidPayload(validatePayload('trackView', payload, trackViewPayloadFields), onError)
     )
@@ -535,40 +548,32 @@ const bridge: Bridge = {
       acceptedStickyViewKeys.has(stickyKey),
     )
 
-    instance
-      .trackView({
+    reportBridgeTask(
+      currentInstance.trackView({
         ...corePayload,
         sticky: shouldSendSticky ? true : undefined,
-      })
-      .then((result) => {
+      }),
+      onSuccess,
+      onError,
+      (result) => {
         if (shouldRememberStickyEntryViewResult(shouldSendSticky, result.accepted)) {
           acceptedStickyViewKeys.add(stickyKey)
         }
-        onSuccess(serializeEventEmissionResult(result))
-      })
-      .catch((err: unknown) => {
-        onError(err instanceof Error ? err.message : String(err))
-      })
+        return serializeEventEmissionResult(result)
+      },
+    )
   },
 
   trackClick(payload, onSuccess, onError) {
-    if (!instance) {
-      onError('SDK not initialized. Call initialize() first.')
-      return
-    }
-    if (
-      rejectInvalidPayload(validatePayload('trackClick', payload, trackClickPayloadFields), onError)
+    runValidatedBridgeTask(
+      'trackClick',
+      payload,
+      trackClickPayloadFields,
+      onSuccess,
+      onError,
+      (currentInstance) => currentInstance.trackClick(payload),
+      () => NULL_JSON,
     )
-      return
-
-    instance
-      .trackClick(payload)
-      .then(() => {
-        onSuccess(JSON.stringify(null))
-      })
-      .catch((err: unknown) => {
-        onError(err instanceof Error ? err.message : String(err))
-      })
   },
 
   consent(accept) {
@@ -584,6 +589,7 @@ const bridge: Bridge = {
   reset() {
     if (!instance) return
     overrideManager?.resetAll()
+    anonymousId = undefined
     currentScreenTracker.reset()
     acceptedStickyViewKeys.clear()
     instance.reset()
@@ -594,7 +600,7 @@ const bridge: Bridge = {
   },
 
   getFlag(name: string): string {
-    if (!instance) return JSON.stringify(null)
+    if (!instance) return NULL_JSON
     return JSON.stringify(instance.getFlag(name) ?? null)
   },
 
@@ -662,10 +668,7 @@ const bridge: Bridge = {
       audienceDefinitions = createAudienceDefinitions(audienceEntries)
       experienceDefinitions = createExperienceDefinitions(experienceEntries)
       experienceNameMap = createExperienceNameMap(experienceEntries)
-      audienceNameMap = {}
-      for (const { id, name } of audienceDefinitions) {
-        audienceNameMap[id] = name
-      }
+      audienceNameMap = Object.fromEntries(audienceDefinitions.map(({ id, name }) => [id, name]))
 
       return JSON.stringify({
         audienceCount: audienceDefinitions.length,
@@ -701,15 +704,7 @@ const bridge: Bridge = {
     )
 
     return JSON.stringify({
-      profile: signals.profile.value ?? null,
-      consent: signals.consent.value,
-      persistenceConsent: signals.persistenceConsent.value,
-      canOptimize: signals.canOptimize.value,
-      optimizationPossible: instance?.states.optimizationPossible.current ?? false,
-      experienceRequestState: signals.experienceRequestState.value,
-      changes: signals.changes.value ?? null,
-      locale: signals.locale.value ?? null,
-      selectedOptimizations: signals.selectedOptimizations.value ?? null,
+      ...readBridgeState(),
       previewPanelOpen: signals.previewPanelOpen.value,
       audienceOverrides,
       variantOverrides,
@@ -727,18 +722,7 @@ const bridge: Bridge = {
   },
 
   getState(): string {
-    const state: BridgeState = {
-      profile: signals.profile.value ?? null,
-      consent: signals.consent.value,
-      persistenceConsent: signals.persistenceConsent.value,
-      canOptimize: signals.canOptimize.value,
-      optimizationPossible: instance?.states.optimizationPossible.current ?? false,
-      experienceRequestState: signals.experienceRequestState.value,
-      changes: signals.changes.value ?? null,
-      locale: signals.locale.value ?? null,
-      selectedOptimizations: signals.selectedOptimizations.value ?? null,
-    }
-    return JSON.stringify(state)
+    return JSON.stringify(readBridgeState())
   },
 
   hasConsent(method: string): boolean {

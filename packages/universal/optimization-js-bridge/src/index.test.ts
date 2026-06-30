@@ -16,9 +16,42 @@ const createCallbacks = (): {
   onSuccess: rs.fn(),
 })
 
+const PROFILE_RESPONSE = {
+  data: {
+    changes: [],
+    experiences: [],
+    profile: {
+      audiences: [],
+      id: 'profile-after-reset',
+      location: {},
+      random: 0,
+      session: {
+        activeSessionLength: 0,
+        averageSessionLength: 0,
+        count: 1,
+        id: 'session-after-reset',
+        isReturningVisitor: false,
+        landingPage: {
+          path: '',
+          query: {},
+          referrer: '',
+          search: '',
+          url: '',
+        },
+      },
+      stableId: 'profile-after-reset',
+      traits: {},
+    },
+  },
+  error: null,
+  message: 'ok',
+}
+
 describe('bridge contract', () => {
   afterEach(() => {
     bridge.destroy()
+    rs.restoreAllMocks()
+    rs.unstubAllGlobals()
   })
 
   it('installs a callable bridge object on globalThis', () => {
@@ -172,5 +205,37 @@ describe('bridge contract', () => {
 
     expect(viewCallbacks.onError).not.toHaveBeenCalled()
     expect(clickCallbacks.onError).not.toHaveBeenCalled()
+  })
+
+  it('clears the bridge anonymous ID when reset is called', async () => {
+    const fetchMock = rs.fn<typeof fetch>(
+      async () => new Response(JSON.stringify(PROFILE_RESPONSE)),
+    )
+    rs.stubGlobal('fetch', fetchMock)
+    bridge.initialize({
+      clientId: 'test-client',
+      environment: 'main',
+      defaults: {
+        anonymousId: 'bridge-anonymous-id',
+        consent: true,
+        persistenceConsent: true,
+      },
+    })
+    bridge.reset()
+
+    await new Promise<void>((resolve, reject) => {
+      bridge.page(
+        {},
+        () => {
+          resolve()
+        },
+        (error) => {
+          reject(new Error(error))
+        },
+      )
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/profiles$/)
   })
 })

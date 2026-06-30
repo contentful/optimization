@@ -13,7 +13,8 @@ UIKit-based:
 ## Quick start
 
 This path assumes your application policy permits Optimization by default. If your app requires
-explicit opt-in, wire the consent section before you emit events or render personalized content.
+explicit opt-in with no pre-consent SDK events, set `allowedEventTypes: []` before mounting this
+path or defer `.trackScreen(name:)` until consent is accepted.
 
 1. Add the Swift Package through Swift Package Manager. In Xcode, add the package dependency with
    `https://github.com/contentful/optimization.swift`, or add the package to `Package.swift`.
@@ -498,7 +499,7 @@ OptimizationScrollView {
 
 ```swift
 OptimizedEntry(entry: cta) { resolvedEntry in
-    Button("Open") {
+    Button {
         // Use resolved fields here when the selected variant changes the destination.
         navigate(to: resolvedEntry)
     } label: {
@@ -641,8 +642,9 @@ struct FlaggedBadge: View {
 }
 ```
 
-Flag subscriptions can emit flag-view events for delivered values, so apply the same consent and
-analytics governance you use for other SDK events.
+One-time flag reads and flag subscriptions can attempt flag-view tracking when consent or the
+allow-list and current profile allow it, so apply the same analytics governance you use for other
+SDK events.
 
 ### Live updates
 

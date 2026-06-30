@@ -1,6 +1,7 @@
 import { createScopedLogger } from '../logger'
 import type { BaseFetchMethodOptions, FetchMethod, FetchMethodCallbackOptions } from './Fetch'
 import { fetchInputToString } from './fetchInputToString'
+import { resolveFetchMethod } from './resolveFetchMethod'
 
 const logger = createScopedLogger('ApiClient:Retry')
 
@@ -97,6 +98,8 @@ export interface RetryFetchMethodOptions extends BaseFetchMethodOptions {
  * @internal
  */
 interface RetryFetchCallbackOptions extends RetryFetchMethodOptions {
+  fetchMethod: FetchMethod
+
   /**
    * Abort controller used to cancel the underlying fetch requests.
    */
@@ -127,7 +130,7 @@ interface RetryFetchCallbackOptions extends RetryFetchMethodOptions {
 function createRetryFetchCallback({
   apiName = 'Optimization',
   controller,
-  fetchMethod = fetch,
+  fetchMethod,
   init,
   url,
 }: RetryFetchCallbackOptions) {
@@ -223,18 +226,20 @@ async function delayRetry(intervalTimeout: number): Promise<void> {
  */
 export function createRetryFetchMethod({
   apiName = 'Optimization',
-  fetchMethod = fetch,
+  fetchMethod,
   intervalTimeout = DEFAULT_INTERVAL_TIMEOUT,
   onFailedAttempt,
   retries = DEFAULT_RETRY_COUNT,
 }: RetryFetchMethodOptions = {}): FetchMethod {
+  const resolvedFetchMethod = resolveFetchMethod(fetchMethod)
+
   return async (url, init) => {
     const controller = new AbortController()
     const maxAttempts = retries + 1
     const attemptFetch = createRetryFetchCallback({
       apiName,
       controller,
-      fetchMethod,
+      fetchMethod: resolvedFetchMethod,
       init,
       url,
     })

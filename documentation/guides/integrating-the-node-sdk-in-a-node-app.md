@@ -713,14 +713,20 @@ const { entry: resolvedHeroEntry, selectedOptimization } = optimization.resolveO
   baselineHeroEntry,
   pageResponse?.selectedOptimizations,
 )
+const selectedReplacementEntryId = selectedOptimization?.variants[baselineHeroEntry.sys.id]
+const selectedVariantEntryId =
+  selectedReplacementEntryId && selectedReplacementEntryId !== baselineHeroEntry.sys.id
+    ? selectedReplacementEntryId
+    : undefined
 
 analytics.track('Quote Requested', {
   plan: 'enterprise',
   contentful_profile_id: canForwardOptimizationProfileId ? pageResponse?.profile.id : undefined,
   contentful_experience_id: selectedOptimization?.experienceId,
   contentful_variant_index: selectedOptimization?.variantIndex,
-  contentful_variant_entry_id: selectedOptimization ? resolvedHeroEntry.sys.id : undefined,
   contentful_baseline_entry_id: baselineHeroEntry.sys.id,
+  contentful_rendered_entry_id: resolvedHeroEntry.sys.id,
+  contentful_selected_variant_entry_id: selectedVariantEntryId,
 })
 ```
 
@@ -763,7 +769,7 @@ per-request API options.
    types.
 3. Use `onEventBlocked` for diagnostics when consent blocks a request-bound event call.
 4. Use request-scoped `experienceOptions` and `insightsOptions` for advanced API behavior such as
-   `preflight`, IP override, or a custom Insights `beaconHandler`.
+   `preflight`, IP override, or a custom Insights `beacon` sender.
 
 **Follow this pattern:**
 

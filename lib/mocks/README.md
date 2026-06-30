@@ -23,10 +23,10 @@ reference implementations. It is an internal monorepo support package, not a pub
 
 ## Using mocks in unit tests
 
-Ensure you have `msw` installed in your package:
+Ensure you have both `mocks` and `msw` installed in your package:
 
 ```sh
-pnpm add -D msw
+pnpm add -D mocks@workspace:* msw
 ```
 
 Add the following code to your unit test setup script (commonly in `test/setup.ts`):
@@ -57,8 +57,8 @@ afterEach(() => {
 ```
 
 With this setup, any calls to _supported_ Experience/Insights endpoints will be handled by the MSW
-handlers. MSW must additionally ensure that any _unsupported_ endpoints are captured and logged with
-warnings.
+handlers. Unsupported endpoints fail as unhandled requests unless you configure a custom
+`onUnhandledRequest` handler.
 
 > [!WARNING]
 >
@@ -84,16 +84,16 @@ implementation's processes.
 
 ## Updating local mocks & fixtures
 
-To fetch space configuration data (Content Types, etc.) and entries in a given space, use the
-following command:
+To fetch space configuration data (Content Types, etc.) and the supported fixture entry subset from
+a given space, use the following command:
 
 ```sh
 pnpm --filter mocks fetch:ctfl
 ```
 
-Space data will be placed within `lib/mocks/src/contentful/data/space/ctfl-space-data.json`. Entries
-will be placed in the `lib/mocks/src/contentful/data/entries` directory, with a file for each entry
-named according to its entry ID.
+Space data will be placed within `lib/mocks/src/contentful/data/space/ctfl-space-data.json`.
+Supported fixture entries will be placed in the `lib/mocks/src/contentful/data/entries` directory,
+with a file for each entry named according to its entry ID.
 
 > [!WARNING]
 >

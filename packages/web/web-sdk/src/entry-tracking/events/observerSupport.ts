@@ -30,14 +30,6 @@ export const addVisibilityChangeListener = (handler: () => void): (() => void) |
   }
 }
 
-export const Num = {
-  n: (value: unknown, fallback: number): number => (typeof value === 'number' ? value : fallback),
-  clamp01: (value: number | undefined, fallback: number): number =>
-    Math.min(1, Math.max(0, Num.n(value, fallback))),
-  nonNeg: (value: number | undefined, fallback: number): number =>
-    Math.max(0, Num.n(value, fallback)),
-}
-
 export const clearFireTimer = (state: FireTimerState): void => {
   if (state.fireTimer !== null) {
     clearTimeout(state.fireTimer)

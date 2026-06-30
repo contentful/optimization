@@ -4,6 +4,7 @@ import { createRetryFetchMethod } from './createRetryFetchMethod'
 const TEST_URL = 'https://example.com/endpoint'
 
 describe('createRetryFetchMethod', () => {
+  const originalFetch = globalThis.fetch
   let fetchMock: ReturnType<typeof rs.fn>
   let onFailedAttempt: ReturnType<typeof rs.fn>
 
@@ -15,7 +16,29 @@ describe('createRetryFetchMethod', () => {
   })
 
   afterEach(() => {
+    rs.stubGlobal('fetch', originalFetch)
     rs.useRealTimers()
+  })
+
+  it('uses global fetch when fetchMethod is omitted', async () => {
+    const fakeResponse = new Response('ok', { status: 200 })
+    fetchMock.mockResolvedValue(fakeResponse)
+    rs.stubGlobal('fetch', fetchMock)
+
+    const fetchWithRetry = createRetryFetchMethod()
+
+    const result = await fetchWithRetry(TEST_URL, {})
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(result).toBe(fakeResponse)
+  })
+
+  it('throws a configuration error when no fetch method is available', () => {
+    rs.stubGlobal('fetch', undefined)
+
+    expect(() => createRetryFetchMethod()).toThrow(
+      'No fetch implementation available. Provide a fetchMethod.',
+    )
   })
 
   it('calls fetchMethod and returns the response when successful', async () => {

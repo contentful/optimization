@@ -1,6 +1,6 @@
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import { CAN_ADD_LISTENERS } from '../constants'
-import { safeCall } from '../lib'
+import { safeCall } from '../lib/safeCall'
 
 const logger = createScopedLogger('Web:Network')
 

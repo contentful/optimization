@@ -2,6 +2,7 @@ import { mockLogger } from 'mocks'
 import { createTimeoutFetchMethod } from './createTimeoutFetchMethod'
 
 describe('createTimeoutFetchMethod', () => {
+  const originalFetch = globalThis.fetch
   let fetchMock: ReturnType<typeof rs.fn>
   let onRequestTimeout: ReturnType<typeof rs.fn>
 
@@ -14,7 +15,32 @@ describe('createTimeoutFetchMethod', () => {
   })
 
   afterEach(() => {
+    rs.stubGlobal('fetch', originalFetch)
     rs.useRealTimers()
+  })
+
+  it('uses global fetch when fetchMethod is omitted', async () => {
+    const fakeResponse = new Response('ok', { status: 200 })
+    fetchMock.mockResolvedValue(fakeResponse)
+    rs.stubGlobal('fetch', fetchMock)
+
+    const fetchWithTimeout = createTimeoutFetchMethod({
+      requestTimeout: 1000,
+      onRequestTimeout,
+    })
+
+    const result = await fetchWithTimeout('http://test.com', {})
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(result).toBe(fakeResponse)
+  })
+
+  it('throws a configuration error when no fetch method is available', () => {
+    rs.stubGlobal('fetch', undefined)
+
+    expect(() => createTimeoutFetchMethod()).toThrow(
+      'No fetch implementation available. Provide a fetchMethod.',
+    )
   })
 
   it('calls fetchMethod and resolves response before timeout', async () => {

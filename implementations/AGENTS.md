@@ -4,9 +4,12 @@ Applies to reference implementations and shared implementation contracts under `
 
 ## Boundaries
 
-- Reference implementations demonstrate SDK integration patterns; reusable SDK behavior belongs in
-  `packages/`.
-- Keep apps small, example-oriented, and aligned with the public SDK surface they demonstrate.
+- Reference implementations are maintained SDK integration references, E2E targets, and concrete
+  consumer reference material. They are not demos or package-local `dev/` harnesses; do not dismiss
+  failures, stale flows, or docs gaps as demo-only.
+- Reusable SDK behavior belongs in `packages/`; reference implementations should consume the public
+  SDK surface the way customers do.
+- Keep apps small, consumer-oriented, and aligned with the public SDK surface they exercise.
 - CDA entry fetches used for SDK entry resolution must stay single-locale. Do not use
   `withAllLocales` or `locale=*`; choose the application Contentful locale in the implementation and
   pass it explicitly to CDA requests.
@@ -19,15 +22,15 @@ Applies to reference implementations and shared implementation contracts under `
 
 - Follow root Markdown rules and [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md).
 - Use the repo-standard header, implementation-specific `<h3>`, Readme/Guides/Reference/Contributing
-  navigation, pre-release warning, and an introduction naming the demonstrated SDK packages.
-- Use this default top-level order: header/navigation/warning, introduction naming the demonstrated
-  SDK package or native status, `## What this demonstrates`, optional near-top architecture notes,
+  navigation, pre-release warning, and an introduction naming the SDK packages they integrate.
+- Use this default top-level order: header/navigation/warning, introduction naming the integrated
+  SDK package or native status, `## What this covers`, optional near-top architecture notes,
   `## CDA locale handling`, `## Prerequisites`, `## Setup`, `## Running locally`,
   `## Running E2E tests`, implementation-specific maintainer notes, and `## Related`.
-- Keep the tone procedural and example-oriented, not a package API manual.
+- Keep the tone procedural and reference-oriented, not a package API manual.
 - Use `## Prerequisites`, `## Setup`, `## Running locally`, `## Running E2E tests`, and `## Related`
   when they fit the implementation.
-- Prefer monorepo-root setup/run commands, local `.env.example` guidance, and links to demonstrated
+- Prefer monorepo-root setup/run commands, local `.env.example` guidance, and links to integrated
   package READMEs, related implementations, shared mocks, or scenario contracts.
 - Keep ports, process cleanup, Docker, Playwright, Detox, Xcode, emulator, and PM2 details aligned
   with scripts and local `AGENTS.md`.

@@ -63,16 +63,16 @@ manages consent UX, controls routing, decides identity policy, and renders the f
 Decide these policies before initialization because they shape the client state the bridge receives
 at startup and the events it can emit before runtime consent changes:
 
-| Constraint           | iOS behavior                                                                                                                                                                                                                                                                                                |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Configuration        | `clientId` is required. `environment` defaults to `"main"`. `locale` configures the SDK Experience API and event locale; it does not choose the Contentful CDA locale for app-owned entry fetches.                                                                                                          |
-| Consent              | `state.consent` starts as unset unless `StorageDefaults.consent` or persisted SDK consent provides a value. Until event consent is `true`, iOS/native allow-list behavior lets only `identify` and `screen` emit by default.                                                                                |
-| Persistence consent  | Boolean `client.consent(true)` or `client.consent(false)` updates event consent and durable profile-continuity persistence consent together. Use split consent when event consent and durable profile continuity have separate policy decisions.                                                            |
-| Allowed event types  | `OptimizationConfig.allowedEventTypes` replaces the native default pre-consent allow-list. Pass `allowedEventTypes: []` for strict opt-in before any Optimization event, or pass a narrow custom list when legal and privacy review permits specific pre-consent events.                                    |
-| Storage availability | iOS stores consent and, when persistence consent is `true`, profile-continuity values in `UserDefaults`. If storage has no usable value or is cleared, the SDK starts from configured defaults and does not restore profile-continuity state from a previous process.                                       |
-| Preview mode         | The preview panel is an app opt-in surface. Mount it only in debug or internal flows. Opening the panel sets `client.isPreviewPanelOpen`; SwiftUI `OptimizedEntry` treats that state as a live-update override, while UIKit apps must subscribe and redraw to reflect preview changes.                      |
-| Offline behavior     | Event queues are in memory. Events queued while offline flush when connectivity returns or when the app moves toward the background. `QueuePolicy` can tune caps, retry, backoff, circuit behavior, and callbacks, but the SDK does not provide a durable outbox across process death.                      |
-| Configured defaults  | `StorageDefaults` are startup defaults and take precedence over persisted values. If the application persists user choices, leave consent and persistence defaults unset. Restore SDK-stored consent naturally, or call `client.consent(...)` from the resolved app policy instead of seeding every launch. |
+| Constraint           | iOS behavior                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Configuration        | `clientId` is required. `environment` defaults to `"main"`. `locale` configures the SDK Experience API and event locale; it does not choose the Contentful CDA locale for app-owned entry fetches.                                                                                                                                                                                                                     |
+| Consent              | `state.consent` starts as unset unless `StorageDefaults.consent` or persisted SDK consent provides a value. Until event consent is `true`, iOS/native allow-list behavior lets only `identify` and `screen` emit by default.                                                                                                                                                                                           |
+| Persistence consent  | Boolean `client.consent(true)` or `client.consent(false)` updates event consent and durable profile-continuity persistence consent together. Use split consent when event consent and durable profile continuity have separate policy decisions.                                                                                                                                                                       |
+| Allowed event types  | `OptimizationConfig.allowedEventTypes` replaces the native default pre-consent allow-list. Pass `allowedEventTypes: []` for strict opt-in before any Optimization event, or pass a narrow custom list when legal and privacy review permits specific pre-consent events.                                                                                                                                               |
+| Storage availability | iOS stores consent and, when persistence consent is `true`, profile-continuity values in `UserDefaults`. If storage has no usable value or is cleared, the SDK starts from configured defaults and does not restore profile-continuity state from a previous process.                                                                                                                                                  |
+| Preview mode         | The preview panel is an app opt-in surface. Mount it only in debug or internal flows. Opening the panel sets `client.isPreviewPanelOpen`; SwiftUI `OptimizedEntry` treats that state as a live-update override, while UIKit apps must subscribe and redraw to reflect preview changes.                                                                                                                                 |
+| Offline behavior     | Event queues are in memory. Events queued while offline flush when connectivity returns. On iOS/UIKit, app backgrounding triggers an online best-effort flush of queued events; it does not make an offline queue durable or flush while the device remains offline. `QueuePolicy` can tune caps, retry, backoff, circuit behavior, and callbacks, but the SDK does not provide a durable outbox across process death. |
+| Configured defaults  | `StorageDefaults` are startup defaults and take precedence over persisted values. If the application persists user choices, leave consent and persistence defaults unset. Restore SDK-stored consent naturally, or call `client.consent(...)` from the resolved app policy instead of seeding every launch.                                                                                                            |
 
 ## Lifecycle and main actor
 
@@ -81,7 +81,7 @@ at startup and the events it can emit before runtime consent changes:
 | Phase         | Behavior                                                                                                                                                                                                                                 |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Uninitialized | The client exists, but the bridge is not loaded. Async event APIs and `setLocale(_:)` throw `OptimizationError.notInitialized`; many sync read, resolve, consent, reset, and online-state APIs return `nil`, baseline content, or no-op. |
-| Initialized   | The bridge is loaded, startup defaults and eligible persisted state have been resolved, SDK state is available, and lifecycle/network observers are active.                                                                              |
+| Initialized   | The bridge is loaded, startup defaults and eligible persisted state have been resolved, SDK state is available, network observers are active, and iOS/UIKit app lifecycle observers are active when UIKit is available.                  |
 
 SwiftUI apps usually let `OptimizationRoot` call `initialize(config:)`. UIKit apps usually call
 `initialize(config:)` from scene or app startup before passing the client into view controllers.
@@ -259,9 +259,9 @@ SDK-managed entry interaction tracking uses these defaults:
 - Initial view event after 2 seconds at 80% visibility.
 - Periodic duration updates every 5 seconds while the entry remains visible.
 - Final duration update when the entry leaves view after a view event has already fired.
-- Backgrounding pauses active view cycles. If the cycle has already emitted a view event, `pause()`
-  emits a final duration update; foreground resume re-evaluates visibility and starts a fresh cycle
-  when the entry is still eligible.
+- On iOS/UIKit, backgrounding pauses active view cycles. If the cycle has already emitted a view
+  event, `pause()` emits a final duration update; foreground resume re-evaluates visibility and
+  starts a fresh cycle when the entry is still eligible.
 
 SwiftUI `OptimizedEntry` and UIKit `ViewTrackingController` can tune `minVisibleRatio`,
 `dwellTimeMs`, and `viewDurationUpdateIntervalMs` per entry. Wrap scrollable SwiftUI content in
@@ -303,9 +303,9 @@ to redraw in live mode while previewing; the SDK does not automatically rebuild 
 
 ## Offline and app lifecycle delivery
 
-The iOS SDK monitors network reachability and app lifecycle events. No configuration is required for
-the default offline path, and queueing and flushing use the same event-delivery model for SwiftUI
-and UIKit integrations.
+The SDK monitors network reachability. On iOS/UIKit, it also observes app lifecycle events. No
+configuration is required for the default offline path, and queueing and flushing use the same
+event-delivery model for SwiftUI and UIKit integrations.
 
 Default delivery behavior:
 
@@ -314,8 +314,9 @@ Default delivery behavior:
   the oldest offline events before accepting the next event.
 - Insights events batch in memory by profile and flush periodically or when the batch reaches the
   Core batch threshold.
-- Queued events flush when connectivity returns, and the SDK performs a best-effort flush when the
-  app moves toward the background.
+- Queued events flush when connectivity returns. On iOS/UIKit, the SDK also performs an online
+  best-effort flush when the app moves toward the background; if the device remains offline, queued
+  events wait for reconnect.
 - Queues do not survive process death. Keep one `OptimizationClient` alive for the app or scene
   lifetime to preserve queued events across transient connectivity changes.
 
@@ -323,8 +324,8 @@ Use `OptimizationConfig(queuePolicy:)` when production behavior needs non-defaul
 constraints. `QueuePolicy.offlineMaxEvents` changes the Experience offline cap, `QueueFlushPolicy`
 configures retry timing, backoff, jitter, failure thresholds, and circuit-open timing, and queue
 callbacks report offline drops, flush failures, circuit-open events, and recovery. Call
-`client.flush()` only for deliberate app-owned checkpoints; reconnect and background flushing
-already perform best-effort delivery.
+`client.flush()` only for deliberate app-owned checkpoints; reconnect flushing and iOS/UIKit
+background flushing already perform best-effort delivery.
 
 ## Related documentation
 
