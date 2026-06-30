@@ -1,13 +1,8 @@
 import { type ServerTrackingResolvedData } from '@contentful/optimization-nextjs/server'
 import { INLINES } from '@contentful/rich-text-types'
-import {
-  extendEntryRegistry,
-  loadPageEntries,
-  type ContentEntry,
-  type RichTextDocument,
-} from './contentful'
+import { fetchEntry, type ContentEntry, type RichTextDocument } from './contentful'
 import { getOptimizationData, optimization } from './optimization'
-import { isEntry, isRecord, resolveEntryLinks, toIdMap } from './util'
+import { isEntry, isRecord } from './util'
 
 type Profile = Parameters<typeof optimization.getMergeTagValue>[1]
 type SelectedOptimizations = Parameters<typeof optimization.resolveOptimizedEntry>[1]
@@ -60,7 +55,6 @@ function resolveMergeTags(
 function buildEntry(
   baselineEntry: ContentEntry,
   selectedOptimizations: SelectedOptimizations,
-  registry: Map<string, ContentEntry>,
   profile: Profile,
   visited: Set<string>,
   preResolved?: ReturnType<typeof optimization.resolveOptimizedEntry>,
@@ -69,17 +63,13 @@ function buildEntry(
 
   const resolved =
     preResolved ?? optimization.resolveOptimizedEntry(baselineEntry, selectedOptimizations)
-  const resolvedData = {
-    ...resolved,
-    entry: resolveEntryLinks(resolved.entry as ContentEntry, registry),
-  } as ServerTrackingResolvedData
-
+  const resolvedData = resolved as ServerTrackingResolvedData
   const resolvedEntry = resolvedData.entry as ContentEntry
   const fields = resolveMergeTags(resolvedEntry.fields, profile)
 
   const nested = (Array.isArray(fields.nested) ? fields.nested.filter(isEntry) : [])
     .filter((n) => !visited.has(n.sys.id))
-    .map((n) => buildEntry(n, selectedOptimizations, registry, profile, new Set(visited)))
+    .map((n) => buildEntry(n, selectedOptimizations, profile, new Set(visited)))
 
   return {
     baselineEntry,
@@ -96,7 +86,9 @@ function buildEntry(
 
 export async function loadPageData(entryIds: readonly string[]): Promise<ResolvedPageData> {
   const [entries, { data: optimizationData }] = await Promise.all([
-    loadPageEntries(entryIds),
+    Promise.all(entryIds.map(fetchEntry)).then((r) =>
+      r.filter((e): e is ContentEntry => e !== undefined),
+    ),
     getOptimizationData(),
   ])
   const selectedOptimizations = optimizationData?.selectedOptimizations
@@ -105,16 +97,10 @@ export async function loadPageData(entryIds: readonly string[]): Promise<Resolve
     optimization.resolveOptimizedEntry(entry, selectedOptimizations),
   )
 
-  const registry = toIdMap(entries)
-  await extendEntryRegistry(registry, [
-    ...entries,
-    ...resolvedVariants.map((r) => r.entry as ContentEntry),
-  ])
-
   const byId = new Map(
     entries.map((entry, i) => [
       entry.sys.id,
-      buildEntry(entry, selectedOptimizations, registry, profile, new Set(), resolvedVariants[i]),
+      buildEntry(entry, selectedOptimizations, profile, new Set(), resolvedVariants[i]),
     ]),
   )
 

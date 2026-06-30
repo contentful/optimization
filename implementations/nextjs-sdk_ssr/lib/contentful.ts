@@ -2,7 +2,7 @@ import type { Document } from '@contentful/rich-text-types'
 import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { createClient } from 'contentful'
 import { appConfig } from './config'
-import { collectLinkIds } from './util'
+import { isRecord } from './util'
 
 export interface ContentEntryFields {
   text?: EntryFieldTypes.Text | EntryFieldTypes.RichText
@@ -26,42 +26,48 @@ export const client = createClient({
   ...(basePath ? { basePath } : {}),
 })
 
-async function fetchEntry(entryId: string): Promise<ContentEntry | undefined> {
+function isLink(value: unknown): value is { sys: { type: 'Link'; linkType: 'Entry'; id: string } } {
+  return (
+    isRecord(value) &&
+    isRecord(value.sys) &&
+    value.sys.type === 'Link' &&
+    value.sys.linkType === 'Entry' &&
+    typeof value.sys.id === 'string'
+  )
+}
+
+async function resolveField(value: unknown, visited: Set<string>): Promise<unknown> {
+  if (isLink(value)) {
+    const fetched = await fetchEntry(value.sys.id)
+    if (!fetched) return value
+    return resolveLinks(fetched, visited)
+  }
+  if (Array.isArray(value)) return Promise.all(value.map((item) => resolveField(item, visited)))
+  return value
+}
+
+async function resolveLinks(entry: ContentEntry, visited: Set<string>): Promise<ContentEntry> {
+  if (visited.has(entry.sys.id)) return entry
+  visited.add(entry.sys.id)
+  const resolvedFields = Object.fromEntries(
+    await Promise.all(
+      Object.entries(entry.fields).map(async ([key, value]) => [
+        key,
+        await resolveField(value, visited),
+      ]),
+    ),
+  ) as ContentEntry['fields']
+  return { ...entry, fields: resolvedFields }
+}
+
+export async function fetchEntry(entryId: string): Promise<ContentEntry | undefined> {
   try {
-    return await client.getEntry<ContentEntrySkeleton>(entryId, {
+    const entry = await client.getEntry<ContentEntrySkeleton>(entryId, {
       include: ENTRY_INCLUDE_DEPTH,
       locale: appConfig.locale,
     })
+    return resolveLinks(entry, new Set())
   } catch {
     return undefined
-  }
-}
-
-export async function loadPageEntries(entryIds: readonly string[]): Promise<ContentEntry[]> {
-  const results = await Promise.all(entryIds.map(fetchEntry))
-  return results.filter((entry): entry is ContentEntry => entry !== undefined)
-}
-
-export async function extendEntryRegistry(
-  registry: Map<string, ContentEntry>,
-  entries: ContentEntry[],
-): Promise<void> {
-  const queue = new Set<string>()
-  for (const entry of entries) {
-    for (const id of collectLinkIds(entry)) {
-      if (!registry.has(id)) queue.add(id)
-    }
-  }
-  while (queue.size > 0) {
-    const fetched = await loadPageEntries([...queue])
-    queue.clear()
-    for (const entry of fetched) {
-      if (!registry.has(entry.sys.id)) {
-        registry.set(entry.sys.id, entry)
-        for (const id of collectLinkIds(entry)) {
-          if (!registry.has(id)) queue.add(id)
-        }
-      }
-    }
   }
 }
