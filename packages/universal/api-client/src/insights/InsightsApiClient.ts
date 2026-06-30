@@ -6,6 +6,7 @@ import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 import { createScopedLogger } from '../logger'
 
 const logger = createScopedLogger('ApiClient:Insights')
+const BEACON_FALLBACK_MESSAGE = 'beacon failed; falling back to fetch'
 
 /**
  * Default base URL for the Insights ingest API.
@@ -21,18 +22,18 @@ export const INSIGHTS_BASE_URL = 'https://ingest.insights.ninetailed.co/'
  */
 export interface InsightsApiClientRequestOptions {
   /**
-   * Handler used to enqueue events via the Beacon API or a similar mechanism.
+   * Sender used to enqueue serialized events via the Beacon API or a similar mechanism.
    *
    * @param url - Target URL for the batched events.
-   * @param data - Array of batched insights events to be sent.
+   * @param body - Serialized batched insights events to be sent.
    * @returns `true` if the events were successfully queued, `false` otherwise.
    *
    * @remarks
-   * When provided, this handler is preferred over direct `fetch` calls. If it
-   * returns `false`, the client falls back to emitting events immediately via
-   * `fetch`.
+   * This option is intended for last-chance lifecycle delivery. If it returns
+   * `false` or throws, the client falls back to emitting events immediately via
+   * `fetch` with `keepalive`.
    */
-  beaconHandler?: (url: string | URL, data: BatchInsightsEventArray) => boolean
+  beacon?: (url: string, body: string) => boolean
 }
 
 /**
@@ -40,14 +41,14 @@ export interface InsightsApiClientRequestOptions {
  *
  * @public
  */
-export interface InsightsApiClientConfig extends ApiConfig, InsightsApiClientRequestOptions {}
+export interface InsightsApiClientConfig extends ApiConfig {}
 
 /**
  * Client for sending analytics and insights events to the Ninetailed Insights API.
  *
  * @remarks
  * This client is optimized for sending batched events, optionally using a
- * custom beacon-like handler when available.
+ * custom beacon-like sender for last-chance lifecycle delivery.
  *
  * @example
  * ```ts
@@ -81,11 +82,6 @@ export default class InsightsApiClient extends ApiClientBase {
   protected readonly baseUrl: string
 
   /**
-   * Optional handler used to enqueue events via the Beacon API or a similar mechanism.
-   */
-  private readonly beaconHandler: InsightsApiClientRequestOptions['beaconHandler']
-
-  /**
    * Creates a new {@link InsightsApiClient} instance.
    *
    * @param config - Configuration for the Insights API client.
@@ -95,38 +91,34 @@ export default class InsightsApiClient extends ApiClientBase {
    * const client = new InsightsApiClient({
    *   clientId: 'org-id',
    *   environment: 'main',
-   *   beaconHandler: (url, data) => {
-   *     return navigator.sendBeacon(url.toString(), JSON.stringify(data))
-   *   },
    * })
    * ```
    */
   constructor(config: InsightsApiClientConfig) {
     super('Insights', config)
 
-    const { baseUrl, beaconHandler } = config
+    const { baseUrl } = config
 
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Set default for anything falsey
     this.baseUrl = baseUrl || INSIGHTS_BASE_URL
-    this.beaconHandler = beaconHandler
   }
 
   /**
    * Sends batches of insights events to the Ninetailed Insights API.
    *
    * @param batches - Array of event batches to send.
-   * @param options - Optional request options, including a per-call `beaconHandler`.
+   * @param options - Optional request options, including a per-call `beacon` sender.
    * @returns `true` when the event batch is successfully queued by the beacon
-   * handler or a direct request is successfully sent, `false` otherwise.
+   * sender or a direct request is successfully sent, `false` otherwise.
    *
    * @remarks
-   * If a `beaconHandler` is provided (either in the method call or in the
-   * client configuration) it will be invoked first. When the handler returns
-   * `true`, the events are considered successfully queued and no network
-   * request is made by this method.
+   * If a `beacon` sender is provided, it will be invoked first with the
+   * serialized request body. When the sender returns `true`, the events are
+   * considered successfully queued and no network request is made by this
+   * method.
    *
-   * If the handler is missing or returns `false`, the events are emitted
-   * immediately via `fetch`.
+   * If the sender is missing, returns `false`, or throws, the events are
+   * emitted immediately via `fetch`.
    *
    * @example
    * ```ts
@@ -135,11 +127,9 @@ export default class InsightsApiClient extends ApiClientBase {
    *
    * @example
    * ```ts
-   * // Override beaconHandler for a single call
+   * // Use Beacon for a last-chance lifecycle flush
    * const success = await insightsClient.sendBatchEvents(batches, {
-   *   beaconHandler: (url, data) => {
-   *     return navigator.sendBeacon(url.toString(), JSON.stringify(data))
-   *   },
+   *   beacon: (url, body) => navigator.sendBeacon(url, body),
    * })
    * ```
    */
@@ -147,26 +137,30 @@ export default class InsightsApiClient extends ApiClientBase {
     batches: BatchInsightsEventArray,
     options: InsightsApiClientRequestOptions = {},
   ): Promise<boolean> {
-    const { beaconHandler = this.beaconHandler } = options
+    const { beacon } = options
 
     const url = new URL(
       `v1/organizations/${this.clientId}/environments/${this.environment}/events`,
       this.baseUrl,
     )
+    const urlString = url.toString()
 
     const body = parseWithFriendlyError(BatchInsightsEventArray, batches)
+    const serializedBody = JSON.stringify(body)
 
-    if (typeof beaconHandler === 'function') {
-      logger.debug('Queueing events via beaconHandler')
+    if (beacon) {
+      logger.debug('Queueing events via beacon')
 
-      const beaconSuccessfullyQueued = beaconHandler(url, body)
+      try {
+        const beaconSuccessfullyQueued = beacon(urlString, serializedBody)
 
-      if (beaconSuccessfullyQueued) {
-        return true
-      } else {
-        logger.warn(
-          'beaconHandler failed to queue events; events will be emitted immediately via fetch',
-        )
+        if (beaconSuccessfullyQueued) {
+          return true
+        }
+
+        logger.warn(BEACON_FALLBACK_MESSAGE)
+      } catch (error) {
+        logger.warn(BEACON_FALLBACK_MESSAGE, error)
       }
     }
 
@@ -177,13 +171,13 @@ export default class InsightsApiClient extends ApiClientBase {
     logger.debug(`"${requestName}" request body:`, body)
 
     try {
-      await this.fetch(url.toString(), {
+      await this.fetch(urlString, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(body),
-        keepalive: true,
+        body: serializedBody,
+        keepalive: !!beacon,
       })
 
       logger.debug(`"${requestName}" request successfully completed`)

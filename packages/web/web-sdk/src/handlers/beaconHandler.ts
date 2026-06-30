@@ -1,10 +1,8 @@
-import type { BatchInsightsEventArray } from '@contentful/optimization-core/api-schemas'
-
 /**
- * Send a batch of analytics events using `navigator.sendBeacon`.
+ * Send a serialized analytics payload using `navigator.sendBeacon`.
  *
  * @param url - The endpoint URL that receives the beacon request.
- * @param events - The batch of events to serialize and send.
+ * @param body - Serialized event payload to send.
  * @returns `true` if the user agent successfully queued the data for transfer,
  * otherwise `false`.
  *
@@ -14,7 +12,7 @@ import type { BatchInsightsEventArray } from '@contentful/optimization-core/api-
  *
  * @example
  * ```ts
- * const ok = beaconHandler('/analytics/batch', batchEvents)
+ * const ok = beaconHandler('/analytics/batch', JSON.stringify(batchEvents))
  * if (!ok) {
  *   // Optionally fall back to XHR/fetch
  * }
@@ -22,10 +20,6 @@ import type { BatchInsightsEventArray } from '@contentful/optimization-core/api-
  *
  * @public
  */
-export function beaconHandler(url: string | URL, events: BatchInsightsEventArray): boolean {
-  const blobData = new Blob([JSON.stringify(events)], {
-    type: 'text/plain',
-  })
-
-  return window.navigator.sendBeacon(url, blobData)
+export function beaconHandler(url: string, body: string): boolean {
+  return window.navigator.sendBeacon(url, body)
 }

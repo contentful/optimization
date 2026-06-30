@@ -31,7 +31,7 @@ export interface CoreStatelessRequestOptions extends Pick<
  */
 export interface CoreStatelessInsightsOptions extends Pick<
   InsightsApiClientRequestOptions,
-  'beaconHandler'
+  'beacon'
 > {}
 
 /**

@@ -23,7 +23,6 @@ const ENABLE_PREVIEW_PANEL = import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_
 type LogLevel = 'debug' | 'warn' | 'error'
 
 const previewPanelLogger = createScopedLogger('ReactWebReference:PreviewPanel')
-let previewPanelAttachmentStarted = false
 
 function resolveLogLevel(): LogLevel {
   const raw = import.meta.env.PUBLIC_OPTIMIZATION_LOG_LEVEL?.trim().toLowerCase()
@@ -36,11 +35,10 @@ function resolveLogLevel(): LogLevel {
 }
 
 function attachPreviewPanel(): void {
-  if (!ENABLE_PREVIEW_PANEL || previewPanelAttachmentStarted) {
+  if (!ENABLE_PREVIEW_PANEL) {
     return
   }
 
-  previewPanelAttachmentStarted = true
   void import('@contentful/optimization-web-preview-panel')
     .then(async ({ default: attachOptimizationPreviewPanel }) => {
       await attachOptimizationPreviewPanel({
@@ -49,7 +47,6 @@ function attachPreviewPanel(): void {
       })
     })
     .catch((error: unknown) => {
-      previewPanelAttachmentStarted = false
       previewPanelLogger.warn('Failed to attach the Contentful Optimization preview panel.', error)
     })
 }

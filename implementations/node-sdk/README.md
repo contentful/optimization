@@ -32,8 +32,8 @@ entry resolution, merge-tag rendering, profile-aware event calls, and local mock
 
 The server creates one stateless Node SDK instance at module load and passes request-specific
 options directly to stateless event methods inside each incoming request handler. Because the
-application explicitly decides when to call the Node SDK, emitted Node events use the SDK's default
-consented event label.
+application explicitly decides when to call the Node SDK, this app passes `consent: true`, so
+emitted Node events are labelled consented.
 
 > [!WARNING]
 >

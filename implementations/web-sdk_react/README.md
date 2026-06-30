@@ -181,13 +181,15 @@ The setup step creates the local `.env` file if needed:
 test -f implementations/web-sdk_react/.env || cp implementations/web-sdk_react/.env.example implementations/web-sdk_react/.env
 ```
 
-See `.env.example` for available configuration options. The implementation reads from
-`import.meta.env` directly and falls back to local mock-safe defaults, so it can run without extra
-env wiring. To use local mock Contentful endpoints, set `PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000`
-and `PUBLIC_CONTENTFUL_BASE_PATH=contentful`.
+See `.env.example` for the Contentful and Optimization API values used by the local mock setup. The
+Optimization SDK client has mock-safe defaults for its client ID, environment, and API base URLs,
+but Contentful entry loading requires the Contentful env vars from `.env.example`. To use local mock
+Contentful endpoints, set `PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000` and
+`PUBLIC_CONTENTFUL_BASE_PATH=contentful`.
 
-Preview panel attachment is gated behind `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`. Set it to
-`true` for development demos that need preview panel behavior.
+Preview panel attachment is controlled at build time by `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`.
+Set it to `true` before starting or building the app for development demos that need preview panel
+behavior.
 
 ## Project structure
 
@@ -199,10 +201,12 @@ web-sdk_react/
 │   ├── optimization/         # SDK React adapter
 │   │   ├── OptimizationProvider.tsx
 │   │   ├── hooks/
-│   │   └── components/
+│   │   └── liveUpdates/
+│   ├── components/           # Shared UI components
 │   ├── pages/                # Route pages
-│   └── components/           # UI components
-├── public/                   # Static assets
+│   ├── sections/             # Entry rendering sections
+│   ├── services/             # Contentful client setup
+│   └── types/                # Local Contentful and env types
 ├── index.html                # HTML template
 ├── rsbuild.config.ts         # Rsbuild configuration
 ├── tsconfig.json             # TypeScript configuration
@@ -222,8 +226,9 @@ Implementation-specific touchpoints:
 - `src/optimization/OptimizationProvider.tsx` owns Web SDK lifecycle and provider state.
 - `src/optimization/hooks/` exposes local hooks for SDK access, entry resolution, and analytics
   actions.
-- `src/optimization/components/` contains adapter components that keep app pages free of direct Web
-  SDK setup code.
+- `src/optimization/liveUpdates/` owns preview-panel-aware live update context.
+- `src/sections/` renders optimized Contentful entries and wires entry tracking attributes.
+- `src/components/` contains shared UI components for rich text, controls, and tracking display.
 
 ## Related
 

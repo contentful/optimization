@@ -188,6 +188,10 @@ contains the optimization metadata the resolver needs:
 | `nt_config`        | Defines entry-replacement components. Traffic, distribution, and stickiness are upstream allocation metadata. |
 | `nt_variants`      | Contains the resolved Contentful entries that can replace the baseline entry.                                 |
 
+Selected variant entries must use the same content type as the baseline entry. If a matched variant
+ID points to a resolved entry with a different content type, the resolver ignores that entry and
+falls back to the baseline entry.
+
 Components with `type: "EntryReplacement"` participate in entry resolution. Components with omitted
 `type` are also treated as `EntryReplacement` components for backward-compatible Contentful
 payloads. `InlineVariable` components are resolved through the Custom Flag and `changes` flow, not
@@ -250,7 +254,7 @@ The shared Core resolver follows one path for every SDK package:
    `baseline.id` equals the baseline entry `sys.id` and whose baseline is not hidden.
 9. Select the configured variant at `variantIndex - 1`.
 10. Find the linked Contentful variant entry in `optimizationEntry.fields.nt_variants` by the
-    selected variant ID.
+    selected variant ID, and confirm that the variant entry uses the baseline entry content type.
 11. Return the variant entry and `selectedOptimization` metadata when all checks pass.
 
 If steps 8 to 10 fail after a `SelectedOptimization` has matched, the resolver returns the baseline
@@ -322,6 +326,7 @@ of throwing. The selected metadata result distinguishes a baseline selection fro
 | Selected variant index is out of range            | Baseline entry | Matched selection             |
 | Variant ID exists in config but not `nt_variants` | Baseline entry | Matched selection             |
 | Variant entry is still an unresolved link         | Baseline entry | Matched selection             |
+| Variant entry content type differs from baseline  | Baseline entry | Matched selection             |
 
 Consumers must not rely on exceptions to detect personalization misses. Render the baseline entry
 when no variant resolves; baseline fallback is expected behavior, not an error state.

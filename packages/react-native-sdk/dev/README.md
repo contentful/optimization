@@ -43,14 +43,13 @@ Or run the script directly:
 
 ### What the script does
 
-1. Checks all prerequisites (Node.js, pnpm, Watchman, Xcode/CocoaPods or Android SDK)
-2. Installs workspace dependencies via `pnpm install`
-3. Starts the mock API server on port 8000
-4. Starts the Metro bundler on port 8081
-5. For iOS: Installs CocoaPods
-6. For Android: Sets up adb reverse port forwarding
-7. Builds and launches the app (unless `--no-app` is specified)
-8. Cleans up all background processes on exit (Ctrl+C)
+1. Installs workspace dependencies via `pnpm install`
+2. Starts the mock API server on port 8000
+3. Starts the Metro bundler on port 8081
+4. For iOS: Installs CocoaPods
+5. For Android: Sets up adb reverse port forwarding
+6. Builds and launches the app (unless `--no-app` is specified)
+7. Cleans up all background processes on exit (Ctrl+C)
 
 ### Logs
 
@@ -90,7 +89,7 @@ This starts the mock server on `http://localhost:8000` with:
 ```sh
 cd packages/react-native-sdk/dev/ios
 pod install --repo-update
-cd ..
+cd ../..
 ```
 
 #### 4. Start Metro bundler

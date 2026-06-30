@@ -30,24 +30,20 @@ export function transformOverrides(
   overrides: OverrideState,
   baseline: BaselineSelections,
 ): TransformedOverrides {
-  const audienceOverrides: Record<string, boolean> = {}
-  for (const [id, { isActive }] of Object.entries(overrides.audiences)) {
-    audienceOverrides[id] = isActive
-  }
-
-  const variantOverrides: Record<string, number> = {}
-  for (const [id, { variantIndex }] of Object.entries(overrides.selectedOptimizations)) {
-    variantOverrides[id] = variantIndex
-  }
-
-  const defaultVariantIndices: Record<string, number> = {}
-  if (baseline) {
-    for (const { experienceId, variantIndex } of baseline) {
-      if (variantOverrides[experienceId] !== undefined) {
-        defaultVariantIndices[experienceId] = variantIndex
-      }
-    }
-  }
+  const audienceOverrides = Object.fromEntries(
+    Object.entries(overrides.audiences).map(([id, { isActive }]) => [id, isActive]),
+  )
+  const variantOverrides = Object.fromEntries(
+    Object.entries(overrides.selectedOptimizations).map(([id, { variantIndex }]) => [
+      id,
+      variantIndex,
+    ]),
+  )
+  const defaultVariantIndices = Object.fromEntries(
+    (baseline ?? [])
+      .filter(({ experienceId }) => variantOverrides[experienceId] !== undefined)
+      .map(({ experienceId, variantIndex }) => [experienceId, variantIndex]),
+  )
 
   return { audienceOverrides, variantOverrides, defaultVariantIndices }
 }

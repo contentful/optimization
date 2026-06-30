@@ -118,10 +118,11 @@ pnpm typecheck
 
 ## Running E2E tests
 
-1. Run the full E2E setup and test suite from the repository root:
+1. Install the shared Playwright browsers/system dependencies, then run this implementation's E2E
+   wrapper from the repository root:
 
 ```sh
-pnpm setup:e2e:react-web-sdk
+pnpm --dir lib/e2e-web setup:e2e
 pnpm test:e2e:react-web-sdk
 ```
 

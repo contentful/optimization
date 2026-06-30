@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { mockLogger } from 'mocks'
 import { http, HttpResponse } from 'msw'
 import ApiClientBase from '../ApiClientBase'
+import type { FetchMethod } from '../fetch'
 import { server } from '../test/setup'
 import InsightsApiClient, {
   INSIGHTS_BASE_URL,
@@ -173,7 +174,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     )
   })
 
-  it('uses beaconHandler when supplied', async () => {
+  it('uses beacon sender when supplied', async () => {
     const batches = generateBatchEventArray('e2')
 
     rs.spyOn(BatchInsightsEventArray, 'safeParse').mockImplementation(
@@ -184,17 +185,34 @@ describe('InsightsApiClient.sendBatchEvents', () => {
       })) as typeof BatchInsightsEventArray.safeParse,
     )
 
-    const beaconHandler = rs.fn(() => true)
+    const beacon = rs.fn<(url: string, body: string) => boolean>(() => true)
 
     const fetchSpy = rs.spyOn(globalThis, 'fetch')
 
     const client = makeClient()
 
-    await expect(client.sendBatchEvents(batches, { beaconHandler })).resolves.toBe(true)
+    await expect(client.sendBatchEvents(batches, { beacon })).resolves.toBe(true)
 
-    expect(beaconHandler).toHaveBeenCalledTimes(1)
-    expect(beaconHandler).toHaveBeenCalledWith(expectedUrl, batches)
+    expect(beacon).toHaveBeenCalledTimes(1)
+    expect(beacon).toHaveBeenCalledWith(expectedUrl.toString(), expect.any(String))
+    expect(JSON.parse(beacon.mock.calls[0]?.[1] ?? '')).toEqual(batches)
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not use keepalive for default fetch delivery', async () => {
+    const batches = generateBatchEventArray('e2-default-fetch')
+    const fetchMethod = rs.fn<FetchMethod>(async () => {
+      await Promise.resolve()
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    })
+    const client = makeClient({ fetchOptions: { fetchMethod } })
+
+    await expect(client.sendBatchEvents(batches)).resolves.toBe(true)
+
+    expect(fetchMethod).toHaveBeenCalledWith(
+      expectedUrl.toString(),
+      expect.objectContaining({ keepalive: false }),
+    )
   })
 
   it('accepts and POSTs component_click events', async () => {
@@ -235,24 +253,26 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     await expect(client.sendBatchEvents(batches)).resolves.toBe(true)
   })
 
-  it('POSTs batches via fetch when beaconHandler fails', async () => {
+  it('POSTs batches via keepalive fetch when beacon sender fails', async () => {
     const batches = generateBatchEventArray('e3')
 
-    const beaconHandler = rs.fn(() => false)
+    const beacon = rs.fn<(url: string, body: string) => boolean>(() => false)
+    const fetchMethod = rs.fn<FetchMethod>(async () => {
+      await Promise.resolve()
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    })
 
-    const handler = http.post(
-      `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
-      () => HttpResponse.json({ ok: true }, { status: 200 }),
+    const client = makeClient({ fetchOptions: { fetchMethod } })
+
+    await expect(client.sendBatchEvents(batches, { beacon })).resolves.toBe(true)
+
+    expect(beacon).toHaveBeenCalledTimes(1)
+    expect(beacon).toHaveBeenCalledWith(expectedUrl.toString(), expect.any(String))
+    expect(JSON.parse(beacon.mock.calls[0]?.[1] ?? '')).toEqual(batches)
+    expect(fetchMethod).toHaveBeenCalledWith(
+      expectedUrl.toString(),
+      expect.objectContaining({ keepalive: true }),
     )
-
-    server.use(handler)
-
-    const client = makeClient()
-
-    await expect(client.sendBatchEvents(batches, { beaconHandler })).resolves.toBe(true)
-
-    expect(beaconHandler).toHaveBeenCalledTimes(1)
-    expect(beaconHandler).toHaveBeenCalledWith(expectedUrl, batches)
     expect(mockLogger.info).toHaveBeenCalledWith(
       'ApiClient:Insights',
       'Sending "Event Batches" request',
@@ -265,6 +285,25 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     expect(mockLogger.debug).toHaveBeenCalledWith(
       'ApiClient:Insights',
       expect.stringContaining('request successfully completed'),
+    )
+  })
+
+  it('POSTs batches via keepalive fetch when beacon sender throws', async () => {
+    const batches = generateBatchEventArray('e3-throw')
+    const beacon = rs.fn<(url: string, body: string) => boolean>(() => {
+      throw new Error('beacon-down')
+    })
+    const fetchMethod = rs.fn<FetchMethod>(async () => {
+      await Promise.resolve()
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    })
+    const client = makeClient({ fetchOptions: { fetchMethod } })
+
+    await expect(client.sendBatchEvents(batches, { beacon })).resolves.toBe(true)
+
+    expect(fetchMethod).toHaveBeenCalledWith(
+      expectedUrl.toString(),
+      expect.objectContaining({ keepalive: true }),
     )
   })
 

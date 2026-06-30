@@ -1,4 +1,7 @@
-import type { ApiClientConfig } from '@contentful/optimization-api-client'
+import type {
+  ApiClientConfig,
+  InsightsApiClientRequestOptions,
+} from '@contentful/optimization-api-client'
 import type {
   Json,
   Profile,
@@ -92,7 +95,6 @@ const createStatefulInsightsApiConfig = (
 
   const insightsConfig = {
     baseUrl: api.insightsBaseUrl,
-    beaconHandler: api.beaconHandler,
   }
 
   return hasDefinedValues(insightsConfig) ? insightsConfig : undefined
@@ -344,7 +346,9 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     })
   }
 
-  private async flushQueues(options: { force?: boolean } = {}): Promise<void> {
+  protected async flushQueues(
+    options: { force?: boolean } & InsightsApiClientRequestOptions = {},
+  ): Promise<void> {
     await this.insightsQueue.flush(options)
     await this.experienceQueue.flush(options)
   }

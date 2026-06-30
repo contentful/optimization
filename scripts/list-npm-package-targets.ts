@@ -41,13 +41,23 @@ if (command === 'npm-targets') {
   }
 } else if (command === 'report-target') {
   if (packageName === undefined) {
-    fail('Usage: tsx scripts/list-npm-notice-targets.ts report-target <package-name>')
+    fail('Usage: tsx scripts/list-npm-package-targets.ts report-target <package-name>')
   }
 
   console.log(getReportTarget(packageName))
+} else if (command === 'npm-package-names') {
+  for (const target of getRequiredNpmPublishTargets()) {
+    console.log(target.name)
+  }
+} else if (command === 'npm-pnpm-filters') {
+  console.log(
+    getRequiredNpmPublishTargets()
+      .map((target) => `--filter=${target.name}`)
+      .join(' '),
+  )
 } else {
   fail(
-    'Usage: tsx scripts/list-npm-notice-targets.ts npm-targets|npm-report-targets|report-target <package-name>',
+    'Usage: tsx scripts/list-npm-package-targets.ts npm-targets|npm-report-targets|report-target|npm-package-names|npm-pnpm-filters <package-name>',
   )
 }
 
@@ -55,9 +65,18 @@ function getNpmPublishTargets(): WorkspacePackage[] {
   return workspacePackages.filter(
     (workspacePackage) =>
       workspacePackage.name.startsWith('@contentful/optimization-') &&
-      workspacePackage.name !== '@contentful/optimization-js-bridge' &&
       !workspacePackage.manifest.private,
   )
+}
+
+function getRequiredNpmPublishTargets(): WorkspacePackage[] {
+  const targets = getNpmPublishTargets()
+
+  if (targets.length === 0) {
+    fail('No npm package targets found.')
+  }
+
+  return targets
 }
 
 function readWorkspacePackages(): WorkspacePackage[] {

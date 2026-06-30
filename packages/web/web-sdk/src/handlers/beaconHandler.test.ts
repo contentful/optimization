@@ -5,30 +5,19 @@ describe('beaconHandler', () => {
     rs.restoreAllMocks()
   })
 
-  it('serializes events into a text/plain Blob and forwards to sendBeacon', async () => {
+  it('forwards a serialized body to sendBeacon', () => {
     const sendBeacon = rs.spyOn(window.navigator, 'sendBeacon').mockReturnValue(true)
-    const events: Parameters<typeof beaconHandler>[1] = []
+    const bodyText = '[]'
 
-    const ok = beaconHandler('/collect', events)
+    const ok = beaconHandler('/collect', bodyText)
 
     expect(ok).toBe(true)
     expect(sendBeacon).toHaveBeenCalledTimes(1)
-
-    const [url, body] = sendBeacon.mock.calls[0] ?? []
-    expect(url).toBe('/collect')
-    expect(body).toBeInstanceOf(Blob)
-    if (!(body instanceof Blob)) {
-      throw new Error('Expected sendBeacon body to be a Blob')
-    }
-
-    expect(body.type).toBe('text/plain')
-    await expect(body.text()).resolves.toBe(JSON.stringify(events))
+    expect(sendBeacon).toHaveBeenCalledWith('/collect', bodyText)
   })
 
   it('returns false when sendBeacon fails to queue the payload', () => {
     rs.spyOn(window.navigator, 'sendBeacon').mockReturnValue(false)
-    const events: Parameters<typeof beaconHandler>[1] = []
-
-    expect(beaconHandler('/collect', events)).toBe(false)
+    expect(beaconHandler('/collect', '[]')).toBe(false)
   })
 })

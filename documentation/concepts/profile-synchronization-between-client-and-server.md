@@ -314,8 +314,9 @@ The effective initialization order is:
 4. Initialize Core state with the merged defaults.
 5. Read the current and legacy anonymous-ID cookies only when the resolved persistence consent is
    `true`.
-6. If a cookie ID exists and differs from `LocalStore.anonymousId`, clear active and cached
-   profile-continuity state, then seed the anonymous ID from the cookie.
+6. If a cookie ID exists and differs from `LocalStore.anonymousId`, seed the anonymous ID from the
+   cookie. The SDK clears active and cached profile-continuity state before seeding only when that
+   cookie also differs from the active `profile.id`, where an active profile exists.
 
 This order lets the browser resume from localStorage when durable profile-continuity persistence is
 allowed and there is no server handoff, while still letting a server-set cookie take precedence when
@@ -367,8 +368,10 @@ The Web SDK keeps the cookie and localStorage anonymous ID aligned when persiste
 
 - During initialization, a server-set `ctfl-opt-aid` cookie overrides a different local anonymous ID
   only when persistence consent resolves to `true`. The SDK calls `reset()` to clear active and
-  cached profile-continuity state, then writes the cookie value to localStorage. If persistence
-  consent is granted later, the same cookie adoption check runs then.
+  cached profile-continuity state only when the cookie also differs from the active `profile.id`,
+  where an active profile exists. If the cookie matches the active profile, the SDK preserves active
+  state and writes the cookie value to localStorage. If persistence consent is granted later, the
+  same cookie adoption check runs then.
 - When the profile signal changes after an Experience response, the SDK writes the full profile to
   localStorage and writes `profile.id` to both localStorage and the `ctfl-opt-aid` cookie.
 - When the profile signal is cleared and an anonymous ID already exists, the SDK removes cached

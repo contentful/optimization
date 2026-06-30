@@ -5,10 +5,12 @@ title: Locale handling in the Optimization SDK Suite
 # Locale handling in the Optimization SDK Suite
 
 Use this document to keep the application Contentful locale separate from the SDK Experience/event
-locale across Web, React Web, Next.js, Node, React Native, iOS, and Android applications. The SDKs
-do not resolve Contentful locales, wrap Contentful Delivery API clients, or infer browser, device,
-or request locales. Applications choose their own locale from routing, i18n, native state, or
-request logic and pass it to each system that needs it.
+locale across Web, React Web, Next.js, Node, React Native, iOS, and Android applications. For
+app-owned content fetching and entry resolution, the SDKs do not resolve Contentful locales, wrap
+Contentful Delivery API clients, or infer browser, device, or request locales. Applications choose
+their own locale from routing, i18n, native state, or request logic and pass it to each system that
+needs it. Preview and debug tooling is separate: preview-panel APIs can use Contentful clients to
+load Optimization definitions, but they do not choose or fetch locales for application content.
 
 For entry replacement mechanics, see
 [Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md). For

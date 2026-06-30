@@ -34,9 +34,10 @@ they are not the first stop for installation or setup commands.
 - [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md) -
   explains how application-owned Contentful locales differ from SDK Experience/event locales.
 - [Interaction tracking in Web SDKs](./interaction-tracking-in-web-sdks.md) - explains how
-  `@contentful/optimization-web` and `@contentful/optimization-react-web` detect browser entry
-  views, clicks, hovers, Custom Flag views, page events, and custom events, including consent,
-  profile, DOM, and delivery mechanics.
+  `@contentful/optimization-web` detects browser entry views, clicks, and hovers; how
+  `@contentful/optimization-react-web` renders tracking metadata, exposes Web SDK behavior, and
+  provides router/page helpers; and how Custom Flag views, page events, and application-provided
+  custom events move through consent, profile, DOM, and delivery mechanics.
 - [Interaction tracking in Node and stateless environments](./interaction-tracking-in-node-and-stateless-environments.md) -
   explains what the Node SDK can track from a stateless server runtime, when browser observation is
   required, how the Web SDK can track server-generated HTML without owning optimization, and what a

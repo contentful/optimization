@@ -25,8 +25,8 @@ shells against the mock server in `lib/mocks/` and hosts the XCUITest suite.
 
 > [!NOTE]
 >
-> This is not a published iOS SDK package. For package status, see
-> [`packages/ios`](../../packages/ios/README.md).
+> This reference app is not the iOS SDK package. The iOS SDK exists as a pre-release Swift Package;
+> for package status, see [`packages/ios`](../../packages/ios/README.md).
 
 ## What this demonstrates
 
@@ -83,7 +83,9 @@ pnpm serve:mocks
 ```
 
 You can skip this manual mock-server step when using `./scripts/bootstrap.sh` or
-`./scripts/run-e2e.sh`; both scripts start the mock server and clean up their own child process.
+`./scripts/run-e2e.sh`; both scripts start the mock server. Before starting mocks, they stop any
+existing process bound to `MOCK_SERVER_PORT` (default `8000`), then clean up their own mock-server
+child process on exit.
 
 This implementation does not use a local `.env` file. Mock API settings live in shared iOS app
 configuration and point simulator traffic to `http://localhost:8000`.
@@ -226,8 +228,8 @@ Common local pitfalls:
 
 ## Related
 
-- [Optimization iOS SDK package status](../../packages/ios/README.md) - Planned native iOS SDK
-  status marker
+- [Optimization iOS SDK package](../../packages/ios/README.md) - Pre-release Swift Package status
+  and release notes
 - [Optimization iOS SDK code map](../../packages/ios/CODE_MAP.md) - Maintainer architecture map for
   the native iOS package
 - [Native bridge architecture](../../packages/universal/optimization-js-bridge/BRIDGE_ARCHITECTURE.md) -

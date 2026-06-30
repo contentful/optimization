@@ -3,8 +3,6 @@ import { EntryInteractionRuntime } from './EntryInteractionRuntime'
 import * as clickDetectorModule from './events/click/createEntryClickDetector'
 import * as hoverDetectorModule from './events/hover/createEntryHoverDetector'
 import * as viewDetectorModule from './events/view/createEntryViewDetector'
-import ElementExistenceObserver from './registry/ElementExistenceObserver'
-import { EntryElementRegistry } from './registry/EntryElementRegistry'
 
 interface DetectorMocks<
   TStartOptions = never,
@@ -132,6 +130,7 @@ describe('EntryInteractionRuntime', () => {
 
   afterEach(() => {
     rs.restoreAllMocks()
+    document.body.innerHTML = ''
   })
 
   it('enables interactions through tracking API and forwards start options', () => {
@@ -159,6 +158,51 @@ describe('EntryInteractionRuntime', () => {
       dwellTimeMs: 250,
       minVisibleRatio: 0.25,
     })
+  })
+
+  it('seeds existing entry elements once per newly started detector', () => {
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'seeded-entry'
+    document.body.append(entry)
+    const { clickDetector, runtime, viewDetector } = createRuntime()
+
+    runtime.tracking.enable('clicks')
+    expect(clickDetector.onEntryAdded).toHaveBeenCalledTimes(1)
+    expect(clickDetector.onEntryAdded).toHaveBeenCalledWith(entry)
+
+    clickDetector.onEntryAdded.mockClear()
+    runtime.tracking.enable('views')
+
+    expect(clickDetector.onEntryAdded).not.toHaveBeenCalled()
+    expect(viewDetector.onEntryAdded).toHaveBeenCalledTimes(1)
+    expect(viewDetector.onEntryAdded).toHaveBeenCalledWith(entry)
+  })
+
+  it('fans entry DOM changes out to running detectors', async () => {
+    const { clickDetector, runtime, viewDetector } = createRuntime()
+
+    runtime.tracking.enable('clicks')
+    runtime.tracking.enable('views')
+    clickDetector.onEntryAdded.mockClear()
+    viewDetector.onEntryAdded.mockClear()
+
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'dynamic-entry'
+    document.body.append(entry)
+
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(clickDetector.onEntryAdded).toHaveBeenCalledWith(entry)
+    expect(viewDetector.onEntryAdded).toHaveBeenCalledWith(entry)
+
+    document.body.removeChild(entry)
+
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(clickDetector.onEntryRemoved).toHaveBeenCalledWith(entry)
+    expect(viewDetector.onEntryRemoved).toHaveBeenCalledWith(entry)
   })
 
   it('disables interactions globally by setting their auto-track flag to false', () => {
@@ -296,21 +340,15 @@ describe('EntryInteractionRuntime', () => {
     expect(clickDetector.clearElement).not.toHaveBeenCalled()
   })
 
-  it('destroy stops trackers and disconnects shared registry and observer', () => {
+  it('destroy stops trackers and clears entry observation state', () => {
     const { clickDetector, hoverDetector, runtime, viewDetector } = createRuntime()
-    const registryDisconnectSpy = rs
-      .spyOn(EntryElementRegistry.prototype, 'disconnect')
-      .mockImplementation(() => undefined)
-    const observerDisconnectSpy = rs
-      .spyOn(ElementExistenceObserver.prototype, 'disconnect')
-      .mockImplementation(() => undefined)
+    runtime.tracking.enable('clicks')
 
     runtime.destroy()
 
     expect(clickDetector.stop).toHaveBeenCalledTimes(1)
     expect(hoverDetector.stop).toHaveBeenCalledTimes(1)
     expect(viewDetector.stop).toHaveBeenCalledTimes(1)
-    expect(registryDisconnectSpy).toHaveBeenCalledTimes(1)
-    expect(observerDisconnectSpy).toHaveBeenCalledTimes(1)
+    expect(Reflect.get(runtime, 'entryElementObserver')).toBeUndefined()
   })
 })

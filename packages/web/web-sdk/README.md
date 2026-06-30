@@ -189,28 +189,31 @@ the Insights API for event ingestion.
 | `app`                       | No        | `undefined`                                   | Application metadata attached to outgoing event context                           |
 | `locale`                    | No        | `undefined`                                   | SDK Experience API and default event locale                                       |
 | `defaults`                  | No        | `undefined`                                   | Initial state, commonly including consent, persistence consent, or profile values |
-| `allowedEventTypes`         | No        | `['identify', 'page']`                        | Event types allowed before consent is explicitly set                              |
+| `allowedEventTypes`         | No        | `['identify', 'page']`                        | Event types intentionally allowed while consent is unset or false                 |
 | `autoTrackEntryInteraction` | No        | `{ views: true, clicks: true, hovers: true }` | Opt-out automatic tracking for entry views, clicks, and hovers                    |
 | `cookie`                    | No        | `{ domain: undefined, expires: 365 }`         | Anonymous ID cookie settings                                                      |
 | `getAnonymousId`            | No        | `undefined`                                   | Function used to provide an anonymous ID from application-owned identity state    |
 | `queuePolicy`               | No        | SDK defaults                                  | Flush retry behavior and offline queue bounds                                     |
 | `logLevel`                  | No        | `'error'`                                     | Minimum log level for the default console sink                                    |
-| `onEventBlocked`            | No        | `undefined`                                   | Callback invoked when consent or guard logic blocks an event                      |
+| `onEventBlocked`            | No        | `undefined`                                   | Callback invoked when consent blocks an event                                     |
 
 Common `api` options:
 
-| Option              | Required? | Default                                    | Description                                                       |
-| ------------------- | --------- | ------------------------------------------ | ----------------------------------------------------------------- |
-| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                   |
-| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                     |
-| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Experience API features to apply to each request                  |
-| `preflight`         | No        | `false`                                    | Aggregate a new profile state without storing it                  |
-| `beaconHandler`     | No        | Built-in beacon integration                | Custom handler for enqueueing Insights API batches when needed    |
-| `plainText`         | No        | `false`                                    | Sends performance-critical Experience API endpoints as plain text |
+| Option              | Required? | Default                                                          | Description                                           |
+| ------------------- | --------- | ---------------------------------------------------------------- | ----------------------------------------------------- |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`                            | Base URL for the Experience API                       |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'`                       | Base URL for the Insights API                         |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`                                  | Experience API features to apply to each request      |
+| `preflight`         | No        | `false`                                                          | Aggregate a new profile state without storing it      |
+| `plainText`         | No        | `true` for single-profile mutations; batch mutations use `false` | Sends eligible Experience API mutations as plain text |
 
 Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalTimeout`,
 `onFailedAttempt`, and `onRequestTimeout`. Default retries intentionally apply only to HTTP `503`
 responses.
+
+Configured `allowedEventTypes` are an intentional allow-list, not a temporary state. The Web default
+allows `identify` and `page` while consent is unset or false. Set `allowedEventTypes: []` for strict
+opt-in when no Optimization event may emit before accepted consent.
 
 Choose the application Contentful locale in your router, i18n layer, or app configuration. Pass that
 value directly to Contentful CDA requests. Use the top-level SDK `locale` when Experience API
@@ -231,8 +234,9 @@ For every option, callback payload, and exported type, use the generated
 ### Consent and profile events
 
 Consent is application policy. The SDK stores event consent, blocks non-allowed events until event
-consent is accepted, and can track durable profile-continuity persistence consent separately. For
-cross-SDK consent guidance, see
+consent is accepted, and intentionally allows configured `allowedEventTypes` in every consent state.
+It can track durable profile-continuity persistence consent separately. For cross-SDK consent
+guidance, see
 [Consent management in the Optimization SDK Suite](../../../documentation/concepts/consent-management-in-the-optimization-sdk-suite.md).
 
 For default-on application policies that do not render an end-user consent UI, seed accepted consent
@@ -255,9 +259,11 @@ const { accepted, data } = await optimization.page({
 })
 ```
 
-The startup default and boolean consent calls grant or withdraw both event emission and durable
-profile continuity by default. Object-form consent lets events emit while keeping profile, selected
-optimizations, changes, and the anonymous ID session-only until persistence consent is granted.
+The startup default and boolean consent calls grant or withdraw both event consent and durable
+profile continuity by default. Withdrawing event consent still permits configured
+`allowedEventTypes`; use `allowedEventTypes: []` for strict opt-in. Object-form consent lets events
+emit while keeping profile, selected optimizations, changes, and the anonymous ID session-only until
+persistence consent is granted.
 
 `page()`, `identify()`, `screen()`, `track()`, and sticky `trackView()` calls return an event
 result. `{ accepted: false }` means consent or SDK guards blocked the event.
@@ -292,7 +298,8 @@ for the broader locale model.
 Use `getMergeTagValue()` for Contentful Rich Text merge tags and `getFlag()` for Custom Flags. If a
 merge tag references localized profile fields such as `location.city` or `location.country`, its
 resolved value follows the localized profile data returned by the Experience API. The Web SDK is
-stateful, so reading a flag also emits flag-view tracking.
+stateful, so reading a flag can emit deduplicated flag-view tracking when consent or the allow-list
+permits it and profile state is available.
 
 ### Entry interaction tracking
 
@@ -347,6 +354,7 @@ the generated reference for the complete `states` surface.
 - `reset()` clears internal state except consent and persistence consent. Use it when the active
   profile changes.
 - `flush()` drains queued Insights API and Experience API events.
+- Browser lifecycle events use `navigator.sendBeacon()` for last-chance Insights delivery.
 - `destroy()` releases listeners and singleton ownership for explicit teardown paths such as tests
   or hot-reload workflows.
 - Lifecycle interceptors exist for first-party SDK and preview-panel integration. Most application

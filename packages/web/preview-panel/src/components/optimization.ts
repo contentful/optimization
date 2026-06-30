@@ -54,25 +54,6 @@ export function isRecordRadioGroupChangeEvent(event: Event): event is RecordRadi
  */
 export const OPTIMIZATION_TAG = 'ctfl-opt-preview-optimization' as const
 
-/**
- * Type guard that checks whether an element is an {@link Optimization}.
- *
- * @param element - The element to check.
- * @returns `true` if the element's tag matches {@link OPTIMIZATION_TAG}.
- *
- * @example
- * ```ts
- * if (isOptimization(el)) {
- *   el.optimization = entry
- * }
- * ```
- *
- * @public
- */
-export function isOptimization(element?: Element): element is Optimization {
-  return element?.tagName === OPTIMIZATION_TAG.toUpperCase()
-}
-
 /** @internal */
 const percentageFormatter = new Intl.NumberFormat(undefined, {
   style: 'percent',
@@ -351,20 +332,4 @@ export class Optimization extends LitElement {
       color: #9ca3af;
     }
   `
-}
-
-/**
- * Registers the {@link Optimization} custom element if not already defined.
- *
- * @example
- * ```ts
- * defineOptimization()
- * ```
- *
- * @public
- */
-export function defineOptimization(): void {
-  if (!customElements.get(OPTIMIZATION_TAG)) {
-    customElements.define(OPTIMIZATION_TAG, Optimization)
-  }
 }

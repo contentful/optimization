@@ -33,10 +33,9 @@ tracking, live updates, consent gating, and offline recovery behavior.
 
 ## CDA locale handling
 
-The static app defines one `APP_LOCALE`, passes it as the Web SDK top-level `locale`, and passes it
-directly to Contentful CDA `getEntry()` calls. Do not use `withAllLocales` or `locale=*`; SDK entry
-resolution expects direct single-locale fields such as `fields.nt_experiences` and
-`fields.nt_variants`. See
+The static app uses `en-US` as its application locale for both the Web SDK top-level `locale` and
+Contentful CDA `getEntry()` calls. Do not use `withAllLocales` or `locale=*`; SDK entry resolution
+expects direct single-locale fields such as `fields.nt_experiences` and `fields.nt_variants`. See
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
 for the broader locale model and
 [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
@@ -111,13 +110,19 @@ HTML, and serves `public/`; PM2 manages the `serve` and `serve:stop` processes.
 
 E2E tests are run using Playwright.
 
-1. Install implementation dependencies, browser binaries, and system dependencies:
+1. Install implementation dependencies:
 
    ```sh
    pnpm setup:e2e:web-sdk
    ```
 
-2. Run the E2E test suite:
+2. Install the shared Playwright browser binaries and system dependencies used by `lib/e2e-web`:
+
+   ```sh
+   pnpm --dir lib/e2e-web setup:e2e
+   ```
+
+3. Run the E2E test suite:
 
    ```sh
    pnpm test:e2e:web-sdk

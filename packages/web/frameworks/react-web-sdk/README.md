@@ -95,8 +95,9 @@ or custom framework adapters.
 
 ## Common configuration
 
-`OptimizationRoot` accepts the Web SDK configuration props directly and adds React-specific props
-such as `liveUpdates` and `onStatesReady`.
+`OptimizationRoot` accepts most Web SDK configuration props directly and adds React-specific props
+such as `liveUpdates`, `onStatesReady`, and `serverOptimizationState`. The Web SDK
+`autoTrackEntryInteraction` option is exposed as the React `trackEntryInteraction` prop.
 
 | Prop                      | Required? | Default                                       | Description                                                                |
 | ------------------------- | --------- | --------------------------------------------- | -------------------------------------------------------------------------- |
@@ -125,9 +126,10 @@ control, including integrations that supply an SDK instance:
 </OptimizationProvider>
 ```
 
-Injected SDK instances render children immediately unless `onStatesReady` is provided. When
-`onStatesReady` is provided, the provider waits until those state subscribers are attached before
-children mount, and still leaves SDK teardown to the owner that created the instance.
+Injected SDK instances render children immediately unless state setup such as `onStatesReady` or
+`serverOptimizationState` is provided. When state setup is provided, the provider waits until that
+setup is complete before children mount, and still leaves SDK teardown to the owner that created the
+instance.
 
 For server-to-browser state handoff, pass server-returned Optimization data through
 `serverOptimizationState` on `OptimizationRoot` or `OptimizationProvider`. Keep `defaults` for

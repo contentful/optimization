@@ -3,7 +3,6 @@ import {
   derefElement,
   isPageVisible,
   NOW,
-  Num,
   type ElementState,
   type PerElementEffectiveOptions,
 } from './element-view-observer-support'
@@ -80,26 +79,6 @@ describe('NOW', () => {
 
     rs.stubGlobal('performance', originalPerf)
     expect(dateSpy).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe('Num helpers', () => {
-  it('n(value,fallback)', () => {
-    expect(Num.n(5, 99)).toBe(5)
-    expect(Num.n('x', 99)).toBe(99)
-    expect(Num.n(undefined, 3)).toBe(3)
-  })
-
-  it('clamp01', () => {
-    expect(Num.clamp01(2, 0.3)).toBe(1)
-    expect(Num.clamp01(-5, 0.4)).toBe(0)
-    expect(Num.clamp01(undefined, 0.4)).toBeCloseTo(0.4)
-  })
-
-  it('nonNeg', () => {
-    expect(Num.nonNeg(-10, 5)).toBe(0)
-    expect(Num.nonNeg(12, 5)).toBe(12)
-    expect(Num.nonNeg(undefined, 7)).toBe(7)
   })
 })
 

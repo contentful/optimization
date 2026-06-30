@@ -985,14 +985,15 @@ Merge tags and entry replacement use different mechanics. Entry replacement uses
 
 **Integration category:** Optional
 
-Use the preview panel in development, preview, or staging environments where authors or engineers
-need to inspect variant behavior. Keep production loading explicit and environment-gated.
+Use the preview panel where authors or engineers need to inspect variant behavior. Keep production
+loading explicit and gate attachment behind an application-owned flag.
 
 1. Add the preview panel package only when your app needs browser authoring tooling.
 2. Attach the panel from a Client Component under `OptimizationRoot`.
 3. Wait until the browser SDK is ready before attaching the panel.
 4. Pass an app-owned Contentful client to the attach function.
-5. Enable it only in approved app environments.
+5. Enable it only when an approved app environment sets `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`
+   to `true`.
 6. Verify preview behavior with live updates because the preview panel forces optimized entries to
    react to preview state.
 
@@ -1004,17 +1005,14 @@ need to inspect variant behavior. Keep production loading explicit and environme
 import { useOptimizationContext } from '@contentful/optimization-nextjs/client'
 import { useEffect } from 'react'
 
-let previewPanelAttachmentStarted = false
-
 export function PreviewPanelAttachment({ nonce }: { nonce?: string }) {
   const { isReady } = useOptimizationContext()
+  const previewPanelEnabled = process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
 
   useEffect(() => {
-    // Keep authoring tooling out of production runtime by default.
-    if (process.env.NEXT_PUBLIC_APP_ENVIRONMENT === 'production') return
-    if (!isReady || previewPanelAttachmentStarted) return
-
-    previewPanelAttachmentStarted = true
+    // Keep authoring tooling opt-in.
+    if (!previewPanelEnabled) return
+    if (!isReady) return
 
     void Promise.all([
       import('@contentful/optimization-web-preview-panel'),
@@ -1026,10 +1024,8 @@ export function PreviewPanelAttachment({ nonce }: { nonce?: string }) {
           nonce,
         })
       })
-      .catch(() => {
-        previewPanelAttachmentStarted = false
-      })
-  }, [isReady, nonce])
+      .catch(() => undefined)
+  }, [isReady, nonce, previewPanelEnabled])
 
   return null
 }
@@ -1039,8 +1035,8 @@ The preview panel package has no attachment side effects. A dynamic import only 
 function; the application must call `attachOptimizationPreviewPanel(...)` with the Contentful client
 that can read previewable entries.
 
-The hybrid reference implementation attaches the preview panel only for development, preview, and
-staging app environments.
+The hybrid reference implementation exposes `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL` through
+Next.js config and attaches the preview panel only when that flag is `true`.
 
 ## Advanced integrations
 
