@@ -4,15 +4,12 @@ import { EntryCard } from '@/components/EntryCard'
 import { loadPageEntries } from '@/lib/contentful'
 import { loadOptimizationData, resolveOptimizedEntries } from '@/lib/resolution'
 import { PAGES } from 'e2e-web'
-import { cookies } from 'next/headers'
 import Link from 'next/link'
 
 export default async function PageTwo() {
-  const cookieStore = await cookies()
-
   const [entries, optimizationData] = await Promise.all([
     loadPageEntries(PAGES.pageTwo.ids),
-    loadOptimizationData(cookieStore),
+    loadOptimizationData(),
   ])
 
   const { entriesById, resolvedById } = await resolveOptimizedEntries(

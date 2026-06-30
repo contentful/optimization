@@ -1,6 +1,5 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { EntryCard } from '@/components/EntryCard'
-import { LiveEntryCard } from '@/components/LiveEntryCard'
 import { loadPageEntries } from '@/lib/contentful'
 import {
   loadOptimizationData,
@@ -9,14 +8,11 @@ import {
   resolveOptimizedEntries,
 } from '@/lib/resolution'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
-import { cookies } from 'next/headers'
 
 export default async function Home() {
-  const cookieStore = await cookies()
-
   const [entries, optimizationData] = await Promise.all([
     loadPageEntries(PAGES.home.ids),
-    loadOptimizationData(cookieStore),
+    loadOptimizationData(),
   ])
 
   const { registry, entriesById, resolvedById } = await resolveOptimizedEntries(
@@ -53,17 +49,17 @@ export default async function Home() {
           <div className="sections-grid" data-testid="live-updates-examples">
             <section data-testid="live-updates-default">
               <h3>Default (inherits global setting)</h3>
-              <LiveEntryCard entry={liveUpdatesEntry} testId="live-default" />
+              <EntryCard entry={liveUpdatesEntry} testId="live-default" />
             </section>
 
             <section data-testid="live-updates-enabled">
               <h3>Always On (liveUpdates=true)</h3>
-              <LiveEntryCard entry={liveUpdatesEntry} liveUpdates={true} testId="live-enabled" />
+              <EntryCard entry={liveUpdatesEntry} liveUpdates={true} testId="live-enabled" />
             </section>
 
             <section data-testid="live-updates-locked">
               <h3>Locked (liveUpdates=false)</h3>
-              <LiveEntryCard entry={liveUpdatesEntry} liveUpdates={false} testId="live-locked" />
+              <EntryCard entry={liveUpdatesEntry} liveUpdates={false} testId="live-locked" />
             </section>
           </div>
         ) : (

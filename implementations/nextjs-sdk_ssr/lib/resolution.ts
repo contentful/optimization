@@ -1,12 +1,9 @@
 import {
-  getNextjsServerOptimizationData,
+  type OptimizationData,
   type ServerTrackingResolvedData,
 } from '@contentful/optimization-nextjs/server'
-import { headers } from 'next/headers'
-import { appConfig } from './config'
-import { getAppConsent } from './consent'
 import { buildEntryRegistry, extendEntryRegistry, type ContentEntry } from './contentful'
-import { optimization } from './optimization'
+import { getOptimizationData, optimization } from './optimization'
 import { resolveEntryLinks, toIdMap } from './util'
 
 type SelectedOptimizations = Parameters<typeof optimization.resolveOptimizedEntry>[1]
@@ -19,18 +16,8 @@ export interface ResolvedPageData {
   resolvedById: Map<string, ServerTrackingResolvedData>
 }
 
-type CookieStore = Parameters<typeof getAppConsent>[0]
-
-export async function loadOptimizationData(
-  cookieStore: CookieStore,
-): Promise<Awaited<ReturnType<typeof getNextjsServerOptimizationData>>['data'] | undefined> {
-  if (!getAppConsent(cookieStore)) return undefined
-  const { data } = await getNextjsServerOptimizationData(optimization, {
-    consent: { events: true, persistence: true },
-    cookies: cookieStore,
-    headers: await headers(),
-    locale: appConfig.locale,
-  })
+export async function loadOptimizationData(): Promise<OptimizationData | undefined> {
+  const { data } = await getOptimizationData()
   return data
 }
 

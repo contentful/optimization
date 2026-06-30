@@ -37,12 +37,10 @@ async function fetchEntry(entryId: string): Promise<ContentEntry | undefined> {
   }
 }
 
-async function fetchEntries(entryIds: readonly string[]): Promise<ContentEntry[]> {
+export async function loadPageEntries(entryIds: readonly string[]): Promise<ContentEntry[]> {
   const results = await Promise.all(entryIds.map(fetchEntry))
   return results.filter((entry): entry is ContentEntry => entry !== undefined)
 }
-
-export { fetchEntries as loadPageEntries }
 
 export async function extendEntryRegistry(
   registry: Map<string, ContentEntry>,
@@ -54,10 +52,16 @@ export async function extendEntryRegistry(
       if (!registry.has(id)) queue.add(id)
     }
   }
-  if (queue.size > 0) {
-    const fetched = await fetchEntries([...queue])
+  while (queue.size > 0) {
+    const fetched = await loadPageEntries([...queue])
+    queue.clear()
     for (const entry of fetched) {
-      registry.set(entry.sys.id, entry)
+      if (!registry.has(entry.sys.id)) {
+        registry.set(entry.sys.id, entry)
+        for (const id of collectLinkIds(entry)) {
+          if (!registry.has(id)) queue.add(id)
+        }
+      }
     }
   }
 }

@@ -1,3 +1,4 @@
+import { EntryCardClient } from '@/components/EntryCard.client'
 import type { ContentEntry, RichTextDocument } from '@/lib/contentful'
 import { isRecord } from '@/lib/util'
 import {
@@ -13,14 +14,31 @@ const HOVER_DURATION_UPDATE_INTERVAL_MS = 1000
 
 type MergeTagResolver = (entry: unknown) => string | undefined
 
-interface EntryCardProps {
+interface EntryCardServerProps {
   baselineEntry: ContentEntry
   clickScenario?: EntryClickScenario
   getMergeTagValue?: MergeTagResolver
   manualTracking: boolean
   resolveEntry?: (entry: ContentEntry) => ServerTrackingResolvedData
   resolvedData: ServerTrackingResolvedData
+  entry?: never
+  liveUpdates?: never
+  testId?: never
 }
+
+interface EntryCardClientProps {
+  entry: ContentEntry
+  liveUpdates?: boolean
+  testId: string
+  baselineEntry?: never
+  clickScenario?: never
+  getMergeTagValue?: never
+  manualTracking?: never
+  resolveEntry?: never
+  resolvedData?: never
+}
+
+type EntryCardProps = EntryCardServerProps | EntryCardClientProps
 
 function isRichTextField(field: unknown): field is RichTextDocument {
   return isRecord(field) && field.nodeType === 'document' && Array.isArray(field.content)
@@ -47,14 +65,27 @@ function buildRenderOptions(getMergeTagValue?: MergeTagResolver): Options {
   }
 }
 
-export function EntryCard({
-  baselineEntry,
-  clickScenario,
-  getMergeTagValue,
-  manualTracking,
-  resolveEntry,
-  resolvedData,
-}: EntryCardProps): JSX.Element {
+export function EntryCard(props: EntryCardProps): JSX.Element {
+  if (props.entry !== undefined) {
+    return (
+      <section className="entry-card" data-testid={`content-entry-${props.testId}`}>
+        <EntryCardClient
+          entry={props.entry}
+          liveUpdates={props.liveUpdates}
+          testId={props.testId}
+        />
+      </section>
+    )
+  }
+
+  const {
+    baselineEntry,
+    clickScenario,
+    getMergeTagValue,
+    manualTracking,
+    resolveEntry,
+    resolvedData,
+  } = props
   const resolvedEntry = resolvedData.entry as ContentEntry
   const autoTrackViews = !manualTracking
   const richText = Object.values(resolvedEntry.fields).find(isRichTextField)

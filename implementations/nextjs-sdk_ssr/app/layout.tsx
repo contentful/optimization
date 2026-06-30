@@ -2,11 +2,10 @@ import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvide
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
 import { appConfig } from '@/lib/config'
-import { getAppConsent } from '@/lib/consent'
+import { getOptimizationData } from '@/lib/optimization'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
 import 'e2e-web/theme.css'
 import type { Metadata } from 'next'
-import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { Suspense, type ReactNode } from 'react'
 
@@ -17,8 +16,18 @@ export const metadata: Metadata = {
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const cookieStore = await cookies()
-  const appConsent = getAppConsent(cookieStore)
+  const { data: optimizationData, hasConsent } = await getOptimizationData()
+  const defaults = optimizationData
+    ? {
+        profile: optimizationData.profile,
+        ...(hasConsent
+          ? {
+              selectedOptimizations: optimizationData.selectedOptimizations,
+              changes: optimizationData.changes,
+            }
+          : {}),
+      }
+    : undefined
 
   return (
     <html lang={appConfig.locale.split('-')[0]}>
@@ -30,6 +39,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           api={appConfig.api}
           trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
           logLevel="debug"
+          defaults={defaults}
           app={{
             name: 'Contentful Optimization Next.js SDK SSR (Client)',
             version: '0.1.0',
@@ -38,7 +48,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <GlobalLiveUpdatesProvider>
             <PreviewPanel />
             <Suspense>
-              <NextAppAutoPageTracker initialPageEvent={appConsent ? 'skip' : 'emit'} />
+              <NextAppAutoPageTracker initialPageEvent={hasConsent ? 'skip' : 'emit'} />
             </Suspense>
             <div className="app-shell">
               <nav>
