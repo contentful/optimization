@@ -2,7 +2,7 @@ import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvide
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
 import { appConfig } from '@/lib/config'
-import { getOptimizationData } from '@/lib/optimization'
+import { optimization } from '@/lib/optimization'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
 import 'e2e-web/theme.css'
 import type { Metadata } from 'next'
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const { data: optimizationData, hasConsent } = await getOptimizationData()
+  const { data: optimizationData, hasConsent } = await optimization.getOptimizationData()
   const defaults = optimizationData
     ? {
         profile: optimizationData.profile,

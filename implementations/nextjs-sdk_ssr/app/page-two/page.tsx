@@ -1,15 +1,15 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { CustomViewTracker } from '@/components/CustomViewTracker'
 import { EntryCard } from '@/components/EntryCard'
-import { loadPageData } from '@/lib/resolution'
+import { optimization } from '@/lib/optimization'
 import { PAGES } from 'e2e-web'
 import Link from 'next/link'
 
 export default async function PageTwo() {
-  const data = await loadPageData(PAGES.pageTwo.ids)
-
-  const auto = data.get(PAGES.pageTwo.auto)
-  const manual = data.get(PAGES.pageTwo.manual)
+  const [auto, manual] = await Promise.all([
+    optimization.getEntry(PAGES.pageTwo.auto),
+    optimization.getEntry(PAGES.pageTwo.manual),
+  ])
 
   return (
     <section data-testid="page-two-view">

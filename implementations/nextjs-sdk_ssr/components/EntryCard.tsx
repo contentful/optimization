@@ -1,6 +1,6 @@
 import { EntryCardClient } from '@/components/EntryCard.client'
 import type { ContentEntry, RichTextDocument } from '@/lib/contentful'
-import type { Entry } from '@/lib/resolution'
+import type { Entry } from '@/lib/optimization'
 import { isRecord } from '@/lib/util'
 import { ServerOptimizedEntry } from '@contentful/optimization-nextjs/server'
 import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'

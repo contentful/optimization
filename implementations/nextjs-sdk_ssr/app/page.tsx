@@ -1,12 +1,16 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { EntryCard } from '@/components/EntryCard'
-import { loadPageData } from '@/lib/resolution'
+import { optimization } from '@/lib/optimization'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 
 export default async function Home() {
-  const data = await loadPageData(PAGES.home.ids)
+  const [liveUpdates, auto, manual] = await Promise.all([
+    optimization.getEntry(PAGES.home.liveUpdates),
+    optimization.getEntries(PAGES.home.auto),
+    optimization.getEntries(PAGES.home.manual),
+  ])
 
-  const liveUpdatesEntry = data.get(PAGES.home.liveUpdates)?.baselineEntry
+  const liveUpdatesEntry = liveUpdates?.baselineEntry
 
   return (
     <>
@@ -56,7 +60,7 @@ export default async function Home() {
             <h2>Auto Observed Entries</h2>
           </header>
           <div id="auto-observed" className="entry-grid">
-            {data.resolve(PAGES.home.auto).map((entry) => (
+            {auto.map((entry) => (
               <EntryCard
                 key={entry.baselineEntry.sys.id}
                 entry={entry}
@@ -72,7 +76,7 @@ export default async function Home() {
             <h2>Manually Observed Entries</h2>
           </header>
           <div id="manually-observed" className="entry-grid">
-            {data.resolve(PAGES.home.manual).map((entry) => (
+            {manual.map((entry) => (
               <EntryCard key={entry.baselineEntry.sys.id} entry={entry} manualTracking={true} />
             ))}
           </div>
