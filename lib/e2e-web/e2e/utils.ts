@@ -30,7 +30,25 @@ export function onlyWithPreviewPanel(): void {
   test.skip(!isPreviewPanelEnabled, 'Preview panel is disabled for this build.')
 }
 
-const MOCK_EXPERIENCE_URL = 'http://localhost:8000/experience'
+export const CONSENT_COOKIE = 'app-personalization-consent'
+export const PROFILE_COOKIE = 'ctfl-opt-aid'
+
+interface CookieContext {
+  addCookies: (cookies: Array<{ name: string; value: string; url: string }>) => Promise<void>
+}
+
+export async function seedAnonymousProfile(
+  context: CookieContext,
+  baseURL: string | undefined,
+): Promise<string> {
+  if (!baseURL) throw new Error('baseURL is required')
+  const profileId = crypto.randomUUID()
+  await context.addCookies([
+    { name: CONSENT_COOKIE, value: 'granted', url: baseURL },
+    { name: PROFILE_COOKIE, value: profileId, url: baseURL },
+  ])
+  return profileId
+}
 
 export async function setup(page: Page): Promise<void> {
   await page.goto('/')
@@ -47,12 +65,14 @@ export async function scrollThroughEntries(page: Page): Promise<void> {
   }
 }
 
-// Seed the mock so it returns identified-visitor data for this profile ID.
-// The mock tracks identified state in-memory via POSTed identify events.
+const MOCK_EXPERIENCE_URL = 'http://localhost:8000/experience'
+
 export async function seedIdentifiedProfile(
+  context: CookieContext,
+  baseURL: string | undefined,
   request: APIRequestContext,
-  profileId: string,
 ): Promise<void> {
+  const profileId = await seedAnonymousProfile(context, baseURL)
   const now = new Date().toISOString()
   await request.post(
     `${MOCK_EXPERIENCE_URL}/v2/organizations/mock-client-id/environments/main/profiles/${profileId}`,
