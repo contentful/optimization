@@ -32,7 +32,7 @@ export function useMergeTagResolver(): UseMergeTagResolverResult {
   return useMemo<UseMergeTagResolverResult>(
     () => ({
       getMergeTagValue: (embeddedEntryNodeTarget, profile) =>
-        sdk.getMergeTagValue(embeddedEntryNodeTarget, profile),
+        sdk ? sdk.getMergeTagValue(embeddedEntryNodeTarget, profile) : undefined,
     }),
     [sdk],
   )

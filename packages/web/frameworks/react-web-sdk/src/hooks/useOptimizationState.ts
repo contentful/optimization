@@ -11,6 +11,10 @@ interface ObservableLike<T> {
   readonly subscribe: (next: (value: T) => void) => { unsubscribe: () => void }
 }
 
+function nullObs<T>(value: T): ObservableLike<T> {
+  return { current: value, subscribe: () => ({ unsubscribe: () => undefined }) }
+}
+
 function useObservableState<T>(observable: ObservableLike<T>): T {
   const snapshotRef = useRef<T>(observable.current)
   const observableRef = useRef(observable)
@@ -48,7 +52,7 @@ function useObservableState<T>(observable: ObservableLike<T>): T {
  */
 export function useConsentState(): ObservableValue<OptimizationStates['consent']> {
   const sdk = useOptimization()
-  return useObservableState(sdk.states.consent)
+  return useObservableState(sdk ? sdk.states.consent : nullObs(undefined))
 }
 
 /**
@@ -58,7 +62,7 @@ export function useConsentState(): ObservableValue<OptimizationStates['consent']
  */
 export function useCanOptimizeState(): ObservableValue<OptimizationStates['canOptimize']> {
   const sdk = useOptimization()
-  return useObservableState(sdk.states.canOptimize)
+  return useObservableState(sdk ? sdk.states.canOptimize : nullObs(false))
 }
 
 /**
@@ -68,7 +72,7 @@ export function useCanOptimizeState(): ObservableValue<OptimizationStates['canOp
  */
 export function useEventStreamState(): ObservableValue<OptimizationStates['eventStream']> {
   const sdk = useOptimization()
-  return useObservableState(sdk.states.eventStream)
+  return useObservableState(sdk ? sdk.states.eventStream : nullObs(undefined))
 }
 
 /**
@@ -78,7 +82,7 @@ export function useEventStreamState(): ObservableValue<OptimizationStates['event
  */
 export function useProfileState(): ObservableValue<OptimizationStates['profile']> {
   const sdk = useOptimization()
-  return useObservableState(sdk.states.profile)
+  return useObservableState(sdk ? sdk.states.profile : nullObs(undefined))
 }
 
 /**
@@ -90,5 +94,5 @@ export function useSelectedOptimizationsState(): ObservableValue<
   OptimizationStates['selectedOptimizations']
 > {
   const sdk = useOptimization()
-  return useObservableState(sdk.states.selectedOptimizations)
+  return useObservableState(sdk ? sdk.states.selectedOptimizations : nullObs(undefined))
 }

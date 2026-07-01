@@ -5,7 +5,6 @@ import {
   type OptimizationContextValue,
   type OptimizationSdk,
 } from '../context/OptimizationContext'
-import { SSR_STUB } from './ssrStub'
 
 function getMissingProviderError(): Error {
   return new Error(
@@ -25,11 +24,12 @@ export function useOptimizationContext(): OptimizationContextValue {
 }
 
 /**
- * Returns the initialized Contentful Optimization SDK instance.
+ * Returns the initialized Contentful Optimization SDK instance, or `undefined`
+ * before the SDK is ready (during SSR and the first client render).
  *
  * @public
  */
-export function useOptimization(): OptimizationSdk {
+export function useOptimization(): OptimizationSdk | undefined {
   const { sdk, isReady, error } = useOptimizationContext()
 
   if (!sdk || !isReady) {
@@ -39,11 +39,7 @@ export function useOptimization(): OptimizationSdk {
       })
     }
 
-    // The SDK initializes in useLayoutEffect. Before that fires (during SSR and on the first
-    // client render), return a stub so components can render without throwing. All actual SDK
-    // method calls happen in effects or event handlers, which run after useLayoutEffect has
-    // already set the real SDK into context.
-    return SSR_STUB
+    return undefined
   }
 
   return sdk

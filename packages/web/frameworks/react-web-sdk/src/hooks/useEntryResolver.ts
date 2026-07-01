@@ -52,11 +52,11 @@ export function useEntryResolver(): UseEntryResolverResult {
   return useMemo<UseEntryResolverResult>(
     () => ({
       resolveOptimizedEntry: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) =>
-        sdk.resolveOptimizedEntry(entry, selectedOptimizations),
+        sdk ? sdk.resolveOptimizedEntry(entry, selectedOptimizations) : { entry },
       resolveEntry: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) =>
-        sdk.resolveOptimizedEntry(entry, selectedOptimizations).entry,
+        sdk ? sdk.resolveOptimizedEntry(entry, selectedOptimizations).entry : entry,
       resolveEntryData: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) =>
-        sdk.resolveOptimizedEntry(entry, selectedOptimizations),
+        sdk ? sdk.resolveOptimizedEntry(entry, selectedOptimizations) : { entry },
     }),
     [sdk],
   )

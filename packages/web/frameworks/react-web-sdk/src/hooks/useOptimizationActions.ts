@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 
+import type { EventEmissionResult } from '@contentful/optimization-web/core-sdk'
 import type { OptimizationSdk } from '../context/OptimizationContext'
 import { useOptimization } from './useOptimization'
 
@@ -10,12 +11,20 @@ import { useOptimization } from './useOptimization'
  */
 export interface UseOptimizationActionsResult {
   readonly consent: OptimizationSdk['consent']
-  readonly flush: OptimizationSdk['flush']
-  readonly identify: OptimizationSdk['identify']
-  readonly page: OptimizationSdk['page']
+  readonly flush: () => Promise<void>
+  readonly identify: (
+    ...args: Parameters<OptimizationSdk['identify']>
+  ) => Promise<EventEmissionResult | undefined>
+  readonly page: (
+    ...args: Parameters<OptimizationSdk['page']>
+  ) => Promise<EventEmissionResult | undefined>
   readonly reset: OptimizationSdk['reset']
-  readonly screen: OptimizationSdk['screen']
-  readonly track: OptimizationSdk['track']
+  readonly screen: (
+    ...args: Parameters<OptimizationSdk['screen']>
+  ) => Promise<EventEmissionResult | undefined>
+  readonly track: (
+    ...args: Parameters<OptimizationSdk['track']>
+  ) => Promise<EventEmissionResult | undefined>
 }
 
 /**
@@ -43,18 +52,18 @@ export function useOptimizationActions(): UseOptimizationActionsResult {
   return useMemo<UseOptimizationActionsResult>(
     () => ({
       consent: (value) => {
-        sdk.consent(value)
+        if (sdk) sdk.consent(value)
       },
       flush: async () => {
-        await sdk.flush()
+        if (sdk) await sdk.flush()
       },
-      identify: async (payload) => await sdk.identify(payload),
-      page: async (payload) => await sdk.page(payload),
+      identify: async (payload) => (sdk ? await sdk.identify(payload) : undefined),
+      page: async (payload) => (sdk ? await sdk.page(payload) : undefined),
       reset: () => {
-        sdk.reset()
+        if (sdk) sdk.reset()
       },
-      screen: async (payload) => await sdk.screen(payload),
-      track: async (payload) => await sdk.track(payload),
+      screen: async (payload) => (sdk ? await sdk.screen(payload) : undefined),
+      track: async (payload) => (sdk ? await sdk.track(payload) : undefined),
     }),
     [sdk],
   )

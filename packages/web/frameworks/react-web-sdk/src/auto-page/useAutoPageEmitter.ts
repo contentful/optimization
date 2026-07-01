@@ -59,6 +59,7 @@ export function useAutoPageEmitter({
       return
     }
 
+    if (!sdk) return
     void sdk
       .trackCurrentPage({
         initialPageEvent,
