@@ -16,11 +16,8 @@ const getStatefulRuntimeLock = (): StatefulRuntimeLockState => {
   return singletonGlobal[STATEFUL_RUNTIME_LOCK_KEY]
 }
 
-export const acquireStatefulRuntimeSingleton = (owner: string): void => {
-  // The lock guards the browser-DOM invariant (one SDK owns window.contentfulOptimization).
-  // On the server there is no shared DOM, so each request constructs its own instance
-  // independently and the lock must not block concurrent SSR renders.
-  if (!('window' in globalThis)) return
+export const acquireStatefulRuntimeSingleton = (owner: string, enforce: boolean): void => {
+  if (!enforce) return
 
   const lock = getStatefulRuntimeLock()
 
@@ -33,8 +30,8 @@ export const acquireStatefulRuntimeSingleton = (owner: string): void => {
   lock.owner = owner
 }
 
-export const releaseStatefulRuntimeSingleton = (owner: string): void => {
-  if (!('window' in globalThis)) return
+export const releaseStatefulRuntimeSingleton = (owner: string, enforce: boolean): void => {
+  if (!enforce) return
 
   const lock = getStatefulRuntimeLock()
 

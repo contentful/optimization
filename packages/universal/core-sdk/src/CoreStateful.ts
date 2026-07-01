@@ -217,6 +217,7 @@ const OPTIMIZATION_UNLOCKING_EVENT_TYPES: readonly EventType[] = [
 
 class CoreStateful extends CoreStatefulEventEmitter implements ConsentController, ConsentGuard {
   private readonly singletonOwner: string
+  private readonly singletonEnforced: boolean
   private destroyed = false
   protected readonly allowedEventTypes: AllowedEventType[]
   protected readonly experienceQueue: ExperienceQueue
@@ -248,7 +249,10 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     profile: toObservable(profileSignal),
   }
 
-  constructor(config: CoreStatefulConfig) {
+  constructor(
+    config: CoreStatefulConfig,
+    { disableSingleton = false }: { disableSingleton?: boolean } = {},
+  ) {
     const locale = normalizeExplicitLocale(config.locale)
 
     super(
@@ -262,7 +266,8 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
 
     this.eventBuilder.getConsent = () => consentSignal.value
     this.singletonOwner = `CoreStateful#${++statefulInstanceCounter}`
-    acquireStatefulRuntimeSingleton(this.singletonOwner)
+    this.singletonEnforced = !disableSingleton
+    acquireStatefulRuntimeSingleton(this.singletonOwner, this.singletonEnforced)
 
     try {
       const { allowedEventTypes, defaults, getAnonymousId, onEventBlocked, queuePolicy } = config
@@ -305,7 +310,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
 
       this.initializeEffects()
     } catch (error) {
-      releaseStatefulRuntimeSingleton(this.singletonOwner)
+      releaseStatefulRuntimeSingleton(this.singletonOwner, this.singletonEnforced)
       throw error
     }
   }
@@ -454,7 +459,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     })
     this.insightsQueue.clearPeriodicFlushTimer()
 
-    releaseStatefulRuntimeSingleton(this.singletonOwner)
+    releaseStatefulRuntimeSingleton(this.singletonOwner, this.singletonEnforced)
   }
 
   reset(): void {

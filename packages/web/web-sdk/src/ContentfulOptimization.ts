@@ -36,6 +36,7 @@ import {
   createVisibilityChangeListener,
 } from './handlers'
 import { getCookie, removeCookie, setCookie, type CookieAttributes } from './lib/cookies'
+import { isBrowser } from './lib/isBrowser'
 import LocalStore from './storage/LocalStore'
 
 export type { CookieAttributes } from './lib/cookies'
@@ -293,7 +294,7 @@ class ContentfulOptimization extends CoreStateful {
 
     const mergedConfig: OptimizationWebConfig = mergeConfig(restConfig)
 
-    super(mergedConfig)
+    super(mergedConfig, { disableSingleton: !isBrowser() })
 
     const canLoadPersistedContinuity = mergedConfig.defaults?.persistenceConsent === true
     const { cookieValue, legacyCookieValue } = readInitialCookieValues(canLoadPersistedContinuity)
