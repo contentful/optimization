@@ -352,8 +352,9 @@ describe('OptimizationProvider onStatesReady', () => {
       </OptimizationProvider>,
     )
 
-    expect(markup).toBe('')
-    expect(childRendered).toBe(false)
+    // Children render during SSR; the SDK constructor must never run on the server.
+    expect(markup).toMatchInlineSnapshot(`""`)
+    expect(childRendered).toBe(true)
     expect(window.contentfulOptimization).toBeUndefined()
   })
 
