@@ -7,6 +7,7 @@ export function CustomViewTracker({ componentId }: { readonly componentId: strin
   const sdk = useOptimization()
 
   useEffect(() => {
+    if (!sdk) return
     void sdk.trackView({ componentId, viewId: crypto.randomUUID(), viewDurationMs: 0 })
   }, [sdk, componentId])
 

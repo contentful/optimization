@@ -160,7 +160,7 @@ export function ControlPanel({ demoCTA, serverState }: ControlPanelProps = {}): 
             className="btn btn--secondary btn--sm"
             data-testid="track-conversion-button"
             onClick={() => {
-              void sdk.trackView({
+              void sdk?.trackView({
                 componentId: 'page-two-demo-cta',
                 viewId: crypto.randomUUID(),
                 viewDurationMs: 0,
