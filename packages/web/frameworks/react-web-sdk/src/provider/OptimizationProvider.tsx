@@ -12,7 +12,6 @@ import {
 import { useLayoutEffect, useRef, useState, type PropsWithChildren, type ReactElement } from 'react'
 
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
-import { isBrowser } from './isBrowser'
 
 /**
  * Provider-owned callback for app-level subscriptions once SDK state is ready.
@@ -180,20 +179,23 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       return { error: undefined, isReady: true, sdk: props.sdk }
     }
 
-    // On the server, useLayoutEffect never fires, so initialize the SDK synchronously
-    // here. Each server render gets its own instance; the singleton lock is skipped on
-    // the server so concurrent SSR requests don't contend over globalThis.
-    if (!isBrowser()) {
-      try {
-        const binding = initializeProviderSdk(props)
+    // Two paths must defer to useLayoutEffect and cannot init here:
+    // 1. serverOptimizationState — async hydration; the Promise cannot be awaited in useState.
+    // 2. onStatesReady — the callback must run before children mount; on server where
+    //    useLayoutEffect never fires, children must not render at all.
+    if (props.serverOptimizationState !== undefined || props.onStatesReady !== undefined) {
+      return { error: undefined, isReady: false, sdk: undefined }
+    }
 
-        if (!isPromiseLike(binding)) {
-          sdkBindingRef.current = binding
-          return { error: undefined, isReady: true, sdk: binding.sdk }
-        }
-      } catch (error: unknown) {
-        return { error: toError(error), isReady: false, sdk: undefined }
+    try {
+      const binding = initializeProviderSdk(props)
+
+      if (!isPromiseLike(binding)) {
+        sdkBindingRef.current = binding
+        return { error: undefined, isReady: true, sdk: binding.sdk }
       }
+    } catch (error: unknown) {
+      return { error: toError(error), isReady: false, sdk: undefined }
     }
 
     return { error: undefined, isReady: false, sdk: undefined }
@@ -203,6 +205,16 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     const { current: initialProps } = initialPropsRef
 
     if (canUseInjectedSdkDuringInitialRender(initialProps)) return
+
+    // SDK was already initialized synchronously in useState (browser or server); only register
+    // the cleanup teardown — do not create a second instance.
+    if (sdkBindingRef.current !== undefined) {
+      const { current: binding } = sdkBindingRef
+      return () => {
+        disposeSdkBinding(binding)
+        sdkBindingRef.current = undefined
+      }
+    }
 
     // Async path: serverOptimizationState requires hydration before the SDK is ready.
     const setupState = { disposed: false }
@@ -268,9 +280,15 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     }
   }, [liveLocale, props.sdk, state.sdk])
 
-  const shouldRenderChildren = state.isReady || state.error !== undefined
-
-  if (!shouldRenderChildren) {
+  // Gate rendering when async setup must complete first:
+  // - onStatesReady: the callback subscribes to SDK state and must run before children mount.
+  // - serverOptimizationState: async hydration must finish before children see SDK-resolved data.
+  // In all other cases, always render: the owned SDK initializes in useLayoutEffect and client
+  // components guard on isReady/sdk in their own effects. This also allows Next.js SSR to produce
+  // HTML from server components inside the provider tree.
+  const needsAsyncSetup =
+    props.onStatesReady !== undefined || props.serverOptimizationState !== undefined
+  if (needsAsyncSetup && !state.isReady && state.error === undefined) {
     return null
   }
 

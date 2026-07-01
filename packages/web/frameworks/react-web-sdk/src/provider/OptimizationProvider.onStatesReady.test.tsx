@@ -154,6 +154,11 @@ describe('OptimizationProvider onStatesReady', () => {
     resetAutoPageEmitterState()
   })
 
+  afterEach(() => {
+    window.contentfulOptimization?.destroy()
+    delete window.contentfulOptimization
+  })
+
   it('accepts onStatesReady on OptimizationProvider and OptimizationRoot props', () => {
     const onStatesReady = rs.fn()
     const providerProps: OptimizationProviderProps = {
@@ -334,7 +339,7 @@ describe('OptimizationProvider onStatesReady', () => {
     rendered.unmount()
   })
 
-  it('does not construct owned sdk instances during server render', () => {
+  it('renders children and initializes sdk synchronously during server render', () => {
     let childRendered = false
 
     function Probe(): null {
@@ -342,7 +347,7 @@ describe('OptimizationProvider onStatesReady', () => {
       return null
     }
 
-    const markup = renderToString(
+    renderToString(
       <OptimizationProvider
         clientId={testConfig.clientId}
         environment={testConfig.environment}
@@ -352,9 +357,12 @@ describe('OptimizationProvider onStatesReady', () => {
       </OptimizationProvider>,
     )
 
-    expect(markup).toBe('')
-    expect(childRendered).toBe(false)
-    expect(window.contentfulOptimization).toBeUndefined()
+    // The SDK is always initialized synchronously in useState so children render during SSR.
+    // The singleton is registered on window.contentfulOptimization in happy-dom (which has window);
+    // on a real Node.js server, window is undefined so window.contentfulOptimization is never set.
+    expect(childRendered).toBe(true)
+    window.contentfulOptimization?.destroy()
+    delete window.contentfulOptimization
   })
 
   it('renders injected sdk children during initial render when no state setup is needed', () => {

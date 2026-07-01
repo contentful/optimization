@@ -3,11 +3,16 @@ import type { ReactElement } from 'react'
 import { renderToString } from 'react-dom/server'
 import { OptimizationProvider, useOptimization, type OptimizationSdk } from '../index'
 
-// Simulate a server (Node.js) environment: isBrowser() returning false causes
-// OptimizationProvider to initialize the SDK synchronously inside useState rather
-// than deferring to useLayoutEffect.
-rs.mock('./isBrowser', () => ({
-  isBrowser: () => false,
+// Simulate a Node.js / SSR environment: disable browser APIs so the SDK behaves
+// as it would on the server — no IntersectionObserver, MutationObserver, or DOM listeners.
+rs.mock('@contentful/optimization-web/constants', () => ({
+  CAN_ADD_LISTENERS: false,
+  HAS_MUTATION_OBSERVER: false,
+  OPTIMIZATION_WEB_SDK_NAME: '@contentful/optimization-web',
+  OPTIMIZATION_WEB_SDK_VERSION: '0.0.0',
+  ANONYMOUS_ID_COOKIE: '__ctfl_anon',
+  ENTRY_ID_ATTRIBUTE: 'data-ctfl-entry-id',
+  ENTRY_SELECTOR: '[data-ctfl-entry-id]',
 }))
 
 const testConfig = {
@@ -19,7 +24,7 @@ const testConfig = {
   },
 }
 
-describe('OptimizationProvider — SSR (isBrowser: false)', () => {
+describe('OptimizationProvider — SSR (CAN_ADD_LISTENERS: false, synchronous useState init)', () => {
   afterEach(() => {
     window.contentfulOptimization?.destroy()
     delete window.contentfulOptimization
