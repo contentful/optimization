@@ -5,7 +5,6 @@ import {
   type OptimizationContextValue,
   type OptimizationSdk,
 } from '../context/OptimizationContext'
-import { SSR_STUB } from './ssrStub'
 
 function getMissingProviderError(): Error {
   return new Error(
@@ -39,10 +38,10 @@ export function useOptimization(): OptimizationSdk {
       })
     }
 
-    // On the server the SDK is initialized synchronously in the useState initializer,
-    // so this path is only reached during the browser's first-render window before
-    // useLayoutEffect fires. The stub provides no-op defaults for that brief window.
-    return SSR_STUB
+    throw new Error(
+      'ContentfulOptimization SDK is still initializing. ' +
+        'This should not happen when using the loading gate in OptimizationProvider.',
+    )
   }
 
   return sdk
