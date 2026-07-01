@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { CONSENT_COOKIE, runIf, seedAnonymousProfile, seedIdentifiedProfile } from './utils'
+import { CONSENT_COOKIE, runIf, seedAnonymousProfile, seedIdentifiedProfile, skipIf } from './utils'
 
 test.describe('Hydration', () => {
   runIf('HYDRATION')
@@ -26,6 +26,7 @@ test.describe('Hydration', () => {
 
 test.describe('SSR first-paint state', () => {
   runIf('SSR')
+  skipIf('SKIP_NO_JS')
   test.use({ javaScriptEnabled: false })
 
   test.describe('unidentified user', () => {
