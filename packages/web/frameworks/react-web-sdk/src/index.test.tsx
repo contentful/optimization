@@ -141,29 +141,6 @@ describe('@contentful/optimization-react-web core providers', () => {
     withoutLocale.unmount()
   })
 
-  it('does not create an owned optimization instance during server render', () => {
-    let renderedChild = false
-
-    function Probe(): null {
-      renderedChild = true
-      return null
-    }
-
-    const markup = renderToString(
-      <OptimizationProvider
-        clientId={testConfig.clientId}
-        environment={testConfig.environment}
-        api={testConfig.api}
-      >
-        <Probe />
-      </OptimizationProvider>,
-    )
-
-    expect(markup).toBe('')
-    expect(renderedChild).toBe(false)
-    expect(window.contentfulOptimization).toBeUndefined()
-  })
-
   it('provides optimization and live updates from OptimizationRoot', () => {
     let capturedOptimization: OptimizationSdk | undefined = undefined
     let capturedGlobalLiveUpdates: boolean | null = null

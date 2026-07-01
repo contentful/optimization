@@ -393,17 +393,41 @@ describe('CoreStateful blocked event handling', () => {
     }
   })
 
-  it('supports only one stateful instance per runtime until destroy is called', () => {
-    const first = createCoreStateful()
-    const createSecondCore = (): CoreStateful => new CoreStateful(config)
+  it('allows only one stateful instance per browser runtime until destroy is called', () => {
+    // In a browser environment the singleton lock prevents two SDK instances from
+    // competing over window.contentfulOptimization. This test runs via the Node path
+    // where the lock is skipped, so we mock window to simulate a browser runtime.
+    const windowDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'window')
+    Object.defineProperty(globalThis, 'window', { value: {}, writable: true, configurable: true })
 
-    expect(createSecondCore).toThrowError(/already initialized/i)
+    try {
+      const first = createCoreStateful()
+      const createSecondCore = (): CoreStateful => new CoreStateful(config)
+
+      expect(createSecondCore).toThrowError(/already initialized/i)
+
+      first.destroy()
+
+      expect(createCoreStateful).not.toThrow()
+    } finally {
+      if (windowDescriptor) {
+        Object.defineProperty(globalThis, 'window', windowDescriptor)
+      } else {
+        Reflect.deleteProperty(globalThis, 'window')
+      }
+    }
+  })
+
+  it('allows multiple stateful instances in a Node environment — singleton lock is browser-only', () => {
+    // The singleton lock guards window.contentfulOptimization (browser-only invariant).
+    // On the server (typeof window === 'undefined') the lock is skipped so that concurrent
+    // SSR requests can each construct their own SDK instance without contention.
+    const first = createCoreStateful()
+
+    const createSecond = (): CoreStateful => new CoreStateful(config)
+    expect(createSecond).not.toThrow()
 
     first.destroy()
-
-    expect(() => {
-      createCoreStateful()
-    }).not.toThrow()
   })
 
   it('flushes Insights API and Experience API queues with force on destroy', async () => {

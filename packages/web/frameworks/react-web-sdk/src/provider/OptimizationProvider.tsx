@@ -12,6 +12,7 @@ import {
 import { useLayoutEffect, useRef, useState, type PropsWithChildren, type ReactElement } from 'react'
 
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
+import { IS_SERVER } from './serverEnv'
 
 /**
  * Provider-owned callback for app-level subscriptions once SDK state is ready.
@@ -172,8 +173,6 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   const initialPropsRef = useRef(props)
   const liveLocale = props.sdk === undefined ? props.locale : undefined
 
-  // sdkBindingRef holds the binding created during initialization so the
-  // useLayoutEffect cleanup can dispose it without re-creating the SDK.
   const sdkBindingRef = useRef<ProviderSdkBinding | undefined>(undefined)
 
   const [state, setState] = useState<ProviderState>(() => {
@@ -181,36 +180,20 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       return { error: undefined, isReady: true, sdk: props.sdk }
     }
 
-    // Async hydration path — defer to useLayoutEffect
-    if (props.serverOptimizationState !== undefined) {
-      return { error: undefined, isReady: false, sdk: undefined }
-    }
+    // On the server, useLayoutEffect never fires, so initialize the SDK synchronously
+    // here. Each server render gets its own instance; the singleton lock is skipped on
+    // the server so concurrent SSR requests don't contend over globalThis.
+    if (IS_SERVER) {
+      try {
+        const binding = initializeProviderSdk(props)
 
-    // On the server (no window) it is safe to run synchronous initialization here:
-    // useState initializers run exactly once during SSR, so no double-init risk.
-    // In the browser, defer to useLayoutEffect to avoid StrictMode double-invocation.
-    if (typeof window !== 'undefined') {
-      return { error: undefined, isReady: false, sdk: undefined }
-    }
-
-    try {
-      const result = initializeProviderSdk(props)
-
-      if (!isPromiseLike(result)) {
-        sdkBindingRef.current = result
-
-        // Apply initial locale synchronously — the locale useLayoutEffect won't
-        // fire a second time since state.sdk is already set and stable.
-        if (liveLocale !== undefined) {
-          try {
-            result.sdk.setLocale(liveLocale)
-          } catch {}
+        if (!isPromiseLike(binding)) {
+          sdkBindingRef.current = binding
+          return { error: undefined, isReady: true, sdk: binding.sdk }
         }
-
-        return { error: undefined, isReady: true, sdk: result.sdk }
+      } catch (error: unknown) {
+        return { error: toError(error), isReady: false, sdk: undefined }
       }
-    } catch (error: unknown) {
-      return { error: toError(error), isReady: false, sdk: undefined }
     }
 
     return { error: undefined, isReady: false, sdk: undefined }
@@ -218,16 +201,6 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
 
   useLayoutEffect(() => {
     const { current: initialProps } = initialPropsRef
-
-    // Sync init already ran in useState — just register cleanup for the binding.
-    if (sdkBindingRef.current !== undefined) {
-      const { current: binding } = sdkBindingRef
-
-      return () => {
-        disposeSdkBinding(binding)
-        sdkBindingRef.current = undefined
-      }
-    }
 
     if (canUseInjectedSdkDuringInitialRender(initialProps)) return
 
