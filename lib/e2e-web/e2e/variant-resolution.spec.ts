@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { CLICK_SCENARIO_IDS, PAGES } from '../src/fixtures'
-import { runIf, seedIdentifiedProfile, skipIf } from './utils'
+import { runIf, seedAnonymousProfile, seedIdentifiedProfile, skipIf } from './utils'
 
 test.describe('Variant Resolution (CSR)', () => {
   runIf('CSR')
@@ -175,11 +175,7 @@ test.describe('Variant Resolution (SSR, JavaScript disabled)', () => {
 
   test.describe('unidentified user', () => {
     test.beforeEach(async ({ baseURL, context, page }) => {
-      const profileId = crypto.randomUUID()
-      await context.addCookies([
-        { name: 'app-personalization-consent', value: 'granted', url: baseURL },
-        { name: 'ctfl-opt-aid', value: profileId, url: baseURL },
-      ])
+      await seedAnonymousProfile(context, baseURL)
 
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
@@ -247,12 +243,7 @@ test.describe('Variant Resolution (SSR, JavaScript disabled)', () => {
 
   test.describe('identified user', () => {
     test.beforeEach(async ({ baseURL, context, page, request }) => {
-      const profileId = crypto.randomUUID()
-      await seedIdentifiedProfile(request, profileId)
-      await context.addCookies([
-        { name: 'app-personalization-consent', value: 'granted', url: baseURL },
-        { name: 'ctfl-opt-aid', value: profileId, url: baseURL },
-      ])
+      await seedIdentifiedProfile(context, baseURL, request)
 
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
