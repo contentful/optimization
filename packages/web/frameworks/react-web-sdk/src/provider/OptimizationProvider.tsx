@@ -221,6 +221,7 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
         return
       }
 
+      disposeOnce(sdkBindingRef.current)
       sdkBindingRef.current = initializedBinding
       setState({ error: undefined, isReady: true, sdk: initializedBinding.sdk })
     }
