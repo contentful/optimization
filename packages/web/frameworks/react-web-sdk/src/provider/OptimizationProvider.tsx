@@ -248,12 +248,9 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     }
   }, [liveLocale, props.sdk, state.sdk])
 
-  // When onStatesReady is set, gate rendering until the callback has run — the app may subscribe
-  // to SDK state in the callback and children must not mount before that.
-  // Without onStatesReady, always render: the owned SDK initializes in useLayoutEffect and
-  // client components already guard on isReady/sdk in their own effects. This also allows
-  // Next.js SSR to produce HTML from server components that live inside the provider tree.
-  if (props.onStatesReady && !state.isReady && state.error === undefined) {
+  const shouldRenderChildren = state.isReady || state.error !== undefined
+
+  if (!shouldRenderChildren) {
     return null
   }
 
