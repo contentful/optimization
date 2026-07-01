@@ -14,6 +14,21 @@ import {
   type TestEntry,
 } from './OptimizedEntry.testUtils'
 
+function createDeferred<T>(): {
+  readonly promise: Promise<T>
+  readonly reject: (reason?: unknown) => void
+  readonly resolve: (value: T) => void
+} {
+  let resolveDeferred: (value: T) => void = () => undefined
+  let rejectDeferred: (reason?: unknown) => void = () => undefined
+  const promise = new Promise<T>((resolve, reject) => {
+    resolveDeferred = resolve
+    rejectDeferred = reject
+  })
+
+  return { promise, reject: rejectDeferred, resolve: resolveDeferred }
+}
+
 describe('OptimizedEntry', () => {
   const baseline = makeEntry('baseline')
   const optimizedBaseline = makeOptimizableEntry('optimized-baseline')
@@ -155,6 +170,62 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
+  it('fetches entryId entries and renders the loading fallback until they resolve', async () => {
+    const deferred = createDeferred<TestEntry>()
+    const { optimization } = createRuntime((entry) => ({ entry }))
+    const fetchContentfulEntry = rs.fn(async () => await deferred.promise)
+    Reflect.set(optimization, 'fetchContentfulEntry', fetchContentfulEntry)
+
+    const view = await renderComponent(
+      <OptimizedEntry entryId="baseline" entryQuery={{ locale: 'de-DE' }} loadingFallback="loading">
+        {(resolved) => readTitle(resolved)}
+      </OptimizedEntry>,
+      optimization,
+    )
+
+    expect(view.container.textContent).toContain('loading')
+    expect(fetchContentfulEntry).toHaveBeenCalledWith('baseline', { locale: 'de-DE' })
+
+    await act(async () => {
+      deferred.resolve(baseline)
+      await deferred.promise
+    })
+
+    expect(view.container.textContent).toContain('baseline')
+    expect(getWrapper(view.container).dataset.ctflEntryId).toBe('baseline')
+
+    await view.unmount()
+  })
+
+  it('renders entryId fetch error fallbacks', async () => {
+    const deferred = createDeferred<TestEntry>()
+    const error = new Error('CDA failed')
+    const onEntryError = rs.fn()
+    const { optimization } = createRuntime((entry) => ({ entry }))
+    Reflect.set(optimization, 'fetchContentfulEntry', async () => await deferred.promise)
+
+    const view = await renderComponent(
+      <OptimizedEntry
+        entryId="baseline"
+        errorFallback={(entryError) => `error: ${entryError.message}`}
+        onEntryError={onEntryError}
+      >
+        {(resolved) => readTitle(resolved)}
+      </OptimizedEntry>,
+      optimization,
+    )
+
+    await act(async () => {
+      deferred.reject(error)
+      await deferred.promise.catch(() => undefined)
+    })
+
+    expect(onEntryError).toHaveBeenCalledWith(error)
+    expect(view.container.textContent).toContain('error: CDA failed')
+
+    await view.unmount()
+  })
+
   it('reveals baseline after the unresolved loading timeout when a custom fallback is provided', async () => {
     rs.useFakeTimers()
 
@@ -241,6 +312,42 @@ describe('OptimizedEntry', () => {
     expect(wrapper.dataset.ctflSticky).toBe('false')
     expect(wrapper.dataset.ctflVariantIndex).toBe('2')
     expect(wrapper.dataset.ctflDuplicationScope).toBe('session')
+
+    await view.unmount()
+  })
+
+  it('passes resolved metadata to render props and onEntryResolved', async () => {
+    const onEntryResolved = rs.fn()
+    const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
+      if (!selectedOptimizations?.length) return { entry }
+      return {
+        entry: variantA,
+        optimizationContextId: 'ctx-1',
+        selectedOptimization: selectedOptimizations[0],
+      }
+    })
+
+    const view = await renderComponent(
+      <OptimizedEntry baselineEntry={optimizedBaseline} onEntryResolved={onEntryResolved}>
+        {(resolved, metadata) =>
+          `${readTitle(resolved)}:${metadata?.baselineEntryId}:${metadata?.entryId}:${metadata?.optimizationContextId}`
+        }
+      </OptimizedEntry>,
+      optimization,
+    )
+
+    await emit(variantOneState)
+
+    expect(view.container.textContent).toContain('variant-a:optimized-baseline:variant-a:ctx-1')
+    expect(onEntryResolved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baselineEntry: optimizedBaseline,
+        baselineEntryId: 'optimized-baseline',
+        entry: variantA,
+        entryId: 'variant-a',
+        optimizationContextId: 'ctx-1',
+      }),
+    )
 
     await view.unmount()
   })

@@ -30,6 +30,7 @@ export type {
   CoreStatelessRequest,
   CoreStatelessRequestConsent,
   CoreStatelessRequestOptions,
+  FetchOptimizedEntryResult,
   PageViewBuilderArgs,
   ResolvedData,
   UniversalEventBuilderArgs,
@@ -144,13 +145,26 @@ export type NextjsPageContextInput =
   | NonNullable<UniversalEventBuilderArgs['page']>
   | CreateNextjsPageContextOptions
 
+export type ServerOptimizedEntryFetchResult = ServerTrackingResolvedData & {
+  readonly baselineEntry: ServerTrackingBaselineEntry
+}
+
 type ServerOptimizedEntryOwnProps<TElement extends keyof JSX.IntrinsicElements> =
   ServerTrackingAttributeOptions & {
     readonly as?: TElement
-    readonly baselineEntry: ServerTrackingBaselineEntry
     readonly children?: ReactNode
-    readonly resolvedData: ServerTrackingResolvedData
-  }
+  } & (
+      | {
+          readonly baselineEntry: ServerTrackingBaselineEntry
+          readonly resolvedData: ServerTrackingResolvedData
+          readonly result?: never
+        }
+      | {
+          readonly baselineEntry?: never
+          readonly resolvedData?: never
+          readonly result: ServerOptimizedEntryFetchResult
+        }
+    )
 
 type DataCtflAttributeName = `data-ctfl-${string}`
 
@@ -340,20 +354,39 @@ export function persistNextjsAnonymousId(
   }
 }
 
-export function ServerOptimizedEntry<TElement extends keyof JSX.IntrinsicElements = 'div'>({
-  as,
-  baselineEntry,
-  children,
-  clickable,
-  hoverDurationUpdateIntervalMs,
-  resolvedData,
-  trackClicks,
-  trackHovers,
-  trackViews,
-  viewDurationUpdateIntervalMs,
-  ...htmlProps
-}: ServerOptimizedEntryProps<TElement>): ReactElement {
+function getServerOptimizedEntryData<TElement extends keyof JSX.IntrinsicElements>(
+  props: ServerOptimizedEntryProps<TElement>,
+): {
+  readonly baselineEntry: ServerTrackingBaselineEntry
+  readonly resolvedData: ServerTrackingResolvedData
+} {
+  if (props.result !== undefined) {
+    return { baselineEntry: props.result.baselineEntry, resolvedData: props.result }
+  }
+
+  return { baselineEntry: props.baselineEntry, resolvedData: props.resolvedData }
+}
+
+export function ServerOptimizedEntry<TElement extends keyof JSX.IntrinsicElements = 'div'>(
+  props: ServerOptimizedEntryProps<TElement>,
+): ReactElement {
+  const {
+    as,
+    baselineEntry: _baselineEntry,
+    children,
+    clickable,
+    hoverDurationUpdateIntervalMs,
+    resolvedData: _resolvedData,
+    result: _result,
+    trackClicks,
+    trackHovers,
+    trackViews,
+    viewDurationUpdateIntervalMs,
+    ...htmlProps
+  } = props
   const Element = as ?? 'div'
+  const { baselineEntry, resolvedData } = getServerOptimizedEntryData(props)
+
   const trackingAttributes: ServerTrackingAttributes = getServerTrackingAttributes(
     baselineEntry,
     resolvedData,
@@ -367,7 +400,11 @@ export function ServerOptimizedEntry<TElement extends keyof JSX.IntrinsicElement
     },
   )
 
-  return createElement(Element, { ...htmlProps, ...trackingAttributes }, children)
+  return createElement(
+    Element,
+    { ...(htmlProps as Record<string, unknown>), ...trackingAttributes },
+    children,
+  )
 }
 
 function mergePageContext(

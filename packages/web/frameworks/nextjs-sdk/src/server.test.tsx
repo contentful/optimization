@@ -435,4 +435,23 @@ describe('Next.js server helpers', () => {
       className: 'entry',
     })
   })
+
+  it('renders a server wrapper from a managed fetch result', () => {
+    const element = ServerOptimizedEntry({
+      as: 'article',
+      children: 'Rendered content',
+      result: {
+        baselineEntry,
+        ...resolvedData,
+      },
+    })
+
+    expect(element.props).toMatchObject({
+      'data-ctfl-baseline-id': 'baseline-entry',
+      'data-ctfl-entry-id': 'variant-entry',
+      'data-ctfl-optimization-id': 'experience-id',
+      'data-ctfl-variant-index': 1,
+      children: 'Rendered content',
+    })
+  })
 })

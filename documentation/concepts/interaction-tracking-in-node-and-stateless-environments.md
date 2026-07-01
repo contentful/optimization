@@ -53,7 +53,7 @@ interaction decides which facts are available.
 
 | Path                                        | Runtime responsibility                                                                                                                                                                                                                                                                                                                         | Use when                                                                                                                             |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `@contentful/optimization-node`             | Bind request consent, locale, profile, and page context; call Experience API methods; resolve entries; emit server-known events.                                                                                                                                                                                                               | Server rendering owns personalization, and the event is a request fact or server-observed business action.                           |
+| `@contentful/optimization-node`             | Bind request consent, locale, profile, and page context; call Experience API methods; resolve entries with app-fetched `baselineEntry` or request-bound `fetchOptimizedEntry()`; emit server-known events.                                                                                                                                     | Server rendering owns personalization, and the event is a request fact or server-observed business action.                           |
 | `@contentful/optimization-web`              | Own browser consent state, profile state, storage, automatic DOM observation, browser queues, and Insights delivery.                                                                                                                                                                                                                           | Non-React or custom browser code needs view, click, hover, route, or manual element tracking after HTML reaches the page.            |
 | `@contentful/optimization-react-web`        | Wrap the Web SDK with React browser providers, hooks, router trackers, and `OptimizedEntry` from `@contentful/optimization-react-web`.                                                                                                                                                                                                         | React browser apps need framework-owned state, route page tracking, entry wrappers, or browser-side entry personalization.           |
 | `@contentful/optimization-nextjs`           | Own Next.js adapter surfaces: server helpers and `ServerOptimizedEntry` from `@contentful/optimization-nextjs/server`, request helpers from `@contentful/optimization-nextjs/request-handler`, tracking helpers from `@contentful/optimization-nextjs/tracking-attributes`, and client wrappers from `@contentful/optimization-nextjs/client`. | Next.js apps need server-owned personalization, request and cookie helpers, SSR tracking attributes, and client tracking boundaries. |
@@ -211,6 +211,15 @@ if (!pageResponse) {
   return
 }
 ```
+
+When the Node SDK is configured with a consumer-owned `contentful.js` client, prefer
+`requestOptimization.fetchOptimizedEntry(entryId)` after an accepted Experience call. The
+request-bound client uses the latest `selectedOptimizations` when they are omitted. Manual
+`baselineEntry` plus `resolveOptimizedEntry()` remains supported when the application owns CDA
+fetching or caching directly.
+
+Both managed `fetchOptimizedEntry()` and manual `resolveOptimizedEntry()` expect single-locale CDA
+entry shapes. Avoid `withAllLocales` and `locale=*` for optimization surfaces.
 
 Use server-side `track()` for server-known business events:
 

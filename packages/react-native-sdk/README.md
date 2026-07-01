@@ -117,6 +117,7 @@ Only `clientId` is required.
 | `environment`           | No        | `'main'`                      | Contentful environment identifier                                                 |
 | `api`                   | No        | See API options below         | Experience API and Insights API endpoint and request options                      |
 | `locale`                | No        | `undefined`                   | SDK Experience API and default event locale                                       |
+| `contentful`            | No        | `undefined`                   | App-provided `contentful.js` client for SDK-managed entry fetching                |
 | `defaults`              | No        | `undefined`                   | Initial state, commonly including consent, persistence consent, or profile values |
 | `allowedEventTypes`     | No        | `['identify', 'screen']`      | Event types allowed before consent is explicitly set                              |
 | `trackEntryInteraction` | No        | `{ views: true, taps: true }` | Default view and tap tracking for `OptimizedEntry` components                     |
@@ -141,8 +142,9 @@ Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalT
 responses.
 
 Choose the application Contentful locale in your navigation, i18n, or app configuration layer. Pass
-that value directly to Contentful CDA requests, and pass the same value to SDK `locale` when
-Experience API responses and event context should use the same language. See
+that value through `contentful.defaultQuery`, per-entry `entryQuery`, or manual Contentful CDA
+requests, and pass the same value to SDK `locale` when Experience API responses and event context
+should use the same language. See
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the full locale model.
 
@@ -204,31 +206,60 @@ cross-SDK consent guidance, see
 ### Render optimized entries
 
 `OptimizedEntry` resolves optimized Contentful entries and passes non-optimized entries through
-unchanged:
+unchanged. Prefer SDK-managed fetching when the SDK is configured with your app-owned
+`contentful.js` client:
 
 ```tsx
 import { OptimizedEntry } from '@contentful/optimization-react-native'
 
-function HeroEntry({ entry }) {
+function HeroEntry() {
   return (
-    <OptimizedEntry baselineEntry={entry}>
+    <OptimizedEntry entryId="hero-entry-id" entryQuery={{ locale: 'en-US' }}>
       {(resolvedEntry) => <Hero data={resolvedEntry.fields} />}
     </OptimizedEntry>
   )
 }
 ```
 
-Fetch Contentful entries in your app layer. For optimized entries, request linked entries deeply
-enough for the baseline and variants, commonly with `include: 10`.
+Configure the SDK with `contentful: { client }` on `OptimizationRoot`, `OptimizationProvider`, or
+`ContentfulOptimization.create(...)`. SDK-managed fetching merges `contentful.defaultQuery`,
+per-entry `entryQuery`, the SDK `locale` fallback, and `include: 10`. Manual baseline entries remain
+supported and unchanged:
 
-Use one CDA locale for entries passed to `OptimizedEntry` or `useEntryResolver()`. For localized
-apps, derive the application locale from your navigation, i18n, or app configuration layer and pass
-it directly to Contentful CDA requests. Do not pass all-locale CDA responses from `withAllLocales`
-or `locale=*`; these APIs expect direct single-locale field values. See
+```tsx
+<OptimizedEntry baselineEntry={entry}>
+  {(resolvedEntry) => <Hero data={resolvedEntry.fields} />}
+</OptimizedEntry>
+```
+
+Use one CDA locale for entries fetched through `entryId`, passed to `OptimizedEntry`, or resolved
+with `useEntryResolver()` or `useOptimizedEntry()`. For localized apps, derive the application
+locale from your navigation, i18n, or app configuration layer and pass it to `entryQuery`,
+`contentful.defaultQuery`, or manual Contentful CDA requests. Do not pass all-locale CDA responses
+from `withAllLocales` or `locale=*`; these APIs expect direct single-locale field values. See
 [Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the broader locale model.
+
+Use `useOptimizedEntry()` when a component needs the same managed `entryId` or manual
+`baselineEntry` source model without the `OptimizedEntry` wrapper:
+
+```tsx
+import { useOptimizedEntry } from '@contentful/optimization-react-native'
+
+function HeroData() {
+  const { entry, isLoading, error } = useOptimizedEntry({ entryId: 'hero-entry-id' })
+
+  if (isLoading || error || !entry) return null
+
+  return <Hero data={entry.fields} />
+}
+```
+
+Use `onEntryResolved`, the render prop metadata, or the hook's `metadata` and `isResolved` fields
+when application code needs the baseline ID, resolved entry ID, or optimization context after
+tracking is ready.
 
 Use `useEntryResolver()` when a component needs manual entry resolution without the `OptimizedEntry`
 wrapper:

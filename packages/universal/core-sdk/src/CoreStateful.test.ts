@@ -1,6 +1,8 @@
-import CoreStateful, { type CoreStatefulConfig } from './CoreStateful'
+import type { Entry } from 'contentful'
 import type { ChangeArray } from './api-schemas'
 import { getPreviewPanelBridge, hydrateOptimizationData } from './bridge-support'
+import type { ContentfulEntryClient, ContentfulEntryQuery } from './CoreBase'
+import CoreStateful, { type CoreStatefulConfig } from './CoreStateful'
 import type {
   BlockedEvent,
   EventOptimizationContext,
@@ -19,6 +21,8 @@ const config: CoreStatefulConfig = {
   clientId: 'key_123',
   environment: 'main',
 }
+
+type MockContentfulGetEntry = (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
 
 const DARK_MODE_CHANGE: ChangeArray[number] = {
   key: 'dark-mode',
@@ -540,6 +544,29 @@ describe('CoreStateful blocked event handling', () => {
         variantIndex: 1,
       }),
     )
+  })
+
+  it('defaults fetchOptimizedEntry to the selectedOptimizations signal', async () => {
+    const getEntry = rs.fn<MockContentfulGetEntry>(
+      async () => await Promise.resolve(optimizedEntry),
+    )
+    const client: ContentfulEntryClient & {
+      readonly getEntry: ReturnType<typeof rs.fn<MockContentfulGetEntry>>
+    } = {
+      getEntry,
+    }
+    const core = createCoreStateful({
+      contentful: { client, cache: false },
+    })
+
+    signals.selectedOptimizations.value = selectedOptimizationsFixture
+
+    const result = await core.fetchOptimizedEntry('entry-id')
+
+    expect(getEntry).toHaveBeenCalledWith('entry-id', { include: 10 })
+    expect(result.baselineEntry).toBe(optimizedEntry)
+    expect(result.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(result.optimizationContextId).toEqual(expect.any(String))
   })
 
   it('registers unique optimization contexts and clears them on reset and destroy', () => {

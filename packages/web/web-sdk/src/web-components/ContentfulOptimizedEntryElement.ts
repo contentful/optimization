@@ -1,5 +1,10 @@
 import type { ResolvedData } from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
+import {
+  OptimizedEntrySourceController,
+  type ContentfulEntryQuery,
+  type OptimizedEntrySourceSnapshot,
+} from '@contentful/optimization-core/entry-source'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import {
   OPTIMIZED_ENTRY_HOST_DISPLAY,
@@ -21,6 +26,7 @@ type HostAttributeValue = string | boolean | number | undefined
 
 export interface ContentfulOptimizedEntryEventDetail {
   readonly entry: Entry
+  readonly metadata: OptimizedEntrySnapshot['metadata']
   readonly resolvedData: ResolvedData<EntrySkeletonType>
   readonly selectedOptimization: ResolvedData<EntrySkeletonType>['selectedOptimization']
   readonly selectedOptimizations: SelectedOptimizationArray | undefined
@@ -68,14 +74,17 @@ function hasResolvedDataChanged(
 
 export class ContentfulOptimizedEntryElement extends HTMLElement {
   static get observedAttributes(): string[] {
-    return ['live-updates', 'track-clicks', 'track-hovers', 'track-views']
+    return ['entry-id', 'live-updates', 'track-clicks', 'track-hovers', 'track-views']
   }
 
   private explicitRoot: ContentfulOptimizationRootElement | undefined = undefined
   private assignedBaselineEntry: Entry | undefined = undefined
+  private assignedEntryQuery: ContentfulEntryQuery | undefined = undefined
   private controller: OptimizedEntryController | undefined = undefined
+  private readonly sourceController = new OptimizedEntrySourceController()
   private appliedHostAttributes = new Map<string, string>()
   private previousSnapshot: OptimizedEntrySnapshot | undefined = undefined
+  private previousSourceSnapshot: OptimizedEntrySourceSnapshot | undefined = undefined
   private optimizationRootContext: ContentfulOptimizationRootContext | undefined = undefined
   private unsubscribeFromRootContext: (() => void) | undefined = undefined
   private assignedSdk: OptimizedEntrySdk | undefined = undefined
@@ -86,6 +95,28 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
 
   set baselineEntry(value: Entry | undefined) {
     this.assignedBaselineEntry = value
+    this.syncEntryController()
+  }
+
+  get entryId(): string | undefined {
+    return this.getAttribute('entry-id') ?? undefined
+  }
+
+  set entryId(value: string | undefined) {
+    if (value === undefined) {
+      this.removeAttribute('entry-id')
+      return
+    }
+
+    this.setAttribute('entry-id', value)
+  }
+
+  get entryQuery(): ContentfulEntryQuery | undefined {
+    return this.assignedEntryQuery
+  }
+
+  set entryQuery(value: ContentfulEntryQuery | undefined) {
+    this.assignedEntryQuery = value
     this.syncEntryController()
   }
 
@@ -143,11 +174,16 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
   connectedCallback(): void {
     this.style.display ||= OPTIMIZED_ENTRY_HOST_DISPLAY
 
+    this.sourceController.setSnapshotListener((snapshot) => {
+      this.applySourceSnapshot(snapshot)
+    })
     this.bindRoot()
     this.syncEntryController()
   }
 
   disconnectedCallback(): void {
+    this.sourceController.disconnect()
+    this.sourceController.setSnapshotListener(undefined)
     this.unsubscribeFromRootContext?.()
     this.unsubscribeFromRootContext = undefined
     this.controller?.disconnect()
@@ -155,6 +191,7 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
     this.controller = undefined
     this.optimizationRootContext = undefined
     this.previousSnapshot = undefined
+    this.previousSourceSnapshot = undefined
   }
 
   attributeChangedCallback(_name: string, oldValue: string | null, newValue: string | null): void {
@@ -211,14 +248,23 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
   }
 
   private syncEntryController(): void {
-    const { assignedBaselineEntry: baselineEntry } = this
+    const { sdk, isSdkStateReady } = this.resolveControllerSdk()
+    const previousSourceSnapshot = this.sourceController.getSnapshot()
+    const { entryId } = this
 
-    if (!baselineEntry) {
-      this.clearController()
-      this.resetPresentationState()
-      return
-    }
+    this.sourceController.updateOptions({
+      baselineEntry: this.assignedBaselineEntry,
+      entryId: entryId === '' ? undefined : entryId,
+      entryQuery: this.assignedEntryQuery,
+      sdk,
+      isSdkStateReady,
+    })
 
+    const nextSourceSnapshot = this.sourceController.getSnapshot()
+    this.applySourceSnapshot(nextSourceSnapshot, previousSourceSnapshot === nextSourceSnapshot)
+  }
+
+  private syncBaselineEntryController(baselineEntry: Entry): void {
     const { sdk, isSdkStateReady } = this.resolveControllerSdk()
 
     if (!sdk || !isSdkStateReady) {
@@ -257,6 +303,58 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
     this.clearController()
     this.resetPresentationState()
 
+    if (this.optimizationRootContext?.error) {
+      this.dispatchEntryError(this.optimizationRootContext.error)
+    }
+  }
+
+  private applySourceSnapshot(
+    snapshot: OptimizedEntrySourceSnapshot,
+    forcePresentationUpdate = false,
+  ): void {
+    const { previousSourceSnapshot } = this
+    const sourceSnapshotChanged = previousSourceSnapshot !== snapshot
+    this.previousSourceSnapshot = snapshot
+
+    if (snapshot.baselineEntry !== undefined) {
+      if (sourceSnapshotChanged || forcePresentationUpdate) {
+        this.syncBaselineEntryController(snapshot.baselineEntry)
+      }
+      return
+    }
+
+    this.clearController()
+    this.resetPresentationState()
+    this.applyManagedSourceSnapshot(snapshot, sourceSnapshotChanged, forcePresentationUpdate)
+  }
+
+  private applyManagedSourceSnapshot(
+    snapshot: OptimizedEntrySourceSnapshot,
+    sourceSnapshotChanged: boolean,
+    forcePresentationUpdate: boolean,
+  ): void {
+    if (snapshot.error !== undefined) {
+      if (sourceSnapshotChanged) {
+        this.dispatchEntryError(snapshot.error)
+      }
+      return
+    }
+
+    if (snapshot.isLoading && sourceSnapshotChanged && this.canFetchManagedSource()) {
+      this.dispatchEntryLoading()
+    }
+
+    if (forcePresentationUpdate && snapshot.entryId !== undefined) {
+      this.dispatchRootContextError()
+    }
+  }
+
+  private canFetchManagedSource(): boolean {
+    const { sdk, isSdkStateReady } = this.resolveControllerSdk()
+    return sdk !== undefined && isSdkStateReady
+  }
+
+  private dispatchRootContextError(): void {
     if (this.optimizationRootContext?.error) {
       this.dispatchEntryError(this.optimizationRootContext.error)
     }
@@ -371,11 +469,21 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
         composed: true,
         detail: {
           entry: snapshot.entry,
+          metadata: snapshot.metadata,
           resolvedData: snapshot.resolvedData,
           selectedOptimization: snapshot.selectedOptimization,
           selectedOptimizations: snapshot.selectedOptimizations,
           snapshot,
         },
+      }),
+    )
+  }
+
+  private dispatchEntryLoading(): void {
+    this.dispatchEvent(
+      new CustomEvent(ENTRY_LOADING_EVENT, {
+        bubbles: true,
+        composed: true,
       }),
     )
   }

@@ -6,11 +6,12 @@ title: Locale handling in the Optimization SDK Suite
 
 Use this document to keep the application Contentful locale separate from the SDK Experience/event
 locale across Web, React Web, Next.js, Node, React Native, iOS, and Android applications. For
-app-owned content fetching and entry resolution, the SDKs do not resolve Contentful locales, wrap
+app-owned content fetching and entry resolution, the SDKs do not resolve Contentful locales, create
 Contentful Delivery API clients, or infer browser, device, or request locales. Applications choose
-their own locale from routing, i18n, native state, or request logic and pass it to each system that
-needs it. Preview and debug tooling is separate: preview-panel APIs can use Contentful clients to
-load Optimization definitions, but they do not choose or fetch locales for application content.
+their own locale from routing, i18n, native state, or request logic and pass it to manual Contentful
+calls or SDK-managed entry fetching. Preview and debug tooling is separate: preview-panel APIs can
+use Contentful clients to load Optimization definitions, but they do not choose locales for
+application content.
 
 For entry replacement mechanics, see
 [Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md). For
@@ -63,23 +64,48 @@ locale is supported by Contentful.
 
 ## Application Contentful locale
 
-Applications fetch Contentful entries directly. Choose an `appLocale` with application-owned logic,
-then pass it to CDA or CPA calls.
+Choose an `appLocale` with application-owned logic, then pass it to CDA or CPA calls. JavaScript
+managed fetching uses the application-owned `contentful.js` client from `contentful: { client }`;
+the SDK does not create clients, discover Contentful locales, infer browser or request locales, or
+own locale policy.
 
-Contentful fetch, JavaScript runtimes (TypeScript):
+SDK-managed Contentful fetch, JavaScript runtimes (TypeScript):
 
 ```ts
 const appLocale = getAppLocale()
 
+const optimization = new ContentfulOptimization({
+  clientId,
+  contentful: {
+    client: contentfulClient,
+    defaultQuery: { locale: appLocale },
+  },
+  locale: appLocale,
+})
+
+const entry = await optimization.fetchContentfulEntry(entryId, {
+  locale: appLocale,
+})
+```
+
+Per-call `entryQuery` or `query` values override `contentful.defaultQuery`. If no Contentful query
+locale is provided, managed fetching falls back to the SDK `locale` before calling
+`contentful.js getEntry()`. Request-bound Node clients use `forRequest({ locale })` as that
+fallback. Use a concrete locale such as `en-US`; do not use `withAllLocales` or `locale=*` for
+entries that the SDK will resolve.
+
+Manual Contentful fetch, JavaScript runtimes (TypeScript):
+
+```ts
 const entry = await contentfulClient.getEntry(entryId, {
   include: 10,
   locale: appLocale,
 })
 ```
 
-Do this anywhere Contentful content is fetched: browser data loaders, React hooks, server routes,
-React Native services, and native app content clients. If the app omits `locale`, Contentful uses
-the space default locale.
+Pass the same `appLocale` anywhere Contentful content is fetched: browser data loaders, React hooks,
+server routes, React Native services, and native app content clients. If the app omits `locale`,
+Contentful uses the space default locale.
 
 Use the same `appLocale` in cache keys when localized content can differ.
 
@@ -136,8 +162,10 @@ On iOS and Android, call `setLocale` only after the client has initialized; set 
 through `OptimizationConfig` before mounting or initializing.
 
 `setLocale(locale)` validates and normalizes the SDK Experience/event locale. It does not refetch
-Contentful content, update routes, or clear application caches. Application code must refetch
-Contentful entries with its chosen Contentful locale.
+Contentful content, update routes, or clear application caches. JavaScript managed fetching can use
+the SDK locale only as the fallback `getEntry()` query locale when neither `contentful.defaultQuery`
+nor a per-call query provides one. Application code must refetch Contentful entries with its chosen
+Contentful locale.
 
 Web or React Web client runtime (TypeScript):
 
@@ -221,17 +249,30 @@ const [entry, data] = await Promise.all([
 `forRequest({ locale })` sets the request-bound Experience API locale and default event context
 locale. If both `locale` and `experienceOptions.locale` are supplied, `locale` wins. Use
 `experienceOptions.locale` only as an advanced low-level pass-through when `locale` is not supplied.
+When a Node SDK is configured with `contentful: { client }`, root `fetchOptimizedEntry(entryId)`
+needs explicit `selectedOptimizations` for personalized results. A request-bound `forRequest()`
+client uses the latest accepted Experience response selections by default when
+`fetchOptimizedEntry(entryId)` omits `selectedOptimizations`. It also uses the request `locale` as
+the managed Contentful query locale when neither `contentful.defaultQuery` nor the per-call query
+sets `locale`.
 
 ## Entry resolution and localized Contentful content
 
 Entry resolution expects one localized view of a baseline entry and linked optimization entries.
 Pass direct single-locale field values to the runtime-specific entry resolution surface:
 
-- Web and Node `resolveOptimizedEntry()`.
-- React Web and React Native `OptimizedEntry` and `useEntryResolver()`.
-- React Web and Next.js client `useOptimizedEntry()`.
-- Next.js server `resolveOptimizedEntry()`; pass the baseline entry and returned `ResolvedData` to
-  `ServerOptimizedEntry` when server-rendered tracking attributes are needed.
+- Core, Web, and Node `fetchContentfulEntry()` and `fetchOptimizedEntry()` for JavaScript
+  SDK-managed fetching through an app-owned `contentful.js` client.
+- Web and Node `resolveOptimizedEntry()` for manual baseline entries.
+- React Web `OptimizedEntry` and `useOptimizedEntry()` with either `baselineEntry` or managed
+  `entryId` plus optional `entryQuery`.
+- Web Component `ctfl-optimized-entry` with either `baselineEntry` or managed `entry-id`/`entryId`
+  plus optional `entryQuery`.
+- Next.js server `resolveOptimizedEntry()` or managed `fetchOptimizedEntry()`; pass manual
+  `baselineEntry` and `resolvedData` props or the managed result to `ServerOptimizedEntry` when
+  server-rendered tracking attributes are needed.
+- React Native `OptimizedEntry` and `useOptimizedEntry()` with either `baselineEntry` or managed
+  `entryId` plus optional `entryQuery`; `useEntryResolver()` remains manual-only.
 - iOS `OptimizationClient.resolveOptimizedEntry(baseline:selectedOptimizations:)` and SwiftUI
   `OptimizedEntry(entry:)`.
 - Android `OptimizationClient.resolveOptimizedEntry(...)`, Compose `OptimizedEntry(entry:)`, and XML
@@ -241,7 +282,8 @@ Do not pass all-locale CDA responses from `withAllLocales` or `locale=*`.
 
 The SDK does not mutate application Contentful clients or infer when a content refetch is needed.
 When route or language state changes, the application must update SDK locale state, refetch
-Contentful content with the app locale, and invalidate app caches as needed.
+Contentful content with the app locale, clear SDK-managed Contentful entry cache entries when those
+cached CDA results are no longer valid, and invalidate app caches as needed.
 
 ## Application responsibilities
 
@@ -249,7 +291,8 @@ Applications own:
 
 - Choosing the application Contentful locale from routes, request context, i18n state, or native app
   state.
-- Passing the Contentful locale to CDA and CPA requests.
+- Passing the Contentful locale to manual CDA and CPA requests or SDK-managed `contentful.js`
+  fetching.
 - Passing the SDK Experience/event locale through top-level SDK `locale`, provider `locale`, Next.js
   `getNextjsServerOptimizationData({ locale })`, Next.js ESR
   `getNextjsEsrOptimizationData({ locale })`, native config `locale`, native `setLocale`, or Node

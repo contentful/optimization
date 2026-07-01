@@ -117,12 +117,12 @@ For state shape and observable state mechanics, see
 
 The server, browser, and API each own different parts of the profile lifecycle:
 
-| Runtime or layer              | Owns                                                                                          | Does not own                                                                                      |
-| ----------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| **Experience API**            | Profile creation, profile updates, audience evaluation, selected optimizations, and changes.  | Application consent policy, cookie settings, Contentful fetching, rendering, or response caching. |
-| **Node SDK**                  | Stateless Experience and Insights calls using request-scoped profile IDs and request options. | Cookies, sessions, long-lived profile state, browser storage, or consent state.                   |
-| **Web SDK and React Web SDK** | Browser state, consent state, localStorage caches, readable anonymous-ID cookie, and queues.  | Server sessions, server response caching, server-rendered hydration data, or Contentful fetching. |
-| **Application**               | Consent policy, identity policy, cookie attributes, request context, and cache boundaries.    | The internal profile aggregation rules of the Experience API.                                     |
+| Runtime or layer              | Owns                                                                                          | Does not own                                                                                                                                                                                           |
+| ----------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Experience API**            | Profile creation, profile updates, audience evaluation, selected optimizations, and changes.  | Application consent policy, cookie settings, Contentful fetching, rendering, or response caching.                                                                                                      |
+| **Node SDK**                  | Stateless Experience and Insights calls using request-scoped profile IDs and request options. | Cookies, sessions, long-lived profile state, browser storage, or consent state.                                                                                                                        |
+| **Web SDK and React Web SDK** | Browser state, consent state, localStorage caches, readable anonymous-ID cookie, and queues.  | Server sessions, server response caching, server-rendered hydration data, or Contentful entry fetching unless explicitly configured with a consumer-owned `contentful.js` client for managed fetching. |
+| **Application**               | Consent policy, identity policy, cookie attributes, request context, and cache boundaries.    | The internal profile aggregation rules of the Experience API.                                                                                                                                          |
 
 The React Web SDK uses the Web SDK under its providers and hooks, so profile synchronization follows
 the same browser mechanics.
@@ -144,7 +144,7 @@ same evaluated data before its first client-side Experience response.
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Server owns the first render**  | The server renders selected variants and profile-derived values, and the client can wait for fresh SDK data before re-resolving. | Persist `ctfl-opt-aid` when allowed, and prevent stale browser caches from driving visible personalized content before a later Experience response.                                                                                                                                                                                                |
 | **Server bootstraps the browser** | The client must continue from the same evaluated data before its first browser Experience response.                              | For direct Web SDK initialization, serialize the server's `profile`, `selectedOptimizations`, and `changes` into `defaults`. For React Web and Next.js direct provider handoff, pass the server `OptimizationData` through `serverOptimizationState`. For Next.js page-level handoff, render `NextjsOptimizationState` under existing SDK context. |
-| **Browser owns personalization**  | The server can render baseline or loading output while the client resolves personalization after hydration.                      | Persist `ctfl-opt-aid` when allowed, then let the Web SDK call `page()` and resolve entries after selected optimizations are available.                                                                                                                                                                                                            |
+| **Browser owns personalization**  | The server can render baseline or loading output while the client resolves personalization after hydration.                      | Persist `ctfl-opt-aid` when allowed, then let the Web SDK call `page()` and resolve entries in the app layer, or use SDK-managed fetching only when configured with a `contentful.js` client, after selected optimizations are available.                                                                                                          |
 
 Direct Web SDK bootstrapping must use the same `OptimizationData` response that drove the server
 render:
@@ -529,6 +529,8 @@ Use this checklist when implementing a hybrid Node and browser profile flow:
   before the first browser Experience response.
 - Clear both browser state and server persistence when consent revocation must end profile
   continuity.
+- Use single-locale CDA entry payloads for both manual `baselineEntry` resolution and SDK-managed
+  `fetchOptimizedEntry()`; avoid `withAllLocales` and `locale=*`.
 - Cache raw Contentful delivery payloads, not profile-evaluated SDK responses or personalized HTML
   unless the cache key varies on the full personalization context.
 

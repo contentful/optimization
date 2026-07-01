@@ -16,7 +16,9 @@ export type OptimizationRootSdkConfig = Omit<OptimizationWebConfig, 'autoTrackEn
 export interface OptimizationRootSdk
   extends
     OptimizedEntrySdk,
-    Partial<Omit<ContentfulOptimization, 'states' | 'resolveOptimizedEntry'>> {
+    Partial<
+      Omit<ContentfulOptimization, 'fetchContentfulEntry' | 'states' | 'resolveOptimizedEntry'>
+    > {
   readonly states: OptimizedEntrySdk['states'] & {
     readonly previewPanelOpen: Observable<boolean>
   }

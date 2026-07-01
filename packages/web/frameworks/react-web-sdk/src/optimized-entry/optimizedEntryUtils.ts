@@ -1,10 +1,14 @@
-import type { OptimizedEntryLoadingTargetDisplay } from '@contentful/optimization-web/presentation'
+import type {
+  OptimizedEntryLoadingTargetDisplay,
+  OptimizedEntryMetadata,
+} from '@contentful/optimization-web/presentation'
 import type { Entry } from 'contentful'
 import type { CSSProperties, ReactNode } from 'react'
 
 export type LoadingFallback = ReactNode | (() => ReactNode)
+export type ErrorFallback = ReactNode | ((error: Error) => ReactNode)
 export type WrapperElement = 'div' | 'span'
-export type RenderProp = (resolvedEntry: Entry) => ReactNode
+export type RenderProp = (resolvedEntry: Entry, metadata?: OptimizedEntryMetadata) => ReactNode
 export type OptimizedEntryChildren = ReactNode | RenderProp
 
 export type LoadingLayoutTargetStyle = Pick<CSSProperties, 'display' | 'visibility'>
@@ -17,16 +21,27 @@ export function resolveLoadingFallback(loadingFallback: LoadingFallback | undefi
   return loadingFallback
 }
 
-export function isRenderProp(children: OptimizedEntryChildren): children is RenderProp {
-  return typeof children === 'function'
+export function resolveErrorFallback(
+  errorFallback: ErrorFallback | undefined,
+  error: Error,
+): ReactNode {
+  if (typeof errorFallback === 'function') {
+    return errorFallback(error)
+  }
+
+  return errorFallback
 }
 
-export function resolveChildren(children: OptimizedEntryChildren, entry: Entry): ReactNode {
-  if (!isRenderProp(children)) {
+export function resolveChildren(
+  children: OptimizedEntryChildren,
+  entry: Entry,
+  metadata?: OptimizedEntryMetadata,
+): ReactNode {
+  if (typeof children !== 'function') {
     return children
   }
 
-  return children(entry)
+  return children(entry, metadata)
 }
 
 export function resolveLoadingLayoutTargetStyle(
