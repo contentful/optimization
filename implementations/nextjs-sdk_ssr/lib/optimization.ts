@@ -3,12 +3,11 @@ import {
   getNextjsServerOptimizationData,
   type ServerTrackingResolvedData,
 } from '@contentful/optimization-nextjs/server'
-import { INLINES } from '@contentful/rich-text-types'
 import { cookies, headers } from 'next/headers'
 import { cache } from 'react'
 import { appConfig } from './config'
 import { fetchEntry, type ContentEntry } from './contentful'
-import { getAppConsent, isEntry, isRecord, isRichTextField } from './util'
+import { getAppConsent, isEntry, isMergeTagNode, isRecord, isRichTextField } from './util'
 
 type Profile = Parameters<ReturnType<typeof createNextjsOptimization>['getMergeTagValue']>[1]
 type SelectedOptimizations = Parameters<
@@ -64,13 +63,14 @@ class ServerOptimization {
   ): ContentEntry['fields'] {
     const resolveNode = (node: unknown): unknown => {
       if (!isRecord(node)) return node
-      if (
-        node.nodeType === INLINES.EMBEDDED_ENTRY &&
-        isRecord(node.data) &&
-        'target' in node.data
-      ) {
-        const value = this.sdk.getMergeTagValue(node.data.target as never, profile) ?? ''
-        return { ...node, data: { ...node.data, resolvedValue: value } }
+      if (isMergeTagNode(node)) {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            resolvedValue: this.sdk.getMergeTagValue(node.data.target, profile) ?? '',
+          },
+        }
       }
       if (Array.isArray(node.content)) {
         return { ...node, content: node.content.map(resolveNode) }
