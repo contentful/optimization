@@ -6,7 +6,7 @@ import { OptimizationProvider, useOptimization, type OptimizationSdk } from '../
 // Simulate a server (Node.js) environment: isBrowser() returning false causes
 // OptimizationProvider to initialize the SDK synchronously inside useState rather
 // than deferring to useLayoutEffect.
-rs.mock('@contentful/optimization-web/lib/isBrowser', () => ({
+rs.mock('./isBrowser', () => ({
   isBrowser: () => false,
 }))
 

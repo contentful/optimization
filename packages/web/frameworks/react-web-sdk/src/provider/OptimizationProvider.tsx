@@ -11,9 +11,8 @@ import {
 } from '@contentful/optimization-web/presentation'
 import { useLayoutEffect, useRef, useState, type PropsWithChildren, type ReactElement } from 'react'
 
-import { isBrowser } from '@contentful/optimization-web/lib/isBrowser'
-
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
+import { isBrowser } from './isBrowser'
 
 /**
  * Provider-owned callback for app-level subscriptions once SDK state is ready.

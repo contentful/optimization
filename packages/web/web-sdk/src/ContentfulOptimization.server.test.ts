@@ -1,4 +1,5 @@
 import type { CoreConfig } from '@contentful/optimization-core'
+import { batch, signals } from '@contentful/optimization-core'
 import ContentfulOptimization from './ContentfulOptimization'
 
 // Simulate a Node.js / SSR environment: no browser APIs available.
@@ -19,15 +20,42 @@ const config: CoreConfig = {
 
 describe('ContentfulOptimization — server (CAN_ADD_LISTENERS: false)', () => {
   afterEach(() => {
-    // Clean up any SDK that survived a test (e.g. on the browser singleton lock).
     if (typeof window !== 'undefined') {
       window.contentfulOptimization?.destroy()
       delete window.contentfulOptimization
     }
+
+    batch(() => {
+      signals.consent.value = undefined
+      signals.persistenceConsent.value = undefined
+      signals.profile.value = undefined
+      signals.selectedOptimizations.value = undefined
+      signals.changes.value = undefined
+    })
   })
 
   it('constructs without throwing when browser APIs are unavailable', () => {
     expect(() => new ContentfulOptimization(config)).not.toThrow()
+  })
+
+  it('constructs without throwing when IntersectionObserver is not defined and consent is granted — simulates Node.js / SSR', () => {
+    const originalIO = (globalThis as Record<string, unknown>).IntersectionObserver
+    delete (globalThis as Record<string, unknown>).IntersectionObserver
+
+    let sdk: ContentfulOptimization | undefined
+
+    try {
+      // consent: true triggers syncAutoTrackedEntryInteractions → views.start() → new ElementViewObserver
+      // which calls new IntersectionObserver — must not throw on the server
+      expect(() => {
+        sdk = new ContentfulOptimization({ ...config, defaults: { consent: true } })
+      }).not.toThrow()
+    } finally {
+      sdk?.destroy()
+      if (originalIO !== undefined) {
+        ;(globalThis as Record<string, unknown>).IntersectionObserver = originalIO
+      }
+    }
   })
 
   it('exposes states with no browser-sourced values', () => {

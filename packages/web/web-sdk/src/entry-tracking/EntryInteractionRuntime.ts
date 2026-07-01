@@ -1,4 +1,9 @@
-import { ENTRY_ID_ATTRIBUTE, ENTRY_SELECTOR, HAS_MUTATION_OBSERVER } from '../constants'
+import {
+  CAN_ADD_LISTENERS,
+  ENTRY_ID_ATTRIBUTE,
+  ENTRY_SELECTOR,
+  HAS_MUTATION_OBSERVER,
+} from '../constants'
 import { safeCall } from '../lib/safeCall'
 import type { EntryInteractionDetector } from './EntryInteractionDetector'
 import {
@@ -264,6 +269,8 @@ export class EntryInteractionRuntime {
   }
 
   private startEntryInteraction(interaction: EntryInteraction, autoTrackingEnabled: boolean): void {
+    if (!CAN_ADD_LISTENERS) return
+
     const detector = this.getDetector(interaction)
 
     detector.setAuto?.(autoTrackingEnabled)
