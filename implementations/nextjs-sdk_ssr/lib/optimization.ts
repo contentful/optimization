@@ -65,11 +65,10 @@ class ServerOptimization {
       if (!isRecord(node)) return node
       if (isMergeTagNode(node)) {
         return {
-          ...node,
-          data: {
-            ...node.data,
-            resolvedValue: this.sdk.getMergeTagValue(node.data.target, profile) ?? '',
-          },
+          nodeType: 'text',
+          value: this.sdk.getMergeTagValue(node.data.target, profile) ?? '',
+          marks: [],
+          data: {},
         }
       }
       if (Array.isArray(node.content)) {

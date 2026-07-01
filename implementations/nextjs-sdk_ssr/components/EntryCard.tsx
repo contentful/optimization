@@ -1,10 +1,9 @@
 import { EntryCardClient } from '@/components/EntryCard.client'
 import type { ContentEntry } from '@/lib/contentful'
 import type { Entry } from '@/lib/optimization'
-import { isRecord, isRichTextField } from '@/lib/util'
+import { isRichTextField } from '@/lib/util'
 import { ServerOptimizedEntry } from '@contentful/optimization-nextjs/server'
-import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
-import { INLINES } from '@contentful/rich-text-types'
+import { documentToReactComponents } from '@contentful/rich-text-react-renderer'
 import type { EntryClickScenario } from 'e2e-web'
 import type { JSX } from 'react'
 
@@ -16,16 +15,6 @@ interface EntryCardProps {
   testId?: string
   clickScenario?: EntryClickScenario
   manualTracking?: boolean
-}
-
-const RENDER_OPTIONS: Options = {
-  renderNode: {
-    [INLINES.EMBEDDED_ENTRY]: (node): string => {
-      const { data } = node
-      if (!isRecord(data)) return ''
-      return typeof data.resolvedValue === 'string' ? data.resolvedValue : ''
-    },
-  },
 }
 
 export function EntryCard(props: EntryCardProps): JSX.Element {
@@ -52,7 +41,7 @@ export function EntryCard(props: EntryCardProps): JSX.Element {
         data-testid={`entry-text-${baselineEntry.sys.id}`}
       >
         {richText ? (
-          <>{documentToReactComponents(richText, RENDER_OPTIONS)}</>
+          <>{documentToReactComponents(richText)}</>
         ) : (
           <p>{typeof resolvedEntry.fields.text === 'string' ? resolvedEntry.fields.text : ''}</p>
         )}
