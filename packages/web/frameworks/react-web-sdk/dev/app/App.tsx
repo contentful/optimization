@@ -36,9 +36,11 @@ const DEV_ROUTES = [
 
 type FlagValue = Json
 
-export function App(): ReactElement {
+export function App(): ReactElement | null {
   const location = useLocation()
   const sdk = useOptimization()
+
+  if (!sdk) return null
   const { resolveEntry, resolveEntryData } = useEntryResolver()
   const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
   const { entriesById, loading: entriesLoading, error: entriesError } = useDevEntries()

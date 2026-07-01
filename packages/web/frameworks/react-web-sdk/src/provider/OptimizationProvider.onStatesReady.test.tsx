@@ -231,7 +231,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     function Probe(): null {
       setupOrder.push('child')
-      profileFromChild = useOptimization().states.profile.current
+      profileFromChild = useOptimization()?.states.profile.current
       return null
     }
 
@@ -262,7 +262,7 @@ describe('OptimizationProvider onStatesReady', () => {
     let profileFromChild: OptimizationData['profile'] | undefined = undefined
 
     function Probe(): null {
-      profileFromChild = useOptimization().states.profile.current
+      profileFromChild = useOptimization()?.states.profile.current
       return null
     }
 
@@ -286,7 +286,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     function Probe(): null {
       setupOrder.push('child')
-      profileFromChild = useOptimization().states.profile.current
+      profileFromChild = useOptimization()?.states.profile.current
       return null
     }
 
@@ -315,7 +315,7 @@ describe('OptimizationProvider onStatesReady', () => {
     let profileFromChild: OptimizationData['profile'] | undefined = undefined
 
     function Probe(): null {
-      profileFromChild = useOptimization().states.profile.current
+      profileFromChild = useOptimization()?.states.profile.current
       return null
     }
 
