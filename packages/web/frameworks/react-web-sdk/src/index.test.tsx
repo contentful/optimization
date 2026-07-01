@@ -547,10 +547,10 @@ describe('@contentful/optimization-react-web core providers', () => {
     renderClient(<FirstScenario />).unmount()
     renderClient(<SecondScenario />).unmount()
 
-    // The SDK now initializes synchronously in the useState initializer, so children render
-    // once per mount with isReady: true immediately. The liveUpdates values come from provider
-    // props and are stable across renders.
-    expect(results).toEqual([true, false, true])
+    // Children render twice per mount: once in the initial state (isReady: false) and once after
+    // useLayoutEffect fires and sets the owned SDK (isReady: true). The liveUpdates values are
+    // stable across both renders since they come from provider props, not SDK readiness.
+    expect(results).toEqual([true, false, true, false, true, true])
   })
 
   it('destroys the optimization singleton on provider unmount', () => {

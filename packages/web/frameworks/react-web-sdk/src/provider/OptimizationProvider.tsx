@@ -198,6 +198,15 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
 
       if (!isPromiseLike(result)) {
         sdkBindingRef.current = result
+
+        // Apply initial locale synchronously — the locale useLayoutEffect won't
+        // fire a second time since state.sdk is already set and stable.
+        if (liveLocale !== undefined) {
+          try {
+            result.sdk.setLocale(liveLocale)
+          } catch {}
+        }
+
         return { error: undefined, isReady: true, sdk: result.sdk }
       }
     } catch (error: unknown) {
@@ -253,10 +262,11 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       const initializedBinding = initializeProviderSdk(initialProps)
 
       if (!isPromiseLike(initializedBinding)) {
-        sdkBindingRef.current = initializedBinding
+        setInitializedState(initializedBinding)
         return () => {
           setupState.disposed = true
           disposeOnce(sdkBindingRef.current)
+          sdkBindingRef.current = undefined
         }
       }
 
