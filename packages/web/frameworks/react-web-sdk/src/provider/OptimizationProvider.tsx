@@ -171,22 +171,59 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   const { children } = props
   const initialPropsRef = useRef(props)
   const liveLocale = props.sdk === undefined ? props.locale : undefined
-  const canRenderInjectedSdk = canUseInjectedSdkDuringInitialRender(props)
-  const [state, setState] = useState<ProviderState>(() => ({
-    error: undefined,
-    isReady: canRenderInjectedSdk,
-    sdk: canRenderInjectedSdk ? props.sdk : undefined,
-  }))
+
+  // sdkBindingRef holds the binding created during initialization so the
+  // useLayoutEffect cleanup can dispose it without re-creating the SDK.
+  const sdkBindingRef = useRef<ProviderSdkBinding | undefined>(undefined)
+
+  const [state, setState] = useState<ProviderState>(() => {
+    if (canUseInjectedSdkDuringInitialRender(props)) {
+      return { error: undefined, isReady: true, sdk: props.sdk }
+    }
+
+    // Async hydration path — defer to useLayoutEffect
+    if (props.serverOptimizationState !== undefined) {
+      return { error: undefined, isReady: false, sdk: undefined }
+    }
+
+    // On the server (no window) it is safe to run synchronous initialization here:
+    // useState initializers run exactly once during SSR, so no double-init risk.
+    // In the browser, defer to useLayoutEffect to avoid StrictMode double-invocation.
+    if (typeof window !== 'undefined') {
+      return { error: undefined, isReady: false, sdk: undefined }
+    }
+
+    try {
+      const result = initializeProviderSdk(props)
+
+      if (!isPromiseLike(result)) {
+        sdkBindingRef.current = result
+        return { error: undefined, isReady: true, sdk: result.sdk }
+      }
+    } catch (error: unknown) {
+      return { error: toError(error), isReady: false, sdk: undefined }
+    }
+
+    return { error: undefined, isReady: false, sdk: undefined }
+  })
 
   useLayoutEffect(() => {
     const { current: initialProps } = initialPropsRef
 
-    if (canUseInjectedSdkDuringInitialRender(initialProps)) {
-      return
+    // Sync init already ran in useState — just register cleanup for the binding.
+    if (sdkBindingRef.current !== undefined) {
+      const { current: binding } = sdkBindingRef
+
+      return () => {
+        disposeSdkBinding(binding)
+        sdkBindingRef.current = undefined
+      }
     }
 
+    if (canUseInjectedSdkDuringInitialRender(initialProps)) return
+
+    // Async path: serverOptimizationState requires hydration before the SDK is ready.
     const setupState = { disposed: false }
-    let sdkBinding: ProviderSdkBinding | undefined = undefined
     let disposedBinding: ProviderSdkBinding | undefined = undefined
 
     function disposeOnce(binding: ProviderSdkBinding | undefined): void {
@@ -202,7 +239,7 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
         return
       }
 
-      sdkBinding = initializedBinding
+      sdkBindingRef.current = initializedBinding
       setState({ error: undefined, isReady: true, sdk: initializedBinding.sdk })
     }
 
@@ -216,11 +253,10 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       const initializedBinding = initializeProviderSdk(initialProps)
 
       if (!isPromiseLike(initializedBinding)) {
-        setInitializedState(initializedBinding)
-
+        sdkBindingRef.current = initializedBinding
         return () => {
           setupState.disposed = true
-          disposeOnce(sdkBinding)
+          disposeOnce(sdkBindingRef.current)
         }
       }
 
@@ -232,7 +268,7 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
 
     return () => {
       setupState.disposed = true
-      disposeOnce(sdkBinding)
+      disposeOnce(sdkBindingRef.current)
     }
   }, [])
 

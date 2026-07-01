@@ -39,10 +39,9 @@ export function useOptimization(): OptimizationSdk {
       })
     }
 
-    // The SDK initializes in useLayoutEffect. Before that fires (during SSR and on the first
-    // client render), return a stub so components can render without throwing. All actual SDK
-    // method calls happen in effects or event handlers, which run after useLayoutEffect has
-    // already set the real SDK into context.
+    // On the server the SDK is initialized synchronously in the useState initializer,
+    // so this path is only reached during the browser's first-render window before
+    // useLayoutEffect fires. The stub provides no-op defaults for that brief window.
     return SSR_STUB
   }
 

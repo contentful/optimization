@@ -23,6 +23,8 @@ import type { z } from 'zod/mini'
 
 const logger = createScopedLogger('Web:LocalStore')
 
+const canUseStorage = typeof localStorage !== 'undefined'
+
 /**
  * Local storage abstraction used by the Web SDK to persist optimization state.
  *
@@ -30,7 +32,7 @@ const logger = createScopedLogger('Web:LocalStore')
  * @remarks
  * Wraps browser `localStorage` access and uses zod parsers to safely read and
  * write typed values. All getters return `undefined` when no valid data is
- * present.
+ * present. All operations are no-ops on the server (SSR).
  */
 const LocalStore = {
   /**
@@ -67,6 +69,8 @@ const LocalStore = {
    * @returns The stored anonymous ID string, or `undefined` when absent.
    */
   get anonymousId(): string | undefined {
+    if (!canUseStorage) return undefined
+
     const legacyAnonymousIdValue = localStorage.getItem(ANONYMOUS_ID_KEY_LEGACY)
 
     if (legacyAnonymousIdValue) LocalStore.setCache(ANONYMOUS_ID_KEY_LEGACY, undefined)
@@ -90,6 +94,8 @@ const LocalStore = {
    * `denied`, or `undefined` when no value is stored.
    */
   get consent(): boolean | undefined {
+    if (!canUseStorage) return undefined
+
     return decodeConsentStorageValue(localStorage.getItem(CONSENT_KEY))
   },
 
@@ -104,6 +110,8 @@ const LocalStore = {
   },
 
   get persistenceConsent(): boolean | undefined {
+    if (!canUseStorage) return undefined
+
     return resolvePersistedPersistenceConsent(
       decodeConsentStorageValue(localStorage.getItem(PERSISTENCE_CONSENT_KEY)),
       LocalStore.consent,
@@ -120,6 +128,8 @@ const LocalStore = {
    * @returns `true` or `false` when stored, or `undefined` otherwise.
    */
   get debug(): boolean | undefined {
+    if (!canUseStorage) return undefined
+
     const debug = localStorage.getItem(DEBUG_FLAG_KEY)
 
     return debug ? debug === 'true' : undefined
@@ -197,6 +207,8 @@ const LocalStore = {
    * @returns Parsed data when present and valid, otherwise `undefined`.
    */
   getCache<T extends z.ZodMiniType>(key: string, parser: T): z.output<T> | undefined {
+    if (!canUseStorage) return undefined
+
     const cacheString = localStorage.getItem(key)
 
     if (!cacheString) return
@@ -221,6 +233,8 @@ const LocalStore = {
    * restricted storage environments (e.g. quota exhaustion, denied access).
    */
   setCache(key: string, data: unknown): void {
+    if (!canUseStorage) return
+
     try {
       if (data === undefined) {
         localStorage.removeItem(key)
