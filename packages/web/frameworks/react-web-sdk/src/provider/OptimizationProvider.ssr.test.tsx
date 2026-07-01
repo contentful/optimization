@@ -3,10 +3,11 @@ import type { ReactElement } from 'react'
 import { renderToString } from 'react-dom/server'
 import { OptimizationProvider, useOptimization, type OptimizationSdk } from '../index'
 
-// Simulate a server (Node.js) environment: IS_SERVER = true causes OptimizationProvider
-// to initialize the SDK synchronously inside useState rather than deferring to useLayoutEffect.
-rs.mock('./serverEnv', () => ({
-  IS_SERVER: true,
+// Simulate a server (Node.js) environment: isBrowser() returning false causes
+// OptimizationProvider to initialize the SDK synchronously inside useState rather
+// than deferring to useLayoutEffect.
+rs.mock('@contentful/optimization-web/lib/isBrowser', () => ({
+  isBrowser: () => false,
 }))
 
 const testConfig = {
@@ -18,7 +19,7 @@ const testConfig = {
   },
 }
 
-describe('OptimizationProvider — SSR (IS_SERVER: true)', () => {
+describe('OptimizationProvider — SSR (isBrowser: false)', () => {
   afterEach(() => {
     window.contentfulOptimization?.destroy()
     delete window.contentfulOptimization

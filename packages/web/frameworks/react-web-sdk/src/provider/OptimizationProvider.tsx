@@ -11,8 +11,9 @@ import {
 } from '@contentful/optimization-web/presentation'
 import { useLayoutEffect, useRef, useState, type PropsWithChildren, type ReactElement } from 'react'
 
+import { isBrowser } from '@contentful/optimization-web/lib/isBrowser'
+
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
-import { IS_SERVER } from './serverEnv'
 
 /**
  * Provider-owned callback for app-level subscriptions once SDK state is ready.
@@ -183,7 +184,7 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     // On the server, useLayoutEffect never fires, so initialize the SDK synchronously
     // here. Each server render gets its own instance; the singleton lock is skipped on
     // the server so concurrent SSR requests don't contend over globalThis.
-    if (IS_SERVER) {
+    if (!isBrowser()) {
       try {
         const binding = initializeProviderSdk(props)
 
