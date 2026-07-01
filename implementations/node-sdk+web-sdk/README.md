@@ -31,11 +31,12 @@ Use this implementation when you need a hybrid SSR/browser example. It demonstra
 SDK server flow, a stateful Web SDK browser flow, consent-aware cookie-based profile continuity
 between them, and local mock API usage for end-to-end validation.
 
-On the server side, the stateless Node SDK is created once at module load and each request passes
-its request-scoped options directly to stateless event methods. The demo stores application-owned
-consent in a server-readable cookie and writes the shared anonymous ID cookie only when consent
-permits profile continuity. When app consent is missing or denied, the server clears the shared
-anonymous ID cookie, skips Node SDK event calls, and lets the browser render baseline entries.
+On the server side, the stateless Node SDK is created once at module load. Each request binds
+request-scoped options with `sdk.forRequest(...)`, then calls stateless event methods on the
+returned request object. The demo stores application-owned consent in a server-readable cookie and
+writes the shared anonymous ID cookie only when consent permits profile continuity. When app consent
+is missing or denied, the server clears the shared anonymous ID cookie, skips Node SDK event calls,
+and lets the browser render baseline entries.
 
 The goal of this reference implementation is to illustrate the usage of cookie-based communication
 in both the Node and Web SDKs, which is an important component of many server-side/client-side
@@ -49,11 +50,11 @@ hybrid SSR and ESR solutions.
 
 ## CDA locale handling
 
-The server and browser share one `APP_LOCALE`. Server code passes it to
-`forRequest({ locale: APP_LOCALE })`, event context, and Contentful CDA fetches. Browser code passes
-the same value as the Web SDK top-level `locale` and directly to CDA entry fetches. Do not use
-`contentful.js` `withAllLocales` or raw CDA `locale=*` for entries passed to SDK resolution; the
-resolver expects direct single-locale fields such as `fields.nt_experiences` and
+The server and browser share one `APP_LOCALE`. Server code passes it to the Node SDK request context
+with `sdk.forRequest({ locale: APP_LOCALE })` and uses it when building event context. Browser code
+passes the same value as the Web SDK top-level `locale` and directly to Contentful CDA entry
+fetches. Do not use `contentful.js` `withAllLocales` or raw CDA `locale=*` for entries passed to SDK
+resolution; the resolver expects direct single-locale fields such as `fields.nt_experiences` and
 `fields.nt_variants`. See
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
 for the broader locale model and

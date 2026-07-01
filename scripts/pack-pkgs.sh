@@ -9,7 +9,10 @@ cd "$ROOT_DIR"
 rm -rf pkgs
 mkdir -p pkgs
 
-pnpm pack \
-  --filter "@contentful/optimization-*" \
-  --filter "!@contentful/optimization-js-bridge" \
-  --pack-destination pkgs
+FILTERS=()
+while IFS= read -r package; do
+  [ -n "$package" ] || continue
+  FILTERS+=(--filter "$package")
+done < <("$ROOT_DIR/node_modules/.bin/tsx" "$ROOT_DIR/scripts/list-npm-package-targets.ts" npm-package-names)
+
+pnpm pack "${FILTERS[@]}" --pack-destination pkgs

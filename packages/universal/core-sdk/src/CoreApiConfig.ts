@@ -23,8 +23,6 @@ export interface CoreSharedApiConfig {
  * @public
  */
 export interface CoreStatefulApiConfig extends CoreSharedApiConfig {
-  /** Beacon-like handler used by Insights event delivery when available. */
-  beaconHandler?: InsightsApiClientConfig['beaconHandler']
   /** Experience API IP override. */
   ip?: ExperienceApiClientConfig['ip']
   /** Experience API plain-text request toggle. */

@@ -18,6 +18,8 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - name: Classify changes
         id: changes
         env:
@@ -35,13 +37,41 @@ jobs:
           has_docs=false
           has_packages=false
           changed_packages=""
+          package_manifests="$(find packages -name package.json -not -path '*/node_modules/*' -print | sort)"
 
           add_package() {
-            package="$1"
+            local package="$1"
 
             if ! grep --fixed-strings --line-regexp --quiet "$package" <<< "$changed_packages"; then
               changed_packages="${changed_packages}${package}"$'\n'
             fi
+          }
+
+          package_name_for_file() {
+            local file="$1"
+            local best_name=""
+            local best_path=""
+            local manifest package_name package_path
+
+            while IFS= read -r manifest; do
+              [ -n "$manifest" ] || continue
+
+              package_path="${manifest%/package.json}"
+              case "$file" in
+                "$package_path" | "$package_path"/*)
+                  if [ ${#package_path} -gt ${#best_path} ]; then
+                    package_name="$(jq -r '.name // empty' "$manifest")"
+
+                    if [ -n "$package_name" ]; then
+                      best_name="$package_name"
+                      best_path="$package_path"
+                    fi
+                  fi
+                  ;;
+              esac
+            done <<< "$package_manifests"
+
+            [ -n "$best_name" ] && printf '%s\n' "$best_name"
           }
 
           while IFS=$'\t' read -r file status; do
@@ -55,41 +85,13 @@ jobs:
                     ;;
                 esac
                 ;;
-              packages/ios/ios-jsc-bridge/*)
+              packages/*)
                 has_packages=true
-                add_package "@contentful/optimization-ios-bridge"
-                ;;
-              packages/node/node-sdk/*)
-                has_packages=true
-                add_package "@contentful/optimization-node"
-                ;;
-              packages/react-native-sdk/*)
-                has_packages=true
-                add_package "@contentful/optimization-react-native"
-                ;;
-              packages/universal/api-client/*)
-                has_packages=true
-                add_package "@contentful/optimization-api-client"
-                ;;
-              packages/universal/api-schemas/*)
-                has_packages=true
-                add_package "@contentful/optimization-api-schemas"
-                ;;
-              packages/universal/core-sdk/*)
-                has_packages=true
-                add_package "@contentful/optimization-core"
-                ;;
-              packages/web/frameworks/react-web-sdk/*)
-                has_packages=true
-                add_package "@contentful/optimization-react-web"
-                ;;
-              packages/web/preview-panel/*)
-                has_packages=true
-                add_package "@contentful/optimization-web-preview-panel"
-                ;;
-              packages/web/web-sdk/*)
-                has_packages=true
-                add_package "@contentful/optimization-web"
+
+                package_name="$(package_name_for_file "$file")"
+                if [ -n "$package_name" ]; then
+                  add_package "$package_name"
+                fi
                 ;;
             esac
           done <<< "$changed_files"

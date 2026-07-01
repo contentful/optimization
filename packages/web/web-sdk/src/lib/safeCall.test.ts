@@ -1,4 +1,4 @@
-import { safeCall, safeCallAsync } from './index'
+import { safeCall, safeCallAsync } from './safeCall'
 
 describe('safeCall', () => {
   it('forwards sync callback failures to onError', () => {

@@ -68,9 +68,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contentful/optimization-api-schemas": "workspace:*",
-    "es-toolkit": "catalog:",
-    "zod": "catalog:"
+    "@contentful/optimization-api-schemas": "workspace:*"
   },
   "devDependencies": {
     "build-tools": "workspace:*",

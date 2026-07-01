@@ -14,6 +14,7 @@ export function PreviewPanel(): JSX.Element | null {
     }
 
     started.current = true
+
     void Promise.all([
       import('@contentful/optimization-web-preview-panel'),
       import('@/lib/contentful'),

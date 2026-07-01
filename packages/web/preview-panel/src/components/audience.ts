@@ -112,25 +112,6 @@ export function isAudienceSwitchChangeEvent(event: Event): event is AudienceSwit
 }
 
 /**
- * Type guard that checks whether an element is a {@link Audience}.
- *
- * @param element - The element to check.
- * @returns `true` if the element's tag matches {@link AUDIENCE_TAG}.
- *
- * @example
- * ```ts
- * if (isAudience(el)) {
- *   el.audienceGroup = audienceGroup
- * }
- * ```
- *
- * @public
- */
-export function isAudience(element?: Element): element is Audience {
-  return element?.tagName === AUDIENCE_TAG.toUpperCase()
-}
-
-/**
  * Collapsible audience section that groups {@link Optimization}
  * components under a single audience heading.
  *
@@ -407,20 +388,4 @@ export class Audience extends LitElement {
       color: #111827;
     }
   `
-}
-
-/**
- * Registers the {@link Audience} custom element if not already defined.
- *
- * @example
- * ```ts
- * defineAudience()
- * ```
- *
- * @public
- */
-export function defineAudience(): void {
-  if (!customElements.get(AUDIENCE_TAG)) {
-    customElements.define(AUDIENCE_TAG, Audience)
-  }
 }

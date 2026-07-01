@@ -1,4 +1,4 @@
-import type attachOptimizationPreviewPanel from '@contentful/optimization-web-preview-panel'
+import { createScopedLogger } from '@contentful/optimization-web/logger'
 import type { ContentfulClientApi } from 'contentful'
 import {
   createContext,
@@ -19,7 +19,6 @@ interface LiveUpdatesContextValue {
 }
 
 const LiveUpdatesContext = createContext<LiveUpdatesContextValue | undefined>(undefined)
-type PreviewPanelAttacher = typeof attachOptimizationPreviewPanel
 
 interface PreviewPanelConfig {
   contentful: ContentfulClientApi<undefined>
@@ -33,8 +32,7 @@ interface LiveUpdatesProviderProps extends PropsWithChildren {
 
 const PREVIEW_PANEL_TAG = 'ctfl-opt-preview-panel'
 const PREVIEW_PANEL_TOGGLE_SELECTOR = 'button.toggle-drawer'
-
-const previewPanelAttachments = new WeakMap<OptimizationInstance, Promise<void>>()
+const previewPanelLogger = createScopedLogger('WebSdkReactReference:PreviewPanel')
 
 function getPreviewPanelToggleButton(): HTMLButtonElement | null {
   const panelElement = document.querySelector(PREVIEW_PANEL_TAG)
@@ -51,30 +49,13 @@ async function attachPreviewPanel(previewPanel: PreviewPanelConfig): Promise<voi
     return
   }
 
-  const existing = previewPanelAttachments.get(previewPanel.optimization)
-  if (existing) {
-    await existing
-    return
-  }
-
-  // Preview panel is demo-only and disabled by default for production-style builds.
-  const { default: attachOptimizationPreviewPanel }: { default: PreviewPanelAttacher } =
+  const { default: attachOptimizationPreviewPanel } =
     await import('@contentful/optimization-web-preview-panel')
-  const attachment = attachOptimizationPreviewPanel({
+  await attachOptimizationPreviewPanel({
     contentful: previewPanel.contentful,
     optimization: previewPanel.optimization,
     nonce: undefined,
-  }).catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : String(error)
-    if (message.includes('already been attached')) {
-      return
-    }
-
-    throw error
   })
-
-  previewPanelAttachments.set(previewPanel.optimization, attachment)
-  await attachment
 }
 
 export function LiveUpdatesProvider({
@@ -95,7 +76,9 @@ export function LiveUpdatesProvider({
   }, [])
 
   useEffect(() => {
-    void attachPreviewPanel(previewPanel).catch(() => undefined)
+    void attachPreviewPanel(previewPanel).catch((error: unknown) => {
+      previewPanelLogger.warn('Failed to attach the Contentful Optimization preview panel.', error)
+    })
   }, [previewPanel.contentful, previewPanel.optimization])
 
   const value = useMemo<LiveUpdatesContextValue>(

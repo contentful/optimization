@@ -118,9 +118,16 @@ observe the final user interface.
 
 ## What stateless tracking means
 
-The Node SDK extends the stateless Core runtime. You can create one SDK instance per module or
-process, but every event call must receive request-scoped inputs from the current request. The SDK
-does not retain profile, consent, page, cookie, session, or browser-storage state between calls.
+The Node SDK extends the stateless Core runtime. You can create one singleton SDK instance per
+module or process, but that singleton does not keep durable profile, consent, page, cookie, session,
+or browser-storage state across requests. Bind each incoming request's inputs with `forRequest()`
+before emitting events.
+
+The object returned by `forRequest()` is request-local. It retains the profile, consent, locale,
+page context, and request options passed at construction for that object's lifecycle. Experience API
+responses from `page()`, `identify()`, `track()`, `screen()`, and sticky `trackView()` update that
+request-local profile, so later calls on the same request object can use the updated profile. Do not
+reuse a request object across independent HTTP requests.
 
 In practice, the application must supply:
 

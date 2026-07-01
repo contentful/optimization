@@ -12,11 +12,11 @@ single command.
 
 ## Scripts
 
-| Script           | Purpose                                                              |
-| ---------------- | -------------------------------------------------------------------- |
-| `bootstrap.sh`   | Build, install, and launch the app on an emulator for local dev      |
-| `run-e2e.sh`     | Build, install, and run the Maestro E2E flow suite                   |
-| `prepare-env.sh` | Validate the local environment without starting anything (fast fail) |
+| Script           | Purpose                                                           |
+| ---------------- | ----------------------------------------------------------------- |
+| `bootstrap.sh`   | Build, install, and launch the app on an emulator for local dev   |
+| `run-e2e.sh`     | Build, install, and run the Maestro E2E flow suite                |
+| `prepare-env.sh` | Check local prerequisites and configure `adb reverse` (fast fail) |
 
 ## Prerequisites
 
@@ -78,10 +78,10 @@ device slot.
 
 ## `prepare-env.sh`
 
-Read-only validation: checks that the mock server is reachable, the bridge bundle is built, a device
-is connected, and sets up `adb reverse`. It starts nothing, so it fails fast with a clear message.
-It is wired in as a "Before launch" step for the **App** and **All UI Tests** run configurations in
-Android Studio.
+Pre-launch validation: checks that the mock server is reachable, the bridge bundle is built, a
+device is connected, and sets up `adb reverse`. It starts no servers, emulators, or builds, so it
+fails fast with a clear message. Run it manually before Android Studio app/test launches, or add it
+as a "Before launch" step in local run configurations.
 
 ```sh
 cd implementations/android-sdk

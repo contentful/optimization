@@ -20,29 +20,10 @@ const fuzzySearch = new UFuzzy({
 export const MATCHED_TEXT_TAG = 'ctfl-opt-preview-matched-text' as const
 
 /**
- * Type guard that checks whether an element is a {@link MatchedText}.
+ * Renders text with fuzzy search matches visually emphasized.
  *
- * @param element - The element to check.
- * @returns `true` if the element's tag matches {@link MATCHED_TEXT_TAG}.
- *
- * @example
- * ```ts
- * if (isMatchedText(el)) {
- *   el.text = 'Europe Visitors'
- * }
- * ```
- *
- * @public
- */
-export function isMatchedText(element?: Element): element is MatchedText {
-  return element?.tagName === MATCHED_TEXT_TAG.toUpperCase()
-}
-
-/**
- * Renders text with search-matching substrings visually emphasized.
- *
- * Consumes {@link searchContext} from the parent panel and wraps each
- * case-insensitive substring match in a styled `<span>`.
+ * Consumes {@link searchContext} from the parent panel and wraps fuzzy-match
+ * ranges in styled `<span>` elements.
  *
  * @see {@link LitElement}
  *
@@ -102,20 +83,4 @@ export class MatchedText extends LitElement {
       font-weight: 900;
     }
   `
-}
-
-/**
- * Registers the {@link MatchedText} custom element if not already defined.
- *
- * @example
- * ```ts
- * defineMatchedText()
- * ```
- *
- * @public
- */
-export function defineMatchedText(): void {
-  if (!customElements.get(MATCHED_TEXT_TAG)) {
-    customElements.define(MATCHED_TEXT_TAG, MatchedText)
-  }
 }

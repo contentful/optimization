@@ -43,7 +43,7 @@ SDK runtime.
 Install using an NPM-compatible package manager, pnpm for example:
 
 ```sh
-pnpm install @contentful/optimization-web-preview-panel
+pnpm add @contentful/optimization-web-preview-panel
 ```
 
 Import the attach function; both CJS and ESM module systems are supported, ESM preferred:
@@ -62,7 +62,9 @@ attachOptimizationPreviewPanel({
 ```
 
 The attach function appends the panel to the DOM and adds the toggle button that opens it. It is
-safe to call more than once; repeated calls reuse the in-flight or completed panel attachment.
+safe to call more than once; repeated calls reuse the in-flight or completed panel attachment. The
+panel search uses fuzzy matching for audience and optimization names and highlights matched text in
+the result list.
 
 > [!IMPORTANT]
 >

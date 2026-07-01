@@ -340,7 +340,8 @@ renders either the selected variant or the baseline entry.
 
 1. Pass the baseline entry fetched by your application.
 2. Use a render prop when the rendered UI depends on the resolved entry.
-3. Use `loadingFallback` when you want custom loading UI while optimization state is unresolved.
+3. Use `loadingFallback` when you want temporary custom loading UI while optimization state is
+   unresolved.
 4. Use `useOptimizedEntry()` only when a component needs direct access to loading, readiness, or
    selected-optimization metadata.
 
@@ -370,9 +371,10 @@ receive direct React node children when the markup does not need to read the res
 case, the wrapper still resolves entry metadata and emits tracking attributes after loading
 completes.
 
-Without a custom `loadingFallback`, `OptimizedEntry` uses the baseline render output as a hidden
-loading-layout target while optimization state is unresolved, then reveals baseline content if
-resolution is still unavailable after 5 seconds.
+With a custom `loadingFallback`, `OptimizedEntry` renders that fallback while optimization state is
+unresolved, then reveals baseline content if resolution is still unavailable after 5 seconds.
+Without a custom fallback, `OptimizedEntry` uses the baseline render output as a hidden
+loading-layout target during the same unresolved window, then reveals it after the same timeout.
 
 For optimized entries, unresolved means the SDK has not received a successful or failed Experience
 API outcome and selected optimizations are not available. Entries without optimization references
@@ -816,14 +818,10 @@ import { createScopedLogger } from '@contentful/optimization-react-web/logger'
 import { OptimizationRoot } from '@contentful/optimization-react-web'
 
 const previewPanelLogger = createScopedLogger('PreviewPanel')
-let previewPanelAttachmentStarted = false
 
 function attachPreviewPanel(): void {
   // Keep preview code behind an environment gate so production bundles can remove it.
   if (import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL !== 'true') return
-  if (previewPanelAttachmentStarted) return
-
-  previewPanelAttachmentStarted = true
 
   void import('@contentful/optimization-web-preview-panel')
     .then(async ({ default: attachOptimizationPreviewPanel }) => {
@@ -833,7 +831,6 @@ function attachPreviewPanel(): void {
       })
     })
     .catch((error: unknown) => {
-      previewPanelAttachmentStarted = false
       previewPanelLogger.warn('Failed to attach the preview panel.', error)
     })
 }
@@ -890,8 +887,9 @@ function App() {
 }
 ```
 
-Injected SDK children render immediately unless `onStatesReady` is provided. When `onStatesReady` is
-provided, the provider waits for those subscribers to attach before children mount.
+Injected SDK children render immediately only when no provider-managed state setup is needed. When
+`onStatesReady` or `serverOptimizationState` is provided, the provider waits for that setup before
+children mount.
 
 ### Strict consent, storage, and delivery controls
 
@@ -977,11 +975,21 @@ Before releasing a React Web SDK integration, verify these checks:
 - Local validation path: run your app's typecheck, build, and route or interaction smoke tests. In
   this repository, the React Web reference implementation uses these checks.
 
+For typecheck and production-build validation:
+
 **Copy this:**
 
 ```sh
 pnpm implementation:run -- react-web-sdk typecheck
 pnpm implementation:run -- react-web-sdk build
+```
+
+For route or interaction smoke coverage:
+
+**Copy this:**
+
+```sh
+pnpm test:e2e:react-web-sdk
 ```
 
 ## Troubleshooting

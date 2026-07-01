@@ -22,14 +22,17 @@
 
 Reference implementation demonstrating `@contentful/optimization-nextjs` in a Next.js App Router
 application with server-rendered personalization and browser-side tracking. The application imports
-only Next.js SDK subpaths:
+public Next.js SDK subpaths for SDK-owned behavior:
 
 - `@contentful/optimization-nextjs/server` in Server Components and server-only modules
 - `@contentful/optimization-nextjs/client` in Client Components
+- `@contentful/optimization-nextjs/api-schemas` for shared schema guards
 - `@contentful/optimization-nextjs/request-handler` in proxy
 
 The Next.js SDK adapter owns its lower-level server/client composition internally, so this
-implementation does not import, configure, or externalize lower-level SDK packages directly.
+implementation does not import, configure, or externalize lower-level Node, Web, or React SDK
+packages directly. The optional preview panel package is the exception: when enabled, the app
+dynamically loads `@contentful/optimization-web-preview-panel`.
 
 ## What this demonstrates
 
@@ -40,11 +43,13 @@ is resolved before browser startup. It demonstrates:
 - Server-rendered tracking markup with `ServerOptimizedEntry`
 - Request URL capture through `createNextjsOptimizationContextHandler()`
 - Browser-side page, view, click, and hover tracking through the adapter client entry
+- A client-side live updates island with `OptimizedEntry`
 - `initialPageEvent="skip"` when the server already resolved the same initial page
 
-In this SSR pattern, content is static after browser startup. Client actions such as consent,
-identify, and reset update browser SDK state and analytics, but server-rendered content changes only
-on the next server request.
+In this SSR pattern, content rendered through `ServerOptimizedEntry` is static after browser
+startup. Client actions such as consent, identify, and reset update browser SDK state and analytics,
+but server-rendered content changes only on the next server request. The live updates section is a
+client-side island that uses `OptimizedEntry` to demonstrate browser-side re-resolution.
 
 ## Architecture
 
@@ -69,14 +74,17 @@ Browser startup
   browser tracking
     NextAppAutoPageTracker handles route page events
     default interaction observers read data-ctfl-* attributes
+
+  client live updates island
+    LiveEntryCard uses OptimizedEntry for browser-side re-resolution examples
 ```
 
 ## CDA locale handling
 
-The implementation defines one `APP_LOCALE`, passes it to the Next.js SDK server helpers, uses it
-for event context, and passes it directly to Contentful CDA fetches. The browser provider receives
-the same locale value. Do not use `contentful.js` `withAllLocales` or raw CDA `locale=*`; SDK entry
-resolution expects direct single-locale fields such as `fields.nt_experiences` and
+The implementation defines one `appConfig.locale`, passes it to the Next.js SDK server helpers, uses
+it for event context, and passes it directly to Contentful CDA fetches. The browser provider
+receives the same locale value. Do not use `contentful.js` `withAllLocales` or raw CDA `locale=*`;
+SDK entry resolution expects direct single-locale fields such as `fields.nt_experiences` and
 `fields.nt_variants`.
 
 See
@@ -132,15 +140,17 @@ pnpm setup:e2e:nextjs-sdk_ssr
 pnpm test:e2e:nextjs-sdk_ssr
 ```
 
-The E2E suite mirrors the shared React SDK interaction and navigation tests that apply to
-SSR-rendered markup, with additional Next.js SSR checks for server first paint, tracking attributes,
-proxy request URL context, and skipped duplicate initial page events.
+The SSR E2E run uses `E2E_FLAGS=SSR,SKIP_NO_JS` from `.env.example`. It runs the shared navigation,
+tracking, and live updates specs against SSR-rendered markup; `SKIP_NO_JS` skips the
+JavaScript-disabled variant-resolution block. Hydration-only no-client-Experience-request checks
+remain behind `HYDRATION`, and request URL forwarding plus tracking-attribute mapping are covered by
+`@contentful/optimization-nextjs` package unit tests.
 
 Use Playwright UI or codegen when needed:
 
 ```sh
 pnpm implementation:run -- nextjs-sdk_ssr test:e2e:ui
-pnpm implementation:run -- nextjs-sdk_ssr test:e2e:codegen
+APP_PORT=3001 pnpm implementation:run -- nextjs-sdk_ssr test:e2e:codegen
 ```
 
 ## Related

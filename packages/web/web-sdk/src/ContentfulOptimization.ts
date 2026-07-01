@@ -22,7 +22,7 @@ import {
 } from '@contentful/optimization-core'
 import type { App } from '@contentful/optimization-core/api-schemas'
 import { ANONYMOUS_ID_COOKIE_LEGACY } from '@contentful/optimization-core/constants'
-import { getPageProperties, getUserAgent } from './builders'
+import { getPageProperties, getUserAgent } from './builders/EventBuilder'
 import {
   ANONYMOUS_ID_COOKIE,
   OPTIMIZATION_WEB_SDK_NAME,
@@ -36,7 +36,7 @@ import {
   createVisibilityChangeListener,
 } from './handlers'
 import { getCookie, removeCookie, setCookie, type CookieAttributes } from './lib/cookies'
-import { LocalStore } from './storage'
+import LocalStore from './storage/LocalStore'
 
 export type { CookieAttributes } from './lib/cookies'
 
@@ -170,7 +170,7 @@ function readInitialCookieValues(canLoadPersistedContinuity: boolean): {
  * This helper wires together:
  * - consent/profile/selectedOptimizations from LocalStore,
  * - Web-specific eventBuilder functions (page, user agent),
- * - beacon-based Insights delivery,
+ * - browser event defaults,
  * - and anonymous ID retrieval.
  *
  * @internal
@@ -186,10 +186,6 @@ function mergeConfig({
   const { eventBuilder: configuredEventBuilder } = config
   const mergedConfig: CoreStatefulConfig = {
     ...config,
-    api: {
-      beaconHandler,
-      ...config.api,
-    },
     defaults: {
       ...baseDefaults,
       ...defaults,
@@ -317,7 +313,7 @@ class ContentfulOptimization extends CoreStateful {
     })
 
     this.cleanupVisibilityListener = createVisibilityChangeListener(async () => {
-      await this.flush()
+      await this.flushQueues({ force: true, beacon: beaconHandler })
     })
 
     effect(() => {
@@ -403,6 +399,8 @@ class ContentfulOptimization extends CoreStateful {
 
     if (cookieValue && cookieValue !== LocalStore.anonymousId) {
       if (cookieValue !== signals.profile.value?.id) this.reset()
+      this.setAnonymousId(cookieValue)
+    } else if (legacyCookieValue && cookieValue) {
       this.setAnonymousId(cookieValue)
     }
   }

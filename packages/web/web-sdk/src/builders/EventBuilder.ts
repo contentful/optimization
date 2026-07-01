@@ -12,10 +12,7 @@ const logger = createScopedLogger('Web:EventBuilder')
  * @internal
  */
 function buildQuery(url: string | URL): Dictionary {
-  return new URL(url).searchParams.entries().reduce((entries: Dictionary, [k, v]) => {
-    entries[k] = v
-    return entries
-  }, {})
+  return Object.fromEntries(new URL(url).searchParams)
 }
 
 /**

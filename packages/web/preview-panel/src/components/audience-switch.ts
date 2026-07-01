@@ -197,19 +197,3 @@ export class AudienceSwitch extends LitElement {
     }
   `
 }
-
-/**
- * Registers the {@link AudienceSwitch} custom element if not already defined.
- *
- * @example
- * ```ts
- * defineAudienceSwitch()
- * ```
- *
- * @public
- */
-export function defineAudienceSwitch(): void {
-  if (!customElements.get(AUDIENCE_SWITCH_TAG)) {
-    customElements.define(AUDIENCE_SWITCH_TAG, AudienceSwitch)
-  }
-}

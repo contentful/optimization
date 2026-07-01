@@ -390,12 +390,13 @@ Two additional transitions matter:
    `attempts > 0`. When the app becomes `active` again, it re-checks visibility from scratch, which
    starts a new cycle if the entry is still on screen.
 
-2. **Component unmount.** The unmount cleanup clears the fire timer and, if the cycle had any
-   successful events (`attempts > 0`), flushes a final view event synchronously.
+2. **Component unmount.** The unmount cleanup clears the fire timer and, if the cycle already made a
+   view emission attempt (`attempts > 0`), schedules a final view event through the same async
+   `trackView` path.
 
-Combined, these transitions mean that when the initial event has fired, the hook emits a final event
-with the same `viewId` and the cycle duration when visibility ends naturally, the user backgrounds
-the app, or the component unmounts.
+Combined, these transitions mean that when the initial view emission attempt has occurred, the hook
+emits a final event with the same `viewId` and the cycle duration when visibility ends naturally,
+the user backgrounds the app, or the component unmounts.
 
 ## Scroll context and viewport resolution
 

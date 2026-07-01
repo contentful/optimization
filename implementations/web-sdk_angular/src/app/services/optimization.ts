@@ -26,6 +26,7 @@ import {
   type Profile,
   type SelectedOptimizationArray,
 } from '@contentful/optimization-web/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-web/logger'
 import type { Entry } from 'contentful'
 import { PAGES } from 'e2e-web'
 import { filter } from 'rxjs/operators'
@@ -92,26 +93,19 @@ function toSdkConstructorArgs(config: NgContentfulOptimizationConfig): {
 }
 
 let instance: NgContentfulOptimizationInstance | undefined = undefined
-let attachmentStarted = false
+const previewPanelLogger = createScopedLogger('AngularReference:PreviewPanel')
 
 async function attachPreviewPanel(
   sdk: NgContentfulOptimizationInstance,
   config: NgContentfulOptimizationConfig,
 ): Promise<void> {
-  if (attachmentStarted) return
-  attachmentStarted = true
-  try {
-    const contentfulClient = getOrCreateBaseClient(config)
-    const { default: attach } = await import('@contentful/optimization-web-preview-panel')
-    await attach({
-      contentful: contentfulClient,
-      optimization: sdk,
-      nonce: config.previewPanel?.nonce,
-    })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
-    if (!msg.includes('already been attached')) throw err
-  }
+  const contentfulClient = getOrCreateBaseClient(config)
+  const { default: attach } = await import('@contentful/optimization-web-preview-panel')
+  await attach({
+    contentful: contentfulClient,
+    optimization: sdk,
+    nonce: config.previewPanel?.nonce,
+  })
 }
 
 function getOrCreateInstance(
@@ -168,7 +162,12 @@ export class NgContentfulOptimization {
     this.context = { platform: 'browser', sdk }
 
     if (config.previewPanel !== undefined) {
-      void attachPreviewPanel(sdk, config)
+      void attachPreviewPanel(sdk, config).catch((error: unknown) => {
+        previewPanelLogger.warn(
+          'Failed to attach the Contentful Optimization preview panel.',
+          error,
+        )
+      })
     }
 
     this.consent = fromSdkState(sdk.states.consent)
@@ -197,7 +196,6 @@ export class NgContentfulOptimization {
       routerSubscription.unsubscribe()
       sdk.destroy()
       instance = undefined
-      attachmentStarted = false
     })
   }
 

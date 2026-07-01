@@ -104,6 +104,11 @@ function resetHookState(): void {
   refCounter = 0
 }
 
+function rerenderHook<T>(render: () => T): T {
+  refCounter = 0
+  return render()
+}
+
 function createMockEntry(id: string): Entry {
   return {
     // @ts-expect-error -- partial mock for testing, missing publishedVersion
@@ -176,15 +181,21 @@ describe('useViewportTracking', () => {
     it('should not fire if visibility ends before dwell time', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('entry-2')
+      const render = (): ReturnType<typeof useViewportTracking> =>
+        useViewportTracking({
+          entry,
+          dwellTimeMs: 2000,
+          minVisibleRatio: 0.8,
+        })
 
-      useViewportTracking({
-        entry,
-        dwellTimeMs: 2000,
-        minVisibleRatio: 0.8,
-      })
+      const { onLayout } = render()
 
+      onLayout(createLayoutEvent())
+      rs.advanceTimersByTime(1000)
       expect(mockTrackView).not.toHaveBeenCalled()
 
+      scrollContextValue = { scrollY: 200, viewportHeight: 800 }
+      rerenderHook(render)
       rs.advanceTimersByTime(3000)
 
       expect(mockTrackView).not.toHaveBeenCalled()

@@ -1,3 +1,5 @@
+import { ENTRY_ID_ATTRIBUTE, ENTRY_SELECTOR, HAS_MUTATION_OBSERVER } from '../constants'
+import { safeCall } from '../lib/safeCall'
 import type { EntryInteractionDetector } from './EntryInteractionDetector'
 import {
   createEntryClickDetector,
@@ -11,9 +13,8 @@ import {
   createEntryViewDetector,
   type EntryViewTrackingCore,
 } from './events/view/createEntryViewDetector'
-import ElementExistenceObserver from './registry/ElementExistenceObserver'
-import { EntryElementRegistry } from './registry/EntryElementRegistry'
 import {
+  resolveAutoTrackEntryInteractionOptions,
   type AutoTrackEntryInteractionOptions,
   type EntryClickInteractionElementOptions,
   type EntryElementInteraction,
@@ -24,8 +25,8 @@ import {
   type EntryInteractionStartOptions,
   type EntryViewInteractionElementOptions,
   type EntryViewInteractionStartOptions,
-  resolveAutoTrackEntryInteractionOptions,
 } from './resolveAutoTrackEntryInteractionOptions'
+import { isEntryElement, type EntryElement } from './resolveTrackingPayload'
 
 const ENTRY_INTERACTIONS: EntryInteraction[] = ['clicks', 'views', 'hovers']
 
@@ -64,12 +65,73 @@ interface EntryInteractionDetectorMap {
   >
 }
 
+const isNode = (value: unknown): value is Node =>
+  typeof Node !== 'undefined' && value instanceof Node
+
+const isElement = (node: Node): node is Element =>
+  typeof Element !== 'undefined' && node instanceof Element
+
+const isDocumentFragment = (node: Node): node is DocumentFragment =>
+  typeof DocumentFragment !== 'undefined' && node instanceof DocumentFragment
+
+function collectElements(
+  nodes: ReadonlySet<Node>,
+  requireConnected: boolean,
+  target: Set<Element>,
+): void {
+  nodes.forEach((node) => {
+    if (isElement(node)) {
+      if (!requireConnected || node.isConnected) target.add(node)
+      node.querySelectorAll('*').forEach((element) => {
+        if (!requireConnected || element.isConnected) target.add(element)
+      })
+      return
+    }
+
+    if (!isDocumentFragment(node)) return
+
+    node.querySelectorAll('*').forEach((element) => {
+      if (!requireConnected || element.isConnected) target.add(element)
+    })
+  })
+}
+
+function collectEntryAttributeMutation(
+  record: MutationRecord,
+  addedNodes: Set<Node>,
+  removedNodes: Set<Node>,
+): boolean {
+  if (record.type !== 'attributes' || record.attributeName !== ENTRY_ID_ATTRIBUTE) return false
+
+  if (isNode(record.target)) {
+    removedNodes.add(record.target)
+    addedNodes.add(record.target)
+  }
+
+  return true
+}
+
+function collectChildListMutation(
+  record: MutationRecord,
+  addedNodes: Set<Node>,
+  removedNodes: Set<Node>,
+): void {
+  record.addedNodes.forEach((node) => {
+    if (removedNodes.delete(node)) return
+    addedNodes.add(node)
+  })
+
+  record.removedNodes.forEach((node) => {
+    if (addedNodes.delete(node)) return
+    removedNodes.add(node)
+  })
+}
+
 /**
  * Runtime coordinator for tracked entry interactions (clicks, views, and hovers).
  *
  * @remarks
- * Owns shared registry/observer dependencies and exposes an imperative
- * tracking API that can enable, disable, observe, and unobserve interactions.
+ * Exposes an imperative tracking API that can enable, disable, observe, and unobserve interactions.
  * Automatic view and hover timers start only after Core allows the underlying
  * event type by consent or `allowedEventTypes`.
  *
@@ -78,19 +140,10 @@ interface EntryInteractionDetectorMap {
 export class EntryInteractionRuntime {
   private readonly core: EntryInteractionRuntimeCore
   private readonly entryInteractionDetectors: EntryInteractionDetectorMap
-  private readonly entryElementRegistry: EntryElementRegistry
-  private readonly entryExistenceObserver: ElementExistenceObserver
-  private readonly cleanupRegistrySubscriptions: Record<
-    EntryInteraction,
-    (() => void) | undefined
-  > = {
-    clicks: undefined,
-    views: undefined,
-    hovers: undefined,
-  }
-
+  private readonly entryElements = new Map<Element, EntryElement>()
   private readonly autoTrack: Record<EntryInteraction, boolean>
   public readonly tracking: EntryInteractionApi
+  private entryElementObserver: MutationObserver | undefined = undefined
   private readonly elementOverrides: EntryInteractionElementOverrideMap = {
     clicks: new Map(),
     views: new Map(),
@@ -114,8 +167,6 @@ export class EntryInteractionRuntime {
     autoTrackEntryInteraction?: AutoTrackEntryInteractionOptions,
   ) {
     this.core = core
-    this.entryExistenceObserver = new ElementExistenceObserver()
-    this.entryElementRegistry = new EntryElementRegistry(this.entryExistenceObserver)
 
     this.entryInteractionDetectors = {
       clicks: createEntryClickDetector(core),
@@ -155,8 +206,7 @@ export class EntryInteractionRuntime {
   public destroy(): void {
     this.stopAllEntryInteractions()
     this.clearAllElementOverrides()
-    this.entryElementRegistry.disconnect()
-    this.entryExistenceObserver.disconnect()
+    this.stopEntryElementObservation()
   }
 
   public syncAutoTrackedEntryInteractions(): void {
@@ -222,29 +272,139 @@ export class EntryInteractionRuntime {
       this.entryInteractionDetectors.views.start(this.viewStartOptions)
     else this.entryInteractionDetectors.hovers.start(this.hoverStartOptions)
 
-    this.cleanupRegistrySubscriptions[interaction] = this.entryElementRegistry.subscribe({
-      onAdded: detector.onEntryAdded,
-      onRemoved: detector.onEntryRemoved,
-      onError: detector.onError,
-    })
-
+    this.ensureEntryElementObservation()
+    this.seedInitialEntryElements()
     this.isInteractionRunning[interaction] = true
     this.isAutoTrackingEnabled[interaction] = autoTrackingEnabled
+    this.entryElements.forEach((entryElement) => {
+      this.notifyDetectorAdded(interaction, entryElement)
+    })
   }
 
   private stopEntryInteraction(interaction: EntryInteraction): void {
-    this.cleanupRegistrySubscriptions[interaction]?.()
-    this.cleanupRegistrySubscriptions[interaction] = undefined
-
     this.getDetector(interaction).stop()
     this.isInteractionRunning[interaction] = false
     this.isAutoTrackingEnabled[interaction] = false
+    this.maybeStopEntryElementObservation()
   }
 
   private stopAllEntryInteractions(): void {
     ENTRY_INTERACTIONS.forEach((interaction) => {
       this.stopEntryInteraction(interaction)
     })
+  }
+
+  private ensureEntryElementObservation(): void {
+    if (this.entryElementObserver) return
+    if (!HAS_MUTATION_OBSERVER || typeof document === 'undefined') return
+
+    this.entryElementObserver = new MutationObserver((records) => {
+      this.processEntryElementRecords(records)
+    })
+
+    this.entryElementObserver.observe(document, {
+      attributeFilter: [ENTRY_ID_ATTRIBUTE],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    })
+  }
+
+  private seedInitialEntryElements(): void {
+    if (typeof document === 'undefined') return
+
+    document.querySelectorAll(ENTRY_SELECTOR).forEach((element) => {
+      if (!isEntryElement(element) || this.entryElements.has(element)) return
+
+      this.entryElements.set(element, element)
+    })
+  }
+
+  private processEntryElementRecords(records: readonly MutationRecord[]): void {
+    if (records.length === 0) return
+
+    const addedNodes = new Set<Node>()
+    const removedNodes = new Set<Node>()
+
+    records.forEach((record) => {
+      if (collectEntryAttributeMutation(record, addedNodes, removedNodes)) return
+
+      collectChildListMutation(record, addedNodes, removedNodes)
+    })
+
+    if (addedNodes.size === 0 && removedNodes.size === 0) return
+
+    const removedElements = new Set<Element>()
+    const addedElements = new Set<Element>()
+
+    collectElements(removedNodes, false, removedElements)
+    collectElements(addedNodes, true, addedElements)
+    this.removeEntryElements(removedElements)
+    this.addEntryElements(addedElements)
+  }
+
+  private addEntryElements(elements: Iterable<Element>): void {
+    for (const element of elements) {
+      if (!isEntryElement(element) || this.entryElements.has(element)) continue
+
+      this.entryElements.set(element, element)
+      this.notifyEntryElementAdded(element)
+    }
+  }
+
+  private removeEntryElements(elements: Iterable<Element>): void {
+    for (const element of elements) {
+      const entryElement = this.entryElements.get(element)
+      if (!entryElement) continue
+
+      this.entryElements.delete(element)
+      this.notifyEntryElementRemoved(entryElement)
+    }
+  }
+
+  private notifyEntryElementAdded(entryElement: EntryElement): void {
+    ENTRY_INTERACTIONS.forEach((interaction) => {
+      if (this.isInteractionRunning[interaction])
+        this.notifyDetectorAdded(interaction, entryElement)
+    })
+  }
+
+  private notifyEntryElementRemoved(entryElement: EntryElement): void {
+    ENTRY_INTERACTIONS.forEach((interaction) => {
+      if (this.isInteractionRunning[interaction]) {
+        this.notifyDetectorRemoved(interaction, entryElement)
+      }
+    })
+  }
+
+  private notifyDetectorAdded(interaction: EntryInteraction, entryElement: EntryElement): void {
+    const { onEntryAdded, onError } = this.getDetector(interaction)
+    if (!onEntryAdded) return
+
+    safeCall(() => {
+      onEntryAdded(entryElement)
+    }, onError)
+  }
+
+  private notifyDetectorRemoved(interaction: EntryInteraction, entryElement: EntryElement): void {
+    const { onEntryRemoved, onError } = this.getDetector(interaction)
+    if (!onEntryRemoved) return
+
+    safeCall(() => {
+      onEntryRemoved(entryElement)
+    }, onError)
+  }
+
+  private maybeStopEntryElementObservation(): void {
+    if (ENTRY_INTERACTIONS.some((interaction) => this.isInteractionRunning[interaction])) return
+
+    this.stopEntryElementObservation()
+  }
+
+  private stopEntryElementObservation(): void {
+    this.entryElementObserver?.disconnect()
+    this.entryElementObserver = undefined
+    this.entryElements.clear()
   }
 
   private setElementOverride(

@@ -498,8 +498,8 @@ calling suspend APIs directly.
 **Integration category:** Common but policy-dependent
 
 1. Leave global view and tap tracking defaults enabled when your Analytics and privacy policy
-   permits them. Pass `trackViews = false` or `trackTaps = false` globally or per entry when a
-   surface must opt out.
+   permits them. Pass `trackViews = false` or `trackTaps = false` globally when a surface must opt
+   out by default.
 
 **Copy this:**
 
@@ -537,7 +537,8 @@ OptimizedEntryView(context).apply {
     onTap = { baselineEntry ->
         navigateToEntry(baselineEntry)
     }
-    // onTap keeps the view trackable unless trackTaps is explicitly set to false.
+    // Direct onTap is a per-entry override; it keeps this entry tappable even
+    // when global trackTaps is false.
     setContentRenderer { resolvedEntry ->
         CtaBinder.create(context, resolvedEntry)
     }
@@ -545,8 +546,9 @@ OptimizedEntryView(context).apply {
 }
 ```
 
-3. Set `trackTaps = false` when `onTap` must run without SDK tap tracking. When `onTap` is present
-   and `trackTaps` is unset, the view keeps tap tracking enabled.
+3. Set per-entry `trackTaps = false` only when that entry must opt out of the SDK tap handling path.
+   Do not combine it with `onTap`; if a component needs an app-owned tap handler without SDK tap
+   tracking, attach a normal Android click listener inside the rendered child view instead.
 4. Tune view-tracking timing only when the default 2 second dwell time, 80% visible ratio, or 5
    second update interval does not match the component.
 
@@ -565,8 +567,8 @@ OptimizedEntryView(context).apply {
 }
 ```
 
-View and tap tracking still respect the SDK consent gate. For interaction timing, component event
-metadata, and offline delivery behavior, see
+SDK view and tap event emission still respects the SDK consent gate. For interaction timing,
+component event metadata, and offline delivery behavior, see
 [Android SDK runtime and interaction mechanics](../concepts/android-sdk-runtime-and-interaction-mechanics.md#tracking-mechanics).
 
 ## Optional integrations

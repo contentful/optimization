@@ -12,7 +12,7 @@
 
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import { CAN_ADD_LISTENERS } from '../../../constants'
-import { safeCallAsync } from '../../../lib'
+import { safeCallAsync } from '../../../lib/safeCall'
 import {
   ensureSweeper,
   finalizeDroppedState,
@@ -29,7 +29,6 @@ import {
   type ElementState,
   type Interval,
   NOW,
-  Num,
   type PerElementEffectiveOptions,
   clearFireTimer,
   derefElement,
@@ -38,6 +37,8 @@ import {
 
 const logger = createScopedLogger('Web:ElementHoverObserver')
 const createHoverId = (): string => crypto.randomUUID()
+const nonNegativeNumber = (value: number | undefined, fallback: number): number =>
+  Math.max(0, typeof value === 'number' ? value : fallback)
 
 const canUsePointerEvents = (): boolean =>
   CAN_ADD_LISTENERS &&
@@ -127,8 +128,8 @@ class ElementHoverObserver {
 
   private static initOptions(options?: ElementHoverObserverOptions): EffectiveObserverOptions {
     return {
-      dwellTimeMs: Num.nonNeg(options?.dwellTimeMs, DEFAULTS.DWELL_MS),
-      hoverDurationUpdateIntervalMs: Num.nonNeg(
+      dwellTimeMs: nonNegativeNumber(options?.dwellTimeMs, DEFAULTS.DWELL_MS),
+      hoverDurationUpdateIntervalMs: nonNegativeNumber(
         options?.hoverDurationUpdateIntervalMs,
         DEFAULTS.HOVER_DURATION_UPDATE_INTERVAL_MS,
       ),
@@ -140,8 +141,8 @@ class ElementHoverObserver {
     observerOptions: EffectiveObserverOptions,
   ): PerElementEffectiveOptions {
     return {
-      dwellTimeMs: Num.nonNeg(options?.dwellTimeMs, observerOptions.dwellTimeMs),
-      hoverDurationUpdateIntervalMs: Num.nonNeg(
+      dwellTimeMs: nonNegativeNumber(options?.dwellTimeMs, observerOptions.dwellTimeMs),
+      hoverDurationUpdateIntervalMs: nonNegativeNumber(
         options?.hoverDurationUpdateIntervalMs,
         observerOptions.hoverDurationUpdateIntervalMs,
       ),

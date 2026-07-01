@@ -66,25 +66,6 @@ export function isDrawerToggleEvent(event: Event): event is DrawerToggleEvent {
 }
 
 /**
- * Type guard that checks whether an element is a {@link Panel}.
- *
- * @param element - The element to check.
- * @returns `true` if the element's tag matches {@link PANEL_TAG}.
- *
- * @example
- * ```ts
- * if (isPanel(el)) {
- *   el.audiences = audiences
- * }
- * ```
- *
- * @public
- */
-export function isPanel(element?: Element): element is Panel {
-  return element?.tagName === PANEL_TAG.toUpperCase()
-}
-
-/**
  * Root preview panel web component that provides the slide-out drawer shell.
  *
  * Provides the drawer chrome, search state, and shared contexts for the
@@ -109,10 +90,6 @@ export class Panel extends LitElement {
   private accessor _drawerOpened = false
 
   /** @internal */
-  @state()
-  private accessor _drawerBodyMounted = false
-
-  /** @internal */
   private _reset(): void {
     this.dispatchEvent(
       new CustomEvent(PANEL_RESET, {
@@ -124,7 +101,6 @@ export class Panel extends LitElement {
 
   /** @internal */
   private _setDrawerOpened(open: boolean): void {
-    if (open) this._drawerBodyMounted = true
     this._drawerOpened = open
     this.toggleAttribute('data-open', open)
 
@@ -150,25 +126,6 @@ export class Panel extends LitElement {
   }
 
   /** @internal */
-  private readonly _onTransitionEnd = (event: TransitionEvent): void => {
-    if (event.currentTarget !== this) return
-    if (event.propertyName !== 'transform') return
-    if (!this._drawerOpened) this._drawerBodyMounted = false
-  }
-
-  /** @internal */
-  connectedCallback(): void {
-    super.connectedCallback()
-    this.addEventListener('transitionend', this._onTransitionEnd)
-  }
-
-  /** @internal */
-  disconnectedCallback(): void {
-    this.removeEventListener('transitionend', this._onTransitionEnd)
-    super.disconnectedCallback()
-  }
-
-  /** @internal */
   protected render(): TemplateResult {
     return html`
       <button
@@ -191,7 +148,6 @@ export class Panel extends LitElement {
 
       <div
         class="body"
-        ?hidden=${!this._drawerBodyMounted}
         ?inert=${!this._drawerOpened}
         aria-hidden=${this._drawerOpened ? 'false' : 'true'}
       >
@@ -375,20 +331,4 @@ export class Panel extends LitElement {
       background: #7e29d3;
     }
   `
-}
-
-/**
- * Registers the {@link Panel} custom element if not already defined.
- *
- * @example
- * ```ts
- * definePanel()
- * ```
- *
- * @public
- */
-export function definePanel(): void {
-  if (!customElements.get(PANEL_TAG)) {
-    customElements.define(PANEL_TAG, Panel)
-  }
 }

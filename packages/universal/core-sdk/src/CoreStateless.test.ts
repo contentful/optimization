@@ -55,13 +55,11 @@ async function invokeUntypedMethod(
 
 describe('CoreStateless', () => {
   it('strips stateful-only api config from stateless construction', () => {
-    const beaconHandler = rs.fn(() => true)
     const core: unknown = Reflect.construct(CoreStateless, [
       {
         clientId: 'key_123',
         environment: 'main',
         api: {
-          beaconHandler,
           insightsBaseUrl: 'https://ingest.example.test/',
           ip: '198.51.100.5',
           locale: 'de-DE',
@@ -75,7 +73,6 @@ describe('CoreStateless', () => {
       throw new Error('Failed to construct CoreStateless')
     }
 
-    expect(Reflect.get(core.api.insights, 'beaconHandler')).toBeUndefined()
     expect(Reflect.get(core.api.experience, 'ip')).toBeUndefined()
     expect(Reflect.get(core.api.experience, 'locale')).toBeUndefined()
     expect(Reflect.get(core.api.experience, 'plainText')).toBeUndefined()
@@ -497,10 +494,10 @@ describe('CoreStateless', () => {
   it('passes request-scoped Insights options to Insights-only events', async () => {
     const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
-    const beaconHandler = (): boolean => true
+    const beacon = (): boolean => true
     const requestOptimization = core.forRequest({
       consent: true,
-      insightsOptions: { beaconHandler },
+      insightsOptions: { beacon },
       profile: { id: 'profile-123' },
     })
 
@@ -508,7 +505,7 @@ describe('CoreStateless', () => {
 
     expect(sendBatchEvents).toHaveBeenCalledWith(
       expect.any(Array),
-      expect.objectContaining({ beaconHandler }),
+      expect.objectContaining({ beacon }),
     )
   })
 

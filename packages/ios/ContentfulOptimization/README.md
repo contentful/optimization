@@ -187,9 +187,12 @@ For the full locale model, see
 For the single-locale CDA entry contract, see
 [Entry optimization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract).
 
-See the [guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) and
-[API reference](https://contentful.github.io/optimization) for the full API, SwiftUI helpers, and
-preview-panel setup.
+See the
+[SwiftUI integration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-optimization-ios-sdk-in-a-swiftui-app.html),
+[UIKit integration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-optimization-ios-sdk-in-a-uikit-app.html),
+and
+[iOS runtime and interaction mechanics](https://contentful.github.io/optimization/documents/Documentation.Concepts.iOS_SDK_runtime_and_interaction_mechanics.html)
+for setup walkthroughs, SwiftUI helpers, runtime behavior, and preview-panel guidance.
 
 ## License
 

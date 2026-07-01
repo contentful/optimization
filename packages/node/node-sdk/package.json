@@ -99,8 +99,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contentful/optimization-core": "workspace:*",
-    "es-toolkit": "catalog:"
+    "@contentful/optimization-core": "workspace:*"
   },
   "devDependencies": {
     "@contentful/rich-text-html-renderer": "catalog:",

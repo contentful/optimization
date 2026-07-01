@@ -4,7 +4,8 @@ Applies to all workspace packages under `packages/`.
 
 ## Boundaries
 
-- Published SDK behavior belongs in packages; reference implementations only demonstrate it.
+- Published SDK behavior belongs in packages; reference implementations consume it through public
+  APIs as maintained E2E targets and consumer references.
 - Shared cross-platform behavior usually belongs in `packages/universal/core-sdk` unless it is
   clearly platform-specific.
 - Keep package-local `dev/` harnesses aligned with the SDK behavior they exercise.

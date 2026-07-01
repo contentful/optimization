@@ -59,67 +59,67 @@ jobs:
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # Node SSR Only implementation E2E coverage scope.
             e2e_node_sdk:
-              - '{implementations/node-sdk/**,lib/**,packages/node/node-sdk/**,packages/universal/core-sdk/**,packages/universal/api-client/**,packages/universal/api-schemas/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '{implementations/node-sdk/**,lib/**,packages/node/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # Node SSR + Web Vanilla implementation E2E coverage scope.
             e2e_node_sdk_web_sdk:
-              - '{implementations/node-sdk+web-sdk/**,lib/**,packages/node/node-sdk/**,packages/web/web-sdk/**,packages/web/preview-panel/**,packages/universal/core-sdk/**,packages/universal/api-client/**,packages/universal/api-schemas/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '{implementations/node-sdk+web-sdk/**,lib/**,packages/node/**,packages/web/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # Web Vanilla implementation E2E coverage scope.
             e2e_web_sdk:
-              - '{implementations/web-sdk/**,lib/**,packages/web/web-sdk/**,packages/web/preview-panel/**,packages/universal/core-sdk/**,packages/universal/api-client/**,packages/universal/api-schemas/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '{implementations/web-sdk/**,lib/**,packages/web/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # React + Web SDK implementation E2E coverage scope.
             e2e_web_sdk_react:
-              - '{implementations/web-sdk_react/**,lib/**,packages/web/web-sdk/**,packages/web/preview-panel/**,packages/universal/core-sdk/**,packages/universal/api-client/**,packages/universal/api-schemas/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '{implementations/web-sdk_react/**,lib/**,packages/web/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # Angular + Web SDK implementation E2E coverage scope.
             e2e_web_sdk_angular:
-              - '{implementations/web-sdk_angular/**,lib/**,packages/web/web-sdk/**,packages/web/preview-panel/**,packages/universal/core-sdk/**,packages/universal/api-client/**,packages/universal/api-schemas/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '{implementations/web-sdk_angular/**,lib/**,packages/node/**,packages/web/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # React Web SDK (optimization-react-web) implementation E2E coverage scope.
             e2e_react_web_sdk:
-              - '{implementations/react-web-sdk/**,lib/**,packages/web/frameworks/react-web-sdk/**,packages/web/web-sdk/**,packages/web/preview-panel/**,packages/universal/core-sdk/**,packages/universal/api-client/**,packages/universal/api-schemas/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '{implementations/react-web-sdk/**,lib/**,packages/web/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # Next.js SDK SSR implementation E2E coverage scope.
             e2e_nextjs_sdk_ssr:
-              - '{implementations/nextjs-sdk_ssr/**,lib/**,packages/web/frameworks/nextjs-sdk/**,packages/node/node-sdk/**,packages/web/frameworks/react-web-sdk/**,packages/web/web-sdk/**,packages/universal/core-sdk/**,packages/universal/api-client/**,packages/universal/api-schemas/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '{implementations/nextjs-sdk_ssr/**,lib/**,packages/node/**,packages/web/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # Next.js SDK hybrid implementation E2E coverage scope.
             e2e_nextjs_sdk_hybrid:
-              - '{implementations/nextjs-sdk_hybrid/**,lib/**,packages/web/frameworks/nextjs-sdk/**,packages/node/node-sdk/**,packages/web/frameworks/react-web-sdk/**,packages/web/web-sdk/**,packages/web/preview-panel/**,packages/universal/core-sdk/**,packages/universal/api-client/**,packages/universal/api-schemas/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '{implementations/nextjs-sdk_hybrid/**,lib/**,packages/node/**,packages/web/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # React Native Android implementation E2E coverage scope.
             e2e_react_native_android:
-              - '{implementations/react-native-sdk/**,lib/**,packages/react-native-sdk/**,packages/universal/core-sdk/**,packages/universal/api-client/**,packages/universal/api-schemas/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '{implementations/react-native-sdk/**,lib/**,packages/react-native-sdk/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # Android native implementation E2E coverage scope.
             e2e_android:
-              - '{implementations/android-sdk/**,lib/mocks/**,packages/android/**,packages/universal/optimization-js-bridge/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '{implementations/android-sdk/**,lib/mocks/**,packages/android/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # iOS native implementation E2E coverage scope.
             e2e_ios:
-              - '{implementations/ios-sdk/**,lib/mocks/**,packages/ios/**,packages/universal/optimization-js-bridge/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '{implementations/ios-sdk/**,lib/mocks/**,packages/ios/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # Swift Package build/test scope (the package published to optimization.swift).
             swift_package:
-              - '{packages/ios/ContentfulOptimization/**,packages/universal/optimization-js-bridge/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '{packages/ios/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # Android library scope (the AAR published to Maven Central).
             android_library:
-              - '{packages/android/ContentfulOptimization/**,packages/universal/optimization-js-bridge/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '{packages/android/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
 
@@ -288,22 +288,11 @@ jobs:
       - run: pnpm implementation:lint
 
   test-unit:
-    name: 🧪 Test (${{ matrix.package }})
+    name: 🧪 Unit Tests
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: [setup, changes]
     if: needs.changes.outputs.unit == 'true'
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - package: '@contentful/optimization-api-schemas'
-          - package: '@contentful/optimization-api-client'
-          - package: '@contentful/optimization-core'
-          - package: '@contentful/optimization-node'
-          - package: '@contentful/optimization-web'
-          - package: '@contentful/optimization-web-preview-panel'
-          - package: '@contentful/optimization-react-native'
     steps:
       - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
 
@@ -319,7 +308,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - run: pnpm --filter ${{ matrix.package }} test:unit
+      - run: pnpm test:unit:ci
 
   test-android-sdk-unit:
     name: 🤖 Test Android SDK (JVM unit)
@@ -1322,7 +1311,7 @@ jobs:
           api-level: 36
           arch: x86_64
           target: google_apis
-          profile: pixel_tablet
+          profile: pixel_7
           avd-name: test
           force-avd-creation: true
           emulator-boot-timeout: 600

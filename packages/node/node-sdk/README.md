@@ -51,7 +51,7 @@ source of truth for exported API signatures.
 Install using an NPM-compatible package manager, pnpm for example:
 
 ```sh
-pnpm install @contentful/optimization-node
+pnpm add @contentful/optimization-node
 ```
 
 Import the Optimization class; both CJS and ESM module systems are supported, ESM preferred:
@@ -139,9 +139,9 @@ client:
 
 Request-scoped Insights options belong in `insightsOptions`:
 
-| Option          | Description                                         |
-| --------------- | --------------------------------------------------- |
-| `beaconHandler` | Custom handler for enqueueing Insights API batches. |
+| Option   | Description                                                       |
+| -------- | ----------------------------------------------------------------- |
+| `beacon` | Last-chance sender for serialized Insights API batches if needed. |
 
 Use the request-scoped top-level `locale` on `forRequest()` as the promoted path for localized
 Experience API responses and default event context. `experienceOptions.locale` remains available as

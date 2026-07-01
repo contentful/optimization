@@ -88,11 +88,14 @@ export default async function Page() {
 
 ```tsx
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
+import { Suspense, type ReactNode } from 'react'
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children }: { children: ReactNode }) {
   return (
     <OptimizationRoot clientId="client-id" environment="main">
-      <NextAppAutoPageTracker initialPageEvent="skip" />
+      <Suspense>
+        <NextAppAutoPageTracker initialPageEvent="skip" />
+      </Suspense>
       {children}
     </OptimizationRoot>
   )
@@ -174,5 +177,6 @@ export async function GET(request: Request) {
 ```
 
 The ESR helper derives page context from `request.url`, reads `ctfl-opt-aid` from request cookies
-when available, calls `page()`, and returns `OptimizationData`. Call `persist(response)` only after
-your application creates the response that is safe to personalize and not shared across visitors.
+when available, calls `page()`, and returns an object containing `data`, `requestOptimization`, and
+`persist()`. Call `persist(response)` only after your application creates the response that is safe
+to personalize and not shared across visitors.

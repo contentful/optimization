@@ -392,7 +392,6 @@ func contentfulAnalyticsProperties(from event: [String: Any]) -> [String: Any] {
         "contentful_experience_id": event["experienceId"],
         "contentful_variant_index": event["variantIndex"],
         "contentful_view_id": event["viewId"],
-        "contentful_hover_id": event["hoverId"],
         "contentful_audience_name": audienceFields?["nt_name"],
         "contentful_experience_name": experienceFields?["nt_name"],
         "contentful_experience_type": experienceFields?["nt_type"],
@@ -427,11 +426,13 @@ lifecycleScope.launch {
 }
 ```
 
-Native events arrive as dictionary or map payloads with the same wire fields, such as `type`,
-`messageId`, `componentId`, `experienceId`, `variantIndex`, `viewId`, and duration fields. Optimized
-entry interaction events can also include the same optional `optimization` enrichment object. Keep
-the same mapping and consent rules that you use for JavaScript destinations, and prefer approved
-display strings, such as audience name, over full nested objects.
+Native events arrive as dictionary or map payloads with fields such as `type`, `messageId`,
+`componentId`, `experienceId`, `variantIndex`, `viewId`, and `viewDurationMs`. Native mobile SDKs
+expose view and tap tracking, not hover tracking; `hoverId` and `hoverDurationMs` apply to Web and
+Node runtimes that emit hover events. Optimized entry interaction events can also include the same
+optional `optimization` enrichment object. Keep the same mapping and consent rules that you use for
+JavaScript destinations, and prefer approved display strings, such as audience name, over full
+nested objects.
 
 ### Destination variants
 

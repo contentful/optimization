@@ -5,14 +5,13 @@ import {
 import {
   type Interval,
   NOW,
-  Num,
   type Timer,
   clearFireTimer,
   derefElement,
   isPageVisible,
 } from '../observerSupport'
 
-export { NOW, Num, clearFireTimer, derefElement, isPageVisible, type Interval, type Timer }
+export { NOW, clearFireTimer, derefElement, isPageVisible, type Interval, type Timer }
 
 export const DEFAULTS = {
   DWELL_MS: 1000,

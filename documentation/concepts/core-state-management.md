@@ -61,14 +61,14 @@ extend behavior through the consumer-facing channels the SDK provides.
 stateless environments use `CoreStateless`, which has request-bound state instead of a shared
 `states` surface.
 
-| Runtime                                                  | State surface                                                                                                                                            | Runtime boundary                                                                                                                                               |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Web, `@contentful/optimization-web`                      | `sdk.states.*`, `sdk.locale`, and `sdk.setLocale()`                                                                                                      | Owns browser memory state, `localStorage`, the `ctfl-opt-aid` cookie, automatic page and entry interaction state, and browser queues.                          |
-| React Web, `@contentful/optimization-react-web`          | Web SDK state through `OptimizationProvider`, `OptimizationRoot`, `onStatesReady`, hooks, and the provider `locale` prop                                 | Wraps a Web SDK instance. Provider-owned instances update locale through `sdk.setLocale()` when the `locale` prop changes.                                     |
-| React Native, `@contentful/optimization-react-native`    | `sdk.states.*`, `OptimizationProvider`, `OptimizationRoot`, `onStatesReady`, `sdk.locale`, and `sdk.setLocale()`                                         | Owns a stateful Core instance plus AsyncStorage persistence and screen/app-state/network coordination.                                                         |
-| iOS, `ContentfulOptimization` Swift package              | `OptimizationClient.state`, `locale`, `selectedOptimizations`, `optimizationPossible`, `experienceRequestState`, `eventStream`, and `blockedEventStream` | Runs stateful Core inside the JavaScriptCore bridge. Swift exposes bridge snapshots through `@Published` properties and Combine publishers.                    |
-| Android, `ContentfulOptimization` Kotlin package         | `OptimizationClient.state`, `locale`, `selectedOptimizations`, `optimizationPossible`, `experienceRequestState`, `eventStream`, and `blockedEventStream` | Runs stateful Core inside the QuickJS bridge. Kotlin exposes bridge snapshots through `StateFlow` and `SharedFlow`.                                            |
-| Node and stateless Core, `@contentful/optimization-node` | `forRequest({ consent, locale, profile })`, request return values, and `request.profile`                                                                 | No `CoreStateful.states`, no shared profile-continuity store, and no browser or native interaction observation. The host application binds and persists state. |
+| Runtime                                                                                                             | State surface                                                                                                                                            | Runtime boundary                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web, `@contentful/optimization-web`                                                                                 | `sdk.states.*`, `sdk.locale`, and `sdk.setLocale()`                                                                                                      | Owns browser memory state, `localStorage`, the `ctfl-opt-aid` cookie, automatic page and entry interaction state, and browser queues.                          |
+| React Web, `@contentful/optimization-react-web`                                                                     | Web SDK state through `OptimizationProvider`, `OptimizationRoot`, `onStatesReady`, hooks, and the provider `locale` prop                                 | Wraps a Web SDK instance. Provider-owned instances update locale through `sdk.setLocale()` when the `locale` prop changes.                                     |
+| React Native, `@contentful/optimization-react-native`                                                               | `sdk.states.*`, `OptimizationProvider`, `OptimizationRoot`, `onStatesReady`, `sdk.locale`, and `sdk.setLocale()`                                         | Owns a stateful Core instance plus AsyncStorage persistence and screen/app-state/network coordination.                                                         |
+| iOS, `ContentfulOptimization` Swift package                                                                         | `OptimizationClient.state`, `locale`, `selectedOptimizations`, `optimizationPossible`, `experienceRequestState`, `eventStream`, and `blockedEventStream` | Runs stateful Core inside the JavaScriptCore bridge. Swift exposes bridge snapshots through `@Published` properties and Combine publishers.                    |
+| Android, Maven `com.contentful.java:optimization-android` with the `com.contentful.optimization.*` Kotlin namespace | `OptimizationClient.state`, `locale`, `selectedOptimizations`, `optimizationPossible`, `experienceRequestState`, `eventStream`, and `blockedEventStream` | Runs stateful Core inside the QuickJS bridge. Kotlin exposes bridge snapshots through `StateFlow` and `SharedFlow`.                                            |
+| Node and stateless Core, `@contentful/optimization-node`                                                            | `forRequest({ consent, locale, profile })`, request return values, and `request.profile`                                                                 | No `CoreStateful.states`, no shared profile-continuity store, and no browser or native interaction observation. The host application binds and persists state. |
 
 Stateful SDKs share the same Core concepts, but the public names differ by runtime. Use `sdk.states`
 in JavaScript stateful runtimes, React provider callbacks when a framework owns the SDK lifecycle,
@@ -465,7 +465,7 @@ Web and React Native TypeScript SDK instance:
 
 ```ts
 const darkModeSubscription = sdk.states.flag('dark-mode').subscribe((value) => {
-  document.body.classList.toggle('dark', value === true)
+  setDarkModeEnabled(value === true)
 })
 ```
 
@@ -562,7 +562,8 @@ SDK initialization or provider-managed state subscriber setup is pending. React 
 layout-effect scheduling for provider-owned browser SDK creation so ready children normally mount
 before first visible paint. React Native keeps async effect scheduling because SDK creation depends
 on platform storage and device state. When a framework adapter injects an already-created SDK,
-children can render immediately unless `onStatesReady` is provided.
+children can render immediately unless `onStatesReady` is provided. React Web also holds children
+when `serverOptimizationState` is provided so hydration happens first.
 
 ## Diagnostics
 

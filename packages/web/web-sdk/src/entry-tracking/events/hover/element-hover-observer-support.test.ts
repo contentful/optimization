@@ -3,7 +3,6 @@ import {
   derefElement,
   isPageVisible,
   NOW,
-  Num,
   type ElementState,
   type PerElementEffectiveOptions,
 } from './element-hover-observer-support'
@@ -80,20 +79,6 @@ describe('NOW', () => {
 
     rs.stubGlobal('performance', originalPerf)
     expect(dateSpy).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe('Num helpers', () => {
-  it('n(value,fallback)', () => {
-    expect(Num.n(5, 99)).toBe(5)
-    expect(Num.n('x', 99)).toBe(99)
-    expect(Num.n(undefined, 3)).toBe(3)
-  })
-
-  it('nonNeg', () => {
-    expect(Num.nonNeg(-10, 5)).toBe(0)
-    expect(Num.nonNeg(12, 5)).toBe(12)
-    expect(Num.nonNeg(undefined, 7)).toBe(7)
   })
 })
 

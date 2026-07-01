@@ -423,8 +423,10 @@ signal becomes `true`.
 The Web SDK wires browser lifecycle events into this queue model:
 
 - `online` and `offline` update Core's online signal. Going online forces a flush.
-- `visibilitychange`, `pagehide`, and `beforeunload` call `flush()` once per hide cycle.
-- Insights delivery uses the configured beacon handler, which defaults to `navigator.sendBeacon()`.
+- `visibilitychange`, `pagehide`, and `beforeunload` force an Insights flush with
+  `navigator.sendBeacon()` once per hide cycle.
+- Normal periodic, threshold, online, and explicit flushes use fetch so retry and failure policy can
+  observe the response.
 
 Browser storage writes are best-effort. If a `localStorage` write fails, live SDK state continues in
 memory for the current runtime while durable continuity is limited. At startup, the SDK reads

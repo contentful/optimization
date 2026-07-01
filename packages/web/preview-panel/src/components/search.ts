@@ -40,25 +40,6 @@ export function isSearchChangeEvent(event: Event): event is SearchChangeEvent {
 export const SEARCH_TAG = 'ctfl-opt-preview-search' as const
 
 /**
- * Type guard that checks whether an element is a {@link Search}.
- *
- * @param element - The element to check.
- * @returns `true` if the element's tag matches {@link SEARCH_TAG}.
- *
- * @example
- * ```ts
- * if (isSearch(el)) {
- *   el.label = 'Find audiences'
- * }
- * ```
- *
- * @public
- */
-export function isSearch(element?: Element): element is Search {
-  return element?.tagName === SEARCH_TAG.toUpperCase()
-}
-
-/**
  * Search input used to filter preview audiences and optimizations.
  *
  * Emits {@link SEARCH_CHANGE} with the normalized query whenever the user
@@ -227,20 +208,4 @@ export class Search extends LitElement {
       height: 1rem;
     }
   `
-}
-
-/**
- * Registers the {@link Search} custom element if not already defined.
- *
- * @example
- * ```ts
- * defineSearch()
- * ```
- *
- * @public
- */
-export function defineSearch(): void {
-  if (!customElements.get(SEARCH_TAG)) {
-    customElements.define(SEARCH_TAG, Search)
-  }
 }
