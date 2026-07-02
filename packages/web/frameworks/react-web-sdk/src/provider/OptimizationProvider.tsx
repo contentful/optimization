@@ -144,15 +144,19 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     }
   }, [])
 
+  const configProps = props.sdk === undefined ? props : undefined
+
   useLayoutEffect(() => {
     const { current: sdk } = sdkRef
-    if (sdk === null || props.sdk !== undefined) return
+    if (sdk === null || configProps === undefined) return
 
     sdk.setConfig({
-      locale: props.locale,
-      autoTrackEntryInteraction: resolveTrackEntryInteractionOptions(props.trackEntryInteraction),
+      locale: configProps.locale,
+      autoTrackEntryInteraction: resolveTrackEntryInteractionOptions(
+        configProps.trackEntryInteraction,
+      ),
     })
-  }, [props.sdk, props.locale, props.trackEntryInteraction])
+  }, [configProps?.locale, configProps?.trackEntryInteraction])
 
   const contextValue = useMemo(() => {
     const sdk = setupDone && error === undefined ? (sdkRef.current ?? undefined) : undefined
