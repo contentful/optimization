@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
 import type { OptimizationSdk } from '../context/OptimizationContext'
-import { useOptimization } from './useOptimization'
+import { useOptimizationContext } from './useOptimization'
 
 /**
  * Bound Optimization SDK actions safe to destructure in React components.
@@ -21,40 +21,38 @@ export interface UseOptimizationActionsResult {
 /**
  * Returns bound Optimization SDK actions that are safe to destructure.
  *
+ * @remarks
+ * SSR-safe: when the SDK is not yet ready (server render or initial
+ * synchronous client render) the returned actions no-op and event-emitting
+ * actions resolve to `{ accepted: false }`. Once the SDK is ready subsequent
+ * calls invoke the real methods.
+ *
  * @example
  * ```tsx
  * const { track, screen, flush, consent, reset } = useOptimizationActions()
  * await track({ event: 'purchase' })
- * await screen({ name: 'Cart' })
- * await flush()
- * consent(true)
- * reset()
  * ```
- *
- * @remarks
- * This hook does not create a new SDK instance. It binds the most common
- * actions from the existing SDK instance returned by `useOptimization()`.
  *
  * @public
  */
 export function useOptimizationActions(): UseOptimizationActionsResult {
-  const sdk = useOptimization()
+  const { sdk } = useOptimizationContext()
 
   return useMemo<UseOptimizationActionsResult>(
     () => ({
       consent: (value) => {
-        sdk.consent(value)
+        sdk?.consent(value)
       },
       flush: async () => {
-        await sdk.flush()
+        await sdk?.flush()
       },
-      identify: async (payload) => await sdk.identify(payload),
-      page: async (payload) => await sdk.page(payload),
+      identify: async (payload) => (await sdk?.identify(payload)) ?? { accepted: false },
+      page: async (payload) => (await sdk?.page(payload)) ?? { accepted: false },
       reset: () => {
-        sdk.reset()
+        sdk?.reset()
       },
-      screen: async (payload) => await sdk.screen(payload),
-      track: async (payload) => await sdk.track(payload),
+      screen: async (payload) => (await sdk?.screen(payload)) ?? { accepted: false },
+      track: async (payload) => (await sdk?.track(payload)) ?? { accepted: false },
     }),
     [sdk],
   )

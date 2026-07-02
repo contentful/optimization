@@ -1,6 +1,6 @@
 'use client'
 
-import { useOptimization } from '@contentful/optimization-react-web'
+import { useOptimizationContext } from '@contentful/optimization-react-web'
 import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
 import { hydrateOptimizationData } from '@contentful/optimization-web/bridge-support'
 import { useLayoutEffect } from 'react'
@@ -22,9 +22,10 @@ export interface NextjsOptimizationStateProps {
 }
 
 export function NextjsOptimizationState({ data }: NextjsOptimizationStateProps): null {
-  const sdk = useOptimization()
+  const { sdk } = useOptimizationContext()
 
   useLayoutEffect(() => {
+    if (!sdk) return
     void hydrateOptimizationData(sdk, data)
   }, [data, sdk])
 

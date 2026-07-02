@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useOptimization } from '../hooks/useOptimization'
+import { useOptimizationContext } from '../hooks/useOptimization'
 import { useConsentState } from '../hooks/useOptimizationState'
 import type { AutoPagePayload } from './types'
 
@@ -51,11 +51,11 @@ export function useAutoPageEmitter({
   routeKey,
   buildPayload,
 }: UseAutoPageEmitterArgs): void {
-  const sdk = useOptimization()
+  const { sdk } = useOptimizationContext()
   const consent = useConsentState()
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !sdk) {
       return
     }
 

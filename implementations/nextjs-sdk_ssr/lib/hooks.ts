@@ -2,7 +2,6 @@
 
 import {
   useConsentState,
-  useOptimization,
   useOptimizationActions,
   useOptimizationContext,
 } from '@contentful/optimization-nextjs/client'
@@ -92,18 +91,19 @@ export function useFlagSubscription(flagName: string): unknown {
 export function useManualViewTracking(
   manualTracking: boolean | undefined,
 ): (element: HTMLDivElement | null, entryId: string) => void {
-  const sdk = useOptimization()
+  const { sdk } = useOptimizationContext()
   const trackedElement = useRef<HTMLDivElement | null>(null)
 
   useEffect(
     () => () => {
       const { current } = trackedElement
-      if (current) sdk.tracking.clearElement('views', current)
+      if (current) sdk?.tracking.clearElement('views', current)
     },
-    [sdk.tracking],
+    [sdk?.tracking],
   )
 
   return (element: HTMLDivElement | null, entryId: string): void => {
+    if (!sdk) return
     const { current: previous } = trackedElement
     if (previous && previous !== element) sdk.tracking.clearElement('views', previous)
     trackedElement.current = element
