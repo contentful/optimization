@@ -111,7 +111,9 @@ profile-changing events:
 For consent gates, see
 [Consent management in the Optimization SDK Suite](./consent-management-in-the-optimization-sdk-suite.md).
 For state shape and observable state mechanics, see
-[Core state management](./core-state-management.md).
+[Core state management](./core-state-management.md). For how the React provider renders this data on
+the server and hydrates it without a mismatch, see
+[Server-side rendering and hydration](./server-side-rendering-and-hydration.md).
 
 ## Runtime responsibilities
 
