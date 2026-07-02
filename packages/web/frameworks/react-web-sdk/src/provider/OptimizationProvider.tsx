@@ -95,7 +95,7 @@ function resolveOwnedSdk(props: OptimizationProviderConfigProps): OptimizationSd
   })
 }
 
-function needsSetupPhase(props: OptimizationProviderProps): boolean {
+function hasSetupCallbacks(props: OptimizationProviderProps): boolean {
   return props.serverOptimizationState !== undefined || props.onStatesReady !== undefined
 }
 
@@ -113,16 +113,14 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   // State only tracks whether async setup is done or failed.
   // sdk is always available synchronously from sdkRef.
   const [error, setError] = useState<Error | undefined>(undefined)
-  const [setupDone, setSetupDone] = useState(() => !needsSetupPhase(props))
+  const [setupDone, setSetupDone] = useState(() => !hasSetupCallbacks(props))
 
-  const liveLocale = props.sdk === undefined ? props.locale : undefined
-  const liveTrackEntryInteraction =
-    props.sdk === undefined ? props.trackEntryInteraction : undefined
+  const ownedProps = props.sdk === undefined ? props : undefined
 
   // Handles async setup: serverOptimizationState hydration and onStatesReady subscription.
   // Runs at most once per mount; cleanup unsubscribes onStatesReady listeners on teardown.
   useLayoutEffect(() => {
-    if (!needsSetupPhase(props)) return
+    if (!hasSetupCallbacks(props)) return
 
     let disposed = false
     const { current: sdk } = sdkRef
@@ -154,16 +152,15 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
 
   useLayoutEffect(() => {
     const { current: sdk } = sdkRef
-    if (sdk === null || (liveLocale === undefined && liveTrackEntryInteraction === undefined))
-      return
+    if (sdk === null || ownedProps === undefined) return
 
     sdk.setConfig({
-      ...(liveLocale !== undefined && { locale: liveLocale }),
-      ...(liveTrackEntryInteraction !== undefined && {
-        autoTrackEntryInteraction: resolveTrackEntryInteractionOptions(liveTrackEntryInteraction),
-      }),
+      locale: ownedProps.locale,
+      autoTrackEntryInteraction: resolveTrackEntryInteractionOptions(
+        ownedProps.trackEntryInteraction,
+      ),
     })
-  }, [liveLocale, liveTrackEntryInteraction])
+  }, [ownedProps?.locale, ownedProps?.trackEntryInteraction])
 
   const contextValue = useMemo(() => {
     const sdk = setupDone && error === undefined ? (sdkRef.current ?? undefined) : undefined
@@ -174,7 +171,7 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   // - onStatesReady: the callback subscribes to SDK state and must run before children mount.
   // - serverOptimizationState: async hydration must finish before children see SDK-resolved data.
   // In all other cases, always render so Next.js SSR produces HTML and client hydration matches.
-  if (needsSetupPhase(props) && !setupDone && error === undefined) {
+  if (hasSetupCallbacks(props) && !setupDone && error === undefined) {
     return null
   }
 
