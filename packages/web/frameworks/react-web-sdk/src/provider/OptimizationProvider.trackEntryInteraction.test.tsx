@@ -7,6 +7,7 @@ const constructedConfigs: Array<Record<string, unknown>> = []
 const setLocaleCalls: string[] = []
 
 rs.mock('@contentful/optimization-web', () => ({
+  isBrowser: () => true,
   default: class MockContentfulOptimization {
     constructor(config: Record<string, unknown>) {
       constructedConfigs.push(config)
