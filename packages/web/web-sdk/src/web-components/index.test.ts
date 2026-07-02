@@ -162,6 +162,7 @@ function createSdk(
     reset: () => undefined,
     resolveOptimizedEntry,
     screen: resolveAccepted,
+    setConfig: () => undefined,
     setLocale: () => undefined,
     states,
     track: resolveAccepted,

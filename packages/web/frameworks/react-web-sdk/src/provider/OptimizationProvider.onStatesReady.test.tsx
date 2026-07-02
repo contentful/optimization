@@ -436,10 +436,9 @@ describe('OptimizationProvider onStatesReady', () => {
     expect(onStatesReady).not.toHaveBeenCalled()
   })
 
-  it('destroys owned sdk instances when onStatesReady throws', () => {
+  it('surfaces an error context when onStatesReady throws', () => {
     const error = new Error('states setup failed')
     let capturedContext: OptimizationContextValue | null = null
-    const destroySpy = rs.spyOn(ContentfulOptimization.prototype, 'destroy')
     const rendered = createClientRoot()
 
     function Probe(): null {
@@ -465,9 +464,6 @@ describe('OptimizationProvider onStatesReady', () => {
       isReady: false,
       error,
     })
-    expect(destroySpy).toHaveBeenCalledTimes(1)
-    expect(window.contentfulOptimization).toBeUndefined()
-    destroySpy.mockRestore()
     rendered.unmount()
   })
 
@@ -499,15 +495,8 @@ describe('OptimizationProvider onStatesReady', () => {
     expect(destroySpy).not.toHaveBeenCalled()
   })
 
-  it('runs onStatesReady cleanup before owned sdk teardown', () => {
-    const order: string[] = []
-    const { destroy: originalDestroy } = ContentfulOptimization.prototype
-    const destroySpy = rs
-      .spyOn(ContentfulOptimization.prototype, 'destroy')
-      .mockImplementation(function destroy(this: ContentfulOptimization): void {
-        order.push('destroy')
-        originalDestroy.call(this)
-      })
+  it('runs onStatesReady cleanup on unmount', () => {
+    const cleanup = rs.fn()
     const rendered = createClientRoot()
 
     rendered.render(
@@ -515,9 +504,7 @@ describe('OptimizationProvider onStatesReady', () => {
         clientId={testConfig.clientId}
         environment={testConfig.environment}
         api={testConfig.api}
-        onStatesReady={() => () => {
-          order.push('cleanup')
-        }}
+        onStatesReady={() => cleanup}
       >
         <div />
       </OptimizationProvider>,
@@ -525,9 +512,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     rendered.unmount()
 
-    expect(order).toEqual(['cleanup', 'destroy'])
-    expect(destroySpy).toHaveBeenCalledTimes(1)
-    destroySpy.mockRestore()
+    expect(cleanup).toHaveBeenCalledTimes(1)
   })
 
   it('captures provider props on first mount until the key changes', () => {

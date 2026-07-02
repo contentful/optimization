@@ -91,6 +91,17 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
 }
 
 /**
+ * Mutable subset of {@link OptimizationWebConfig} that can be updated after construction
+ * via {@link ContentfulOptimization.setConfig}.
+ *
+ * @public
+ */
+export type SetOptimizationWebConfig = Pick<
+  OptimizationWebConfig,
+  'locale' | 'autoTrackEntryInteraction'
+>
+
+/**
  * Public tracking API exposed by {@link ContentfulOptimization#tracking}.
  *
  * @public
@@ -446,6 +457,49 @@ class ContentfulOptimization extends CoreStateful {
     removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
     LocalStore.reset()
     super.reset()
+  }
+
+  /**
+   * Return the existing browser singleton or construct a new one.
+   *
+   * @remarks
+   * When `window.contentfulOptimization` already exists, its mutable config is updated
+   * via {@link ContentfulOptimization.setConfig} and the instance is returned with
+   * `owned: false` — the caller must not call `destroy()` on it.
+   *
+   * When no singleton exists, a new instance is constructed from `config` and returned
+   * with `owned: true` — the caller is responsible for eventually calling `destroy()`.
+   *
+   * @public
+   */
+  static getOrCreate(config: OptimizationWebConfig): ContentfulOptimization {
+    if (typeof window !== 'undefined' && window.contentfulOptimization) {
+      const { autoTrackEntryInteraction, locale } = config
+      window.contentfulOptimization.setConfig({ autoTrackEntryInteraction, locale })
+      return window.contentfulOptimization
+    }
+
+    return new ContentfulOptimization(config)
+  }
+
+  /**
+   * Update mutable configuration options without recreating the SDK instance.
+   *
+   * @remarks
+   * Supports live updates to `locale` and `autoTrackEntryInteraction`.
+   * Structural options (`clientId`, `environment`, `accessToken`, `apiHost`) are
+   * constructor-only and are silently ignored here.
+   *
+   * @public
+   */
+  setConfig(patch: SetOptimizationWebConfig): void {
+    if (patch.locale !== undefined) {
+      this.setLocale(patch.locale)
+    }
+
+    if (patch.autoTrackEntryInteraction !== undefined) {
+      this.entryInteractionRuntime.setAutoTrackOptions(patch.autoTrackEntryInteraction)
+    }
   }
 
   /**

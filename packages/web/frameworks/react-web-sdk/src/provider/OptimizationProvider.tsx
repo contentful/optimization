@@ -1,18 +1,23 @@
-import ContentfulOptimization, { isBrowser } from '@contentful/optimization-web'
+import ContentfulOptimization from '@contentful/optimization-web'
 import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
 import { hydrateOptimizationData } from '@contentful/optimization-web/bridge-support'
 import {
   createOptimizationRootSdkBinding,
-  disposeOptimizationRootSdkBinding,
-  type OptimizationRootSdkBinding,
+  resolveTrackEntryInteractionOptions,
   type OptimizationRootSdkConfig,
   type OnStatesReady as SharedOnStatesReady,
   type TrackEntryInteractionOptions as SharedTrackEntryInteractionOptions,
 } from '@contentful/optimization-web/presentation'
-import { useLayoutEffect, useState, type PropsWithChildren, type ReactElement } from 'react'
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PropsWithChildren,
+  type ReactElement,
+} from 'react'
 
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
-import { useLifecycle } from '../lib/useLifecycle'
 
 /**
  * Provider-owned callback for app-level subscriptions once SDK state is ready.
@@ -23,13 +28,6 @@ export type OnStatesReady = SharedOnStatesReady<OptimizationSdk>
 export type TrackEntryInteractionOptions = SharedTrackEntryInteractionOptions
 
 type OptimizationProviderBaseConfigProps = OptimizationRootSdkConfig
-type ProviderSdkBinding = OptimizationRootSdkBinding<OptimizationSdk>
-
-interface ProviderState {
-  readonly error: Error | undefined
-  readonly isReady: boolean
-  readonly sdk: OptimizationSdk | undefined
-}
 
 interface ServerOptimizationStateProps {
   /**
@@ -79,76 +77,22 @@ function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error))
 }
 
-const PENDING_STATE: ProviderState = { error: undefined, isReady: false, sdk: undefined }
-
-function readyState(sdk: OptimizationSdk): ProviderState {
-  return { error: undefined, isReady: true, sdk }
-}
-
-function failedState(error: unknown): ProviderState {
-  return { error: toError(error), isReady: false, sdk: undefined }
-}
-
-function createOwnedSdkBinding(props: OptimizationProviderConfigProps): ProviderSdkBinding {
+function resolveOwnedSdk(props: OptimizationProviderConfigProps): OptimizationSdk {
   const {
     children: _children,
     onStatesReady: _onStatesReady,
     sdk: _sdk,
     serverOptimizationState: _serverOptimizationState,
     trackEntryInteraction,
+    locale,
     ...config
   } = props
 
-  return createOptimizationRootSdkBinding({
-    config,
-    createSdk: (sdkConfig) => {
-      if (isBrowser()) window.contentfulOptimization?.destroy()
-      return new ContentfulOptimization(sdkConfig)
-    },
-    trackEntryInteraction,
+  return ContentfulOptimization.getOrCreate({
+    ...config,
+    locale,
+    autoTrackEntryInteraction: resolveTrackEntryInteractionOptions(trackEntryInteraction),
   })
-}
-
-function disposeSdkBinding(sdkBinding: ProviderSdkBinding | undefined): void {
-  disposeOptimizationRootSdkBinding(sdkBinding)
-}
-
-function bindOnStatesReady(
-  sdkBinding: ProviderSdkBinding,
-  onStatesReady: OnStatesReady | undefined,
-): ProviderSdkBinding {
-  const cleanup = onStatesReady?.(sdkBinding.sdk.states)
-
-  if (typeof cleanup !== 'function') {
-    return sdkBinding
-  }
-
-  return { ...sdkBinding, cleanup }
-}
-
-function initializeProviderSdk(
-  props: OptimizationProviderProps,
-): ProviderSdkBinding | Promise<ProviderSdkBinding> {
-  const sdkBinding =
-    props.sdk === undefined
-      ? createOwnedSdkBinding(props)
-      : createOptimizationRootSdkBinding({ sdk: props.sdk })
-
-  if (props.serverOptimizationState === undefined) {
-    try {
-      return bindOnStatesReady(sdkBinding, props.onStatesReady)
-    } catch (error: unknown) {
-      disposeSdkBinding(sdkBinding)
-      throw error
-    }
-  }
-
-  return hydrateOptimizationData(sdkBinding.sdk, props.serverOptimizationState)
-    .then(() => bindOnStatesReady(sdkBinding, props.onStatesReady))
-    .catch((error: unknown) => {
-      disposeSdkBinding(sdkBinding)
-      throw error
-    })
 }
 
 function canUseInjectedSdkDuringInitialRender(
@@ -169,55 +113,91 @@ function requiresAsyncSetup(props: OptimizationProviderProps): boolean {
 }
 
 export function OptimizationProvider(props: OptimizationProviderProps): ReactElement | null {
-  const lifecycle = useLifecycle<ProviderSdkBinding>(
-    (): ProviderSdkBinding | Promise<ProviderSdkBinding> => initializeProviderSdk(props),
-    disposeSdkBinding,
-  )
+  // SDK ref is initialized once during render — safe for SSR and StrictMode.
+  const sdkRef = useRef<OptimizationSdk | null>(null)
+  sdkRef.current ??=
+    props.sdk === undefined
+      ? resolveOwnedSdk(props)
+      : createOptimizationRootSdkBinding({ sdk: props.sdk }).sdk
 
-  const [state, setState] = useState<ProviderState>(() => {
-    if (canUseInjectedSdkDuringInitialRender(props)) {
-      return readyState(props.sdk)
-    }
-    if (requiresAsyncSetup(props)) {
-      return PENDING_STATE
-    }
-    const result = lifecycle.init()
-    if (result === undefined) return PENDING_STATE
-    if ('error' in result) return failedState(result.error)
-    return readyState(result.value.sdk)
+  // Cleanup from onStatesReady; called on unmount when async setup ran.
+  const cleanupRef = useRef<(() => void) | null>(null)
+
+  // State only tracks whether async setup is done or failed.
+  // sdk is always available synchronously from sdkRef.
+  const [error, setError] = useState<Error | undefined>(undefined)
+  const [setupDone, setSetupDone] = useState(() => {
+    if (canUseInjectedSdkDuringInitialRender(props)) return true
+    return !requiresAsyncSetup(props)
   })
 
   const liveLocale = props.sdk === undefined ? props.locale : undefined
+  const liveTrackEntryInteraction =
+    props.sdk === undefined ? props.trackEntryInteraction : undefined
 
+  // Handles async setup: serverOptimizationState hydration and onStatesReady subscription.
+  // Runs at most once per mount; cleanup unsubscribes onStatesReady listeners on teardown.
   useLayoutEffect(() => {
     if (canUseInjectedSdkDuringInitialRender(props)) return
-    return lifecycle.mount(
-      (binding) => {
-        setState(readyState(binding.sdk))
-      },
-      (error) => {
-        setState(failedState(error))
-      },
-    )
+    if (!requiresAsyncSetup(props)) return
+
+    let disposed = false
+    const { current: sdk } = sdkRef
+
+    if (sdk === null) return
+
+    const runSetup = async (): Promise<void> => {
+      try {
+        if (props.serverOptimizationState !== undefined) {
+          await hydrateOptimizationData(sdk, props.serverOptimizationState)
+        }
+        if (disposed) return
+        const result = props.onStatesReady?.(sdk.states)
+        if (typeof result === 'function') cleanupRef.current = result
+        setSetupDone(true)
+      } catch (err: unknown) {
+        if (!disposed) setError(toError(err))
+      }
+    }
+
+    void runSetup()
+
+    return () => {
+      disposed = true
+      cleanupRef.current?.()
+      cleanupRef.current = null
+    }
   }, [])
 
   useLayoutEffect(() => {
-    if (state.sdk === undefined || liveLocale === undefined) return
+    const { current: sdk } = sdkRef
+    if (sdk === null || (liveLocale === undefined && liveTrackEntryInteraction === undefined))
+      return
 
-    try {
-      state.sdk.setLocale(liveLocale)
-    } catch (error: unknown) {
-      setState({ ...readyState(state.sdk), error: toError(error) })
-    }
-  }, [liveLocale, state.sdk])
+    sdk.setConfig({
+      ...(liveLocale !== undefined && { locale: liveLocale }),
+      ...(liveTrackEntryInteraction !== undefined && {
+        autoTrackEntryInteraction: resolveTrackEntryInteractionOptions(liveTrackEntryInteraction),
+      }),
+    })
+  }, [liveLocale, liveTrackEntryInteraction])
+
+  const contextValue = useMemo(() => {
+    const sdk = setupDone && error === undefined ? (sdkRef.current ?? undefined) : undefined
+    return { sdk, isReady: sdk !== undefined, error }
+  }, [setupDone, error])
 
   // Gate rendering when async setup must complete first:
   // - onStatesReady: the callback subscribes to SDK state and must run before children mount.
   // - serverOptimizationState: async hydration must finish before children see SDK-resolved data.
   // In all other cases, always render so Next.js SSR produces HTML and client hydration matches.
-  if (requiresAsyncSetup(props) && !state.isReady && state.error === undefined) {
+  if (requiresAsyncSetup(props) && !setupDone && error === undefined) {
     return null
   }
 
-  return <OptimizationContext.Provider value={state}>{props.children}</OptimizationContext.Provider>
+  return (
+    <OptimizationContext.Provider value={contextValue}>
+      {props.children}
+    </OptimizationContext.Provider>
+  )
 }

@@ -1,6 +1,6 @@
 import type { Observable } from '@contentful/optimization-core'
 import type ContentfulOptimization from '../ContentfulOptimization'
-import type { OptimizationWebConfig } from '../ContentfulOptimization'
+import type { OptimizationWebConfig, SetOptimizationWebConfig } from '../ContentfulOptimization'
 import {
   resolveAutoTrackEntryInteractionOptions,
   type AutoTrackEntryInteractionOptions,
@@ -22,6 +22,7 @@ export interface OptimizationRootSdk
   }
   destroy: () => void
   setLocale: (locale: string) => string | undefined
+  setConfig: (patch: SetOptimizationWebConfig) => void
 }
 
 export type OnStatesReady<TSdk extends OptimizationRootSdk = OptimizationRootSdk> = (

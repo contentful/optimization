@@ -203,6 +203,14 @@ export class EntryInteractionRuntime {
     }
   }
 
+  public setAutoTrackOptions(options: AutoTrackEntryInteractionOptions): void {
+    const { clicks, views, hovers } = resolveAutoTrackEntryInteractionOptions(options)
+    this.autoTrack.clicks = clicks
+    this.autoTrack.views = views
+    this.autoTrack.hovers = hovers
+    this.reconcileAllInteractions()
+  }
+
   public reset(): void {
     this.stopAllEntryInteractions()
     this.clearAllElementOverrides()

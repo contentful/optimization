@@ -667,4 +667,105 @@ describe('ContentfulOptimization', () => {
     expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBeNull()
     expect(document.cookie).not.toContain(`${ANONYMOUS_ID_COOKIE}=${DEFAULT_PROFILE.id}`)
   })
+
+  describe('getOrCreate()', () => {
+    it('constructs a new instance when no singleton exists', () => {
+      const sdk = ContentfulOptimization.getOrCreate(config)
+
+      expect(sdk).toBeInstanceOf(ContentfulOptimization)
+      expect(window.contentfulOptimization).toBe(sdk)
+    })
+
+    it('returns the existing singleton when one already exists', () => {
+      const first = new ContentfulOptimization(config)
+
+      expect(ContentfulOptimization.getOrCreate(config)).toBe(first)
+    })
+
+    it('calls setConfig on the existing singleton when adopting', () => {
+      const first = new ContentfulOptimization(config)
+      const setConfig = rs.spyOn(first, 'setConfig')
+
+      ContentfulOptimization.getOrCreate({ ...config, locale: 'de-DE' })
+
+      expect(setConfig).toHaveBeenCalledWith(expect.objectContaining({ locale: 'de-DE' }))
+    })
+
+    it('does not destroy the existing singleton when adopting', () => {
+      const first = new ContentfulOptimization(config)
+      const destroy = rs.spyOn(first, 'destroy')
+
+      ContentfulOptimization.getOrCreate(config)
+
+      expect(destroy).not.toHaveBeenCalled()
+    })
+
+    it('passes autoTrackEntryInteraction to setConfig when adopting', () => {
+      const first = new ContentfulOptimization(config)
+      const setConfig = rs.spyOn(first, 'setConfig')
+
+      ContentfulOptimization.getOrCreate({
+        ...config,
+        autoTrackEntryInteraction: { views: false },
+      })
+
+      expect(setConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ autoTrackEntryInteraction: { views: false } }),
+      )
+    })
+  })
+
+  describe('setConfig()', () => {
+    it('calls setLocale when locale is provided', () => {
+      const web = new ContentfulOptimization(config)
+      const setLocale = rs.spyOn(web, 'setLocale')
+
+      web.setConfig({ locale: 'de-DE' })
+
+      expect(setLocale).toHaveBeenCalledWith('de-DE')
+    })
+
+    it('does not call setLocale when locale is absent from the patch', () => {
+      const web = new ContentfulOptimization(config)
+      const setLocale = rs.spyOn(web, 'setLocale')
+
+      web.setConfig({})
+
+      expect(setLocale).not.toHaveBeenCalled()
+    })
+
+    it('updates autoTrackEntryInteraction when provided', () => {
+      const web = new ContentfulOptimization(config)
+
+      expect(getAutoTrackEntryViews(web)).toBe(true)
+      expect(getAutoTrackEntryClicks(web)).toBe(true)
+      expect(getAutoTrackEntryHovers(web)).toBe(true)
+
+      web.setConfig({ autoTrackEntryInteraction: { views: false } })
+
+      expect(getAutoTrackEntryViews(web)).toBe(false)
+      expect(getAutoTrackEntryClicks(web)).toBe(true)
+      expect(getAutoTrackEntryHovers(web)).toBe(true)
+    })
+
+    it('does not change autoTrackEntryInteraction when absent from the patch', () => {
+      const web = new ContentfulOptimization({
+        ...config,
+        autoTrackEntryInteraction: { views: false },
+      })
+
+      web.setConfig({ locale: 'en-US' })
+
+      expect(getAutoTrackEntryViews(web)).toBe(false)
+    })
+
+    it('leaves already-set locale unchanged when patching other fields', () => {
+      const web = new ContentfulOptimization({ ...config, locale: 'en-US' })
+
+      web.setConfig({ autoTrackEntryInteraction: { clicks: false } })
+
+      expect(web.locale).toBe('en-US')
+      expect(getAutoTrackEntryClicks(web)).toBe(false)
+    })
+  })
 })

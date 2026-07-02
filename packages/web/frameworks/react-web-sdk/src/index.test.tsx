@@ -125,20 +125,6 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(optimization.trackHover).toBeTypeOf('function')
     expect(optimization.tracking).toBeDefined()
     rendered.unmount()
-
-    capturedOptimization = undefined
-    const withoutLocale = renderClient(
-      <OptimizationProvider
-        clientId={testConfig.clientId}
-        environment={testConfig.environment}
-        api={testConfig.api}
-      >
-        <Probe />
-      </OptimizationProvider>,
-    )
-
-    expect(requireOptimizationSdk(capturedOptimization).locale).toBeUndefined()
-    withoutLocale.unmount()
   })
 
   it('provides optimization and live updates from OptimizationRoot', () => {
@@ -526,7 +512,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(results).toEqual([true, false, true])
   })
 
-  it('destroys the optimization singleton on provider unmount', () => {
+  it('keeps the SDK singleton alive after provider unmount', () => {
     const container = document.createElement('div')
     document.body.append(container)
     const root = createRoot(container)
@@ -549,7 +535,7 @@ describe('@contentful/optimization-react-web core providers', () => {
       root.unmount()
     })
 
-    expect(window.contentfulOptimization).toBeUndefined()
+    expect(window.contentfulOptimization).toBeInstanceOf(ContentfulOptimization)
 
     const remountRoot = createRoot(container)
 
@@ -574,7 +560,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     container.remove()
   })
 
-  it('cleans up layout-effect initialization during StrictMode replay', () => {
+  it('keeps the SDK singleton alive after StrictMode unmount', () => {
     const rendered = renderClient(
       <StrictMode>
         <OptimizationProvider
@@ -591,7 +577,7 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     rendered.unmount()
 
-    expect(window.contentfulOptimization).toBeUndefined()
+    expect(window.contentfulOptimization).toBeInstanceOf(ContentfulOptimization)
   })
 
   it('uses an injected sdk instance without taking ownership of teardown', () => {
@@ -627,10 +613,11 @@ describe('@contentful/optimization-react-web core providers', () => {
     container.remove()
   })
 
-  it('destroys a stale window singleton before constructing a new SDK instance', () => {
+  it('adopts a window singleton left by an interrupted concurrent-mode render instead of destroying it', () => {
     // Simulate a concurrent-mode render that was interrupted before effects ran:
     // the SDK constructor set window.contentfulOptimization but the component was
-    // discarded without cleanup.
+    // discarded without cleanup. The new behavior is to reuse the instance rather
+    // than destroy-and-recreate it.
     const stale = new ContentfulOptimization(testConfig)
     const destroySpy = rs.spyOn(stale, 'destroy')
     window.contentfulOptimization = stale
@@ -645,9 +632,8 @@ describe('@contentful/optimization-react-web core providers', () => {
       </OptimizationProvider>,
     )
 
-    expect(destroySpy).toHaveBeenCalledOnce()
-    expect(window.contentfulOptimization).toBeInstanceOf(ContentfulOptimization)
-    expect(window.contentfulOptimization).not.toBe(stale)
+    expect(destroySpy).not.toHaveBeenCalled()
+    expect(window.contentfulOptimization).toBe(stale)
 
     rendered.unmount()
   })

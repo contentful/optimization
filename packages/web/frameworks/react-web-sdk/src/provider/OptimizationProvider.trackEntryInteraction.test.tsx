@@ -4,11 +4,10 @@ import { createRoot } from 'react-dom/client'
 import { OptimizationProvider } from '../index'
 
 const constructedConfigs: Array<Record<string, unknown>> = []
-const setLocaleCalls: string[] = []
+const setConfigCalls: Array<Record<string, unknown>> = []
 
-rs.mock('@contentful/optimization-web', () => ({
-  isBrowser: () => true,
-  default: class MockContentfulOptimization {
+rs.mock('@contentful/optimization-web', () => {
+  class MockContentfulOptimization {
     constructor(config: Record<string, unknown>) {
       constructedConfigs.push(config)
       Reflect.set(window, 'contentfulOptimization', this)
@@ -19,11 +18,25 @@ rs.mock('@contentful/optimization-web', () => ({
     }
 
     setLocale(locale: string): string {
-      setLocaleCalls.push(locale)
       return locale
     }
-  },
-}))
+
+    setConfig(patch: Record<string, unknown>): void {
+      setConfigCalls.push(patch)
+    }
+
+    static getOrCreate(config: Record<string, unknown>): MockContentfulOptimization {
+      const current: unknown = Reflect.get(window, 'contentfulOptimization')
+      if (current instanceof MockContentfulOptimization) {
+        current.setConfig(config)
+        return current
+      }
+      return new MockContentfulOptimization(config)
+    }
+  }
+
+  return { isBrowser: () => true, default: MockContentfulOptimization }
+})
 
 function renderProvider(element: ReactElement): {
   unmount: () => void
@@ -65,7 +78,7 @@ function requireConfig(index: number): Record<string, unknown> {
 describe('OptimizationProvider trackEntryInteraction', () => {
   it('maps default React tracking options to Web SDK auto tracking options', () => {
     constructedConfigs.length = 0
-    setLocaleCalls.length = 0
+    setConfigCalls.length = 0
 
     const rendered = renderProvider(
       <OptimizationProvider clientId="test-client-id" environment="main">
@@ -84,7 +97,7 @@ describe('OptimizationProvider trackEntryInteraction', () => {
 
   it('maps explicit React tracking options to Web SDK auto tracking options', () => {
     constructedConfigs.length = 0
-    setLocaleCalls.length = 0
+    setConfigCalls.length = 0
 
     const rendered = renderProvider(
       <OptimizationProvider
@@ -109,7 +122,7 @@ describe('OptimizationProvider trackEntryInteraction', () => {
 
   it('updates the owned SDK when the locale prop changes', () => {
     constructedConfigs.length = 0
-    setLocaleCalls.length = 0
+    setConfigCalls.length = 0
 
     const rendered = renderProvider(
       <OptimizationProvider clientId="test-client-id" environment="main" locale="en-US">
@@ -117,7 +130,7 @@ describe('OptimizationProvider trackEntryInteraction', () => {
       </OptimizationProvider>,
     )
 
-    expect(setLocaleCalls).toEqual(['en-US'])
+    expect(setConfigCalls.some((c) => c.locale === 'en-US')).toBe(true)
 
     rendered.update(
       <OptimizationProvider clientId="test-client-id" environment="main" locale="de-DE">
@@ -125,7 +138,7 @@ describe('OptimizationProvider trackEntryInteraction', () => {
       </OptimizationProvider>,
     )
 
-    expect(setLocaleCalls).toEqual(['en-US', 'de-DE'])
+    expect(setConfigCalls.some((c) => c.locale === 'de-DE')).toBe(true)
 
     rendered.unmount()
   })
