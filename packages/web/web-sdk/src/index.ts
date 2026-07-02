@@ -43,6 +43,7 @@ export type {
   EntryViewInteractionStartOptions,
 } from './entry-tracking'
 export * from './handlers/beaconHandler'
+export { isBrowser } from './lib/isBrowser'
 export * from './storage/LocalStore'
 
 export default ContentfulOptimization
