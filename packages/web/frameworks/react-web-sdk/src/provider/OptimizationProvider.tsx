@@ -1,7 +1,6 @@
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
 import { hydrateOptimizationData } from '@contentful/optimization-web/bridge-support'
-import { isBrowser } from '@contentful/optimization-web/lib/isBrowser'
 import {
   createOptimizationRootSdkBinding,
   disposeOptimizationRootSdkBinding,
@@ -103,7 +102,7 @@ function createOwnedSdkBinding(props: OptimizationProviderConfigProps): Provider
   return createOptimizationRootSdkBinding({
     config,
     createSdk: (sdkConfig) => {
-      if (isBrowser()) window.contentfulOptimization?.destroy()
+      if (typeof window !== 'undefined') window.contentfulOptimization?.destroy()
       return new ContentfulOptimization(sdkConfig)
     },
     trackEntryInteraction,
