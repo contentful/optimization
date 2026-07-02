@@ -95,20 +95,7 @@ function resolveOwnedSdk(props: OptimizationProviderConfigProps): OptimizationSd
   })
 }
 
-function canUseInjectedSdkDuringInitialRender(
-  props: OptimizationProviderProps,
-): props is OptimizationProviderSdkProps & {
-  readonly onStatesReady: undefined
-  readonly serverOptimizationState: undefined
-} {
-  return (
-    props.sdk !== undefined &&
-    props.onStatesReady === undefined &&
-    props.serverOptimizationState === undefined
-  )
-}
-
-function requiresAsyncSetup(props: OptimizationProviderProps): boolean {
+function needsSetupPhase(props: OptimizationProviderProps): boolean {
   return props.serverOptimizationState !== undefined || props.onStatesReady !== undefined
 }
 
@@ -126,10 +113,7 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   // State only tracks whether async setup is done or failed.
   // sdk is always available synchronously from sdkRef.
   const [error, setError] = useState<Error | undefined>(undefined)
-  const [setupDone, setSetupDone] = useState(() => {
-    if (canUseInjectedSdkDuringInitialRender(props)) return true
-    return !requiresAsyncSetup(props)
-  })
+  const [setupDone, setSetupDone] = useState(() => !needsSetupPhase(props))
 
   const liveLocale = props.sdk === undefined ? props.locale : undefined
   const liveTrackEntryInteraction =
@@ -138,8 +122,7 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   // Handles async setup: serverOptimizationState hydration and onStatesReady subscription.
   // Runs at most once per mount; cleanup unsubscribes onStatesReady listeners on teardown.
   useLayoutEffect(() => {
-    if (canUseInjectedSdkDuringInitialRender(props)) return
-    if (!requiresAsyncSetup(props)) return
+    if (!needsSetupPhase(props)) return
 
     let disposed = false
     const { current: sdk } = sdkRef
@@ -191,7 +174,7 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   // - onStatesReady: the callback subscribes to SDK state and must run before children mount.
   // - serverOptimizationState: async hydration must finish before children see SDK-resolved data.
   // In all other cases, always render so Next.js SSR produces HTML and client hydration matches.
-  if (requiresAsyncSetup(props) && !setupDone && error === undefined) {
+  if (needsSetupPhase(props) && !setupDone && error === undefined) {
     return null
   }
 
