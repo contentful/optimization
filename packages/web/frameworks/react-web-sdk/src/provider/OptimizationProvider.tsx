@@ -191,14 +191,23 @@ function canUseInjectedSdkDuringInitialRender(props: OptimizationProviderProps):
  * client render, before the mount effect runs).
  *
  * @remarks
- * With a config-driven provider this is a read-only snapshot runtime seeded from
- * server state plus the configured consent/locale defaults, so it reports the
- * same values the live SDK will after hydration. With an injected SDK the live
- * instance is already available and is used directly.
+ * When an injected SDK can back the initial render directly (no server state and
+ * no `onStatesReady`), the live instance is used as-is. Otherwise the initial
+ * render uses a read-only snapshot runtime seeded from `serverOptimizationState`
+ * plus the configured consent/locale defaults, so first paint reflects the
+ * server-resolved state — whether the SDK is owned or injected — and matches the
+ * value the live SDK reports after the effect hydrates it.
  */
 function createInitialRuntime(props: OptimizationProviderProps): WebOptimizationRuntime {
   if (props.sdk !== undefined) {
-    return props.sdk
+    // An injected SDK with no async setup already backs the initial render.
+    if (canUseInjectedSdkDuringInitialRender(props)) {
+      return props.sdk
+    }
+
+    // An injected SDK with server state renders that state first, then the
+    // effect hydrates the live instance with the same data.
+    return createWebSnapshotRuntime({ data: props.serverOptimizationState })
   }
 
   return createWebSnapshotRuntime({
