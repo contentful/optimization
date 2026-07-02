@@ -4,7 +4,6 @@ import { LiveEntryCard } from '@/components/LiveEntryCard'
 import { type ContentEntry, loadPageEntries } from '@/lib/contentful'
 import { getServerOptimizationData, optimization } from '@/lib/optimization'
 import { toIdMap } from '@/lib/util'
-import { NextjsOptimizationState } from '@contentful/optimization-nextjs/client'
 import { type ServerTrackingResolvedData } from '@contentful/optimization-nextjs/server'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 
@@ -41,7 +40,6 @@ export default async function Home() {
       </div>
 
       <ControlPanel />
-      <NextjsOptimizationState data={optimizationData} />
 
       <section className="page-section" data-testid="live-updates-section">
         <header className="page-section__header">

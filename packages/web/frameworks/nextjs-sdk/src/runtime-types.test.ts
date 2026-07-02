@@ -7,10 +7,6 @@ export function acceptNextjsClientSdk(runtime: WebContentfulOptimization): Optim
   return runtime
 }
 
-export function acceptConcreteWebRuntime(sdk: OptimizationSdk): WebContentfulOptimization {
-  return sdk
-}
-
 export function acceptNextjsServerSdk(
   runtime: NodeContentfulOptimization,
 ): NextjsServerOptimization {

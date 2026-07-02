@@ -340,6 +340,19 @@ export function persistNextjsAnonymousId(
   }
 }
 
+/**
+ * Renders a server-resolved entry in a Server Component with tracking
+ * attributes and no client JavaScript for the entry itself.
+ *
+ * @deprecated Prefer the isomorphic `OptimizedEntry` from
+ * `@contentful/optimization-react-web`, which now server-renders for first paint
+ * and hydrates for interactivity and live updates, using a single component and
+ * automatic variant resolution. Use this component only when you specifically
+ * need a pure Server Component with zero client JavaScript for the entry and no
+ * live updates, and are resolving `resolvedData` yourself on the server.
+ *
+ * @public
+ */
 export function ServerOptimizedEntry<TElement extends keyof JSX.IntrinsicElements = 'div'>({
   as,
   baselineEntry,
