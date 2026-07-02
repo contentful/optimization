@@ -39,17 +39,19 @@ dynamically loads `@contentful/optimization-web-preview-panel`.
 Use this implementation when you need a server-rendered Next.js example where personalized content
 is resolved before browser startup. It demonstrates:
 
-- Server-rendered personalized first paint with `getNextjsServerOptimizationData()`
-- Server-rendered tracking markup with `ServerOptimizedEntry`
+- Server-rendered personalized first paint with `getNextjsServerOptimizationData()`, deduplicated
+  per request with a React `cache()` helper (`getServerOptimizationData` in `lib/optimization.ts`)
+- Seeding `OptimizationRoot` with `serverOptimizationState` in the layout so the provider renders
+  identified and personalized state on the server, correct even with JavaScript disabled
+- Server-rendered entries through the isomorphic `OptimizedEntry`
 - Request URL capture through `createNextjsOptimizationContextHandler()`
 - Browser-side page, view, click, and hover tracking through the adapter client entry
-- A client-side live updates island with `OptimizedEntry`
 - `initialPageEvent="skip"` when the server already resolved the same initial page
 
-In this SSR pattern, content rendered through `ServerOptimizedEntry` is static after browser
-startup. Client actions such as consent, identify, and reset update browser SDK state and analytics,
-but server-rendered content changes only on the next server request. The live updates section is a
-client-side island that uses `OptimizedEntry` to demonstrate browser-side re-resolution.
+In this SSR pattern, `OptimizedEntry` renders the server-resolved variant and holds it after
+hydration. Client actions such as consent, identify, and reset update browser SDK state and
+analytics, but server-rendered content changes only on the next server request. The live updates
+section opts specific entries into `liveUpdates` to demonstrate browser-side re-resolution.
 
 ## Architecture
 
@@ -59,24 +61,27 @@ Request
     createNextjsOptimizationContextHandler()
       forwards sanitized request URL context for Server Components
 
-  app/page.tsx
-    fetches CDA entries
-    calls getNextjsServerOptimizationData() with cookies() and headers()
-    resolves entries through the request-bound SDK
-    renders NextjsOptimizationState near optimized content for server-to-browser state handoff
-    renders children through ServerOptimizedEntry
+  lib/optimization.ts
+    getServerOptimizationData() — React cache()
+      calls getNextjsServerOptimizationData() with cookies() and headers()
+      one Experience page() call per request, shared by layout and pages
 
-Browser startup
-  app/layout.tsx
+  app/layout.tsx (Server Component)
     mounts OptimizationRoot from @contentful/optimization-nextjs/client
+    passes serverOptimizationState={await getServerOptimizationData()}
+      provider renders personalized state on the server and hydrates the live SDK
     passes initialPageEvent="skip" only after consented server page resolution
 
-  browser tracking
-    NextAppAutoPageTracker handles route page events
-    default interaction observers read data-ctfl-* attributes
+  app/page.tsx
+    fetches CDA entries
+    reads the same getServerOptimizationData() (deduplicated)
+    renders entries through the isomorphic OptimizedEntry
 
-  client live updates island
-    LiveEntryCard uses OptimizedEntry for browser-side re-resolution examples
+Browser startup
+  provider swaps the snapshot runtime for the live browser SDK
+  NextAppAutoPageTracker handles route page events
+  default interaction observers read data-ctfl-* attributes
+  entries opted into liveUpdates re-resolve in the browser
 ```
 
 ## CDA locale handling
@@ -140,10 +145,11 @@ pnpm setup:e2e:nextjs-sdk_ssr
 pnpm test:e2e:nextjs-sdk_ssr
 ```
 
-The SSR E2E run uses `E2E_FLAGS=SSR,SKIP_NO_JS` from `.env.example`. It runs the shared navigation,
-tracking, and live updates specs against SSR-rendered markup; `SKIP_NO_JS` skips the
-JavaScript-disabled variant-resolution block. Hydration-only no-client-Experience-request checks
-remain behind `HYDRATION`, and request URL forwarding plus tracking-attribute mapping are covered by
+The SSR E2E run uses `E2E_FLAGS=SSR` from `.env.example`. It runs the shared navigation, tracking,
+and live updates specs against SSR-rendered markup, plus the SSR first-paint and JavaScript-disabled
+variant-resolution blocks — the provider renders personalized state on the server, so those pass
+without JavaScript. Hydration-only no-client-Experience-request checks remain behind `HYDRATION`,
+and request URL forwarding plus tracking-attribute mapping are covered by
 `@contentful/optimization-nextjs` package unit tests.
 
 Use Playwright UI or codegen when needed:

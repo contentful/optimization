@@ -45,21 +45,24 @@ already installed by your app instead of installing its own copy.
 
 ## Server setup
 
+Resolve the request Optimization data in a Server Component. Wrap it in React `cache()` so the
+layout and pages share one call per request. Entry resolution is pure and runs on the server.
+
 ```tsx
 import {
-  ServerOptimizedEntry,
   createNextjsOptimization,
   getNextjsServerOptimizationData,
 } from '@contentful/optimization-nextjs/server'
-import { NextjsOptimizationState } from '@contentful/optimization-nextjs/client'
 import { cookies, headers } from 'next/headers'
+import { cache } from 'react'
 
-const sdk = createNextjsOptimization({
+export const sdk = createNextjsOptimization({
   clientId: 'client-id',
   environment: 'main',
 })
 
-export default async function Page() {
+// One Experience `page()` call per request, shared across server components.
+export const getServerOptimizationData = cache(async () => {
   const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
   const { data } = await getNextjsServerOptimizationData(sdk, {
     consent: { events: true, persistence: true },
@@ -67,32 +70,32 @@ export default async function Page() {
     headers: headerStore,
     locale: 'en-US',
   })
-
-  const resolvedData = sdk.resolveOptimizedEntry(entry, data?.selectedOptimizations)
-
-  return (
-    <>
-      <NextjsOptimizationState data={data} />
-      <ServerOptimizedEntry baselineEntry={entry} resolvedData={resolvedData}>
-        {resolvedData.entry.fields.title}
-      </ServerOptimizedEntry>
-    </>
-  )
-}
+  return data
+})
 ```
-
-`NextjsOptimizationState` must render under SDK context. That context can come from
-`OptimizationRoot` or `OptimizationProvider`, commonly mounted in a shared App Router layout.
 
 ## Client setup
 
+Mount `OptimizationRoot` in the App Router layout and pass the server data through
+`serverOptimizationState`. The provider renders personalized state on the server (so the first paint
+is correct even without JavaScript) and hydrates the live browser SDK with the same data on the
+client.
+
 ```tsx
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
+import { getServerOptimizationData } from '@/lib/optimization'
 import { Suspense, type ReactNode } from 'react'
 
-export function Providers({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const serverOptimizationState = await getServerOptimizationData()
+
   return (
-    <OptimizationRoot clientId="client-id" environment="main">
+    <OptimizationRoot
+      clientId="client-id"
+      environment="main"
+      defaults={{ consent: true }}
+      serverOptimizationState={serverOptimizationState}
+    >
       <Suspense>
         <NextAppAutoPageTracker initialPageEvent="skip" />
       </Suspense>
@@ -105,31 +108,26 @@ export function Providers({ children }: { children: ReactNode }) {
 Use `initialPageEvent="skip"` only when the server already called `page()` for the same initial
 route. Route changes still emit normally.
 
-## Server-to-browser state handoff
+## Rendering optimized entries
 
-Use `serverOptimizationState={data}` on `OptimizationRoot` or `OptimizationProvider` when that
-provider or root receives the server Optimization data directly:
+Render entries with the isomorphic `OptimizedEntry`. It resolves the variant on the server for first
+paint, emits the tracking attributes the browser observes, and hydrates for interaction tracking and
+live updates — one component in both environments.
 
 ```tsx
-<OptimizationRoot
-  clientId="client-id"
-  environment="main"
-  defaults={{ consent: true }}
-  serverOptimizationState={data}
+import { OptimizedEntry } from '@contentful/optimization-nextjs/client'
+;<OptimizedEntry baselineEntry={entry}>
+  {(resolvedEntry) => <h2>{String(resolvedEntry.fields.title ?? '')}</h2>}
+</OptimizedEntry>
+```
+
+> [!NOTE]
 >
-  {children}
-</OptimizationRoot>
-```
-
-When a shared App Router layout owns the SDK context and a page owns the server data, render
-`NextjsOptimizationState` under that context near the server-rendered optimized content:
-
-```tsx
-<NextjsOptimizationState data={data} />
-```
-
-Keep `defaults` for configuration or default state such as consent. Pass server-returned profile,
-selected optimizations, and changes through `serverOptimizationState` or `NextjsOptimizationState`.
+> `NextjsOptimizationState` and `ServerOptimizedEntry` are deprecated. Pass server data through the
+> provider's `serverOptimizationState` prop and render entries with `OptimizedEntry`.
+> `NextjsOptimizationState` remains for configuring the provider without server data and hydrating
+> page-specific data later; `ServerOptimizedEntry` remains for pure zero-JavaScript Server Component
+> rendering where you resolve `resolvedData` yourself.
 
 ## Request context setup
 
