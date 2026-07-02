@@ -2,13 +2,12 @@ import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvide
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
 import { appConfig } from '@/lib/config'
-import { optimization } from '@/lib/optimization'
+import { getServerOptimizationData } from '@/lib/optimization'
 import { getAppConsent } from '@/lib/util'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
-import { getNextjsServerOptimizationData } from '@contentful/optimization-nextjs/server'
 import 'e2e-web/theme.css'
 import type { Metadata } from 'next'
-import { cookies, headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { Suspense, type ReactNode } from 'react'
 
@@ -19,20 +18,13 @@ export const metadata: Metadata = {
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
+  const cookieStore = await cookies()
   const appConsent = getAppConsent(cookieStore)
 
   // Resolve the request-scoped optimization state on the server so the
   // isomorphic provider renders identified/personalized first-paint state even
-  // with JavaScript disabled. Only fetched when consent permits it.
-  const serverOptimizationState = appConsent
-    ? await getNextjsServerOptimizationData(optimization, {
-        consent: { events: true, persistence: true },
-        cookies: cookieStore,
-        headers: headerStore,
-        locale: appConfig.locale,
-      }).then(({ data }) => data)
-    : undefined
+  // with JavaScript disabled. Deduplicated per request with the page components.
+  const serverOptimizationState = await getServerOptimizationData()
 
   return (
     <html lang={appConfig.locale.split('-')[0]}>

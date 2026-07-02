@@ -1,31 +1,17 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { EntryCard } from '@/components/EntryCard'
 import { LiveEntryCard } from '@/components/LiveEntryCard'
-import { appConfig } from '@/lib/config'
 import { type ContentEntry, loadPageEntries } from '@/lib/contentful'
-import { optimization } from '@/lib/optimization'
-import { getAppConsent, toIdMap } from '@/lib/util'
+import { getServerOptimizationData, optimization } from '@/lib/optimization'
+import { toIdMap } from '@/lib/util'
 import { NextjsOptimizationState } from '@contentful/optimization-nextjs/client'
-import {
-  type ServerTrackingResolvedData,
-  getNextjsServerOptimizationData,
-} from '@contentful/optimization-nextjs/server'
+import { type ServerTrackingResolvedData } from '@contentful/optimization-nextjs/server'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
-import { cookies, headers } from 'next/headers'
 
 export default async function Home() {
-  const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
-
   const [entries, optimizationData] = await Promise.all([
     loadPageEntries(PAGES.home.ids),
-    getAppConsent(cookieStore)
-      ? getNextjsServerOptimizationData(optimization, {
-          consent: { events: true, persistence: true },
-          cookies: cookieStore,
-          headers: headerStore,
-          locale: appConfig.locale,
-        }).then(({ data }) => data)
-      : undefined,
+    getServerOptimizationData(),
   ])
 
   const entriesById = toIdMap(entries)
