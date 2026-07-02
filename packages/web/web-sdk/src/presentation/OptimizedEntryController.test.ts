@@ -108,6 +108,8 @@ function createSdk(
     experienceRequestState,
     optimizationPossible,
     sdk: {
+      fetchContentfulEntry: async (entryId: string) =>
+        await Promise.resolve(createTestEntry(entryId)),
       resolveOptimizedEntry,
       states: {
         canOptimize,
@@ -187,21 +189,40 @@ describe('OptimizedEntryController', () => {
 
     controller.connect()
 
-    expect(controller.getSnapshot().hostAttributes).toMatchObject({
-      'data-ctfl-entry-id': 'baseline',
-      'data-ctfl-track-clicks': true,
-      'data-ctfl-track-hovers': false,
-      'data-ctfl-variant-index': 0,
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: baseline,
+      isResolved: true,
+      metadata: {
+        baselineEntry: baseline,
+        baselineEntryId: 'baseline',
+        entry: baseline,
+        entryId: 'baseline',
+      },
+      hostAttributes: {
+        'data-ctfl-entry-id': 'baseline',
+        'data-ctfl-track-clicks': true,
+        'data-ctfl-track-hovers': false,
+        'data-ctfl-variant-index': 0,
+      },
     })
 
     runtime.selectedOptimizations.emit(variantOneState)
 
-    expect(controller.getSnapshot().hostAttributes).toMatchObject({
-      'data-ctfl-entry-id': 'variant-a',
-      'data-ctfl-optimization-context-id': 'ctx-1',
-      'data-ctfl-optimization-id': 'exp-hero',
-      'data-ctfl-sticky': true,
-      'data-ctfl-variant-index': 1,
+    expect(controller.getSnapshot()).toMatchObject({
+      metadata: {
+        baselineEntry: baseline,
+        entry: variantA,
+        optimizationContextId: 'ctx-1',
+        selectedOptimization: variantOneState[0],
+        selectedOptimizations: variantOneState,
+      },
+      hostAttributes: {
+        'data-ctfl-entry-id': 'variant-a',
+        'data-ctfl-optimization-context-id': 'ctx-1',
+        'data-ctfl-optimization-id': 'exp-hero',
+        'data-ctfl-sticky': true,
+        'data-ctfl-variant-index': 1,
+      },
     })
 
     controller.disconnect()

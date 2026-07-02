@@ -1,6 +1,7 @@
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type {
+  ContentfulEntryQuery,
   EventEmissionResult,
   ExperienceRequestState,
   ResolvedData,
@@ -42,6 +43,7 @@ export type RuntimeOptimization = OptimizationSdk
 export type OptimizationSdkOverrides = Omit<
   Partial<OptimizationSdkPublic>,
   | 'identify'
+  | 'fetchContentfulEntry'
   | 'page'
   | 'resolveOptimizedEntry'
   | 'screen'
@@ -50,6 +52,7 @@ export type OptimizationSdkOverrides = Omit<
   | 'tracking'
   | 'trackView'
 > & {
+  fetchContentfulEntry?: (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
   identify?: EventMethodOverride<OptimizationSdk['identify']>
   page?: EventMethodOverride<OptimizationSdk['page']>
   resolveOptimizedEntry?: ResolveOptimizedEntry
@@ -222,6 +225,8 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
     flush: async () => {
       await Promise.resolve()
     },
+    fetchContentfulEntry: async (entryId: string) =>
+      await Promise.resolve(createTestEntry(entryId)),
     getFlag: () => undefined,
     getMergeTagValue: () => undefined,
     hasConsent,

@@ -22,8 +22,8 @@ events.
    pnpm add @contentful/optimization-web contentful
    ```
 
-2. Create one Web SDK instance for the page or SPA runtime, then emit one `page()` event, fetch one
-   single-locale Contentful entry, resolve the selected variant, and render it.
+2. Create one Contentful delivery client and one Web SDK instance for the page or SPA runtime, then
+   emit one `page()` event, fetch one optimized entry by ID, and render it.
 
    **Adapt this to your use case:**
 
@@ -41,6 +41,11 @@ events.
 
    const optimization = new ContentfulOptimization({
      clientId: 'your-optimization-client-id',
+     contentful: {
+       client: contentfulClient,
+       // Include linked optimization entries and variants for SDK-managed entry fetches.
+       defaultQuery: { include: 10 },
+     },
      environment: 'main',
      locale: APP_LOCALE,
      // Only use default-on consent when application policy permits it.
@@ -52,14 +57,8 @@ events.
    })
 
    // Emit the page event before resolving entries so selections are current.
-   const pageResult = await optimization.page()
-   const baselineEntry = await contentfulClient.getEntry('hero-entry-id', {
-     include: 10,
-     locale: APP_LOCALE,
-   })
-   // Passing [] falls back to the baseline when the page event is blocked or has no data.
-   const selectedOptimizations = pageResult.accepted ? pageResult.data?.selectedOptimizations : []
-   const { entry } = optimization.resolveOptimizedEntry(baselineEntry, selectedOptimizations ?? [])
+   await optimization.page()
+   const { entry } = await optimization.fetchOptimizedEntry('hero-entry-id')
 
    const hero = document.querySelector<HTMLElement>('#hero')
    if (hero) {
@@ -104,7 +103,7 @@ The full guide uses these setup items:
 | Setup item                                                          | Category                       | Required for quick start | Where to configure                                                                   |
 | ------------------------------------------------------------------- | ------------------------------ | ------------------------ | ------------------------------------------------------------------------------------ |
 | `@contentful/optimization-web` package                              | Required for first integration | Yes                      | Application package manager                                                          |
-| Contentful delivery client package                                  | Required for first integration | Yes                      | Application package manager and Contentful client factory                            |
+| Contentful delivery client package                                  | Required for first integration | Yes                      | Application package manager, Contentful client factory, and SDK `contentful.client`  |
 | Optimization client ID and optional non-`main` environment          | Required for first integration | Yes                      | Runtime configuration passed to `new ContentfulOptimization(...)`                    |
 | Contentful space, environment, and access token                     | Required for first integration | Yes                      | Application-owned Contentful client configuration                                    |
 | Non-default Contentful CDA host                                     | Common but policy-dependent    | No                       | Application-owned Contentful client host or endpoint configuration                   |
@@ -125,9 +124,9 @@ The full guide uses these setup items:
 | Production event, privacy, and cache validation                     | Advanced or production-only    | No                       | Release checklist, observability, and deployment configuration                       |
 
 Keep the default path single-locale. Fetch entries for SDK resolution with one concrete Contentful
-locale and enough include depth for linked optimization entries and variants. Do not pass
-`contentful.js` `withAllLocales` results or raw CDA `locale=*` responses to
-`resolveOptimizedEntry()`.
+locale and enough include depth for linked optimization entries and variants. Do not configure
+SDK-managed fetches or manual fetches with `contentful.js` `withAllLocales` results or raw CDA
+`locale=*` responses.
 
 ## Core integration
 
@@ -175,6 +174,11 @@ export const contentfulClient = contentful.createClient({
 // Reuse this singleton across route, render, and tracking handlers.
 export const optimization = new ContentfulOptimization({
   clientId: APP_CONFIG.optimizationClientId,
+  contentful: {
+    client: contentfulClient,
+    // Include linked optimization entries and variants for SDK-managed entry fetches.
+    defaultQuery: { include: 10 },
+  },
   environment: APP_CONFIG.optimizationEnvironment,
   locale: APP_LOCALE,
   app: {
@@ -190,7 +194,9 @@ export const optimization = new ContentfulOptimization({
 ```
 
 The Web SDK does not replace the Contentful delivery client. Your application still owns Contentful
-credentials, entry fetching, routing, rendering, consent policy, identity policy, and cache policy.
+credentials, delivery-client configuration, routing, rendering, consent policy, identity policy, and
+cache policy. When configured with `contentful: { client, defaultQuery?, cache? }`, the SDK can call
+that app-owned client's `getEntry()` method for managed entry fetching.
 
 For locale mechanics, see
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
@@ -346,15 +352,15 @@ route.
 
 **Integration category:** Required for first integration
 
-The browser app fetches Contentful entries. The Web SDK chooses the current variant after the
-baseline entry and Experience API selections exist.
+The browser app owns the Contentful delivery client, credentials, and delivery policy. The preferred
+path passes that app-owned `contentful.js` client to the SDK as
+`contentful: { client, defaultQuery?, cache? }`, then calls `fetchOptimizedEntry(entryId)` after
+`page()` or `identify()`. The stateful Web SDK uses current `selectedOptimizations` when omitted.
 
-1. Fetch the baseline Contentful entry with one CDA locale and enough include depth to resolve
-   optimization entries and variants.
+1. Configure the Web SDK with `contentful: { client, defaultQuery?, cache? }`.
 2. Call `page()` or `identify()` before rendering optimized content so SDK state has current
    `selectedOptimizations`.
-3. Pass the baseline entry to `resolveOptimizedEntry()`. In a stateful Web SDK integration, the
-   method uses current SDK state when you omit the second argument.
+3. Call `fetchOptimizedEntry(entryId)` to fetch the baseline entry and resolve the selected variant.
 4. Render the returned `entry`. If no matching optimization exists, the SDK returns the baseline
    entry.
 5. Store the baseline entry ID separately from the resolved entry ID so later rerenders do not
@@ -366,14 +372,11 @@ baseline entry and Experience API selections exist.
 
 ```ts
 async function renderEntry(entryId: string, element: HTMLElement): Promise<void> {
-  const baselineEntry = await contentfulClient.getEntry(entryId, {
-    include: 10,
-    locale: APP_LOCALE,
+  const resolved = await optimization.fetchOptimizedEntry(entryId, {
+    query: { locale: APP_LOCALE },
   })
 
-  // Omitted selections use current SDK state from the most recent accepted page or identify call.
-  const resolved = optimization.resolveOptimizedEntry(baselineEntry)
-  const { entry, optimizationContextId, selectedOptimization } = resolved
+  const { baselineEntry, entry, optimizationContextId, selectedOptimization } = resolved
 
   element.textContent = String(entry.fields.headline ?? '')
 
@@ -399,9 +402,25 @@ async function renderEntry(entryId: string, element: HTMLElement): Promise<void>
 }
 ```
 
+Manual baseline fetching plus `resolveOptimizedEntry()` remains supported when the app needs custom
+delivery behavior or already has the baseline entry:
+
+**Adapt this to your use case:**
+
+```ts
+const baselineEntry = await contentfulClient.getEntry(entryId, {
+  include: 10,
+  locale: APP_LOCALE,
+})
+
+// Omitted selections use current SDK state from the most recent accepted page or identify call.
+const { entry } = optimization.resolveOptimizedEntry(baselineEntry)
+```
+
 Entry resolution expects standard single-locale CDA fields such as `fields.nt_experiences` and
-`fields.nt_variants`. All-locale CDA responses put field values under locale keys and cause
-resolution to fall back to the baseline entry.
+`fields.nt_variants`. Do not configure SDK-managed fetches or manual fetches with `contentful.js`
+`withAllLocales` or raw CDA `locale=*` responses. All-locale CDA responses put field values under
+locale keys and cause resolution to fall back to the baseline entry.
 
 For deeper mechanics and fallback behavior, see
 [Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md).
@@ -645,7 +664,9 @@ resolution without a framework adapter.
 3. Use one root for entries that share one SDK instance. The root can create the SDK from attributes
    and assigned properties, or it can reuse an existing `window.contentfulOptimization` instance.
 4. Assign structured values such as `defaults`, `api`, `trackEntryInteraction`, `sdk`, and
-   `baselineEntry` as DOM properties, not string attributes.
+   `baselineEntry` as DOM properties, not string attributes. Use `entry-id` as SDK-managed fetch
+   input when the active SDK has `contentful.client`; assign `baselineEntry` only when app code
+   fetches the entry itself.
 5. Listen for `ctfl-entry-loading`, `ctfl-entry-resolved`, and `ctfl-entry-error` to render
    application-owned UI.
 
@@ -658,28 +679,21 @@ import {
   type ContentfulOptimizedEntryEventDetail,
   defineContentfulOptimizationElements,
 } from '@contentful/optimization-web/web-components'
+import { optimization } from './optimization'
 
 defineContentfulOptimizationElements()
 
 const root = document.querySelector<ContentfulOptimizationRootElement>('ctfl-optimization-root')
 const entry = document.querySelector<ContentfulOptimizedEntryElement>(
-  'ctfl-optimized-entry[data-entry-id]',
+  'ctfl-optimized-entry[entry-id]',
 )
 
 if (root) {
-  // Structured SDK options must be assigned as properties, not string attributes.
-  root.defaults = { consent: true }
-  root.trackEntryInteraction = { hovers: false }
+  // Reuse the app-owned SDK configured with contentful: { client }.
+  root.sdk = optimization
 }
 
-if (entry?.dataset.entryId) {
-  const baselineEntry = await contentfulClient.getEntry(entry.dataset.entryId, {
-    include: 10,
-    locale: APP_LOCALE,
-  })
-
-  // The SDK resolves after app code supplies the structured baseline entry object.
-  entry.baselineEntry = baselineEntry
+if (entry) {
   entry.addEventListener('ctfl-entry-resolved', (event) => {
     const { detail } = event as CustomEvent<ContentfulOptimizedEntryEventDetail>
 
@@ -691,12 +705,13 @@ if (entry?.dataset.entryId) {
 **Follow this pattern:**
 
 ```html
-<ctfl-optimization-root client-id="your-optimization-client-id" environment="main" locale="en-US">
-  <ctfl-optimized-entry data-entry-id="hero-entry-id"></ctfl-optimized-entry>
+<ctfl-optimization-root>
+  <ctfl-optimized-entry entry-id="hero-entry-id"></ctfl-optimized-entry>
 </ctfl-optimization-root>
 ```
 
-The `data-entry-id` attribute above is app-owned lookup metadata, not SDK fetch configuration.
+The `entry-id` attribute is SDK-managed fetch input when the active SDK has `contentful.client`.
+Assign the `baselineEntry` property only when app code fetches the entry itself.
 
 `@contentful/optimization-web/web-components` is side-effect-free. Custom elements are registered
 only when `defineContentfulOptimizationElements()` runs. If the root owns the SDK instance,

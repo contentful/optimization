@@ -1,3 +1,11 @@
+export type { OptimizedEntryMetadata } from '@contentful/optimization-core'
+export {
+  OptimizedEntrySourceController,
+  createOptimizedEntryLoadingEntry,
+  type OptimizedEntrySourceControllerOptions,
+  type OptimizedEntrySourceSnapshot,
+  type OptimizedEntrySourceSnapshotListener,
+} from '@contentful/optimization-core/entry-source'
 export {
   createOptimizationRootSdkBinding,
   disposeOptimizationRootSdkBinding,

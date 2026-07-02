@@ -6,8 +6,8 @@ handoff when consent, identity, profile, preview, or route state changes.
 
 This pattern uses `@contentful/optimization-nextjs`. The server entry composes the stateless Node
 SDK, the client entry composes the React Web SDK, and the request handler forwards sanitized Next.js
-proxy or middleware request context headers. Your application still owns Contentful fetching,
-consent policy, identity policy, routing, caching, and component rendering.
+proxy or middleware request context headers. Your application still owns the Contentful client and
+credentials, consent policy, identity policy, routing, caching, and component rendering.
 
 If browser-side actions do not need to change visible content until the next request, use the
 [Next.js SSR guide](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md) instead.
@@ -20,12 +20,13 @@ before browser takeover. If consent depends on a consent management platform (CM
 account preference, or user choice, keep the same structure and apply the policy-dependent consent
 section before release.
 
-1. Install the Next.js adapter package.
+1. Install the Next.js adapter package. Add `contentful` only if your app does not already have a
+   Contentful Delivery API client.
 
    **Copy this:**
 
    ```sh
-   pnpm add @contentful/optimization-nextjs
+   pnpm add @contentful/optimization-nextjs contentful
    ```
 
 2. Create one server SDK singleton and a cached request helper that returns server optimization
@@ -40,14 +41,29 @@ section before release.
      createNextjsOptimization,
      getNextjsServerOptimizationData,
    } from '@contentful/optimization-nextjs/server'
+   import { createClient } from 'contentful'
    import { cookies, headers } from 'next/headers'
    import { cache } from 'react'
 
    export const APP_LOCALE = 'en-US'
 
+   const contentfulClient = createClient({
+     accessToken: process.env.CONTENTFUL_DELIVERY_TOKEN ?? '',
+     environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'main',
+     space: process.env.CONTENTFUL_SPACE_ID ?? '',
+   })
+
    // Keep one server SDK instance; bind request state through adapter helpers.
    export const optimization = createNextjsOptimization({
      clientId: process.env.CONTENTFUL_OPTIMIZATION_CLIENT_ID ?? '',
+     contentful: {
+       client: contentfulClient,
+       defaultQuery: {
+         // Managed fetching expects one CDA locale and resolved optimization links.
+         include: 10,
+         locale: APP_LOCALE,
+       },
+     },
      environment: process.env.CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main',
      locale: APP_LOCALE,
      api: {
@@ -61,22 +77,39 @@ section before release.
      logLevel: 'error',
    })
 
-   export const getOptimizationData = cache(async () => {
+   export const getOptimizationRequest = cache(async () => {
      const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
 
      // Accepted startup allows the server page call and returns profile data for browser handoff.
-     const { data } = await getNextjsServerOptimizationData(optimization, {
+     const { data, requestOptimization } = await getNextjsServerOptimizationData(optimization, {
        consent: { events: true, persistence: true },
        cookies: cookieStore,
        headers: headerStore,
        locale: APP_LOCALE,
      })
 
-     return data
+     return { optimizationData: data, requestOptimization }
    })
    ```
 
-3. Create a Client Component boundary that renders server content outside the SDK context, then
+3. Create a browser-safe Contentful delivery client for the takeover boundary.
+
+   **Copy this:**
+
+   ```ts
+   // lib/contentful-browser-client.ts
+   import { createClient } from 'contentful'
+
+   export const contentfulClient = createClient({
+     accessToken: process.env.NEXT_PUBLIC_CONTENTFUL_DELIVERY_TOKEN ?? '',
+     environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'main',
+     space: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID ?? '',
+   })
+   ```
+
+   Use only browser-safe Delivery API credentials in `NEXT_PUBLIC_` variables.
+
+4. Create a Client Component boundary that renders server content outside the SDK context, then
    reveals the browser takeover island after browser SDK state is ready.
 
    **Adapt this to your use case:**
@@ -91,6 +124,7 @@ section before release.
      type NextAppAutoPageTrackerProps,
      type OptimizationRootProps,
    } from '@contentful/optimization-nextjs/client'
+   import { contentfulClient } from '@/lib/contentful-browser-client'
    import { Suspense, useState, type ReactNode } from 'react'
 
    export function HybridTakeoverBoundary({
@@ -117,6 +151,10 @@ section before release.
            clientId={process.env.NEXT_PUBLIC_CONTENTFUL_OPTIMIZATION_CLIENT_ID ?? ''}
            environment={process.env.NEXT_PUBLIC_CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main'}
            locale={locale}
+           contentful={{
+             client: contentfulClient,
+             defaultQuery: { include: 10, locale },
+           }}
            defaults={defaults}
            serverOptimizationState={serverOptimizationState}
            logLevel="error"
@@ -136,8 +174,8 @@ section before release.
    }
    ```
 
-4. Fetch single-locale Contentful entries in a Server Component, resolve the initial HTML with the
-   server data, and pass both baseline and server-resolved data to the takeover island.
+5. Fetch and resolve single-locale Contentful entries in a Server Component, render the initial HTML
+   with the server data, and pass entry IDs plus server-resolved data to the takeover island.
 
    **Adapt this to your use case:**
 
@@ -145,8 +183,7 @@ section before release.
    // app/page.tsx
    import { HybridEntryList } from '@/components/HybridEntryList'
    import { HybridTakeoverBoundary } from '@/components/HybridTakeoverBoundary'
-   import { fetchEntriesFromContentful } from '@/lib/contentful-client'
-   import { APP_LOCALE, getOptimizationData, optimization } from '@/lib/optimization-server'
+   import { APP_LOCALE, getOptimizationRequest } from '@/lib/optimization-server'
    import type { Entry } from 'contentful'
 
    function EntryCard({ entry }: { entry: Entry }) {
@@ -164,16 +201,14 @@ section before release.
    }
 
    export default async function Home() {
-     const [baselineEntries, optimizationData] = await Promise.all([
-       fetchEntriesFromContentful(['home-hero', 'home-offer']),
-       getOptimizationData(),
-     ])
+     const entryIds = ['home-hero', 'home-offer']
+     const { optimizationData, requestOptimization } = await getOptimizationRequest()
 
-     // Resolve locally against request-selected optimizations, with baseline fallback.
-     const serverResolvedData = baselineEntries.map((baselineEntry) =>
-       optimization.resolveOptimizedEntry(baselineEntry, optimizationData?.selectedOptimizations),
+     // Fetch baseline entries and resolve them against request-selected optimizations.
+     const serverResults = await Promise.all(
+       entryIds.map((entryId) => requestOptimization.fetchOptimizedEntry(entryId)),
      )
-     const serverEntries = serverResolvedData.map(({ entry }) => entry)
+     const serverEntries = serverResults.map(({ entry }) => entry)
      const defaults = { consent: true }
 
      return (
@@ -184,18 +219,16 @@ section before release.
          serverContent={<ServerEntryList entries={serverEntries} />}
          serverOptimizationState={optimizationData}
        >
-         <HybridEntryList
-           baselineEntries={baselineEntries}
-           serverResolvedData={serverResolvedData}
-         />
+         <HybridEntryList entryIds={entryIds} serverResults={serverResults} />
        </HybridTakeoverBoundary>
      )
    }
    ```
 
-5. Render the browser takeover entries through `OptimizedEntry`. Use the server-resolved entry as
-   the loading fallback so takeover content matches the initial HTML while the browser SDK becomes
-   ready.
+6. Render the browser takeover entries through `OptimizedEntry entryId`. Use the server-resolved
+   entry as the loading and error fallback so takeover content matches the initial HTML while the
+   browser SDK becomes ready. Replace `reportContentfulEntryError` with your app-owned logging or
+   monitoring function.
 
    **Adapt this to your use case:**
 
@@ -211,23 +244,26 @@ section before release.
    }
 
    export function HybridEntryList({
-     baselineEntries,
-     serverResolvedData,
+     entryIds,
+     serverResults,
    }: {
-     baselineEntries: Entry[]
-     serverResolvedData: { entry: Entry }[]
+     entryIds: string[]
+     serverResults: { entry: Entry }[]
    }) {
      return (
        <>
-         {baselineEntries.map((baselineEntry, index) => {
-           const serverEntry = serverResolvedData[index]?.entry ?? baselineEntry
+         {entryIds.map((entryId, index) => {
+           const serverEntry = serverResults[index]?.entry
+           if (!serverEntry) return null
 
            // loadingFallback matches the server-selected content during browser takeover.
            return (
              <OptimizedEntry
-               key={baselineEntry.sys.id}
-               baselineEntry={baselineEntry}
+               key={entryId}
+               entryId={entryId}
+               errorFallback={<EntryCard entry={serverEntry} />}
                loadingFallback={<EntryCard entry={serverEntry} />}
+               onEntryError={(error) => reportContentfulEntryError(error)}
              >
                {(resolvedEntry) => <EntryCard entry={resolvedEntry} />}
              </OptimizedEntry>
@@ -238,7 +274,7 @@ section before release.
    }
    ```
 
-6. Verify the first run. The route source must contain the server-selected content or baseline
+7. Verify the first run. The route source must contain the server-selected content or baseline
    fallback, that content must remain visible after browser takeover, and the browser must not emit
    a duplicate initial page event when `initialPageEvent="skip"` is used with server optimization
    state.
@@ -284,7 +320,7 @@ Use this table as the setup inventory for the full hybrid integration:
 | `@contentful/optimization-nextjs` package                       | Required for first integration | Yes                      | Application package manager                                                          |
 | Optimization client ID and environment                          | Required for first integration | Yes                      | Server SDK config and client takeover `OptimizationRoot` props                       |
 | Server-only and browser-exposed environment variables           | Required for first integration | Yes                      | Runtime environment, including `NEXT_PUBLIC_` variables for browser config           |
-| Contentful CDA credentials and app-owned fetcher                | Required for first integration | Yes                      | Application Contentful client                                                        |
+| Contentful CDA credentials and app-owned `contentful.js` client | Required for first integration | Yes                      | Server SDK `contentful` config and browser takeover `OptimizationRoot`               |
 | Single-locale CDA entries with resolved optimization links      | Required for first integration | Yes                      | CDA calls with one `locale` and enough `include` depth, commonly `include: 10`       |
 | Server request helper for Optimization data                     | Required for first integration | Yes                      | Server-only page-event owner using `getNextjsServerOptimizationData()` and `cache()` |
 | Next.js proxy or middleware hook                                | Common but policy-dependent    | No                       | `proxy.ts` or `middleware.ts` for server helpers that need request context           |
@@ -303,8 +339,9 @@ Use this table as the setup inventory for the full hybrid integration:
 | Personalized response caching and duplicate-event policy        | Advanced or production-only    | No                       | Next.js route config, CDN rules, server helper structure, and tracker settings       |
 
 Use one application Contentful locale for entries that feed SDK resolution. The SDK Experience and
-event locale often uses the same string, but the SDK does not fetch Contentful content or change CDA
-requests for you.
+event locale often uses the same string. Preferred hybrid integrations create the `contentful.js`
+client in the app and pass it to the SDK through `contentful` config. Manual `baselineEntry`
+rendering remains supported when entries are fetched outside the SDK.
 
 ## Core integration
 
@@ -336,11 +373,12 @@ importing lower-level Node, Web, or React Web packages directly.
 **Copy this:**
 
 ```sh
-pnpm add @contentful/optimization-nextjs
+pnpm add @contentful/optimization-nextjs contentful
 ```
 
 The adapter package lists Next.js, React, and React DOM as application-owned peer dependencies. It
-uses the runtime that is already installed by the app.
+uses the runtime that is already installed by the app. The `contentful` package is the app-owned CDA
+client used by managed entry fetching examples.
 
 ### Server SDK and request helper
 
@@ -351,12 +389,14 @@ consent, locale, and profile through request helpers. Use the proxy or middlewar
 Server Components can derive page context from forwarded request context headers.
 
 1. Read the Optimization client ID and environment from server-only runtime configuration.
-2. Pass the application Experience/event locale to the SDK singleton.
-3. Configure API endpoint overrides only when your app uses mocks, a proxy, or non-default hosts.
-4. Wrap `getNextjsServerOptimizationData()` in React `cache()` when more than one Server Component
+2. Configure the app-owned `contentful.js` client and the single-locale default CDA query on the SDK
+   singleton.
+3. Pass the application Experience/event locale to the SDK singleton.
+4. Configure API endpoint overrides only when your app uses mocks, a proxy, or non-default hosts.
+5. Wrap `getNextjsServerOptimizationData()` in React `cache()` when more than one Server Component
    in the same render pass needs the same request-local Optimization data.
-5. Add the request-context proxy or middleware helper for routes that call the server helper.
-6. Return `undefined` instead of calling the SDK when application policy does not permit server
+6. Add the request-context proxy or middleware helper for routes that call the server helper.
+7. Return `undefined` instead of calling the SDK when application policy does not permit server
    personalization for the request.
 
 **Adapt this to your use case:**
@@ -367,6 +407,7 @@ import {
   createNextjsOptimization,
   getNextjsServerOptimizationData,
 } from '@contentful/optimization-nextjs/server'
+import { createClient } from 'contentful'
 import { cookies, headers } from 'next/headers'
 import { cache } from 'react'
 
@@ -374,9 +415,19 @@ export const APP_LOCALE = 'en-US'
 
 const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
 
+const contentfulClient = createClient({
+  accessToken: process.env.CONTENTFUL_DELIVERY_TOKEN ?? '',
+  environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'main',
+  space: process.env.CONTENTFUL_SPACE_ID ?? '',
+})
+
 // Keep one server SDK instance; bind request state through adapter helpers.
 export const optimization = createNextjsOptimization({
   clientId: process.env.CONTENTFUL_OPTIMIZATION_CLIENT_ID ?? '',
+  contentful: {
+    client: contentfulClient,
+    defaultQuery: { include: 10, locale: APP_LOCALE },
+  },
   environment: process.env.CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main',
   locale: APP_LOCALE,
   api: {
@@ -390,29 +441,30 @@ export const optimization = createNextjsOptimization({
   logLevel: 'error',
 })
 
-export const getOptimizationData = cache(async () => {
+export const getOptimizationRequest = cache(async () => {
   const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
   const appConsent = cookieStore.get(APP_PERSONALIZATION_CONSENT_COOKIE)?.value
 
   if (appConsent === 'denied') return undefined
 
   // Accepted startup allows the server page call and returns profile data for browser handoff.
-  const { data } = await getNextjsServerOptimizationData(optimization, {
+  const { data, requestOptimization } = await getNextjsServerOptimizationData(optimization, {
     consent: { events: true, persistence: true },
     cookies: cookieStore,
     headers: headerStore,
     locale: APP_LOCALE,
   })
 
-  return data
+  return { optimizationData: data, requestOptimization }
 })
 ```
 
 `getNextjsServerOptimizationData()` calls `page()` through the request-bound Node SDK and returns
-the profile, selected optimizations, and changes for that request. Treat that call as the initial
-server page event for the route. The request-scoped `locale` is sent to the Experience API and used
-as the default event context locale. In Server Components, pass `headers()` so the SDK can derive
-page context from the request URL captured by the Next.js proxy or middleware helper.
+the profile, selected optimizations, changes, and `requestOptimization` helper for that request.
+Treat that call as the initial server page event for the route. The request-scoped `locale` is sent
+to the Experience API and used as the default event context locale. In Server Components, pass
+`headers()` so the SDK can derive page context from the request URL captured by the Next.js proxy or
+middleware helper.
 
 ### Proxy request context
 
@@ -449,12 +501,15 @@ handoff or an explicit server persistence flow. For deeper mechanics, see
 
 **Integration category:** Required for first integration
 
-The SDK does not fetch Contentful entries. Fetch baseline entries in the application layer with one
-Contentful locale and resolved optimization links before passing them to the server resolver or
-client entry primitives.
+Preferred hybrid integrations configure the app-owned `contentful.js` client on the server SDK and
+browser `OptimizationRoot`. Server Components use
+`requestOptimization.fetchOptimizedEntry(entryId)`. Browser takeover can use
+`OptimizedEntry entryId` or `useOptimizedEntry({ entryId })`. Manual `baselineEntry` remains
+supported when entries are fetched outside the SDK.
 
 1. Choose the application Contentful locale in routing, i18n, request policy, or app configuration.
-2. Pass that locale to CDA requests.
+2. Pass that locale through server SDK `contentful.defaultQuery`, browser `OptimizationRoot`
+   `contentful.defaultQuery`, per-entry `entryQuery`, or manual CDA requests.
 3. Include linked optimization entries and variant entries. The common Contentful CDA setting is
    `include: 10`.
 4. Do not pass all-locale CDA responses from `contentful.js` `withAllLocales` or raw CDA `locale=*`
@@ -493,6 +548,9 @@ export async function fetchEntriesFromContentful(entryIds: readonly string[]): P
 }
 ```
 
+Use this manual helper only for flows that keep app-owned baseline fetching. Managed server and
+browser entry rendering can use the configured SDK client instead.
+
 Single-locale entries expose optimization fields as direct field values, such as
 `fields.nt_experiences` and `fields.nt_variants`. All-locale responses use locale-keyed field maps
 and fall back to baseline rendering. For the resolver contract, see
@@ -504,12 +562,12 @@ For the full locale model, see
 
 **Integration category:** Required for first integration
 
-Use the server SDK result for the content decision that starts the route. The resolver is local and
-synchronous: it joins the current `selectedOptimizations` with optimization links already present in
-the Contentful payload.
+Use the request-bound server SDK result for the content decision that starts the route. The managed
+helper fetches the baseline entry, then joins the current `selectedOptimizations` with optimization
+links in that Contentful payload.
 
-1. Fetch Contentful entries and request Optimization data in the same Server Component render.
-2. Call `optimization.resolveOptimizedEntry()` for each baseline entry.
+1. Request Optimization data in the Server Component render.
+2. Call `requestOptimization.fetchOptimizedEntry(entryId)` for each entry.
 3. Render the resolved entry outside an owned `OptimizationRoot` boundary when the initial HTML must
    contain personalized content.
 4. Treat missing optimization data, unresolved links, all-locale CDA payloads, and API failures as
@@ -521,8 +579,7 @@ the Contentful payload.
 // app/page.tsx
 import { HybridEntryList } from '@/components/HybridEntryList'
 import { HybridTakeoverBoundary } from '@/components/HybridTakeoverBoundary'
-import { fetchEntriesFromContentful } from '@/lib/contentful-client'
-import { APP_LOCALE, getOptimizationData, optimization } from '@/lib/optimization-server'
+import { APP_LOCALE, getOptimizationRequest, optimization } from '@/lib/optimization-server'
 import type { Entry } from 'contentful'
 
 function ServerEntryList({ entries }: { entries: Entry[] }) {
@@ -536,16 +593,19 @@ function ServerEntryList({ entries }: { entries: Entry[] }) {
 }
 
 export default async function Home() {
-  const [baselineEntries, optimizationData] = await Promise.all([
-    fetchEntriesFromContentful(['home-hero', 'home-offer']),
-    getOptimizationData(),
-  ])
+  const entryIds = ['home-hero', 'home-offer']
+  const optimizationRequest = await getOptimizationRequest()
+  const optimizationData = optimizationRequest?.optimizationData
 
-  // Resolve locally against request-selected optimizations, with baseline fallback.
-  const serverResolvedData = baselineEntries.map((baselineEntry) =>
-    optimization.resolveOptimizedEntry(baselineEntry, optimizationData?.selectedOptimizations),
+  // Fetch baseline entries and resolve them against request-selected optimizations.
+  const serverResults = await Promise.all(
+    entryIds.map((entryId) =>
+      optimizationRequest
+        ? optimizationRequest.requestOptimization.fetchOptimizedEntry(entryId)
+        : optimization.fetchOptimizedEntry(entryId, { selectedOptimizations: [] }),
+    ),
   )
-  const serverEntries = serverResolvedData.map(({ entry }) => entry)
+  const serverEntries = serverResults.map(({ entry }) => entry)
   const defaults = { consent: true }
 
   return (
@@ -556,7 +616,7 @@ export default async function Home() {
       serverContent={<ServerEntryList entries={serverEntries} />}
       serverOptimizationState={optimizationData}
     >
-      <HybridEntryList baselineEntries={baselineEntries} serverResolvedData={serverResolvedData} />
+      <HybridEntryList entryIds={entryIds} serverResults={serverResults} />
     </HybridTakeoverBoundary>
   )
 }
@@ -571,11 +631,11 @@ same `data-ctfl-*` metadata after browser startup.
 ```tsx
 import { ServerOptimizedEntry } from '@contentful/optimization-nextjs/server'
 
-function ServerRenderedEntry({ baselineEntry, resolvedData }: ServerRenderedEntryProps) {
+function ServerRenderedEntry({ result }: ServerRenderedEntryProps) {
   return (
     // Render data-ctfl-* attributes for browser entry-interaction tracking.
-    <ServerOptimizedEntry baselineEntry={baselineEntry} resolvedData={resolvedData}>
-      <h2>{String(resolvedData.entry.fields.title ?? '')}</h2>
+    <ServerOptimizedEntry result={result}>
+      <h2>{String(result.entry.fields.title ?? '')}</h2>
     </ServerOptimizedEntry>
   )
 }
@@ -598,8 +658,25 @@ server-resolved content outside that provider boundary and pass server-returned 
 4. Mount `OptimizationRoot` around the Client Components that take over after state handoff.
 5. Pass browser-exposed values such as `NEXT_PUBLIC_CONTENTFUL_OPTIMIZATION_CLIENT_ID` into the
    client provider.
-6. Include `defaults.consent: true` only when application policy permits accepted browser startup.
-7. Wrap `NextAppAutoPageTracker` in `Suspense` because it uses App Router navigation hooks.
+6. Pass the browser-safe app-owned `contentful.js` client through `contentful` when takeover entries
+   use `entryId`.
+7. Include `defaults.consent: true` only when application policy permits accepted browser startup.
+8. Wrap `NextAppAutoPageTracker` in `Suspense` because it uses App Router navigation hooks.
+
+**Copy this:**
+
+```ts
+// lib/contentful-browser-client.ts
+import { createClient } from 'contentful'
+
+export const contentfulClient = createClient({
+  accessToken: process.env.NEXT_PUBLIC_CONTENTFUL_DELIVERY_TOKEN ?? '',
+  environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'main',
+  space: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID ?? '',
+})
+```
+
+Use only browser-safe Delivery API credentials in `NEXT_PUBLIC_` variables.
 
 **Adapt this to your use case:**
 
@@ -612,6 +689,7 @@ import {
   type NextAppAutoPageTrackerProps,
   type OptimizationRootProps,
 } from '@contentful/optimization-nextjs/client'
+import { contentfulClient } from '@/lib/contentful-browser-client'
 import { Suspense, useState, type ReactNode } from 'react'
 
 export function HybridTakeoverBoundary({
@@ -638,6 +716,10 @@ export function HybridTakeoverBoundary({
         clientId={process.env.NEXT_PUBLIC_CONTENTFUL_OPTIMIZATION_CLIENT_ID ?? ''}
         environment={process.env.NEXT_PUBLIC_CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main'}
         locale={locale}
+        contentful={{
+          client: contentfulClient,
+          defaultQuery: { include: 10, locale },
+        }}
         defaults={defaults}
         serverOptimizationState={serverOptimizationState}
         onStatesReady={() => {
@@ -670,12 +752,15 @@ Render takeover content with React Web entry primitives from the Next.js client 
 when visible content must react to profile changes.
 
 1. Create Client Components for entries that need browser-side re-resolution.
-2. Pass the baseline Contentful entry into `OptimizedEntry`.
+2. Use `entryId` when browser `OptimizationRoot` has `contentful: { client }`.
 3. Pass `liveUpdates={true}` for entries that must update after `identify()`, `consent()`,
    `reset()`, preview changes, or selected-optimization state changes.
 4. Use the server-resolved entry as `loadingFallback` when you need the first rendered content to
    stay stable while the browser SDK becomes ready.
-5. Use `useOptimizedEntry()` or `useEntryResolver()` only when a component needs custom rendering
+5. Use `errorFallback` and `onEntryError` when managed CDA failures must keep server content visible
+   and notify application-owned logging.
+6. Pass `baselineEntry` only when the takeover component receives entries fetched outside the SDK.
+7. Use `useOptimizedEntry()` or `useEntryResolver()` only when a component needs custom rendering
    control that the `OptimizedEntry` wrapper does not provide.
 
 **Adapt this to your use case:**
@@ -686,29 +771,46 @@ when visible content must react to profile changes.
 import { OptimizedEntry } from '@contentful/optimization-nextjs/client'
 import type { Entry } from 'contentful'
 
+function reportContentfulEntryError(error: unknown) {
+  // Send this to your app-owned logging or monitoring pipeline.
+  console.error(error)
+}
+
 function EntryCard({ entry }: { entry: Entry }) {
   return <article>{String(entry.fields.title ?? '')}</article>
 }
 
 export function HybridEntry({
-  baselineEntry,
+  entryId,
   serverResolvedEntry,
 }: {
-  baselineEntry: Entry
+  entryId: string
   serverResolvedEntry: Entry
 }) {
   // liveUpdates keeps this entry reactive after identify, consent, reset, or preview changes.
   // loadingFallback preserves server-selected content while the browser SDK initializes.
   return (
     <OptimizedEntry
-      baselineEntry={baselineEntry}
+      entryId={entryId}
+      errorFallback={<EntryCard entry={serverResolvedEntry} />}
       liveUpdates={true}
       loadingFallback={<EntryCard entry={serverResolvedEntry} />}
+      onEntryError={(error) => reportContentfulEntryError(error)}
     >
       {(resolvedEntry) => <EntryCard entry={resolvedEntry} />}
     </OptimizedEntry>
   )
 }
+```
+
+If a Client Component already receives a manually fetched baseline entry, keep the manual prop:
+
+**Adapt this to your use case:**
+
+```tsx
+<OptimizedEntry baselineEntry={baselineEntry} loadingFallback={<EntryCard entry={serverEntry} />}>
+  {(resolvedEntry) => <EntryCard entry={resolvedEntry} />}
+</OptimizedEntry>
 ```
 
 For shared live-update controls, set `liveUpdates={true}` on `OptimizationRoot` or wrap a subtree in
@@ -1114,18 +1216,20 @@ your privacy, analytics, and platform owners agree on the event posture.
 **Adapt this to your use case:**
 
 ```ts
-export async function getOptimizationData() {
+export async function getOptimizationRequest() {
   const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
   const granted = cookieStore.get('app-personalization-consent')?.value === 'granted'
 
   if (!granted) return undefined
 
-  return await getNextjsServerOptimizationData(optimization, {
+  const { data, requestOptimization } = await getNextjsServerOptimizationData(optimization, {
     consent: { events: true, persistence: true },
     cookies: cookieStore,
     headers: headerStore,
     locale: APP_LOCALE,
   })
+
+  return { optimizationData: data, requestOptimization }
 }
 ```
 

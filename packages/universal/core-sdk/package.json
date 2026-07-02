@@ -52,6 +52,16 @@
         "default": "./dist/bridge-support.cjs"
       }
     },
+    "./entry-source": {
+      "import": {
+        "types": "./dist/entry-source.d.mts",
+        "default": "./dist/entry-source.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-source.d.cts",
+        "default": "./dist/entry-source.cjs"
+      }
+    },
     "./api-client": {
       "import": {
         "types": "./dist/api-client.d.mts",
@@ -91,8 +101,8 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 18300,
-        "index.mjs": 17800,
+        "index.cjs": 19100,
+        "index.mjs": 18700,
         "bridge-support.cjs": 1200,
         "bridge-support.mjs": 2100,
         "preview-support.cjs": 5300,

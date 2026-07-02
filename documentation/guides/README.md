@@ -12,6 +12,7 @@ children:
   - ./integrating-the-optimization-ios-sdk-in-a-uikit-app.md
   - ./integrating-the-optimization-android-sdk-in-a-compose-app.md
   - ./integrating-the-optimization-android-sdk-in-a-views-app.md
+  - ./building-a-custom-javascript-optimization-adapter.md
   - ./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md
 ---
 
@@ -53,6 +54,9 @@ Native iOS and Android guides route to pre-release alpha surfaces.
 
 ## Supplemental guides
 
+- [Building a custom JavaScript Optimization adapter](./building-a-custom-javascript-optimization-adapter.md) -
+  Build a low-level adapter only when no official SDK package fits your JavaScript runtime or
+  framework.
 - [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
   Forward optimization context to analytics, tag-management, customer-data, or product-analytics
   tools after SDK integration.

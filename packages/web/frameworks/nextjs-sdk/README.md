@@ -37,11 +37,12 @@ SDK on the server with the React Web SDK on the client; it is not a new optimiza
 ## Install
 
 ```sh
-pnpm add @contentful/optimization-nextjs
+pnpm add @contentful/optimization-nextjs contentful
 ```
 
 Next.js, React, and React DOM are application-owned peer dependencies. The adapter uses the runtime
-already installed by your app instead of installing its own copy.
+already installed by your app instead of installing its own copy. The `contentful` package is the
+app-owned CDA client used by the managed entry fetching example.
 
 ## Server setup
 
@@ -52,34 +53,43 @@ import {
   getNextjsServerOptimizationData,
 } from '@contentful/optimization-nextjs/server'
 import { NextjsOptimizationState } from '@contentful/optimization-nextjs/client'
+import { createClient } from 'contentful'
 import { cookies, headers } from 'next/headers'
+
+const contentfulClient = createClient({
+  accessToken: process.env.CONTENTFUL_ACCESS_TOKEN!,
+  space: process.env.CONTENTFUL_SPACE_ID!,
+})
 
 const sdk = createNextjsOptimization({
   clientId: 'client-id',
+  contentful: { client: contentfulClient },
   environment: 'main',
+  locale: 'en-US',
 })
 
 export default async function Page() {
   const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
-  const { data } = await getNextjsServerOptimizationData(sdk, {
+  const { data, requestOptimization } = await getNextjsServerOptimizationData(sdk, {
     consent: { events: true, persistence: true },
     cookies: cookieStore,
     headers: headerStore,
     locale: 'en-US',
   })
 
-  const resolvedData = sdk.resolveOptimizedEntry(entry, data?.selectedOptimizations)
+  const result = await requestOptimization.fetchOptimizedEntry('hero-entry')
 
   return (
     <>
       <NextjsOptimizationState data={data} />
-      <ServerOptimizedEntry baselineEntry={entry} resolvedData={resolvedData}>
-        {resolvedData.entry.fields.title}
-      </ServerOptimizedEntry>
+      <ServerOptimizedEntry result={result}>{result.entry.fields.title}</ServerOptimizedEntry>
     </>
   )
 }
 ```
+
+`ServerOptimizedEntry` also keeps the manual `baselineEntry` plus `resolvedData` props for apps that
+fetch Contentful entries outside the SDK.
 
 `NextjsOptimizationState` must render under SDK context. That context can come from
 `OptimizationRoot` or `OptimizationProvider`, commonly mounted in a shared App Router layout.

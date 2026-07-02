@@ -92,6 +92,12 @@ See
 and
 [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
 
+This reference demonstrates the supported manual SSR path: Server Components fetch single-locale
+Contentful entries, then pass them to SDK entry resolution. For Next.js integrations with an
+application-owned `contentful.js` client, we recommend configuring `createNextjsOptimization()` with
+`contentful: { client: contentfulClient }` and using `requestOptimization.fetchOptimizedEntry()`
+unless the route must own Contentful fetching, caching, or response shaping.
+
 ## Prerequisites
 
 - Node.js >= 20.19.0 (24.15.0 recommended to match `.nvmrc`)

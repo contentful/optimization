@@ -31,6 +31,7 @@ export {
 } from './hooks/useOptimizationState'
 export { OptimizedEntry } from './optimized-entry/OptimizedEntry'
 export type {
+  OptimizedEntryErrorFallback,
   OptimizedEntryLoadingFallback,
   OptimizedEntryProps,
 } from './optimized-entry/OptimizedEntry'

@@ -18,12 +18,13 @@ without profile persistence. Use this path only when your application policy per
 server page call at first load. If consent depends on a consent management platform (CMP), account
 preference, or regional rule, use the policy-dependent consent section before release.
 
-1. Install the Next.js adapter package.
+1. Install the Next.js adapter package. Add `contentful` only if your app does not already have a
+   Contentful Delivery API client.
 
    **Copy this:**
 
    ```sh
-   pnpm add @contentful/optimization-nextjs
+   pnpm add @contentful/optimization-nextjs contentful
    ```
 
 2. Create one server SDK singleton.
@@ -33,24 +34,37 @@ preference, or regional rule, use the policy-dependent consent section before re
    ```ts
    // lib/optimization-server.ts
    import { createNextjsOptimization } from '@contentful/optimization-nextjs/server'
+   import { createClient } from 'contentful'
 
    export const APP_LOCALE = 'en-US'
+
+   const contentfulClient = createClient({
+     accessToken: process.env.CONTENTFUL_DELIVERY_TOKEN ?? '',
+     environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'main',
+     space: process.env.CONTENTFUL_SPACE_ID ?? '',
+   })
 
    // Keep one server SDK instance; bind request state through adapter helpers.
    export const optimization = createNextjsOptimization({
      clientId: process.env.CONTENTFUL_OPTIMIZATION_CLIENT_ID ?? '',
+     contentful: {
+       client: contentfulClient,
+       defaultQuery: {
+         // Managed fetching expects one CDA locale and resolved optimization links.
+         include: 10,
+         locale: APP_LOCALE,
+       },
+     },
      environment: process.env.CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main',
      locale: APP_LOCALE,
      logLevel: 'error',
    })
    ```
 
-3. Fetch one Contentful entry in a Server Component, resolve it with request-local Optimization
-   data, and render the resolved entry.
+3. Fetch and resolve one Contentful entry in a Server Component with the request-bound SDK helper,
+   then render the result.
 
-   In this snippet, `fetchEntryFromContentful()` is an app-owned Contentful CDA helper. It must
-   return one single-locale entry with linked optimization entries and variants included. The
-   `cookieStore` and `headerStore` values come from Next.js `cookies()` and `headers()`.
+   The `cookieStore` and `headerStore` values come from Next.js `cookies()` and `headers()`.
    `<NextjsOptimizationState>` is valid when this page renders under SDK context provided by
    `OptimizationRoot` or `OptimizationProvider`, such as a shared App Router layout. If you have not
    added that provider yet, omit the marker until you complete the client provider section.
@@ -61,39 +75,35 @@ preference, or regional rule, use the policy-dependent consent section before re
    // app/page.tsx
    import { APP_LOCALE, optimization } from '@/lib/optimization-server'
    import { NextjsOptimizationState } from '@contentful/optimization-nextjs/client'
-   import { getNextjsServerOptimizationData } from '@contentful/optimization-nextjs/server'
+   import {
+     ServerOptimizedEntry,
+     getNextjsServerOptimizationData,
+   } from '@contentful/optimization-nextjs/server'
    import { cookies, headers } from 'next/headers'
 
    export default async function Home() {
-     const [cookieStore, headerStore, baselineEntry] = await Promise.all([
-       cookies(),
-       headers(),
-       fetchEntryFromContentful({
-         entryId: 'homepage-hero',
-         include: 10,
-         locale: APP_LOCALE,
-       }),
-     ])
+     const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
 
      // Bind request state to the server page call without durable profile persistence.
-     const { data: optimizationData } = await getNextjsServerOptimizationData(optimization, {
-       consent: { events: true, persistence: false },
-       cookies: cookieStore,
-       headers: headerStore,
-       locale: APP_LOCALE,
-     })
-
-     // The resolver returns the baseline entry when no selected optimization matches.
-     const resolvedData = optimization.resolveOptimizedEntry(
-       baselineEntry,
-       optimizationData?.selectedOptimizations,
+     const { data: optimizationData, requestOptimization } = await getNextjsServerOptimizationData(
+       optimization,
+       {
+         consent: { events: true, persistence: false },
+         cookies: cookieStore,
+         headers: headerStore,
+         locale: APP_LOCALE,
+       },
      )
-     const resolvedEntry = resolvedData.entry
+
+     // Fetch the baseline entry and resolve it against request-selected optimizations.
+     const result = await requestOptimization.fetchOptimizedEntry('homepage-hero')
 
      return (
        <main>
          <NextjsOptimizationState data={optimizationData} />
-         <h1>{String(resolvedEntry.fields.title ?? '')}</h1>
+         <ServerOptimizedEntry result={result}>
+           <h1>{String(result.entry.fields.title ?? '')}</h1>
+         </ServerOptimizedEntry>
        </main>
      )
    }
@@ -138,7 +148,7 @@ Use this table as the setup inventory for the full SSR integration:
 | Next.js App Router with React and React DOM peer dependencies      | Required for first integration | Yes                      | Application `package.json`                                                           |
 | `@contentful/optimization-nextjs` package                          | Required for first integration | Yes                      | Application package manager                                                          |
 | Optimization client ID and environment                             | Required for first integration | Yes                      | Server SDK config and `OptimizationRoot` props for browser integrations              |
-| Contentful CDA credentials and app-owned fetcher                   | Required for first integration | Yes                      | Application Contentful client                                                        |
+| Contentful CDA credentials and app-owned `contentful.js` client    | Required for first integration | Yes                      | Server SDK `contentful` config                                                       |
 | Single-locale CDA entries with resolved optimization links         | Required for first integration | Yes                      | CDA calls with `include: 10` and one `locale`                                        |
 | Server Component entry resolution                                  | Required for first integration | Yes                      | App Router pages and server components                                               |
 | Next.js proxy or middleware hook                                   | Common but policy-dependent    | No                       | `proxy.ts` or `middleware.ts`                                                        |
@@ -152,10 +162,12 @@ Use this table as the setup inventory for the full SSR integration:
 | Production caching and duplicate-event policy                      | Advanced or production-only    | No                       | Next.js route config, server helper structure, and tracker settings                  |
 | Client-side entry re-resolution, live updates, or preview takeover | Advanced or production-only    | No                       | Use the hybrid pattern instead of this SSR guide                                     |
 
-The application owns Contentful fetching, locale selection, route policy, consent policy, identity
-policy, and component rendering. The Next.js adapter owns SDK composition: the server entry
-delegates to the stateless Node SDK, the client entry delegates to the React Web SDK, and the
-request handler forwards sanitized request context headers for Server Components.
+The application owns the `contentful.js` client, credentials, locale selection, route policy,
+consent policy, identity policy, and component rendering. Preferred server rendering configures that
+client on `createNextjsOptimization()`, then request-bound helpers call
+`requestOptimization.fetchOptimizedEntry(entryId)` to fetch the baseline entry and resolve it with
+request-local selected optimizations. Manual `baselineEntry` plus `resolveOptimizedEntry()` remains
+supported when an existing server flow fetches entries outside the SDK.
 
 ## Core integration
 
@@ -217,44 +229,58 @@ For deeper consent mechanics, see
 
 **Integration category:** Required for first integration
 
-The SDK does not fetch Contentful entries. Your application fetches the baseline entries, including
-linked optimization entries and variants, then passes the baseline entry and request-local
-`selectedOptimizations` into `resolveOptimizedEntry()`.
+Preferred server rendering uses the app-owned `contentful.js` client configured on
+`createNextjsOptimization()`. The request-bound helper fetches the baseline entry and resolves it
+with request-local `selectedOptimizations`.
 
-1. Fetch Contentful entries with one application Contentful locale.
-2. Use enough include depth for `nt_experiences`, their configuration, and `nt_variants`; the
-   reference implementation uses `include: 10`.
+1. Configure `contentful: { client, defaultQuery }` on the server SDK singleton.
+2. Use one application Contentful locale and enough include depth for `nt_experiences`, their
+   configuration, and `nt_variants`; the reference implementation uses `include: 10`.
 3. Call `getNextjsServerOptimizationData()` with the same request cookies, headers, consent, and
    locale policy that apply to the rendered response.
-4. Pass `optimizationData?.selectedOptimizations` to `optimization.resolveOptimizedEntry()`.
-5. Render the returned `entry`. If no optimization data or matching variant is available, the
-   resolver returns the baseline entry.
+4. Call `requestOptimization.fetchOptimizedEntry(entryId)`.
+5. Render the returned `result.entry` directly or pass `result` to `ServerOptimizedEntry`. If no
+   optimization data or matching variant is available, the helper returns the baseline entry.
 
 In this example, `cookieStore` and `headerStore` are the values returned by Next.js `cookies()` and
-`headers()`. `fetchEntriesFromContentful()` is an app-owned CDA helper that must return
-single-locale entries with linked optimization entries and variants included.
+`headers()`.
 
 **Adapt this to your use case:**
 
 ```tsx
 const appConsent = cookieStore.get('app-personalization-consent')?.value === 'granted'
 
-const [baselineEntries, optimizationData] = await Promise.all([
-  fetchEntriesFromContentful({ include: 10, locale: APP_LOCALE }),
-  // Only request Optimization data when app policy permits profile-producing calls.
-  appConsent
-    ? getNextjsServerOptimizationData(optimization, {
-        consent: { events: true, persistence: true },
-        cookies: cookieStore,
-        headers: headerStore,
-        locale: APP_LOCALE,
-      }).then(({ data }) => data)
-    : undefined,
-])
+// Only request Optimization data when app policy permits profile-producing calls.
+const optimizationRequest = appConsent
+  ? await getNextjsServerOptimizationData(optimization, {
+      consent: { events: true, persistence: true },
+      cookies: cookieStore,
+      headers: headerStore,
+      locale: APP_LOCALE,
+    })
+  : undefined
 
-const resolvedEntries = baselineEntries.map((entry) =>
-  // The resolver returns the baseline entry when no selected optimization matches.
-  optimization.resolveOptimizedEntry(entry, optimizationData?.selectedOptimizations),
+const result = optimizationRequest
+  ? await optimizationRequest.requestOptimization.fetchOptimizedEntry('homepage-hero')
+  : await optimization.fetchOptimizedEntry('homepage-hero', {
+      selectedOptimizations: [],
+    })
+```
+
+When an existing flow already fetches Contentful entries, keep the manual resolver:
+
+**Adapt this to your use case:**
+
+```tsx
+const baselineEntry = await fetchEntryFromContentful({
+  entryId: 'homepage-hero',
+  include: 10,
+  locale: APP_LOCALE,
+})
+
+const resolvedData = optimization.resolveOptimizedEntry(
+  baselineEntry,
+  optimizationRequest?.data?.selectedOptimizations,
 )
 ```
 
@@ -408,16 +434,17 @@ export function OptimizationControls() {
 
 The browser client can automatically observe server-rendered entry wrappers when the markup contains
 the `data-ctfl-*` tracking attributes. Use `ServerOptimizedEntry` to render those attributes from
-the same baseline entry and resolved data used for SSR content.
+the same managed result, or manual baseline entry and resolved data, used for SSR content.
 
 1. Wrap server-rendered entry content with `ServerOptimizedEntry`.
-2. Pass the original baseline entry and the full `ResolvedData` returned by
+2. Pass the `result` returned by `requestOptimization.fetchOptimizedEntry(entryId)`.
+3. For manual fetching, pass the original baseline entry and the full `ResolvedData` returned by
    `resolveOptimizedEntry()`.
-3. Use `getServerTrackingAttributes()` from `@contentful/optimization-nextjs/tracking-attributes`
+4. Use `getServerTrackingAttributes()` from `@contentful/optimization-nextjs/tracking-attributes`
    when an existing server-rendered element or design-system component must own the wrapper markup.
-4. Use `trackEntryInteraction` on `OptimizationRoot` only to opt out of interaction types the app
+5. Use `trackEntryInteraction` on `OptimizationRoot` only to opt out of interaction types the app
    must not observe.
-5. Use `clickable`, `trackViews`, `trackClicks`, `trackHovers`, and duration interval props only
+6. Use `clickable`, `trackViews`, `trackClicks`, `trackHovers`, and duration interval props only
    when an entry needs per-element tracking behavior.
 
 **Adapt this to your use case:**
@@ -425,13 +452,12 @@ the same baseline entry and resolved data used for SSR content.
 ```tsx
 <ServerOptimizedEntry
   as="article"
-  // Use the same baseline entry and resolved data that produced the SSR content.
-  baselineEntry={baselineEntry}
+  // Use the same managed result that produced the SSR content.
   clickable
   hoverDurationUpdateIntervalMs={1000}
-  resolvedData={resolvedData}
+  result={result}
 >
-  <h2>{resolvedData.entry.fields.title}</h2>
+  <h2>{result.entry.fields.title}</h2>
 </ServerOptimizedEntry>
 ```
 

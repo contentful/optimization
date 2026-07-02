@@ -33,6 +33,16 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
 - Implementations consume local package tarballs from `pkgs/` after `pnpm build:pkgs` plus the
   implementation install step.
 
+## Reference implementations
+
+- Treat `implementations/**` as first-class product artifacts: maintained SDK integration contracts,
+  customer-facing evidence, and required validation targets for the SDK surfaces they exercise.
+- Treat broken, stale, incomplete, or needlessly reduced reference implementations as SDK-suite
+  quality issues unless evidence shows the affected behavior is no longer supported.
+- Do not treat reference implementations as optional demos, disposable samples, or places to reduce
+  behavior for convenience. When public SDK behavior changes, identify affected reference
+  implementations before concluding validation.
+
 ## Code discipline
 
 - Treat [`eslint.config.ts`](./eslint.config.ts) as an upfront design constraint.

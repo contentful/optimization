@@ -54,6 +54,9 @@ Install using an NPM-compatible package manager, pnpm for example:
 pnpm add @contentful/optimization-node
 ```
 
+Add `contentful` too when the SDK will use your app-owned `contentful.js` client for managed entry
+fetching.
+
 Import the Optimization class; both CJS and ESM module systems are supported, ESM preferred:
 
 ```ts
@@ -113,6 +116,7 @@ between requests. For cross-SDK consent guidance, see
 | `environment`       | No        | `'main'`               | Contentful environment identifier                           |
 | `api`               | No        | See API options below  | Experience API and Insights API endpoint options            |
 | `app`               | No        | `undefined`            | Application metadata attached to outgoing event context     |
+| `contentful`        | No        | `undefined`            | App-owned `contentful.js` client, default query, and cache  |
 | `locale`            | No        | `undefined`            | Default SDK Experience API and event locale                 |
 | `fetchOptions`      | No        | SDK defaults           | Fetch timeout and retry behavior                            |
 | `allowedEventTypes` | No        | `['identify', 'page']` | Event types allowed before request event consent is granted |
@@ -222,22 +226,41 @@ to `forRequest()`.
 
 ### Content resolution
 
-Fetch Contentful entries in your application layer, then resolve variants with returned optimization
-data:
+When a `contentful.js` client is available, prefer SDK-managed fetching by entry ID. Configure the
+client once, then call `fetchOptimizedEntry()` on a request-bound client after an accepted
+Experience API call. `forRequest()` clients use the latest selected optimizations when omitted;
+singleton calls require explicit `selectedOptimizations`.
 
 ```ts
+const optimization = new ContentfulOptimization({
+  clientId: 'client-id',
+  contentful: { client: contentfulClient },
+  environment: 'main',
+  locale: appLocale,
+})
+
+const requestOptimization = optimization.forRequest({ consent: true, profile })
+await requestOptimization.page()
+const { baselineEntry, entry } = await requestOptimization.fetchOptimizedEntry('hero-entry')
+```
+
+If your application already fetched the baseline entry, keep using the manual resolver:
+
+```ts
+const pageResult = await requestOptimization.page()
 const resolvedEntry = optimization.resolveOptimizedEntry(
   baselineEntry,
-  optimizationData?.selectedOptimizations,
+  pageResult.accepted ? pageResult.data.selectedOptimizations : undefined,
 )
 ```
 
-Fetch entries with one CDA locale in the app layer. For localized apps, configure your application
-locale and pass it directly to Contentful CDA requests. Pass the same value to
-`forRequest({ locale: appLocale })` when MergeTags that read localized profile fields should match
-the rendered entry language. Do not pass all-locale CDA responses from `withAllLocales` or
-`locale=*` into `resolveOptimizedEntry()`; the resolver expects direct single-locale field values.
-See
+Use one CDA locale in either path. For localized apps, configure your application locale. A
+request-bound client uses `forRequest({ locale: appLocale })` as the managed Contentful query locale
+when neither `contentful.defaultQuery` nor the per-call query sets `locale`. Pass the same value to
+app-owned Contentful CDA requests and to `forRequest({ locale: appLocale })` when MergeTags that
+read localized profile fields match the rendered entry language. Do not pass all-locale CDA
+responses from `withAllLocales` or `locale=*`; the resolver expects direct single-locale field
+values. See
 [Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
@@ -250,12 +273,13 @@ stateless, so `getFlag()` does not automatically emit flag-view tracking.
 
 ### Caching guidance
 
-Cache raw Contentful delivery payloads in your application layer, not profile-evaluated SDK event
-results.
+Cache raw Contentful delivery payloads in your application layer or with the SDK-managed entry
+cache, not profile-evaluated SDK event results. Use `clearContentfulEntryCache()` when an SDK
+instance must drop cached CDA entries.
 
 | Data or call                                                                | Cache across requests? | Reason                                                               |
 | --------------------------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------- |
-| Raw Contentful entries fetched from CDA                                     | Yes                    | They are content snapshots and can be resolved per request           |
+| Raw Contentful entries fetched from CDA or the SDK-managed entry cache      | Yes                    | They are content snapshots and can be resolved per request           |
 | `resolveOptimizedEntry()` and `getMergeTagValue()` results                  | Request-local only     | Results depend on the current profile and optimization data          |
 | `page()`, `identify()`, `screen()`, `track()`, and sticky `trackView()`     | No                     | These calls perform side effects and return request-specific profile |
 | Non-sticky `trackView()`, `trackClick()`, `trackHover()`, `trackFlagView()` | No                     | These calls emit Insights API events                                 |

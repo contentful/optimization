@@ -1,4 +1,10 @@
-import type { Observable, ResolvedData, Subscription } from '@contentful/optimization-core'
+import type {
+  ContentfulEntryQuery,
+  Observable,
+  OptimizedEntryMetadata,
+  ResolvedData,
+  Subscription,
+} from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import {
@@ -27,6 +33,7 @@ export interface OptimizedEntrySdk {
     entry: Entry,
     selectedOptimizations?: SelectedOptimizationArray,
   ) => ResolvedData<EntrySkeletonType>
+  fetchContentfulEntry: (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
 }
 
 export interface OptimizedEntrySnapshot {
@@ -35,12 +42,14 @@ export interface OptimizedEntrySnapshot {
   readonly hostAttributes: OptimizedEntryTrackingAttributes
   readonly isLoading: boolean
   readonly isReady: boolean
+  readonly isResolved: boolean
   readonly loadingPresentation: {
     readonly showLoadingFallback: boolean
     readonly hideLoadingLayoutTarget: boolean
     readonly shouldRenderBaselineWhileLoading: boolean
     readonly targetDisplay: OptimizedEntryLoadingTargetDisplay
   }
+  readonly metadata: OptimizedEntryMetadata
   readonly resolvedData: ResolvedData<EntrySkeletonType>
   readonly selectedOptimization: ResolvedData<EntrySkeletonType>['selectedOptimization']
   readonly selectedOptimizations: SelectedOptimizationArray | undefined
@@ -180,14 +189,35 @@ function areLoadingPresentationsEqual(
   )
 }
 
-function areSnapshotsEqual(left: OptimizedEntrySnapshot, right: OptimizedEntrySnapshot): boolean {
+function areSnapshotMetadataEqual(
+  left: OptimizedEntrySnapshot['metadata'],
+  right: OptimizedEntrySnapshot['metadata'],
+): boolean {
+  return (
+    left.baselineEntry === right.baselineEntry &&
+    left.optimizationContextId === right.optimizationContextId
+  )
+}
+
+function areSnapshotValuesEqual(
+  left: OptimizedEntrySnapshot,
+  right: OptimizedEntrySnapshot,
+): boolean {
   return (
     left.canOptimize === right.canOptimize &&
     left.entry === right.entry &&
     left.isLoading === right.isLoading &&
     left.isReady === right.isReady &&
+    left.isResolved === right.isResolved &&
     left.selectedOptimization === right.selectedOptimization &&
-    left.selectedOptimizations === right.selectedOptimizations &&
+    left.selectedOptimizations === right.selectedOptimizations
+  )
+}
+
+function areSnapshotsEqual(left: OptimizedEntrySnapshot, right: OptimizedEntrySnapshot): boolean {
+  return (
+    areSnapshotValuesEqual(left, right) &&
+    areSnapshotMetadataEqual(left.metadata, right.metadata) &&
     areLoadingPresentationsEqual(left.loadingPresentation, right.loadingPresentation) &&
     areHostAttributesEqual(left.hostAttributes, right.hostAttributes)
   )
@@ -367,10 +397,21 @@ export class OptimizedEntryController {
             this.selectedOptimizations,
           )
         : createBaselineResolvedData(this.options.baselineEntry)
+    const metadata: OptimizedEntryMetadata = {
+      baselineEntry: this.options.baselineEntry,
+      baselineEntryId: this.options.baselineEntry.sys.id,
+      entry: resolvedData.entry,
+      entryId: resolvedData.entry.sys.id,
+      optimizationContextId: resolvedData.optimizationContextId,
+      resolvedData,
+      selectedOptimization: resolvedData.selectedOptimization,
+      selectedOptimizations: this.selectedOptimizations,
+    }
+    const isResolved = !showLoadingFallback
 
     return {
       canOptimize: this.canOptimize,
-      entry: resolvedData.entry,
+      entry: metadata.entry,
       hostAttributes: showLoadingFallback
         ? {}
         : resolveOptimizedEntryTrackingAttributes(
@@ -380,14 +421,16 @@ export class OptimizedEntryController {
           ),
       isLoading,
       isReady: this.options.isPresentationReady,
+      isResolved,
       loadingPresentation: {
         showLoadingFallback,
         hideLoadingLayoutTarget,
         shouldRenderBaselineWhileLoading,
         targetDisplay: this.options.targetDisplay,
       },
+      metadata,
       resolvedData,
-      selectedOptimization: resolvedData.selectedOptimization,
+      selectedOptimization: metadata.selectedOptimization,
       selectedOptimizations: this.selectedOptimizations,
     }
   }

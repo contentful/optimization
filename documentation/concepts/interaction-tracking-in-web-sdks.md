@@ -67,8 +67,10 @@ allowed, which event type it becomes, and which queue receives it.
 | `@contentful/optimization-web`       | Initializes Core for a browser runtime. Persists consent and, when persistence consent permits it, profile data, selected optimizations, and anonymous IDs. Discovers tracked DOM elements and observes interactions. |
 | `@contentful/optimization-react-web` | Creates and tears down the Web SDK instance, resolves entries in React, emits `data-ctfl-*` attributes, exposes the SDK instance, and emits router-driven `page()` calls.                                             |
 
-The application still owns Contentful fetching, rendering policy, consent UX, identity policy, route
-ownership, and any business event taxonomy passed to `track()`.
+The application owns rendering policy, consent UX, identity policy, route ownership, and any
+business event taxonomy passed to `track()`. Contentful entry fetching is application-owned unless
+the SDK is explicitly configured with a consumer-owned `contentful.js` client for managed entry
+fetching.
 
 ## Runtime prerequisites and defaults
 
@@ -376,7 +378,9 @@ SDK configuration values pass through to the underlying instance.
 
 `OptimizedEntry` does three tracking-related things:
 
-- Resolves the baseline entry with `useOptimizedEntry()`.
+- Resolves a provided baseline entry, or fetches the baseline first when `OptimizedEntry` or
+  `useOptimizedEntry()` receives an `entryId` and the SDK is configured with a `contentful.js`
+  client.
 - Renders a wrapper element with `display: contents`.
 - Adds tracking attributes for the resolved entry when resolved content is ready.
 
@@ -397,6 +401,9 @@ The wrapper receives:
 `data-ctfl-duplication-scope` is emitted by React Web for optimization metadata, but the Web SDK
 entry interaction payload does not use it.
 
+Managed entry fetching expects the same single-locale CDA entry shape as manual `baselineEntry`
+resolution. Do not use `withAllLocales` or `locale=*` for Web or React Web optimization surfaces.
+
 During loading, `OptimizedEntry` does not emit resolved entry tracking attributes. Loading UI is
 therefore not tracked as the resolved Contentful entry. If `children` is a direct `ReactNode`
 instead of a render prop, the wrapper still receives tracking attributes, but the child content does
@@ -405,6 +412,12 @@ not change based on the resolved entry.
 `useOptimizedEntry()` only resolves data. It does not add DOM attributes or register an element. If
 a component uses `useOptimizedEntry()` directly, it must either render the `data-ctfl-*` attributes
 itself or use `sdk.tracking.enableElement(...)`.
+
+> [!IMPORTANT]
+>
+> `OptimizedEntrySourceController` does not emit Web tracking attributes. Custom Web adapters that
+> use it must render `data-ctfl-*` attributes after resolution or call
+> `optimization.tracking.enableElement(...)` with equivalent data.
 
 React Web router adapters emit `page()` calls when supported routers change route. They are page
 event helpers, not entry interaction detectors. Entry views, clicks, and hovers still come from the
@@ -466,7 +479,8 @@ provider children can emit router `page()` events or entry interactions.
 
 The Web SDKs do not own every part of tracking:
 
-- They do not fetch Contentful entries.
+- They do not infer Contentful entries from tracking metadata. Managed entry fetching requires an
+  explicitly configured `contentful.js` client.
 - They do not decide whether a user has granted consent.
 - They do not infer a browser view from server rendering alone.
 - They do not make non-clickable markup clickable.
@@ -494,5 +508,7 @@ application.
   Step-by-step browser integration flow.
 - [Integrating the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md) -
   Step-by-step React integration flow.
+- [Building a custom JavaScript Optimization adapter](../guides/building-a-custom-javascript-optimization-adapter.md) -
+  Low-level entry-source lifecycle guidance for custom adapter authors.
 - [Forwarding Optimization SDK context to analytics and tag-management tools](../guides/forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
   Consent-aware forwarding, sticky-view dedupe, and Custom Flag analytics handoff.
