@@ -26,9 +26,32 @@ import { OptimizationContext, type OptimizationSdk } from '../context/Optimizati
 export type OnStatesReady = SharedOnStatesReady<OptimizationSdk>
 export type TrackEntryInteractionOptions = SharedTrackEntryInteractionOptions
 
-type OptimizationProviderBaseConfigProps = OptimizationRootSdkConfig
+export type OptimizationProviderConfigProps = PropsWithChildren<
+  OptimizationRootSdkConfig & {
+    /**
+     * Server-returned Optimization state to apply before provider children mount.
+     *
+     * @remarks
+     * Use this for server-to-browser state handoff. Keep `defaults` for configuration and default
+     * state such as consent policy.
+     */
+    readonly serverOptimizationState?: OptimizationData
+    /**
+     * Controls automatic entry interaction tracking for OptimizedEntry components.
+     *
+     * @defaultValue `{ views: true, clicks: true, hovers: true }`
+     */
+    readonly trackEntryInteraction?: TrackEntryInteractionOptions
+    /**
+     * Called once the SDK state surface is initialized and before provider children mount.
+     * Return a cleanup function to unsubscribe app-level state observers on teardown.
+     */
+    readonly onStatesReady?: OnStatesReady
+    readonly sdk?: never
+  }
+>
 
-interface ServerOptimizationStateProps {
+export type OptimizationProviderSdkProps = PropsWithChildren<{
   /**
    * Server-returned Optimization state to apply before provider children mount.
    *
@@ -37,36 +60,13 @@ interface ServerOptimizationStateProps {
    * state such as consent policy.
    */
   readonly serverOptimizationState?: OptimizationData
-}
-
-export type OptimizationProviderConfigProps = PropsWithChildren<
-  OptimizationProviderBaseConfigProps &
-    ServerOptimizationStateProps & {
-      /**
-       * Controls automatic entry interaction tracking for OptimizedEntry components.
-       *
-       * @defaultValue `{ views: true, clicks: true, hovers: true }`
-       */
-      readonly trackEntryInteraction?: TrackEntryInteractionOptions
-      /**
-       * Called once the SDK state surface is initialized and before provider children mount.
-       * Return a cleanup function to unsubscribe app-level state observers on teardown.
-       */
-      readonly onStatesReady?: OnStatesReady
-      readonly sdk?: never
-    }
->
-
-export type OptimizationProviderSdkProps = PropsWithChildren<
-  ServerOptimizationStateProps & {
-    /**
-     * Called with the injected SDK state surface before provider children mount.
-     * Return a cleanup function to unsubscribe app-level state observers on teardown.
-     */
-    readonly onStatesReady?: OnStatesReady
-    readonly sdk: OptimizationSdk
-  }
->
+  /**
+   * Called with the injected SDK state surface before provider children mount.
+   * Return a cleanup function to unsubscribe app-level state observers on teardown.
+   */
+  readonly onStatesReady?: OnStatesReady
+  readonly sdk: OptimizationSdk
+}>
 
 export type OptimizationProviderProps =
   | OptimizationProviderConfigProps
