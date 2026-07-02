@@ -2,13 +2,12 @@ import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvide
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
 import { appConfig } from '@/lib/config'
-import { getAppConsent } from '@/lib/util'
+import { optimization } from '@/lib/optimization'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
 import 'e2e-web/theme.css'
 import type { Metadata } from 'next'
-import { cookies } from 'next/headers'
 import Link from 'next/link'
-import { Suspense, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 
 export const metadata: Metadata = {
   title: 'Optimization Next.js SDK SSR',
@@ -16,9 +15,11 @@ export const metadata: Metadata = {
     'Next.js App Router reference: the Next.js SDK resolves entries server-side and handles client-side tracking and interactive controls.',
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const cookieStore = await cookies()
-  const appConsent = getAppConsent(cookieStore)
+  const { profile, selectedOptimizations, changes, initialPageEvent, hasConsent } =
+    await optimization.getServerState()
 
   return (
     <html lang={appConfig.locale.split('-')[0]}>
@@ -30,17 +31,20 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           api={appConfig.api}
           trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
           logLevel="debug"
+          defaults={{
+            consent: hasConsent,
+            persistenceConsent: hasConsent,
+            ...(profile ? { profile } : {}),
+            ...(hasConsent && selectedOptimizations ? { selectedOptimizations, changes } : {}),
+          }}
           app={{
             name: 'Contentful Optimization Next.js SDK SSR (Client)',
             version: '0.1.0',
           }}
-          defaults={{ consent: appConsent, persistenceConsent: appConsent }}
         >
           <GlobalLiveUpdatesProvider>
             <PreviewPanel />
-            <Suspense>
-              <NextAppAutoPageTracker initialPageEvent={appConsent ? 'skip' : 'emit'} />
-            </Suspense>
+            <NextAppAutoPageTracker initialPageEvent={initialPageEvent} />
             <div className="app-shell">
               <nav>
                 <Link data-testid="link-home" href="/">

@@ -5,20 +5,55 @@ import {
   useOptimization,
   useOptimizationActions,
   useOptimizationContext,
+  useProfileState,
+  useSelectedOptimizationsState,
 } from '@contentful/optimization-nextjs/client'
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { setAppConsent } from './util'
 
-export function useConsent(): {
-  consent: boolean | undefined
-  setConsent: (value: boolean) => void
-} {
-  const consent = useConsentState()
-  const { consent: setConsent } = useOptimizationActions()
+type Profile = ReturnType<typeof useProfileState>
+
+type ServerDefaults = {
+  readonly profile?: Profile
+  readonly selectedOptimizations?: readonly unknown[]
+}
+
+export type ControlPanelServerState = ServerDefaults & { readonly hasConsent?: boolean }
+
+export function useControlPanel(serverState: ControlPanelServerState = {}) {
+  const sdk = useOptimization()
+  const { identify, reset, consent: setConsent } = useOptimizationActions()
+  const sdkConsent = useConsentState()
+  const clientProfile = useProfileState()
+  const selectedOptimizations = useSelectedOptimizationsState()
+  const { sdk: sdkCtx, isReady } = useOptimizationContext()
+  const profile = isReady ? clientProfile : (clientProfile ?? serverState.profile)
+  const [booleanFlag, setBooleanFlag] = useState<unknown>(undefined)
+
+  useEffect(() => {
+    if (!sdkCtx || !isReady) return
+    const subscription = sdkCtx.states.flag('boolean').subscribe(setBooleanFlag)
+    return () => subscription.unsubscribe()
+  }, [isReady, sdkCtx])
+
+  const consent = sdkConsent ?? serverState.hasConsent
+  const activeCount =
+    selectedOptimizations?.length ?? serverState.selectedOptimizations?.length ?? 0
+
   useEffect(() => {
     if (typeof consent === 'boolean') setAppConsent(consent)
   }, [consent])
-  return { consent, setConsent }
+
+  return {
+    sdk,
+    identify,
+    reset,
+    consent,
+    setConsent,
+    profile,
+    activeCount,
+    booleanFlag,
+  }
 }
 
 const MS_PER_SECOND = 1000
@@ -72,42 +107,4 @@ export function useEventStream<T>(
   }, [isReady, sdk])
 
   return { events, rawCount }
-}
-
-export function useFlagSubscription(flagName: string): unknown {
-  const { sdk, isReady } = useOptimizationContext()
-  const [value, setValue] = useState<unknown>(undefined)
-
-  useEffect(() => {
-    if (!sdk || !isReady) return
-    const subscription = sdk.states.flag(flagName).subscribe(setValue)
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [isReady, sdk, flagName])
-
-  return value
-}
-
-export function useManualViewTracking(
-  manualTracking: boolean | undefined,
-): (element: HTMLDivElement | null, entryId: string) => void {
-  const sdk = useOptimization()
-  const trackedElement = useRef<HTMLDivElement | null>(null)
-
-  useEffect(
-    () => () => {
-      const { current } = trackedElement
-      if (current) sdk.tracking.clearElement('views', current)
-    },
-    [sdk.tracking],
-  )
-
-  return (element: HTMLDivElement | null, entryId: string): void => {
-    const { current: previous } = trackedElement
-    if (previous && previous !== element) sdk.tracking.clearElement('views', previous)
-    trackedElement.current = element
-    if (!element || !manualTracking) return
-    sdk.tracking.enableElement('views', element, { data: { entryId } })
-  }
 }

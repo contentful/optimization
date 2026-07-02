@@ -1,40 +1,15 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { CustomViewTracker } from '@/components/CustomViewTracker'
 import { EntryCard } from '@/components/EntryCard'
-import { appConfig } from '@/lib/config'
-import { loadPageEntries } from '@/lib/contentful'
 import { optimization } from '@/lib/optimization'
-import { getAppConsent, toIdMap } from '@/lib/util'
-import { NextjsOptimizationState } from '@contentful/optimization-nextjs/client'
-import { getNextjsServerOptimizationData } from '@contentful/optimization-nextjs/server'
 import { PAGES } from 'e2e-web'
-import { cookies, headers } from 'next/headers'
 import Link from 'next/link'
 
 export default async function PageTwo() {
-  const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
-
-  const [entries, optimizationData] = await Promise.all([
-    loadPageEntries(PAGES.pageTwo.ids),
-    getAppConsent(cookieStore)
-      ? getNextjsServerOptimizationData(optimization, {
-          consent: { events: true, persistence: true },
-          cookies: cookieStore,
-          headers: headerStore,
-          locale: appConfig.locale,
-        }).then(({ data }) => data)
-      : undefined,
+  const [serverState, [auto, manual]] = await Promise.all([
+    optimization.getServerState(),
+    optimization.getEntries([PAGES.pageTwo.auto, PAGES.pageTwo.manual]),
   ])
-
-  const entriesById = toIdMap(entries)
-  const autoEntry = entriesById.get(PAGES.pageTwo.auto)
-  const manualEntry = entriesById.get(PAGES.pageTwo.manual)
-  const autoResolved = autoEntry
-    ? optimization.resolveOptimizedEntry(autoEntry, optimizationData?.selectedOptimizations)
-    : undefined
-  const manualResolved = manualEntry
-    ? optimization.resolveOptimizedEntry(manualEntry, optimizationData?.selectedOptimizations)
-    : undefined
 
   return (
     <section data-testid="page-two-view">
@@ -46,8 +21,7 @@ export default async function PageTwo() {
       </div>
 
       <CustomViewTracker componentId="page-two-hero" />
-      <ControlPanel demoCTA />
-      <NextjsOptimizationState data={optimizationData} />
+      <ControlPanel demoCTA serverState={serverState} />
 
       <div className="sections-grid sections-grid--split" data-testid="page-two-optimization">
         <section className="page-section">
@@ -55,12 +29,8 @@ export default async function PageTwo() {
             <h2>Auto-observed</h2>
           </header>
           <div className="entry-grid">
-            {autoEntry && autoResolved ? (
-              <EntryCard
-                baselineEntry={autoEntry}
-                resolvedData={autoResolved}
-                manualTracking={false}
-              />
+            {auto ? (
+              <EntryCard entry={auto} manualTracking={false} />
             ) : (
               <p>Auto tracked entry is unavailable.</p>
             )}
@@ -72,12 +42,8 @@ export default async function PageTwo() {
             <h2>Manually-observed</h2>
           </header>
           <div className="entry-grid">
-            {manualEntry && manualResolved ? (
-              <EntryCard
-                baselineEntry={manualEntry}
-                resolvedData={manualResolved}
-                manualTracking={true}
-              />
+            {manual ? (
+              <EntryCard entry={manual} manualTracking={true} />
             ) : (
               <p>Manual tracked entry is unavailable.</p>
             )}

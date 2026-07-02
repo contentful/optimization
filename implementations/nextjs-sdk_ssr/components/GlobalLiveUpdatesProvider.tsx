@@ -1,7 +1,7 @@
 'use client'
 
 import { LiveUpdatesProvider } from '@contentful/optimization-nextjs/client'
-import { createContext, useContext, useMemo, useState, type JSX, type ReactNode } from 'react'
+import { createContext, useContext, useState, type JSX, type ReactNode } from 'react'
 
 interface GlobalLiveUpdatesContextValue {
   readonly globalLiveUpdates: boolean
@@ -26,15 +26,12 @@ export function GlobalLiveUpdatesProvider({
   readonly children: ReactNode
 }): JSX.Element {
   const [globalLiveUpdates, setGlobalLiveUpdates] = useState(false)
-  const value = useMemo<GlobalLiveUpdatesContextValue>(
-    () => ({
-      globalLiveUpdates,
-      onToggleGlobalLiveUpdates: () => {
-        setGlobalLiveUpdates((current) => !current)
-      },
-    }),
-    [globalLiveUpdates],
-  )
+  const value: GlobalLiveUpdatesContextValue = {
+    globalLiveUpdates,
+    onToggleGlobalLiveUpdates: () => {
+      setGlobalLiveUpdates((current) => !current)
+    },
+  }
 
   return (
     <GlobalLiveUpdatesContext.Provider value={value}>
