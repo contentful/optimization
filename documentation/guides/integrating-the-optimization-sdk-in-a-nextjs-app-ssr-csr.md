@@ -991,7 +991,7 @@ loading explicit and gate attachment behind an application-owned flag.
 1. Add the preview panel package only when your app needs browser authoring tooling.
 2. Attach the panel from a Client Component under `OptimizationRoot`.
 3. Wait until the browser SDK is ready before attaching the panel.
-4. Pass an app-owned Contentful client to the attach function.
+4. Pass an app-owned Contentful client or pre-fetched preview entries to the attach function.
 5. Enable it only when an approved app environment sets `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`
    to `true`.
 6. Verify preview behavior with live updates because the preview panel forces optimized entries to
@@ -1032,8 +1032,10 @@ export function PreviewPanelAttachment({ nonce }: { nonce?: string }) {
 ```
 
 The preview panel package has no attachment side effects. A dynamic import only loads the attach
-function; the application must call `attachOptimizationPreviewPanel(...)` with the Contentful client
-that can read previewable entries.
+function; the application must call `attachOptimizationPreviewPanel(...)` with a Contentful client
+or `entries: { audiences, experiences }` for preview definitions that the app already loaded.
+`entries` takes precedence over `contentful`, so the panel does not fetch through the Contentful
+client when both are provided.
 
 The hybrid reference implementation exposes `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL` through
 Next.js config and attaches the preview panel only when that flag is `true`.

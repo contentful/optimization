@@ -26,6 +26,19 @@ interface CursorResponse<S extends EntrySkeletonType, M extends ChainModifiers> 
   pages?: { next?: string }
 }
 
+/** @public */
+export type PreviewPanelEntrySource<M extends ChainModifiers = ChainModifiers> =
+  | ContentfulEntryCollection<M>
+  | ReadonlyArray<Entry<EntrySkeletonType, M>>
+
+/** @public */
+export interface PreviewPanelEntries<M extends ChainModifiers = ChainModifiers> {
+  /** Audience entries or a Contentful entry collection containing audience entries. */
+  audiences: PreviewPanelEntrySource<M>
+  /** Experience entries or a Contentful entry collection containing experience entries. */
+  experiences: PreviewPanelEntrySource<M>
+}
+
 /** @internal */
 function getContentTypeId(entry: unknown): string | undefined {
   if (!isRecord(entry)) return undefined
@@ -75,6 +88,50 @@ export function isAudienceEntry(audience: unknown): audience is AudienceEntry {
  */
 export function isOptimizationEntry(optimization: unknown): optimization is OptimizationEntry {
   return getContentTypeId(optimization) === 'nt_experience'
+}
+
+/** @internal */
+function isEntryArray<M extends ChainModifiers>(
+  entries: PreviewPanelEntrySource<M>,
+): entries is ReadonlyArray<Entry<EntrySkeletonType, M>> {
+  return Array.isArray(entries)
+}
+
+/** @internal */
+function toEntryCollection<M extends ChainModifiers>(
+  entries: PreviewPanelEntrySource<M>,
+  filter: (entry: Entry<EntrySkeletonType, M>) => boolean,
+): ContentfulEntryCollection<M> {
+  if (isEntryArray(entries)) {
+    const items = [...entries].filter(filter)
+
+    return {
+      items,
+      total: items.length,
+      skip: 0,
+      limit: items.length,
+    }
+  }
+
+  const items = entries.items.filter(filter)
+
+  return {
+    ...entries,
+    items,
+    total: items.length,
+    skip: 0,
+    limit: items.length,
+  }
+}
+
+/** @internal */
+export function normalizePreviewPanelEntries<M extends ChainModifiers>(
+  entries: PreviewPanelEntries<M>,
+): { audiences: ContentfulEntryCollection<M>; experiences: ContentfulEntryCollection<M> } {
+  return {
+    audiences: toEntryCollection(entries.audiences, isAudienceEntry),
+    experiences: toEntryCollection(entries.experiences, isOptimizationEntry),
+  }
 }
 
 /**

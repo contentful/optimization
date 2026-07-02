@@ -4,6 +4,7 @@ import {
   buildPreviewModel,
   createAudienceDefinitions,
   createExperienceDefinitions,
+  type ContentfulEntryCollection,
   type OverrideState,
 } from '@contentful/optimization-core/preview-support'
 import type ContentfulOptimization from '@contentful/optimization-web'
@@ -35,7 +36,12 @@ import {
   isDrawerToggleEvent,
 } from './components/panel'
 import { SEARCH_TAG, Search } from './components/search'
-import { getAllEntries, isOptimizationEntry } from './lib/entries'
+import {
+  getAllEntries,
+  isOptimizationEntry,
+  normalizePreviewPanelEntries,
+  type PreviewPanelEntries,
+} from './lib/entries'
 
 declare global {
   interface Window {
@@ -194,6 +200,24 @@ function applyAudienceSwitchChange(
   }
 }
 
+/** @internal */
+async function fetchPreviewPanelEntries<M extends ChainModifiers>(
+  contentful: ContentfulClientApi<M> | undefined,
+): Promise<{ audiences: ContentfulEntryCollection<M>; experiences: ContentfulEntryCollection<M> }> {
+  if (contentful === undefined) {
+    throw new Error(
+      '[ContentfulOptimization Preview Panel] Provide either entries or a Contentful client',
+    )
+  }
+
+  const [audiences, experiences] = await Promise.all([
+    getAllEntries(contentful, 'nt_audience'),
+    getAllEntries(contentful, 'nt_experience', { include: 10 }),
+  ])
+
+  return { audiences, experiences }
+}
+
 /**
  * Configuration for {@link attachOptimizationPreviewPanelToSdk}.
  *
@@ -201,7 +225,9 @@ function applyAudienceSwitchChange(
  */
 interface AttachOptimizationPreviewPanelToSdkArgs<M extends ChainModifiers = ChainModifiers> {
   /** Contentful client used to fetch audience and optimization entries. */
-  contentful: ContentfulClientApi<M>
+  contentful: ContentfulClientApi<M> | undefined
+  /** Pre-fetched audience and experience entries. */
+  entries: PreviewPanelEntries<M> | undefined
   /** ContentfulOptimization Web SDK instance to register the preview panel with. */
   optimization: ContentfulOptimization
   /** Optional CSP nonce passed to the Lit framework for style injection. */
@@ -215,7 +241,14 @@ interface AttachOptimizationPreviewPanelToSdkArgs<M extends ChainModifiers = Cha
  */
 export interface AttachOptimizationPreviewPanelArgs<M extends ChainModifiers = ChainModifiers> {
   /** Contentful client used to fetch audience and optimization entries. */
-  contentful: ContentfulClientApi<M>
+  contentful?: ContentfulClientApi<M>
+  /**
+   * Pre-fetched audience and experience entries.
+   *
+   * @remarks
+   * When provided, the preview panel uses these entries and does not fetch through `contentful`.
+   */
+  entries?: PreviewPanelEntries<M>
   /**
    * ContentfulOptimization Web SDK instance to register the preview panel with.
    *
@@ -230,11 +263,11 @@ export interface AttachOptimizationPreviewPanelArgs<M extends ChainModifiers = C
 /**
  * Attaches the ContentfulOptimization preview panel to the supplied SDK instance.
  *
- * Registers all custom elements, fetches audiences and optimization entries from
- * Contentful, wires up the shared {@link PreviewOverrideManager}, and appends
- * the panel to `document.body`.
+ * Registers all custom elements, loads audiences and optimization entries, wires
+ * up the shared {@link PreviewOverrideManager}, and appends the panel to
+ * `document.body`.
  *
- * @param args - Configuration containing the Contentful client, ContentfulOptimization instance, and optional CSP nonce.
+ * @param args - Configuration containing entry loading options, ContentfulOptimization instance, and optional CSP nonce.
  * @returns Resolves once the panel has been appended to the document body.
  * @throws Error if the preview panel has already been attached.
  * @throws Error if optimization states cannot be obtained during registration.
@@ -243,6 +276,7 @@ export interface AttachOptimizationPreviewPanelArgs<M extends ChainModifiers = C
  */
 async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = ChainModifiers>({
   contentful,
+  entries,
   optimization: contentfulOptimization,
   nonce,
 }: AttachOptimizationPreviewPanelToSdkArgs<M>): Promise<void> {
@@ -265,10 +299,11 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
 
   definePreviewPanelComponents()
 
-  const [audienceCollection, optimizationCollection] = await Promise.all([
-    getAllEntries(contentful, 'nt_audience'),
-    getAllEntries(contentful, 'nt_experience', { include: 10 }),
-  ])
+  const { audiences: audienceCollection, experiences: optimizationCollection } =
+    entries !== undefined
+      ? normalizePreviewPanelEntries(entries)
+      : await fetchPreviewPanelEntries(contentful)
+
   const panelOptimizationEntries: OptimizationEntry[] = []
   optimizationCollection.items.forEach((entry) => {
     if (isOptimizationEntry(entry)) panelOptimizationEntries.push(entry)
@@ -367,13 +402,13 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
 /**
  * Attaches the ContentfulOptimization preview panel to the DOM as a Web Component.
  *
- * Registers all custom elements, fetches audiences and optimization entries from
- * Contentful, wires up the shared override manager, and appends the panel to
+ * Registers all custom elements, loads audiences and optimization entries, wires
+ * up the shared override manager, and appends the panel to
  * `document.body`.
  * Calling this function more than once reuses the existing in-flight or completed
  * attachment.
  *
- * @param args - Configuration containing the Contentful client, optional ContentfulOptimization instance, and optional CSP nonce.
+ * @param args - Configuration containing entry loading options, optional ContentfulOptimization instance, and optional CSP nonce.
  * @returns Resolves once the panel has been appended to the document body.
  * @throws Error if no Optimization Web SDK instance can be resolved.
  * @throws Error if optimization states cannot be obtained during registration.
@@ -389,7 +424,12 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
  */
 export default async function attachOptimizationPreviewPanel<
   M extends ChainModifiers = ChainModifiers,
->({ contentful, optimization, nonce }: AttachOptimizationPreviewPanelArgs<M>): Promise<void> {
+>({
+  contentful,
+  entries,
+  optimization,
+  nonce,
+}: AttachOptimizationPreviewPanelArgs<M>): Promise<void> {
   if (previewPanelAttachment !== undefined) {
     await previewPanelAttachment
     return
@@ -397,6 +437,12 @@ export default async function attachOptimizationPreviewPanel<
 
   if (hasPreviewPanel()) {
     return
+  }
+
+  if (entries === undefined && contentful === undefined) {
+    throw new Error(
+      '[ContentfulOptimization Preview Panel] Provide either entries or a Contentful client',
+    )
   }
 
   const resolvedOptimization = resolveOptimization(optimization)
@@ -409,6 +455,7 @@ export default async function attachOptimizationPreviewPanel<
 
   previewPanelAttachment = attachOptimizationPreviewPanelToSdk({
     contentful,
+    entries,
     optimization: resolvedOptimization,
     nonce,
   }).catch((error: unknown) => {

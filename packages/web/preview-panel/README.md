@@ -30,6 +30,7 @@ SDK runtime.
 
 - [Getting started](#getting-started)
 - [When to use this package](#when-to-use-this-package)
+- [Pre-fetched entries](#pre-fetched-entries)
 - [Common configuration](#common-configuration)
 - [Production bundle control](#production-bundle-control)
 - [Content security policy support](#content-security-policy-support)
@@ -61,6 +62,17 @@ attachOptimizationPreviewPanel({
 })
 ```
 
+When your application already fetches preview content, pass `entries` instead:
+
+```ts
+attachOptimizationPreviewPanel({
+  entries: {
+    audiences: audienceEntries,
+    experiences: experienceEntries,
+  },
+})
+```
+
 The attach function appends the panel to the DOM and adds the toggle button that opens it. It is
 safe to call more than once; repeated calls reuse the in-flight or completed panel attachment. The
 panel search uses fuzzy matching for audience and optimization names and highlights matched text in
@@ -79,13 +91,54 @@ the browser preview panel attached to an existing Contentful SDK client. Applica
 an explicit Optimization Web SDK instance, but the common browser flow uses
 `window.contentfulOptimization`.
 
+## Pre-fetched entries
+
+Use `entries` when the app cannot give the browser preview panel a direct Contentful client or when
+it already owns the query layer. This covers GraphQL query adapters, Hydrogen loaders, SSR data
+handoff, tag-filtered Contentful queries, and proxy APIs.
+
+The `entries` option has this shape:
+
+```ts
+attachOptimizationPreviewPanel({
+  entries: {
+    audiences,
+    experiences,
+  },
+})
+```
+
+Each value can be either a Contentful-style entry collection or a readonly array of Contentful
+entries. The preview panel normalizes arrays into entry collections, keeps only `nt_audience` items
+from `audiences`, keeps only `nt_experience` items from `experiences`, and preserves
+`experiences.includes.Entry` so linked variant names can be displayed.
+
+If both `entries` and `contentful` are provided, `entries` wins and the preview panel does not fetch
+through the Contentful client.
+
+Common paths:
+
+- **Contentful client** - Pass `contentful` first when the browser can use an existing Contentful
+  Delivery API client.
+- **GraphQL** - Map GraphQL nodes to Contentful entry objects, then pass the arrays as
+  `entries.audiences` and `entries.experiences`.
+- **Hydrogen loaders and SSR** - Load audiences and experiences in the loader or server route,
+  serialize them to the browser, then attach with `entries`.
+- **Tag-filtered queries** - Pass the filtered Contentful collections directly. The panel still
+  filters by content type before building definitions.
+- **Proxy APIs** - Return `{ audiences, experiences }` from the proxy and pass that object as
+  `entries`.
+
 ## Common configuration
 
-| Option         | Required? | Default                         | Description                                                |
-| -------------- | --------- | ------------------------------- | ---------------------------------------------------------- |
-| `contentful`   | Yes       | N/A                             | Existing Contentful client used to read preview content    |
-| `optimization` | No        | `window.contentfulOptimization` | Existing Optimization Web SDK instance                     |
-| `nonce`        | No        | `undefined`                     | CSP nonce applied to Lit styles when strict CSP is enabled |
+| Option         | Required?   | Default                         | Description                                                |
+| -------------- | ----------- | ------------------------------- | ---------------------------------------------------------- |
+| `contentful`   | Conditional | N/A                             | Existing Contentful client used to read preview content    |
+| `entries`      | Conditional | N/A                             | Pre-fetched audience and experience entries                |
+| `optimization` | No          | `window.contentfulOptimization` | Existing Optimization Web SDK instance                     |
+| `nonce`        | No          | `undefined`                     | CSP nonce applied to Lit styles when strict CSP is enabled |
+
+Provide either `contentful` or `entries`.
 
 For the complete attach function signature, use the generated
 [Preview Panel reference](https://contentful.github.io/optimization/modules/_contentful_optimization-web-preview-panel.html).

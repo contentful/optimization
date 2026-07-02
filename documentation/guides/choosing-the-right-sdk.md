@@ -63,8 +63,9 @@ Use this table to choose the primary package and the next integration guide:
 ## Alternatives
 
 - **Browser preview panel** - Add `@contentful/optimization-web-preview-panel` to a Web SDK or React
-  Web SDK integration when the browser app needs author preview overrides. It attaches to an
-  existing Contentful client and Web SDK instance; it is not a standalone SDK.
+  Web SDK integration when the browser app needs author preview overrides. It attaches to a Web SDK
+  instance and reads definitions from an existing Contentful client or pre-fetched audience and
+  experience entries; it is not a standalone SDK.
 - **Core SDK** - Use `@contentful/optimization-core` when building or maintaining an SDK layer that
   needs the shared state machine, event builders, queues, resolvers, interceptors, or preview
   support. Application integrations start with a platform SDK.

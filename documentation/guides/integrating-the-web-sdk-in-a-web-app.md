@@ -725,8 +725,8 @@ read preview content, and talks to an existing Web SDK instance through the brow
 
 2. Gate the dynamic import behind an environment value so production bundles can remove preview code
    when the gate is replaced with `false` at build time.
-3. Attach the panel after the Web SDK singleton and Contentful client exist. The attach function
-   uses `window.contentfulOptimization` by default.
+3. Attach the panel after the Web SDK singleton and either a Contentful client or pre-fetched
+   preview entries exist. The attach function uses `window.contentfulOptimization` by default.
 4. Pass the `optimization` option when your app owns an SDK instance that is not available through
    `window.contentfulOptimization`.
 5. Pass a CSP `nonce` when strict Content Security Policy rules require one for Lit styles.
@@ -760,6 +760,11 @@ attachPreviewPanel()
 The attach function is side-effect-free until called. Repeated calls reuse the in-flight or
 completed attachment. While the panel is open, Web Components entry rendering treats live updates as
 enabled so preview overrides can render without toggling `live-updates` on the root or entry.
+
+If your app already loads preview content through GraphQL, SSR, a Hydrogen loader, a tag-filtered
+query, or a proxy API, pass `entries: { audiences, experiences }` instead of `contentful`.
+`audiences` and `experiences` can be Contentful-style entry collections or arrays of Contentful
+entries. When `entries` is provided, the preview panel does not fetch through `contentful`.
 
 ### Analytics forwarding
 

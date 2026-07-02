@@ -802,13 +802,13 @@ for vendor mappings, consent boundaries, helper functions, and dedupe guidance.
 **Integration category:** Optional
 
 The preview panel is a separate browser package for authoring and staging workflows. It appends a
-Lit-based panel to `document.body`, uses an existing Contentful Delivery API client, and talks to
-the Web SDK through the browser preview bridge.
+Lit-based panel to `document.body`, reads preview definitions from a Contentful client or
+pre-fetched entries, and talks to the Web SDK through the browser preview bridge.
 
 1. Install `@contentful/optimization-web-preview-panel`.
 2. Gate the dynamic import behind an environment variable so production bundles can remove it.
-3. Attach the panel after the Web SDK instance exists. `onStatesReady` is a good React Web setup
-   point.
+3. Attach the panel after the Web SDK instance exists and either a Contentful client or pre-fetched
+   preview entries are available. `onStatesReady` is a good React Web setup point.
 4. Pass a CSP nonce when strict Content Security Policy rules require one.
 
 **Adapt this to your use case:**
@@ -848,6 +848,11 @@ export function App() {
 By default, the attach function uses `window.contentfulOptimization`, which the Web SDK-owned
 provider instance creates in the browser. If your app injects an SDK instance that is not available
 through that singleton, pass `optimization` to `attachOptimizationPreviewPanel(...)`.
+
+If your app already loads preview definitions through GraphQL, a loader, SSR handoff, tag-filtered
+queries, or a proxy API, pass `entries: { audiences, experiences }` instead of `contentful`.
+`audiences` and `experiences` can be Contentful-style entry collections or arrays of Contentful
+entries. When `entries` is provided, the preview panel does not fetch through `contentful`.
 
 ## Advanced integrations
 
