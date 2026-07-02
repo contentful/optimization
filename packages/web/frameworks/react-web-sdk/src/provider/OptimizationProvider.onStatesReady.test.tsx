@@ -334,15 +334,17 @@ describe('OptimizationProvider onStatesReady', () => {
     rendered.unmount()
   })
 
-  it('does not construct owned sdk instances during server render', () => {
+  it('renders children from a snapshot runtime during server render without constructing the owned sdk', () => {
     let childRendered = false
+    let isReadyDuringRender = false
 
     function Probe(): null {
       childRendered = true
+      isReadyDuringRender = useOptimizationContext().isReady
       return null
     }
 
-    const markup = renderToString(
+    renderToString(
       <OptimizationProvider
         clientId={testConfig.clientId}
         environment={testConfig.environment}
@@ -352,8 +354,10 @@ describe('OptimizationProvider onStatesReady', () => {
       </OptimizationProvider>,
     )
 
-    expect(markup).toBe('')
-    expect(childRendered).toBe(false)
+    // Children render on the server (the provider is isomorphic), backed by a
+    // read-only snapshot runtime, but the live browser SDK is never constructed.
+    expect(childRendered).toBe(true)
+    expect(isReadyDuringRender).toBe(true)
     expect(window.contentfulOptimization).toBeUndefined()
   })
 
@@ -407,24 +411,28 @@ describe('OptimizationProvider onStatesReady', () => {
     rendered.unmount()
   })
 
-  it('does not render injected sdk children during server render when state setup must run first', () => {
+  it('renders injected sdk children during server render while onStatesReady defers to the client', () => {
     const sdk = createOptimizationSdk()
     const onStatesReady = rs.fn()
     let childRendered = false
+    let capturedSdk: ReturnType<typeof useOptimization> | undefined = undefined
 
     function Probe(): null {
       childRendered = true
+      capturedSdk = useOptimization()
       return null
     }
 
-    const markup = renderToString(
+    renderToString(
       <OptimizationProvider sdk={sdk} onStatesReady={onStatesReady}>
         <Probe />
       </OptimizationProvider>,
     )
 
-    expect(markup).toBe('')
-    expect(childRendered).toBe(false)
+    // The injected SDK backs the server render directly, so children render. The
+    // onStatesReady side effect runs only on the client (in the mount effect).
+    expect(childRendered).toBe(true)
+    expect(capturedSdk).toBe(sdk)
     expect(onStatesReady).not.toHaveBeenCalled()
   })
 

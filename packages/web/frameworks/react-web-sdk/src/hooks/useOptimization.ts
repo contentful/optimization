@@ -24,24 +24,29 @@ export function useOptimizationContext(): OptimizationContextValue {
 }
 
 /**
- * Returns the initialized Contentful Optimization SDK instance.
+ * Returns the Contentful Optimization runtime.
+ *
+ * @remarks
+ * The returned object is isomorphic and always present once a provider is
+ * mounted: a read-only snapshot runtime during server rendering and the initial
+ * client render, and the live SDK after hydration. It is safe to call in any
+ * environment — reads and entry resolution work everywhere; event and
+ * browser-only tracking calls are no-ops on the server. Throws only when used
+ * outside an {@link OptimizationProvider}.
  *
  * @public
  */
 export function useOptimization(): OptimizationSdk {
-  const { sdk, isReady, error } = useOptimizationContext()
+  const { sdk, error } = useOptimizationContext()
 
-  if (!sdk || !isReady) {
+  if (!sdk) {
     if (error) {
       throw new Error(`ContentfulOptimization SDK failed to initialize: ${error.message}`, {
         cause: error,
       })
     }
 
-    throw new Error(
-      'ContentfulOptimization SDK is still initializing. ' +
-        'This should not happen when using the loading gate in OptimizationProvider.',
-    )
+    throw getMissingProviderError()
   }
 
   return sdk

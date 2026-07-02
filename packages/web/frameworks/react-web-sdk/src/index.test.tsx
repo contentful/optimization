@@ -141,7 +141,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     withoutLocale.unmount()
   })
 
-  it('does not create an owned optimization instance during server render', () => {
+  it('renders children on the server without creating an owned optimization instance', () => {
     let renderedChild = false
 
     function Probe(): null {
@@ -149,7 +149,7 @@ describe('@contentful/optimization-react-web core providers', () => {
       return null
     }
 
-    const markup = renderToString(
+    renderToString(
       <OptimizationProvider
         clientId={testConfig.clientId}
         environment={testConfig.environment}
@@ -159,8 +159,9 @@ describe('@contentful/optimization-react-web core providers', () => {
       </OptimizationProvider>,
     )
 
-    expect(markup).toBe('')
-    expect(renderedChild).toBe(false)
+    // The isomorphic provider renders children on the server (backed by a
+    // snapshot runtime) but never constructs the live browser SDK there.
+    expect(renderedChild).toBe(true)
     expect(window.contentfulOptimization).toBeUndefined()
   })
 
@@ -507,12 +508,14 @@ describe('@contentful/optimization-react-web core providers', () => {
   })
 
   it('supports live updates fallback semantics for dependent components', () => {
-    const results: boolean[] = []
+    // The isomorphic provider renders children once from the snapshot runtime and
+    // again after swapping to the live SDK, so capture the resolved value per
+    // labeled component rather than asserting a fixed render count.
+    const resolved: Record<string, boolean> = {}
 
-    function Probe({ liveUpdates }: { liveUpdates?: boolean }): null {
+    function Probe({ label, liveUpdates }: { label: string; liveUpdates?: boolean }): null {
       const context = useLiveUpdates()
-      const isLive = liveUpdates ?? context.globalLiveUpdates
-      results.push(isLive)
+      resolved[label] = liveUpdates ?? context.globalLiveUpdates
       return null
     }
 
@@ -524,8 +527,8 @@ describe('@contentful/optimization-react-web core providers', () => {
           api={testConfig.api}
           liveUpdates={true}
         >
-          <Probe />
-          <Probe liveUpdates={false} />
+          <Probe label="global-live" />
+          <Probe label="override-off" liveUpdates={false} />
         </OptimizationRoot>
       )
     }
@@ -538,7 +541,7 @@ describe('@contentful/optimization-react-web core providers', () => {
           api={testConfig.api}
           liveUpdates={false}
         >
-          <Probe liveUpdates={true} />
+          <Probe label="override-on" liveUpdates={true} />
         </OptimizationRoot>
       )
     }
@@ -546,7 +549,11 @@ describe('@contentful/optimization-react-web core providers', () => {
     renderClient(<FirstScenario />).unmount()
     renderClient(<SecondScenario />).unmount()
 
-    expect(results).toEqual([true, false, true])
+    expect(resolved).toEqual({
+      'global-live': true,
+      'override-off': false,
+      'override-on': true,
+    })
   })
 
   it('destroys the optimization singleton on provider unmount', () => {
