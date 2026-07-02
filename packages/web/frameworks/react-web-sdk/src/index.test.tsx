@@ -103,7 +103,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     let capturedOptimization: OptimizationSdk | undefined = undefined
 
     function Probe(): null {
-      capturedOptimization = useOptimization()
+      capturedOptimization = useOptimizationContext().sdk
       return null
     }
 
@@ -141,7 +141,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     withoutLocale.unmount()
   })
 
-  it('does not create an owned optimization instance during server render', () => {
+  it('renders children during server render without constructing the SDK', () => {
     let renderedChild = false
 
     function Probe(): null {
@@ -159,8 +159,10 @@ describe('@contentful/optimization-react-web core providers', () => {
       </OptimizationProvider>,
     )
 
+    // SSR always renders children so browsers hydrate real HTML.
+    // The SDK is not constructed server-side (useLayoutEffect does not run).
     expect(markup).toBe('')
-    expect(renderedChild).toBe(false)
+    expect(renderedChild).toBe(true)
     expect(window.contentfulOptimization).toBeUndefined()
   })
 
@@ -169,7 +171,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     let capturedGlobalLiveUpdates: boolean | null = null
 
     function Probe(): null {
-      capturedOptimization = useOptimization()
+      capturedOptimization = useOptimizationContext().sdk
       const { globalLiveUpdates } = useLiveUpdates()
       capturedGlobalLiveUpdates = globalLiveUpdates
       return null
@@ -284,7 +286,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     let capturedResolver: UseEntryResolverResult | undefined = undefined
 
     function Probe(): null {
-      capturedOptimization = useOptimization()
+      capturedOptimization = useOptimizationContext().sdk
       capturedResolver = useEntryResolver()
       return null
     }
@@ -510,9 +512,10 @@ describe('@contentful/optimization-react-web core providers', () => {
     const results: boolean[] = []
 
     function Probe({ liveUpdates }: { liveUpdates?: boolean }): null {
+      const { isReady } = useOptimizationContext()
       const context = useLiveUpdates()
       const isLive = liveUpdates ?? context.globalLiveUpdates
-      results.push(isLive)
+      if (isReady) results.push(isLive)
       return null
     }
 

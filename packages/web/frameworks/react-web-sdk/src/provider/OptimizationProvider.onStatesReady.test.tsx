@@ -230,8 +230,13 @@ describe('OptimizationProvider onStatesReady', () => {
     let profileFromChild: OptimizationData['profile'] | undefined = undefined
 
     function Probe(): null {
-      setupOrder.push('child')
-      profileFromChild = useOptimization().states.profile.current
+      const { sdk } = useOptimizationContext()
+      // Skip the pre-mount render (sdk undefined) — the ordering guarantee
+      // applies to the ready render only.
+      if (sdk) {
+        setupOrder.push('child')
+        profileFromChild = sdk.states.profile.current
+      }
       return null
     }
 
@@ -262,7 +267,7 @@ describe('OptimizationProvider onStatesReady', () => {
     let profileFromChild: OptimizationData['profile'] | undefined = undefined
 
     function Probe(): null {
-      profileFromChild = useOptimization().states.profile.current
+      profileFromChild = useOptimizationContext().sdk?.states.profile.current
       return null
     }
 
@@ -285,8 +290,11 @@ describe('OptimizationProvider onStatesReady', () => {
     let profileFromChild: OptimizationData['profile'] | undefined = undefined
 
     function Probe(): null {
-      setupOrder.push('child')
-      profileFromChild = useOptimization().states.profile.current
+      const { sdk: readySdk } = useOptimizationContext()
+      if (readySdk) {
+        setupOrder.push('child')
+        profileFromChild = readySdk.states.profile.current
+      }
       return null
     }
 
@@ -315,7 +323,7 @@ describe('OptimizationProvider onStatesReady', () => {
     let profileFromChild: OptimizationData['profile'] | undefined = undefined
 
     function Probe(): null {
-      profileFromChild = useOptimization().states.profile.current
+      profileFromChild = useOptimizationContext().sdk?.states.profile.current
       return null
     }
 
@@ -353,7 +361,7 @@ describe('OptimizationProvider onStatesReady', () => {
     )
 
     expect(markup).toBe('')
-    expect(childRendered).toBe(false)
+    expect(childRendered).toBe(true)
     expect(window.contentfulOptimization).toBeUndefined()
   })
 
@@ -424,7 +432,7 @@ describe('OptimizationProvider onStatesReady', () => {
     )
 
     expect(markup).toBe('')
-    expect(childRendered).toBe(false)
+    expect(childRendered).toBe(true)
     expect(onStatesReady).not.toHaveBeenCalled()
   })
 
@@ -467,11 +475,11 @@ describe('OptimizationProvider onStatesReady', () => {
     const sdk = createOptimizationSdk()
     const destroySpy = rs.spyOn(sdk, 'destroy')
     const cleanup = rs.fn()
-    let capturedOptimization: ReturnType<typeof useOptimization> | undefined = undefined
+    let capturedOptimization: OptimizationSdk | undefined = undefined
     const rendered = createClientRoot()
 
     function Probe(): null {
-      capturedOptimization = useOptimization()
+      capturedOptimization = useOptimizationContext().sdk
       return null
     }
 
@@ -527,11 +535,11 @@ describe('OptimizationProvider onStatesReady', () => {
     const secondSdk = createOptimizationSdk()
     const firstReady = rs.fn()
     const secondReady = rs.fn()
-    let capturedOptimization: ReturnType<typeof useOptimization> | undefined = undefined
+    let capturedOptimization: OptimizationSdk | undefined = undefined
     const rendered = createClientRoot()
 
     function Probe(): null {
-      capturedOptimization = useOptimization()
+      capturedOptimization = useOptimizationContext().sdk
       return null
     }
 

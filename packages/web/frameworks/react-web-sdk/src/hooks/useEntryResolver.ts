@@ -3,7 +3,7 @@ import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useMemo } from 'react'
 
-import { useOptimization } from './useOptimization'
+import { useOptimizationContext } from './useOptimization'
 
 /**
  * Helper methods for resolving Contentful entries against selected optimizations.
@@ -31,12 +31,20 @@ export interface UseEntryResolverResult {
   ) => ResolvedData<EntrySkeletonType>
 }
 
+function toBaselineResolvedData(entry: Entry): ResolvedData<EntrySkeletonType> {
+  return { entry, selectedOptimization: undefined }
+}
+
 /**
  * Returns entry-resolution helpers for React components.
  *
  * @remarks
  * When `selectedOptimizations` is omitted, helpers use the current SDK
  * `states.selectedOptimizations` value.
+ *
+ * SSR-safe: when the SDK is not yet ready the helpers return the unmodified
+ * baseline entry so server-rendered content matches the client-hydrated
+ * baseline before optimizations resolve.
  *
  * @example
  * ```tsx
@@ -47,16 +55,16 @@ export interface UseEntryResolverResult {
  * @public
  */
 export function useEntryResolver(): UseEntryResolverResult {
-  const sdk = useOptimization()
+  const { sdk } = useOptimizationContext()
 
   return useMemo<UseEntryResolverResult>(
     () => ({
       resolveOptimizedEntry: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) =>
-        sdk.resolveOptimizedEntry(entry, selectedOptimizations),
+        sdk?.resolveOptimizedEntry(entry, selectedOptimizations) ?? toBaselineResolvedData(entry),
       resolveEntry: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) =>
-        sdk.resolveOptimizedEntry(entry, selectedOptimizations).entry,
+        sdk?.resolveOptimizedEntry(entry, selectedOptimizations).entry ?? entry,
       resolveEntryData: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) =>
-        sdk.resolveOptimizedEntry(entry, selectedOptimizations),
+        sdk?.resolveOptimizedEntry(entry, selectedOptimizations) ?? toBaselineResolvedData(entry),
     }),
     [sdk],
   )

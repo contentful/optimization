@@ -172,6 +172,11 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   const initialPropsRef = useRef(props)
   const liveLocale = props.sdk === undefined ? props.locale : undefined
   const canRenderInjectedSdk = canUseInjectedSdkDuringInitialRender(props)
+  // `false` during SSR and the initial synchronous client render (before the
+  // first useLayoutEffect fires). Flipped to `true` inside the effect below.
+  // On the server useLayoutEffect never runs, so this stays `false` and the
+  // gate below always renders children — SSR produces HTML.
+  const hasMountedRef = useRef(false)
   const [state, setState] = useState<ProviderState>(() => ({
     error: undefined,
     isReady: canRenderInjectedSdk,
@@ -179,6 +184,7 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   }))
 
   useLayoutEffect(() => {
+    hasMountedRef.current = true
     const { current: initialProps } = initialPropsRef
 
     if (canUseInjectedSdkDuringInitialRender(initialProps)) {
@@ -248,9 +254,14 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     }
   }, [liveLocale, props.sdk, state.sdk])
 
-  const shouldRenderChildren = state.isReady || state.error !== undefined
+  // On the client, block rendering while the SDK is still initializing so
+  // components that call `useOptimization()` at render time don't throw.
+  // On the server (`hasMountedRef.current === false`) always render children
+  // so SSR produces HTML; internal hooks read the SDK via context and safely
+  // default when `sdk` is undefined.
+  const needsBlock = hasMountedRef.current && !state.isReady && state.error === undefined
 
-  if (!shouldRenderChildren) {
+  if (needsBlock) {
     return null
   }
 

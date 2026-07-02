@@ -5,15 +5,15 @@ import { appConfig } from '@/lib/config'
 import { useConsent, useFlagSubscription } from '@/lib/hooks'
 import {
   useLiveUpdates,
-  useOptimization,
   useOptimizationActions,
+  useOptimizationContext,
   useProfileState,
   useSelectedOptimizationsState,
 } from '@contentful/optimization-nextjs/client'
 import { type JSX } from 'react'
 
 export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): JSX.Element {
-  const sdk = useOptimization()
+  const { sdk } = useOptimizationContext()
   const { identify, reset } = useOptimizationActions()
   const { consent, setConsent } = useConsent()
   const profile = useProfileState()
@@ -164,6 +164,7 @@ export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): 
             className="btn btn--secondary btn--sm"
             data-testid="track-conversion-button"
             onClick={() => {
+              if (!sdk) return
               void sdk.trackView({
                 componentId: 'page-two-demo-cta',
                 viewId: crypto.randomUUID(),
