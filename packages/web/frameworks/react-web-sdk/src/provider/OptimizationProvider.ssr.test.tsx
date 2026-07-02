@@ -144,4 +144,25 @@ describe('OptimizationProvider — SSR (CAN_ADD_LISTENERS: false, synchronous us
     expect(render).not.toThrow()
     expect(render).not.toThrow()
   })
+
+  it('does not throw when window has a stale singleton from an interrupted render — simulates concurrent render restart', () => {
+    // Concurrent React can run the render phase (which calls init() and constructs
+    // an SDK) and then discard the work-in-progress tree before effects execute.
+    // The SDK constructor sets window.contentfulOptimization but no cleanup runs,
+    // so the next render attempt finds a stale singleton and must destroy it first.
+    const stale = new ContentfulOptimization(testConfig)
+    window.contentfulOptimization = stale
+
+    expect(() => {
+      renderToString(
+        <OptimizationProvider
+          clientId={testConfig.clientId}
+          environment={testConfig.environment}
+          api={testConfig.api}
+        >
+          <div />
+        </OptimizationProvider>,
+      )
+    }).not.toThrow()
+  })
 })

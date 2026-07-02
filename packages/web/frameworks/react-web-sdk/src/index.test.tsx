@@ -626,4 +626,29 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(destroySpy).not.toHaveBeenCalled()
     container.remove()
   })
+
+  it('destroys a stale window singleton before constructing a new SDK instance', () => {
+    // Simulate a concurrent-mode render that was interrupted before effects ran:
+    // the SDK constructor set window.contentfulOptimization but the component was
+    // discarded without cleanup.
+    const stale = new ContentfulOptimization(testConfig)
+    const destroySpy = rs.spyOn(stale, 'destroy')
+    window.contentfulOptimization = stale
+
+    const rendered = renderClient(
+      <OptimizationProvider
+        clientId={testConfig.clientId}
+        environment={testConfig.environment}
+        api={testConfig.api}
+      >
+        <div />
+      </OptimizationProvider>,
+    )
+
+    expect(destroySpy).toHaveBeenCalledOnce()
+    expect(window.contentfulOptimization).toBeInstanceOf(ContentfulOptimization)
+    expect(window.contentfulOptimization).not.toBe(stale)
+
+    rendered.unmount()
+  })
 })

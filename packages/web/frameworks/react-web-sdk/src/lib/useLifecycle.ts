@@ -20,6 +20,7 @@ export function useLifecycle<T>(
 
   return {
     init() {
+      if (ref.current !== undefined) unmount()
       try {
         const value = initialize()
         if (!(value instanceof Promise)) {
