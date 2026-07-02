@@ -1,5 +1,39 @@
 import { signal } from '@preact/signals-core'
-import { toObservable } from './Observable'
+import { staticObservable, toObservable } from './Observable'
+
+describe('staticObservable', () => {
+  it('exposes the constant value as current', () => {
+    expect(staticObservable('value').current).toBe('value')
+    expect(staticObservable(undefined).current).toBeUndefined()
+  })
+
+  it('emits the value once on subscribe and never again', () => {
+    const received: number[] = []
+    const subscription = staticObservable(42).subscribe((value) => {
+      received.push(value)
+    })
+
+    expect(received).toEqual([42])
+
+    // No mechanism can change a static value, so the callback never fires again.
+    subscription.unsubscribe()
+    expect(received).toEqual([42])
+  })
+
+  it('emits non-nullish values through subscribeOnce and skips nullish ones', () => {
+    const receivedValue: number[] = []
+    staticObservable(7).subscribeOnce((value) => {
+      receivedValue.push(value)
+    })
+    expect(receivedValue).toEqual([7])
+
+    const receivedNullish: unknown[] = []
+    staticObservable(undefined).subscribeOnce((value) => {
+      receivedNullish.push(value)
+    })
+    expect(receivedNullish).toEqual([])
+  })
+})
 
 describe('Observable helpers', () => {
   it('exposes current as a deep-cloned snapshot of the signal value', () => {
