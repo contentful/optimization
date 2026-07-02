@@ -55,6 +55,41 @@ function isNonNullish<TValue>(value: TValue): value is NonNullable<TValue> {
   return value !== undefined && value !== null
 }
 
+const NOOP_SUBSCRIPTION: Subscription = { unsubscribe: () => undefined }
+
+/**
+ * Create an {@link Observable} over a fixed value that never changes.
+ *
+ * @typeParam T - Value type emitted by the observable.
+ * @param value - The constant value exposed as `current` and emitted on subscribe.
+ * @returns An observable that emits `value` once on subscribe and never again.
+ *
+ * @remarks
+ * Use this for read-only, request-scoped state surfaces such as server-side
+ * rendering, where a snapshot is known up front and cannot update. `subscribe`
+ * invokes `next(value)` synchronously and returns a no-op {@link Subscription};
+ * `subscribeOnce` invokes `next(value)` synchronously only when `value` is
+ * non-nullish. Unlike {@link toObservable}, no cloning is performed — the caller
+ * owns snapshot isolation for the constant value.
+ *
+ * @public
+ */
+export function staticObservable<T>(value: T): Observable<T> {
+  return {
+    current: value,
+
+    subscribe(next) {
+      next(value)
+      return NOOP_SUBSCRIPTION
+    },
+
+    subscribeOnce(next) {
+      if (isNonNullish(value)) next(value)
+      return NOOP_SUBSCRIPTION
+    },
+  }
+}
+
 function toError(value: unknown): Error {
   if (value instanceof Error) return value
   return new Error(`Subscriber threw non-Error value: ${String(value)}`)

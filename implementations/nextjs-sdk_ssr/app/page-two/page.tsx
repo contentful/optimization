@@ -1,29 +1,16 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { CustomViewTracker } from '@/components/CustomViewTracker'
 import { EntryCard } from '@/components/EntryCard'
-import { appConfig } from '@/lib/config'
 import { loadPageEntries } from '@/lib/contentful'
-import { optimization } from '@/lib/optimization'
-import { getAppConsent, toIdMap } from '@/lib/util'
-import { NextjsOptimizationState } from '@contentful/optimization-nextjs/client'
-import { getNextjsServerOptimizationData } from '@contentful/optimization-nextjs/server'
+import { getServerOptimizationData, optimization } from '@/lib/optimization'
+import { toIdMap } from '@/lib/util'
 import { PAGES } from 'e2e-web'
-import { cookies, headers } from 'next/headers'
 import Link from 'next/link'
 
 export default async function PageTwo() {
-  const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
-
   const [entries, optimizationData] = await Promise.all([
     loadPageEntries(PAGES.pageTwo.ids),
-    getAppConsent(cookieStore)
-      ? getNextjsServerOptimizationData(optimization, {
-          consent: { events: true, persistence: true },
-          cookies: cookieStore,
-          headers: headerStore,
-          locale: appConfig.locale,
-        }).then(({ data }) => data)
-      : undefined,
+    getServerOptimizationData(),
   ])
 
   const entriesById = toIdMap(entries)
@@ -47,7 +34,6 @@ export default async function PageTwo() {
 
       <CustomViewTracker componentId="page-two-hero" />
       <ControlPanel demoCTA />
-      <NextjsOptimizationState data={optimizationData} />
 
       <div className="sections-grid sections-grid--split" data-testid="page-two-optimization">
         <section className="page-section">

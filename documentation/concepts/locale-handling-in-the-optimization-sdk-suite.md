@@ -185,12 +185,12 @@ current request locale. Server Components pass `headers()` to `getNextjsServerOp
 the SDK can derive page context from the request URL captured by the Next.js proxy or middleware
 helper.
 
-Locale handoff is separate from server optimization state handoff. When the browser provider has the
-server data at its boundary, pass it with `serverOptimizationState` on `OptimizationRoot`. When a
-shared App Router layout owns the provider and the page owns request-local data, render
-`NextjsOptimizationState` near the server-rendered optimized content. Keep `defaults` for
+Locale handoff is separate from server optimization state handoff. Pass the server data with
+`serverOptimizationState` on `OptimizationRoot`, resolving it in the layout so the provider renders
+personalized state on the server and hydrates the same data on the client. Keep `defaults` for
 configuration or default state such as consent policy, not for server-returned profile, selected
-optimizations, or changes.
+optimizations, or changes. (The deprecated `NextjsOptimizationState` marker remains for hydrating
+page-specific data under an existing provider that was not seeded with server data.)
 
 ## Node and stateless SDKs
 
@@ -230,9 +230,10 @@ Pass direct single-locale field values to the runtime-specific entry resolution 
 
 - Web and Node `resolveOptimizedEntry()`.
 - React Web and React Native `OptimizedEntry` and `useEntryResolver()`.
-- React Web and Next.js client `useOptimizedEntry()`.
-- Next.js server `resolveOptimizedEntry()`; pass the baseline entry and returned `ResolvedData` to
-  `ServerOptimizedEntry` when server-rendered tracking attributes are needed.
+- React Web and Next.js client `useOptimizedEntry()`, and the isomorphic `OptimizedEntry` that
+  resolves on the server and hydrates on the client.
+- Next.js server `resolveOptimizedEntry()` for Server Component resolution; the deprecated
+  `ServerOptimizedEntry` remains for pure zero-JavaScript server rendering.
 - iOS `OptimizationClient.resolveOptimizedEntry(baseline:selectedOptimizations:)` and SwiftUI
   `OptimizedEntry(entry:)`.
 - Android `OptimizationClient.resolveOptimizedEntry(...)`, Compose `OptimizedEntry(entry:)`, and XML

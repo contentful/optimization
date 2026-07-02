@@ -2,6 +2,7 @@ import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvide
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
 import { appConfig } from '@/lib/config'
+import { getServerOptimizationData } from '@/lib/optimization'
 import { getAppConsent } from '@/lib/util'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
 import 'e2e-web/theme.css'
@@ -20,6 +21,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const cookieStore = await cookies()
   const appConsent = getAppConsent(cookieStore)
 
+  // Resolve the request-scoped optimization state on the server so the
+  // isomorphic provider renders identified/personalized first-paint state even
+  // with JavaScript disabled. Deduplicated per request with the page components.
+  const serverOptimizationState = await getServerOptimizationData()
+
   return (
     <html lang={appConfig.locale.split('-')[0]}>
       <body>
@@ -35,6 +41,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             version: '0.1.0',
           }}
           defaults={{ consent: appConsent, persistenceConsent: appConsent }}
+          serverOptimizationState={serverOptimizationState}
         >
           <GlobalLiveUpdatesProvider>
             <PreviewPanel />

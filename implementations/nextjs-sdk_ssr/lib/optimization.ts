@@ -1,5 +1,12 @@
-import { createNextjsOptimization } from '@contentful/optimization-nextjs/server'
+import type { OptimizationData } from '@contentful/optimization-nextjs/server'
+import {
+  createNextjsOptimization,
+  getNextjsServerOptimizationData,
+} from '@contentful/optimization-nextjs/server'
+import { cookies, headers } from 'next/headers'
+import { cache } from 'react'
 import { appConfig } from './config'
+import { getAppConsent } from './util'
 
 export const optimization = createNextjsOptimization({
   clientId: appConfig.clientId,
@@ -11,4 +18,27 @@ export const optimization = createNextjsOptimization({
     name: 'Contentful Optimization Next.js SDK SSR (Server)',
     version: '0.1.0',
   },
+})
+
+/**
+ * Resolve the request-scoped Optimization data once per request.
+ *
+ * The root layout and the page both need this data — the layout to seed the
+ * isomorphic provider, the page to resolve entry variants. `cache` deduplicates
+ * the call across the request so exactly one Experience `page()` event is
+ * emitted, regardless of how many server components ask for it.
+ */
+export const getServerOptimizationData = cache(async (): Promise<OptimizationData | undefined> => {
+  const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
+
+  if (!getAppConsent(cookieStore)) return undefined
+
+  const { data } = await getNextjsServerOptimizationData(optimization, {
+    consent: { events: true, persistence: true },
+    cookies: cookieStore,
+    headers: headerStore,
+    locale: appConfig.locale,
+  })
+
+  return data
 })

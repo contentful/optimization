@@ -49,6 +49,14 @@ handoff. It demonstrates:
 This hybrid pattern keeps App Router server fetching in place, hands Optimization state to the
 browser, and lets the browser SDK own entry resolution and reactive updates after startup.
 
+> [!NOTE]
+>
+> This implementation still uses `NextjsOptimizationState` for the state handoff, which is now
+> deprecated. New integrations should pass server Optimization data to `OptimizationRoot` through
+> the `serverOptimizationState` prop instead; the provider renders personalized state on the server
+> and hydrates the same data on the client. See the
+> [Next.js SSR guide](../../documentation/guides/integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md).
+
 ## Architecture
 
 ```text

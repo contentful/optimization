@@ -9,9 +9,17 @@ import {
   type OnStatesReady as SharedOnStatesReady,
   type TrackEntryInteractionOptions as SharedTrackEntryInteractionOptions,
 } from '@contentful/optimization-web/presentation'
-import { useLayoutEffect, useRef, useState, type PropsWithChildren, type ReactElement } from 'react'
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PropsWithChildren,
+  type ReactElement,
+} from 'react'
 
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
+import { createWebSnapshotRuntime, type WebOptimizationRuntime } from '../runtime/webRuntime'
 
 /**
  * Provider-owned callback for app-level subscriptions once SDK state is ready.
@@ -27,7 +35,9 @@ type ProviderSdkBinding = OptimizationRootSdkBinding<OptimizationSdk>
 interface ProviderState {
   readonly error: Error | undefined
   readonly isReady: boolean
-  readonly sdk: OptimizationSdk | undefined
+  /** Whether `runtime` is the live browser SDK (vs the initial snapshot runtime). */
+  readonly isLive: boolean
+  readonly runtime: WebOptimizationRuntime | undefined
 }
 
 interface ServerOptimizationStateProps {
@@ -159,6 +169,15 @@ function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
   return value instanceof Promise
 }
 
+/**
+ * Whether an injected SDK can back the initial render directly, with no
+ * asynchronous setup to run first.
+ *
+ * @remarks
+ * When true, the initial-render runtime is already the final live runtime, so
+ * the mount effect must not re-set state — this keeps the context identity
+ * stable across re-renders.
+ */
 function canUseInjectedSdkDuringInitialRender(props: OptimizationProviderProps): boolean {
   return (
     props.sdk !== undefined &&
@@ -167,20 +186,62 @@ function canUseInjectedSdkDuringInitialRender(props: OptimizationProviderProps):
   )
 }
 
-export function OptimizationProvider(props: OptimizationProviderProps): ReactElement | null {
+/**
+ * Whether the initial render is backed by the injected live SDK directly.
+ *
+ * @remarks
+ * An injected SDK backs the initial render unless `serverOptimizationState` must
+ * paint first. `onStatesReady` does not change this — it is a client-only effect
+ * — so an injected SDK is used as-is even when `onStatesReady` is provided.
+ */
+function injectedSdkBacksInitialRender(props: OptimizationProviderProps): boolean {
+  return props.sdk !== undefined && props.serverOptimizationState === undefined
+}
+
+/**
+ * Build the runtime used for the initial render (server render and the first
+ * client render, before the mount effect runs).
+ *
+ * @remarks
+ * An injected SDK backs the initial render directly unless `serverOptimizationState`
+ * is provided, in which case a read-only snapshot paints the server-resolved
+ * state first and the effect hydrates the injected SDK with the same data. A
+ * config-driven provider always renders from a snapshot seeded with server state
+ * plus the configured consent/locale defaults, matching the value the live SDK
+ * reports after the effect hydrates it.
+ */
+function createInitialRuntime(props: OptimizationProviderProps): WebOptimizationRuntime {
+  if (props.sdk !== undefined) {
+    // Render the injected SDK directly unless server state must paint first.
+    return injectedSdkBacksInitialRender(props)
+      ? props.sdk
+      : createWebSnapshotRuntime({ data: props.serverOptimizationState })
+  }
+
+  return createWebSnapshotRuntime({
+    data: props.serverOptimizationState,
+    consent: props.defaults?.consent,
+    persistenceConsent: props.defaults?.persistenceConsent,
+    locale: props.locale,
+  })
+}
+
+export function OptimizationProvider(props: OptimizationProviderProps): ReactElement {
   const { children } = props
   const initialPropsRef = useRef(props)
   const liveLocale = props.sdk === undefined ? props.locale : undefined
-  const canRenderInjectedSdk = canUseInjectedSdkDuringInitialRender(props)
   const [state, setState] = useState<ProviderState>(() => ({
     error: undefined,
-    isReady: canRenderInjectedSdk,
-    sdk: canRenderInjectedSdk ? props.sdk : undefined,
+    isReady: true,
+    isLive: injectedSdkBacksInitialRender(props),
+    runtime: createInitialRuntime(props),
   }))
 
   useLayoutEffect(() => {
     const { current: initialProps } = initialPropsRef
 
+    // An injected SDK with no async setup already backs the initial render; do
+    // not re-set state so the context value identity stays stable.
     if (canUseInjectedSdkDuringInitialRender(initialProps)) {
       return
     }
@@ -203,12 +264,12 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       }
 
       sdkBinding = initializedBinding
-      setState({ error: undefined, isReady: true, sdk: initializedBinding.sdk })
+      setState({ error: undefined, isReady: true, isLive: true, runtime: initializedBinding.sdk })
     }
 
     function setInitializationError(error: unknown): void {
       if (!setupState.disposed) {
-        setState({ error: toError(error), isReady: false, sdk: undefined })
+        setState({ error: toError(error), isReady: false, isLive: false, runtime: undefined })
       }
     }
 
@@ -237,22 +298,26 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   }, [])
 
   useLayoutEffect(() => {
-    if (state.sdk === undefined || props.sdk !== undefined || liveLocale === undefined) {
+    if (!state.isLive || state.runtime === undefined || props.sdk !== undefined) {
+      return
+    }
+    if (liveLocale === undefined) {
       return
     }
 
     try {
-      state.sdk.setLocale(liveLocale)
+      state.runtime.setLocale(liveLocale)
     } catch (error: unknown) {
-      setState({ error: toError(error), isReady: true, sdk: state.sdk })
+      setState({ error: toError(error), isReady: true, isLive: true, runtime: state.runtime })
     }
-  }, [liveLocale, props.sdk, state.sdk])
+  }, [liveLocale, props.sdk, state.isLive, state.runtime])
 
-  const shouldRenderChildren = state.isReady || state.error !== undefined
+  const contextValue = useMemo(
+    () => ({ sdk: state.runtime, isReady: state.isReady, error: state.error }),
+    [state.runtime, state.isReady, state.error],
+  )
 
-  if (!shouldRenderChildren) {
-    return null
-  }
-
-  return <OptimizationContext.Provider value={state}>{children}</OptimizationContext.Provider>
+  return (
+    <OptimizationContext.Provider value={contextValue}>{children}</OptimizationContext.Provider>
+  )
 }

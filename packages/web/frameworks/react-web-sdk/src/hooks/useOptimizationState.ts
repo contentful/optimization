@@ -38,7 +38,13 @@ function useObservableState<T>(observable: ObservableLike<T>): T {
 
   const getSnapshot = useCallback(() => snapshotRef.current, [])
 
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+  // On the server (and the initial hydration render) React uses the third
+  // argument. Read directly from the observable's current value so the server
+  // snapshot matches the value the client is seeded with, avoiding hydration
+  // mismatches. The observable is a static, request-scoped snapshot server-side.
+  const getServerSnapshot = useCallback(() => observable.current, [observable])
+
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 }
 
 /**

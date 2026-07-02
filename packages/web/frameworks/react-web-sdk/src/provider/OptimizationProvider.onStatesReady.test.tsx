@@ -223,7 +223,7 @@ describe('OptimizationProvider onStatesReady', () => {
     rendered.unmount()
   })
 
-  it('applies serverOptimizationState to owned SDK instances before onStatesReady and child render', async () => {
+  it('applies serverOptimizationState to owned SDK instances for onStatesReady and child render', async () => {
     const serverOptimizationState = createServerOptimizationState('owned-server-profile')
     const setupOrder: string[] = []
     let profileFromOnStatesReady: OptimizationData['profile'] | undefined = undefined
@@ -250,7 +250,9 @@ describe('OptimizationProvider onStatesReady', () => {
       </OptimizationProvider>,
     )
 
-    expect(setupOrder).toEqual(['onStatesReady', 'child'])
+    // The child renders first from the server snapshot, then the mount effect
+    // runs onStatesReady on the live SDK and the child re-renders against it.
+    expect(setupOrder).toEqual(['child', 'onStatesReady', 'child'])
     expect(profileFromOnStatesReady).toEqual(serverOptimizationState.profile)
     expect(profileFromChild).toEqual(serverOptimizationState.profile)
     rendered.unmount()
@@ -277,7 +279,7 @@ describe('OptimizationProvider onStatesReady', () => {
     sdk.destroy()
   })
 
-  it('applies serverOptimizationState to injected SDK instances before onStatesReady and child render', async () => {
+  it('applies serverOptimizationState to injected SDK instances for onStatesReady and child render', async () => {
     const serverOptimizationState = createServerOptimizationState('injected-ready-profile')
     const sdk = new ContentfulOptimization(testConfig)
     const setupOrder: string[] = []
@@ -303,7 +305,9 @@ describe('OptimizationProvider onStatesReady', () => {
       </OptimizationProvider>,
     )
 
-    expect(setupOrder).toEqual(['onStatesReady', 'child'])
+    // The child renders first from the server snapshot, then the mount effect
+    // hydrates the injected SDK, runs onStatesReady, and the child re-renders.
+    expect(setupOrder).toEqual(['child', 'onStatesReady', 'child'])
     expect(profileFromOnStatesReady).toEqual(serverOptimizationState.profile)
     expect(profileFromChild).toEqual(serverOptimizationState.profile)
     rendered.unmount()
@@ -334,15 +338,17 @@ describe('OptimizationProvider onStatesReady', () => {
     rendered.unmount()
   })
 
-  it('does not construct owned sdk instances during server render', () => {
+  it('renders children from a snapshot runtime during server render without constructing the owned sdk', () => {
     let childRendered = false
+    let isReadyDuringRender = false
 
     function Probe(): null {
       childRendered = true
+      isReadyDuringRender = useOptimizationContext().isReady
       return null
     }
 
-    const markup = renderToString(
+    renderToString(
       <OptimizationProvider
         clientId={testConfig.clientId}
         environment={testConfig.environment}
@@ -352,8 +358,10 @@ describe('OptimizationProvider onStatesReady', () => {
       </OptimizationProvider>,
     )
 
-    expect(markup).toBe('')
-    expect(childRendered).toBe(false)
+    // Children render on the server (the provider is isomorphic), backed by a
+    // read-only snapshot runtime, but the live browser SDK is never constructed.
+    expect(childRendered).toBe(true)
+    expect(isReadyDuringRender).toBe(true)
     expect(window.contentfulOptimization).toBeUndefined()
   })
 
@@ -407,24 +415,29 @@ describe('OptimizationProvider onStatesReady', () => {
     rendered.unmount()
   })
 
-  it('does not render injected sdk children during server render when state setup must run first', () => {
+  it('renders injected sdk children during server render while onStatesReady defers to the client', () => {
     const sdk = createOptimizationSdk()
     const onStatesReady = rs.fn()
     let childRendered = false
+    let capturedSdk: ReturnType<typeof useOptimization> | undefined = undefined
 
     function Probe(): null {
       childRendered = true
+      capturedSdk = useOptimization()
       return null
     }
 
-    const markup = renderToString(
+    renderToString(
       <OptimizationProvider sdk={sdk} onStatesReady={onStatesReady}>
         <Probe />
       </OptimizationProvider>,
     )
 
-    expect(markup).toBe('')
-    expect(childRendered).toBe(false)
+    // The injected SDK backs the server render directly (no serverOptimizationState
+    // to paint first), so children render against it. The onStatesReady side
+    // effect defers to the client mount effect and does not run during SSR.
+    expect(childRendered).toBe(true)
+    expect(capturedSdk).toBe(sdk)
     expect(onStatesReady).not.toHaveBeenCalled()
   })
 

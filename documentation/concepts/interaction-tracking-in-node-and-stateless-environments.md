@@ -75,10 +75,11 @@ Apply these constraints before choosing server-only, hybrid, or manual tracking:
   views without entry views.
 - Browser Insights delivery needs a current Web SDK profile. In direct Web SDK initialization, the
   profile can come from `defaults.profile`. In React Web and Next.js provider handoff, pass
-  server-returned Optimization data through `serverOptimizationState`. In Next.js page-level
-  handoff, render `NextjsOptimizationState` under existing SDK context. The profile can also come
-  from browser-persisted profile state that persistence consent allows the SDK to load, or a browser
-  Experience API call such as `page()`, `identify()`, `track()`, or sticky `trackView()`.
+  server-returned Optimization data through `serverOptimizationState` (the deprecated
+  `NextjsOptimizationState` marker remains for hydrating page-specific data under an existing
+  provider). The profile can also come from browser-persisted profile state that persistence consent
+  allows the SDK to load, or a browser Experience API call such as `page()`, `identify()`,
+  `track()`, or sticky `trackView()`.
 - Browser storage is best-effort. The Web SDK uses `localStorage` and the `ctfl-opt-aid` cookie when
   persistence consent permits continuity; if storage fails or is unavailable, continuity is limited
   to in-memory state.
@@ -312,8 +313,9 @@ of tracking that can only be measured in the browser.
 ### Render tracking metadata on resolved entries
 
 Use SDK helpers when available instead of copying the attribute map into application code. In
-Next.js, `ServerOptimizedEntry` renders the Web SDK tracking attributes from the baseline entry and
-the `ResolvedData` returned by `resolveOptimizedEntry()`. For custom SSR wrappers, call
+Next.js, the isomorphic `OptimizedEntry` renders the Web SDK tracking attributes as part of
+resolving the entry on the server; the deprecated `ServerOptimizedEntry` does the same from an
+explicit `ResolvedData` for pure zero-JavaScript server rendering. For custom SSR wrappers, call
 `getServerTrackingAttributes()` from `@contentful/optimization-nextjs/tracking-attributes`. Non-Next
 runtimes can call `resolveOptimizedEntryTrackingAttributes()` from
 `@contentful/optimization-web/tracking-attributes` when they already have the same baseline entry
@@ -393,9 +395,10 @@ delivery. Choose one of these patterns before enabling interaction tracking:
 
 - **Bootstrap the server profile.** For direct Web SDK initialization, serialize the `profile`
   returned by the server's `page()` or `identify()` call and pass it as `defaults.profile`. For
-  React Web and Next.js, pass the server `OptimizationData` through `serverOptimizationState`, or
-  render `NextjsOptimizationState` under an existing SDK context when a Next.js page owns the data.
-  Use this when the same server response already rendered personalized HTML from that profile.
+  React Web and Next.js, pass the server `OptimizationData` through `serverOptimizationState` (the
+  deprecated `NextjsOptimizationState` marker remains for hydrating page-specific data under an
+  existing provider). Use this when the same server response already rendered personalized HTML from
+  that profile.
 - **Re-evaluate in the browser.** Persist `ctfl-opt-aid` on the server, initialize the Web SDK in
   the browser, call `page()` after your consent policy allows it, then enable tracking after the
   page response populates browser profile state.

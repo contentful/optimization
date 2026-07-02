@@ -88,8 +88,9 @@ the runtime:
 | iOS          | `OptimizationClient.resolveOptimizedEntry(baseline:selectedOptimizations:)`        | SwiftUI `OptimizedEntry`; UIKit can call the client directly |
 | Android      | `suspend OptimizationClient.resolveOptimizedEntry(...)`                            | Compose `OptimizedEntry`; XML Views `OptimizedEntryView`     |
 
-Next.js uses the Node server and React Web client surfaces, plus Next.js adapter components such as
-`ServerOptimizedEntry` for server-rendered entries.
+Next.js uses the Node server and React Web client surfaces. The isomorphic `OptimizedEntry` resolves
+entries on the server for first paint and hydrates on the client; the deprecated
+`ServerOptimizedEntry` remains only for pure zero-JavaScript Server Component rendering.
 
 ## Inputs and constraints
 
