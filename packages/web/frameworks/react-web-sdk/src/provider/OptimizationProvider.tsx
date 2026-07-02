@@ -2,7 +2,6 @@ import ContentfulOptimization from '@contentful/optimization-web'
 import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
 import { hydrateOptimizationData } from '@contentful/optimization-web/bridge-support'
 import {
-  createOptimizationRootSdkBinding,
   resolveTrackEntryInteractionOptions,
   type OptimizationRootSdkConfig,
   type OnStatesReady as SharedOnStatesReady,
@@ -102,10 +101,7 @@ function hasSetupCallbacks(props: OptimizationProviderProps): boolean {
 export function OptimizationProvider(props: OptimizationProviderProps): ReactElement | null {
   // SDK ref is initialized once during render — safe for SSR and StrictMode.
   const sdkRef = useRef<OptimizationSdk | null>(null)
-  sdkRef.current ??=
-    props.sdk === undefined
-      ? resolveOwnedSdk(props)
-      : createOptimizationRootSdkBinding({ sdk: props.sdk }).sdk
+  sdkRef.current ??= props.sdk ?? resolveOwnedSdk(props)
 
   // Cleanup from onStatesReady; called on unmount when async setup ran.
   const cleanupRef = useRef<(() => void) | null>(null)
@@ -114,8 +110,6 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   // sdk is always available synchronously from sdkRef.
   const [error, setError] = useState<Error | undefined>(undefined)
   const [setupDone, setSetupDone] = useState(() => !hasSetupCallbacks(props))
-
-  const ownedProps = props.sdk === undefined ? props : undefined
 
   // Handles async setup: serverOptimizationState hydration and onStatesReady subscription.
   // Runs at most once per mount; cleanup unsubscribes onStatesReady listeners on teardown.
@@ -152,15 +146,13 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
 
   useLayoutEffect(() => {
     const { current: sdk } = sdkRef
-    if (sdk === null || ownedProps === undefined) return
+    if (sdk === null || props.sdk !== undefined) return
 
     sdk.setConfig({
-      locale: ownedProps.locale,
-      autoTrackEntryInteraction: resolveTrackEntryInteractionOptions(
-        ownedProps.trackEntryInteraction,
-      ),
+      locale: props.locale,
+      autoTrackEntryInteraction: resolveTrackEntryInteractionOptions(props.trackEntryInteraction),
     })
-  }, [ownedProps?.locale, ownedProps?.trackEntryInteraction])
+  }, [props.sdk, props.locale, props.trackEntryInteraction])
 
   const contextValue = useMemo(() => {
     const sdk = setupDone && error === undefined ? (sdkRef.current ?? undefined) : undefined
