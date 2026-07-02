@@ -187,27 +187,35 @@ function canUseInjectedSdkDuringInitialRender(props: OptimizationProviderProps):
 }
 
 /**
+ * Whether the initial render is backed by the injected live SDK directly.
+ *
+ * @remarks
+ * An injected SDK backs the initial render unless `serverOptimizationState` must
+ * paint first. `onStatesReady` does not change this — it is a client-only effect
+ * — so an injected SDK is used as-is even when `onStatesReady` is provided.
+ */
+function injectedSdkBacksInitialRender(props: OptimizationProviderProps): boolean {
+  return props.sdk !== undefined && props.serverOptimizationState === undefined
+}
+
+/**
  * Build the runtime used for the initial render (server render and the first
  * client render, before the mount effect runs).
  *
  * @remarks
- * When an injected SDK can back the initial render directly (no server state and
- * no `onStatesReady`), the live instance is used as-is. Otherwise the initial
- * render uses a read-only snapshot runtime seeded from `serverOptimizationState`
- * plus the configured consent/locale defaults, so first paint reflects the
- * server-resolved state — whether the SDK is owned or injected — and matches the
- * value the live SDK reports after the effect hydrates it.
+ * An injected SDK backs the initial render directly unless `serverOptimizationState`
+ * is provided, in which case a read-only snapshot paints the server-resolved
+ * state first and the effect hydrates the injected SDK with the same data. A
+ * config-driven provider always renders from a snapshot seeded with server state
+ * plus the configured consent/locale defaults, matching the value the live SDK
+ * reports after the effect hydrates it.
  */
 function createInitialRuntime(props: OptimizationProviderProps): WebOptimizationRuntime {
   if (props.sdk !== undefined) {
-    // An injected SDK with no async setup already backs the initial render.
-    if (canUseInjectedSdkDuringInitialRender(props)) {
-      return props.sdk
-    }
-
-    // An injected SDK with server state renders that state first, then the
-    // effect hydrates the live instance with the same data.
-    return createWebSnapshotRuntime({ data: props.serverOptimizationState })
+    // Render the injected SDK directly unless server state must paint first.
+    return injectedSdkBacksInitialRender(props)
+      ? props.sdk
+      : createWebSnapshotRuntime({ data: props.serverOptimizationState })
   }
 
   return createWebSnapshotRuntime({
@@ -222,16 +230,12 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   const { children } = props
   const initialPropsRef = useRef(props)
   const liveLocale = props.sdk === undefined ? props.locale : undefined
-  const [state, setState] = useState<ProviderState>(() => {
-    const injectedIsLive = canUseInjectedSdkDuringInitialRender(props)
-
-    return {
-      error: undefined,
-      isReady: true,
-      isLive: injectedIsLive,
-      runtime: createInitialRuntime(props),
-    }
-  })
+  const [state, setState] = useState<ProviderState>(() => ({
+    error: undefined,
+    isReady: true,
+    isLive: injectedSdkBacksInitialRender(props),
+    runtime: createInitialRuntime(props),
+  }))
 
   useLayoutEffect(() => {
     const { current: initialProps } = initialPropsRef

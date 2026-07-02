@@ -433,12 +433,11 @@ describe('OptimizationProvider onStatesReady', () => {
       </OptimizationProvider>,
     )
 
-    // With onStatesReady present, the server render is backed by a read-only
-    // snapshot runtime (not the injected SDK), so children render immediately
-    // while the onStatesReady side effect defers to the client mount effect.
+    // The injected SDK backs the server render directly (no serverOptimizationState
+    // to paint first), so children render against it. The onStatesReady side
+    // effect defers to the client mount effect and does not run during SSR.
     expect(childRendered).toBe(true)
-    expect(capturedSdk).toBeDefined()
-    expect(capturedSdk).not.toBe(sdk)
+    expect(capturedSdk).toBe(sdk)
     expect(onStatesReady).not.toHaveBeenCalled()
   })
 
