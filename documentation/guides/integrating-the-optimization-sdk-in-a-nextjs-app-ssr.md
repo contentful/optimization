@@ -286,9 +286,10 @@ consent controls, identify, and reset run in the browser through the Next.js cli
 
 > [!NOTE]
 >
-> `serverOptimizationState` on the provider is the recommended handoff. The
-> `<NextjsOptimizationState>` marker is deprecated; it remains only for setups that configure the
-> provider without server data and hydrate page-specific data later under existing SDK context.
+> `serverOptimizationState` on the provider is the recommended handoff. To seed a configuration-only
+> provider and hydrate page-specific data later under existing SDK context, call
+> `hydrateOptimizationData` from `@contentful/optimization-web/bridge-support` inside a Client
+> Component.
 
 **Adapt this to your use case:**
 

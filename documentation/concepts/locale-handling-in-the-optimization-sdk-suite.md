@@ -189,8 +189,9 @@ Locale handoff is separate from server optimization state handoff. Pass the serv
 `serverOptimizationState` on `OptimizationRoot`, resolving it in the layout so the provider renders
 personalized state on the server and hydrates the same data on the client. Keep `defaults` for
 configuration or default state such as consent policy, not for server-returned profile, selected
-optimizations, or changes. (The deprecated `NextjsOptimizationState` marker remains for hydrating
-page-specific data under an existing provider that was not seeded with server data.)
+optimizations, or changes. (To hydrate page-specific data under an existing provider that was not
+seeded with server data, call `hydrateOptimizationData` from
+`@contentful/optimization-web/bridge-support` inside a Client Component.)
 
 ## Node and stateless SDKs
 

@@ -75,11 +75,11 @@ Apply these constraints before choosing server-only, hybrid, or manual tracking:
   views without entry views.
 - Browser Insights delivery needs a current Web SDK profile. In direct Web SDK initialization, the
   profile can come from `defaults.profile`. In React Web and Next.js provider handoff, pass
-  server-returned Optimization data through `serverOptimizationState` (the deprecated
-  `NextjsOptimizationState` marker remains for hydrating page-specific data under an existing
-  provider). The profile can also come from browser-persisted profile state that persistence consent
-  allows the SDK to load, or a browser Experience API call such as `page()`, `identify()`,
-  `track()`, or sticky `trackView()`.
+  server-returned Optimization data through `serverOptimizationState` (call
+  `hydrateOptimizationData` from `@contentful/optimization-web/bridge-support` inside a Client
+  Component to hydrate page-specific data under an existing provider). The profile can also come
+  from browser-persisted profile state that persistence consent allows the SDK to load, or a browser
+  Experience API call such as `page()`, `identify()`, `track()`, or sticky `trackView()`.
 - Browser storage is best-effort. The Web SDK uses `localStorage` and the `ctfl-opt-aid` cookie when
   persistence consent permits continuity; if storage fails or is unavailable, continuity is limited
   to in-memory state.
@@ -395,10 +395,10 @@ delivery. Choose one of these patterns before enabling interaction tracking:
 
 - **Bootstrap the server profile.** For direct Web SDK initialization, serialize the `profile`
   returned by the server's `page()` or `identify()` call and pass it as `defaults.profile`. For
-  React Web and Next.js, pass the server `OptimizationData` through `serverOptimizationState` (the
-  deprecated `NextjsOptimizationState` marker remains for hydrating page-specific data under an
-  existing provider). Use this when the same server response already rendered personalized HTML from
-  that profile.
+  React Web and Next.js, pass the server `OptimizationData` through `serverOptimizationState` (call
+  `hydrateOptimizationData` from `@contentful/optimization-web/bridge-support` inside a Client
+  Component to hydrate page-specific data under an existing provider). Use this when the same server
+  response already rendered personalized HTML from that profile.
 - **Re-evaluate in the browser.** Persist `ctfl-opt-aid` on the server, initialize the Web SDK in
   the browser, call `page()` after your consent policy allows it, then enable tracking after the
   page response populates browser profile state.
@@ -409,9 +409,9 @@ delivery. Choose one of these patterns before enabling interaction tracking:
 
 In Next.js SSR integrations, `initialPageEvent="skip"` intentionally avoids the initial browser
 Experience API `page()` request when the server already emitted that page event. If that skip leaves
-the browser without `serverOptimizationState` or `NextjsOptimizationState`, and without a prior
-persisted browser profile, automatic entry views, clicks, and hovers cannot deliver until a later
-browser Experience API call populates profile state.
+the browser without `serverOptimizationState` and without a prior persisted browser profile,
+automatic entry views, clicks, and hovers cannot deliver until a later browser Experience API call
+populates profile state.
 
 If the Web SDK must read `ctfl-opt-aid`, do not mark that cookie as `HttpOnly`. Configure `path`,
 `domain`, and `SameSite` so the server route and browser code refer to the same profile.
