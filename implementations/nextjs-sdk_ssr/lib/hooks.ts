@@ -44,7 +44,7 @@ export function useEventStream<T>(
   parse: (event: unknown, id: string) => T | undefined,
   update: (previous: T[], next: T) => T[],
 ): EventStreamState<T> {
-  const { sdk, isReady } = useOptimizationContext()
+  const { sdk } = useOptimizationContext()
   const [events, setEvents] = useState<T[]>([])
   const [rawCount, setRawCount] = useState(0)
   const nextId = useRef(0)
@@ -52,7 +52,7 @@ export function useEventStream<T>(
   const updateRef = useRef(update)
 
   useEffect(() => {
-    if (!isReady || sdk === undefined) return
+    if (sdk === undefined) return
 
     const subscription = sdk.states.eventStream.subscribe((event: unknown) => {
       const id = `event-${nextId.current}`
@@ -69,22 +69,22 @@ export function useEventStream<T>(
       setRawCount(0)
       nextId.current = 0
     }
-  }, [isReady, sdk])
+  }, [sdk])
 
   return { events, rawCount }
 }
 
 export function useFlagSubscription(flagName: string): unknown {
-  const { sdk, isReady } = useOptimizationContext()
+  const { sdk } = useOptimizationContext()
   const [value, setValue] = useState<unknown>(undefined)
 
   useEffect(() => {
-    if (!sdk || !isReady) return
+    if (!sdk) return
     const subscription = sdk.states.flag(flagName).subscribe(setValue)
     return () => {
       subscription.unsubscribe()
     }
-  }, [isReady, sdk, flagName])
+  }, [sdk, flagName])
 
   return value
 }

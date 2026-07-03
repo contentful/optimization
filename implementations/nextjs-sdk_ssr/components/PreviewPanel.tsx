@@ -5,10 +5,10 @@ import { useOptimizationContext } from '@contentful/optimization-nextjs/client'
 import { useEffect, type JSX } from 'react'
 
 export function PreviewPanel(): JSX.Element | null {
-  const { isReady, sdk } = useOptimizationContext()
+  const { sdk } = useOptimizationContext()
 
   useEffect(() => {
-    if (!appConfig.previewPanelEnabled || !isReady || sdk === undefined) {
+    if (!appConfig.previewPanelEnabled || sdk === undefined) {
       return
     }
 
@@ -25,7 +25,7 @@ export function PreviewPanel(): JSX.Element | null {
       .catch((error: unknown) => {
         console.warn('Failed to attach the Contentful Optimization preview panel.', error)
       })
-  }, [isReady, sdk])
+  }, [sdk])
 
   return null
 }
