@@ -340,11 +340,11 @@ describe('OptimizationProvider onStatesReady', () => {
 
   it('renders children from a snapshot runtime during server render without constructing the owned sdk', () => {
     let childRendered = false
-    let isReadyDuringRender = false
+    let sdkPresentDuringRender = false
 
     function Probe(): null {
       childRendered = true
-      isReadyDuringRender = useOptimizationContext().isReady
+      sdkPresentDuringRender = useOptimizationContext().sdk !== undefined
       return null
     }
 
@@ -361,7 +361,7 @@ describe('OptimizationProvider onStatesReady', () => {
     // Children render on the server (the provider is isomorphic), backed by a
     // read-only snapshot runtime, but the live browser SDK is never constructed.
     expect(childRendered).toBe(true)
-    expect(isReadyDuringRender).toBe(true)
+    expect(sdkPresentDuringRender).toBe(true)
     expect(window.contentfulOptimization).toBeUndefined()
   })
 
@@ -467,7 +467,6 @@ describe('OptimizationProvider onStatesReady', () => {
 
     expect(capturedContext).toEqual({
       sdk: undefined,
-      isReady: false,
       error,
     })
     expect(destroySpy).toHaveBeenCalledTimes(1)

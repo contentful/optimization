@@ -79,7 +79,7 @@ describe('useMergeTagResolver', () => {
     }
 
     renderToString(
-      <OptimizationContext.Provider value={{ sdk, isReady: true, error: undefined }}>
+      <OptimizationContext.Provider value={{ sdk, error: undefined }}>
         <Probe />
       </OptimizationContext.Provider>,
     )

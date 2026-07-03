@@ -47,12 +47,16 @@ export function useOptimizedEntrySnapshot({
   trackViews,
   viewDurationUpdateIntervalMs,
 }: UseOptimizedEntrySnapshotParams): OptimizedEntrySnapshot {
-  const { sdk, isReady } = useOptimizationContext()
+  const { sdk } = useOptimizationContext()
   const liveUpdatesContext = useLiveUpdates()
-  // Seed from context readiness so the server render (and the first client
-  // render) presents resolved content instead of the loading state; effects,
-  // which do not run on the server, would otherwise leave this false during SSR.
-  const [isPresentationReady, setIsPresentationReady] = useState(isReady)
+  // The isomorphic runtime is present from the initial render (snapshot on the
+  // server, live SDK after hydration), so SDK-state readiness tracks its
+  // presence.
+  const isSdkStateReady = sdk !== undefined
+  // Seed from readiness so the server render (and the first client render)
+  // presents resolved content instead of the loading state; effects, which do
+  // not run on the server, would otherwise leave this false during SSR.
+  const [isPresentationReady, setIsPresentationReady] = useState(isSdkStateReady)
 
   const controllerOptions = useMemo(
     () => ({
@@ -63,7 +67,7 @@ export function useOptimizedEntrySnapshot({
       hasCustomLoadingFallback,
       isPreviewPanelOpen: liveUpdatesContext.previewPanelVisible,
       sdk,
-      isSdkStateReady: isReady,
+      isSdkStateReady,
       targetDisplay,
       clickable,
       hoverDurationUpdateIntervalMs,
@@ -78,7 +82,7 @@ export function useOptimizedEntrySnapshot({
       clickable,
       hasCustomLoadingFallback,
       hoverDurationUpdateIntervalMs,
-      isReady,
+      isSdkStateReady,
       liveUpdates,
       liveUpdatesContext.globalLiveUpdates,
       liveUpdatesContext.previewPanelVisible,
@@ -94,8 +98,8 @@ export function useOptimizedEntrySnapshot({
   const [snapshot, setSnapshot] = useState<OptimizedEntrySnapshot>(() => controller.getSnapshot())
 
   useEffect(() => {
-    setIsPresentationReady(isReady)
-  }, [isReady])
+    setIsPresentationReady(isSdkStateReady)
+  }, [isSdkStateReady])
 
   useEffect(() => {
     controller.setSnapshotListener(setSnapshot)

@@ -23,7 +23,6 @@ export interface OptimizationContextValue {
    * environment.
    */
   readonly sdk: OptimizationSdk | undefined
-  readonly isReady: boolean
   readonly error: Error | undefined
 }
 

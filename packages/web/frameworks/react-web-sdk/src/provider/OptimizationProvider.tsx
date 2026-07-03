@@ -34,7 +34,6 @@ type ProviderSdkBinding = OptimizationRootSdkBinding<OptimizationSdk>
 
 interface ProviderState {
   readonly error: Error | undefined
-  readonly isReady: boolean
   /** Whether `runtime` is the live browser SDK (vs the initial snapshot runtime). */
   readonly isLive: boolean
   readonly runtime: WebOptimizationRuntime | undefined
@@ -232,7 +231,6 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   const liveLocale = props.sdk === undefined ? props.locale : undefined
   const [state, setState] = useState<ProviderState>(() => ({
     error: undefined,
-    isReady: true,
     isLive: injectedSdkBacksInitialRender(props),
     runtime: createInitialRuntime(props),
   }))
@@ -264,12 +262,12 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       }
 
       sdkBinding = initializedBinding
-      setState({ error: undefined, isReady: true, isLive: true, runtime: initializedBinding.sdk })
+      setState({ error: undefined, isLive: true, runtime: initializedBinding.sdk })
     }
 
     function setInitializationError(error: unknown): void {
       if (!setupState.disposed) {
-        setState({ error: toError(error), isReady: false, isLive: false, runtime: undefined })
+        setState({ error: toError(error), isLive: false, runtime: undefined })
       }
     }
 
@@ -308,13 +306,13 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     try {
       state.runtime.setLocale(liveLocale)
     } catch (error: unknown) {
-      setState({ error: toError(error), isReady: true, isLive: true, runtime: state.runtime })
+      setState({ error: toError(error), isLive: true, runtime: state.runtime })
     }
   }, [liveLocale, props.sdk, state.isLive, state.runtime])
 
   const contextValue = useMemo(
-    () => ({ sdk: state.runtime, isReady: state.isReady, error: state.error }),
-    [state.runtime, state.isReady, state.error],
+    () => ({ sdk: state.runtime, error: state.error }),
+    [state.runtime, state.error],
   )
 
   return (
