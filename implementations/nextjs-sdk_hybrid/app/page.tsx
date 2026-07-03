@@ -1,18 +1,16 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { EntryCard } from '@/components/EntryCard'
 import { loadPageEntries } from '@/lib/contentful'
-import { getOptimizationData } from '@/lib/optimization'
 import { toIdMap } from '@/lib/util'
-import { NextjsOptimizationState } from '@contentful/optimization-nextjs/client'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 
 const NESTED_CONTENT_TYPE = 'nestedContent'
 
 export default async function Home() {
-  const [entries, optimizationData] = await Promise.all([
-    loadPageEntries(PAGES.home.ids),
-    getOptimizationData(),
-  ])
+  // The layout seeds the provider with serverOptimizationState, and EntryCard's
+  // OptimizedEntry resolves variants from context, so the page only needs the
+  // baseline entries.
+  const entries = await loadPageEntries(PAGES.home.ids)
   const entriesById = toIdMap(entries)
   const liveUpdatesEntry = entriesById.get(PAGES.home.liveUpdates)
 
@@ -27,7 +25,6 @@ export default async function Home() {
       </div>
 
       <ControlPanel />
-      <NextjsOptimizationState data={optimizationData} />
 
       <section className="page-section" data-testid="live-updates-section">
         <header className="page-section__header">

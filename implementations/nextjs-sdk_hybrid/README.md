@@ -40,22 +40,16 @@ and Optimization state, then the browser SDK resolves entries and owns reactive 
 handoff. It demonstrates:
 
 - Server request context forwarding through proxy
-- Server-to-browser state handoff through `NextjsOptimizationState`
-- Browser-side entry resolution with `OptimizedEntry` after browser startup
+- Server-to-browser state handoff through `serverOptimizationState` on `OptimizationRoot`
+- Isomorphic entry rendering with `OptimizedEntry`, which resolves on the server and re-resolves in
+  the browser after startup
 - Live re-resolution after consent, identify, reset, and client-side route changes
 - `initialPageEvent="skip"` when the server request helper already emitted the initial page event
 - Preview panel attachment behind `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`
 
 This hybrid pattern keeps App Router server fetching in place, hands Optimization state to the
-browser, and lets the browser SDK own entry resolution and reactive updates after startup.
-
-> [!NOTE]
->
-> This implementation still uses `NextjsOptimizationState` for the state handoff, which is now
-> deprecated. New integrations should pass server Optimization data to `OptimizationRoot` through
-> the `serverOptimizationState` prop instead; the provider renders personalized state on the server
-> and hydrates the same data on the client. See the
-> [Next.js SSR guide](../../documentation/guides/integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md).
+browser through the provider's `serverOptimizationState` prop, and lets the browser SDK own entry
+re-resolution and reactive updates after startup.
 
 ## Architecture
 
@@ -70,17 +64,18 @@ First request
     getOptimizationData()
       calls getNextjsServerOptimizationData() with cookies() and headers()
 
-  app/page.tsx and app/page-two/page.tsx
-    fetch CDA entries server-side
-    render NextjsOptimizationState with server Optimization data
-
-  app/layout.tsx
+  app/layout.tsx (Server Component)
     owns one OptimizationRoot for browser takeover and route tracking
+    passes serverOptimizationState={await getOptimizationData()}
+      provider renders personalized state on the server and hydrates the live SDK
+
+  app/page.tsx and app/page-two/page.tsx
+    fetch CDA entries server-side and render them through OptimizedEntry
 
 Browser runtime
-  NextjsOptimizationState hydrates Optimization data into the nearest runtime
+  provider swaps the snapshot runtime for the live browser SDK
   NextAppAutoPageTracker emits route page events
-  OptimizedEntry resolves entries from current selectedOptimizations
+  OptimizedEntry re-resolves entries from current selectedOptimizations
   LiveUpdatesProvider controls reactive re-resolution
 ```
 

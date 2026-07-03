@@ -2,6 +2,7 @@ import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvide
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
 import { appConfig } from '@/lib/config'
+import { getOptimizationData } from '@/lib/optimization'
 import { getAppConsent } from '@/lib/util'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@contentful/optimization-nextjs/client'
 import 'e2e-web/theme.css'
@@ -29,6 +30,9 @@ export default async function RootLayout({
   const cookieStore = await cookies()
   const appConsent = getAppConsent(cookieStore)
   const htmlLang = getHtmlLang(appConfig.locale)
+  // Seed the provider with server-resolved state (deduplicated per request with
+  // the pages) so first paint is personalized before the browser takes over.
+  const serverOptimizationState = await getOptimizationData()
 
   return (
     <html lang={htmlLang}>
@@ -45,6 +49,7 @@ export default async function RootLayout({
             version: '0.1.0',
           }}
           defaults={{ consent: appConsent, persistenceConsent: appConsent }}
+          serverOptimizationState={serverOptimizationState}
         >
           <GlobalLiveUpdatesProvider>
             <PreviewPanel />
