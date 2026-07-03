@@ -233,8 +233,8 @@ Pass direct single-locale field values to the runtime-specific entry resolution 
 - React Web and React Native `OptimizedEntry` and `useEntryResolver()`.
 - React Web and Next.js client `useOptimizedEntry()`, and the isomorphic `OptimizedEntry` that
   resolves on the server and hydrates on the client.
-- Next.js server `resolveOptimizedEntry()` for Server Component resolution; the deprecated
-  `ServerOptimizedEntry` remains for pure zero-JavaScript server rendering.
+- Next.js server `resolveOptimizedEntry()` for Server Component resolution;
+  `ServerOnlyOptimizedEntry` for pure zero-JavaScript server rendering.
 - iOS `OptimizationClient.resolveOptimizedEntry(baseline:selectedOptimizations:)` and SwiftUI
   `OptimizedEntry(entry:)`.
 - Android `OptimizationClient.resolveOptimizedEntry(...)`, Compose `OptimizedEntry(entry:)`, and XML

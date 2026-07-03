@@ -144,7 +144,7 @@ export type NextjsPageContextInput =
   | NonNullable<UniversalEventBuilderArgs['page']>
   | CreateNextjsPageContextOptions
 
-type ServerOptimizedEntryOwnProps<TElement extends keyof JSX.IntrinsicElements> =
+type ServerOnlyOptimizedEntryOwnProps<TElement extends keyof JSX.IntrinsicElements> =
   ServerTrackingAttributeOptions & {
     readonly as?: TElement
     readonly baselineEntry: ServerTrackingBaselineEntry
@@ -154,11 +154,11 @@ type ServerOptimizedEntryOwnProps<TElement extends keyof JSX.IntrinsicElements> 
 
 type DataCtflAttributeName = `data-ctfl-${string}`
 
-export type ServerOptimizedEntryProps<TElement extends keyof JSX.IntrinsicElements = 'div'> =
-  ServerOptimizedEntryOwnProps<TElement> &
+export type ServerOnlyOptimizedEntryProps<TElement extends keyof JSX.IntrinsicElements = 'div'> =
+  ServerOnlyOptimizedEntryOwnProps<TElement> &
     Omit<
       JSX.IntrinsicElements[TElement],
-      keyof ServerOptimizedEntryOwnProps<TElement> | DataCtflAttributeName
+      keyof ServerOnlyOptimizedEntryOwnProps<TElement> | DataCtflAttributeName
     >
 
 export function createNextjsOptimization(config: OptimizationNodeConfig): ContentfulOptimization {
@@ -344,16 +344,20 @@ export function persistNextjsAnonymousId(
  * Renders a server-resolved entry in a Server Component with tracking
  * attributes and no client JavaScript for the entry itself.
  *
- * @deprecated Prefer the isomorphic `OptimizedEntry` from
- * `@contentful/optimization-react-web`, which now server-renders for first paint
- * and hydrates for interactivity and live updates, using a single component and
- * automatic variant resolution. Use this component only when you specifically
- * need a pure Server Component with zero client JavaScript for the entry and no
- * live updates, and are resolving `resolvedData` yourself on the server.
+ * @remarks
+ * Use this component when you need a pure Server Component that ships zero client
+ * JavaScript for the entry and no live updates, resolving `resolvedData`
+ * yourself on the server. For the common case — first-paint server rendering
+ * plus client-side interactivity and live updates from a single component with
+ * automatic variant resolution — prefer the isomorphic `OptimizedEntry` from
+ * `@contentful/optimization-react-web`.
+ *
+ * When a design-system component must own the wrapper markup, use the
+ * lower-level {@link getServerTrackingAttributes} helper directly instead.
  *
  * @public
  */
-export function ServerOptimizedEntry<TElement extends keyof JSX.IntrinsicElements = 'div'>({
+export function ServerOnlyOptimizedEntry<TElement extends keyof JSX.IntrinsicElements = 'div'>({
   as,
   baselineEntry,
   children,
@@ -365,7 +369,7 @@ export function ServerOptimizedEntry<TElement extends keyof JSX.IntrinsicElement
   trackViews,
   viewDurationUpdateIntervalMs,
   ...htmlProps
-}: ServerOptimizedEntryProps<TElement>): ReactElement {
+}: ServerOnlyOptimizedEntryProps<TElement>): ReactElement {
   const Element = as ?? 'div'
   const trackingAttributes: ServerTrackingAttributes = getServerTrackingAttributes(
     baselineEntry,

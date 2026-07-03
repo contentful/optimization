@@ -452,9 +452,9 @@ function ArticleEntry({ baselineEntry }: { baselineEntry: Entry }) {
 
 > [!NOTE]
 >
-> `ServerOptimizedEntry` is deprecated in favor of `OptimizedEntry`. It remains valid only when you
-> need a pure Server Component with zero client JavaScript for the entry and no live updates, and
-> are resolving `resolvedData` yourself on the server.
+> `OptimizedEntry` is the default for entry rendering. Use `ServerOnlyOptimizedEntry` when you need
+> a pure Server Component with zero client JavaScript for the entry and no live updates, resolving
+> `resolvedData` yourself on the server.
 
 Use the lower-level `getServerTrackingAttributes()` helper when a design-system component must own
 the wrapper markup and forward the `data-ctfl-*` attributes to the DOM element the browser SDK

@@ -123,12 +123,11 @@ import { OptimizedEntry } from '@contentful/optimization-nextjs/client'
 
 > [!NOTE]
 >
-> `ServerOptimizedEntry` is deprecated. Pass server data through the provider's
-> `serverOptimizationState` prop and render entries with `OptimizedEntry`. To seed a
-> configuration-only provider and hydrate page-specific data later, call `hydrateOptimizationData`
-> from `@contentful/optimization-web/bridge-support` inside a Client Component.
-> `ServerOptimizedEntry` remains for pure zero-JavaScript Server Component rendering where you
-> resolve `resolvedData` yourself.
+> `OptimizedEntry` is the default for entry rendering. To seed a configuration-only provider and
+> hydrate page-specific data later, call `hydrateOptimizationData` from
+> `@contentful/optimization-web/bridge-support` inside a Client Component. Use
+> `ServerOnlyOptimizedEntry` from `@contentful/optimization-nextjs/server` when you need a pure
+> zero-JavaScript Server Component entry with no live updates, resolving `resolvedData` yourself.
 
 ## Request context setup
 

@@ -1,6 +1,6 @@
 import {
   NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER,
-  ServerOptimizedEntry,
+  ServerOnlyOptimizedEntry,
   bindNextjsOptimizationRequest,
   createNextjsOptimization,
   createNextjsPageContext,
@@ -415,7 +415,7 @@ describe('Next.js server helpers', () => {
   })
 
   it('renders a server wrapper with tracking attributes and caller props', () => {
-    const element = ServerOptimizedEntry({
+    const element = ServerOnlyOptimizedEntry({
       as: 'article',
       baselineEntry,
       children: 'Rendered content',

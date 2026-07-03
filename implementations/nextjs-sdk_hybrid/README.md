@@ -158,7 +158,7 @@ The E2E suite reuses the shared `lib/e2e-web` browser scenarios for CSR and hydr
 the hybrid app configuration. It covers shared variant resolution, tracking, navigation, live
 updates, offline queue recovery, and the hybrid-specific hydration check that a consented server
 handoff does not issue a duplicate client Experience request. Package unit tests cover lower-level
-Next.js adapter request-context, `ServerOptimizedEntry`, and initial page-event helper behavior.
+Next.js adapter request-context, `ServerOnlyOptimizedEntry`, and initial page-event helper behavior.
 
 Use Playwright UI or codegen when needed:
 

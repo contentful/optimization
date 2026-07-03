@@ -89,8 +89,8 @@ the runtime:
 | Android      | `suspend OptimizationClient.resolveOptimizedEntry(...)`                            | Compose `OptimizedEntry`; XML Views `OptimizedEntryView`     |
 
 Next.js uses the Node server and React Web client surfaces. The isomorphic `OptimizedEntry` resolves
-entries on the server for first paint and hydrates on the client; the deprecated
-`ServerOptimizedEntry` remains only for pure zero-JavaScript Server Component rendering.
+entries on the server for first paint and hydrates on the client; `ServerOnlyOptimizedEntry` is
+available for pure zero-JavaScript Server Component rendering.
 
 ## Inputs and constraints
 

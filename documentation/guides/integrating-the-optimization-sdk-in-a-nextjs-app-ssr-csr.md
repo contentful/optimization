@@ -582,9 +582,9 @@ function ServerRenderedEntry({ baselineEntry }: ServerRenderedEntryProps) {
 
 > [!NOTE]
 >
-> `ServerOptimizedEntry` is deprecated in favor of `OptimizedEntry`. Use it only for a pure Server
-> Component with zero client JavaScript for the entry and no live updates, resolving `resolvedData`
-> yourself on the server.
+> `OptimizedEntry` is the default for entry rendering. Use `ServerOnlyOptimizedEntry` only for a
+> pure Server Component with zero client JavaScript for the entry and no live updates, resolving
+> `resolvedData` yourself on the server.
 
 ### Browser root and server optimization state
 
@@ -779,8 +779,8 @@ delivery.
    them; use `trackEntryInteraction` only to opt out of interaction types the app must not observe.
 2. Use `OptimizedEntry` props such as `clickable`, `trackViews`, `trackClicks`, `trackHovers`,
    `viewDurationUpdateIntervalMs`, and `hoverDurationUpdateIntervalMs` for per-entry control.
-3. `OptimizedEntry` already renders server-side and emits tracking metadata; use the deprecated
-   `ServerOptimizedEntry` only for a pure zero-JavaScript Server Component entry.
+3. `OptimizedEntry` already renders server-side and emits tracking metadata; use
+   `ServerOnlyOptimizedEntry` only for a pure zero-JavaScript Server Component entry.
 4. Use `sdk.tracking.enableElement(...)` from `useOptimization()` only for app-owned manual
    observation cases.
 5. Verify consent gates. Page events can be allowed before full consent, but entry views, clicks,
