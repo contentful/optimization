@@ -95,9 +95,12 @@ class SnapshotRuntime implements OptimizationRuntime {
       locale: staticObservable(snapshot.locale),
       canOptimize: staticObservable(canOptimize),
       optimizationPossible: staticObservable(true),
-      experienceRequestState: staticObservable(
-        snapshot.data ? { status: 'success' } : { status: 'idle' },
-      ),
+      // A snapshot is a settled, request-scoped result: no experience request is
+      // in flight for the render it backs (server render and the client's first
+      // render). Report `success` so consumers such as OptimizedEntry present
+      // resolved-or-baseline content instead of a loading state — and so the
+      // server render matches the client's first render before hydration.
+      experienceRequestState: staticObservable({ status: 'success' }),
       selectedOptimizations: staticObservable(this.currentSelectedOptimizations),
       previewPanelAttached: staticObservable(false),
       previewPanelOpen: staticObservable(false),

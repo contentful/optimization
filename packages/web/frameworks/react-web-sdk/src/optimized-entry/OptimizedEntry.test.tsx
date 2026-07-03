@@ -604,7 +604,7 @@ describe('OptimizedEntry', () => {
     await spanView.unmount()
   })
 
-  it('renders invisible loading target during SSR for non-optimized entries', () => {
+  it('renders visible resolved content during SSR when the runtime is ready', () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
     const markup = renderToStringWithoutWindow(() =>
@@ -616,9 +616,10 @@ describe('OptimizedEntry', () => {
       ),
     )
 
-    expect(markup).toContain('data-ctfl-loading-layout-target="true"')
-    expect(markup).toContain('visibility:hidden')
+    // The provider context is ready, so the entry presents its resolved content
+    // during SSR rather than the hidden loading target.
     expect(markup).toContain('baseline')
+    expect(markup).not.toContain('visibility:hidden')
   })
 
   it('renders non-optimized content after sdk initialization', async () => {

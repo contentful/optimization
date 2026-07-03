@@ -49,7 +49,10 @@ export function useOptimizedEntrySnapshot({
 }: UseOptimizedEntrySnapshotParams): OptimizedEntrySnapshot {
   const { sdk, isReady } = useOptimizationContext()
   const liveUpdatesContext = useLiveUpdates()
-  const [isPresentationReady, setIsPresentationReady] = useState(false)
+  // Seed from context readiness so the server render (and the first client
+  // render) presents resolved content instead of the loading state; effects,
+  // which do not run on the server, would otherwise leave this false during SSR.
+  const [isPresentationReady, setIsPresentationReady] = useState(isReady)
 
   const controllerOptions = useMemo(
     () => ({

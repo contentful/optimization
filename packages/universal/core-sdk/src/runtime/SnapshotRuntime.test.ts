@@ -79,11 +79,13 @@ describe('SnapshotRuntime', () => {
       expect(runtime.hasConsent('track')).toBe(true)
     })
 
-    it('reports canOptimize false and idle request state without server data', () => {
+    it('reports canOptimize false and a settled request state without server data', () => {
       const runtime = createSnapshotRuntime()
 
       expect(runtime.states.canOptimize.current).toBe(false)
-      expect(runtime.states.experienceRequestState.current).toEqual({ status: 'idle' })
+      // A snapshot is always settled — no experience request is in flight for the
+      // render it backs — so consumers present content instead of a loading state.
+      expect(runtime.states.experienceRequestState.current).toEqual({ status: 'success' })
       expect(runtime.states.profile.current).toBeUndefined()
       expect(runtime.hasConsent('track')).toBe(false)
     })

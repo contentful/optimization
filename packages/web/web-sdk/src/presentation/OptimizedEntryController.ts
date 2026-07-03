@@ -208,7 +208,40 @@ export class OptimizedEntryController {
 
   constructor(options: OptimizedEntryControllerOptions) {
     this.options = normalizeOptions(options)
+    // Prime from the SDK state's current values so the initial snapshot resolves
+    // the selected variant during server rendering and the first client render,
+    // before connect() attaches live subscriptions.
+    this.primeStateFromSdk()
     this.snapshot = this.createSnapshot()
+  }
+
+  /**
+   * Read the current SDK state values into local fields without subscribing.
+   *
+   * @remarks
+   * Used at construction (so the first snapshot resolves the variant, including
+   * during SSR where {@link OptimizedEntryController.connect} never runs) and at
+   * the start of {@link OptimizedEntryController.resubscribe}.
+   */
+  private primeStateFromSdk(): void {
+    const { options } = this
+    const { sdk, isSdkStateReady } = options
+    if (!sdk || !isSdkStateReady) {
+      return
+    }
+
+    const { states } = sdk
+    const { canOptimize, experienceRequestState, optimizationPossible, selectedOptimizations } =
+      states
+    const { current: currentSelectedOptimizations } = selectedOptimizations
+    const { current: currentCanOptimize } = canOptimize
+    const { current: currentExperienceRequestState } = experienceRequestState
+    const { current: currentOptimizationPossible } = optimizationPossible
+
+    this.acceptSelectedOptimizations(currentSelectedOptimizations)
+    this.canOptimize = currentCanOptimize
+    this.hasExperienceRequestSettled = isExperienceRequestSettled(currentExperienceRequestState)
+    this.optimizationPossible = currentOptimizationPossible
   }
 
   setSnapshotListener(listener: OptimizedEntrySnapshotListener | undefined): void {
@@ -290,18 +323,11 @@ export class OptimizedEntryController {
       return
     }
 
+    this.primeStateFromSdk()
+
     const { states } = sdk
     const { canOptimize, experienceRequestState, optimizationPossible, selectedOptimizations } =
       states
-    const { current: currentSelectedOptimizations } = selectedOptimizations
-    const { current: currentCanOptimize } = canOptimize
-    const { current: currentExperienceRequestState } = experienceRequestState
-    const { current: currentOptimizationPossible } = optimizationPossible
-
-    this.acceptSelectedOptimizations(currentSelectedOptimizations)
-    this.canOptimize = currentCanOptimize
-    this.hasExperienceRequestSettled = isExperienceRequestSettled(currentExperienceRequestState)
-    this.optimizationPossible = currentOptimizationPossible
 
     this.subscriptions = [
       selectedOptimizations.subscribe((nextSelectedOptimizations) => {
