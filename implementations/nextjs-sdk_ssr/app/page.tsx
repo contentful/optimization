@@ -1,32 +1,17 @@
 import { ControlPanel } from '@/components/ControlPanel'
 import { EntryCard } from '@/components/EntryCard'
 import { LiveEntryCard } from '@/components/LiveEntryCard'
-import { type ContentEntry, loadPageEntries } from '@/lib/contentful'
-import { getServerOptimizationData, optimization } from '@/lib/optimization'
+import { loadPageEntries } from '@/lib/contentful'
 import { toIdMap } from '@/lib/util'
-import { type ServerTrackingResolvedData } from '@contentful/optimization-nextjs/server'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 
 export default async function Home() {
-  const [entries, optimizationData] = await Promise.all([
-    loadPageEntries(PAGES.home.ids),
-    getServerOptimizationData(),
-  ])
+  // Entries are fetched server-side; the isomorphic OptimizedEntry (inside
+  // EntryCard) resolves the variant from provider context on both server and
+  // client, so the page no longer pre-resolves or threads resolved data.
+  const entries = await loadPageEntries(PAGES.home.ids)
 
   const entriesById = toIdMap(entries)
-  const resolvedById = new Map(
-    entries.map((entry) => [
-      entry.sys.id,
-      optimization.resolveOptimizedEntry(entry, optimizationData?.selectedOptimizations),
-    ]),
-  )
-
-  const profile = optimizationData?.profile
-  const getMergeTagValue = (entry: unknown): string | undefined =>
-    optimization.getMergeTagValue(entry as never, profile)
-  const resolveEntry = (entry: ContentEntry): ServerTrackingResolvedData =>
-    optimization.resolveOptimizedEntry(entry, optimizationData?.selectedOptimizations)
-
   const liveUpdatesEntry = entriesById.get(PAGES.home.liveUpdates)
 
   return (
@@ -79,17 +64,13 @@ export default async function Home() {
           <div id="auto-observed" className="entry-grid">
             {PAGES.home.auto.flatMap((id) => {
               const entry = entriesById.get(id)
-              const resolvedData = resolvedById.get(id)
-              if (!entry || !resolvedData) return []
+              if (!entry) return []
               return [
                 <EntryCard
                   key={id}
                   baselineEntry={entry}
                   clickScenario={CLICK_SCENARIOS[id]}
-                  getMergeTagValue={getMergeTagValue}
                   manualTracking={false}
-                  resolveEntry={resolveEntry}
-                  resolvedData={resolvedData}
                 />,
               ]
             })}
@@ -103,18 +84,8 @@ export default async function Home() {
           <div id="manually-observed" className="entry-grid">
             {PAGES.home.manual.flatMap((id) => {
               const entry = entriesById.get(id)
-              const resolvedData = resolvedById.get(id)
-              if (!entry || !resolvedData) return []
-              return [
-                <EntryCard
-                  key={id}
-                  baselineEntry={entry}
-                  getMergeTagValue={getMergeTagValue}
-                  manualTracking={true}
-                  resolveEntry={resolveEntry}
-                  resolvedData={resolvedData}
-                />,
-              ]
+              if (!entry) return []
+              return [<EntryCard key={id} baselineEntry={entry} manualTracking={true} />]
             })}
           </div>
         </section>

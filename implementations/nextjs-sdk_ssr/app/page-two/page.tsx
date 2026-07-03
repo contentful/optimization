@@ -2,26 +2,18 @@ import { ControlPanel } from '@/components/ControlPanel'
 import { CustomViewTracker } from '@/components/CustomViewTracker'
 import { EntryCard } from '@/components/EntryCard'
 import { loadPageEntries } from '@/lib/contentful'
-import { getServerOptimizationData, optimization } from '@/lib/optimization'
 import { toIdMap } from '@/lib/util'
 import { PAGES } from 'e2e-web'
 import Link from 'next/link'
 
 export default async function PageTwo() {
-  const [entries, optimizationData] = await Promise.all([
-    loadPageEntries(PAGES.pageTwo.ids),
-    getServerOptimizationData(),
-  ])
+  // EntryCard's OptimizedEntry resolves variants from provider context, so the
+  // page only needs the baseline entries.
+  const entries = await loadPageEntries(PAGES.pageTwo.ids)
 
   const entriesById = toIdMap(entries)
   const autoEntry = entriesById.get(PAGES.pageTwo.auto)
   const manualEntry = entriesById.get(PAGES.pageTwo.manual)
-  const autoResolved = autoEntry
-    ? optimization.resolveOptimizedEntry(autoEntry, optimizationData?.selectedOptimizations)
-    : undefined
-  const manualResolved = manualEntry
-    ? optimization.resolveOptimizedEntry(manualEntry, optimizationData?.selectedOptimizations)
-    : undefined
 
   return (
     <section data-testid="page-two-view">
@@ -41,12 +33,8 @@ export default async function PageTwo() {
             <h2>Auto-observed</h2>
           </header>
           <div className="entry-grid">
-            {autoEntry && autoResolved ? (
-              <EntryCard
-                baselineEntry={autoEntry}
-                resolvedData={autoResolved}
-                manualTracking={false}
-              />
+            {autoEntry ? (
+              <EntryCard baselineEntry={autoEntry} manualTracking={false} />
             ) : (
               <p>Auto tracked entry is unavailable.</p>
             )}
@@ -58,12 +46,8 @@ export default async function PageTwo() {
             <h2>Manually-observed</h2>
           </header>
           <div className="entry-grid">
-            {manualEntry && manualResolved ? (
-              <EntryCard
-                baselineEntry={manualEntry}
-                resolvedData={manualResolved}
-                manualTracking={true}
-              />
+            {manualEntry ? (
+              <EntryCard baselineEntry={manualEntry} manualTracking={true} />
             ) : (
               <p>Manual tracked entry is unavailable.</p>
             )}

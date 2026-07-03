@@ -1,13 +1,12 @@
+'use client'
+
 import type { ContentEntry, ContentEntrySkeleton } from '@/lib/contentful'
 import {
   isRecord,
   isResolvedContentfulEntry,
   isRichTextDocument,
 } from '@contentful/optimization-nextjs/api-schemas'
-import {
-  ServerOptimizedEntry,
-  type ServerTrackingResolvedData,
-} from '@contentful/optimization-nextjs/server'
+import { OptimizedEntry, useMergeTagResolver } from '@contentful/optimization-nextjs/client'
 import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
 import { INLINES } from '@contentful/rich-text-types'
 import type { EntryClickScenario } from 'e2e-web'
@@ -20,41 +19,38 @@ type MergeTagResolver = (entry: unknown) => string | undefined
 interface EntryCardProps {
   baselineEntry: ContentEntry
   clickScenario?: EntryClickScenario
-  getMergeTagValue?: MergeTagResolver
   manualTracking: boolean
-  resolveEntry?: (entry: ContentEntry) => ServerTrackingResolvedData
-  resolvedData: ServerTrackingResolvedData
 }
 
-function buildRenderOptions(getMergeTagValue?: MergeTagResolver): Options {
+function buildRenderOptions(getMergeTagValue: MergeTagResolver): Options {
   return {
     renderNode: {
       [INLINES.EMBEDDED_ENTRY]: (node): string => {
         const { data } = node
         if (!isRecord(data) || !('target' in data)) return ''
-        return getMergeTagValue?.(data.target) ?? ''
+        return getMergeTagValue(data.target) ?? ''
       },
     },
   }
 }
 
-export function EntryCard({
+function EntryContent({
   baselineEntry,
   clickScenario,
-  getMergeTagValue,
-  manualTracking,
-  resolveEntry,
-  resolvedData,
-}: EntryCardProps): JSX.Element {
-  const resolvedEntry = resolvedData.entry as ContentEntry
-  const autoTrackViews = !manualTracking
+  resolvedEntry,
+}: {
+  baselineEntry: ContentEntry
+  clickScenario?: EntryClickScenario
+  resolvedEntry: ContentEntry
+}): JSX.Element {
+  const { getMergeTagValue } = useMergeTagResolver()
   const richText = Object.values(resolvedEntry.fields).find(isRichTextDocument)
   const nested = Array.isArray(resolvedEntry.fields.nested)
     ? resolvedEntry.fields.nested.filter(isResolvedContentfulEntry<ContentEntrySkeleton>)
     : []
-  const renderOptions = buildRenderOptions(getMergeTagValue)
+  const renderOptions = buildRenderOptions((entry) => getMergeTagValue(entry as never))
 
-  const content = (
+  return (
     <div data-ctfl-entry-id={resolvedEntry.sys.id} data-testid={`content-${baselineEntry.sys.id}`}>
       <div
         aria-label={`Entry: ${baselineEntry.sys.id}`}
@@ -78,38 +74,52 @@ export function EntryCard({
           {nested.map((nestedEntry) => (
             <EntryCard
               baselineEntry={nestedEntry}
-              getMergeTagValue={getMergeTagValue}
               key={nestedEntry.sys.id}
               manualTracking={false}
-              resolveEntry={resolveEntry}
-              resolvedData={resolveEntry ? resolveEntry(nestedEntry) : { entry: nestedEntry }}
             />
           ))}
         </div>
       ) : null}
     </div>
   )
+}
+
+export function EntryCard({
+  baselineEntry,
+  clickScenario,
+  manualTracking,
+}: EntryCardProps): JSX.Element {
+  const autoTrackViews = !manualTracking
 
   return (
     <section className="entry-card" data-testid={`content-entry-${baselineEntry.sys.id}`}>
-      <ServerOptimizedEntry
+      <OptimizedEntry
         as="div"
         baselineEntry={baselineEntry}
         clickable={autoTrackViews && clickScenario === 'direct'}
         hoverDurationUpdateIntervalMs={
           autoTrackViews ? HOVER_DURATION_UPDATE_INTERVAL_MS : undefined
         }
-        resolvedData={resolvedData}
         trackViews={autoTrackViews ? undefined : false}
       >
-        {autoTrackViews && clickScenario === 'ancestor' ? (
-          <div data-ctfl-clickable="true" data-testid="entry-click-ancestor-wrapper">
-            {content}
-          </div>
-        ) : (
-          content
-        )}
-      </ServerOptimizedEntry>
+        {(resolvedEntry) =>
+          autoTrackViews && clickScenario === 'ancestor' ? (
+            <div data-ctfl-clickable="true" data-testid="entry-click-ancestor-wrapper">
+              <EntryContent
+                baselineEntry={baselineEntry}
+                clickScenario={clickScenario}
+                resolvedEntry={resolvedEntry as ContentEntry}
+              />
+            </div>
+          ) : (
+            <EntryContent
+              baselineEntry={baselineEntry}
+              clickScenario={clickScenario}
+              resolvedEntry={resolvedEntry as ContentEntry}
+            />
+          )
+        }
+      </OptimizedEntry>
     </section>
   )
 }
