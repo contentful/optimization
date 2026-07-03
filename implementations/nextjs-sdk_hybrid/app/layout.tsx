@@ -54,7 +54,7 @@ export default async function RootLayout({
           <GlobalLiveUpdatesProvider>
             <PreviewPanel />
             <Suspense>
-              <NextAppAutoPageTracker initialPageEvent="skip" />
+              <NextAppAutoPageTracker initialPageEvent={appConsent ? 'skip' : 'emit'} />
             </Suspense>
             <div className="app-shell">
               <nav>
