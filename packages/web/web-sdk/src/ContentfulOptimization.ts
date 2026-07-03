@@ -25,6 +25,7 @@ import { ANONYMOUS_ID_COOKIE_LEGACY } from '@contentful/optimization-core/consta
 import { getPageProperties, getUserAgent } from './builders/EventBuilder'
 import {
   ANONYMOUS_ID_COOKIE,
+  DEFAULT_WEB_ALLOWED_EVENT_TYPES,
   OPTIMIZATION_WEB_SDK_NAME,
   OPTIMIZATION_WEB_SDK_VERSION,
 } from './constants'
@@ -209,7 +210,7 @@ function mergeConfig({
     logLevel: LocalStore.debug ? 'debug' : logLevel,
   }
 
-  mergedConfig.allowedEventTypes ??= allowedEventTypes ?? ['identify', 'page']
+  mergedConfig.allowedEventTypes ??= allowedEventTypes ?? [...DEFAULT_WEB_ALLOWED_EVENT_TYPES]
 
   return mergedConfig
 }

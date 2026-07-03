@@ -1,7 +1,23 @@
+import type { AllowedEventType } from '@contentful/optimization-core'
+
 // eslint-disable-next-line @typescript-eslint/naming-convention -- Replaced at build-time
 declare const __OPTIMIZATION_VERSION__: string | undefined
 // eslint-disable-next-line @typescript-eslint/naming-convention -- Replaced at build-time
 declare const __OPTIMIZATION_PACKAGE_NAME__: string | undefined
+
+/**
+ * Event types the Web SDK admits before event consent is granted.
+ *
+ * @remarks
+ * `identify` and `page` are permitted pre-consent so the browser can resolve
+ * the initial page experience. This is the value the Web SDK applies when a
+ * consumer does not supply `allowedEventTypes`, and the same value a
+ * server-to-browser snapshot must carry so consent-derived state matches across
+ * hydration.
+ *
+ * @public
+ */
+export const DEFAULT_WEB_ALLOWED_EVENT_TYPES: readonly AllowedEventType[] = ['identify', 'page']
 
 /**
  * Version of the Optimization Web SDK, replaced at build time.

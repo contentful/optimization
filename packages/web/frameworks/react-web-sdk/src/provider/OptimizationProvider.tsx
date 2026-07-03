@@ -1,6 +1,7 @@
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
 import { hydrateOptimizationData } from '@contentful/optimization-web/bridge-support'
+import { DEFAULT_WEB_ALLOWED_EVENT_TYPES } from '@contentful/optimization-web/constants'
 import {
   createOptimizationRootSdkBinding,
   disposeOptimizationRootSdkBinding,
@@ -222,6 +223,9 @@ function createInitialRuntime(props: OptimizationProviderProps): WebOptimization
     consent: props.defaults?.consent,
     persistenceConsent: props.defaults?.persistenceConsent,
     locale: props.locale,
+    // Seed with the same allow-list the live SDK will apply so consent-derived
+    // state (hasConsent, optimizationPossible) does not flip on hydration.
+    allowedEventTypes: props.allowedEventTypes ?? DEFAULT_WEB_ALLOWED_EVENT_TYPES,
   })
 }
 

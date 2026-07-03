@@ -9,13 +9,61 @@ import type {
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import type { CoreStates } from '../CoreStateful'
-import type { EventEmissionResult } from '../events'
+import {
+  type AllowedEventType,
+  DEFAULT_ALLOWED_EVENT_TYPES,
+  type EventEmissionResult,
+} from '../events'
 import type { ResolvedData } from '../resolvers'
 import { FlagsResolver, MergeTagValueResolver, OptimizedEntryResolver } from '../resolvers'
 import { staticObservable } from '../signals'
 import type { OptimizationRuntime } from './OptimizationRuntime'
 
 const logger = createScopedLogger('Optimization:SnapshotRuntime')
+
+// Mirrors the live SDK's allow-list-aware consent gating (see
+// CoreStatefulEventEmitter.hasConsent and CoreStateful's optimizationPossibleSignal)
+// so the snapshot resolves the same values before and after hydration.
+const CONSENT_EVENT_TYPE_MAP: Readonly<Partial<Record<string, readonly AllowedEventType[]>>> = {
+  trackView: ['component'],
+  trackFlagView: ['flag', 'component'],
+  trackClick: ['component_click'],
+  trackHover: ['component_hover'],
+}
+
+const OPTIMIZATION_UNLOCKING_EVENT_TYPES: readonly AllowedEventType[] = [
+  'identify',
+  'page',
+  'screen',
+  'track',
+  'group',
+  'alias',
+  'component',
+]
+
+function resolveHasConsent(
+  name: string,
+  consent: boolean | undefined,
+  allowedEventTypes: readonly AllowedEventType[],
+): boolean {
+  if (consent === true) return true
+
+  const { [name]: mappedEventTypes } = CONSENT_EVENT_TYPE_MAP
+  if (mappedEventTypes !== undefined) {
+    return mappedEventTypes.some((eventType) => allowedEventTypes.includes(eventType))
+  }
+
+  return allowedEventTypes.some((eventType) => eventType === name)
+}
+
+function resolveOptimizationPossible(
+  consent: boolean | undefined,
+  allowedEventTypes: readonly AllowedEventType[],
+): boolean {
+  if (consent === true) return true
+
+  return OPTIMIZATION_UNLOCKING_EVENT_TYPES.some((type) => allowedEventTypes.includes(type))
+}
 
 /**
  * Request-scoped, read-only state used to seed a {@link SnapshotRuntime}.
@@ -37,6 +85,16 @@ export interface OptimizationSnapshot {
   readonly persistenceConsent?: boolean
   /** Active locale for the request, if known. */
   readonly locale?: string
+  /**
+   * Event types admitted before consent is granted.
+   *
+   * @remarks
+   * Carries the same value the live SDK is configured with, so the snapshot
+   * resolves `hasConsent()` and `optimizationPossible` identically before and
+   * after hydration. Defaults to {@link DEFAULT_ALLOWED_EVENT_TYPES} (fail
+   * closed) when the host does not supply it.
+   */
+  readonly allowedEventTypes?: readonly AllowedEventType[]
 }
 
 /**
@@ -76,6 +134,7 @@ class SnapshotRuntime implements OptimizationRuntime {
   private readonly changes: ChangeArray | undefined
   private readonly currentSelectedOptimizations: SelectedOptimizationArray | undefined
   private readonly currentProfile: Profile | undefined
+  private readonly allowedEventTypes: readonly AllowedEventType[]
 
   readonly states: CoreStates
 
@@ -84,8 +143,15 @@ class SnapshotRuntime implements OptimizationRuntime {
     this.changes = snapshot.data?.changes
     this.currentSelectedOptimizations = snapshot.data?.selectedOptimizations
     this.currentProfile = snapshot.data?.profile
+    this.allowedEventTypes = snapshot.allowedEventTypes ?? DEFAULT_ALLOWED_EVENT_TYPES
 
     const canOptimize = this.currentSelectedOptimizations !== undefined
+    // Match the live SDK's allow-list-aware gating so the value does not flip
+    // when the browser SDK hydrates and subscribes.
+    const optimizationPossible = resolveOptimizationPossible(
+      snapshot.consent,
+      this.allowedEventTypes,
+    )
 
     this.states = {
       blockedEventStream: staticObservable(undefined),
@@ -94,7 +160,7 @@ class SnapshotRuntime implements OptimizationRuntime {
       eventStream: staticObservable(undefined),
       locale: staticObservable(snapshot.locale),
       canOptimize: staticObservable(canOptimize),
-      optimizationPossible: staticObservable(true),
+      optimizationPossible: staticObservable(optimizationPossible),
       // A snapshot is a settled, request-scoped result: no experience request is
       // in flight for the render it backs (server render and the client's first
       // render). Report `success` so consumers such as OptimizedEntry present
@@ -150,8 +216,8 @@ class SnapshotRuntime implements OptimizationRuntime {
     return this.snapshot.locale
   }
 
-  hasConsent(): boolean {
-    return this.snapshot.consent === true
+  hasConsent(name: string): boolean {
+    return resolveHasConsent(name, this.snapshot.consent, this.allowedEventTypes)
   }
 
   async identify(): Promise<EventEmissionResult> {

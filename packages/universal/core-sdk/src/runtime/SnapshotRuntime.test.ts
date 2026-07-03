@@ -90,6 +90,39 @@ describe('SnapshotRuntime', () => {
       expect(runtime.hasConsent('track')).toBe(false)
     })
 
+    it('reports optimizationPossible false when consent is absent and nothing is allow-listed', () => {
+      const runtime = createSnapshotRuntime({ consent: false, allowedEventTypes: [] })
+
+      expect(runtime.states.optimizationPossible.current).toBe(false)
+    })
+
+    it('reports optimizationPossible true when an unlocking event type is allow-listed pre-consent', () => {
+      const runtime = createSnapshotRuntime({ consent: false, allowedEventTypes: ['page'] })
+
+      expect(runtime.states.optimizationPossible.current).toBe(true)
+    })
+
+    it('resolves hasConsent through the allow-list when consent is not granted', () => {
+      const runtime = createSnapshotRuntime({
+        consent: false,
+        allowedEventTypes: ['page', 'component'],
+      })
+
+      // `page` is allow-listed directly; `trackView` maps to the `component`
+      // selector, which is allow-listed; `trackClick` maps to `component_click`,
+      // which is not.
+      expect(runtime.hasConsent('page')).toBe(true)
+      expect(runtime.hasConsent('trackView')).toBe(true)
+      expect(runtime.hasConsent('trackClick')).toBe(false)
+    })
+
+    it('grants every hasConsent check when consent is true regardless of allow-list', () => {
+      const runtime = createSnapshotRuntime({ consent: true, allowedEventTypes: [] })
+
+      expect(runtime.hasConsent('trackClick')).toBe(true)
+      expect(runtime.states.optimizationPossible.current).toBe(true)
+    })
+
     it('emits each state value once on subscribe', () => {
       const runtime = createSnapshotRuntime({ data: snapshotData, consent: true })
       const received: Array<boolean | undefined> = []
