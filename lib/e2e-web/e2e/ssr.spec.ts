@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { CONSENT_COOKIE, runIf, seedAnonymousProfile, seedIdentifiedProfile, skipIf } from './utils'
 
 test.describe('Hydration', () => {
@@ -63,6 +63,37 @@ test.describe('SSR first-paint state', () => {
 
       await expect(page.getByTestId('consent-status')).toHaveText('Yes')
       await expect(page.getByTestId('identified-status')).toHaveText('Yes')
+    })
+  })
+
+  // Regression guard: the server must resolve the optimized variant into the
+  // first-paint HTML (with JavaScript disabled), matching what the browser SDK
+  // resolves after hydration. A baseline-only server render — baseline id equal
+  // to entry id, variant index 0, no optimization id — is the mismatch bug where
+  // the server short-circuited resolution while the client still personalized.
+  test.describe('server-resolved variants', () => {
+    const BASELINE_ID = '2Z2WLOx07InSewC3LUB3eX'
+    const EXPERIENCE_ID = '2cSY1TX0nDfYe4fuIrGQ1K'
+    const VARIANT_ENTRY_ID = '1UFf7qr4mHET3HYuYmcpEj'
+
+    async function expectServerResolvedVariant(page: Page): Promise<void> {
+      await page.goto('/')
+      await page.waitForLoadState('domcontentloaded')
+
+      const host = page.locator(`[data-ctfl-baseline-id="${BASELINE_ID}"]`).first()
+      await expect(host).toHaveAttribute('data-ctfl-entry-id', VARIANT_ENTRY_ID)
+      await expect(host).toHaveAttribute('data-ctfl-optimization-id', EXPERIENCE_ID)
+      await expect(host).toHaveAttribute('data-ctfl-variant-index', '1')
+    }
+
+    test('renders the variant for a new visitor before consent', async ({ page }) => {
+      await expectServerResolvedVariant(page)
+    })
+
+    test('renders the variant for a consented visitor', async ({ baseURL, context, page }) => {
+      await seedAnonymousProfile(context, baseURL)
+
+      await expectServerResolvedVariant(page)
     })
   })
 })

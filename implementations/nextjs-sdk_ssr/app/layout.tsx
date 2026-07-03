@@ -46,7 +46,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <GlobalLiveUpdatesProvider>
             <PreviewPanel />
             <Suspense>
-              <NextAppAutoPageTracker initialPageEvent={appConsent ? 'skip' : 'emit'} />
+              <NextAppAutoPageTracker initialPageEvent="skip" />
             </Suspense>
             <div className="app-shell">
               <nav>

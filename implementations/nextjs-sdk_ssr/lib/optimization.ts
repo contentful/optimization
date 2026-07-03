@@ -31,10 +31,15 @@ export const optimization = createNextjsOptimization({
 export const getServerOptimizationData = cache(async (): Promise<OptimizationData | undefined> => {
   const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
 
-  if (!getAppConsent(cookieStore)) return undefined
+  // Resolve on the server regardless of consent so first-paint SSR matches the
+  // browser SDK, which resolves the initial `page()` before consent by default
+  // (`allowedEventTypes` includes `page`). Consent gates event emission and
+  // profile persistence — not experience resolution — so pass the real consent
+  // state rather than short-circuiting to baseline.
+  const consented = getAppConsent(cookieStore)
 
   const { data } = await getNextjsServerOptimizationData(optimization, {
-    consent: { events: true, persistence: true },
+    consent: { events: consented, persistence: consented },
     cookies: cookieStore,
     headers: headerStore,
     locale: appConfig.locale,
