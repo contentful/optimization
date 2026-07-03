@@ -51,13 +51,13 @@ between server and browser, see
 Choose the runtime path before designing the event flow. The SDK that renders or observes the
 interaction decides which facts are available.
 
-| Path                                        | Runtime responsibility                                                                                                                                                                                                                                                                                                                         | Use when                                                                                                                             |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `@contentful/optimization-node`             | Bind request consent, locale, profile, and page context; call Experience API methods; resolve entries; emit server-known events.                                                                                                                                                                                                               | Server rendering owns personalization, and the event is a request fact or server-observed business action.                           |
-| `@contentful/optimization-web`              | Own browser consent state, profile state, storage, automatic DOM observation, browser queues, and Insights delivery.                                                                                                                                                                                                                           | Non-React or custom browser code needs view, click, hover, route, or manual element tracking after HTML reaches the page.            |
-| `@contentful/optimization-react-web`        | Wrap the Web SDK with React browser providers, hooks, router trackers, and `OptimizedEntry` from `@contentful/optimization-react-web`.                                                                                                                                                                                                         | React browser apps need framework-owned state, route page tracking, entry wrappers, or browser-side entry personalization.           |
-| `@contentful/optimization-nextjs`           | Own Next.js adapter surfaces: server helpers and `ServerOptimizedEntry` from `@contentful/optimization-nextjs/server`, request helpers from `@contentful/optimization-nextjs/request-handler`, tracking helpers from `@contentful/optimization-nextjs/tracking-attributes`, and client wrappers from `@contentful/optimization-nextjs/client`. | Next.js apps need server-owned personalization, request and cookie helpers, SSR tracking attributes, and client tracking boundaries. |
-| First-party browser collector plus Node SDK | Observe browser interactions in application code, post observations to an app endpoint, validate policy, and call request-bound Node SDK tracking methods.                                                                                                                                                                                     | The browser cannot run the Web SDK, but the app can own DOM observation, payload mapping, profile continuity, and retries.           |
+| Path                                        | Runtime responsibility                                                                                                                                                                                                                                                                          | Use when                                                                                                                            |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-node`             | Bind request consent, locale, profile, and page context; call Experience API methods; resolve entries; emit server-known events.                                                                                                                                                                | Server rendering owns personalization, and the event is a request fact or server-observed business action.                          |
+| `@contentful/optimization-web`              | Own browser consent state, profile state, storage, automatic DOM observation, browser queues, and Insights delivery.                                                                                                                                                                            | Non-React or custom browser code needs view, click, hover, route, or manual element tracking after HTML reaches the page.           |
+| `@contentful/optimization-react-web`        | Wrap the Web SDK with React browser providers, hooks, router trackers, and `OptimizedEntry` from `@contentful/optimization-react-web`.                                                                                                                                                          | React browser apps need framework-owned state, route page tracking, entry wrappers, or browser-side entry personalization.          |
+| `@contentful/optimization-nextjs`           | Own Next.js adapter surfaces: `/app-router` returns app-local App Router roots, providers, route trackers, and `OptimizedEntry`; `/pages-router` returns Pages Router client components; lower-level server, request, tracking-attribute, and client helpers remain available for manual paths. | Next.js apps need server-owned personalization, automatic profile handoff, SSR tracking attributes, and client tracking boundaries. |
+| First-party browser collector plus Node SDK | Observe browser interactions in application code, post observations to an app endpoint, validate policy, and call request-bound Node SDK tracking methods.                                                                                                                                      | The browser cannot run the Web SDK, but the app can own DOM observation, payload mapping, profile continuity, and retries.          |
 
 ## Constraints that decide delivery
 
@@ -74,11 +74,14 @@ Apply these constraints before choosing server-only, hybrid, or manual tracking:
   entry views and flag views before consent; `flag` narrows pre-consent admission to Custom Flag
   views without entry views.
 - Browser Insights delivery needs a current Web SDK profile. In direct Web SDK initialization, the
-  profile can come from `defaults.profile`. In React Web and Next.js provider handoff, pass
-  server-returned Optimization data through `serverOptimizationState`. In Next.js page-level
-  handoff, render `NextjsOptimizationState` under existing SDK context. The profile can also come
-  from browser-persisted profile state that persistence consent allows the SDK to load, or a browser
-  Experience API call such as `page()`, `identify()`, `track()`, or sticky `trackView()`.
+  profile can come from `defaults.profile`. In React Web provider handoff and manual Next.js
+  provider or root setup, pass server-returned Optimization data through `serverOptimizationState`.
+  In the preferred App Router bound setup, the server root or provider from
+  `createNextjsAppRouterOptimization()` hands off server data for the browser side automatically. In
+  Pages Router, pass the server data returned by `getServerSideOptimizationProps()` through
+  `serverOptimizationState` in `pages/_app.tsx`. The profile can also come from browser-persisted
+  profile state that persistence consent allows the SDK to load, or a browser Experience API call
+  such as `page()`, `identify()`, `track()`, or sticky `trackView()`.
 - Browser storage is best-effort. The Web SDK uses `localStorage` and the `ctfl-opt-aid` cookie when
   persistence consent permits continuity; if storage fails or is unavailable, continuity is limited
   to in-memory state.
@@ -311,13 +314,14 @@ of tracking that can only be measured in the browser.
 
 ### Render tracking metadata on resolved entries
 
-Use SDK helpers when available instead of copying the attribute map into application code. In
-Next.js, `ServerOptimizedEntry` renders the Web SDK tracking attributes from the baseline entry and
-the `ResolvedData` returned by `resolveOptimizedEntry()`. For custom SSR wrappers, call
-`getServerTrackingAttributes()` from `@contentful/optimization-nextjs/tracking-attributes`. Non-Next
-runtimes can call `resolveOptimizedEntryTrackingAttributes()` from
-`@contentful/optimization-web/tracking-attributes` when they already have the same baseline entry
-and resolved data shape.
+Use SDK wrappers or helpers when available instead of copying the attribute map into application
+code. In Next.js App Router integrations, the preferred wrapper is the app-local bound
+`OptimizedEntry` returned by `createNextjsAppRouterOptimization()`. In Server Components, it
+resolves the baseline entry, renders the server-selected entry, and emits the Web SDK tracking
+attributes through server internals. For custom SSR wrappers, call `getServerTrackingAttributes()`
+from `@contentful/optimization-nextjs/tracking-attributes`. Non-Next runtimes can call
+`resolveOptimizedEntryTrackingAttributes()` from `@contentful/optimization-web/tracking-attributes`
+when they already have the same baseline entry and resolved data shape.
 
 ```tsx
 import { getServerTrackingAttributes } from '@contentful/optimization-nextjs/tracking-attributes'
@@ -393,9 +397,10 @@ delivery. Choose one of these patterns before enabling interaction tracking:
 
 - **Bootstrap the server profile.** For direct Web SDK initialization, serialize the `profile`
   returned by the server's `page()` or `identify()` call and pass it as `defaults.profile`. For
-  React Web and Next.js, pass the server `OptimizationData` through `serverOptimizationState`, or
-  render `NextjsOptimizationState` under an existing SDK context when a Next.js page owns the data.
-  Use this when the same server response already rendered personalized HTML from that profile.
+  React Web and manual Next.js provider or root setup, pass the server `OptimizationData` through
+  `serverOptimizationState`. Preferred Next.js bound roots and providers hand off server data
+  automatically. Use this when the same server response already rendered personalized HTML from that
+  profile.
 - **Re-evaluate in the browser.** Persist `ctfl-opt-aid` on the server, initialize the Web SDK in
   the browser, call `page()` after your consent policy allows it, then enable tracking after the
   page response populates browser profile state.
@@ -404,11 +409,11 @@ delivery. Choose one of these patterns before enabling interaction tracking:
   call the Node SDK with the request's profile ID. This is a manual tracking architecture, not the
   Web SDK auto-tracking path.
 
-In Next.js SSR integrations, `initialPageEvent="skip"` intentionally avoids the initial browser
-Experience API `page()` request when the server already emitted that page event. If that skip leaves
-the browser without `serverOptimizationState` or `NextjsOptimizationState`, and without a prior
-persisted browser profile, automatic entry views, clicks, and hovers cannot deliver until a later
-browser Experience API call populates profile state.
+In Next.js server-rendered integrations, `initialPageEvent="skip"` intentionally avoids the initial
+browser Experience API `page()` request when the server already emitted that page event. If that
+skip leaves the browser with neither a bound server root or provider handoff nor manual
+`serverOptimizationState`, and without a prior persisted browser profile, automatic entry views,
+clicks, and hovers cannot deliver until a later browser Experience API call populates profile state.
 
 If the Web SDK must read `ctfl-opt-aid`, do not mark that cookie as `HttpOnly`. Configure `path`,
 `domain`, and `SameSite` so the server route and browser code refer to the same profile.
@@ -430,40 +435,49 @@ remains server-owned.
 
 ### React meta-framework SSR with client tracking
 
-The [Next.js SDK SSR reference implementation](../../implementations/nextjs-sdk_ssr/README.md) is
-one concrete example of the same tracking-only browser pattern. In Next.js, prefer the
-`@contentful/optimization-nextjs` adapter subpaths so app code uses the adapter's server,
-request-handler, and client entries rather than wiring the lower-level Node and React Web packages
-directly. The same ownership guidance applies to any React-based meta-framework that can render
-React code on the server and hydrate part of that tree in the browser.
+The
+[Next.js SDK App Router reference implementation](../../implementations/nextjs-sdk_app-router/README.md)
+is one concrete example of the same server-to-browser tracking pattern. In Next.js App Router,
+prefer the `@contentful/optimization-nextjs/app-router` factory so app code imports app-local bound
+`OptimizationRoot`, `OptimizationProvider`, `OptimizedEntry`, and route trackers from one binding
+module. Use `/pages-router` for Pages Router client components and `/pages-router/server` for
+`getServerSideProps`. Use adapter subpaths for manual server, tracking-attribute, request, or client
+control when the bound router path does not fit. The same ownership guidance applies to any
+React-based meta-framework that can render React code on the server and hydrate part of that tree in
+the browser.
 
 Keep personalization server-owned by enforcing these boundaries:
 
-- Server-only modules, routes, loaders, middleware, actions, or Server Components import server-only
-  SDK entrypoints, call the request-bound page path, call `sdk.resolveOptimizedEntry(...)`, and
-  render plain React elements. In Next.js, those imports come from
-  `@contentful/optimization-nextjs/server` and `@contentful/optimization-nextjs/request-handler`.
+- Next.js App Router Server Components can import the app-local bound `OptimizationRoot`,
+  `OptimizationProvider`, `OptimizedEntry`, and route trackers from the binding module created by
+  `createNextjsAppRouterOptimization()`. The bound server root or provider owns request data and
+  profile handoff, and the bound server `OptimizedEntry` resolves and renders tracked entries.
+- Lower-level Next.js server modules can still import `/server` helpers, call the request-bound page
+  path, call `sdk.resolveOptimizedEntry(...)`, and render attributes from
+  `getServerTrackingAttributes()` when the app needs manual request control.
 - Server-rendered entry wrappers include adapter/server-generated `data-ctfl-*` tracking attributes,
   so the browser tracking runtime can observe them after hydration.
-- Client-only modules import browser entrypoints for `OptimizationRoot`, router page tracking,
-  consent controls, identify controls, and automatic interaction tracking. In Next.js, those imports
-  come from `@contentful/optimization-nextjs/client`.
-- `OptimizationRoot` and router page trackers stay behind the framework's client-only boundary, so
+- Client-only modules use the same app-local bound exports for the preferred Next.js path. Use
+  `/client` imports when a manual browser-only setup needs direct browser entrypoints.
+- Bound `OptimizationRoot` and route trackers stay behind the framework's client-only boundary, so
   the browser runtime is not instantiated during SSR. Next.js App Router can render the adapter's
   Client Component exports from a Server Component layout; other frameworks need the equivalent
   client-only island, lazy hydration, or browser-only wrapper.
-- The client tree does not use `OptimizedEntry`, `useOptimizedEntry`, or browser-side
-  `resolveOptimizedEntry()`.
+- Client Components that only hydrate controls around server-rendered entries do not re-render those
+  same entries through client `OptimizedEntry`, `useOptimizedEntry`, or browser-side
+  `resolveOptimizedEntry()`. Use the bound client `OptimizedEntry` only for live or browser-owned
+  surfaces that intentionally resolve variants after startup.
 - Client rendering does not consume `defaults.selectedOptimizations` or
   `states.selectedOptimizations` to choose entry variants. When persistence consent is true, the Web
   SDK can load persisted selected optimizations for state continuity, but tracking-only client code
   must not use browser selected-optimization state to render already server-rendered entries.
 
-This split avoids the common accidental-client-personalization path in React apps. `OptimizedEntry`
-is the React Web SDK's browser-personalization component; using it in a hydrated client tree can
-cause the browser to resolve variants from client SDK state. For server-only personalization, render
-the resolved entry in the server-owned render path and use the client SDK only for tracking and
-controls.
+This split avoids the common accidental-client-personalization path in React apps. In Next.js, the
+app-local `OptimizedEntry` has server behavior in Server Components and client behavior in Client
+Components. Use it for server-owned entries from Server Components. In hydrated Client Components,
+using `OptimizedEntry` means browser resolution from client SDK state. For server-only
+personalization, render the resolved entry in the server-owned render path and use the client SDK
+only for tracking and controls.
 
 After hydration, client actions can still update the profile. For example, `sdk.identify()` can
 associate the visitor with a known user, and `sdk.consent(true)` can allow interaction tracking.
@@ -590,11 +604,13 @@ Use this checklist when implementing interaction tracking for Node-rendered HTML
 
 - [Node SDK integration guide](../guides/integrating-the-node-sdk-in-a-node-app.md)
 - [Web SDK integration guide](../guides/integrating-the-web-sdk-in-a-web-app.md)
-- [Next.js SSR guide](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md)
+- [Next.js App Router integration guide](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
+- [Next.js Pages Router integration guide](../guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
 - [Interaction tracking in Web SDKs](./interaction-tracking-in-web-sdks.md)
 - [Profile synchronization between client and server](./profile-synchronization-between-client-and-server.md)
 - [Optimization Web SDK README](../../packages/web/web-sdk/README.md)
 - [Optimization React Web SDK README](../../packages/web/frameworks/react-web-sdk/README.md)
 - [Optimization Next.js SDK README](../../packages/web/frameworks/nextjs-sdk/README.md)
 - [Node SSR + Web SDK reference implementation](../../implementations/node-sdk+web-sdk/README.md)
-- [Next.js SDK SSR reference implementation](../../implementations/nextjs-sdk_ssr/README.md)
+- [Next.js SDK App Router reference implementation](../../implementations/nextjs-sdk_app-router/README.md)
+- [Next.js SDK Pages Router reference implementation](../../implementations/nextjs-sdk_pages-router/README.md)

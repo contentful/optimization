@@ -9,7 +9,7 @@ import {
   getCoreBridgeCapabilities,
   type CoreBridgeCapabilities,
   type PreviewPanelBridge,
-} from './capabilities'
+} from './coreBridgeCapabilities'
 
 export type { CoreBridgeCapabilities, PreviewPanelBridge }
 

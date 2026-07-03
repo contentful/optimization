@@ -1,3 +1,5 @@
+import { optimizedEntry } from '@contentful/optimization-core/test/fixtures/optimizedEntry'
+import { selectedOptimizations } from '@contentful/optimization-core/test/fixtures/selectedOptimizations'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
 import { beforeEach, describe, expect, it, rs } from '@rstest/core'
@@ -223,15 +225,15 @@ describe('OptimizationProvider onStatesReady', () => {
     rendered.unmount()
   })
 
-  it('applies serverOptimizationState to owned SDK instances before onStatesReady and child render', async () => {
+  it('renders serverOptimizationState from a snapshot before owned SDK setup finishes', async () => {
     const serverOptimizationState = createServerOptimizationState('owned-server-profile')
     const setupOrder: string[] = []
     let profileFromOnStatesReady: OptimizationData['profile'] | undefined = undefined
-    let profileFromChild: OptimizationData['profile'] | undefined = undefined
+    const childProfiles: Array<OptimizationData['profile'] | undefined> = []
 
     function Probe(): null {
       setupOrder.push('child')
-      profileFromChild = useOptimization().states.profile.current
+      childProfiles.push(useOptimization().states.profile.current)
       return null
     }
 
@@ -250,9 +252,12 @@ describe('OptimizationProvider onStatesReady', () => {
       </OptimizationProvider>,
     )
 
-    expect(setupOrder).toEqual(['onStatesReady', 'child'])
+    expect(setupOrder).toEqual(['child', 'onStatesReady', 'child'])
     expect(profileFromOnStatesReady).toEqual(serverOptimizationState.profile)
-    expect(profileFromChild).toEqual(serverOptimizationState.profile)
+    expect(childProfiles).toEqual([
+      serverOptimizationState.profile,
+      serverOptimizationState.profile,
+    ])
     rendered.unmount()
   })
 
@@ -277,16 +282,16 @@ describe('OptimizationProvider onStatesReady', () => {
     sdk.destroy()
   })
 
-  it('applies serverOptimizationState to injected SDK instances before onStatesReady and child render', async () => {
+  it('renders serverOptimizationState from a snapshot before injected SDK setup finishes', async () => {
     const serverOptimizationState = createServerOptimizationState('injected-ready-profile')
     const sdk = new ContentfulOptimization(testConfig)
     const setupOrder: string[] = []
     let profileFromOnStatesReady: OptimizationData['profile'] | undefined = undefined
-    let profileFromChild: OptimizationData['profile'] | undefined = undefined
+    const childProfiles: Array<OptimizationData['profile'] | undefined> = []
 
     function Probe(): null {
       setupOrder.push('child')
-      profileFromChild = useOptimization().states.profile.current
+      childProfiles.push(useOptimization().states.profile.current)
       return null
     }
 
@@ -303,9 +308,12 @@ describe('OptimizationProvider onStatesReady', () => {
       </OptimizationProvider>,
     )
 
-    expect(setupOrder).toEqual(['onStatesReady', 'child'])
+    expect(setupOrder).toEqual(['child', 'onStatesReady', 'child'])
     expect(profileFromOnStatesReady).toEqual(serverOptimizationState.profile)
-    expect(profileFromChild).toEqual(serverOptimizationState.profile)
+    expect(childProfiles).toEqual([
+      serverOptimizationState.profile,
+      serverOptimizationState.profile,
+    ])
     rendered.unmount()
     sdk.destroy()
   })
@@ -334,12 +342,14 @@ describe('OptimizationProvider onStatesReady', () => {
     rendered.unmount()
   })
 
-  it('does not construct owned sdk instances during server render', () => {
-    let childRendered = false
+  it('renders config-only children from a snapshot during server render', () => {
+    let experienceRequestStatus: string | undefined = undefined
 
-    function Probe(): null {
-      childRendered = true
-      return null
+    function Probe(): ReactElement {
+      const sdk = useOptimization()
+      experienceRequestStatus = sdk.states.experienceRequestState.current.status
+
+      return <span>{experienceRequestStatus}</span>
     }
 
     const markup = renderToString(
@@ -352,8 +362,74 @@ describe('OptimizationProvider onStatesReady', () => {
       </OptimizationProvider>,
     )
 
-    expect(markup).toBe('')
-    expect(childRendered).toBe(false)
+    expect(markup).toContain('success')
+    expect(experienceRequestStatus).toBe('success')
+    expect(window.contentfulOptimization).toBeUndefined()
+  })
+
+  it('renders serverOptimizationState during server render', () => {
+    const serverOptimizationState = createServerOptimizationState('server-profile')
+    let profileFromChild: OptimizationData['profile'] | undefined = undefined
+    let consentFromChild: boolean | undefined = undefined
+    let pageConsentFromChild = false
+    let trackConsentFromChild = true
+
+    function Probe(): ReactElement {
+      const sdk = useOptimization()
+      profileFromChild = sdk.states.profile.current
+      consentFromChild = sdk.states.consent.current
+      pageConsentFromChild = sdk.hasConsent('page')
+      trackConsentFromChild = sdk.hasConsent('track')
+
+      return <span>{sdk.states.profile.current?.id}</span>
+    }
+
+    const markup = renderToString(
+      <OptimizationProvider
+        clientId={testConfig.clientId}
+        defaults={{ consent: false, persistenceConsent: false }}
+        environment={testConfig.environment}
+        api={testConfig.api}
+        serverOptimizationState={serverOptimizationState}
+      >
+        <Probe />
+      </OptimizationProvider>,
+    )
+
+    expect(markup).toContain('server-profile')
+    expect(profileFromChild).toEqual(serverOptimizationState.profile)
+    expect(consentFromChild).toBe(false)
+    expect(pageConsentFromChild).toBe(true)
+    expect(trackConsentFromChild).toBe(false)
+    expect(window.contentfulOptimization).toBeUndefined()
+  })
+
+  it('resolves server-selected entries from the snapshot during server render', () => {
+    const serverOptimizationState = {
+      ...createServerOptimizationState('server-profile'),
+      selectedOptimizations,
+    }
+    let resolvedEntryId: string | undefined = undefined
+
+    function Probe(): ReactElement {
+      resolvedEntryId = useOptimization().resolveOptimizedEntry(optimizedEntry).entry.sys.id
+
+      return <span>{resolvedEntryId}</span>
+    }
+
+    const markup = renderToString(
+      <OptimizationProvider
+        clientId={testConfig.clientId}
+        environment={testConfig.environment}
+        api={testConfig.api}
+        serverOptimizationState={serverOptimizationState}
+      >
+        <Probe />
+      </OptimizationProvider>,
+    )
+
+    expect(markup).toContain('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(resolvedEntryId).toBe('4k6ZyFQnR2POY5IJLLlJRb')
     expect(window.contentfulOptimization).toBeUndefined()
   })
 
@@ -407,13 +483,15 @@ describe('OptimizationProvider onStatesReady', () => {
     rendered.unmount()
   })
 
-  it('does not render injected sdk children during server render when state setup must run first', () => {
+  it('renders injected sdk children during server render before client-only state setup', () => {
     const sdk = createOptimizationSdk()
     const onStatesReady = rs.fn()
     let childRendered = false
+    let capturedOptimization: ReturnType<typeof useOptimization> | undefined = undefined
 
     function Probe(): null {
       childRendered = true
+      capturedOptimization = useOptimization()
       return null
     }
 
@@ -424,7 +502,8 @@ describe('OptimizationProvider onStatesReady', () => {
     )
 
     expect(markup).toBe('')
-    expect(childRendered).toBe(false)
+    expect(childRendered).toBe(true)
+    expect(requireOptimizationSdk(capturedOptimization)).toBe(sdk)
     expect(onStatesReady).not.toHaveBeenCalled()
   })
 
@@ -454,7 +533,6 @@ describe('OptimizationProvider onStatesReady', () => {
 
     expect(capturedContext).toEqual({
       sdk: undefined,
-      isReady: false,
       error,
     })
     expect(destroySpy).toHaveBeenCalledTimes(1)

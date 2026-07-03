@@ -105,7 +105,7 @@ integration. It also provides framework-facing APIs, including providers, hooks,
 rendering, navigation tracking, and component-level tracking configuration.
 
 Reference implementations are intentionally pattern-oriented. Some framework targets include routing
-and rendering strategies inside the framework itself; Next.js now has a first-party adapter for that
+and rendering strategies inside the framework itself; Next.js has a first-party adapter for that
 composition, while other meta-frameworks such as Nuxt.js and SvelteKit can still be validated
 through SDK composition rather than dedicated framework adapter SDKs. Any target with distinct SSR,
 CSR, prerendering, or hybrid modalities can have multiple reference implementations when those
@@ -189,7 +189,8 @@ Framework adapter SDKs must make runtime SDK behavior natural inside a framework
 the shared product behavior.
 
 Target framework adapter surfaces include application and UI adapters for Angular, React Web,
-Svelte, and Vue; mobile UI APIs for React Native; and server adapters for Express and NestJS.
+Next.js, Svelte, and Vue; mobile UI APIs for React Native; and server adapters for Express and
+NestJS.
 
 - **FW-1 Framework-native setup** - Each adapter must provide the framework's expected setup
   primitive, such as a provider, plugin, module, middleware, or application wrapper.
@@ -343,15 +344,14 @@ The suite must support these application and validation workflows:
 
 - Web client-side personalization with entry resolution, page events, interaction tracking, consent,
   preview, and analytics handoff.
-- Application and UI framework personalization across Angular, React Web, Svelte, and Vue with
-  framework-native setup, state access, optimized rendering, route tracking, rendering-strategy
+- Application and UI framework personalization across Angular, React Web, Next.js, Svelte, and Vue
+  with framework-native setup, state access, optimized rendering, route tracking, rendering-strategy
   support where applicable, preview-aware live updates, and analytics handoff.
 - Server personalization across Node, Express, and NestJS with request-scoped profile evaluation,
   middleware or route integration, SSR support, event delivery, and browser follow-up tracking where
   applicable.
-- Meta-framework reference patterns for the Next.js adapter and for Nuxt.js, SvelteKit, and similar
-  targets across CSR, SSR, prerendering where compatible with personalization constraints, and
-  hybrid takeover modalities.
+- Meta-framework reference patterns for Nuxt.js, SvelteKit, and similar targets across CSR, SSR,
+  prerendering where compatible with personalization constraints, and hybrid takeover modalities.
 - Mobile framework-facing personalization through React Native APIs with provider setup, optimized
   entries, screen tracking, interaction tracking, offline behavior, preview, and analytics handoff.
 - Native app personalization across iOS and Android with direct client APIs, native UI helpers,

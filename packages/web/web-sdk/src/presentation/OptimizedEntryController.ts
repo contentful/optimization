@@ -8,63 +8,120 @@ import {
 
 const BASELINE_REVEAL_TIMEOUT_MS = 5000
 
+/**
+ * Display mode used for the temporary loading layout target.
+ *
+ * @public
+ */
 export type OptimizedEntryLoadingTargetDisplay = 'block' | 'inline'
 
+/**
+ * Layout-neutral display value used by optimized-entry host elements.
+ *
+ * @public
+ */
 export const OPTIMIZED_ENTRY_HOST_DISPLAY = 'contents'
 
 interface ExperienceRequestStateLike {
   readonly status: string
 }
 
+/**
+ * Minimal SDK surface needed by optimized-entry presentation controllers.
+ *
+ * @public
+ */
 export interface OptimizedEntrySdk {
+  /** SDK state observables used to resolve and track optimized entry content. */
   readonly states: {
     readonly canOptimize: Observable<boolean>
     readonly experienceRequestState: Observable<ExperienceRequestStateLike>
     readonly optimizationPossible: Observable<boolean>
     readonly selectedOptimizations: Observable<SelectedOptimizationArray | undefined>
   }
+  /** Resolve a Contentful entry against the currently selected optimizations. */
   resolveOptimizedEntry: (
     entry: Entry,
     selectedOptimizations?: SelectedOptimizationArray,
   ) => ResolvedData<EntrySkeletonType>
 }
 
+/**
+ * Current presentation state for one optimized entry.
+ *
+ * @public
+ */
 export interface OptimizedEntrySnapshot {
+  /** Whether SDK state says optimized content can be selected. */
   readonly canOptimize: boolean
+  /** Entry that should be rendered for the current snapshot. */
   readonly entry: Entry
+  /** Host attributes needed for automatic entry interaction tracking. */
   readonly hostAttributes: OptimizedEntryTrackingAttributes
+  /** Whether the optimized entry is still waiting for optimization state. */
   readonly isLoading: boolean
-  readonly isReady: boolean
+  /** Whether the client presentation layer is ready to reveal rendered content. */
+  readonly isPresentationReady: boolean
+  /** Loading and fallback rendering decisions for wrappers around the entry. */
   readonly loadingPresentation: {
     readonly showLoadingFallback: boolean
     readonly hideLoadingLayoutTarget: boolean
     readonly shouldRenderBaselineWhileLoading: boolean
     readonly targetDisplay: OptimizedEntryLoadingTargetDisplay
   }
+  /** Full resolved entry data returned by the SDK resolver. */
   readonly resolvedData: ResolvedData<EntrySkeletonType>
+  /** Selected optimization that resolved the current entry, when one applied. */
   readonly selectedOptimization: ResolvedData<EntrySkeletonType>['selectedOptimization']
+  /** Selected optimization array used for this snapshot. */
   readonly selectedOptimizations: SelectedOptimizationArray | undefined
 }
 
+/**
+ * Inputs used to configure an {@link OptimizedEntryController}.
+ *
+ * @public
+ */
 export interface OptimizedEntryControllerOptions {
+  /** Whether the client presentation layer is ready to reveal rendered content. */
   readonly isPresentationReady?: boolean
+  /** Baseline Contentful entry fetched by the application. */
   readonly baselineEntry: Entry
+  /** Per-entry live-update override. */
   readonly entryLiveUpdatesEnabled?: boolean
+  /** Root-level live-update setting inherited by entries without an override. */
   readonly rootLiveUpdatesEnabled?: boolean
+  /** Whether the wrapper has its own loading fallback UI. */
   readonly hasCustomLoadingFallback?: boolean
+  /** Delay before baseline content is revealed while optimization remains unresolved. */
   readonly baselineRevealTimeoutMs?: number
+  /** Whether the preview panel is open and should force live updates. */
   readonly isPreviewPanelOpen?: boolean
+  /** SDK instance used for optimized entry resolution. */
   readonly sdk?: OptimizedEntrySdk
+  /** Whether SDK state observables are ready to read. */
   readonly isSdkStateReady?: boolean
+  /** Display mode for the temporary loading layout target. */
   readonly targetDisplay?: OptimizedEntryLoadingTargetDisplay
+  /** Whether the wrapper should be marked as a click target. */
   readonly clickable?: boolean
+  /** Hover duration update interval in milliseconds. */
   readonly hoverDurationUpdateIntervalMs?: number
+  /** Per-entry click tracking override. */
   readonly trackClicks?: boolean
+  /** Per-entry hover tracking override. */
   readonly trackHovers?: boolean
+  /** Per-entry view tracking override. */
   readonly trackViews?: boolean
+  /** View duration update interval in milliseconds. */
   readonly viewDurationUpdateIntervalMs?: number
 }
 
+/**
+ * Receives optimized-entry snapshot updates.
+ *
+ * @public
+ */
 export type OptimizedEntrySnapshotListener = (snapshot: OptimizedEntrySnapshot) => void
 
 interface NormalizedOptimizedEntryControllerOptions {
@@ -86,8 +143,15 @@ interface NormalizedOptimizedEntryControllerOptions {
   readonly viewDurationUpdateIntervalMs?: number
 }
 
+/**
+ * Duplicate-baseline guard state for nested optimized entries.
+ *
+ * @public
+ */
 export interface OptimizedEntryNestingState {
+  /** Baseline IDs for the current optimized entry and all optimized-entry ancestors. */
   readonly currentAndAncestorBaselineIds: ReadonlySet<string>
+  /** Whether the current baseline ID already exists in an optimized-entry ancestor. */
   readonly hasDuplicateBaselineAncestor: boolean
 }
 
@@ -114,10 +178,20 @@ function normalizeOptions(
   }
 }
 
+/**
+ * Return whether a Contentful entry contains optimization references.
+ *
+ * @public
+ */
 export function hasOptimizationReferences(entry: Entry): boolean {
   return Array.isArray(entry.fields.nt_experiences) && entry.fields.nt_experiences.length > 0
 }
 
+/**
+ * Resolve duplicate-baseline guard state for a nested optimized entry.
+ *
+ * @public
+ */
 export function resolveOptimizedEntryNestingState(
   baselineEntryId: string,
   ancestorBaselineIds: ReadonlySet<string> | null | undefined,
@@ -132,6 +206,11 @@ export function resolveOptimizedEntryNestingState(
   }
 }
 
+/**
+ * Resolve whether an optimized entry should react to later SDK state updates.
+ *
+ * @public
+ */
 export function resolveShouldLiveUpdate(params: {
   readonly entryLiveUpdatesEnabled: boolean | undefined
   readonly rootLiveUpdatesEnabled: boolean
@@ -185,7 +264,7 @@ function areSnapshotsEqual(left: OptimizedEntrySnapshot, right: OptimizedEntrySn
     left.canOptimize === right.canOptimize &&
     left.entry === right.entry &&
     left.isLoading === right.isLoading &&
-    left.isReady === right.isReady &&
+    left.isPresentationReady === right.isPresentationReady &&
     left.selectedOptimization === right.selectedOptimization &&
     left.selectedOptimizations === right.selectedOptimizations &&
     areLoadingPresentationsEqual(left.loadingPresentation, right.loadingPresentation) &&
@@ -193,6 +272,12 @@ function areSnapshotsEqual(left: OptimizedEntrySnapshot, right: OptimizedEntrySn
   )
 }
 
+/**
+ * Coordinates optimized-entry resolution, loading presentation, live updates, and tracking
+ * attributes without depending on a specific UI framework.
+ *
+ * @public
+ */
 export class OptimizedEntryController {
   private canOptimize = false
   private connected = false
@@ -208,13 +293,16 @@ export class OptimizedEntryController {
 
   constructor(options: OptimizedEntryControllerOptions) {
     this.options = normalizeOptions(options)
+    this.primeStateFromSdk()
     this.snapshot = this.createSnapshot()
   }
 
+  /** Register or clear the callback that receives snapshot updates. */
   setSnapshotListener(listener: OptimizedEntrySnapshotListener | undefined): void {
     this.listener = listener
   }
 
+  /** Subscribe to SDK state and start loading timeout management. */
   connect(): void {
     if (this.connected) {
       return
@@ -225,12 +313,14 @@ export class OptimizedEntryController {
     this.updateSnapshot()
   }
 
+  /** Unsubscribe from SDK state and stop loading timeout management. */
   disconnect(): void {
     this.connected = false
     this.clearSubscriptions()
     this.clearLoadingRevealTimer()
   }
 
+  /** Apply new controller options and recompute the current snapshot. */
   updateOptions(options: OptimizedEntryControllerOptions): void {
     const { options: previousOptions } = this
     const previousShouldLiveUpdate = this.shouldLiveUpdate()
@@ -262,6 +352,7 @@ export class OptimizedEntryController {
     this.updateSnapshot()
   }
 
+  /** Return the latest optimized-entry snapshot. */
   getSnapshot(): OptimizedEntrySnapshot {
     return this.snapshot
   }
@@ -281,9 +372,7 @@ export class OptimizedEntryController {
     this.subscriptions = []
   }
 
-  private resubscribe(): void {
-    this.clearSubscriptions()
-
+  private primeStateFromSdk(): void {
     const { options } = this
     const { sdk, isSdkStateReady } = options
     if (!sdk || !isSdkStateReady) {
@@ -302,6 +391,22 @@ export class OptimizedEntryController {
     this.canOptimize = currentCanOptimize
     this.hasExperienceRequestSettled = isExperienceRequestSettled(currentExperienceRequestState)
     this.optimizationPossible = currentOptimizationPossible
+  }
+
+  private resubscribe(): void {
+    this.clearSubscriptions()
+
+    const { options } = this
+    const { sdk, isSdkStateReady } = options
+    if (!sdk || !isSdkStateReady) {
+      return
+    }
+
+    this.primeStateFromSdk()
+
+    const { states } = sdk
+    const { canOptimize, experienceRequestState, optimizationPossible, selectedOptimizations } =
+      states
 
     this.subscriptions = [
       selectedOptimizations.subscribe((nextSelectedOptimizations) => {
@@ -379,7 +484,7 @@ export class OptimizedEntryController {
             this.options,
           ),
       isLoading,
-      isReady: this.options.isPresentationReady,
+      isPresentationReady: this.options.isPresentationReady,
       loadingPresentation: {
         showLoadingFallback,
         hideLoadingLayoutTarget,

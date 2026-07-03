@@ -1,11 +1,11 @@
-import type ContentfulOptimization from '@contentful/optimization-web'
 import { createContext } from 'react'
 
-export type OptimizationSdk = ContentfulOptimization
+import type { WebOptimizationRuntime } from '../runtime/webRuntime'
+
+export type OptimizationSdk = WebOptimizationRuntime
 
 export interface OptimizationContextValue {
   readonly sdk: OptimizationSdk | undefined
-  readonly isReady: boolean
   readonly error: Error | undefined
 }
 

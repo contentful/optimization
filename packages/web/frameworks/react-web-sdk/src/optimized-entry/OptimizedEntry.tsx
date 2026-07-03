@@ -4,6 +4,7 @@ import {
 } from '@contentful/optimization-web/presentation'
 import type { Entry } from 'contentful'
 import { createContext, useContext, useEffect, useMemo, useRef, type JSX } from 'react'
+import { useOptimization } from '../hooks/useOptimization'
 import { createScopedLogger } from '../logger'
 import {
   resolveChildren,
@@ -11,12 +12,14 @@ import {
   resolveLoadingLayoutTargetStyle,
   type LoadingFallback,
   type OptimizedEntryChildren,
+  type OptimizedEntryRenderContext,
   type RenderProp,
   type WrapperElement,
 } from './optimizedEntryUtils'
 import { useOptimizedEntrySnapshot } from './useOptimizedEntry'
 
 export type OptimizedEntryLoadingFallback = LoadingFallback
+export type { OptimizedEntryRenderContext }
 export type OptimizedEntryWrapperElement = WrapperElement
 export type OptimizedEntryRenderProp = RenderProp
 
@@ -130,6 +133,14 @@ export function OptimizedEntry({
   trackViews,
   viewDurationUpdateIntervalMs,
 }: OptimizedEntryProps): JSX.Element | null {
+  const sdk = useOptimization()
+  const renderContext = useMemo<OptimizedEntryRenderContext>(
+    () => ({
+      getMergeTagValue: (embeddedEntryNodeTarget, profile) =>
+        sdk.getMergeTagValue(embeddedEntryNodeTarget, profile),
+    }),
+    [sdk],
+  )
   const {
     sys: { id: baselineEntryId },
   } = baselineEntry
@@ -165,7 +176,7 @@ export function OptimizedEntry({
     targetDisplay: loadingTargetDisplay,
   } = loadingPresentation
   const loadingContent = shouldRenderBaselineWhileLoading
-    ? resolveChildren(children, baselineEntry)
+    ? resolveChildren(children, baselineEntry, renderContext)
     : resolvedLoadingFallback
   const dataTestId = dataTestIdProp ?? testId
   const Wrapper = as
@@ -194,7 +205,7 @@ export function OptimizedEntry({
   return (
     <OptimizedEntryNestingContext.Provider value={currentAndAncestorBaselineIds}>
       <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId} {...hostAttributes}>
-        {resolveChildren(children, entry)}
+        {resolveChildren(children, entry, renderContext)}
       </Wrapper>
     </OptimizedEntryNestingContext.Provider>
   )

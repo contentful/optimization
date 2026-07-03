@@ -388,8 +388,8 @@ also trigger implementation E2E. At a high level:
 | `e2e_web_sdk` -> `e2e-web-sdk`                                                             | `lib/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files                                             |
 | `e2e_web_sdk_react` -> `e2e-web-sdk_react`                                                 | `lib/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files                                             |
 | `e2e_react_web_sdk` -> `e2e-react-web-sdk`                                                 | `lib/**`, `packages/web/frameworks/react-web-sdk/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files |
-| `e2e_nextjs_sdk_ssr` -> `e2e-nextjs-sdk-ssr`                                               | `lib/**`, `packages/web/frameworks/nextjs-sdk/**`, Node SDK, React Web SDK, Web SDK, universal packages, shared root files                              |
-| `e2e_nextjs_sdk_hybrid` -> `e2e-nextjs-sdk-hybrid`                                         | `lib/**`, `packages/web/frameworks/nextjs-sdk/**`, Node SDK, React Web SDK, Web SDK, preview panel, universal packages, shared root files               |
+| `e2e_nextjs_sdk_app_router` -> `e2e-nextjs-sdk-app-router`                                 | `lib/**`, `packages/web/frameworks/nextjs-sdk/**`, Node SDK, React Web SDK, Web SDK, universal packages, shared root files                              |
+| `e2e_nextjs_sdk_pages_router` -> `e2e-nextjs-sdk-pages-router`                             | `lib/**`, `packages/web/frameworks/nextjs-sdk/**`, Node SDK, React Web SDK, Web SDK, preview panel, universal packages, shared root files               |
 | `e2e_react_native_android` -> `e2e-react-native-android-build`, `e2e-react-native-android` | `lib/**`, `packages/react-native-sdk/**`, universal packages, shared root files                                                                         |
 
 See [`.github/workflows/main-pipeline.yaml`](./.github/workflows/main-pipeline.yaml) for the exact

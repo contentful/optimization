@@ -141,12 +141,14 @@ describe('@contentful/optimization-react-web core providers', () => {
     withoutLocale.unmount()
   })
 
-  it('does not create an owned optimization instance during server render', () => {
-    let renderedChild = false
+  it('renders config-owned children from a snapshot during server render', () => {
+    let experienceRequestStatus: string | undefined = undefined
 
-    function Probe(): null {
-      renderedChild = true
-      return null
+    function Probe(): ReactElement {
+      const sdk = useOptimization()
+      experienceRequestStatus = sdk.states.experienceRequestState.current.status
+
+      return <span>{experienceRequestStatus}</span>
     }
 
     const markup = renderToString(
@@ -159,8 +161,8 @@ describe('@contentful/optimization-react-web core providers', () => {
       </OptimizationProvider>,
     )
 
-    expect(markup).toBe('')
-    expect(renderedChild).toBe(false)
+    expect(markup).toContain('success')
+    expect(experienceRequestStatus).toBe('success')
     expect(window.contentfulOptimization).toBeUndefined()
   })
 
@@ -222,9 +224,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     }
 
     renderToString(
-      <OptimizationContext.Provider
-        value={{ sdk: undefined, isReady: false, error: initializationError }}
-      >
+      <OptimizationContext.Provider value={{ sdk: undefined, error: initializationError }}>
         <Probe />
       </OptimizationContext.Provider>,
     )
@@ -232,7 +232,6 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(capturedContext).toEqual(
       expect.objectContaining({
         sdk: undefined,
-        isReady: false,
         error: initializationError,
       }),
     )
@@ -246,7 +245,7 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     const capturedError = captureRenderError(
       <OptimizationContext.Provider
-        value={{ sdk: undefined, isReady: false, error: new Error('SDK unavailable.') }}
+        value={{ sdk: undefined, error: new Error('SDK unavailable.') }}
       >
         <BrokenProbe />
       </OptimizationContext.Provider>,
@@ -316,7 +315,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     })
 
     renderToString(
-      <OptimizationContext.Provider value={{ sdk, isReady: true, error: undefined }}>
+      <OptimizationContext.Provider value={{ sdk, error: undefined }}>
         <Probe />
       </OptimizationContext.Provider>,
     )
@@ -425,13 +424,13 @@ describe('@contentful/optimization-react-web core providers', () => {
     })
 
     const rendered = renderClient(
-      <OptimizationContext.Provider value={{ sdk, isReady: true, error: undefined }}>
+      <OptimizationContext.Provider value={{ sdk, error: undefined }}>
         <Probe />
       </OptimizationContext.Provider>,
     )
 
     rendered.rerender(
-      <OptimizationContext.Provider value={{ sdk, isReady: true, error: undefined }}>
+      <OptimizationContext.Provider value={{ sdk, error: undefined }}>
         <Probe />
       </OptimizationContext.Provider>,
     )
@@ -546,7 +545,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     renderClient(<FirstScenario />).unmount()
     renderClient(<SecondScenario />).unmount()
 
-    expect(results).toEqual([true, false, true])
+    expect(results).toEqual([true, false, true, false, true, true])
   })
 
   it('destroys the optimization singleton on provider unmount', () => {

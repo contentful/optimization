@@ -140,27 +140,27 @@ function ControlPanelFields({
         {globalLiveUpdates ? 'OFF' : 'ON'}
       </button>
 
+      <span
+        className="control-panel__row-label"
+        data-tooltip="Contentful preview panel is open — forces live updates regardless of the global toggle"
+      >
+        Preview panel
+      </span>
+      <span className="control-panel__row-value" data-testid="preview-panel-status">
+        {isPreviewPanelOpen ? 'Open' : 'Closed'}
+      </span>
       {ENABLE_PREVIEW_PANEL ? (
-        <>
-          <span
-            className="control-panel__row-label"
-            data-tooltip="Contentful preview panel is open — forces live updates regardless of the global toggle"
-          >
-            Preview panel
-          </span>
-          <span className="control-panel__row-value" data-testid="preview-panel-status">
-            {isPreviewPanelOpen ? 'Open' : 'Closed'}
-          </span>
-          <button
-            className="btn btn--sm btn--secondary"
-            data-testid="simulate-preview-panel-button"
-            onClick={onTogglePreviewPanel}
-            type="button"
-          >
-            {isPreviewPanelOpen ? 'Close Preview Panel' : 'Open Preview Panel'}
-          </button>
-        </>
-      ) : null}
+        <button
+          className="btn btn--sm btn--secondary"
+          data-testid="simulate-preview-panel-button"
+          onClick={onTogglePreviewPanel}
+          type="button"
+        >
+          {isPreviewPanelOpen ? 'Close Preview Panel' : 'Open Preview Panel'}
+        </button>
+      ) : (
+        <span />
+      )}
 
       <span
         className="control-panel__row-label"

@@ -69,7 +69,7 @@ export function ContentEntry({
         }
         trackViews={autoTrackViews ? undefined : false}
       >
-        {(resolvedEntry) => {
+        {(resolvedEntry, { getMergeTagValue }) => {
           const asCf = resolvedEntry as ContentEntryType
           const richTextField = Object.values(asCf.fields).find(isRichTextDocument)
           const fullLabel = `Entry: ${asCf.sys.id}`
@@ -89,7 +89,7 @@ export function ContentEntry({
             >
               <div data-testid={`entry-text-${entry.sys.id}`} aria-label={fullLabel}>
                 {richTextField ? (
-                  <RichTextRenderer richText={richTextField} />
+                  <RichTextRenderer getMergeTagValue={getMergeTagValue} richText={richTextField} />
                 ) : (
                   <p>{getEntryText(asCf)}</p>
                 )}

@@ -37,6 +37,9 @@ For pnpm-managed packages with matching scripts, use `pnpm --filter <package-nam
 - Run unit tests when behavior, helpers, contracts, or tested code changed.
 - Run package `build` when exports, bundled runtime code, emitted declarations, or packaging
   changed.
+- When adding a package export or Rslib entry that emits a new bundle, add its matching
+  `buildTools.bundleSize.gzipBudgets` entry in the same package change. This does not relax the root
+  policy for changing existing budgets.
 - Run `size:check` for runtime, export, dependency, bundler config, or bundle-shape changes, and
   handle failures under the root `Bundle size` policy.
 - Validate package-local harnesses when changing flows they demonstrate.

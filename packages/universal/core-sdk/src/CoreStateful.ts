@@ -11,6 +11,7 @@ import { createScopedLogger, logger } from '@contentful/optimization-api-client/
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { installCoreBridgeCapabilities } from './bridge-support/capabilities'
 import type { ConsentController, ConsentGuard, ConsentInput } from './consent'
+import { UNLOCKING_EVENT_TYPES } from './consent/ConsentPolicy'
 import type { CoreStatefulApiConfig } from './CoreApiConfig'
 import type { CoreConfig } from './CoreBase'
 import CoreStatefulEventEmitter from './CoreStatefulEventEmitter'
@@ -19,7 +20,6 @@ import {
   type BlockedEvent,
   DEFAULT_ALLOWED_EVENT_TYPES,
   type EventOptimizationContext,
-  type EventType,
   type OptimizationEventStreamEvent,
 } from './events'
 import { toPositiveInt } from './lib/number'
@@ -205,16 +205,6 @@ let statefulInstanceCounter = 0
  *
  * @public
  */
-const OPTIMIZATION_UNLOCKING_EVENT_TYPES: readonly EventType[] = [
-  'identify',
-  'page',
-  'screen',
-  'track',
-  'group',
-  'alias',
-  'component',
-]
-
 class CoreStateful extends CoreStatefulEventEmitter implements ConsentController, ConsentGuard {
   private readonly singletonOwner: string
   private destroyed = false
@@ -224,10 +214,11 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   protected readonly onEventBlocked?: CoreStatefulConfig['onEventBlocked']
   private readonly optimizationContexts = new Map<string, RegisteredOptimizationContext>()
 
-  private readonly optimizationPossibleSignal = signalFns.computed<boolean>(() => {
-    if (consentSignal.value === true) return true
-    return OPTIMIZATION_UNLOCKING_EVENT_TYPES.some((type) => this.allowedEventTypes.includes(type))
-  })
+  private readonly optimizationPossibleSignal = signalFns.computed<boolean>(
+    () =>
+      consentSignal.value === true ||
+      UNLOCKING_EVENT_TYPES.some((type) => this.allowedEventTypes.includes(type)),
+  )
 
   /**
    * Expose merged observable state for consumers.

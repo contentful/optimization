@@ -10,17 +10,26 @@ import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimizationContext } from '../hooks/useOptimization'
 
 export interface UseOptimizedEntryParams {
+  /** Baseline Contentful entry fetched by the application. */
   baselineEntry: Entry
+  /** Per-entry live-update override. */
   liveUpdates?: boolean
 }
 
 export interface UseOptimizedEntryResult {
+  /** Whether SDK state says optimized content can be selected. */
   canOptimize: boolean
+  /** Entry that should be rendered for the current hook state. */
   entry: Entry
+  /** Whether the optimized entry is still waiting for optimization state. */
   isLoading: boolean
-  isReady: boolean
+  /** Whether the client presentation layer is ready to reveal rendered content. */
+  isPresentationReady: boolean
+  /** Selected optimization that resolved the current entry, when one applied. */
   selectedOptimization: ResolvedData<EntrySkeletonType>['selectedOptimization']
+  /** Full resolved entry data returned by the SDK resolver. */
   resolvedData: ResolvedData<EntrySkeletonType>
+  /** Selected optimization array used for this hook state. */
   selectedOptimizations: SelectedOptimizationArray | undefined
 }
 
@@ -35,6 +44,11 @@ export interface UseOptimizedEntrySnapshotParams extends UseOptimizedEntryParams
   viewDurationUpdateIntervalMs?: number
 }
 
+/**
+ * Return the low-level optimized-entry presentation snapshot for a baseline entry.
+ *
+ * @public
+ */
 export function useOptimizedEntrySnapshot({
   baselineEntry,
   clickable,
@@ -47,9 +61,10 @@ export function useOptimizedEntrySnapshot({
   trackViews,
   viewDurationUpdateIntervalMs,
 }: UseOptimizedEntrySnapshotParams): OptimizedEntrySnapshot {
-  const { sdk, isReady } = useOptimizationContext()
+  const { sdk } = useOptimizationContext()
   const liveUpdatesContext = useLiveUpdates()
-  const [isPresentationReady, setIsPresentationReady] = useState(false)
+  const isSdkReady = sdk !== undefined
+  const [isPresentationReady, setIsPresentationReady] = useState(isSdkReady)
 
   const controllerOptions = useMemo(
     () => ({
@@ -60,7 +75,7 @@ export function useOptimizedEntrySnapshot({
       hasCustomLoadingFallback,
       isPreviewPanelOpen: liveUpdatesContext.previewPanelVisible,
       sdk,
-      isSdkStateReady: isReady,
+      isSdkStateReady: isSdkReady,
       targetDisplay,
       clickable,
       hoverDurationUpdateIntervalMs,
@@ -75,7 +90,7 @@ export function useOptimizedEntrySnapshot({
       clickable,
       hasCustomLoadingFallback,
       hoverDurationUpdateIntervalMs,
-      isReady,
+      isSdkReady,
       liveUpdates,
       liveUpdatesContext.globalLiveUpdates,
       liveUpdatesContext.previewPanelVisible,
@@ -91,8 +106,8 @@ export function useOptimizedEntrySnapshot({
   const [snapshot, setSnapshot] = useState<OptimizedEntrySnapshot>(() => controller.getSnapshot())
 
   useEffect(() => {
-    setIsPresentationReady(isReady)
-  }, [isReady])
+    setIsPresentationReady(isSdkReady)
+  }, [isSdkReady])
 
   useEffect(() => {
     controller.setSnapshotListener(setSnapshot)
@@ -113,6 +128,11 @@ export function useOptimizedEntrySnapshot({
   return snapshot
 }
 
+/**
+ * Resolve a baseline entry and expose optimized-entry loading and metadata state.
+ *
+ * @public
+ */
 export function useOptimizedEntry(params: UseOptimizedEntryParams): UseOptimizedEntryResult {
   const snapshot = useOptimizedEntrySnapshot(params)
 
@@ -120,7 +140,7 @@ export function useOptimizedEntry(params: UseOptimizedEntryParams): UseOptimized
     canOptimize: snapshot.canOptimize,
     entry: snapshot.entry,
     isLoading: snapshot.isLoading,
-    isReady: snapshot.isReady,
+    isPresentationReady: snapshot.isPresentationReady,
     selectedOptimization: snapshot.selectedOptimization,
     resolvedData: snapshot.resolvedData,
     selectedOptimizations: snapshot.selectedOptimizations,

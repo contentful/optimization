@@ -19,6 +19,7 @@ export type OptimizationWebRuntime = ContentfulOptimization
 export * from './builders/EventBuilder'
 export {
   CAN_ADD_LISTENERS,
+  DEFAULT_WEB_ALLOWED_EVENT_TYPES,
   ENTRY_SELECTOR,
   HAS_MUTATION_OBSERVER,
   OPTIMIZATION_WEB_SDK_NAME,

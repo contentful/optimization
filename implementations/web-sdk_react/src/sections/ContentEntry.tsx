@@ -194,7 +194,7 @@ export function ContentEntry({
   entry,
   observation,
 }: ContentEntryProps): JSX.Element {
-  const { sdk, isReady } = useOptimization()
+  const { sdk } = useOptimization()
   const { resolveEntry } = useOptimizationResolver()
   const containerRef = useRef<HTMLDivElement | null>(null)
 
@@ -207,7 +207,7 @@ export function ContentEntry({
   )
 
   useEffect(() => {
-    if (!isReady || sdk === undefined || observation !== 'manual' || !hasTrackingApi(sdk)) {
+    if (sdk === undefined || observation !== 'manual' || !hasTrackingApi(sdk)) {
       return
     }
 
@@ -230,7 +230,7 @@ export function ContentEntry({
     return () => {
       sdk.tracking.clearElement('views', element)
     }
-  }, [experienceId, isReady, observation, resolvedEntry.sys.id, sdk, sticky, variantIndex])
+  }, [experienceId, observation, resolvedEntry.sys.id, sdk, sticky, variantIndex])
 
   const richTextField = Object.values(resolvedEntry.fields).find(isRichTextDocument)
 

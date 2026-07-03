@@ -42,7 +42,7 @@ React framework package.
 | Live updates (global)        | `OptimizationRoot liveUpdates` prop                                                        |
 | Live updates (per-component) | `OptimizedEntry liveUpdates` prop                                                          |
 | Live updates (locked)        | `<OptimizedEntry liveUpdates={false}>`                                                     |
-| Merge tag rendering          | `useMergeTagResolver().getMergeTagValue()`                                                 |
+| Merge tag rendering          | `OptimizedEntry` render context `getMergeTagValue`                                         |
 | Nested personalization       | Nested `<OptimizedEntry>` composition                                                      |
 | Consent gating               | `sdk.consent()` via `useOptimizationContext()`                                             |
 | Identify / reset             | `sdk.identify()` / `sdk.reset()` via `useOptimizationContext()`                            |
@@ -177,7 +177,7 @@ react-web-sdk/
 │   ├── components/
 │   │   ├── AnalyticsEventDisplay.tsx   # Live event stream panel (persists across routes)
 │   │   ├── ControlPanel.tsx            # Consent, identify, reset, and conversion controls
-│   │   └── RichTextRenderer.tsx        # Rich text + merge tag rendering
+│   │   └── RichTextRenderer.tsx        # Rich text + getMergeTagValue merge tags
 │   ├── config/
 │   │   └── locale.ts                   # Application Contentful locale
 │   ├── contentful-generated.d.ts       # Generated Contentful entry skeleton types
@@ -213,9 +213,12 @@ Implementation-specific touchpoints:
 
 - `src/main.tsx` mounts `OptimizationRoot`, `ReactRouterAutoPageTracker`, route configuration, and
   preview-panel attachment.
-- `src/sections/ContentEntry.tsx` demonstrates automatic tracking props and manual view tracking.
+- `src/sections/ContentEntry.tsx` demonstrates automatic tracking props, manual view tracking, and
+  passing `OptimizedEntry` render-context `getMergeTagValue` into rich text rendering.
 - `src/sections/LiveUpdatesExampleEntry.tsx` compares default, locked, and always-live entry
   resolution.
+- `src/components/RichTextRenderer.tsx` renders rich text merge tags with the `getMergeTagValue`
+  prop from the `OptimizedEntry` render context.
 - `src/components/ControlPanel.tsx` demonstrates consent, identify, reset, and conversion actions.
 
 ## Code orientation
@@ -224,14 +227,14 @@ Implementation-specific touchpoints:
 | ------------------------------------------ | -------------------------------------------------------------- |
 | `src/main.tsx`                             | Configures `OptimizationRoot` and `ReactRouterAutoPageTracker` |
 | `src/App.tsx`                              | Subscribes to provider state and renders route-level controls  |
-| `src/sections/ContentEntry.tsx`            | Demonstrates `OptimizedEntry` tracking props and manual views  |
+| `src/sections/ContentEntry.tsx`            | Passes `OptimizedEntry` context into tracked rich text entries |
 | `src/sections/LiveUpdatesExampleEntry.tsx` | Demonstrates locked and live entry resolution                  |
-| `src/components/RichTextRenderer.tsx`      | Demonstrates merge tag rendering with `useMergeTagResolver()`  |
+| `src/components/RichTextRenderer.tsx`      | Consumes `getMergeTagValue` for rich text merge tag rendering  |
 | `src/components/AnalyticsEventDisplay.tsx` | Displays event stream output from `sdk.states.eventStream`     |
 | Manual `selectedOptimizations` lock logic  | `<OptimizedEntry liveUpdates={false}>`                         |
 
-**What stays the same:** `contentfulClient.ts`, locale config, type definitions, `RichTextRenderer`,
-E2E test files, page/section component structure.
+**What stays the same:** `contentfulClient.ts`, locale config, type definitions, E2E test files,
+page/section component structure.
 
 **Key architectural difference:** `App.tsx` acts as a persistent layout (contains
 `AnalyticsEventDisplay` that stays mounted across route changes). Pages are route children that

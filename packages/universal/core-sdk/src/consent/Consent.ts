@@ -31,8 +31,8 @@ export interface ConsentController {
  *
  * @internal
  * @remarks
- * These methods are consumed by consent-gated send paths to decide whether to proceed with an
- * operation and how to report blocked calls.
+ * This predicate is consumed by consent-gated send paths to decide whether to proceed with an
+ * operation.
  */
 export interface ConsentGuard {
   /**
@@ -45,13 +45,4 @@ export interface ConsentGuard {
    * The mapping between method names and event type strings can be product‑specific.
    */
   hasConsent: (name: string) => boolean
-
-  /**
-   * Hook invoked when an operation is blocked due to missing consent.
-   *
-   * @param name - The blocked operation/method name.
-   * @param args - The original call arguments, provided for diagnostics/telemetry.
-   * @returns Nothing. Implementations typically log and/or emit diagnostics.
-   */
-  onBlockedByConsent: (name: string, args: unknown[]) => void
 }

@@ -33,6 +33,7 @@ export { OptimizedEntry } from './optimized-entry/OptimizedEntry'
 export type {
   OptimizedEntryLoadingFallback,
   OptimizedEntryProps,
+  OptimizedEntryRenderContext,
 } from './optimized-entry/OptimizedEntry'
 export { useOptimizedEntry } from './optimized-entry/useOptimizedEntry'
 export type {

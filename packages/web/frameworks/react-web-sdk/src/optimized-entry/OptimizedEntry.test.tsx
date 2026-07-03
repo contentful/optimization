@@ -1,7 +1,11 @@
-import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import type {
+  MergeTagEntry,
+  SelectedOptimizationArray,
+} from '@contentful/optimization-web/api-schemas'
 import { act, createElement } from 'react'
 import { OptimizedEntry, type OptimizedEntryProps } from './OptimizedEntry'
 import {
+  createOptimizationSdk,
   createRuntime,
   getRequiredElement,
   getWrapper,
@@ -24,6 +28,28 @@ describe('OptimizedEntry', () => {
   const variantParent = makeEntry('parent-variant')
   const baselineChild = makeEntry('child-baseline')
   const variantChild = makeEntry('child-variant')
+
+  function makeMergeTagEntry(id: string): MergeTagEntry {
+    const entry = makeEntry(id)
+    const mergeTagEntry: MergeTagEntry = {
+      ...entry,
+      fields: {
+        nt_mergetag_id: 'traits.continent',
+        nt_name: id,
+      },
+      sys: {
+        ...entry.sys,
+        contentType: {
+          sys: {
+            id: 'nt_mergetag',
+            linkType: 'ContentType',
+            type: 'Link',
+          },
+        },
+      },
+    }
+    return mergeTagEntry
+  }
 
   const variantOneState: SelectedOptimizationArray = [
     {
@@ -68,6 +94,28 @@ describe('OptimizedEntry', () => {
     expect(wrapper.dataset.ctflEntryId).toBe('baseline')
     expect(wrapper.dataset.ctflOptimizationId).toBeUndefined()
     expect(wrapper.dataset.ctflVariantIndex).toBe('0')
+
+    await view.unmount()
+  })
+
+  it('passes merge-tag helpers to render props', async () => {
+    const optimization = createOptimizationSdk()
+    const getMergeTagValueCalls: unknown[] = []
+    optimization.getMergeTagValue = function (embeddedEntryNodeTarget): string {
+      getMergeTagValueCalls.push([this === optimization, embeddedEntryNodeTarget])
+      return 'EU'
+    }
+    const mergeTagEntry = makeMergeTagEntry('merge-tag')
+
+    const view = await renderComponent(
+      <OptimizedEntry baselineEntry={baseline}>
+        {(_resolved, { getMergeTagValue }) => getMergeTagValue(mergeTagEntry)}
+      </OptimizedEntry>,
+      optimization,
+    )
+
+    expect(view.container.textContent).toContain('EU')
+    expect(getMergeTagValueCalls).toContainEqual([true, mergeTagEntry])
 
     await view.unmount()
   })
@@ -604,7 +652,7 @@ describe('OptimizedEntry', () => {
     await spanView.unmount()
   })
 
-  it('renders invisible loading target during SSR for non-optimized entries', () => {
+  it('renders visible resolved content during SSR when the runtime is ready', () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
     const markup = renderToStringWithoutWindow(() =>
@@ -616,9 +664,8 @@ describe('OptimizedEntry', () => {
       ),
     )
 
-    expect(markup).toContain('data-ctfl-loading-layout-target="true"')
-    expect(markup).toContain('visibility:hidden')
     expect(markup).toContain('baseline')
+    expect(markup).not.toContain('visibility:hidden')
   })
 
   it('renders non-optimized content after sdk initialization', async () => {

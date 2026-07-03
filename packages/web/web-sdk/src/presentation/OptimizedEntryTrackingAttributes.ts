@@ -1,17 +1,38 @@
 import type { ResolvedData } from '@contentful/optimization-core'
 import type { Entry, EntrySkeletonType } from 'contentful'
 
+/**
+ * Value type supported by optimized-entry host tracking attributes.
+ *
+ * @public
+ */
 export type OptimizedEntryHostAttributeValue = string | boolean | number | undefined
 
+/**
+ * Options that control optimized-entry interaction tracking attributes.
+ *
+ * @public
+ */
 export interface OptimizedEntryTrackingAttributeOptions {
+  /** Whether the host element should be treated as a click target. */
   readonly clickable?: boolean
+  /** Hover duration update interval in milliseconds. */
   readonly hoverDurationUpdateIntervalMs?: number
+  /** Per-entry click tracking override. */
   readonly trackClicks?: boolean
+  /** Per-entry hover tracking override. */
   readonly trackHovers?: boolean
+  /** Per-entry view tracking override. */
   readonly trackViews?: boolean
+  /** View duration update interval in milliseconds. */
   readonly viewDurationUpdateIntervalMs?: number
 }
 
+/**
+ * Data attributes applied to optimized-entry host elements for automatic tracking.
+ *
+ * @public
+ */
 export type OptimizedEntryTrackingAttributes = Record<string, OptimizedEntryHostAttributeValue>
 
 interface SelectedOptimizationWithDuplicationScope {
@@ -34,6 +55,11 @@ function resolveDuplicationScope(
   return candidate.trim() ? candidate : undefined
 }
 
+/**
+ * Build host tracking attributes for an optimized-entry presentation snapshot.
+ *
+ * @public
+ */
 export function resolveOptimizedEntryTrackingAttributes(
   baselineEntry: Entry,
   resolvedData: ResolvedData<EntrySkeletonType>,

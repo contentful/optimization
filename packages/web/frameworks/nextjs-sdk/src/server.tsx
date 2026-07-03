@@ -12,15 +12,8 @@ import type {
   UniversalEventBuilderArgs,
 } from '@contentful/optimization-node/core-sdk'
 import { createPageContextFromUrl } from '@contentful/optimization-node/core-sdk'
-import { createElement, type JSX, type ReactElement, type ReactNode } from 'react'
+import type { NextjsCookieReader } from './bound-component-types'
 import { NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER } from './request-context'
-import {
-  getServerTrackingAttributes,
-  type ServerTrackingAttributeOptions,
-  type ServerTrackingAttributes,
-  type ServerTrackingBaselineEntry,
-  type ServerTrackingResolvedData,
-} from './tracking-attributes'
 
 export const DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE = ANONYMOUS_ID_COOKIE
 export type { OptimizationNodeConfig } from '@contentful/optimization-node'
@@ -34,6 +27,13 @@ export type {
   ResolvedData,
   UniversalEventBuilderArgs,
 } from '@contentful/optimization-node/core-sdk'
+export type {
+  NextjsCookieReader,
+  NextjsCookieValue,
+  NextjsOptimizationServerConsent,
+  NextjsOptimizationServerConsentContext,
+  NextjsOptimizationServerConsentResolver,
+} from './bound-component-types'
 export {
   NEXTJS_OPTIMIZATION_REQUEST_HEADER_PREFIX,
   NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER,
@@ -45,14 +45,6 @@ export type {
   ServerTrackingResolvedData,
 } from './tracking-attributes'
 export type ContentfulOptimization = ContentfulOptimizationRuntime
-
-export interface NextjsCookieValue {
-  readonly value: string
-}
-
-export interface NextjsCookieReader {
-  get: (name: string) => NextjsCookieValue | undefined
-}
 
 export interface NextjsCookieWriter {
   delete: (name: string) => void
@@ -143,23 +135,6 @@ export interface CreateNextjsPageContextOptions {
 export type NextjsPageContextInput =
   | NonNullable<UniversalEventBuilderArgs['page']>
   | CreateNextjsPageContextOptions
-
-type ServerOptimizedEntryOwnProps<TElement extends keyof JSX.IntrinsicElements> =
-  ServerTrackingAttributeOptions & {
-    readonly as?: TElement
-    readonly baselineEntry: ServerTrackingBaselineEntry
-    readonly children?: ReactNode
-    readonly resolvedData: ServerTrackingResolvedData
-  }
-
-type DataCtflAttributeName = `data-ctfl-${string}`
-
-export type ServerOptimizedEntryProps<TElement extends keyof JSX.IntrinsicElements = 'div'> =
-  ServerOptimizedEntryOwnProps<TElement> &
-    Omit<
-      JSX.IntrinsicElements[TElement],
-      keyof ServerOptimizedEntryOwnProps<TElement> | DataCtflAttributeName
-    >
 
 export function createNextjsOptimization(config: OptimizationNodeConfig): ContentfulOptimization {
   return new ContentfulOptimizationRuntime(config)
@@ -338,36 +313,6 @@ export function persistNextjsAnonymousId(
   if (deleteWhenProfileCannotPersist) {
     response.cookies.delete(anonymousIdCookieName)
   }
-}
-
-export function ServerOptimizedEntry<TElement extends keyof JSX.IntrinsicElements = 'div'>({
-  as,
-  baselineEntry,
-  children,
-  clickable,
-  hoverDurationUpdateIntervalMs,
-  resolvedData,
-  trackClicks,
-  trackHovers,
-  trackViews,
-  viewDurationUpdateIntervalMs,
-  ...htmlProps
-}: ServerOptimizedEntryProps<TElement>): ReactElement {
-  const Element = as ?? 'div'
-  const trackingAttributes: ServerTrackingAttributes = getServerTrackingAttributes(
-    baselineEntry,
-    resolvedData,
-    {
-      clickable,
-      hoverDurationUpdateIntervalMs,
-      trackClicks,
-      trackHovers,
-      trackViews,
-      viewDurationUpdateIntervalMs,
-    },
-  )
-
-  return createElement(Element, { ...htmlProps, ...trackingAttributes }, children)
 }
 
 function mergePageContext(

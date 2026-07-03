@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, type NextRouter } from 'next/router'
+import { useRouter, type NextRouter } from 'next/router.js'
 import { useCallback, useMemo, type ReactElement } from 'react'
 import { buildAutoPagePayload } from '../auto-page/pagePayload'
 import type { AutoPagePayload, AutoPagePayloadOptions } from '../auto-page/types'

@@ -1,3 +1,9 @@
+/**
+ * Low-level presentation primitives shared by optimized-entry wrappers.
+ *
+ * @packageDocumentation
+ */
+
 export {
   createOptimizationRootSdkBinding,
   disposeOptimizationRootSdkBinding,

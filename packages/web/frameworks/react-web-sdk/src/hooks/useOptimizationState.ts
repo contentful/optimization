@@ -38,7 +38,7 @@ function useObservableState<T>(observable: ObservableLike<T>): T {
 
   const getSnapshot = useCallback(() => snapshotRef.current, [])
 
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+  return useSyncExternalStore(subscribe, getSnapshot, () => observable.current)
 }
 
 /**

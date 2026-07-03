@@ -151,7 +151,7 @@ function toDuration(event: AnalyticsEvent): number | undefined {
 }
 
 export function AnalyticsEventDisplay(): JSX.Element {
-  const { sdk, isReady } = useOptimizationContext()
+  const { sdk } = useOptimizationContext()
   const [events, setEvents] = useState<AnalyticsEvent[]>([])
   const [rawEventsCount, setRawEventsCount] = useState(0)
   const [, tick] = useReducer((n: number) => n + 1, 0)
@@ -165,7 +165,7 @@ export function AnalyticsEventDisplay(): JSX.Element {
   }, [])
 
   useEffect(() => {
-    if (!isReady || sdk === undefined) {
+    if (sdk === undefined) {
       setEvents([])
       setRawEventsCount(0)
       nextId.current = 0
@@ -187,7 +187,7 @@ export function AnalyticsEventDisplay(): JSX.Element {
     return () => {
       subscription.unsubscribe()
     }
-  }, [isReady, sdk])
+  }, [sdk])
 
   return (
     <section className="tracking-log" data-testid="analytics-events-container">

@@ -2,7 +2,20 @@ import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server
 import {
   NEXTJS_OPTIMIZATION_REQUEST_HEADER_PREFIX,
   NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER,
+  NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER,
+  serializeNextjsOptimizationRequestContext,
 } from './request-context'
+import {
+  getNextjsServerOptimizationData,
+  persistNextjsAnonymousId,
+  type ContentfulOptimization,
+  type CoreStatelessRequest,
+  type CoreStatelessRequestConsent,
+  type NextjsAnonymousIdCookieOptions,
+  type NextjsOptimizationServerConsentResolver,
+  type OptimizationData,
+  type PersistNextjsAnonymousIdOptions,
+} from './server'
 
 export type MaybePromise<T> = T | Promise<T>
 
@@ -14,18 +27,85 @@ export type NextjsOptimizationRequestHandler = (
   responseOrEvent?: NextResponse | NextFetchEvent,
 ) => MaybePromise<NextResponse>
 
-export function createNextjsOptimizationContextHandler(): NextjsOptimizationRequestHandler {
-  return (request, responseOrEvent) => {
+export interface NextjsOptimizationContextHandlerOptions extends PersistNextjsAnonymousIdOptions {
+  readonly consent: CoreStatelessRequestConsent | NextjsOptimizationServerConsentResolver
+  readonly cookieOptions?: NextjsAnonymousIdCookieOptions
+  readonly locale?: string
+  readonly sdk: ContentfulOptimization
+}
+
+export function createNextjsOptimizationContextHandler(
+  options?: NextjsOptimizationContextHandlerOptions,
+): NextjsOptimizationRequestHandler {
+  return async (request, responseOrEvent) => {
     const response = getExistingNextResponse(responseOrEvent)
     const requestHeaders = createForwardedRequestHeaders(request, response)
+    const result =
+      options === undefined
+        ? undefined
+        : await getRequestOptimizationData(request, requestHeaders, options)
+
+    if (result !== undefined) {
+      requestHeaders.set(
+        NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER,
+        serializeNextjsOptimizationRequestContext({
+          consent: result.consent,
+          data: result.data,
+        }),
+      )
+    }
 
     if (!response) {
-      return NextResponse.next({ request: { headers: requestHeaders } })
+      const nextResponse = NextResponse.next({ request: { headers: requestHeaders } })
+      if (options !== undefined && result !== undefined) {
+        persistNextjsAnonymousId(nextResponse, result.requestOptimization, result.data, options)
+      }
+      return nextResponse
     }
 
     applyNextjsOptimizationRequestContext(response, requestHeaders)
+    if (options !== undefined && result !== undefined) {
+      persistNextjsAnonymousId(response, result.requestOptimization, result.data, options)
+    }
     return response
   }
+}
+
+interface RequestOptimizationData {
+  readonly consent: CoreStatelessRequestConsent
+  readonly data: OptimizationData | undefined
+  readonly requestOptimization: CoreStatelessRequest
+}
+
+async function getRequestOptimizationData(
+  request: NextRequest,
+  headers: Headers,
+  options: NextjsOptimizationContextHandlerOptions,
+): Promise<RequestOptimizationData> {
+  const consent = await resolveServerConsent(options.consent, {
+    cookies: request.cookies,
+    headers,
+  })
+  const { data, requestOptimization } = await getNextjsServerOptimizationData(options.sdk, {
+    anonymousIdCookieName: options.anonymousIdCookieName,
+    consent,
+    headers,
+    locale: options.locale,
+    request: {
+      cookies: request.cookies,
+      headers,
+      url: request.url,
+    },
+  })
+
+  return { consent, data, requestOptimization }
+}
+
+function resolveServerConsent(
+  consent: CoreStatelessRequestConsent | NextjsOptimizationServerConsentResolver,
+  context: Parameters<NextjsOptimizationServerConsentResolver>[0],
+): CoreStatelessRequestConsent | Promise<CoreStatelessRequestConsent> {
+  return typeof consent === 'function' ? consent(context) : consent
 }
 
 function getExistingNextResponse(

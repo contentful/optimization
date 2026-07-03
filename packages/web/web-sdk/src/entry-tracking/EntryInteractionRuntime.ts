@@ -127,6 +127,27 @@ function collectChildListMutation(
   })
 }
 
+function hasSameBaselineTrackedAncestor(element: EntryElement): boolean {
+  const {
+    dataset: { ctflBaselineId: baselineId },
+  } = element
+  if (!baselineId) return false
+
+  let { parentElement: ancestor } = element
+  while (ancestor) {
+    const { parentElement } = ancestor
+    if (isEntryElement(ancestor)) {
+      const {
+        dataset: { ctflBaselineId },
+      } = ancestor
+      if (ctflBaselineId === baselineId) return true
+    }
+    ancestor = parentElement
+  }
+
+  return false
+}
+
 /**
  * Runtime coordinator for tracked entry interactions (clicks, views, and hovers).
  *
@@ -314,7 +335,13 @@ export class EntryInteractionRuntime {
     if (typeof document === 'undefined') return
 
     document.querySelectorAll(ENTRY_SELECTOR).forEach((element) => {
-      if (!isEntryElement(element) || this.entryElements.has(element)) return
+      if (
+        !isEntryElement(element) ||
+        this.entryElements.has(element) ||
+        hasSameBaselineTrackedAncestor(element)
+      ) {
+        return
+      }
 
       this.entryElements.set(element, element)
     })
@@ -344,12 +371,23 @@ export class EntryInteractionRuntime {
   }
 
   private addEntryElements(elements: Iterable<Element>): void {
+    let added = false
+
     for (const element of elements) {
-      if (!isEntryElement(element) || this.entryElements.has(element)) continue
+      if (
+        !isEntryElement(element) ||
+        this.entryElements.has(element) ||
+        hasSameBaselineTrackedAncestor(element)
+      ) {
+        continue
+      }
 
       this.entryElements.set(element, element)
+      added = true
       this.notifyEntryElementAdded(element)
     }
+
+    if (added) this.removeNestedDuplicateEntryElements()
   }
 
   private removeEntryElements(elements: Iterable<Element>): void {
@@ -359,6 +397,12 @@ export class EntryInteractionRuntime {
 
       this.entryElements.delete(element)
       this.notifyEntryElementRemoved(entryElement)
+    }
+  }
+
+  private removeNestedDuplicateEntryElements(): void {
+    for (const entryElement of this.entryElements.values()) {
+      if (hasSameBaselineTrackedAncestor(entryElement)) this.removeEntryElements([entryElement])
     }
   }
 

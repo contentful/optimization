@@ -1,6 +1,6 @@
 'use client'
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation.js'
 import { useCallback, useMemo, type ReactElement } from 'react'
 import { buildAutoPagePayload } from '../auto-page/pagePayload'
 import type { AutoPagePayload, AutoPagePayloadOptions } from '../auto-page/types'

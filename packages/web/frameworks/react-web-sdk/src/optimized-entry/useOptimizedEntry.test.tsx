@@ -55,7 +55,7 @@ describe('useOptimizedEntry', () => {
       entry: baselineEntry,
       selectedOptimization: undefined,
       isLoading: true,
-      isReady: true,
+      isPresentationReady: true,
       canOptimize: false,
       selectedOptimizations: undefined,
     })
@@ -183,7 +183,7 @@ describe('useOptimizedEntry', () => {
     expect(rendered.getResult()).toMatchObject({
       entry: baselineEntry,
       isLoading: false,
-      isReady: true,
+      isPresentationReady: true,
       canOptimize: false,
       selectedOptimization: undefined,
       selectedOptimizations: undefined,

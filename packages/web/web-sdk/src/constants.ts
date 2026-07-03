@@ -1,7 +1,16 @@
+import type { AllowedEventType } from '@contentful/optimization-core'
+
 // eslint-disable-next-line @typescript-eslint/naming-convention -- Replaced at build-time
 declare const __OPTIMIZATION_VERSION__: string | undefined
 // eslint-disable-next-line @typescript-eslint/naming-convention -- Replaced at build-time
 declare const __OPTIMIZATION_PACKAGE_NAME__: string | undefined
+
+/**
+ * Event types the Web SDK admits before event consent is granted.
+ *
+ * @public
+ */
+export const DEFAULT_WEB_ALLOWED_EVENT_TYPES: readonly AllowedEventType[] = ['identify', 'page']
 
 /**
  * Version of the Optimization Web SDK, replaced at build time.
