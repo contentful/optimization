@@ -27,9 +27,9 @@ import type { Profile, SelectedOptimizationArray } from '@contentful/optimizatio
 import { hydrateOptimizationData } from '@contentful/optimization-web/bridge-support'
 import { createScopedLogger } from '@contentful/optimization-web/logger'
 import {
-  createSnapshotRuntime,
-  type OptimizationRuntime,
+  createWebSnapshotRuntime,
   type OptimizationSnapshot,
+  type WebOptimizationRuntime,
 } from '@contentful/optimization-web/runtime'
 import type { Entry } from 'contentful'
 import { PAGES } from 'e2e-web'
@@ -103,7 +103,7 @@ async function attachPreviewPanel(
 function hydrateSnapshotAndPromote(
   sdk: ContentfulOptimization,
   snapshot: OptimizationSnapshot | undefined,
-  runtimeSignal: WritableSignal<OptimizationRuntime>,
+  runtimeSignal: WritableSignal<WebOptimizationRuntime>,
 ): void {
   if (!snapshot?.data) {
     runtimeSignal.set(sdk)
@@ -142,27 +142,17 @@ function getOrCreateInstance(config: NgContentfulOptimizationConfig): Contentful
 
 /**
  * Single SDK service exposed to components. Both server and browser see the
- * same {@link OptimizationRuntime} surface: on the server (and during the
- * initial client render) it is a read-only {@link createSnapshotRuntime}
- * backed by the SSR handoff; on the browser after construction it swaps to
- * the live {@link ContentfulOptimization}. Resolvers, `states`, and event
- * actions work in both environments; browser-only imperative APIs
- * (`sdk.tracking.*`, `sdk.trackCurrentPage`) are reachable through
- * {@link liveSdk}, which is `undefined` on the server so callers can gate
- * their setup with `isPlatformBrowser()` — the same pattern React Web uses
- * via `useEffect`.
+ * same {@link WebOptimizationRuntime}: on the server (and during the initial
+ * client render) it is a read-only {@link createWebSnapshotRuntime} backed by
+ * the SSR handoff, with `tracking.*` and `trackCurrentPage` as inert no-ops;
+ * on the browser after construction it swaps to the live
+ * {@link ContentfulOptimization}. Every member — resolvers, `states`, event
+ * actions, and even the browser-only tracking imperatives — is safe to call
+ * unconditionally in components.
  */
 @Injectable({ providedIn: 'root' })
 export class NgContentfulOptimization {
-  /**
-   * The live web SDK, or `undefined` on the server. Only reach for this
-   * when calling browser-only imperative APIs that fall outside
-   * {@link OptimizationRuntime} (`tracking.*`, `trackCurrentPage`). For every
-   * other action call `runtime().identify(...)`, `runtime().page(...)`, etc.
-   * — those already work in both environments.
-   */
-  readonly liveSdk: ContentfulOptimization | undefined
-  readonly runtime: Signal<OptimizationRuntime>
+  readonly runtime: Signal<WebOptimizationRuntime>
   readonly consent: Signal<boolean | undefined>
   readonly profile: Signal<Profile | undefined>
   readonly selectedOptimizations: Signal<SelectedOptimizationArray | undefined>
@@ -178,7 +168,7 @@ export class NgContentfulOptimization {
       undefined,
     )
 
-    const runtimeSignal = signal<OptimizationRuntime>(createSnapshotRuntime(snapshot))
+    const runtimeSignal = signal<WebOptimizationRuntime>(createWebSnapshotRuntime(snapshot))
     this.runtime = runtimeSignal.asReadonly()
     this.consent = fromSdkState(() => runtimeSignal().states.consent)
     this.profile = fromSdkState(() => runtimeSignal().states.profile)
@@ -186,14 +176,12 @@ export class NgContentfulOptimization {
 
     if (!isBrowser) {
       // Server render: the snapshot runtime satisfies the full seam. Reads
-      // flow through `states.*`, resolvers/getMergeTagValue are pure, and
-      // event actions are inert dev-warn no-ops.
-      this.liveSdk = undefined
+      // flow through `states.*`, resolvers/getMergeTagValue are pure, event
+      // actions are inert dev-warn no-ops, and `tracking.*` is a NOOP object.
       return
     }
 
     const sdk = getOrCreateInstance(config)
-    this.liveSdk = sdk
 
     // Prime the live SDK with the server-computed snapshot before promoting
     // it to the runtime signal, so the first live render matches the SSR

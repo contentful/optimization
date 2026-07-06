@@ -1,4 +1,3 @@
-import { isPlatformBrowser } from '@angular/common'
 import {
   afterNextRender,
   computed,
@@ -6,7 +5,6 @@ import {
   effect,
   ElementRef,
   inject,
-  PLATFORM_ID,
   signal,
   untracked,
   type Signal,
@@ -29,15 +27,10 @@ export interface ResolvedEntry {
 }
 
 function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Signal<boolean>): void {
-  // `sdk.tracking.*` is a browser-only imperative API — the server has no DOM
-  // element to observe. Gating the whole wiring on `isPlatformBrowser` mirrors
-  // how React Web puts tracking inside `useEffect`: the lifecycle itself is
-  // the "if browser" guard, so the calls below never need a runtime check.
-  if (!isPlatformBrowser(inject(PLATFORM_ID))) return
-
-  const { liveSdk } = inject(NgContentfulOptimization)
-  if (!liveSdk) return
-  const { tracking } = liveSdk
+  // `runtime().tracking.*` is a NOOP on the server snapshot runtime and the
+  // real web SDK after hydration, so the wiring below can run unconditionally.
+  // `afterNextRender` already guards DOM access — it never fires on the server.
+  const optimization = inject(NgContentfulOptimization)
   const elementRef = inject<ElementRef<Element>>(ElementRef)
   const destroyRef = inject(DestroyRef)
 
@@ -49,13 +42,13 @@ function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Sign
 
   function track(): void {
     const { entryId, optimizationId, sticky, variantIndex } = result()
-    tracking.enableElement('views', elementRef.nativeElement, {
+    optimization.runtime().tracking.enableElement('views', elementRef.nativeElement, {
       data: { entryId, optimizationId, sticky, variantIndex },
     })
   }
 
   function clear(): void {
-    tracking.clearElement('views', elementRef.nativeElement)
+    optimization.runtime().tracking.clearElement('views', elementRef.nativeElement)
   }
 
   effect(() => {
