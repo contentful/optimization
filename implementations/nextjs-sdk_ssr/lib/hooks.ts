@@ -14,7 +14,7 @@ export function useConsent(): {
   setConsent: (value: boolean) => void
 } {
   const consent = useConsentState()
-  const { consent: setConsent } = useOptimizationActions()
+  const { setConsent } = useOptimizationActions()
   useEffect(() => {
     if (typeof consent === 'boolean') setAppConsent(consent)
   }, [consent])

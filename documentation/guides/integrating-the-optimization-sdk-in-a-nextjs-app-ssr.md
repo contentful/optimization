@@ -364,7 +364,7 @@ function setAppConsentCookie(consented: boolean): void {
 }
 
 export function OptimizationControls() {
-  const { consent: setConsent, identify, reset } = useOptimizationActions()
+  const { setConsent, identifyUser, resetUser } = useOptimizationActions()
   const consent = useConsentState()
   const profile = useProfileState()
 
@@ -384,12 +384,12 @@ export function OptimizationControls() {
         {consent === true ? 'Reject consent' : 'Accept consent'}
       </button>
       {isIdentified ? (
-        <button onClick={() => reset()} type="button">
+        <button onClick={() => resetUser()} type="button">
           Reset profile
         </button>
       ) : (
         <button
-          onClick={() => void identify({ userId: 'user-123', traits: { identified: true } })}
+          onClick={() => void identifyUser({ userId: 'user-123', traits: { identified: true } })}
           type="button"
         >
           Identify

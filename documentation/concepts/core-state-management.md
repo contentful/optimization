@@ -492,8 +492,8 @@ Native equivalents: iOS uses `client.getFlag(_:)` and `client.flagPublisher(_:)`
 
 Consent is a precondition for most event emission. Set it with the `consent` method:
 
-Web and React Native TypeScript SDK instance; React Web uses `useOptimizationActions().consent` with
-the same arguments:
+Web and React Native TypeScript SDK instance; React Web uses `useOptimizationActions().setConsent`
+with the same arguments:
 
 ```ts
 // Grant consent after application policy allows SDK event emission.
