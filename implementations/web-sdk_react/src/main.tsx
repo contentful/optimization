@@ -9,7 +9,7 @@ import { LiveUpdatesProvider } from './optimization/liveUpdates/LiveUpdatesConte
 import { getContentfulClient } from './services/contentfulClient'
 
 function RootApp(): React.JSX.Element {
-  const { sdk, isReady } = useOptimization()
+  const { sdk } = useOptimization()
   const [globalLiveUpdates, setGlobalLiveUpdates] = React.useState(false)
 
   const handleToggleGlobalLiveUpdates = React.useCallback(() => {
@@ -18,7 +18,7 @@ function RootApp(): React.JSX.Element {
 
   const app = <App onToggleGlobalLiveUpdates={handleToggleGlobalLiveUpdates} />
 
-  if (!isReady || sdk === undefined) {
+  if (sdk === undefined) {
     return app
   }
 

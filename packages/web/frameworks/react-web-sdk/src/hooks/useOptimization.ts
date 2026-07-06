@@ -29,19 +29,16 @@ export function useOptimizationContext(): OptimizationContextValue {
  * @public
  */
 export function useOptimization(): OptimizationSdk {
-  const { sdk, isReady, error } = useOptimizationContext()
+  const { sdk, error } = useOptimizationContext()
 
-  if (!sdk || !isReady) {
+  if (!sdk) {
     if (error) {
       throw new Error(`ContentfulOptimization SDK failed to initialize: ${error.message}`, {
         cause: error,
       })
     }
 
-    throw new Error(
-      'ContentfulOptimization SDK is still initializing. ' +
-        'This should not happen when using the loading gate in OptimizationProvider.',
-    )
+    throw new Error('ContentfulOptimization SDK is unavailable.')
   }
 
   return sdk

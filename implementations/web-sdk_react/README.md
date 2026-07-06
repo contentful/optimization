@@ -33,9 +33,13 @@ application with a local adapter layer.
 > [!NOTE]
 >
 > This implementation uses [Rsbuild](https://rsbuild.dev/) for consistency with the SDK build
-> tooling. If you're creating your own React application, you can use any build tool you prefer
-> (Vite, Create React App, Next.js, etc.); the SDK integration patterns demonstrated here work the
-> same way.
+> tooling. If you're creating your own browser-rendered React application, you can use any
+> client-side build tool you prefer (Vite, Create React App, etc.); the direct Web SDK adapter
+> patterns demonstrated here apply to browser React apps. For Next.js apps, use
+> `@contentful/optimization-nextjs` with the
+> [Next.js SDK README](../../packages/web/frameworks/nextjs-sdk/README.md),
+> [App Router reference](../nextjs-sdk_app-router/README.md), or
+> [Pages Router reference](../nextjs-sdk_pages-router/README.md) instead.
 
 ## What this demonstrates
 

@@ -52,6 +52,16 @@
         "default": "./dist/bridge-support.cjs"
       }
     },
+    "./runtime": {
+      "import": {
+        "types": "./dist/runtime.d.mts",
+        "default": "./dist/runtime.mjs"
+      },
+      "require": {
+        "types": "./dist/runtime.d.cts",
+        "default": "./dist/runtime.cjs"
+      }
+    },
     "./presentation": {
       "import": {
         "types": "./dist/presentation.d.mts",
@@ -125,6 +135,8 @@
         "index.mjs": 12500,
         "bridge-support.cjs": 1200,
         "bridge-support.mjs": 1200,
+        "runtime.cjs": 800,
+        "runtime.mjs": 200,
         "contentful-optimization-web-components.umd.js": 39000,
         "presentation.cjs": 3200,
         "presentation.mjs": 3200,

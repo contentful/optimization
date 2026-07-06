@@ -99,23 +99,23 @@ or custom framework adapters.
 such as `liveUpdates`, `onStatesReady`, and `serverOptimizationState`. The Web SDK
 `autoTrackEntryInteraction` option is exposed as the React `trackEntryInteraction` prop.
 
-| Prop                      | Required? | Default                                       | Description                                                                |
-| ------------------------- | --------- | --------------------------------------------- | -------------------------------------------------------------------------- |
-| `clientId`                | Yes       | N/A                                           | Shared API key for Experience API and Insights API requests                |
-| `environment`             | No        | `'main'`                                      | Contentful environment identifier                                          |
-| `api`                     | No        | Web SDK defaults                              | Experience API and Insights API endpoint and request options               |
-| `app`                     | No        | `undefined`                                   | Application metadata attached to outgoing event context                    |
-| `locale`                  | No        | `undefined`                                   | SDK Experience API and default event locale                                |
-| `defaults`                | No        | `undefined`                                   | Configuration/default state such as consent or persistence consent         |
-| `serverOptimizationState` | No        | `undefined`                                   | Server-returned Optimization state to apply before provider children mount |
-| `allowedEventTypes`       | No        | `['identify', 'page']`                        | Event types allowed before consent is explicitly set                       |
-| `trackEntryInteraction`   | No        | `{ views: true, clicks: true, hovers: true }` | Automatic entry interaction tracking for `OptimizedEntry` elements         |
-| `cookie`                  | No        | `{ domain: undefined, expires: 365 }`         | Anonymous ID cookie settings inherited from the Web SDK                    |
-| `liveUpdates`             | No        | `false`                                       | Whether `OptimizedEntry` components react continuously to SDK state        |
-| `onStatesReady`           | No        | `undefined`                                   | Provider-managed app-level state subscription hook                         |
-| `queuePolicy`             | No        | SDK defaults                                  | Flush retry behavior and offline queue bounds                              |
-| `logLevel`                | No        | `'error'`                                     | Minimum log level for the default console sink                             |
-| `onEventBlocked`          | No        | `undefined`                                   | Callback invoked when consent or guard logic blocks an event               |
+| Prop                      | Required? | Default                                       | Description                                                          |
+| ------------------------- | --------- | --------------------------------------------- | -------------------------------------------------------------------- |
+| `clientId`                | Yes       | N/A                                           | Shared API key for Experience API and Insights API requests          |
+| `environment`             | No        | `'main'`                                      | Contentful environment identifier                                    |
+| `api`                     | No        | Web SDK defaults                              | Experience API and Insights API endpoint and request options         |
+| `app`                     | No        | `undefined`                                   | Application metadata attached to outgoing event context              |
+| `locale`                  | No        | `undefined`                                   | SDK Experience API and default event locale                          |
+| `defaults`                | No        | `undefined`                                   | Configuration/default state such as consent or persistence consent   |
+| `serverOptimizationState` | No        | `undefined`                                   | Server-returned Optimization state for the initial provider snapshot |
+| `allowedEventTypes`       | No        | `['identify', 'page']`                        | Event types allowed before consent is explicitly set                 |
+| `trackEntryInteraction`   | No        | `{ views: true, clicks: true, hovers: true }` | Automatic entry interaction tracking for `OptimizedEntry` elements   |
+| `cookie`                  | No        | `{ domain: undefined, expires: 365 }`         | Anonymous ID cookie settings inherited from the Web SDK              |
+| `liveUpdates`             | No        | `false`                                       | Whether `OptimizedEntry` components react continuously to SDK state  |
+| `onStatesReady`           | No        | `undefined`                                   | Provider-managed app-level state subscription hook                   |
+| `queuePolicy`             | No        | SDK defaults                                  | Flush retry behavior and offline queue bounds                        |
+| `logLevel`                | No        | `'error'`                                     | Minimum log level for the default console sink                       |
+| `onEventBlocked`          | No        | `undefined`                                   | Callback invoked when consent or guard logic blocks an event         |
 
 Use `OptimizationProvider` directly when an application or framework adapter needs direct provider
 control, including integrations that supply an SDK instance:
@@ -126,10 +126,9 @@ control, including integrations that supply an SDK instance:
 </OptimizationProvider>
 ```
 
-Injected SDK instances render children immediately unless state setup such as `onStatesReady` or
-`serverOptimizationState` is provided. When state setup is provided, the provider waits until that
-setup is complete before children mount, and still leaves SDK teardown to the owner that created the
-instance.
+Injected SDK instances render children on the initial render. When `serverOptimizationState` is
+provided, that initial render uses a snapshot runtime while provider setup hydrates the injected
+SDK. The provider still leaves SDK teardown to the owner that created the instance.
 
 For server-to-browser state handoff, pass server-returned Optimization data through
 `serverOptimizationState` on `OptimizationRoot` or `OptimizationProvider`. Keep `defaults` for
@@ -175,8 +174,8 @@ end-user consent UI, seed accepted consent on `OptimizationRoot`:
 </OptimizationRoot>
 ```
 
-When application policy depends on user choice, leave `defaults.consent` unset and call `consent()`
-from `useOptimizationActions()` in the relevant control:
+When application policy depends on user choice, leave `defaults.consent` unset and call
+`setConsent()` from `useOptimizationActions()` in the relevant control:
 
 ```tsx
 import { useOptimizationActions } from '@contentful/optimization-react-web'
@@ -195,8 +194,8 @@ continuity needs to stay session-only. For cross-SDK consent guidance, see
 ### Provider and hook access
 
 `OptimizationRoot` owns the Web SDK lifecycle. Provider-owned initialization runs after React
-commit, outside render, and renders no children while the SDK is pending. In normal browser
-rendering this uses a layout-effect path so ready children can mount before the first visible paint.
+commit, outside render. Children render against an initial snapshot runtime, then a layout-effect
+setup initializes the live SDK before the first visible paint in normal browser rendering.
 
 Use the dedicated React SDK action hooks when components need common Optimization actions:
 
@@ -264,17 +263,25 @@ for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the broader locale model.
 
-Use `useMergeTagResolver()` when a component needs to resolve embedded merge tag entries:
+For optimized entry content, prefer the `OptimizedEntry` render context and pass `getMergeTagValue`
+into the child renderer:
 
 ```tsx
-import { useMergeTagResolver } from '@contentful/optimization-react-web'
+import { OptimizedEntry } from '@contentful/optimization-react-web'
 
-function MergeTagText({ mergeTagEntry }) {
-  const { getMergeTagValue } = useMergeTagResolver()
-
-  return <span>{getMergeTagValue(mergeTagEntry) ?? ''}</span>
+function HeroEntry({ baselineEntry }) {
+  return (
+    <OptimizedEntry baselineEntry={baselineEntry}>
+      {(resolvedEntry, { getMergeTagValue }) => (
+        <HeroCard entry={resolvedEntry} getMergeTagValue={getMergeTagValue} />
+      )}
+    </OptimizedEntry>
+  )
 }
 ```
+
+Use `useMergeTagResolver()` for components that resolve merge tags outside an `OptimizedEntry`
+render prop.
 
 If a merge tag references localized profile fields such as `location.city` or `location.country`,
 its resolved value follows the localized profile values returned by the Experience API.
@@ -308,10 +315,10 @@ subscribes.
 </OptimizationRoot>
 ```
 
-The callback receives only `sdk.states`. It runs as soon as the provider has initialized the state
-surface and before children mount, so subscriptions can observe events emitted by child effects such
-as router page tracking. For component-local UI state, keep using hooks and React effects under the
-provider.
+The callback receives only `sdk.states`. It runs when layout-effect provider setup initializes the
+live state surface. Initial children can already render against a snapshot runtime, and
+subscriptions can still observe events emitted by child effects such as router page tracking. For
+component-local UI state, keep using hooks and React effects under the provider.
 
 ### OptimizedEntry
 
@@ -324,7 +331,9 @@ import { OptimizedEntry } from '@contentful/optimization-react-web'
 function HeroEntry({ baselineEntry }) {
   return (
     <OptimizedEntry baselineEntry={baselineEntry}>
-      {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
+      {(resolvedEntry, { getMergeTagValue }) => (
+        <HeroCard entry={resolvedEntry} getMergeTagValue={getMergeTagValue} />
+      )}
     </OptimizedEntry>
   )
 }
@@ -378,8 +387,11 @@ Router adapters emit `page()` events for supported client-side routers:
 | Next.js App Router | `@contentful/optimization-react-web/router/next-app`        | Mount in `app/layout.tsx` inside `OptimizationRoot`                  |
 | TanStack Router    | `@contentful/optimization-react-web/router/tanstack-router` | Mount under the TanStack router tree and inside `OptimizationRoot`   |
 
-For Next.js applications that need the server, client, and request-handler integration together,
-prefer the [`@contentful/optimization-nextjs`](../nextjs-sdk/README.md) adapter package.
+The `next-pages` tracker remains available for low-level Pages Router wiring. For full Next.js Pages
+Router SSR setup with `getServerSideProps`, server state handoff, and anonymous ID cookie writes,
+prefer the
+[`@contentful/optimization-nextjs/pages-router`](../nextjs-sdk/README.md#pages-router-setup) adapter
+path.
 
 All adapters support static and dynamic page payload enrichment. See the
 [React Web integration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html#5-emit-page-events-with-supported-router-adapters)

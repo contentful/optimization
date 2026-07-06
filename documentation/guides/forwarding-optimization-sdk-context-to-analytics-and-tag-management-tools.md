@@ -242,67 +242,74 @@ that additional Contentful flag-view observation.
 
 ### Stateful JavaScript runtimes
 
-Applies when you use the Web SDK, React Web SDK, React Native SDK, or the Next.js client entrypoint
-and the SDK instance owns observable state.
+Applies when you use the Web SDK, React Web SDK, React Native SDK, or app-local bound Next.js
+components and the SDK instance owns observable state.
 
-For plain Web SDK integrations, subscribe directly on the SDK instance. For React Web, React Native,
-and Next.js client integrations, prefer `onStatesReady` on the provider root so the subscription
-exists before child components can emit SDK events.
+For plain Web SDK integrations, subscribe directly on the SDK instance. For React Web and React
+Native integrations, prefer `onStatesReady` on the provider root so the subscription exists before
+child effects can emit SDK events.
+
+For Next.js App Router integrations, configure `onStatesReady` once in
+`createNextjsAppRouterOptimization()` from `@contentful/optimization-nextjs/app-router`. The bound
+`OptimizationRoot` uses that factory config and renders without per-render `clientId`,
+`environment`, or `onStatesReady` props. Use lower-level `/client` root props only for manual
+server/client escape hatches.
+
+For Pages Router integrations, configure `onStatesReady` once in
+`createNextjsPagesRouterOptimization()` from `@contentful/optimization-nextjs/pages-router`, then
+pass `pageProps.contentfulOptimization.serverOptimizationState` to the bound root in
+`pages/_app.tsx`.
 
 **Adapt this to your use case:**
 
 ```tsx
+import { createNextjsAppRouterOptimization } from '@contentful/optimization-nextjs/app-router'
+
 const forwardedMessageIds = new Set<string>()
 
-function AppOptimizationRoot() {
-  return (
-    <OptimizationRoot
-      clientId="your-client-id"
-      environment="main"
-      onStatesReady={(states) => {
-        const initialMessageId = states.eventStream.current?.messageId
+export const { proxy, NextAppAutoPageTracker, OptimizationRoot, OptimizedEntry } =
+  createNextjsAppRouterOptimization({
+    // ...clientId, environment, locale, server, defaults
+    onStatesReady: (states) => {
+      const initialMessageId = states.eventStream.current?.messageId
 
-        // onStatesReady runs before provider children mount, so child SDK events can be observed.
-        const eventSubscription = states.eventStream.subscribe((event) => {
-          if (!event) return
+      // Attach before child route trackers and interaction observers emit.
+      const eventSubscription = states.eventStream.subscribe((event) => {
+        if (!event) return
 
-          // Guard against the current snapshot and provider remounts.
-          if (forwardedMessageIds.has(event.messageId)) return
-          if (event.messageId === initialMessageId) {
-            forwardedMessageIds.add(event.messageId)
-            return
-          }
-
-          // Keep vendor consent separate from the SDK's Contentful event consent gate.
-          if (!appPolicyAllowsThirdPartyAnalytics()) return
-          if (!shouldForwardContentfulEvent(event)) return
-
+        // Guard against the current snapshot and provider remounts.
+        if (forwardedMessageIds.has(event.messageId)) return
+        if (event.messageId === initialMessageId) {
           forwardedMessageIds.add(event.messageId)
-
-          // The analytics layer owns destination naming and property registration.
-          analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
-        })
-
-        const blockedSubscription = states.blockedEventStream.subscribe((blocked) => {
-          if (!blocked) return
-
-          // Blocked events are diagnostic only and are not replayed after consent changes.
-          console.debug('Contentful event blocked', {
-            method: blocked.method,
-            reason: blocked.reason,
-          })
-        })
-
-        return () => {
-          eventSubscription.unsubscribe()
-          blockedSubscription.unsubscribe()
+          return
         }
+
+        // Keep vendor consent separate from the SDK's Contentful event consent gate.
+        if (!appPolicyAllowsThirdPartyAnalytics()) return
+        if (!shouldForwardContentfulEvent(event)) return
+
+        forwardedMessageIds.add(event.messageId)
+
+        // The analytics layer owns destination naming and property registration.
+        analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
       })
-    >
-      <App />
-    </OptimizationRoot>
-  )
-}
+
+      const blockedSubscription = states.blockedEventStream.subscribe((blocked) => {
+        if (!blocked) return
+
+        // Blocked events are diagnostic only and are not replayed after consent changes.
+        console.debug('Contentful event blocked', {
+          method: blocked.method,
+          reason: blocked.reason,
+        })
+      })
+
+      return () => {
+        eventSubscription.unsubscribe()
+        blockedSubscription.unsubscribe()
+      }
+    },
+  })
 ```
 
 Use `states.blockedEventStream` or `onEventBlocked` for diagnostics. Blocked events are dropped at
@@ -310,13 +317,17 @@ the SDK boundary and are not replayed when consent changes.
 
 ### Node and Next.js server runtimes
 
-Applies when a Node route, server action, middleware/proxy flow, or Next.js Server Component already
-called a request-bound SDK method and owns the analytics event for that request.
+Applies when a Node route, server action, middleware/proxy flow, or lower-level/manual Next.js
+server flow already called a request-bound SDK method and owns the analytics event for that request.
 
 Use the `data` from the same accepted SDK call that rendered the response or handled the server
-event. For Next.js helpers, `getNextjsServerOptimizationData()` returns the same `OptimizationData`
-shape in its `data` field. Browser state streams cannot explain a server-rendered first paint unless
-you intentionally hydrate the browser with the same Optimization data.
+event. App Router Next.js integrations load request server data through the bound components created
+by `createNextjsAppRouterOptimization()`. Use the config-bound `getServerSideOptimizationProps()`
+helper for Pages Router `getServerSideProps`; it returns the same `OptimizationData` shape in its
+`data` field and serializable `props.contentfulOptimization`. Use
+`getNextjsServerOptimizationData()` only when you intentionally build a lower-level/manual `/server`
+flow. Browser state streams cannot explain a server-rendered first paint unless you intentionally
+hydrate the browser with the same Optimization data.
 
 **Adapt this to your use case:**
 
@@ -537,8 +548,8 @@ Use these guides when you need the SDK setup that this recipe assumes:
 - [Integrating the Optimization Node SDK in a Node app](./integrating-the-node-sdk-in-a-node-app.md)
 - [Integrating the Optimization Web SDK in a web app](./integrating-the-web-sdk-in-a-web-app.md)
 - [Integrating the Optimization React Web SDK in a React app](./integrating-the-react-web-sdk-in-a-react-app.md)
-- [Integrating the Optimization SDK in a Next.js app (SSR)](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md)
-- [Integrating the Optimization SDK in a Next.js app (hybrid SSR + CSR takeover)](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md)
+- [Integrating the Optimization Next.js SDK in a Next.js App Router app](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
+- [Integrating the Optimization Next.js SDK in a Next.js Pages Router app](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
 - [Integrating the Optimization React Native SDK in a React Native app](./integrating-the-react-native-sdk-in-a-react-native-app.md)
 - [Integrating the Optimization iOS SDK in a SwiftUI app](./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
 - [Integrating the Optimization iOS SDK in a UIKit app](./integrating-the-optimization-ios-sdk-in-a-uikit-app.md)

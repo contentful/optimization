@@ -88,8 +88,13 @@ the runtime:
 | iOS          | `OptimizationClient.resolveOptimizedEntry(baseline:selectedOptimizations:)`        | SwiftUI `OptimizedEntry`; UIKit can call the client directly |
 | Android      | `suspend OptimizationClient.resolveOptimizedEntry(...)`                            | Compose `OptimizedEntry`; XML Views `OptimizedEntryView`     |
 
-Next.js uses the Node server and React Web client surfaces, plus Next.js adapter components such as
-`ServerOptimizedEntry` for server-rendered entries.
+For Next.js App Router integrations, prefer the app-local bound `OptimizedEntry` returned by
+`createNextjsAppRouterOptimization()` from `@contentful/optimization-nextjs/app-router`. In Server
+Components it resolves through the Node SDK and server data; in Client Components the same app-local
+name resolves through React Web. Pages Router integrations use
+`createNextjsPagesRouterOptimization()` from `@contentful/optimization-nextjs/pages-router` for
+client rendering, and routes that resolve entries manually can call `getServerTrackingAttributes()`
+when they need SSR tracking attributes.
 
 ## Inputs and constraints
 
@@ -500,14 +505,15 @@ Use these guides for SDK-specific integration paths:
 - [Integrating the Optimization iOS SDK in a UIKit app](../guides/integrating-the-optimization-ios-sdk-in-a-uikit-app.md)
 - [Integrating the Optimization Android SDK in a Jetpack Compose app](../guides/integrating-the-optimization-android-sdk-in-a-compose-app.md)
 - [Integrating the Optimization Android SDK in an XML Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md)
-- [Integrating the Optimization SDK in a Next.js app with SSR](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md)
-- [Integrating the Optimization SDK in a Next.js app with SSR and CSR](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md)
+- [Integrating the Optimization Next.js SDK in a Next.js App Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
+- [Integrating the Optimization Next.js SDK in a Next.js Pages Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
 
 Use these package READMEs when you need runtime-specific API orientation:
 
 - [Optimization Core SDK](../../packages/universal/core-sdk/README.md)
 - [Optimization Web SDK](../../packages/web/web-sdk/README.md)
 - [Optimization React Web SDK](../../packages/web/frameworks/react-web-sdk/README.md)
+- [Optimization Next.js SDK](../../packages/web/frameworks/nextjs-sdk/README.md)
 - [Optimization React Native SDK](../../packages/react-native-sdk/README.md)
 - [Optimization Node SDK](../../packages/node/node-sdk/README.md)
 - [Optimization iOS SDK](../../packages/ios/ContentfulOptimization/README.md)

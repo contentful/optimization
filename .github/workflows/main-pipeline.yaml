@@ -27,8 +27,8 @@ jobs:
       e2e_web_sdk_react: ${{ steps.filter.outputs.e2e_web_sdk_react }}
       e2e_web_sdk_angular: ${{ steps.filter.outputs.e2e_web_sdk_angular }}
       e2e_react_web_sdk: ${{ steps.filter.outputs.e2e_react_web_sdk }}
-      e2e_nextjs_sdk_ssr: ${{ steps.filter.outputs.e2e_nextjs_sdk_ssr }}
-      e2e_nextjs_sdk_hybrid: ${{ steps.filter.outputs.e2e_nextjs_sdk_hybrid }}
+      e2e_nextjs_sdk_app_router: ${{ steps.filter.outputs.e2e_nextjs_sdk_app_router }}
+      e2e_nextjs_sdk_pages_router: ${{ steps.filter.outputs.e2e_nextjs_sdk_pages_router }}
       e2e_react_native_android: ${{ steps.filter.outputs.e2e_react_native_android }}
       e2e_android: ${{ steps.filter.outputs.e2e_android }}
       e2e_ios: ${{ steps.filter.outputs.e2e_ios }}
@@ -87,14 +87,14 @@ jobs:
               - '{implementations/react-web-sdk/**,lib/**,packages/web/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
-            # Next.js SDK SSR implementation E2E coverage scope.
-            e2e_nextjs_sdk_ssr:
-              - '{implementations/nextjs-sdk_ssr/**,lib/**,packages/node/**,packages/web/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+            # Next.js SDK App Router implementation E2E coverage scope.
+            e2e_nextjs_sdk_app_router:
+              - '{implementations/nextjs-sdk_app-router/**,lib/**,packages/node/**,packages/web/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
-            # Next.js SDK hybrid implementation E2E coverage scope.
-            e2e_nextjs_sdk_hybrid:
-              - '{implementations/nextjs-sdk_hybrid/**,lib/**,packages/node/**,packages/web/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+            # Next.js SDK Pages Router implementation E2E coverage scope.
+            e2e_nextjs_sdk_pages_router:
+              - '{implementations/nextjs-sdk_pages-router/**,lib/**,packages/node/**,packages/web/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # React Native Android implementation E2E coverage scope.
@@ -658,66 +658,19 @@ jobs:
             ./lib/e2e-web/test-results/
           retention-days: 1
 
-  e2e-nextjs-sdk-ssr:
-    name: ▲ E2E Next.js SDK SSR
+  e2e-nextjs-sdk-app-router:
+    name: ▲ E2E Next.js SDK App Router
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: [setup, changes, build]
-    if: needs.changes.outputs.e2e_nextjs_sdk_ssr == 'true'
-    steps:
-      - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
-
-      - name: Create .env from .env.example
-        run: cp implementations/nextjs-sdk_ssr/.env.example implementations/nextjs-sdk_ssr/.env
-
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version-file: '.nvmrc'
-          package-manager-cache: false
-
-      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
-
-      - name: Set up caches (Namespace)
-        uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
-        with:
-          cache: |
-            pnpm
-            playwright
-            apt
-
-      - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: sdk-package-tarballs
-          path: pkgs
-      - run: pnpm store prune
-      - run:
-          pnpm run implementation:nextjs-sdk_ssr -- implementation:install -- --no-frozen-lockfile
-      - run: pnpm --dir lib/e2e-web install --no-frozen-lockfile
-      - run: pnpm --dir lib/e2e-web run setup:e2e
-      - run: pnpm run implementation:nextjs-sdk_ssr -- implementation:test:e2e:run
-
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ !cancelled() }}
-        with:
-          name: ci-results-nextjs-sdk-ssr
-          path: |
-            ./lib/e2e-web/playwright-report/
-            ./lib/e2e-web/test-results/
-          retention-days: 1
-
-  e2e-nextjs-sdk-hybrid:
-    name: ▲ E2E Next.js SDK Hybrid
-    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
-    timeout-minutes: 15
-    needs: [setup, changes, build]
-    if: needs.changes.outputs.e2e_nextjs_sdk_hybrid == 'true'
+    if: needs.changes.outputs.e2e_nextjs_sdk_app_router == 'true'
     steps:
       - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
 
       - name: Create .env from .env.example
         run:
-          cp implementations/nextjs-sdk_hybrid/.env.example implementations/nextjs-sdk_hybrid/.env
+          cp implementations/nextjs-sdk_app-router/.env.example
+          implementations/nextjs-sdk_app-router/.env
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
@@ -741,16 +694,67 @@ jobs:
           path: pkgs
       - run: pnpm store prune
       - run:
-          pnpm run implementation:nextjs-sdk_hybrid -- implementation:install --
+          pnpm run implementation:nextjs-sdk_app-router -- implementation:install --
           --no-frozen-lockfile
       - run: pnpm --dir lib/e2e-web install --no-frozen-lockfile
       - run: pnpm --dir lib/e2e-web run setup:e2e
-      - run: pnpm run implementation:nextjs-sdk_hybrid -- implementation:test:e2e:run
+      - run: pnpm run implementation:nextjs-sdk_app-router -- implementation:test:e2e:run
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:
-          name: ci-results-nextjs-sdk-hybrid
+          name: ci-results-nextjs-sdk-app-router
+          path: |
+            ./lib/e2e-web/playwright-report/
+            ./lib/e2e-web/test-results/
+          retention-days: 1
+
+  e2e-nextjs-sdk-pages-router:
+    name: ▲ E2E Next.js SDK Pages Router
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    timeout-minutes: 15
+    needs: [setup, changes, build]
+    if: needs.changes.outputs.e2e_nextjs_sdk_pages_router == 'true'
+    steps:
+      - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
+
+      - name: Create .env from .env.example
+        run:
+          cp implementations/nextjs-sdk_pages-router/.env.example
+          implementations/nextjs-sdk_pages-router/.env
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
+        with:
+          cache: |
+            pnpm
+            playwright
+            apt
+
+      - run: pnpm install --prefer-offline --frozen-lockfile
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sdk-package-tarballs
+          path: pkgs
+      - run: pnpm store prune
+      - run:
+          pnpm run implementation:nextjs-sdk_pages-router -- implementation:install --
+          --no-frozen-lockfile
+      - run: pnpm --dir lib/e2e-web install --no-frozen-lockfile
+      - run: pnpm --dir lib/e2e-web run setup:e2e
+      - run: pnpm run implementation:nextjs-sdk_pages-router -- implementation:test:e2e:run
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-results-nextjs-sdk-pages-router
           path: |
             ./lib/e2e-web/playwright-report/
             ./lib/e2e-web/test-results/

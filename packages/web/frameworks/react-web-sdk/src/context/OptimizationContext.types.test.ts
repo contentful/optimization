@@ -5,12 +5,8 @@ export function acceptReactWebSdk(runtime: ContentfulOptimization): Optimization
   return runtime
 }
 
-export function acceptConcreteWebSdk(sdk: OptimizationSdk): ContentfulOptimization {
-  return sdk
-}
-
 describe('React Web OptimizationSdk type contract', () => {
-  it('aliases the concrete Web SDK runtime', () => {
+  it('accepts the concrete Web SDK runtime', () => {
     expect(true).toBe(true)
   })
 })

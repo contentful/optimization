@@ -8,8 +8,10 @@ Shared Playwright E2E package for web SDK reference implementations.
   `IMPLEMENTATION` / `APP_PORT` contract for browser-based Web SDK E2E.
 - Supported CSR implementations (`E2E_FLAGS=CSR`, the default): `react-web-sdk`, `web-sdk_react`,
   and `web-sdk_angular`.
-- Supported SSR implementation (`E2E_FLAGS=SSR`): `nextjs-sdk_ssr` (port 3001).
-- Supported hybrid implementation (`E2E_FLAGS=CSR,SSR`): `nextjs-sdk_hybrid` (port 3002).
+- Supported App Router implementation (`E2E_FLAGS=CSR,HYDRATION,SSR`): `nextjs-sdk_app-router` (port
+  3002).
+- Supported Pages Router implementation (`E2E_FLAGS=CSR,HYDRATION,SSR`): `nextjs-sdk_pages-router`
+  (port 3001).
 - Keep selectors and `data-testid` contracts aligned with every supported implementation before
   changing shared specs.
 - Treat `playwright-report/`, `test-results/`, and `node_modules/` as generated or local-only.
@@ -26,8 +28,8 @@ Shared Playwright E2E package for web SDK reference implementations.
 
 - `pnpm --dir lib/e2e-web setup:e2e`
 - `pnpm --dir lib/e2e-web test`
-- `IMPLEMENTATION=nextjs-sdk_hybrid pnpm --dir lib/e2e-web test`
-- `IMPLEMENTATION=nextjs-sdk_ssr pnpm --dir lib/e2e-web test`
+- `IMPLEMENTATION=nextjs-sdk_app-router pnpm --dir lib/e2e-web test`
+- `IMPLEMENTATION=nextjs-sdk_pages-router pnpm --dir lib/e2e-web test`
 - `IMPLEMENTATION=react-web-sdk pnpm --dir lib/e2e-web test`
 - `pnpm --dir lib/e2e-web test:codegen`
 - `pnpm --dir lib/e2e-web test:ui`

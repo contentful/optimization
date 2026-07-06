@@ -3,23 +3,21 @@ import { LiveUpdatesProvider, OptimizationProvider, type OptimizationSdk } from 
 import { useOptimizationContext } from '../../../src/hooks/useOptimization'
 
 function DecoupledConsumer({ label }: { label: string }): ReactElement {
-  const { sdk, isReady, error } = useOptimizationContext()
+  const { sdk, error } = useOptimizationContext()
 
   return (
     <p>
-      {label}:{' '}
-      {error ? `Error — ${error.message}` : isReady && sdk ? 'SDK ready' : 'Initializing...'}
+      {label}: {error ? `Error — ${error.message}` : sdk ? 'SDK ready' : 'Initializing...'}
     </p>
   )
 }
 
 function ContextConsumer(): ReactElement {
-  const { sdk, isReady, error } = useOptimizationContext()
+  const { sdk, error } = useOptimizationContext()
 
   return (
     <article className="dashboard__card">
       <h2>useOptimizationContext()</h2>
-      <p>{`isReady: ${String(isReady)}`}</p>
       <p>{`sdk: ${sdk ? 'present' : 'undefined'}`}</p>
       <p>{`error: ${error ? error.message : 'none'}`}</p>
     </article>

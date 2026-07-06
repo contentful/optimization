@@ -1,10 +1,14 @@
 import type { OptimizedEntryLoadingTargetDisplay } from '@contentful/optimization-web/presentation'
 import type { Entry } from 'contentful'
 import type { CSSProperties, ReactNode } from 'react'
+import type { OptimizationSdk } from '../context/OptimizationContext'
 
 export type LoadingFallback = ReactNode | (() => ReactNode)
 export type WrapperElement = 'div' | 'span'
-export type RenderProp = (resolvedEntry: Entry) => ReactNode
+export interface OptimizedEntryRenderContext {
+  readonly getMergeTagValue: OptimizationSdk['getMergeTagValue']
+}
+export type RenderProp = (resolvedEntry: Entry, context: OptimizedEntryRenderContext) => ReactNode
 export type OptimizedEntryChildren = ReactNode | RenderProp
 
 export type LoadingLayoutTargetStyle = Pick<CSSProperties, 'display' | 'visibility'>
@@ -21,12 +25,16 @@ export function isRenderProp(children: OptimizedEntryChildren): children is Rend
   return typeof children === 'function'
 }
 
-export function resolveChildren(children: OptimizedEntryChildren, entry: Entry): ReactNode {
+export function resolveChildren(
+  children: OptimizedEntryChildren,
+  entry: Entry,
+  context: OptimizedEntryRenderContext,
+): ReactNode {
   if (!isRenderProp(children)) {
     return children
   }
 
-  return children(entry)
+  return children(entry, context)
 }
 
 export function resolveLoadingLayoutTargetStyle(

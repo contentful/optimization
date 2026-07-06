@@ -10,6 +10,7 @@ import type {
 import { createScopedLogger, logger } from '@contentful/optimization-api-client/logger'
 import { isEqual } from 'es-toolkit/predicate'
 import type { ConsentGuard } from './consent'
+import { hasEventConsent } from './consent/ConsentPolicy'
 import CoreBase from './CoreBase'
 import type { CoreStatefulConfig } from './CoreStateful'
 import type {
@@ -39,13 +40,6 @@ import {
 } from './signals'
 
 const coreLogger = createScopedLogger('CoreStateful')
-
-const CONSENT_EVENT_TYPE_MAP: Readonly<Partial<Record<string, readonly AllowedEventType[]>>> = {
-  trackView: ['component'],
-  trackFlagView: ['flag', 'component'],
-  trackClick: ['component_click'],
-  trackHover: ['component_hover'],
-}
 
 type FlagViewTrackingSignature = readonly [
   value: Json,
@@ -295,17 +289,10 @@ abstract class CoreStatefulEventEmitter
   }
 
   hasConsent(name: string): boolean {
-    if (consentSignal.value) return true
-
-    const { [name]: mappedEventTypes } = CONSENT_EVENT_TYPE_MAP
-    if (mappedEventTypes !== undefined) {
-      return mappedEventTypes.some((eventType) => this.allowedEventTypes.includes(eventType))
-    }
-
-    return this.allowedEventTypes.some((eventType) => eventType === name)
+    return hasEventConsent(name, consentSignal.value, this.allowedEventTypes)
   }
 
-  onBlockedByConsent(name: string, args: readonly unknown[]): void {
+  private onBlockedByConsent(name: string, args: readonly unknown[]): void {
     coreLogger.warn(
       `Event "${name}" was blocked due to lack of consent; payload: ${JSON.stringify(args)}`,
     )

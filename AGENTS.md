@@ -167,11 +167,14 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
   crosses package families or is uncertain.
 - On failure, report the command, package or bundle, budget, actual size, and delta.
 - Allowed remediation is limited to confirmed current-change regressions, dependency/import
-  mistakes, and measurement issues. Prefer maintainability-preserving fixes: remove unused imports
-  or dependencies, fix accidental heavy import paths, restore tree-shaking, reuse existing helpers
-  instead of duplicating code, or correct build measurement.
+  mistakes, and measurement issues. Every remediation must preserve maintainability: do not make
+  code harder to read, type, test, debug, or change just to reduce bytes. Prefer fixes such as
+  removing unused imports or dependencies, fixing accidental heavy import paths, restoring
+  tree-shaking, reusing existing helpers instead of duplicating code, or correcting build
+  measurement.
 - Re-examine the design once when a bundle-size failure is caused by current work. Apply only
-  changes that preserve behavior, public APIs, readability, and the package's existing architecture.
+  changes that preserve behavior, public APIs, readability, type safety, testability, debuggability,
+  and the package's existing architecture.
 - Approval-only changes are not remediation. Do not edit `buildTools.bundleSize.gzipBudgets`, budget
   values, bundle entries, aliases, chunks, exports, dependency shape, or budget policy; do not
   remove behavior, narrow public APIs, obscure readable code, add one-off shims, or change source

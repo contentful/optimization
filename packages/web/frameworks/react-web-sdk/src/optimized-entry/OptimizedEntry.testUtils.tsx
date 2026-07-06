@@ -1,5 +1,6 @@
 import type { TestEntry } from '../test/sdkTestUtils'
 export {
+  createOptimizationSdk,
   createRuntime,
   defaultLiveUpdatesContext,
   createTestEntry as makeEntry,

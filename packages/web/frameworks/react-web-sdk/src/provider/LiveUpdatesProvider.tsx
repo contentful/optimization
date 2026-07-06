@@ -11,11 +11,11 @@ export function LiveUpdatesProvider({
   children,
   globalLiveUpdates = false,
 }: LiveUpdatesProviderProps): ReactElement {
-  const { sdk, isReady } = useOptimizationContext()
+  const { sdk } = useOptimizationContext()
   const [previewPanelVisible, setPreviewPanelVisible] = useState(false)
 
   useEffect(() => {
-    if (!sdk || !isReady) {
+    if (!sdk) {
       return
     }
 
@@ -26,7 +26,7 @@ export function LiveUpdatesProvider({
     return () => {
       sub.unsubscribe()
     }
-  }, [isReady, sdk])
+  }, [sdk])
 
   return (
     <LiveUpdatesContext.Provider

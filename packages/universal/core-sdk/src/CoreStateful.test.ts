@@ -9,6 +9,7 @@ import type {
   ViewBuilderArgs,
 } from './events'
 import type { QueueFlushFailureContext } from './lib/queue'
+import { createSnapshotRuntime } from './runtime/SnapshotRuntime'
 import { batch, signals } from './signals'
 import { mergeTagEntry } from './test/fixtures/mergeTagEntry'
 import { optimizedEntry } from './test/fixtures/optimizedEntry'
@@ -523,6 +524,21 @@ describe('CoreStateful blocked event handling', () => {
     expect(values.at(-1)).toBe(true)
 
     subscription.unsubscribe()
+  })
+
+  it('keeps live and snapshot consent policy aligned', () => {
+    const core = createCoreStateful({ allowedEventTypes: ['component', 'flag'] })
+    const snapshot = createSnapshotRuntime({
+      allowedEventTypes: ['component', 'flag'],
+      consent: false,
+    })
+
+    expect(snapshot.states.optimizationPossible.current).toBe(
+      core.states.optimizationPossible.current,
+    )
+    expect(snapshot.hasConsent('trackView')).toBe(core.hasConsent('trackView'))
+    expect(snapshot.hasConsent('trackFlagView')).toBe(core.hasConsent('trackFlagView'))
+    expect(snapshot.hasConsent('trackClick')).toBe(core.hasConsent('trackClick'))
   })
 
   it('defaults resolveOptimizedEntry to the selectedOptimizations signal', () => {

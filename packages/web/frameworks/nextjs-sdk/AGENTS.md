@@ -7,6 +7,12 @@ client.
 
 - Keep this package as glue only. Server and request-handler helpers delegate to
   `@contentful/optimization-node`; client exports delegate to `@contentful/optimization-react-web`.
+- Keep router-specific bound-component factories explicit. App Router components live under
+  `@contentful/optimization-nextjs/app-router`; Pages Router client components live under
+  `@contentful/optimization-nextjs/pages-router`; Pages `getServerSideProps` support lives under
+  `@contentful/optimization-nextjs/pages-router/server`.
+- Keep the package root and `/client` as client-safe lower-level exports. Do not add a bound
+  component factory to the package root.
 - Do not import `@contentful/optimization-core` directly.
 - Keep server entries free of client directives and browser-only assumptions.
 - Keep client entries marked with `"use client"` and free of Node-only imports.

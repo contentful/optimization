@@ -193,7 +193,7 @@ interface ControlPanelProps {
 }
 
 export function ControlPanel({ demoCTA: onTrackConversion }: ControlPanelProps): JSX.Element {
-  const { sdk, isReady } = useOptimizationContext()
+  const { sdk } = useOptimizationContext()
   const { globalLiveUpdates, previewPanelVisible, setPreviewPanelVisible } = useLiveUpdates()
   const { onToggleGlobalLiveUpdates } = useOutletContext<AppOutletContext>()
 
@@ -203,7 +203,7 @@ export function ControlPanel({ demoCTA: onTrackConversion }: ControlPanelProps):
   const [booleanFlag, setBooleanFlag] = useState<unknown>(undefined)
 
   useEffect(() => {
-    if (!sdk || !isReady) {
+    if (sdk === undefined) {
       return
     }
 
@@ -220,7 +220,7 @@ export function ControlPanel({ demoCTA: onTrackConversion }: ControlPanelProps):
       selectedOptSub.unsubscribe()
       flagSub.unsubscribe()
     }
-  }, [isReady, sdk])
+  }, [sdk])
 
   const isIdentified = useMemo(() => Boolean(profile?.traits.identified), [profile])
 

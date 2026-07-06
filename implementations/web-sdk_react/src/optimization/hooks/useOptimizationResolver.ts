@@ -44,14 +44,14 @@ function toStringValue(value: unknown): string {
 }
 
 export function useOptimizationResolver(): UseOptimizationResolverResult {
-  const { sdk, isReady } = useOptimization()
+  const { sdk } = useOptimization()
   // Subscribe to selectedOptimizations so resolveEntry gets a new identity when the
   // Experience API responds. Without this, ContentEntry's useMemo would lock in the
   // baseline on first render (signal still empty) and never re-resolve on slow browsers.
   const { selectedOptimizations } = useOptimizationState(sdk?.states)
 
   return useMemo<UseOptimizationResolverResult>(() => {
-    if (!isReady || sdk === undefined) {
+    if (sdk === undefined) {
       return {
         resolveEntry: fallbackResolveEntry,
         getMergeTagValue: (_mergeTagEntry: MergeTagEntry): string => '',
@@ -71,5 +71,5 @@ export function useOptimizationResolver(): UseOptimizationResolverResult {
       getMergeTagValue: (mergeTagEntry: MergeTagEntry): string =>
         toStringValue(sdk.getMergeTagValue(mergeTagEntry)),
     }
-  }, [isReady, sdk, selectedOptimizations])
+  }, [sdk, selectedOptimizations])
 }

@@ -22,14 +22,14 @@ function toEntryMap(entries: ContentEntry[]): Map<string, ContentEntry> {
 }
 
 export default function App(): JSX.Element {
-  const { sdk, isReady, error } = useOptimizationContext()
+  const { sdk, error } = useOptimizationContext()
   const { onToggleGlobalLiveUpdates } = useOutletContext<OutletContext>()
 
   const [selectedOptimizationCount, setSelectedOptimizationCount] = useState(0)
   const [entries, setEntries] = useState<ContentEntry[]>([])
 
   useEffect(() => {
-    if (!sdk || !isReady) {
+    if (sdk === undefined) {
       return
     }
 
@@ -40,10 +40,10 @@ export default function App(): JSX.Element {
     return () => {
       selectedOptSub.unsubscribe()
     }
-  }, [isReady, sdk])
+  }, [sdk])
 
   useEffect(() => {
-    if (!sdk || !isReady) {
+    if (sdk === undefined) {
       return
     }
 
@@ -55,7 +55,7 @@ export default function App(): JSX.Element {
     void fetchEntries(PAGES.home.ids).then((nextEntries) => {
       setEntries(nextEntries)
     })
-  }, [isReady, sdk])
+  }, [sdk])
 
   const entriesById = useMemo(() => toEntryMap(entries), [entries])
   const liveUpdatesBaselineEntry = entriesById.get(PAGES.home.liveUpdates)
@@ -64,7 +64,7 @@ export default function App(): JSX.Element {
     return <p data-testid="sdk-error">{error.message}</p>
   }
 
-  if (!sdk || !isReady) {
+  if (sdk === undefined) {
     return <p data-testid="sdk-loading">Loading SDK...</p>
   }
 

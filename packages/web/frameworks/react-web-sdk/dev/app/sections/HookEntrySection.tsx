@@ -8,11 +8,12 @@ interface HookEntrySectionProps {
 }
 
 function HookEntryCard({ baselineEntry }: { baselineEntry: Entry }): ReactElement {
-  const { entry, isLoading, isReady, canOptimize, selectedOptimization } = useOptimizedEntry({
-    baselineEntry,
-  })
+  const { entry, isLoading, isPresentationReady, canOptimize, selectedOptimization } =
+    useOptimizedEntry({
+      baselineEntry,
+    })
 
-  if (isLoading || !isReady) {
+  if (isLoading || !isPresentationReady) {
     return (
       <article className="dashboard__card">
         <h2>useOptimizedEntry (hook only)</h2>

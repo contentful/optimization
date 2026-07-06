@@ -10,10 +10,10 @@ export interface UseAnalyticsResult {
 }
 
 export function useAnalytics(): UseAnalyticsResult {
-  const { sdk, isReady } = useOptimization()
+  const { sdk } = useOptimization()
 
   return useMemo<UseAnalyticsResult>(() => {
-    if (!isReady || sdk === undefined) {
+    if (sdk === undefined) {
       return {
         trackView: (_payload: TrackViewPayload): undefined => undefined,
       }
@@ -22,5 +22,5 @@ export function useAnalytics(): UseAnalyticsResult {
     return {
       trackView: async (payload: TrackViewPayload): TrackViewResult => await sdk.trackView(payload),
     }
-  }, [isReady, sdk])
+  }, [sdk])
 }

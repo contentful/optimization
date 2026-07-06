@@ -16,7 +16,7 @@ export function LiveUpdatesExampleEntry({
   liveUpdates,
   testIdPrefix,
 }: LiveUpdatesExampleEntryProps): JSX.Element {
-  const { sdk, isReady } = useOptimization()
+  const { sdk } = useOptimization()
   const { resolveEntry } = useOptimizationResolver()
   const liveUpdatesContext = useLiveUpdates()
   const [lockedSelectedOptimizations, setLockedSelectedOptimizations] = useState<
@@ -28,7 +28,7 @@ export function LiveUpdatesExampleEntry({
     (liveUpdates ?? liveUpdatesContext?.globalLiveUpdates ?? false)
 
   useEffect(() => {
-    if (!isReady || sdk === undefined) {
+    if (sdk === undefined) {
       setLockedSelectedOptimizations(undefined)
       return
     }
@@ -51,7 +51,7 @@ export function LiveUpdatesExampleEntry({
     return () => {
       subscription.unsubscribe()
     }
-  }, [isReady, sdk, shouldLiveUpdate])
+  }, [sdk, shouldLiveUpdate])
 
   const { entry: resolvedEntry } = useMemo(
     () => resolveEntry(baselineEntry, lockedSelectedOptimizations),

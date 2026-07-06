@@ -461,7 +461,7 @@ export async function renderWithOptimizationProviders(
   await act(async () => {
     await Promise.resolve()
     root.render(
-      <OptimizationContext.Provider value={{ sdk: optimization, isReady: true, error: undefined }}>
+      <OptimizationContext.Provider value={{ sdk: optimization, error: undefined }}>
         <LiveUpdatesContext.Provider value={liveUpdatesContext}>{node}</LiveUpdatesContext.Provider>
       </OptimizationContext.Provider>,
     )
@@ -485,7 +485,7 @@ export function renderWithOptimizationProvidersToString(
   liveUpdatesContext = defaultLiveUpdatesContext(),
 ): string {
   return renderToString(
-    <OptimizationContext.Provider value={{ sdk: optimization, isReady: true, error: undefined }}>
+    <OptimizationContext.Provider value={{ sdk: optimization, error: undefined }}>
       <LiveUpdatesContext.Provider value={liveUpdatesContext}>{node}</LiveUpdatesContext.Provider>
     </OptimizationContext.Provider>,
   )

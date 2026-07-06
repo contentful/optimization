@@ -1,6 +1,7 @@
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
 import { hydrateOptimizationData } from '@contentful/optimization-web/bridge-support'
+import { DEFAULT_WEB_ALLOWED_EVENT_TYPES } from '@contentful/optimization-web/constants'
 import {
   createOptimizationRootSdkBinding,
   disposeOptimizationRootSdkBinding,
@@ -9,9 +10,17 @@ import {
   type OnStatesReady as SharedOnStatesReady,
   type TrackEntryInteractionOptions as SharedTrackEntryInteractionOptions,
 } from '@contentful/optimization-web/presentation'
-import { useLayoutEffect, useRef, useState, type PropsWithChildren, type ReactElement } from 'react'
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PropsWithChildren,
+  type ReactElement,
+} from 'react'
 
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
+import { createWebSnapshotRuntime, type WebOptimizationRuntime } from '../runtime/webRuntime'
 
 /**
  * Provider-owned callback for app-level subscriptions once SDK state is ready.
@@ -26,8 +35,8 @@ type ProviderSdkBinding = OptimizationRootSdkBinding<OptimizationSdk>
 
 interface ProviderState {
   readonly error: Error | undefined
-  readonly isReady: boolean
-  readonly sdk: OptimizationSdk | undefined
+  readonly isLive: boolean
+  readonly runtime: WebOptimizationRuntime | undefined
 }
 
 interface ServerOptimizationStateProps {
@@ -51,7 +60,7 @@ export type OptimizationProviderConfigProps = PropsWithChildren<
        */
       readonly trackEntryInteraction?: TrackEntryInteractionOptions
       /**
-       * Called once the SDK state surface is initialized and before provider children mount.
+       * Called once the live SDK state surface is initialized.
        * Return a cleanup function to unsubscribe app-level state observers on teardown.
        */
       readonly onStatesReady?: OnStatesReady
@@ -62,7 +71,8 @@ export type OptimizationProviderConfigProps = PropsWithChildren<
 export type OptimizationProviderSdkProps = PropsWithChildren<
   ServerOptimizationStateProps & {
     /**
-     * Called with the injected SDK state surface before provider children mount.
+     * Called with the injected SDK state surface before provider children mount unless a server
+     * snapshot is provided for the initial render.
      * Return a cleanup function to unsubscribe app-level state observers on teardown.
      */
     readonly onStatesReady?: OnStatesReady
@@ -167,15 +177,34 @@ function canUseInjectedSdkDuringInitialRender(props: OptimizationProviderProps):
   )
 }
 
-export function OptimizationProvider(props: OptimizationProviderProps): ReactElement | null {
+function injectedSdkBacksInitialRender(props: OptimizationProviderProps): boolean {
+  return props.sdk !== undefined && props.serverOptimizationState === undefined
+}
+
+function createInitialRuntime(props: OptimizationProviderProps): WebOptimizationRuntime {
+  if (props.sdk !== undefined) {
+    return injectedSdkBacksInitialRender(props)
+      ? props.sdk
+      : createWebSnapshotRuntime({ data: props.serverOptimizationState })
+  }
+
+  return createWebSnapshotRuntime({
+    allowedEventTypes: props.allowedEventTypes ?? DEFAULT_WEB_ALLOWED_EVENT_TYPES,
+    consent: props.defaults?.consent,
+    data: props.serverOptimizationState,
+    locale: props.locale,
+    persistenceConsent: props.defaults?.persistenceConsent,
+  })
+}
+
+export function OptimizationProvider(props: OptimizationProviderProps): ReactElement {
   const { children } = props
   const initialPropsRef = useRef(props)
   const liveLocale = props.sdk === undefined ? props.locale : undefined
-  const canRenderInjectedSdk = canUseInjectedSdkDuringInitialRender(props)
   const [state, setState] = useState<ProviderState>(() => ({
     error: undefined,
-    isReady: canRenderInjectedSdk,
-    sdk: canRenderInjectedSdk ? props.sdk : undefined,
+    isLive: injectedSdkBacksInitialRender(props),
+    runtime: createInitialRuntime(props),
   }))
 
   useLayoutEffect(() => {
@@ -203,12 +232,12 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       }
 
       sdkBinding = initializedBinding
-      setState({ error: undefined, isReady: true, sdk: initializedBinding.sdk })
+      setState({ error: undefined, isLive: true, runtime: initializedBinding.sdk })
     }
 
     function setInitializationError(error: unknown): void {
       if (!setupState.disposed) {
-        setState({ error: toError(error), isReady: false, sdk: undefined })
+        setState({ error: toError(error), isLive: false, runtime: undefined })
       }
     }
 
@@ -237,22 +266,27 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   }, [])
 
   useLayoutEffect(() => {
-    if (state.sdk === undefined || props.sdk !== undefined || liveLocale === undefined) {
+    if (!state.isLive || state.runtime === undefined || props.sdk !== undefined) {
+      return
+    }
+
+    if (liveLocale === undefined) {
       return
     }
 
     try {
-      state.sdk.setLocale(liveLocale)
+      state.runtime.setLocale(liveLocale)
     } catch (error: unknown) {
-      setState({ error: toError(error), isReady: true, sdk: state.sdk })
+      setState({ error: toError(error), isLive: true, runtime: state.runtime })
     }
-  }, [liveLocale, props.sdk, state.sdk])
+  }, [liveLocale, props.sdk, state.isLive, state.runtime])
 
-  const shouldRenderChildren = state.isReady || state.error !== undefined
+  const contextValue = useMemo(
+    () => ({ sdk: state.runtime, error: state.error }),
+    [state.runtime, state.error],
+  )
 
-  if (!shouldRenderChildren) {
-    return null
-  }
-
-  return <OptimizationContext.Provider value={state}>{children}</OptimizationContext.Provider>
+  return (
+    <OptimizationContext.Provider value={contextValue}>{children}</OptimizationContext.Provider>
+  )
 }

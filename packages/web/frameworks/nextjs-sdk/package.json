@@ -8,18 +8,32 @@
     "directory": "packages/web/frameworks/nextjs-sdk"
   },
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.mts",
+  "main": "./dist/client.cjs",
+  "module": "./dist/client.mjs",
+  "types": "./dist/client.d.mts",
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
+        "types": "./dist/client.d.mts",
+        "default": "./dist/client.mjs"
       },
       "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
+        "types": "./dist/client.d.cts",
+        "default": "./dist/client.cjs"
+      }
+    },
+    "./app-router": {
+      "react-server": {
+        "types": "./dist/app-router-server.d.mts",
+        "default": "./dist/app-router-server.mjs"
+      },
+      "import": {
+        "types": "./dist/app-router.d.mts",
+        "default": "./dist/app-router.mjs"
+      },
+      "require": {
+        "types": "./dist/app-router.d.cts",
+        "default": "./dist/app-router.cjs"
       }
     },
     "./client": {
@@ -62,6 +76,26 @@
         "default": "./dist/esr.cjs"
       }
     },
+    "./pages-router": {
+      "import": {
+        "types": "./dist/pages-router.d.mts",
+        "default": "./dist/pages-router.mjs"
+      },
+      "require": {
+        "types": "./dist/pages-router.d.cts",
+        "default": "./dist/pages-router.cjs"
+      }
+    },
+    "./pages-router/server": {
+      "import": {
+        "types": "./dist/pages-router/server.d.mts",
+        "default": "./dist/pages-router/server.mjs"
+      },
+      "require": {
+        "types": "./dist/pages-router/server.d.cts",
+        "default": "./dist/pages-router/server.cjs"
+      }
+    },
     "./request-handler": {
       "import": {
         "types": "./dist/request-handler.d.mts",
@@ -91,12 +125,18 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 600,
-        "index.mjs": 300,
+        "app-router.cjs": 1200,
+        "app-router.mjs": 1200,
+        "app-router-server.cjs": 3600,
+        "app-router-server.mjs": 3900,
         "client.cjs": 1200,
         "client.mjs": 1200,
         "esr.cjs": 4200,
         "esr.mjs": 4200,
+        "pages-router.cjs": 1200,
+        "pages-router.mjs": 1200,
+        "pages-router/server.cjs": 3600,
+        "pages-router/server.mjs": 3600,
         "server.cjs": 4500,
         "server.mjs": 4500,
         "request-handler.cjs": 2500,
@@ -109,8 +149,8 @@
   "scripts": {
     "build": "pnpm clean && pnpm build:dist",
     "build:ci": "pnpm build:dist",
-    "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
-    "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
+    "build:dist": "rslib build && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/pages-router",
+    "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/pages-router",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo ./node_modules/.cache/rspack",
     "size:check": "pnpm build:dist && build-tools bundle-size",
     "size:report": "build-tools bundle-size --report-only",

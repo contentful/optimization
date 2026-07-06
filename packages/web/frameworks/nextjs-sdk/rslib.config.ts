@@ -24,13 +24,16 @@ const common = {
 const CLIENT_DIRECTIVE = "'use client';"
 
 const clientEntries = {
+  'app-router': './src/app-router-client.ts',
   client: './src/client.ts',
+  'pages-router': './src/pages-router.ts',
 } as const
 
 const serverEntries = {
   'api-schemas': './src/api-schemas.ts',
+  'app-router-server': './src/app-router-server.tsx',
   esr: './src/esr.ts',
-  index: './src/index.ts',
+  'pages-router/server': './src/pages-router-server.ts',
   'request-handler': './src/request-handler.ts',
   server: './src/server.tsx',
   'tracking-attributes': './src/tracking-attributes.ts',

@@ -6,8 +6,8 @@ Applies to public guides under `documentation/guides/`.
 
 - Directory README: keep `Choosing the right SDK` under `## Start here`; list integration guides
   under `## Integration guides` with server and web SDKs before native and mobile SDKs in this
-  order: Node, Web, React Web, Next.js SSR, Next.js hybrid, React Native, iOS SwiftUI, iOS UIKit,
-  Android Compose, Android Views.
+  order: Node, Web, React Web, Next.js App Router, Next.js Pages Router, React Native, iOS SwiftUI,
+  iOS UIKit, Android Compose, Android Views.
 - Keep the directory README as a lightweight routing index. It must help readers pick the next
   guide, not preview setup steps, compare every tradeoff, or teach integration procedures.
 - Use only concise routing fields in the directory README, such as `Guide`, `Runtime or app type`,
@@ -91,8 +91,8 @@ Use this guide when...
   feature/concept sections.
 - Include `## Troubleshooting` only when the guide covers known failure modes.
 - Integration guide H1 format: `# Integrating the Optimization <SDK name> SDK in a <runtime> app`;
-  Next.js variants may append the pattern in parentheses, such as `(SSR)` or
-  `(hybrid SSR + CSR takeover)`.
+  Next.js variants should name the router, such as `Next.js App Router app` or
+  `Next.js Pages Router app`.
 - When extracting README material, update the matching integration guide when possible; TypeDoc owns
   method-by-method API detail.
 
@@ -242,11 +242,17 @@ that feature as its single proof:
   interaction tracking configuration, interaction-event verification, analytics forwarding, preview,
   live updates, or identity unless the guide's chosen first result requires that feature. Default
   interaction tracking may exist implicitly when the quick start uses `OptimizedEntry`.
-- Next.js hybrid quick starts: do not include explicit `trackEntryInteraction`, `data-ctfl-*`
-  verification, entry view/click/hover verification, analytics forwarding, preview, or production
-  cache policy. Keep the first path focused on server defaults, request handling, duplicate initial
-  page-event prevention, baseline fallback, and browser takeover. Default interaction tracking may
-  exist implicitly when the quick start renders SDK entry wrappers.
+- Next.js App Router quick starts: use `createNextjsAppRouterOptimization()` from
+  `@contentful/optimization-nextjs/app-router` to define app-local bound `OptimizationRoot` and
+  `OptimizedEntry` exports, then import those bound components in quick-start snippets. Keep
+  `/client` and `/server` subpath imports for later manual escape hatches. Do not include explicit
+  `trackEntryInteraction`, `data-ctfl-*` verification, entry view/click/hover verification,
+  analytics forwarding, preview, or production cache policy. Keep the first path focused on server
+  defaults, request handling, duplicate initial page-event prevention, baseline fallback, and
+  browser takeover. Default interaction tracking may exist implicitly when the quick start renders
+  SDK entry wrappers. For Pages Router docs, use `@contentful/optimization-nextjs/pages-router` for
+  bound client components and `@contentful/optimization-nextjs/pages-router/server` for
+  `getServerSideProps`.
 - React Native quick starts: do not include `OptimizationScrollProvider`, explicit `trackTaps`, view
   tracking verification, tap tracking verification, preview, offline delivery, or analytics
   forwarding. Keep interaction tracking in the later feature section. Default interaction tracking
@@ -390,7 +396,7 @@ When supported by the SDK/runtime, cover:
   verification; Android Compose quick starts must not include `OptimizationLazyColumn`, explicit
   `trackViews` or `trackTaps`, or interaction-event verification; Android Views quick starts must
   not include `TrackingRecyclerView`, explicit `trackViews` or `trackTaps`, or interaction-event
-  verification; and Next.js hybrid quick starts must not include explicit `trackEntryInteraction` or
+  verification; and Next.js quick starts must not include explicit `trackEntryInteraction` or
   `data-ctfl-*` verification unless the selected proof requires them. Default interaction tracking
   may exist implicitly when a quick start uses the SDK entry wrapper.
 - Verify quick-start snippets use `**Copy this:**` unless they require structural adaptation.

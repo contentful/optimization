@@ -178,6 +178,23 @@ describe('EntryInteractionRuntime', () => {
     expect(viewDetector.onEntryAdded).toHaveBeenCalledWith(entry)
   })
 
+  it('ignores nested auto-tracked entries with the same baseline id', () => {
+    const outer = document.createElement('div')
+    outer.dataset.ctflBaselineId = 'baseline-entry'
+    outer.dataset.ctflEntryId = 'variant-entry'
+    const inner = document.createElement('div')
+    inner.dataset.ctflBaselineId = 'baseline-entry'
+    inner.dataset.ctflEntryId = 'baseline-entry'
+    outer.append(inner)
+    document.body.append(outer)
+    const { runtime, viewDetector } = createRuntime()
+
+    runtime.tracking.enable('views')
+
+    expect(viewDetector.onEntryAdded).toHaveBeenCalledTimes(1)
+    expect(viewDetector.onEntryAdded).toHaveBeenCalledWith(outer)
+  })
+
   it('fans entry DOM changes out to running detectors', async () => {
     const { clickDetector, runtime, viewDetector } = createRuntime()
 
@@ -203,6 +220,29 @@ describe('EntryInteractionRuntime', () => {
 
     expect(clickDetector.onEntryRemoved).toHaveBeenCalledWith(entry)
     expect(viewDetector.onEntryRemoved).toHaveBeenCalledWith(entry)
+  })
+
+  it('removes tracked descendants when a matching baseline ancestor becomes tracked', async () => {
+    const outer = document.createElement('div')
+    const inner = document.createElement('div')
+    inner.dataset.ctflBaselineId = 'baseline-entry'
+    inner.dataset.ctflEntryId = 'baseline-entry'
+    outer.append(inner)
+    document.body.append(outer)
+    const { runtime, viewDetector } = createRuntime()
+
+    runtime.tracking.enable('views')
+    expect(viewDetector.onEntryAdded).toHaveBeenCalledWith(inner)
+    viewDetector.onEntryAdded.mockClear()
+
+    outer.dataset.ctflBaselineId = 'baseline-entry'
+    outer.dataset.ctflEntryId = 'variant-entry'
+
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(viewDetector.onEntryAdded).toHaveBeenCalledWith(outer)
+    expect(viewDetector.onEntryRemoved).toHaveBeenCalledWith(inner)
   })
 
   it('disables interactions globally by setting their auto-track flag to false', () => {

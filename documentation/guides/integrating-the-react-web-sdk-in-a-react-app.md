@@ -149,7 +149,7 @@ Use this table as the setup inventory for the guide:
 | Entry rendering through `OptimizedEntry` or `useOptimizedEntry`                           | Required for first integration | Yes                      | React components that render Contentful entries                                                |
 | Consent startup policy and user-choice wiring                                             | Common but policy-dependent    | Conditional              | `defaults`, `allowedEventTypes`, and application consent UI or CMP callbacks                   |
 | Entry interaction tracking for views, clicks, and hovers                                  | Common but policy-dependent    | No                       | `trackEntryInteraction` on `OptimizationRoot` and per-entry tracking props                     |
-| User identity, profile continuity, and reset policy                                       | Common but policy-dependent    | No                       | Account, session, or identity components that call `identify()` and `reset()`                  |
+| User identity, profile continuity, and reset policy                                       | Common but policy-dependent    | No                       | Account, session, or identity components that call `identifyUser()` and `resetUser()`          |
 | Router package for an adapter such as React Router, Next.js, or TanStack Router           | Optional                       | No                       | App router dependencies and the matching `@contentful/optimization-react-web/router/*` subpath |
 | Merge tag and Custom Flag rendering                                                       | Optional                       | No                       | Components that read profile-backed merge tags or flags                                        |
 | Analytics forwarding destination                                                          | Optional                       | No                       | `onStatesReady` subscriptions and application-owned analytics code                             |
@@ -596,12 +596,14 @@ Identify a visitor only when your application knows the user or has policy-appro
 Reset profile state when the active visitor changes, logs out, or must no longer share the previous
 profile state.
 
-1. Call `identify()` from the account, session, or profile event that owns the identity decision.
+1. Call `identifyUser()` from the account, session, or profile event that owns the identity
+   decision.
 2. Render SDK state with dedicated hooks such as `useProfileState()` and
    `useSelectedOptimizationsState()`.
-3. Call `reset()` when identity changes require clearing profile, selected optimizations, changes,
-   and route dedupe state. Consent state is preserved.
-4. Re-emit `page()` or `identify()` after reset when the app needs fresh optimization state.
+3. Call `resetUser()` when identity changes require clearing profile, selected optimizations,
+   changes, and route dedupe state. Consent state is preserved.
+4. Re-emit `trackPageView()` or `identifyUser()` after reset when the app needs fresh optimization
+   state.
 
 **Adapt this to your use case:**
 
@@ -649,22 +651,62 @@ For cross-runtime identity behavior, see
 Use merge tags when Contentful Rich Text contains embedded personalization fields. Use Custom Flags
 when application UI branches on a named flag rather than an optimized entry.
 
-1. Use `useMergeTagResolver()` in the component that renders Rich Text embedded entries.
-2. Use `optimization.getFlag(name)` only for direct reads, such as event handlers or render paths
+1. For optimized entry content, read `getMergeTagValue` from the `OptimizedEntry` render context and
+   pass it into your app-owned Rich Text renderer.
+2. Use `useMergeTagResolver()` only when a component resolves merge tags outside an `OptimizedEntry`
+   render prop.
+3. Use `optimization.getFlag(name)` only for direct reads, such as event handlers or render paths
    that don't need to update when the flag changes.
-3. Subscribe to `optimization.states.flag(name)` when React UI must rerender after profile, route,
+4. Subscribe to `optimization.states.flag(name)` when React UI must rerender after profile, route,
    or preview changes update the flag value.
-4. Treat flag reads as analytics exposure. In the stateful Web runtime, reading a flag can emit
+5. Treat flag reads as analytics exposure. In the stateful Web runtime, reading a flag can emit
    flag-view tracking when consent allows it.
 
 **Adapt this to your use case:**
 
 ```tsx
-import { useMergeTagResolver, useOptimization } from '@contentful/optimization-react-web'
+import {
+  OptimizedEntry,
+  type OptimizedEntryRenderContext,
+  useMergeTagResolver,
+  useOptimization,
+} from '@contentful/optimization-react-web'
 import type { Entry } from 'contentful'
 import { useEffect, useState } from 'react'
 
-function PersonalizedRichText({ mergeTagEntry }: { mergeTagEntry: Entry }) {
+type GetMergeTagValue = OptimizedEntryRenderContext['getMergeTagValue']
+
+function RichTextRenderer({
+  getMergeTagValue,
+  mergeTagEntry,
+}: {
+  getMergeTagValue: GetMergeTagValue
+  mergeTagEntry: Entry
+}) {
+  // Call this from the Rich Text embedded-entry renderer that visits merge-tag entries.
+  return <span>{getMergeTagValue(mergeTagEntry) ?? ''}</span>
+}
+
+function PersonalizedEntry({
+  baselineEntry,
+  mergeTagEntry,
+}: {
+  baselineEntry: Entry
+  mergeTagEntry: Entry
+}) {
+  return (
+    <OptimizedEntry baselineEntry={baselineEntry}>
+      {(resolvedEntry, { getMergeTagValue }) => (
+        <article>
+          <h1>{String(resolvedEntry.fields.title ?? '')}</h1>
+          <RichTextRenderer getMergeTagValue={getMergeTagValue} mergeTagEntry={mergeTagEntry} />
+        </article>
+      )}
+    </OptimizedEntry>
+  )
+}
+
+function StandalonePersonalizedRichText({ mergeTagEntry }: { mergeTagEntry: Entry }) {
   const { getMergeTagValue } = useMergeTagResolver()
 
   return <span>{getMergeTagValue(mergeTagEntry) ?? ''}</span>
@@ -946,8 +988,8 @@ browser storage. If storage writes fail, the SDK continues with in-memory state.
 React Web is a browser-side React package. Classify these concerns before adding extra packages or
 custom adapters:
 
-- Server-side personalization, proxy cookie handling, and SSR-to-browser takeover belong in the
-  Next.js SSR or hybrid SSR + CSR guides, not in this React Web-only guide.
+- Server-side personalization, request cookie handling, and SSR-to-browser takeover belong in the
+  Next.js App Router or Pages Router guides, not in this React Web-only guide.
 - Direct Web Components are part of `@contentful/optimization-web`, not the React Web rendering
   surface. React components can use `OptimizedEntry` instead of custom elements.
 - The React Web SDK does not replace your Contentful CDA client, router, consent UI, identity

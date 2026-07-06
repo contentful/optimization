@@ -15,7 +15,7 @@ const routerState = {
 }
 let currentRouterState = routerState
 
-rs.mock('next/router', () => ({
+rs.mock('next/router.js', () => ({
   useRouter: () => currentRouterState,
 }))
 
@@ -34,7 +34,7 @@ async function renderTracker(
     await act(async () => {
       await Promise.resolve()
       root.render(
-        <OptimizationContext.Provider value={{ sdk, isReady: true, error: undefined }}>
+        <OptimizationContext.Provider value={{ sdk, error: undefined }}>
           <LiveUpdatesContext.Provider value={defaultLiveUpdatesContext()}>
             {nextNode}
           </LiveUpdatesContext.Provider>

@@ -65,7 +65,7 @@ function buildTestRouter(
 ): ReturnType<typeof createRouter> {
   function RootLayout(): ReactElement {
     return (
-      <OptimizationContext.Provider value={{ sdk, isReady: true, error: undefined }}>
+      <OptimizationContext.Provider value={{ sdk, error: undefined }}>
         <LiveUpdatesContext.Provider value={defaultLiveUpdatesContext()}>
           {tracker}
           <Outlet />
