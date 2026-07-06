@@ -182,8 +182,8 @@ from `useOptimizationActions()` in the relevant control:
 import { useOptimizationActions } from '@contentful/optimization-react-web'
 
 function ConsentButton() {
-  const { consent } = useOptimizationActions()
-  return <button onClick={() => consent(true)}>Accept</button>
+  const { setConsent } = useOptimizationActions()
+  return <button onClick={() => setConsent(true)}>Accept</button>
 }
 ```
 
@@ -204,15 +204,16 @@ Use the dedicated React SDK action hooks when components need common Optimizatio
 import { useOptimizationActions } from '@contentful/optimization-react-web'
 
 function ProductCta() {
-  const { track } = useOptimizationActions()
+  const { trackEvent } = useOptimizationActions()
 
-  return <button onClick={() => track({ event: 'purchase' })}>Buy now</button>
+  return <button onClick={() => trackEvent({ event: 'purchase' })}>Buy now</button>
 }
 ```
 
 Use `useOptimization()` when a component needs direct access to the SDK instance itself, and prefer
-`useOptimizationActions()` when a component wants destructurable action methods such as `track()`,
-`identify()`, `page()`, `screen()`, `flush()`, `reset()`, or `consent()`.
+`useOptimizationActions()` when a component wants destructurable action methods such as
+`trackEvent()`, `identifyUser()`, `trackPageView()`, `trackScreen()`, `flushEvents()`,
+`resetUser()`, or `setConsent()`.
 
 Use dedicated state hooks such as `useConsentState()`, `useProfileState()`, and
 `useSelectedOptimizationsState()` when components need to render current SDK state. Prefer those

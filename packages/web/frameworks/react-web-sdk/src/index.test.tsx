@@ -445,13 +445,13 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     expect(secondRender).toBe(firstRender)
 
-    firstRender.consent(true)
-    await firstRender.flush()
-    await firstRender.identify({ userId: 'user-1' })
-    await firstRender.page({ properties: { title: 'Home' } })
-    firstRender.reset()
-    await firstRender.screen({ name: 'Cart', properties: { source: 'test' } })
-    await firstRender.track({ event: 'purchase', properties: { revenue: 99 } })
+    firstRender.setConsent(true)
+    await firstRender.flushEvents()
+    await firstRender.identifyUser({ userId: 'user-1' })
+    await firstRender.trackPageView({ properties: { title: 'Home' } })
+    firstRender.resetUser()
+    await firstRender.trackScreen({ name: 'Cart', properties: { source: 'test' } })
+    await firstRender.trackEvent({ event: 'purchase', properties: { revenue: 99 } })
 
     expect(consent).toHaveBeenCalledWith(true)
     expect(flush).toHaveBeenCalledTimes(1)

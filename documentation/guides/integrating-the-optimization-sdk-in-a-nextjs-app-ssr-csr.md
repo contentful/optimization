@@ -842,7 +842,7 @@ function setAppConsentCookie(consented: boolean): void {
 }
 
 export function PersonalizationControls() {
-  const { consent: setConsent, identify, reset } = useOptimizationActions()
+  const { setConsent, identifyUser, resetUser } = useOptimizationActions()
   const consent = useConsentState()
   const profile = useProfileState()
 
@@ -863,14 +863,14 @@ export function PersonalizationControls() {
       {!isIdentified ? (
         <button
           onClick={() => {
-            void identify({ userId: 'user-123', traits: { identified: true } })
+            void identifyUser({ userId: 'user-123', traits: { identified: true } })
           }}
           type="button"
         >
           Identify
         </button>
       ) : (
-        <button onClick={() => reset()} type="button">
+        <button onClick={() => resetUser()} type="button">
           Reset profile
         </button>
       )}
@@ -879,7 +879,7 @@ export function PersonalizationControls() {
 }
 ```
 
-With `liveUpdates={true}`, `identify()`, `consent()`, and `reset()` can change
+With `liveUpdates={true}`, `identifyUser()`, `setConsent()`, and `resetUser()` can change
 `selectedOptimizations` in the browser SDK and re-render affected entries without a full page
 refresh. For consent design details, see
 [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).

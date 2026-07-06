@@ -9,13 +9,13 @@ import { useOptimization } from './useOptimization'
  * @public
  */
 export interface UseOptimizationActionsResult {
-  readonly consent: OptimizationSdk['consent']
-  readonly flush: OptimizationSdk['flush']
-  readonly identify: OptimizationSdk['identify']
-  readonly page: OptimizationSdk['page']
-  readonly reset: OptimizationSdk['reset']
-  readonly screen: OptimizationSdk['screen']
-  readonly track: OptimizationSdk['track']
+  readonly setConsent: OptimizationSdk['consent']
+  readonly flushEvents: OptimizationSdk['flush']
+  readonly identifyUser: OptimizationSdk['identify']
+  readonly trackPageView: OptimizationSdk['page']
+  readonly resetUser: OptimizationSdk['reset']
+  readonly trackScreen: OptimizationSdk['screen']
+  readonly trackEvent: OptimizationSdk['track']
 }
 
 /**
@@ -23,12 +23,12 @@ export interface UseOptimizationActionsResult {
  *
  * @example
  * ```tsx
- * const { track, screen, flush, consent, reset } = useOptimizationActions()
- * await track({ event: 'purchase' })
- * await screen({ name: 'Cart' })
- * await flush()
- * consent(true)
- * reset()
+ * const { trackEvent, trackScreen, flushEvents, setConsent, resetUser } = useOptimizationActions()
+ * await trackEvent({ event: 'purchase' })
+ * await trackScreen({ name: 'Cart' })
+ * await flushEvents()
+ * setConsent(true)
+ * resetUser()
  * ```
  *
  * @remarks
@@ -42,19 +42,19 @@ export function useOptimizationActions(): UseOptimizationActionsResult {
 
   return useMemo<UseOptimizationActionsResult>(
     () => ({
-      consent: (value) => {
+      setConsent: (value) => {
         sdk.consent(value)
       },
-      flush: async () => {
+      flushEvents: async () => {
         await sdk.flush()
       },
-      identify: async (payload) => await sdk.identify(payload),
-      page: async (payload) => await sdk.page(payload),
-      reset: () => {
+      identifyUser: async (payload) => await sdk.identify(payload),
+      trackPageView: async (payload) => await sdk.page(payload),
+      resetUser: () => {
         sdk.reset()
       },
-      screen: async (payload) => await sdk.screen(payload),
-      track: async (payload) => await sdk.track(payload),
+      trackScreen: async (payload) => await sdk.screen(payload),
+      trackEvent: async (payload) => await sdk.track(payload),
     }),
     [sdk],
   )

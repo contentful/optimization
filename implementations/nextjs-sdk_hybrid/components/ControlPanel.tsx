@@ -14,7 +14,7 @@ import { type JSX } from 'react'
 
 export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): JSX.Element {
   const sdk = useOptimization()
-  const { identify, reset } = useOptimizationActions()
+  const { identifyUser, resetUser } = useOptimizationActions()
   const { consent, setConsent } = useConsent()
   const profile = useProfileState()
   const selectedOptimizations = useSelectedOptimizationsState()
@@ -75,7 +75,7 @@ export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): 
             className="btn btn--danger btn--sm"
             data-testid="reset-button"
             onClick={() => {
-              reset()
+              resetUser()
             }}
             type="button"
           >
@@ -86,7 +86,7 @@ export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): 
             className="btn btn--secondary btn--sm"
             data-testid="identify-button"
             onClick={() => {
-              void identify({ userId: 'charles', traits: { identified: true } })
+              void identifyUser({ userId: 'charles', traits: { identified: true } })
             }}
             type="button"
           >

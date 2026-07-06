@@ -53,13 +53,13 @@ explicit opt-in, wire the consent section before you emit events or render perso
    })
 
    function HomePage() {
-     const { page } = useOptimizationActions()
+     const { trackPageView } = useOptimizationActions()
      const [entry, setEntry] = useState<Entry | undefined>()
 
      useEffect(() => {
        // Emit after the provider is ready so the SDK can resolve route-based optimizations.
-       void page()
-     }, [page])
+       void trackPageView()
+     }, [trackPageView])
 
      useEffect(() => {
        void contentfulClient
@@ -185,12 +185,12 @@ import type { ReactNode } from 'react'
 
 function PurchaseButton() {
   // Bound action hooks are safe to destructure from React components.
-  const { track } = useOptimizationActions()
+  const { trackEvent } = useOptimizationActions()
 
   return (
     <button
       onClick={() => {
-        void track({ event: 'purchase' })
+        void trackEvent({ event: 'purchase' })
       }}
       type="button"
     >
@@ -224,9 +224,9 @@ export function AppRoot({ children }: { children: ReactNode }) {
 
 Do not destructure methods from the object returned by `useOptimization()`. Those methods rely on
 the SDK instance binding. `useOptimizationActions()` returns bound actions that are safe to
-destructure, including `consent`, `flush`, `identify`, `page`, `reset`, `screen`, and `track`. Use
-`useOptimizationContext()` when a component needs `{ sdk, isReady, error }` for diagnostics or error
-rendering before the SDK is ready.
+destructure, including `setConsent`, `flushEvents`, `identifyUser`, `trackPageView`, `resetUser`,
+`trackScreen`, and `trackEvent`. Use `useOptimizationContext()` when a component needs
+`{ sdk, isReady, error }` for diagnostics or error rendering before the SDK is ready.
 
 ### Consent and privacy-policy handoff
 
@@ -258,19 +258,19 @@ import { useConsentState, useOptimizationActions } from '@contentful/optimizatio
 
 function ConsentControls() {
   const consentState = useConsentState()
-  const { consent } = useOptimizationActions()
+  const { setConsent } = useOptimizationActions()
 
   return (
     <div>
       <span>Consent: {String(consentState)}</span>
-      <button onClick={() => consent(true)} type="button">
+      <button onClick={() => setConsent(true)} type="button">
         Accept
       </button>
-      <button onClick={() => consent(false)} type="button">
+      <button onClick={() => setConsent(false)} type="button">
         Reject
       </button>
       {/* Accept events while keeping durable profile continuity disabled. */}
-      <button onClick={() => consent({ events: true, persistence: false })} type="button">
+      <button onClick={() => setConsent({ events: true, persistence: false })} type="button">
         Events only
       </button>
     </div>
@@ -413,8 +413,8 @@ avoid duplicate resolution loops. For deeper mechanics, see
 **Integration category:** Required for first integration
 
 The SDK needs page events to evaluate the route-like experience the visitor is viewing. React Web
-provides router adapters for common client-side routers and `useOptimizationActions().page()` for
-manual emission.
+provides router adapters for common client-side routers and
+`useOptimizationActions().trackPageView()` for manual emission.
 
 1. Mount one page tracker inside `OptimizationRoot` and inside the router context it reads.
 2. Use the adapter that matches your router.
@@ -613,7 +613,7 @@ import {
 } from '@contentful/optimization-react-web'
 
 function AccountState() {
-  const { identify, reset } = useOptimizationActions()
+  const { identifyUser, resetUser } = useOptimizationActions()
   const profile = useProfileState()
   const selectedOptimizations = useSelectedOptimizationsState()
 
@@ -623,13 +623,13 @@ function AccountState() {
       <span>Optimizations: {selectedOptimizations?.length ?? 0}</span>
       <button
         onClick={() => {
-          void identify({ userId: 'user-123', traits: { plan: 'pro' } })
+          void identifyUser({ userId: 'user-123', traits: { plan: 'pro' } })
         }}
         type="button"
       >
         Identify
       </button>
-      <button onClick={() => reset()} type="button">
+      <button onClick={() => resetUser()} type="button">
         Reset
       </button>
     </div>
