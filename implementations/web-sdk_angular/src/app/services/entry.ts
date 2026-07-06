@@ -1,3 +1,4 @@
+import { isPlatformBrowser } from '@angular/common'
 import {
   afterNextRender,
   computed,
@@ -5,14 +6,13 @@ import {
   effect,
   ElementRef,
   inject,
+  PLATFORM_ID,
   signal,
-  TransferState,
   untracked,
   type Signal,
 } from '@angular/core'
 
 import type { Entry } from 'contentful'
-import { SERVER_RESOLVED_ENTRIES_KEY } from '../transfer-state-keys'
 import { resolveEntryMergeTags } from './merge-tags'
 import { NgContentfulOptimization } from './optimization'
 
@@ -29,7 +29,15 @@ export interface ResolvedEntry {
 }
 
 function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Signal<boolean>): void {
-  const optimization = inject(NgContentfulOptimization)
+  // `sdk.tracking.*` is a browser-only imperative API — the server has no DOM
+  // element to observe. Gating the whole wiring on `isPlatformBrowser` mirrors
+  // how React Web puts tracking inside `useEffect`: the lifecycle itself is
+  // the "if browser" guard, so the calls below never need a runtime check.
+  if (!isPlatformBrowser(inject(PLATFORM_ID))) return
+
+  const { liveSdk } = inject(NgContentfulOptimization)
+  if (!liveSdk) return
+  const { tracking } = liveSdk
   const elementRef = inject<ElementRef<Element>>(ElementRef)
   const destroyRef = inject(DestroyRef)
 
@@ -40,18 +48,14 @@ function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Sign
   })
 
   function track(): void {
-    optimization.ifBrowser((sdk) => {
-      const { entryId, optimizationId, sticky, variantIndex } = result()
-      sdk.tracking.enableElement('views', elementRef.nativeElement, {
-        data: { entryId, optimizationId, sticky, variantIndex },
-      })
+    const { entryId, optimizationId, sticky, variantIndex } = result()
+    tracking.enableElement('views', elementRef.nativeElement, {
+      data: { entryId, optimizationId, sticky, variantIndex },
     })
   }
 
   function clear(): void {
-    optimization.ifBrowser((sdk) => {
-      sdk.tracking.clearElement('views', elementRef.nativeElement)
-    })
+    tracking.clearElement('views', elementRef.nativeElement)
   }
 
   effect(() => {
@@ -74,7 +78,6 @@ export function injectContentfulEntry({
   manualTracking?: Signal<boolean>
 }): Signal<ResolvedEntry> {
   const optimization = inject(NgContentfulOptimization)
-  const transferState = inject(TransferState)
 
   function liveRead<T>(sig: Signal<T>): T {
     if (isLive()) return sig()
@@ -85,42 +88,24 @@ export function injectContentfulEntry({
     return untracked(sig) ?? sig()
   }
 
-  const variant = computed(() => {
-    const raw = entry()
-    if (optimization.context.platform === 'browser') {
-      return {
-        raw,
-        resolved: optimization.context.sdk.resolveOptimizedEntry(
-          raw,
-          liveRead(optimization.selectedOptimizations),
-        ),
-      }
-    }
-    // Server render: lift the server-resolved entry from TransferState if present
-    // so the initial HTML reflects the personalized variant. Falls back to the
-    // baseline when no handoff exists (e.g. consent denied — server skipped resolve).
-    const handoff = transferState.get(SERVER_RESOLVED_ENTRIES_KEY, undefined)
-    return {
-      raw,
-      resolved: handoff?.[raw.sys.id] ?? { entry: raw, selectedOptimization: undefined },
-    }
-  })
-
   const result = computed(() => {
-    const { raw, resolved } = variant()
+    const runtime = optimization.runtime()
+    const raw = entry()
+    const resolved = runtime.resolveOptimizedEntry(
+      raw,
+      liveRead(optimization.selectedOptimizations),
+    )
     const profile = liveRead(optimization.profile)
     let mergeTagResolved: boolean | undefined = undefined
-    const entry = resolveEntryMergeTags(resolved.entry, (target) => {
-      const value = profile
-        ? optimization.ifBrowser((sdk) => sdk.getMergeTagValue(target, profile))
-        : undefined
+    const entryWithMergeTags = resolveEntryMergeTags(resolved.entry, (target) => {
+      const value = profile ? runtime.getMergeTagValue(target, profile) : undefined
       if (value !== undefined) mergeTagResolved = true
       else mergeTagResolved ??= false
       return value ?? target.fields.nt_fallback
     })
 
     return {
-      entry,
+      entry: entryWithMergeTags,
       baselineId: raw.sys.id,
       entryId: resolved.entry.sys.id,
       optimizationId: resolved.selectedOptimization?.experienceId,

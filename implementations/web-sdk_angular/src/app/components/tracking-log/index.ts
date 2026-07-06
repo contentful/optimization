@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core'
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { interval } from 'rxjs'
 import { NgContentfulOptimization } from '../../services/optimization'
@@ -50,77 +50,92 @@ export class TrackingLog {
   })
 
   constructor() {
-    const { optimization } = this
-    const { context } = optimization
-    if (context.platform !== 'browser') return
-    const { sdk } = context
+    const destroyRef = inject(DestroyRef)
 
     let pageSeq = 0
     let componentSeq = 0
-    const sub = sdk.states.eventStream.subscribe((raw) => {
-      if (raw != null) {
-        this.rawEventsCount.update((n) => n + 1)
-      }
-      switch (raw?.type) {
-        case 'page': {
-          const {
-            properties: { url },
-          } = raw
-          pageSeq += 1
-          const pathname = (() => {
-            try {
-              return new URL(url, window.location.origin).pathname
-            } catch {
-              return url
+    let sub: { unsubscribe: () => void } | undefined = undefined
+
+    // Re-subscribe when the runtime swaps from the SSR snapshot runtime to
+    // the live SDK. The snapshot runtime's static eventStream never emits, so
+    // the initial subscription is a harmless no-op that is torn down on swap.
+    effect(() => {
+      const runtime = this.optimization.runtime()
+      sub?.unsubscribe()
+      sub = runtime.states.eventStream.subscribe((raw) => {
+        if (raw != null) {
+          this.rawEventsCount.update((n) => n + 1)
+        }
+        switch (raw?.type) {
+          case 'page': {
+            const {
+              properties: { url },
+            } = raw
+            pageSeq += 1
+            const pathname = (() => {
+              try {
+                return new URL(url, window.location.origin).pathname
+              } catch {
+                return url
+              }
+            })()
+            this.track({ type: 'page', value: pathname, key: `page-${pageSeq}-${url}` })
+            break
+          }
+          case 'component': {
+            const { componentId, viewId, viewDurationMs } = raw
+            if (viewId) {
+              this.track({
+                type: 'view',
+                value: componentId,
+                key: `view-${viewId}`,
+                viewDurationMs: typeof viewDurationMs === 'number' ? viewDurationMs : undefined,
+              })
+            } else {
+              componentSeq += 1
+              this.track(
+                {
+                  type: 'comp',
+                  value: componentId,
+                  key: `component-${componentId}-${componentSeq}`,
+                },
+                `event-component-${componentId}`,
+              )
             }
-          })()
-          this.track({ type: 'page', value: pathname, key: `page-${pageSeq}-${url}` })
-          break
-        }
-        case 'component': {
-          const { componentId, viewId, viewDurationMs } = raw
-          if (viewId) {
-            this.track({
-              type: 'view',
-              value: componentId,
-              key: `view-${viewId}`,
-              viewDurationMs: typeof viewDurationMs === 'number' ? viewDurationMs : undefined,
-            })
-          } else {
-            componentSeq += 1
-            this.track(
-              { type: 'comp', value: componentId, key: `component-${componentId}-${componentSeq}` },
-              `event-component-${componentId}`,
-            )
+            break
           }
-          break
-        }
-        case 'component_hover': {
-          const { componentId, hoverId, hoverDurationMs } = raw
-          if (hoverId) {
-            this.track({
-              type: 'hover',
-              value: componentId,
-              key: `component_hover-hover-${hoverId}`,
-              hoverDurationMs: typeof hoverDurationMs === 'number' ? hoverDurationMs : undefined,
-              hoverId,
-            })
-          } else {
-            this.track({ type: 'hover', value: componentId, key: `component_hover-${componentId}` })
+          case 'component_hover': {
+            const { componentId, hoverId, hoverDurationMs } = raw
+            if (hoverId) {
+              this.track({
+                type: 'hover',
+                value: componentId,
+                key: `component_hover-hover-${hoverId}`,
+                hoverDurationMs: typeof hoverDurationMs === 'number' ? hoverDurationMs : undefined,
+                hoverId,
+              })
+            } else {
+              this.track({
+                type: 'hover',
+                value: componentId,
+                key: `component_hover-${componentId}`,
+              })
+            }
+            break
           }
-          break
+          case 'component_click': {
+            const { componentId } = raw
+            this.track({ type: 'click', value: componentId, key: `component_click-${componentId}` })
+            break
+          }
+          default:
+            break
         }
-        case 'component_click': {
-          const { componentId } = raw
-          this.track({ type: 'click', value: componentId, key: `component_click-${componentId}` })
-          break
-        }
-        default:
-          break
-      }
+      })
     })
-    inject(DestroyRef).onDestroy(() => {
-      sub.unsubscribe()
+
+    destroyRef.onDestroy(() => {
+      sub?.unsubscribe()
     })
   }
 

@@ -3,6 +3,7 @@ import {
   DestroyRef,
   inject,
   Injectable,
+  makeStateKey,
   PLATFORM_ID,
   provideAppInitializer,
   REQUEST,
@@ -11,22 +12,25 @@ import {
   TransferState,
   type EnvironmentProviders,
   type Signal,
+  type StateKey,
+  type WritableSignal,
 } from '@angular/core'
 import { NavigationEnd, Router } from '@angular/router'
 import type NodeContentfulOptimizationType from '@contentful/optimization-node'
-import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import type {
   CoreStatelessRequest,
   UniversalEventBuilderArgs,
 } from '@contentful/optimization-node/core-sdk'
 import ContentfulOptimization from '@contentful/optimization-web'
-import {
-  isResolvedContentfulEntry,
-  type Profile,
-  type SelectedOptimizationArray,
-} from '@contentful/optimization-web/api-schemas'
+import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import { hydrateOptimizationData } from '@contentful/optimization-web/bridge-support'
 import { createScopedLogger } from '@contentful/optimization-web/logger'
+import {
+  createSnapshotRuntime,
+  type OptimizationRuntime,
+  type OptimizationSnapshot,
+} from '@contentful/optimization-web/runtime'
 import type { Entry } from 'contentful'
 import { PAGES } from 'e2e-web'
 import { filter } from 'rxjs/operators'
@@ -36,35 +40,19 @@ import {
   NG_CONTENTFUL_OPTIMIZATION_CONFIG,
   resolveLogLevel,
 } from '../config'
-import {
-  SERVER_BASELINES_KEY,
-  SERVER_OPTIMIZATION_KEY,
-  SERVER_RESOLVED_ENTRIES_KEY,
-  type ResolvedEntryData,
-  type ServerHandoff,
-} from '../transfer-state-keys'
 import { fromSdkState } from '../utils'
 import { readConsentFromRequest } from './consent'
-import { NgContentfulClient } from './contentful-client'
-import { resolveEntryMergeTags } from './merge-tags'
-
-type NgContentfulOptimizationInstance = ContentfulOptimization
+import { NgContentfulClient, SERVER_BASELINES_KEY } from './contentful-client'
 
 /**
- * Runtime context exposed by the {@link NgContentfulOptimization} service.
- * The `sdk` here is the **browser** SDK (`@contentful/optimization-web`),
- * which reads `localStorage` at construction time and therefore cannot be
- * instantiated server-side. Discriminating on `platform` lets callers branch
- * on the runtime without dereferencing an optional chain.
- *
- * The **Node** SDK (`@contentful/optimization-node`) does run server-side,
- * but it is intentionally not surfaced through this service — it is owned by
- * the preflight at the bottom of this file and only its **results** cross
- * into the browser bundle via `TransferState`.
+ * SSR handoff for the personalization runtime. Stamped by the server preflight,
+ * read on the browser to seed the initial snapshot runtime before the live SDK
+ * takes over. The shape matches {@link OptimizationSnapshot} so the same
+ * request-scoped payload backs `createSnapshotRuntime` on both sides of the
+ * hydration boundary.
  */
-type NgContentfulOptimizationContext =
-  | { readonly platform: 'server' }
-  | { readonly platform: 'browser'; readonly sdk: NgContentfulOptimizationInstance }
+const SERVER_OPTIMIZATION_KEY: StateKey<OptimizationSnapshot> =
+  makeStateKey<OptimizationSnapshot>('ssr-optimization')
 
 /**
  * Shared SDK-config mapping used by both the browser Web SDK constructor and
@@ -92,11 +80,12 @@ function toSdkConstructorArgs(config: NgContentfulOptimizationConfig): {
   }
 }
 
-let instance: NgContentfulOptimizationInstance | undefined = undefined
+let instance: ContentfulOptimization | undefined = undefined
 const previewPanelLogger = createScopedLogger('AngularReference:PreviewPanel')
+const hydrationLogger = createScopedLogger('AngularReference:SsrHydration')
 
 async function attachPreviewPanel(
-  sdk: NgContentfulOptimizationInstance,
+  sdk: ContentfulOptimization,
   config: NgContentfulOptimizationConfig,
 ): Promise<void> {
   const contentfulClient = getOrCreateBaseClient(config)
@@ -108,9 +97,38 @@ async function attachPreviewPanel(
   })
 }
 
-function getOrCreateInstance(
+// Kept as module-scope helpers (rather than instance methods) so SonarQube
+// typescript:S7059 does not fire on in-constructor async work.
+
+function hydrateSnapshotAndPromote(
+  sdk: ContentfulOptimization,
+  snapshot: OptimizationSnapshot | undefined,
+  runtimeSignal: WritableSignal<OptimizationRuntime>,
+): void {
+  if (!snapshot?.data) {
+    runtimeSignal.set(sdk)
+    return
+  }
+  hydrateOptimizationData(sdk, snapshot.data)
+    .then(() => {
+      runtimeSignal.set(sdk)
+    })
+    .catch((error: unknown) => {
+      hydrationLogger.warn('Failed to hydrate live SDK from SSR snapshot.', error)
+      runtimeSignal.set(sdk)
+    })
+}
+
+function attachPreviewPanelSafely(
+  sdk: ContentfulOptimization,
   config: NgContentfulOptimizationConfig,
-): NgContentfulOptimizationInstance {
+): void {
+  attachPreviewPanel(sdk, config).catch((error: unknown) => {
+    previewPanelLogger.warn('Failed to attach the Contentful Optimization preview panel.', error)
+  })
+}
+
+function getOrCreateInstance(config: NgContentfulOptimizationConfig): ContentfulOptimization {
   instance ??= new ContentfulOptimization({
     ...toSdkConstructorArgs(config),
     autoTrackEntryInteraction: config.autoTrackEntryInteraction ?? {
@@ -123,14 +141,28 @@ function getOrCreateInstance(
 }
 
 /**
- * Single SDK service exposed to components. On the browser it owns a real
- * {@link ContentfulOptimization} instance; on the server it surfaces the SSR
- * handoff so templates render the personalised state without ever touching the
- * Web SDK (which would crash on `localStorage`).
+ * Single SDK service exposed to components. Both server and browser see the
+ * same {@link OptimizationRuntime} surface: on the server (and during the
+ * initial client render) it is a read-only {@link createSnapshotRuntime}
+ * backed by the SSR handoff; on the browser after construction it swaps to
+ * the live {@link ContentfulOptimization}. Resolvers, `states`, and event
+ * actions work in both environments; browser-only imperative APIs
+ * (`sdk.tracking.*`, `sdk.trackCurrentPage`) are reachable through
+ * {@link liveSdk}, which is `undefined` on the server so callers can gate
+ * their setup with `isPlatformBrowser()` — the same pattern React Web uses
+ * via `useEffect`.
  */
 @Injectable({ providedIn: 'root' })
 export class NgContentfulOptimization {
-  readonly context: NgContentfulOptimizationContext
+  /**
+   * The live web SDK, or `undefined` on the server. Only reach for this
+   * when calling browser-only imperative APIs that fall outside
+   * {@link OptimizationRuntime} (`tracking.*`, `trackCurrentPage`). For every
+   * other action call `runtime().identify(...)`, `runtime().page(...)`, etc.
+   * — those already work in both environments.
+   */
+  readonly liveSdk: ContentfulOptimization | undefined
+  readonly runtime: Signal<OptimizationRuntime>
   readonly consent: Signal<boolean | undefined>
   readonly profile: Signal<Profile | undefined>
   readonly selectedOptimizations: Signal<SelectedOptimizationArray | undefined>
@@ -141,45 +173,46 @@ export class NgContentfulOptimization {
     const destroyRef = inject(DestroyRef)
     const transferState = inject(TransferState)
     const isBrowser = isPlatformBrowser(inject(PLATFORM_ID))
-    const handoff = transferState.get(SERVER_OPTIMIZATION_KEY, undefined)
+    const snapshot = transferState.get<OptimizationSnapshot | undefined>(
+      SERVER_OPTIMIZATION_KEY,
+      undefined,
+    )
+
+    const runtimeSignal = signal<OptimizationRuntime>(createSnapshotRuntime(snapshot))
+    this.runtime = runtimeSignal.asReadonly()
+    this.consent = fromSdkState(() => runtimeSignal().states.consent)
+    this.profile = fromSdkState(() => runtimeSignal().states.profile)
+    this.selectedOptimizations = fromSdkState(() => runtimeSignal().states.selectedOptimizations)
 
     if (!isBrowser) {
-      // Seed the read-only signals from the SSR handoff so server-rendered
-      // templates reflect the same consent/profile state the server preflight
-      // observed. Without this, JS-disabled clients would see "undefined" /
-      // "0 active optimizations" in the Utilities panel even though the entry
-      // markup is fully personalised.
-      this.context = { platform: 'server' }
-      this.consent = signal<boolean | undefined>(handoff?.consent).asReadonly()
-      this.profile = signal<Profile | undefined>(handoff?.profile).asReadonly()
-      this.selectedOptimizations = signal<SelectedOptimizationArray | undefined>(
-        handoff?.selectedOptimizations,
-      ).asReadonly()
+      // Server render: the snapshot runtime satisfies the full seam. Reads
+      // flow through `states.*`, resolvers/getMergeTagValue are pure, and
+      // event actions are inert dev-warn no-ops.
+      this.liveSdk = undefined
       return
     }
 
     const sdk = getOrCreateInstance(config)
-    this.context = { platform: 'browser', sdk }
+    this.liveSdk = sdk
+
+    // Prime the live SDK with the server-computed snapshot before promoting
+    // it to the runtime signal, so the first live render matches the SSR
+    // HTML (same selectedOptimizations, same profile, same merge tags).
+    // With no server data (consent denied or preflight skipped), the snapshot
+    // runtime and the fresh live SDK already share the same initial state, so
+    // we can swap immediately.
+    hydrateSnapshotAndPromote(sdk, snapshot, runtimeSignal)
 
     if (config.previewPanel !== undefined) {
-      void attachPreviewPanel(sdk, config).catch((error: unknown) => {
-        previewPanelLogger.warn(
-          'Failed to attach the Contentful Optimization preview panel.',
-          error,
-        )
-      })
+      attachPreviewPanelSafely(sdk, config)
     }
-
-    this.consent = fromSdkState(sdk.states.consent)
-    this.profile = fromSdkState(sdk.states.profile)
-    this.selectedOptimizations = fromSdkState(sdk.states.selectedOptimizations)
 
     // Page events fire on every route change. The first NavigationEnd after
     // hydration is skipped when the server preflight already emitted page()
     // for the same route (consent was granted server-side) — without this
     // skip, analytics double-counts the SSR landing page. Subsequent
     // navigations always emit.
-    let skipNextPage = handoff?.consent ?? false
+    let skipNextPage = snapshot?.consent ?? false
     const routerSubscription = router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
@@ -197,16 +230,6 @@ export class NgContentfulOptimization {
       sdk.destroy()
       instance = undefined
     })
-  }
-
-  /**
-   * Run an SDK side-effect on the browser. Returns the callback's value on the
-   * browser branch, and `undefined` on the server (where there is no SDK to
-   * call). Lets call sites avoid an `if (context.platform === 'browser')`
-   * narrowing dance for fire-and-forget toggles.
-   */
-  ifBrowser<T>(fn: (sdk: NgContentfulOptimizationInstance) => T): T | undefined {
-    return this.context.platform === 'browser' ? fn(this.context.sdk) : undefined
   }
 }
 
@@ -243,20 +266,6 @@ async function createServerOptimization(
 }
 
 /**
- * Outcome of the server-side preflight for one SSR request. Discriminated on
- * `consentGranted` so callers either get the full personalization context or
- * a "no SDK work happened" branch — never a half-populated value.
- */
-type ServerOptimizationData =
-  | { readonly consentGranted: false }
-  | {
-      readonly consentGranted: true
-      readonly data: OptimizationData
-      readonly profileId: string
-      readonly canPersistProfile: boolean
-    }
-
-/**
  * Build an event context for the SSR `forRequest()` call so the server-side
  * page event carries the current route. Without this, route-targeted
  * experiences resolve against an empty page context and miss on first paint.
@@ -277,13 +286,25 @@ function createServerEventContext(request: Request, locale: string): UniversalEv
   }
 }
 
-async function getServerOptimizationData(
+interface ServerPreflightOutcome {
+  readonly snapshot: OptimizationSnapshot
+  readonly profileId: string | undefined
+  readonly canPersistProfile: boolean
+}
+
+async function computeSnapshot(
   sdk: NodeContentfulOptimizationType,
   request: Request,
   consentGranted: boolean,
   locale: string,
-): Promise<ServerOptimizationData> {
-  if (!consentGranted) return { consentGranted: false }
+): Promise<ServerPreflightOutcome> {
+  if (!consentGranted) {
+    return {
+      snapshot: { consent: false, locale },
+      profileId: undefined,
+      canPersistProfile: false,
+    }
+  }
 
   const anonymousId = readAnonymousId(request)
   const requestOptimization: CoreStatelessRequest = sdk.forRequest({
@@ -293,53 +314,24 @@ async function getServerOptimizationData(
     ...(anonymousId === undefined ? {} : { profile: { id: anonymousId } }),
   })
   const pageResult = await requestOptimization.page()
-  if (!pageResult.accepted) return { consentGranted: false }
-  const data: OptimizationData | undefined = pageResult.data
-  if (!data) return { consentGranted: false }
-
-  return {
-    consentGranted: true,
-    data,
-    profileId: data.profile.id,
-    canPersistProfile: requestOptimization.canPersistProfile,
-  }
-}
-
-/**
- * Resolve baselines against the SSR `selectedOptimizations`, then walk each
- * rich-text field and substitute inline merge-tag entries using the SDK's
- * `getMergeTagValue`. Shipping fully-resolved entries through `TransferState`
- * lets JS-disabled clients see the variant content AND the personalised merge
- * tags on first paint, not just the placeholder text.
- *
- * Nested entries (`fields.nested[]`) often appear only on the *resolved*
- * variant rather than on the baseline, so we recurse after each
- * `resolveOptimizedEntry` call to cover per-level Personalization
- * assignments inside the chosen variant.
- */
-function resolveServerEntries(
-  sdk: NodeContentfulOptimizationType,
-  baselines: readonly Entry[],
-  selectedOptimizations: OptimizationData['selectedOptimizations'],
-  profile: Profile | undefined,
-): Record<string, ResolvedEntryData> {
-  const resolved: Record<string, ResolvedEntryData> = {}
-  const queue: Entry[] = [...baselines]
-  for (let entry = queue.shift(); entry !== undefined; entry = queue.shift()) {
-    if (Object.hasOwn(resolved, entry.sys.id)) continue
-    const result = sdk.resolveOptimizedEntry(entry, selectedOptimizations)
-    const entryWithMergeTags = profile
-      ? resolveEntryMergeTags(result.entry, (target) => sdk.getMergeTagValue(target, profile))
-      : result.entry
-    resolved[entry.sys.id] = { ...result, entry: entryWithMergeTags }
-    const nested: unknown = entryWithMergeTags.fields.nested
-    if (Array.isArray(nested)) {
-      for (const child of nested) {
-        if (isResolvedContentfulEntry(child)) queue.push(child)
-      }
+  if (!pageResult.accepted || !pageResult.data) {
+    return {
+      snapshot: { consent: false, locale },
+      profileId: undefined,
+      canPersistProfile: false,
     }
   }
-  return resolved
+
+  return {
+    snapshot: {
+      consent: true,
+      persistenceConsent: requestOptimization.canPersistProfile,
+      locale,
+      data: pageResult.data,
+    },
+    profileId: pageResult.data.profile.id,
+    canPersistProfile: requestOptimization.canPersistProfile,
+  }
 }
 
 function persistAnonymousIdCookie(responseInit: ResponseInit, profileId: string): void {
@@ -349,28 +341,6 @@ function persistAnonymousIdCookie(responseInit: ResponseInit, profileId: string)
       : new Headers(responseInit.headers)
   headers.append('set-cookie', `${ANONYMOUS_ID_COOKIE}=${profileId}; Path=/; SameSite=Lax`)
   responseInit.headers = headers
-}
-
-function stampServerHandoff(
-  transferState: TransferState,
-  serverData: ServerOptimizationData,
-  baselines: readonly Entry[],
-  resolvedEntries: Record<string, ResolvedEntryData>,
-): void {
-  const handoff: ServerHandoff = serverData.consentGranted
-    ? {
-        consent: true,
-        profile: serverData.data.profile,
-        profileId: serverData.profileId,
-        selectedOptimizations: serverData.data.selectedOptimizations,
-      }
-    : { consent: false }
-  transferState.set<ServerHandoff>(SERVER_OPTIMIZATION_KEY, handoff)
-  transferState.set<Record<string, Entry>>(
-    SERVER_BASELINES_KEY,
-    Object.fromEntries(baselines.map((baseline) => [baseline.sys.id, baseline])),
-  )
-  transferState.set<Record<string, ResolvedEntryData>>(SERVER_RESOLVED_ENTRIES_KEY, resolvedEntries)
 }
 
 async function runServerPreflight(): Promise<void> {
@@ -387,19 +357,17 @@ async function runServerPreflight(): Promise<void> {
   const baselineIds = [...new Set([...PAGES.home.ids, ...PAGES.pageTwo.ids])]
   const baselines = await contentful.fetchEntries(baselineIds)
 
-  const serverData = await getServerOptimizationData(sdk, request, consentGranted, config.locale)
+  const outcome = await computeSnapshot(sdk, request, consentGranted, config.locale)
 
-  if (serverData.consentGranted && serverData.canPersistProfile && responseInit) {
-    persistAnonymousIdCookie(responseInit, serverData.profileId)
+  if (outcome.canPersistProfile && outcome.profileId && responseInit) {
+    persistAnonymousIdCookie(responseInit, outcome.profileId)
   }
 
-  const resolvedEntries = resolveServerEntries(
-    sdk,
-    baselines,
-    serverData.consentGranted ? serverData.data.selectedOptimizations : [],
-    serverData.consentGranted ? serverData.data.profile : undefined,
+  transferState.set<OptimizationSnapshot>(SERVER_OPTIMIZATION_KEY, outcome.snapshot)
+  transferState.set<Record<string, Entry>>(
+    SERVER_BASELINES_KEY,
+    Object.fromEntries(baselines.map((baseline) => [baseline.sys.id, baseline])),
   )
-  stampServerHandoff(transferState, serverData, baselines, resolvedEntries)
 }
 
 /**
