@@ -22,6 +22,8 @@ import type {
   FlagViewBuilderArgs,
   HoverBuilderArgs,
   IdentifyBuilderArgs,
+  NodeViewBuilderArgs,
+  NodeViewTrackingArgs,
   PageViewBuilderArgs,
   ScreenViewBuilderArgs,
   TrackBuilderArgs,
@@ -267,6 +269,37 @@ abstract class CoreStatefulEventEmitter
       [payload],
       this.eventBuilder.buildHover(payload),
       this.getEventOptimizationContext(payload.optimizationContextId),
+    )
+  }
+
+  /**
+   * Track an XDA graph-node view through Insights.
+   *
+   * @param payload - Node view builder arguments. When `anonymousId` is
+   *   omitted, the emitter derives it from the active profile.
+   * @returns A promise that resolves when processing completes.
+   *
+   * @example
+   * ```ts
+   * await core.trackNodeView({
+   *   entityId: 'exp-1',
+   *   entityKind: 'Experience',
+   *   variantId: 'variant-a',
+   *   variantIndex: 1,
+   *   optimizationId: 'opt-1',
+   *   viewId: crypto.randomUUID(),
+   *   viewDurationMs: 1_000,
+   * })
+   * ```
+   */
+  async trackNodeView(payload: NodeViewTrackingArgs): Promise<void> {
+    const anonymousId = payload.anonymousId ?? profileSignal.value?.id ?? ''
+    const builderArgs: NodeViewBuilderArgs = { ...payload, anonymousId }
+
+    await this.sendInsightsEvent(
+      'trackNodeView',
+      [payload],
+      this.eventBuilder.buildNodeView(builderArgs),
     )
   }
 

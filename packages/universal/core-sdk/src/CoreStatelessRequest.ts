@@ -17,6 +17,8 @@ import type {
   FlagViewBuilderArgs,
   HoverBuilderArgs,
   IdentifyBuilderArgs,
+  NodeViewBuilderArgs,
+  NodeViewTrackingArgs,
   PageViewBuilderArgs,
   ScreenViewBuilderArgs,
   TrackBuilderArgs,
@@ -33,6 +35,8 @@ const TRACK_HOVER_PROFILE_ERROR =
   'CoreStatelessRequest.trackHover() requires a request-bound profile id for Insights delivery.'
 const TRACK_FLAG_VIEW_PROFILE_ERROR =
   'CoreStatelessRequest.trackFlagView() requires a request-bound profile id for Insights delivery.'
+const TRACK_NODE_VIEW_PROFILE_ERROR =
+  'CoreStatelessRequest.trackNodeView() requires a request-bound profile id for Insights delivery.'
 const NON_STICKY_TRACK_VIEW_PROFILE_ERROR =
   'CoreStatelessRequest.trackView() requires a request-bound profile id when `payload.sticky` is not `true`.'
 const STICKY_TRACK_VIEW_PROFILE_ERROR =
@@ -266,6 +270,19 @@ export class CoreStatelessRequest {
       this.core.eventBuilder.buildHover(this.withEventContext(payload)),
       requireInsightsProfile(this.currentProfile, TRACK_HOVER_PROFILE_ERROR),
     )
+  }
+
+  async trackNodeView(payload: StatelessInsightsPayload<NodeViewTrackingArgs>): Promise<void> {
+    if (!this.hasConsent('exo_node_view')) {
+      this.reportBlockedEvent('trackNodeView', [payload])
+      return
+    }
+
+    const profile = requireInsightsProfile(this.currentProfile, TRACK_NODE_VIEW_PROFILE_ERROR)
+    const anonymousId = payload.anonymousId ?? profile.id
+    const builderArgs: NodeViewBuilderArgs = this.withEventContext({ ...payload, anonymousId })
+
+    await this.sendAllowedInsightsEvent(this.core.eventBuilder.buildNodeView(builderArgs), profile)
   }
 
   async trackFlagView(payload: StatelessInsightsPayload<FlagViewBuilderArgs>): Promise<void> {
