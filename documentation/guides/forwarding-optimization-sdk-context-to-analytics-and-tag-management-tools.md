@@ -326,8 +326,10 @@ by `createNextjsAppRouterOptimization()`. Use the config-bound `getServerSideOpt
 helper for Pages Router `getServerSideProps`; it returns the same `OptimizationData` shape in its
 `data` field and serializable `props.contentfulOptimization`. Use
 `getNextjsServerOptimizationData()` only when you intentionally build a lower-level/manual `/server`
-flow. Browser state streams cannot explain a server-rendered first paint unless you intentionally
-hydrate the browser with the same Optimization data.
+flow. When the SDK is configured with `contentful: { client }`, prefer the request-bound managed
+entry helper so the entry decision and analytics context share the same request data. Browser state
+streams cannot explain a server-rendered first paint unless you intentionally hydrate the browser
+with the same Optimization data.
 
 **Adapt this to your use case:**
 
@@ -338,11 +340,12 @@ const pageResult = await requestOptimization.page({
 
 const optimizationData = pageResult.accepted ? pageResult.data : undefined
 
-// Resolve the entry and analytics context from the same request-local Optimization data.
-const { entry: resolvedHeroEntry, selectedOptimization } = optimization.resolveOptimizedEntry(
-  baselineHeroEntry,
-  optimizationData?.selectedOptimizations,
-)
+// Fetch and resolve the entry with the same request-local Optimization data.
+const {
+  baselineEntry,
+  entry: resolvedHeroEntry,
+  selectedOptimization,
+} = await requestOptimization.fetchOptimizedEntry('hero-entry-id')
 
 if (appPolicyAllowsThirdPartyAnalytics()) {
   // The server event owner decides which Contentful fields belong on this business event.
@@ -356,11 +359,15 @@ if (appPolicyAllowsThirdPartyAnalytics()) {
       contentful_experience_id: selectedOptimization?.experienceId,
       contentful_variant_index: selectedOptimization?.variantIndex,
       contentful_variant_entry_id: selectedOptimization ? resolvedHeroEntry.sys.id : undefined,
-      contentful_baseline_entry_id: baselineHeroEntry.sys.id,
+      contentful_baseline_entry_id: baselineEntry.sys.id,
     }),
   )
 }
 ```
+
+For manual Contentful fetching, keep passing an app-fetched `baselineEntry` and
+`optimizationData?.selectedOptimizations` to `resolveOptimizedEntry()`, then forward the same fields
+from the returned result.
 
 In stateless runtimes, Insights-only calls such as non-sticky `trackView()`, `trackClick()`,
 `trackHover()`, and `trackFlagView()` need a request-bound profile. Sticky `trackView()` returns

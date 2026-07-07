@@ -1,7 +1,10 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import { getOptimizedEntrySourceKey } from '@contentful/optimization-web/presentation'
+import { act, useState } from 'react'
 import type { LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
-import type { OptimizationSdk } from '../context/OptimizationContext'
+import type { OptimizationContextValue, OptimizationSdk } from '../context/OptimizationContext'
 import {
+  createOptimizationSdk,
   createRuntime,
   defaultLiveUpdatesContext,
   createTestEntry as makeEntry,
@@ -15,12 +18,14 @@ async function renderHook(params: {
   liveUpdates?: boolean
   optimization: OptimizationSdk
   liveUpdatesContext?: LiveUpdatesContextValue
+  optimizationContext?: Partial<OptimizationContextValue>
 }): Promise<{ getResult: () => UseOptimizedEntryResult; unmount: () => Promise<void> }> {
   const {
     baselineEntry,
     liveUpdates,
     optimization,
     liveUpdatesContext = defaultLiveUpdatesContext(),
+    optimizationContext,
   } = params
   let captured: UseOptimizedEntryResult | undefined = undefined
 
@@ -29,7 +34,12 @@ async function renderHook(params: {
     return null
   }
 
-  const view = await renderWithOptimizationProviders(<Probe />, optimization, liveUpdatesContext)
+  const view = await renderWithOptimizationProviders(
+    <Probe />,
+    optimization,
+    liveUpdatesContext,
+    optimizationContext,
+  )
 
   return {
     getResult() {
@@ -59,6 +69,7 @@ describe('useOptimizedEntry', () => {
       canOptimize: false,
       selectedOptimizations: undefined,
     })
+    expect(rendered.getResult()).not.toHaveProperty('isReady')
 
     await rendered.unmount()
   })
@@ -76,6 +87,7 @@ describe('useOptimizedEntry', () => {
     ]
     const { emit, optimization } = createRuntime((entry, selectedOptimizations) => ({
       entry: selectedOptimizations ? variantEntry : entry,
+      optimizationContextId: selectedOptimizations ? 'ctx-1' : undefined,
       selectedOptimization: selectedOptimizations?.[0],
     }))
     const rendered = await renderHook({ baselineEntry, optimization })
@@ -86,6 +98,16 @@ describe('useOptimizedEntry', () => {
       entry: variantEntry,
       selectedOptimization: variantState[0],
       isLoading: false,
+      isResolved: true,
+      metadata: {
+        baselineEntry,
+        baselineEntryId: 'baseline',
+        entry: variantEntry,
+        entryId: 'variant-a',
+        optimizationContextId: 'ctx-1',
+        selectedOptimization: variantState[0],
+        selectedOptimizations: variantState,
+      },
       canOptimize: true,
       selectedOptimizations: variantState,
     })
@@ -190,5 +212,186 @@ describe('useOptimizedEntry', () => {
     })
 
     await rendered.unmount()
+  })
+
+  it('returns updated baselineEntry props during the first render after manual entry changes', async () => {
+    const firstEntry = makeEntry('baseline')
+    const secondEntry = makeEntry('updated-baseline')
+    const optimization = createOptimizationSdk()
+    const renderedEntryIdsAfterUpdate: string[] = []
+    let setBaselineEntry: ((entry: typeof firstEntry) => void) | undefined
+
+    function Probe(): null {
+      const [baselineEntry, setEntry] = useState(firstEntry)
+      setBaselineEntry = setEntry
+      const result = useOptimizedEntry({ baselineEntry })
+      if (baselineEntry === secondEntry) {
+        renderedEntryIdsAfterUpdate.push(result.baselineEntry.sys.id)
+      }
+      return null
+    }
+
+    const view = await renderWithOptimizationProviders(<Probe />, optimization)
+
+    await act(async () => {
+      setBaselineEntry?.(secondEntry)
+      await Promise.resolve()
+    })
+
+    expect(renderedEntryIdsAfterUpdate[0]).toBe('updated-baseline')
+
+    await view.unmount()
+  })
+
+  it('fetches entryId entries through the SDK', async () => {
+    const baselineEntry = makeEntry('baseline')
+    const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(baselineEntry))
+    const optimization = createOptimizationSdk({
+      fetchContentfulEntry,
+    })
+    let captured: UseOptimizedEntryResult | undefined = undefined
+
+    function Probe(): null {
+      captured = useOptimizedEntry({
+        entryId: 'baseline',
+        entryQuery: { locale: 'de-DE' },
+      })
+      return null
+    }
+
+    function getCaptured(): UseOptimizedEntryResult {
+      if (!captured) throw new Error('Expected hook result to be captured')
+      return captured
+    }
+
+    const view = await renderWithOptimizationProviders(<Probe />, optimization)
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(fetchContentfulEntry).toHaveBeenCalledWith('baseline', { locale: 'de-DE' })
+    expect(getCaptured().entry).toBe(baselineEntry)
+    expect(getCaptured().baselineEntry).toBe(baselineEntry)
+    expect(getCaptured().error).toBeUndefined()
+
+    await view.unmount()
+  })
+
+  it('does not fetch entryId entries while the context is snapshot-backed', async () => {
+    const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(makeEntry('baseline')))
+    const optimization = createOptimizationSdk({ fetchContentfulEntry })
+    let captured: UseOptimizedEntryResult | undefined = undefined
+
+    function Probe(): null {
+      captured = useOptimizedEntry({ entryId: 'baseline' })
+      return null
+    }
+
+    function getCaptured(): UseOptimizedEntryResult {
+      if (!captured) throw new Error('Expected hook result to be captured')
+      return captured
+    }
+
+    const view = await renderWithOptimizationProviders(
+      <Probe />,
+      optimization,
+      defaultLiveUpdatesContext(),
+      { isLive: false },
+    )
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(fetchContentfulEntry).not.toHaveBeenCalled()
+    expect(getCaptured()).toMatchObject({
+      entry: undefined,
+      isLoading: true,
+    })
+
+    await view.unmount()
+  })
+
+  it('uses server handoff entries before fetching new live entry IDs', async () => {
+    const preloadedEntry = makeEntry('preloaded')
+    const liveEntry = makeEntry('live-entry')
+    const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(liveEntry))
+    const optimization = createOptimizationSdk({ fetchContentfulEntry })
+    let setEntryId: ((entryId: string) => void) | undefined = undefined
+    let captured: UseOptimizedEntryResult | undefined = undefined
+
+    function Probe(): null {
+      const [entryId, setCurrentEntryId] = useState('hero')
+      setEntryId = setCurrentEntryId
+      captured = useOptimizedEntry({
+        entryId,
+        entryQuery: { locale: 'de-DE' },
+      })
+      return null
+    }
+
+    function getCaptured(): UseOptimizedEntryResult {
+      if (!captured) throw new Error('Expected hook result to be captured')
+      return captured
+    }
+
+    const view = await renderWithOptimizationProviders(
+      <Probe />,
+      optimization,
+      defaultLiveUpdatesContext(),
+      {
+        isLive: true,
+        serverOptimizedEntries: new Map([
+          [getOptimizedEntrySourceKey('hero', { locale: 'de-DE' }), preloadedEntry],
+        ]),
+      },
+    )
+
+    expect(getCaptured().entry).toBe(preloadedEntry)
+    expect(fetchContentfulEntry).not.toHaveBeenCalled()
+
+    await act(async () => {
+      setEntryId?.('other')
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(fetchContentfulEntry).toHaveBeenCalledWith('other', { locale: 'de-DE' })
+    expect(getCaptured().entry).toBe(liveEntry)
+
+    await view.unmount()
+  })
+
+  it('surfaces entryId fetch errors', async () => {
+    const error = new Error('CDA failed')
+    const onEntryError = rs.fn()
+    const optimization = createOptimizationSdk({
+      fetchContentfulEntry: async () => await Promise.reject(error),
+    })
+    let captured: UseOptimizedEntryResult | undefined = undefined
+
+    function Probe(): null {
+      captured = useOptimizedEntry({ entryId: 'baseline', onEntryError })
+      return null
+    }
+
+    function getCaptured(): UseOptimizedEntryResult {
+      if (!captured) throw new Error('Expected hook result to be captured')
+      return captured
+    }
+
+    const view = await renderWithOptimizationProviders(<Probe />, optimization)
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(onEntryError).toHaveBeenCalledWith(error)
+    expect(getCaptured().entry).toBeUndefined()
+    expect(getCaptured().error).toBe(error)
+    expect(getCaptured().isLoading).toBe(false)
+
+    await view.unmount()
   })
 })

@@ -1,4 +1,5 @@
 import ContentfulOptimizationRuntime from '@contentful/optimization-node'
+import type { Entry } from 'contentful'
 import type { GetServerSidePropsContext } from 'next'
 import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
@@ -55,13 +56,15 @@ interface CreatedSdk {
   readonly page: ReturnType<typeof rs.fn<CoreStatelessRequest['page']>>
   readonly sdk: ContentfulOptimization
 }
+type NextjsOptimizationConfig = Parameters<typeof createNextjsOptimization>[0]
 
 function createSdk(
   page = rs.fn<CoreStatelessRequest['page']>(
     async () => await Promise.resolve({ accepted: true, data: OPTIMIZATION_DATA }),
   ),
+  config: NextjsOptimizationConfig = SDK_CONFIG,
 ): CreatedSdk {
-  const sdk = createNextjsOptimization(SDK_CONFIG)
+  const sdk = createNextjsOptimization(config)
   const originalForRequest = sdk.forRequest.bind(sdk)
   const forRequest = rs.spyOn(sdk, 'forRequest')
 
@@ -72,6 +75,24 @@ function createSdk(
   })
 
   return { forRequest, page, sdk }
+}
+
+function createEntry(id: string): Entry {
+  return {
+    fields: { title: id },
+    metadata: { tags: [] },
+    sys: {
+      contentType: { sys: { id: 'content-type', linkType: 'ContentType', type: 'Link' } },
+      createdAt: '2024-01-01T00:00:00.000Z',
+      environment: { sys: { id: 'main', linkType: 'Environment', type: 'Link' } },
+      id,
+      publishedVersion: 1,
+      revision: 1,
+      space: { sys: { id: 'space-id', linkType: 'Space', type: 'Link' } },
+      type: 'Entry',
+      updatedAt: '2024-01-01T00:00:00.000Z',
+    },
+  }
 }
 
 function createContext({
@@ -236,6 +257,47 @@ describe('Next.js Pages Router server helpers', () => {
       },
     })
     expect(JSON.parse(JSON.stringify(result.props))).toEqual(result.props)
+  })
+
+  it('prefetches declared optimized entries into page props after request data loads', async () => {
+    const calls: string[] = []
+    const baselineEntry = createEntry('hero')
+    const getEntry = rs.fn(async () => {
+      calls.push('fetch')
+      return await Promise.resolve(baselineEntry)
+    })
+    const page = rs.fn<CoreStatelessRequest['page']>(async () => {
+      calls.push('page')
+      return await Promise.resolve({ accepted: true, data: OPTIMIZATION_DATA })
+    })
+    const { sdk } = createSdk(page, {
+      ...SDK_CONFIG,
+      contentful: { client: { getEntry }, cache: false },
+    })
+
+    const result = await getNextjsPagesRouterOptimizationProps(sdk, createContext(), {
+      consent: true,
+      prefetchOptimizedEntries: [
+        { entryId: 'hero', entryQuery: { locale: 'de-DE' } },
+        { entryId: 'hero', entryQuery: { locale: 'de-DE' } },
+      ],
+    })
+
+    expect(calls).toEqual(['page', 'fetch'])
+    expect(getEntry).toHaveBeenCalledTimes(1)
+    expect(getEntry).toHaveBeenCalledWith('hero', { include: 10, locale: 'de-DE' })
+    expect(result.props.contentfulOptimization.serverOptimizedEntries).toEqual([
+      {
+        baselineEntry,
+        entryId: 'hero',
+        entryQuery: { locale: 'de-DE' },
+      },
+      {
+        baselineEntry,
+        entryId: 'hero',
+        entryQuery: { locale: 'de-DE' },
+      },
+    ])
   })
 
   it('emits the initial browser page event when server data came from pre-consent tracking', async () => {

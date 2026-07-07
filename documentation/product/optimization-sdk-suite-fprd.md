@@ -22,8 +22,8 @@ The suite is layered:
 - Framework adapter SDKs provide framework-native integration surfaces on top of runtime SDKs.
 - Meta-framework reference patterns document supported SDK compositions for application frameworks
   that do not require a dedicated SDK.
-- Reference implementations provide executable examples and validation harnesses for supported
-  integration patterns.
+- Reference implementations provide executable validation artifacts for supported integration
+  patterns.
 - Supporting packages provide low-level API transport, schemas, preview tooling, and native bridge
   infrastructure.
 
@@ -244,22 +244,22 @@ Reference implementations are part of the SDK Suite product surface. They show h
 fit into realistic applications and provide executable validation for supported integration
 patterns.
 
-- **REF-1 Public-surface examples** - Each reference implementation must use the public SDK surface
-  it demonstrates. Reusable SDK behavior belongs in packages, not reference apps.
+- **REF-1 Public SDK surface** - Each reference implementation must use the public SDK surface it
+  validates. Reusable SDK behavior belongs in packages, not reference apps.
 - **REF-2 SDK coverage** - Each published SDK must have at least one reference implementation that
-  demonstrates its primary integration path.
+  validates its primary integration path.
 - **REF-3 Runtime behavior coverage** - Runtime SDK reference implementations must demonstrate
   initialization, consent, personalization, tracking, locale handling, local mock API usage, and
   preview where the runtime supports it.
 - **REF-4 Framework adapter coverage** - Each framework adapter SDK must have a customer-style
-  reference implementation that demonstrates framework-native setup, routing or request tracking,
+  reference implementation that validates framework-native setup, routing or request tracking,
   optimized rendering, live updates, preview where supported, and analytics handoff.
 - **REF-5 Meta-framework pattern coverage** - Meta-frameworks such as Nuxt.js and SvelteKit can be
   supported through reference implementations instead of dedicated SDKs when SDK composition covers
   the required behavior. When a dedicated adapter exists, such as Next.js, its reference
   implementations must validate the adapter and the relevant rendering modalities.
 - **REF-6 Modality coverage** - CSR, SSR, prerendering, and hybrid web application patterns must
-  have separate reference implementations when combining them would make the example unclear or
+  have separate reference implementations when combining them would make the reference unclear or
   technically impractical. This applies whether those modalities are built into a framework or
   provided by a meta-framework.
 - **REF-7 Native parity coverage** - Native iOS and Android reference implementations must cover
@@ -273,7 +273,7 @@ patterns.
 - **REF-10 E2E validation** - Reference implementations must define the appropriate E2E runner for
   the platform, such as Playwright, Detox, XCUITest, or Maestro.
 - **REF-11 Documentation role** - Reference implementation README files must explain what the app
-  demonstrates, how to run it, how to validate it, and which SDK or package docs it supports.
+  validates, how to run it, how to validate it, and which SDK or package docs it supports.
 - **REF-12 Known gaps** - Reference implementations must document product or handoff gaps when they
   expose a missing SDK capability, such as server-to-client initial optimization data seeding.
 
@@ -409,8 +409,8 @@ The suite must support these application and validation workflows:
 - Framework adapter SDKs must reuse runtime SDKs and Core behavior rather than diverging into
   independent implementations.
 - Native SDKs must keep bridge behavior aligned with shared Core semantics.
-- Reference implementations must stay small and example-oriented. They must not become reusable
-  application frameworks or hidden SDK layers.
+- Reference implementations must stay focused, consumer-oriented, and coverage-preserving. They must
+  not become reusable application frameworks or hidden SDK layers.
 - Shared mocks, fixtures, and scenario contracts are internal validation dependencies for reference
   implementations.
 - Documentation that describes public SDK status must align with this fPRD. If package docs describe

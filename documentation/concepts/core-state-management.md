@@ -79,12 +79,14 @@ Swift or Kotlin published state in native runtimes, and request objects in Node/
 ### Key state definitions
 
 **Locale state** is the SDK Experience API and event locale. It is not a Contentful Delivery API
-locale and it does not fetch localized entries for your application. In stateful JavaScript
-runtimes, `locale` is available as `sdk.locale` and `sdk.states.locale`; `setLocale()` updates the
-state signal, future Experience API requests, and default event context. React providers can update
-provider-owned SDK instances from their `locale` prop. iOS and Android expose the same value as
-native `locale` state from the bridge. Node and stateless runtimes bind locale per request with
-`forRequest({ locale })`.
+locale policy and changing it does not by itself refetch localized entries for your application. In
+stateful JavaScript runtimes, `locale` is available as `sdk.locale` and `sdk.states.locale`;
+`setLocale()` updates the state signal, future Experience API requests, and default event context.
+JavaScript managed fetching can use this value only as a fallback `getEntry()` query locale when no
+Contentful query locale is provided. Request-bound Node clients use `forRequest({ locale })` as that
+fallback for managed Contentful entry fetching. React providers can update provider-owned SDK
+instances from their `locale` prop. iOS and Android expose the same value as native `locale` state
+from the bridge. Node and stateless runtimes bind locale per request with `forRequest({ locale })`.
 
 **`experienceRequestState`** tells you what happened to the most recent Experience API request. It
 starts as `{ status: 'idle' }`, changes to `{ status: 'pending' }` when a request starts, changes to
@@ -97,6 +99,11 @@ produce optimization data. It is about permission and configuration, not about d
 available. `states.optimizationPossible` can be `true` before `states.selectedOptimizations`
 contains variants. Use `states.canOptimize` when you need to know whether variant selection data is
 available for entry resolution.
+
+**Selected optimization state** is the current Experience API selection array used by stateful entry
+resolution. In stateful JavaScript runtimes, `resolveOptimizedEntry(entry)` uses
+`states.selectedOptimizations.current` when explicit selections are omitted. In stateful Core and
+Web runtimes, `fetchOptimizedEntry(entryId)` follows the same default.
 
 ### Signals and observables
 
@@ -156,11 +163,14 @@ still current and has not already produced an accepted event.
 The SDK locale affects default Experience API requests and event context. It does not modify your
 Contentful client, router, native localization, or server i18n state. Fetch Contentful entries with
 the application-owned CDA locale, and pass SDK locale separately when Experience API responses and
-events need that locale.
+events need that locale. JavaScript managed fetching can use SDK locale only as the fallback
+Contentful `getEntry()` query locale when `contentful.defaultQuery` and the per-call query omit
+`locale`.
 
 `setLocale(locale)` validates and normalizes explicit locale values. Invalid explicit values throw
 without changing locale state. In stateful SDKs, changing locale affects future requests and events;
-it does not automatically refetch profile state or selected optimizations.
+it does not automatically refetch profile state, selected optimizations, or localized Contentful
+entries.
 
 ### Defaults, storage, offline, and preview state
 
@@ -275,6 +285,10 @@ instead of writing signal values directly. Think about state changes as a few fl
 - **Experience-producing events** - `identify`, `page`, `screen`, `track`, and sticky `trackView`
   send an Experience API request when consent or the allow-list permits it. A successful response
   publishes profile, selected optimizations, changes, and request status in one state batch.
+- **SDK-managed entry fetching** - `fetchContentfulEntry(entryId)` and
+  `fetchOptimizedEntry(entryId)` call the configured consumer-owned `contentful.js` client. They do
+  not publish profile, selected optimizations, changes, or diagnostics events. Resolution reads
+  current selected optimization state only when options omit explicit selections.
 - **Insights and diagnostics events** - `trackView`, `trackClick`, `trackHover`, and `trackFlagView`
   can update `eventStream` when the event is accepted. Sticky `trackView` also uses the Experience
   path before sending its paired Insights event.
@@ -287,6 +301,11 @@ instead of writing signal values directly. Think about state changes as a few fl
 Flag reads only produce accepted flag-view delivery when event consent is `true` or
 `allowedEventTypes` permits `flag` or `component`, and an active Optimization profile ID exists.
 Reads before either condition is true do not update the accepted flag-view dedupe signature.
+
+The SDK-managed Contentful entry cache is separate from optimization state. It caches CDA entries
+returned by the configured `contentful.js` client and does not store profile or selected
+optimization data. Use `clearContentfulEntryCache()` when application locale, preview mode,
+environment, or cache policy changes make those cached entries invalid.
 
 The package also exports raw `signals` and `signalFns` references for SDK layers and first-party
 preview tooling. Those exports are not application consumer APIs. Application code must treat them

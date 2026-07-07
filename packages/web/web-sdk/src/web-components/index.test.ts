@@ -70,6 +70,23 @@ async function resolveVoid(): Promise<void> {
   await Promise.resolve()
 }
 
+async function flushMicrotasks(): Promise<void> {
+  await Promise.resolve()
+  await Promise.resolve()
+}
+
+function createDeferred<T>(): {
+  readonly promise: Promise<T>
+  readonly resolve: (value: T) => void
+} {
+  let resolveDeferred: (value: T) => void = () => undefined
+  const promise = new Promise<T>((resolve) => {
+    resolveDeferred = resolve
+  })
+
+  return { promise, resolve: resolveDeferred }
+}
+
 function toContentfulOptimization<TSdk extends object>(sdk: TSdk): TSdk & ContentfulOptimization {
   Object.setPrototypeOf(sdk, ContentfulOptimization.prototype)
 
@@ -153,6 +170,8 @@ function createSdk(
     consent: () => undefined,
     destroy,
     flush: resolveVoid,
+    fetchContentfulEntry: async (entryId: string) =>
+      await Promise.resolve(createTestEntry(entryId)),
     getFlag: () => undefined,
     getMergeTagValue: () => undefined,
     hasConsent: () => true,
@@ -228,6 +247,16 @@ function getEntryDetail(event: Event): ContentfulOptimizedEntryEventDetail {
   }
 
   return detail
+}
+
+function getEntryError(event: Event): Error | undefined {
+  if (!(event instanceof CustomEvent)) return undefined
+
+  const { detail }: { detail: unknown } = event
+  if (!isRecord(detail)) return undefined
+
+  const error = Reflect.get(detail, 'error')
+  return error instanceof Error ? error : undefined
 }
 
 function ensureElementsDefined(): void {
@@ -324,13 +353,21 @@ describe('Contentful Optimization Web Components', () => {
     const runtime = createSdk((entry) => ({ entry }))
     const root = createRootElement(runtime.sdk)
     const entry = createEntryElement(baseline)
-    const resolved = rs.fn((event: Event) => getEntryDetail(event).entry.sys.id)
+    const resolved = rs.fn((event: Event) => getEntryDetail(event))
 
     entry.addEventListener('ctfl-entry-resolved', resolved)
     root.append(entry)
     document.body.append(root)
 
-    expect(resolved).toHaveReturnedWith('baseline')
+    expect(resolved).toHaveReturnedWith(
+      expect.objectContaining({
+        entry: baseline,
+        metadata: expect.objectContaining({
+          baselineEntry: baseline,
+          entry: baseline,
+        }),
+      }),
+    )
     expect(entry.style.display).toBe('contents')
     expect(entry.dataset.ctflEntryId).toBe('baseline')
     expect(entry.dataset.ctflVariantIndex).toBe('0')
@@ -345,7 +382,7 @@ describe('Contentful Optimization Web Components', () => {
     const root = createRootElement(runtime.sdk)
     const entry = createEntryElement(optimizedBaseline)
     const loading = rs.fn()
-    const resolved = rs.fn((event: Event) => getEntryDetail(event).entry.sys.id)
+    const resolved = rs.fn((event: Event) => getEntryDetail(event))
 
     entry.addEventListener('ctfl-entry-loading', loading)
     entry.addEventListener('ctfl-entry-resolved', resolved)
@@ -361,12 +398,132 @@ describe('Contentful Optimization Web Components', () => {
     runtime.canOptimize.emit(true)
     runtime.experienceRequestState.emit({ status: 'success' })
 
-    expect(resolved).toHaveReturnedWith('variant-a')
+    expect(resolved).toHaveReturnedWith(
+      expect.objectContaining({
+        entry: variantA,
+        metadata: expect.objectContaining({
+          baselineEntry: optimizedBaseline,
+          entryId: 'variant-a',
+          selectedOptimization: variantOneState[0],
+        }),
+      }),
+    )
     expect(entry.dataset.ctflBaselineId).toBe('optimized-baseline')
     expect(entry.dataset.ctflEntryId).toBe('variant-a')
     expect(entry.dataset.ctflOptimizationId).toBe('exp-hero')
     expect(entry.dataset.ctflVariantIndex).toBe('1')
     expect(entry.style.visibility).toBe('')
+  })
+
+  it('fetches entryId entries through the SDK before resolving', async () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(baseline))
+    Reflect.set(runtime.sdk, 'fetchContentfulEntry', fetchContentfulEntry)
+    const root = createRootElement(runtime.sdk)
+    const entry = document.createElement('ctfl-optimized-entry')
+
+    if (!(entry instanceof ContentfulOptimizedEntryElement)) {
+      throw new Error('ctfl-optimized-entry is not registered.')
+    }
+
+    const loading = rs.fn()
+    const resolved = rs.fn((event: Event) => getEntryDetail(event))
+
+    entry.entryId = 'baseline'
+    entry.entryQuery = { locale: 'de-DE' }
+    entry.addEventListener('ctfl-entry-loading', loading)
+    entry.addEventListener('ctfl-entry-resolved', resolved)
+    root.append(entry)
+    document.body.append(root)
+    await flushMicrotasks()
+
+    expect(loading).toHaveBeenCalledTimes(1)
+    expect(fetchContentfulEntry).toHaveBeenCalledWith('baseline', { locale: 'de-DE' })
+    expect(resolved).toHaveReturnedWith(
+      expect.objectContaining({
+        entry: baseline,
+        metadata: expect.objectContaining({
+          baselineEntry: baseline,
+        }),
+      }),
+    )
+    expect(entry.dataset.ctflEntryId).toBe('baseline')
+  })
+
+  it('lets baselineEntry take precedence over entryId', () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(variantA))
+    Reflect.set(runtime.sdk, 'fetchContentfulEntry', fetchContentfulEntry)
+    const root = createRootElement(runtime.sdk)
+    const entry = createEntryElement(baseline)
+
+    entry.entryId = 'variant-a'
+    root.append(entry)
+    document.body.append(root)
+
+    expect(fetchContentfulEntry).not.toHaveBeenCalled()
+    expect(entry.dataset.ctflEntryId).toBe('baseline')
+  })
+
+  it('starts a fresh entryId fetch when baselineEntry precedence is removed', async () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const firstFetch = createDeferred<Entry>()
+    let fetchCount = 0
+    const fetchContentfulEntry = rs.fn(async () => {
+      fetchCount += 1
+      if (fetchCount === 1) return await firstFetch.promise
+      return await Promise.resolve(baseline)
+    })
+    Reflect.set(runtime.sdk, 'fetchContentfulEntry', fetchContentfulEntry)
+    const root = createRootElement(runtime.sdk)
+    const entry = document.createElement('ctfl-optimized-entry')
+
+    if (!(entry instanceof ContentfulOptimizedEntryElement)) {
+      throw new Error('ctfl-optimized-entry is not registered.')
+    }
+
+    entry.entryId = 'baseline'
+    root.append(entry)
+    document.body.append(root)
+
+    expect(fetchContentfulEntry).toHaveBeenCalledTimes(1)
+
+    entry.baselineEntry = variantA
+    expect(entry.dataset.ctflEntryId).toBe('variant-a')
+
+    entry.baselineEntry = undefined
+    await flushMicrotasks()
+
+    expect(fetchContentfulEntry).toHaveBeenCalledTimes(2)
+    expect(entry.dataset.ctflEntryId).toBe('baseline')
+    firstFetch.resolve(baseline)
+    await flushMicrotasks()
+  })
+
+  it('dispatches entry errors from managed entryId fetches', async () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const error = new Error('CDA failed')
+    runtime.sdk.fetchContentfulEntry = rs.fn(async () => await Promise.reject(error))
+    const root = createRootElement(runtime.sdk)
+    const entry = document.createElement('ctfl-optimized-entry')
+
+    if (!(entry instanceof ContentfulOptimizedEntryElement)) {
+      throw new Error('ctfl-optimized-entry is not registered.')
+    }
+
+    const errored = rs.fn((event: Event) => getEntryError(event))
+
+    entry.entryId = 'baseline'
+    entry.addEventListener('ctfl-entry-error', errored)
+    root.append(entry)
+    document.body.append(root)
+    await flushMicrotasks()
+
+    expect(errored).toHaveReturnedWith(error)
   })
 
   it('clears presentation state when baselineEntry is unset and resolves again when reused', () => {

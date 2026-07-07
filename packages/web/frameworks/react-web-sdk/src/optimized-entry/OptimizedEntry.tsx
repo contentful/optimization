@@ -1,24 +1,44 @@
+import type {
+  ContentfulEntryQuery,
+  OptimizedEntryMetadata,
+} from '@contentful/optimization-web/core-sdk'
 import {
   OPTIMIZED_ENTRY_HOST_DISPLAY,
+  createOptimizedEntryLoadingEntry,
   resolveOptimizedEntryNestingState,
 } from '@contentful/optimization-web/presentation'
 import type { Entry } from 'contentful'
-import { createContext, useContext, useEffect, useMemo, useRef, type JSX } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  type JSX,
+  type ReactNode,
+} from 'react'
 import { useOptimization } from '../hooks/useOptimization'
 import { createScopedLogger } from '../logger'
 import {
   resolveChildren,
+  resolveErrorFallback,
   resolveLoadingFallback,
   resolveLoadingLayoutTargetStyle,
+  type ErrorFallback,
   type LoadingFallback,
   type OptimizedEntryChildren,
   type OptimizedEntryRenderContext,
   type RenderProp,
   type WrapperElement,
 } from './optimizedEntryUtils'
-import { useOptimizedEntrySnapshot } from './useOptimizedEntry'
+import {
+  useManagedBaselineEntry,
+  useOptimizedEntrySnapshot,
+  type UseOptimizedEntryParams,
+} from './useOptimizedEntry'
 
 export type OptimizedEntryLoadingFallback = LoadingFallback
+export type OptimizedEntryErrorFallback = ErrorFallback
 export type { OptimizedEntryRenderContext }
 export type OptimizedEntryWrapperElement = WrapperElement
 export type OptimizedEntryRenderProp = RenderProp
@@ -28,14 +48,9 @@ export type OptimizedEntryRenderProp = RenderProp
  *
  * @public
  */
-export interface OptimizedEntryProps {
+interface OptimizedEntrySharedProps {
   /**
-   * The baseline Contentful entry fetched with `include: 10`.
-   * Must include `nt_experiences` field with linked optimization data.
-   */
-  baselineEntry: Entry
-  /**
-   * Render prop that receives the resolved variant entry.
+   * Render prop that receives the resolved variant entry and metadata when resolved.
    */
   children: OptimizedEntryChildren
   /**
@@ -60,6 +75,18 @@ export interface OptimizedEntryProps {
    * Optional fallback rendered while optimization state is unresolved.
    */
   loadingFallback?: OptimizedEntryLoadingFallback
+  /**
+   * Optional fallback rendered when SDK-managed entry fetching fails.
+   */
+  errorFallback?: OptimizedEntryErrorFallback
+  /**
+   * Callback invoked when SDK-managed entry fetching fails.
+   */
+  onEntryError?: (error: Error) => void
+  /**
+   * Callback invoked when a resolved entry is rendered with tracking attributes ready.
+   */
+  onEntryResolved?: (metadata: OptimizedEntryMetadata) => void
   /**
    * Marks the optimized entry wrapper as a click target for entry click tracking.
    */
@@ -86,9 +113,105 @@ export interface OptimizedEntryProps {
   hoverDurationUpdateIntervalMs?: number
 }
 
+type OptimizedEntrySourceProps =
+  | {
+      /**
+       * The baseline Contentful entry fetched with `include: 10`.
+       * Must include `nt_experiences` field with linked optimization data.
+       */
+      baselineEntry: Entry
+      entryId?: never
+      entryQuery?: never
+    }
+  | {
+      baselineEntry?: never
+      /** Contentful entry ID fetched through the SDK-managed Contentful client. */
+      entryId: string
+      /** Per-call Contentful `getEntry()` query overrides. */
+      entryQuery?: ContentfulEntryQuery
+    }
+
+/**
+ * Props for the {@link OptimizedEntry} component.
+ *
+ * @public
+ */
+export type OptimizedEntryProps = OptimizedEntrySharedProps & OptimizedEntrySourceProps
+
 const WRAPPER_STYLE = Object.freeze({ display: OPTIMIZED_ENTRY_HOST_DISPLAY })
 const OptimizedEntryNestingContext = createContext<ReadonlySet<string> | null>(null)
 const logger = createScopedLogger('React:OptimizedEntry')
+
+interface OptimizedEntryFrameProps {
+  readonly children: ReactNode
+  readonly currentAndAncestorBaselineIds: ReadonlySet<string>
+  readonly dataTestId: string | undefined
+  readonly hostAttributes?: Record<string, string | number | boolean | undefined>
+  readonly Wrapper: OptimizedEntryWrapperElement
+}
+
+function OptimizedEntryFrame({
+  children,
+  currentAndAncestorBaselineIds,
+  dataTestId,
+  hostAttributes,
+  Wrapper,
+}: OptimizedEntryFrameProps): JSX.Element {
+  return (
+    <OptimizedEntryNestingContext.Provider value={currentAndAncestorBaselineIds}>
+      <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId} {...hostAttributes}>
+        {children}
+      </Wrapper>
+    </OptimizedEntryNestingContext.Provider>
+  )
+}
+
+function hasBaselineEntry(
+  entryProps: OptimizedEntrySourceProps,
+): entryProps is Extract<OptimizedEntrySourceProps, { baselineEntry: Entry }> {
+  return entryProps.baselineEntry !== undefined
+}
+
+function resolveEntrySource(
+  entryProps: OptimizedEntrySourceProps,
+  liveUpdates: boolean | undefined,
+  onEntryError: ((error: Error) => void) | undefined,
+): { readonly entryId: string | undefined; readonly managedEntryParams: UseOptimizedEntryParams } {
+  if (hasBaselineEntry(entryProps)) {
+    return {
+      entryId: undefined,
+      managedEntryParams: { baselineEntry: entryProps.baselineEntry, liveUpdates, onEntryError },
+    }
+  }
+
+  return {
+    entryId: entryProps.entryId,
+    managedEntryParams: {
+      entryId: entryProps.entryId,
+      entryQuery: entryProps.entryQuery,
+      liveUpdates,
+      onEntryError,
+    },
+  }
+}
+
+function renderErrorFallback(
+  errorFallback: OptimizedEntryErrorFallback | undefined,
+  error: Error,
+  frameProps: Omit<OptimizedEntryFrameProps, 'children'>,
+): JSX.Element | null {
+  const errorContent = resolveErrorFallback(errorFallback, error)
+
+  if (errorContent === undefined) {
+    return null
+  }
+
+  return <OptimizedEntryFrame {...frameProps}>{errorContent}</OptimizedEntryFrame>
+}
+
+function getTargetDisplay(wrapper: OptimizedEntryWrapperElement): 'block' | 'inline' {
+  return wrapper === 'span' ? 'inline' : 'block'
+}
 
 function useDuplicateBaselineGuard(baselineEntryId: string): {
   currentAndAncestorBaselineIds: ReadonlySet<string>
@@ -119,35 +242,38 @@ function useDuplicateBaselineGuard(baselineEntryId: string): {
 }
 
 export function OptimizedEntry({
-  baselineEntry,
   children,
   liveUpdates,
   as = 'div',
   testId,
   'data-testid': dataTestIdProp,
   loadingFallback,
+  errorFallback,
+  onEntryError,
+  onEntryResolved,
   clickable,
   hoverDurationUpdateIntervalMs,
   trackClicks,
   trackHovers,
   trackViews,
   viewDurationUpdateIntervalMs,
+  ...entryProps
 }: OptimizedEntryProps): JSX.Element | null {
   const sdk = useOptimization()
-  const renderContext = useMemo<OptimizedEntryRenderContext>(
-    () => ({
-      getMergeTagValue: (embeddedEntryNodeTarget, profile) =>
-        sdk.getMergeTagValue(embeddedEntryNodeTarget, profile),
-    }),
-    [sdk],
+  const { entryId, managedEntryParams } = resolveEntrySource(entryProps, liveUpdates, onEntryError)
+  const managedEntry = useManagedBaselineEntry(managedEntryParams)
+  const loadingEntry = useMemo(
+    () => createOptimizedEntryLoadingEntry(entryId ?? 'contentful-entry'),
+    [entryId],
   )
+  const baselineEntry = managedEntry.entry ?? loadingEntry
   const {
     sys: { id: baselineEntryId },
   } = baselineEntry
   const { currentAndAncestorBaselineIds, hasDuplicateBaselineAncestor } =
     useDuplicateBaselineGuard(baselineEntryId)
   const hasCustomLoadingFallback = loadingFallback !== undefined
-  const targetDisplay = as === 'span' ? 'inline' : 'block'
+  const targetDisplay = getTargetDisplay(as)
   const snapshot = useOptimizedEntrySnapshot({
     baselineEntry,
     clickable,
@@ -160,14 +286,60 @@ export function OptimizedEntry({
     trackViews,
     viewDurationUpdateIntervalMs,
   })
+  const { metadata } = snapshot
+  const renderContext = useMemo<OptimizedEntryRenderContext>(
+    () => ({
+      ...metadata,
+      getMergeTagValue: (embeddedEntryNodeTarget, profile) =>
+        sdk.getMergeTagValue(embeddedEntryNodeTarget, profile),
+    }),
+    [metadata, sdk],
+  )
+
+  useEffect(() => {
+    if (managedEntry.entry && !hasDuplicateBaselineAncestor && snapshot.isResolved) {
+      onEntryResolved?.(metadata)
+    }
+  }, [
+    hasDuplicateBaselineAncestor,
+    managedEntry.entry,
+    metadata,
+    onEntryResolved,
+    snapshot.isResolved,
+  ])
 
   if (hasDuplicateBaselineAncestor) {
     return null
   }
 
+  const dataTestId = dataTestIdProp ?? testId
+  const Wrapper = as
+  const frameProps = {
+    currentAndAncestorBaselineIds,
+    dataTestId,
+    Wrapper,
+  }
+
+  if (managedEntry.error) {
+    return renderErrorFallback(errorFallback, managedEntry.error, frameProps)
+  }
+
   const resolvedLoadingFallback = hasCustomLoadingFallback
     ? resolveLoadingFallback(loadingFallback)
     : undefined
+
+  if (!managedEntry.entry) {
+    const loadingLayoutTargetStyle = resolveLoadingLayoutTargetStyle(targetDisplay, false)
+
+    return (
+      <OptimizedEntryFrame {...frameProps}>
+        <Wrapper data-ctfl-loading-layout-target="true" style={loadingLayoutTargetStyle}>
+          {resolvedLoadingFallback}
+        </Wrapper>
+      </OptimizedEntryFrame>
+    )
+  }
+
   const { entry, hostAttributes, loadingPresentation } = snapshot
   const {
     hideLoadingLayoutTarget,
@@ -178,8 +350,6 @@ export function OptimizedEntry({
   const loadingContent = shouldRenderBaselineWhileLoading
     ? resolveChildren(children, baselineEntry, renderContext)
     : resolvedLoadingFallback
-  const dataTestId = dataTestIdProp ?? testId
-  const Wrapper = as
 
   if (showLoadingFallback) {
     const LoadingLayoutTarget = Wrapper
@@ -189,25 +359,21 @@ export function OptimizedEntry({
     )
 
     return (
-      <OptimizedEntryNestingContext.Provider value={currentAndAncestorBaselineIds}>
-        <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId}>
-          <LoadingLayoutTarget
-            data-ctfl-loading-layout-target="true"
-            style={loadingLayoutTargetStyle}
-          >
-            {loadingContent}
-          </LoadingLayoutTarget>
-        </Wrapper>
-      </OptimizedEntryNestingContext.Provider>
+      <OptimizedEntryFrame {...frameProps}>
+        <LoadingLayoutTarget
+          data-ctfl-loading-layout-target="true"
+          style={loadingLayoutTargetStyle}
+        >
+          {loadingContent}
+        </LoadingLayoutTarget>
+      </OptimizedEntryFrame>
     )
   }
 
   return (
-    <OptimizedEntryNestingContext.Provider value={currentAndAncestorBaselineIds}>
-      <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId} {...hostAttributes}>
-        {resolveChildren(children, entry, renderContext)}
-      </Wrapper>
-    </OptimizedEntryNestingContext.Provider>
+    <OptimizedEntryFrame {...frameProps} hostAttributes={hostAttributes}>
+      {resolveChildren(children, entry, renderContext)}
+    </OptimizedEntryFrame>
   )
 }
 

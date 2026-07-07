@@ -4,12 +4,17 @@ Applies to reference implementations and shared implementation contracts under `
 
 ## Boundaries
 
-- Reference implementations are maintained SDK integration references, E2E targets, and concrete
-  consumer reference material. They are not demos or package-local `dev/` harnesses; do not dismiss
-  failures, stale flows, or docs gaps as demo-only.
+- Reference implementations are first-class product artifacts: maintained SDK integration contracts,
+  E2E targets, customer-facing evidence, and concrete consumer reference material. They are not
+  optional demos or package-local `dev/` harnesses; do not dismiss failures, stale flows, incomplete
+  coverage, or docs gaps as demo-only.
 - Reusable SDK behavior belongs in `packages/`; reference implementations should consume the public
   SDK surface the way customers do.
-- Keep apps small, consumer-oriented, and aligned with the public SDK surface they exercise.
+- Keep apps focused, consumer-oriented, coverage-preserving, and aligned with the public SDK surface
+  they exercise.
+- Do not remove, reduce, or bypass implementation behavior because it appears app-local. First
+  verify whether it documents a supported integration path, backs E2E coverage, or exposes an SDK
+  gap.
 - CDA entry fetches used for SDK entry resolution must stay single-locale. Do not use
   `withAllLocales` or `locale=*`; choose the application Contentful locale in the implementation and
   pass it explicitly to CDA requests.
@@ -22,7 +27,8 @@ Applies to reference implementations and shared implementation contracts under `
 
 - Follow root Markdown rules and [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md).
 - Use the repo-standard header, implementation-specific `<h3>`, Readme/Guides/Reference/Contributing
-  navigation, pre-release warning, and an introduction naming the SDK packages they integrate.
+  navigation, pre-release warning, and an introduction naming the SDK packages they integrate and
+  the customer-style integration path they validate.
 - Use this default top-level order: header/navigation/warning, introduction naming the integrated
   SDK package or native status, `## What this covers`, optional near-top architecture notes,
   `## CDA locale handling`, `## Prerequisites`, `## Setup`, `## Running locally`,

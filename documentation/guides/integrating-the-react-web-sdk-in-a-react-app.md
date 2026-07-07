@@ -4,8 +4,8 @@ Use this guide when you want to add browser-side personalization and analytics t
 application with `@contentful/optimization-react-web`.
 
 The React Web SDK wraps `@contentful/optimization-web` with React providers, hooks, entry-rendering
-components, live-update state, and router adapters. Your application still owns Contentful entry
-fetching, consent policy, identity policy, routing, and final rendering.
+components, live-update state, and router adapters. Your application still owns the Contentful
+client and credentials, consent policy, identity policy, routing, and final rendering.
 
 Use the lower-level Web SDK guide instead when your app is not React-based or when you want to own
 the browser SDK lifecycle without React abstractions.
@@ -24,9 +24,8 @@ explicit opt-in, wire the consent section before you emit events or render perso
    pnpm add @contentful/optimization-react-web contentful
    ```
 
-2. Mount `OptimizationRoot` once, emit a page event so the SDK can evaluate route-based
-   optimizations, fetch one single-locale Contentful entry with linked optimization data, and render
-   it through `OptimizedEntry`.
+2. Mount `OptimizationRoot` once with your app-owned `contentful.js` client, emit a page event so
+   the SDK can evaluate route-based optimizations, and render one entry through `OptimizedEntry`.
 
    Set `PUBLIC_HERO_ENTRY_ID` to the baseline entry ID for the first optimized entry, or replace
    `HERO_ENTRY_ID` with an app-owned constant.
@@ -39,8 +38,8 @@ explicit opt-in, wire the consent section before you emit events or render perso
      OptimizedEntry,
      useOptimizationActions,
    } from '@contentful/optimization-react-web'
-   import { createClient, type Entry } from 'contentful'
-   import { useEffect, useState } from 'react'
+   import { createClient } from 'contentful'
+   import { useEffect } from 'react'
 
    const APP_LOCALE = 'en-US'
    const HERO_ENTRY_ID = import.meta.env.PUBLIC_HERO_ENTRY_ID
@@ -54,27 +53,14 @@ explicit opt-in, wire the consent section before you emit events or render perso
 
    function HomePage() {
      const { trackPageView } = useOptimizationActions()
-     const [entry, setEntry] = useState<Entry | undefined>()
 
      useEffect(() => {
        // Emit after the provider is ready so the SDK can resolve route-based optimizations.
        void trackPageView()
      }, [trackPageView])
 
-     useEffect(() => {
-       void contentfulClient
-         .getEntry(HERO_ENTRY_ID, {
-           // Resolve linked optimization and variant entries before passing the entry to React Web.
-           include: INCLUDE_DEPTH,
-           locale: APP_LOCALE,
-         })
-         .then(setEntry)
-     }, [])
-
-     if (!entry) return null
-
      return (
-       <OptimizedEntry baselineEntry={entry}>
+       <OptimizedEntry entryId={HERO_ENTRY_ID}>
          {(resolvedEntry) => (
            <article>
              <h1>{String(resolvedEntry.fields.title ?? '')}</h1>
@@ -90,6 +76,14 @@ explicit opt-in, wire the consent section before you emit events or render perso
          clientId={import.meta.env.PUBLIC_CONTENTFUL_OPTIMIZATION_CLIENT_ID}
          environment={import.meta.env.PUBLIC_CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main'}
          locale={APP_LOCALE}
+         contentful={{
+           client: contentfulClient,
+           defaultQuery: {
+             // Managed fetching expects one CDA locale and resolved optimization links.
+             include: INCLUDE_DEPTH,
+             locale: APP_LOCALE,
+           },
+         }}
          // Use accepted startup consent only when your application policy permits it.
          defaults={{ consent: true }}
        >
@@ -110,7 +104,7 @@ explicit opt-in, wire the consent section before you emit events or render perso
 - [Core integration](#core-integration)
   - [Install and initialize the React provider](#install-and-initialize-the-react-provider)
   - [Consent and privacy-policy handoff](#consent-and-privacy-policy-handoff)
-  - [Contentful entry fetching and locale shape](#contentful-entry-fetching-and-locale-shape)
+  - [Contentful client configuration and locale shape](#contentful-client-configuration-and-locale-shape)
   - [Entry resolution and fallback rendering](#entry-resolution-and-fallback-rendering)
   - [Page events and route tracking](#page-events-and-route-tracking)
   - [Entry interaction tracking](#entry-interaction-tracking)
@@ -140,10 +134,10 @@ Use this table as the setup inventory for the guide:
 | `@contentful/optimization-react-web` plus app-owned React and React DOM peer dependencies | Required for first integration | Yes                      | Application package dependencies                                                               |
 | Optimization client ID and environment                                                    | Required for first integration | Yes                      | `OptimizationRoot` props, usually from runtime environment variables                           |
 | Experience API and Insights API endpoint overrides                                        | Common but policy-dependent    | No                       | `api` prop when using non-default production, staging, or mock endpoints                       |
-| Contentful Delivery API client, space, environment, and access token                      | Required for first integration | Yes                      | Application-owned Contentful fetching layer                                                    |
+| Contentful Delivery API client, space, environment, and access token                      | Required for first integration | Yes                      | Application-owned `contentful.js` client passed through `OptimizationRoot`                     |
 | Contentful optimized entry ID used by the first rendered entry                            | Required for first integration | Yes                      | Runtime environment variable such as `PUBLIC_HERO_ENTRY_ID`, or an app-owned entry ID constant |
 | Contentful entries with linked optimization and variant data                              | Required for first integration | Yes                      | Contentful content model and entries rendered by the app                                       |
-| Single Contentful CDA locale and `include: 10` for optimized entries                      | Required for first integration | Yes                      | `getEntry()` or `getEntries()` calls before passing entries to the SDK                         |
+| Single Contentful CDA locale and `include: 10` for optimized entries                      | Required for first integration | Yes                      | `contentful.defaultQuery`, per-entry `entryQuery`, or manual `getEntry()` calls                |
 | `OptimizationRoot` mounted once around the React tree that uses SDK hooks                 | Required for first integration | Yes                      | React app root, layout, or router root                                                         |
 | Page event emission on initial render, plus route changes for routed apps                 | Required for first integration | Yes                      | Router adapter under `OptimizationRoot`, or an app-owned `page()` effect                       |
 | Entry rendering through `OptimizedEntry` or `useOptimizedEntry`                           | Required for first integration | Yes                      | React components that render Contentful entries                                                |
@@ -157,8 +151,9 @@ Use this table as the setup inventory for the guide:
 | Strict pre-consent event policy, cookie settings, queue policy, and CSP nonce             | Advanced or production-only    | No                       | `OptimizationRoot` config and preview-panel attach options                                     |
 | Externally owned Web SDK instance                                                         | Advanced or production-only    | No                       | `OptimizationProvider sdk={...}` with `LiveUpdatesProvider`                                    |
 
-The React Web SDK does not fetch Contentful entries. Fetch entries in your application layer, then
-pass the resulting single-locale entry objects to the SDK components and hooks.
+For the preferred JavaScript path, create the `contentful.js` client in your app and pass it to
+`OptimizationRoot` through `contentful: { client, defaultQuery?, cache? }`. Manual `baselineEntry`
+rendering remains supported when the app fetches entries outside the SDK.
 
 ## Core integration
 
@@ -226,7 +221,7 @@ Do not destructure methods from the object returned by `useOptimization()`. Thos
 the SDK instance binding. `useOptimizationActions()` returns bound actions that are safe to
 destructure, including `setConsent`, `flushEvents`, `identifyUser`, `trackPageView`, `resetUser`,
 `trackScreen`, and `trackEvent`. Use `useOptimizationContext()` when a component needs
-`{ sdk, isReady, error }` for diagnostics or error rendering before the SDK is ready.
+`{ sdk, error }` for diagnostics or error rendering before the SDK is available.
 
 ### Consent and privacy-policy handoff
 
@@ -284,16 +279,18 @@ default, the Web SDK permits only `identify` and `page` before consent is explic
 For the cross-SDK policy model, see
 [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
 
-### Contentful entry fetching and locale shape
+### Contentful client configuration and locale shape
 
 **Integration category:** Required for first integration
 
-The SDK resolves entries after your app fetches them from Contentful. It expects the standard
-single-locale CDA entry shape with direct field values, including linked optimization fields such as
-`fields.nt_experiences` and `fields.nt_variants`.
+The preferred React Web path uses an app-owned `contentful.js` client configured on
+`OptimizationRoot`. The SDK-managed entry fetch expects the standard single-locale CDA entry shape
+with direct field values, including linked optimization fields such as `fields.nt_experiences` and
+`fields.nt_variants`.
 
 1. Choose the application Contentful locale in your router, i18n layer, or app configuration.
-2. Pass that locale to Contentful CDA requests.
+2. Pass that locale through `contentful.defaultQuery` on `OptimizationRoot`, per-entry `entryQuery`,
+   or manual CDA requests.
 3. Pass the same locale to `OptimizationRoot` when Experience API responses and event context need
    to match rendered content.
 4. Fetch optimized entries with `include: 10` so linked optimization and variant entries are
@@ -301,9 +298,10 @@ single-locale CDA entry shape with direct field values, including linked optimiz
 5. Do not pass `withAllLocales` or raw CDA `locale=*` responses to `OptimizedEntry`,
    `useOptimizedEntry`, or `useEntryResolver()`.
 
-**Copy this:**
+**Adapt this to your use case:**
 
 ```tsx
+import { OptimizationRoot } from '@contentful/optimization-react-web'
 import { createClient } from 'contentful'
 
 const APP_LOCALE = 'en-US'
@@ -315,13 +313,20 @@ const contentfulClient = createClient({
   space: import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID,
 })
 
-export async function fetchOptimizedEntry(entryId: string) {
-  return await contentfulClient.getEntry(entryId, {
-    // Resolve linked optimization and variant entries before rendering.
-    include: INCLUDE_DEPTH,
-    // Keep CDA locale aligned with the OptimizationRoot locale.
-    locale: APP_LOCALE,
-  })
+export function AppRoot() {
+  return (
+    <OptimizationRoot
+      clientId="your-client-id"
+      contentful={{
+        client: contentfulClient,
+        // Resolve linked optimization data in one CDA locale.
+        defaultQuery: { include: INCLUDE_DEPTH, locale: APP_LOCALE },
+      }}
+      locale={APP_LOCALE}
+    >
+      <YourApp />
+    </OptimizationRoot>
+  )
 }
 ```
 
@@ -335,15 +340,37 @@ needed, and rerender localized content. For the full locale model, see
 
 **Integration category:** Required for first integration
 
-`OptimizedEntry` resolves a baseline Contentful entry against selected optimization state and
-renders either the selected variant or the baseline entry.
+`OptimizedEntry` resolves a Contentful entry against selected optimization state and renders either
+the selected variant or the baseline entry.
 
-1. Pass the baseline entry fetched by your application.
-2. Use a render prop when the rendered UI depends on the resolved entry.
-3. Use `loadingFallback` when you want temporary custom loading UI while optimization state is
+1. Use `entryId` for SDK-managed fetching when `OptimizationRoot` has `contentful: { client }`.
+2. Use `entryQuery` for per-entry query overrides such as a route-specific locale.
+3. Use `errorFallback` and `onEntryError` for managed CDA failures.
+4. Pass `baselineEntry` when the app fetches entries outside the SDK.
+5. Use a render prop when the rendered UI depends on the resolved entry.
+6. Use `loadingFallback` when you want temporary custom loading UI while optimization state is
    unresolved.
-4. Use `useOptimizedEntry()` only when a component needs direct access to loading, readiness, or
-   selected-optimization metadata.
+7. Use `useOptimizedEntry()` only when a component needs direct access to loading, presentation
+   readiness, or selected-optimization metadata.
+
+Replace `reportContentfulEntryError` in the example with your app-owned logging or monitoring
+function.
+
+**Adapt this to your use case:**
+
+```tsx
+<OptimizedEntry
+  entryId="hero-entry"
+  entryQuery={{ locale: APP_LOCALE }}
+  errorFallback={() => <HeroFallback />}
+  loadingFallback={() => <HeroSkeleton />}
+  onEntryError={(error) => reportContentfulEntryError(error)}
+>
+  {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
+</OptimizedEntry>
+```
+
+For manual fetching, keep passing the app-fetched baseline entry:
 
 **Adapt this to your use case:**
 
@@ -1010,8 +1037,8 @@ Before releasing a React Web SDK integration, verify these checks:
   click, hover, flag, or custom tracking event appear in the expected SDK event stream or
   destination debugger.
 - Content fallback behavior: entries without optimization references render baseline content,
-  optimized entries stop showing loading fallback after readiness or the 5-second baseline reveal,
-  and all-locale CDA responses are not passed to entry resolvers.
+  optimized entries stop showing loading fallback after presentation readiness or the 5-second
+  baseline reveal, and all-locale CDA responses are not passed to entry resolvers.
 - Duplicate tracking prevention: one page tracker is mounted per router tree, Strict Mode remounts
   do not duplicate page events, analytics forwarding deduplicates exact records by `messageId`,
   sticky-view exposure forwarding uses semantic dedupe when the destination wants one exposure, and

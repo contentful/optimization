@@ -137,7 +137,7 @@
         "bridge-support.mjs": 1200,
         "runtime.cjs": 900,
         "runtime.mjs": 320,
-        "contentful-optimization-web-components.umd.js": 39000,
+        "contentful-optimization-web-components.umd.js": 39010,
         "presentation.cjs": 3200,
         "presentation.mjs": 3200,
         "tracking-attributes.cjs": 1200,

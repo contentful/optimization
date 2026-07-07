@@ -12,17 +12,31 @@ import type {
   UniversalEventBuilderArgs,
 } from '@contentful/optimization-node/core-sdk'
 import { createPageContextFromUrl } from '@contentful/optimization-node/core-sdk'
+import type { JSX, ReactElement, ReactNode } from 'react'
 import type { NextjsCookieReader } from './bound-component-types'
 import { NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER } from './request-context'
+import { renderOptimizedEntryOnServer } from './server-entry-renderer'
+import type {
+  ServerTrackingAttributeOptions,
+  ServerTrackingBaselineEntry,
+  ServerTrackingResolvedData,
+} from './tracking-attributes'
 
 export const DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE = ANONYMOUS_ID_COOKIE
 export type { OptimizationNodeConfig } from '@contentful/optimization-node'
 export type { OptimizationData, PartialProfile } from '@contentful/optimization-node/api-schemas'
+export {
+  prefetchOptimizedEntries,
+  type OptimizedEntryPrefetchDescriptor,
+  type OptimizedEntryPrefetchRuntime,
+  type ServerOptimizedEntryHandoff,
+} from '@contentful/optimization-node/core-sdk'
 export type {
   CoreStatelessInsightsOptions,
   CoreStatelessRequest,
   CoreStatelessRequestConsent,
   CoreStatelessRequestOptions,
+  FetchOptimizedEntryResult,
   PageViewBuilderArgs,
   ResolvedData,
   UniversalEventBuilderArgs,
@@ -135,6 +149,36 @@ export interface CreateNextjsPageContextOptions {
 export type NextjsPageContextInput =
   | NonNullable<UniversalEventBuilderArgs['page']>
   | CreateNextjsPageContextOptions
+
+export type ServerOptimizedEntryFetchResult = ServerTrackingResolvedData & {
+  readonly baselineEntry: ServerTrackingBaselineEntry
+}
+
+type ServerOptimizedEntryOwnProps<TElement extends keyof JSX.IntrinsicElements> =
+  ServerTrackingAttributeOptions & {
+    readonly as?: TElement
+    readonly children?: ReactNode
+  } & (
+      | {
+          readonly baselineEntry: ServerTrackingBaselineEntry
+          readonly resolvedData: ServerTrackingResolvedData
+          readonly result?: never
+        }
+      | {
+          readonly baselineEntry?: never
+          readonly resolvedData?: never
+          readonly result: ServerOptimizedEntryFetchResult
+        }
+    )
+
+type DataCtflAttributeName = `data-ctfl-${string}`
+
+export type ServerOptimizedEntryProps<TElement extends keyof JSX.IntrinsicElements = 'div'> =
+  ServerOptimizedEntryOwnProps<TElement> &
+    Omit<
+      JSX.IntrinsicElements[TElement],
+      keyof ServerOptimizedEntryOwnProps<TElement> | DataCtflAttributeName
+    >
 
 export function createNextjsOptimization(config: OptimizationNodeConfig): ContentfulOptimization {
   return new ContentfulOptimizationRuntime(config)
@@ -313,6 +357,37 @@ export function persistNextjsAnonymousId(
   if (deleteWhenProfileCannotPersist) {
     response.cookies.delete(anonymousIdCookieName)
   }
+}
+
+function getServerOptimizedEntryData<TElement extends keyof JSX.IntrinsicElements>(
+  props: ServerOptimizedEntryProps<TElement>,
+): {
+  readonly baselineEntry: ServerTrackingBaselineEntry
+  readonly resolvedData: ServerTrackingResolvedData
+} {
+  if (props.result !== undefined) {
+    return { baselineEntry: props.result.baselineEntry, resolvedData: props.result }
+  }
+
+  return { baselineEntry: props.baselineEntry, resolvedData: props.resolvedData }
+}
+
+export function ServerOptimizedEntry<TElement extends keyof JSX.IntrinsicElements = 'div'>(
+  props: ServerOptimizedEntryProps<TElement>,
+): ReactElement {
+  const {
+    baselineEntry: _baselineEntry,
+    resolvedData: _resolvedData,
+    result: _result,
+    ...rendererProps
+  } = props
+  const { baselineEntry, resolvedData } = getServerOptimizedEntryData(props)
+
+  return renderOptimizedEntryOnServer({
+    ...rendererProps,
+    baselineEntry,
+    resolvedData,
+  })
 }
 
 function mergePageContext(

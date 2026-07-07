@@ -1,6 +1,10 @@
+import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import type { OptimizationData } from './api-schemas'
+import type { ContentfulEntryClient, ContentfulEntryQuery } from './CoreBase'
 import CoreStateless from './CoreStateless'
 import type { BlockedEvent } from './events'
+import { optimizedEntry } from './test/fixtures/optimizedEntry'
+import { selectedOptimizations } from './test/fixtures/selectedOptimizations'
 
 const TRACK_CLICK_PROFILE_ERROR =
   'CoreStatelessRequest.trackClick() requires a request-bound profile id for Insights delivery.'
@@ -10,6 +14,14 @@ const TRACK_FLAG_VIEW_PROFILE_ERROR =
   'CoreStatelessRequest.trackFlagView() requires a request-bound profile id for Insights delivery.'
 const NON_STICKY_TRACK_VIEW_PROFILE_ERROR =
   'CoreStatelessRequest.trackView() requires a request-bound profile id when `payload.sticky` is not `true`.'
+
+type ProductEntrySkeleton = EntrySkeletonType<
+  {
+    title: EntryFieldTypes.Symbol
+  },
+  'product'
+>
+type MockContentfulGetEntry = (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
 
 const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
   changes: [],
@@ -37,6 +49,19 @@ const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
       averageSessionLength: 0,
     },
   },
+}
+
+function createOptimizedEntryClient(): ContentfulEntryClient & {
+  readonly getEntry: ReturnType<typeof rs.fn<MockContentfulGetEntry>>
+} {
+  const getEntry = rs.fn<MockContentfulGetEntry>(async () => await Promise.resolve(optimizedEntry))
+  const client: ContentfulEntryClient & {
+    readonly getEntry: ReturnType<typeof rs.fn<MockContentfulGetEntry>>
+  } = {
+    getEntry,
+  }
+
+  return client
 }
 
 async function invokeUntypedMethod(
@@ -238,6 +263,111 @@ describe('CoreStateless', () => {
       }),
       expect.objectContaining({ locale: 'de-DE', preflight: true }),
     )
+  })
+
+  it('uses latest request-bound Experience selections for managed optimized entry fetching', async () => {
+    const client = createOptimizedEntryClient()
+    const core = new CoreStateless({
+      clientId: 'key_123',
+      environment: 'main',
+      contentful: { client, cache: false },
+    })
+    rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue({
+      ...EMPTY_OPTIMIZATION_DATA,
+      selectedOptimizations,
+    })
+    const requestOptimization = core.forRequest({
+      consent: true,
+      profile: { id: 'profile-123' },
+    })
+
+    await requestOptimization.page()
+    const result = await requestOptimization.fetchOptimizedEntry('entry-id')
+
+    expect(result.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(result.selectedOptimization).toEqual(
+      expect.objectContaining({
+        experienceId: '2qVK4T5lnScbswoyBuGipd',
+        variantIndex: 1,
+      }),
+    )
+  })
+
+  it('preserves managed Contentful entry skeleton types for request-bound fetches', async () => {
+    const client = createOptimizedEntryClient()
+    const core = new CoreStateless({
+      clientId: 'key_123',
+      environment: 'main',
+      contentful: { client, cache: false },
+    })
+    const requestOptimization = core.forRequest({ consent: true })
+
+    const entry = await requestOptimization.fetchContentfulEntry<ProductEntrySkeleton>('entry-id')
+    const result = await requestOptimization.fetchOptimizedEntry<ProductEntrySkeleton>('entry-id')
+    const typedEntry: Entry<ProductEntrySkeleton, undefined> = entry
+    const typedBaselineEntry: Entry<ProductEntrySkeleton, undefined> = result.baselineEntry
+    const typedResolvedEntry: Entry<ProductEntrySkeleton, undefined> = result.entry
+    const typedTitle: string = result.entry.fields.title
+
+    expect(typedEntry).toBe(entry)
+    expect(typedBaselineEntry).toBe(result.baselineEntry)
+    expect(typedResolvedEntry).toBe(result.entry)
+    expect(typedTitle).toBe(result.entry.fields.title)
+  })
+
+  it('uses request locale as the managed Contentful query fallback', async () => {
+    const client = createOptimizedEntryClient()
+    const core = new CoreStateless({
+      clientId: 'key_123',
+      environment: 'main',
+      locale: 'en-US',
+      contentful: {
+        client,
+        defaultQuery: { include: 2 },
+        cache: false,
+      },
+    })
+    const requestOptimization = core.forRequest({
+      consent: true,
+      locale: 'de-DE',
+    })
+
+    await requestOptimization.fetchContentfulEntry('entry-id')
+    await requestOptimization.fetchOptimizedEntry('entry-id', {
+      query: { locale: 'fr-FR' },
+      selectedOptimizations: [],
+    })
+
+    expect(client.getEntry).toHaveBeenNthCalledWith(1, 'entry-id', {
+      include: 2,
+      locale: 'de-DE',
+    })
+    expect(client.getEntry).toHaveBeenNthCalledWith(2, 'entry-id', {
+      include: 2,
+      locale: 'fr-FR',
+    })
+
+    const defaultLocaleClient = createOptimizedEntryClient()
+    const defaultLocaleCore = new CoreStateless({
+      clientId: 'key_123',
+      environment: 'main',
+      contentful: {
+        client: defaultLocaleClient,
+        defaultQuery: { locale: 'it-IT' },
+        cache: false,
+      },
+    })
+    const defaultLocaleRequest = defaultLocaleCore.forRequest({
+      consent: true,
+      locale: 'de-DE',
+    })
+
+    await defaultLocaleRequest.fetchContentfulEntry('entry-id')
+
+    expect(defaultLocaleClient.getEntry).toHaveBeenCalledWith('entry-id', {
+      include: 10,
+      locale: 'it-IT',
+    })
   })
 
   it('defaults allowedEventTypes to empty for stateless core requests', async () => {

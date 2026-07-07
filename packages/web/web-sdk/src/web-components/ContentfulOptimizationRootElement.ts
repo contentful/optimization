@@ -52,7 +52,7 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
     return ['client-id', 'environment', 'live-updates', 'locale']
   }
 
-  private apiOptions: OptimizationRootSdkConfig['api'] | undefined = undefined
+  private apiOptions: OptimizationRootSdkConfig['api'] | undefined
   private context: ContentfulOptimizationRootContext = {
     error: undefined,
     rootLiveUpdatesEnabled: false,
@@ -60,25 +60,20 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
     isPreviewPanelOpen: false,
     sdk: undefined,
   }
-  private defaultOptions: OptimizationRootSdkConfig['defaults'] | undefined = undefined
-  private onStatesReadyHandler: OnStatesReady | undefined = undefined
-  private previewPanelOpenSubscription: { unsubscribe: () => void } | undefined = undefined
-  private sdkBinding: OptimizationRootSdkBinding | undefined = undefined
-  private assignedSdk: ContentfulOptimization | undefined = undefined
+  private defaultOptions: OptimizationRootSdkConfig['defaults'] | undefined
+  private onStatesReadyHandler: OnStatesReady | undefined
+  private previewPanelOpenSubscription: { unsubscribe: () => void } | undefined
+  private sdkBinding: OptimizationRootSdkBinding | undefined
+  private assignedSdk: ContentfulOptimization | undefined
   private readonly subscribers = new Set<OptimizationRootContextSubscriber>()
-  private trackEntryInteractionOptions: TrackEntryInteractionOptions | undefined = undefined
+  private trackEntryInteractionOptions: TrackEntryInteractionOptions | undefined
 
   get clientId(): string | undefined {
     return this.getAttribute('client-id') ?? undefined
   }
 
   set clientId(value: string | undefined) {
-    if (value === undefined) {
-      this.removeAttribute('client-id')
-      return
-    }
-
-    this.setAttribute('client-id', value)
+    this.setOptionalAttribute('client-id', value)
   }
 
   get environment(): string | undefined {
@@ -86,12 +81,7 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
   }
 
   set environment(value: string | undefined) {
-    if (value === undefined) {
-      this.removeAttribute('environment')
-      return
-    }
-
-    this.setAttribute('environment', value)
+    this.setOptionalAttribute('environment', value)
   }
 
   get locale(): string | undefined {
@@ -99,12 +89,7 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
   }
 
   set locale(value: string | undefined) {
-    if (value === undefined) {
-      this.removeAttribute('locale')
-      return
-    }
-
-    this.setAttribute('locale', value)
+    this.setOptionalAttribute('locale', value)
   }
 
   get liveUpdates(): boolean {
@@ -163,6 +148,15 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
   set onStatesReady(value: OnStatesReady | undefined) {
     this.onStatesReadyHandler = value
     this.reinitializeIfConnected()
+  }
+
+  private setOptionalAttribute(name: string, value: string | undefined): void {
+    if (value === undefined) {
+      this.removeAttribute(name)
+      return
+    }
+
+    this.setAttribute(name, value)
   }
 
   connectedCallback(): void {
@@ -253,13 +247,7 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
         isPreviewPanelOpen: false,
         sdk: undefined,
       })
-      this.dispatchEvent(
-        new CustomEvent<ContentfulOptimizationRootErrorEventDetail>(ROOT_ERROR_EVENT, {
-          bubbles: true,
-          composed: true,
-          detail: { error: normalizedError },
-        }),
-      )
+      this.dispatchRootError(normalizedError)
     }
   }
 
@@ -302,13 +290,7 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
     } catch (error: unknown) {
       const normalizedError = toError(error)
       this.publishContext({ error: normalizedError })
-      this.dispatchEvent(
-        new CustomEvent<ContentfulOptimizationRootErrorEventDetail>(ROOT_ERROR_EVENT, {
-          bubbles: true,
-          composed: true,
-          detail: { error: normalizedError },
-        }),
-      )
+      this.dispatchRootError(normalizedError)
     }
   }
 
@@ -323,6 +305,16 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
       isPreviewPanelOpen: false,
       sdk: undefined,
     })
+  }
+
+  private dispatchRootError(error: Error): void {
+    this.dispatchEvent(
+      new CustomEvent<ContentfulOptimizationRootErrorEventDetail>(ROOT_ERROR_EVENT, {
+        bubbles: true,
+        composed: true,
+        detail: { error },
+      }),
+    )
   }
 
   private publishContext(nextContext: Partial<ContentfulOptimizationRootContext>): void {

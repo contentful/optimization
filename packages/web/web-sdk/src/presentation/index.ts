@@ -4,6 +4,19 @@
  * @packageDocumentation
  */
 
+export type { OptimizedEntryMetadata } from '@contentful/optimization-core'
+export {
+  OptimizedEntrySourceController,
+  createOptimizedEntryLoadingEntry,
+  getOptimizedEntrySourceKey,
+  prefetchOptimizedEntries,
+  type OptimizedEntryPrefetchDescriptor,
+  type OptimizedEntryPrefetchRuntime,
+  type OptimizedEntrySourceControllerOptions,
+  type OptimizedEntrySourceSnapshot,
+  type OptimizedEntrySourceSnapshotListener,
+  type ServerOptimizedEntryHandoff,
+} from '@contentful/optimization-core/entry-source'
 export {
   createOptimizationRootSdkBinding,
   disposeOptimizationRootSdkBinding,
