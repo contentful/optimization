@@ -174,6 +174,12 @@ step before you ship.
    hydrates. If you see the original content instead, work through
    [Troubleshooting](#troubleshooting).
 
+You now have personalization working end to end. **The rest of this guide is not a re-run of the
+quick start** — it explains what each step did and covers what the quick start deliberately skipped:
+real, consent-gated startup; your Contentful fetch requirements and the baseline-fallback contract;
+browser takeover and live updates; interaction tracking; and production hardening. Read straight
+through to understand the pieces, or jump to the section you need.
+
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
@@ -235,6 +241,9 @@ wrapping, consent, tracking — is introduced by the section that needs it.
 
 **Integration category:** Required for first integration
 
+This section explains the `lib/optimization.ts` module you created in the quick start — what each
+config key does and how to make startup depend on real consent.
+
 The Next.js adapter is a thin layer between three things you already have or control: your
 Contentful data, Contentful's Experience API, and your React components. You configure it once, and
 it hands you components that behave correctly on the server and in the browser.
@@ -264,8 +273,13 @@ The config you pass to `createNextjsAppRouterOptimization()` breaks down like th
    whether the server may personalize; return `false` to fall back to baseline.
 6. `app` is your app's name and version, sent as metadata.
 
-**Adapt this to your use case:** a config with a real, per-request consent check instead of
-always-on startup.
+The quick start used always-on `defaults` and `server.consent` to get you a result. For production,
+make startup depend on real consent: seed the browser `defaults` off, and make `server.consent` a
+function that reads your app's recorded choice per request. Everything else stays as it was in
+step 2.
+
+**Adapt this to your use case:** the same module from step 2, with only `defaults` and `server`
+changed to read real consent.
 
 ```ts
 // src/lib/optimization.ts
@@ -280,6 +294,8 @@ export const { proxy, NextAppAutoPageTracker, OptimizationRoot, OptimizedEntry }
     clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID ?? '',
     environment: process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main',
     locale: APP_LOCALE,
+    app: { name: 'my-next-app', version: '1.0.0' },
+    // Changed from step 2: start off, and let per-request consent decide.
     defaults: { consent: false, persistenceConsent: false },
     server: {
       enabled: true,
@@ -289,13 +305,13 @@ export const { proxy, NextAppAutoPageTracker, OptimizationRoot, OptimizedEntry }
           ? { events: true, persistence: true }
           : false,
     },
-    app: { name: 'my-next-app', version: '1.0.0' },
   })
 ```
 
 Create these bound components exactly once. The bound server path caches its request data within a
 single render pass, so the root and every `OptimizedEntry` in that request share one profile and one
-set of decisions.
+set of decisions. (You store and read that consent cookie from a Client Component; see
+[Consent, identity, profile, and reset](#consent-identity-profile-and-reset).)
 
 ### Fetching Contentful entries
 
@@ -331,92 +347,50 @@ For the full locale model, see
 
 **Integration category:** Common but policy-dependent
 
-Server-side personalization must know _who_ the visitor is before your page renders. That is what
-the request handler from quick-start step 3 does. On each matching request it reads the visitor's
-cookies, calls the Experience API, and — when persistence consent allows — writes the returned
-profile id to the `ctfl-opt-aid` cookie so the same visitor stays consistent on later requests.
+This explains the `proxy.ts` you added in step 3 and how to tune it. Server-side personalization
+must know _who_ the visitor is before your page renders — that is the proxy's job. On each matching
+request it reads the visitor's cookies, calls the Experience API, and — when persistence consent
+allows — writes the returned profile id to the `ctfl-opt-aid` cookie so the same visitor stays
+consistent on later requests.
 
-1. Re-export `proxy` from `proxy.ts` (or `middleware.ts` on older Next.js versions) at your app root
-   and declare the `matcher` so it runs on routes that use server personalization.
-2. Keep consent, locale, and profile policy in your `optimization.ts` factory, not here. This file
-   only mounts the handler.
-3. Do not mark `ctfl-opt-aid` as `HttpOnly` — the browser SDK must read it to keep the same profile
-   after takeover.
+The two things you control here:
 
-**Copy this:**
+1. The **`matcher`**: it must cover every route whose Server Components use server personalization,
+   and exclude static assets and API routes (as the step-3 matcher does). Narrow it if only some
+   routes personalize.
+2. Nothing else belongs in this file. Consent, locale, and profile policy live in your
+   `optimization.ts` factory; `proxy.ts` only mounts the handler.
 
-```ts
-// proxy.ts
-export { proxy } from './src/lib/optimization'
-
-export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
-}
-```
-
-For how server and browser stay on the same profile, see
+One cookie constraint matters: do not mark `ctfl-opt-aid` as `HttpOnly` — the browser SDK must read
+it to keep the same profile after takeover. For how server and browser stay on the same profile, see
 [Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md).
 
 ### Personalizing first paint on the server
 
 **Integration category:** Required for first integration
 
-This is where personalization actually happens. In a Server Component, `OptimizedEntry` resolves the
-entry against the request's decisions and renders the variant — or the baseline entry — straight
-into the HTML. No JavaScript is required for the visitor to see personalized content.
+Step 5 showed the wrap. This explains the two things about it that matter everywhere, then covers a
+second app shape.
 
-The rule never changes: **wherever a Contentful entry becomes a component, wrap it in
-`OptimizedEntry` and render whatever the render prop hands back.** Two facts hold everywhere:
+In a Server Component, `OptimizedEntry` resolves the entry against the request's decisions and
+renders the variant — or the baseline entry — straight into the HTML. No JavaScript is required for
+the visitor to see personalized content. The rule never changes: **wherever a Contentful entry
+becomes a component, wrap it and render whatever the render prop hands back.** Two facts hold
+everywhere:
 
-- The render prop's first argument is the resolved entry, typed as a base `contentful` `Entry`. If
-  your component expects a narrower type, cast it — `resolved as YourSectionType`. This mirrors the
-  reference implementation, which casts the render-prop entry to its own content type. When your
-  type is narrowed with a chain modifier (for example the `WITHOUT_UNRESOLVABLE_LINKS` type from
-  `.withoutUnresolvableLinks`), TypeScript may reject the direct cast; use
-  `resolved as unknown as YourSectionType` in that case.
-- When consent is denied, no variant applies, links are unresolved, or the payload was all-locale,
-  the render prop simply receives the baseline entry. Your UI never breaks; it falls back to default
-  content.
+- **Type of the resolved entry.** The render prop's first argument is typed as a base `contentful`
+  `Entry`. If your component expects a narrower type, cast it — `resolved as YourSectionType` —
+  which mirrors the reference implementation. When your type is narrowed with a chain modifier (for
+  example the `WITHOUT_UNRESOLVABLE_LINKS` type from `.withoutUnresolvableLinks`), TypeScript may
+  reject the direct cast; use `resolved as unknown as YourSectionType` instead.
+- **Fallback contract.** When consent is denied, no variant applies, links are unresolved, or the
+  payload was all-locale, the render prop simply receives the baseline entry. Your UI never breaks;
+  it falls back to default content — this is why the quick start works even before you author a
+  variant.
 
-How the wrap looks depends on your app's shape.
-
-#### A page composed of sections (most marketing sites)
-
-Your page fetches a `page` entry and walks `fields.sections` through a renderer that maps each
-section's content-type id to a component. That renderer is the single hand-off point — wrap there
-once and every section on every page becomes personalizable.
-
-**Adapt this to your use case:** wrap only the return line, keeping your null-handling and types.
-
-```tsx
-// components/SectionRenderer.tsx — your existing renderer, with the wrap added
-import { OptimizedEntry } from '@/src/lib/optimization'
-import { sectionMap } from './sectionMap'
-import type { SectionEntry } from '@/src/lib/content-model'
-
-export function SectionRenderer({ sections }: { sections?: (SectionEntry | undefined)[] }) {
-  if (!sections?.length) return null
-  return (
-    <>
-      {sections.map((entry) => {
-        const Component = entry ? sectionMap[entry.sys.contentType.sys.id] : undefined
-        if (!entry || !Component) return null
-        return (
-          <OptimizedEntry key={entry.sys.id} baselineEntry={entry}>
-            {/* resolved is a base Entry; cast to the section union your components expect. */}
-            {(resolved) => <Component entry={resolved as SectionEntry} />}
-          </OptimizedEntry>
-        )
-      })}
-    </>
-  )
-}
-```
-
-#### A flat list, or one entry per route
-
-If a route fetches entries directly and renders them without a section registry, wrap each entry
-where you render it. The wrap and the cast are identical.
+The quick-start example wrapped a content-type-to-component renderer, which covers most
+section-composed sites. The other common shape is a route that fetches and renders entries directly,
+without a registry — the wrap and the cast are identical:
 
 **Adapt this to your use case:**
 
@@ -442,20 +416,21 @@ boundary. Reach for those only in [advanced routes](#manual-server-and-client-es
 
 **Integration category:** Required for first integration
 
-`OptimizationRoot` is the provider that carries personalization state through your tree and hands
-the server's decisions to the browser. `NextAppAutoPageTracker` reports **page events** — a signal
-that a page was viewed — as the visitor navigates.
+Step 4 mounted the root and tracker. Here is what they do and the one decision you have to get
+right. `OptimizationRoot` carries personalization state through your tree and hands the server's
+decisions to the browser. `NextAppAutoPageTracker` reports **page events** — a signal that a page
+was viewed — as the visitor navigates.
 
-1. Mount `OptimizationRoot` once, around the subtree that shares personalization state — usually the
-   whole app, inside your existing root layout.
-2. Configure behavior (`defaults`, `trackEntryInteraction`, `onStatesReady`, `liveUpdates`) in the
-   factory, not as per-render props on the root.
-3. Wrap `NextAppAutoPageTracker` in `Suspense` because it reads App Router navigation hooks.
-4. Choose one owner for the first page event. When the server personalized the page it already
-   reported that view, so pass `initialPageEvent="skip"` to stop the browser reporting a duplicate.
-   Use `"emit"` for browser-owned routes that did not use the server path. If startup is
-   consent-gated, make it conditional — `skip` when the server owned a consented event, `emit`
-   otherwise.
+Two rules and one decision:
+
+1. Configure behavior (`defaults`, `trackEntryInteraction`, `onStatesReady`, `liveUpdates`) in the
+   factory, not as per-render props on the root. The root takes no config of its own.
+2. `NextAppAutoPageTracker` must stay inside `Suspense` (it reads `useSearchParams()`), as in
+   step 4.
+3. **The decision: who owns the first page event.** When the server personalized the page it already
+   reported that view, so `initialPageEvent="skip"` stops the browser reporting a duplicate. Use
+   `"emit"` for browser-owned routes that did not use the server path. If startup is consent-gated,
+   make it conditional — `skip` when the server owned a consented event, `emit` otherwise.
 
 **Adapt this to your use case:** attaching route-aware properties to page events.
 
