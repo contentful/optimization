@@ -30,6 +30,12 @@ add per-archetype checks.
       internally); a plausible-looking field name such as `isReady` or `liveUpdates` is not proof it
       exists. When source and reference impl seem to disagree, read the source and reconcile.
 - [ ] Code comments explain only meaningful SDK-specific lines; no obvious-syntax narration.
+- [ ] **Every identifier that looks like a magic value states who owns it.** For each cookie name,
+      env var, header, storage key, or config string in a snippet, make clear whether the SDK
+      defines/reads it (the reader must match the exact name) or the reader invents and manages it
+      (a placeholder they name and wire up themselves). Do not let an app-owned value read as an SDK
+      constant — e.g. a consent cookie the app writes and reads is the reader's, while
+      `ctfl-opt-aid` is the SDK's.
 - [ ] `pnpm format:fix <file>` leaves the file unchanged (run it; Prettier owns formatting).
 - [ ] The collapsible TOC preserves the mtoc markers, omits `## Quick start`, and every anchor
       resolves to a real heading.

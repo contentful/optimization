@@ -278,6 +278,13 @@ make startup depend on real consent: seed the browser `defaults` off, and make `
 function that reads your app's recorded choice per request. Everything else stays as it was in
 step 2.
 
+`CONSENT_COOKIE` below is **your** cookie, not an SDK cookie — you name it, you write it (from your
+consent UI or CMP), and you read it here. The SDK never touches it; it only calls your
+`server.consent` function and personalizes based on what you return. (The one SDK-managed cookie is
+`ctfl-opt-aid`, from the [request handler](#request-context-and-the-profile-cookie).) The
+[Consent, identity, profile, and reset](#consent-identity-profile-and-reset) section shows the
+Client Component that writes this cookie.
+
 **Adapt this to your use case:** the same module from step 2, with only `defaults` and `server`
 changed to read real consent.
 
