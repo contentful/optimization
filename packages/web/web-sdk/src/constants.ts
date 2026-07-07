@@ -66,6 +66,21 @@ export const ENTRY_ID_ATTRIBUTE = 'data-ctfl-entry-id'
 export const ENTRY_SELECTOR = `[${ENTRY_ID_ATTRIBUTE}]`
 
 /**
+ * Attribute used to identify tracked graph-node elements stamped by the
+ * `experiences-adapter` node binding.
+ *
+ * @public
+ */
+export const NODE_ID_ATTRIBUTE = 'data-ctfl-node-id'
+
+/**
+ * Selector used to locate tracked graph-node elements in the DOM.
+ *
+ * @public
+ */
+export const NODE_SELECTOR = `[${NODE_ID_ATTRIBUTE}]`
+
+/**
  * Flag indicating whether the current environment can safely add DOM
  * event listeners.
  *
