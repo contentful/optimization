@@ -6,14 +6,11 @@ import {
   ElementRef,
   inject,
   signal,
-  TransferState,
   untracked,
   type Signal,
 } from '@angular/core'
 
 import type { Entry } from 'contentful'
-import { SERVER_RESOLVED_ENTRIES_KEY } from '../transfer-state-keys'
-import { resolveEntryMergeTags } from './merge-tags'
 import { NgContentfulOptimization } from './optimization'
 
 export type ObservationMode = 'auto' | 'manual'
@@ -25,10 +22,12 @@ export interface ResolvedEntry {
   optimizationId: string | undefined
   sticky: boolean | undefined
   variantIndex: number | undefined
-  mergeTagResolved: boolean | undefined
 }
 
 function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Signal<boolean>): void {
+  // `runtime().tracking.*` is a NOOP on the server snapshot runtime and the
+  // real web SDK after hydration, so the wiring below can run unconditionally.
+  // `afterNextRender` already guards DOM access — it never fires on the server.
   const optimization = inject(NgContentfulOptimization)
   const elementRef = inject<ElementRef<Element>>(ElementRef)
   const destroyRef = inject(DestroyRef)
@@ -40,18 +39,14 @@ function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Sign
   })
 
   function track(): void {
-    optimization.ifBrowser((sdk) => {
-      const { entryId, optimizationId, sticky, variantIndex } = result()
-      sdk.tracking.enableElement('views', elementRef.nativeElement, {
-        data: { entryId, optimizationId, sticky, variantIndex },
-      })
+    const { entryId, optimizationId, sticky, variantIndex } = result()
+    optimization.runtime().tracking.enableElement('views', elementRef.nativeElement, {
+      data: { entryId, optimizationId, sticky, variantIndex },
     })
   }
 
   function clear(): void {
-    optimization.ifBrowser((sdk) => {
-      sdk.tracking.clearElement('views', elementRef.nativeElement)
-    })
+    optimization.runtime().tracking.clearElement('views', elementRef.nativeElement)
   }
 
   effect(() => {
@@ -74,7 +69,6 @@ export function injectContentfulEntry({
   manualTracking?: Signal<boolean>
 }): Signal<ResolvedEntry> {
   const optimization = inject(NgContentfulOptimization)
-  const transferState = inject(TransferState)
 
   function liveRead<T>(sig: Signal<T>): T {
     if (isLive()) return sig()
@@ -85,48 +79,21 @@ export function injectContentfulEntry({
     return untracked(sig) ?? sig()
   }
 
-  const variant = computed(() => {
+  const result = computed<ResolvedEntry>(() => {
+    const runtime = optimization.runtime()
     const raw = entry()
-    if (optimization.context.platform === 'browser') {
-      return {
-        raw,
-        resolved: optimization.context.sdk.resolveOptimizedEntry(
-          raw,
-          liveRead(optimization.selectedOptimizations),
-        ),
-      }
-    }
-    // Server render: lift the server-resolved entry from TransferState if present
-    // so the initial HTML reflects the personalized variant. Falls back to the
-    // baseline when no handoff exists (e.g. consent denied — server skipped resolve).
-    const handoff = transferState.get(SERVER_RESOLVED_ENTRIES_KEY, undefined)
-    return {
+    const resolved = runtime.resolveOptimizedEntry(
       raw,
-      resolved: handoff?.[raw.sys.id] ?? { entry: raw, selectedOptimization: undefined },
-    }
-  })
-
-  const result = computed(() => {
-    const { raw, resolved } = variant()
-    const profile = liveRead(optimization.profile)
-    let mergeTagResolved: boolean | undefined = undefined
-    const entry = resolveEntryMergeTags(resolved.entry, (target) => {
-      const value = profile
-        ? optimization.ifBrowser((sdk) => sdk.getMergeTagValue(target, profile))
-        : undefined
-      if (value !== undefined) mergeTagResolved = true
-      else mergeTagResolved ??= false
-      return value ?? target.fields.nt_fallback
-    })
+      liveRead(optimization.selectedOptimizations),
+    )
 
     return {
-      entry,
+      entry: resolved.entry,
       baselineId: raw.sys.id,
       entryId: resolved.entry.sys.id,
       optimizationId: resolved.selectedOptimization?.experienceId,
       sticky: resolved.selectedOptimization?.sticky,
       variantIndex: resolved.selectedOptimization?.variantIndex,
-      mergeTagResolved,
     }
   })
 

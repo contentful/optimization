@@ -1,7 +1,14 @@
-import { inject, Injectable, resource, TransferState, type ResourceRef } from '@angular/core'
+import {
+  inject,
+  Injectable,
+  makeStateKey,
+  resource,
+  TransferState,
+  type ResourceRef,
+  type StateKey,
+} from '@angular/core'
 import type { ContentfulClientApi, Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { getOrCreateBaseClient, NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
-import { SERVER_BASELINES_KEY } from '../transfer-state-keys'
 
 export interface ContentEntryFields {
   text?: EntryFieldTypes.Text | EntryFieldTypes.RichText
@@ -12,6 +19,14 @@ export type ContentEntrySkeleton = EntrySkeletonType<ContentEntryFields>
 export type ContentfulEntry = Entry<ContentEntrySkeleton>
 
 const INCLUDE_DEPTH = 10
+
+/**
+ * Baseline CDA entries keyed by id. Stamped by the SSR preflight so the
+ * browser can skip a duplicate CDA fetch on hydration. Lives next to
+ * {@link NgContentfulClient} because that class is the sole reader.
+ */
+export const SERVER_BASELINES_KEY: StateKey<Record<string, Entry>> =
+  makeStateKey<Record<string, Entry>>('ssr-baselines')
 
 @Injectable({ providedIn: 'root' })
 export class NgContentfulClient {

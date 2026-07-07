@@ -19,8 +19,11 @@ import {
   type ReactElement,
 } from 'react'
 
+import {
+  createWebSnapshotRuntime,
+  type WebOptimizationRuntime,
+} from '@contentful/optimization-web/runtime'
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
-import { createWebSnapshotRuntime, type WebOptimizationRuntime } from '../runtime/webRuntime'
 
 /**
  * Provider-owned callback for app-level subscriptions once SDK state is ready.
