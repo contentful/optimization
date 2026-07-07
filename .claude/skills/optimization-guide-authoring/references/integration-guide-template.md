@@ -130,7 +130,15 @@ shape to the feature section. Then one sentence naming the single proof and the 
   explicit `trackEntryInteraction`, `data-ctfl-*` verification, entry view/click/hover verification,
   analytics forwarding, or production cache policy in the quick start. First path focuses on server
   defaults, request handling, duplicate-page-event prevention, baseline fallback, and the entry
-  wrap.
+  wrap. Two version/runtime traps the guide must call out because they hard-fail the target reader:
+  - **Request-handler filename + export are Next.js-version-specific.** Next.js 16 loads a `proxy`
+    export from `proxy.ts`; Next.js 15 loads a `middleware` export from `middleware.ts` (alias:
+    `export { proxy as middleware }`). Wrong filename/export ⇒ the handler silently never runs, and
+    with `server.enabled: true` the bound root then _throws_ (not baseline fallback). Target the
+    current major (16) and give the 15 variant explicitly.
+  - **Server personalization forces dynamic rendering.** The bound server components read
+    `headers()`, so a personalized route can no longer use `revalidate`/`generateStaticParams` (ISR
+    or SSG). Say so in the core path, not only under caching.
 - **Next.js Pages Router:** `@contentful/optimization-nextjs/pages-router` for bound client
   components, `@contentful/optimization-nextjs/pages-router/server` for `getServerSideProps`.
 - **Web / React Web:** no explicit tracking-attribute setup or interaction-event verification unless
@@ -149,8 +157,11 @@ shape to the feature section. Then one sentence naming the single proof and the 
 - If the render prop returns a widened type (e.g. `OptimizedEntry`'s render prop returns a base
   `contentful` `Entry`), the snippet must show the cast the reader needs (`resolved as YourType`)
   and say why. Verify against the SDK source (`packages/**/src`), not just the reference
-  implementation — do not claim type-identity the SDK does not provide. Note the
-  `as unknown as YourType` fallback for modifier-narrowed types (e.g. `withoutUnresolvableLinks`).
+  implementation — do not claim type-identity the SDK does not provide. Recommend the plain direct
+  cast as the default; it works for common cases including `.withoutUnresolvableLinks`-narrowed
+  types (confirmed by `tsc`). Mention `as unknown as YourType` only as a rare escape for genuinely
+  disjoint types — do not tie it to a specific chain modifier, and do not add it speculatively
+  without compiling first.
 - State the fallback contract explicitly: on denied consent / no variant / unresolved links /
   all-locale payloads, the render prop receives the baseline entry and the UI does not break.
 

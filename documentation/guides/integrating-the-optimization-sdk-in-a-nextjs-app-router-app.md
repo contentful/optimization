@@ -58,8 +58,11 @@ step before you ship.
    ```
 
 2. Create one module that binds the SDK to your config. You do this once and import from it
-   everywhere. Put it at a path your app's import alias understands (for example `src/lib/`), and
-   use the same environment-variable convention your app already uses for Contentful.
+   everywhere. Use the same environment-variable convention your app already uses for Contentful.
+   The snippets import it as `@/src/lib/optimization`, which assumes the file is at
+   `src/lib/optimization.ts` and your `tsconfig` maps `@/*` to the project root — adjust the
+   specifier to match your own `paths` (for example `@/lib/optimization` if your alias points at a
+   top-level `lib/`).
 
    **Adapt this to your use case:** replace the placeholder values and the import path; the config
    keys are explained in [How the SDK fits your app](#how-the-sdk-fits-your-app).
@@ -92,11 +95,29 @@ step before you ship.
    so the same visitor gets consistent variants next time. You are only mounting it — not writing
    that logic.
 
-   **Copy this:**
+   Next.js is version-specific about both the filename and the export name: Next.js 16 loads a
+   `proxy` export from **`proxy.ts`**; Next.js 15 loads a `middleware` export from
+   **`middleware.ts`**. Get either wrong and the handler silently never runs — and because
+   `server.enabled` is `true`, `OptimizationRoot` then throws instead of falling back to baseline.
+   See [Request context and the profile cookie](#request-context-and-the-profile-cookie).
+
+   **Copy this** (Next.js 16):
 
    ```ts
-   // proxy.ts — at your Next.js app root (use middleware.ts on Next.js versions that still use it)
+   // proxy.ts — at your Next.js app root
    export { proxy } from './src/lib/optimization'
+
+   export const config = {
+     matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
+   }
+   ```
+
+   **Copy this** (Next.js 15 — same handler, aliased to the `middleware` export Next.js 15 looks
+   for):
+
+   ```ts
+   // middleware.ts — at your Next.js app root
+   export { proxy as middleware } from './src/lib/optimization'
 
    export const config = {
      matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
@@ -158,8 +179,7 @@ step before you ship.
    -    return <Component key={entry.sys.id} entry={entry} />
    +    return (
    +      <OptimizedEntry key={entry.sys.id} baselineEntry={entry}>
-   +        {/* Render prop hands back a base `Entry`; cast to your own entry type.
-   +            If that type is narrowed (e.g. withoutUnresolvableLinks), use `as unknown as YourEntryType`. */}
+   +        {/* Render prop hands back a base `Entry`; cast to your own entry type. */}
    +        {(resolved) => <Component entry={resolved as YourEntryType} />}
    +      </OptimizedEntry>
    +    )
@@ -216,7 +236,9 @@ The sections below walk the integration in order. First, gather the few things y
 outside this guide:
 
 - **A Next.js App Router app** with React and React DOM installed, and its own Contentful fetching
-  already working.
+  already working. This guide targets **Next.js 16**; it also works on Next.js 15, where the one
+  difference is the request-handler filename (`middleware.ts` instead of `proxy.ts` — called out in
+  step 3).
 - **Contentful delivery credentials** — space ID, delivery token, and environment.
 - **At least one entry with a variant attached to an experience**, authored in Contentful. Without
   an authored variant the integration still runs, but every visitor sees the baseline, so you cannot
@@ -354,19 +376,27 @@ For the full locale model, see
 
 **Integration category:** Common but policy-dependent
 
-This explains the `proxy.ts` you added in step 3 and how to tune it. Server-side personalization
-must know _who_ the visitor is before your page renders — that is the proxy's job. On each matching
-request it reads the visitor's cookies, calls the Experience API, and — when persistence consent
-allows — writes the returned profile id to the `ctfl-opt-aid` cookie so the same visitor stays
-consistent on later requests.
+This explains the request handler you added in step 3 and how to tune it. Server-side
+personalization must know _who_ the visitor is before your page renders — that is the proxy's job.
+On each matching request it reads the visitor's cookies, calls the Experience API, and — when
+persistence consent allows — writes the returned profile id to the `ctfl-opt-aid` cookie so the same
+visitor stays consistent on later requests.
 
 The two things you control here:
 
-1. The **`matcher`**: it must cover every route whose Server Components use server personalization,
+1. The **filename and export name**, which are Next.js-version-specific. Next.js 16 loads a `proxy`
+   export from `proxy.ts`; Next.js 15 loads a `middleware` export from `middleware.ts` (alias it:
+   `export { proxy as middleware }`). The `config` object is the same either way. If the filename or
+   export name is wrong for your version, Next.js never runs the handler, and because
+   `server.enabled` is `true` the bound `OptimizationRoot` throws on render rather than degrading to
+   baseline. If you see that error, check the filename and export name against your Next.js version
+   first.
+2. The **`matcher`**: it must cover every route whose Server Components use server personalization,
    and exclude static assets and API routes (as the step-3 matcher does). Narrow it if only some
    routes personalize.
-2. Nothing else belongs in this file. Consent, locale, and profile policy live in your
-   `optimization.ts` factory; `proxy.ts` only mounts the handler.
+
+Consent, locale, and profile policy live in your `optimization.ts` factory; this file only mounts
+the handler.
 
 One cookie constraint matters: do not mark `ctfl-opt-aid` as `HttpOnly` — the browser SDK must read
 it to keep the same profile after takeover. For how server and browser stay on the same profile, see
@@ -387,13 +417,16 @@ everywhere:
 
 - **Type of the resolved entry.** The render prop's first argument is typed as a base `contentful`
   `Entry`. If your component expects a narrower type, cast it — `resolved as YourSectionType` —
-  which mirrors the reference implementation. When your type is narrowed with a chain modifier (for
-  example the `WITHOUT_UNRESOLVABLE_LINKS` type from `.withoutUnresolvableLinks`), TypeScript may
-  reject the direct cast; use `resolved as unknown as YourSectionType` instead.
+  which mirrors the reference implementation. This direct cast works for the common cases, including
+  `.withoutUnresolvableLinks`-narrowed types. Only if TypeScript rejects a cast for a genuinely
+  disjoint type do you need `resolved as unknown as YourSectionType`.
 - **Fallback contract.** When consent is denied, no variant applies, links are unresolved, or the
   payload was all-locale, the render prop simply receives the baseline entry. Your UI never breaks;
   it falls back to default content — this is why the quick start works even before you author a
   variant.
+- **Do not double-wrap the same entry.** A nested `OptimizedEntry` that shares a baseline entry id
+  with an `OptimizedEntry` above it renders nothing (it returns `null`, with a dev-only warning).
+  Wrap at one level — the renderer hand-off, or the individual cards, not both.
 
 The quick-start example wrapped a content-type-to-component renderer, which covers most
 section-composed sites. The other common shape is a route that fetches and renders entries directly,
@@ -418,6 +451,17 @@ export default async function Home() {
 
 The default App Router path needs no manual `resolveOptimizedEntry()` call and no custom takeover
 boundary. Reach for those only in [advanced routes](#manual-server-and-client-escape-hatches).
+
+> [!IMPORTANT]
+>
+> Server personalization makes a route **dynamic**. The bound server components read request
+> `headers()`, so any route they render is rendered per request — it can no longer be statically
+> generated or served from ISR. If the route currently sets `export const revalidate = ...` or uses
+> `generateStaticParams`, those stop applying once you personalize it; remove them, or keep that
+> route unpersonalized. This is a deliberate trade: personalized HTML is per visitor, so it cannot
+> also be a single cached page. See
+> [Caching and request deduplication](#caching-and-request-deduplication) for how to keep caching
+> raw Contentful data underneath.
 
 ### The bound root and page events
 
@@ -690,18 +734,35 @@ entry replacements.
 4. Treat flag-view and merge-tag events as consent-gated browser activity unless the server path
    owns the event.
 
+Merge tags live inside Rich Text as embedded entry nodes, so `getMergeTagValue` takes a merge-tag
+_entry node_ — not a plain field. You resolve them while rendering the Rich Text document: for each
+embedded entry, guard with `isMergeTagEntry` (from `/api-schemas`) and pass the node's `target` to
+`getMergeTagValue`.
+
 **Follow this pattern:**
 
 ```tsx
 import { OptimizedEntry } from '@/src/lib/optimization'
+import { isMergeTagEntry } from '@contentful/optimization-nextjs/api-schemas'
+import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
+import { INLINES } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
 
 export function EntryWithMergeTags({ entry }: { entry: Entry }) {
   return (
     <OptimizedEntry baselineEntry={entry}>
-      {(resolved, { getMergeTagValue }) => (
-        <span>{getMergeTagValue(resolved.fields.greeting) ?? ''}</span>
-      )}
+      {(resolved, { getMergeTagValue }) => {
+        const options: Options = {
+          renderNode: {
+            [INLINES.EMBEDDED_ENTRY]: (node) => {
+              const target = node.data.target
+              // Only merge-tag nodes resolve to a profile value; render others as usual.
+              return isMergeTagEntry(target) ? (getMergeTagValue(target) ?? '') : null
+            },
+          },
+        }
+        return documentToReactComponents(resolved.fields.body as never, options)
+      }}
     </OptimizedEntry>
   )
 }
@@ -898,19 +959,19 @@ pnpm test:e2e:nextjs-sdk_app-router
 
 ## Troubleshooting
 
-| Symptom                                                            | Likely cause                                                                            | Check                                                                                                              |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Entries stay on baseline                                           | No variant applies, denied consent, unresolved Contentful links, or all-locale CDA      | Author a variant that targets you, check `server.consent`, fetch one `locale` with enough `include`                |
-| The variant never appears even though it is authored               | Your test visitor does not match the experience's audience                              | Target all visitors for a first test, or force the variant with the preview panel                                  |
-| `<Component entry={resolved} />` shows a type error                | The render prop returns a base `Entry`, wider than your component's type                | Cast it: `resolved as YourSectionType`; if the type is modifier-narrowed, `resolved as unknown as YourSectionType` |
-| Two server-side page events appear for one request                 | Multiple bound factories, or a manual helper also calls the server page path            | Create bound components once and keep manual `getNextjsServerOptimizationData()` out of the route                  |
-| Browser sends a duplicate first page event                         | `initialPageEvent="emit"` used after the server path already emitted the same route     | Use `skip` only when the server path owns the same initial request                                                 |
-| Browser does not send the first page event                         | `initialPageEvent="skip"` used on a browser-owned route without a matching server event | Use `emit` when the browser owns first page tracking                                                               |
-| Live entries do not update after `identifyUser()` or `resetUser()` | Live updates are off (the default)                                                      | Set `liveUpdates: true` in the factory, or pass `liveUpdates` to a `/client` `OptimizedEntry`                      |
-| Entry views, clicks, or hovers do not emit                         | Interaction tracking is opted out, consent blocks the event, or no profile is available | Check factory `trackEntryInteraction`, entry props, consent state, and `states.blockedEventStream`                 |
-| Server and browser use different profiles                          | Cookie domain, path, readability, or consent cleanup differs between runtimes           | Use a browser-readable `ctfl-opt-aid` with a consistent path and clear it on withdrawal                            |
-| Server Components fail with browser globals                        | A Client Component hook or browser-only import crossed into a server module             | Use bound imports in Server Components and `/client` hooks only in Client Components                               |
-| Personalized HTML appears stale                                    | Route or CDN caching is sharing profile-evaluated output                                | Mark personalized routes dynamic or vary cache keys on the full personalization context                            |
+| Symptom                                                            | Likely cause                                                                            | Check                                                                                                  |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Entries stay on baseline                                           | No variant applies, denied consent, unresolved Contentful links, or all-locale CDA      | Author a variant that targets you, check `server.consent`, fetch one `locale` with enough `include`    |
+| The variant never appears even though it is authored               | Your test visitor does not match the experience's audience                              | Target all visitors for a first test, or force the variant with the preview panel                      |
+| `<Component entry={resolved} />` shows a type error                | The render prop returns a base `Entry`, wider than your component's type                | Cast it: `resolved as YourSectionType` (add `as unknown` only if TS rejects a genuinely disjoint type) |
+| Two server-side page events appear for one request                 | Multiple bound factories, or a manual helper also calls the server page path            | Create bound components once and keep manual `getNextjsServerOptimizationData()` out of the route      |
+| Browser sends a duplicate first page event                         | `initialPageEvent="emit"` used after the server path already emitted the same route     | Use `skip` only when the server path owns the same initial request                                     |
+| Browser does not send the first page event                         | `initialPageEvent="skip"` used on a browser-owned route without a matching server event | Use `emit` when the browser owns first page tracking                                                   |
+| Live entries do not update after `identifyUser()` or `resetUser()` | Live updates are off (the default)                                                      | Set `liveUpdates: true` in the factory, or pass `liveUpdates` to a `/client` `OptimizedEntry`          |
+| Entry views, clicks, or hovers do not emit                         | Interaction tracking is opted out, consent blocks the event, or no profile is available | Check factory `trackEntryInteraction`, entry props, consent state, and `states.blockedEventStream`     |
+| Server and browser use different profiles                          | Cookie domain, path, readability, or consent cleanup differs between runtimes           | Use a browser-readable `ctfl-opt-aid` with a consistent path and clear it on withdrawal                |
+| Server Components fail with browser globals                        | A Client Component hook or browser-only import crossed into a server module             | Use bound imports in Server Components and `/client` hooks only in Client Components                   |
+| Personalized HTML appears stale                                    | Route or CDN caching is sharing profile-evaluated output                                | Mark personalized routes dynamic or vary cache keys on the full personalization context                |
 
 ## Reference implementations to compare against
 
