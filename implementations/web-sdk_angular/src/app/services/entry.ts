@@ -11,7 +11,6 @@ import {
 } from '@angular/core'
 
 import type { Entry } from 'contentful'
-import { resolveEntryMergeTags } from './merge-tags'
 import { NgContentfulOptimization } from './optimization'
 
 export type ObservationMode = 'auto' | 'manual'
@@ -23,7 +22,6 @@ export interface ResolvedEntry {
   optimizationId: string | undefined
   sticky: boolean | undefined
   variantIndex: number | undefined
-  mergeTagResolved: boolean | undefined
 }
 
 function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Signal<boolean>): void {
@@ -81,30 +79,21 @@ export function injectContentfulEntry({
     return untracked(sig) ?? sig()
   }
 
-  const result = computed(() => {
+  const result = computed<ResolvedEntry>(() => {
     const runtime = optimization.runtime()
     const raw = entry()
     const resolved = runtime.resolveOptimizedEntry(
       raw,
       liveRead(optimization.selectedOptimizations),
     )
-    const profile = liveRead(optimization.profile)
-    let mergeTagResolved: boolean | undefined = undefined
-    const entryWithMergeTags = resolveEntryMergeTags(resolved.entry, (target) => {
-      const value = profile ? runtime.getMergeTagValue(target, profile) : undefined
-      if (value !== undefined) mergeTagResolved = true
-      else mergeTagResolved ??= false
-      return value ?? target.fields.nt_fallback
-    })
 
     return {
-      entry: entryWithMergeTags,
+      entry: resolved.entry,
       baselineId: raw.sys.id,
       entryId: resolved.entry.sys.id,
       optimizationId: resolved.selectedOptimization?.experienceId,
       sticky: resolved.selectedOptimization?.sticky,
       variantIndex: resolved.selectedOptimization?.variantIndex,
-      mergeTagResolved,
     }
   })
 
