@@ -28,6 +28,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
+          trap 'echo "Classify changes failed at line ${LINENO}: ${BASH_COMMAND}" >&2' ERR
 
           changed_files="$(
             gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
@@ -71,7 +72,9 @@ jobs:
               esac
             done <<< "$package_manifests"
 
-            [ -n "$best_name" ] && printf '%s\n' "$best_name"
+            if [ -n "$best_name" ]; then
+              printf '%s\n' "$best_name"
+            fi
           }
 
           while IFS=$'\t' read -r file status; do
