@@ -137,31 +137,33 @@ The JSON response contains a `profileId` when `page()` is accepted.
 
 Use this setup inventory before you move beyond the quick start:
 
-| Setup item                                                      | Category                       | Required for quick start | Where to configure                                                                       |
-| --------------------------------------------------------------- | ------------------------------ | ------------------------ | ---------------------------------------------------------------------------------------- |
-| `@contentful/optimization-node` package                         | Required for first integration | Yes                      | Node app package dependencies                                                            |
-| Express package for the quick-start route                       | Required for first integration | Yes                      | Quick-start app dependencies, or your equivalent Node request framework                  |
-| Optimization client ID                                          | Required for first integration | Yes                      | `ContentfulOptimization({ clientId })` from environment configuration                    |
-| Optimization environment and API endpoints                      | Required for first integration | Conditional              | `environment` and `api` SDK options when not using defaults or local mocks               |
-| Application Contentful delivery client                          | Required for first integration | Conditional              | App-owned `contentful.js`, REST, or GraphQL client used before entry resolution          |
-| Single-locale Contentful entry payloads with optimization links | Required for first integration | Conditional              | CDA request options such as `locale: appLocale` and `include` depth                      |
-| Request route or handler integration                            | Required for first integration | Yes                      | Express routes, server functions, or custom Node request handlers                        |
-| Request event context                                           | Required for first integration | Yes                      | `forRequest({ eventContext })` per incoming request                                      |
-| Application locale decision                                     | Required for first integration | Yes                      | Router, i18n layer, request policy, CDA requests, and `forRequest({ locale })`           |
-| Consent policy                                                  | Common but policy-dependent    | Yes                      | Application policy, consent cookie, CMP callback, session, or preference store           |
-| Profile ID persistence                                          | Common but policy-dependent    | Conditional              | Application session or first-party cookie such as `ANONYMOUS_ID_COOKIE`                  |
-| Known-user identity source                                      | Common but policy-dependent    | No                       | Authentication middleware, session, JWT, or account service used before `identify()`     |
-| Rich Text merge-tag renderer                                    | Optional                       | No                       | Application Rich Text rendering pipeline                                                 |
-| Custom Flag reads                                               | Optional                       | No                       | Server render logic that consumes `getFlag()`                                            |
-| Server-side interaction or business event tracking              | Optional                       | No                       | App-owned event collector, route action, or rendered-entry exposure path                 |
-| Third-party analytics forwarding                                | Optional                       | No                       | Server-side analytics, customer-data, or tag-management integration                      |
-| `@contentful/optimization-web` package and continuity           | Optional                       | No                       | Browser package dependencies, shared anonymous-ID cookie, and browser SDK initialization |
-| Strict pre-consent allowlist and request options                | Advanced or production-only    | No                       | SDK `allowedEventTypes`, `experienceOptions`, `insightsOptions`, and `onEventBlocked`    |
-| Personalized response caching policy                            | Advanced or production-only    | No                       | Application cache keys, CDN rules, and render cache boundaries                           |
+| Setup item                                                      | Category                       | Required for quick start | Where to configure                                                                               |
+| --------------------------------------------------------------- | ------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------ |
+| `@contentful/optimization-node` package                         | Required for first integration | Yes                      | Node app package dependencies                                                                    |
+| Express package for the quick-start route                       | Required for first integration | Yes                      | Quick-start app dependencies, or your equivalent Node request framework                          |
+| Optimization client ID                                          | Required for first integration | Yes                      | `ContentfulOptimization({ clientId })` from environment configuration                            |
+| Optimization environment and API endpoints                      | Required for first integration | Conditional              | `environment` and `api` SDK options when not using defaults or local mocks                       |
+| Application Contentful delivery client                          | Required for first integration | Conditional              | App-owned `contentful.js`, REST, or GraphQL client; SDK-managed fetching can use `contentful.js` |
+| Single-locale Contentful entry payloads with optimization links | Required for first integration | Conditional              | CDA request options such as `locale: appLocale` and `include` depth                              |
+| Request route or handler integration                            | Required for first integration | Yes                      | Express routes, server functions, or custom Node request handlers                                |
+| Request event context                                           | Required for first integration | Yes                      | `forRequest({ eventContext })` per incoming request                                              |
+| Application locale decision                                     | Required for first integration | Yes                      | Router, i18n layer, request policy, CDA requests, and `forRequest({ locale })`                   |
+| Consent policy                                                  | Common but policy-dependent    | Yes                      | Application policy, consent cookie, CMP callback, session, or preference store                   |
+| Profile ID persistence                                          | Common but policy-dependent    | Conditional              | Application session or first-party cookie such as `ANONYMOUS_ID_COOKIE`                          |
+| Known-user identity source                                      | Common but policy-dependent    | No                       | Authentication middleware, session, JWT, or account service used before `identify()`             |
+| Rich Text merge-tag renderer                                    | Optional                       | No                       | Application Rich Text rendering pipeline                                                         |
+| Custom Flag reads                                               | Optional                       | No                       | Server render logic that consumes `getFlag()`                                                    |
+| Server-side interaction or business event tracking              | Optional                       | No                       | App-owned event collector, route action, or rendered-entry exposure path                         |
+| Third-party analytics forwarding                                | Optional                       | No                       | Server-side analytics, customer-data, or tag-management integration                              |
+| `@contentful/optimization-web` package and continuity           | Optional                       | No                       | Browser package dependencies, shared anonymous-ID cookie, and browser SDK initialization         |
+| Strict pre-consent allowlist and request options                | Advanced or production-only    | No                       | SDK `allowedEventTypes`, `experienceOptions`, `insightsOptions`, and `onEventBlocked`            |
+| Personalized response caching policy                            | Advanced or production-only    | No                       | Application cache keys, CDN rules, and render cache boundaries                                   |
 
 The Node SDK is stateless. It does not manage cookies, sessions, consent state, long-lived profile
-state, Contentful fetching, or HTML rendering. Your application provides those inputs per request,
-and the SDK evaluates or emits events, resolves entries, and returns request-local data.
+state, Contentful credentials, or HTML rendering. Your application owns the Contentful delivery
+client and its credentials; when configured with that client, the SDK can call `client.getEntry()`
+for managed entry fetching. Your application provides request inputs, and the SDK evaluates or emits
+events, fetches configured entries, resolves variants, and returns request-local data.
 
 ## Core integration
 
@@ -172,7 +174,7 @@ and the SDK evaluates or emits events, resolves entries, and returns request-loc
 Create the SDK once for the Node process or module, then reuse that singleton across requests. Bind
 request-specific inputs later with `forRequest()`.
 
-1. Install `@contentful/optimization-node`.
+1. Install `@contentful/optimization-node` and `contentful` when the SDK will fetch entries by ID.
 2. Read the Optimization client ID and environment from your runtime configuration.
 3. Configure default locale and API endpoint overrides only when your app needs them.
 4. Export the singleton so route handlers can create request-bound SDK clients.
@@ -180,13 +182,14 @@ request-specific inputs later with `forRequest()`.
 **Copy this:**
 
 ```sh
-pnpm add @contentful/optimization-node
+pnpm add @contentful/optimization-node contentful
 ```
 
 **Copy this:**
 
 ```ts
 import ContentfulOptimization from '@contentful/optimization-node'
+import * as contentful from 'contentful'
 
 function required(name: string): string {
   const value = process.env[name]
@@ -198,9 +201,20 @@ function required(name: string): string {
   return value
 }
 
+const contentfulClient = contentful.createClient({
+  accessToken: required('CONTENTFUL_DELIVERY_TOKEN'),
+  environment: required('CONTENTFUL_ENVIRONMENT'),
+  space: required('CONTENTFUL_SPACE_ID'),
+})
+
 // Create this once per process; use forRequest() inside route handlers.
 export const optimization = new ContentfulOptimization({
   clientId: required('CONTENTFUL_OPTIMIZATION_CLIENT_ID'),
+  contentful: {
+    client: contentfulClient,
+    // Include linked optimization entries and variants for SDK-managed entry fetches.
+    defaultQuery: { include: 10 },
+  },
   environment: process.env.CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main',
   app: {
     name: 'my-express-app',
@@ -475,24 +489,24 @@ For the lower-level mechanics, see
 
 **Integration category:** Required for first integration
 
-The Node SDK does not replace your Contentful delivery client. Fetch the baseline Contentful entry
-with the application locale and enough include depth, then pass that entry and request-local
-`selectedOptimizations` to `resolveOptimizedEntry()`.
+Your app owns the Contentful delivery client, credentials, and delivery policy. The preferred
+Contentful path passes an app-owned `contentful.js` client to the SDK, then calls the request-bound
+`requestOptimization.fetchOptimizedEntry(entryId)` helper after `page()` or `identify()`.
 
 After verifying the first `profileId` response, this section is where you add Contentful rendering:
-pass the `selectedOptimizations` returned by `page()` to `resolveOptimizedEntry()` before rendering
-the response.
+call `requestOptimization.fetchOptimizedEntry(entryId)` before rendering the response. The helper
+fetches the baseline entry, resolves the selected variant, and uses the latest accepted Experience
+response selections when `selectedOptimizations` is omitted.
 
-1. Fetch a single-locale Contentful entry from the application layer.
-2. Include linked optimization entries and variant entries in the Contentful response.
-3. Call `resolveOptimizedEntry()` with the request's `selectedOptimizations`.
+1. Configure the SDK with `contentful: { client, defaultQuery?, cache? }`.
+2. Call `page()` or `identify()` before resolving entries for the response.
+3. Call `requestOptimization.fetchOptimizedEntry(entryId)` inside the request handler.
 4. Render the returned `entry`. If resolution cannot find a matching optimization or variant, the
    resolver returns the baseline entry.
 
 **Adapt this to your use case:**
 
 ```ts
-import type { Entry } from 'contentful'
 import * as contentful from 'contentful'
 
 const contentfulClient = contentful.createClient({
@@ -501,16 +515,16 @@ const contentfulClient = contentful.createClient({
   space: required('CONTENTFUL_SPACE_ID'),
 })
 
-type ArticleEntry = Entry<ArticleSkeleton>
-
-async function getArticle(entryId: string, locale: string): Promise<ArticleEntry> {
-  return await contentfulClient.getEntry<ArticleSkeleton>(entryId, {
+const optimization = new ContentfulOptimization({
+  clientId: required('CONTENTFUL_OPTIMIZATION_CLIENT_ID'),
+  contentful: {
+    client: contentfulClient,
     // Include linked optimization entries and variants before SDK resolution.
-    include: 10,
-    // Fetch one CDA locale; all-locale payloads cannot be resolved by the SDK.
-    locale,
-  })
-}
+    defaultQuery: { include: 10 },
+  },
+  environment: process.env.CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main',
+  locale: 'en-US',
+})
 
 app.get('/article/:entryId', async (req, res) => {
   const appLocale = getAppLocale(req)
@@ -523,13 +537,11 @@ app.get('/article/:entryId', async (req, res) => {
   // Evaluate the request before resolving entry variants for this response.
   const pageResult = await requestOptimization.page()
   const pageResponse = pageResult.accepted ? pageResult.data : undefined
-  const article = await getArticle(req.params.entryId, appLocale)
-
-  // The resolver returns article when no matching selected optimization exists.
-  const { entry: optimizedArticle, selectedOptimization } = optimization.resolveOptimizedEntry(
-    article,
-    pageResponse?.selectedOptimizations,
-  )
+  const {
+    baselineEntry: article,
+    entry: optimizedArticle,
+    selectedOptimization,
+  } = await requestOptimization.fetchOptimizedEntry(req.params.entryId)
 
   if (requestOptimization.canPersistProfile) {
     persistProfile(res, pageResponse?.profile.id)
@@ -543,8 +555,29 @@ app.get('/article/:entryId', async (req, res) => {
 })
 ```
 
-Do not pass all-locale CDA responses from `contentful.js` `withAllLocales` or raw CDA `locale=*`
-into `resolveOptimizedEntry()`. The resolver expects direct single-locale field values such as
+Use `requestOptimization.fetchOptimizedEntry()` in request handlers. If you call
+`optimization.fetchOptimizedEntry()` on the singleton for personalized content, pass
+`selectedOptimizations` explicitly.
+
+Manual baseline-entry fetching plus `resolveOptimizedEntry()` remains supported when the app needs
+custom delivery behavior, GraphQL, REST without `contentful.js`, or an already-fetched baseline
+entry:
+
+**Adapt this to your use case:**
+
+```ts
+const baselineEntry = await contentfulClient.getEntry(req.params.entryId, {
+  include: 10,
+  locale: appLocale,
+})
+const { entry: optimizedArticle } = optimization.resolveOptimizedEntry(
+  baselineEntry,
+  pageResponse?.selectedOptimizations,
+)
+```
+
+Do not configure SDK-managed fetches or manual fetches with `contentful.js` `withAllLocales` or raw
+CDA `locale=*` responses. The resolver expects direct single-locale field values such as
 `fields.nt_experiences` and `fields.nt_variants`. For the entry contract, see
 [Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
 
@@ -582,7 +615,9 @@ const html = documentToHtmlString(richTextField, {
 
 If MergeTags reference localized profile fields such as `location.city` or `location.country`, pass
 the same application locale to Contentful fetches and `forRequest({ locale })` so profile values and
-entry language line up.
+entry language line up. For SDK-managed entry fetching on a request-bound client,
+`forRequest({ locale })` supplies the managed Contentful query locale when neither
+`contentful.defaultQuery` nor the per-call query sets `locale`.
 
 ### Read Custom Flags
 
@@ -813,20 +848,22 @@ cache varies on every personalization input.
    environment, host, and delivery mode.
 2. Treat cached Contentful entries as immutable, or clone them before request-specific transforms
    such as merge-tag rendering.
-3. Resolve variants from the current request's `selectedOptimizations`.
+3. Resolve variants from the current request's `selectedOptimizations`, or use
+   `requestOptimization.fetchOptimizedEntry()` so the request-bound helper supplies them.
 4. Render MergeTags against the current request's `profile`.
 5. Do not memoize `page()`, `identify()`, `screen()`, `track()`, or `trackView()` results as if they
    were pure reads.
 
 Use this cache-safety table when planning production caching:
 
-| Artifact                                                                   | Shared-cache safe? | Notes                                                                                       |
-| -------------------------------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------- |
-| Raw `contentful.js` entry or query response                                | Yes                | Key by entry or query, locale, include depth, environment, host, and delivery mode          |
-| `resolveOptimizedEntry(entry, selectedOptimizations)` result               | Conditional        | Safe only if keyed by the baseline entry version plus a `selectedOptimizations` fingerprint |
-| Merge-tag-rendered rich text                                               | No                 | Depends on the current request `profile`                                                    |
-| SSR HTML with personalized content                                         | Usually no         | Safe only when the cache varies on all personalization inputs                               |
-| `page()`, `identify()`, `screen()`, `track()`, and `trackView()` responses | No                 | These methods perform side effects and must not be memoized                                 |
+| Artifact                                                                   | Shared-cache safe? | Notes                                                                                                       |
+| -------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Raw `contentful.js` entry or query response                                | Yes                | Key by entry or query, locale, include depth, environment, host, and delivery mode                          |
+| SDK-managed entry cache                                                    | Yes                | Caches baseline `getEntry()` results only; configure with `contentful.cache` or disable with `cache: false` |
+| `resolveOptimizedEntry(entry, selectedOptimizations)` result               | Conditional        | Safe only if keyed by the baseline entry version plus a `selectedOptimizations` fingerprint                 |
+| Merge-tag-rendered rich text                                               | No                 | Depends on the current request `profile`                                                                    |
+| SSR HTML with personalized content                                         | Usually no         | Safe only when the cache varies on all personalization inputs                                               |
+| `page()`, `identify()`, `screen()`, `track()`, and `trackView()` responses | No                 | These methods perform side effects and must not be memoized                                                 |
 
 ## Production checks
 

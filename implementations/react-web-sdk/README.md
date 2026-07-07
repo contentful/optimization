@@ -64,6 +64,13 @@ for the broader locale model and
 [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
 for the entry contract.
 
+This reference uses the supported manual path: application code fetches single-locale Contentful
+entries and passes them to SDK entry resolution. For JavaScript integrations with an
+application-owned `contentful.js` client, we recommend configuring the SDK with
+`contentful: { client: contentfulClient }` and using managed fetching (`fetchOptimizedEntry()`,
+`entryId`, and optional `entryQuery` where supported). Keep the manual `baselineEntry` /
+`resolveOptimizedEntry()` path when the application must own fetching, caching, or response shaping.
+
 ## Prerequisites
 
 - Node.js >= 20.19.0 (24.15.0 recommended to match `.nvmrc`)
@@ -233,8 +240,8 @@ Implementation-specific touchpoints:
 | `src/components/AnalyticsEventDisplay.tsx` | Displays event stream output from `sdk.states.eventStream`     |
 | Manual `selectedOptimizations` lock logic  | `<OptimizedEntry liveUpdates={false}>`                         |
 
-**What stays the same:** `contentfulClient.ts`, locale config, type definitions, E2E test files,
-page/section component structure.
+**What stays the same in this reference path:** `contentfulClient.ts`, locale config, type
+definitions, `RichTextRenderer`, E2E test files, page/section component structure.
 
 **Key architectural difference:** `App.tsx` acts as a persistent layout (contains
 `AnalyticsEventDisplay` that stays mounted across route changes). Pages are route children that

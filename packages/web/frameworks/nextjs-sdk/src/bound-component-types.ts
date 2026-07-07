@@ -1,7 +1,10 @@
 import type { OptimizationRootProps, OptimizedEntryProps } from '@contentful/optimization-react-web'
 import type { ReactNode } from 'react'
 
-export type NextjsBoundProviderConfig = Omit<OptimizationRootProps, 'children' | 'liveUpdates'>
+export type NextjsBoundProviderConfig = Omit<
+  OptimizationRootProps,
+  'children' | 'liveUpdates' | 'serverOptimizedEntries'
+>
 
 export interface NextjsCookieValue {
   readonly value: string
@@ -44,7 +47,7 @@ export interface NextjsOptimizationCookieConfig {
 
 export type NextjsBoundRootConfig = Omit<
   OptimizationRootProps,
-  'children' | 'cookie' | 'sdk' | 'serverOptimizationState'
+  'children' | 'cookie' | 'sdk' | 'serverOptimizationState' | 'serverOptimizedEntries'
 > & {
   readonly cookie?: NextjsOptimizationCookieConfig
 }
@@ -60,7 +63,9 @@ export interface NextjsPagesRouterClientDefaults {
   readonly persistenceConsent?: boolean
 }
 
-export type NextjsBoundOptimizedEntryProps = Omit<
+type DistributiveOmit<T, K extends keyof T> = T extends unknown ? Omit<T, K> : never
+
+export type NextjsBoundOptimizedEntryProps = DistributiveOmit<
   OptimizedEntryProps,
   'liveUpdates' | 'loadingFallback'
 >
@@ -69,4 +74,5 @@ export type NextjsServerOptimizedEntryProps = NextjsBoundOptimizedEntryProps
 
 export interface BoundNextjsOptimizationRootProps {
   readonly children?: ReactNode
+  readonly serverOptimizedEntries?: OptimizationRootProps['serverOptimizedEntries']
 }

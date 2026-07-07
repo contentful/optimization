@@ -15,12 +15,125 @@ import type {
 } from '@contentful/optimization-api-client/api-schemas'
 import type { LogLevels } from '@contentful/optimization-api-client/logger'
 import { ConsoleLogSink, logger } from '@contentful/optimization-api-client/logger'
-import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
+import type { ChainModifiers, Entry, EntryQueries, EntrySkeletonType, LocaleCode } from 'contentful'
 import { OPTIMIZATION_CORE_SDK_NAME, OPTIMIZATION_CORE_SDK_VERSION } from './constants'
 import { EventBuilder, type EventBuilderConfig } from './events'
 import { InterceptorManager } from './lib/interceptor'
 import type { ResolvedData } from './resolvers'
 import { FlagsResolver, MergeTagValueResolver, OptimizedEntryResolver } from './resolvers'
+
+const DEFAULT_CONTENTFUL_ENTRY_CACHE_MAX_ENTRIES = 100
+const DEFAULT_CONTENTFUL_ENTRY_CACHE_TTL_MS = 300_000
+const DEFAULT_CONTENTFUL_ENTRY_INCLUDE = 10
+
+/**
+ * Query shape used for SDK-managed `contentful.js` `getEntry()` calls.
+ *
+ * @public
+ */
+export type ContentfulEntryQuery = EntryQueries<undefined>
+
+type ManagedContentfulEntry<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  L extends LocaleCode = LocaleCode,
+> = Entry<S, undefined, L>
+
+/**
+ * Minimal `contentful.js` client surface required for SDK-managed entry fetching.
+ *
+ * @public
+ */
+export interface ContentfulEntryClient {
+  /** Fetch a single Contentful entry by ID. */
+  getEntry: (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
+}
+
+/**
+ * Cache options for SDK-managed Contentful entry fetching.
+ *
+ * @public
+ */
+export interface ContentfulEntryCacheOptions {
+  /** Maximum number of entries retained per SDK instance. */
+  maxEntries?: number
+  /** Time, in milliseconds, before a cached entry is refetched. */
+  ttlMs?: number
+}
+
+/**
+ * SDK-managed Contentful entry fetching configuration.
+ *
+ * @public
+ */
+export interface ContentfulConfig {
+  /** `contentful.js` client used for SDK-managed `getEntry()` calls. */
+  client: ContentfulEntryClient
+  /** Query merged into every SDK-managed `getEntry()` call. */
+  defaultQuery?: ContentfulEntryQuery
+  /**
+   * Per-SDK-instance entry cache configuration.
+   *
+   * @remarks
+   * Defaults to `{ maxEntries: 100, ttlMs: 300_000 }`. Set to `false` to disable caching.
+   */
+  cache?: false | ContentfulEntryCacheOptions
+}
+
+/**
+ * Options for {@link CoreBase.fetchOptimizedEntry}.
+ *
+ * @public
+ */
+export interface FetchOptimizedEntryOptions {
+  /** Per-call Contentful `getEntry()` query overrides. */
+  query?: ContentfulEntryQuery
+  /** Selected optimizations used for personalized entry resolution. */
+  selectedOptimizations?: SelectedOptimizationArray
+}
+
+/**
+ * Result returned by {@link CoreBase.fetchOptimizedEntry}.
+ *
+ * @public
+ */
+export interface FetchOptimizedEntryResult<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = undefined,
+  L extends LocaleCode = LocaleCode,
+> extends ResolvedData<S, M, L> {
+  /** Baseline entry fetched from Contentful before optimization resolution. */
+  baselineEntry: Entry<S, M, L>
+}
+
+type ResolvedContentfulEntryCacheOptions = readonly [maxEntries: number, ttlMs: number]
+type ContentfulEntryCacheRecord = readonly [expiresAt: number, promise: Promise<Entry>]
+
+function createContentfulEntryQuery(
+  defaultQuery: ContentfulEntryQuery | undefined,
+  query: ContentfulEntryQuery | undefined,
+  locale: string | undefined,
+): ContentfulEntryQuery {
+  const mergedQuery: ContentfulEntryQuery = {
+    ...defaultQuery,
+    ...query,
+  }
+
+  mergedQuery.include ??= DEFAULT_CONTENTFUL_ENTRY_INCLUDE
+
+  if (mergedQuery.locale === undefined && locale !== undefined) {
+    mergedQuery.locale = locale
+  }
+
+  return mergedQuery
+}
+
+function evictEntryCache(cache: Map<string, ContentfulEntryCacheRecord>, maxEntries: number): void {
+  while (cache.size > maxEntries) {
+    const oldestKey = cache.keys().next()
+    if (oldestKey.done) break
+    cache.delete(oldestKey.value)
+  }
+}
 
 /**
  * Lifecycle container for event and state interceptors.
@@ -49,6 +162,15 @@ export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigPropert
    * Event builder configuration (channel/library metadata, etc.).
    */
   eventBuilder?: EventBuilderConfig
+
+  /**
+   * Optional SDK-managed Contentful Delivery API entry fetching.
+   *
+   * @remarks
+   * Existing manual `resolveOptimizedEntry()` usage remains supported. Configure this only when
+   * callers want the SDK to call `contentful.js` `getEntry()` by entry ID.
+   */
+  contentful?: ContentfulConfig
 
   /** Minimum log level for the default console sink. */
   logLevel?: LogLevels
@@ -85,6 +207,8 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
   }
 
   private resolvedLocale: string | undefined
+  private readonly entryCache = new Map<string, ContentfulEntryCacheRecord>()
+  private readonly entryCacheOptions: ResolvedContentfulEntryCacheOptions | undefined
 
   /** Current SDK locale for Experience API requests and event context. */
   get locale(): string | undefined {
@@ -103,6 +227,14 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
   constructor(config: TConfig, api: CoreBaseApiClientConfig = {}, locale?: string) {
     this.config = config
     this.resolvedLocale = locale
+    const cache = config.contentful?.cache
+    this.entryCacheOptions =
+      cache === false
+        ? undefined
+        : [
+            cache?.maxEntries ?? DEFAULT_CONTENTFUL_ENTRY_CACHE_MAX_ENTRIES,
+            cache?.ttlMs ?? DEFAULT_CONTENTFUL_ENTRY_CACHE_TTL_MS,
+          ]
 
     const { eventBuilder, logLevel, environment, clientId, fetchOptions } = config
 
@@ -131,6 +263,110 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
 
   protected setResolvedLocale(locale: string | undefined): void {
     this.resolvedLocale = locale
+  }
+
+  /**
+   * Clear SDK-managed Contentful entry cache entries for this SDK instance.
+   *
+   * @public
+   */
+  clearContentfulEntryCache(): void {
+    this.entryCache.clear()
+  }
+
+  /**
+   * Fetch a Contentful entry through the configured `contentful.js` client.
+   *
+   * @param entryId - Contentful entry ID to fetch.
+   * @param query - Per-call `getEntry()` query overrides.
+   * @returns The Contentful entry returned by the configured client.
+   *
+   * @remarks
+   * The SDK merges `contentful.defaultQuery`, the per-call query, SDK locale fallback, and
+   * `include: 10` before calling `getEntry()`. By default, results are cached per SDK instance.
+   */
+  async fetchContentfulEntry<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(entryId: string, query?: ContentfulEntryQuery): Promise<ManagedContentfulEntry<S, L>>
+  async fetchContentfulEntry(entryId: string, query?: ContentfulEntryQuery): Promise<Entry> {
+    const { client } = this.config.contentful ?? {}
+
+    if (!client) {
+      throw new Error('fetchContentfulEntry() requires contentful.client in SDK config.')
+    }
+
+    const { locale } = this
+    const mergedQuery = createContentfulEntryQuery(
+      this.config.contentful?.defaultQuery,
+      query,
+      locale,
+    )
+    const { entryCacheOptions: cacheOptions } = this
+
+    if (cacheOptions === undefined) {
+      return await client.getEntry(entryId, mergedQuery)
+    }
+
+    const now = Date.now()
+    const cacheKey = `${entryId}:${JSON.stringify(mergedQuery)}`
+    const cached = this.entryCache.get(cacheKey)
+
+    if (cached && cached[0] > now) {
+      this.entryCache.delete(cacheKey)
+      this.entryCache.set(cacheKey, cached)
+      return await cached[1]
+    }
+
+    if (cached) {
+      this.entryCache.delete(cacheKey)
+    }
+
+    const promise = client.getEntry(entryId, mergedQuery)
+    const cacheRecord: ContentfulEntryCacheRecord = [now + cacheOptions[1], promise]
+
+    this.entryCache.set(cacheKey, cacheRecord)
+    evictEntryCache(this.entryCache, cacheOptions[0])
+
+    try {
+      return await promise
+    } catch (error) {
+      if (this.entryCache.get(cacheKey) === cacheRecord) {
+        this.entryCache.delete(cacheKey)
+      }
+
+      throw error
+    }
+  }
+
+  /**
+   * Fetch a Contentful entry and resolve its optimized variant.
+   *
+   * @param entryId - Contentful entry ID to fetch.
+   * @param options - Per-call Contentful query and selected optimizations.
+   * @returns Baseline entry, resolved entry, and optimization metadata.
+   *
+   * @remarks
+   * This is additive to the synchronous `resolveOptimizedEntry()` API.
+   */
+  async fetchOptimizedEntry<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(
+    entryId: string,
+    options?: FetchOptimizedEntryOptions,
+  ): Promise<FetchOptimizedEntryResult<S, undefined, L>>
+  async fetchOptimizedEntry(
+    entryId: string,
+    options: FetchOptimizedEntryOptions = {},
+  ): Promise<FetchOptimizedEntryResult<EntrySkeletonType, ChainModifiers>> {
+    const baselineEntry = await this.fetchContentfulEntry(entryId, options.query)
+    const resolvedData = this.resolveOptimizedEntry(baselineEntry, options.selectedOptimizations)
+
+    return {
+      baselineEntry,
+      ...resolvedData,
+    }
   }
 
   /**

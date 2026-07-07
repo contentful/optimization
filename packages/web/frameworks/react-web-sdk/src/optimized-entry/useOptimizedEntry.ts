@@ -1,47 +1,154 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
+import type { ContentfulEntryQuery, ResolvedData } from '@contentful/optimization-web/core-sdk'
 import {
+  createOptimizedEntryLoadingEntry,
+  getOptimizedEntrySourceKey,
   OptimizedEntryController,
+  OptimizedEntrySourceController,
+  type OptimizedEntryMetadata,
   type OptimizedEntrySnapshot,
+  type OptimizedEntrySourceSnapshot,
 } from '@contentful/optimization-web/presentation'
 import type { Entry, EntrySkeletonType } from 'contentful'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimizationContext } from '../hooks/useOptimization'
 
-export interface UseOptimizedEntryParams {
-  /** Baseline Contentful entry fetched by the application. */
-  baselineEntry: Entry
+export type UseOptimizedEntryParams = {
   /** Per-entry live-update override. */
   liveUpdates?: boolean
+  /** Callback invoked when SDK-managed entry fetching fails. */
+  onEntryError?: (error: Error) => void
+} & (
+  | {
+      /** Baseline Contentful entry fetched by the application. */
+      baselineEntry: Entry
+      entryId?: never
+      entryQuery?: never
+    }
+  | {
+      baselineEntry?: never
+      /** Contentful entry ID fetched through the SDK-managed Contentful client. */
+      entryId: string
+      /** Per-call Contentful `getEntry()` query overrides. */
+      entryQuery?: ContentfulEntryQuery
+    }
+)
+
+interface UseManagedBaselineEntryResult {
+  readonly entry: Entry | undefined
+  readonly error: Error | undefined
+  readonly isLoading: boolean
 }
 
-export interface UseOptimizedEntryResult {
+type UseOptimizedEntryBaselineParams = Extract<UseOptimizedEntryParams, { baselineEntry: Entry }>
+type UseOptimizedEntryManagedParams = Extract<UseOptimizedEntryParams, { entryId: string }>
+
+export interface UseOptimizedEntryResult<TEntry extends Entry | undefined = Entry | undefined> {
   /** Whether SDK state says optimized content can be selected. */
   canOptimize: boolean
+  /** Baseline entry used for resolution, or `undefined` while managed fetching is unresolved. */
+  baselineEntry: TEntry
   /** Entry that should be rendered for the current hook state. */
-  entry: Entry
-  /** Whether the optimized entry is still waiting for optimization state. */
+  entry: TEntry
+  /** Error from SDK-managed entry fetching, when one occurred. */
+  error: Error | undefined
+  /** Whether the optimized entry is still waiting for content or optimization state. */
   isLoading: boolean
   /** Whether the client presentation layer is ready to reveal rendered content. */
   isPresentationReady: boolean
-  /** Selected optimization that resolved the current entry, when one applied. */
-  selectedOptimization: ResolvedData<EntrySkeletonType>['selectedOptimization']
+  /** Whether the current entry has been resolved and metadata can be consumed. */
+  isResolved: boolean
+  /** Baseline, resolved-entry, and optimization metadata for render surfaces. */
+  metadata: OptimizedEntryMetadata | undefined
   /** Full resolved entry data returned by the SDK resolver. */
   resolvedData: ResolvedData<EntrySkeletonType>
+  /** Selected optimization that resolved the current entry, when one applied. */
+  selectedOptimization: ResolvedData<EntrySkeletonType>['selectedOptimization']
   /** Selected optimization array used for this hook state. */
   selectedOptimizations: SelectedOptimizationArray | undefined
 }
 
-export interface UseOptimizedEntrySnapshotParams extends UseOptimizedEntryParams {
+export interface UseOptimizedEntrySnapshotParams {
+  baselineEntry: Entry
   clickable?: boolean
   hasCustomLoadingFallback?: boolean
   hoverDurationUpdateIntervalMs?: number
+  liveUpdates?: boolean
   targetDisplay?: 'block' | 'inline'
   trackClicks?: boolean
   trackHovers?: boolean
   trackViews?: boolean
   viewDurationUpdateIntervalMs?: number
+}
+
+export function useManagedBaselineEntry({
+  baselineEntry,
+  entryId,
+  entryQuery,
+  onEntryError,
+}: UseOptimizedEntryParams): UseManagedBaselineEntryResult {
+  const optimizationContext = useOptimizationContext()
+  const { sdk, serverOptimizedEntries } = optimizationContext
+  const isSdkLive = optimizationContext.isLive ?? sdk !== undefined
+  const entrySourceKey =
+    entryId === undefined ? undefined : getOptimizedEntrySourceKey(entryId, entryQuery)
+  const handoffEntry =
+    entrySourceKey === undefined ? undefined : serverOptimizedEntries?.get(entrySourceKey)
+  const effectiveBaselineEntry = baselineEntry ?? handoffEntry
+  const [controller] = useState(() => new OptimizedEntrySourceController())
+  const [snapshot, setSnapshot] = useState<OptimizedEntrySourceSnapshot>(() => {
+    if (effectiveBaselineEntry !== undefined) {
+      return { baselineEntry: effectiveBaselineEntry, isLoading: false }
+    }
+
+    return { entryId, isLoading: true }
+  })
+  const reportedErrorRef = useRef<Error | undefined>(undefined)
+
+  useEffect(() => {
+    controller.setSnapshotListener(setSnapshot)
+
+    return () => {
+      controller.setSnapshotListener(undefined)
+      controller.disconnect()
+    }
+  }, [controller])
+
+  useEffect(() => {
+    controller.updateOptions({
+      baselineEntry: effectiveBaselineEntry,
+      entryId,
+      entryQuery,
+      sdk,
+      isSdkStateReady: isSdkLive,
+    })
+  }, [controller, effectiveBaselineEntry, entryId, entryQuery, entrySourceKey, isSdkLive, sdk])
+
+  useEffect(() => {
+    const { error } = snapshot
+    if (error === undefined) {
+      reportedErrorRef.current = undefined
+      return
+    }
+
+    if (reportedErrorRef.current === error) {
+      return
+    }
+
+    reportedErrorRef.current = error
+    onEntryError?.(error)
+  }, [onEntryError, snapshot])
+
+  if (effectiveBaselineEntry !== undefined) {
+    return { entry: effectiveBaselineEntry, error: undefined, isLoading: false }
+  }
+
+  return {
+    entry: snapshot.baselineEntry,
+    error: snapshot.error,
+    isLoading: snapshot.isLoading,
+  }
 }
 
 /**
@@ -133,16 +240,36 @@ export function useOptimizedEntrySnapshot({
  *
  * @public
  */
+export function useOptimizedEntry(
+  params: UseOptimizedEntryBaselineParams,
+): UseOptimizedEntryResult<Entry>
+export function useOptimizedEntry(params: UseOptimizedEntryManagedParams): UseOptimizedEntryResult
 export function useOptimizedEntry(params: UseOptimizedEntryParams): UseOptimizedEntryResult {
-  const snapshot = useOptimizedEntrySnapshot(params)
+  const managedEntry = useManagedBaselineEntry(params)
+  const loadingEntryId = (params as { readonly entryId?: string }).entryId ?? 'contentful-entry'
+  const loadingEntry = useMemo(
+    () => createOptimizedEntryLoadingEntry(loadingEntryId),
+    [loadingEntryId],
+  )
+  const baselineEntry = managedEntry.entry ?? loadingEntry
+  const snapshot = useOptimizedEntrySnapshot({
+    baselineEntry,
+    liveUpdates: params.liveUpdates,
+  })
+  const hasEntry = managedEntry.entry !== undefined
+  const isPresentationReady = hasEntry && snapshot.isPresentationReady
 
   return {
     canOptimize: snapshot.canOptimize,
-    entry: snapshot.entry,
-    isLoading: snapshot.isLoading,
-    isPresentationReady: snapshot.isPresentationReady,
-    selectedOptimization: snapshot.selectedOptimization,
+    baselineEntry: managedEntry.entry,
+    entry: hasEntry ? snapshot.entry : undefined,
+    error: managedEntry.error,
+    isLoading: managedEntry.isLoading || snapshot.isLoading,
+    isPresentationReady,
+    isResolved: hasEntry && snapshot.isResolved,
+    metadata: hasEntry ? snapshot.metadata : undefined,
     resolvedData: snapshot.resolvedData,
-    selectedOptimizations: snapshot.selectedOptimizations,
+    selectedOptimization: hasEntry ? snapshot.selectedOptimization : undefined,
+    selectedOptimizations: hasEntry ? snapshot.selectedOptimizations : undefined,
   }
 }

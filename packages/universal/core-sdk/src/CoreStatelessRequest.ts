@@ -7,6 +7,12 @@ import {
   type InsightsEvent as InsightsEventPayload,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
+import type { Entry, EntrySkeletonType, LocaleCode } from 'contentful'
+import type {
+  ContentfulEntryQuery,
+  FetchOptimizedEntryOptions,
+  FetchOptimizedEntryResult,
+} from './CoreBase'
 import type CoreStateless from './CoreStateless'
 import type { CoreStatelessInsightsOptions, CoreStatelessRequestOptions } from './CoreStateless'
 import { PartialProfile, type OptimizationData } from './api-schemas'
@@ -60,7 +66,10 @@ export type CoreStatelessRequestConsent =
 export interface CoreStatelessForRequestOptions {
   /** Request-scoped event and persistence consent. */
   consent: CoreStatelessRequestConsent
-  /** Request-scoped SDK locale used for Experience API requests and default event context. */
+  /**
+   * Request-scoped SDK locale used for Experience API requests, default event context, and
+   * SDK-managed Contentful entry fetching when no Contentful query locale is configured.
+   */
   locale?: string
   /** Profile already known for the request, such as an anonymous ID from a cookie. */
   profile?: PartialProfile
@@ -141,10 +150,12 @@ type RequestExperienceMethod = 'identify' | 'page' | 'screen' | 'track'
 export class CoreStatelessRequest {
   private readonly core: CoreStateless
   private currentProfile: PartialProfile | undefined
+  private currentSelectedOptimizations: OptimizationData['selectedOptimizations'] | undefined
   private readonly requestEventConsent: boolean | undefined
   private readonly eventContext: UniversalEventBuilderArgs
   private readonly experienceOptions: CoreStatelessRequestOptions | undefined
   private readonly insightsOptions: CoreStatelessInsightsOptions | undefined
+  private readonly requestLocale: string | undefined
   readonly canPersistProfile: boolean
 
   constructor(core: CoreStateless, options: CoreStatelessForRequestOptions) {
@@ -154,6 +165,7 @@ export class CoreStatelessRequest {
 
     this.core = core
     this.currentProfile = profile
+    this.requestLocale = requestLocale
     this.requestEventConsent = isBooleanConsent ? consent : consent.events
     this.canPersistProfile = (isBooleanConsent ? consent : consent.persistence) === true
     this.eventContext =
@@ -280,6 +292,64 @@ export class CoreStatelessRequest {
     )
   }
 
+  /**
+   * Fetch a Contentful entry through the parent SDK's configured `contentful.js` client.
+   *
+   * @remarks
+   * If `contentful.defaultQuery` and the per-call query omit `locale`, this request's `locale`
+   * becomes the managed Contentful query locale.
+   *
+   * @public
+   */
+  async fetchContentfulEntry<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(entryId: string, query?: ContentfulEntryQuery): Promise<Entry<S, undefined, L>> {
+    return await this.core.fetchContentfulEntry<S, L>(
+      entryId,
+      this.withRequestContentfulLocale(query),
+    )
+  }
+
+  /**
+   * Fetch a Contentful entry and resolve it with request-local selected optimizations.
+   *
+   * @remarks
+   * If `options.selectedOptimizations` is omitted, this uses the latest selected optimizations
+   * returned by an accepted request-bound Experience API call. If `contentful.defaultQuery` and the
+   * per-call query omit `locale`, this request's `locale` becomes the managed Contentful query
+   * locale.
+   *
+   * @public
+   */
+  async fetchOptimizedEntry<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(
+    entryId: string,
+    options: FetchOptimizedEntryOptions = {},
+  ): Promise<FetchOptimizedEntryResult<S, undefined, L>> {
+    return await this.core.fetchOptimizedEntry<S, L>(entryId, {
+      ...options,
+      query: this.withRequestContentfulLocale(options.query),
+      selectedOptimizations: options.selectedOptimizations ?? this.currentSelectedOptimizations,
+    })
+  }
+
+  private withRequestContentfulLocale(
+    query: ContentfulEntryQuery | undefined,
+  ): ContentfulEntryQuery | undefined {
+    if (
+      this.requestLocale === undefined ||
+      query?.locale !== undefined ||
+      this.core.config.contentful?.defaultQuery?.locale !== undefined
+    ) {
+      return query
+    }
+
+    return { ...query, locale: this.requestLocale }
+  }
+
   private withEventContext<TPayload extends UniversalEventBuilderArgs>(
     payload: TPayload,
   ): TPayload {
@@ -326,8 +396,9 @@ export class CoreStatelessRequest {
       this.experienceOptions,
     )
 
-    const { profile } = result
+    const { profile, selectedOptimizations } = result
     this.currentProfile = profile
+    this.currentSelectedOptimizations = selectedOptimizations
 
     return result
   }

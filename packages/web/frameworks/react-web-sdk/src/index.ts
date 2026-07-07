@@ -31,6 +31,7 @@ export {
 } from './hooks/useOptimizationState'
 export { OptimizedEntry } from './optimized-entry/OptimizedEntry'
 export type {
+  OptimizedEntryErrorFallback,
   OptimizedEntryLoadingFallback,
   OptimizedEntryProps,
   OptimizedEntryRenderContext,
@@ -50,4 +51,10 @@ export type {
 } from './provider/OptimizationProvider'
 export { OptimizationRoot } from './root/OptimizationRoot'
 export type { OptimizationRootProps } from './root/OptimizationRoot'
+export {
+  prefetchOptimizedEntries,
+  type OptimizedEntryPrefetchDescriptor,
+  type OptimizedEntryPrefetchRuntime,
+  type ServerOptimizedEntryHandoff,
+} from './server-optimized-entries'
 export type ContentfulOptimizationOrNull = OptimizationSdk | null

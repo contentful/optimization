@@ -164,7 +164,7 @@ export class EntryInteractionRuntime {
   private readonly entryElements = new Map<Element, EntryElement>()
   private readonly autoTrack: Record<EntryInteraction, boolean>
   public readonly tracking: EntryInteractionApi
-  private entryElementObserver: MutationObserver | undefined = undefined
+  private entryElementObserver: MutationObserver | undefined
   private readonly elementOverrides: EntryInteractionElementOverrideMap = {
     clicks: new Map(),
     views: new Map(),
