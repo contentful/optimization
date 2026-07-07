@@ -135,9 +135,13 @@ Router, React Native, iOS SwiftUI, iOS UIKit, Android Compose, Android Views.
 4. **Fill feature sections in order**, each with its integration-category line and numbered
    procedure. Cover the shared concern checklist or mark concerns not-applicable (see
    [references/authoring-checklist.md](references/authoring-checklist.md)).
-5. **Ground every example in reality.** Prefer patterns and values from the matching reference
-   implementation under `implementations/`. For "adapt" snippets, model the reader's real starting
-   shape (e.g. a section renderer) so they can locate where SDK code slots in.
+5. **Ground every example in reality, then verify it against source.** Prefer patterns and values
+   from the matching reference implementation under `implementations/`, and for "adapt" snippets
+   model the reader's real starting shape so they can locate where SDK code slots in. Then confirm
+   every API used — hook, prop, config key, context field, return shape — exists in the SDK source
+   under `packages/**/src`, not only in the reference impl. The reference impl proves one path works
+   but can hide nuance (a factory field it does not use, a provider the bound component renders
+   internally), and a plausible name like `isReady` is not proof it exists.
 6. **Sync the TOC and anchors**, add `## Production checks` and (if there are known failure modes)
    `## Troubleshooting`, and link the reference implementation READMEs.
 7. **Self-review** against [references/authoring-checklist.md](references/authoring-checklist.md).

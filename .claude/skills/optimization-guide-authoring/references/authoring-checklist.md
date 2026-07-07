@@ -23,6 +23,12 @@ add per-archetype checks.
       endpoints, and paths match reality, or a NOTE explains the discrepancy.
 - [ ] No placeholder-only snippet is labeled `**Copy this:**` when it actually needs relocation or
       structural change (that is an adapt).
+- [ ] **Every API in a code example is verified against the SDK source, not just the reference
+      implementation.** Confirm each hook, prop, config key, context field, and return shape exists
+      in `packages/**/src` (grep the type/export). The reference impl shows one working path but can
+      hide nuance (a factory field the impl does not use, a provider the bound component renders
+      internally); a plausible-looking field name such as `isReady` or `liveUpdates` is not proof it
+      exists. When source and reference impl seem to disagree, read the source and reconcile.
 - [ ] Code comments explain only meaningful SDK-specific lines; no obvious-syntax narration.
 - [ ] `pnpm format:fix <file>` leaves the file unchanged (run it; Prettier owns formatting).
 - [ ] The collapsible TOC preserves the mtoc markers, omits `## Quick start`, and every anchor
@@ -41,8 +47,11 @@ add per-archetype checks.
 - [ ] **The quick start is grounded in a real app shape** — no invented fetch shapes (e.g. a
       hardcoded array of entry IDs). The most common real shape leads; other shapes are pointed to a
       feature section.
-- [ ] **Files the reader already owns (layout, providers, renderer) are shown as diffs that preserve
-      existing content**, not full files to paste over. The prose says so.
+- [ ] **Files the reader already owns (layout, providers, renderer) are shown as `+`/`-` diffs that
+      preserve existing content**, not full files to paste over, and not with the additions blended
+      invisibly into a rewritten file. The `+` lines must be unambiguously the additions. A short
+      prose note states the surrounding code is illustrative context to match against, not a block
+      to paste verbatim.
 - [ ] The entry-wrap example shows any cast the render prop requires and states the fallback
       contract; the cast matches the matching reference implementation (verify against
       `implementations/`).

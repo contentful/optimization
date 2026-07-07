@@ -102,7 +102,11 @@ shape to the feature section. Then one sentence naming the single proof and the 
   hardcoded array of entry IDs. Model the reader's most common real shape and show changes as diffs
   against their existing files. Point readers with other shapes to the feature section.
 - **Never hand over a full file the reader would paste over their own.** For layouts, providers, and
-  renderers, show a diff (`+`/`-`) that preserves what they already render, and say so in words.
+  renderers, show a `+`/`-` diff so the additions are unambiguous, keep the reader's existing lines
+  (guards, chrome, settings fetch) visible around them, and add a one-line note that the surrounding
+  code is illustrative context to match against — not a block to paste verbatim. Do not "fix"
+  copy-paste friction by blending the additions into a rewritten file; that trades clarity for
+  pastability and loses more than it gains.
 - **Keep example labels honest.** `**Copy this:**` only when values work as-is against what the
   guide points to; otherwise `**Adapt this to your use case:**`, and name what is the reader's vs
   the pattern to copy. A path or file the reader must relocate (import alias, app-root file) is an
@@ -138,12 +142,15 @@ shape to the feature section. Then one sentence naming the single proof and the 
 
 ## Rendering / entry-wrap rules (the recurring credibility trap)
 
-- The entry wrapper is where an entry becomes a component. Find that single hand-off in the reader's
-  likely code and wrap there. For section-composed sites that is the renderer's `.map`.
+- The entry wrapper goes wherever an entry becomes a component. Many apps have one such hand-off (a
+  renderer or registry mapping content type to component); others render an entry directly in a
+  page. Use app-neutral wording — do not assume a specific file or symbol name (e.g.
+  "SectionRenderer") that varies between apps.
 - If the render prop returns a widened type (e.g. `OptimizedEntry`'s render prop returns a base
   `contentful` `Entry`), the snippet must show the cast the reader needs (`resolved as YourType`)
-  and say why. Confirm this against the matching reference implementation before publishing — do not
-  claim type-identity the SDK does not provide.
+  and say why. Verify against the SDK source (`packages/**/src`), not just the reference
+  implementation — do not claim type-identity the SDK does not provide. Note the
+  `as unknown as YourType` fallback for modifier-narrowed types (e.g. `withoutUnresolvableLinks`).
 - State the fallback contract explicitly: on denied consent / no variant / unresolved links /
   all-locale payloads, the render prop receives the baseline entry and the UI does not break.
 
