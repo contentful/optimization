@@ -62,6 +62,9 @@ export type {
 export { useEntryResolver } from './hooks/useEntryResolver'
 export type { UseEntryResolverResult } from './hooks/useEntryResolver'
 
+export { useOptimizedEntry } from './hooks/useOptimizedEntry'
+export type { UseOptimizedEntryParams, UseOptimizedEntryResult } from './hooks/useOptimizedEntry'
+
 export { useViewportTracking } from './hooks/useViewportTracking'
 export type {
   UseViewportTrackingOptions,

@@ -147,9 +147,13 @@ describe('Next.js App Router server components', () => {
 
   it('loads server data into the bound client provider', async () => {
     setServerData({ events: true, persistence: true })
+    const serverOptimizedEntries = [{ baselineEntry, entryId: 'baseline-entry' }]
 
     const { OptimizationRoot } = createNextjsAppRouterOptimization({
       ...sdkConfig,
+      contentful: {
+        client: { getEntry: async () => await Promise.resolve(baselineEntry) },
+      },
       defaults: { consent: false, persistenceConsent: false },
       server: {
         enabled: true,
@@ -157,7 +161,7 @@ describe('Next.js App Router server components', () => {
       },
     })
 
-    const element = await OptimizationRoot({ children: 'Server content' })
+    const element = await OptimizationRoot({ children: 'Server content', serverOptimizedEntries })
 
     expect(element).toMatchObject({
       props: {
@@ -170,8 +174,10 @@ describe('Next.js App Router server components', () => {
         defaults: { consent: true, persistenceConsent: true },
         environment: sdkConfig.environment,
         serverOptimizationState: optimizationData,
+        serverOptimizedEntries,
       },
     })
+    expect(element.props).not.toHaveProperty('contentful')
   })
 
   it('loads server defaults and live updates into the bound provider', async () => {
@@ -273,6 +279,33 @@ describe('Next.js App Router server components', () => {
       'data-ctfl-entry-id': 'baseline-entry',
       'data-ctfl-track-views': true,
       'data-testid': 'entry',
+      children: 'baseline-entry',
+    })
+  })
+
+  it('fetches and renders managed entryId content on the server', async () => {
+    const getEntry = rs.fn(async () => await Promise.resolve(baselineEntry))
+    const { OptimizedEntry } = createNextjsAppRouterOptimization({
+      ...sdkConfig,
+      contentful: { client: { getEntry }, cache: false },
+      server: {
+        enabled: false,
+      },
+    })
+
+    const element = await OptimizedEntry({
+      entryId: 'baseline-entry',
+      entryQuery: { locale: 'de-DE' },
+      children: (entry) => entry.sys.id,
+    })
+
+    expect(getEntry).toHaveBeenCalledWith('baseline-entry', {
+      include: 10,
+      locale: 'de-DE',
+    })
+    expect(element.props).toMatchObject({
+      'data-ctfl-baseline-id': 'baseline-entry',
+      'data-ctfl-entry-id': 'baseline-entry',
       children: 'baseline-entry',
     })
   })

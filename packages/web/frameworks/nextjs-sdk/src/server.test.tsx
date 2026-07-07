@@ -1,5 +1,6 @@
 import {
   NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER,
+  ServerOptimizedEntry,
   bindNextjsOptimizationRequest,
   createNextjsOptimization,
   createNextjsPageContext,
@@ -10,6 +11,7 @@ import {
   type CoreStatelessRequest,
   type OptimizationData,
 } from './server'
+import type { ServerTrackingBaselineEntry, ServerTrackingResolvedData } from './tracking-attributes'
 
 const sdkConfig = {
   clientId: 'test-client-id',
@@ -21,6 +23,16 @@ interface CreatedSdk {
   readonly sdk: ContentfulOptimization
 }
 
+const baselineEntry = createEntry('baseline-entry')
+const resolvedData = {
+  entry: createEntry('variant-entry'),
+  selectedOptimization: {
+    experienceId: 'experience-id',
+    sticky: false,
+    variantIndex: 1,
+    variants: {},
+  },
+} satisfies ServerTrackingResolvedData
 const optimizationData: OptimizationData = {
   changes: [],
   selectedOptimizations: [],
@@ -47,6 +59,45 @@ const optimizationData: OptimizationData = {
       averageSessionLength: 0,
     },
   },
+}
+
+function createEntry(id: string): ServerTrackingBaselineEntry {
+  return {
+    fields: {},
+    metadata: {
+      tags: [],
+    },
+    sys: {
+      contentType: {
+        sys: {
+          id: 'content-type',
+          linkType: 'ContentType',
+          type: 'Link',
+        },
+      },
+      createdAt: '2024-01-01T00:00:00.000Z',
+      environment: {
+        sys: {
+          id: 'main',
+          linkType: 'Environment',
+          type: 'Link',
+        },
+      },
+      id,
+      locale: 'en-US',
+      publishedVersion: 1,
+      revision: 1,
+      space: {
+        sys: {
+          id: 'space-id',
+          linkType: 'Space',
+          type: 'Link',
+        },
+      },
+      type: 'Entry',
+      updatedAt: '2024-01-01T00:00:00.000Z',
+    },
+  }
 }
 
 function createSdk(
@@ -360,6 +411,47 @@ describe('Next.js server helpers', () => {
     expect(set).toHaveBeenCalledWith('ctfl-opt-aid', 'new-profile-id', {
       path: '/',
       sameSite: 'lax',
+    })
+  })
+
+  it('renders a server wrapper with tracking attributes and caller props', () => {
+    const element = ServerOptimizedEntry({
+      as: 'article',
+      baselineEntry,
+      children: 'Rendered content',
+      className: 'entry',
+      resolvedData,
+      trackViews: true,
+    })
+
+    expect(element.type).toBe('article')
+    expect(element.props).toMatchObject({
+      'data-ctfl-baseline-id': 'baseline-entry',
+      'data-ctfl-entry-id': 'variant-entry',
+      'data-ctfl-optimization-id': 'experience-id',
+      'data-ctfl-track-views': true,
+      'data-ctfl-variant-index': 1,
+      children: 'Rendered content',
+      className: 'entry',
+    })
+  })
+
+  it('renders a server wrapper from a managed fetch result', () => {
+    const element = ServerOptimizedEntry({
+      as: 'article',
+      children: 'Rendered content',
+      result: {
+        baselineEntry,
+        ...resolvedData,
+      },
+    })
+
+    expect(element.props).toMatchObject({
+      'data-ctfl-baseline-id': 'baseline-entry',
+      'data-ctfl-entry-id': 'variant-entry',
+      'data-ctfl-optimization-id': 'experience-id',
+      'data-ctfl-variant-index': 1,
+      children: 'Rendered content',
     })
   })
 })

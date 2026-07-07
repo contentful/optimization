@@ -40,11 +40,12 @@ SDK on the server with the React Web SDK on the client; it is not a new optimiza
 ## Install
 
 ```sh
-pnpm add @contentful/optimization-nextjs
+pnpm add @contentful/optimization-nextjs contentful
 ```
 
 Next.js, React, and React DOM are application-owned peer dependencies. The adapter uses the runtime
-already installed by your app instead of installing its own copy.
+already installed by your app instead of installing its own copy. The `contentful` package is the
+app-owned CDA client used by the managed entry fetching example.
 
 ## App Router setup
 
@@ -210,34 +211,44 @@ import { OptimizationRoot } from '@contentful/optimization-nextjs/client'
 import {
   createNextjsOptimization,
   getNextjsServerOptimizationData,
+  ServerOptimizedEntry,
 } from '@contentful/optimization-nextjs/server'
-import { getServerTrackingAttributes } from '@contentful/optimization-nextjs/tracking-attributes'
+import { createClient } from 'contentful'
 import { cookies, headers } from 'next/headers'
+
+const contentfulClient = createClient({
+  accessToken: process.env.CONTENTFUL_ACCESS_TOKEN!,
+  space: process.env.CONTENTFUL_SPACE_ID!,
+})
 
 const sdk = createNextjsOptimization({
   clientId: 'client-id',
+  contentful: { client: contentfulClient },
   environment: 'main',
+  locale: 'en-US',
 })
 
 export default async function Page() {
   const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
-  const { data } = await getNextjsServerOptimizationData(sdk, {
+  const { data, requestOptimization } = await getNextjsServerOptimizationData(sdk, {
     consent: { events: true, persistence: true },
     cookies: cookieStore,
     headers: headerStore,
     locale: 'en-US',
   })
 
-  const resolvedData = sdk.resolveOptimizedEntry(entry, data?.selectedOptimizations)
-  const trackingAttributes = getServerTrackingAttributes(entry, resolvedData)
+  const result = await requestOptimization.fetchOptimizedEntry('hero-entry')
 
   return (
     <OptimizationRoot clientId="client-id" environment="main" serverOptimizationState={data}>
-      <div {...trackingAttributes}>{resolvedData.entry.fields.title}</div>
+      <ServerOptimizedEntry result={result}>{result.entry.fields.title}</ServerOptimizedEntry>
     </OptimizationRoot>
   )
 }
 ```
+
+`ServerOptimizedEntry` also keeps the manual `baselineEntry` plus `resolvedData` props for apps that
+fetch Contentful entries outside the SDK.
 
 ## Manual client setup
 

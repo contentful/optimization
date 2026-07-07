@@ -4,8 +4,8 @@ Applies to all workspace packages under `packages/`.
 
 ## Boundaries
 
-- Published SDK behavior belongs in packages; reference implementations consume it through public
-  APIs as maintained E2E targets and consumer references.
+- Published SDK behavior belongs in packages; reference implementations are first-class downstream
+  consumers that exercise public APIs as maintained E2E targets and consumer references.
 - Shared cross-platform behavior usually belongs in `packages/universal/core-sdk` unless it is
   clearly platform-specific.
 - Keep package-local `dev/` harnesses aligned with the SDK behavior they exercise.
@@ -45,8 +45,9 @@ For pnpm-managed packages with matching scripts, use `pnpm --filter <package-nam
 - Validate package-local harnesses when changing flows they demonstrate.
 - For package changes consumed by implementations, run `pnpm build:pkgs` before implementation
   install or tests.
-- Broaden to affected downstream SDKs or reference implementations for shared behavior, public
-  contracts, preview behavior, event flow, or platform integration changes.
+- Identify and validate affected downstream SDKs or reference implementations for shared behavior,
+  public contracts, preview behavior, event flow, or platform integration changes. If you skip one,
+  report the exact reason and risk.
 - Schedule package validation by the workspace dependency graph. Do not manually run SDK `build`,
   `clean`, `build:pkgs`, implementation install, `size:report`, or `size:check` commands in parallel
   across packages when one package can consume another package's generated output.

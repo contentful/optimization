@@ -85,14 +85,14 @@ pnpm version:pnpm
 
 ## Repository map
 
-| Path                 | Purpose                                                                             |
-| -------------------- | ----------------------------------------------------------------------------------- |
-| `lib/`               | Internal shared tooling and mock services, such as `build-tools` and `mocks`        |
-| `packages/`          | Workspace packages, including the published SDKs and framework layers               |
-| `implementations/`   | Reference applications used for integration testing, local demos, and E2E coverage  |
-| `pkgs/`              | Generated tarballs created by `pnpm build:pkgs`; implementations install from these |
-| `docs/`              | Generated TypeDoc output                                                            |
-| `dist/`, `coverage/` | Generated build and test artifacts inside individual workspaces                     |
+| Path                 | Purpose                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------ |
+| `lib/`               | Internal shared tooling and mock services, such as `build-tools` and `mocks`               |
+| `packages/`          | Workspace packages, including the published SDKs and framework layers                      |
+| `implementations/`   | Reference applications used for integration testing, validation evidence, and E2E coverage |
+| `pkgs/`              | Generated tarballs created by `pnpm build:pkgs`; implementations install from these        |
+| `docs/`              | Generated TypeDoc output                                                                   |
+| `dist/`, `coverage/` | Generated build and test artifacts inside individual workspaces                            |
 
 The most important repository-specific mechanic is this:
 
@@ -335,7 +335,7 @@ category:
   caveats, and links to guides, reference implementations, and generated API reference.
 - Lower-level package READMEs explain the package's role in the SDK stack, who uses it directly,
   common setup options where useful, and where exhaustive API details live.
-- Reference implementation READMEs stay procedural: what the implementation demonstrates,
+- Reference implementation READMEs stay procedural: what the implementation validates,
   prerequisites, setup, run/test commands, environment notes, and related package links.
 - Internal and placeholder READMEs stay short, explicit, and status-oriented.
 

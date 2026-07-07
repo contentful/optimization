@@ -7,7 +7,8 @@ from that state after hydration.
 This pattern uses `@contentful/optimization-nextjs`. The `/pages-router` factory binds app-local
 client components, and `/pages-router/server` prepares serializable `pageProps` for
 `getServerSideProps`. Your application still owns Contentful fetching, consent policy, identity
-policy, routing, caching, and component rendering.
+policy, routing, caching, and component rendering. When configured with an app-owned `contentful.js`
+client, the SDK can fetch entries by ID for managed entry resolution.
 
 If your application uses the App Router, use the
 [Next.js App Router guide](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
@@ -196,7 +197,7 @@ Use this table as the setup inventory for the full Pages Router integration:
 | App-local bound components from `/pages-router`                 | Required for first integration | Yes                      | `lib/optimization.ts` with `createNextjsPagesRouterOptimization()`                  |
 | Optimization client ID, environment, locale, and API endpoints  | Required for first integration | Yes                      | Bound component factory and server SDK config with browser-safe environment values  |
 | Server SDK helper from `/pages-router/server`                   | Required for first integration | Yes                      | `getServerSideProps` helper module                                                  |
-| Contentful CDA credentials and app-owned fetcher                | Required for first integration | Yes                      | Application Contentful client                                                       |
+| Contentful CDA credentials and fetch policy                     | Required for first integration | Yes                      | Application Contentful client or SDK `contentful` config                            |
 | Single-locale CDA entries with resolved optimization links      | Required for first integration | Yes                      | CDA calls with one `locale` and enough `include` depth, commonly `include: 10`      |
 | Bound `OptimizationRoot`                                        | Required for first integration | Yes                      | `pages/_app.tsx`                                                                    |
 | Pages Router page tracker                                       | Required for first integration | Yes                      | `NextPagesAutoPageTracker` under the bound `OptimizationRoot`                       |
@@ -212,7 +213,7 @@ Use this table as the setup inventory for the full Pages Router integration:
 | Personalized response caching and duplicate-event policy        | Advanced or production-only    | No                       | `getServerSideProps`, CDN rules, response headers, and tracker settings             |
 
 Use one application Contentful locale for entries that feed SDK resolution. The SDK Experience and
-event locale often uses the same string, but the SDK does not fetch Contentful content or change CDA
+event locale often uses the same string, but the SDK does not infer the CDA locale or change CDA
 requests for you.
 
 ## Core integration
@@ -277,8 +278,10 @@ clears the anonymous ID cookie on the response, and returns serializable
 
 **Integration category:** Required for first integration
 
-The SDK does not fetch Contentful entries. Fetch baseline entries in the application layer with one
-Contentful locale and resolved optimization links before passing them to bound entry primitives.
+This quick start fetches baseline entries in the application layer with one Contentful locale and
+resolved optimization links before passing them to bound entry primitives. For managed entry
+fetching, configure the SDK with `contentful: { client }` and pass `entryId` plus an optional
+`entryQuery` to supported entry helpers.
 
 1. Choose the application Contentful locale in routing, i18n, request policy, or app configuration.
 2. Pass that locale to CDA requests.

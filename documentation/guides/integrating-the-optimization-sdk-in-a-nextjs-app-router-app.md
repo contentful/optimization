@@ -8,7 +8,8 @@ This pattern uses `@contentful/optimization-nextjs`. The `/app-router` factory b
 components that compose the stateless Node SDK in Server Components and the React Web SDK in Client
 Components. The request handler forwards sanitized Next.js proxy or middleware request context
 headers. Your application still owns Contentful fetching, consent policy, identity policy, routing,
-caching, and component rendering.
+caching, and component rendering. When configured with an app-owned `contentful.js` client, the SDK
+can fetch entries by ID for managed entry resolution.
 
 If your application still uses the Pages Router, use the
 [Next.js Pages Router guide](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
@@ -180,7 +181,7 @@ Use this table as the setup inventory for the full App Router integration:
 | `@contentful/optimization-nextjs` package                         | Required for first integration | Yes                      | Application package manager                                                         |
 | App-local bound components from `/app-router`                     | Required for first integration | Yes                      | `lib/optimization.ts` with `createNextjsAppRouterOptimization()`                    |
 | Optimization client ID, environment, locale, and API endpoints    | Required for first integration | Yes                      | Bound component factory config with browser-safe environment variables              |
-| Contentful CDA credentials and app-owned fetcher                  | Required for first integration | Yes                      | Application Contentful client                                                       |
+| Contentful CDA credentials and fetch policy                       | Required for first integration | Yes                      | Application Contentful client or SDK `contentful` config                            |
 | Single-locale CDA entries with resolved optimization links        | Required for first integration | Yes                      | CDA calls with one `locale` and enough `include` depth, commonly `include: 10`      |
 | Next.js proxy or middleware hook                                  | Common but policy-dependent    | Yes                      | `proxy.ts` or `middleware.ts` for request context forwarding                        |
 | Bound `OptimizationRoot`                                          | Required for first integration | Yes                      | App Router layout                                                                   |
@@ -199,7 +200,7 @@ Use this table as the setup inventory for the full App Router integration:
 | Personalized response caching and duplicate-event policy          | Advanced or production-only    | No                       | Next.js route config, CDN rules, bound component placement, and tracker settings    |
 
 Use one application Contentful locale for entries that feed SDK resolution. The SDK Experience and
-event locale often uses the same string, but the SDK does not fetch Contentful content or change CDA
+event locale often uses the same string, but the SDK does not infer the CDA locale or change CDA
 requests for you.
 
 ## Core integration
@@ -345,9 +346,10 @@ handoff or an explicit server persistence flow. For deeper mechanics, see
 
 **Integration category:** Required for first integration
 
-The SDK does not fetch Contentful entries. Fetch baseline entries in the application layer with one
-Contentful locale and resolved optimization links before passing them to bound server or client
-entry primitives.
+This quick start fetches baseline entries in the application layer with one Contentful locale and
+resolved optimization links before passing them to bound server or client entry primitives. For
+managed entry fetching, configure the SDK with `contentful: { client }` and pass `entryId` plus an
+optional `entryQuery` to supported entry helpers.
 
 1. Choose the application Contentful locale in routing, i18n, request policy, or app configuration.
 2. Pass that locale to CDA requests.
@@ -834,13 +836,13 @@ import { useOptimizationContext } from '@contentful/optimization-nextjs/client'
 import { useEffect } from 'react'
 
 export function PreviewPanelAttachment({ nonce }: { nonce?: string }) {
-  const { isReady } = useOptimizationContext()
+  const { sdk } = useOptimizationContext()
   const previewPanelEnabled = process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
 
   useEffect(() => {
     // Keep authoring tooling opt-in.
     if (!previewPanelEnabled) return
-    if (!isReady) return
+    if (!sdk) return
 
     void Promise.all([
       import('@contentful/optimization-web-preview-panel'),
@@ -853,7 +855,7 @@ export function PreviewPanelAttachment({ nonce }: { nonce?: string }) {
         })
       })
       .catch(() => undefined)
-  }, [isReady, nonce, previewPanelEnabled])
+  }, [nonce, previewPanelEnabled, sdk])
 
   return null
 }

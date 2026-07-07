@@ -251,7 +251,7 @@ class ContentfulOptimization extends CoreStateful {
    *
    * @internal
    */
-  private readonly cookieAttributes?: CookieAttributes = undefined
+  private readonly cookieAttributes?: CookieAttributes
 
   /**
    * Cleanup function for online/offline listener bindings.

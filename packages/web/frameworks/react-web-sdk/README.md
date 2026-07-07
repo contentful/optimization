@@ -60,6 +60,9 @@ Install using an NPM-compatible package manager, pnpm for example:
 pnpm install @contentful/optimization-react-web
 ```
 
+Add `contentful` too when `OptimizationRoot` will use your app-owned `contentful.js` client for
+managed entry fetching.
+
 React and React DOM are application-owned peer dependencies. The SDK uses the React runtime already
 installed by your app instead of installing its own copy.
 
@@ -99,23 +102,24 @@ or custom framework adapters.
 such as `liveUpdates`, `onStatesReady`, and `serverOptimizationState`. The Web SDK
 `autoTrackEntryInteraction` option is exposed as the React `trackEntryInteraction` prop.
 
-| Prop                      | Required? | Default                                       | Description                                                          |
-| ------------------------- | --------- | --------------------------------------------- | -------------------------------------------------------------------- |
-| `clientId`                | Yes       | N/A                                           | Shared API key for Experience API and Insights API requests          |
-| `environment`             | No        | `'main'`                                      | Contentful environment identifier                                    |
-| `api`                     | No        | Web SDK defaults                              | Experience API and Insights API endpoint and request options         |
-| `app`                     | No        | `undefined`                                   | Application metadata attached to outgoing event context              |
-| `locale`                  | No        | `undefined`                                   | SDK Experience API and default event locale                          |
-| `defaults`                | No        | `undefined`                                   | Configuration/default state such as consent or persistence consent   |
-| `serverOptimizationState` | No        | `undefined`                                   | Server-returned Optimization state for the initial provider snapshot |
-| `allowedEventTypes`       | No        | `['identify', 'page']`                        | Event types allowed before consent is explicitly set                 |
-| `trackEntryInteraction`   | No        | `{ views: true, clicks: true, hovers: true }` | Automatic entry interaction tracking for `OptimizedEntry` elements   |
-| `cookie`                  | No        | `{ domain: undefined, expires: 365 }`         | Anonymous ID cookie settings inherited from the Web SDK              |
-| `liveUpdates`             | No        | `false`                                       | Whether `OptimizedEntry` components react continuously to SDK state  |
-| `onStatesReady`           | No        | `undefined`                                   | Provider-managed app-level state subscription hook                   |
-| `queuePolicy`             | No        | SDK defaults                                  | Flush retry behavior and offline queue bounds                        |
-| `logLevel`                | No        | `'error'`                                     | Minimum log level for the default console sink                       |
-| `onEventBlocked`          | No        | `undefined`                                   | Callback invoked when consent or guard logic blocks an event         |
+| Prop                      | Required? | Default                                       | Description                                                                |
+| ------------------------- | --------- | --------------------------------------------- | -------------------------------------------------------------------------- |
+| `clientId`                | Yes       | N/A                                           | Shared API key for Experience API and Insights API requests                |
+| `environment`             | No        | `'main'`                                      | Contentful environment identifier                                          |
+| `api`                     | No        | Web SDK defaults                              | Experience API and Insights API endpoint and request options               |
+| `app`                     | No        | `undefined`                                   | Application metadata attached to outgoing event context                    |
+| `contentful`              | No        | `undefined`                                   | App-owned `contentful.js` client, default query, and cache                 |
+| `locale`                  | No        | `undefined`                                   | SDK Experience API and default event locale                                |
+| `defaults`                | No        | `undefined`                                   | Configuration/default state such as consent or persistence consent         |
+| `serverOptimizationState` | No        | `undefined`                                   | Server-returned Optimization state to apply before provider children mount |
+| `allowedEventTypes`       | No        | `['identify', 'page']`                        | Event types allowed before consent is explicitly set                       |
+| `trackEntryInteraction`   | No        | `{ views: true, clicks: true, hovers: true }` | Automatic entry interaction tracking for `OptimizedEntry` elements         |
+| `cookie`                  | No        | `{ domain: undefined, expires: 365 }`         | Anonymous ID cookie settings inherited from the Web SDK                    |
+| `liveUpdates`             | No        | `false`                                       | Whether `OptimizedEntry` components react continuously to SDK state        |
+| `onStatesReady`           | No        | `undefined`                                   | Provider-managed app-level state subscription hook                         |
+| `queuePolicy`             | No        | SDK defaults                                  | Flush retry behavior and offline queue bounds                              |
+| `logLevel`                | No        | `'error'`                                     | Minimum log level for the default console sink                             |
+| `onEventBlocked`          | No        | `undefined`                                   | Callback invoked when consent or guard logic blocks an event               |
 
 Use `OptimizationProvider` directly when an application or framework adapter needs direct provider
 control, including integrations that supply an SDK instance:
@@ -254,10 +258,10 @@ function HeroEntry({ baselineEntry }) {
 }
 ```
 
-Fetch Contentful entries in the app layer with one CDA locale. For localized apps, configure your
-application locale and pass it directly before passing entries to `OptimizedEntry`,
-`useEntryResolver()`, or `useOptimizedEntry()`. Do not pass all-locale CDA responses from
-`withAllLocales` or `locale=*`; these APIs expect direct single-locale field values. See
+For manual entries, fetch Contentful entries in the app layer with one CDA locale before passing
+them to `baselineEntry` surfaces. For managed fetching, use `entryId` and `entryQuery`. Do not pass
+all-locale CDA responses from `withAllLocales` or `locale=*`; these APIs expect direct single-locale
+field values. See
 [Entry optimization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
@@ -322,8 +326,9 @@ component-local UI state, keep using hooks and React effects under the provider.
 
 ### OptimizedEntry
 
-`OptimizedEntry` resolves a baseline Contentful entry and renders either the selected variant or the
-baseline entry:
+`OptimizedEntry` fetches a Contentful entry by ID when the root SDK is configured with
+`contentful: { client }`, then renders the selected variant or baseline. `baselineEntry` remains
+supported for the manual path:
 
 ```tsx
 import { OptimizedEntry } from '@contentful/optimization-react-web'
@@ -338,6 +343,47 @@ function HeroEntry({ baselineEntry }) {
   )
 }
 ```
+
+When `OptimizationRoot` uses a Web SDK configured with `contentful: { client }`, React entry
+surfaces can fetch by entry ID:
+
+```tsx
+function HeroEntry() {
+  return (
+    <OptimizedEntry
+      entryId="hero-entry"
+      entryQuery={{ locale: 'en-US' }}
+      loadingFallback={() => <HeroSkeleton />}
+      errorFallback={() => <HeroFallback />}
+    >
+      {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
+    </OptimizedEntry>
+  )
+}
+```
+
+Hooks use the same managed entry source:
+
+```tsx
+import { useOptimizedEntry } from '@contentful/optimization-react-web'
+
+function HeroEntry() {
+  const { entry, error, isLoading } = useOptimizedEntry({
+    entryId: 'hero-entry',
+    entryQuery: { locale: 'en-US' },
+  })
+
+  if (isLoading) return <HeroSkeleton />
+  if (error || !entry) return <HeroFallback />
+  return <HeroCard entry={entry} />
+}
+```
+
+`baselineEntry` remains supported and takes the manual path. Use `onEntryError` when application
+code needs to log or report managed CDA failures. Use `errorFallback` on `OptimizedEntry` to render
+fallback UI for managed CDA failures. Use `onEntryResolved`, the render prop metadata, or the hook's
+`metadata` and `isResolved` fields when application code needs the baseline ID, resolved entry ID,
+or optimization context after tracking attributes are ready.
 
 Use `loadingFallback`, direct children, wrapper props, and nested composition patterns when needed.
 For optimized entries, the loading phase begins immediately while optimization is unresolved. If the

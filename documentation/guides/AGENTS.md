@@ -368,8 +368,10 @@ When supported by the SDK/runtime, cover:
 
 ## Reference implementations
 
-- Link only to monorepo reference implementation READMEs, not external demos or implementation
-  source files.
+- Link only to monorepo reference implementation READMEs, not external demos, sample apps, or
+  implementation source files.
+- Frame reference implementations as maintained comparison and validation targets for SDK behavior.
+  Do not present them as optional examples or lower-stakes sample code.
 - Mention relevant implementations briefly near the top only when they clarify the quick start or
   first required setup path; otherwise, expand links in
   `Reference implementations to compare against`.

@@ -127,8 +127,8 @@
       "gzipBudgets": {
         "app-router.cjs": 1200,
         "app-router.mjs": 1200,
-        "app-router-server.cjs": 3600,
-        "app-router-server.mjs": 3900,
+        "app-router-server.cjs": 3800,
+        "app-router-server.mjs": 4200,
         "client.cjs": 1200,
         "client.mjs": 1200,
         "esr.cjs": 4200,
@@ -136,11 +136,11 @@
         "pages-router.cjs": 1200,
         "pages-router.mjs": 1200,
         "pages-router/server.cjs": 3600,
-        "pages-router/server.mjs": 3600,
+        "pages-router/server.mjs": 4000,
         "server.cjs": 4500,
         "server.mjs": 4500,
         "request-handler.cjs": 2500,
-        "request-handler.mjs": 2500,
+        "request-handler.mjs": 2800,
         "tracking-attributes.cjs": 1200,
         "tracking-attributes.mjs": 1200
       }

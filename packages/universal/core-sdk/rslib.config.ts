@@ -22,6 +22,7 @@ export default defineConfig({
       constants: './src/constants.ts',
       'bridge-support': './src/bridge-support/index.ts',
       runtime: './src/runtime/index.ts',
+      'entry-source': './src/entry-source.ts',
       'api-client': './src/api-client.ts',
       'api-schemas': './src/api-schemas.ts',
       'preview-support': './src/preview-support/index.ts',

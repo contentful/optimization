@@ -13,13 +13,13 @@ title: Framework and meta-framework reference implementation requirements
 
 ## Summary
 
-Reference implementations are executable examples and validation harnesses for supported
-Optimization SDK integration patterns. They show SDK maintainers and application engineers how
-public SDK APIs fit into realistic framework and meta-framework applications.
+Reference implementations are executable validation artifacts for supported Optimization SDK
+integration patterns. They show SDK maintainers and application engineers how public SDK APIs fit
+into realistic framework and meta-framework applications.
 
-Each reference implementation must demonstrate the intended application workflow, exercise the
-relevant SDK surface against shared mocks and fixtures, and provide automated E2E coverage for the
-practical happy paths exposed by the demonstrated SDKs.
+Each reference implementation must validate the intended application workflow, exercise the relevant
+SDK surface against shared mocks and fixtures, and provide automated E2E coverage for the practical
+happy paths exposed by the demonstrated SDKs.
 
 The product goal is to keep framework SDKs and meta-framework patterns usable, documented, and
 validated across personalization, tracking, consent, locale handling, preview, offline behavior,
@@ -90,10 +90,10 @@ throwaway demos.
 ## Selection requirements
 
 - **REFREQ-1 SDK coverage** - Each public framework adapter SDK must have at least one reference
-  implementation that demonstrates its primary integration path.
+  implementation that validates its primary integration path.
 - **REFREQ-2 Runtime coverage** - Each public runtime SDK must have at least one reference
-  implementation that demonstrates initialization, consent, personalization, tracking, locale
-  handling, diagnostics, and preview where the runtime supports those behaviors.
+  implementation that validates initialization, consent, personalization, tracking, locale handling,
+  diagnostics, and preview where the runtime supports those behaviors.
 - **REFREQ-3 Meta-framework coverage** - Each supported meta-framework pattern must have a reference
   implementation when the pattern involves distinct server/browser, routing, rendering, caching, or
   hydration decisions.
@@ -110,13 +110,13 @@ throwaway demos.
 - **REFREQ-7 Customer-style structure** - The app must use normal framework application structure:
   routes, screens, providers, modules, middleware, controllers, components, or views as appropriate.
 - **REFREQ-8 Minimal domain surface** - The app must include enough content, navigation, controls,
-  and state display to validate SDK behavior without becoming a broad sample product.
+  and state display to validate SDK behavior without becoming a broad product shell.
 - **REFREQ-9 App-owned content fetching** - The app must fetch Contentful entries in application
   code and pass single-locale CDA entries to SDK resolution helpers.
 - **REFREQ-10 App-owned consent controls** - The app must include explicit consent controls when the
-  demonstrated flow depends on user consent.
+  validated flow depends on user consent.
 - **REFREQ-11 App-owned identity controls** - The app must include identify and reset controls when
-  profile transitions are part of the SDK behavior being demonstrated.
+  profile transitions are part of the SDK behavior being validated.
 - **REFREQ-12 Real routing or navigation** - The app must use the framework's routing or navigation
   system when testing page, screen, request, middleware, or navigation tracking.
 - **REFREQ-13 Stable test identifiers** - The app must expose stable automation identifiers for
@@ -294,7 +294,7 @@ pattern.
 ## README and runbook requirements
 
 - **REFREQ-71 README role** - Each reference implementation README must explain what the app
-  demonstrates, which SDK packages it validates, and which application pattern it represents.
+  validates, which SDK packages it exercises, and which application pattern it represents.
 - **REFREQ-72 Setup** - The README must provide setup commands from the monorepo root and document
   environment variables using `.env.example`.
 - **REFREQ-73 Running locally** - The README must explain how to start the app and required mock
@@ -320,8 +320,7 @@ Use this checklist when adding or evaluating a framework or meta-framework refer
 - [ ] The implementation has a clear SDK or pattern owner and belongs in the correct
       `implementations/` subtree.
 - [ ] The app uses public SDK APIs and does not import package internals or generated outputs.
-- [ ] The app demonstrates a realistic framework setup path rather than a synthetic test harness
-      alone.
+- [ ] The app validates a realistic framework setup path rather than a synthetic test harness alone.
 - [ ] App-owned Contentful fetching uses the resolved Contentful locale and single-locale CDA entry
       payloads.
 - [ ] Consent, identify, reset, and profile-continuity flows are observable and testable when the

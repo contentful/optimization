@@ -35,7 +35,7 @@ import {
   type OptimizationNodeConfig,
 } from './server'
 import { renderOptimizedEntryOnServer } from './server-entry-renderer'
-import type { ServerTrackingResolvedData } from './tracking-attributes'
+import type { ServerTrackingBaselineEntry, ServerTrackingResolvedData } from './tracking-attributes'
 
 export type { OptimizedEntryRenderContext } from '@contentful/optimization-react-web'
 export type {
@@ -48,11 +48,20 @@ export type {
   NextjsOptimizationServerOptions,
   NextjsServerOptimizedEntryProps,
 } from './bound-component-types'
+export {
+  prefetchOptimizedEntries,
+  type OptimizedEntryPrefetchDescriptor,
+  type ServerOptimizedEntryHandoff,
+} from './server'
 export { NextAppAutoPageTracker, type NextAppAutoPageContext, type NextAppAutoPageTrackerProps }
 type IgnoredReactWebOptimizedEntryProps = Pick<
   ReactWebOptimizedEntryProps,
   'liveUpdates' | 'loadingFallback'
 >
+type NextjsBoundManagedEntryQuery = Extract<
+  NextjsBoundOptimizedEntryProps,
+  { entryId: string }
+>['entryQuery']
 
 export interface NextjsOptimizationComponents {
   readonly OptimizationRoot: (props: BoundNextjsOptimizationRootProps) => Promise<ReactElement>
@@ -103,11 +112,12 @@ export function createNextjsAppRouterOptimization(
 
   async function OptimizationRoot({
     children,
+    serverOptimizedEntries,
   }: BoundNextjsOptimizationRootProps): Promise<ReactElement> {
     const serverData = await loadServerData()
     return createElement(
       ReactWebOptimizationProvider,
-      toClientProviderConfig(config, serverData),
+      { ...toClientProviderConfig(config, serverData), serverOptimizedEntries },
       createElement(
         ReactWebLiveUpdatesProvider,
         { globalLiveUpdates: config.liveUpdates },
@@ -118,11 +128,12 @@ export function createNextjsAppRouterOptimization(
 
   async function OptimizationProvider({
     children,
+    serverOptimizedEntries,
   }: BoundNextjsOptimizationRootProps): Promise<ReactElement | null> {
     const serverData = await loadServerData()
     return createElement(
       ReactWebOptimizationProvider,
-      toClientProviderConfig(config, serverData),
+      { ...toClientProviderConfig(config, serverData), serverOptimizedEntries },
       createElement(
         ReactWebLiveUpdatesProvider,
         { globalLiveUpdates: config.liveUpdates },
@@ -133,19 +144,41 @@ export function createNextjsAppRouterOptimization(
 
   async function OptimizedEntry(props: NextjsBoundOptimizedEntryProps): Promise<ReactElement> {
     const {
-      baselineEntry,
+      baselineEntry: suppliedBaselineEntry,
       children,
+      entryId,
+      entryQuery,
+      errorFallback: _errorFallback,
       liveUpdates: _liveUpdates,
       loadingFallback: _loadingFallback,
+      onEntryError: _onEntryError,
+      onEntryResolved: _onEntryResolved,
       testId,
       'data-testid': dataTestId,
       ...serverEntryProps
     } = props as NextjsBoundOptimizedEntryProps & Partial<IgnoredReactWebOptimizedEntryProps>
     const { data } = await loadServerData()
-    const resolvedData = sdk.resolveOptimizedEntry(baselineEntry, data?.selectedOptimizations)
+    const { baselineEntry, resolvedData } =
+      suppliedBaselineEntry === undefined
+        ? await resolveManagedServerOptimizedEntry(entryId, entryQuery, data)
+        : {
+            baselineEntry: suppliedBaselineEntry,
+            resolvedData: sdk.resolveOptimizedEntry(
+              suppliedBaselineEntry,
+              data?.selectedOptimizations,
+            ),
+          }
     const renderContext: OptimizedEntryRenderContext = {
+      baselineEntry,
+      baselineEntryId: baselineEntry.sys.id,
+      entry: resolvedData.entry,
+      entryId: resolvedData.entry.sys.id,
       getMergeTagValue: (embeddedEntryNodeTarget, profile) =>
         sdk.getMergeTagValue(embeddedEntryNodeTarget, profile ?? data?.profile),
+      optimizationContextId: resolvedData.optimizationContextId,
+      resolvedData,
+      selectedOptimization: resolvedData.selectedOptimization,
+      selectedOptimizations: data?.selectedOptimizations,
     }
     const testAttributes =
       dataTestId === undefined && testId === undefined
@@ -161,6 +194,26 @@ export function createNextjsAppRouterOptimization(
       children: resolveOptimizedEntryChildren(children, resolvedData.entry, renderContext),
       resolvedData,
     })
+  }
+
+  async function resolveManagedServerOptimizedEntry(
+    entryId: string | undefined,
+    entryQuery: NextjsBoundManagedEntryQuery,
+    data: OptimizationData | undefined,
+  ): Promise<{
+    readonly baselineEntry: ServerTrackingBaselineEntry
+    readonly resolvedData: ServerTrackingResolvedData
+  }> {
+    if (entryId === undefined) {
+      throw new Error('Bound Next.js OptimizedEntry requires either baselineEntry or entryId.')
+    }
+
+    const result = await sdk.fetchOptimizedEntry(entryId, {
+      query: entryQuery,
+      selectedOptimizations: data?.selectedOptimizations,
+    })
+
+    return { baselineEntry: result.baselineEntry, resolvedData: result }
   }
 
   return {
@@ -227,7 +280,12 @@ function toClientProviderConfig(
   config: NextjsOptimizationComponentsConfig,
   serverData: NextjsAutomaticServerOptimizationData,
 ): NextjsBoundProviderConfig {
-  const { liveUpdates: _liveUpdates, server: _server, ...providerConfig } = config
+  const {
+    contentful: _contentful,
+    liveUpdates: _liveUpdates,
+    server: _server,
+    ...providerConfig
+  } = config
   const clientProviderConfig: NextjsBoundProviderConfig = {
     ...providerConfig,
     defaults: resolveClientDefaults(providerConfig.defaults, serverData.consent),

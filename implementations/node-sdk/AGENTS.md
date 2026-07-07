@@ -4,7 +4,7 @@ Node SSR reference implementation for `@contentful/optimization-node`.
 
 ## Rules
 
-- Keep this app minimal and documentation-oriented; reusable Node SDK behavior belongs in
+- Keep this app focused and reference-oriented; reusable Node SDK behavior belongs in
   `packages/node/node-sdk`.
 - Local mock defaults come from `.env.example`.
 - `serve` uses PM2-managed processes; use `serve:stop` when done.

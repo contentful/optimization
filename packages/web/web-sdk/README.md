@@ -59,6 +59,9 @@ Install using an NPM-compatible package manager, pnpm for example:
 pnpm install @contentful/optimization-web
 ```
 
+Add `contentful` too when the SDK will use your app-owned `contentful.js` client for managed entry
+fetching.
+
 Import the Optimization class; both CJS and ESM module systems are supported, ESM preferred:
 
 ```ts
@@ -140,15 +143,22 @@ root.onStatesReady = (states) => {
 
 entry.baselineEntry = baselineEntry
 entry.addEventListener('ctfl-entry-resolved', (event) => {
-  renderHero(event.detail.entry)
+  renderHero(event.detail.entry, event.detail.metadata)
 })
 ```
 
-`baselineEntry` is property-only because Contentful entries are structured objects. For framework
-wrappers, assign `baselineEntry`, `sdk`, `defaults`, `api`, and callback properties after client
-hydration, then listen for `ctfl-entry-loading`, `ctfl-entry-resolved`, and `ctfl-entry-error` to
-render framework-owned UI. The custom element intentionally does not provide a framework-neutral
-render-prop API.
+`baselineEntry` is property-only because Contentful entries are structured objects. When the Web SDK
+is configured with `contentful: { client }`, `ctfl-optimized-entry` can also fetch by
+`entry-id`/`entryId`; `baselineEntry` takes precedence when both are set. Set the `entryQuery`
+property for per-entry CDA query overrides. For framework wrappers, assign `baselineEntry`,
+`entryQuery`, `sdk`, `defaults`, `api`, and callback properties after client hydration, then listen
+for `ctfl-entry-loading`, `ctfl-entry-resolved`, and `ctfl-entry-error` to render framework-owned
+UI. The custom element intentionally does not provide a framework-neutral render-prop API. Framework
+wrappers that render without the custom element but still use Web presentation helpers can import
+`OptimizedEntrySourceController` and `createOptimizedEntryLoadingEntry` from
+`@contentful/optimization-web/presentation` to share the same managed entry-source lifecycle.
+Core-only or non-Web custom runtime adapters can import those entry-source primitives directly from
+`@contentful/optimization-core/entry-source` without depending on the Web SDK.
 
 For script-tag usage, load the main Web SDK UMD bundle and the separate Web Components UMD bundle:
 
@@ -187,6 +197,7 @@ the Insights API for event ingestion.
 | `environment`               | No        | `'main'`                                      | Contentful environment identifier                                                 |
 | `api`                       | No        | See API options below                         | Experience API and Insights API endpoint and request options                      |
 | `app`                       | No        | `undefined`                                   | Application metadata attached to outgoing event context                           |
+| `contentful`                | No        | `undefined`                                   | App-owned `contentful.js` client, default query, and cache                        |
 | `locale`                    | No        | `undefined`                                   | SDK Experience API and default event locale                                       |
 | `defaults`                  | No        | `undefined`                                   | Initial state, commonly including consent, persistence consent, or profile values |
 | `allowedEventTypes`         | No        | `['identify', 'page']`                        | Event types intentionally allowed while consent is unset or false                 |
@@ -273,8 +284,23 @@ not have data yet. Router integrations that need current-route deduplication can
 
 ### Content resolution
 
-Fetch Contentful entries in your application layer, then use the SDK to resolve the selected
-variant:
+When a `contentful.js` client is available, prefer SDK-managed fetching by entry ID:
+
+```ts
+const optimization = new ContentfulOptimization({
+  clientId: 'client-id',
+  contentful: { client: contentfulClient },
+  environment: 'main',
+  locale: appLocale,
+})
+
+const { baselineEntry, entry } = await optimization.fetchOptimizedEntry('hero-entry')
+```
+
+`fetchOptimizedEntry(entryId)` fetches the baseline entry and resolves it with the Web SDK's current
+`selectedOptimizations` when omitted. `fetchContentfulEntry()` only performs the managed CDA fetch.
+
+If your application already fetched the baseline entry, keep using the manual resolver:
 
 ```ts
 const { accepted, data: optimizationData } = await optimization.page({
@@ -286,10 +312,10 @@ const resolvedEntry = optimization.resolveOptimizedEntry(
 )
 ```
 
-Fetch entries with one CDA locale in the app layer. For localized apps, configure your application
-locale and pass it directly before calling `getEntry()` or `getEntries()`. Do not pass all-locale
-CDA responses from `withAllLocales` or `locale=*`; the resolver expects direct single-locale field
-values. See
+Use one CDA locale in either path. For localized apps, configure your application locale and pass it
+directly before calling `getEntry()`, `getEntries()`, or SDK-managed entry fetches. Do not pass
+all-locale CDA responses from `withAllLocales` or `locale=*`; the resolver expects direct
+single-locale field values. See
 [Entry optimization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
