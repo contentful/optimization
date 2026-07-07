@@ -8,6 +8,12 @@ Use this guide when your application already sends events to an analytics, tag-m
 customer-data, replay, or product-analytics destination and you want to attach approved Optimization
 SDK context to those events.
 
+The Optimization SDK looks at the current visitor and decides which content variant to show, then
+swaps the baseline entry your app fetched for the selected variant. Your application provides the
+Contentful entries to choose between, the consent policy that controls when the SDK may send data,
+and the locale used for Contentful CDA requests. This guide builds on that foundation to show how to
+pass approved SDK context to your own analytics or tag-management tools.
+
 By the end, you can forward one approved SDK event or context signal to an app-owned destination
 without changing which events the SDK sends to Contentful.
 
@@ -29,6 +35,15 @@ Use this guide when one of these statements is true:
 Skip this guide when you only need Contentful Personalization and Analytics. The SDK already sends
 page, screen, entry interaction, Custom Flag, and profile-updating events to Contentful when your
 integration and consent policy allow them.
+
+## Before you start
+
+- An Optimization client ID from your Contentful Optimization workspace.
+- A Contentful space with at least one entry that has optimization data. The entry must include
+  `nt_experiences` and `nt_variants` fields linked to optimization and variant entries.
+- Contentful space ID, environment name (usually `main`), and a Delivery API access token.
+- The application locale string you use for Contentful CDA requests (for example, `en-US`).
+- Node.js installed (see `.nvmrc` for the required version) and pnpm as the package manager.
 
 ## Quick start
 
@@ -78,10 +93,10 @@ const subscription = optimization.states.eventStream.subscribe((event) => {
 Keep the returned `subscription` for teardown in tests, hot reloads, or route-level provider
 unmounts. The message-ID cache, not the subscription object, prevents re-forwarding across
 subscriber or provider remounts. Remove the initial snapshot guard when forwarding the current
-accepted SDK event at subscription time is intentional. Verify one SDK activity creates one intended
-destination event before adding more vendors or fields. Use the helper in the default recipe when
-the destination rejects `undefined` values or when exposure reports need view and hover
-deduplication.
+accepted SDK event at subscription time is intentional. If it worked, one SDK activity produces one
+event in your analytics destination with the expected `contentful_*` fields, and the SDK continues
+sending its own events to Contentful without change. Use the helper in the default recipe when the
+destination rejects `undefined` values or when exposure reports need view and hover deduplication.
 
 <details>
   <summary>Table of Contents</summary>
@@ -122,9 +137,10 @@ Use the same pattern for every destination:
 6. Attach Contentful context to existing business events only when the report needs attribution by
    experience, variant, entry, or flag.
 
-`states.selectedOptimizations` is useful for readiness checks and coarse segmentation, but it is not
-an exposure event by itself. It tells you which experiences are active for the current profile, not
-which entry rendered or which user interaction occurred.
+`states.selectedOptimizations` (the list of content variants the SDK has picked for this visitor) is
+useful for readiness checks and coarse segmentation, but it is not an exposure event by itself. It
+tells you which experiences are active for the current profile (the visitor identity state
+maintained by the SDK), not which entry rendered or which user interaction occurred.
 
 The SDK event stream is a live handoff, not a durable third-party delivery queue. Stateful
 JavaScript observables emit the current value when a subscriber registers, then later updates. They
@@ -329,7 +345,10 @@ helper for Pages Router `getServerSideProps`; it returns the same `OptimizationD
 flow. When the SDK is configured with `contentful: { client }`, prefer the request-bound managed
 entry helper so the entry decision and analytics context share the same request data. Browser state
 streams cannot explain a server-rendered first paint unless you intentionally hydrate the browser
-with the same Optimization data.
+with the same Optimization data. The example below uses `resolveOptimizedEntry()` (which picks the
+correct variant entry from the list of selected optimizations, or returns the baseline entry when no
+match exists) to produce the resolved entry and `selectedOptimization` values attached to the
+analytics payload.
 
 **Adapt this to your use case:**
 
@@ -380,9 +399,10 @@ collects events.
 
 Subscribe from the screen or application owner that outlives the interactions you want to observe.
 On iOS, `eventStream` is a Combine publisher backed by a `PassthroughSubject`, so subscribe before
-calling `page()`, `screen()`, `flagPublisher(...)`, or rendering tracked entries. On Android,
-collect `client.eventStream` from a lifecycle-aware coroutine scope and cancel that scope with the
-owning screen or activity.
+calling `page()` (which signals to the SDK which page the visitor is viewing, triggering Experience
+API evaluation), `screen()`, `flagPublisher(...)`, or rendering tracked entries. On Android, collect
+`client.eventStream` from a lifecycle-aware coroutine scope and cancel that scope with the owning
+screen or activity.
 
 #### iOS
 

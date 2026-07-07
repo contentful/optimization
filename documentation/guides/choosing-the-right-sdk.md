@@ -3,6 +3,15 @@
 Use this guide when you need to select the Optimization SDK package or native package that matches
 an application runtime before following an integration guide.
 
+The Optimization SDK looks at the current visitor and decides which content variant to show. It then
+swaps the baseline entry your app fetched for the selected variant. To do that, your application
+must supply Contentful entries that include optimization data, a consent policy so the SDK knows how
+to handle visitor tracking, and the locale you use for Contentful Delivery API requests.
+
+## Before you start
+
+- Familiarity with your application runtime and technology stack.
+
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->

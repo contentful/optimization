@@ -3,15 +3,27 @@
 Use this guide when you want to implement server-side personalization in a Node runtime such as
 Express, a custom SSR server, or a server-side function using `@contentful/optimization-node`.
 
-The examples below use Express, but the same request-scoped flow applies to any Node request
-handler.
+The Optimization SDK looks at the current visitor and decides which content variant to show, then
+swaps the baseline entry your app fetched for the selected variant. Your application provides the
+Contentful entries (with `nt_experiences` and `nt_variants` fields), a consent policy, and the
+locale for CDA requests. The SDK handles variant resolution and profile state for each request.
+
+## Before you start
+
+- An Optimization client ID from your Contentful Optimization workspace.
+- A Contentful space with at least one entry that has optimization data. The entry must include
+  `nt_experiences` and `nt_variants` fields linked to optimization and variant entries.
+- Contentful space ID, environment name (usually `main`), and a Delivery API access token.
+- The application locale string you use for Contentful CDA requests (for example, `en-US`).
+- Node.js installed (see `.nvmrc` for the required version) and pnpm as the package manager.
 
 ## Quick start
 
 Install the Node SDK and Express, create one process-level SDK instance, bind request-scoped consent
-and page context with `forRequest()`, call `page()` from a route, and start a local server. This
-quick start assumes your application policy permits Optimization by default and no end-user consent
-UI is rendered.
+and page context with `forRequest()` (which creates a request-scoped SDK client that binds
+per-request data such as locale, consent, and visitor profile), call `page()` from a route, and
+start a local server. This quick start assumes your application policy permits Optimization by
+default and no end-user consent UI is rendered.
 
 **Copy this:**
 
@@ -103,7 +115,7 @@ In another terminal, verify the route.
 curl http://localhost:3000/
 ```
 
-The JSON response contains a `profileId` when `page()` is accepted.
+If it worked, the curl response is a JSON object with a non-empty `profileId` string.
 
 <details>
   <summary>Table of Contents</summary>
@@ -348,8 +360,10 @@ is granted, and labels those events with `context.gdpr.isConsentGiven: false`. C
 
 **Integration category:** Required for first integration
 
-Call `page()` for the server route or request that needs profile evaluation, selected optimizations,
-or Custom Flag changes. Render from the accepted event result for the current request.
+Call `page()` (which tells the SDK which page the visitor is viewing so it can evaluate
+personalization for that page) for the server route or request that needs profile evaluation,
+selected optimizations, or Custom Flag changes. Render from the accepted event result for the
+current request.
 
 1. Create a request-bound SDK client inside the route handler.
 2. Call `page()` before resolving personalized entries for that response.
@@ -399,7 +413,8 @@ The Node SDK does not choose the identity key or fetch traits for you.
 
 1. Read the known user ID from authentication middleware, a session, a JWT, or an upstream account
    service.
-2. Bind the current anonymous profile ID, if one exists, with `forRequest({ profile })`.
+2. Bind the current anonymous profile (the visitor identity state maintained by the SDK) ID, if one
+   exists, with `forRequest({ profile })`.
 3. Call `identify()` when the user is known and your consent policy permits that event.
 4. Render from the response object that best matches the user state for the current response.
 

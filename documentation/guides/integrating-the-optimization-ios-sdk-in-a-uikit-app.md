@@ -7,6 +7,20 @@ Package.
 Use the SwiftUI guide instead when your app renders optimized entries through SwiftUI views:
 [Integrating the Optimization iOS SDK in a SwiftUI app](./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md).
 
+The SDK looks at the current visitor and decides which content variant to show, then swaps the
+baseline entry your app fetched for the selected variant. Your application provides the Contentful
+entries (fetched with your own Contentful client), the consent policy that controls when the SDK may
+emit events, and the locale string that aligns rendered content with SDK event context.
+
+## Before you start
+
+- An Optimization client ID from your Contentful Optimization workspace.
+- A Contentful space with at least one entry that has optimization data. The entry must include
+  `nt_experiences` and `nt_variants` fields linked to optimization and variant entries.
+- Contentful space ID, environment name (usually `main`), and a Delivery API access token.
+- The application locale string you use for Contentful CDA requests (for example, `en-US`).
+- Xcode installed.
+
 ## Quick start
 
 This path proves the SDK can initialize in a UIKit scene and emit one screen event. It assumes
@@ -20,7 +34,7 @@ opt-in apps must also pass `allowedEventTypes: []` before enabling gated events.
 3. Initialize the client with the Optimization client ID, Contentful environment, and accepted
    startup consent.
 4. Track the current screen from `viewDidAppear(_:)`.
-5. Verify the visible label changes to `Optimization screen event accepted`.
+5. If it worked, the SDK diagnostics or debug logs show one accepted screen or page event.
 
 **Copy this:**
 
@@ -348,10 +362,11 @@ let result = client.resolveOptimizedEntry(
 contentView.configure(with: result.entry)
 ```
 
-`resolveOptimizedEntry(baseline:selectedOptimizations:)` is synchronous and fail-soft. It returns
-the baseline entry when no selected optimization matches, when the entry is not optimized, when the
-linked optimization data is missing, or when the selected variant is not present in the Contentful
-payload. For deeper resolver mechanics, see
+`resolveOptimizedEntry(baseline:selectedOptimizations:)` (which picks the correct variant entry from
+the list of selected optimizations, or returns the baseline entry when no match exists) is
+synchronous and fail-soft. It returns the baseline entry when no selected optimization matches, when
+the entry is not optimized, when the linked optimization data is missing, or when the selected
+variant is not present in the Contentful payload. For deeper resolver mechanics, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md).
 
 ### Screen, custom event, and entry tracking
@@ -515,8 +530,8 @@ optimizations from Experience API responses, persist profile-continuity state wh
 reset SDK-managed profile state.
 
 1. Call `identify(userId:traits:)` after sign-in or when the app has a stable application user ID.
-2. Wait for SDK state, rendered content, or app-owned loading state before assuming the profile has
-   affected visible entries.
+2. Wait for SDK state, rendered content, or app-owned loading state before assuming the profile (the
+   visitor identity state maintained by the SDK) has affected visible entries.
 3. Call `reset()` when the app's logout or privacy flow must clear SDK-managed profile,
    selected-optimization, change, and anonymous ID state.
 4. Preserve or clear app-owned user identifiers according to your account and privacy policy. The

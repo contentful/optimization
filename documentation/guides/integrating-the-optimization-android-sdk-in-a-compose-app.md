@@ -4,11 +4,26 @@ Use this guide when you want to add Optimization, Analytics, screen tracking, en
 tracking, Custom Flags, MergeTag rendering, and preview overrides to a native Android application
 built with Jetpack Compose.
 
+The Optimization SDK looks at the current visitor and decides which content variant to show, then
+swaps the baseline entry your app fetched for the selected variant. Your application provides the
+Contentful entries (fetched from the Delivery API), a consent policy that tells the SDK whether it
+may track and personalize, and the locale string used for Contentful CDA requests. The SDK handles
+variant selection; your app handles fetching, rendering, and consent UI.
+
 The Compose integration uses `OptimizationRoot`, `OptimizedEntry`, `OptimizationLazyColumn`, and
 `ScreenTrackingEffect`. Your application still owns Contentful entry fetching, consent policy,
 identity policy, navigation, app-owned caching, and final rendering. Use the Android Views guide
 instead when your app is View-based:
 [Integrating the Optimization Android SDK in an Android Views app](./integrating-the-optimization-android-sdk-in-a-views-app.md).
+
+## Before you start
+
+- An Optimization client ID from your Contentful Optimization workspace.
+- A Contentful space with at least one entry that has optimization data. The entry must include
+  `nt_experiences` and `nt_variants` fields linked to optimization and variant entries.
+- Contentful space ID, environment name (usually `main`), and a Delivery API access token.
+- The application locale string you use for Contentful CDA requests (for example, `en-US`).
+- Android Studio installed.
 
 ## Quick start
 
@@ -69,8 +84,8 @@ an accepted SDK event.
    }
    ```
 
-3. Verify the first run. Confirm one `screen` event for `Home` is accepted with consent marked as
-   accepted in your SDK diagnostics, mock server, or network logs.
+3. Verify the first run. If it worked, the SDK diagnostics or debug logs show one accepted screen or
+   page event.
 
 <details>
   <summary>Table of Contents</summary>
@@ -245,10 +260,12 @@ fun ConsentControls(content: @Composable () -> Unit) {
 ```
 
 By default, mobile `identify` and screen events can emit before event consent is accepted. Entry
-views, entry taps, `page`, and custom `track` events are blocked until consent is accepted or their
-event types are allow-listed. Boolean consent calls control both event emission and durable profile
-continuity. Use this form when events can emit but profile, selected optimizations, changes, and
-anonymous identity must stay session-only:
+views, entry taps, `page` (which tells the SDK which page the visitor is viewing so it can evaluate
+personalization for that page), and custom `track` events are blocked until consent is accepted or
+their event types are allow-listed. Boolean consent calls control both event emission and durable
+profile continuity. Use this form when events can emit but profile, selected optimizations (the list
+of content variants the SDK has picked for this visitor), changes, and anonymous identity must stay
+session-only:
 
 **Copy this:**
 
@@ -315,8 +332,9 @@ the entry map your app must convert into its own view model or Compose hierarchy
 2. Keep field parsing and UI rendering in application components.
 3. Use `accessibilityIdentifier` when tests or accessibility tooling need a stable wrapper
    identifier.
-4. Use `client.resolveOptimizedEntry(...)` directly only when a custom UI abstraction needs the same
-   local resolver without the Compose wrapper.
+4. Use `client.resolveOptimizedEntry(...)` (which picks the correct variant entry from the list of
+   selected optimizations, or returns the baseline entry when no match exists) directly only when a
+   custom UI abstraction needs the same local resolver without the Compose wrapper.
 
 **Adapt this to your use case:**
 
@@ -349,9 +367,9 @@ LaunchedEffect(entry) {
 }
 ```
 
-Collect `selectedOptimizations` inside the effect when custom UI must re-resolve after profile,
-preview, or consent-driven selection changes. Reading `client.selectedOptimizations.value` only
-captures the current snapshot.
+Collect `selectedOptimizations` inside the effect when custom UI must re-resolve after profile (the
+visitor identity state maintained by the SDK), preview, or consent-driven selection changes. Reading
+`client.selectedOptimizations.value` only captures the current snapshot.
 
 The resolver does not fetch Contentful entries, evaluate audiences, call the Experience API, or
 mutate state. It joins the current selected optimization metadata with linked entries already

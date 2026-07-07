@@ -4,11 +4,25 @@ Use this guide when you want to add Optimization, Analytics, screen tracking, en
 tracking, Custom Flags, and preview overrides to a SwiftUI application using the Optimization iOS
 SDK.
 
+The iOS SDK looks at the current visitor and decides which content variant to show, then swaps the
+baseline entry your app fetched for the selected variant. You provide Contentful entries fetched
+with your own client, a consent policy that reflects your application's privacy requirements, and a
+locale string that aligns the SDK's personalization with the language your content is rendered in.
+
 The SwiftUI integration uses `OptimizationRoot`, `OptimizedEntry`, `OptimizationScrollView`, and
 `.trackScreen(name:)`. Your application still owns Contentful entry fetching, consent policy,
 identity policy, navigation, and final rendering. Use the UIKit guide instead when your app is
 UIKit-based:
 [Integrating the Optimization iOS SDK in a UIKit app](./integrating-the-optimization-ios-sdk-in-a-uikit-app.md).
+
+## Before you start
+
+- An Optimization client ID from your Contentful Optimization workspace.
+- A Contentful space with at least one entry that has optimization data. The entry must include
+  `nt_experiences` and `nt_variants` fields linked to optimization and variant entries.
+- Contentful space ID, environment name (usually `main`), and a Delivery API access token.
+- The application locale string you use for Contentful CDA requests (for example, `en-US`).
+- Xcode installed.
 
 ## Quick start
 
@@ -102,8 +116,7 @@ path or defer `.trackScreen(name:)` until consent is accepted.
    }
    ```
 
-3. Verify the first run. The entry ID text renders the baseline entry when no selected variant is
-   available, or the selected variant entry when the Experience API selects one for the visitor.
+3. If it worked, the SDK diagnostics or debug logs show one accepted screen or page event.
 
 <details>
   <summary>Table of Contents</summary>
@@ -159,7 +172,8 @@ Use this table as the setup inventory for the guide:
 
 The iOS SDK does not fetch Contentful entries for your application UI. Fetch entries in the
 application layer, then pass the resulting single-locale dictionaries to `OptimizedEntry` or
-`client.resolveOptimizedEntry(...)`.
+`client.resolveOptimizedEntry(...)` (which picks the correct variant entry from the list of selected
+optimizations, or returns the baseline entry when no match exists).
 
 ## Core integration
 
@@ -520,14 +534,15 @@ behavior, see
 **Integration category:** Common but policy-dependent
 
 Identify users when your product has an application-owned user identity that can be sent to
-Optimization. The SDK publishes profile, selected optimizations, changes, consent, and locale state
-through `OptimizationClient`.
+Optimization. The SDK publishes profile (the visitor identity state maintained by the SDK), selected
+optimizations, changes, consent, and locale state through `OptimizationClient`.
 
 1. Call `identify(userId:traits:)` from the authenticated flow or account state change that owns
    identity.
 2. Read `client.state.profile` when SwiftUI needs to react to profile state.
-3. Read `client.selectedOptimizations` only for app-owned resolution or diagnostics;
-   `OptimizedEntry` observes it automatically.
+3. Read `client.selectedOptimizations` (the list of content variants the SDK has picked for this
+   visitor) only for app-owned resolution or diagnostics; `OptimizedEntry` observes it
+   automatically.
 4. Call `client.reset()` when the user signs out or your policy requires clearing SDK-managed
    profile continuity.
 5. Re-emit a screen or page event after reset when the active journey needs fresh anonymous state.

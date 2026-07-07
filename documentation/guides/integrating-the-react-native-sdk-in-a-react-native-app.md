@@ -4,10 +4,25 @@ Use this guide when you want to add mobile personalization, Analytics events, sc
 optional preview tooling to a React Native or Expo application with
 `@contentful/optimization-react-native`.
 
+The SDK looks at the current visitor and decides which content variant to show, then swaps the
+baseline entry your app fetched for the selected variant. To use it, your application must supply
+Contentful entries (fetched with enough link depth to resolve optimization and variant data), a
+consent policy, and the locale string you use for Contentful Delivery API requests.
+
 The React Native SDK builds on the Optimization Core SDK and adds React Native providers, hooks,
 entry rendering, viewport and tap tracking, AsyncStorage persistence, optional offline delivery, and
 an in-app preview panel. Your application still owns Contentful Delivery API client configuration,
 Contentful locale policy, consent policy, identity policy, navigation, and final rendering.
+
+## Before you start
+
+- An Optimization client ID from your Contentful Optimization workspace.
+- A Contentful space with at least one entry that has optimization data. The entry must include
+  `nt_experiences` and `nt_variants` fields linked to optimization and variant entries.
+- Contentful space ID, environment name (usually `main`), and a Delivery API access token.
+- The application locale string you use for Contentful CDA requests (for example, `en-US`).
+- Node.js installed (see `.nvmrc` for the required version), pnpm as the package manager, and a
+  React Native or Expo development environment.
 
 ## Quick start
 
@@ -80,8 +95,7 @@ events or rendering personalized content.
    }
    ```
 
-3. Verify the first run. The app displays a resolved entry ID for either the selected variant or the
-   baseline fallback.
+3. If it worked, the SDK diagnostics or debug logs show one accepted screen or page event.
 
 <details>
   <summary>Table of Contents</summary>
@@ -244,7 +258,8 @@ By default, React Native permits `identify` and `screen` before event consent is
 views, entry taps, `page`, and custom `track` events are blocked until consent is accepted or their
 event types are allow-listed. Boolean consent calls control both event emission and durable profile
 continuity. Use `optimization.consent({ events: true, persistence: false })` when events can emit
-but profile, selected optimizations, changes, and anonymous identity must stay session-only.
+but profile (the visitor identity state maintained by the SDK), selected optimizations, changes, and
+anonymous identity must stay session-only.
 
 For cross-SDK policy details, see
 [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
@@ -540,9 +555,9 @@ function AccountControls() {
 ```
 
 AsyncStorage persists consent state and, when persistence consent permits it, profile, selected
-optimizations, changes, and anonymous identity across app launches. It does not persist SDK event
-queues. Live SDK state after startup comes from in-memory SDK state, not repeated AsyncStorage
-reads.
+optimizations (the list of content variants the SDK has picked for this visitor), changes, and
+anonymous identity across app launches. It does not persist SDK event queues. Live SDK state after
+startup comes from in-memory SDK state, not repeated AsyncStorage reads.
 
 For advanced anonymous ID ownership, pass `getAnonymousId` to `OptimizationRoot` or
 `ContentfulOptimization.create(...)` only when your app owns an approved anonymous ID that

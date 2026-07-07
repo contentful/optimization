@@ -5,6 +5,21 @@ rendering, and preview overrides to a native Android application built with XML 
 Views. Use the Compose guide when the screen is built with Jetpack Compose:
 [Integrating the Optimization Android SDK in a Jetpack Compose app](./integrating-the-optimization-android-sdk-in-a-compose-app.md).
 
+The SDK looks at the current visitor and decides which content variant to show, then swaps the
+baseline entry your app fetched for the selected variant. Your application is responsible for
+supplying the Contentful entries (fetched from the Contentful Delivery API), a consent policy that
+tells the SDK when it may emit events, and the locale string used for Contentful requests. The SDK
+resolves which variant to show; your app owns fetching, rendering, and consent UX.
+
+## Before you start
+
+- An Optimization client ID from your Contentful Optimization workspace.
+- A Contentful space with at least one entry that has optimization data. The entry must include
+  `nt_experiences` and `nt_variants` fields linked to optimization and variant entries.
+- Contentful space ID, environment name (usually `main`), and a Delivery API access token.
+- The application locale string you use for Contentful CDA requests (for example, `en-US`).
+- Android Studio installed.
+
 ## Quick start
 
 This path uses the Android/native default pre-consent allow-list, where `screen` can emit before an
@@ -96,8 +111,7 @@ single-locale Contentful entry, and renders the resolved entry in an Android Vie
    }
    ```
 
-4. Verify that the entry renders either its baseline content or selected variant content in the
-   Android View.
+4. If it worked, the SDK diagnostics or debug logs show one accepted screen or page event.
 
 <details>
   <summary>Table of Contents</summary>
@@ -399,11 +413,12 @@ For the Contentful entry contract and fallback rules, see
 
 **Copy this:**
 
-```xml
+```html
 <com.contentful.optimization.views.OptimizedEntryView
-    android:id="@+id/hero_slot"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content" />
+  android:id="@+id/hero_slot"
+  android:layout_width="match_parent"
+  android:layout_height="wrap_content"
+/>
 ```
 
 2. Set `accessibilityIdentifier`, set a renderer that turns the resolved entry map into a child
@@ -650,8 +665,8 @@ lifecycleScope.launch {
 ```
 
 After reset, emit a fresh screen, identify, page, or other approved profile-producing event before
-expecting new selected optimizations. Store account IDs, consent records, and cross-device identity
-state outside the SDK.
+expecting new selected optimizations (the list of content variants the SDK has picked for this
+visitor). Store account IDs, consent records, and cross-device identity state outside the SDK.
 
 ### Runtime locale changes
 
@@ -714,9 +729,9 @@ For forwarding SDK context to other destinations, see
 
 **Integration category:** Optional
 
-Custom Flags and MergeTag helpers read profile-backed values from the initialized
-`OptimizationClient`. Use them from Views, adapters, or binders that already wait for SDK
-initialization.
+Custom Flags and MergeTag helpers read profile (the visitor identity state maintained by the
+SDK)-backed values from the initialized `OptimizationClient`. Use them from Views, adapters, or
+binders that already wait for SDK initialization.
 
 1. Use `client.getFlag(name)` for a one-time Custom Flag read.
 2. Use `client.observeFlag(name)` when a View needs a `StateFlow` that updates with flag value
