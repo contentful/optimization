@@ -1,28 +1,56 @@
 # Integrating the Optimization Next.js SDK in a Next.js App Router app
 
-Use this guide when you want a Next.js App Router route to personalize the initial HTML with server
-optimization state, then let the browser take over entry resolution after server-to-browser state
-handoff when consent, identity, profile, preview, or route state changes.
+Use this guide to add Contentful personalization to a Next.js App Router site you already have. By
+the end of the quick start, one piece of content will be personalized per visitor in the
+server-rendered HTML — no flash of default content, no rewrite of how your app fetches or renders.
 
-This pattern uses `@contentful/optimization-nextjs`. The `/app-router` factory binds app-local
-components that compose the stateless Node SDK in Server Components and the React Web SDK in Client
-Components. The request handler forwards sanitized Next.js proxy or middleware request context
-headers. Your application still owns Contentful fetching, consent policy, identity policy, routing,
-caching, and component rendering.
+**New to personalization?** Here is the whole idea in four sentences:
 
-If your application still uses the Pages Router, use the
+- In Contentful you author **variants** of an entry and attach them to an **experience** — a rule
+  that decides which visitors see which variant.
+- When a page is requested, Contentful's **Experience API** looks at the current visitor and picks
+  the variant for each experience. Swapping a fetched entry for its picked variant is called
+  **resolving** the entry.
+- Your app already fetches Contentful entries and turns them into components. The SDK's only job is
+  to sit at that hand-off and give you the resolved variant instead of the original — or the
+  original entry when no variant applies, which is the **baseline fallback**.
+- You render whatever the SDK hands back exactly as you render entries today.
+
+That is enough to start. You do not need to understand audiences, traffic allocation, or events yet;
+this guide introduces each idea at the point you need it.
+
+You will get there in two milestones:
+
+- **Milestone 1 — personalized first paint (the quick start below).** A visitor sees their variant
+  in the server HTML. This is complete and shippable on its own.
+- **Milestone 2 — browser takeover (opt-in, later).** Content re-personalizes live when consent,
+  identity, or profile changes, without a page reload. See
+  [Browser takeover and live updates](#browser-takeover-and-live-updates).
+
+This guide uses `@contentful/optimization-nextjs`. The `/app-router` factory gives you app-local
+components that do the right thing in both Server and Client Components. Your app keeps ownership of
+Contentful fetching, consent policy, identity, routing, caching, and rendering.
+
+If your app uses the Pages Router, use the
 [Next.js Pages Router guide](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
 instead.
 
 ## Quick start
 
-This quick start assumes your application policy permits accepted SDK startup. It uses the bound
-server root as the initial page-event owner so the route can render personalized HTML before browser
-takeover. If consent depends on a consent management platform (CMP), regional rule, account
-preference, or user choice, keep the same structure and apply the policy-dependent consent section
-before release.
+Most App Router + Contentful sites share one shape: you fetch a **page** entry, and render its
+sections through a renderer that maps each section's content type to a component. This quick start
+assumes that shape and shows the changes as **diffs against your existing files** — you are adding a
+few lines, not replacing your app. The diffs are illustrative, not literal patches: find the
+equivalent lines in your own files rather than expecting them to apply cleanly. If your app is
+shaped differently (a flat list of entries, or one entry per route), the wrap is the same; see
+[Personalizing first paint on the server](#personalizing-first-paint-on-the-server).
 
-1. Install the Next.js adapter package.
+It proves one result: **one section renders its personalized variant in the server HTML.** It
+assumes your app may personalize on startup. If personalization must wait for consent, keep this
+structure and add the [Consent, identity, profile, and reset](#consent-identity-profile-and-reset)
+step before you ship.
+
+1. Install the adapter package.
 
    **Copy this:**
 
@@ -30,128 +58,132 @@ before release.
    pnpm add @contentful/optimization-nextjs
    ```
 
-2. Bind app-local SDK components once from `/app-router`. Server Components resolve this import to
-   the automatic server implementation, and Client Components resolve it to client exports.
+2. Create one module that binds the SDK to your config. You do this once and import from it
+   everywhere. Put it at a path your app's import alias understands (for example `src/lib/`), and
+   use the same environment-variable convention your app already uses for Contentful.
 
-   **Copy this:**
+   **Adapt this to your use case:** replace the placeholder values and the import path; the config
+   keys are explained in [How the SDK fits your app](#how-the-sdk-fits-your-app).
 
    ```ts
-   // lib/optimization.ts
+   // src/lib/optimization.ts
    import { createNextjsAppRouterOptimization } from '@contentful/optimization-nextjs/app-router'
 
    export const APP_LOCALE = 'en-US'
 
    export const { proxy, NextAppAutoPageTracker, OptimizationRoot, OptimizedEntry } =
      createNextjsAppRouterOptimization({
-       clientId: process.env.NEXT_PUBLIC_CONTENTFUL_OPTIMIZATION_CLIENT_ID ?? '',
-       environment: process.env.NEXT_PUBLIC_CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main',
+       clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID ?? '',
+       environment: process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main',
        locale: APP_LOCALE,
+       // consent: allowed to personalize and send events for this visitor.
+       // persistenceConsent: allowed to store a profile-id cookie so results stay consistent.
        defaults: { consent: true, persistenceConsent: true },
        server: {
-         enabled: true,
+         enabled: true, // resolve variants on the server, for first paint
          consent: { events: true, persistence: true },
        },
-       api: {
-         experienceBaseUrl: process.env.NEXT_PUBLIC_CONTENTFUL_EXPERIENCE_API_BASE_URL,
-         insightsBaseUrl: process.env.NEXT_PUBLIC_CONTENTFUL_INSIGHTS_API_BASE_URL,
-       },
-       app: {
-         name: 'my-next-app',
-         version: '1.0.0',
-       },
-       logLevel: 'error',
+       app: { name: 'my-next-app', version: '1.0.0' },
      })
    ```
 
-3. Export the SDK proxy for Server Components that use the bound server path.
+3. Add the request handler so the SDK runs before your pages render. Next.js executes this file on
+   every matching request; the SDK's `proxy` reads the visitor's cookies, asks the Experience API
+   who they are, and stores that identity (an anonymous **profile** id) in the `ctfl-opt-aid` cookie
+   so the same visitor gets consistent variants next time. You are only mounting it — not writing
+   that logic.
 
    **Copy this:**
 
    ```ts
-   // proxy.ts
-   export { proxy } from './lib/optimization'
+   // proxy.ts — at your Next.js app root (use middleware.ts on Next.js versions that still use it)
+   export { proxy } from './src/lib/optimization'
 
    export const config = {
      matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
    }
    ```
 
-4. Mount the bound root once in the App Router layout. The SDK proxy reads request cookies and
-   headers, calls the server SDK, persists the returned profile ID, and passes server optimization
-   state into the browser root.
+4. Wrap your layout in `OptimizationRoot`, and drop the page tracker inside it. **Keep everything
+   your layout already renders** — header, footer, providers, fonts, styles. You are adding a
+   wrapper, not replacing the file. Put the root around your whole app (chrome included) so that
+   header, footer, or announcement content can be personalized later too.
 
-   **Adapt this to your use case:**
+   **Adapt this to your use case:** the diff shows the additions against a typical layout; place the
+   root to enclose everything you render inside `<body>`.
 
    ```tsx
    // app/layout.tsx
-   import { NextAppAutoPageTracker, OptimizationRoot } from '@/lib/optimization'
-   import { Suspense, type ReactNode } from 'react'
+   +import { NextAppAutoPageTracker, OptimizationRoot } from '@/src/lib/optimization'
+   +import { Suspense } from 'react'
 
-   export default async function RootLayout({ children }: { children: ReactNode }) {
-     return (
-       <html lang="en">
-         <body>
-           <OptimizationRoot>
-             <Suspense>
-               {/* The bound server root owns the initial page event for this request. */}
-               <NextAppAutoPageTracker initialPageEvent="skip" />
-             </Suspense>
-             {children}
-           </OptimizationRoot>
-         </body>
-       </html>
-     )
-   }
+    export default async function RootLayout({ children }: { children: React.ReactNode }) {
+      const settings = await getSiteSettings() // your existing code stays
+      return (
+        <html lang="en">
+          <body>
+   +        <OptimizationRoot>
+   +          {/* "skip": the server already reported this page view — don't report it twice. */}
+   +          <Suspense>
+   +            <NextAppAutoPageTracker initialPageEvent="skip" />
+   +          </Suspense>
+              <Header settings={settings} />
+              {children}
+              <Footer settings={settings} />
+   +        </OptimizationRoot>
+          </body>
+        </html>
+      )
+    }
    ```
 
-5. Fetch single-locale Contentful entries in a Server Component and render first-paint content with
-   the bound `OptimizedEntry`.
+5. Find the one place your app turns a Contentful entry into a component — for a sectioned site,
+   that is the `.map` inside your section renderer — and wrap it in `OptimizedEntry`. This single
+   change is the whole integration: keep your fetch and your components as they are.
 
-   **Adapt this to your use case:**
+   **Adapt this to your use case:** wrap the return line inside your existing renderer; keep your
+   null-handling exactly as it is.
 
    ```tsx
-   // app/page.tsx
-   import { OptimizedEntry } from '@/lib/optimization'
-   import { fetchEntriesFromContentful } from '@/lib/contentful-client'
-   import type { Entry } from 'contentful'
+   // components/SectionRenderer.tsx
+   +import { OptimizedEntry } from '@/src/lib/optimization'
+   // SectionEntry is your existing section type — the union your components already accept.
 
-   function EntryCard({ entry }: { entry: Entry }) {
-     return <h2>{String(entry.fields.title ?? '')}</h2>
-   }
-
-   export default async function Home() {
-     const entries = await fetchEntriesFromContentful(['home-hero', 'home-offer'])
-
-     return (
-       <>
-         {entries.map((entry) => (
-           <OptimizedEntry key={entry.sys.id} baselineEntry={entry}>
-             {(resolvedEntry) => <EntryCard entry={resolvedEntry} />}
-           </OptimizedEntry>
-         ))}
-       </>
-     )
-   }
+    export function SectionRenderer({ sections }) {
+      return sections?.map((entry) => {
+        const Component = entry ? sectionMap[entry.sys.contentType.sys.id] : undefined
+        if (!entry || !Component) return null // your existing guard stays
+   -    return <Component key={entry.sys.id} entry={entry} />
+   +    return (
+   +      <OptimizedEntry key={entry.sys.id} baselineEntry={entry}>
+   +        {/* Render prop hands back a base `Entry`; cast to your section type.
+   +            If your type is narrowed (e.g. withoutUnresolvableLinks), use `as unknown as SectionEntry`. */}
+   +        {(resolved) => <Component entry={resolved as SectionEntry} />}
+   +      </OptimizedEntry>
+   +    )
+      })
+    }
    ```
 
-6. Verify the first run. The route source must contain the server-selected content or baseline
-   fallback, that content must remain visible after hydration, and the browser must not emit a
-   duplicate initial page event when `initialPageEvent="skip"` is used with the bound server root.
+6. Verify the one result. In Contentful, author a variant on a section that appears on your home
+   page and attach it to an experience — for a first test, target **all visitors** so you match it
+   automatically. Load the page, **View Source** (or disable JavaScript), and search the raw HTML
+   for the variant's text. It must be present in the server HTML and stay on screen after the page
+   hydrates. If you see the original content instead, work through
+   [Troubleshooting](#troubleshooting).
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Required setup](#required-setup)
+- [Before you start](#before-you-start)
 - [Core integration](#core-integration)
-  - [Package entry points and runtime boundary](#package-entry-points-and-runtime-boundary)
-  - [App-local bound components](#app-local-bound-components)
-  - [Proxy request context](#proxy-request-context)
-  - [Contentful fetching and entry shape](#contentful-fetching-and-entry-shape)
-  - [Server first render and fallback behavior](#server-first-render-and-fallback-behavior)
-  - [Bound root and server optimization state](#bound-root-and-server-optimization-state)
-  - [Client takeover and live re-resolution](#client-takeover-and-live-re-resolution)
-  - [Page events and App Router navigation](#page-events-and-app-router-navigation)
+  - [How the SDK fits your app](#how-the-sdk-fits-your-app)
+  - [Fetching Contentful entries](#fetching-contentful-entries)
+  - [Request context and the profile cookie](#request-context-and-the-profile-cookie)
+  - [Personalizing first paint on the server](#personalizing-first-paint-on-the-server)
+  - [The bound root and page events](#the-bound-root-and-page-events)
+  - [Browser takeover and live updates](#browser-takeover-and-live-updates)
   - [Entry interaction tracking](#entry-interaction-tracking)
   - [Consent, identity, profile, and reset](#consent-identity-profile-and-reset)
 - [Optional integrations](#optional-integrations)
@@ -170,342 +202,296 @@ before release.
 <!-- mtoc-end -->
 </details>
 
-## Required setup
+## Before you start
 
-Use this table as the setup inventory for the full App Router integration:
+The sections below walk the integration in order. First, gather the few things you can only get from
+outside this guide:
 
-| Setup item                                                        | Category                       | Required for quick start | Where to configure                                                                  |
-| ----------------------------------------------------------------- | ------------------------------ | ------------------------ | ----------------------------------------------------------------------------------- |
-| Next.js App Router with React and React DOM peer dependencies     | Required for first integration | Yes                      | Application `package.json`                                                          |
-| `@contentful/optimization-nextjs` package                         | Required for first integration | Yes                      | Application package manager                                                         |
-| App-local bound components from `/app-router`                     | Required for first integration | Yes                      | `lib/optimization.ts` with `createNextjsAppRouterOptimization()`                    |
-| Optimization client ID, environment, locale, and API endpoints    | Required for first integration | Yes                      | Bound component factory config with browser-safe environment variables              |
-| Contentful CDA credentials and app-owned fetcher                  | Required for first integration | Yes                      | Application Contentful client                                                       |
-| Single-locale CDA entries with resolved optimization links        | Required for first integration | Yes                      | CDA calls with one `locale` and enough `include` depth, commonly `include: 10`      |
-| Next.js proxy or middleware hook                                  | Common but policy-dependent    | Yes                      | `proxy.ts` or `middleware.ts` for request context forwarding                        |
-| Bound `OptimizationRoot`                                          | Required for first integration | Yes                      | App Router layout                                                                   |
-| Bound `OptimizedEntry` for server first-paint/static content      | Required for first integration | Yes                      | Server Components that render Contentful entries                                    |
-| App-local or `/client` `OptimizedEntry` for live/browser surfaces | Required for first integration | No                       | Client Components that render personalized entries after browser startup            |
-| App Router page tracker                                           | Required for first integration | Yes                      | `NextAppAutoPageTracker` under the bound `OptimizationRoot`                         |
-| Consent and persistence policy                                    | Common but policy-dependent    | Conditional              | `server.consent`, browser consent defaults, CMP, or controls                        |
-| Anonymous ID cookie continuity                                    | Common but policy-dependent    | Conditional              | Bound server state handoff, ESR persistence, and `ctfl-opt-aid`                     |
-| Browser identify, profile state, and reset controls               | Common but policy-dependent    | No                       | Client Components using Next.js client hooks                                        |
-| Entry interaction tracking for views, clicks, and hovers          | Common but policy-dependent    | No                       | Factory `trackEntryInteraction`, `OptimizedEntry` props, or manual browser tracking |
-| Analytics or tag-manager forwarding                               | Optional                       | No                       | Factory `onStatesReady` subscription and app-owned forwarding code                  |
-| Merge tag and Custom Flag rendering                               | Optional                       | No                       | `OptimizedEntry` render props, Rich Text renderers, flag readers, and live surfaces |
-| Preview panel package                                             | Optional                       | No                       | Environment-gated preview attachment in non-production app environments             |
-| Manual server or client SDK wiring                                | Advanced or production-only    | No                       | `/server`, `/client`, and explicit `serverOptimizationState` escape hatches         |
-| Strict pre-consent allowlist, storage, queue, and cookie policy   | Advanced or production-only    | No                       | Factory config, `server.consent`, CMP integration, and application cleanup          |
-| Personalized response caching and duplicate-event policy          | Advanced or production-only    | No                       | Next.js route config, CDN rules, bound component placement, and tracker settings    |
+- **A Next.js App Router app** with React and React DOM installed, and its own Contentful fetching
+  already working.
+- **Contentful delivery credentials** — space ID, delivery token, and environment.
+- **At least one entry with a variant attached to an experience**, authored in Contentful. Without
+  an authored variant the integration still runs, but every visitor sees the baseline, so you cannot
+  tell personalization from a bug. For your first test, an experience that targets all visitors is
+  the easiest to verify because you match it automatically.
+- **Your Optimization project values** — client ID and environment, from your Optimization project
+  settings. The Experience and Insights API base URLs default correctly; you only set them for mocks
+  or non-default hosts (see [How the SDK fits your app](#how-the-sdk-fits-your-app)).
 
-Use one application Contentful locale for entries that feed SDK resolution. The SDK Experience and
-event locale often uses the same string, but the SDK does not fetch Contentful content or change CDA
-requests for you.
+You do not need a setup inventory up front. Everything else — the request handler, the root, entry
+wrapping, consent, tracking — is introduced by the section that needs it.
+
+> [!NOTE]
+>
+> This guide uses `NEXT_PUBLIC_`-prefixed environment variables because Next.js only exposes
+> variables with that prefix to browser code. Use whatever prefix your app already uses for its
+> other browser-visible Contentful variables, and keep it consistent.
 
 ## Core integration
 
-### Package entry points and runtime boundary
+### How the SDK fits your app
 
 **Integration category:** Required for first integration
 
-The Next.js adapter is a glue package. App Router integrations should start from `/app-router` and
-export app-local bound components once. Use subpaths for hooks, request handlers, schemas, ESR, or
-manual escape hatches.
+The Next.js adapter is a thin layer between three things you already have or control: your
+Contentful data, Contentful's Experience API, and your React components. You configure it once, and
+it hands you components that behave correctly on the server and in the browser.
 
-| Import path                                       | Runtime                                       | Responsibility                                                                                                    |
-| ------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `@contentful/optimization-nextjs/app-router`      | App-local binding module                      | Preferred `createNextjsAppRouterOptimization()` factory for App Router proxy plus Server and Client Components    |
-| `@contentful/optimization-nextjs/client`          | Client Components                             | Router-neutral browser hooks, manual client providers, live updates helpers, and entry components                 |
-| `@contentful/optimization-nextjs/server`          | Advanced server-only modules                  | Manual server SDK creation, request binding, server resolution, and SSR tracking attributes                       |
-| `@contentful/optimization-nextjs/esr`             | Route handlers, edge functions, and ESR flows | Request-rendered Optimization data and explicit response persistence                                              |
-| `@contentful/optimization-nextjs/request-handler` | Next.js proxy or middleware                   | Request URL capture and SDK-owned request header sanitization                                                     |
-| `@contentful/optimization-nextjs/api-schemas`     | Shared schema helpers                         | API types plus structural guards such as `isMergeTagEntry`, `isRichTextDocument`, and `isResolvedContentfulEntry` |
+The only import path you need to start is `/app-router`. It resolves automatically: in a Server
+Component the returned components render personalized HTML on the server; in a Client Component the
+same imports use the browser runtime. You reach for the other subpaths only later.
 
-1. Install `@contentful/optimization-nextjs` in the Next.js app.
-2. Create an app-local module, commonly `lib/optimization.ts`, that calls
-   `createNextjsAppRouterOptimization()`.
-3. Import `OptimizationRoot`, `OptimizationProvider`, the bound `OptimizedEntry`, and route trackers
-   from the app-local module in Server and Client Components.
-4. Import browser hooks, and `OptimizedEntry` for per-entry `liveUpdates` or `loadingFallback`, from
-   `/client` only inside Client Components marked with `'use client'`.
-5. Re-export `proxy` from the app-local module in proxy or middleware code and declare the literal
-   Next.js matcher config there.
-6. Keep `/server` imports for manual server control when the bound App Router factory does not fit a
-   route.
-7. Import schema guards and API types from `/api-schemas`, not from `/client`.
+| Import path                                   | Use it for                                                                                  |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-nextjs/app-router`  | The factory returning your bound `OptimizationRoot`, `OptimizedEntry`, tracker, and `proxy` |
+| `@contentful/optimization-nextjs/client`      | Browser-only hooks and per-entry live-update controls, inside `'use client'` components     |
+| `@contentful/optimization-nextjs/server`      | Manual server SDK control, for advanced routes only                                         |
+| `@contentful/optimization-nextjs/api-schemas` | Type guards such as `isMergeTagEntry` and `isResolvedContentfulEntry`                       |
 
-**Copy this:**
+The config you pass to `createNextjsAppRouterOptimization()` breaks down like this:
 
-```sh
-pnpm add @contentful/optimization-nextjs
-```
+1. `clientId` and `environment` identify your Optimization project. Read them from browser-safe env
+   variables.
+2. `locale` is the one locale the SDK uses for Experience and event context. Use the same locale you
+   pass to Contentful.
+3. `api` overrides the Experience and Insights endpoints. Set these only for a mock, a proxy, or
+   non-default hosts; omit them otherwise.
+4. `defaults` is the browser SDK's starting state: `consent` (may personalize and send events) and
+   `persistenceConsent` (may store the profile-id cookie).
+5. `server.enabled: true` turns on server-side first paint. `server.consent` decides, per request,
+   whether the server may personalize; return `false` to fall back to baseline.
+6. `app` is your app's name and version, sent as metadata.
 
-The adapter package lists Next.js, React, and React DOM as application-owned peer dependencies. It
-uses the runtime that is already installed by the app.
-
-### App-local bound components
-
-**Integration category:** Required for first integration
-
-Create the bound components once at module level. The `/app-router` export resolves to the automatic
-server implementation for Server Components and to client exports for Client Components. The SDK
-proxy creates the server SDK, reads request cookies and headers, resolves `server.consent`, calls
-the server page helper, persists `ctfl-opt-aid`, and forwards server data. The bound server root and
-bound server `OptimizedEntry` consume that forwarded data and pass it through
-`serverOptimizationState` internally.
-
-1. Read browser-safe Optimization client ID, environment, locale, and endpoint values in the
-   app-local binding module.
-2. Pass the application Experience/event locale to the SDK singleton.
-3. Configure API endpoint overrides only when your app uses mocks, a proxy, or non-default hosts.
-4. Set `server.enabled: true` and provide `server.consent` when the server path should own first
-   paint personalization and initial page data.
-5. Put application consent policy in `server.consent`; return `false` when the request is not
-   allowed to personalize.
-6. Configure `defaults` for the browser SDK's startup state.
-7. Export the returned `proxy` from `proxy.ts` and declare the matcher as a literal Next.js config
-   object for routes that use the bound server path.
-
-**Adapt this to your use case:**
+**Adapt this to your use case:** a config with a real, per-request consent check instead of
+always-on startup.
 
 ```ts
-// lib/optimization.ts
+// src/lib/optimization.ts
 import { createNextjsAppRouterOptimization } from '@contentful/optimization-nextjs/app-router'
 
 export const APP_LOCALE = 'en-US'
 
-const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
+const CONSENT_COOKIE = 'app-personalization-consent'
 
-export const {
-  proxy,
-  NextAppAutoPageTracker,
-  OptimizationRoot,
-  OptimizationProvider,
-  OptimizedEntry,
-} = createNextjsAppRouterOptimization({
-  clientId: process.env.NEXT_PUBLIC_CONTENTFUL_OPTIMIZATION_CLIENT_ID ?? '',
-  environment: process.env.NEXT_PUBLIC_CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main',
-  locale: APP_LOCALE,
-  defaults: { consent: false, persistenceConsent: false },
-  server: {
-    enabled: true,
-    consent: ({ cookies }) =>
-      cookies.get(APP_PERSONALIZATION_CONSENT_COOKIE)?.value === 'granted'
-        ? { events: true, persistence: true }
-        : false,
-  },
-  api: {
-    experienceBaseUrl: process.env.NEXT_PUBLIC_CONTENTFUL_EXPERIENCE_API_BASE_URL,
-    insightsBaseUrl: process.env.NEXT_PUBLIC_CONTENTFUL_INSIGHTS_API_BASE_URL,
-  },
-  app: {
-    name: 'my-next-app',
-    version: '1.0.0',
-  },
-  logLevel: 'error',
-})
+export const { proxy, NextAppAutoPageTracker, OptimizationRoot, OptimizedEntry } =
+  createNextjsAppRouterOptimization({
+    clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID ?? '',
+    environment: process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main',
+    locale: APP_LOCALE,
+    defaults: { consent: false, persistenceConsent: false },
+    server: {
+      enabled: true,
+      // Personalize only when your app has recorded consent for this visitor.
+      consent: ({ cookies }) =>
+        cookies.get(CONSENT_COOKIE)?.value === 'granted'
+          ? { events: true, persistence: true }
+          : false,
+    },
+    app: { name: 'my-next-app', version: '1.0.0' },
+  })
 ```
 
-The bound server path treats its request-local page call as the initial server page event for the
-route. It caches that request data inside one React render pass, so the root and server
-`OptimizedEntry` calls share the same profile, selected optimizations, and changes.
+Create these bound components exactly once. The bound server path caches its request data within a
+single render pass, so the root and every `OptimizedEntry` in that request share one profile and one
+set of decisions.
 
-### Proxy request context
+### Fetching Contentful entries
+
+**Integration category:** Required for first integration
+
+The SDK does not fetch Contentful for you. This is the boundary: **you fetch, the SDK resolves.**
+Keep your existing client and fetchers; the SDK only needs entries to arrive in a shape it can
+resolve.
+
+1. Fetch with one concrete Contentful locale. Do not use `withAllLocales` or raw CDA `locale=*` —
+   all-locale payloads use locale-keyed field maps the resolver cannot read, so entries fall back to
+   baseline.
+2. Use an `include` depth deep enough to resolve the whole tree — the page, its sections, and the
+   linked variant entries. `include: 10` is the common setting and is what most section-composed
+   sites already use.
+3. If you use `.withoutUnresolvableLinks` (common for deeply-linked pages), keep it; it does not
+   interfere with variant resolution as long as the variant entries are published and within your
+   include depth.
+4. Use the same locale for Contentful and for the SDK when localized Experience responses and
+   rendered content must line up.
+
+Your existing fetch usually needs **no change** — most section-composed sites already fetch a page
+by slug with a generous include depth and a single locale. A single-locale entry exposes its
+optimization fields directly, such as `fields.nt_experiences` and `fields.nt_variants` (the `nt_`
+prefix is how personalization links appear on an entry).
+
+For the resolver contract, see
+[Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
+For the full locale model, see
+[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
+
+### Request context and the profile cookie
 
 **Integration category:** Common but policy-dependent
 
-Use the returned Next.js proxy or middleware handler to capture request context, call the Experience
-API, persist the returned profile ID, and forward server data before Server Components use the bound
-server root or bound server `OptimizedEntry`.
+Server-side personalization must know _who_ the visitor is before your page renders. That is what
+the request handler from quick-start step 3 does. On each matching request it reads the visitor's
+cookies, calls the Experience API, and — when persistence consent allows — writes the returned
+profile id to the `ctfl-opt-aid` cookie so the same visitor stays consistent on later requests.
 
-1. Export `proxy` from `proxy.ts` or `middleware.ts`.
-2. Match routes whose Server Components use the bound server path.
-3. Keep consent, locale, and profile policy in the app-local component factory.
+1. Re-export `proxy` from `proxy.ts` (or `middleware.ts` on older Next.js versions) at your app root
+   and declare the `matcher` so it runs on routes that use server personalization.
+2. Keep consent, locale, and profile policy in your `optimization.ts` factory, not here. This file
+   only mounts the handler.
+3. Do not mark `ctfl-opt-aid` as `HttpOnly` — the browser SDK must read it to keep the same profile
+   after takeover.
 
-**Adapt this to your use case:**
+**Copy this:**
 
 ```ts
 // proxy.ts
-export { proxy } from './lib/optimization'
+export { proxy } from './src/lib/optimization'
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
 }
 ```
 
-The proxy strips incoming SDK-owned request headers, forwards sanitized request context, and
-persists the Experience API returned `profile.id` as `ctfl-opt-aid` when persistence consent allows
-it.
-
-Do not mark `ctfl-opt-aid` as `HttpOnly` when the browser SDK must adopt it through browser state
-handoff or an explicit server persistence flow. For deeper mechanics, see
+For how server and browser stay on the same profile, see
 [Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md).
 
-### Contentful fetching and entry shape
+### Personalizing first paint on the server
 
 **Integration category:** Required for first integration
 
-The SDK does not fetch Contentful entries. Fetch baseline entries in the application layer with one
-Contentful locale and resolved optimization links before passing them to bound server or client
-entry primitives.
+This is the payoff. In a Server Component, `OptimizedEntry` resolves the entry against the request's
+decisions and renders the variant — or the baseline entry — straight into the HTML. No JavaScript is
+required for the visitor to see personalized content.
 
-1. Choose the application Contentful locale in routing, i18n, request policy, or app configuration.
-2. Pass that locale to CDA requests.
-3. Include linked optimization entries and variant entries. The common Contentful CDA setting is
-   `include: 10`.
-4. Do not pass all-locale CDA responses from `contentful.js` `withAllLocales` or raw CDA `locale=*`
-   into bound `OptimizedEntry`, `resolveOptimizedEntry()`, or `useOptimizedEntry()`.
-5. Use the same locale as the SDK Experience/event locale when localized Experience responses and
-   rendered content need to match.
+The rule never changes: **wherever a Contentful entry becomes a component, wrap it in
+`OptimizedEntry` and render whatever the render prop hands back.** Two facts hold everywhere:
 
-**Adapt this to your use case:**
+- The render prop's first argument is the resolved entry, typed as a base `contentful` `Entry`. If
+  your component expects a narrower type, cast it — `resolved as YourSectionType`. This mirrors the
+  reference implementation, which casts the render-prop entry to its own content type. When your
+  type is narrowed with a chain modifier (for example the `WITHOUT_UNRESOLVABLE_LINKS` type from
+  `.withoutUnresolvableLinks`), TypeScript may reject the direct cast; use
+  `resolved as unknown as YourSectionType` in that case.
+- When consent is denied, no variant applies, links are unresolved, or the payload was all-locale,
+  the render prop simply receives the baseline entry. Your UI never breaks; it falls back to default
+  content.
 
-```ts
-import { createClient, type Entry } from 'contentful'
-import { APP_LOCALE } from './optimization'
+How the wrap looks depends on your app's shape.
 
-const contentfulClient = createClient({
-  accessToken: process.env.CONTENTFUL_DELIVERY_TOKEN ?? '',
-  environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'main',
-  space: process.env.CONTENTFUL_SPACE_ID ?? '',
-})
+#### A page composed of sections (most marketing sites)
 
-export function getContentfulClient() {
-  return contentfulClient
-}
+Your page fetches a `page` entry and walks `fields.sections` through a renderer that maps each
+section's content-type id to a component. That renderer is the single hand-off point — wrap there
+once and every section on every page becomes personalizable.
 
-export async function fetchEntriesFromContentful(entryIds: readonly string[]): Promise<Entry[]> {
-  const entries = await Promise.all(
-    entryIds.map((entryId) =>
-      getContentfulClient().getEntry(entryId, {
-        // Entry resolution expects linked optimization data in one locale.
-        include: 10,
-        locale: APP_LOCALE,
-      }),
-    ),
-  )
-
-  return entries
-}
-```
-
-Single-locale entries expose optimization fields as direct field values, such as
-`fields.nt_experiences` and `fields.nt_variants`. All-locale responses use locale-keyed field maps
-and fall back to baseline rendering. For the resolver contract, see
-[Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
-For the full locale model, see
-[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
-
-### Server first render and fallback behavior
-
-**Integration category:** Required for first integration
-
-Use the app-local bound `OptimizedEntry` in Server Components for first-paint or static content. The
-server implementation resolves locally against request-selected optimizations and renders tracking
-metadata for browser observers.
-
-1. Fetch Contentful entries in the Server Component that owns the route content.
-2. Render each baseline entry through the app-local `OptimizedEntry`.
-3. Render the `resolvedEntry` from the render prop.
-4. Use the render-prop `getMergeTagValue` when the same render path needs merge tags.
-5. Treat denied consent, missing optimization data, unresolved links, all-locale CDA payloads, and
-   API failures as baseline fallback cases.
-
-**Adapt this to your use case:**
+**Adapt this to your use case:** wrap only the return line, keeping your null-handling and types.
 
 ```tsx
-// app/page.tsx
-import { OptimizedEntry } from '@/lib/optimization'
-import { fetchEntriesFromContentful } from '@/lib/contentful-client'
-import type { Entry } from 'contentful'
+// components/SectionRenderer.tsx — your existing renderer, with the wrap added
+import { OptimizedEntry } from '@/src/lib/optimization'
+import { sectionMap } from './sectionMap'
+import type { SectionEntry } from '@/src/lib/content-model'
 
-function EntryCard({ entry }: { entry: Entry }) {
-  return <h2>{String(entry.fields.title ?? '')}</h2>
-}
-
-export default async function Home() {
-  const entries = await fetchEntriesFromContentful(['home-hero', 'home-offer'])
-
+export function SectionRenderer({ sections }: { sections?: (SectionEntry | undefined)[] }) {
+  if (!sections?.length) return null
   return (
     <>
-      {entries.map((entry) => (
-        <OptimizedEntry key={entry.sys.id} baselineEntry={entry}>
-          {(resolvedEntry) => <EntryCard entry={resolvedEntry} />}
-        </OptimizedEntry>
-      ))}
+      {sections.map((entry) => {
+        const Component = entry ? sectionMap[entry.sys.contentType.sys.id] : undefined
+        if (!entry || !Component) return null
+        return (
+          <OptimizedEntry key={entry.sys.id} baselineEntry={entry}>
+            {/* resolved is a base Entry; cast to the section union your components expect. */}
+            {(resolved) => <Component entry={resolved as SectionEntry} />}
+          </OptimizedEntry>
+        )
+      })}
     </>
   )
 }
 ```
 
-The default App Router path does not need a custom takeover boundary or a manual
-`resolveOptimizedEntry()` call. Use those only when an advanced route needs direct server SDK
-control.
+#### A flat list, or one entry per route
 
-### Bound root and server optimization state
-
-**Integration category:** Required for first integration
-
-The app-local `OptimizationRoot` is already bound to the factory config. In Server Component layouts
-it loads request Optimization data and passes that data to the browser root as
-`serverOptimizationState` internally. In Client Components it uses the client implementation with
-server-only config removed.
-
-1. Mount the app-local `OptimizationRoot` once around the route subtree that shares SDK state.
-2. Configure `defaults`, `onStatesReady`, `liveUpdates`, and `trackEntryInteraction` in
-   `createNextjsAppRouterOptimization()`, not as per-render root props.
-3. Wrap `NextAppAutoPageTracker` in `Suspense` because it uses App Router navigation hooks.
-4. Use `initialPageEvent="skip"` when the bound server root owns the initial request page event.
-5. Use `OptimizationProvider` from the same app-local module only when a nested provider boundary is
-   needed.
+If a route fetches entries directly and renders them without a section registry, wrap each entry
+where you render it. The wrap and the cast are identical.
 
 **Adapt this to your use case:**
 
 ```tsx
-// app/layout.tsx
-import { NextAppAutoPageTracker, OptimizationRoot } from '@/lib/optimization'
-import { Suspense, type ReactNode } from 'react'
+// app/page.tsx
+import { OptimizedEntry } from '@/src/lib/optimization'
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  return (
-    <html lang="en">
-      <body>
-        <OptimizationRoot>
-          <Suspense>
-            <NextAppAutoPageTracker initialPageEvent="skip" />
-          </Suspense>
-          {children}
-        </OptimizationRoot>
-      </body>
-    </html>
-  )
+export default async function Home() {
+  const entries = await getHomeEntries() // your existing fetch, unchanged
+
+  return entries.map((entry) => (
+    <OptimizedEntry key={entry.sys.id} baselineEntry={entry}>
+      {(resolved) => <YourCard entry={resolved as YourEntryType} />}
+    </OptimizedEntry>
+  ))
 }
 ```
 
-Manual `serverOptimizationState` props still exist for lower-level `/client` roots, but they are an
-advanced escape hatch. The bound App Router root handles state handoff for the default path.
+The default App Router path needs no manual `resolveOptimizedEntry()` call and no custom takeover
+boundary. Reach for those only in [advanced routes](#manual-server-and-client-escape-hatches).
 
-### Client takeover and live re-resolution
+### The bound root and page events
 
 **Integration category:** Required for first integration
 
-Render browser-owned surfaces with the app-local `OptimizedEntry` when entries can inherit factory
-or provider live-update settings. Use `/client` `OptimizedEntry` for client-only islands that need
-per-entry `liveUpdates` or `loadingFallback`; the bound App Router entry intentionally omits those
-props so Server and Client Component typings stay aligned.
+`OptimizationRoot` is the provider that carries personalization state through your tree and hands
+the server's decisions to the browser. `NextAppAutoPageTracker` reports **page events** — a signal
+that a page was viewed — as the visitor navigates.
 
-1. Create Client Components for entries that need browser-side re-resolution.
-2. Import `OptimizedEntry` from the app-local binding module when entries inherit factory or
-   provider settings.
-3. Import `OptimizedEntry` from `/client` when a client-only entry needs per-entry `liveUpdates` or
-   `loadingFallback`.
-4. Use factory-level `liveUpdates: true`, `LiveUpdatesProvider`, or `/client` per-entry
-   `liveUpdates` for entries that must update after `identifyUser()`, `setConsent()`, `resetUser()`,
-   preview changes, or selected-optimization state changes.
-5. Use `/client` hooks such as `useOptimizedEntry()` or `useEntryResolver()` only when a component
-   needs custom rendering control that the `OptimizedEntry` wrapper does not provide.
+1. Mount `OptimizationRoot` once, around the subtree that shares personalization state — usually the
+   whole app, inside your existing root layout.
+2. Configure behavior (`defaults`, `trackEntryInteraction`, `onStatesReady`, `liveUpdates`) in the
+   factory, not as per-render props on the root.
+3. Wrap `NextAppAutoPageTracker` in `Suspense` because it reads App Router navigation hooks.
+4. Choose one owner for the first page event. When the server personalized the page it already
+   reported that view, so pass `initialPageEvent="skip"` to stop the browser reporting a duplicate.
+   Use `"emit"` for browser-owned routes that did not use the server path. If startup is
+   consent-gated, make it conditional — `skip` when the server owned a consented event, `emit`
+   otherwise.
 
-**Adapt this to your use case:**
+**Adapt this to your use case:** attaching route-aware properties to page events.
+
+```tsx
+<Suspense>
+  <NextAppAutoPageTracker
+    initialPageEvent="skip" // skip only when the server owns this route's first page event
+    getPagePayload={({ pathname }) => ({
+      properties: { routeGroup: pathname.startsWith('/account') ? 'account' : 'public' },
+    })}
+  />
+</Suspense>
+```
+
+The tracker deduplicates consecutive route keys, including React Strict Mode's double effects, but
+it does not replace your page-event policy. Use `skip` only when there is a matching server page
+event.
+
+### Browser takeover and live updates
+
+**Integration category:** Required for first integration
+
+This is Milestone 2. First paint is already complete and shippable; add this only when some content
+must re-personalize _after_ the page loads — for example, when a visitor accepts consent, signs in,
+or is identified, and entries should update without a reload.
+
+Live updates are opt-in because most content is fixed for the life of a request. Turn them on where
+they matter:
+
+1. For a broad default, set `liveUpdates: true` in the factory, or wrap a subtree in
+   `LiveUpdatesProvider`.
+2. For a single client-only entry, import `OptimizedEntry` from `/client` and pass `liveUpdates`.
+   The bound `/app-router` `OptimizedEntry` deliberately omits per-entry `liveUpdates` and
+   `loadingFallback` props so the same import type-checks in both Server and Client Components.
+3. Use `/client` hooks such as `useOptimizedEntry()` only when you need rendering control the
+   wrapper does not offer.
+
+**Adapt this to your use case:** a client-only entry that re-resolves on profile changes.
 
 ```tsx
 'use client'
@@ -513,130 +499,65 @@ props so Server and Client Component typings stay aligned.
 import { OptimizedEntry } from '@contentful/optimization-nextjs/client'
 import type { Entry } from 'contentful'
 
-function EntryCard({ entry }: { entry: Entry }) {
-  return <article>{String(entry.fields.title ?? '')}</article>
-}
-
 export function LiveEntry({ baselineEntry }: { baselineEntry: Entry }) {
   return (
     <OptimizedEntry baselineEntry={baselineEntry} liveUpdates>
-      {(resolvedEntry) => <EntryCard entry={resolvedEntry} />}
+      {(resolved) => <article>{String(resolved.fields.title ?? '')}</article>}
     </OptimizedEntry>
   )
 }
 ```
 
-For shared live-update controls, set `liveUpdates: true` in the component factory or wrap a subtree
-in `LiveUpdatesProvider`. The App Router bound `OptimizedEntry` intentionally does not accept
-per-entry live-update or loading-fallback props because the same app-local import must also
-type-check for Server Components.
-
-Verify live re-resolution only after the takeover path is working:
-
-1. Enable `liveUpdates: true` globally or through `LiveUpdatesProvider` for entries that must react
-   to browser state changes.
-2. Trigger `identifyUser()`, `setConsent()`, or `resetUser()` from the Client Component that owns
-   the application control.
-3. Confirm affected entries re-resolve without a full page refresh and entries with `/client`
-   `liveUpdates={false}` stay locked until the next render path.
-
-### Page events and App Router navigation
-
-**Integration category:** Required for first integration
-
-Choose one owner for the initial route page event, then use `NextAppAutoPageTracker` for browser App
-Router route changes.
-
-1. Let the bound server root own the initial page event when `server.enabled` is `true` for the
-   route subtree.
-2. The context proxy does not emit page events. It only forwards request context headers for the
-   bound server path.
-3. Mount `NextAppAutoPageTracker` under the app-local `OptimizationRoot`.
-4. Set `initialPageEvent="skip"` when the bound server path owns the same initial route event.
-5. Use `initialPageEvent="emit"` when a route is browser-owned and does not use the bound server
-   path for first request data.
-6. Use manual `/server` helpers only when the initial server page event needs per-route payload
-   control that the bound factory does not expose.
-
-**Follow this pattern:**
-
-```tsx
-<Suspense>
-  {/* Skip only when the bound server path owns this route's initial page event. */}
-  <NextAppAutoPageTracker
-    initialPageEvent="skip"
-    getPagePayload={({ pathname }) => ({
-      properties: {
-        routeGroup: pathname.startsWith('/account') ? 'account' : 'public',
-      },
-    })}
-  />
-</Suspense>
-```
-
-The tracker deduplicates consecutive route keys, including Strict Mode double-effect invocations,
-but it does not replace application policy. Use the `skip` mode only for a matching server page
-event.
+To verify takeover, enable live updates, then trigger `identifyUser()`, `setConsent()`, or
+`resetUser()` from a Client Component (see the next sections). Confirm that live entries re-resolve
+without a full reload and that entries with `liveUpdates={false}` stay put until the next render.
 
 ### Entry interaction tracking
 
 **Integration category:** Common but policy-dependent
 
-Entry interaction tracking is browser-side. Bound `OptimizedEntry` renders the metadata on the
-server or client, and the browser SDK observes views, clicks, and hovers after consent permits the
-detectors and event delivery.
+Interaction tracking — views, clicks, and hovers on entries — is a browser behavior.
+`OptimizedEntry` renders the metadata the browser SDK needs, and the SDK observes interactions once
+consent permits. It is on by default when you use `OptimizedEntry`, so you rarely configure anything
+to get started.
 
-1. Leave the default view, click, and hover interactions enabled when your consent policy permits
-   them; use factory `trackEntryInteraction` only to opt out of interaction types the app must not
-   observe.
-2. Use `OptimizedEntry` props such as `clickable`, `trackViews`, `trackClicks`, `trackHovers`,
-   `viewDurationUpdateIntervalMs`, and `hoverDurationUpdateIntervalMs` for per-entry control.
-3. Use `sdk.tracking.enableElement(...)` from `useOptimization()` only for app-owned manual
-   observation cases.
-4. Use `getServerTrackingAttributes()` only when a route also uses manual `/server` resolution.
-5. Verify consent gates. Page events can be allowed before full consent, but entry views, clicks,
-   and hovers are blocked unless consent or `allowedEventTypes` permits them.
+1. Leave the defaults on when your consent policy allows them. Use factory `trackEntryInteraction`
+   only to opt out of an interaction type you must not observe.
+2. Use `OptimizedEntry` props such as `clickable`, `trackViews`, `trackClicks`, and `trackHovers`
+   for per-entry control.
+3. Page events can be allowed before full consent, but entry views, clicks, and hovers stay blocked
+   until consent or `allowedEventTypes` permits them.
 
-**Follow this pattern:**
+**Follow this pattern:** opting out of one detector globally.
 
 ```tsx
 createNextjsAppRouterOptimization({
   // ...clientId, environment, locale, server, defaults
-  // Opt out only when your consent policy disallows a detector.
-  trackEntryInteraction: { hovers: false },
+  trackEntryInteraction: { hovers: false }, // opt out only where policy requires it
 })
 ```
 
-**Follow this pattern:**
-
-```tsx
-<OptimizedEntry baselineEntry={entry} clickable hoverDurationUpdateIntervalMs={1000}>
-  {(resolvedEntry) => <EntryCard entry={resolvedEntry} />}
-</OptimizedEntry>
-```
-
-The tracking payload uses the resolved entry ID, not the baseline entry ID. For deeper mechanics,
-see [Interaction tracking in Web SDKs](../concepts/interaction-tracking-in-web-sdks.md).
+Tracking uses the _resolved_ entry id, not the baseline id. For mechanics, see
+[Interaction tracking in Web SDKs](../concepts/interaction-tracking-in-web-sdks.md).
 
 ### Consent, identity, profile, and reset
 
 **Integration category:** Common but policy-dependent
 
-Consent, identity, and profile continuity are application policy decisions. The SDK provides the
-runtime controls, but your application owns the consent record, privacy notice, CMP integration,
-identity source, and server cookie cleanup.
+Consent, identity, and profile continuity are your application's decisions. The SDK gives you the
+runtime controls; your app owns the consent record, the privacy notice, the CMP, the identity
+source, and cookie cleanup.
 
 1. If policy permits accepted startup, set accepted `server.consent` and seed accepted consent in
-   browser defaults.
+   browser `defaults`.
 2. If policy depends on user choice, read the choice in `server.consent` and call `setConsent()`
-   from the Client Component that owns the browser decision.
-3. Store the policy decision in the same CMP, account preference, session, or cookie that the server
-   consent resolver can read on the next request.
-4. Call `identifyUser()` from browser flows when a visitor becomes known.
-5. Call `resetUser()` and clear application-owned profile cookies when withdrawal or sign-out must
-   end active-session personalization.
+   from the Client Component that owns the decision.
+3. Store the decision where `server.consent` can read it next request — the same CMP, account
+   preference, or cookie.
+4. Call `identifyUser()` when a visitor becomes known, and `resetUser()` (plus clearing your own
+   profile cookies) on sign-out or withdrawal.
 
-**Adapt this to your use case:**
+**Adapt this to your use case:** a client control panel wired to the SDK actions.
 
 ```tsx
 'use client'
@@ -646,47 +567,40 @@ import {
   useOptimizationActions,
   useProfileState,
 } from '@contentful/optimization-nextjs/client'
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 
-const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
+const CONSENT_COOKIE = 'app-personalization-consent'
 
-function setAppConsentCookie(consented: boolean): void {
-  const value = consented ? 'granted' : 'denied'
-  // Store app consent where server.consent can read it on the next request.
-  document.cookie = `${APP_PERSONALIZATION_CONSENT_COOKIE}=${value}; Path=/; SameSite=Lax`
+function persistConsent(consented: boolean): void {
+  // Store where server.consent can read it on the next request.
+  document.cookie = `${CONSENT_COOKIE}=${consented ? 'granted' : 'denied'}; Path=/; SameSite=Lax`
 }
 
 export function PersonalizationControls() {
   const { setConsent, identifyUser, resetUser } = useOptimizationActions()
   const consent = useConsentState()
   const profile = useProfileState()
+  const isIdentified = Boolean(profile?.traits.identified)
 
   useEffect(() => {
-    if (typeof consent === 'boolean') setAppConsentCookie(consent)
+    if (typeof consent === 'boolean') persistConsent(consent)
   }, [consent])
-
-  const isIdentified = useMemo(
-    () => profile !== undefined && Boolean(profile.traits.identified),
-    [profile],
-  )
 
   return (
     <div>
       <button onClick={() => setConsent(consent !== true)} type="button">
         {consent === true ? 'Reject consent' : 'Accept consent'}
       </button>
-      {!isIdentified ? (
+      {isIdentified ? (
+        <button onClick={() => resetUser()} type="button">
+          Reset profile
+        </button>
+      ) : (
         <button
-          onClick={() => {
-            void identifyUser({ userId: 'user-123', traits: { identified: true } })
-          }}
+          onClick={() => void identifyUser({ userId: 'user-123', traits: { identified: true } })}
           type="button"
         >
           Identify
-        </button>
-      ) : (
-        <button onClick={() => resetUser()} type="button">
-          Reset profile
         </button>
       )}
     </div>
@@ -694,9 +608,9 @@ export function PersonalizationControls() {
 }
 ```
 
-With factory-level, provider-level, or `/client` per-entry live updates enabled, `identifyUser()`,
-`setConsent()`, and `resetUser()` can change `selectedOptimizations` in the browser SDK and
-re-render affected entries without a full page refresh. For consent design details, see
+With live updates enabled, `identifyUser()`, `setConsent()`, and `resetUser()` can change the
+selected variants in the browser and re-render affected entries without a reload. For consent
+design, see
 [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
 
 ## Optional integrations
@@ -706,18 +620,18 @@ re-render affected entries without a full page refresh. For consent design detai
 **Integration category:** Optional
 
 Use analytics forwarding when your app needs to send approved Optimization context to a tag manager,
-customer-data platform, warehouse, or analytics destination. The SDK still sends events to
+customer-data platform, warehouse, or analytics destination. The SDK still sends its own events to
 Contentful; forwarding is application-owned.
 
 1. Keep server and browser forwarding separate. Server-rendered attribution comes from the request
-   that resolved the entry, while browser activity comes from browser state subscriptions.
-2. Register browser subscriptions with factory `onStatesReady` so event observers attach before
-   child effects such as route trackers emit events.
-3. Dedupe forwarded events by `messageId` or destination-specific semantic keys.
-4. Store forwarded message IDs in module or app state so remounts do not forward the same event
-   again. If the destination must receive only future SDK events, read the current `messageId`
-   before subscribing and skip that event.
-5. Gate forwarding with the same consent and destination policy that controls the rest of your
+   that resolved the entry; browser activity comes from browser state subscriptions.
+2. Register browser subscriptions with factory `onStatesReady` so observers attach before child
+   effects such as route trackers emit events.
+3. Dedupe forwarded events by `messageId` or a destination-specific key.
+4. Store forwarded message ids in module or app state so remounts do not forward the same event
+   again. To receive only future events, read the current `messageId` before subscribing and skip
+   it.
+5. Gate forwarding with the same consent and destination policy that governs the rest of your
    analytics stack.
 
 **Adapt this to your use case:**
@@ -757,10 +671,10 @@ export const { proxy, NextAppAutoPageTracker, OptimizationRoot, OptimizedEntry }
   })
 ```
 
-Use
+See
 [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
-for request-local server mapping, React Web subscription helpers, vendor examples, consent, dedupe,
-and governance guidance.
+for request-local server mapping, subscription helpers, vendor examples, consent, dedupe, and
+governance guidance.
 
 ### Merge tags and Custom Flags
 
@@ -769,43 +683,33 @@ and governance guidance.
 Use merge tags and Custom Flags when entries or components render profile-backed values that are not
 entry replacements.
 
-1. Resolve Rich Text merge tag entries with the `getMergeTagValue` function passed to
-   `OptimizedEntry` render props.
+1. Resolve Rich Text merge tag entries with the `getMergeTagValue` function passed to the
+   `OptimizedEntry` render prop.
 2. Keep the SDK locale aligned with the rendered Contentful locale when merge tags reference
    localized profile fields such as `location.city` or `location.country`.
-3. Use flag state from the browser SDK for components that need to react after browser startup.
-4. Treat flag-view and merge-tag event behavior as consent-gated browser activity unless the server
-   path owns the event.
+3. Use flag state from the browser SDK for components that must react after browser startup.
+4. Treat flag-view and merge-tag events as consent-gated browser activity unless the server path
+   owns the event.
 
 **Follow this pattern:**
 
 ```tsx
-import { OptimizedEntry } from '@/lib/optimization'
+import { OptimizedEntry } from '@/src/lib/optimization'
 import type { Entry } from 'contentful'
-
-function EntryCard({
-  entry,
-  getMergeTagValue,
-}: {
-  entry: Entry
-  getMergeTagValue: (mergeTagEntry: unknown) => string | undefined
-}) {
-  return <span>{getMergeTagValue(entry.fields.greeting) ?? ''}</span>
-}
 
 export function EntryWithMergeTags({ entry }: { entry: Entry }) {
   return (
     <OptimizedEntry baselineEntry={entry}>
-      {(resolvedEntry, { getMergeTagValue }) => (
-        <EntryCard entry={resolvedEntry} getMergeTagValue={getMergeTagValue} />
+      {(resolved, { getMergeTagValue }) => (
+        <span>{getMergeTagValue(resolved.fields.greeting) ?? ''}</span>
       )}
     </OptimizedEntry>
   )
 }
 ```
 
-Merge tags and entry replacement use different mechanics. Entry replacement uses
-`selectedOptimizations`; merge tags read profile-backed values from current SDK state. Use
+Merge tags and entry replacement use different mechanics. Entry replacement swaps the whole entry
+for its variant; merge tags read profile-backed values from current SDK state. Use
 `useMergeTagResolver()` from `/client` only in Client Components that need merge tags outside an
 `OptimizedEntry` render prop.
 
@@ -813,17 +717,18 @@ Merge tags and entry replacement use different mechanics. Entry replacement uses
 
 **Integration category:** Optional
 
-Use the preview panel where authors or engineers need to inspect variant behavior. Keep production
-loading explicit and gate attachment behind an application-owned flag.
+Use the preview panel where authors or engineers need to inspect variant behavior — including
+forcing a specific variant to verify a targeted experience. Keep production loading explicit and
+gate attachment behind an application-owned flag.
 
 1. Add the preview panel package only when your app needs browser authoring tooling.
 2. Attach the panel from a Client Component under `OptimizationRoot`.
-3. Wait until the browser SDK is ready before attaching the panel.
+3. Wait until the browser SDK is ready before attaching.
 4. Pass an app-owned Contentful client or pre-fetched preview entries to the attach function.
-5. Enable it only when an approved app environment sets `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`
+5. Enable it only when an approved environment sets `NEXT_PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`
    to `true`.
-6. Verify preview behavior with live updates because the preview panel forces optimized entries to
-   react to preview state.
+6. Verify with live updates, because the preview panel forces optimized entries to react to preview
+   state.
 
 **Follow this pattern:**
 
@@ -835,38 +740,29 @@ import { useEffect } from 'react'
 
 export function PreviewPanelAttachment({ nonce }: { nonce?: string }) {
   const { isReady } = useOptimizationContext()
-  const previewPanelEnabled = process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
+  const enabled = process.env.NEXT_PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
 
   useEffect(() => {
-    // Keep authoring tooling opt-in.
-    if (!previewPanelEnabled) return
-    if (!isReady) return
+    if (!enabled || !isReady) return // keep authoring tooling opt-in and post-ready
 
     void Promise.all([
       import('@contentful/optimization-web-preview-panel'),
-      import('@/lib/contentful-client'),
+      import('@/src/lib/contentful'),
     ])
-      .then(async ([{ default: attachOptimizationPreviewPanel }, { getContentfulClient }]) => {
-        await attachOptimizationPreviewPanel({
-          contentful: getContentfulClient(),
-          nonce,
-        })
+      .then(async ([{ default: attachOptimizationPreviewPanel }, { client }]) => {
+        await attachOptimizationPreviewPanel({ contentful: client, nonce })
       })
       .catch(() => undefined)
-  }, [isReady, nonce, previewPanelEnabled])
+  }, [isReady, nonce, enabled])
 
   return null
 }
 ```
 
-The preview panel package has no attachment side effects. A dynamic import only loads the attach
-function; the application must call `attachOptimizationPreviewPanel(...)` with a Contentful client
-or `entries: { audiences, experiences }` for preview definitions that the app already loaded.
-`entries` takes precedence over `contentful`, so the panel does not fetch through the Contentful
-client when both are provided.
-
-The App Router reference implementation exposes `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL` through
-Next.js config and attaches the preview panel only when that flag is `true`.
+A dynamic import only loads the attach function; your app must call
+`attachOptimizationPreviewPanel(...)` with a Contentful client, or with
+`entries: { audiences, experiences }` when you already loaded the preview definitions. `entries`
+takes precedence over `contentful`.
 
 ## Advanced integrations
 
@@ -874,63 +770,54 @@ Next.js config and attaches the preview panel only when that flag is `true`.
 
 **Integration category:** Advanced or production-only
 
-App Router applications can mix route strategies. Choose the strategy per route instead of forcing
-one rendering model across the whole app.
+App Router apps can mix strategies. Choose one per route instead of forcing a single model across
+the whole app.
 
 | Route need                                                  | Use this pattern                                                             |
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Server is the only content source until the next request    | Render with bound server `OptimizedEntry` and keep browser live updates off  |
-| Server first render plus browser-side reactivity            | Use bound root handoff and app-local or `/client` `OptimizedEntry`           |
+| Server is the only content source until the next request    | Bound server `OptimizedEntry`, browser live updates off                      |
+| Server first render plus browser-side reactivity            | Bound root handoff plus app-local or `/client` `OptimizedEntry`              |
 | Browser-owned personalization after startup                 | Render baseline or loading UI on the server and let Client Components own it |
-| Highly interactive account, dashboard, or settings surfaces | Prefer Client Components with live updates and explicit consent state        |
+| Highly interactive account, dashboard, or settings surfaces | Client Components with live updates and explicit consent state               |
 
-1. Keep SEO-sensitive content in Server Components when the content must be visible in the initial
-   HTML.
+1. Keep SEO-sensitive content in Server Components so it appears in the initial HTML.
 2. Use Client Components for controls that call hooks, `identifyUser()`, `setConsent()`,
-   `resetUser()`, live flag state, or manual browser tracking.
-3. Use the same app-local `OptimizationRoot` for browser takeover subtrees that share browser SDK
-   state.
-4. Reuse the same Contentful locale and anonymous ID continuity rules across mixed route strategies.
+   `resetUser()`, live flag state, or manual tracking.
+3. Reuse the same `OptimizationRoot` for takeover subtrees that share browser state.
+4. Reuse the same Contentful locale and anonymous-id continuity across strategies.
 
-The important boundary is ownership: Server Components render through the bound server
-`OptimizedEntry`, and Client Components render through the app-local `OptimizedEntry` or `/client`
-`OptimizedEntry` when they need per-entry browser-only props.
+The boundary that matters is ownership: Server Components render through the bound server
+`OptimizedEntry`; Client Components render through the app-local or `/client` `OptimizedEntry` when
+they need browser-only props.
 
 ### Manual server and client escape hatches
 
 **Integration category:** Advanced or production-only
 
-Use manual helpers only when the bound App Router factory cannot express a route's control needs.
+Use manual helpers only when the bound App Router factory cannot express a route's needs.
 
-1. Use `createNextjsOptimization()` and `getNextjsServerOptimizationData()` from `/server` when a
-   route needs direct request SDK control, custom server page payloads, or app-owned request
-   deduplication.
-2. Pass `serverOptimizationState` to `/client` `OptimizationRoot` or `OptimizationProvider` only in
-   manual server/client setups.
+1. Use `createNextjsOptimization()` and `getNextjsServerOptimizationData()` from `/server` for
+   direct request SDK control, custom server page payloads, or app-owned request deduplication.
+2. Pass `serverOptimizationState` to a `/client` `OptimizationRoot` or `OptimizationProvider` only
+   in manual server/client setups.
 3. Use `getServerTrackingAttributes()` only with manual `resolveOptimizedEntry()` results.
-4. Keep a custom takeover boundary only when the app needs staged reveal behavior that the bound
-   root plus server/client `OptimizedEntry` split does not cover.
+4. Keep a custom takeover boundary only for staged-reveal behavior the bound split does not cover.
 
 ### Caching and request deduplication
 
 **Integration category:** Advanced or production-only
 
 Personalized server rendering is request-specific. Keep shared caches on raw Contentful payloads,
-not on profile-evaluated SDK results or personalized HTML unless your cache key varies on every
+not on profile-evaluated results or personalized HTML, unless your cache key varies on every
 personalization input.
 
-1. Let the bound component factory's internal `cache()` deduplicate request Optimization data inside
-   one React Server Component render pass.
-2. Create the bound components once in an app-local module. Multiple factories can create multiple
-   server page calls.
-3. Avoid sharing server Optimization data across requests. It is profile-specific and tied to the
-   request page event.
-4. Cache raw Contentful entries by entry ID, locale, environment, and include depth when your app
-   cache policy permits it.
-5. Mark personalized routes dynamic or otherwise exclude them from full-route caching unless your
-   deployment varies the cache on the full profile state.
-6. Re-check cache rules when adding `generateStaticParams`, route segment cache settings, CDN
-   caching, or reverse proxy caching.
+1. Let the bound factory's internal `cache()` deduplicate request data within one render pass.
+2. Create the bound components once. Multiple factories create multiple server page calls.
+3. Do not share server Optimization data across requests; it is profile-specific.
+4. Cache raw Contentful entries by entry id, locale, environment, and include depth when your policy
+   permits.
+5. Mark personalized routes dynamic unless your deployment varies the cache on the full profile
+   state.
 
 **Copy this:**
 
@@ -939,8 +826,7 @@ personalization input.
 export const dynamic = 'force-dynamic'
 ```
 
-The exact Next.js cache policy belongs to the application. The SDK does not mark routes dynamic for
-you.
+The exact Next.js cache policy is yours. The SDK does not mark routes dynamic for you.
 
 ### Strict consent and duplicate-event controls
 
@@ -949,14 +835,14 @@ you.
 Strict consent and duplicate-event controls are production policy work. Configure them only after
 your privacy, analytics, and platform owners agree on the event posture.
 
-1. Use `allowedEventTypes: []` in the factory config when no SDK events can emit before consent.
+1. Use `allowedEventTypes: []` when no SDK events can emit before consent.
 2. Return `false` from `server.consent` while consent is unknown or denied.
-3. Clear `ctfl-opt-aid` and application-owned consent or profile cookies when withdrawal must end
-   profile continuity.
-4. Use `initialPageEvent="skip"` only for a matching server page event. Use `emit` when the browser
-   owns the first page event.
-5. Subscribe to `states.blockedEventStream` during validation to confirm the SDK blocks the events
-   your policy expects it to block.
+3. Clear `ctfl-opt-aid` and your own consent or profile cookies when withdrawal must end profile
+   continuity.
+4. Use `initialPageEvent="skip"` only for a matching server page event; use `emit` when the browser
+   owns the first page view.
+5. Subscribe to `states.blockedEventStream` during validation to confirm the SDK blocks what your
+   policy expects.
 
 **Adapt this to your use case:**
 
@@ -982,28 +868,25 @@ state still qualifies after consent, the SDK can emit a fresh current-state even
 
 Run these checks before release:
 
-- Confirm the app-local component factory uses the intended Optimization client ID, environment, API
-  endpoints, locale, app metadata, and log level.
-- Confirm browser-exposed `NEXT_PUBLIC_` variables contain only values that can be shipped to the
-  client.
+- Confirm the factory uses the intended client id, environment, API endpoints, locale, app metadata,
+  and log level.
+- Confirm browser-exposed environment variables contain only values safe to ship to the client.
 - Confirm Contentful fetches use one concrete locale and include resolved optimization entries and
   variants.
-- Confirm `server.consent`, browser SDK consent, anonymous ID persistence, and CMP or account
-  preference state stay aligned across first load, route navigation, opt-in, opt-out, sign-in,
-  sign-out, and reset.
-- Confirm the bound server path owns the initial page event and `NextAppAutoPageTracker` does not
-  duplicate the first route event.
-- Confirm `identifyUser()`, `setConsent()`, and `resetUser()` re-resolve only the entries that are
-  configured for live updates.
+- Confirm `server.consent`, browser consent, anonymous-id persistence, and CMP or account state stay
+  aligned across first load, navigation, opt-in, opt-out, sign-in, sign-out, and reset.
+- Confirm the server path owns the initial page event and `NextAppAutoPageTracker` does not
+  duplicate it.
+- Confirm `identifyUser()`, `setConsent()`, and `resetUser()` re-resolve only the entries configured
+  for live updates.
 - Confirm entry views, clicks, hovers, flag views, page events, business events, and forwarded
-  analytics events are delivered only when policy permits them.
-- Confirm baseline fallback renders when the Experience API fails, selected optimizations are
-  missing, optimization links are unresolved, or CDA payloads are all-locale.
+  analytics events deliver only when policy permits them.
+- Confirm baseline fallback renders when the Experience API fails, variants are missing, links are
+  unresolved, or CDA payloads are all-locale.
 - Confirm personalized routes are not shared-cache safe unless the cache varies on every
   personalization input.
-- Confirm local validation uses the reference implementation flow when you need end-to-end evidence
-  for bound server-to-browser state handoff, proxy request context forwarding, entry tracking, live
-  updates, page events, and offline queue behavior.
+- Confirm end-to-end evidence for server-to-browser handoff, request context, entry tracking, live
+  updates, and page events using the reference implementation flow.
 
 **Copy this:**
 
@@ -1015,17 +898,19 @@ pnpm test:e2e:nextjs-sdk_app-router
 
 ## Troubleshooting
 
-| Symptom                                                            | Likely cause                                                                                   | Check                                                                                                    |
-| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Entries stay on baseline                                           | Missing selected optimizations, denied consent, unresolved Contentful links, or all-locale CDA | Check `server.consent`, fetch with one `locale`, and use enough `include` depth                          |
-| Two server-side page events appear for one request                 | Multiple bound factories or a manual helper also calls the server page path                    | Create bound components once and keep manual `getNextjsServerOptimizationData()` out of the route        |
-| Browser sends a duplicate first page event                         | `initialPageEvent="emit"` is used after the bound server path already emitted the same route   | Use `skip` only when the bound server path owns the same initial request                                 |
-| Browser does not send the first page event                         | `initialPageEvent="skip"` is used on a browser-owned route without a matching server event     | Use `emit` when the browser owns first page tracking                                                     |
-| Live entries do not update after `identifyUser()` or `resetUser()` | `liveUpdates` is false in the factory or provider                                              | Set `liveUpdates: true` in the component factory or wrap the subtree in `LiveUpdatesProvider`            |
-| Entry views, clicks, or hovers do not emit                         | Interaction tracking is opted out, consent blocks the event, or no profile is available        | Check factory `trackEntryInteraction`, entry props, consent state, and `states.blockedEventStream`       |
-| Server and browser use different profiles                          | Cookie domain, path, readability, or consent cleanup differs between runtimes                  | Use a browser-readable `ctfl-opt-aid` with consistent path and clear it on withdrawal                    |
-| Server Components fail with browser globals                        | A Client Component hook or browser-only import crossed into a server module                    | Use app-local bound component imports in Server Components and `/client` hooks only in Client Components |
-| Personalized HTML appears stale                                    | Route or CDN caching is sharing profile-evaluated output                                       | Mark personalized routes dynamic or vary cache keys on the full personalization context                  |
+| Symptom                                                            | Likely cause                                                                            | Check                                                                                                              |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Entries stay on baseline                                           | No variant applies, denied consent, unresolved Contentful links, or all-locale CDA      | Author a variant that targets you, check `server.consent`, fetch one `locale` with enough `include`                |
+| The variant never appears even though it is authored               | Your test visitor does not match the experience's audience                              | Target all visitors for a first test, or force the variant with the preview panel                                  |
+| `<Component entry={resolved} />` shows a type error                | The render prop returns a base `Entry`, wider than your component's type                | Cast it: `resolved as YourSectionType`; if the type is modifier-narrowed, `resolved as unknown as YourSectionType` |
+| Two server-side page events appear for one request                 | Multiple bound factories, or a manual helper also calls the server page path            | Create bound components once and keep manual `getNextjsServerOptimizationData()` out of the route                  |
+| Browser sends a duplicate first page event                         | `initialPageEvent="emit"` used after the server path already emitted the same route     | Use `skip` only when the server path owns the same initial request                                                 |
+| Browser does not send the first page event                         | `initialPageEvent="skip"` used on a browser-owned route without a matching server event | Use `emit` when the browser owns first page tracking                                                               |
+| Live entries do not update after `identifyUser()` or `resetUser()` | `liveUpdates` is off in the factory and provider                                        | Set `liveUpdates: true` in the factory or wrap the subtree in `LiveUpdatesProvider`                                |
+| Entry views, clicks, or hovers do not emit                         | Interaction tracking is opted out, consent blocks the event, or no profile is available | Check factory `trackEntryInteraction`, entry props, consent state, and `states.blockedEventStream`                 |
+| Server and browser use different profiles                          | Cookie domain, path, readability, or consent cleanup differs between runtimes           | Use a browser-readable `ctfl-opt-aid` with a consistent path and clear it on withdrawal                            |
+| Server Components fail with browser globals                        | A Client Component hook or browser-only import crossed into a server module             | Use bound imports in Server Components and `/client` hooks only in Client Components                               |
+| Personalized HTML appears stale                                    | Route or CDN caching is sharing profile-evaluated output                                | Mark personalized routes dynamic or vary cache keys on the full personalization context                            |
 
 ## Reference implementations to compare against
 
