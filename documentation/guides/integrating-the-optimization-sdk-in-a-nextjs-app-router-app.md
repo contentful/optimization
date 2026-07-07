@@ -37,12 +37,11 @@ instead.
 
 ## Quick start
 
-Most App Router + Contentful sites share one shape: you fetch a **page** entry, and render its
-sections through a renderer that maps each section's content type to a component. This quick start
-assumes that shape and shows the changes as **diffs against your existing files** — you are adding a
-few lines, not replacing your app. The diffs are illustrative, not literal patches: find the
-equivalent lines in your own files rather than expecting them to apply cleanly. If your app is
-shaped differently (a flat list of entries, or one entry per route), the wrap is the same; see
+Most App Router + Contentful sites share one shape: you fetch a **page** entry and render its
+content through your own components. This quick start assumes that shape. In the snippets that
+change an existing file, lines prefixed with `+` are what you add and the rest is a typical app for
+context — match the additions to your own file rather than pasting the whole block. If your app is
+shaped differently, the change is the same wherever an entry becomes a component; see
 [Personalizing first paint on the server](#personalizing-first-paint-on-the-server).
 
 It proves one result: **one section renders its personalized variant in the server HTML.** It
@@ -104,13 +103,13 @@ step before you ship.
    }
    ```
 
-4. Wrap your layout in `OptimizationRoot`, and drop the page tracker inside it. **Keep everything
+4. Wrap your layout in `OptimizationRoot`, and put the page tracker inside it. **Keep everything
    your layout already renders** — header, footer, providers, fonts, styles. You are adding a
-   wrapper, not replacing the file. Put the root around your whole app (chrome included) so that
-   header, footer, or announcement content can be personalized later too.
+   wrapper, not replacing the file. Put the root around everything inside `<body>` (chrome included)
+   so header, footer, or announcement content can be personalized later too.
 
-   **Adapt this to your use case:** the diff shows the additions against a typical layout; place the
-   root to enclose everything you render inside `<body>`.
+   **Adapt this to your use case:** the `+` lines are the additions; the rest is a typical layout
+   for context.
 
    ```tsx
    // app/layout.tsx
@@ -123,13 +122,15 @@ step before you ship.
         <html lang="en">
           <body>
    +        <OptimizationRoot>
-   +          {/* "skip": the server already reported this page view — don't report it twice. */}
+   +          {/* Suspense is required: the tracker reads useSearchParams(), which Next.js
+   +              only allows inside a Suspense boundary. */}
    +          <Suspense>
+   +            {/* "skip": the server already reported this page view — don't report it twice. */}
    +            <NextAppAutoPageTracker initialPageEvent="skip" />
    +          </Suspense>
-              <Header settings={settings} />
-              {children}
-              <Footer settings={settings} />
+             <Header settings={settings} />
+             {children}
+             <Footer settings={settings} />
    +        </OptimizationRoot>
           </body>
         </html>
@@ -137,36 +138,37 @@ step before you ship.
     }
    ```
 
-5. Find the one place your app turns a Contentful entry into a component — for a sectioned site,
-   that is the `.map` inside your section renderer — and wrap it in `OptimizedEntry`. This single
-   change is the whole integration: keep your fetch and your components as they are.
+5. Wherever your code turns a Contentful entry into a component, wrap it in `OptimizedEntry`. Many
+   apps have a single such place — a renderer or registry that maps a content type to a component —
+   and wrapping it there personalizes every entry it renders; others render an entry directly in a
+   page. Either way, this is the whole integration: keep your fetch and your components as they are.
 
-   **Adapt this to your use case:** wrap the return line inside your existing renderer; keep your
-   null-handling exactly as it is.
+   **Adapt this to your use case:** the example is a content-type-to-component renderer. The `+`
+   lines are the additions; wrap the entry wherever your own code renders one, keeping your existing
+   guards.
 
    ```tsx
-   // components/SectionRenderer.tsx
+   // e.g. your renderer that maps a content type to a component (yours may be named differently)
    +import { OptimizedEntry } from '@/src/lib/optimization'
-   // SectionEntry is your existing section type — the union your components already accept.
 
-    export function SectionRenderer({ sections }) {
-      return sections?.map((entry) => {
-        const Component = entry ? sectionMap[entry.sys.contentType.sys.id] : undefined
+    export function ContentRenderer({ items }) {
+      return items?.map((entry) => {
+        const Component = entry ? componentFor(entry.sys.contentType.sys.id) : undefined
         if (!entry || !Component) return null // your existing guard stays
    -    return <Component key={entry.sys.id} entry={entry} />
    +    return (
    +      <OptimizedEntry key={entry.sys.id} baselineEntry={entry}>
-   +        {/* Render prop hands back a base `Entry`; cast to your section type.
-   +            If your type is narrowed (e.g. withoutUnresolvableLinks), use `as unknown as SectionEntry`. */}
-   +        {(resolved) => <Component entry={resolved as SectionEntry} />}
+   +        {/* Render prop hands back a base `Entry`; cast to your own entry type.
+   +            If that type is narrowed (e.g. withoutUnresolvableLinks), use `as unknown as YourEntryType`. */}
+   +        {(resolved) => <Component entry={resolved as YourEntryType} />}
    +      </OptimizedEntry>
    +    )
       })
     }
    ```
 
-6. Verify the one result. In Contentful, author a variant on a section that appears on your home
-   page and attach it to an experience — for a first test, target **all visitors** so you match it
+6. Check that it works. In Contentful, author a variant on a section that appears on your home page
+   and attach it to an experience — for a first test, target **all visitors** so you match it
    automatically. Load the page, **View Source** (or disable JavaScript), and search the raw HTML
    for the variant's text. It must be present in the server HTML and stay on screen after the page
    hydrates. If you see the original content instead, work through
@@ -480,18 +482,33 @@ This is Milestone 2. First paint is already complete and shippable; add this onl
 must re-personalize _after_ the page loads — for example, when a visitor accepts consent, signs in,
 or is identified, and entries should update without a reload.
 
-Live updates are opt-in because most content is fixed for the life of a request. Turn them on where
-they matter:
+Live updates are opt-in because most content is fixed for the life of a request. You do not add a
+provider for this — the bound `OptimizationRoot` already includes the live-updates provider
+internally. You only choose the scope:
 
-1. For a broad default, set `liveUpdates: true` in the factory, or wrap a subtree in
-   `LiveUpdatesProvider`.
-2. For a single client-only entry, import `OptimizedEntry` from `/client` and pass `liveUpdates`.
-   The bound `/app-router` `OptimizedEntry` deliberately omits per-entry `liveUpdates` and
-   `loadingFallback` props so the same import type-checks in both Server and Client Components.
+1. **App-wide default:** set `liveUpdates: true` in the factory config
+   (`createNextjsAppRouterOptimization`). The bound root passes it through, so every live-capable
+   entry re-resolves on state changes.
+2. **Per-entry:** import `OptimizedEntry` from `/client` in a Client Component and pass
+   `liveUpdates`. A per-entry value overrides the app-wide default, so you can opt one entry in
+   (`liveUpdates`) or out (`liveUpdates={false}`) independently. The bound `/app-router`
+   `OptimizedEntry` deliberately omits the per-entry `liveUpdates` and `loadingFallback` props so
+   the same import type-checks in both Server and Client Components — that is why per-entry control
+   uses the `/client` import.
 3. Use `/client` hooks such as `useOptimizedEntry()` only when you need rendering control the
    wrapper does not offer.
 
-**Adapt this to your use case:** a client-only entry that re-resolves on profile changes.
+**Follow this pattern:** the app-wide switch, in the factory from step 2 of the quick start.
+
+```ts
+createNextjsAppRouterOptimization({
+  // ...clientId, environment, locale, server, defaults
+  liveUpdates: true, // every live-capable entry re-resolves on browser state changes
+})
+```
+
+**Adapt this to your use case:** a single client-only entry that re-resolves on profile changes,
+without turning on the app-wide default.
 
 ```tsx
 'use client'
@@ -739,21 +756,22 @@ import { useOptimizationContext } from '@contentful/optimization-nextjs/client'
 import { useEffect } from 'react'
 
 export function PreviewPanelAttachment({ nonce }: { nonce?: string }) {
-  const { isReady } = useOptimizationContext()
+  // The context exposes the SDK instance; it is undefined until the browser SDK is ready.
+  const { sdk } = useOptimizationContext()
   const enabled = process.env.NEXT_PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
 
   useEffect(() => {
-    if (!enabled || !isReady) return // keep authoring tooling opt-in and post-ready
+    if (!enabled || sdk === undefined) return // opt-in, and only after the SDK is ready
 
     void Promise.all([
       import('@contentful/optimization-web-preview-panel'),
-      import('@/src/lib/contentful'),
+      import('@/src/lib/contentful'), // your Contentful client module
     ])
       .then(async ([{ default: attachOptimizationPreviewPanel }, { client }]) => {
         await attachOptimizationPreviewPanel({ contentful: client, nonce })
       })
       .catch(() => undefined)
-  }, [isReady, nonce, enabled])
+  }, [sdk, nonce, enabled])
 
   return null
 }
@@ -906,7 +924,7 @@ pnpm test:e2e:nextjs-sdk_app-router
 | Two server-side page events appear for one request                 | Multiple bound factories, or a manual helper also calls the server page path            | Create bound components once and keep manual `getNextjsServerOptimizationData()` out of the route                  |
 | Browser sends a duplicate first page event                         | `initialPageEvent="emit"` used after the server path already emitted the same route     | Use `skip` only when the server path owns the same initial request                                                 |
 | Browser does not send the first page event                         | `initialPageEvent="skip"` used on a browser-owned route without a matching server event | Use `emit` when the browser owns first page tracking                                                               |
-| Live entries do not update after `identifyUser()` or `resetUser()` | `liveUpdates` is off in the factory and provider                                        | Set `liveUpdates: true` in the factory or wrap the subtree in `LiveUpdatesProvider`                                |
+| Live entries do not update after `identifyUser()` or `resetUser()` | Live updates are off (the default)                                                      | Set `liveUpdates: true` in the factory, or pass `liveUpdates` to a `/client` `OptimizedEntry`                      |
 | Entry views, clicks, or hovers do not emit                         | Interaction tracking is opted out, consent blocks the event, or no profile is available | Check factory `trackEntryInteraction`, entry props, consent state, and `states.blockedEventStream`                 |
 | Server and browser use different profiles                          | Cookie domain, path, readability, or consent cleanup differs between runtimes           | Use a browser-readable `ctfl-opt-aid` with a consistent path and clear it on withdrawal                            |
 | Server Components fail with browser globals                        | A Client Component hook or browser-only import crossed into a server module             | Use bound imports in Server Components and `/client` hooks only in Client Components                               |
