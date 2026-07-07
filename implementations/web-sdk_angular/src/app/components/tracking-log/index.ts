@@ -1,5 +1,6 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core'
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
+import type { OptimizationEventStreamEvent } from '@contentful/optimization-web/core-sdk'
 import { interval } from 'rxjs'
 import { NgContentfulOptimization } from '../../services/optimization'
 
@@ -28,18 +29,29 @@ function timeAgo(firedAt: number, now: number): string {
   return `${Math.floor(m / MINUTES_PER_HOUR)}h`
 }
 
+type StreamEvent = OptimizationEventStreamEvent
+type EventOfType<T extends StreamEvent['type']> = Extract<StreamEvent, { type: T }>
+
 @Component({
   selector: 'app-tracking-log',
   templateUrl: './index.html',
 })
 export class TrackingLog {
   private readonly optimization = inject(NgContentfulOptimization)
+  private readonly destroyRef = inject(DestroyRef)
 
   private readonly events = signal<Map<string, AnalyticsEvent>>(new Map())
   private readonly rawEventsCount = signal(0)
   private readonly tick = toSignal(interval(TICK_INTERVAL_SECONDS * MS_PER_SECOND), {
     initialValue: 0,
   })
+
+  // Per-event-type sequence counters. Externalized from the dispatch so each
+  // handler stays a straight input→track mapping without threading closure
+  // state through the switch.
+  private pageSeq = 0
+  private componentSeq = 0
+
   protected readonly rawEventsDisplay = this.rawEventsCount.asReadonly()
   protected readonly displayEvents = computed(() => {
     this.tick()
@@ -50,78 +62,97 @@ export class TrackingLog {
   })
 
   constructor() {
-    const { optimization } = this
-    const { context } = optimization
-    if (context.platform !== 'browser') return
-    const { sdk } = context
+    let sub: { unsubscribe: () => void } | undefined = undefined
 
-    let pageSeq = 0
-    let componentSeq = 0
-    const sub = sdk.states.eventStream.subscribe((raw) => {
-      if (raw != null) {
-        this.rawEventsCount.update((n) => n + 1)
-      }
-      switch (raw?.type) {
-        case 'page': {
-          const {
-            properties: { url },
-          } = raw
-          pageSeq += 1
-          const pathname = (() => {
-            try {
-              return new URL(url, window.location.origin).pathname
-            } catch {
-              return url
-            }
-          })()
-          this.track({ type: 'page', value: pathname, key: `page-${pageSeq}-${url}` })
-          break
-        }
-        case 'component': {
-          const { componentId, viewId, viewDurationMs } = raw
-          if (viewId) {
-            this.track({
-              type: 'view',
-              value: componentId,
-              key: `view-${viewId}`,
-              viewDurationMs: typeof viewDurationMs === 'number' ? viewDurationMs : undefined,
-            })
-          } else {
-            componentSeq += 1
-            this.track(
-              { type: 'comp', value: componentId, key: `component-${componentId}-${componentSeq}` },
-              `event-component-${componentId}`,
-            )
-          }
-          break
-        }
-        case 'component_hover': {
-          const { componentId, hoverId, hoverDurationMs } = raw
-          if (hoverId) {
-            this.track({
-              type: 'hover',
-              value: componentId,
-              key: `component_hover-hover-${hoverId}`,
-              hoverDurationMs: typeof hoverDurationMs === 'number' ? hoverDurationMs : undefined,
-              hoverId,
-            })
-          } else {
-            this.track({ type: 'hover', value: componentId, key: `component_hover-${componentId}` })
-          }
-          break
-        }
-        case 'component_click': {
-          const { componentId } = raw
-          this.track({ type: 'click', value: componentId, key: `component_click-${componentId}` })
-          break
-        }
-        default:
-          break
-      }
+    // Re-subscribe when the runtime swaps from the SSR snapshot runtime to
+    // the live SDK. The snapshot runtime's static eventStream never emits, so
+    // the initial subscription is a harmless no-op that is torn down on swap.
+    effect(() => {
+      const runtime = this.optimization.runtime()
+      sub?.unsubscribe()
+      sub = runtime.states.eventStream.subscribe((raw) => {
+        this.dispatch(raw)
+      })
     })
-    inject(DestroyRef).onDestroy(() => {
-      sub.unsubscribe()
+
+    this.destroyRef.onDestroy(() => {
+      sub?.unsubscribe()
     })
+  }
+
+  private dispatch(raw: StreamEvent | undefined): void {
+    if (raw == null) return
+    this.rawEventsCount.update((n) => n + 1)
+
+    switch (raw.type) {
+      case 'page':
+        this.handlePage(raw)
+        break
+      case 'component':
+        this.handleComponent(raw)
+        break
+      case 'component_hover':
+        this.handleHover(raw)
+        break
+      case 'component_click':
+        this.handleClick(raw)
+        break
+      default:
+        break
+    }
+  }
+
+  private handlePage(raw: EventOfType<'page'>): void {
+    const {
+      properties: { url },
+    } = raw
+    this.pageSeq += 1
+    const pathname = (() => {
+      try {
+        return new URL(url, window.location.origin).pathname
+      } catch {
+        return url
+      }
+    })()
+    this.track({ type: 'page', value: pathname, key: `page-${this.pageSeq}-${url}` })
+  }
+
+  private handleComponent(raw: EventOfType<'component'>): void {
+    const { componentId, viewId, viewDurationMs } = raw
+    if (viewId) {
+      this.track({
+        type: 'view',
+        value: componentId,
+        key: `view-${viewId}`,
+        viewDurationMs: typeof viewDurationMs === 'number' ? viewDurationMs : undefined,
+      })
+      return
+    }
+    this.componentSeq += 1
+    this.track(
+      { type: 'comp', value: componentId, key: `component-${componentId}-${this.componentSeq}` },
+      `event-component-${componentId}`,
+    )
+  }
+
+  private handleHover(raw: EventOfType<'component_hover'>): void {
+    const { componentId, hoverId, hoverDurationMs } = raw
+    if (hoverId) {
+      this.track({
+        type: 'hover',
+        value: componentId,
+        key: `component_hover-hover-${hoverId}`,
+        hoverDurationMs: typeof hoverDurationMs === 'number' ? hoverDurationMs : undefined,
+        hoverId,
+      })
+      return
+    }
+    this.track({ type: 'hover', value: componentId, key: `component_hover-${componentId}` })
+  }
+
+  private handleClick(raw: EventOfType<'component_click'>): void {
+    const { componentId } = raw
+    this.track({ type: 'click', value: componentId, key: `component_click-${componentId}` })
   }
 
   private track(

@@ -1,6 +1,6 @@
 import { createContext } from 'react'
 
-import type { WebOptimizationRuntime } from '../runtime/webRuntime'
+import type { WebOptimizationRuntime } from '@contentful/optimization-web/runtime'
 
 export type OptimizationSdk = WebOptimizationRuntime
 

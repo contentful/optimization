@@ -2,9 +2,12 @@ import { NgTemplateOutlet } from '@angular/common'
 import { Component, computed, forwardRef, inject, input } from '@angular/core'
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser'
 import {
+  isMergeTagEntry,
   isRecord,
   isResolvedContentfulEntry,
   isRichTextDocument,
+  isUnresolvedEntryLink,
+  type MergeTagEntry,
 } from '@contentful/optimization-web/api-schemas'
 import { BLOCKS, INLINES } from '@contentful/rich-text-types'
 import {
@@ -17,6 +20,7 @@ import {
 import type { ContentEntrySkeleton, ContentfulEntry } from '../../services/contentful-client'
 import { injectContentfulEntry } from '../../services/entry'
 import { NgLiveUpdates } from '../../services/live-updates'
+import { NgContentfulOptimization } from '../../services/optimization'
 
 // — Badge —
 
@@ -57,8 +61,26 @@ function escape(text: string): string {
 }
 
 type NodeRenderer = (children: () => string, data: Record<string, unknown>) => string
+type MergeTagValueResolver = (target: MergeTagEntry) => string | undefined
 
-const RENDERERS: Partial<Record<string, NodeRenderer>> = {
+/**
+ * Substitution outcome tracked alongside a single rich-text walk. Callers pass
+ * a fresh cell in; the walker flips `resolved` to true or false depending on
+ * whether the first encountered merge tag returned a value. Kept out of the
+ * entry-resolution layer so it lives next to the badge that consumes it —
+ * mirrors the Next.js reference which resolves at render time via
+ * `OptimizedEntryRenderContext.getMergeTagValue`.
+ */
+interface MergeTagRenderState {
+  resolved: boolean | undefined
+}
+
+// `INLINES.EMBEDDED_ENTRY` is a string enum member; widen it once at module
+// scope so the render walk compares plain strings and `@typescript-eslint/no-
+// unsafe-enum-comparison` stays quiet without a cast at the call site.
+const EMBEDDED_ENTRY_NODE_TYPE: string = INLINES.EMBEDDED_ENTRY
+
+const BLOCK_RENDERERS: Partial<Record<string, NodeRenderer>> = {
   [BLOCKS.PARAGRAPH]: (children) => `<p>${children()}</p>`,
   [BLOCKS.HEADING_1]: (children) => `<h1>${children()}</h1>`,
   [BLOCKS.HEADING_2]: (children) => `<h2>${children()}</h2>`,
@@ -79,16 +101,38 @@ const RENDERERS: Partial<Record<string, NodeRenderer>> = {
   },
 }
 
-function renderNode(node: unknown): string {
+function renderMergeTag(
+  data: Record<string, unknown>,
+  getMergeTagValue: MergeTagValueResolver | undefined,
+  state: MergeTagRenderState,
+): string {
+  if (!('target' in data)) return ''
+  const { target } = data
+  if (isUnresolvedEntryLink(target) || !isMergeTagEntry(target)) return ''
+  const value = getMergeTagValue?.(target)
+  if (value !== undefined) {
+    state.resolved = true
+    return escape(value)
+  }
+  state.resolved ??= false
+  return typeof target.fields.nt_fallback === 'string' ? escape(target.fields.nt_fallback) : ''
+}
+
+function renderNode(
+  node: unknown,
+  getMergeTagValue: MergeTagValueResolver | undefined,
+  state: MergeTagRenderState,
+): string {
   if (!isRecord(node)) return ''
   const nodeType = typeof node.nodeType === 'string' ? node.nodeType : ''
   const value = typeof node.value === 'string' ? node.value : ''
   const content = Array.isArray(node.content) ? node.content : []
   const data = isRecord(node.data) ? node.data : {}
-  const children = (): string => content.map((c) => renderNode(c)).join('')
+  const children = (): string => content.map((c) => renderNode(c, getMergeTagValue, state)).join('')
 
   if (nodeType === 'text') return escape(value)
-  const { [nodeType]: renderer } = RENDERERS
+  if (nodeType === EMBEDDED_ENTRY_NODE_TYPE) return renderMergeTag(data, getMergeTagValue, state)
+  const { [nodeType]: renderer } = BLOCK_RENDERERS
   return renderer !== undefined ? renderer(children, data) : children()
 }
 
@@ -108,6 +152,7 @@ export class EntryCard {
 
   private readonly sanitizer = inject(DomSanitizer)
   private readonly liveUpdatesService = inject(NgLiveUpdates)
+  private readonly optimization = inject(NgContentfulOptimization)
 
   private readonly isLive = computed(() => {
     if (this.liveUpdatesService.previewPanelVisible()) return true
@@ -120,14 +165,29 @@ export class EntryCard {
     manualTracking: this.manualTracking,
   })
 
-  protected readonly effectiveTestId = computed(() => this.testId() ?? this.resolved().baselineId)
-  protected readonly isVariant = computed(() => this.resolved().optimizationId !== undefined)
-  protected readonly richTextHtml = computed<SafeHtml | undefined>(() => {
+  // Rich text and merge-tag detection share a single walk so the badge signal
+  // reflects the substitution outcome for exactly this render.
+  private readonly renderedRichText = computed<
+    { html: SafeHtml; mergeTagResolved: boolean | undefined } | undefined
+  >(() => {
     const { entry } = this.resolved()
     const doc = Object.values(entry.fields).find(isRichTextDocument)
     if (!doc) return undefined
-    return this.sanitizer.bypassSecurityTrustHtml(renderNode(doc))
+    const profile = this.optimization.profile()
+    const runtime = this.optimization.runtime()
+    const getMergeTagValue = profile
+      ? (target: MergeTagEntry): string | undefined => runtime.getMergeTagValue(target, profile)
+      : undefined
+    const state: MergeTagRenderState = { resolved: undefined }
+    const html = this.sanitizer.bypassSecurityTrustHtml(renderNode(doc, getMergeTagValue, state))
+    return { html, mergeTagResolved: state.resolved }
   })
+
+  protected readonly effectiveTestId = computed(() => this.testId() ?? this.resolved().baselineId)
+  protected readonly isVariant = computed(() => this.resolved().optimizationId !== undefined)
+  protected readonly richTextHtml = computed<SafeHtml | undefined>(
+    () => this.renderedRichText()?.html,
+  )
   protected readonly entryText = computed(() => {
     const text: unknown = this.resolved().entry.fields.text
     return typeof text === 'string' ? text : 'No content'
@@ -139,8 +199,7 @@ export class EntryCard {
       : []
   })
   protected readonly badges = computed(() => {
-    const r = this.resolved()
-    const mergeTag = mergeTagKey(r.mergeTagResolved)
+    const mergeTag = mergeTagKey(this.renderedRichText()?.mergeTagResolved)
     const scenario = this.clickScenario()
     const keys: BadgeKey[] = [
       ...(mergeTag ? [mergeTag] : []),
