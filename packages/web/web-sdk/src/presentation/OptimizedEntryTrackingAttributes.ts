@@ -84,6 +84,7 @@ export function resolveOptimizedEntryTrackingAttributes(
     'data-ctfl-baseline-id': baselineEntry.sys.id,
     'data-ctfl-clickable': clickable === true ? true : undefined,
     'data-ctfl-duplication-scope': resolveDuplicationScope(selectedOptimization),
+    'data-ctfl-empty-variant': resolvedData.isEmptyVariant === true ? true : undefined,
     'data-ctfl-entry-id': entryId,
     'data-ctfl-hover-duration-update-interval-ms': hoverDurationUpdateIntervalMs,
     'data-ctfl-optimization-id': selectedOptimization?.experienceId,

@@ -40,6 +40,20 @@ export interface ResolvedData<
   selectedOptimization?: SelectedOptimization
   /** Opaque runtime-owned optimization context ID for entry interaction tracking. */
   optimizationContextId?: string
+  /**
+   * Whether the resolved variant is an empty variant — a deliberate author choice to
+   * render nothing for this audience. When `true`, the entry field still contains the
+   * baseline entry (used for tracking context) but renderers must display no content.
+   * This is distinct from a baseline selection (`variantIndex === 0`) and from a
+   * resolution error (broken variant link), both of which render the baseline entry.
+   *
+   * An empty variant is detected by `selectedVariant.id === ''`. In the Ninetailed
+   * data model, an empty-string variant ID means no replacement entry exists for that
+   * slot — the content author deliberately chose to show nothing for this audience.
+   * The `hidden` field on the variant config is always `false` (or absent) in practice
+   * and is not used for detection.
+   */
+  isEmptyVariant?: true
 }
 
 /**
@@ -183,13 +197,18 @@ function resolveWithContext<
   const resolveTo = (
     resolvedEntry: Entry<S, M, L>,
     selectedVariant?: EntryReplacementVariant,
+    isEmptyVariant?: true,
   ): ResolvedDataWithOptimizationContext<S, M, L> => {
     const audienceEntry = isResolvedAudienceEntry(maybeAudienceEntry)
       ? maybeAudienceEntry
       : undefined
 
     return {
-      resolvedData: { entry: resolvedEntry, selectedOptimization },
+      resolvedData: {
+        entry: resolvedEntry,
+        selectedOptimization,
+        ...(isEmptyVariant ? { isEmptyVariant } : {}),
+      },
       optimizationContext: {
         selectedOptimization,
         optimizationEntry,
@@ -220,6 +239,13 @@ function resolveWithContext<
       `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${entry.sys.id}`,
     )
     return resolveTo(entry)
+  }
+
+  if (selectedVariant.id === '') {
+    logger.debug(
+      `Entry ${entry.sys.id} resolved to empty variant at index ${selectedVariantIndex} — rendering nothing`,
+    )
+    return resolveTo(entry, selectedVariant, true)
   }
 
   const selectedVariantEntry = OptimizedEntryResolver.getSelectedVariantEntry<S, M, L>({

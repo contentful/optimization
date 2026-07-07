@@ -6,17 +6,30 @@ import * as z from 'zod/mini'
  * @remarks
  * Each variant is identified by an `id` and can be marked as `hidden`.
  *
+ * An **empty variant** — the content author's deliberate choice to show nothing for an
+ * audience — is encoded as `id: ""`. The `hidden` field is always `false` (or absent)
+ * in Contentful-sourced data; it is not the detection signal. The resolver detects an
+ * empty variant via `id === ""` and returns `isEmptyVariant: true` in `ResolvedData`
+ * so renderers can suppress content while still emitting a component view impression
+ * for measurement.
+ *
+ * The `hidden` field on the **baseline** (`EntryReplacementComponent.baseline`) has a
+ * different meaning: `true` excludes the entire component from variant resolution and
+ * allocation. This is a baseline-level "hidden from traffic" flag, unrelated to the
+ * empty-variant concept above.
+ *
  * @public
  */
 export const EntryReplacementVariant = z.object({
   /**
-   * Unique identifier for the variant.
+   * Unique identifier for the variant. Empty string (`""`) for an Empty variant.
    */
   id: z.string(),
 
   /**
-   * Indicates whether this variant is hidden from allocation/traffic.
-   *
+   * On a baseline: `true` excludes the whole component from allocation.
+   * On a variant: always `false` (or absent) in Contentful-sourced data.
+   * Not used for empty-variant detection — use `id === ""` instead.
    */
   hidden: z.optional(z.boolean()),
 })

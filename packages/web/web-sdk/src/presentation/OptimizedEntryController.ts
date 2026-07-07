@@ -58,6 +58,12 @@ export interface OptimizedEntrySnapshot {
   readonly entry: Entry
   /** Host attributes needed for automatic entry interaction tracking. */
   readonly hostAttributes: OptimizedEntryTrackingAttributes
+  /**
+   * Whether the resolved variant is an empty variant — the content author deliberately
+   * chose to show nothing for this audience. Renderers must suppress visible content
+   * when this is `true`, but still mount the tracking host so a component view fires.
+   */
+  readonly isEmptyVariant: boolean
   /** Whether the optimized entry is still waiting for optimization state. */
   readonly isLoading: boolean
   /** Whether the client presentation layer is ready to reveal rendered content. */
@@ -263,6 +269,7 @@ function areSnapshotsEqual(left: OptimizedEntrySnapshot, right: OptimizedEntrySn
   return (
     left.canOptimize === right.canOptimize &&
     left.entry === right.entry &&
+    left.isEmptyVariant === right.isEmptyVariant &&
     left.isLoading === right.isLoading &&
     left.isPresentationReady === right.isPresentationReady &&
     left.selectedOptimization === right.selectedOptimization &&
@@ -483,6 +490,7 @@ export class OptimizedEntryController {
             resolvedData,
             this.options,
           ),
+      isEmptyVariant: resolvedData.isEmptyVariant === true,
       isLoading,
       isPresentationReady: this.options.isPresentationReady,
       loadingPresentation: {

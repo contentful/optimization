@@ -168,7 +168,7 @@ export function OptimizedEntry({
   const resolvedLoadingFallback = hasCustomLoadingFallback
     ? resolveLoadingFallback(loadingFallback)
     : undefined
-  const { entry, hostAttributes, loadingPresentation } = snapshot
+  const { entry, hostAttributes, isEmptyVariant, loadingPresentation } = snapshot
   const {
     hideLoadingLayoutTarget,
     shouldRenderBaselineWhileLoading,
@@ -205,7 +205,7 @@ export function OptimizedEntry({
   return (
     <OptimizedEntryNestingContext.Provider value={currentAndAncestorBaselineIds}>
       <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId} {...hostAttributes}>
-        {resolveChildren(children, entry, renderContext)}
+        {isEmptyVariant ? null : resolveChildren(children, entry, renderContext)}
       </Wrapper>
     </OptimizedEntryNestingContext.Provider>
   )
