@@ -13,6 +13,9 @@ add per-archetype checks.
       and any of consent/persistenceConsent/profile/page-event the quick start touches).
 - [ ] No section promises "you don't need X" and then requires an undefined X before it is
       explained.
+- [ ] No informal filler or hype that reads oddly in a reference doc ("this is the payoff", "the
+      magic happens here", "boom", gratuitous "just"). Section openers state what the section does
+      plainly.
 - [ ] Every fenced code block has exactly one bold intent label immediately before it
       (`**Copy this:**`, `**Adapt this to your use case:**`, `**Follow this pattern:**`, or
       `**Reference excerpt:**`). No former/other labels.

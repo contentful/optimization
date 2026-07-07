@@ -32,6 +32,10 @@ go deeper. Two consequences drive everything below:
   browser takeover"). A newcomer must not need the concept docs to get a first result.
 - **Sequence over completeness.** Reveal the picture in order. Do not front-load the full production
   surface. Anything a section will teach later must not appear before the reader needs it.
+- **Plain, not chatty.** Be direct and warm, but avoid informal filler and hype that reads oddly in
+  a reference doc ("this is the payoff", "the magic happens here", "boom", "just"). Say what the
+  section does plainly ("This is where personalization happens"). A sentence should still make sense
+  read aloud in a technical review.
 
 ## Scope
 

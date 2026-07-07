@@ -359,9 +359,9 @@ For how server and browser stay on the same profile, see
 
 **Integration category:** Required for first integration
 
-This is the payoff. In a Server Component, `OptimizedEntry` resolves the entry against the request's
-decisions and renders the variant — or the baseline entry — straight into the HTML. No JavaScript is
-required for the visitor to see personalized content.
+This is where personalization actually happens. In a Server Component, `OptimizedEntry` resolves the
+entry against the request's decisions and renders the variant — or the baseline entry — straight
+into the HTML. No JavaScript is required for the visitor to see personalized content.
 
 The rule never changes: **wherever a Contentful entry becomes a component, wrap it in
 `OptimizedEntry` and render whatever the render prop hands back.** Two facts hold everywhere:
