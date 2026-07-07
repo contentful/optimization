@@ -1,5 +1,6 @@
 import type {
   ChangeArray,
+  ExperienceEventArray,
   ExperienceEvent as ExperienceEventPayload,
   InsightsEvent as InsightsEventPayload,
   Json,
@@ -338,8 +339,7 @@ abstract class CoreStatefulEventEmitter
     event: ExperienceEventPayload,
     optimizationContext?: EventOptimizationContext,
   ): Promise<EventEmissionResult> {
-    if (!this.hasConsent(method)) {
-      this.onBlockedByConsent(method, args)
+    if (!this.guardExperienceEventConsent(method, args)) {
       return { accepted: false }
     }
 
@@ -347,6 +347,30 @@ abstract class CoreStatefulEventEmitter
     if (data === undefined) return { accepted: true }
 
     return { accepted: true, data }
+  }
+
+  /**
+   * Drain queued Experience events through the shared consent gate.
+   *
+   * @remarks
+   * Events blocked by consent remain queued — the drain is a no-op in that case
+   * so the events can be sent once consent is granted.
+   *
+   * @internal
+   */
+  protected drainQueuedExperienceEvents(method: string): ExperienceEventArray {
+    if (!this.guardExperienceEventConsent(method, [])) return []
+
+    return this.experienceQueue.drainQueuedEvents()
+  }
+
+  private guardExperienceEventConsent(method: string, args: readonly unknown[]): boolean {
+    if (!this.hasConsent(method)) {
+      this.onBlockedByConsent(method, args)
+      return false
+    }
+
+    return true
   }
 
   protected async sendInsightsEvent(
