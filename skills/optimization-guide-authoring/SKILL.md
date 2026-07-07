@@ -6,13 +6,12 @@ description: >-
   quick-start-then-deepen structure, the copy-vs-adapt example labels, the guides directory routing
   index, and the self-review checklist that keeps guides consistent. Use when writing a new
   integration guide, rewriting an existing one, adding a decision or recipe guide, editing the
-  guides README index, or reviewing a guide for structure and voice. Not for concept docs under
-  documentation/concepts (those own deeper mechanics), not for package or implementation READMEs,
-  and not for generated TypeDoc under docs/.
-when_to_use: >-
-  Triggers on "write a guide", "integration guide", "getting started guide", "documentation/guides",
-  "choosing-the-right-sdk", "guide archetype", "quick start", "rewrite the guide", "guide TOC",
-  "Copy this / Adapt this", and on editing any file under documentation/guides/.
+  guides README index, reviewing a guide for structure and voice, or editing any file under
+  documentation/guides/. Triggers on "write a guide", "integration guide", "getting started guide",
+  "documentation/guides", "choosing-the-right-sdk", "guide archetype", "quick start", "rewrite the
+  guide", "guide TOC", "Copy this / Adapt this". Not for concept docs under documentation/concepts
+  (those own deeper mechanics), not for package or implementation READMEs, and not for generated
+  TypeDoc under docs/.
 argument-hint: '[guide file or SDK to document]'
 paths: documentation/guides/**
 ---
