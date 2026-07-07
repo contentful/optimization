@@ -340,14 +340,20 @@ a resolution miss:
 | Variant entry is still an unresolved link         | Baseline entry | —                | Matched selection             |
 | Variant entry content type differs from baseline  | Baseline entry | —                | Matched selection             |
 
-The "empty variant" row is distinct from data errors. A content author deliberately selected the
-**Empty variant** option in the Personalization UI, which stores `id: ""` in the variant config
-(with `hidden: false` — the `hidden` flag is always `false` on variants in Contentful-sourced data
-and is not the detection signal). The SDK detects an empty variant by `id === ""` and returns
-`isEmptyVariant: true` in `ResolvedData`. Renderers must not display any content when
-`isEmptyVariant` is `true`, but they must still emit a component view impression so the empty
-variant is measurable in Insights. The baseline entry is returned in the `entry` field as tracking
-context only.
+The "empty variant" row is distinct from data errors. When a content author selects the **Empty
+variant** option in the Personalization UI, the variant is stored in `nt_config` as
+`{ "id": "", "hidden": true }`. An unfilled placeholder slot (a variant added or unlinked but not
+yet configured) is stored as `{ "id": "", "hidden": false }`. Both forms have `id: ""`, and both
+produce `isEmptyVariant: true`.
+
+The SDK detects an empty variant by `id === ""` — not by the `hidden` flag. The `hidden` flag is not
+a reliable signal because the Experience API strips it before runtime; it only survives in the
+Contentful CDA `nt_config` payload that the resolver reads. Using `id === ""` is stable across both
+data sources.
+
+When `isEmptyVariant` is `true`, renderers must not display any content. They must still emit a
+component view impression so the empty variant is measurable in Insights. The baseline entry is
+returned in the `entry` field as tracking context only.
 
 Consumers must not rely on exceptions to detect personalization misses. Render the baseline entry
 when no variant resolves; baseline fallback is expected behavior, not an error state.
