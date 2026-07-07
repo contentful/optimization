@@ -25,6 +25,7 @@ import {
   type WebOptimizationRuntime,
 } from '@contentful/optimization-web/runtime'
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
+import type { ServerOptimizedEntryHandoff } from '../server-optimized-entries'
 
 /**
  * Provider-owned callback for app-level subscriptions once SDK state is ready.
