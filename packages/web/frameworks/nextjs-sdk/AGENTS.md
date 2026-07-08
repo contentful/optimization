@@ -11,8 +11,8 @@ client.
   `@contentful/optimization-nextjs/app-router`; Pages Router client components live under
   `@contentful/optimization-nextjs/pages-router`; Pages `getServerSideProps` support lives under
   `@contentful/optimization-nextjs/pages-router/server`.
-- Keep the package root and `/client` as client-safe lower-level exports. Do not add a bound
-  component factory to the package root.
+- Keep `/client` as the router-neutral client-safe lower-level export. The package root is
+  intentionally unexported; do not add a bound component factory or client alias there.
 - Do not import `@contentful/optimization-core` directly.
 - Keep server entries free of client directives and browser-only assumptions.
 - Keep client entries marked with `"use client"` and free of Node-only imports.

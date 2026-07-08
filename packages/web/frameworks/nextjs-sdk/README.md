@@ -21,14 +21,16 @@
 > The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 `@contentful/optimization-nextjs` is a thin adapter for Next.js applications. It composes the Node
-SDK on the server with the React Web SDK on the client; it is not a new optimization runtime.
+SDK on the server with the React Web SDK on the client; it is not a new optimization runtime. The
+package root intentionally has no runtime export. Import one of the documented subpaths so the
+server, client, and router boundaries stay explicit.
 
 ## What this package provides
 
 | Runtime         | Import path                                           | Responsibility                                            |
 | --------------- | ----------------------------------------------------- | --------------------------------------------------------- |
-| App Router      | `@contentful/optimization-nextjs/app-router`          | Bound App Router components and SDK proxy                 |
-| Pages Router    | `@contentful/optimization-nextjs/pages-router`        | Bound Pages Router client component factory               |
+| App Router      | `@contentful/optimization-nextjs/app-router`          | App Router factory, route tracker, and SDK proxy          |
+| Pages Router    | `@contentful/optimization-nextjs/pages-router`        | Pages Router factory and route tracker                    |
 | Pages server    | `@contentful/optimization-nextjs/pages-router/server` | Config-bound `getServerSideProps` state handoff           |
 | Client          | `@contentful/optimization-nextjs/client`              | Router-neutral React SDK providers, hooks, and components |
 | Schemas         | `@contentful/optimization-nextjs/api-schemas`         | Shared API types, schemas, and structural guards          |
@@ -51,7 +53,8 @@ app-owned CDA client used by the managed entry fetching example.
 
 Start App Router integrations from `/app-router` and define app-local bound exports once. Next.js
 resolves that import to the automatic server implementation for Server Components and to the client
-implementation for Client Components.
+implementation for Client Components. The `/app-router` subpath is a factory and tracker surface;
+import browser hooks, providers, and generic client entry components from `/client`.
 
 ```tsx
 import { createNextjsAppRouterOptimization } from '@contentful/optimization-nextjs/app-router'
@@ -140,7 +143,9 @@ it does not accept injected SDK instances.
 ## Pages Router setup
 
 Start Pages Router integrations from `/pages-router` and pass server state through `_app.tsx`
-because `getServerSideProps` delivers it through `pageProps`.
+because `getServerSideProps` delivers it through `pageProps`. The `/pages-router` subpath is a
+factory and tracker surface; import browser hooks, providers, and generic client entry components
+from `/client`.
 
 ```tsx
 import { createNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router'

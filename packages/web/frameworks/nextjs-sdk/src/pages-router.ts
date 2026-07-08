@@ -21,7 +21,6 @@ import type {
   NextjsPagesRouterOptimizationComponentsConfig,
 } from './bound-component-types'
 
-export * from '@contentful/optimization-react-web'
 export type {
   BoundNextjsOptimizationRootProps,
   NextjsOptimizationCookieConfig,

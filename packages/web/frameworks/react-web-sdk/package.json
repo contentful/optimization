@@ -129,7 +129,7 @@
   "scripts": {
     "build": "pnpm clean && pnpm build:dist",
     "build:ci": "pnpm build:dist",
-    "build:dist": "rslib build && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/router",
+    "build:dist": "rslib build && build-tools check-client-boundary-exports ./src ./dist && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/router",
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/router",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo ./node_modules/.cache/rspack",
     "dev": "rsbuild dev --host 0.0.0.0 -c dev/rsbuild.config.ts",

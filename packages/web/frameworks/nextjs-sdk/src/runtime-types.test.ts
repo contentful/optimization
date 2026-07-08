@@ -1,12 +1,11 @@
 import type NodeContentfulOptimization from '@contentful/optimization-node'
-import type { OptimizedEntryProps } from '@contentful/optimization-react-web'
 import type WebContentfulOptimization from '@contentful/optimization-web'
 import type {
   NextjsOptimizationComponents as NextjsAppClientComponents,
   NextjsBoundOptimizedEntryProps,
 } from './app-router-client'
 import type { NextjsOptimizationComponents as NextjsAppServerComponents } from './app-router-server'
-import type { OptimizationSdk } from './client'
+import type { OptimizationSdk, OptimizedEntryProps } from './client'
 import type { NextjsPagesRouterOptimization } from './pages-router'
 import type { ContentfulOptimization as NextjsServerOptimization } from './server'
 

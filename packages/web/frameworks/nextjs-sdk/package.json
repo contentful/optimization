@@ -8,20 +8,7 @@
     "directory": "packages/web/frameworks/nextjs-sdk"
   },
   "type": "module",
-  "main": "./dist/client.cjs",
-  "module": "./dist/client.mjs",
-  "types": "./dist/client.d.mts",
   "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/client.d.mts",
-        "default": "./dist/client.mjs"
-      },
-      "require": {
-        "types": "./dist/client.d.cts",
-        "default": "./dist/client.cjs"
-      }
-    },
     "./app-router": {
       "react-server": {
         "types": "./dist/app-router-server.d.mts",
@@ -149,7 +136,7 @@
   "scripts": {
     "build": "pnpm clean && pnpm build:dist",
     "build:ci": "pnpm build:dist",
-    "build:dist": "rslib build && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/pages-router",
+    "build:dist": "rslib build && build-tools check-client-boundary-exports ./src ./dist && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/pages-router",
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/pages-router",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo ./node_modules/.cache/rspack",
     "size:check": "pnpm build:dist && build-tools bundle-size",

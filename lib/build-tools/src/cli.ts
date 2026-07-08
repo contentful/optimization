@@ -1,4 +1,5 @@
 import { checkBundleSize } from './bundleSize'
+import { checkClientBoundaryExports } from './clientBoundaryExports'
 import { emitDualDts } from './emitDualDts'
 import { preparePublishReadme } from './publishReadme'
 
@@ -7,11 +8,13 @@ function printUsage(): void {
     'Usage:\n' +
       '  build-tools emit-dual-dts [distDir]\n' +
       '  build-tools bundle-size [packageDir] [--report-only]\n' +
+      '  build-tools check-client-boundary-exports [path...]\n' +
       '  build-tools rewrite-readme prepare [packageDir]\n' +
       '\n' +
       'Examples:\n' +
       '  build-tools emit-dual-dts ./dist\n' +
       '  build-tools bundle-size\n' +
+      '  build-tools check-client-boundary-exports ./src ./dist\n' +
       '  build-tools rewrite-readme prepare\n' +
       '  build-tools bundle-size ./packages/web/web-sdk --report-only\n',
   )
@@ -73,6 +76,20 @@ function runBundleSizeCommand(args: string[]): void {
   }
 }
 
+function runCheckClientBoundaryExportsCommand(args: string[]): void {
+  const failures = checkClientBoundaryExports({ paths: args })
+
+  if (failures.length === 0) return
+
+  process.stderr.write('Unsupported export * in client boundaries:\n')
+
+  for (const failure of failures) {
+    process.stderr.write(`- ${failure.file}\n`)
+  }
+
+  process.exitCode = 1
+}
+
 function runRewriteReadmeCommand(args: string[]): void {
   const [action, packageDir = '.'] = args
 
@@ -108,6 +125,11 @@ export function main(argv: string[]): void {
 
   if (command === 'bundle-size') {
     runBundleSizeCommand(rest)
+    return
+  }
+
+  if (command === 'check-client-boundary-exports') {
+    runCheckClientBoundaryExportsCommand(rest)
     return
   }
 

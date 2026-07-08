@@ -1,3 +1,4 @@
+import * as reactWeb from '@contentful/optimization-react-web'
 import type { Entry } from 'contentful'
 import * as appRouter from './app-router-client'
 import * as client from './client'
@@ -56,7 +57,7 @@ describe('Next.js App Router client components', () => {
       serverOptimizedEntries,
     })
 
-    expect(components.OptimizedEntry).toBe(appRouter.OptimizedEntry)
+    expect(components.OptimizedEntry).toBe(client.OptimizedEntry)
     expect(components.NextAppAutoPageTracker).toBe(appRouter.NextAppAutoPageTracker)
     expect(components.proxy).toBeUndefined()
     expect(components).not.toHaveProperty('config')
@@ -92,8 +93,16 @@ describe('Next.js App Router client components', () => {
   })
 
   it('keeps the low-level client entry free of router-specific exports', () => {
+    expect(Object.keys(client).sort()).toEqual(Object.keys(reactWeb).sort())
     expect(client).not.toHaveProperty('NextAppAutoPageTracker')
     expect(client).not.toHaveProperty('NextPagesAutoPageTracker')
     expect(client).not.toHaveProperty('createNextjsOptimizationComponents')
+  })
+
+  it('keeps the App Router entry scoped to the factory and tracker', () => {
+    expect(Object.keys(appRouter).sort()).toEqual([
+      'NextAppAutoPageTracker',
+      'createNextjsAppRouterOptimization',
+    ])
   })
 })

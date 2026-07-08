@@ -5,6 +5,11 @@
  */
 export { checkBundleSize } from './bundleSize'
 export type { BundleSizeFailure, BundleSizeResult, CheckBundleSizeOptions } from './bundleSize'
+export { checkClientBoundaryExports } from './clientBoundaryExports'
+export type {
+  CheckClientBoundaryExportsOptions,
+  ClientBoundaryExportFailure,
+} from './clientBoundaryExports'
 export { emitDualDts } from './emitDualDts'
 export { getPackageName, hasPackageName } from './package'
 export { preparePublishReadme, rewriteReadmeForPublish } from './publishReadme'
