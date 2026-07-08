@@ -10,7 +10,9 @@ add per-archetype checks.
       hits does not use an undefined term.
 - [ ] Every term the quick start relies on is defined in plain language at or before first use (for
       SDK guides that includes: variant, experience, Experience API, resolving, baseline fallback,
-      and any of consent/persistenceConsent/profile/page-event the quick start touches).
+      and any of consent/persistenceConsent/profile/page-event the quick start touches). The
+      definition is in prose (or the intro explainer), not only inside a code comment — a reader who
+      skims prose and diffs must still meet the term defined.
 - [ ] No section promises "you don't need X" and then requires an undefined X before it is
       explained.
 - [ ] No informal filler or hype that reads oddly in a reference doc ("this is the payoff", "the
@@ -63,6 +65,9 @@ add per-archetype checks.
       `implementations/`).
 - [ ] The verify step is performable — it tells the reader how to cause the result
       (audience-targets- all, or forcing a variant), not just to "load as a qualifying visitor."
+- [ ] The quick start is self-contained: no step (the verify step included) is only actionable via a
+      forward reference to a later section. A step may link onward for depth, but the instruction it
+      needs to act must be present inline where the reader hits it.
 - [ ] `## Before you start` is a prerequisites list, not a setup-inventory table, and includes the
       authored-variant gotcha (see before-you-start.md).
 - [ ] The shared concern checklist is covered or each unsupported concern is explicitly marked
