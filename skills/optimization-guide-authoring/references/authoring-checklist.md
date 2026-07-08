@@ -76,7 +76,9 @@ add per-archetype checks.
       tracking, privacy/governance, and a local validation path.
 - [ ] `## Troubleshooting` is present only if the guide covers known failure modes, and its rows map
       to real symptoms a reader hits (including the render-prop cast type error, if applicable).
-- [ ] Reference-implementation links point to monorepo READMEs, not source files or external demos.
+- [ ] Reference-implementation links point to monorepo READMEs, not source files, sample apps, or
+      external demos. Reference implementations are framed as maintained comparison and validation
+      targets for SDK behavior, not as optional examples or lower-stakes sample code.
 
 ## C. Decision guides (`choosing-the-right-sdk.md` and future)
 

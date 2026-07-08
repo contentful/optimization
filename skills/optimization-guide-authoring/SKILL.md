@@ -38,6 +38,13 @@ go deeper. Two consequences drive everything below:
   a reference doc ("this is the payoff", "the magic happens here", "boom", "just"). Say what the
   section does plainly ("This is where personalization happens"). A sentence should still make sense
   read aloud in a technical review.
+- **Describe the current SDK, not its history.** The reader opens the guide cold and does not know
+  what the SDK looked like before. Write in the present tense and never narrate change: no "no
+  longer", "now supports", "was removed", "used to", "newly added", "renamed from", PR/issue
+  numbers, or version-bump framing. When the SDK changes, revise the affected prose in place so it
+  reads as if it were always this way. (A `## Troubleshooting` row describing a present symptom and
+  its fix — e.g. a build error and how to resolve it — is current-state guidance, not history, and
+  is fine.)
 
 ## Scope
 

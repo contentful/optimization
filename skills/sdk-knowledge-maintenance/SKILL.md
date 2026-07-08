@@ -46,6 +46,16 @@ the base holds facts. When you catch an SDK-specific fact drifting into a skill,
 
 These are the transferable behaviors this skill exists to preserve.
 
+- **Record the current state, not the history that produced it.** The base describes how the SDK
+  works _now_, for a reader who does not know what it looked like before and does not need to. Never
+  write change-ledger language: no "no longer", "now exports", "was removed", "used to", "gains",
+  "newly added", "renamed from", "remains supported", PR/issue numbers, version-bump framing, or
+  "this changed because…". State the fact plainly in the present tense. When the SDK changes, _edit
+  the fact in place_ so it reads as if it were always true — do not append a note about the change
+  or strike through the old value. (Genuine runtime conditionals — "after reading headers the route
+  cannot use ISR" — are present-tense behavior, not history, and are fine.) The same rule governs
+  `shared/consistency-notes.md`: it records the status quo of what language must match across a
+  guide family, not a log of merges or fixes.
 - **Every fact carries a `source:` pointer.** A path, `path#symbol`, or `path:line` into
   `packages/**/src`. A fact without a source pointer is a claim, not knowledge — do not add it.
 - **Capture once, as a byproduct of verification.** When you verify an SDK API against source while
@@ -86,6 +96,9 @@ These are the transferable behaviors this skill exists to preserve.
 ## Before you finish
 
 - Every new or changed fact has a `source:` pointer into `packages/**/src`.
+- Every entry reads as present-tense current state, with no change-ledger language ("no longer",
+  "now", "was removed", "used to", PR/issue numbers, version-bump framing). Changes were edited in
+  place, not appended as history.
 - New per-SDK files match `_template.md` heading-for-heading, with `None.` for empty sections.
 - Shared facts live once in `shared/` and are linked, not restated.
 - Any cross-guide drift you noticed is logged in `shared/consistency-notes.md`.

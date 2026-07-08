@@ -3,11 +3,26 @@
 SDK-neutral concepts common to Web, React Web, and both Next.js routers. Per-SDK files reference
 these instead of restating them. Terse; not a guide.
 
-## You-fetch / SDK-resolves boundary
+## Entry-source boundary (managed or manual)
 
-The app owns Contentful fetching; the SDK only resolves. The SDK sits at the hand-off where a
-fetched entry becomes a component and returns the resolved variant (or the baseline entry). The app
-keeps its client, fetchers, components, routing, caching, and rendering.
+The app owns the Contentful client. Two supported ways to get a fetched entry to the SDK's
+resolution hand-off:
+
+- **Manual:** the app fetches the entry itself and passes it in (`baselineEntry` /
+  `resolveOptimizedEntry(entry)`). The app keeps its client, fetchers, caching, and rendering.
+- **Managed (opt-in):** the app hands the SDK its `contentful.js` client via `contentful` config
+  (`contentful: { client, defaultQuery?, cache? }`); the SDK then fetches by entry ID through that
+  client (`fetchContentfulEntry(id)` / `fetchOptimizedEntry(id)` / `<OptimizedEntry entryId>` /
+  `useOptimizedEntry({ entryId })`). The client is still app-owned; the SDK only calls `getEntry()`
+  on it, merging `contentful.defaultQuery`, the per-call query, an SDK locale fallback, and
+  `include: 10`. Per-instance cache defaults to `{ maxEntries: 100, ttlMs: 300_000 }`;
+  `cache: false` disables it; `clearContentfulEntryCache()` clears it. source: `core-sdk`
+  `CoreBase.ts` — `ContentfulConfig` (~:66-79), `ContentfulEntryClient` (~:46-49), `contentful?`
+  config key, `fetchContentfulEntry`/`fetchOptimizedEntry`/`clearContentfulEntryCache`.
+
+Either way, the SDK sits at the hand-off where a fetched entry becomes a component and returns the
+resolved variant (or the baseline entry). Both paths are supported; a guide must not assert the SDK
+never fetches. source: `core-sdk` `CoreBase.ts` `contentful?` config.
 
 ## Entry resolution
 

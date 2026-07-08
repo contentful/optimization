@@ -7,13 +7,23 @@ main's final consistency pass. Terse; running log.
 
 - Intro four-sentence explainer of variant / experience / Experience API / resolving / baseline
   fallback. Keep the wording aligned (see [`vocabulary.md`](./vocabulary.md)).
-- The you-fetch / SDK-resolves boundary sentence. See [`concepts.md`](./concepts.md).
+- The **entry-source boundary** framing (managed-or-manual). See [`concepts.md`](./concepts.md).
+  Every web guide states it the same way: "you own the Contentful client; the SDK can fetch through
+  it (managed) OR you fetch yourself (manual); both are supported." The guide must not assert the
+  SDK never fetches, and must keep the manual path first-class.
 - Entry-wrap cast guidance: render prop returns a base `Entry`; use `resolved as YourType`; mention
   `as unknown as YourType` only for genuinely disjoint types.
 - Baseline-fallback contract phrasing (denied consent / no variant / unresolved links / all-locale).
 - `## Before you start` shape and the authored-variant gotcha (all-visitors experience for a first
   test).
 - consent vs persistenceConsent one-line definitions.
+- No app-authored helper is named after a real SDK method — notably `fetchOptimizedEntry`, which is
+  an SDK method. A guide's own example fetch helper uses a distinct name (React Web uses
+  `fetchPageEntry`).
+- The two Next.js guides share one verbatim troubleshooting row: symptom "Next.js 15 reports
+  unsupported `export *` in a client boundary" / cause "The app or an old SDK version uses wildcard
+  re-exports in a `'use client'` module" / fix "Upgrade to the fixed SDK and avoid app-authored
+  `export *` barrels in Client Components." Keep the App Router and Pages Router rows aligned.
 
 ## Drift spotted (for review)
 

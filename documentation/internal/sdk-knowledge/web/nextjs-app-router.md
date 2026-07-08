@@ -21,6 +21,11 @@ when this SDK's guide is next revised.
 Note: `/app-router` has a `react-server` export condition (server build) distinct from its browser
 build. source: `package.json` exports.
 
+The package root (`@contentful/optimization-nextjs`) is not an import path — the `package.json`
+exports map starts at `./app-router`, with no `.` entry. React Web hooks/providers import from
+`/client`; the bound `OptimizationRoot` / `OptimizedEntry` / `NextAppAutoPageTracker` import from
+`/app-router`. source: `nextjs-sdk/package.json` exports (no `.` entry).
+
 ## Setup / factory
 
 - `createNextjsAppRouterOptimization(config)` →
@@ -28,19 +33,25 @@ build. source: `package.json` exports.
   Config keys: `clientId`, `environment`, `locale`, `api?`, `defaults` (`consent`,
   `persistenceConsent`), `server` (`enabled`, `consent` — value or `({ cookies }) => consent`),
   `app` (`name`, `version`), plus `liveUpdates?`, `trackEntryInteraction?`, `onStatesReady?`,
-  `allowedEventTypes?`. Create bound components once. source:
-  `src/app-router-server.tsx:57-65,166-172` (5-member return + interface).
+  `allowedEventTypes?`. Create bound components once. source: `src/app-router-server.tsx:66-74,88`
+  (5-member interface + factory).
+- **`contentful?: ContentfulConfig` (managed fetching):** via the core `contentful` config. Lets the
+  bound server `OptimizedEntry` fetch by `entryId` (via
+  `sdk.fetchOptimizedEntry(entryId, { query })`) as an alternative to a manual `baselineEntry`. The
+  factory strips `contentful` before building the CLIENT provider config (`toClientProviderConfig`
+  destructures `contentful: _contentful`); managed fetching runs on the server side. source:
+  `src/app-router-server.tsx:145-223,284`; `core-sdk` `CoreBase.ts:173`.
 
 ## Components & hooks
 
-| Name                                                                                     | Kind      | Import path           | Key props/args                                                                   | Returns                                   | source                                |
-| ---------------------------------------------------------------------------------------- | --------- | --------------------- | -------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------- |
-| `OptimizationRoot`                                                                       | component | `/app-router` (bound) | `children` (takes no per-render config)                                          | element                                   | accepted App Router guide             |
-| `OptimizedEntry`                                                                         | component | `/app-router` (bound) | `baselineEntry`, render-prop child                                               | element / `null`                          | accepted App Router guide             |
-| `OptimizedEntry`                                                                         | component | `/client`             | adds per-entry `liveUpdates`, `loadingFallback`                                  | element / `null`                          | accepted App Router guide             |
-| `NextAppAutoPageTracker`                                                                 | component | `/app-router`         | `initialPageEvent`, `getPagePayload`; needs `Suspense` (reads `useSearchParams`) | element                                   | react-web `router/next-app.tsx:3, 51` |
-| `useOptimizationActions`                                                                 | hook      | `/client`             | —                                                                                | `{ setConsent, identifyUser, resetUser }` | accepted App Router guide             |
-| `useConsentState` / `useProfileState` / `useOptimizationContext` / `useMergeTagResolver` | hook      | `/client`             | —                                                                                | state / `{ sdk }` / resolver              | accepted App Router guide             |
+| Name                                                                                     | Kind      | Import path           | Key props/args                                                                                                                                                         | Returns                                   | source                                       |
+| ---------------------------------------------------------------------------------------- | --------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | -------------------------------------------- |
+| `OptimizationRoot`                                                                       | component | `/app-router` (bound) | `children` (takes no per-render config)                                                                                                                                | element                                   | accepted App Router guide                    |
+| `OptimizedEntry`                                                                         | component | `/app-router` (bound) | discriminated union `baselineEntry` (manual) XOR `entryId` (+`entryQuery?`, managed server fetch); render-prop child. Omits per-render `liveUpdates`/`loadingFallback` | element / `null`                          | `src/app-router-server.tsx:57-63,145-223`    |
+| `OptimizedEntry`                                                                         | component | `/client`             | adds per-entry `liveUpdates`, `loadingFallback` (+ `errorFallback`/`onEntryError` for managed)                                                                         | element / `null`                          | react-web `OptimizedEntry.tsx:81-90,118-133` |
+| `NextAppAutoPageTracker`                                                                 | component | `/app-router`         | `initialPageEvent`, `getPagePayload`; needs `Suspense` (reads `useSearchParams`)                                                                                       | element                                   | react-web `router/next-app.tsx:3, 51`        |
+| `useOptimizationActions`                                                                 | hook      | `/client`             | —                                                                                                                                                                      | `{ setConsent, identifyUser, resetUser }` | accepted App Router guide                    |
+| `useConsentState` / `useProfileState` / `useOptimizationContext` / `useMergeTagResolver` | hook      | `/client`             | —                                                                                                                                                                      | state / `{ sdk }` / resolver              | accepted App Router guide                    |
 
 Note: bound `/app-router` `OptimizedEntry` omits per-entry `liveUpdates`/`loadingFallback` so the
 same import type-checks in Server + Client Components; use `/client` `OptimizedEntry` for per-entry

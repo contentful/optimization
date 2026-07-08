@@ -39,6 +39,16 @@ wraps this). Package source root: `packages/web/web-sdk/src`; shared core:
     `ContentfulOptimization.ts:58,309`.
   - `autoTrackEntryInteraction` — default `views`/`clicks`/`hovers` all `true`. source:
     `src/entry-tracking/resolveAutoTrackEntryInteractionOptions.ts:123-131`.
+  - **`contentful?: ContentfulConfig` (managed entry fetching):** opt-in; from `CoreConfig`
+    (`OptimizationWebConfig extends CoreStatefulConfig extends CoreConfig`).
+    `{ client: ContentfulEntryClient, defaultQuery?: ContentfulEntryQuery, cache?: false |`
+    `{ maxEntries?, ttlMs? } }`. `ContentfulEntryClient` = `{ getEntry(entryId, query?) }`;
+    `ContentfulEntryQuery = EntryQueries<undefined>`. Managed query merges `defaultQuery` + per-call
+    query + SDK locale fallback + `include: 10`. Cache default
+    `{ maxEntries: 100, ttlMs: 300_000 }`; `cache: false` disables. source: `core-sdk` `CoreBase.ts`
+    `CoreConfig.contentful` (:173), `ContentfulConfig` (:68), `ContentfulEntryClient` (:46),
+    `ContentfulEntryQuery` (:34); `web-sdk` `ContentfulOptimization.ts:68`
+    (`extends CoreStatefulConfig`); `CoreStateful.ts:175` (`CoreStatefulConfig extends CoreConfig`).
 
 ## Components & hooks
 
@@ -48,11 +58,21 @@ None (imperative class + Web Components; no React surface). Web Components eleme
 | ---------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `defineContentfulOptimizationElements()` | registrar | Side-effect-free until called; registers the two custom elements                                                                                                                                                                                                                                                                                                                               | `src/web-components/index.ts:4-5,21-45`                                                                                                                  |
 | `<ctfl-optimization-root>`               | element   | Attributes: `client-id`, `environment`, `locale`, `live-updates`. Properties: `defaults`, `api`, `trackEntryInteraction`, `sdk`, `onStatesReady`. Reuses `window.contentfulOptimization` automatically if present (`this.assignedSdk ?? getGlobalSdk()`); `sdk` prop supplies an explicit instance. Root-owned SDK defaults view/click/hover on. Events `ctfl-root-ready` / `ctfl-root-error`. | `web-components/ContentfulOptimizationRootElement.ts:51-53,123-166,217,42-48`; `RootElement.ts:13-14`; `presentation/optimizationRootRuntime.ts:131-133` |
-| `<ctfl-optimized-entry>`                 | element   | Property `baselineEntry` (assigning it triggers resolution), `sdk`. Attributes `live-updates`, `track-clicks`, `track-hovers`, `track-views`. Events `ctfl-entry-loading` / `ctfl-entry-resolved` / `ctfl-entry-error`.                                                                                                                                                                        | `web-components/ContentfulOptimizedEntryElement.ts:70-72,83-99,16-18`                                                                                    |
+| `<ctfl-optimized-entry>`                 | element   | Property `baselineEntry` (manual: assigning it triggers resolution) OR `entry-id` attribute / `entryId` property (managed: SDK fetches by ID via configured `contentful.client`); `entryQuery` property; `sdk`. Observed attributes: `entry-id`, `live-updates`, `track-clicks`, `track-hovers`, `track-views`. Events `ctfl-entry-loading` / `ctfl-entry-resolved` / `ctfl-entry-error`.      | `web-components/ContentfulOptimizedEntryElement.ts:76-77,92-119,197-201,253-262,16-18`                                                                   |
 | `ContentfulOptimizedEntryEventDetail`    | type      | `{ entry, resolvedData, selectedOptimization, selectedOptimizations, snapshot }`                                                                                                                                                                                                                                                                                                               | `ContentfulOptimizedEntryElement.ts:22-28,372-378`                                                                                                       |
 
 ## Render / entry resolution
 
+- **Managed fetch methods (from `CoreBase`; require `contentful: { client }`):**
+  - `fetchContentfulEntry(entryId, query?)` → `Promise<Entry>` — calls the configured client's
+    `getEntry()` with the merged query (`defaultQuery` + per-call + locale fallback +
+    `include: 10`), per-instance cached. Throws if `contentful.client` is not configured.
+  - `fetchOptimizedEntry(entryId, options?)` → `Promise<{ baselineEntry, entry,`
+    `selectedOptimization?, ... }>` — fetches then resolves; `options = { query?,`
+    `selectedOptimizations? }`. Additive to synchronous `resolveOptimizedEntry()`.
+  - `clearContentfulEntryCache()` → clears this instance's managed-entry cache.
+  - source: `core-sdk` `CoreBase.ts` `clearContentfulEntryCache` (:273), `fetchContentfulEntry`
+    (:288), `fetchOptimizedEntry` (:352), `FetchOptimizedEntryResult` (:99).
 - `resolveOptimizedEntry(baselineEntry, selectedOptimizations?)` →
   `{ resolvedData: { entry, selectedOptimization? }, optimizationContext? }`; public helper surfaces
   `{ entry, selectedOptimization?, optimizationContextId? }`. Omitting arg 2 defaults to
@@ -73,14 +93,14 @@ None (imperative class + Web Components; no React surface). Web Components eleme
 
 ## Identifier ownership
 
-| Identifier                              | Owner  | Notes                                                                                                                                                    | source                                                                                                          |
-| --------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `ctfl-opt-aid` (profile/anon-id cookie) | SDK    | Browser-readable; NOT `HttpOnly` (browser SDK reads it for hybrid takeover)                                                                              | `core-sdk` `constants.ts:38`                                                                                    |
-| `ANONYMOUS_ID_COOKIE` constant          | SDK    | Exported from `/constants`; value === `'ctfl-opt-aid'`                                                                                                   | `src/constants.ts:52` re-exports `core-sdk` `constants.ts:38`                                                   |
-| `data-ctfl-*` tracking attributes       | SDK    | `-entry-id`, `-baseline-id`, `-optimization-id`, `-optimization-context-id`, `-variant-index`, `-sticky`, `-clickable`; entry-id must be the RESOLVED id | `presentation/OptimizedEntryTrackingAttributes.ts:70-73,83-97`; `entry-tracking/resolveTrackingPayload.ts:8-31` |
-| app consent cookie/record               | reader | Reader names/writes/reads; SDK only reflects `consent()`                                                                                                 | shared concept; guide                                                                                           |
-| `<ctfl-optimized-entry data-entry-id>`  | reader | App-owned lookup metadata, not SDK config                                                                                                                | guide                                                                                                           |
-| browser env/config values               | reader | Bundler-agnostic; match the app's own browser-visible-var convention                                                                                     | guide                                                                                                           |
+| Identifier                              | Owner  | Notes                                                                                                                                                                           | source                                                                                                          |
+| --------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `ctfl-opt-aid` (profile/anon-id cookie) | SDK    | Browser-readable; NOT `HttpOnly` (browser SDK reads it for hybrid takeover)                                                                                                     | `core-sdk` `constants.ts:38`                                                                                    |
+| `ANONYMOUS_ID_COOKIE` constant          | SDK    | Exported from `/constants`; value === `'ctfl-opt-aid'`                                                                                                                          | `src/constants.ts:52` re-exports `core-sdk` `constants.ts:38`                                                   |
+| `data-ctfl-*` tracking attributes       | SDK    | `-entry-id`, `-baseline-id`, `-optimization-id`, `-optimization-context-id`, `-variant-index`, `-sticky`, `-clickable`; entry-id must be the RESOLVED id                        | `presentation/OptimizedEntryTrackingAttributes.ts:70-73,83-97`; `entry-tracking/resolveTrackingPayload.ts:8-31` |
+| app consent cookie/record               | reader | Reader names/writes/reads; SDK only reflects `consent()`                                                                                                                        | shared concept; guide                                                                                           |
+| `<ctfl-optimized-entry entry-id>`       | SDK    | Managed-fetch INPUT: entry ID the SDK fetches via the configured `contentful.client`; NOT app lookup metadata. Manual alternative: assign the `baselineEntry` property instead. | `web-components/ContentfulOptimizedEntryElement.ts:77,101-111,253-262`                                          |
+| browser env/config values               | reader | Bundler-agnostic; match the app's own browser-visible-var convention                                                                                                            | guide                                                                                                           |
 
 ## Events & tracking
 

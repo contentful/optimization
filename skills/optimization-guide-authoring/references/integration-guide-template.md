@@ -171,6 +171,16 @@ the exact entry points — this skill names none. Apply these general rules:
 - Comment only meaningful SDK-specific lines (lifecycle, consent, sequencing, fallback,
   duplicate-event prevention). Never narrate obvious syntax.
 
+## Reference implementations
+
+- Link only to monorepo reference implementation READMEs — not external demos, sample apps, or
+  implementation source files.
+- Frame reference implementations as maintained comparison and validation targets for SDK behavior.
+  Do not present them as optional examples or lower-stakes sample code.
+- Mention relevant implementations briefly near the top only when they clarify the quick start or
+  first required setup path; otherwise expand the links in
+  `## Reference implementations to compare against`.
+
 ## TOC rules
 
 - Preserve `<!-- mtoc-start -->` / `<!-- mtoc-end -->`.
