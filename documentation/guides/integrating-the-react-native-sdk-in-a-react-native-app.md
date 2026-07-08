@@ -6,8 +6,8 @@ optional preview tooling to a React Native or Expo application with
 
 The React Native SDK builds on the Optimization Core SDK and adds React Native providers, hooks,
 entry rendering, viewport and tap tracking, AsyncStorage persistence, optional offline delivery, and
-an in-app preview panel. Your application still owns Contentful Delivery API fetching, consent
-policy, identity policy, navigation, and final rendering.
+an in-app preview panel. Your application still owns Contentful Delivery API client configuration,
+Contentful locale policy, consent policy, identity policy, navigation, and final rendering.
 
 ## Quick start
 
@@ -24,21 +24,19 @@ events or rendering personalized content.
    pnpm add @contentful/optimization-react-native @react-native-async-storage/async-storage contentful
    ```
 
-2. Mount `OptimizationRoot`, emit one screen event for profile context, fetch one single-locale
-   Contentful entry with linked optimization data, and render the resolved entry ID through
-   `OptimizedEntry`.
+2. Mount `OptimizationRoot` with your app-owned Contentful client, emit one screen event for profile
+   context, and render one single-locale Contentful entry by ID through `OptimizedEntry`.
 
    **Copy this:**
 
    ```tsx
-   import { useEffect, useState } from 'react'
    import { Text } from 'react-native'
    import {
      OptimizationRoot,
      OptimizedEntry,
      useScreenTracking,
    } from '@contentful/optimization-react-native'
-   import { createClient, type Entry } from 'contentful'
+   import { createClient } from 'contentful'
 
    const APP_LOCALE = 'en-US'
 
@@ -49,25 +47,12 @@ events or rendering personalized content.
    })
 
    function HomeScreen() {
-     const [entry, setEntry] = useState<Entry | undefined>()
-
      // Automatic screen tracking uses current-screen dedupe.
      useScreenTracking({ name: 'Home' })
 
-     useEffect(() => {
-       void contentfulClient
-         .getEntry('hero-entry-id', {
-           include: 10, // Resolve optimization and variant links before SDK resolution.
-           locale: APP_LOCALE, // Keep CDA entries and SDK context on the same locale.
-         })
-         .then(setEntry)
-     }, [])
-
-     if (!entry) return null
-
      // OptimizedEntry passes the selected variant or baseline fallback to the renderer.
      return (
-       <OptimizedEntry baselineEntry={entry}>
+       <OptimizedEntry entryId="hero-entry-id">
          {(resolvedEntry) => <Text>{`Resolved entry: ${resolvedEntry.sys.id}`}</Text>}
        </OptimizedEntry>
      )
@@ -80,6 +65,13 @@ events or rendering personalized content.
          clientId="your-optimization-client-id"
          environment="main"
          locale={APP_LOCALE}
+         contentful={{
+           client: contentfulClient,
+           defaultQuery: {
+             include: 10, // Resolve optimization and variant links before SDK resolution.
+             locale: APP_LOCALE, // Keep CDA entries and SDK context on the same locale.
+           },
+         }}
          defaults={{ consent: true }}
        >
          <HomeScreen />
@@ -125,33 +117,34 @@ events or rendering personalized content.
 
 Use this setup inventory before you move beyond the quick start:
 
-| Setup item                                                                | Category                       | Required for quick start | Where to configure                                                                     |
-| ------------------------------------------------------------------------- | ------------------------------ | ------------------------ | -------------------------------------------------------------------------------------- |
-| React Native app with compatible React and React Native peer dependencies | Required for first integration | Yes                      | Application package dependencies                                                       |
-| `@contentful/optimization-react-native` package                           | Required for first integration | Yes                      | Application package dependencies                                                       |
-| `@react-native-async-storage/async-storage` peer dependency               | Required for first integration | Yes                      | Application package dependencies and native install flow                               |
-| Contentful Delivery API client                                            | Required for first integration | Yes                      | Application package dependencies and app-owned Contentful client factory               |
-| Optimization client ID and environment                                    | Required for first integration | Yes                      | `OptimizationRoot`, `OptimizationProvider`, or `ContentfulOptimization.create(...)`    |
-| Experience API and Insights API endpoint overrides                        | Common but policy-dependent    | No                       | `api` SDK config for staging, mock, or non-default hosts                               |
-| Contentful space, environment, access token, and CDA host                 | Required for first integration | Yes                      | Application-owned Contentful fetching layer                                            |
-| Optimized Contentful entries with resolved `nt_experiences` and variants  | Required for first integration | Yes                      | Contentful content model and CDA `include` depth                                       |
-| Single Contentful CDA locale and SDK Experience/event locale              | Required for first integration | Yes                      | App locale policy, Contentful `getEntry()` calls, and SDK `locale`                     |
-| `OptimizationRoot` mounted once around SDK consumers                      | Required for first integration | Yes                      | React Native app root or navigation root                                               |
-| Screen, route, or lifecycle integration                                   | Required for first integration | Yes                      | `useScreenTracking`, `useScreenTrackingCallback`, or `OptimizationNavigationContainer` |
-| Entry rendering through `OptimizedEntry` or `useEntryResolver`            | Required for first integration | Yes                      | React Native components that render Contentful entries                                 |
-| Consent startup policy and user-choice wiring                             | Common but policy-dependent    | Conditional              | SDK `defaults`, `allowedEventTypes`, and application consent UI or CMP callbacks       |
-| Entry view and tap tracking policy                                        | Common but policy-dependent    | Conditional              | `trackEntryInteraction` on `OptimizationRoot` and per-entry tracking props             |
-| User identity, profile continuity, and reset policy                       | Common but policy-dependent    | No                       | Authentication, account, or settings flows that call `identify()` and `reset()`        |
-| React Navigation integration                                              | Optional                       | No                       | App navigation dependencies and `OptimizationNavigationContainer`                      |
-| `@react-native-community/netinfo` for offline detection                   | Optional                       | No                       | Application package dependencies and native install flow                               |
-| Preview peer dependencies                                                 | Optional                       | No                       | `@react-native-clipboard/clipboard` and `react-native-safe-area-context`               |
-| Merge tag and Custom Flag rendering                                       | Optional                       | No                       | App-owned Rich Text, flag, or feature-rendering components                             |
-| Analytics forwarding destination                                          | Optional                       | No                       | `onStatesReady` subscriptions and application-owned analytics code                     |
-| Strict pre-consent allowlist, queue policy, and diagnostics               | Advanced or production-only    | No                       | SDK `allowedEventTypes`, `queuePolicy`, `onEventBlocked`, and `logLevel`               |
-| Preview release gating and custom native builds                           | Advanced or production-only    | No                       | Build flags, Expo custom dev builds, and release configuration                         |
+| Setup item                                                                           | Category                       | Required for quick start | Where to configure                                                                     |
+| ------------------------------------------------------------------------------------ | ------------------------------ | ------------------------ | -------------------------------------------------------------------------------------- |
+| React Native app with compatible React and React Native peer dependencies            | Required for first integration | Yes                      | Application package dependencies                                                       |
+| `@contentful/optimization-react-native` package                                      | Required for first integration | Yes                      | Application package dependencies                                                       |
+| `@react-native-async-storage/async-storage` peer dependency                          | Required for first integration | Yes                      | Application package dependencies and native install flow                               |
+| Contentful Delivery API client                                                       | Required for first integration | Yes                      | Application package dependencies, app-owned Contentful client factory, and SDK config  |
+| Optimization client ID and environment                                               | Required for first integration | Yes                      | `OptimizationRoot`, `OptimizationProvider`, or `ContentfulOptimization.create(...)`    |
+| Experience API and Insights API endpoint overrides                                   | Common but policy-dependent    | No                       | `api` SDK config for staging, mock, or non-default hosts                               |
+| Contentful space, environment, access token, and CDA host                            | Required for first integration | Yes                      | Application-owned Contentful client and SDK `contentful` config                        |
+| Optimized Contentful entries with resolved `nt_experiences` and variants             | Required for first integration | Yes                      | Contentful content model and CDA `include` depth                                       |
+| Single Contentful CDA locale and SDK Experience/event locale                         | Required for first integration | Yes                      | App locale policy, SDK `contentful.defaultQuery` or `entryQuery`, and SDK `locale`     |
+| `OptimizationRoot` mounted once around SDK consumers                                 | Required for first integration | Yes                      | React Native app root or navigation root                                               |
+| Screen, route, or lifecycle integration                                              | Required for first integration | Yes                      | `useScreenTracking`, `useScreenTrackingCallback`, or `OptimizationNavigationContainer` |
+| Entry rendering through `OptimizedEntry`, `useOptimizedEntry`, or `useEntryResolver` | Required for first integration | Yes                      | React Native components that render Contentful entries                                 |
+| Consent startup policy and user-choice wiring                                        | Common but policy-dependent    | Conditional              | SDK `defaults`, `allowedEventTypes`, and application consent UI or CMP callbacks       |
+| Entry view and tap tracking policy                                                   | Common but policy-dependent    | Conditional              | `trackEntryInteraction` on `OptimizationRoot` and per-entry tracking props             |
+| User identity, profile continuity, and reset policy                                  | Common but policy-dependent    | No                       | Authentication, account, or settings flows that call `identify()` and `reset()`        |
+| React Navigation integration                                                         | Optional                       | No                       | App navigation dependencies and `OptimizationNavigationContainer`                      |
+| `@react-native-community/netinfo` for offline detection                              | Optional                       | No                       | Application package dependencies and native install flow                               |
+| Preview peer dependencies                                                            | Optional                       | No                       | `@react-native-clipboard/clipboard` and `react-native-safe-area-context`               |
+| Merge tag and Custom Flag rendering                                                  | Optional                       | No                       | App-owned Rich Text, flag, or feature-rendering components                             |
+| Analytics forwarding destination                                                     | Optional                       | No                       | `onStatesReady` subscriptions and application-owned analytics code                     |
+| Strict pre-consent allowlist, queue policy, and diagnostics                          | Advanced or production-only    | No                       | SDK `allowedEventTypes`, `queuePolicy`, `onEventBlocked`, and `logLevel`               |
+| Preview release gating and custom native builds                                      | Advanced or production-only    | No                       | Build flags, Expo custom dev builds, and release configuration                         |
 
-The React Native SDK does not fetch Contentful entries. Fetch entries in your application layer,
-then pass single-locale entry objects to SDK components and hooks.
+Prefer SDK-managed entry fetching by configuring `contentful: { client }` and passing `entryId`.
+Manual single-locale `baselineEntry` objects remain supported when your application layer must own
+the individual Contentful request.
 
 ## Core integration
 
@@ -219,7 +212,7 @@ accepted.
 5. Subscribe to `states.blockedEventStream` during development when you need to verify blocked
    calls.
 
-**Copy this:**
+**Adapt this to your use case:**
 
 ```tsx
 // Use this only when policy allows Optimization to start accepted.
@@ -260,27 +253,52 @@ For cross-SDK policy details, see
 
 **Integration category:** Required for first integration
 
-Your app owns Contentful fetching. The SDK resolver expects a standard single-locale Contentful CDA
-entry payload where optimized fields are direct values, not locale-keyed maps.
+Your app owns the Contentful client and locale policy. The React Native SDK can call that client
+when `contentful: { client }` is configured, or your app can fetch a manual `baselineEntry`. Both
+paths must produce a standard single-locale Contentful CDA entry payload where optimized fields are
+direct values, not locale-keyed maps.
 
 1. Choose the application Contentful locale in your app configuration, i18n layer, or navigation
    layer.
-2. Pass that locale to Contentful CDA requests that feed SDK entry resolution.
+2. Configure `contentful.defaultQuery` on the SDK, pass per-entry `entryQuery`, or pass the locale
+   to manual Contentful CDA requests.
 3. Request enough link depth for `nt_experiences`, optimization config, and linked variant entries.
    `include: 10` is the repository reference implementation's pattern.
 4. Pass the same locale to SDK `locale` when Experience API responses and event context must use the
    same language.
 5. Do not pass `contentful.js` `withAllLocales` results or raw CDA `locale=*` responses to
-   `OptimizedEntry` or `useEntryResolver`.
+   `OptimizedEntry`, `useOptimizedEntry`, or `useEntryResolver`.
 
-**Copy this:**
+**Adapt this to your use case:**
 
 ```tsx
 const APP_LOCALE = 'en-US'
 
+<OptimizationRoot
+  clientId="your-optimization-client-id"
+  locale={APP_LOCALE}
+  contentful={{
+    client: contentfulClient,
+    defaultQuery: {
+      include: 10, // Resolve optimization and variant links before SDK resolution.
+      locale: APP_LOCALE, // Keep CDA entries and SDK context on the same locale.
+    },
+  }}
+>
+  <OptimizedEntry entryId="hero-entry-id">
+    {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
+  </OptimizedEntry>
+</OptimizationRoot>
+```
+
+Manual fetching remains supported when your app needs request ownership around one entry:
+
+**Adapt this to your use case:**
+
+```tsx
 const entry = await contentfulClient.getEntry('hero-entry-id', {
-  include: 10, // Resolve optimization and variant links before SDK resolution.
-  locale: APP_LOCALE, // Keep CDA entries and SDK context on the same locale.
+  include: 10,
+  locale: APP_LOCALE,
 })
 ```
 
@@ -302,27 +320,49 @@ For the broader locale model, see
 non-optimized entries through unchanged. Invalid, incomplete, or unmatched optimization data falls
 back to the baseline entry instead of throwing.
 
-1. Pass the baseline Contentful entry to `OptimizedEntry`.
-2. Use a render prop when the child needs the resolved baseline or variant entry.
-3. Use static children only when you need entry tracking but not variant data in the child.
-4. Use `useEntryResolver()` when a component needs the same resolution behavior without the wrapper
+1. Pass `entryId` to let the SDK fetch the baseline entry through the configured Contentful client.
+2. Pass `baselineEntry` when your application already fetched the entry and must keep manual request
+   ownership.
+3. Use `loadingFallback`, `errorFallback`, and `onEntryError` when the managed fetch needs visible
+   loading or error handling.
+4. Use a render prop when the child needs the resolved baseline or variant entry.
+5. Use static children only when you need entry tracking but not variant data in the child.
+6. Use `useOptimizedEntry()` for the same managed or manual source model without the wrapper
    component.
+7. Use `useEntryResolver()` when a component needs manual-only resolution helpers.
 
 **Adapt this to your use case:**
 
 ```tsx
-import { OptimizedEntry, useEntryResolver } from '@contentful/optimization-react-native'
+import {
+  OptimizedEntry,
+  useEntryResolver,
+  useOptimizedEntry,
+} from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
-function HeroSection({ baselineEntry }: { baselineEntry: Entry }) {
+function HeroSection() {
   return (
-    <OptimizedEntry baselineEntry={baselineEntry}>
+    <OptimizedEntry
+      entryId="hero-entry-id"
+      loadingFallback={null}
+      errorFallback={null}
+      onEntryError={(error) => diagnostics.report(error)}
+    >
       {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
     </OptimizedEntry>
   )
 }
 
-function HeroData({ baselineEntry }: { baselineEntry: Entry }) {
+function HeroData() {
+  const { entry, isPresentationReady } = useOptimizedEntry({ entryId: 'hero-entry-id' })
+
+  if (!isPresentationReady || !entry) return null
+
+  return <HeroCard entry={entry} />
+}
+
+function HeroManualData({ baselineEntry }: { baselineEntry: Entry }) {
   const { resolveEntry } = useEntryResolver()
   // resolveEntry uses current selected optimizations and falls back to baseline content.
   const resolvedEntry = resolveEntry(baselineEntry)

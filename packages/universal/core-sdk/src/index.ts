@@ -36,6 +36,7 @@ export type {
   QueueFlushRecoveredContext,
 } from './lib/queue'
 export * from './locale'
+export type * from './OptimizedEntryMetadata'
 export * from './page-context'
 export type { ExperienceQueue } from './queues/ExperienceQueue'
 export type { InsightsQueue } from './queues/InsightsQueue'

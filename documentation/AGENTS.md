@@ -34,6 +34,9 @@ Applies to authored documentation under `documentation/`.
 - In guides, do not place concept links in the opening before quick-start material unless the
   concept is required for safe action. Put deeper mechanics links after the relevant step or in a
   `## Learn more` section.
+- Treat reference implementations as maintained validation evidence and comparison targets for
+  supported integration paths. Do not frame them as optional examples, disposable samples, or
+  lower-stakes app code.
 - Guides, concepts, and product documents may link to docs, package READMEs, implementation READMEs,
   and generated reference docs, but not directly to source code, tests, generated outputs, or source
   line numbers.

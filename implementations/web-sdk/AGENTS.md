@@ -4,8 +4,8 @@ Vanilla JS reference implementation for `@contentful/optimization-web`.
 
 ## Rules
 
-- Keep this app minimal and example-oriented; reusable runtime logic belongs in
-  `packages/web/web-sdk`.
+- Keep this app focused, consumer-oriented, and coverage-preserving; reusable runtime logic belongs
+  in `packages/web/web-sdk`.
 - `build` copies Web SDK, preview-panel, and `lib/e2e-web/src/theme.css` assets into `public/dist`.
 - `server.ts` is a lightweight Node.js HTTP server; it reads `.env` (or `.env.example`), injects env
   vars as `window.ENVIRONMENT` into the HTML, and serves `public/` with an SPA fallback. No Docker

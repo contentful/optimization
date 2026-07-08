@@ -130,6 +130,10 @@ Account for these constraints before wiring lifecycle details:
 - **Storage availability** - Platform storage is a durability layer, not the live source of truth.
   If browser storage, AsyncStorage, UserDefaults, or SharedPreferences is unavailable or blocked,
   design the application to continue from runtime state.
+- **Managed entry fetching** - SDK-managed entry fetching still uses the application-configured
+  `contentful.js` client and does not change consent ownership. Apply the same CMP, routing, locale,
+  and cache policy before choosing manual `baselineEntry` resolution or managed
+  `fetchOptimizedEntry()`.
 - **Offline queue purge** - Withdrawing event consent with `consent(false)` purges queued SDK
   Experience and Insights events. Blocked events are not replayed when consent later becomes true.
 - **Preview mode** - Preview panels and preview overrides change live-update and preview behavior;

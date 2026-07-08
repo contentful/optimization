@@ -35,6 +35,7 @@ Contentful and SDK Experience/event locale handling, see
   - [Multiple attached optimizations](#multiple-attached-optimizations)
 - [Where resolution happens](#where-resolution-happens)
   - [Resolve directly with SDK methods](#resolve-directly-with-sdk-methods)
+  - [Manage entry sources in custom adapters](#manage-entry-sources-in-custom-adapters)
   - [Render with framework components](#render-with-framework-components)
   - [Preview selected variants](#preview-selected-variants)
 - [Related documentation](#related-documentation)
@@ -57,12 +58,14 @@ The Experience API owns profile evaluation and returns the selected experience a
 Contentful owns entry delivery and link resolution. The SDK joins those two data sets in memory and
 returns either the baseline entry or a resolved variant entry.
 
-Applications still own consent, identity, routing, Contentful fetching, and component rendering
-policy. After those inputs exist, entry resolution provides the content decision for the current
-profile or request.
+Applications still own Contentful client configuration, locale choice, cache policy, consent,
+identity, routing, and component rendering policy. JavaScript runtimes can either receive a manual
+`baselineEntry` or call the app-provided `contentful.js` client through SDK-managed fetching. After
+those inputs exist, entry resolution provides the content decision for the current profile or
+request.
 
 ```text
-Application fetches Contentful baseline entry
+Application provides a Contentful baseline entry or SDK fetches one by entry ID
   -> Application or SDK emits an Experience event
   -> SDK event result exposes data.selectedOptimizations
   -> SDK resolver matches selectedOptimizations to entry.fields.nt_experiences
@@ -78,15 +81,15 @@ it to entry resolution.
 Entry resolution is available across the Optimization SDK Suite, but the public surface depends on
 the runtime:
 
-| Runtime      | Direct API                                                                         | Component or native rendering API                            |
-| ------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Core         | `CoreStateful.resolveOptimizedEntry()` and `CoreStateless.resolveOptimizedEntry()` | None                                                         |
-| Web          | `ContentfulOptimization.resolveOptimizedEntry()`                                   | `ctfl-optimized-entry` Web Component                         |
-| React Web    | `useEntryResolver()` and the underlying Web SDK method                             | `useOptimizedEntry()` and `OptimizedEntry`                   |
-| React Native | `useEntryResolver()` and the underlying React Native SDK method                    | `OptimizedEntry`                                             |
-| Node         | `ContentfulOptimization.resolveOptimizedEntry()`                                   | None                                                         |
-| iOS          | `OptimizationClient.resolveOptimizedEntry(baseline:selectedOptimizations:)`        | SwiftUI `OptimizedEntry`; UIKit can call the client directly |
-| Android      | `suspend OptimizationClient.resolveOptimizedEntry(...)`                            | Compose `OptimizedEntry`; XML Views `OptimizedEntryView`     |
+| Runtime      | Direct API                                                                              | Component or native rendering API                            |
+| ------------ | --------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Core         | `resolveOptimizedEntry()` and managed `fetchOptimizedEntry()`                           | None                                                         |
+| Web          | `resolveOptimizedEntry()` and managed `fetchOptimizedEntry()`                           | `ctfl-optimized-entry` Web Component                         |
+| React Web    | `useEntryResolver()` and the underlying Web SDK method                                  | `useOptimizedEntry()` and `OptimizedEntry`                   |
+| React Native | `useEntryResolver()`, `useOptimizedEntry()`, and the underlying React Native SDK method | `OptimizedEntry`                                             |
+| Node         | `resolveOptimizedEntry()` and managed `fetchOptimizedEntry()`                           | None                                                         |
+| iOS          | `OptimizationClient.resolveOptimizedEntry(baseline:selectedOptimizations:)`             | SwiftUI `OptimizedEntry`; UIKit can call the client directly |
+| Android      | `suspend OptimizationClient.resolveOptimizedEntry(...)`                                 | Compose `OptimizedEntry`; XML Views `OptimizedEntryView`     |
 
 For Next.js App Router integrations, prefer the app-local bound `OptimizedEntry` returned by
 `createNextjsAppRouterOptimization()` from `@contentful/optimization-nextjs/app-router`. In Server
@@ -94,7 +97,9 @@ Components it resolves through the Node SDK and server data; in Client Component
 name resolves through React Web. Pages Router integrations use
 `createNextjsPagesRouterOptimization()` from `@contentful/optimization-nextjs/pages-router` for
 client rendering, and routes that resolve entries manually can call `getServerTrackingAttributes()`
-when they need SSR tracking attributes.
+or `ServerOptimizedEntry` when they need SSR tracking attributes. `ServerOptimizedEntry` accepts
+either manual `baselineEntry` and `resolvedData` props or the result returned by managed
+`fetchOptimizedEntry()`.
 
 ## Inputs and constraints
 
@@ -116,8 +121,10 @@ Usable entry selections depend on runtime state before the resolver runs:
 - **Preview overrides** - Preview tooling mutates `selectedOptimizations` by applying audience or
   variant overrides. The resolver still receives an ordinary selection array and follows the same
   local matching rules.
-- **Resolution boundary** - Entry resolution stays local and fail-soft. It does not retry events,
-  fetch Contentful entries, override consent policy, or throw for personalization misses.
+- **Resolution boundary** - Synchronous entry resolution stays local and fail-soft. SDK-managed
+  fetching is an additive JavaScript path that calls the configured `contentful.js` client before
+  running the same resolver. Neither path retries Experience events, overrides consent policy, or
+  throws for personalization misses.
 
 ## Single-locale CDA entry contract
 
@@ -132,13 +139,36 @@ and raw CDA `locale=*` return locale-keyed field maps instead of direct values, 
 time, so locale-keyed maps do not match the `OptimizedEntry` schema and resolution falls back to the
 baseline entry.
 
-Fetch the entry with a single CDA locale and enough include depth for optimization links:
+JavaScript managed fetching is the preferred path when the application already owns a configured
+`contentful.js` client. Configure the SDK with that client and a concrete single CDA locale:
 
 JavaScript runtimes / TypeScript:
 
 ```ts
 const appLocale = getAppLocale()
 
+const optimization = new ContentfulOptimization({
+  clientId,
+  contentful: {
+    client: contentfulClient,
+    defaultQuery: { locale: appLocale },
+  },
+  environment,
+  locale: appLocale,
+})
+
+const { baselineEntry, entry } = await optimization.fetchOptimizedEntry(entryId, {
+  selectedOptimizations,
+  query: {
+    locale: appLocale,
+  },
+})
+```
+
+Manual `baselineEntry` fetching remains supported and unchanged. Fetch the entry with a single CDA
+locale and enough include depth for optimization links:
+
+```ts
 const optimization = new ContentfulOptimization({
   clientId,
   environment,
@@ -151,9 +181,16 @@ const baselineEntry = await contentfulClient.getEntry(entryId, {
 })
 ```
 
-Use an application-owned Contentful locale for CDA entry fetches that feed entry resolution. The SDK
-top-level `locale` or Node `forRequest({ locale })` configures the SDK Experience/event locale, but
-it does not modify Contentful client requests for you. For the full locale model, see
+Managed fetching merges `contentful.defaultQuery`, per-call query overrides, the SDK `locale`
+fallback, and `include: 10`. Request-bound Node clients use `forRequest({ locale })` as the locale
+fallback for managed Contentful entry fetching. Managed fetching also keeps a small per-SDK-instance
+entry cache by default. Set `contentful.cache: false` when the host application must own all
+Contentful entry caching.
+
+Use an application-owned Contentful locale for manual CDA entry fetches that feed entry resolution.
+The SDK top-level `locale` or Node `forRequest({ locale })` configures the SDK Experience/event
+locale, but it does not modify manual Contentful client requests for you. For the full locale model,
+see
 [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
 For entries that will be passed to the Optimization SDK resolver, use a concrete locale instead of
@@ -391,6 +428,10 @@ const { entry, selectedOptimization } = optimization.resolveOptimizedEntry(
 )
 ```
 
+For managed fetching, root stateless SDKs still need explicit selections for personalized results.
+Request-bound `forRequest()` clients store the latest accepted Experience response and use its
+`selectedOptimizations` when `fetchOptimizedEntry(entryId)` omits the option.
+
 The Web, React Web, and React Native SDKs are stateful. If callers omit `selectedOptimizations`,
 those SDKs resolve from their `selectedOptimizations` state. Passing an explicit array is still
 useful for server-provided or request-local data because it avoids depending on ambient SDK state.
@@ -413,6 +454,19 @@ Call it from a coroutine when resolving directly, or use Compose `OptimizedEntry
 resolved `entry` and optional `selectedOptimization` metadata and `optimizationContextId`, and
 returns the baseline unchanged when no selected optimization matches the entry.
 
+### Manage entry sources in custom adapters
+
+`fetchOptimizedEntry(entryId)` is the one-shot JavaScript path for callers that can await a managed
+Contentful fetch and immediate variant resolution. It returns the fetched `baselineEntry` plus the
+resolved entry and optimization metadata.
+
+`OptimizedEntrySourceController` from `@contentful/optimization-core/entry-source` is the adapter
+primitive for mounted components, hooks, custom elements, or other runtime wrappers that accept
+either `baselineEntry` or `entryId`. It manages source changes, SDK readiness, loading and error
+snapshots, stale fetch protection, and disconnect cleanup before resolution. It does not resolve or
+render entries. After a snapshot contains `baselineEntry`, the adapter still calls
+`resolveOptimizedEntry()`, renders the result, and attaches any tracking metadata for its runtime.
+
 ### Render with framework components
 
 Use framework components or native view adapters when rendering is already inside a supported
@@ -420,16 +474,20 @@ framework tree or native view adapter. These surfaces subscribe to SDK state, ca
 resolver, and pass the resolved entry to your rendering code.
 
 The Web SDK `ctfl-optimized-entry` custom element uses the same `OptimizedEntryController` as the
-framework adapters. Assign the structured Contentful entry through the `baselineEntry` property, and
-provide an SDK through either an ancestor or explicit `ctfl-optimization-root` binding or the
-element's `sdk` property. The element honors `live-updates`, `track-clicks`, `track-hovers`, and
-`track-views` attributes, applies `data-ctfl-*` tracking attributes to the host, and emits
-`ctfl-entry-loading` and `ctfl-entry-resolved` events as the controller state changes. The Web SDK
-README owns setup details for defining the custom elements and assigning property-only values.
+framework adapters. Assign the structured Contentful entry through the `baselineEntry` property, or
+configure the SDK with `contentful: { client }` and set `entry-id`/`entryId` plus optional
+`entryQuery`. `baselineEntry` takes precedence when both are set. Provide an SDK through either an
+ancestor or explicit `ctfl-optimization-root` binding or the element's `sdk` property. The element
+honors `live-updates`, `track-clicks`, `track-hovers`, and `track-views` attributes, applies
+`data-ctfl-*` tracking attributes to the host, and emits `ctfl-entry-loading`,
+`ctfl-entry-resolved`, and `ctfl-entry-error` events as entry fetching and controller state changes.
+The Web SDK README owns setup details for defining the custom elements and assigning property-only
+values.
 
 React Web wraps resolution in `useOptimizedEntry()` and `OptimizedEntry`. `OptimizedEntry`:
 
 - Subscribes to `sdk.states.selectedOptimizations`.
+- Accepts either `baselineEntry` or managed `entryId` with optional `entryQuery`.
 - Locks to the first non-`undefined` selected optimization set by default.
 - Re-resolves when `liveUpdates` is enabled globally, per component, or by the preview panel.
 - Shows a loading fallback for optimized entries until optimization state is available.
@@ -441,9 +499,12 @@ React Web wraps resolution in `useOptimizedEntry()` and `OptimizedEntry`. `Optim
 React Web also exposes `useEntryResolver()` for components that need manual resolution without the
 `OptimizedEntry` wrapper.
 
-React Native uses the same resolver inside its `OptimizedEntry` component. The component:
+React Native wraps resolution in `useOptimizedEntry()` and `OptimizedEntry`. `OptimizedEntry`:
 
 - Passes non-optimized entries through unchanged.
+- Accepts either `baselineEntry` or managed `entryId` with optional `entryQuery`.
+- Renders `loadingFallback` or `null` while a managed entry is fetching.
+- Renders `errorFallback` or `null` and calls `onEntryError` when managed entry fetching fails.
 - Subscribes to `states.selectedOptimizations` only for optimized entries.
 - Locks to the first selected optimization set by default.
 - Re-resolves when `liveUpdates` is enabled globally, per component, or by the preview panel.
@@ -451,7 +512,9 @@ React Native uses the same resolver inside its `OptimizedEntry` component. The c
 - Sends view and tap tracking metadata from the resolved entry and `selectedOptimization`.
 
 React Native does not render DOM data attributes. It passes the resolved entry and optimization
-metadata directly into its viewport and tap tracking hooks.
+metadata directly into its viewport and tap tracking hooks after a real entry exists.
+`useEntryResolver()` remains the manual-only helper when a component already owns its baseline
+entry.
 
 SwiftUI uses the same resolver inside `OptimizedEntry`. The component passes non-optimized entries
 through unchanged, resolves optimized entries from the client's selected optimizations, can lock to
@@ -501,6 +564,7 @@ Use these guides for SDK-specific integration paths:
 - [Integrating the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md)
 - [Integrating the React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
 - [Integrating the Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md)
+- [Building a custom JavaScript Optimization adapter](../guides/building-a-custom-javascript-optimization-adapter.md)
 - [Integrating the Optimization iOS SDK in a SwiftUI app](../guides/integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
 - [Integrating the Optimization iOS SDK in a UIKit app](../guides/integrating-the-optimization-ios-sdk-in-a-uikit-app.md)
 - [Integrating the Optimization Android SDK in a Jetpack Compose app](../guides/integrating-the-optimization-android-sdk-in-a-compose-app.md)

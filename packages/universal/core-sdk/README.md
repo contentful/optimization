@@ -41,6 +41,7 @@ exported API signatures.
   - [Stateless Core](#stateless-core)
 - [Common configuration](#common-configuration)
 - [Package surface](#package-surface)
+  - [Custom entry-source adapters](#custom-entry-source-adapters)
 - [Preview support](#preview-support)
 - [Related](#related)
 
@@ -115,6 +116,7 @@ Shared Core configuration:
 | `clientId`     | Yes       | N/A                   | Shared API key for Experience API and Insights API requests |
 | `environment`  | No        | `'main'`              | Contentful environment identifier                           |
 | `api`          | No        | See API options below | Experience API and Insights API endpoint options            |
+| `contentful`   | No        | `undefined`           | App-owned `contentful.js` client, default query, and cache  |
 | `eventBuilder` | No        | SDK-layer defaults    | Event metadata overrides for platform SDK authors           |
 | `fetchOptions` | No        | SDK defaults          | Fetch timeout and retry behavior                            |
 | `logLevel`     | No        | `'error'`             | Minimum log level for the default console sink              |
@@ -181,26 +183,53 @@ For every option, callback payload, and exported type, use the generated
 
 Core exposes reusable primitives for SDK layers:
 
-| Surface                         | Purpose                                                                |
-| ------------------------------- | ---------------------------------------------------------------------- |
-| `CoreStateful`                  | Stateful optimization runtime for browser, mobile, and bridge SDKs     |
-| `CoreStateless`                 | Stateless optimization runtime for server SDKs                         |
-| Event methods                   | `identify`, `page`, `screen`, `track`, `trackView`, `trackClick`, etc. |
-| Resolution helpers              | `resolveOptimizedEntry`, `getMergeTagValue`, and `getFlag`             |
-| Current-state tracking          | `AcceptedCurrentStateTracker` for SDK-owned page or screen adapters    |
-| `states`                        | Stateful observable state streams                                      |
-| Interceptors                    | First-party hooks for event and state lifecycle customization          |
-| Queue policy and fetch helpers  | Shared retry, flush, timeout, and offline buffering behavior           |
-| Signal and observable utilities | Lightweight reactive primitives used internally by stateful SDK layers |
+| Surface                         | Purpose                                                                           |
+| ------------------------------- | --------------------------------------------------------------------------------- |
+| `CoreStateful`                  | Stateful optimization runtime for browser, mobile, and bridge SDKs                |
+| `CoreStateless`                 | Stateless optimization runtime for server SDKs                                    |
+| Event methods                   | `identify`, `page`, `screen`, `track`, `trackView`, `trackClick`, etc.            |
+| Resolution and fetch helpers    | `resolveOptimizedEntry`, `fetchOptimizedEntry`, `getMergeTagValue`, and `getFlag` |
+| Current-state tracking          | `AcceptedCurrentStateTracker` for SDK-owned page or screen adapters               |
+| `states`                        | Stateful observable state streams                                                 |
+| Interceptors                    | First-party hooks for event and state lifecycle customization                     |
+| Queue policy and fetch helpers  | Shared retry, flush, timeout, and offline buffering behavior                      |
+| Signal and observable utilities | Lightweight reactive primitives used internally by stateful SDK layers            |
 
-Resolution helpers expect Contentful entries fetched by the app layer with one CDA locale. Use the
-application Contentful locale before resolving entries. Do not pass all-locale CDA responses from
-`withAllLocales` or `locale=*`; optimization fields such as `fields.nt_experiences` and
-`fields.nt_variants` must be direct single-locale field values. See
+When a `contentful.js` client is available, prefer SDK-managed fetching. Configure
+`contentful: { client, defaultQuery?, cache? }`, then call `fetchContentfulEntry(entryId, query?)`
+or `fetchOptimizedEntry(entryId, options?)`. Managed calls merge `defaultQuery`, per-call query
+overrides, SDK `locale` fallback, and `include: 10`, then cache entries per SDK instance by default.
+Set `contentful.cache: false` to disable the cache or call `clearContentfulEntryCache()` to clear
+it. `resolveOptimizedEntry()` remains the manual path for entries the app already fetched. Stateful
+Core uses the current `selectedOptimizations` when omitted, request-bound stateless clients use the
+latest accepted Experience selections and request `locale` fallback for managed Contentful fetches,
+and root stateless callers pass explicit `selectedOptimizations`.
+
+Do not pass all-locale CDA responses from `withAllLocales` or `locale=*`; optimization fields such
+as `fields.nt_experiences` and `fields.nt_variants` must be direct single-locale field values. See
 [Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the broader locale model.
+
+### Custom entry-source adapters
+
+`@contentful/optimization-core/entry-source` is an advanced subpath for custom JavaScript runtime or
+framework adapters that cannot use an official Web, React Web, React Native, Node, or native SDK
+surface. It is not part of the root Core API posture and is not the preferred path for application
+integrations.
+
+Import `OptimizedEntrySourceController` when an adapter accepts either a direct `baselineEntry` or
+an `entryId` that must be fetched through an SDK-managed `contentful.js` client. The controller owns
+the `baselineEntry` versus `entryId` source lifecycle, `entryId + entryQuery` fetch keying, SDK
+readiness/loading/error snapshots, stale request protection, and `disconnect()` cleanup.
+`createOptimizedEntryLoadingEntry(entryId)` creates a stable placeholder Contentful entry for
+adapter loading states.
+
+The entry-source controller does not own rendering, variant resolution, tracking, consent,
+Experience API calls, or Contentful client creation. After a snapshot contains `baselineEntry`, the
+adapter still calls `resolveOptimizedEntry()`, renders the result, and wires any runtime-specific
+tracking.
 
 The generated reference owns method arguments, return types, callback payload shapes, and inherited
 members. Keep this README focused on package role and maintainer orientation.

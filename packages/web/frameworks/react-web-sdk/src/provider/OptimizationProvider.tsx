@@ -5,6 +5,7 @@ import { DEFAULT_WEB_ALLOWED_EVENT_TYPES } from '@contentful/optimization-web/co
 import {
   createOptimizationRootSdkBinding,
   disposeOptimizationRootSdkBinding,
+  getOptimizedEntrySourceKey,
   type OptimizationRootSdkBinding,
   type OptimizationRootSdkConfig,
   type OnStatesReady as SharedOnStatesReady,
@@ -19,8 +20,12 @@ import {
   type ReactElement,
 } from 'react'
 
+import {
+  createWebSnapshotRuntime,
+  type WebOptimizationRuntime,
+} from '@contentful/optimization-web/runtime'
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
-import { createWebSnapshotRuntime, type WebOptimizationRuntime } from '../runtime/webRuntime'
+import type { ServerOptimizedEntryHandoff } from '../server-optimized-entries'
 
 /**
  * Provider-owned callback for app-level subscriptions once SDK state is ready.
@@ -48,6 +53,10 @@ interface ServerOptimizationStateProps {
    * state such as consent policy.
    */
   readonly serverOptimizationState?: OptimizationData
+  /**
+   * Server-fetched baseline entries for SDK-managed OptimizedEntry hydration.
+   */
+  readonly serverOptimizedEntries?: readonly ServerOptimizedEntryHandoff[]
 }
 
 export type OptimizationProviderConfigProps = PropsWithChildren<
@@ -100,6 +109,7 @@ function createOwnedSdkBinding(props: OptimizationProviderConfigProps): Provider
     onStatesReady: _onStatesReady,
     sdk: _sdk,
     serverOptimizationState: _serverOptimizationState,
+    serverOptimizedEntries: _serverOptimizedEntries,
     trackEntryInteraction,
     ...config
   } = props
@@ -197,6 +207,19 @@ function createInitialRuntime(props: OptimizationProviderProps): WebOptimization
   })
 }
 
+function createServerOptimizedEntries(
+  entries: readonly ServerOptimizedEntryHandoff[] | undefined,
+): ReadonlyMap<string, ServerOptimizedEntryHandoff['baselineEntry']> | undefined {
+  if (entries === undefined) return undefined
+
+  const map = new Map<string, ServerOptimizedEntryHandoff['baselineEntry']>()
+  for (const { baselineEntry, entryId, entryQuery } of entries) {
+    map.set(getOptimizedEntrySourceKey(entryId, entryQuery), baselineEntry)
+  }
+
+  return map
+}
+
 export function OptimizationProvider(props: OptimizationProviderProps): ReactElement {
   const { children } = props
   const initialPropsRef = useRef(props)
@@ -206,6 +229,10 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     isLive: injectedSdkBacksInitialRender(props),
     runtime: createInitialRuntime(props),
   }))
+  const serverOptimizedEntries = useMemo(
+    () => createServerOptimizedEntries(props.serverOptimizedEntries),
+    [props.serverOptimizedEntries],
+  )
 
   useLayoutEffect(() => {
     const { current: initialProps } = initialPropsRef
@@ -282,8 +309,13 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   }, [liveLocale, props.sdk, state.isLive, state.runtime])
 
   const contextValue = useMemo(
-    () => ({ sdk: state.runtime, error: state.error }),
-    [state.runtime, state.error],
+    () => ({
+      sdk: state.runtime,
+      error: state.error,
+      isLive: state.isLive,
+      serverOptimizedEntries,
+    }),
+    [state.runtime, state.error, state.isLive, serverOptimizedEntries],
   )
 
   return (

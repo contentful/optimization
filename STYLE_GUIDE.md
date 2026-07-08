@@ -116,6 +116,10 @@ Use the repository-standard product names and terms from `AGENTS.md`, including:
 - reference implementation
 - exact package names, such as `@contentful/optimization-web`
 
+When referring to in-repo apps under `implementations/`, use `reference implementation` or
+`reference app`. Do not use `demo`, `sample`, or `example` to describe their status; reserve
+`example` for code snippets or package-local harnesses when accurate.
+
 Use Contentful product terms consistently when they apply:
 
 - `app` - An HTML5 application that extends the functionality of the Contentful web app or

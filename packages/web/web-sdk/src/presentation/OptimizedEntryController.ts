@@ -1,4 +1,10 @@
-import type { Observable, ResolvedData, Subscription } from '@contentful/optimization-core'
+import type {
+  ContentfulEntryQuery,
+  Observable,
+  OptimizedEntryMetadata,
+  ResolvedData,
+  Subscription,
+} from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import {
@@ -44,6 +50,7 @@ export interface OptimizedEntrySdk {
     entry: Entry,
     selectedOptimizations?: SelectedOptimizationArray,
   ) => ResolvedData<EntrySkeletonType>
+  fetchContentfulEntry: (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
 }
 
 /**
@@ -62,6 +69,8 @@ export interface OptimizedEntrySnapshot {
   readonly isLoading: boolean
   /** Whether the client presentation layer is ready to reveal rendered content. */
   readonly isPresentationReady: boolean
+  /** Whether the current entry has been resolved and can be exposed to render callbacks. */
+  readonly isResolved: boolean
   /** Loading and fallback rendering decisions for wrappers around the entry. */
   readonly loadingPresentation: {
     readonly showLoadingFallback: boolean
@@ -69,6 +78,8 @@ export interface OptimizedEntrySnapshot {
     readonly shouldRenderBaselineWhileLoading: boolean
     readonly targetDisplay: OptimizedEntryLoadingTargetDisplay
   }
+  /** Baseline, resolved-entry, and optimization metadata for render surfaces. */
+  readonly metadata: OptimizedEntryMetadata
   /** Full resolved entry data returned by the SDK resolver. */
   readonly resolvedData: ResolvedData<EntrySkeletonType>
   /** Selected optimization that resolved the current entry, when one applied. */
@@ -259,14 +270,35 @@ function areLoadingPresentationsEqual(
   )
 }
 
-function areSnapshotsEqual(left: OptimizedEntrySnapshot, right: OptimizedEntrySnapshot): boolean {
+function areSnapshotMetadataEqual(
+  left: OptimizedEntrySnapshot['metadata'],
+  right: OptimizedEntrySnapshot['metadata'],
+): boolean {
+  return (
+    left.baselineEntry === right.baselineEntry &&
+    left.optimizationContextId === right.optimizationContextId
+  )
+}
+
+function areSnapshotValuesEqual(
+  left: OptimizedEntrySnapshot,
+  right: OptimizedEntrySnapshot,
+): boolean {
   return (
     left.canOptimize === right.canOptimize &&
     left.entry === right.entry &&
     left.isLoading === right.isLoading &&
     left.isPresentationReady === right.isPresentationReady &&
+    left.isResolved === right.isResolved &&
     left.selectedOptimization === right.selectedOptimization &&
-    left.selectedOptimizations === right.selectedOptimizations &&
+    left.selectedOptimizations === right.selectedOptimizations
+  )
+}
+
+function areSnapshotsEqual(left: OptimizedEntrySnapshot, right: OptimizedEntrySnapshot): boolean {
+  return (
+    areSnapshotValuesEqual(left, right) &&
+    areSnapshotMetadataEqual(left.metadata, right.metadata) &&
     areLoadingPresentationsEqual(left.loadingPresentation, right.loadingPresentation) &&
     areHostAttributesEqual(left.hostAttributes, right.hostAttributes)
   )
@@ -283,11 +315,11 @@ export class OptimizedEntryController {
   private connected = false
   private hasExperienceRequestSettled = false
   private optimizationPossible = true
-  private listener: OptimizedEntrySnapshotListener | undefined = undefined
-  private baselineRevealTimeout: ReturnType<typeof setTimeout> | undefined = undefined
+  private listener: OptimizedEntrySnapshotListener | undefined
+  private baselineRevealTimeout: ReturnType<typeof setTimeout> | undefined
   private options: NormalizedOptimizedEntryControllerOptions
   private hasBaselineRevealTimedOut = false
-  private selectedOptimizations: SelectedOptimizationArray | undefined = undefined
+  private selectedOptimizations: SelectedOptimizationArray | undefined
   private snapshot: OptimizedEntrySnapshot
   private subscriptions: Subscription[] = []
 
@@ -472,10 +504,21 @@ export class OptimizedEntryController {
             this.selectedOptimizations,
           )
         : createBaselineResolvedData(this.options.baselineEntry)
+    const metadata: OptimizedEntryMetadata = {
+      baselineEntry: this.options.baselineEntry,
+      baselineEntryId: this.options.baselineEntry.sys.id,
+      entry: resolvedData.entry,
+      entryId: resolvedData.entry.sys.id,
+      optimizationContextId: resolvedData.optimizationContextId,
+      resolvedData,
+      selectedOptimization: resolvedData.selectedOptimization,
+      selectedOptimizations: this.selectedOptimizations,
+    }
+    const isResolved = !showLoadingFallback
 
     return {
       canOptimize: this.canOptimize,
-      entry: resolvedData.entry,
+      entry: metadata.entry,
       hostAttributes: showLoadingFallback
         ? {}
         : resolveOptimizedEntryTrackingAttributes(
@@ -485,14 +528,16 @@ export class OptimizedEntryController {
           ),
       isLoading,
       isPresentationReady: this.options.isPresentationReady,
+      isResolved,
       loadingPresentation: {
         showLoadingFallback,
         hideLoadingLayoutTarget,
         shouldRenderBaselineWhileLoading,
         targetDisplay: this.options.targetDisplay,
       },
+      metadata,
       resolvedData,
-      selectedOptimization: resolvedData.selectedOptimization,
+      selectedOptimization: metadata.selectedOptimization,
       selectedOptimizations: this.selectedOptimizations,
     }
   }

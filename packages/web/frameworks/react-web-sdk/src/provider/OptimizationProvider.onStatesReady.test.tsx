@@ -531,10 +531,7 @@ describe('OptimizationProvider onStatesReady', () => {
       </OptimizationProvider>,
     )
 
-    expect(capturedContext).toEqual({
-      sdk: undefined,
-      error,
-    })
+    expect(capturedContext).toEqual(expect.objectContaining({ sdk: undefined, error }))
     expect(destroySpy).toHaveBeenCalledTimes(1)
     expect(window.contentfulOptimization).toBeUndefined()
     destroySpy.mockRestore()

@@ -20,7 +20,6 @@ import type {
   NextjsOptimizationComponentsConfig,
 } from './bound-component-types'
 
-export * from '@contentful/optimization-react-web'
 export type {
   BoundNextjsOptimizationRootProps,
   NextjsBoundOptimizedEntryProps,
@@ -49,16 +48,24 @@ export function createNextjsAppRouterOptimization(
   const rootConfig = toClientRootConfig(config)
   const providerConfig = toClientProviderConfig(config)
 
-  function OptimizationRoot({ children }: BoundNextjsOptimizationRootProps): ReactElement {
-    return createElement(ReactWebOptimizationRoot, rootConfig, children)
+  function OptimizationRoot({
+    children,
+    serverOptimizedEntries,
+  }: BoundNextjsOptimizationRootProps): ReactElement {
+    return createElement(
+      ReactWebOptimizationRoot,
+      { ...rootConfig, serverOptimizedEntries },
+      children,
+    )
   }
 
   function OptimizationProvider({
     children,
+    serverOptimizedEntries,
   }: BoundNextjsOptimizationRootProps): ReactElement | null {
     return createElement(
       ReactWebOptimizationProvider,
-      providerConfig,
+      { ...providerConfig, serverOptimizedEntries },
       createElement(
         ReactWebLiveUpdatesProvider,
         { globalLiveUpdates: config.liveUpdates },
@@ -78,15 +85,23 @@ export function createNextjsAppRouterOptimization(
 
 function toClientRootConfig(
   config: NextjsOptimizationComponentsConfig,
-): Omit<OptimizationRootProps, 'children' | 'sdk' | 'serverOptimizationState'> {
-  const { server: _server, ...clientConfig } = config
+): Omit<
+  OptimizationRootProps,
+  'children' | 'sdk' | 'serverOptimizationState' | 'serverOptimizedEntries'
+> {
+  const { contentful: _contentful, server: _server, ...clientConfig } = config
   return clientConfig
 }
 
 function toClientProviderConfig(
   config: NextjsOptimizationComponentsConfig,
 ): NextjsBoundProviderConfig {
-  const { liveUpdates: _liveUpdates, server: _server, ...providerConfig } = config
+  const {
+    contentful: _contentful,
+    liveUpdates: _liveUpdates,
+    server: _server,
+    ...providerConfig
+  } = config
   const clientProviderConfig: NextjsBoundProviderConfig = providerConfig
   return clientProviderConfig
 }

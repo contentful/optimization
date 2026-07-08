@@ -1,6 +1,6 @@
 # AGENTS.md
 
-React reference implementation demonstrating direct `@contentful/optimization-web` usage in a React
+React reference implementation for direct `@contentful/optimization-web` usage in a React
 application.
 
 ## Rules

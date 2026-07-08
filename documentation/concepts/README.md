@@ -29,8 +29,9 @@ they are not the first stop for installation or setup commands.
   explains how SDK consent state, event allow-lists, blocked-event diagnostics, persistence, and
   application-owned CMP policy work together to support consent-aware integrations.
 - [Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md) -
-  explains how the SDK resolves a Contentful baseline entry to the selected entry variant, including
-  data model expectations, fallback behavior, resolution paths, and preview overrides.
+  explains how the SDK resolves a manual `baselineEntry` or SDK-managed Contentful fetch with
+  `contentful: { client }` to the selected entry variant, including single-locale CDA shape
+  expectations, fallback behavior, framework `entryId` paths, and preview overrides.
 - [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md) -
   explains how application-owned Contentful locales differ from SDK Experience/event locales.
 - [Interaction tracking in Web SDKs](./interaction-tracking-in-web-sdks.md) - explains how

@@ -15,6 +15,16 @@ const selectedOptimizations = {
   subscribe: rs.fn(() => ({ unsubscribe: rs.fn() })),
 }
 const resolveOptimizedEntry = rs.fn((entry: Entry): ResolvedData<EntrySkeletonType> => ({ entry }))
+const fetchContentfulEntry = rs.fn(
+  async (entryId: string) => await Promise.resolve(createEntry(entryId)),
+)
+const optimization = {
+  fetchContentfulEntry,
+  resolveOptimizedEntry,
+  states: {
+    selectedOptimizations,
+  },
+}
 const useViewportTracking = rs.fn((_options: Record<string, unknown>) => ({
   isVisible: false,
   onLayout: rs.fn(),
@@ -29,12 +39,7 @@ rs.mock('react-native', () => ({
 }))
 
 rs.mock('../context/OptimizationContext', () => ({
-  useOptimization: () => ({
-    resolveOptimizedEntry,
-    states: {
-      selectedOptimizations,
-    },
-  }),
+  useOptimization: () => optimization,
 }))
 
 rs.mock('../hooks/useViewportTracking', () => ({
@@ -68,6 +73,21 @@ function createEntry(id: string): Entry {
   }
 }
 
+function createDeferred<T>(): {
+  readonly promise: Promise<T>
+  readonly reject: (reason?: unknown) => void
+  readonly resolve: (value: T) => void
+} {
+  let resolveDeferred: (value: T) => void = () => undefined
+  let rejectDeferred: (reason?: unknown) => void = () => undefined
+  const promise = new Promise<T>((resolve, reject) => {
+    resolveDeferred = resolve
+    rejectDeferred = reject
+  })
+
+  return { promise, reject: rejectDeferred, resolve: resolveDeferred }
+}
+
 function getCallOptions(
   mock: typeof useViewportTracking | typeof useTapTracking,
 ): Record<string, unknown> {
@@ -97,6 +117,14 @@ describe('OptimizedEntry', () => {
   void beforeEach(() => {
     rs.clearAllMocks()
     selectedOptimizations.current = undefined
+    fetchContentfulEntry.mockImplementation(
+      async (entryId: string) => await Promise.resolve(createEntry(entryId)),
+    )
+    resolveOptimizedEntry.mockImplementation(
+      (entry: Entry): ResolvedData<EntrySkeletonType> => ({
+        entry,
+      }),
+    )
   })
 
   void afterEach(() => {
@@ -210,5 +238,95 @@ describe('OptimizedEntry', () => {
 
     expect(getCallOptions(useViewportTracking).optimizationContextId).toBe('ctx-1')
     expect(getCallOptions(useTapTracking).optimizationContextId).toBe('ctx-1')
+  })
+
+  it('passes resolved metadata to render props and onEntryResolved', async () => {
+    const { OptimizedEntry } = await import('./OptimizedEntry')
+    const testRenderer = await loadTestRenderer<TestRenderer>()
+    const baselineEntry = createEntry('baseline-entry')
+    const renderedMetadata: string[] = []
+    const onEntryResolved = rs.fn()
+
+    act(() => {
+      renderer = testRenderer.create(
+        <OptimizedEntry baselineEntry={baselineEntry} onEntryResolved={onEntryResolved}>
+          {(resolved, metadata) => {
+            renderedMetadata.push(
+              `${metadata.baselineEntryId}:${metadata.entryId}:${metadata.optimizationContextId}`,
+            )
+            return resolved.sys.id
+          }}
+        </OptimizedEntry>,
+      )
+    })
+
+    expect(renderedMetadata).toContain('baseline-entry:baseline-entry:undefined')
+    expect(onEntryResolved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baselineEntry,
+        baselineEntryId: 'baseline-entry',
+        entry: baselineEntry,
+        entryId: 'baseline-entry',
+      }),
+    )
+  })
+
+  it('renders loadingFallback and skips tracking while managed entryId is loading', async () => {
+    const { OptimizedEntry } = await import('./OptimizedEntry')
+    const testRenderer = await loadTestRenderer<TestRenderer>()
+    const deferred = createDeferred<Entry>()
+    fetchContentfulEntry.mockImplementation(async () => await deferred.promise)
+
+    act(() => {
+      renderer = testRenderer.create(
+        <OptimizedEntry
+          entryId="baseline-entry"
+          entryQuery={{ locale: 'de-DE' }}
+          loadingFallback="loading"
+        >
+          {(resolvedEntry) => resolvedEntry.sys.id}
+        </OptimizedEntry>,
+      )
+    })
+
+    expect(fetchContentfulEntry).toHaveBeenCalledWith('baseline-entry', { locale: 'de-DE' })
+    expect(useViewportTracking).not.toHaveBeenCalled()
+    expect(useTapTracking).not.toHaveBeenCalled()
+
+    const baselineEntry = createEntry('baseline-entry')
+    await act(async () => {
+      deferred.resolve(baselineEntry)
+      await deferred.promise
+    })
+
+    expect(getCallOptions(useViewportTracking).entry).toBe(baselineEntry)
+    expect(getCallOptions(useTapTracking).entry).toBe(baselineEntry)
+  })
+
+  it('renders managed entryId fetch errors and reports each error once', async () => {
+    const { OptimizedEntry } = await import('./OptimizedEntry')
+    const testRenderer = await loadTestRenderer<TestRenderer>()
+    const error = new Error('CDA failed')
+    const onEntryError = rs.fn()
+    fetchContentfulEntry.mockImplementation(async () => await Promise.reject(error))
+
+    await act(async () => {
+      renderer = testRenderer.create(
+        <OptimizedEntry
+          entryId="baseline-entry"
+          errorFallback={(entryError) => `error: ${entryError.message}`}
+          onEntryError={onEntryError}
+        >
+          {(resolvedEntry) => resolvedEntry.sys.id}
+        </OptimizedEntry>,
+      )
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(onEntryError).toHaveBeenCalledTimes(1)
+    expect(onEntryError).toHaveBeenCalledWith(error)
+    expect(useViewportTracking).not.toHaveBeenCalled()
+    expect(useTapTracking).not.toHaveBeenCalled()
   })
 })

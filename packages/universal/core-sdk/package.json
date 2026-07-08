@@ -62,6 +62,16 @@
         "default": "./dist/runtime.cjs"
       }
     },
+    "./entry-source": {
+      "import": {
+        "types": "./dist/entry-source.d.mts",
+        "default": "./dist/entry-source.mjs"
+      },
+      "require": {
+        "types": "./dist/entry-source.d.cts",
+        "default": "./dist/entry-source.cjs"
+      }
+    },
     "./api-client": {
       "import": {
         "types": "./dist/api-client.d.mts",
@@ -101,12 +111,14 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 18700,
-        "index.mjs": 18200,
+        "index.cjs": 19100,
+        "index.mjs": 19000,
         "bridge-support.cjs": 1200,
         "bridge-support.mjs": 2100,
         "runtime.cjs": 4000,
         "runtime.mjs": 5500,
+        "entry-source.cjs": 1800,
+        "entry-source.mjs": 1400,
         "preview-support.cjs": 5300,
         "preview-support.mjs": 5500
       }
