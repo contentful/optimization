@@ -1,31 +1,31 @@
 # Default owners for files without a more specific rule.
-* @akfreas @phobetron @Lotfi-Arif
+* @akfreas @phobetron @Lotfi-Arif @TimBeyer @fmamud
 
 # GitHub repository automation and policy.
-.github/**/* @phobetron @Lp-Francois @Lotfi-Arif
+.github/**/* @phobetron @Lp-Francois @Lotfi-Arif @TimBeyer @fmamud
 
 # Code ownership policy.
-/CODEOWNERS @phobetron @Lp-Francois
+/CODEOWNERS @phobetron @Lp-Francois @TimBeyer
 
 # Dependency management and update automation.
-/package.json @phobetron @Lp-Francois
-/pnpm-lock.yaml @phobetron @Lp-Francois
-/pnpm-workspace.yaml @phobetron @Lp-Francois
-/renovate.json @phobetron @Lp-Francois
+/package.json @phobetron @Lp-Francois @TimBeyer
+/pnpm-lock.yaml @phobetron @Lp-Francois @TimBeyer
+/pnpm-workspace.yaml @phobetron @Lp-Francois @TimBeyer
+/renovate.json @phobetron @Lp-Francois @TimBeyer
 
 # Node and package-manager runtime configuration.
-/.nvmrc @phobetron @Lp-Francois
-/.pnpmfile.cjs @phobetron @Lp-Francois
+/.nvmrc @phobetron @Lp-Francois @TimBeyer
+/.pnpmfile.cjs @phobetron @Lp-Francois @TimBeyer
 
 # Commit workflow and repository hygiene.
 /.czrc @phobetron @Lp-Francois
 /.czvinylrc.yaml @phobetron @Lp-Francois
-/.gitignore @phobetron @Lp-Francois
-/.lintstagedrc.yaml @phobetron @Lp-Francois
-/.husky/** @phobetron @Lp-Francois
+/.gitignore @phobetron @Lp-Francois @TimBeyer
+/.lintstagedrc.yaml @phobetron @Lp-Francois @TimBeyer
+/.husky/** @phobetron @Lp-Francois @TimBeyer
 
 # Documentation generation.
-/typedoc.json @phobetron @Lp-Francois
+/typedoc.json @phobetron @Lp-Francois @TimBeyer
 
 # Contentful operational configuration.
-/.contentful/** @phobetron @Lp-Francois
+/.contentful/** @phobetron @Lp-Francois @TimBeyer
