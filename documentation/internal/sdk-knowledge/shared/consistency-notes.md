@@ -32,4 +32,36 @@ main's final consistency pass. Terse; running log.
   its SDK actually uses; keep the _concept_ wording shared (see `concepts.md#page-events`).
 - Live-updates opt-in wording: confirm App Router (bound root includes provider internally) vs Pages
   Router / React Web (explicit `LiveUpdatesProvider` / `globalLiveUpdates`) is described per-SDK
-  accurately while keeping the shared concept sentence identical. </content>
+  accurately while keeping the shared concept sentence identical.
+
+## Resolved when guides 2 & 3 closed (2026-07)
+
+- **Both closed.** Guide 2 (React Web) + guide 3 (Web) verified against source with file:line
+  evidence; KB `web/react-web.md` and `web/web.md` written from those facts. No cross-guide language
+  drift introduced: guide 3 reuses the shared four-sentence explainer, the you-fetch/SDK-resolves
+  sentence, the cast guidance, and the baseline-fallback phrasing verbatim.
+- **Deliberate consistency hold (guide 3):** step-3 verify wording ("author a variant … target all
+  visitors") and the lifecycle-section opener were left as-is because they mirror the accepted,
+  already-closed guides 1/2. Two readability suggestions to reword them were DISCARDED to avoid
+  making guide 3 inconsistent with the closed guides.
+- **`Copy this` vs `Follow this pattern` for partial-constructor snippets:** guide 3 now labels
+  merge-into-your-existing-`new ContentfulOptimization({...})` excerpts as `Follow this pattern:`
+  (matches how React Web labels its `trackEntryInteraction={{ hovers: false }}` excerpt). Only
+  self-contained pure-value-substitution blocks keep `Copy this:`. Good pattern for future guides.
+- **Preview-panel flag (guide 3).** The Web guide's preview snippet uses
+  `import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL` as a reader-owned, environment-gated
+  flag (an illustrative Vite-shaped convention). The Web SDK is bundler-agnostic, so there is no
+  single "correct" prefix here; it is framed as reader-owned. Consistent with the earlier drift note
+  — matches React Web's approach; does not copy the impl as an SDK constant.
+
+## Backport candidate for main's cross-guide pass (NEW precision, not in the closed guides yet)
+
+- **Control-variant `selectedOptimization` precision.** Guide 3 / `web/web.md` now state that
+  `selectedOptimization` is `undefined` ONLY when no experience matched; when an experience assigns
+  the CONTROL/baseline variant (`variantIndex: 0`) it is DEFINED while the resolved entry still
+  equals the baseline — so `selectedOptimization === undefined` must not be read as "showing
+  baseline content." source: `core-sdk/src/resolvers/OptimizedEntryResolver.ts:148-209`. The React
+  Web, App Router, and Pages Router guides describe the baseline-fallback contract but do NOT
+  surface this control-variant nuance. Consider whether to backport a one-line note to those guides
+  (the render helpers already guard on presence, so it is a prose-precision improvement, not a bug).
+  </content>
