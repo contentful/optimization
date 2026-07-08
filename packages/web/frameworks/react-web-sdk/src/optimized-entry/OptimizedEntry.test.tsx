@@ -856,4 +856,97 @@ describe('OptimizedEntry', () => {
 
     await view.unmount()
   })
+
+  describe('empty variant', () => {
+    const emptyVariantState: SelectedOptimizationArray = [
+      {
+        experienceId: 'exp-hero',
+        sticky: false,
+        variantIndex: 1,
+        variants: { 'optimized-baseline': '' },
+      },
+    ]
+
+    it('renders no content when the resolved variant is empty', async () => {
+      const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
+        if (selectedOptimizations?.length) {
+          return {
+            entry,
+            isEmptyVariant: true,
+            selectedOptimization: selectedOptimizations[0],
+          }
+        }
+        return { entry }
+      })
+
+      const view = await renderComponent(
+        <OptimizedEntry baselineEntry={optimizedBaseline}>
+          {(resolved) => readTitle(resolved)}
+        </OptimizedEntry>,
+        optimization,
+      )
+
+      await emit(emptyVariantState)
+
+      expect(view.container.textContent).toBe('')
+
+      await view.unmount()
+    })
+
+    it('keeps the tracking host with data-ctfl-empty-variant when the variant is empty', async () => {
+      const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
+        if (selectedOptimizations?.length) {
+          return {
+            entry,
+            isEmptyVariant: true,
+            selectedOptimization: selectedOptimizations[0],
+          }
+        }
+        return { entry }
+      })
+
+      const view = await renderComponent(
+        <OptimizedEntry baselineEntry={optimizedBaseline}>
+          {(resolved) => readTitle(resolved)}
+        </OptimizedEntry>,
+        optimization,
+      )
+
+      await emit(emptyVariantState)
+
+      const wrapper = getWrapper(view.container)
+      expect(wrapper.dataset.ctflEmptyVariant).toBe('true')
+      expect(wrapper.dataset.ctflBaselineId).toBe('optimized-baseline')
+      expect(wrapper.dataset.ctflOptimizationId).toBe('exp-hero')
+      expect(wrapper.dataset.ctflVariantIndex).toBe('1')
+
+      await view.unmount()
+    })
+
+    it('does not render baseline content for an empty variant', async () => {
+      const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
+        if (selectedOptimizations?.length) {
+          return {
+            entry,
+            isEmptyVariant: true,
+            selectedOptimization: selectedOptimizations[0],
+          }
+        }
+        return { entry }
+      })
+
+      const view = await renderComponent(
+        <OptimizedEntry baselineEntry={optimizedBaseline}>
+          {(resolved) => readTitle(resolved)}
+        </OptimizedEntry>,
+        optimization,
+      )
+
+      await emit(emptyVariantState)
+
+      expect(view.container.textContent).not.toContain('optimized-baseline')
+
+      await view.unmount()
+    })
+  })
 })

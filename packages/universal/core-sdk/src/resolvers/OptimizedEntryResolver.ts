@@ -40,6 +40,27 @@ export interface ResolvedData<
   selectedOptimization?: SelectedOptimization
   /** Opaque runtime-owned optimization context ID for entry interaction tracking. */
   optimizationContextId?: string
+  /**
+   * Whether the resolved variant is an empty variant — a deliberate author choice to
+   * render nothing for this audience. When `true`, the entry field still contains the
+   * baseline entry (used for tracking context) but renderers must display no content.
+   * This is distinct from a baseline selection (`variantIndex === 0`) and from a
+   * resolution error (broken variant link), both of which render the baseline entry.
+   *
+   * An empty variant is detected by `selectedVariant.id === ''`. Empty variants appear
+   * in two forms in Contentful CDA `nt_config` data:
+   *
+   * - `{ id: "", hidden: true }` — the author explicitly chose "Use empty variant" in
+   *   the Personalization UI. This is the deliberate author intent for this feature.
+   * - `{ id: "", hidden: false }` — an unfilled placeholder slot, created
+   *   programmatically when a variant is added or unlinked but not yet configured.
+   *
+   * Both forms produce `isEmptyVariant: true`. The `hidden` field is not used for
+   * detection because the Experience API strips it before runtime — it only survives
+   * in the Contentful CDA `nt_config` payload. Using `id === ''` catches both forms
+   * and is stable across all data sources.
+   */
+  isEmptyVariant?: true
 }
 
 /**
@@ -183,13 +204,18 @@ function resolveWithContext<
   const resolveTo = (
     resolvedEntry: Entry<S, M, L>,
     selectedVariant?: EntryReplacementVariant,
+    isEmptyVariant?: true,
   ): ResolvedDataWithOptimizationContext<S, M, L> => {
     const audienceEntry = isResolvedAudienceEntry(maybeAudienceEntry)
       ? maybeAudienceEntry
       : undefined
 
     return {
-      resolvedData: { entry: resolvedEntry, selectedOptimization },
+      resolvedData: {
+        entry: resolvedEntry,
+        selectedOptimization,
+        ...(isEmptyVariant ? { isEmptyVariant } : {}),
+      },
       optimizationContext: {
         selectedOptimization,
         optimizationEntry,
@@ -220,6 +246,18 @@ function resolveWithContext<
       `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${entry.sys.id}`,
     )
     return resolveTo(entry)
+  }
+
+  // Detect an empty variant by id === ''. Two forms exist in CDA nt_config:
+  // { id: '', hidden: true }  — author explicitly chose "Use empty variant" in the UI
+  // { id: '', hidden: false } — unfilled placeholder, added/unlinked but not configured
+  // Both produce isEmptyVariant: true. The `hidden` flag is not used because the
+  // Experience API strips it before runtime; id === '' is the stable invariant.
+  if (selectedVariant.id === '') {
+    logger.debug(
+      `Entry ${entry.sys.id} resolved to empty variant at index ${selectedVariantIndex} — rendering nothing`,
+    )
+    return resolveTo(entry, selectedVariant, true)
   }
 
   const selectedVariantEntry = OptimizedEntryResolver.getSelectedVariantEntry<S, M, L>({

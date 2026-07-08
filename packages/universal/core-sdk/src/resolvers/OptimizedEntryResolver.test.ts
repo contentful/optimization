@@ -628,5 +628,161 @@ describe('OptimizedEntryResolver', () => {
         '2WzXDaWtDmstHl9p8Wufpp',
       )
     })
+
+    describe('empty variant (id: "")', () => {
+      const createOptimizationEntryWithEmptyVariant = (baselineEntry: TestEntry): TestEntry =>
+        createTestEntry(
+          'experience-entry-empty',
+          {
+            nt_name: 'Personalization with empty variant',
+            nt_type: 'nt_personalization',
+            nt_experience_id: 'experience-entry-empty',
+            nt_config: {
+              components: [
+                {
+                  type: 'EntryReplacement',
+                  baseline: { id: baselineEntry.sys.id },
+                  // Real Contentful data: hidden is always false on a variant, not true.
+                  // Empty variant is detected solely by id === "".
+                  variants: [{ id: '', hidden: false }],
+                },
+              ],
+            },
+            nt_variants: [],
+          },
+          'nt_experience',
+        )
+
+      const createSelectedOptimizationsForEmptyVariant = (
+        baselineEntry: TestEntry,
+      ): SelectedOptimizationArray => [
+        {
+          experienceId: 'experience-entry-empty',
+          variantIndex: 1,
+          variants: { [baselineEntry.sys.id]: '' },
+          sticky: false,
+        },
+      ]
+
+      it('returns isEmptyVariant: true and does not render baseline content', () => {
+        const baselineFields: Record<string, unknown> = {}
+        const baselineEntry = createTestEntry('baseline-entry', baselineFields)
+        const optimizationEntry = createOptimizationEntryWithEmptyVariant(baselineEntry)
+        baselineFields.nt_experiences = [optimizationEntry]
+
+        const result = OptimizedEntryResolver.resolve(
+          baselineEntry,
+          createSelectedOptimizationsForEmptyVariant(baselineEntry),
+        )
+
+        expect(result.isEmptyVariant).toBe(true)
+        // The entry field contains the baseline (used for tracking context)
+        expect(result.entry).toBe(baselineEntry)
+        // selectedOptimization is preserved for tracking
+        expect(result.selectedOptimization).toEqual(
+          expect.objectContaining({
+            experienceId: 'experience-entry-empty',
+            variantIndex: 1,
+          }),
+        )
+      })
+
+      it('does not log a "could not resolve" warning for an empty variant', () => {
+        const baselineFields: Record<string, unknown> = {}
+        const baselineEntry = createTestEntry('baseline-entry', baselineFields)
+        const optimizationEntry = createOptimizationEntryWithEmptyVariant(baselineEntry)
+        baselineFields.nt_experiences = [optimizationEntry]
+
+        OptimizedEntryResolver.resolve(
+          baselineEntry,
+          createSelectedOptimizationsForEmptyVariant(baselineEntry),
+        )
+
+        expect(mockedLogger.warn).not.toHaveBeenCalledWith(
+          'Optimization',
+          expect.stringContaining(RESOLUTION_WARNING_BASE),
+        )
+      })
+
+      it('logs a debug message for the empty variant resolution', () => {
+        const baselineFields: Record<string, unknown> = {}
+        const baselineEntry = createTestEntry('baseline-entry', baselineFields)
+        const optimizationEntry = createOptimizationEntryWithEmptyVariant(baselineEntry)
+        baselineFields.nt_experiences = [optimizationEntry]
+
+        OptimizedEntryResolver.resolve(
+          baselineEntry,
+          createSelectedOptimizationsForEmptyVariant(baselineEntry),
+        )
+
+        expect(mockedLogger.debug).toHaveBeenCalledWith(
+          'Optimization',
+          expect.stringContaining('resolved to empty variant'),
+        )
+      })
+
+      it('preserves optimizationContext with selectedVariant for the empty variant', () => {
+        const baselineFields: Record<string, unknown> = {}
+        const baselineEntry = createTestEntry('baseline-entry', baselineFields)
+        const optimizationEntry = createOptimizationEntryWithEmptyVariant(baselineEntry)
+        baselineFields.nt_experiences = [optimizationEntry]
+
+        const { resolvedData, optimizationContext } = OptimizedEntryResolver.resolveWithContext(
+          baselineEntry,
+          createSelectedOptimizationsForEmptyVariant(baselineEntry),
+        )
+
+        expect(resolvedData.isEmptyVariant).toBe(true)
+        expect(optimizationContext?.selectedVariant).toEqual(
+          expect.objectContaining({ id: '', hidden: false }),
+        )
+        expect(optimizationContext?.selectedOptimization).toEqual(
+          expect.objectContaining({ variantIndex: 1 }),
+        )
+      })
+
+      it('still falls back to baseline with a warning for a genuine missing variant entry (non-empty id, no matching nt_variants entry)', () => {
+        const baselineFields: Record<string, unknown> = {}
+        const baselineEntry = createTestEntry('baseline-entry', baselineFields)
+        // Variant has a real (non-empty) id but no matching entry in nt_variants — a real data error,
+        // not an intentional empty variant.
+        const optimizationEntry = createTestEntry(
+          'experience-entry-broken',
+          {
+            nt_name: 'Broken variant',
+            nt_type: 'nt_personalization',
+            nt_experience_id: 'experience-entry-broken',
+            nt_config: {
+              components: [
+                {
+                  type: 'EntryReplacement',
+                  baseline: { id: baselineEntry.sys.id },
+                  variants: [{ id: 'missing-variant-id' }],
+                },
+              ],
+            },
+            nt_variants: [], // entry missing — not intentionally empty
+          },
+          'nt_experience',
+        )
+        baselineFields.nt_experiences = [optimizationEntry]
+
+        const result = OptimizedEntryResolver.resolve(baselineEntry, [
+          {
+            experienceId: 'experience-entry-broken',
+            variantIndex: 1,
+            variants: { [baselineEntry.sys.id]: 'missing-variant-id' },
+            sticky: false,
+          },
+        ])
+
+        expect(result.isEmptyVariant).toBeUndefined()
+        expect(result.entry).toBe(baselineEntry)
+        expect(mockedLogger.warn).toHaveBeenCalledWith(
+          'Optimization',
+          expect.stringContaining(RESOLUTION_WARNING_BASE),
+        )
+      })
+    })
   })
 })

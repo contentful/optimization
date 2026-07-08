@@ -295,14 +295,19 @@ The shared Core resolver follows one path for every SDK package:
 8. Find the `EntryReplacement` component, including components with omitted `type`, whose
    `baseline.id` equals the baseline entry `sys.id` and whose baseline is not hidden.
 9. Select the configured variant at `variantIndex - 1`.
-10. Find the linked Contentful variant entry in `optimizationEntry.fields.nt_variants` by the
+10. When the selected variant has `id: ""` (empty string), return an **empty variant** outcome: the
+    `isEmptyVariant` flag is set to `true` in `ResolvedData`, the baseline entry is returned as the
+    entry field (for tracking context), and `selectedOptimization` metadata is preserved so a
+    component view impression can still be emitted. No warning is logged. Renderers must suppress
+    visible content when `isEmptyVariant` is `true`.
+11. Find the linked Contentful variant entry in `optimizationEntry.fields.nt_variants` by the
     selected variant ID, and confirm that the variant entry uses the baseline entry content type.
-11. Return the variant entry and `selectedOptimization` metadata when all checks pass.
+12. Return the variant entry and `selectedOptimization` metadata when all checks pass.
 
-If steps 8 to 10 fail after a `SelectedOptimization` has matched, the resolver returns the baseline
-entry with the matched `selectedOptimization` metadata. Resolution returns entry objects from the
-Contentful payload. Applications can cache raw Contentful payloads across requests, but
-profile-resolved entries are request-local or session-local decisions.
+If steps 8, 11, or 12 fail after a `SelectedOptimization` has matched (not caused by an empty
+variant), the resolver returns the baseline entry with the matched `selectedOptimization` metadata.
+Resolution returns entry objects from the Contentful payload. Applications can cache raw Contentful
+payloads across requests, but profile-resolved entries are request-local or session-local decisions.
 
 Running resolution only chooses which entry to render. Stateful packages listen for optimization
 state changes around that decision, then choose again when their live-update rules allow it.
@@ -355,20 +360,37 @@ before reading from the configured variant array.
 ### Fallback behavior
 
 Resolution is fail-soft. Invalid, incomplete, or unmatched data returns the baseline entry instead
-of throwing. The selected metadata result distinguishes a baseline selection from a miss:
+of throwing. The selected metadata result distinguishes a baseline selection, an empty variant, and
+a resolution miss:
 
-| Condition                                         | Entry result   | `selectedOptimization` result |
-| ------------------------------------------------- | -------------- | ----------------------------- |
-| No `selectedOptimizations`                        | Baseline entry | `undefined`                   |
-| Entry is not optimized                            | Baseline entry | `undefined`                   |
-| `nt_experiences` contains only unresolved links   | Baseline entry | `undefined`                   |
-| No selected experience matches an attached entry  | Baseline entry | `undefined`                   |
-| Selected `variantIndex` is `0`                    | Baseline entry | Matched selection             |
-| No relevant `EntryReplacement` component exists   | Baseline entry | Matched selection             |
-| Selected variant index is out of range            | Baseline entry | Matched selection             |
-| Variant ID exists in config but not `nt_variants` | Baseline entry | Matched selection             |
-| Variant entry is still an unresolved link         | Baseline entry | Matched selection             |
-| Variant entry content type differs from baseline  | Baseline entry | Matched selection             |
+| Condition                                         | Entry result   | `isEmptyVariant` | `selectedOptimization` result |
+| ------------------------------------------------- | -------------- | ---------------- | ----------------------------- |
+| No `selectedOptimizations`                        | Baseline entry | —                | `undefined`                   |
+| Entry is not optimized                            | Baseline entry | —                | `undefined`                   |
+| `nt_experiences` contains only unresolved links   | Baseline entry | —                | `undefined`                   |
+| No selected experience matches an attached entry  | Baseline entry | —                | `undefined`                   |
+| Selected `variantIndex` is `0`                    | Baseline entry | —                | Matched selection             |
+| No relevant `EntryReplacement` component exists   | Baseline entry | —                | Matched selection             |
+| Selected variant index is out of range            | Baseline entry | —                | Matched selection             |
+| Selected variant has `id: ""` (empty variant)     | Baseline entry | `true`           | Matched selection             |
+| Variant ID exists in config but not `nt_variants` | Baseline entry | —                | Matched selection             |
+| Variant entry is still an unresolved link         | Baseline entry | —                | Matched selection             |
+| Variant entry content type differs from baseline  | Baseline entry | —                | Matched selection             |
+
+The "empty variant" row is distinct from data errors. When a content author selects the **Empty
+variant** option in the Personalization UI, the variant is stored in `nt_config` as
+`{ "id": "", "hidden": true }`. An unfilled placeholder slot (a variant added or unlinked but not
+yet configured) is stored as `{ "id": "", "hidden": false }`. Both forms have `id: ""`, and both
+produce `isEmptyVariant: true`.
+
+The SDK detects an empty variant by `id === ""` — not by the `hidden` flag. The `hidden` flag is not
+a reliable signal because the Experience API strips it before runtime; it only survives in the
+Contentful CDA `nt_config` payload that the resolver reads. Using `id === ""` is stable across both
+data sources.
+
+When `isEmptyVariant` is `true`, renderers must not display any content. They must still emit a
+component view impression so the empty variant is measurable in Insights. The baseline entry is
+returned in the `entry` field as tracking context only.
 
 Consumers must not rely on exceptions to detect personalization misses. Render the baseline entry
 when no variant resolves; baseline fallback is expected behavior, not an error state.

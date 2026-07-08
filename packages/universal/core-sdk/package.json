@@ -112,7 +112,7 @@
     "bundleSize": {
       "gzipBudgets": {
         "index.cjs": 19100,
-        "index.mjs": 19000,
+        "index.mjs": 19100,
         "bridge-support.cjs": 1200,
         "bridge-support.mjs": 2100,
         "runtime.cjs": 4000,
