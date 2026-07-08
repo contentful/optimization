@@ -299,6 +299,9 @@ module prepares the state your pages pass through `pageProps`.
 | `@contentful/optimization-nextjs/server`              | Manual server SDK control, for advanced routes only                                     |
 | `@contentful/optimization-nextjs/api-schemas`         | Type guards such as `isMergeTagEntry` and `isResolvedContentfulEntry`                   |
 
+Import from these subpaths, not the package root: `@contentful/optimization-nextjs` itself is not an
+import path, so always reach for `/pages-router`, `/pages-router/server`, or `/client`.
+
 The config you pass to the **browser** factory (`/pages-router`) breaks down like this:
 
 1. `clientId` and `environment` identify your Optimization project. Read them from browser-safe env
@@ -325,8 +328,9 @@ helper then derives `clientDefaults` from what you return, so the browser starts
 state.
 
 `CONSENT_COOKIE` below is **your** cookie, not an SDK cookie — you name it, you write it (from your
-consent UI or CMP), and you read it here. The SDK never touches it; it only personalizes based on
-what your `server.consent` function returns. (The one SDK-managed cookie is `ctfl-opt-aid`, from the
+consent UI or Consent Management Platform (CMP)), and you read it here. The SDK never touches it; it
+only personalizes based on what your `server.consent` function returns. (The one SDK-managed cookie
+is `ctfl-opt-aid`, from the
 [state handoff](#the-getserversideprops-state-handoff-and-the-profile-cookie).) The
 [Consent, identity, profile, and reset](#consent-identity-profile-and-reset) section shows the
 browser component that writes this cookie.
@@ -386,13 +390,22 @@ consistent across routes.
 
 **Integration category:** Required for first integration
 
-The SDK does not fetch Contentful for you. This is the boundary: **you fetch, the SDK resolves.**
-Keep your existing client and fetchers; the SDK only needs entries to arrive in a shape it can
-resolve.
+Your app owns the Contentful client. There are two supported ways to get a fetched entry to the
+SDK's resolution hand-off, and this guide teaches the first:
 
-1. Fetch with one concrete Contentful locale. Do not use `withAllLocales` or raw CDA `locale=*` —
-   all-locale payloads use locale-keyed field maps the resolver cannot read, so entries fall back to
-   baseline.
+- **Manual (the quick-start default):** you fetch the entry yourself and pass it in as
+  `baselineEntry`. You keep your existing client, fetchers, caching, and rendering; the SDK only
+  needs entries to arrive in a shape it can resolve.
+- **Managed (opt-in, server-side):** you configure the server factory with `contentful: { client }`
+  and let the SDK fetch entries by ID for you during server prefetch, then hand the results to the
+  browser. See the managed note under [Personalizing entries](#personalizing-entries).
+
+Either way the SDK sits at the same hand-off and returns the resolved variant — or the baseline
+entry when none applies. The fetch rules below apply to both paths.
+
+1. Fetch with one concrete Contentful locale. Do not use `withAllLocales` or raw Contentful Delivery
+   API (CDA) `locale=*` — all-locale payloads use locale-keyed field maps the resolver cannot read,
+   so entries fall back to baseline.
 2. Use an `include` depth deep enough to resolve the whole tree — the page, its sections, and the
    linked variant entries. `include: 10` is the common setting and is what most section-composed
    sites already use.
@@ -575,6 +588,92 @@ additions; keep your existing guards.
    })
  }
 ```
+
+#### Letting the server fetch by ID (managed)
+
+If you would rather the SDK fetch an entry for you than fetch it yourself, give the **server**
+helper a Contentful client and prefetch entries by ID. This is a server-side path: on the Pages
+Router the browser factory does not carry a Contentful client, so the browser never fetches by ID on
+its own — the server prefetches during `getServerSideProps` and hands the results to the browser
+through the same `pageProps`.
+
+Three changes wire it up, and all three are required — skip the third and the entry never finds its
+prefetched baseline, so it silently renders nothing:
+
+1. Add `contentful: { client }` to the server factory config from step 3 so the SDK can call
+   `getEntry()` on your client.
+2. Pass `prefetchOptimizedEntries` — a list of `{ entryId, entryQuery? }` descriptors, where
+   `entryQuery` is optional `getEntry()` query params such as `include` depth — as the second
+   argument to `getServerSideOptimizationProps`. The helper fetches and resolves those entries
+   during `getServerSideProps` and adds them to the state it returns.
+3. Pass that state to the bound `OptimizationRoot` in `_app.tsx` as `serverOptimizedEntries`, so a
+   bound `<OptimizedEntry entryId="...">` hydrates from the server-prefetched baseline with no
+   client fetch.
+
+`client` and `entryId` are your values; `contentful`, `prefetchOptimizedEntries`, and
+`serverOptimizedEntries` are the SDK-defined keys.
+
+Apply them in that order — the root prop must exist before a page wraps an entry by id, or the page
+renders nothing. First, the server helper: this replaces the `lib/optimization-server.ts` from step
+3 (it is the same module, with a Contentful client added and the prefetch list forwarded), not a
+second module alongside it.
+
+**Adapt this to your use case:** the step-3 server helper with a Contentful client attached and a
+prefetch list forwarded. `getYourContentfulClient()` and the entry ID are yours.
+
+```ts
+// lib/optimization-server.ts — server helper, managed variant
+import { createNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router/server'
+import type { GetServerSidePropsContext } from 'next'
+import { APP_LOCALE } from './optimization'
+import { getYourContentfulClient } from './contentful' // your existing client
+
+const { getServerSideOptimizationProps } = createNextjsPagesRouterOptimization({
+  clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID ?? '',
+  environment: process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main',
+  locale: APP_LOCALE,
+  app: { name: 'my-next-pages-app', version: '1.0.0' },
+  server: { consent: true },
+  // Managed fetching: the SDK calls getEntry() on your client during server prefetch.
+  contentful: { client: getYourContentfulClient() },
+})
+
+export function getOptimizationProps(context: GetServerSidePropsContext) {
+  return getServerSideOptimizationProps(context, {
+    // Fetched and resolved on the server; handed to the browser as serverOptimizedEntries.
+    prefetchOptimizedEntries: [{ entryId: 'your-entry-id' }],
+  })
+}
+```
+
+Next, forward the prefetched entries from `_app.tsx` by passing one more prop on the
+`OptimizationRoot` from step 4 — the state field the helper populated alongside
+`serverOptimizationState`:
+
+**Adapt this to your use case:** the one added prop on the `OptimizationRoot` from step 4.
+
+```tsx
+ <OptimizationRoot
+   clientDefaults={optimization?.clientDefaults}
+   serverOptimizationState={optimization?.serverOptimizationState}
++  serverOptimizedEntries={optimization?.serverOptimizedEntries}
+ >
+```
+
+Finally, the page wraps the entry by id instead of passing a `baselineEntry` — the entry is already
+in the server-handed state, so no client fetch happens:
+
+**Follow this pattern:** a managed entry, wrapped by id.
+
+```tsx
+<OptimizedEntry entryId="your-entry-id">
+  {(resolved) => <YourCard entry={resolved as YourEntryType} />}
+</OptimizedEntry>
+```
+
+The manual `baselineEntry` path stays the default for this guide: it keeps your fetch and caching in
+your own code. Reach for the managed path only when letting the SDK fetch by ID is simpler than
+threading an entry through your props.
 
 ### Browser takeover and live updates
 
@@ -1058,19 +1157,20 @@ pnpm test:e2e:nextjs-sdk_pages-router
 
 ## Troubleshooting
 
-| Symptom                                                            | Likely cause                                                                            | Check                                                                                                   |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Entries stay on baseline                                           | No variant applies, denied consent, unresolved Contentful links, or all-locale CDA      | Author a variant that targets you, check `server.consent`, fetch one `locale` with enough `include`     |
-| Every entry renders baseline even with consent granted             | `optimization.props` was not spread into the page's returned `props`                    | Return `{ props: { ...optimization.props, entries } }` so `pageProps.contentfulOptimization` is set     |
-| The page 500s instead of showing baseline when the API is down     | `getServerSideOptimizationProps` throws on an Experience API error and is not caught    | Wrap the call in `try/catch` and return props without `contentfulOptimization` to fall back to baseline |
-| The variant never appears even though it is authored               | Your test visitor does not match the experience's audience                              | Target all visitors for a first test, or force the variant with the preview panel                       |
-| `<Component entry={resolved} />` shows a type error                | The render prop returns a base `Entry`, wider than your component's type                | Cast it: `resolved as YourEntryType` (add `as unknown` only if TS rejects a genuinely disjoint type)    |
-| Browser sends a duplicate first page event                         | The tracker emitted after the server helper already reported the same route             | Pass the helper's `initialPageEvent` straight through in `pages/_app.tsx`                               |
-| Browser does not send the first page event                         | `initialPageEvent="skip"` reached a browser-owned route without a matching server event | Let the helper choose the value; it emits `undefined`/`emit` when there is no server helper             |
-| Live entries do not update after `identifyUser()` or `resetUser()` | Live updates are off (the default)                                                      | Set `liveUpdates: true` in the factory, or pass `liveUpdates` to the app-local `OptimizedEntry`         |
-| Entry views, clicks, or hovers do not emit                         | Interaction tracking is opted out, consent blocks the event, or no profile is available | Check factory `trackEntryInteraction`, entry props, consent state, and `states.blockedEventStream`      |
-| Server and browser use different profiles                          | Cookie domain, path, readability, or consent cleanup differs between runtimes           | Keep `ctfl-opt-aid` browser-readable with a consistent path and clear it on withdrawal                  |
-| Personalized HTML appears stale                                    | Route or CDN caching is sharing profile-evaluated output                                | Set `Cache-Control` or vary cache keys on the full personalization context                              |
+| Symptom                                                            | Likely cause                                                                             | Check                                                                                                                                                                                      |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Entries stay on baseline                                           | No variant applies, denied consent, unresolved Contentful links, or all-locale CDA       | Author a variant that targets you, check `server.consent`, fetch one `locale` with enough `include`                                                                                        |
+| Every entry renders baseline even with consent granted             | `optimization.props` was not spread into the page's returned `props`                     | Return `{ props: { ...optimization.props, entries } }` so `pageProps.contentfulOptimization` is set                                                                                        |
+| The page 500s instead of showing baseline when the API is down     | `getServerSideOptimizationProps` throws on an Experience API error and is not caught     | Wrap the call in `try/catch` and return props without `contentfulOptimization` to fall back to baseline                                                                                    |
+| The variant never appears even though it is authored               | Your test visitor does not match the experience's audience                               | Target all visitors for a first test, or force the variant with the preview panel                                                                                                          |
+| `<Component entry={resolved} />` shows a type error                | The render prop returns a base `Entry`, wider than your component's type                 | Cast it: `resolved as YourEntryType` (add `as unknown` only if TS rejects a genuinely disjoint type)                                                                                       |
+| Browser sends a duplicate first page event                         | The tracker emitted after the server helper already reported the same route              | Pass the helper's `initialPageEvent` straight through in `pages/_app.tsx`                                                                                                                  |
+| Browser does not send the first page event                         | `initialPageEvent="skip"` reached a browser-owned route without a matching server event  | Let the helper choose the value; it emits `undefined`/`emit` when there is no server helper                                                                                                |
+| Live entries do not update after `identifyUser()` or `resetUser()` | Live updates are off (the default)                                                       | Set `liveUpdates: true` in the factory, or pass `liveUpdates` to the app-local `OptimizedEntry`                                                                                            |
+| Entry views, clicks, or hovers do not emit                         | Interaction tracking is opted out, consent blocks the event, or no profile is available  | Check factory `trackEntryInteraction`, entry props, consent state, and `states.blockedEventStream`                                                                                         |
+| Server and browser use different profiles                          | Cookie domain, path, readability, or consent cleanup differs between runtimes            | Keep `ctfl-opt-aid` browser-readable with a consistent path and clear it on withdrawal                                                                                                     |
+| Personalized HTML appears stale                                    | Route or CDN caching is sharing profile-evaluated output                                 | Set `Cache-Control` or vary cache keys on the full personalization context                                                                                                                 |
+| Next.js 15 reports unsupported `export *` in a client boundary     | A `'use client'` module re-exports with `export *` — in your app, or a package that does | If the error points to your own code, remove `export *` re-exports from your Client Components; if it points to a dependency's client entry, use one whose client entry uses named exports |
 
 ## Reference implementations to compare against
 
