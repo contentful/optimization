@@ -209,26 +209,26 @@ requests for you.
 
 **Integration category:** Required for first integration
 
-The Next.js adapter is a glue package. App Router integrations should start from `/app-router` and
-export app-local bound components once. Use subpaths for hooks, request handlers, schemas, ESR, or
-manual escape hatches.
+The Next.js adapter is a glue package with no package-root runtime export. App Router integrations
+should start from `/app-router` and export app-local bound components once. Use subpaths for hooks,
+request handlers, schemas, ESR, or manual escape hatches.
 
-| Import path                                       | Runtime                                       | Responsibility                                                                                                    |
-| ------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `@contentful/optimization-nextjs/app-router`      | App-local binding module                      | Preferred `createNextjsAppRouterOptimization()` factory for App Router proxy plus Server and Client Components    |
-| `@contentful/optimization-nextjs/client`          | Client Components                             | Router-neutral browser hooks, manual client providers, live updates helpers, and entry components                 |
-| `@contentful/optimization-nextjs/server`          | Advanced server-only modules                  | Manual server SDK creation, request binding, server resolution, and SSR tracking attributes                       |
-| `@contentful/optimization-nextjs/esr`             | Route handlers, edge functions, and ESR flows | Request-rendered Optimization data and explicit response persistence                                              |
-| `@contentful/optimization-nextjs/request-handler` | Next.js proxy or middleware                   | Request URL capture and SDK-owned request header sanitization                                                     |
-| `@contentful/optimization-nextjs/api-schemas`     | Shared schema helpers                         | API types plus structural guards such as `isMergeTagEntry`, `isRichTextDocument`, and `isResolvedContentfulEntry` |
+| Import path                                       | Runtime                                       | Responsibility                                                                                                                   |
+| ------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-nextjs/app-router`      | App-local binding module                      | Preferred `createNextjsAppRouterOptimization()` factory and route tracker for App Router proxy plus Server and Client Components |
+| `@contentful/optimization-nextjs/client`          | Client Components                             | Router-neutral browser hooks, manual client providers, live updates helpers, and entry components                                |
+| `@contentful/optimization-nextjs/server`          | Advanced server-only modules                  | Manual server SDK creation, request binding, server resolution, and SSR tracking attributes                                      |
+| `@contentful/optimization-nextjs/esr`             | Route handlers, edge functions, and ESR flows | Request-rendered Optimization data and explicit response persistence                                                             |
+| `@contentful/optimization-nextjs/request-handler` | Next.js proxy or middleware                   | Request URL capture and SDK-owned request header sanitization                                                                    |
+| `@contentful/optimization-nextjs/api-schemas`     | Shared schema helpers                         | API types plus structural guards such as `isMergeTagEntry`, `isRichTextDocument`, and `isResolvedContentfulEntry`                |
 
 1. Install `@contentful/optimization-nextjs` in the Next.js app.
 2. Create an app-local module, commonly `lib/optimization.ts`, that calls
    `createNextjsAppRouterOptimization()`.
 3. Import `OptimizationRoot`, `OptimizationProvider`, the bound `OptimizedEntry`, and route trackers
    from the app-local module in Server and Client Components.
-4. Import browser hooks, and `OptimizedEntry` for per-entry `liveUpdates` or `loadingFallback`, from
-   `/client` only inside Client Components marked with `'use client'`.
+4. Import browser hooks, providers, and generic `OptimizedEntry` for per-entry `liveUpdates` or
+   `loadingFallback` from `/client` only inside Client Components marked with `'use client'`.
 5. Re-export `proxy` from the app-local module in proxy or middleware code and declare the literal
    Next.js matcher config there.
 6. Keep `/server` imports for manual server control when the bound App Router factory does not fit a
@@ -1027,6 +1027,7 @@ pnpm test:e2e:nextjs-sdk_app-router
 | Entry views, clicks, or hovers do not emit                         | Interaction tracking is opted out, consent blocks the event, or no profile is available        | Check factory `trackEntryInteraction`, entry props, consent state, and `states.blockedEventStream`       |
 | Server and browser use different profiles                          | Cookie domain, path, readability, or consent cleanup differs between runtimes                  | Use a browser-readable `ctfl-opt-aid` with consistent path and clear it on withdrawal                    |
 | Server Components fail with browser globals                        | A Client Component hook or browser-only import crossed into a server module                    | Use app-local bound component imports in Server Components and `/client` hooks only in Client Components |
+| Next.js 15 reports unsupported `export *` in a client boundary     | The app or an old SDK version uses wildcard re-exports in a `'use client'` module              | Upgrade to the fixed SDK and avoid app-authored `export *` barrels in Client Components                  |
 | Personalized HTML appears stale                                    | Route or CDN caching is sharing profile-evaluated output                                       | Mark personalized routes dynamic or vary cache keys on the full personalization context                  |
 
 ## Reference implementations to compare against

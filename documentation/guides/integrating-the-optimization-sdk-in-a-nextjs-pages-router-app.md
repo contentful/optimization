@@ -222,16 +222,17 @@ requests for you.
 
 **Integration category:** Required for first integration
 
-The Next.js adapter is a glue package. Pages Router integrations should start from `/pages-router`
-for bound browser components and `/pages-router/server` for `getServerSideProps` state handoff.
+The Next.js adapter is a glue package with no package-root runtime export. Pages Router integrations
+should start from `/pages-router` for bound browser components and `/pages-router/server` for
+`getServerSideProps` state handoff.
 
-| Import path                                           | Runtime                 | Responsibility                                                                                    |
-| ----------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------- |
-| `@contentful/optimization-nextjs/pages-router`        | Pages Router components | Bound `OptimizationRoot`, `OptimizationProvider`, `OptimizedEntry`, and route tracker             |
-| `@contentful/optimization-nextjs/pages-router/server` | `getServerSideProps`    | Server Optimization data, initial page-event ownership, and anonymous ID persistence              |
-| `@contentful/optimization-nextjs/client`              | Browser components      | Router-neutral browser hooks, manual client providers, live updates helpers, and entry components |
-| `@contentful/optimization-nextjs/server`              | Advanced server modules | Manual server SDK creation and direct request binding                                             |
-| `@contentful/optimization-nextjs/api-schemas`         | Shared schema helpers   | API types plus structural guards                                                                  |
+| Import path                                           | Runtime                 | Responsibility                                                                                       |
+| ----------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-nextjs/pages-router`        | Pages Router components | Factory and route tracker for bound `OptimizationRoot`, `OptimizationProvider`, and `OptimizedEntry` |
+| `@contentful/optimization-nextjs/pages-router/server` | `getServerSideProps`    | Server Optimization data, initial page-event ownership, and anonymous ID persistence                 |
+| `@contentful/optimization-nextjs/client`              | Browser components      | Router-neutral browser hooks, manual client providers, live updates helpers, and entry components    |
+| `@contentful/optimization-nextjs/server`              | Advanced server modules | Manual server SDK creation and direct request binding                                                |
+| `@contentful/optimization-nextjs/api-schemas`         | Shared schema helpers   | API types plus structural guards                                                                     |
 
 1. Install `@contentful/optimization-nextjs` in the Next.js app.
 2. Create an app-local module that calls `createNextjsPagesRouterOptimization()`.
@@ -239,7 +240,8 @@ for bound browser components and `/pages-router/server` for `getServerSideProps`
    `/pages-router/server`.
 4. Import `OptimizationRoot`, `OptimizationProvider`, `OptimizedEntry`, and
    `NextPagesAutoPageTracker` from the app-local module.
-5. Import browser hooks from `/client` only inside browser components.
+5. Import browser hooks, providers, and generic client entry components from `/client` only inside
+   browser components.
 6. Keep `/server` imports for manual server control when the Pages Router helper does not fit a
    route.
 
@@ -504,6 +506,7 @@ pnpm test:e2e:nextjs-sdk_pages-router
 | Live entries do not update after `identifyUser()` or `resetUser()` | `liveUpdates` is false in the factory, provider, and entry                                     | Set `liveUpdates={true}` on the entry, a `LiveUpdatesProvider`, or the component factory           |
 | Entry views, clicks, or hovers do not emit                         | Interaction tracking is opted out, consent blocks the event, or no profile is available        | Check factory `trackEntryInteraction`, entry props, consent state, and `states.blockedEventStream` |
 | Server and browser use different profiles                          | Cookie domain, path, readability, or consent cleanup differs between runtimes                  | Use a browser-readable `ctfl-opt-aid` with consistent path and clear it on withdrawal              |
+| Next.js 15 reports unsupported `export *` in a client boundary     | The app or an old SDK version uses wildcard re-exports in a `'use client'` module              | Upgrade to the fixed SDK and avoid app-authored `export *` barrels in browser components           |
 | Personalized HTML appears stale                                    | Route or CDN caching is sharing profile-evaluated output                                       | Set response headers or cache keys for the full personalization context                            |
 
 ## Reference implementations to compare against

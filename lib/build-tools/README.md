@@ -6,14 +6,15 @@
 > imported by application code.
 
 `build-tools` contains shared command-line helpers used by Optimization SDK package builds,
-especially declaration emission and bundle-size checks. Keep cross-package build behavior here
-instead of duplicating one-off scripts in downstream package directories.
+especially declaration emission, client-boundary export checks, and bundle-size checks. Keep
+cross-package build behavior here instead of duplicating one-off scripts in downstream package
+directories.
 
 ## When to use this package
 
-Use this package when maintaining shared build helper behavior, declaration output handling, or
-bundle-size measurement. Package-specific bundle-size budgets belong in each package's
-`package.json` under `buildTools.bundleSize.gzipBudgets`.
+Use this package when maintaining shared build helper behavior, declaration output handling,
+client-boundary export validation, or bundle-size measurement. Package-specific bundle-size budgets
+belong in each package's `package.json` under `buildTools.bundleSize.gzipBudgets`.
 
 Bundle-size checks measure configured files as entrypoints. For JavaScript files, the reported `raw`
 and `gzip` values include local static chunks reachable from the configured file in `dist/`, so

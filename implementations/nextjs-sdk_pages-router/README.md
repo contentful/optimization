@@ -27,10 +27,10 @@ tracker once in `pages/_app.tsx`.
 
 The implementation binds `OptimizationRoot`, `OptimizedEntry`, and `NextPagesAutoPageTracker` once
 in `@/lib/optimization` with `createNextjsPagesRouterOptimization()`. Browser runtime imports use
-Next.js SDK package subpaths:
+Next.js SDK package subpaths. The package root is not imported:
 
-- `@contentful/optimization-nextjs/pages-router` in `@/lib/optimization` for bound Pages Router
-  components
+- `@contentful/optimization-nextjs/pages-router` in `@/lib/optimization` for the bound component
+  factory and route tracker
 - `@contentful/optimization-nextjs/pages-router/server` in `@/lib/optimization-server` for
   `getServerSideProps` state handoff
 - `@contentful/optimization-nextjs/client` for browser hooks and providers
