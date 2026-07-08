@@ -471,10 +471,12 @@ If you configured the factory with `contentful: { client }` (the managed path fr
 [Fetching Contentful entries](#fetching-contentful-entries)), you can skip the fetch and pass an
 `entryId` instead of a `baselineEntry`. The bound server `OptimizedEntry` fetches that entry by ID
 through your client and resolves it in the same render — an optional `entryQuery` merges into the
-`getEntry()` call. The `/client` `OptimizedEntry` and `useOptimizedEntry()` accept the same
-`entryId` / `entryQuery` for browser-side use (see
-[Browser takeover and live updates](#browser-takeover-and-live-updates)). The render prop and cast
-are unchanged; only the source of the entry differs.
+`getEntry()` call. Managed `entryId` fetching in App Router is server-side: the bound server
+component holds the Contentful client and fetches during the render, then hands the resolved entry
+to the browser. The `/client` `OptimizedEntry` and `useOptimizedEntry()` accept `entryId` at the
+type level, but the browser runtime does not carry the Contentful client, so a browser-only
+`entryId` resolves from the server-provided entry rather than fetching on its own — keep the fetch
+on the server. The render prop and cast are unchanged; only the source of the entry differs.
 
 **Adapt this to your use case:** the managed variant of the example above — no fetch, an `entryId`
 in place of `baselineEntry`.

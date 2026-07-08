@@ -59,7 +59,7 @@ None (imperative class + Web Components; no React surface). Web Components eleme
 | `defineContentfulOptimizationElements()` | registrar | Side-effect-free until called; registers the two custom elements                                                                                                                                                                                                                                                                                                                               | `src/web-components/index.ts:4-5,21-45`                                                                                                                  |
 | `<ctfl-optimization-root>`               | element   | Attributes: `client-id`, `environment`, `locale`, `live-updates`. Properties: `defaults`, `api`, `trackEntryInteraction`, `sdk`, `onStatesReady`. Reuses `window.contentfulOptimization` automatically if present (`this.assignedSdk ?? getGlobalSdk()`); `sdk` prop supplies an explicit instance. Root-owned SDK defaults view/click/hover on. Events `ctfl-root-ready` / `ctfl-root-error`. | `web-components/ContentfulOptimizationRootElement.ts:51-53,123-166,217,42-48`; `RootElement.ts:13-14`; `presentation/optimizationRootRuntime.ts:131-133` |
 | `<ctfl-optimized-entry>`                 | element   | Property `baselineEntry` (manual: assigning it triggers resolution) OR `entry-id` attribute / `entryId` property (managed: SDK fetches by ID via configured `contentful.client`); `entryQuery` property; `sdk`. Observed attributes: `entry-id`, `live-updates`, `track-clicks`, `track-hovers`, `track-views`. Events `ctfl-entry-loading` / `ctfl-entry-resolved` / `ctfl-entry-error`.      | `web-components/ContentfulOptimizedEntryElement.ts:76-77,92-119,197-201,253-262,16-18`                                                                   |
-| `ContentfulOptimizedEntryEventDetail`    | type      | `{ entry, resolvedData, selectedOptimization, selectedOptimizations, snapshot }`                                                                                                                                                                                                                                                                                                               | `ContentfulOptimizedEntryElement.ts:22-28,372-378`                                                                                                       |
+| `ContentfulOptimizedEntryEventDetail`    | type      | `{ entry, metadata, resolvedData, selectedOptimization, selectedOptimizations, snapshot }`                                                                                                                                                                                                                                                                                                     | `ContentfulOptimizedEntryElement.ts:27-34,453-468`                                                                                                       |
 
 ## Render / entry resolution
 
@@ -74,10 +74,9 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   - source: `core-sdk` `CoreBase.ts` `clearContentfulEntryCache` (:273), `fetchContentfulEntry`
     (:288), `fetchOptimizedEntry` (:352), `FetchOptimizedEntryResult` (:99).
 - `resolveOptimizedEntry(baselineEntry, selectedOptimizations?)` →
-  `{ resolvedData: { entry, selectedOptimization? }, optimizationContext? }`; public helper surfaces
-  `{ entry, selectedOptimization?, optimizationContextId? }`. Omitting arg 2 defaults to
-  `selectedOptimizationsSignal.value` (current SDK state). source: `core-sdk`
-  `resolvers/OptimizedEntryResolver.ts:32-43,145`; `CoreStateful.ts:370-372`.
+  `{ entry, selectedOptimization?, optimizationContextId? }` (public `ResolvedData` shape). Omitting
+  arg 2 defaults to `selectedOptimizationsSignal.value` (current SDK state). source: `core-sdk`
+  `CoreBase.ts:412-433`; `resolvers/OptimizedEntryResolver.ts:32-43`; `CoreStateful.ts:370-372`.
 - `entry` is a base `contentful` `Entry` ⇒ cast `entry as YourType` (`as unknown as YourType` only
   for genuinely disjoint). Baseline fallback: see
   [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback).
