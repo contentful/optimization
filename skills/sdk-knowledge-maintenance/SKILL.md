@@ -56,6 +56,12 @@ These are the transferable behaviors this skill exists to preserve.
   cannot use ISR" — are present-tense behavior, not history, and are fine.) The same rule governs
   `shared/consistency-notes.md`: it records the status quo of what language must match across a
   guide family, not a log of merges or fixes.
+- **While the SDK is pre-release/alpha, record no SDK-version deltas.** One moving version means
+  there is nothing to compare — do not note what a prior SDK version did, "upgrade to the fixed
+  version", or version-to-version differences of this SDK. Record the single current version's facts
+  in present tense. (Host-framework version facts the reader must act on today — e.g. a framework
+  that resolves a handler differently across its own major versions — are present-state environment
+  facts and are fine.) Revisit at the SDK's first major.
 - **Every fact carries a `source:` pointer.** A path, `path#symbol`, or `path:line` into
   `packages/**/src`. A fact without a source pointer is a claim, not knowledge — do not add it.
 - **Capture once, as a byproduct of verification.** When you verify an SDK API against source while

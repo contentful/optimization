@@ -21,9 +21,11 @@ main's final consistency pass. Terse; running log.
   an SDK method. A guide's own example fetch helper uses a distinct name (React Web uses
   `fetchPageEntry`).
 - The two Next.js guides share one verbatim troubleshooting row: symptom "Next.js 15 reports
-  unsupported `export *` in a client boundary" / cause "The app or an old SDK version uses wildcard
-  re-exports in a `'use client'` module" / fix "Upgrade to the fixed SDK and avoid app-authored
-  `export *` barrels in Client Components." Keep the App Router and Pages Router rows aligned.
+  unsupported `export *` in a client boundary" / cause "A `'use client'` module re-exports with
+  `export *` — in your app, or a package that does" / check "If the error points to your own code,
+  remove `export *` re-exports from your Client Components; if it points to a dependency's client
+  entry, use one whose client entry uses named exports." Mechanism-only, no version framing. Keep
+  the App Router and Pages Router rows aligned.
 
 ## Drift spotted (for review)
 
