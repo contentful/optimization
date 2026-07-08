@@ -9,10 +9,10 @@ add per-archetype checks.
 - [ ] The intro opens by naming the working result, not stacked jargon. The first sentence a reader
       hits does not use an undefined term.
 - [ ] Every term the quick start relies on is defined in plain language at or before first use (for
-      SDK guides that includes: variant, experience, Experience API, resolving, baseline fallback,
-      and any of consent/persistenceConsent/profile/page-event the quick start touches). The
-      definition is in prose (or the intro explainer), not only inside a code comment — a reader who
-      skims prose and diffs must still meet the term defined.
+      SDK guides that includes the domain concepts — variant, experience, Experience API, resolving,
+      baseline fallback — plus any SDK-owned config key, identifier, or event name the quick start
+      touches). The definition is in prose (or the intro explainer), not only inside a code comment
+      — a reader who skims prose and diffs must still meet the term defined.
 - [ ] No section promises "you don't need X" and then requires an undefined X before it is
       explained.
 - [ ] No informal filler or hype that reads oddly in a reference doc ("this is the payoff", "the
@@ -29,15 +29,13 @@ add per-archetype checks.
       implementation.** Confirm each hook, prop, config key, context field, and return shape exists
       in `packages/**/src` (grep the type/export). The reference impl shows one working path but can
       hide nuance (a factory field the impl does not use, a provider the bound component renders
-      internally); a plausible-looking field name such as `isReady` or `liveUpdates` is not proof it
-      exists. When source and reference impl seem to disagree, read the source and reconcile.
+      internally); a plausible-looking field name such as `isEnabled` or `hasResults` is not proof
+      it exists. When source and reference impl seem to disagree, read the source and reconcile.
 - [ ] Code comments explain only meaningful SDK-specific lines; no obvious-syntax narration.
-- [ ] **Every identifier that looks like a magic value states who owns it.** For each cookie name,
-      env var, header, storage key, or config string in a snippet, make clear whether the SDK
-      defines/reads it (the reader must match the exact name) or the reader invents and manages it
-      (a placeholder they name and wire up themselves). Do not let an app-owned value read as an SDK
-      constant — e.g. a consent cookie the app writes and reads is the reader's, while
-      `ctfl-opt-aid` is the SDK's.
+- [ ] **Every magic-value identifier states who owns it.** For each cookie name, env var, header,
+      storage key, or config string in a snippet, the guide states whether the reader must match the
+      exact name (SDK-defined) or can choose it freely (reader-invented). Neither reads as the
+      other.
 - [ ] `pnpm format:fix <file>` leaves the file unchanged (run it; Prettier owns formatting).
 - [ ] The collapsible TOC preserves the mtoc markers, omits `## Quick start`, and every anchor
       resolves to a real heading.
@@ -70,11 +68,10 @@ add per-archetype checks.
       needs to act must be present inline where the reader hits it.
 - [ ] `## Before you start` is a prerequisites list, not a setup-inventory table, and includes the
       authored-variant gotcha (see before-you-start.md).
-- [ ] The shared concern checklist is covered or each unsupported concern is explicitly marked
-      not-applicable: install/init/config; consent & privacy handoff; the fetch/SDK boundary; entry
+- [ ] Each shared concern is either covered by the guide or explicitly marked not-applicable for
+      this SDK: install/init/config; consent & privacy handoff; the fetch/SDK boundary; entry
       resolution + fallback; page/route/screen events; interaction tracking; identity/profile/reset;
-      routing/lifecycle/request context; live updates/preview/analytics/caching where supported;
-      verification.
+      routing/lifecycle/request context; real-time updates/preview/analytics/caching; verification.
 - [ ] `## Production checks` covers config, consent, event delivery, content fallback, duplicate
       tracking, privacy/governance, and a local validation path.
 - [ ] `## Troubleshooting` is present only if the guide covers known failure modes, and its rows map

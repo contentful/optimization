@@ -140,7 +140,7 @@ Router, React Native, iOS SwiftUI, iOS UIKit, Android Compose, Android Views.
    every API used — hook, prop, config key, context field, return shape — exists in the SDK source
    under `packages/**/src`, not only in the reference impl. The reference impl proves one path works
    but can hide nuance (a factory field it does not use, a provider the bound component renders
-   internally), and a plausible name like `isReady` is not proof it exists.
+   internally), and a plausible-looking name is not proof it exists.
 6. **Sync the TOC and anchors**, add `## Production checks` and (if there are known failure modes)
    `## Troubleshooting`, and link the reference implementation READMEs.
 7. **Self-review** against [references/authoring-checklist.md](references/authoring-checklist.md).

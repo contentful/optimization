@@ -1,0 +1,9 @@
+{
+  "name": "@contentful/skill-sdk-knowledge-maintenance",
+  "version": "0.1.0",
+  "description": "Maintain the internal Optimization SDK knowledge base under documentation/internal/sdk-knowledge/",
+  "license": "MIT",
+  "files": [
+    "SKILL.md"
+  ]
+}

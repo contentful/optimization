@@ -111,9 +111,9 @@ shape to the feature section. Then one sentence naming the single proof and the 
   guide points to; otherwise `**Adapt this to your use case:**`, and name what is the reader's vs
   the pattern to copy. A path or file the reader must relocate (import alias, app-root file) is an
   adapt, not a copy.
-- **Define each term at first use, tersely.** One clause is enough (`persistenceConsent` — may store
-  the profile-id cookie). Do not promise "you don't need the model" and then require an undefined
-  term two steps later.
+- **Define each term at first use, tersely.** One clause is enough — for example, a consent config
+  key defined inline as "may store the visitor-profile cookie." Do not promise "you don't need the
+  model" and then require an undefined term two steps later.
 - Keep optional concerns out of the quick start unless one is the chosen proof: interaction-tracking
   config, analytics forwarding, identity, preview, live updates, offline queues, caching, strict
   event policy, production hardening. Default interaction tracking may exist implicitly via the
@@ -122,31 +122,27 @@ shape to the feature section. Then one sentence naming the single proof and the 
   experience targeting all visitors so they match automatically, or forcing a variant via the
   preview panel) — not just "load as a qualifying visitor."
 
-## SDK-specific quick-start guardrails
+## Quick-start scope discipline (per SDK)
 
-- **Next.js App Router:** use `createNextjsAppRouterOptimization()` from
-  `@contentful/optimization-nextjs/app-router` for the bound `OptimizationRoot`, `OptimizedEntry`,
-  tracker, and `proxy`. Keep `/client` and `/server` for later escape hatches. Do not include
-  explicit `trackEntryInteraction`, `data-ctfl-*` verification, entry view/click/hover verification,
-  analytics forwarding, or production cache policy in the quick start. First path focuses on server
-  defaults, request handling, duplicate-page-event prevention, baseline fallback, and the entry
-  wrap. Two version/runtime traps the guide must call out because they hard-fail the target reader:
-  - **Request-handler filename + export are Next.js-version-specific.** Next.js 16 loads a `proxy`
-    export from `proxy.ts`; Next.js 15 loads a `middleware` export from `middleware.ts` (alias:
-    `export { proxy as middleware }`). Wrong filename/export ⇒ the handler silently never runs, and
-    with `server.enabled: true` the bound root then _throws_ (not baseline fallback). Target the
-    current major (16) and give the 15 variant explicitly.
-  - **Server personalization forces dynamic rendering.** The bound server components read
-    `headers()`, so a personalized route can no longer use `revalidate`/`generateStaticParams` (ISR
-    or SSG). Say so in the core path, not only under caching.
-- **Next.js Pages Router:** `@contentful/optimization-nextjs/pages-router` for bound client
-  components, `@contentful/optimization-nextjs/pages-router/server` for `getServerSideProps`.
-- **Web / React Web:** no explicit tracking-attribute setup or interaction-event verification unless
-  that is the chosen proof.
-- **React Native / Android Compose / Android Views:** no scroll/lazy-column providers, explicit
-  `trackTaps`/`trackViews`, or interaction-event verification in the quick start.
-- **iOS UIKit:** SDK init + one accepted screen event is an acceptable first proof when entry
-  rendering would make the quick start disproportionately app-specific.
+Before adding or removing quick-start steps, consult the SDK's own source and its existing guide for
+the exact entry points — this skill names none. Apply these general rules:
+
+- Start from the SDK's primary/bound entry point; defer lower-level or escape-hatch subpaths to
+  later sections.
+- The first path should cover only: init/config, the request or lifecycle wiring, one accepted event
+  or one entry resolving (variant or baseline), and the entry wrap. Exclude interaction tracking,
+  analytics forwarding, identity, preview, live updates, offline queues, and production cache policy
+  unless one of those is the explicit chosen proof. Default interaction tracking may exist
+  implicitly via the entry wrapper.
+- **Call out version-specific filenames or exports that fail silently.** When a framework resolves a
+  handler by filename and/or export name, and the current vs previous major differ, name both
+  explicitly and state the failure mode (a wrong name silently no-ops rather than erroring). Verify
+  the exact names against the framework and SDK source.
+- **Flag runtime-mode side effects of the integration.** If wiring the SDK changes a route's
+  rendering mode (e.g. forcing dynamic rendering and disabling static/incremental generation), say
+  so in the core path, not only under caching — verify the trigger against source.
+- For screen/entry-heavy native runtimes, "init + one accepted screen event" is an acceptable first
+  proof when entry rendering would make the quick start disproportionately app-specific.
 
 ## Rendering / entry-wrap rules (the recurring credibility trap)
 
@@ -154,14 +150,13 @@ shape to the feature section. Then one sentence naming the single proof and the 
   renderer or registry mapping content type to component); others render an entry directly in a
   page. Use app-neutral wording — do not assume a specific file or symbol name (e.g.
   "SectionRenderer") that varies between apps.
-- If the render prop returns a widened type (e.g. `OptimizedEntry`'s render prop returns a base
-  `contentful` `Entry`), the snippet must show the cast the reader needs (`resolved as YourType`)
-  and say why. Verify against the SDK source (`packages/**/src`), not just the reference
-  implementation — do not claim type-identity the SDK does not provide. Recommend the plain direct
-  cast as the default; it works for common cases including `.withoutUnresolvableLinks`-narrowed
-  types (confirmed by `tsc`). Mention `as unknown as YourType` only as a rare escape for genuinely
-  disjoint types — do not tie it to a specific chain modifier, and do not add it speculatively
-  without compiling first.
+- If the render prop returns a type wider than the app's schema type (e.g. a base entry type rather
+  than the app's specific content-type interface), the snippet must show the cast the reader needs
+  (`resolved as YourType`) and say why. Verify against the SDK source (`packages/**/src`), not just
+  the reference implementation — do not claim type-identity the SDK does not provide. Recommend the
+  plain direct cast as the default; it works for common narrowed types. Mention
+  `as unknown as YourType` only as a rare escape for genuinely disjoint types — do not tie it to a
+  specific type modifier, and do not add it speculatively without compiling first.
 - State the fallback contract explicitly: on denied consent / no variant / unresolved links /
   all-locale payloads, the render prop receives the baseline entry and the UI does not break.
 

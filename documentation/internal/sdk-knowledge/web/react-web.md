@@ -11,15 +11,15 @@ Package source root: `packages/web/frameworks/react-web-sdk/src`; underlying Web
 
 ## Package & entry points
 
-| Import path                                                 | Purpose                                                                                        | source                                                 |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `@contentful/optimization-react-web`                        | `OptimizationRoot`, `OptimizationProvider`, `LiveUpdatesProvider`, `OptimizedEntry`, all hooks | `package.json` exports; `src/index.ts`                 |
-| `@contentful/optimization-react-web/router/react-router`    | `ReactRouterAutoPageTracker`                                                                   | `package.json:25`; `src/router/react-router.tsx:55`    |
-| `@contentful/optimization-react-web/router/tanstack-router` | TanStack Router auto page tracker                                                              | `package.json:65`; `src/router/tanstack-router.tsx:23` |
-| `@contentful/optimization-react-web/router/next-pages`      | Next.js Pages Router auto page tracker (React-Web-only setups)                                 | `package.json:75`; `src/router/next-pages.tsx:49-58`   |
-| `@contentful/optimization-react-web/router/next-app`        | Next.js App Router auto page tracker (React-Web-only setups)                                   | `package.json:85`; `src/router/next-app.tsx:40-42`     |
-| `@contentful/optimization-react-web/api-schemas`            | Type guards `isMergeTagEntry`, `isRichTextDocument`                                            | `package.json:95`; `src/api-schemas.ts`                |
-| `@contentful/optimization-react-web/logger`                 | `createScopedLogger`                                                                           | `package.json:105`; `src/logger.ts:1`                  |
+| Import path                                                 | Purpose                                                                                        | source                                                  |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `@contentful/optimization-react-web`                        | `OptimizationRoot`, `OptimizationProvider`, `LiveUpdatesProvider`, `OptimizedEntry`, all hooks | `package.json` exports; `src/index.ts`                  |
+| `@contentful/optimization-react-web/router/react-router`    | `ReactRouterAutoPageTracker`                                                                   | `package.json:95`; `src/router/react-router.tsx:55`     |
+| `@contentful/optimization-react-web/router/tanstack-router` | TanStack Router auto page tracker                                                              | `package.json:105`; `src/router/tanstack-router.tsx:23` |
+| `@contentful/optimization-react-web/router/next-pages`      | Next.js Pages Router auto page tracker (React-Web-only setups)                                 | `package.json:75`; `src/router/next-pages.tsx:49-58`    |
+| `@contentful/optimization-react-web/router/next-app`        | Next.js App Router auto page tracker (React-Web-only setups)                                   | `package.json:85`; `src/router/next-app.tsx:40-42`      |
+| `@contentful/optimization-react-web/api-schemas`            | Type guards `isMergeTagEntry`, `isRichTextDocument`                                            | `package.json:65`; `src/api-schemas.ts`                 |
+| `@contentful/optimization-react-web/logger`                 | `createScopedLogger`                                                                           | `package.json:25`; `src/logger.ts:1`                    |
 
 ## Setup / factory
 

@@ -24,11 +24,12 @@ build. source: `package.json` exports.
 ## Setup / factory
 
 - `createNextjsAppRouterOptimization(config)` →
-  `{ proxy, NextAppAutoPageTracker, OptimizationRoot, OptimizedEntry }`. Config keys: `clientId`,
-  `environment`, `locale`, `api?`, `defaults` (`consent`, `persistenceConsent`), `server`
-  (`enabled`, `consent` — value or `({ cookies }) => consent`), `app` (`name`, `version`), plus
-  `liveUpdates?`, `trackEntryInteraction?`, `onStatesReady?`, `allowedEventTypes?`. Create bound
-  components once. source: accepted App Router guide; `src/app-router-server.tsx`.
+  `{ proxy, NextAppAutoPageTracker, OptimizationRoot, OptimizationProvider, OptimizedEntry }`.
+  Config keys: `clientId`, `environment`, `locale`, `api?`, `defaults` (`consent`,
+  `persistenceConsent`), `server` (`enabled`, `consent` — value or `({ cookies }) => consent`),
+  `app` (`name`, `version`), plus `liveUpdates?`, `trackEntryInteraction?`, `onStatesReady?`,
+  `allowedEventTypes?`. Create bound components once. source:
+  `src/app-router-server.tsx:57-65,166-172` (5-member return + interface).
 
 ## Components & hooks
 
@@ -54,11 +55,11 @@ control. source: accepted App Router guide.
 
 ## Identifier ownership
 
-| Identifier                              | Owner  | Notes                                                         | source                                      |
-| --------------------------------------- | ------ | ------------------------------------------------------------- | ------------------------------------------- |
-| `ctfl-opt-aid` (profile/anon-id cookie) | SDK    | Written by `proxy`; must NOT be `HttpOnly` (browser reads it) | `core-sdk/constants.ts:38`; `server.tsx:18` |
-| app consent cookie                      | reader | Reader names/writes/reads; SDK only calls `server.consent`    | accepted App Router guide                   |
-| `NEXT_PUBLIC_*` env vars                | reader | Next.js exposes only `NEXT_PUBLIC_`-prefixed vars to browser  | Next.js convention                          |
+| Identifier                              | Owner  | Notes                                                         | source                                                                          |
+| --------------------------------------- | ------ | ------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `ctfl-opt-aid` (profile/anon-id cookie) | SDK    | Written by `proxy`; must NOT be `HttpOnly` (browser reads it) | `core-sdk/constants.ts:38`; `server.tsx:17`; not-HttpOnly in `cookies.ts:39-67` |
+| app consent cookie                      | reader | Reader names/writes/reads; SDK only calls `server.consent`    | accepted App Router guide                                                       |
+| `NEXT_PUBLIC_*` env vars                | reader | Next.js exposes only `NEXT_PUBLIC_`-prefixed vars to browser  | Next.js convention                                                              |
 
 ## Events & tracking
 
