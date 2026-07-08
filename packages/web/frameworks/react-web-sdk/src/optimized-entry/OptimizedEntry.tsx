@@ -213,6 +213,110 @@ function getTargetDisplay(wrapper: OptimizedEntryWrapperElement): 'block' | 'inl
   return wrapper === 'span' ? 'inline' : 'block'
 }
 
+interface OptimizedEntryBodyProps {
+  readonly Wrapper: OptimizedEntryWrapperElement
+  readonly baselineEntry: Entry
+  readonly children: OptimizedEntryChildren
+  readonly currentAndAncestorBaselineIds: ReadonlySet<string>
+  readonly dataTestId: string | undefined
+  readonly error: Error | undefined
+  readonly errorFallback: OptimizedEntryErrorFallback | undefined
+  readonly hasCustomLoadingFallback: boolean
+  readonly hasDuplicateBaselineAncestor: boolean
+  readonly loadingFallback: OptimizedEntryLoadingFallback | undefined
+  readonly managedEntry: Entry | undefined
+  readonly renderContext: OptimizedEntryRenderContext
+  readonly snapshot: ReturnType<typeof useOptimizedEntrySnapshot>
+  readonly targetDisplay: 'block' | 'inline'
+}
+
+function renderOptimizedEntryBody({
+  Wrapper,
+  baselineEntry,
+  children,
+  currentAndAncestorBaselineIds,
+  dataTestId,
+  error,
+  errorFallback,
+  hasCustomLoadingFallback,
+  hasDuplicateBaselineAncestor,
+  loadingFallback,
+  managedEntry,
+  renderContext,
+  snapshot,
+  targetDisplay,
+}: OptimizedEntryBodyProps): JSX.Element | null {
+  if (hasDuplicateBaselineAncestor) {
+    return null
+  }
+
+  const frameProps = {
+    currentAndAncestorBaselineIds,
+    dataTestId,
+    Wrapper,
+  }
+
+  if (error) {
+    return renderErrorFallback(errorFallback, error, frameProps)
+  }
+
+  const resolvedLoadingFallback = hasCustomLoadingFallback
+    ? resolveLoadingFallback(loadingFallback)
+    : undefined
+
+  if (!managedEntry) {
+    const loadingLayoutTargetStyle = resolveLoadingLayoutTargetStyle(targetDisplay, false)
+
+    return (
+      <OptimizedEntryFrame {...frameProps}>
+        <Wrapper data-ctfl-loading-layout-target="true" style={loadingLayoutTargetStyle}>
+          {resolvedLoadingFallback}
+        </Wrapper>
+      </OptimizedEntryFrame>
+    )
+  }
+
+  const { entry, hostAttributes, isEmptyVariant, loadingPresentation } = snapshot
+  const {
+    hideLoadingLayoutTarget,
+    shouldRenderBaselineWhileLoading,
+    showLoadingFallback,
+    targetDisplay: loadingTargetDisplay,
+  } = loadingPresentation
+  const loadingContent = shouldRenderBaselineWhileLoading
+    ? resolveChildren(children, baselineEntry, renderContext)
+    : resolvedLoadingFallback
+
+  if (showLoadingFallback) {
+    const loadingLayoutTargetStyle = resolveLoadingLayoutTargetStyle(
+      loadingTargetDisplay,
+      hideLoadingLayoutTarget,
+    )
+
+    return (
+      <OptimizedEntryFrame {...frameProps}>
+        <Wrapper data-ctfl-loading-layout-target="true" style={loadingLayoutTargetStyle}>
+          {loadingContent}
+        </Wrapper>
+      </OptimizedEntryFrame>
+    )
+  }
+
+  return (
+    <OptimizedEntryFrame {...frameProps} hostAttributes={hostAttributes}>
+      {isEmptyVariant ? null : resolveChildren(children, entry, renderContext)}
+    </OptimizedEntryFrame>
+  )
+}
+
+function shouldNotifyEntryResolved(
+  managedEntry: Entry | undefined,
+  hasDuplicateBaselineAncestor: boolean,
+  isResolved: boolean,
+): boolean {
+  return managedEntry !== undefined && !hasDuplicateBaselineAncestor && isResolved
+}
+
 function useDuplicateBaselineGuard(baselineEntryId: string): {
   currentAndAncestorBaselineIds: ReadonlySet<string>
   hasDuplicateBaselineAncestor: boolean
@@ -297,7 +401,13 @@ export function OptimizedEntry({
   )
 
   useEffect(() => {
-    if (managedEntry.entry && !hasDuplicateBaselineAncestor && snapshot.isResolved) {
+    if (
+      shouldNotifyEntryResolved(
+        managedEntry.entry,
+        hasDuplicateBaselineAncestor,
+        snapshot.isResolved,
+      )
+    ) {
       onEntryResolved?.(metadata)
     }
   }, [
@@ -308,73 +418,22 @@ export function OptimizedEntry({
     snapshot.isResolved,
   ])
 
-  if (hasDuplicateBaselineAncestor) {
-    return null
-  }
-
-  const dataTestId = dataTestIdProp ?? testId
-  const Wrapper = as
-  const frameProps = {
+  return renderOptimizedEntryBody({
+    Wrapper: as,
+    baselineEntry,
+    children,
     currentAndAncestorBaselineIds,
-    dataTestId,
-    Wrapper,
-  }
-
-  if (managedEntry.error) {
-    return renderErrorFallback(errorFallback, managedEntry.error, frameProps)
-  }
-
-  const resolvedLoadingFallback = hasCustomLoadingFallback
-    ? resolveLoadingFallback(loadingFallback)
-    : undefined
-
-  if (!managedEntry.entry) {
-    const loadingLayoutTargetStyle = resolveLoadingLayoutTargetStyle(targetDisplay, false)
-
-    return (
-      <OptimizedEntryFrame {...frameProps}>
-        <Wrapper data-ctfl-loading-layout-target="true" style={loadingLayoutTargetStyle}>
-          {resolvedLoadingFallback}
-        </Wrapper>
-      </OptimizedEntryFrame>
-    )
-  }
-
-  const { entry, hostAttributes, isEmptyVariant, loadingPresentation } = snapshot
-  const {
-    hideLoadingLayoutTarget,
-    shouldRenderBaselineWhileLoading,
-    showLoadingFallback,
-    targetDisplay: loadingTargetDisplay,
-  } = loadingPresentation
-  const loadingContent = shouldRenderBaselineWhileLoading
-    ? resolveChildren(children, baselineEntry, renderContext)
-    : resolvedLoadingFallback
-
-  if (showLoadingFallback) {
-    const LoadingLayoutTarget = Wrapper
-    const loadingLayoutTargetStyle = resolveLoadingLayoutTargetStyle(
-      loadingTargetDisplay,
-      hideLoadingLayoutTarget,
-    )
-
-    return (
-      <OptimizedEntryFrame {...frameProps}>
-        <LoadingLayoutTarget
-          data-ctfl-loading-layout-target="true"
-          style={loadingLayoutTargetStyle}
-        >
-          {loadingContent}
-        </LoadingLayoutTarget>
-      </OptimizedEntryFrame>
-    )
-  }
-
-  return (
-    <OptimizedEntryFrame {...frameProps} hostAttributes={hostAttributes}>
-      {isEmptyVariant ? null : resolveChildren(children, entry, renderContext)}
-    </OptimizedEntryFrame>
-  )
+    dataTestId: dataTestIdProp ?? testId,
+    error: managedEntry.error,
+    errorFallback,
+    hasCustomLoadingFallback,
+    hasDuplicateBaselineAncestor,
+    loadingFallback,
+    managedEntry: managedEntry.entry,
+    renderContext,
+    snapshot,
+    targetDisplay,
+  })
 }
 
 export default OptimizedEntry
