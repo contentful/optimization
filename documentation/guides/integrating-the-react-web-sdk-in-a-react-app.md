@@ -906,9 +906,11 @@ function App() {
 }
 ```
 
-The provider always renders its children. When you pass `onStatesReady` or
+The provider always renders its children — they are never withheld or unmounted. When you pass
 `serverOptimizationState`, children render against a read-only snapshot until the live SDK state is
-applied (in a layout effect) — they are never withheld or unmounted.
+applied in a layout effect. With an injected `sdk` and no `serverOptimizationState`, children render
+against the live injected SDK from the first render; `onStatesReady` alone does not add a snapshot
+phase.
 
 ### Strict consent, storage, and delivery controls
 
