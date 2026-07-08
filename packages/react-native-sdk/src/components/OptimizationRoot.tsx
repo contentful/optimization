@@ -1,4 +1,4 @@
-import type { CoreStatefulConfig } from '@contentful/optimization-core'
+import type { CoreStatefulConfig, ManagedEntryDescriptor } from '@contentful/optimization-core'
 import React, { type ReactNode } from 'react'
 import {
   InteractionTrackingProvider,
@@ -26,6 +26,11 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
    * regardless of this setting.
    */
   liveUpdates?: boolean
+
+  /**
+   * Managed entries to prefetch after the SDK is ready.
+   */
+  prefetchManagedEntries?: readonly ManagedEntryDescriptor[]
 
   /**
    * Controls which entry interactions are tracked automatically for all

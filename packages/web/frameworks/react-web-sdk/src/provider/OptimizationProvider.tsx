@@ -25,7 +25,7 @@ import {
   type WebOptimizationRuntime,
 } from '@contentful/optimization-web/runtime'
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
-import type { ServerOptimizedEntryHandoff } from '../server-optimized-entries'
+import type { ManagedEntryDescriptor, ManagedEntryHandoff } from '../server-optimized-entries'
 
 /**
  * Provider-owned callback for app-level subscriptions once SDK state is ready.
@@ -56,7 +56,11 @@ interface ServerOptimizationStateProps {
   /**
    * Server-fetched baseline entries for SDK-managed OptimizedEntry hydration.
    */
-  readonly serverOptimizedEntries?: readonly ServerOptimizedEntryHandoff[]
+  readonly prefetchedManagedEntries?: readonly ManagedEntryHandoff[]
+  /**
+   * Managed entries to prefetch after the live SDK is ready.
+   */
+  readonly prefetchManagedEntries?: readonly ManagedEntryDescriptor[]
 }
 
 export type OptimizationProviderConfigProps = PropsWithChildren<
@@ -109,7 +113,8 @@ function createOwnedSdkBinding(props: OptimizationProviderConfigProps): Provider
     onStatesReady: _onStatesReady,
     sdk: _sdk,
     serverOptimizationState: _serverOptimizationState,
-    serverOptimizedEntries: _serverOptimizedEntries,
+    prefetchedManagedEntries: _prefetchedManagedEntries,
+    prefetchManagedEntries: _prefetchManagedEntries,
     trackEntryInteraction,
     ...config
   } = props
@@ -207,12 +212,12 @@ function createInitialRuntime(props: OptimizationProviderProps): WebOptimization
   })
 }
 
-function createServerOptimizedEntries(
-  entries: readonly ServerOptimizedEntryHandoff[] | undefined,
-): ReadonlyMap<string, ServerOptimizedEntryHandoff['baselineEntry']> | undefined {
+function createPrefetchedManagedEntries(
+  entries: readonly ManagedEntryHandoff[] | undefined,
+): ReadonlyMap<string, ManagedEntryHandoff['baselineEntry']> | undefined {
   if (entries === undefined) return undefined
 
-  const map = new Map<string, ServerOptimizedEntryHandoff['baselineEntry']>()
+  const map = new Map<string, ManagedEntryHandoff['baselineEntry']>()
   for (const { baselineEntry, entryId, entryQuery } of entries) {
     map.set(getOptimizedEntrySourceKey(entryId, entryQuery), baselineEntry)
   }
@@ -229,9 +234,9 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     isLive: injectedSdkBacksInitialRender(props),
     runtime: createInitialRuntime(props),
   }))
-  const serverOptimizedEntries = useMemo(
-    () => createServerOptimizedEntries(props.serverOptimizedEntries),
-    [props.serverOptimizedEntries],
+  const prefetchedManagedEntries = useMemo(
+    () => createPrefetchedManagedEntries(props.prefetchedManagedEntries),
+    [props.prefetchedManagedEntries],
   )
 
   useLayoutEffect(() => {
@@ -308,14 +313,38 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     }
   }, [liveLocale, props.sdk, state.isLive, state.runtime])
 
+  useLayoutEffect(() => {
+    if (
+      !state.isLive ||
+      state.runtime === undefined ||
+      props.prefetchManagedEntries === undefined
+    ) {
+      return
+    }
+
+    let disposed = false
+
+    void state.runtime
+      .prefetchManagedEntries(props.prefetchManagedEntries)
+      .catch((error: unknown) => {
+        if (!disposed) {
+          setState({ error: toError(error), isLive: true, runtime: state.runtime })
+        }
+      })
+
+    return () => {
+      disposed = true
+    }
+  }, [props.prefetchManagedEntries, state.isLive, state.runtime])
+
   const contextValue = useMemo(
     () => ({
       sdk: state.runtime,
       error: state.error,
       isLive: state.isLive,
-      serverOptimizedEntries,
+      prefetchedManagedEntries,
     }),
-    [state.runtime, state.error, state.isLive, serverOptimizedEntries],
+    [state.runtime, state.error, state.isLive, prefetchedManagedEntries],
   )
 
   return (

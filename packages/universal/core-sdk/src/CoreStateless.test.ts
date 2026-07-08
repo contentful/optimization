@@ -22,6 +22,9 @@ type ProductEntrySkeleton = EntrySkeletonType<
   'product'
 >
 type MockContentfulGetEntry = (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
+type MockContentfulGetEntries = (
+  query?: Parameters<ContentfulEntryClient['getEntries']>[0],
+) => ReturnType<ContentfulEntryClient['getEntries']>
 
 const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
   changes: [],
@@ -53,15 +56,37 @@ const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
 
 function createOptimizedEntryClient(): ContentfulEntryClient & {
   readonly getEntry: ReturnType<typeof rs.fn<MockContentfulGetEntry>>
+  readonly getEntries: ReturnType<typeof rs.fn<MockContentfulGetEntries>>
 } {
   const getEntry = rs.fn<MockContentfulGetEntry>(async () => await Promise.resolve(optimizedEntry))
+  const getEntries = rs.fn<MockContentfulGetEntries>(
+    async () => await Promise.resolve(createEntryCollection([optimizedEntry])),
+  )
   const client: ContentfulEntryClient & {
     readonly getEntry: ReturnType<typeof rs.fn<MockContentfulGetEntry>>
+    readonly getEntries: ReturnType<typeof rs.fn<MockContentfulGetEntries>>
   } = {
     getEntry,
+    getEntries,
   }
 
   return client
+}
+
+function getRequestedEntryIds(query: Parameters<MockContentfulGetEntries>[0]): string[] {
+  const requestedIds = Reflect.get(query ?? {}, 'sys.id[in]')
+  return Array.isArray(requestedIds) ? requestedIds.map(String) : String(requestedIds).split(',')
+}
+
+function createEntryCollection(
+  items: readonly Entry[],
+): Awaited<ReturnType<ContentfulEntryClient['getEntries']>> {
+  return {
+    items: [...items],
+    limit: items.length,
+    skip: 0,
+    total: items.length,
+  }
 }
 
 async function invokeUntypedMethod(
@@ -368,6 +393,61 @@ describe('CoreStateless', () => {
       include: 10,
       locale: 'it-IT',
     })
+  })
+
+  it('uses request locale as the plural managed Contentful query fallback', async () => {
+    const client = createOptimizedEntryClient()
+    client.getEntries.mockImplementation(async (query) => {
+      const ids = getRequestedEntryIds(query)
+
+      return await Promise.resolve(
+        createEntryCollection(
+          ids.map((entryId) => ({
+            ...optimizedEntry,
+            sys: { ...optimizedEntry.sys, id: entryId },
+          })),
+        ),
+      )
+    })
+    const core = new CoreStateless({
+      clientId: 'key_123',
+      environment: 'main',
+      locale: 'en-US',
+      contentful: {
+        client,
+        defaultQuery: { include: 2 },
+        cache: false,
+      },
+    })
+    const requestOptimization = core.forRequest({
+      consent: true,
+      locale: 'de-DE',
+    })
+
+    await requestOptimization.fetchContentfulEntries(['entry-a', 'entry-b'])
+    const handoffs = await requestOptimization.prefetchManagedEntries([
+      'entry-c',
+      { entryId: 'entry-d', entryQuery: { locale: 'fr-FR' } },
+    ])
+
+    expect(client.getEntries).toHaveBeenNthCalledWith(1, {
+      include: 2,
+      locale: 'de-DE',
+      'sys.id[in]': ['entry-a', 'entry-b'],
+      limit: 2,
+    })
+    expect(client.getEntry).toHaveBeenNthCalledWith(1, 'entry-c', {
+      include: 2,
+      locale: 'de-DE',
+    })
+    expect(client.getEntry).toHaveBeenNthCalledWith(2, 'entry-d', {
+      include: 2,
+      locale: 'fr-FR',
+    })
+    expect(handoffs.map(({ entryId, entryQuery }) => ({ entryId, entryQuery }))).toEqual([
+      { entryId: 'entry-c', entryQuery: undefined },
+      { entryId: 'entry-d', entryQuery: { locale: 'fr-FR' } },
+    ])
   })
 
   it('defaults allowedEventTypes to empty for stateless core requests', async () => {

@@ -50,22 +50,24 @@ export function createNextjsAppRouterOptimization(
 
   function OptimizationRoot({
     children,
-    serverOptimizedEntries,
+    prefetchedManagedEntries,
+    prefetchManagedEntries,
   }: BoundNextjsOptimizationRootProps): ReactElement {
     return createElement(
       ReactWebOptimizationRoot,
-      { ...rootConfig, serverOptimizedEntries },
+      { ...rootConfig, prefetchedManagedEntries, prefetchManagedEntries },
       children,
     )
   }
 
   function OptimizationProvider({
     children,
-    serverOptimizedEntries,
+    prefetchedManagedEntries,
+    prefetchManagedEntries,
   }: BoundNextjsOptimizationRootProps): ReactElement | null {
     return createElement(
       ReactWebOptimizationProvider,
-      { ...providerConfig, serverOptimizedEntries },
+      { ...providerConfig, prefetchedManagedEntries, prefetchManagedEntries },
       createElement(
         ReactWebLiveUpdatesProvider,
         { globalLiveUpdates: config.liveUpdates },
@@ -87,21 +89,20 @@ function toClientRootConfig(
   config: NextjsOptimizationComponentsConfig,
 ): Omit<
   OptimizationRootProps,
-  'children' | 'sdk' | 'serverOptimizationState' | 'serverOptimizedEntries'
+  | 'children'
+  | 'prefetchedManagedEntries'
+  | 'prefetchManagedEntries'
+  | 'sdk'
+  | 'serverOptimizationState'
 > {
-  const { contentful: _contentful, server: _server, ...clientConfig } = config
+  const { server: _server, ...clientConfig } = config
   return clientConfig
 }
 
 function toClientProviderConfig(
   config: NextjsOptimizationComponentsConfig,
 ): NextjsBoundProviderConfig {
-  const {
-    contentful: _contentful,
-    liveUpdates: _liveUpdates,
-    server: _server,
-    ...providerConfig
-  } = config
+  const { liveUpdates: _liveUpdates, server: _server, ...providerConfig } = config
   const clientProviderConfig: NextjsBoundProviderConfig = providerConfig
   return clientProviderConfig
 }

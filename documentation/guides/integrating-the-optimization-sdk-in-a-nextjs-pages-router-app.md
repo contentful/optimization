@@ -602,16 +602,20 @@ prefetched baseline, so it silently renders nothing:
 
 1. Add `contentful: { client }` to the server factory config from step 3 so the SDK can call
    `getEntry()` on your client.
-2. Pass `prefetchOptimizedEntries` — a list of `{ entryId, entryQuery? }` descriptors, where
-   `entryQuery` is optional `getEntry()` query params such as `include` depth — as the second
-   argument to `getServerSideOptimizationProps`. The helper fetches and resolves those entries
-   during `getServerSideProps` and adds them to the state it returns.
-3. Pass that state to the bound `OptimizationRoot` in `_app.tsx` as `serverOptimizedEntries`, so a
+2. Pass `prefetchManagedEntries` — a list of `ManagedEntryDescriptor` values, where strings are
+   entry IDs and object descriptors can include `{ entryId, entryQuery? }`. `entryQuery` is optional
+   `getEntry()` query params such as `include` depth. Pass it as the second argument to
+   `getServerSideOptimizationProps`. The helper fetches and resolves those entries during
+   `getServerSideProps` and adds them to the state it returns.
+3. Pass that state to the bound `OptimizationRoot` in `_app.tsx` as `prefetchedManagedEntries`, so a
    bound `<OptimizedEntry entryId="...">` hydrates from the server-prefetched baseline with no
    client fetch.
 
-`client` and `entryId` are your values; `contentful`, `prefetchOptimizedEntries`, and
-`serverOptimizedEntries` are the SDK-defined keys.
+`client` and `entryId` are your values; `contentful`, `prefetchManagedEntries`, and
+`prefetchedManagedEntries` are the SDK-defined keys.
+
+When several uncached descriptors share the same normalized query, the server helper uses your
+client's `getEntries()` method. Large `getEntries()` fetches are split into 100-ID chunks.
 
 Apply them in that order — the root prop must exist before a page wraps an entry by id, or the page
 renders nothing. First, the server helper: this replaces the `lib/optimization-server.ts` from step
@@ -640,8 +644,8 @@ const { getServerSideOptimizationProps } = createNextjsPagesRouterOptimization({
 
 export function getOptimizationProps(context: GetServerSidePropsContext) {
   return getServerSideOptimizationProps(context, {
-    // Fetched and resolved on the server; handed to the browser as serverOptimizedEntries.
-    prefetchOptimizedEntries: [{ entryId: 'your-entry-id' }],
+    // Fetched and resolved on the server; handed to the browser as prefetchedManagedEntries.
+    prefetchManagedEntries: [{ entryId: 'your-entry-id' }],
   })
 }
 ```
@@ -656,7 +660,7 @@ Next, forward the prefetched entries from `_app.tsx` by passing one more prop on
  <OptimizationRoot
    clientDefaults={optimization?.clientDefaults}
    serverOptimizationState={optimization?.serverOptimizationState}
-+  serverOptimizedEntries={optimization?.serverOptimizedEntries}
++  prefetchedManagedEntries={optimization?.prefetchedManagedEntries}
  >
 ```
 

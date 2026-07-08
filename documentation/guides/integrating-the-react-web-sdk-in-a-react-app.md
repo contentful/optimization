@@ -293,7 +293,10 @@ export function AppRoot({ children }: { children: ReactNode }) {
 ```
 
 Mount `OptimizationRoot` exactly once. Mounting a second owned instance in the same browser runtime
-throws `ContentfulOptimization is already initialized`.
+throws `ContentfulOptimization is already initialized`. Do not nest `OptimizationProvider` inside
+`OptimizationRoot`: the root already composes the provider and live-updates provider. If you need
+direct provider control, use `OptimizationProvider` instead of `OptimizationRoot`; nesting an
+injected provider shadows the root context, including prefetched managed entries.
 
 ### SDK readiness, loading, and error states
 
@@ -361,7 +364,7 @@ the point where the SDK resolves it, and you can mix them per entry:
   entirely yours; the SDK only needs the entry to arrive in a shape it can resolve.
 - **Managed (opt-in).** You hand the SDK your Contentful client once via `contentful: { client }` on
   `OptimizationRoot`, and then reference entries by id — `<OptimizedEntry entryId="…">`. The SDK
-  fetches through your client for you (it only calls `getEntry()` on it) and resolves the result.
+  fetches through your client's `getEntry()` and `getEntries()` methods and resolves the result.
   This trades a little control for less wiring per entry; see
   [Resolving entries and rendering the result](#resolving-entries-and-rendering-the-result) for the
   managed component variant.
@@ -970,6 +973,9 @@ Web SDK instance outside React.
 4. Destroy the injected instance in the owner that created it — the provider does not call
    `destroy()` on instances it did not create.
 
+Use this as an alternative to `OptimizationRoot`, not as a child of it. `OptimizationRoot` already
+includes `OptimizationProvider`, and a nested provider creates a separate context for its subtree.
+
 **Adapt this to your use case:**
 
 ```tsx
@@ -998,14 +1004,14 @@ phase.
 **Prefetching managed entries for a server handoff.** When a managed (`entryId`) `OptimizedEntry`
 renders on a server before the browser SDK is live, you can hand it its baseline entry so it renders
 resolved content immediately instead of a loading state. The package root exports the symbols for
-this: `prefetchOptimizedEntries(runtime, descriptors)` returns a `ServerOptimizedEntryHandoff[]` you
-pass to the `serverOptimizedEntries` prop on `OptimizationRoot` (or `OptimizationProvider`), keyed
-by `entryId` + `entryQuery`. `descriptors` are `OptimizedEntryPrefetchDescriptor` objects
-(`{ entryId, entryQuery? }`); `runtime` is any `OptimizedEntryPrefetchRuntime` — an object exposing
-`fetchContentfulEntry(entryId, query?)`. This SDK ships no server runtime of its own, so you supply
-that runtime yourself (for example, a thin wrapper over your Contentful client that applies your
-single-locale `include: 10` query). For a full server-rendered integration with request-scoped state
-and page-event handoff, use the
+this: `prefetchManagedEntries(runtime, descriptors)` returns a `ManagedEntryHandoff[]` you pass to
+the `prefetchedManagedEntries` prop on `OptimizationRoot` (or `OptimizationProvider`), keyed by
+`entryId` + `entryQuery`. `descriptors` are `ManagedEntryDescriptor` values (`'entry-id'` or
+`{ entryId, entryQuery? }`); `runtime` is any `ManagedEntryPrefetchRuntime` — an object exposing
+`prefetchManagedEntries(descriptors)`. Core uses `getEntries()` for multiple uncached descriptors
+with the same normalized query, split into 100-ID chunks for large fetches. This SDK ships no server
+runtime of its own, so you supply that runtime yourself. For a full server-rendered integration with
+request-scoped state and page-event handoff, use the
 [Next.js App Router guide](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md) or
 [Next.js Pages Router guide](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md),
 which own that path end to end.

@@ -103,7 +103,7 @@ const optimization = new CoreStateful({
 })
 ```
 
-`contentful.defaultQuery` applies to every SDK-managed `getEntry()` call. Set
+`contentful.defaultQuery` applies to every SDK-managed `getEntry()` and `getEntries()` call. Set
 `contentful.cache: false` only when the host application must own all entry caching.
 
 ### Drive source controller lifecycle
@@ -122,6 +122,10 @@ The controller keys managed fetches by `entryId + entryQuery`, waits in loading 
 is ready, ignores stale fetch results after source changes, and clears in-flight ownership on
 disconnect. `createOptimizedEntryLoadingEntry(entryId)` is available when a framework needs a stable
 placeholder `Entry` shape during loading.
+
+For server prefetch, accept `ManagedEntryDescriptor` values and call
+`prefetchManagedEntries(runtime, descriptors)`. Pass the resulting `ManagedEntryHandoff[]` to your
+browser provider under the same key your adapter uses for handoff state.
 
 ### Resolve and render
 

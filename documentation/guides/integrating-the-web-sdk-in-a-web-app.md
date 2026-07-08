@@ -318,7 +318,8 @@ the same resolution step, and you can use different paths for different entries 
   shape it can resolve.
 - **Managed** — you give the SDK your Contentful client once through the `contentful` config key,
   and it fetches by entry ID through that client whenever you call `fetchContentfulEntry(id)` or
-  `fetchOptimizedEntry(id)`. The client stays yours; the SDK only calls `getEntry()` on it.
+  `fetchOptimizedEntry(id)`. The client stays yours; the SDK uses its `getEntry()` and
+  `getEntries()` methods.
 
 Either way, the same fetch requirements hold:
 
@@ -361,6 +362,9 @@ your `contentful.defaultQuery`, any per-call query, the SDK locale as a fallback
 into each `getEntry()` call, and caches results per instance (default
 `{ maxEntries: 100, ttlMs: 300_000 }`; pass `cache: false` to disable, or
 `clearContentfulEntryCache()` to clear it). `fetchContentfulEntry(id)` returns the fetched entry;
+`fetchContentfulEntries(entries)` preserves descriptor order and uses `getEntries()` for multiple
+uncached entries with the same normalized query, split into 100-ID chunks for large fetches.
+`prefetchManagedEntries(entries)` returns server handoff objects for framework adapters.
 `fetchOptimizedEntry(id)` fetches and resolves in one call (see
 [Resolving entries and rendering the result](#resolving-entries-and-rendering-the-result)).
 

@@ -12,18 +12,18 @@ import {
 import {
   createNextjsOptimization,
   getNextjsServerOptimizationData,
-  prefetchOptimizedEntries as prefetchServerOptimizedEntries,
+  prefetchManagedEntries as prefetchServerManagedEntries,
   type ContentfulOptimization,
   type CoreStatelessRequest,
   type CoreStatelessRequestConsent,
+  type ManagedEntryDescriptor,
+  type ManagedEntryHandoff,
   type NextjsCookieReader,
   type NextjsRequestLike,
   type NextjsServerOptimizationDataOptions,
   type OptimizationData,
   type OptimizationNodeConfig,
-  type OptimizedEntryPrefetchDescriptor,
   type PersistNextjsAnonymousIdOptions,
-  type ServerOptimizedEntryHandoff,
 } from './server'
 
 const SECONDS_IN_DAY = 86_400
@@ -34,16 +34,16 @@ export type {
   NextjsPagesRouterClientDefaults,
 } from './bound-component-types'
 export {
-  prefetchOptimizedEntries,
-  type OptimizedEntryPrefetchDescriptor,
-  type ServerOptimizedEntryHandoff,
+  prefetchManagedEntries,
+  type ManagedEntryDescriptor,
+  type ManagedEntryHandoff,
 } from './server'
 
 export interface NextjsPagesRouterOptimizationPageProps {
   readonly clientDefaults?: NextjsPagesRouterClientDefaults
   readonly initialPageEvent: NextjsPagesRouterInitialPageEvent
   readonly serverOptimizationState?: OptimizationData
-  readonly serverOptimizedEntries?: readonly ServerOptimizedEntryHandoff[]
+  readonly prefetchedManagedEntries?: readonly ManagedEntryHandoff[]
 }
 
 export interface NextjsPagesRouterOptimizationProps {
@@ -56,7 +56,7 @@ export interface NextjsPagesRouterOptimizationPropsOptions
     PersistNextjsAnonymousIdOptions {
   readonly initialPageEvent?: NextjsPagesRouterInitialPageEvent
   readonly locale?: string
-  readonly prefetchOptimizedEntries?: readonly OptimizedEntryPrefetchDescriptor[]
+  readonly prefetchManagedEntries?: readonly ManagedEntryDescriptor[]
 }
 
 export type NextjsPagesRouterServerConsentResolver = (
@@ -118,7 +118,7 @@ export async function getNextjsPagesRouterOptimizationProps(
     deleteWhenProfileCannotPersist,
     initialPageEvent,
     locale,
-    prefetchOptimizedEntries,
+    prefetchManagedEntries,
     ...requestOptions
   } = options
   const request = createPagesRouterRequest(context)
@@ -133,10 +133,10 @@ export async function getNextjsPagesRouterOptimizationProps(
     deleteWhenProfileCannotPersist,
   })
   if (setCookie !== undefined) appendSetCookie(context, setCookie)
-  const serverOptimizedEntries =
-    prefetchOptimizedEntries === undefined
+  const prefetchedManagedEntries =
+    prefetchManagedEntries === undefined
       ? undefined
-      : await prefetchServerOptimizedEntries(requestOptimization, prefetchOptimizedEntries)
+      : await prefetchServerManagedEntries(requestOptimization, prefetchManagedEntries)
 
   return {
     data,
@@ -146,7 +146,7 @@ export async function getNextjsPagesRouterOptimizationProps(
         data,
         initialPageEvent ?? resolveInitialPageEvent(data, requestOptions.consent),
         resolveClientDefaults(requestOptions.consent),
-        serverOptimizedEntries,
+        prefetchedManagedEntries,
       ),
     },
   }
@@ -250,12 +250,12 @@ function toContentfulOptimizationProps(
   data: OptimizationData | undefined,
   initialPageEvent: NextjsPagesRouterInitialPageEvent,
   clientDefaults: NextjsPagesRouterClientDefaults | undefined,
-  serverOptimizedEntries: readonly ServerOptimizedEntryHandoff[] | undefined,
+  prefetchedManagedEntries: readonly ManagedEntryHandoff[] | undefined,
 ): NextjsPagesRouterOptimizationPageProps {
   const props: NextjsPagesRouterOptimizationPageProps = {
     ...(clientDefaults === undefined ? {} : { clientDefaults }),
     initialPageEvent,
-    ...(serverOptimizedEntries === undefined ? {} : { serverOptimizedEntries }),
+    ...(prefetchedManagedEntries === undefined ? {} : { prefetchedManagedEntries }),
   }
 
   if (data === undefined) return props

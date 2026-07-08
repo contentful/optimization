@@ -1,6 +1,6 @@
 export {
-  prefetchOptimizedEntries,
-  type OptimizedEntryPrefetchDescriptor,
-  type OptimizedEntryPrefetchRuntime,
-  type ServerOptimizedEntryHandoff,
+  prefetchManagedEntries,
+  type ManagedEntryDescriptor,
+  type ManagedEntryHandoff,
+  type ManagedEntryPrefetchRuntime,
 } from '@contentful/optimization-web/presentation'

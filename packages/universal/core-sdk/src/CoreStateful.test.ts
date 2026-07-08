@@ -566,10 +566,21 @@ describe('CoreStateful blocked event handling', () => {
     const getEntry = rs.fn<MockContentfulGetEntry>(
       async () => await Promise.resolve(optimizedEntry),
     )
+    const getEntries = rs.fn<ContentfulEntryClient['getEntries']>(
+      async () =>
+        await Promise.resolve({
+          items: [optimizedEntry],
+          limit: 1,
+          skip: 0,
+          total: 1,
+        }),
+    )
     const client: ContentfulEntryClient & {
       readonly getEntry: ReturnType<typeof rs.fn<MockContentfulGetEntry>>
+      readonly getEntries: ReturnType<typeof rs.fn<ContentfulEntryClient['getEntries']>>
     } = {
       getEntry,
+      getEntries,
     }
     const core = createCoreStateful({
       contentful: { client, cache: false },

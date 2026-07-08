@@ -9,13 +9,13 @@ export {
   OptimizedEntrySourceController,
   createOptimizedEntryLoadingEntry,
   getOptimizedEntrySourceKey,
-  prefetchOptimizedEntries,
-  type OptimizedEntryPrefetchDescriptor,
-  type OptimizedEntryPrefetchRuntime,
+  prefetchManagedEntries,
+  type ManagedEntryDescriptor,
+  type ManagedEntryHandoff,
+  type ManagedEntryPrefetchRuntime,
   type OptimizedEntrySourceControllerOptions,
   type OptimizedEntrySourceSnapshot,
   type OptimizedEntrySourceSnapshotListener,
-  type ServerOptimizedEntryHandoff,
 } from '@contentful/optimization-core/entry-source'
 export {
   createOptimizationRootSdkBinding,

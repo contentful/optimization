@@ -342,7 +342,7 @@ describe('useOptimizedEntry', () => {
       defaultLiveUpdatesContext(),
       {
         isLive: true,
-        serverOptimizedEntries: new Map([
+        prefetchedManagedEntries: new Map([
           [getOptimizedEntrySourceKey('hero', { locale: 'de-DE' }), preloadedEntry],
         ]),
       },

@@ -58,23 +58,44 @@ function createEntry(id: string): Entry {
   }
 }
 
+function createEntryCollection(items: readonly Entry[]): {
+  readonly items: Entry[]
+  readonly limit: number
+  readonly skip: number
+  readonly total: number
+} {
+  return {
+    items: [...items],
+    limit: items.length,
+    skip: 0,
+    total: items.length,
+  }
+}
+
 describe('Next.js Pages Router client components', () => {
   it('passes config and render-time server state through the bound root and provider', () => {
+    const contentful = {
+      client: {
+        getEntry: async () => await Promise.resolve(createEntry('unused')),
+        getEntries: async () => await Promise.resolve(createEntryCollection([])),
+      },
+    }
     const components = pagesRouter.createNextjsPagesRouterOptimization({
       ...testConfig,
+      contentful,
       liveUpdates: true,
     })
-    const serverOptimizedEntries = [{ baselineEntry: createEntry('hero'), entryId: 'hero' }]
+    const prefetchedManagedEntries = [{ baselineEntry: createEntry('hero'), entryId: 'hero' }]
 
     const root = components.OptimizationRoot({
       children: 'Root content',
       serverOptimizationState,
-      serverOptimizedEntries,
+      prefetchedManagedEntries,
     })
     const provider = components.OptimizationProvider({
       children: 'Provider content',
       serverOptimizationState,
-      serverOptimizedEntries,
+      prefetchedManagedEntries,
     })
 
     expect(root.props).toMatchObject({
@@ -84,14 +105,16 @@ describe('Next.js Pages Router client components', () => {
       environment: testConfig.environment,
       liveUpdates: true,
       serverOptimizationState,
-      serverOptimizedEntries,
+      prefetchedManagedEntries,
+      contentful,
     })
     expect(provider?.props).toMatchObject({
       api: testConfig.api,
       clientId: testConfig.clientId,
       environment: testConfig.environment,
       serverOptimizationState,
-      serverOptimizedEntries,
+      prefetchedManagedEntries,
+      contentful,
     })
     expect(provider?.props).not.toHaveProperty('liveUpdates')
     expect(provider).toMatchObject({
@@ -130,13 +153,18 @@ describe('Next.js Pages Router client components', () => {
   })
 
   it('renders client OptimizedEntry content from Pages Router handoff during SSR', () => {
-    const components = pagesRouter.createNextjsPagesRouterOptimization(testConfig)
+    const getEntry = rs.fn(async () => await Promise.resolve(createEntry('client-fetch')))
+    const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
+    const components = pagesRouter.createNextjsPagesRouterOptimization({
+      ...testConfig,
+      contentful: { client: { getEntry, getEntries } },
+    })
     const baselineEntry = createEntry('hero')
 
     const markup = renderToString(
       <components.OptimizationRoot
         serverOptimizationState={serverOptimizationState}
-        serverOptimizedEntries={[{ baselineEntry, entryId: 'hero' }]}
+        prefetchedManagedEntries={[{ baselineEntry, entryId: 'hero' }]}
       >
         <components.OptimizedEntry entryId="hero" loadingFallback="loading">
           {(entry) => entry.sys.id}
@@ -146,6 +174,8 @@ describe('Next.js Pages Router client components', () => {
 
     expect(markup).toContain('hero')
     expect(markup).not.toContain('loading')
+    expect(getEntry).not.toHaveBeenCalled()
+    expect(getEntries).not.toHaveBeenCalled()
   })
 
   it('returns the Pages tracker only', () => {

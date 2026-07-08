@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, rs } from '@rstest/core'
+import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import React, { act, type ReactElement } from 'react'
 import type ContentfulOptimization from '../ContentfulOptimization'
 import type { OptimizationSdk } from '../OptimizationSdk'
@@ -25,6 +25,7 @@ interface Subscription {
 
 interface SdkStub {
   destroy: () => void
+  prefetchManagedEntries: (entries: readonly unknown[]) => Promise<unknown[]>
   states: {
     eventStream: {
       current: undefined
@@ -40,6 +41,7 @@ interface SdkStub {
 function isContentfulOptimization(value: SdkStub): value is SdkStub & ContentfulOptimization {
   return (
     typeof value.destroy === 'function' &&
+    typeof value.prefetchManagedEntries === 'function' &&
     typeof value.states.eventStream.subscribe === 'function' &&
     typeof value.states.eventStream.subscribeOnce === 'function'
   )
@@ -48,6 +50,7 @@ function isContentfulOptimization(value: SdkStub): value is SdkStub & Contentful
 function createSdk(): ContentfulOptimization {
   const sdk: SdkStub = {
     destroy: rs.fn(),
+    prefetchManagedEntries: rs.fn(async () => await Promise.resolve([])),
     states: {
       eventStream: {
         current: undefined,
@@ -70,6 +73,10 @@ function createSdk(): ContentfulOptimization {
 
 describe('OptimizationProvider injected SDK performance', () => {
   let renderer: TestRenderer | undefined = undefined
+
+  void beforeEach(() => {
+    createOptimization.mockReset()
+  })
 
   void afterEach(() => {
     if (renderer) {
@@ -108,6 +115,26 @@ describe('OptimizationProvider injected SDK performance', () => {
 
     expect(childRendered).toBe(true)
     expect(capturedSdk).toBe(injectedSdk)
+    expect(createOptimization).not.toHaveBeenCalled()
+  })
+
+  it('prefetches managed entries for injected SDKs without creating an SDK', async () => {
+    const { OptimizationProvider } = await import('./OptimizationProvider')
+    const injectedSdk = createSdk()
+    const descriptors = ['hero-entry'] as const
+    const testRenderer = await loadTestRenderer<TestRenderer>()
+
+    await act(async () => {
+      renderer = testRenderer.create(
+        <OptimizationProvider sdk={injectedSdk} prefetchManagedEntries={descriptors}>
+          <></>
+        </OptimizationProvider>,
+      )
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(injectedSdk.prefetchManagedEntries).toHaveBeenCalledWith(descriptors)
     expect(createOptimization).not.toHaveBeenCalled()
   })
 

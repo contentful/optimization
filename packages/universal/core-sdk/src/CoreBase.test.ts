@@ -30,6 +30,9 @@ const CLIENT_ID = 'key_123'
 const ENVIRONMENT = 'main'
 
 type MockContentfulGetEntry = (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
+type MockContentfulGetEntries = (
+  query?: Parameters<ContentfulEntryClient['getEntries']>[0],
+) => ReturnType<ContentfulEntryClient['getEntries']>
 type ProductEntrySkeleton = EntrySkeletonType<
   {
     title: EntryFieldTypes.Symbol
@@ -88,17 +91,39 @@ function createEntry(id: string): Entry {
 function createContentfulClient(
   implementation: MockContentfulGetEntry = async (entryId) =>
     await Promise.resolve(createEntry(entryId)),
+  getEntriesImplementation: MockContentfulGetEntries = async (query) =>
+    await Promise.resolve(createEntryCollection(getRequestedEntryIds(query).map(createEntry))),
 ): ContentfulEntryClient & {
   readonly getEntry: ReturnType<typeof rs.fn<MockContentfulGetEntry>>
+  readonly getEntries: ReturnType<typeof rs.fn<MockContentfulGetEntries>>
 } {
   const getEntry = rs.fn<MockContentfulGetEntry>(implementation)
+  const getEntries = rs.fn<MockContentfulGetEntries>(getEntriesImplementation)
   const client: ContentfulEntryClient & {
     readonly getEntry: ReturnType<typeof rs.fn<MockContentfulGetEntry>>
+    readonly getEntries: ReturnType<typeof rs.fn<MockContentfulGetEntries>>
   } = {
     getEntry,
+    getEntries,
   }
 
   return client
+}
+
+function getRequestedEntryIds(query: Parameters<MockContentfulGetEntries>[0]): string[] {
+  const requestedIds = Reflect.get(query ?? {}, 'sys.id[in]')
+  return Array.isArray(requestedIds) ? requestedIds.map(String) : String(requestedIds).split(',')
+}
+
+function createEntryCollection(
+  items: readonly Entry[],
+): Awaited<ReturnType<ContentfulEntryClient['getEntries']>> {
+  return {
+    items: [...items],
+    limit: items.length,
+    skip: 0,
+    total: items.length,
+  }
 }
 
 function createDeferred<T>(): {
@@ -284,11 +309,327 @@ describe('CoreBase', () => {
     })
   })
 
+  it('caches equivalent Contentful entry queries regardless of key insertion order', async () => {
+    const client = createContentfulClient()
+    const core = new TestCore({
+      ...config,
+      contentful: { client },
+    })
+
+    await core.fetchContentfulEntry('entry-id', { locale: 'de-DE', include: 1 })
+    await core.fetchContentfulEntry('entry-id', { include: 1, locale: 'de-DE' })
+
+    expect(client.getEntry).toHaveBeenCalledTimes(1)
+  })
+
+  it('fetches one uncached descriptor with getEntry', async () => {
+    const client = createContentfulClient(
+      async (entryId) => await Promise.resolve(createEntry(entryId)),
+      async () => await Promise.resolve(createEntryCollection([])),
+    )
+    const core = new TestCore({
+      ...config,
+      contentful: { client, cache: false },
+    })
+
+    await expect(core.fetchContentfulEntries(['entry-a'])).resolves.toMatchObject([
+      { sys: { id: 'entry-a' } },
+    ])
+
+    expect(client.getEntry).toHaveBeenCalledWith('entry-a', { include: 10 })
+    expect(client.getEntries).not.toHaveBeenCalled()
+  })
+
+  it('coalesces same-tick uncached single-entry fetches through getEntries', async () => {
+    const client = createContentfulClient(
+      async (entryId) => await Promise.resolve(createEntry(entryId)),
+      async (query) => {
+        const ids = getRequestedEntryIds(query)
+        return await Promise.resolve(createEntryCollection(ids.map(createEntry)))
+      },
+    )
+    const core = new TestCore(
+      {
+        ...config,
+        contentful: { client, cache: false },
+      },
+      {},
+      'de-DE',
+    )
+
+    const first = core.fetchContentfulEntry('entry-a')
+    const second = core.fetchContentfulEntry('entry-b')
+
+    await expect(Promise.all([first, second])).resolves.toMatchObject([
+      { sys: { id: 'entry-a' } },
+      { sys: { id: 'entry-b' } },
+    ])
+
+    expect(client.getEntry).not.toHaveBeenCalled()
+    expect(client.getEntries).toHaveBeenCalledWith({
+      include: 10,
+      locale: 'de-DE',
+      'sys.id[in]': ['entry-a', 'entry-b'],
+      limit: 2,
+    })
+  })
+
+  it('batches string and object descriptors with the same normalized query through getEntries', async () => {
+    const client = createContentfulClient(
+      async (entryId) => await Promise.resolve(createEntry(entryId)),
+      async (query) => {
+        const ids = getRequestedEntryIds(query)
+        return await Promise.resolve(createEntryCollection(ids.map(createEntry)))
+      },
+    )
+    const core = new TestCore({
+      ...config,
+      contentful: { client, cache: false },
+    })
+
+    await expect(
+      core.fetchContentfulEntries(['entry-a', { entryId: 'entry-b' }]),
+    ).resolves.toMatchObject([{ sys: { id: 'entry-a' } }, { sys: { id: 'entry-b' } }])
+
+    expect(client.getEntry).not.toHaveBeenCalled()
+    expect(client.getEntries).toHaveBeenCalledWith({
+      include: 10,
+      'sys.id[in]': ['entry-a', 'entry-b'],
+      limit: 2,
+    })
+  })
+
+  it('batches equivalent entryQuery objects regardless of key insertion order', async () => {
+    const client = createContentfulClient(
+      async (entryId) => await Promise.resolve(createEntry(entryId)),
+      async (query) => {
+        const ids = getRequestedEntryIds(query)
+        return await Promise.resolve(createEntryCollection(ids.map(createEntry)))
+      },
+    )
+    const core = new TestCore({
+      ...config,
+      contentful: { client, cache: false },
+    })
+
+    await core.fetchContentfulEntries([
+      { entryId: 'entry-a', entryQuery: { locale: 'de-DE', include: 2 } },
+      { entryId: 'entry-b', entryQuery: { include: 2, locale: 'de-DE' } },
+    ])
+
+    expect(client.getEntry).not.toHaveBeenCalled()
+    expect(client.getEntries).toHaveBeenCalledTimes(1)
+    expect(client.getEntries).toHaveBeenCalledWith({
+      locale: 'de-DE',
+      include: 2,
+      'sys.id[in]': ['entry-a', 'entry-b'],
+      limit: 2,
+    })
+  })
+
+  it('creates separate batches for different entryQuery and locale groups', async () => {
+    const client = createContentfulClient(
+      async (entryId) => await Promise.resolve(createEntry(entryId)),
+      async (query) => {
+        const ids = getRequestedEntryIds(query)
+        return await Promise.resolve(createEntryCollection(ids.map(createEntry)))
+      },
+    )
+    const core = new TestCore(
+      {
+        ...config,
+        contentful: { client, cache: false },
+      },
+      {},
+      'de-DE',
+    )
+
+    await core.fetchContentfulEntries([
+      'entry-a',
+      'entry-b',
+      { entryId: 'entry-c', entryQuery: { locale: 'fr-FR' } },
+      { entryId: 'entry-d', entryQuery: { locale: 'fr-FR' } },
+    ])
+
+    expect(client.getEntries).toHaveBeenNthCalledWith(1, {
+      include: 10,
+      locale: 'de-DE',
+      'sys.id[in]': ['entry-a', 'entry-b'],
+      limit: 2,
+    })
+    expect(client.getEntries).toHaveBeenNthCalledWith(2, {
+      include: 10,
+      locale: 'fr-FR',
+      'sys.id[in]': ['entry-c', 'entry-d'],
+      limit: 2,
+    })
+    expect(client.getEntry).not.toHaveBeenCalled()
+  })
+
+  it('uses cached entries for plural fetches', async () => {
+    const client = createContentfulClient(
+      async (entryId) => await Promise.resolve(createEntry(entryId)),
+      async (query) => {
+        const ids = getRequestedEntryIds(query)
+        return await Promise.resolve(createEntryCollection(ids.map(createEntry)))
+      },
+    )
+    const core = new TestCore({
+      ...config,
+      contentful: { client },
+    })
+
+    await core.fetchContentfulEntries(['entry-a', 'entry-b'])
+    await core.fetchContentfulEntries(['entry-b', 'entry-a'])
+
+    expect(client.getEntries).toHaveBeenCalledTimes(1)
+    expect(client.getEntry).not.toHaveBeenCalled()
+  })
+
+  it('reuses in-flight batch entries for concurrent plural fetches', async () => {
+    const deferred = createDeferred<Awaited<ReturnType<ContentfulEntryClient['getEntries']>>>()
+    const client = createContentfulClient(
+      async (entryId) => await Promise.resolve(createEntry(entryId)),
+      async () => await deferred.promise,
+    )
+    const core = new TestCore({
+      ...config,
+      contentful: { client },
+    })
+
+    const first = core.fetchContentfulEntries(['entry-a', 'entry-b'])
+    const second = core.fetchContentfulEntries(['entry-b', 'entry-a'])
+
+    expect(client.getEntries).toHaveBeenCalledTimes(1)
+
+    deferred.resolve(createEntryCollection([createEntry('entry-a'), createEntry('entry-b')]))
+
+    await expect(first).resolves.toMatchObject([
+      { sys: { id: 'entry-a' } },
+      { sys: { id: 'entry-b' } },
+    ])
+    await expect(second).resolves.toMatchObject([
+      { sys: { id: 'entry-b' } },
+      { sys: { id: 'entry-a' } },
+    ])
+    expect(client.getEntry).not.toHaveBeenCalled()
+  })
+
+  it('preserves duplicate descriptor order while fetching each uncached entry once', async () => {
+    const client = createContentfulClient(
+      async (entryId) => await Promise.resolve(createEntry(entryId)),
+      async (query) => {
+        const ids = getRequestedEntryIds(query)
+        return await Promise.resolve(createEntryCollection(ids.map(createEntry)))
+      },
+    )
+    const core = new TestCore({
+      ...config,
+      contentful: { client, cache: false },
+    })
+
+    const entries = await core.fetchContentfulEntries(['entry-a', 'entry-b', 'entry-a'])
+
+    expect(entries.map((entry) => entry.sys.id)).toEqual(['entry-a', 'entry-b', 'entry-a'])
+    expect(client.getEntries).toHaveBeenCalledWith({
+      include: 10,
+      'sys.id[in]': ['entry-a', 'entry-b'],
+      limit: 2,
+    })
+    expect(client.getEntry).not.toHaveBeenCalled()
+  })
+
+  it('chunks getEntries managed entry batches at 100 IDs', async () => {
+    const client = createContentfulClient(
+      async (entryId) => await Promise.resolve(createEntry(entryId)),
+      async (query) => {
+        const ids = getRequestedEntryIds(query)
+        return await Promise.resolve(createEntryCollection(ids.map(createEntry)))
+      },
+    )
+    const core = new TestCore({
+      ...config,
+      contentful: { client, cache: false },
+    })
+    const entryIds = Array.from({ length: 205 }, (_, index) => `entry-${index}`)
+
+    const entries = await core.fetchContentfulEntries(entryIds)
+    const { getEntries } = client
+
+    expect(entries.map((entry) => entry.sys.id)).toEqual(entryIds)
+    expect(getEntries).toHaveBeenCalledTimes(3)
+    expect(getEntries.mock.calls.map(([query]) => getRequestedEntryIds(query).length)).toEqual([
+      100, 100, 5,
+    ])
+    expect(getEntries.mock.calls[0]?.[0]).toMatchObject({
+      include: 10,
+      'sys.id[in]': entryIds.slice(0, 100),
+      limit: 100,
+    })
+    expect(getEntries.mock.calls[2]?.[0]).toMatchObject({
+      include: 10,
+      'sys.id[in]': entryIds.slice(200),
+      limit: 5,
+    })
+  })
+
+  it('rejects cleanly when getEntries omits a requested entry', async () => {
+    const client = createContentfulClient(
+      async (entryId) => await Promise.resolve(createEntry(entryId)),
+      async () => await Promise.resolve(createEntryCollection([createEntry('entry-a')])),
+    )
+    const core = new TestCore({
+      ...config,
+      contentful: { client },
+    })
+
+    await expect(core.fetchContentfulEntries(['entry-a', 'entry-b'])).rejects.toThrow(
+      'Contentful getEntries() response did not include entry "entry-b".',
+    )
+    await expect(core.fetchContentfulEntry('entry-a')).resolves.toMatchObject({
+      sys: { id: 'entry-a' },
+    })
+
+    expect(client.getEntries).toHaveBeenCalledTimes(1)
+    expect(client.getEntry).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns managed-entry handoffs from prefetchManagedEntries', async () => {
+    const client = createContentfulClient(
+      async (entryId) => await Promise.resolve(createEntry(entryId)),
+      async (query) => {
+        const ids = getRequestedEntryIds(query)
+        return await Promise.resolve(createEntryCollection(ids.map(createEntry)))
+      },
+    )
+    const core = new TestCore({
+      ...config,
+      contentful: { client, cache: false },
+    })
+
+    await expect(
+      core.prefetchManagedEntries([
+        'entry-a',
+        { entryId: 'entry-b', entryQuery: { locale: 'de-DE' } },
+      ]),
+    ).resolves.toEqual([
+      {
+        baselineEntry: createEntry('entry-a'),
+        entryId: 'entry-a',
+      },
+      {
+        baselineEntry: createEntry('entry-b'),
+        entryId: 'entry-b',
+        entryQuery: { locale: 'de-DE' },
+      },
+    ])
+  })
+
   it('throws when managed Contentful fetching is used without a client', async () => {
     const core = new TestCore(config)
 
     await expect(core.fetchContentfulEntry('entry-id')).rejects.toThrow(
-      'fetchContentfulEntry() requires contentful.client in SDK config.',
+      'Managed Contentful entry fetching requires contentful.client in SDK config.',
     )
   })
 
@@ -302,6 +643,8 @@ describe('CoreBase', () => {
 
     const first = core.fetchContentfulEntry('entry-id')
     const second = core.fetchContentfulEntry('entry-id')
+
+    await Promise.resolve()
 
     expect(client.getEntry).toHaveBeenCalledTimes(1)
 

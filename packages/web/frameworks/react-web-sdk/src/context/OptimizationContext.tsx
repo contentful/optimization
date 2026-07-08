@@ -9,7 +9,7 @@ export interface OptimizationContextValue {
   readonly sdk: OptimizationSdk | undefined
   readonly error: Error | undefined
   readonly isLive?: boolean
-  readonly serverOptimizedEntries?: ReadonlyMap<string, Entry>
+  readonly prefetchedManagedEntries?: ReadonlyMap<string, Entry>
 }
 
 export const OptimizationContext = createContext<OptimizationContextValue | null>(null)

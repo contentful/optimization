@@ -115,7 +115,7 @@
         "app-router.cjs": 1200,
         "app-router.mjs": 1200,
         "app-router-server.cjs": 3800,
-        "app-router-server.mjs": 4200,
+        "app-router-server.mjs": 4250,
         "client.cjs": 1200,
         "client.mjs": 1200,
         "esr.cjs": 4200,

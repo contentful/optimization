@@ -56,16 +56,18 @@ export function createNextjsPagesRouterOptimization(
   function OptimizationRoot({
     children,
     clientDefaults,
+    prefetchedManagedEntries,
+    prefetchManagedEntries,
     serverOptimizationState,
-    serverOptimizedEntries,
   }: BoundNextjsPagesRouterOptimizationRootProps): ReactElement {
     return createElement(
       ReactWebOptimizationRoot,
       {
         ...rootConfig,
         defaults: resolveClientDefaults(rootConfig.defaults, clientDefaults),
+        prefetchedManagedEntries,
+        prefetchManagedEntries,
         serverOptimizationState,
-        serverOptimizedEntries,
       },
       children,
     )
@@ -74,16 +76,18 @@ export function createNextjsPagesRouterOptimization(
   function OptimizationProvider({
     children,
     clientDefaults,
+    prefetchedManagedEntries,
+    prefetchManagedEntries,
     serverOptimizationState,
-    serverOptimizedEntries,
   }: BoundNextjsPagesRouterOptimizationRootProps): ReactElement | null {
     return createElement(
       ReactWebOptimizationProvider,
       {
         ...providerConfig,
         defaults: resolveClientDefaults(providerConfig.defaults, clientDefaults),
+        prefetchedManagedEntries,
+        prefetchManagedEntries,
         serverOptimizationState,
-        serverOptimizedEntries,
       },
       createElement(
         ReactWebLiveUpdatesProvider,
@@ -105,16 +109,23 @@ function toClientRootConfig(
   config: NextjsPagesRouterOptimizationComponentsConfig,
 ): Omit<
   OptimizationRootProps,
-  'children' | 'sdk' | 'serverOptimizationState' | 'serverOptimizedEntries'
+  | 'children'
+  | 'prefetchedManagedEntries'
+  | 'prefetchManagedEntries'
+  | 'sdk'
+  | 'serverOptimizationState'
 > {
-  const { contentful: _contentful, ...clientConfig } = config
+  const clientConfig = config
   return clientConfig
 }
 
 function toClientProviderConfig(
   config: NextjsPagesRouterOptimizationComponentsConfig,
-): Omit<NextjsBoundProviderConfig, 'serverOptimizationState' | 'serverOptimizedEntries'> {
-  const { contentful: _contentful, liveUpdates: _liveUpdates, ...providerConfig } = config
+): Omit<
+  NextjsBoundProviderConfig,
+  'prefetchedManagedEntries' | 'prefetchManagedEntries' | 'serverOptimizationState'
+> {
+  const { liveUpdates: _liveUpdates, ...providerConfig } = config
   return providerConfig
 }
 

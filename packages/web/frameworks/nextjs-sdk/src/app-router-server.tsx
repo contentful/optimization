@@ -30,6 +30,7 @@ import { createNextjsOptimizationContextHandler } from './request-handler'
 import {
   createNextjsOptimization,
   type CoreStatelessRequestConsent,
+  type ManagedEntryHandoff,
   type NextjsAnonymousIdCookieOptions,
   type OptimizationData,
   type OptimizationNodeConfig,
@@ -49,9 +50,9 @@ export type {
   NextjsServerOptimizedEntryProps,
 } from './bound-component-types'
 export {
-  prefetchOptimizedEntries,
-  type OptimizedEntryPrefetchDescriptor,
-  type ServerOptimizedEntryHandoff,
+  prefetchManagedEntries,
+  type ManagedEntryDescriptor,
+  type ManagedEntryHandoff,
 } from './server'
 export { NextAppAutoPageTracker, type NextAppAutoPageContext, type NextAppAutoPageTrackerProps }
 type IgnoredReactWebOptimizedEntryProps = Pick<
@@ -110,14 +111,19 @@ export function createNextjsAppRouterOptimization(
     return serverData
   })
 
-  async function OptimizationRoot({
+  async function renderBoundProviderTree({
     children,
-    serverOptimizedEntries,
+    prefetchedManagedEntries,
+    prefetchManagedEntries,
   }: BoundNextjsOptimizationRootProps): Promise<ReactElement> {
     const serverData = await loadServerData()
+    const managedEntries = await resolvePrefetchedManagedEntries(
+      prefetchedManagedEntries,
+      prefetchManagedEntries,
+    )
     return createElement(
       ReactWebOptimizationProvider,
-      { ...toClientProviderConfig(config, serverData), serverOptimizedEntries },
+      { ...toClientProviderConfig(config, serverData), prefetchedManagedEntries: managedEntries },
       createElement(
         ReactWebLiveUpdatesProvider,
         { globalLiveUpdates: config.liveUpdates },
@@ -126,20 +132,27 @@ export function createNextjsAppRouterOptimization(
     )
   }
 
-  async function OptimizationProvider({
-    children,
-    serverOptimizedEntries,
-  }: BoundNextjsOptimizationRootProps): Promise<ReactElement | null> {
-    const serverData = await loadServerData()
-    return createElement(
-      ReactWebOptimizationProvider,
-      { ...toClientProviderConfig(config, serverData), serverOptimizedEntries },
-      createElement(
-        ReactWebLiveUpdatesProvider,
-        { globalLiveUpdates: config.liveUpdates },
-        children,
-      ),
-    )
+  async function OptimizationRoot(props: BoundNextjsOptimizationRootProps): Promise<ReactElement> {
+    return await renderBoundProviderTree(props)
+  }
+
+  async function OptimizationProvider(
+    props: BoundNextjsOptimizationRootProps,
+  ): Promise<ReactElement | null> {
+    return await renderBoundProviderTree(props)
+  }
+
+  async function resolvePrefetchedManagedEntries(
+    prefetchedManagedEntries: readonly ManagedEntryHandoff[] | undefined,
+    prefetchManagedEntries: BoundNextjsOptimizationRootProps['prefetchManagedEntries'],
+  ): Promise<readonly ManagedEntryHandoff[] | undefined> {
+    if (prefetchManagedEntries === undefined) return prefetchedManagedEntries
+
+    const fetchedEntries = await sdk.prefetchManagedEntries(prefetchManagedEntries)
+
+    return prefetchedManagedEntries === undefined
+      ? fetchedEntries
+      : [...prefetchedManagedEntries, ...fetchedEntries]
   }
 
   async function OptimizedEntry(props: NextjsBoundOptimizedEntryProps): Promise<ReactElement> {
