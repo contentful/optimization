@@ -58,11 +58,11 @@ step before you ship.
    ```
 
 2. Create one module that binds the SDK to your config. You do this once and import from it
-   everywhere. Use the same environment-variable convention your app already uses for Contentful.
-   The snippets import it as `@/src/lib/optimization`, which assumes the file is at
-   `src/lib/optimization.ts` and your `tsconfig` maps `@/*` to the project root — adjust the
-   specifier to match your own `paths` (for example `@/lib/optimization` if your alias points at a
-   top-level `lib/`).
+   everywhere — the resulting components are _bound_ because they carry your config. Use the same
+   environment-variable convention your app already uses for Contentful. The snippets import it as
+   `@/src/lib/optimization`, which assumes the file is at `src/lib/optimization.ts` and your
+   `tsconfig` maps `@/*` to the project root — adjust the specifier to match your own `paths` (for
+   example `@/lib/optimization` if your alias points at a top-level `lib/`).
 
    **Adapt this to your use case:** replace the placeholder values and the import path; the config
    keys are explained in [How the SDK fits your app](#how-the-sdk-fits-your-app).
@@ -86,6 +86,7 @@ step before you ship.
          consent: { events: true, persistence: true },
        },
        app: { name: 'my-next-app', version: '1.0.0' },
+       // contentful: { client }, // opt-in: enables the entryId managed-fetch path
      })
    ```
 
@@ -281,6 +282,9 @@ same imports use the browser runtime. You reach for the other subpaths only late
 | `@contentful/optimization-nextjs/server`      | Manual server SDK control, for advanced routes only                                         |
 | `@contentful/optimization-nextjs/api-schemas` | Type guards such as `isMergeTagEntry` and `isResolvedContentfulEntry`                       |
 
+Import from a subpath, not the package root — bound components come from `/app-router` and hooks
+from `/client`; `@contentful/optimization-nextjs` on its own is not an import path.
+
 The config you pass to `createNextjsAppRouterOptimization()` breaks down like this:
 
 1. `clientId` and `environment` identify your Optimization project. Read them from browser-safe env
@@ -301,9 +305,10 @@ function that reads your app's recorded choice per request. Everything else stay
 step 2.
 
 `CONSENT_COOKIE` below is **your** cookie, not an SDK cookie — you name it, you write it (from your
-consent UI or CMP), and you read it here. The SDK never touches it; it only calls your
-`server.consent` function and personalizes based on what you return. (The one SDK-managed cookie is
-`ctfl-opt-aid`, from the [request handler](#request-context-and-the-profile-cookie).) The
+consent UI or Consent Management Platform (CMP)), and you read it here. The SDK never touches it; it
+only calls your `server.consent` function and personalizes based on what you return. (The one
+SDK-managed cookie is `ctfl-opt-aid`, from the
+[request handler](#request-context-and-the-profile-cookie).) The
 [Consent, identity, profile, and reset](#consent-identity-profile-and-reset) section shows the
 Client Component that writes this cookie.
 
@@ -346,13 +351,25 @@ set of decisions. (You store and read that consent cookie from a Client Componen
 
 **Integration category:** Required for first integration
 
-The SDK does not fetch Contentful for you. This is the boundary: **you fetch, the SDK resolves.**
-Keep your existing client and fetchers; the SDK only needs entries to arrive in a shape it can
-resolve.
+Your app owns the Contentful client. There are two supported ways to get a fetched entry to the
+SDK's resolution hand-off:
 
-1. Fetch with one concrete Contentful locale. Do not use `withAllLocales` or raw CDA `locale=*` —
-   all-locale payloads use locale-keyed field maps the resolver cannot read, so entries fall back to
-   baseline.
+- **Manual — the quick-start default.** You fetch the entry yourself and pass it to `OptimizedEntry`
+  as `baselineEntry`. Keep your existing client and fetchers; the SDK only needs entries to arrive
+  in a shape it can resolve.
+- **Managed — opt-in.** You hand the factory your Contentful client through the `contentful` config
+  key (`contentful: { client }`), then pass an `entryId` to a bound server `OptimizedEntry` instead
+  of a fetched `baselineEntry`. The SDK fetches that entry by ID through your client
+  (`sdk.fetchOptimizedEntry(entryId, { query: entryQuery })`) and resolves it. The client is still
+  yours — the SDK only calls `getEntry()` on it.
+
+This guide teaches the manual path. The fetch rules below describe what a resolvable payload looks
+like either way: for managed fetching the SDK merges your `entryQuery`, the SDK locale, and
+`include: 10` into the `getEntry()` call, so the single-locale and include-depth rules still hold.
+
+1. Fetch with one concrete Contentful locale. Do not use `withAllLocales` or raw Contentful Delivery
+   API (CDA) `locale=*` — all-locale payloads use locale-keyed field maps the resolver cannot read,
+   so entries fall back to baseline.
 2. Use an `include` depth deep enough to resolve the whole tree — the page, its sections, and the
    linked variant entries. `include: 10` is the common setting and is what most section-composed
    sites already use.
@@ -407,7 +424,8 @@ it to keep the same profile after takeover. For how server and browser stay on t
 **Integration category:** Required for first integration
 
 Step 5 showed the wrap. This explains the two things about it that matter everywhere, then covers a
-second app shape.
+second app shape, and an opt-in managed-fetch variant for apps that configured
+`contentful: { client }`.
 
 In a Server Component, `OptimizedEntry` resolves the entry against the request's decisions and
 renders the variant — or the baseline entry — straight into the HTML. No JavaScript is required for
@@ -446,6 +464,31 @@ export default async function Home() {
       {(resolved) => <YourCard entry={resolved as YourEntryType} />}
     </OptimizedEntry>
   ))
+}
+```
+
+If you configured the factory with `contentful: { client }` (the managed path from
+[Fetching Contentful entries](#fetching-contentful-entries)), you can skip the fetch and pass an
+`entryId` instead of a `baselineEntry`. The bound server `OptimizedEntry` fetches that entry by ID
+through your client and resolves it in the same render — an optional `entryQuery` merges into the
+`getEntry()` call. The `/client` `OptimizedEntry` and `useOptimizedEntry()` accept the same
+`entryId` / `entryQuery` for browser-side use (see
+[Browser takeover and live updates](#browser-takeover-and-live-updates)). The render prop and cast
+are unchanged; only the source of the entry differs.
+
+**Adapt this to your use case:** the managed variant of the example above — no fetch, an `entryId`
+in place of `baselineEntry`.
+
+```tsx
+// app/page.tsx — requires `contentful: { client }` on the factory
+import { OptimizedEntry } from '@/src/lib/optimization'
+
+export default async function Home() {
+  return (
+    <OptimizedEntry entryId="your-page-entry-id">
+      {(resolved) => <YourCard entry={resolved as YourEntryType} />}
+    </OptimizedEntry>
+  )
 }
 ```
 
@@ -959,19 +1002,20 @@ pnpm test:e2e:nextjs-sdk_app-router
 
 ## Troubleshooting
 
-| Symptom                                                            | Likely cause                                                                            | Check                                                                                                  |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Entries stay on baseline                                           | No variant applies, denied consent, unresolved Contentful links, or all-locale CDA      | Author a variant that targets you, check `server.consent`, fetch one `locale` with enough `include`    |
-| The variant never appears even though it is authored               | Your test visitor does not match the experience's audience                              | Target all visitors for a first test, or force the variant with the preview panel                      |
-| `<Component entry={resolved} />` shows a type error                | The render prop returns a base `Entry`, wider than your component's type                | Cast it: `resolved as YourSectionType` (add `as unknown` only if TS rejects a genuinely disjoint type) |
-| Two server-side page events appear for one request                 | Multiple bound factories, or a manual helper also calls the server page path            | Create bound components once and keep manual `getNextjsServerOptimizationData()` out of the route      |
-| Browser sends a duplicate first page event                         | `initialPageEvent="emit"` used after the server path already emitted the same route     | Use `skip` only when the server path owns the same initial request                                     |
-| Browser does not send the first page event                         | `initialPageEvent="skip"` used on a browser-owned route without a matching server event | Use `emit` when the browser owns first page tracking                                                   |
-| Live entries do not update after `identifyUser()` or `resetUser()` | Live updates are off (the default)                                                      | Set `liveUpdates: true` in the factory, or pass `liveUpdates` to a `/client` `OptimizedEntry`          |
-| Entry views, clicks, or hovers do not emit                         | Interaction tracking is opted out, consent blocks the event, or no profile is available | Check factory `trackEntryInteraction`, entry props, consent state, and `states.blockedEventStream`     |
-| Server and browser use different profiles                          | Cookie domain, path, readability, or consent cleanup differs between runtimes           | Use a browser-readable `ctfl-opt-aid` with a consistent path and clear it on withdrawal                |
-| Server Components fail with browser globals                        | A Client Component hook or browser-only import crossed into a server module             | Use bound imports in Server Components and `/client` hooks only in Client Components                   |
-| Personalized HTML appears stale                                    | Route or CDN caching is sharing profile-evaluated output                                | Mark personalized routes dynamic or vary cache keys on the full personalization context                |
+| Symptom                                                            | Likely cause                                                                             | Check                                                                                                                           |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Entries stay on baseline                                           | No variant applies, denied consent, unresolved Contentful links, or all-locale CDA       | Author a variant that targets you, check `server.consent`, fetch one `locale` with enough `include`                             |
+| The variant never appears even though it is authored               | Your test visitor does not match the experience's audience                               | Target all visitors for a first test, or force the variant with the preview panel                                               |
+| `<Component entry={resolved} />` shows a type error                | The render prop returns a base `Entry`, wider than your component's type                 | Cast it: `resolved as YourSectionType` (add `as unknown` only if TS rejects a genuinely disjoint type)                          |
+| Two server-side page events appear for one request                 | Multiple bound factories, or a manual helper also calls the server page path             | Create bound components once and keep manual `getNextjsServerOptimizationData()` out of the route                               |
+| Browser sends a duplicate first page event                         | `initialPageEvent="emit"` used after the server path already emitted the same route      | Use `skip` only when the server path owns the same initial request                                                              |
+| Browser does not send the first page event                         | `initialPageEvent="skip"` used on a browser-owned route without a matching server event  | Use `emit` when the browser owns first page tracking                                                                            |
+| Live entries do not update after `identifyUser()` or `resetUser()` | Live updates are off (the default)                                                       | Set `liveUpdates: true` in the factory, or pass `liveUpdates` to a `/client` `OptimizedEntry`                                   |
+| Entry views, clicks, or hovers do not emit                         | Interaction tracking is opted out, consent blocks the event, or no profile is available  | Check factory `trackEntryInteraction`, entry props, consent state, and `states.blockedEventStream`                              |
+| Server and browser use different profiles                          | Cookie domain, path, readability, or consent cleanup differs between runtimes            | Use a browser-readable `ctfl-opt-aid` with a consistent path and clear it on withdrawal                                         |
+| Server Components fail with browser globals                        | A Client Component hook or browser-only import crossed into a server module              | Use bound imports in Server Components and `/client` hooks only in Client Components                                            |
+| Personalized HTML appears stale                                    | Route or CDN caching is sharing profile-evaluated output                                 | Mark personalized routes dynamic or vary cache keys on the full personalization context                                         |
+| Next.js 15 reports unsupported `export *` in a client boundary     | A `'use client'` module re-exports with `export *` — in your app, or a package that does | Use a package build that avoids `export *` in client entries, and avoid app-authored `export *` re-exports in Client Components |
 
 ## Reference implementations to compare against
 
