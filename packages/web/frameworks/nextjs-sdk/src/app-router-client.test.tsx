@@ -1,3 +1,4 @@
+import * as reactWeb from '@contentful/optimization-react-web'
 import type { Entry } from 'contentful'
 import * as appRouter from './app-router-client'
 import * as client from './client'
