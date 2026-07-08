@@ -30,8 +30,8 @@ You will get there in two milestones:
 This guide uses `@contentful/optimization-react-web`, which wraps the lower-level
 `@contentful/optimization-web` browser SDK in React providers, hooks, and an entry-rendering
 component. You configure it by passing props to one `OptimizationRoot` component you mount once —
-there is no separate factory call. Your app keeps ownership of Contentful fetching, consent policy,
-identity, routing, and rendering.
+there is no separate factory call. Your app keeps ownership of the Contentful client, consent
+policy, identity, routing, and rendering.
 
 Because this SDK runs entirely in the browser, there is no server-rendered first paint: the SDK
 becomes ready _after_ React mounts, so loading and error states are a first-class part of the
@@ -71,6 +71,7 @@ and add the [Consent and privacy handoff](#consent-and-privacy-handoff) step bef
    already uses for browser-visible values (this example uses Vite's `import.meta.env` with a
    `PUBLIC_` prefix; adjust to your bundler).
 
+   `defaults` is the SDK's starting browser state (consent, persistence, and similar). Inside it,
    `consent: true` tells the SDK it may personalize and send events for this visitor; the quick
    start uses always-on consent to keep the path simple — production gates this on the visitor's
    choice (see [Consent and privacy handoff](#consent-and-privacy-handoff)).
@@ -121,7 +122,7 @@ and add the [Consent and privacy handoff](#consent-and-privacy-handoff) step bef
    })
 
    export function HomePage() {
-     // `sdk` is always defined (the provider seeds a read-only snapshot); `error` is set only if init fails.
+     // useOptimizationContext() surfaces `error` if SDK init fails — guard on it so a failure does not render broken UI.
      const { error } = useOptimizationContext()
      const [entry, setEntry] = useState<Entry | undefined>()
 
@@ -225,9 +226,8 @@ and how to make startup depend on real consent.
 
 `OptimizationRoot` is the single React entry point. It composes the `OptimizationProvider` and
 `LiveUpdatesProvider` for you, creates the underlying Web SDK instance after React commits, and
-destroys that instance on unmount. Unlike the Next.js adapters, there is no `createNextjs…()`
-factory: you configure the SDK by passing props directly to this component, and you mount it exactly
-once around the subtree that uses the SDK.
+destroys that instance on unmount. You configure the SDK by passing props directly to this
+component, and you mount it exactly once around the subtree that uses the SDK.
 
 The props you pass break down like this:
 
@@ -241,7 +241,10 @@ The props you pass break down like this:
 4. `api` overrides the Experience and Insights endpoints (`experienceBaseUrl`, `insightsBaseUrl`).
    Set these only for a mock, a proxy, or non-default hosts; omit them otherwise.
 5. `app` is your app's name and version, sent as metadata.
-6. `liveUpdates`, `trackEntryInteraction`, and `onStatesReady` are optional and covered in their own
+6. `contentful` opts into managed entry fetching by handing the SDK your Contentful client
+   (`contentful: { client, defaultQuery?, cache? }`); leave it unset to fetch entries yourself. See
+   [Fetching Contentful entries](#fetching-contentful-entries).
+7. `liveUpdates`, `trackEntryInteraction`, and `onStatesReady` are optional and covered in their own
    sections below.
 
 The quick start used always-on `defaults` to get you a result. For production, make startup depend
@@ -350,22 +353,41 @@ until optimizations are available — use `useOptimizedEntry()`, which returns
 
 **Integration category:** Required for first integration
 
-The SDK does not fetch Contentful for you. This is the boundary: **you fetch, the SDK resolves.**
-Keep your existing client and fetchers; the SDK only needs entries to arrive in a shape it can
-resolve.
+Your app always owns the Contentful client. There are two supported ways to get a fetched entry to
+the point where the SDK resolves it, and you can mix them per entry:
 
-1. Fetch with one concrete Contentful locale. Do not use `withAllLocales` or raw CDA `locale=*` —
-   all-locale payloads use locale-keyed field maps the resolver cannot read, so entries fall back to
-   baseline.
+- **Manual (the quick start's path).** Your code calls the Contentful client itself and passes the
+  result to `OptimizedEntry` as `baselineEntry`. Your fetching, caching, and response shaping stay
+  entirely yours; the SDK only needs the entry to arrive in a shape it can resolve.
+- **Managed (opt-in).** You hand the SDK your Contentful client once via `contentful: { client }` on
+  `OptimizationRoot`, and then reference entries by id — `<OptimizedEntry entryId="…">`. The SDK
+  fetches through your client for you (it only calls `getEntry()` on it) and resolves the result.
+  This trades a little control for less wiring per entry; see
+  [Resolving entries and rendering the result](#resolving-entries-and-rendering-the-result) for the
+  managed component variant.
+
+If you are just starting or want full control over fetching, stay on the manual path; switch to
+managed when you would rather the SDK make the `getEntry()` call than write per-component fetch
+code.
+
+Both paths obey the same fetch rules, because the SDK resolves the same single-locale entry shape
+either way:
+
+1. Fetch with one concrete Contentful locale. Do not use `withAllLocales` or raw Contentful Delivery
+   API (CDA) `locale=*` — all-locale payloads use locale-keyed field maps the resolver cannot read,
+   so entries fall back to baseline.
 2. Use an `include` depth deep enough to resolve the whole tree — the entry, its sections, and the
-   linked variant entries. `include: 10` is the common setting.
+   linked variant entries. `include: 10` is the common setting. In the managed path the SDK applies
+   `include: 10` for you, and you can still override per call with `entryQuery`.
 3. Pass the same locale to Contentful and to `OptimizationRoot` so localized Experience responses
-   and rendered content line up.
+   and rendered content line up. In the managed path the SDK falls back to the `OptimizationRoot`
+   `locale` when your query does not set one.
 
 A single-locale entry exposes its optimization fields directly, such as `fields.nt_experiences` and
 `fields.nt_variants` (the `nt_` prefix is how personalization links appear on an entry).
 
-**Copy this:**
+**Copy this:** the manual fetcher from the quick start. `fetchPageEntry` is your own helper — name
+it whatever fits your app.
 
 ```tsx
 import { createClient } from 'contentful'
@@ -379,7 +401,7 @@ const contentfulClient = createClient({
   space: import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID,
 })
 
-export async function fetchOptimizedEntry(entryId: string) {
+export async function fetchPageEntry(entryId: string) {
   return await contentfulClient.getEntry(entryId, {
     include: INCLUDE_DEPTH, // resolve linked experience and variant entries before rendering
     locale: APP_LOCALE, // keep this aligned with the OptimizationRoot locale
@@ -387,9 +409,31 @@ export async function fetchOptimizedEntry(entryId: string) {
 }
 ```
 
+To use the managed path instead, pass that same client to `OptimizationRoot` and let the SDK fetch.
+The `contentful` prop is SDK-owned; `client` is your app-owned Contentful client.
+
+**Adapt this to your use case:** enable managed fetching on the root you already mount. The `+` line
+is the only addition; the rest is the root from the quick start.
+
+```tsx
+ <OptimizationRoot
+   clientId={import.meta.env.PUBLIC_OPTIMIZATION_CLIENT_ID}
+   environment={import.meta.env.PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
+   locale="en-US"
+   defaults={{ consent: true }}
++  // Hand the SDK your Contentful client so `<OptimizedEntry entryId>` can fetch by id.
++  // `defaultQuery` is merged into every managed getEntry() call; cache is per-instance
++  // ({ maxEntries: 100, ttlMs: 300_000 } by default, or `cache: false` to disable).
++  contentful={{ client: contentfulClient, defaultQuery: { locale: 'en-US' } }}
+ >
+   {/* your app */}
+ </OptimizationRoot>
+```
+
 If your app changes locale at runtime, `OptimizationRoot` updates the SDK's Experience and event
-locale when its `locale` prop changes. You still refetch Contentful entries and re-emit page events
-yourself. For the full model, see
+locale when its `locale` prop changes. On the manual path you still refetch Contentful entries and
+re-emit page events yourself; on the managed path a changed `entryId`/`entryQuery` refetches, but
+you still re-emit page events yourself. For the full model, see
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
 
 ### Resolving entries and rendering the result
@@ -438,6 +482,42 @@ differently). The `+` lines are the additions; keep your existing guards.
 `OptimizedEntry` must render under an ancestor that handles `useOptimizationContext().error` (as the
 [readiness section](#sdk-readiness-loading-and-error-states) shows). On an SDK initialization
 failure it throws rather than rendering baseline, so an unguarded subtree crashes.
+
+**The managed alternative to `baselineEntry`.** If you enabled managed fetching with
+`contentful: { client }` (see [Fetching Contentful entries](#fetching-contentful-entries)), you can
+pass `entryId` instead of fetching yourself. The two entry sources are mutually exclusive: an
+`OptimizedEntry` takes **either** `baselineEntry` (manual — you fetched it) **or** `entryId`
+(managed — the SDK fetches it), never both. With `entryId`, the SDK fetches through your client
+while the component shows its loading state, then resolves and reveals exactly as the manual path
+does. Two props exist only for the managed path, since only it can fail while fetching:
+
+- `errorFallback` — what to render if the managed fetch fails. It is a node or
+  `(error: Error) => ReactNode`; return `undefined` to render nothing.
+- `onEntryError` — a `(error: Error) => void` callback for logging or reporting the fetch failure.
+
+**Adapt this to your use case:** the managed variant of the same wrap. `entryQuery` is optional and
+overrides the merged managed query per call.
+
+```tsx
+import { OptimizedEntry } from '@contentful/optimization-react-web'
+
+export function HomeHero() {
+  return (
+    <OptimizedEntry
+      entryId={import.meta.env.PUBLIC_HERO_ENTRY_ID} // SDK fetches this id through your client
+      entryQuery={{ locale: 'en-US' }} // optional per-call override; merged with the managed query
+      loadingFallback={() => <HeroSkeleton />}
+      errorFallback={(error) => <StaticHero error={error} />} // managed-fetch failure only
+      onEntryError={(error) => diagnostics.logEntryFetchError(error)}
+    >
+      {(resolved) => <StaticHero entry={resolved as YourEntryType} />}
+    </OptimizedEntry>
+  )
+}
+```
+
+The render prop, the cast, and the baseline-fallback contract are identical to the manual path; only
+the entry source and the two managed-failure props differ.
 
 Two more facts hold everywhere:
 
@@ -535,7 +615,8 @@ consent is set, the SDK permits only `identify` and `page` events; other events 
 1. If policy permits personalization by default, seed accepted consent in `defaults` during setup
    (as the quick start does).
 2. If policy depends on user choice, leave `consent` unset and call `setConsent(true | false)` from
-   the banner, CMP callback, or settings screen that owns the decision.
+   the banner, Consent Management Platform (CMP) callback, or settings screen that owns the
+   decision.
 3. Use object-form consent — `setConsent({ events: true, persistence: false })` — only when events
    and durable profile continuity have different policy decisions. A boolean sets both together.
 4. Persist the visitor's choice in your own store (a cookie, `localStorage`, or account preference)
@@ -696,6 +777,7 @@ root `liveUpdates` prop, then the default (locked to the first resolved state).
 **Follow this pattern:** the app-wide switch plus per-entry overrides.
 
 ```tsx
+// globalLiveUpdates is your own boolean (a state value or setting) — true turns live updates on app-wide.
 <OptimizationRoot clientId={clientId} liveUpdates={globalLiveUpdates}>
   <OptimizedEntry baselineEntry={entry}>
     {(resolved) => <InheritsGlobalSetting entry={resolved as YourEntryType} />}
@@ -802,9 +884,10 @@ const forwardedMessageIds = new Set<string>()
         forwardedMessageIds.add(event.messageId)
         return
       }
-      if (!canForwardSdkEvent(event)) return
+      if (!canForwardSdkEvent(event)) return // your own consent/destination filter
 
       forwardedMessageIds.add(event.messageId)
+      // pickContentfulEventProperties is your own property mapper.
       analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
     })
 
@@ -912,6 +995,21 @@ applied in a layout effect. With an injected `sdk` and no `serverOptimizationSta
 against the live injected SDK from the first render; `onStatesReady` alone does not add a snapshot
 phase.
 
+**Prefetching managed entries for a server handoff.** When a managed (`entryId`) `OptimizedEntry`
+renders on a server before the browser SDK is live, you can hand it its baseline entry so it renders
+resolved content immediately instead of a loading state. The package root exports the symbols for
+this: `prefetchOptimizedEntries(runtime, descriptors)` returns a `ServerOptimizedEntryHandoff[]` you
+pass to the `serverOptimizedEntries` prop on `OptimizationRoot` (or `OptimizationProvider`), keyed
+by `entryId` + `entryQuery`. `descriptors` are `OptimizedEntryPrefetchDescriptor` objects
+(`{ entryId, entryQuery? }`); `runtime` is any `OptimizedEntryPrefetchRuntime` — an object exposing
+`fetchContentfulEntry(entryId, query?)`. This SDK ships no server runtime of its own, so you supply
+that runtime yourself (for example, a thin wrapper over your Contentful client that applies your
+single-locale `include: 10` query). For a full server-rendered integration with request-scoped state
+and page-event handoff, use the
+[Next.js App Router guide](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md) or
+[Next.js Pages Router guide](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md),
+which own that path end to end.
+
 ### Strict consent, storage, and delivery controls
 
 **Integration category:** Advanced or production-only
@@ -957,6 +1055,9 @@ Run these checks before release:
 - Confirm baseline fallback renders when the Experience API fails, variants are missing, links are
   unresolved, or a payload is all-locale — and that `OptimizedEntry` stops showing loading after
   resolution settles or the 5-second reveal.
+- If you use managed fetching (`contentful: { client }` with `<OptimizedEntry entryId>`), confirm a
+  failed managed fetch renders your `errorFallback` and reaches `onEntryError`, and that the managed
+  query still uses one concrete locale with a deep enough `include`.
 - Confirm `identifyUser()`, `setConsent()`, and `resetUser()` re-resolve only the entries configured
   for live updates, and that reset runs when identity changes.
 - Confirm entry views, clicks, hovers, flag views, page events, and forwarded analytics deliver only
@@ -982,6 +1083,7 @@ pnpm test:e2e:react-web-sdk
 | The variant never appears even though it is authored              | Your test visitor does not match the experience's audience, or no page event was emitted         | Target all visitors for a first test, or force the variant with the preview panel; confirm the tracker |
 | `<Component entry={resolved} />` shows a type error               | The render prop returns a base `Entry`, wider than your component's type                         | Cast it: `resolved as YourEntryType` (add `as unknown` only if TS rejects a genuinely disjoint type)   |
 | Entry is stuck showing loading UI                                 | Optimization state never settled; only entries with optimization references wait                 | It reveals baseline after 5s automatically; check the Experience request and `include: 10`             |
+| `<OptimizedEntry entryId>` renders the error fallback             | Managed fetch failed, or `contentful: { client }` is not configured on `OptimizationRoot`        | Confirm the root `contentful` client, the entry id, and the query; inspect the `onEntryError` error    |
 | `useOptimization must be used within an OptimizationProvider`     | A hook renders outside `OptimizationRoot` / `OptimizationProvider`                               | Move the provider above that component tree                                                            |
 | `ContentfulOptimization is already initialized`                   | More than one owned SDK instance in the same browser runtime                                     | Keep one `OptimizationRoot`, or inject a single shared instance via `OptimizationProvider`             |
 | Route page events fire more than expected                         | More than one tracker per router tree, or manual `trackPageView()` duplicating the adapter       | Keep one adapter per router tree and centralize manual page emission                                   |
