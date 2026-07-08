@@ -154,4 +154,11 @@ describe('Next.js Pages Router client components', () => {
     expect(components.NextPagesAutoPageTracker).toBe(pagesRouter.NextPagesAutoPageTracker)
     expect(components).not.toHaveProperty('NextAppAutoPageTracker')
   })
+
+  it('keeps the Pages Router entry scoped to the factory and tracker', () => {
+    expect(Object.keys(pagesRouter).sort()).toEqual([
+      'NextPagesAutoPageTracker',
+      'createNextjsPagesRouterOptimization',
+    ])
+  })
 })

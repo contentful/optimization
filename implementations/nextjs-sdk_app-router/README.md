@@ -26,10 +26,10 @@ browser-side entry resolution after startup. The implementation binds `Optimizat
 `OptimizedEntry`, and `NextAppAutoPageTracker` once in `@/lib/optimization` with
 `createNextjsAppRouterOptimization()`. Routes and shared components import those app-local
 components for Server Component first paint and Client Component live-update surfaces. Other SDK
-runtime imports use Next.js SDK package subpaths:
+runtime imports use Next.js SDK package subpaths. The package root is not imported:
 
-- `@contentful/optimization-nextjs/app-router` in `@/lib/optimization` for bound server/client
-  components
+- `@contentful/optimization-nextjs/app-router` in `@/lib/optimization` for the bound component
+  factory and route tracker
 - `@contentful/optimization-nextjs/client` for browser hooks and providers
 - `@contentful/optimization-nextjs/api-schemas` in components that need SDK schema guards
 - `@contentful/optimization-nextjs/app-router` in proxy through the app-local `proxy` export
