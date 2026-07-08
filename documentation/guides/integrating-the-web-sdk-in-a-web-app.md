@@ -13,9 +13,10 @@ your app fetches or renders content.
 - As the visitor uses your app, Contentful's **Experience API** looks at who they are and picks the
   variant for each experience. Swapping a fetched entry for its picked variant is called
   **resolving** the entry.
-- Your app already fetches Contentful entries and turns them into markup. The SDK's only job is to
-  sit at that hand-off and give you the resolved variant instead of the original — or the original
-  entry when no variant applies, which is the **baseline fallback**.
+- Your app turns Contentful entries into markup, and the SDK sits at that hand-off: it gives you the
+  resolved variant instead of the original — or the original entry when no variant applies, which is
+  the **baseline fallback**. You can fetch the entry yourself and hand it to the SDK, or give the
+  SDK your Contentful client and let it fetch by ID — either way the client stays yours.
 - You render whatever the SDK hands back exactly as you render entries today.
 
 That is enough to start. You do not need to understand audiences, traffic allocation, or events yet;
@@ -33,7 +34,7 @@ You will get there in two milestones:
 
 This guide uses the `ContentfulOptimization` class from `@contentful/optimization-web`. You create
 one instance, drive it imperatively — emit events, resolve entries, subscribe to state — and your
-app keeps ownership of Contentful fetching, consent policy, identity, routing, caching, and
+app keeps ownership of its Contentful client, consent policy, identity, routing, caching, and
 rendering. The package also ships optional Web Components (`defineContentfulOptimizationElements()`)
 for a declarative element-based integration; the quick start uses the class, and
 [Web Components entry rendering](#web-components-entry-rendering) covers the elements.
@@ -65,10 +66,10 @@ step before you ship.
    pnpm add @contentful/optimization-web contentful
    ```
 
-2. Create one SDK instance for the page or SPA runtime, emit one `page()` event, fetch one
-   single-locale entry, resolve it, and render the result into the DOM. Read the placeholder config
-   from whatever mechanism your build uses to expose browser-visible values, and keep it consistent
-   with the Contentful variables your app already ships.
+2. Create one SDK instance for the page or single-page app (SPA) runtime, emit one `page()` event,
+   fetch one single-locale entry, resolve it, and render the result into the DOM. Read the
+   placeholder config from whatever mechanism your build uses to expose browser-visible values, and
+   keep it consistent with the Contentful variables your app already ships.
 
    `defaults: { consent: true }` tells the SDK it may personalize and send events for this visitor;
    the quick start uses always-on consent to keep the path simple — production gates this on the
@@ -80,7 +81,8 @@ step before you ship.
 
    **Adapt this to your use case:** replace the placeholder values and the `#hero` selector with
    your own; the config keys are explained in
-   [How the SDK fits your app](#how-the-sdk-fits-your-app).
+   [How the SDK fits your app](#how-the-sdk-fits-your-app). The render step is a minimal placeholder
+   — substitute your own field rendering, template, or DOM update.
 
    ```ts
    import * as contentful from 'contentful'
@@ -112,7 +114,7 @@ step before you ship.
      locale: APP_LOCALE, // one concrete locale — never withAllLocales / locale=*
    })
 
-   // Omit the second argument to resolve against the SDK's current state from the accepted page().
+   // Pass the baseline entry; the SDK uses the selections from the page() call above.
    // On denied consent / no variant / unresolved links / all-locale payload this returns baselineEntry.
    const { entry } = optimization.resolveOptimizedEntry(baselineEntry)
 
@@ -201,7 +203,7 @@ each config key does and how to make startup depend on real consent.
 The Web SDK is a thin, stateful layer between three things you already have or control: your
 Contentful data, Contentful's Experience API, and your rendering code. You create one instance and
 reuse it across route handlers, render code, and interaction handlers. It is not a Contentful client
-replacement: your app still owns Contentful credentials, entry fetching, routing, rendering, consent
+replacement: the Contentful client and credentials are yours, along with routing, rendering, consent
 policy, identity policy, and cache policy.
 
 The config you pass to `new ContentfulOptimization(...)` breaks down like this:
@@ -271,12 +273,14 @@ For the locale model, see
 This is the concept that has no equivalent in the component-based guides, so it is worth stating
 plainly. The Web SDK is imperative and stateful, and its state fills in a specific order:
 
-- **The instance is ready synchronously.** Unlike the React SDK, there is no "not ready on first
-  render" window — `resolveOptimizedEntry()`, `getFlag()`, and the `states.*` observables work the
-  moment you construct the instance.
+- **The instance is ready synchronously.** `resolveOptimizedEntry()`, `getFlag()`, and the
+  `states.*` observables (explained in
+  [State subscriptions, locale changes, and re-rendering](#state-subscriptions-locale-changes-and-re-rendering))
+  work the moment you call `new ContentfulOptimization(...)`.
 - **But optimization state is empty until an accepted event returns it.** The SDK only has current
-  `selectedOptimizations` after an accepted `page()` or `identify()` call resolves. Resolve an entry
-  before that and you get the baseline — which is correct, just not personalized yet.
+  `selectedOptimizations` after an accepted `page()` or `identify()` call resolves (`identify()`
+  works the same way — see [Identity, profile, and reset](#identity-profile-and-reset)). Resolve an
+  entry before that and you get the baseline — which is correct, just not personalized yet.
 
 So the order that matters is: construct → emit `page()` (or `identify()`) → resolve entries. That is
 why the quick start awaits `page()` before calling `resolveOptimizedEntry()`.
@@ -305,13 +309,22 @@ if (accepted) renderVisibleEntries()
 
 **Integration category:** Required for first integration
 
-The SDK does not fetch Contentful for you. This is the boundary: **you fetch, the SDK resolves.**
-Keep your existing client and fetchers; the SDK only needs entries to arrive in a shape it can
-resolve.
+The Contentful client is yours. This is the boundary, and it has two supported shapes: **you fetch,
+the SDK resolves**, or **you hand the SDK your client and it fetches by ID for you.** Both end at
+the same resolution step, and you can use different paths for different entries in the same app.
 
-1. Fetch with one concrete Contentful locale. Do not use `withAllLocales` or raw CDA `locale=*` —
-   all-locale payloads use locale-keyed field maps the resolver cannot read, so entries fall back to
-   baseline.
+- **Manual** — you fetch the entry with your own client and pass it in. The quick start uses this
+  path. Keep your existing client, fetchers, and caching; the SDK only needs entries to arrive in a
+  shape it can resolve.
+- **Managed** — you give the SDK your Contentful client once through the `contentful` config key,
+  and it fetches by entry ID through that client whenever you call `fetchContentfulEntry(id)` or
+  `fetchOptimizedEntry(id)`. The client stays yours; the SDK only calls `getEntry()` on it.
+
+Either way, the same fetch requirements hold:
+
+1. Fetch with one concrete Contentful locale. Do not use `withAllLocales` or raw Contentful Delivery
+   API (CDA) `locale=*` — all-locale payloads use locale-keyed field maps the resolver cannot read,
+   so entries fall back to baseline.
 2. Use an `include` depth deep enough to resolve the whole tree — the entry, its sections, and the
    linked variant entries. `include: 10` is the common setting.
 3. Use the same locale for Contentful and for the SDK so localized Experience responses and rendered
@@ -320,7 +333,8 @@ resolve.
 A single-locale entry exposes its optimization fields directly, such as `fields.nt_experiences` and
 `fields.nt_variants` (the `nt_` prefix is how personalization links appear on an entry).
 
-**Copy this:**
+**Adapt this to your use case:** the manual path — your own fetcher, which the render step then
+resolves. `fetchEntry` is a helper you own and name.
 
 ```ts
 import * as contentful from 'contentful'
@@ -334,7 +348,7 @@ const contentfulClient = contentful.createClient({
   space: 'your-space-id',
 })
 
-export async function fetchOptimizedEntry(entryId: string) {
+export async function fetchEntry(entryId: string) {
   return await contentfulClient.getEntry(entryId, {
     include: INCLUDE_DEPTH, // resolve linked experience and variant entries before rendering
     locale: APP_LOCALE, // keep this aligned with the SDK locale
@@ -342,7 +356,39 @@ export async function fetchOptimizedEntry(entryId: string) {
 }
 ```
 
-For the resolver contract, see
+For the managed path, pass your client to the SDK as `contentful: { client }`. The SDK then merges
+your `contentful.defaultQuery`, any per-call query, the SDK locale as a fallback, and `include: 10`
+into each `getEntry()` call, and caches results per instance (default
+`{ maxEntries: 100, ttlMs: 300_000 }`; pass `cache: false` to disable, or
+`clearContentfulEntryCache()` to clear it). `fetchContentfulEntry(id)` returns the fetched entry;
+`fetchOptimizedEntry(id)` fetches and resolves in one call (see
+[Resolving entries and rendering the result](#resolving-entries-and-rendering-the-result)).
+
+**Adapt this to your use case:** the managed path — configure the client once, then fetch by ID.
+
+```ts
+import * as contentful from 'contentful'
+import ContentfulOptimization from '@contentful/optimization-web'
+
+const contentfulClient = contentful.createClient({
+  accessToken: 'your-contentful-delivery-token',
+  environment: 'main',
+  space: 'your-space-id',
+})
+
+const optimization = new ContentfulOptimization({
+  clientId: 'your-optimization-client-id',
+  locale: 'en-US',
+  // Hand the SDK your client; it calls getEntry() through it. The client stays yours.
+  contentful: { client: contentfulClient },
+})
+
+// getEntry() through your client, with include: 10 and the SDK locale merged in.
+const baselineEntry = await optimization.fetchContentfulEntry('hero-entry-id')
+```
+
+For the combined fetch-and-resolve call — `fetchOptimizedEntry(id)`, which fetches and resolves in
+one step — see the next section. For the resolver contract, see
 [Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
 
 ### Resolving entries and rendering the result
@@ -369,7 +415,22 @@ rendered markup, resolve it first and render whatever the SDK hands back.**
 
 Omit the second argument to resolve against the SDK's current state (the selections from the most
 recent accepted `page()`/`identify()`); pass an explicit `SelectedOptimizationArray` only when you
-resolve against selections you captured yourself.
+resolve against selections you captured yourself — for example selections handed over from a
+server-rendered response (see
+[Hybrid Node SSR and browser continuity](#hybrid-node-ssr-and-browser-continuity)).
+
+If you configured the managed path (`contentful: { client }`), `fetchOptimizedEntry(id, options?)`
+fetches and resolves in one call and returns the same fields plus the `baselineEntry` it fetched.
+Use it when you want the SDK to own the fetch; use `resolveOptimizedEntry(entry)` when you fetch the
+entry yourself.
+
+**Follow this pattern:** managed fetch-and-resolve in one call.
+
+```ts
+// options?: { query?, selectedOptimizations? } — omit to use current SDK state.
+const { entry, baselineEntry, selectedOptimization } =
+  await optimization.fetchOptimizedEntry('hero-entry-id')
+```
 
 Two facts hold everywhere:
 
@@ -386,12 +447,12 @@ Keep the baseline entry id separate from the resolved entry id in the DOM. Later
 baseline id to resolve again, so overwriting it with the variant id would make the SDK treat a
 variant as the baseline.
 
-**Adapt this to your use case:** a render function that resolves one entry and writes it plus its
-tracking metadata into an element.
+**Adapt this to your use case:** a render function that resolves one manually fetched entry and
+writes it plus its tracking metadata into an element.
 
 ```ts
 async function renderEntry(entryId: string, element: HTMLElement): Promise<void> {
-  const baselineEntry = await fetchOptimizedEntry(entryId)
+  const baselineEntry = await fetchEntry(entryId) // your own fetcher from the section above
 
   // Omit selections to use current SDK state from the most recent accepted page()/identify().
   const { entry, optimizationContextId, selectedOptimization } =
@@ -476,7 +537,7 @@ event consent is `undefined` or `false`, the SDK's default allow-list permits on
 1. If policy permits personalization by default and you render no consent UI, seed accepted consent
    in `defaults` (as the quick start does).
 2. If policy depends on user choice, leave `consent` unset and call `consent(true | false)` from the
-   banner, CMP callback, or settings screen that owns the decision.
+   banner, consent-management platform (CMP) callback, or settings screen that owns the decision.
 3. For strict opt-in, pass `allowedEventTypes: []` so no event can emit before an explicit choice.
 4. Use object-form consent — `consent({ events: true, persistence: false })` — only when events are
    permitted but durable profile continuity must stay session-only. A boolean sets both axes
@@ -694,13 +755,28 @@ side-effect-free until you register the elements.
 3. Pass simple config as **attributes** (`client-id`, `environment`, `locale`, `live-updates`), and
    structured config as **DOM properties** (`defaults`, `api`, `trackEntryInteraction`, `sdk`,
    `onStatesReady`) — attributes are strings, so objects must be assigned as properties.
-4. On each `<ctfl-optimized-entry>`, assign the fetched entry to the `baselineEntry` **property**
-   (an object, so not an attribute). Per-entry tracking overrides use the `track-views`,
-   `track-clicks`, `track-hovers`, and `live-updates` attributes.
+4. Give each `<ctfl-optimized-entry>` its entry one of two ways:
+   - **Manual:** assign the fetched entry to the `baselineEntry` **property** (an object, so not an
+     attribute). You fetch the entry yourself and the element resolves it.
+   - **Managed:** set the SDK-owned `entry-id` **attribute** (or the `entryId` property, plus an
+     optional `entryQuery` property) and the element fetches and resolves by ID for you — no manual
+     fetch. This works only when the shared SDK instance carries a Contentful client
+     (`contentful: { client }`), so use a reused `window.contentfulOptimization` or an assigned
+     `sdk` that was configured that way; a root that builds its SDK from
+     `client-id`/`environment`/`locale` alone has no client to fetch through.
+
+   Per-entry tracking overrides use the `track-views`, `track-clicks`, `track-hovers`, and
+   `live-updates` attributes either way.
+
 5. Listen for `ctfl-entry-loading`, `ctfl-entry-resolved`, and `ctfl-entry-error` on an entry
    element to render app-owned UI; the root emits `ctfl-root-ready` and `ctfl-root-error`.
 
-**Adapt this to your use case:** register the elements, configure the root, and render on resolve.
+The `data-entry-id` below is an example name you invent — the SDK does not read it. The SDK-owned
+attribute is `entry-id` (no `data-` prefix), shown in the managed example below. Keep the two
+distinct.
+
+**Adapt this to your use case:** the manual path — you fetch and assign `baselineEntry`, then render
+on resolve. Here `data-entry-id` is your own lookup key, not the SDK's `entry-id` attribute.
 
 ```ts
 import {
@@ -723,7 +799,7 @@ const entryElement = document.querySelector<ContentfulOptimizedEntryElement>(
   'ctfl-optimized-entry[data-entry-id]',
 )
 if (entryElement?.dataset.entryId) {
-  // data-entry-id here is YOUR app's lookup metadata, not SDK config — you choose the attribute.
+  // data-entry-id here is YOUR app's lookup key — an attribute you named, not the SDK's entry-id.
   const baselineEntry = await contentfulClient.getEntry(entryElement.dataset.entryId, {
     include: 10,
     locale: 'en-US',
@@ -738,13 +814,31 @@ if (entryElement?.dataset.entryId) {
 }
 ```
 
-**Follow this pattern:** the markup the script above drives.
+**Follow this pattern:** the markup the manual script above drives. `data-entry-id` is the app's own
+attribute; the script reads it to decide what to fetch.
 
 ```html
 <ctfl-optimization-root client-id="your-optimization-client-id" environment="main" locale="en-US">
   <ctfl-optimized-entry data-entry-id="hero-entry-id"></ctfl-optimized-entry>
 </ctfl-optimization-root>
 ```
+
+For the managed path, the SDK instance must carry a Contentful client, and the element takes the
+SDK-owned `entry-id` attribute (no `data-` prefix). Setting `entry-id` makes the element fetch and
+resolve by ID on its own — you write no fetch and assign no `baselineEntry`.
+
+**Follow this pattern:** managed markup — the SDK's own `entry-id` attribute drives the fetch.
+
+```html
+<!-- The shared SDK was constructed with contentful: { client }, so the element can fetch by ID. -->
+<ctfl-optimization-root>
+  <ctfl-optimized-entry entry-id="hero-entry-id"></ctfl-optimized-entry>
+</ctfl-optimization-root>
+```
+
+The `entry-id` attribute is SDK-owned: match the exact name and the element fetches through the
+configured client. The `data-entry-id` in the manual example is a reader-invented lookup key — the
+app names it and reads it to drive its own fetch. Do not treat one as the other.
 
 When the root owns the SDK instance, `trackEntryInteraction` defaults view, click, and hover
 tracking to enabled — the same defaults as the `ContentfulOptimization` constructor. Set the
