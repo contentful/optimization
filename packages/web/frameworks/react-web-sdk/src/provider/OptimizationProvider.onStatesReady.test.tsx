@@ -225,6 +225,20 @@ describe('OptimizationProvider onStatesReady', () => {
     rendered.unmount()
   })
 
+  it('prefetches managed entries after the live SDK is ready', async () => {
+    const prefetchManagedEntries = rs.fn(async () => await Promise.resolve([]))
+    const sdk = createOptimizationSdk({ prefetchManagedEntries })
+    const rendered = await renderClientAsync(
+      <OptimizationProvider sdk={sdk} prefetchManagedEntries={['hero-entry']}>
+        <></>
+      </OptimizationProvider>,
+    )
+
+    expect(prefetchManagedEntries).toHaveBeenCalledWith(['hero-entry'])
+
+    rendered.unmount()
+  })
+
   it('renders serverOptimizationState from a snapshot before owned SDK setup finishes', async () => {
     const serverOptimizationState = createServerOptimizationState('owned-server-profile')
     const setupOrder: string[] = []

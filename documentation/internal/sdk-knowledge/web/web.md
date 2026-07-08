@@ -42,24 +42,30 @@ wraps this). Package source root: `packages/web/web-sdk/src`; shared core:
   - **`contentful?: ContentfulConfig` (managed entry fetching):** opt-in; from `CoreConfig`
     (`OptimizationWebConfig extends CoreStatefulConfig extends CoreConfig`).
     `{ client: ContentfulEntryClient, defaultQuery?: ContentfulEntryQuery, cache?: false |`
-    `{ maxEntries?, ttlMs? } }`. `ContentfulEntryClient` = `{ getEntry(entryId, query?) }`;
-    `ContentfulEntryQuery = EntryQueries<undefined>`. Managed query merges `defaultQuery` + per-call
-    query + SDK locale fallback + `include: 10`. Cache default
-    `{ maxEntries: 100, ttlMs: 300_000 }`; `cache: false` disables. source: `core-sdk` `CoreBase.ts`
-    `CoreConfig.contentful` (:173), `ContentfulConfig` (:68), `ContentfulEntryClient` (:46),
-    `ContentfulEntryQuery` (:34); `web-sdk` `ContentfulOptimization.ts:68`
-    (`extends CoreStatefulConfig`); `CoreStateful.ts:175` (`CoreStatefulConfig extends CoreConfig`).
+    `{ maxEntries?, ttlMs? } }`. `ContentfulEntryClient` =
+    `{ getEntry(entryId, query?), getEntries(query?) }`;
+    `ContentfulEntryQuery = EntryQueries<undefined>`. Managed query merges `defaultQuery` +
+    per-entry query + SDK locale fallback + `include: 10`. One uncached normalized entry uses
+    `getEntry()`; multiple uncached entries with the same normalized query use `getEntries()`;
+    same-tick uncached single-entry calls with the same normalized query can share `getEntries()`;
+    large `getEntries()` fetches split into 100-ID chunks. Cache default
+    `{ maxEntries: 100, ttlMs: 300_000 }`; `cache: false` disables. source:
+    `packages/universal/core-sdk/src/CoreBase.ts` `CoreConfig.contentful`, `ContentfulConfig`,
+    `ContentfulEntryClient`, `ContentfulEntryQuery`, `fetchContentfulEntries`;
+    `packages/universal/core-sdk/src/managed-entry-fetcher.ts` `ManagedEntryFetcher`;
+    `packages/web/web-sdk/src/ContentfulOptimization.ts` `OptimizationWebConfig`;
+    `packages/universal/core-sdk/src/CoreStateful.ts` `CoreStatefulConfig`.
 
 ## Components & hooks
 
 None (imperative class + Web Components; no React surface). Web Components element table:
 
-| Element / symbol                         | Kind      | Notes                                                                                                                                                                                                                                                                                                                                                                                          | source                                                                                                                                                   |
-| ---------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `defineContentfulOptimizationElements()` | registrar | Side-effect-free until called; registers the two custom elements                                                                                                                                                                                                                                                                                                                               | `src/web-components/index.ts:4-5,21-45`                                                                                                                  |
-| `<ctfl-optimization-root>`               | element   | Attributes: `client-id`, `environment`, `locale`, `live-updates`. Properties: `defaults`, `api`, `trackEntryInteraction`, `sdk`, `onStatesReady`. Reuses `window.contentfulOptimization` automatically if present (`this.assignedSdk ?? getGlobalSdk()`); `sdk` prop supplies an explicit instance. Root-owned SDK defaults view/click/hover on. Events `ctfl-root-ready` / `ctfl-root-error`. | `web-components/ContentfulOptimizationRootElement.ts:51-53,123-166,217,42-48`; `RootElement.ts:13-14`; `presentation/optimizationRootRuntime.ts:131-133` |
-| `<ctfl-optimized-entry>`                 | element   | Property `baselineEntry` (manual: assigning it triggers resolution) OR `entry-id` attribute / `entryId` property (managed: SDK fetches by ID via configured `contentful.client`); `entryQuery` property; `sdk`. Observed attributes: `entry-id`, `live-updates`, `track-clicks`, `track-hovers`, `track-views`. Events `ctfl-entry-loading` / `ctfl-entry-resolved` / `ctfl-entry-error`.      | `web-components/ContentfulOptimizedEntryElement.ts:76-77,92-119,197-201,253-262,16-18`                                                                   |
-| `ContentfulOptimizedEntryEventDetail`    | type      | `{ entry, metadata, resolvedData, selectedOptimization, selectedOptimizations, snapshot }`                                                                                                                                                                                                                                                                                                     | `ContentfulOptimizedEntryElement.ts:27-34,453-468`                                                                                                       |
+| Element / symbol                         | Kind      | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | source                                                                                                                                             |
+| ---------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `defineContentfulOptimizationElements()` | registrar | Side-effect-free until called; registers the two custom elements                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `src/web-components/index.ts:4-5,21-45`                                                                                                            |
+| `<ctfl-optimization-root>`               | element   | Attributes: `client-id`, `environment`, `locale`, `live-updates`. Properties: `defaults`, `api`, `contentful`, `trackEntryInteraction`, `sdk`, `onStatesReady`, `prefetchManagedEntries`. `contentful` is property-only and configures owned-root managed fetching. Reuses `window.contentfulOptimization` automatically if present (`this.assignedSdk ?? getGlobalSdk()`); `sdk` prop supplies an explicit instance. Root-owned SDK defaults view/click/hover on. `prefetchManagedEntries` warms the SDK-managed entry cache after the root SDK is ready. Events `ctfl-root-ready` / `ctfl-root-error`. | `packages/web/web-sdk/src/web-components/ContentfulOptimizationRootElement.ts`; `packages/web/web-sdk/src/presentation/optimizationRootRuntime.ts` |
+| `<ctfl-optimized-entry>`                 | element   | Property `baselineEntry` (manual: assigning it triggers resolution) OR `entry-id` attribute / `entryId` property (managed: SDK fetches by ID via configured `contentful.client`); `entryQuery` property; `sdk`. Observed attributes: `entry-id`, `live-updates`, `track-clicks`, `track-hovers`, `track-views`. Events `ctfl-entry-loading` / `ctfl-entry-resolved` / `ctfl-entry-error`.                                                                                                                                                                                                                | `web-components/ContentfulOptimizedEntryElement.ts:76-77,92-119,197-201,253-262,16-18`                                                             |
+| `ContentfulOptimizedEntryEventDetail`    | type      | `{ entry, metadata, resolvedData, selectedOptimization, selectedOptimizations, snapshot }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `ContentfulOptimizedEntryElement.ts:27-34,453-468`                                                                                                 |
 
 ## Render / entry resolution
 
@@ -67,12 +73,19 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   - `fetchContentfulEntry(entryId, query?)` → `Promise<Entry>` — calls the configured client's
     `getEntry()` with the merged query (`defaultQuery` + per-call + locale fallback +
     `include: 10`), per-instance cached. Throws if `contentful.client` is not configured.
+  - `fetchContentfulEntries(entries)` → `Promise<Entry[]>` — accepts string IDs or
+    `{ entryId, entryQuery? }` descriptors; returns entries in descriptor order, including
+    duplicates; batches same-query uncached entries through `getEntries()`.
+  - `prefetchManagedEntries(entries)` → `Promise<ManagedEntryHandoff[]>` — fetches the same
+    descriptors and returns `{ entryId, entryQuery?, baselineEntry }` handoff entries for framework
+    cache warming.
   - `fetchOptimizedEntry(entryId, options?)` → `Promise<{ baselineEntry, entry,`
     `selectedOptimization?, ... }>` — fetches then resolves; `options = { query?,`
     `selectedOptimizations? }`. Additive to synchronous `resolveOptimizedEntry()`.
   - `clearContentfulEntryCache()` → clears this instance's managed-entry cache.
-  - source: `core-sdk` `CoreBase.ts` `clearContentfulEntryCache` (:273), `fetchContentfulEntry`
-    (:288), `fetchOptimizedEntry` (:352), `FetchOptimizedEntryResult` (:99).
+  - source: `packages/universal/core-sdk/src/CoreBase.ts` `clearContentfulEntryCache`,
+    `fetchContentfulEntry`, `fetchContentfulEntries`, `prefetchManagedEntries`,
+    `fetchOptimizedEntry`, `FetchOptimizedEntryResult`.
 - `resolveOptimizedEntry(baselineEntry, selectedOptimizations?)` →
   `{ entry, selectedOptimization?, optimizationContextId? }` (public `ResolvedData` shape). Omitting
   arg 2 defaults to `selectedOptimizationsSignal.value` (current SDK state). source: `core-sdk`

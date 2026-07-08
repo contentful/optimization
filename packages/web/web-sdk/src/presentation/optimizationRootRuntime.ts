@@ -41,6 +41,8 @@ export interface OptimizationRootSdk
   }
   /** Release SDK-owned resources. */
   destroy: () => void
+  /** Warm the SDK-managed Contentful entry cache. */
+  prefetchManagedEntries: ContentfulOptimization['prefetchManagedEntries']
   /** Set the active locale and return the resulting locale. */
   setLocale: (locale: string) => string | undefined
 }

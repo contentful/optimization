@@ -23,6 +23,7 @@ import type { CoreStatefulConfig } from '@contentful/optimization-core'
  * @public
  */
 export type OptimizationConfig = CoreStatefulConfig
+export type { ManagedEntryDescriptor } from '@contentful/optimization-core'
 export type { OptimizationPreviewRuntime, OptimizationSdk } from './OptimizationSdk'
 
 export { OptimizationProvider } from './components/OptimizationProvider'

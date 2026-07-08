@@ -1,8 +1,9 @@
 import type { Entry } from 'contentful'
 import type { ContentfulEntryQuery } from './CoreBase'
 import {
+  getOptimizedEntrySourceKey,
   OptimizedEntrySourceController,
-  prefetchOptimizedEntries,
+  prefetchManagedEntries,
 } from './OptimizedEntrySourceController'
 
 function createTestEntry(id: string): Entry {
@@ -97,6 +98,12 @@ describe('OptimizedEntrySourceController', () => {
     })
   })
 
+  it('creates stable managed source keys for equivalent query objects', () => {
+    expect(getOptimizedEntrySourceKey('baseline', { locale: 'de-DE', include: 2 })).toBe(
+      getOptimizedEntrySourceKey('baseline', { include: 2, locale: 'de-DE' }),
+    )
+  })
+
   it('stays loading without fetching until the SDK is ready', () => {
     const sdk = createSdk(async () => await Promise.resolve(createTestEntry('baseline')))
     const controller = new OptimizedEntrySourceController()
@@ -170,34 +177,27 @@ describe('OptimizedEntrySourceController', () => {
   })
 })
 
-describe('prefetchOptimizedEntries', () => {
-  it('dedupes descriptor fetches by managed entry source key', async () => {
-    const fetchContentfulEntry = rs.fn(
-      async (entryId: string) => await Promise.resolve(createTestEntry(entryId)),
-    )
+describe('prefetchManagedEntries', () => {
+  it('delegates prefetching to the managed-entry runtime', async () => {
+    const runtime = {
+      prefetchManagedEntries: rs.fn(
+        async () =>
+          await Promise.resolve([
+            {
+              baselineEntry: createTestEntry('baseline'),
+              entryId: 'baseline',
+            },
+          ]),
+      ),
+    }
 
-    const entries = await prefetchOptimizedEntries({ fetchContentfulEntry }, [
-      { entryId: 'baseline', entryQuery: { locale: 'de-DE' } },
-      { entryId: 'baseline', entryQuery: { locale: 'de-DE' } },
-      { entryId: 'baseline', entryQuery: { locale: 'fr-FR' } },
-    ])
+    const entries = await prefetchManagedEntries(runtime, ['baseline'])
 
-    expect(fetchContentfulEntry).toHaveBeenCalledTimes(2)
+    expect(runtime.prefetchManagedEntries).toHaveBeenCalledWith(['baseline'])
     expect(entries).toEqual([
       {
         baselineEntry: createTestEntry('baseline'),
         entryId: 'baseline',
-        entryQuery: { locale: 'de-DE' },
-      },
-      {
-        baselineEntry: createTestEntry('baseline'),
-        entryId: 'baseline',
-        entryQuery: { locale: 'de-DE' },
-      },
-      {
-        baselineEntry: createTestEntry('baseline'),
-        entryId: 'baseline',
-        entryQuery: { locale: 'fr-FR' },
       },
     ])
   })

@@ -108,6 +108,20 @@ function createEntry(id: string): ServerTrackingBaselineEntry {
   }
 }
 
+function createEntryCollection(items: readonly ServerTrackingBaselineEntry[]): {
+  readonly items: ServerTrackingBaselineEntry[]
+  readonly limit: number
+  readonly skip: number
+  readonly total: number
+} {
+  return {
+    items: [...items],
+    limit: items.length,
+    skip: 0,
+    total: items.length,
+  }
+}
+
 function createMergeTagEntry(id: string, selector: string): MergeTagEntry {
   const entry = createEntry(id)
   const mergeTagEntry: MergeTagEntry = {
@@ -145,14 +159,28 @@ describe('Next.js App Router server components', () => {
     expect(components).not.toHaveProperty('NextPagesAutoPageTracker')
   })
 
+  it('keeps the App Router root and provider as separate bound components', () => {
+    const components = createNextjsAppRouterOptimization({
+      ...sdkConfig,
+      server: {
+        enabled: false,
+      },
+    })
+
+    expect(components.OptimizationRoot).not.toBe(components.OptimizationProvider)
+  })
+
   it('loads server data into the bound client provider', async () => {
     setServerData({ events: true, persistence: true })
-    const serverOptimizedEntries = [{ baselineEntry, entryId: 'baseline-entry' }]
+    const prefetchedManagedEntries = [{ baselineEntry, entryId: 'baseline-entry' }]
 
     const { OptimizationRoot } = createNextjsAppRouterOptimization({
       ...sdkConfig,
       contentful: {
-        client: { getEntry: async () => await Promise.resolve(baselineEntry) },
+        client: {
+          getEntry: async () => await Promise.resolve(baselineEntry),
+          getEntries: async () => await Promise.resolve(createEntryCollection([])),
+        },
       },
       defaults: { consent: false, persistenceConsent: false },
       server: {
@@ -161,7 +189,10 @@ describe('Next.js App Router server components', () => {
       },
     })
 
-    const element = await OptimizationRoot({ children: 'Server content', serverOptimizedEntries })
+    const element = await OptimizationRoot({
+      children: 'Server content',
+      prefetchedManagedEntries,
+    })
 
     expect(element).toMatchObject({
       props: {
@@ -173,11 +204,45 @@ describe('Next.js App Router server components', () => {
         clientId: sdkConfig.clientId,
         defaults: { consent: true, persistenceConsent: true },
         environment: sdkConfig.environment,
+        prefetchedManagedEntries,
         serverOptimizationState: optimizationData,
-        serverOptimizedEntries,
       },
     })
     expect(element.props).not.toHaveProperty('contentful')
+  })
+
+  it('fetches App Router root prefetch descriptors on the server', async () => {
+    const getEntry = rs.fn(async () => await Promise.resolve(baselineEntry))
+    const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
+    const { OptimizationRoot } = createNextjsAppRouterOptimization({
+      ...sdkConfig,
+      contentful: { client: { getEntry, getEntries }, cache: false },
+      server: {
+        enabled: false,
+      },
+    })
+
+    const element = await OptimizationRoot({
+      children: 'Server content',
+      prefetchManagedEntries: [{ entryId: 'baseline-entry', entryQuery: { locale: 'de-DE' } }],
+    })
+
+    expect(getEntry).toHaveBeenCalledWith('baseline-entry', {
+      include: 10,
+      locale: 'de-DE',
+    })
+    expect(getEntries).not.toHaveBeenCalled()
+    expect(element).toMatchObject({
+      props: {
+        prefetchedManagedEntries: [
+          {
+            baselineEntry,
+            entryId: 'baseline-entry',
+            entryQuery: { locale: 'de-DE' },
+          },
+        ],
+      },
+    })
   })
 
   it('loads server defaults and live updates into the bound provider', async () => {
@@ -285,9 +350,10 @@ describe('Next.js App Router server components', () => {
 
   it('fetches and renders managed entryId content on the server', async () => {
     const getEntry = rs.fn(async () => await Promise.resolve(baselineEntry))
+    const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
     const { OptimizedEntry } = createNextjsAppRouterOptimization({
       ...sdkConfig,
-      contentful: { client: { getEntry }, cache: false },
+      contentful: { client: { getEntry, getEntries }, cache: false },
       server: {
         enabled: false,
       },
@@ -303,6 +369,7 @@ describe('Next.js App Router server components', () => {
       include: 10,
       locale: 'de-DE',
     })
+    expect(getEntries).not.toHaveBeenCalled()
     expect(element.props).toMatchObject({
       'data-ctfl-baseline-id': 'baseline-entry',
       'data-ctfl-entry-id': 'baseline-entry',

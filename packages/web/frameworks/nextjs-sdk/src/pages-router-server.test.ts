@@ -95,6 +95,20 @@ function createEntry(id: string): Entry {
   }
 }
 
+function createEntryCollection(items: readonly Entry[]): {
+  readonly items: Entry[]
+  readonly limit: number
+  readonly skip: number
+  readonly total: number
+} {
+  return {
+    items: [...items],
+    limit: items.length,
+    skip: 0,
+    total: items.length,
+  }
+}
+
 function createContext({
   cookies = {},
   headers = {},
@@ -259,25 +273,26 @@ describe('Next.js Pages Router server helpers', () => {
     expect(JSON.parse(JSON.stringify(result.props))).toEqual(result.props)
   })
 
-  it('prefetches declared optimized entries into page props after request data loads', async () => {
+  it('prefetches declared managed entries into page props after request data loads', async () => {
     const calls: string[] = []
     const baselineEntry = createEntry('hero')
     const getEntry = rs.fn(async () => {
       calls.push('fetch')
       return await Promise.resolve(baselineEntry)
     })
+    const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
     const page = rs.fn<CoreStatelessRequest['page']>(async () => {
       calls.push('page')
       return await Promise.resolve({ accepted: true, data: OPTIMIZATION_DATA })
     })
     const { sdk } = createSdk(page, {
       ...SDK_CONFIG,
-      contentful: { client: { getEntry }, cache: false },
+      contentful: { client: { getEntry, getEntries }, cache: false },
     })
 
     const result = await getNextjsPagesRouterOptimizationProps(sdk, createContext(), {
       consent: true,
-      prefetchOptimizedEntries: [
+      prefetchManagedEntries: [
         { entryId: 'hero', entryQuery: { locale: 'de-DE' } },
         { entryId: 'hero', entryQuery: { locale: 'de-DE' } },
       ],
@@ -286,7 +301,8 @@ describe('Next.js Pages Router server helpers', () => {
     expect(calls).toEqual(['page', 'fetch'])
     expect(getEntry).toHaveBeenCalledTimes(1)
     expect(getEntry).toHaveBeenCalledWith('hero', { include: 10, locale: 'de-DE' })
-    expect(result.props.contentfulOptimization.serverOptimizedEntries).toEqual([
+    expect(getEntries).not.toHaveBeenCalled()
+    expect(result.props.contentfulOptimization.prefetchedManagedEntries).toEqual([
       {
         baselineEntry,
         entryId: 'hero',

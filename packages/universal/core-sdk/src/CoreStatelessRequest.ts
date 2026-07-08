@@ -12,6 +12,8 @@ import type {
   ContentfulEntryQuery,
   FetchOptimizedEntryOptions,
   FetchOptimizedEntryResult,
+  ManagedEntryDescriptor,
+  ManagedEntryHandoff,
 } from './CoreBase'
 import type CoreStateless from './CoreStateless'
 import type { CoreStatelessInsightsOptions, CoreStatelessRequestOptions } from './CoreStateless'
@@ -30,6 +32,7 @@ import type {
   ViewBuilderArgs,
 } from './events'
 import { normalizeExplicitLocale } from './locale'
+import { createManagedEntryHandoffs, normalizeManagedEntryDescriptor } from './managed-entry'
 
 const coreLogger = createScopedLogger('CoreStateless')
 
@@ -309,6 +312,43 @@ export class CoreStatelessRequest {
       entryId,
       this.withRequestContentfulLocale(query),
     )
+  }
+
+  /**
+   * Fetch Contentful entries through the parent SDK's configured `contentful.js` client.
+   *
+   * @remarks
+   * If `contentful.defaultQuery` and a descriptor's `entryQuery` omit `locale`, this request's
+   * `locale` becomes the managed Contentful query locale.
+   *
+   * @public
+   */
+  async fetchContentfulEntries<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(entries: readonly ManagedEntryDescriptor[]): Promise<Array<Entry<S, undefined, L>>> {
+    return await this.core.fetchContentfulEntries<S, L>(
+      entries.map((entry) => {
+        const descriptor = normalizeManagedEntryDescriptor(entry)
+        const entryQuery = this.withRequestContentfulLocale(descriptor.entryQuery)
+
+        return entryQuery === undefined
+          ? descriptor.entryId
+          : { entryId: descriptor.entryId, entryQuery }
+      }),
+    )
+  }
+
+  /**
+   * Prefetch Contentful entries and return request-local handoff payloads for framework SSR.
+   *
+   * @public
+   */
+  async prefetchManagedEntries(
+    entries: readonly ManagedEntryDescriptor[],
+  ): Promise<ManagedEntryHandoff[]> {
+    const baselineEntries = await this.fetchContentfulEntries(entries)
+    return createManagedEntryHandoffs(entries, baselineEntries)
   }
 
   /**

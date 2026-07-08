@@ -1,4 +1,5 @@
 import ContentfulOptimization from '../ContentfulOptimization'
+import type { ContentfulConfig, ManagedEntryDescriptor } from '../core-sdk'
 import {
   OPTIMIZED_ENTRY_HOST_DISPLAY,
   createOptimizationRootSdkBinding,
@@ -61,8 +62,10 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
     sdk: undefined,
   }
   private defaultOptions: OptimizationRootSdkConfig['defaults'] | undefined
+  private contentfulOptions: ContentfulConfig | undefined
   private onStatesReadyHandler: OnStatesReady | undefined
   private previewPanelOpenSubscription: { unsubscribe: () => void } | undefined
+  private prefetchManagedEntryDescriptors: readonly ManagedEntryDescriptor[] | undefined
   private sdkBinding: OptimizationRootSdkBinding | undefined
   private assignedSdk: ContentfulOptimization | undefined
   private readonly subscribers = new Set<OptimizationRootContextSubscriber>()
@@ -114,6 +117,15 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
     this.reinitializeIfConnected()
   }
 
+  get contentful(): ContentfulConfig | undefined {
+    return this.contentfulOptions
+  }
+
+  set contentful(value: ContentfulConfig | undefined) {
+    this.contentfulOptions = value
+    this.reinitializeIfConnected()
+  }
+
   get api(): OptimizationRootSdkConfig['api'] | undefined {
     return this.apiOptions
   }
@@ -148,6 +160,15 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
   set onStatesReady(value: OnStatesReady | undefined) {
     this.onStatesReadyHandler = value
     this.reinitializeIfConnected()
+  }
+
+  get prefetchManagedEntries(): readonly ManagedEntryDescriptor[] | undefined {
+    return this.prefetchManagedEntryDescriptors
+  }
+
+  set prefetchManagedEntries(value: readonly ManagedEntryDescriptor[] | undefined) {
+    this.prefetchManagedEntryDescriptors = value
+    this.prefetchManagedEntriesIfReady()
   }
 
   private setOptionalAttribute(name: string, value: string | undefined): void {
@@ -232,6 +253,7 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
         isPreviewPanelOpen,
         sdk,
       })
+      this.prefetchManagedEntriesIfReady()
       this.dispatchEvent(
         new CustomEvent<ContentfulOptimizationRootReadyEventDetail>(ROOT_READY_EVENT, {
           bubbles: true,
@@ -261,6 +283,7 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
     return {
       api: this.apiOptions,
       clientId,
+      contentful: this.contentfulOptions,
       defaults: this.defaultOptions,
       environment: this.environment,
       locale: this.locale,
@@ -315,6 +338,27 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
         detail: { error },
       }),
     )
+  }
+
+  private prefetchManagedEntriesIfReady(): void {
+    const {
+      context: { sdk },
+      prefetchManagedEntryDescriptors: entries,
+    } = this
+
+    if (sdk === undefined || entries === undefined || entries.length === 0) {
+      return
+    }
+
+    void sdk.prefetchManagedEntries(entries).catch((error: unknown) => {
+      if (this.context.sdk !== sdk) {
+        return
+      }
+
+      const normalizedError = toError(error)
+      this.publishContext({ error: normalizedError })
+      this.dispatchRootError(normalizedError)
+    })
   }
 
   private publishContext(nextContext: Partial<ContentfulOptimizationRootContext>): void {

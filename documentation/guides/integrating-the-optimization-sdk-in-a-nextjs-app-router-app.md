@@ -361,11 +361,13 @@ SDK's resolution hand-off:
   key (`contentful: { client }`), then pass an `entryId` to a bound server `OptimizedEntry` instead
   of a fetched `baselineEntry`. The SDK fetches that entry by ID through your client
   (`sdk.fetchOptimizedEntry(entryId, { query: entryQuery })`) and resolves it. The client is still
-  yours — the SDK only calls `getEntry()` on it.
+  yours — the SDK uses its `getEntry()` and `getEntries()` methods.
 
 This guide teaches the manual path. The fetch rules below describe what a resolvable payload looks
 like either way: for managed fetching the SDK merges your `entryQuery`, the SDK locale, and
-`include: 10` into the `getEntry()` call, so the single-locale and include-depth rules still hold.
+`include: 10` into the Contentful query, so the single-locale and include-depth rules still hold.
+When several uncached managed entries share the same normalized query, the SDK uses your client's
+`getEntries()` method. Large `getEntries()` fetches are split into 100-ID chunks.
 
 1. Fetch with one concrete Contentful locale. Do not use `withAllLocales` or raw Contentful Delivery
    API (CDA) `locale=*` — all-locale payloads use locale-keyed field maps the resolver cannot read,
@@ -494,6 +496,10 @@ export default async function Home() {
 }
 ```
 
+If a layout knows the managed IDs before child routes render, pass
+`prefetchManagedEntries={['your-page-entry-id']}` to the bound `OptimizationRoot`. The App Router
+server root fetches those entries and passes them to React Web as `prefetchedManagedEntries`.
+
 The default App Router path needs no manual `resolveOptimizedEntry()` call and no custom takeover
 boundary. Reach for those only in [advanced routes](#manual-server-and-client-escape-hatches).
 
@@ -556,6 +562,11 @@ or is identified, and entries should update without a reload.
 Live updates are opt-in because most content is fixed for the life of a request. You do not add a
 provider for this — the bound `OptimizationRoot` already includes the live-updates provider
 internally. You only choose the scope:
+
+Use the bound `OptimizationProvider` only as an alternative wrapper when an adapter needs provider
+control. Do not nest it inside `OptimizationRoot`: the root already includes the provider, and a
+nested provider creates a separate context that can hide server handoffs such as
+`prefetchedManagedEntries`.
 
 1. **App-wide default:** set `liveUpdates: true` in the factory config
    (`createNextjsAppRouterOptimization`). The bound root passes it through, so every live-capable

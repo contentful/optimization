@@ -183,27 +183,32 @@ For every option, callback payload, and exported type, use the generated
 
 Core exposes reusable primitives for SDK layers:
 
-| Surface                         | Purpose                                                                           |
-| ------------------------------- | --------------------------------------------------------------------------------- |
-| `CoreStateful`                  | Stateful optimization runtime for browser, mobile, and bridge SDKs                |
-| `CoreStateless`                 | Stateless optimization runtime for server SDKs                                    |
-| Event methods                   | `identify`, `page`, `screen`, `track`, `trackView`, `trackClick`, etc.            |
-| Resolution and fetch helpers    | `resolveOptimizedEntry`, `fetchOptimizedEntry`, `getMergeTagValue`, and `getFlag` |
-| Current-state tracking          | `AcceptedCurrentStateTracker` for SDK-owned page or screen adapters               |
-| `states`                        | Stateful observable state streams                                                 |
-| Interceptors                    | First-party hooks for event and state lifecycle customization                     |
-| Queue policy and fetch helpers  | Shared retry, flush, timeout, and offline buffering behavior                      |
-| Signal and observable utilities | Lightweight reactive primitives used internally by stateful SDK layers            |
+| Surface                         | Purpose                                                                                                                                                       |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CoreStateful`                  | Stateful optimization runtime for browser, mobile, and bridge SDKs                                                                                            |
+| `CoreStateless`                 | Stateless optimization runtime for server SDKs                                                                                                                |
+| Event methods                   | `identify`, `page`, `screen`, `track`, `trackView`, `trackClick`, etc.                                                                                        |
+| Resolution and fetch helpers    | `resolveOptimizedEntry`, `fetchContentfulEntry`, `fetchContentfulEntries`, `fetchOptimizedEntry`, `prefetchManagedEntries`, `getMergeTagValue`, and `getFlag` |
+| Current-state tracking          | `AcceptedCurrentStateTracker` for SDK-owned page or screen adapters                                                                                           |
+| `states`                        | Stateful observable state streams                                                                                                                             |
+| Interceptors                    | First-party hooks for event and state lifecycle customization                                                                                                 |
+| Queue policy and fetch helpers  | Shared retry, flush, timeout, and offline buffering behavior                                                                                                  |
+| Signal and observable utilities | Lightweight reactive primitives used internally by stateful SDK layers                                                                                        |
 
 When a `contentful.js` client is available, prefer SDK-managed fetching. Configure
-`contentful: { client, defaultQuery?, cache? }`, then call `fetchContentfulEntry(entryId, query?)`
-or `fetchOptimizedEntry(entryId, options?)`. Managed calls merge `defaultQuery`, per-call query
+`contentful: { client, defaultQuery?, cache? }`, then call `fetchContentfulEntry(entryId, query?)`,
+`fetchContentfulEntries(entries)`, `prefetchManagedEntries(entries)`, or
+`fetchOptimizedEntry(entryId, options?)`. Managed calls merge `defaultQuery`, per-entry query
 overrides, SDK `locale` fallback, and `include: 10`, then cache entries per SDK instance by default.
-Set `contentful.cache: false` to disable the cache or call `clearContentfulEntryCache()` to clear
-it. `resolveOptimizedEntry()` remains the manual path for entries the app already fetched. Stateful
-Core uses the current `selectedOptimizations` when omitted, request-bound stateless clients use the
-latest accepted Experience selections and request `locale` fallback for managed Contentful fetches,
-and root stateless callers pass explicit `selectedOptimizations`.
+For multiple uncached entries with the same normalized query, Core calls
+`client.getEntries({ 'sys.id[in]': ids, limit: ids.length })`, splitting large batches into 100-ID
+chunks. Same-tick uncached single-entry calls can join the same batch. Results preserve descriptor
+order and duplicates. Set `contentful.cache: false` to disable the cache or call
+`clearContentfulEntryCache()` to clear it. `resolveOptimizedEntry()` remains the manual path for
+entries the app already fetched. Stateful Core uses the current `selectedOptimizations` when
+omitted, request-bound stateless clients use the latest accepted Experience selections and request
+`locale` fallback for managed Contentful fetches, and root stateless callers pass explicit
+`selectedOptimizations`.
 
 Do not pass all-locale CDA responses from `withAllLocales` or `locale=*`; optimization fields such
 as `fields.nt_experiences` and `fields.nt_variants` must be direct single-locale field values. See

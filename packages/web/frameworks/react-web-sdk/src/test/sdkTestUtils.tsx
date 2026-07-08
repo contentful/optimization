@@ -43,8 +43,10 @@ export type RuntimeOptimization = OptimizationSdk
 export type OptimizationSdkOverrides = Omit<
   Partial<OptimizationSdkPublic>,
   | 'identify'
+  | 'fetchContentfulEntries'
   | 'fetchContentfulEntry'
   | 'page'
+  | 'prefetchManagedEntries'
   | 'resolveOptimizedEntry'
   | 'screen'
   | 'states'
@@ -52,9 +54,11 @@ export type OptimizationSdkOverrides = Omit<
   | 'tracking'
   | 'trackView'
 > & {
+  fetchContentfulEntries?: (entries: readonly unknown[]) => Promise<Entry[]>
   fetchContentfulEntry?: (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
   identify?: EventMethodOverride<OptimizationSdk['identify']>
   page?: EventMethodOverride<OptimizationSdk['page']>
+  prefetchManagedEntries?: (entries: readonly unknown[]) => Promise<unknown[]>
   resolveOptimizedEntry?: ResolveOptimizedEntry
   screen?: EventMethodOverride<OptimizationSdk['screen']>
   states?: Partial<OptimizationSdk['states']>
@@ -179,6 +183,16 @@ function toEventEmissionResult(value: unknown): EventEmissionResult {
   return { accepted: true }
 }
 
+function getManagedEntryDescriptorId(entry: unknown): string {
+  if (typeof entry === 'string') return entry
+
+  if (entry !== null && typeof entry === 'object' && 'entryId' in entry) {
+    return String(entry.entryId)
+  }
+
+  return String(undefined)
+}
+
 export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}): OptimizationSdk {
   const { states: stateOverrides, tracking: trackingOverrides, ...sdkOverrides } = overrides
   const hasConsent = sdkOverrides.hasConsent ?? (() => true)
@@ -227,6 +241,10 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
     },
     fetchContentfulEntry: async (entryId: string) =>
       await Promise.resolve(createTestEntry(entryId)),
+    fetchContentfulEntries: async (entries: readonly unknown[]) =>
+      await Promise.resolve(
+        entries.map((entry) => createTestEntry(getManagedEntryDescriptorId(entry))),
+      ),
     getFlag: () => undefined,
     getMergeTagValue: () => undefined,
     hasConsent,
@@ -236,6 +254,7 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
     },
     locale: undefined,
     page,
+    prefetchManagedEntries: async () => await Promise.resolve([]),
     resolveOptimizedEntry: (entry: Entry) => ({ entry }),
     reset: () => undefined,
     screen: async () => {

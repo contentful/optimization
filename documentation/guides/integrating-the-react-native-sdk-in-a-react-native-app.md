@@ -268,6 +268,9 @@ direct values, not locale-keyed maps.
    same language.
 5. Do not pass `contentful.js` `withAllLocales` results or raw CDA `locale=*` responses to
    `OptimizedEntry`, `useOptimizedEntry`, or `useEntryResolver`.
+6. Pass `prefetchManagedEntries` to `OptimizationRoot` or `OptimizationProvider` when a screen knows
+   the managed entries it will render soon and you want the SDK to warm its managed-entry cache
+   after readiness.
 
 **Adapt this to your use case:**
 
@@ -306,6 +309,10 @@ Changing the provider `locale` prop after initialization calls `sdk.setLocale(ne
 the locale update, Experience API requests and event context use the new locale, but the SDK does
 not refetch Contentful entries or refresh profile state. Refetch entries and run your normal
 `screen()`, `identify()`, or profile refresh path when localized data must update.
+
+`prefetchManagedEntries` accepts entry ID strings or `{ entryId, entryQuery }` descriptors. The
+provider keeps rendering children while the cache warms. React Native does not expose
+`prefetchedManagedEntries` because it has no server-to-client hydration handoff path.
 
 For the entry contract, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).

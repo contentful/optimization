@@ -52,9 +52,9 @@ export type {
 export { OptimizationRoot } from './root/OptimizationRoot'
 export type { OptimizationRootProps } from './root/OptimizationRoot'
 export {
-  prefetchOptimizedEntries,
-  type OptimizedEntryPrefetchDescriptor,
-  type OptimizedEntryPrefetchRuntime,
-  type ServerOptimizedEntryHandoff,
+  prefetchManagedEntries,
+  type ManagedEntryDescriptor,
+  type ManagedEntryHandoff,
+  type ManagedEntryPrefetchRuntime,
 } from './server-optimized-entries'
 export type ContentfulOptimizationOrNull = OptimizationSdk | null

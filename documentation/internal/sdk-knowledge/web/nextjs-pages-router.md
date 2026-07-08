@@ -12,7 +12,7 @@ App Router surface: see [`nextjs-app-router.md`](./nextjs-app-router.md).
 | Import path                                           | Purpose                                                                                                                                                                                                                      | source                                                          |
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | `@contentful/optimization-nextjs/pages-router`        | **Client** factory → bound `OptimizationRoot`, `OptimizationProvider`, `OptimizedEntry`, `NextPagesAutoPageTracker`. Exports the factory + `NextPagesAutoPageTracker` + bound types (React Web hooks import from `/client`). | `src/pages-router.ts:29-33, 50, 96-101` (`'use client'` line 1) |
-| `@contentful/optimization-nextjs/pages-router/server` | **Server** factory → `getServerSideOptimizationProps`; also exports `prefetchOptimizedEntries`, `OptimizedEntryPrefetchDescriptor`, `ServerOptimizedEntryHandoff`                                                            | `src/pages-router-server.ts:36-40, 85`                          |
+| `@contentful/optimization-nextjs/pages-router/server` | **Server** factory → `getServerSideOptimizationProps`; also exports `prefetchManagedEntries`, `ManagedEntryDescriptor`, `ManagedEntryHandoff`                                                                                | `src/pages-router-server.ts:36-40, 88-93`                       |
 | `@contentful/optimization-nextjs/client`              | Browser-only hooks + per-entry controls                                                                                                                                                                                      | `src/client.ts`; `package.json` exports                         |
 | `@contentful/optimization-nextjs/server`              | Manual server SDK control (escape hatches)                                                                                                                                                                                   | `src/server.tsx`; `package.json` exports                        |
 | `@contentful/optimization-nextjs/api-schemas`         | Type guards `isMergeTagEntry`, `isResolvedContentfulEntry`                                                                                                                                                                   | `src/api-schemas.ts`                                            |
@@ -47,31 +47,33 @@ module cannot wildcard-re-export React Web without breaking Next.js 15 builds.) 
     `src/pages-router-server.ts:56-57, 293-306`.
   - **`contentful?: ContentfulConfig` (managed fetching):** via `OptimizationNodeConfig` → core
     `contentful` config; enables server-side managed fetch through the request optimization instance
-    (`requestOptimization.fetchOptimizedEntry(id)`) and the `prefetchOptimizedEntries` option below.
-    source: `core-sdk` `CoreBase.ts:173` (`CoreConfig.contentful`).
+    (`requestOptimization.fetchOptimizedEntry(id)`) and the `prefetchManagedEntries` option below.
+    source: `packages/universal/core-sdk/src/CoreBase.ts` `CoreConfig.contentful`.
   - Consent resolver reads cookies as `context.req.cookies[NAME]` (NOT App Router's
     `cookies.get()`). source: `src/pages-router-server.ts:52-54`; ref impl
     `lib/optimization-server.ts:16-19`.
   - `getServerSideOptimizationProps(context, options?)` return shape:
-    `{ props: { contentfulOptimization: { clientDefaults?, initialPageEvent, serverOptimizationState?, serverOptimizedEntries? } }, data, requestOptimization }`.
-    `clientDefaults` + `serverOptimizationState` + `serverOptimizedEntries` optional;
+    `{ props: { contentfulOptimization: { clientDefaults?, initialPageEvent, serverOptimizationState?, prefetchedManagedEntries? } }, data, requestOptimization }`.
+    `clientDefaults` + `serverOptimizationState` + `prefetchedManagedEntries` optional;
     `initialPageEvent` required. Also writes the anonymous-id `Set-Cookie`. source:
-    `src/pages-router-server.ts:41-49, 72-76, 101-149, 233-258`.
-  - **`prefetchOptimizedEntries` option:** `options.prefetchOptimizedEntries?: readonly`
-    `OptimizedEntryPrefetchDescriptor[]` (`{ entryId, entryQuery? }`). When present, the server
-    calls `prefetchOptimizedEntries(requestOptimization, descriptors)` and puts the resulting
-    `ServerOptimizedEntryHandoff[]` (each `{ entryId, entryQuery?, baselineEntry }`) into
-    `contentfulOptimization.serverOptimizedEntries`, which `OptimizationRoot` forwards to
-    react-web's `serverOptimizedEntries` prop so managed-`entryId` entries hydrate without a client
-    fetch. source: `src/pages-router-server.ts:36-40, 59, 121-149, 253-258`; `core-sdk`
-    `OptimizedEntrySourceController.ts:98-101`.
+    `packages/web/frameworks/nextjs-sdk/src/pages-router-server.ts:42-60,82-92,111-150,249-259`.
+  - **`prefetchManagedEntries` option:** `options.prefetchManagedEntries?: readonly`
+    `ManagedEntryDescriptor[]` (`string | { entryId, entryQuery? }`). When present, the server calls
+    `prefetchManagedEntries(requestOptimization, descriptors)` and puts the resulting
+    `ManagedEntryHandoff[]` (each `{ entryId, entryQuery?, baselineEntry }`) into
+    `contentfulOptimization.prefetchedManagedEntries`, which `OptimizationRoot` forwards to
+    react-web's `prefetchedManagedEntries` prop so managed-`entryId` entries hydrate without a
+    client fetch. source:
+    `packages/web/frameworks/nextjs-sdk/src/pages-router-server.ts:36-40,53-60,116-150,249-259`;
+    `packages/web/frameworks/nextjs-sdk/src/pages-router.ts:36-71`;
+    `packages/universal/core-sdk/src/OptimizedEntrySourceController.ts:32-36,91-96`.
 
 ## Components & hooks
 
 | Name                       | Kind      | Import path                      | Key props/args                                                                                                                                                               | Returns                                   | source                                                                |
 | -------------------------- | --------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------- |
-| `OptimizationRoot`         | component | `/pages-router`                  | `clientDefaults?`, `serverOptimizationState?`, `children`                                                                                                                    | `ReactElement`                            | `src/pages-router.ts:37-71`                                           |
-| `OptimizationProvider`     | component | `/pages-router`                  | same; internally wraps `LiveUpdatesProvider` (`globalLiveUpdates`)                                                                                                           | `ReactElement \| null`                    | `src/pages-router.ts:73-91`                                           |
+| `OptimizationRoot`         | component | `/pages-router`                  | `clientDefaults?`, `serverOptimizationState?`, `prefetchedManagedEntries?`, `prefetchManagedEntries?`, `children`                                                            | `ReactElement`                            | `packages/web/frameworks/nextjs-sdk/src/pages-router.ts:36-71`        |
+| `OptimizationProvider`     | component | `/pages-router`                  | same; internally wraps `LiveUpdatesProvider` (`globalLiveUpdates`)                                                                                                           | `ReactElement \| null`                    | `packages/web/frameworks/nextjs-sdk/src/pages-router.ts:76-98`        |
 | `OptimizedEntry`           | component | `/pages-router` (factory return) | discriminated union `baselineEntry` XOR `entryId` (+`entryQuery?`), render-prop child, `liveUpdates?`, `loadingFallback?`, `errorFallback?`, `onEntryError?`, tracking props | `ReactElement \| null`                    | `src/pages-router.ts:100` (= react-web `OptimizedEntry`)              |
 | `NextPagesAutoPageTracker` | component | `/pages-router`                  | `initialPageEvent?: 'emit'\|'skip'`, `getPagePayload?`                                                                                                                       | `null`                                    | `src/pages-router.ts:30`; react-web `src/router/next-pages.tsx:53-58` |
 | `useConsentState`          | hook      | `/client`                        | —                                                                                                                                                                            | consent state                             | react-web `hooks/useOptimizationState.ts:49`                          |
