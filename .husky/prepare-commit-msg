@@ -1,11 +1,10 @@
 #!/bin/bash
 
-# Don't run cz if a message has been supplied
-[ "$2" = "message" ] && exit 0
+set -e
 
-# Don't run cz if we're amending the previous commit
-[ "$2" = "commit" ] && [ "$3" = "HEAD" ] && exit 0
+# Only prompt for plain interactive `git commit`.
+[ -n "$2" ] && exit 0
+[ -r /dev/tty ] || exit 0
 
-if [[ $COMMIT_MSG =~ ^$ ]]; then
-  exec </dev/tty && node_modules/.bin/cz --hook || true
-fi
+exec </dev/tty
+pnpm exec tsx scripts/prepare-commit-message.ts "$1"

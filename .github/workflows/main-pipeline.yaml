@@ -45,7 +45,7 @@ jobs:
           # - Markdown plus docs/documentation changes do not trigger build, unit, native, or E2E jobs.
           # - Implementation E2E jobs run only for implementations relevant to changed paths.
           # - Skipped E2E jobs due to unmatched filters are expected behavior.
-          # - Keep this mapping aligned with CONTRIBUTING.md ("E2E Coverage and Environment").
+          # - Keep this mapping aligned with CONTRIBUTING.md ("E2E jobs").
           filters: |
             build:
               - '{lib/**,packages/**,implementations/**,package.json,pnpm-lock.yaml,pnpm-workspace.yaml,tsconfig*.json,.github/workflows/main-pipeline.yaml}'

@@ -24,7 +24,7 @@ plugins {
 // already-verified Maven Central namespace (com.contentful.java) rather than registering a new one.
 // The Android package namespace stays com.contentful.optimization (group != package, no conflict).
 // Version flows from the release tag in CI (-Pcontentful.optimization.version / RELEASE_VERSION),
-// matching the npm and SPM release versions cut from the same tag.
+// using the optimization-android-v* package release tag created by Release Please.
 group = "com.contentful.java"
 version = (project.findProperty("contentful.optimization.version") as String?)
     ?: System.getenv("RELEASE_VERSION")

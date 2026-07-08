@@ -74,3 +74,8 @@ overrides:
   '@types/node': 'catalog:'
   typescript: 'catalog:'
   vitest: 'catalog:'
+
+minimumReleaseAgeExclude:
+  - '@commitlint/cli@21.2.1'
+  - '@commitlint/read@21.2.1'
+  - release-please@17.10.2
