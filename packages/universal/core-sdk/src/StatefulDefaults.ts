@@ -22,8 +22,8 @@ export interface StatefulDefaults {
   selectedOptimizations?: SelectedOptimizationArray
 }
 
-type PersistedDefaultLoader<T> = () => T | undefined
-type PersistedDefaultValue<T> = T | PersistedDefaultLoader<T> | undefined
+export type PersistedDefaultLoader<T> = () => T | undefined
+export type PersistedDefaultValue<T> = T | PersistedDefaultLoader<T> | undefined
 
 /**
  * Persisted values supplied by a platform store.

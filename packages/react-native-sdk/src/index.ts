@@ -38,7 +38,15 @@ export { OptimizationRoot } from './components/OptimizationRoot'
 export type { OptimizationRootProps } from './components/OptimizationRoot'
 
 export { OptimizedEntry } from './components/OptimizedEntry'
-export type { OptimizedEntryProps } from './components/OptimizedEntry'
+export type {
+  OptimizedEntryChildren,
+  OptimizedEntryErrorFallback,
+  OptimizedEntryLoadingFallback,
+  OptimizedEntryProps,
+  OptimizedEntryRenderProp,
+  OptimizedEntrySharedProps,
+  OptimizedEntrySourceProps,
+} from './components/OptimizedEntry'
 
 export { OptimizationScrollProvider, useScrollContext } from './context/OptimizationScrollContext'
 export type {
