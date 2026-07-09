@@ -41,6 +41,11 @@ Future families get sibling dirs (e.g. `native/`, `node/`). Do not create empty 
 ## Rules
 
 - Every fact carries a `source:` pointer in the [grammar below](#source-pointer-grammar).
+- Every per-SDK file declares the guide(s) its facts compose into, with a
+  `<!-- feeds-guides: documentation/guides/<guide>.md -->` marker under the title (comma-separate
+  multiple). This is the KB→guide direction of the dependency graph: a `source:` pointer says which
+  source a fact came from; `feeds-guides` says which guide must be recomposed when the fact changes.
+  `knowledge:check` requires the marker and that its targets resolve.
 - Per-SDK files conform to [`_template.md`](./_template.md) exactly — same sections, same order. If
   a section has no entries, keep the heading and write `None.`
 - Per-SDK files link to [`shared/concepts.md`](./shared/concepts.md) and

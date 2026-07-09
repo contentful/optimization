@@ -1,5 +1,7 @@
 # Next.js App Router (`@contentful/optimization-nextjs`) — SDK knowledge
 
+<!-- feeds-guides: documentation/guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md -->
+
 > Internal, verified reference. Not a guide. Facts only, each with a source pointer. Last verified
 > against packages/\*\*/src during the guide rewrite.
 

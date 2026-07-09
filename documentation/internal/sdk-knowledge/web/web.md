@@ -1,5 +1,7 @@
 # Web (`@contentful/optimization-web`) — SDK knowledge
 
+<!-- feeds-guides: documentation/guides/integrating-the-web-sdk-in-a-web-app.md -->
+
 > Internal, verified reference. Not a guide. Facts only, each with a source pointer. Last verified
 > against packages/\*\*/src during the guide rewrite.
 

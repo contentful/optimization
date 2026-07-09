@@ -7,6 +7,8 @@ shared/concepts.md and shared/vocabulary.md instead of restating shared material
 
 # <SDK display name> — SDK knowledge
 
+<!-- feeds-guides: documentation/guides/<the guide this file's facts compose into>.md -->
+
 > Internal, verified reference. Not a guide. Facts only, each with a source pointer. Last verified
 > against packages/\*\*/src during the guide rewrite.
 

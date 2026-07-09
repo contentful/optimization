@@ -137,11 +137,12 @@ function validateFile(absPath: string): void {
   // validation entirely. Prose continuations ("The React Web guides…") have no such shape.
   checkDanglingPointerLines(lines, relPath)
 
-  // Coverage and template conformance apply only to per-SDK files, whose _template.md shape makes
-  // "every bullet/row is a sourced fact" a firm rule. shared/ files mix normative prose with facts.
+  // Coverage, template conformance, and the KB→guide link apply only to per-SDK files: shared/ files
+  // mix normative prose with facts and feed a family rather than a single guide.
   if (isPerSdkFile(absPath)) {
     checkPointerCoverage(lines, relPath)
     checkTemplateConformance(lines, relPath)
+    checkFeedsGuides(lines, relPath)
   }
 }
 
@@ -479,6 +480,43 @@ function checkTemplateConformance(lines: string[], file: string): void {
   }
 }
 
+/**
+ * Validates the KB→guide dependency link. Every per-SDK file declares the guide(s) its facts compose
+ * into via a `<!-- feeds-guides: path[, path] -->` marker; the target guides must exist. This is the
+ * downstream direction of the graph: given a changed KB fact, it names which guides must be recomposed
+ * (the mirror of the source→KB direction that a fact's `source:` pointer gives). A per-SDK file with
+ * no marker cannot be scoped incrementally, so it is required.
+ */
+function checkFeedsGuides(lines: string[], file: string): void {
+  const markerLine = lines.findIndex((line) => line.includes('feeds-guides:'))
+  if (markerLine === -1) {
+    addProblem(
+      file,
+      1,
+      `per-SDK file must declare which guide(s) it feeds: add ` +
+        `<!-- feeds-guides: documentation/guides/<guide>.md -->`,
+    )
+    return
+  }
+
+  const match = /feeds-guides:\s*([^>]+?)\s*-->/u.exec(lines[markerLine] ?? '')
+  const targets = (match?.[1] ?? '')
+    .split(',')
+    .map((target) => target.trim())
+    .filter((target) => target !== '')
+
+  if (targets.length === 0) {
+    addProblem(file, markerLine + 1, `feeds-guides: marker lists no guide`)
+    return
+  }
+
+  for (const target of targets) {
+    if (!fileExists(path.join(rootDir, target))) {
+      addProblem(file, markerLine + 1, `feeds-guides: → no such guide (${target})`)
+    }
+  }
+}
+
 /** The `##` section heading texts of a markdown file, in document order. */
 function sectionHeadings(lines: string[]): string[] {
   return sectionLevel(headingsOf(lines)).map((heading) => heading.text)
@@ -649,7 +687,9 @@ function addProblem(file: string, line: number, message: string): void {
  */
 function report(): void {
   if (problems.length === 0) {
-    console.log('✓ SDK knowledge base: all source pointers resolve and templates conform.')
+    console.log(
+      '✓ SDK knowledge base: source pointers resolve, templates conform, and guide links are valid.',
+    )
     return
   }
 

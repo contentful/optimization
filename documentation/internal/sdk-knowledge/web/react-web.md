@@ -1,5 +1,7 @@
 # React Web (`@contentful/optimization-react-web`) — SDK knowledge
 
+<!-- feeds-guides: documentation/guides/integrating-the-react-web-sdk-in-a-react-app.md -->
+
 > Internal, verified reference. Not a guide. Facts only, each with a source pointer. Last verified
 > against packages/\*\*/src during the guide rewrite.
 
