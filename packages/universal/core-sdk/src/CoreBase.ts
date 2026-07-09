@@ -62,7 +62,7 @@ export interface ManagedEntryHandoff {
   readonly baselineEntry: Entry
 }
 
-type ManagedContentfulEntry<
+export type ManagedContentfulEntry<
   S extends EntrySkeletonType = EntrySkeletonType,
   L extends LocaleCode = LocaleCode,
 > = Entry<S, undefined, L>

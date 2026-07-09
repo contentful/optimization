@@ -8,7 +8,7 @@ import type {
 } from '@contentful/optimization-api-client/api-schemas'
 import type { Entry } from 'contentful'
 
-type ContentfulEntry = Entry
+export type ContentfulEntry = Entry
 
 /**
  * Opaque identifier for a runtime-owned optimization context.
@@ -33,7 +33,7 @@ export interface EventOptimizationContext {
 }
 
 /**
- * Event emitted through {@link CoreStateful.states.eventStream}.
+ * Event emitted through {@link CoreStateful.states | CoreStateful.states.eventStream}.
  *
  * @public
  */

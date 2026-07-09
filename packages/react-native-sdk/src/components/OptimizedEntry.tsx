@@ -24,7 +24,7 @@ export type OptimizedEntryChildren = ReactNode | OptimizedEntryRenderProp
  *
  * @public
  */
-interface OptimizedEntrySharedProps {
+export interface OptimizedEntrySharedProps {
   /**
    * Content to render. Accepts either a render prop or static children.
    *
@@ -154,7 +154,7 @@ interface OptimizedEntrySharedProps {
   onTap?: (resolvedEntry: Entry) => void
 }
 
-type OptimizedEntrySourceProps =
+export type OptimizedEntrySourceProps =
   | {
       /**
        * The baseline Contentful entry to optimize and track.

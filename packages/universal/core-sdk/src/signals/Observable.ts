@@ -87,7 +87,7 @@ function toError(value: unknown): Error {
   return new Error(`Subscriber threw non-Error value: ${String(value)}`)
 }
 
-type SnapshotFn<T> = (value: T) => T
+export type SnapshotFn<T> = (value: T) => T
 
 /**
  * Wrap a signal-like object with the local {@link Observable} contract.
