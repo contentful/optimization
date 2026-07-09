@@ -101,4 +101,4 @@ Examples:
 
 Copy `_template.md` into the right family dir, keep every heading, fill each section with verified
 facts + source pointers, mark empty sections `None.`, and add shared vocabulary/concepts to
-`shared/` rather than duplicating them. </content>
+`shared/` rather than duplicating them.

@@ -57,4 +57,3 @@ this SDK.
 ## Failure & fallback behavior
 
 - What happens on API failure, missing variant, unresolved links, bad payload shape. source:
-  </content>
