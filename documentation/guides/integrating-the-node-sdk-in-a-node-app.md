@@ -1,17 +1,65 @@
 # Integrating the Optimization Node SDK in a Node app
 
-Use this guide when you want to implement server-side personalization in a Node runtime such as
-Express, a custom SSR server, or a server-side function using `@contentful/optimization-node`.
+Use this guide to add Contentful personalization to a Node server you already have — an Express app,
+a custom SSR server, or a server-side function — using `@contentful/optimization-node`. By the end
+of the quick start, one route will emit a page event and report the profile the Experience API
+returns for that request, without changing how your server fetches or renders content.
 
-The examples below use Express, but the same request-scoped flow applies to any Node request
-handler.
+**New to personalization?** Here is the whole idea in five sentences:
+
+- In Contentful you author **variants** of an entry and attach them to an **experience** — a rule
+  that decides which visitors see which variant.
+- On each request, Contentful's **Experience API** looks at who the visitor is and picks the variant
+  for each experience. Swapping a fetched entry for its picked variant is called **resolving** the
+  entry.
+- The Experience API also returns a **profile**: the anonymous, per-visitor identity and state the
+  SDK uses to keep the same visitor's personalization consistent across requests.
+- Your server fetches Contentful entries and turns them into a response, and the SDK sits at that
+  hand-off: it gives you the resolved variant instead of the original — or the original entry when
+  no variant applies, the **baseline fallback**. You can fetch the entry yourself and hand it to the
+  SDK, or give the SDK your Contentful client and let it fetch by ID; either way the client stays
+  yours.
+- You render whatever the SDK hands back exactly as you render entries today.
+
+That is enough to start. You do not need audiences, traffic allocation, or interaction events yet;
+this guide introduces each idea at the point you need it.
+
+You will get there in two milestones:
+
+- **Milestone 1 — an accepted page event and a profile for the request (the quick start below).** A
+  page event is _accepted_ when your consent policy allows it and the Experience API responds; the
+  response carries the profile and the request's variant selections, and the route reports the
+  profile ID. This is complete and shippable on its own.
+- **Milestone 2 — a resolved entry in the response (later).** You fetch an entry, resolve it against
+  the request's selections, and render the returned variant or baseline. See
+  [Fetch and resolve Contentful entries](#fetch-and-resolve-contentful-entries).
+
+This guide uses the `ContentfulOptimization` class from `@contentful/optimization-node`. You create
+one instance for the whole process, then bind each incoming request to its own consent, locale, and
+page context with `forRequest()`. Your app keeps ownership of its Contentful client, consent policy,
+sessions, cookies, identity, routing, caching, and rendering — the Node SDK holds no per-visitor
+state between requests.
+
+The examples use Express, but the same request-scoped flow applies to any Node request handler. If
+you also want the browser to continue personalization after the server renders, see
+[Share continuity with the Web SDK](#share-continuity-with-the-web-sdk). For a browser-only app, use
+the [Web SDK guide](./integrating-the-web-sdk-in-a-web-app.md) instead.
 
 ## Quick start
 
-Install the Node SDK and Express, create one process-level SDK instance, bind request-scoped consent
-and page context with `forRequest()`, call `page()` from a route, and start a local server. This
-quick start assumes your application policy permits Optimization by default and no end-user consent
-UI is rendered.
+Most Node + Contentful apps share one shape: a request handler builds a response and, somewhere in
+it, an entry becomes rendered output. This quick start assumes that shape and proves the smallest
+server-side result: **one route reports an accepted page event and the profile the Experience API
+returned for that request.** It creates one process-level SDK instance, binds request-scoped consent
+and page context with `forRequest()`, and calls `page()` from a route.
+
+This quick start assumes your application policy permits Optimization by default and renders no
+end-user consent UI. Consent has two independent parts you bind per request: `events` (may the SDK
+send events and personalize this request) and `persistence` (may your app store the profile ID so
+the same visitor stays consistent). The shorthand `consent: true` sets both to `true`; the object
+form `{ events, persistence }` sets them separately. If personalization must wait for a consent
+decision, keep this structure and add the [Apply consent policy](#apply-consent-policy) step before
+you ship.
 
 **Copy this:**
 
@@ -103,13 +151,18 @@ In another terminal, verify the route.
 curl http://localhost:3000/
 ```
 
-The JSON response contains a `profileId` when `page()` is accepted.
+The JSON response contains a `profileId` when `page()` is accepted — the Experience API evaluated
+the request and returned a profile. An accepted event does not by itself prove a variant was chosen:
+until you author a variant attached to an experience (see [Before you start](#before-you-start)),
+every request resolves to the baseline. To see a variant later, author an experience that targets
+all visitors so every request matches it automatically, then resolve an entry as shown in
+[Fetch and resolve Contentful entries](#fetch-and-resolve-contentful-entries).
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Required setup](#required-setup)
+- [Before you start](#before-you-start)
 - [Core integration](#core-integration)
   - [Install and initialize the Node SDK](#install-and-initialize-the-node-sdk)
   - [Bind request context and locale](#bind-request-context-and-locale)
@@ -128,42 +181,45 @@ The JSON response contains a `profileId` when `page()` is accepted.
   - [Control pre-consent event admission and request options](#control-pre-consent-event-admission-and-request-options)
   - [Keep caches safe for personalized rendering](#keep-caches-safe-for-personalized-rendering)
 - [Production checks](#production-checks)
+- [Troubleshooting](#troubleshooting)
 - [Reference implementations to compare against](#reference-implementations-to-compare-against)
 
 <!-- mtoc-end -->
 </details>
 
-## Required setup
+## Before you start
 
-Use this setup inventory before you move beyond the quick start:
+The sections below walk the integration in order. First, gather the few things you can only get from
+outside this guide:
 
-| Setup item                                                      | Category                       | Required for quick start | Where to configure                                                                               |
-| --------------------------------------------------------------- | ------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------ |
-| `@contentful/optimization-node` package                         | Required for first integration | Yes                      | Node app package dependencies                                                                    |
-| Express package for the quick-start route                       | Required for first integration | Yes                      | Quick-start app dependencies, or your equivalent Node request framework                          |
-| Optimization client ID                                          | Required for first integration | Yes                      | `ContentfulOptimization({ clientId })` from environment configuration                            |
-| Optimization environment and API endpoints                      | Required for first integration | Conditional              | `environment` and `api` SDK options when not using defaults or local mocks                       |
-| Application Contentful delivery client                          | Required for first integration | Conditional              | App-owned `contentful.js`, REST, or GraphQL client; SDK-managed fetching can use `contentful.js` |
-| Single-locale Contentful entry payloads with optimization links | Required for first integration | Conditional              | CDA request options such as `locale: appLocale` and `include` depth                              |
-| Request route or handler integration                            | Required for first integration | Yes                      | Express routes, server functions, or custom Node request handlers                                |
-| Request event context                                           | Required for first integration | Yes                      | `forRequest({ eventContext })` per incoming request                                              |
-| Application locale decision                                     | Required for first integration | Yes                      | Router, i18n layer, request policy, CDA requests, and `forRequest({ locale })`                   |
-| Consent policy                                                  | Common but policy-dependent    | Yes                      | Application policy, consent cookie, CMP callback, session, or preference store                   |
-| Profile ID persistence                                          | Common but policy-dependent    | Conditional              | Application session or first-party cookie such as `ANONYMOUS_ID_COOKIE`                          |
-| Known-user identity source                                      | Common but policy-dependent    | No                       | Authentication middleware, session, JWT, or account service used before `identify()`             |
-| Rich Text merge-tag renderer                                    | Optional                       | No                       | Application Rich Text rendering pipeline                                                         |
-| Custom Flag reads                                               | Optional                       | No                       | Server render logic that consumes `getFlag()`                                                    |
-| Server-side interaction or business event tracking              | Optional                       | No                       | App-owned event collector, route action, or rendered-entry exposure path                         |
-| Third-party analytics forwarding                                | Optional                       | No                       | Server-side analytics, customer-data, or tag-management integration                              |
-| `@contentful/optimization-web` package and continuity           | Optional                       | No                       | Browser package dependencies, shared anonymous-ID cookie, and browser SDK initialization         |
-| Strict pre-consent allowlist and request options                | Advanced or production-only    | No                       | SDK `allowedEventTypes`, `experienceOptions`, `insightsOptions`, and `onEventBlocked`            |
-| Personalized response caching policy                            | Advanced or production-only    | No                       | Application cache keys, CDN rules, and render cache boundaries                                   |
+- **A Node server** you can add a route handler to, and its own Contentful fetching already working.
+  Install `express` only if you are following the quick start verbatim; any Node request framework
+  works. Install `contentful` if you want the SDK to fetch entries by ID and you do not already have
+  a Delivery API client.
+- **Contentful delivery credentials** — space ID, delivery token, and environment — read from your
+  server's runtime configuration, never shipped to the browser.
+- **At least one entry with a variant attached to an experience**, authored in Contentful. Without
+  an authored variant the integration still runs, but every request resolves to the baseline, so you
+  cannot tell personalization from a bug. For your first test, an experience that targets all
+  visitors is the easiest to verify because every request matches it automatically.
+- **Your Optimization project values** — client ID and environment, from your Optimization project
+  settings. The Experience API (which picks variants) and the Insights API (which receives event and
+  interaction delivery) each have a base URL that defaults correctly; you only set them for mocks or
+  non-default hosts (see [Install and initialize the Node SDK](#install-and-initialize-the-node-sdk)).
 
-The Node SDK is stateless. It does not manage cookies, sessions, consent state, long-lived profile
-state, Contentful credentials, or HTML rendering. Your application owns the Contentful delivery
-client and its credentials; when configured with that client, the SDK can call `client.getEntry()`
-for managed entry fetching. Your application provides request inputs, and the SDK evaluates or emits
-events, fetches configured entries, resolves variants, and returns request-local data.
+You do not need a setup inventory up front. Everything else — consent, entry resolution, identity,
+tracking, caching — is introduced by the section that needs it. The Node SDK holds no per-visitor
+state between requests: it does not manage cookies, sessions, consent, long-lived profiles, or
+rendering. Your app owns those and passes request inputs in; the SDK evaluates the request, resolves
+entries, and returns request-local data.
+
+> [!NOTE]
+>
+> Read the SDK config from your server's runtime configuration. This guide's examples read
+> `process.env` values, and the reference implementations use `PUBLIC_...` names because they run
+> against shared mock defaults; use whatever environment variable convention your deployment already
+> uses and keep it consistent. Ship only the Contentful **delivery** token to any client, never a
+> Management API token.
 
 ## Core integration
 
@@ -173,6 +229,13 @@ events, fetches configured entries, resolves variants, and returns request-local
 
 Create the SDK once for the Node process or module, then reuse that singleton across requests. Bind
 request-specific inputs later with `forRequest()`.
+
+From here on, the guide's examples are TypeScript, because the SDK's request and result types are
+most of the value in a server codebase. Run them with a TypeScript toolchain (for example `tsx`,
+`ts-node`, or a build step) — or drop the type annotations to get back to plain `.mjs` like the quick
+start. The quick start inlined the SDK inside `server.mjs`; the sections below factor initialization
+into a small shared module (call it `optimization.ts`) that each route handler imports, so there is
+still exactly one SDK instance per process.
 
 1. Install `@contentful/optimization-node` and `contentful` when the SDK will fetch entries by ID.
 2. Read the Optimization client ID and environment from your runtime configuration.
@@ -185,7 +248,9 @@ request-specific inputs later with `forRequest()`.
 pnpm add @contentful/optimization-node contentful
 ```
 
-**Copy this:**
+**Adapt this to your use case:** this is a new `optimization.ts` module you create; the route
+handlers in later sections `import { optimization }` from it. Replace the env-var reads with your
+app's configuration mechanism.
 
 ```ts
 import ContentfulOptimization from '@contentful/optimization-node'
@@ -207,7 +272,7 @@ const contentfulClient = contentful.createClient({
   space: required('CONTENTFUL_SPACE_ID'),
 })
 
-// Create this once per process; use forRequest() inside route handlers.
+// Create this once per process; route handlers import it and call forRequest() per request.
 export const optimization = new ContentfulOptimization({
   clientId: required('CONTENTFUL_OPTIMIZATION_CLIENT_ID'),
   contentful: {
@@ -229,9 +294,9 @@ export const optimization = new ContentfulOptimization({
 })
 ```
 
-The reference implementations in this repository use `PUBLIC_...` environment variable names because
-they run against shared mock defaults. Consumer applications can use any environment variable names
-that fit their deployment setup.
+Set `api.experienceBaseUrl` and `api.insightsBaseUrl` only for mock servers or non-default hosts;
+they default correctly otherwise. See the env-var note in [Before you start](#before-you-start) for
+naming conventions.
 
 ### Bind request context and locale
 
@@ -288,6 +353,10 @@ function getRequestContext(req: Request, appLocale: string): UniversalEventBuild
 }
 ```
 
+Later snippets call `getAppLocale(req)` — that is your app's per-request locale decision (from step
+1), which can be as simple as a single `const APP_LOCALE = 'en-US'` if your app is single-locale.
+Wherever you see `getAppLocale(req)`, substitute your own locale source.
+
 For the full locale model, see
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
 
@@ -297,6 +366,11 @@ For the full locale model, see
 
 Consent belongs to your application layer. The Node SDK accepts the request-scoped decision through
 `forRequest({ consent })`.
+
+The snippets here and in the next section call `getProfileFromRequest(req)` and `persistProfile(res,
+id)` — the read and write halves of profile continuity. They are defined in
+[Persist profile identity between requests](#persist-profile-identity-between-requests); if you are
+building top to bottom, treat them as `undefined`/no-ops until you reach that section.
 
 1. If application policy permits Optimization by default and no end-user consent UI is rendered,
    bind each request with `{ events: true, persistence: true }`.
@@ -339,21 +413,34 @@ const requestOptimization = optimization.forRequest({
 })
 ```
 
-By default, the Node SDK still allows request-bound `identify()` and `page()` before event consent
-is granted, and labels those events with `context.gdpr.isConsentGiven: false`. Configure
+By default, the Node SDK admits request-bound `identify()` and `page()` before event consent is
+granted, and labels those events with `context.gdpr.isConsentGiven: false`. Configure
 `allowedEventTypes: []` if your policy requires strict opt-in before all stateless events.
 
 ### Evaluate route requests with `page()`
 
 **Integration category:** Required for first integration
 
-Call `page()` for the server route or request that needs profile evaluation, selected optimizations,
-or Custom Flag changes. Render from the accepted event result for the current request.
+Call `page()` for the server route or request that needs profile evaluation, variant selections, or
+Custom Flag changes. Render from the accepted event result for the current request.
+
+An accepted `page()` returns three things your render logic uses:
+
+- **`profile`** — the anonymous per-visitor identity and state (defined in the intro).
+- **`selectedOptimizations`** — the whole set of variant selections the Experience API made for this
+  request, one per matched experience. You pass this set into entry resolution.
+- **`changes`** — the computed **Custom Flag** values for this request. A Custom Flag is a named
+  value you author against an experience in Contentful (a feature toggle, a string, a number) and
+  read at runtime, instead of swapping a whole entry. See [Read Custom Flags](#read-custom-flags).
 
 1. Create a request-bound SDK client inside the route handler.
 2. Call `page()` before resolving personalized entries for that response.
 3. Use `result.accepted` and `result.data` to handle consent-blocked or unavailable data paths.
 4. Pass returned `profile`, `selectedOptimizations`, and `changes` to downstream render logic.
+
+This route is the quick start's handler with three additions: it gates consent on the app's real
+decision (`allowed`), persists the profile only when `canPersistProfile` is `true`, and returns
+`selectedOptimizations` and `changes` alongside the profile.
 
 **Adapt this to your use case:**
 
@@ -478,9 +565,11 @@ function clearOptimizationIdentity(res: Response): void {
 }
 ```
 
-Use the shared `ANONYMOUS_ID_COOKIE` cookie when the same app also runs the Web SDK in the browser.
-Do not mark that cookie `HttpOnly` in a hybrid Node + Web SDK app because browser-side SDK code must
-read it. In a server-only app, a session store or a stricter cookie policy can be valid.
+`ANONYMOUS_ID_COOKIE` is an SDK-defined constant that resolves to the cookie name `ctfl-opt-aid`;
+import it rather than hardcoding the string, and do not rename it — the browser Web SDK reads the
+same name. Use this shared cookie when the same app also runs the Web SDK in the browser, and do not
+mark it `HttpOnly` in a hybrid Node + Web SDK app because browser-side SDK code must read it. In a
+server-only app, a session store or a stricter cookie policy can be valid.
 
 For the lower-level mechanics, see
 [Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md).
@@ -493,18 +582,28 @@ Your app owns the Contentful delivery client, credentials, and delivery policy. 
 Contentful path passes an app-owned `contentful.js` client to the SDK, then calls the request-bound
 `requestOptimization.fetchOptimizedEntry(entryId)` helper after `page()` or `identify()`.
 
-After verifying the first `profileId` response, this section is where you add Contentful rendering:
-call `requestOptimization.fetchOptimizedEntry(entryId)` before rendering the response. The helper
-fetches the baseline entry, resolves the selected variant, and uses the latest accepted Experience
-response selections when `selectedOptimizations` is omitted.
+This is Milestone 2: the quick start proved an accepted event and a profile; here you turn that into
+a rendered variant. The one genuinely new call is `requestOptimization.fetchOptimizedEntry(entryId)`,
+which fetches the baseline entry, resolves the selected variant, and uses the latest accepted
+Experience response selections when you omit `selectedOptimizations`.
 
-1. Configure the SDK with `contentful: { client, defaultQuery?, cache? }`.
+Two similarly named values appear from here on, and the one-letter difference is intentional:
+
+- **`selectedOptimizations`** (plural) is the request's whole set of selections from `page()` — what
+  you pass _into_ resolution.
+- **`selectedOptimization`** (singular) is the one selection the resolver returns _for a specific
+  entry_: which experience and variant index applied to it. Use it for tracking and analytics.
+
+1. Configure the SDK with `contentful: { client, defaultQuery?, cache? }` (done once in your
+   `optimization.ts` module from [Install and initialize the Node SDK](#install-and-initialize-the-node-sdk)).
 2. Call `page()` or `identify()` before resolving entries for the response.
 3. Call `requestOptimization.fetchOptimizedEntry(entryId)` inside the request handler.
 4. Render the returned `entry`. If resolution cannot find a matching optimization or variant, the
    resolver returns the baseline entry.
 
-**Adapt this to your use case:**
+**Adapt this to your use case:** the SDK config below repeats the `optimization.ts` module from the
+install section so the `contentful.client` requirement is visible in one place — reuse your existing
+instance rather than creating a second one. The route handler is the new part.
 
 ```ts
 import * as contentful from 'contentful'
@@ -515,6 +614,7 @@ const contentfulClient = contentful.createClient({
   space: required('CONTENTFUL_SPACE_ID'),
 })
 
+// This is the same singleton from optimization.ts; shown here so contentful.client is visible.
 const optimization = new ContentfulOptimization({
   clientId: required('CONTENTFUL_OPTIMIZATION_CLIENT_ID'),
   contentful: {
@@ -559,9 +659,8 @@ Use `requestOptimization.fetchOptimizedEntry()` in request handlers. If you call
 `optimization.fetchOptimizedEntry()` on the singleton for personalized content, pass
 `selectedOptimizations` explicitly.
 
-Manual baseline-entry fetching plus `resolveOptimizedEntry()` remains supported when the app needs
-custom delivery behavior, GraphQL, REST without `contentful.js`, or an already-fetched baseline
-entry:
+Use manual baseline-entry fetching plus `resolveOptimizedEntry()` when the app needs custom delivery
+behavior, GraphQL, REST without `contentful.js`, or an already-fetched baseline entry:
 
 **Adapt this to your use case:**
 
@@ -587,7 +686,10 @@ CDA `locale=*` responses. The resolver expects direct single-locale field values
 
 **Integration category:** Optional
 
-Use this helper when your Contentful content contains MergeTag entries.
+Use this helper when your Contentful content contains MergeTag entries. A MergeTag is an authored
+placeholder embedded in Rich Text (for example a visitor's first name or city) that the SDK fills in
+from the request's `profile` at render time, falling back to a default value when the profile has no
+value for it.
 
 1. Detect MergeTag entries in your Rich Text renderer.
 2. Resolve each MergeTag entry against the current request's `profile`.
@@ -629,9 +731,14 @@ Use this helper when your Experience response includes Custom Flag changes.
 2. Render the server response from the returned flag value.
 3. Emit a flag-view event explicitly when your reporting policy needs a flag exposure.
 
+The flag name you pass to `getFlag()` and `componentId` (`'new-navigation'` below) must match the
+Custom Flag key you authored in Contentful — it is not a free-choice label. `getFlag()` returns the
+authored value, so type its use to your flag (here, comparing against `true` for a boolean flag).
+
 **Copy this:**
 
 ```ts
+// 'new-navigation' must match the Custom Flag key authored in Contentful.
 // Pass request-local changes; stateless getFlag() does not emit flag-view tracking.
 const showNewNavigation = optimization.getFlag('new-navigation', pageResponse?.changes) === true
 ```
@@ -670,6 +777,10 @@ real interaction.
 4. Bind a profile for Insights-only calls such as non-sticky `trackView()`, `trackClick()`,
    `trackHover()`, and `trackFlagView()`.
 
+Unlike a Custom Flag key, the `track()` `event` name and its `properties` are your own free-choice
+labels — pick names that fit your analytics plan; they do not need to match anything authored in
+Contentful.
+
 **Adapt this to your use case:**
 
 ```ts
@@ -682,6 +793,7 @@ if (appPolicyAllowsOptimizationEvent(req) && pageResponse?.profile) {
     profile: pageResponse.profile,
   })
 
+  // 'quote_requested' and its properties are your own analytics labels, not authored IDs.
   await requestOptimization.track({
     event: 'quote_requested',
     properties: {
@@ -851,19 +963,19 @@ cache varies on every personalization input.
 3. Resolve variants from the current request's `selectedOptimizations`, or use
    `requestOptimization.fetchOptimizedEntry()` so the request-bound helper supplies them.
 4. Render MergeTags against the current request's `profile`.
-5. Do not memoize `page()`, `identify()`, `screen()`, `track()`, or `trackView()` results as if they
-   were pure reads.
+5. Do not memoize `page()`, `identify()`, `track()`, or `trackView()` results as if they were pure
+   reads.
 
 Use this cache-safety table when planning production caching:
 
-| Artifact                                                                   | Shared-cache safe? | Notes                                                                                                       |
-| -------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------- |
-| Raw `contentful.js` entry or query response                                | Yes                | Key by entry or query, locale, include depth, environment, host, and delivery mode                          |
-| SDK-managed entry cache                                                    | Yes                | Caches baseline `getEntry()` results only; configure with `contentful.cache` or disable with `cache: false` |
-| `resolveOptimizedEntry(entry, selectedOptimizations)` result               | Conditional        | Safe only if keyed by the baseline entry version plus a `selectedOptimizations` fingerprint                 |
-| Merge-tag-rendered rich text                                               | No                 | Depends on the current request `profile`                                                                    |
-| SSR HTML with personalized content                                         | Usually no         | Safe only when the cache varies on all personalization inputs                                               |
-| `page()`, `identify()`, `screen()`, `track()`, and `trackView()` responses | No                 | These methods perform side effects and must not be memoized                                                 |
+| Artifact                                                       | Shared-cache safe? | Notes                                                                                                       |
+| -------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Raw `contentful.js` entry or query response                    | Yes                | Key by entry or query, locale, include depth, environment, host, and delivery mode                          |
+| SDK-managed entry cache                                        | Yes                | Caches baseline `getEntry()` results only; configure with `contentful.cache` or disable with `cache: false` |
+| `resolveOptimizedEntry(entry, selectedOptimizations)` result   | Conditional        | Safe only if keyed by the baseline entry version plus a `selectedOptimizations` fingerprint                 |
+| Merge-tag-rendered rich text                                   | No                 | Depends on the current request `profile`                                                                    |
+| SSR HTML with personalized content                             | Usually no         | Safe only when the cache varies on all personalization inputs                                               |
+| `page()`, `identify()`, `track()`, and `trackView()` responses | No                 | These methods perform side effects and must not be memoized                                                 |
 
 ## Production checks
 
@@ -888,6 +1000,19 @@ Before releasing a Node SDK integration, verify these points:
 - Local validation path: run the server against mock or test credentials, load a route that calls
   `page()`, verify a returned `profile.id`, render an optimized entry, and verify the baseline
   fallback path by testing without `selectedOptimizations`.
+
+## Troubleshooting
+
+| Symptom                                                          | Likely cause                                                                                                 | Check                                                                                                                                     |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Entry always resolves to the baseline                            | No variant applies, no `selectedOptimizations` passed, the entry is not optimized, or an all-locale payload  | Author a variant that targets you, confirm an accepted `page()`/`identify()` ran first, fetch one `locale` with enough `include`          |
+| The variant never appears even though it is authored             | The request does not match the experience's audience, or resolution ran without the request's selections     | Target all visitors for a first test or force the variant with the preview panel; pass `selectedOptimizations` or use the bound helper    |
+| `page()` returns `{ accepted: false }`                           | Event consent is not granted and the event type is not allow-listed                                          | Bind `consent.events: true` for the request, or confirm `allowedEventTypes` permits `page`; inspect `onEventBlocked`                      |
+| `trackView() requires a request-bound profile id` error thrown   | A non-sticky `trackView()`, `trackClick()`, `trackHover()`, or `trackFlagView()` ran without a bound profile | Pass `forRequest({ profile })`, or use sticky `trackView()` which derives the profile from its Experience response                        |
+| Profile does not stay consistent across requests                 | The returned `profile.id` is not persisted, or `canPersistProfile` was `false`                               | Persist the ID only when `requestOptimization.canPersistProfile` is `true`, then read it back into `forRequest({ profile })`              |
+| Hybrid browser sessions start with a different anonymous profile | Server and browser do not share the same readable anonymous-id cookie                                        | Verify the `ctfl-opt-aid` cookie path and same-site settings, and that it is not `HttpOnly` so browser SDK code can read it               |
+| Merge tags render the fallback for every visitor                 | No matching profile value, or the profile locale and entry locale differ                                     | Confirm `getMergeTagValue()` receives the request `profile`, and pass one `APP_LOCALE` to both the CDA fetch and `forRequest({ locale })` |
+| Personalized output leaks between visitors                       | A `page()`/`identify()` response or merge-tag-rendered entry was shared through a cache                      | Cache only raw Contentful payloads; clone before request transforms; never memoize event-method responses                                 |
 
 ## Reference implementations to compare against
 
