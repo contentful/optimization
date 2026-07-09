@@ -1,72 +1,65 @@
 ---
-description: Author a new SDK guide or refresh an existing one end-to-end — writer, then newcomer + source-verification review, then funnel learnings back
-argument-hint: '[SDK/runtime for a new guide, or an existing guide path to refresh]'
+description: Bootstrap docs for an SDK from scratch — comprehend source into the knowledge base, compose the guide from it, then review
+argument-hint: '[SDK/runtime to document, or a guide path to (re)author from scratch]'
 ---
 
-Drive the full guide lifecycle for: `$ARGUMENTS` (if empty, ask which SDK/runtime to document or
-which guide to refresh).
+Bootstrap the full docs for: `$ARGUMENTS` (if empty, ask which SDK/runtime to document).
 
-This is one workflow with two entry points. First **classify the target**, then run the matching
-path. Both paths end in the same review loop, so quality is identical whether a guide is new or
-refreshed.
+This is the **from-scratch path**: an SDK with no knowledge-base file yet, or a guide that must be
+(re)authored from the ground up. It runs the expensive comprehension step once — reading source into
+the knowledge base — then composes the guide from that base. For an SDK whose KB file already exists
+and whose source merely changed, use **`/refresh-docs`** instead (it is far cheaper — it does not
+re-comprehend the whole SDK).
 
-## 0. Classify: new vs. refresh
+The order matters: **knowledge first, guide second.** The guide is composed from verified facts, so
+the facts must exist before the prose.
 
-- If `$ARGUMENTS` names an existing file under `documentation/guides/`, or an SDK that already has a
-  guide there → **refresh**.
-- If it names an SDK/runtime with no guide yet → **new**.
-- If ambiguous, list the guides in `documentation/guides/` and ask.
+## 1. Comprehend source → knowledge base (sdk-knowledge-author)
 
-State which path you're taking and the target guide path before proceeding.
+Launch the `sdk-knowledge-author` agent in **bootstrap** mode for the SDK. It reads the SDK's
+exported public surface under `packages/**/src`, creates the KB file from `_template.md` in the right
+family dir (making a new sibling like `node/` or `native/` if needed), sets its `feeds-guides` marker
+to the target guide, and fills every section with facts + grammar pointers. This is the one step that
+reads source. It returns when `pnpm knowledge:check` passes for the new file.
 
-## 1. Draft (guide-writer)
+## 2. Compose the guide from the knowledge base (guide-writer)
 
-Launch the `guide-writer` agent with the target and the path (new/refresh).
+Launch the `guide-writer` agent for the target guide. It composes from the KB facts created in step 1
+(reading facts, not re-grepping source) following the `optimization-guide-authoring` skill —
+archetype, quick-start-then-deepen, `## Before you start`, copy-vs-adapt labels — grounded in the
+matching reference implementation under `implementations/` for shape. If it finds it needs a fact the
+base does not hold, it escalates back to `sdk-knowledge-author` rather than reading source itself.
 
-- **New:** it drafts the guide from the `optimization-guide-authoring` templates, grounded in the
-  matching reference implementation under `implementations/` and reusing verified facts from the
-  knowledge base (`documentation/internal/sdk-knowledge/`).
-- **Refresh:** it first diffs the guide against the current authoring skill — the fastest tells are a
-  missing `## Quick start` or `## Before you start`, a monolithic flow section, numbered headings, or
-  missing `**Copy this:** / **Adapt this to your use case:**` labels — then brings the guide up to the
-  current archetype and structure, preserving correct content.
+## 3. Review loop (delegate to /review-guide)
 
-The writer returns the edited guide path and a summary of what it changed.
+Run the `review-guide` command on the guide. Two independent reviews run concurrently:
 
-## 2. Review loop (delegate to /review-guide)
+- **guide-newcomer-reviewer** — reads it cold as an average developer; reports undefined jargon,
+  skim-mode, unperformable steps, dishonest labels.
+- **guide-source-verifier** — checks every load-bearing claim traces to a KB fact (a lookup, not a
+  source re-derivation). A claim with no backing fact is escalated to `sdk-knowledge-author`.
 
-Run the `review-guide` command on the target guide. It fans out the two independent reviews
-concurrently and consolidates:
+## 4. Gate before finishing
 
-- **guide-newcomer-reviewer** — reads the guide cold as an average developer; reports undefined
-  jargon, skim-mode, unperformable steps, dishonest labels.
-- **guide-source-verifier** — proves every load-bearing SDK claim against source, reuses KB facts,
-  and records newly verified facts back into the knowledge base. For an SDK whose KB family file does
-  not exist yet, it CREATES it from `_template.md` as it verifies (following the
-  `sdk-knowledge-maintenance` skill) — a new guide grows the KB.
+Do not call it done until all hold; loop back to the responsible step for anything unmet:
 
-## 3. Gate before finishing
-
-Do not call the guide done until all of these hold; loop back to step 1 (writer) for anything unmet:
-
-- Every newcomer **blocker** is fixed; friction items are fixed or consciously accepted with a reason.
-- Every source-verifier **wrong/imprecise** claim is corrected against what the source actually does.
-- `pnpm knowledge:check` passes (new/updated KB facts resolve).
+- Every newcomer **blocker** is fixed; friction items fixed or consciously accepted with a reason.
+- Every verifier **contradicts-KB** claim is corrected; every **no-backing-fact** claim is resolved
+  (fact added by the knowledge author, or claim removed).
+- `pnpm knowledge:check` passes.
 - `pnpm format:fix` leaves the guide clean and its TOC anchors resolve.
 
-## 4. Funnel learnings back (the loop that improves the system)
+## 5. Funnel learnings back
 
-For each finding that reflects a durable rule rather than a one-off, route it to the right artifact —
-never leave it as a persisted TODO:
+Route each durable finding to the right artifact — never leave a persisted TODO:
 
-- a reader-experience or structure rule → the `optimization-guide-authoring` skill (principles only,
-  never SDK facts);
-- a newly verified SDK fact → the knowledge base via `sdk-knowledge-maintenance`;
-- a cross-guide consistency issue → **fix it now** in the affected guides and, if shared wording was
-  missing, add it once to `shared/` (do not record it as drift to reconcile later).
+- a reader-experience or structure rule → the `optimization-guide-authoring` skill (principles only);
+- a fact → the knowledge base (via `sdk-knowledge-author` / `sdk-knowledge-maintenance`);
+- a cross-guide consistency issue → **fix it now** in the affected guides; if shared wording was
+  missing, add it once to `shared/`.
 
-## 5. Report
+## 6. Report
 
-Summarize: new vs. refresh, what the writer changed, the findings from each reviewer and how each was
-resolved, what was funneled into the skill vs. the KB, and the validation result. Note anything
-consciously deferred and why.
+Summarize: the KB file created and its facts, what the guide covers, each reviewer's findings and how
+they resolved, what was funneled into the skill vs. the KB, and the validation result. Note anything
+consciously deferred (e.g. Swift/Kotlin `#symbol` resolution for native SDKs).
