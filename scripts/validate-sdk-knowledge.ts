@@ -83,6 +83,11 @@ function validateFile(absPath: string): void {
     }
   }
 
+  // A `source:` line must not wrap (its tokens run to end of line). Catch a continuation line that
+  // is nothing but pointer tokens — those tokens would otherwise be parsed by no one and skip
+  // validation entirely. Prose continuations ("The React Web guides…") have no such shape.
+  checkDanglingPointerLines(lines, relPath)
+
   // Coverage and template conformance apply only to per-SDK files, whose _template.md shape makes
   // "every bullet/row is a sourced fact" a firm rule. shared/ files mix normative prose with facts.
   if (isPerSdkFile(absPath)) {
@@ -146,6 +151,42 @@ function handleTableRow(
     pointers.push({ line: lineNumber, tokens: splitTokens(cell) })
   }
   return sourceColumnIndex
+}
+
+/**
+ * Flags a line that is a wrapped continuation of a `source:` line — a line consisting only of
+ * grammar tokens (each segment carries a `#` or a known prefix), which the extractor above does not
+ * read, so its tokens would silently skip validation. The grammar requires a source pointer to sit
+ * on one line; this enforces it. A prose continuation ("The React Web guides describe…") has plain
+ * words and is not flagged.
+ */
+function checkDanglingPointerLines(lines: string[], file: string): void {
+  lines.forEach((rawLine, index) => {
+    const line = rawLine.trim()
+    if (line === '' || line.includes('source:') || line.startsWith('|') || line.startsWith('#')) {
+      return
+    }
+    const segments = line.split(';').map((segment) => segment.trim().replace(/^`|`$|\.$/gu, ''))
+    if (segments.length > 0 && segments.every(looksLikePointerToken)) {
+      addProblem(
+        file,
+        index + 1,
+        `line looks like wrapped source pointers ("${truncate(line)}") — a source: pointer must ` +
+          `stay on its own single line so every token is validated`,
+      )
+    }
+  })
+}
+
+/** A bare token that could only be a grammar pointer: has a known prefix or an `<sdk>#…` shape. */
+function looksLikePointerToken(segment: string): boolean {
+  if (segment === '') {
+    return false
+  }
+  if (/^(impl|concept|kb|extern):/u.test(segment)) {
+    return true
+  }
+  return /^[a-z0-9-]+#[^\s]/u.test(segment)
 }
 
 /** Returns the pointer text of a `source: …` prose line, or undefined if the line is not one. */
