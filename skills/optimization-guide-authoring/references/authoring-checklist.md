@@ -13,6 +13,16 @@ add per-archetype checks.
       baseline fallback — plus any SDK-owned config key, identifier, or event name the quick start
       touches). The definition is in prose (or the intro explainer), not only inside a code comment
       — a reader who skims prose and diffs must still meet the term defined.
+- [ ] **Every result-shape field the reader branches on or passes downstream is defined at first
+      use.** A key the guide tells the reader to check (`accepted`, `data`) or hand to render logic
+      (`profile`, `selectedOptimizations`, `changes`) gets a plain-prose definition at first use, not
+      only a code comment. This extends the term rule above from domain nouns to the fields of the
+      SDK's return envelope.
+- [ ] **Near-identical or shorthand identifiers are disambiguated once.** When two names differ by
+      one letter and mean different things (`selectedOptimization` the single returned selection vs
+      `selectedOptimizations` the set passed in), or a shorthand form coexists with a longhand one
+      (`consent: true` vs `consent: { events, persistence }`), the guide states the distinction at
+      first use so neither reads as a typo or a different feature.
 - [ ] No section promises "you don't need X" and then requires an undefined X before it is
       explained.
 - [ ] No informal filler or hype that reads oddly in a reference doc ("this is the payoff", "the
@@ -37,7 +47,23 @@ add per-archetype checks.
 - [ ] **Every magic-value identifier states who owns it.** For each cookie name, env var, header,
       storage key, or config string in a snippet, the guide states whether the reader must match the
       exact name (SDK-defined) or can choose it freely (reader-invented). Neither reads as the
-      other.
+      other. When an SDK-exported constant (e.g. `ANONYMOUS_ID_COOKIE`) surfaces elsewhere as its
+      literal value (e.g. `ctfl-opt-aid` in a Troubleshooting row), the guide states the mapping once
+      so the reader can connect the code they wrote to the artifact they observe.
+- [ ] **Every helper the reader would run is defined before or at first use, or points forward.**
+      Helper functions used inside `**Adapt this to your use case:**` blocks (`getRequestContext`,
+      `getProfileFromRequest`) are defined at or before their first appearance, or the guide points
+      forward to the section that defines them. A helper referenced but defined nowhere in the guide
+      (a `getAppLocale`-style phantom) is a defect: define it once or inline the expression the guide
+      already teaches.
+- [ ] **No orphan cross-SDK API.** The guide does not name a method a given runtime never calls
+      (e.g. `screen()` in a Node guide) inside a warning, "do not do X" list, or table without
+      introducing it in a flow first. Warn only about methods the guide actually teaches.
+- [ ] **Source language is consistent, or the switch is announced with run instructions.** A guide
+      does not silently switch source language (e.g. a `.mjs` quick start run with `node` followed by
+      TypeScript body snippets) without a prose note stating the switch and how to run the new form.
+      The run command shown for a `**Copy this:**` block must actually work for that block's
+      language.
 - [ ] `pnpm format:fix <file>` leaves the file unchanged (run it; Prettier owns formatting).
 - [ ] The collapsible TOC preserves the mtoc markers, omits `## Quick start`, and every anchor
       resolves to a real heading.
