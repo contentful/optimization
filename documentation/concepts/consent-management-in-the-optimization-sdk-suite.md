@@ -461,21 +461,14 @@ Use the same SDK controls after your legal and privacy review maps the applicabl
 | Brazil LGPD                             | [ANPD cookie guidance][anpd-lgpd]                                            | Present purpose categories for personalization, analytics, and sharing, then enable only the SDK event and persistence choices those purposes cover.                                |
 | India DPDP Act                          | [Digital Personal Data Protection Act, 2023][india-dpdp]                     | Sync notice, clear affirmative choice, purpose limits, and withdrawal state into browser, server, and mobile SDK runtimes.                                                          |
 
-[edpb-gdpr]:
-  https://www.edpb.europa.eu/our-work-tools/our-documents/guidelines/guidelines-052020-consent-under-regulation-2016679_en
-[edpb-eprivacy]:
-  https://www.edpb.europa.eu/our-work-tools/our-documents/guidelines/guidelines-22023-technical-scope-art-53-eprivacy-directive_en
-[ico-pecr]:
-  https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/guide-to-pecr/cookies-and-similar-technologies/
+[edpb-gdpr]: https://www.edpb.europa.eu/our-work-tools/our-documents/guidelines/guidelines-052020-consent-under-regulation-2016679_en
+[edpb-eprivacy]: https://www.edpb.europa.eu/our-work-tools/our-documents/guidelines/guidelines-22023-technical-scope-art-53-eprivacy-directive_en
+[ico-pecr]: https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/guide-to-pecr/cookies-and-similar-technologies/
 [california-ccpa]: https://oag.ca.gov/privacy/ccpa
-[opc-pipeda]:
-  https://www.priv.gc.ca/en/privacy-topics/privacy-laws-in-canada/the-personal-information-protection-and-electronic-documents-act-pipeda/p_principle/principles/p_consent/
-[oaic-privacy]:
-  https://www.oaic.gov.au/privacy/your-privacy-rights/your-personal-information/consent-to-the-handling-of-personal-information
-[anpd-lgpd]:
-  https://www.gov.br/anpd/pt-br/centrais-de-conteudo/materiais-educativos-e-publicacoes/guia_orientativo_cookies_e_protecao_de_dados_pessoais
-[india-dpdp]:
-  https://www.meity.gov.in/static/uploads/2024/02/Digital-Personal-Data-Protection-Act-2023.pdf
+[opc-pipeda]: https://www.priv.gc.ca/en/privacy-topics/privacy-laws-in-canada/the-personal-information-protection-and-electronic-documents-act-pipeda/p_principle/principles/p_consent/
+[oaic-privacy]: https://www.oaic.gov.au/privacy/your-privacy-rights/your-personal-information/consent-to-the-handling-of-personal-information
+[anpd-lgpd]: https://www.gov.br/anpd/pt-br/centrais-de-conteudo/materiais-educativos-e-publicacoes/guia_orientativo_cookies_e_protecao_de_dados_pessoais
+[india-dpdp]: https://www.meity.gov.in/static/uploads/2024/02/Digital-Personal-Data-Protection-Act-2023.pdf
 
 ## Engineering checklist
 
