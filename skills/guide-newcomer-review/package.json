@@ -1,0 +1,9 @@
+{
+  "name": "@contentful/skill-guide-newcomer-review",
+  "version": "0.1.0",
+  "description": "Review Optimization SDK guides as an average developer with no personalization background",
+  "license": "MIT",
+  "files": [
+    "SKILL.md"
+  ]
+}
