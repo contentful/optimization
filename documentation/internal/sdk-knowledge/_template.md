@@ -9,8 +9,8 @@ shared/concepts.md and shared/vocabulary.md instead of restating shared material
 
 <!-- feeds-guides: documentation/guides/<the guide this file's facts compose into>.md -->
 
-> Internal, verified reference. Not a guide. Facts only, each with a source pointer. Last verified
-> against packages/\*\*/src during the guide rewrite.
+> Internal, verified reference. Not a guide. Facts only, each with a source pointer verified against
+> packages/\*\*/src.
 
 Shared vocabulary and SDK-neutral concepts: see [`../shared/vocabulary.md`](../shared/vocabulary.md)
 and [`../shared/concepts.md`](../shared/concepts.md). This file records only what is specific to

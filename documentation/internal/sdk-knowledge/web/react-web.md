@@ -2,8 +2,8 @@
 
 <!-- feeds-guides: documentation/guides/integrating-the-react-web-sdk-in-a-react-app.md -->
 
-> Internal, verified reference. Not a guide. Facts only, each with a source pointer. Last verified
-> against packages/\*\*/src during the guide rewrite.
+> Internal, verified reference. Not a guide. Facts only, each with a source pointer verified against
+> packages/\*\*/src.
 
 Shared vocabulary and SDK-neutral concepts: see [`../shared/vocabulary.md`](../shared/vocabulary.md)
 and [`../shared/concepts.md`](../shared/concepts.md). This file records only React-Web specifics.

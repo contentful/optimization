@@ -1,7 +1,9 @@
-# Shared concepts (web family, SDK-neutral)
+# Shared concepts (SDK-neutral)
 
-SDK-neutral concepts common to Web, React Web, and both Next.js routers. Per-SDK files reference
-these instead of restating them. Terse; not a guide.
+SDK-neutral concepts that live in the shared `core-sdk` and so apply across the SDK families that
+consume them — currently Web, React Web, both Next.js routers, Node, and React Native. Per-SDK files
+reference these instead of restating them. A few entries are described with a web-oriented example
+(e.g. a render prop); the underlying contract is the same across runtimes. Terse; not a guide.
 
 ## Entry-source boundary (managed or manual)
 

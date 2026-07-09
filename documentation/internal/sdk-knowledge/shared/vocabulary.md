@@ -1,7 +1,8 @@
-# Shared vocabulary (web family)
+# Shared vocabulary
 
-Canonical term → one-line meaning. Use verbatim across the web-family guides so they do not drift.
-Facts only; source pointers where a term maps to a concrete symbol.
+Canonical term → one-line meaning. Use verbatim across the guide families that share these terms
+(Web, React Web, both Next.js routers, Node, React Native) so they do not drift. Facts only; source
+pointers where a term maps to a concrete symbol.
 
 | Term                   | One-line meaning                                                                                                                                                                                                         | source                                                             |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |

@@ -2,13 +2,13 @@
 
 <!-- feeds-guides: documentation/guides/integrating-the-react-native-sdk-in-a-react-native-app.md -->
 
-> Internal, verified reference. Not a guide. Facts only, each with a source pointer. Last verified
-> against packages/\*\*/src during the guide rewrite.
+> Internal, verified reference. Not a guide. Facts only, each with a source pointer verified against
+> packages/\*\*/src.
 
 Shared vocabulary and SDK-neutral concepts: see [`../shared/vocabulary.md`](../shared/vocabulary.md)
-and [`../shared/concepts.md`](../shared/concepts.md) (those files are headed "web family"; the
-concepts they capture — consent/persistence axes, baseline fallback, entry-source managed-vs-manual,
-live updates, single-locale entry contract — apply to the whole suite via the shared `core-sdk`).
+and [`../shared/concepts.md`](../shared/concepts.md). The concepts they capture — consent/persistence
+axes, baseline fallback, entry-source managed-vs-manual, live updates, single-locale entry contract —
+are SDK-neutral and apply to the whole suite via the shared `core-sdk`.
 This file records only React-Native specifics. The RN SDK subclasses the same `CoreStateful` runtime
 as the web SDKs and adds React Native providers/hooks/components, AsyncStorage persistence, optional
 NetInfo offline detection, `AppState` background flushing, and an in-app preview panel. Package
