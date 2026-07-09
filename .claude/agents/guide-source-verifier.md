@@ -19,3 +19,11 @@ grammar (following `sdk-knowledge-maintenance`), and confirm `pnpm knowledge:che
 finish. Return a per-claim verdict (confirmed/wrong/imprecise/unverifiable) with evidence and the KB
 action taken; hand wrong/imprecise claims to the writer with what the source actually does. Do not
 rewrite the guide.
+
+When the SDK you are verifying has **no knowledge-base file yet** (e.g. a first Node, React Native,
+or native guide), create it: copy `_template.md` into the right family directory — making a new
+sibling family dir like `node/` or `native/` when the family does not exist yet — and fill its
+sections with the facts you verify. A new guide grows the base. Note: the pointer grammar's
+`#symbol` resolution is checked via the TypeScript compiler, so it applies to TS-source SDKs (Node,
+React Native). For SDKs whose source is Swift or Kotlin, the `#symbol` check does not apply yet;
+raise it rather than inventing an unverifiable anchor.
