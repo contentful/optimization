@@ -41,7 +41,7 @@ Future families get sibling dirs (e.g. `native/`, `node/`). Do not create empty 
 
 ## Rules
 
-- Every fact carries a `source:` pointer (path, or `path#symbol`, with line where useful).
+- Every fact carries a `source:` pointer in the [grammar below](#source-pointer-grammar).
 - Per-SDK files conform to [`_template.md`](./_template.md) exactly — same sections, same order. If
   a section has no entries, keep the heading and write `None.`
 - Per-SDK files link to [`shared/concepts.md`](./shared/concepts.md) and
@@ -49,6 +49,53 @@ Future families get sibling dirs (e.g. `native/`, `node/`). Do not create empty 
   each shared fact once, in `shared/`, and reference it.
 - Terse notes, not prose. Not guides. Nothing goes into the skill. Do not git-commit (review owns
   commits).
+
+## Source pointer grammar
+
+A pointer is machine-checked by `pnpm knowledge:check`
+([`scripts/validate-sdk-knowledge.ts`](../../../scripts/validate-sdk-knowledge.ts)). It must match
+this grammar exactly — free-text pointers (e.g. `source: accepted App Router guide`) are rejected,
+which is what keeps a fact grounded in source rather than in another doc.
+
+Where a pointer lives:
+
+- **Prose fact** — end the fact with its own line: `source: <pointers>`. Keep it on one line; never
+  wrap a pointer across lines.
+- **Table row** — a section whose `_template.md` shape has a `source` column puts `<pointers>` in
+  that column. No bare `source:` prefix inside a table cell.
+
+`<pointers>` is one or more pointer tokens separated by `; ` (semicolon-space). Token forms:
+
+| Form                       | Resolves to                                                | Checked                                     |
+| -------------------------- | ---------------------------------------------------------- | ------------------------------------------- |
+| `<sdk>#<relpath>`          | a file under that package's `src/`                         | file exists                                 |
+| `<sdk>#<relpath>#<symbol>` | a declared/exported identifier in that file                | file exists **and** symbol is declared      |
+| `impl:<name>#<relpath>`    | a file under `implementations/<name>/`                     | file exists                                 |
+| `concept:<slug>`           | `documentation/concepts/<slug>.md`                         | file exists                                 |
+| `kb:<relpath>`             | another file in this knowledge base (relative to its root) | file exists                                 |
+| `extern:<free text>`       | an out-of-repo fact (e.g. `extern:Next.js convention`)     | not checked — use sparingly, state the fact |
+
+Definitions:
+
+- `<sdk>` is a workspace package **directory basename** — the validator discovers these from
+  `packages/**/package.json`, so every SDK family is covered automatically. Current keys include
+  `core-sdk`, `web-sdk`, `nextjs-sdk`, `react-web-sdk`, `node-sdk`, `react-native-sdk`,
+  `api-schemas`, `api-client`, `preview-panel`.
+- `<relpath>` is relative to that package's `src/` (e.g. `CoreBase.ts`,
+  `resolvers/OptimizedEntryResolver.ts`).
+- `<symbol>` is a single top-level identifier declared in the file (`export`ed or not): a `const`,
+  `function`, `class`, `interface`, `type`, `enum`, or a named member of an exported
+  interface/type. One symbol per token; for two symbols, write two `; `-separated tokens.
+- **No line numbers.** The symbol is the anchor — line ranges drift on every edit, symbols do not.
+  A fact about a behavior spanning many lines points at the enclosing symbol.
+
+Examples:
+
+- `source: core-sdk#CoreBase.ts#ContentfulConfig`
+- `source: core-sdk#constants.ts#ANONYMOUS_ID_COOKIE; nextjs-sdk#cookies.ts`
+- `source: react-web-sdk#optimized-entry/optimizedEntryUtils.ts; concept:entry-personalization-and-variant-resolution`
+- `source: impl:nextjs-sdk_pages-router#pages/_app.tsx`
+- `source: extern:Next.js exposes only NEXT_PUBLIC_-prefixed vars to the browser`
 
 ## Adding a new SDK
 

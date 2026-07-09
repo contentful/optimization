@@ -25,6 +25,7 @@
     "implementation:nextjs-sdk_app-router": "pnpm run implementation:run -- nextjs-sdk_app-router",
     "implementation:nextjs-sdk_pages-router": "pnpm run implementation:run -- nextjs-sdk_pages-router",
     "implementation:web-sdk": "pnpm run implementation:run -- web-sdk",
+    "knowledge:check": "tsx ./scripts/validate-sdk-knowledge.ts",
     "implementation:lint": "eslint implementations --ignore-pattern implementations/nextjs-sdk_app-router --ignore-pattern implementations/nextjs-sdk_pages-router && pnpm run implementation:run -- nextjs-sdk_app-router lint && pnpm run implementation:run -- nextjs-sdk_pages-router lint",
     "implementation:lint:fix": "eslint implementations --ignore-pattern implementations/nextjs-sdk_app-router --ignore-pattern implementations/nextjs-sdk_pages-router --fix && pnpm run implementation:run -- nextjs-sdk_app-router lint && pnpm run implementation:run -- nextjs-sdk_pages-router lint",
     "implementation:typecheck": "pnpm run implementation:run -- --all -- typecheck",

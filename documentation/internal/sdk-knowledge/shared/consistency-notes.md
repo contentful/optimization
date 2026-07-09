@@ -35,7 +35,7 @@ main's final consistency pass. Terse; running log.
   (no `NEXT_` prefix; non-standard). Guide deliberately diverges from the impl to teach the correct
   convention. Confirm the React Web / Web guides frame their own preview flag as reader-owned with
   each framework's real browser-var convention rather than copying the impl's `PUBLIC_` prefix.
-  source: ref impl `lib/config.ts:6`.
+  source: impl:nextjs-sdk_pages-router#lib/config.ts
 
 ## Open items to reconcile when guides 2 & 3 land
 
@@ -72,8 +72,8 @@ main's final consistency pass. Terse; running log.
   `selectedOptimization` is `undefined` ONLY when no experience matched; when an experience assigns
   the CONTROL/baseline variant (`variantIndex: 0`) it is DEFINED while the resolved entry still
   equals the baseline — so `selectedOptimization === undefined` must not be read as "showing
-  baseline content." source: `core-sdk/src/resolvers/OptimizedEntryResolver.ts:148-209`. The React
-  Web, App Router, and Pages Router guides describe the baseline-fallback contract but do NOT
-  surface this control-variant nuance. Consider whether to backport a one-line note to those guides
-  (the render helpers already guard on presence, so it is a prose-precision improvement, not a bug).
-  </content>
+  baseline content." source: core-sdk#resolvers/OptimizedEntryResolver.ts#OptimizedEntryResolver.
+  The React Web, App Router, and Pages Router guides describe the baseline-fallback contract but do
+  NOT surface this control-variant nuance. Consider whether to backport a one-line note to those
+  guides (the render helpers already guard on presence, so it is a prose-precision improvement, not
+  a bug).

@@ -16,13 +16,12 @@ resolution hand-off:
   `useOptimizedEntry({ entryId })`). The client is still app-owned; the SDK only calls `getEntry()`
   on it, merging `contentful.defaultQuery`, the per-call query, an SDK locale fallback, and
   `include: 10`. Per-instance cache defaults to `{ maxEntries: 100, ttlMs: 300_000 }`;
-  `cache: false` disables it; `clearContentfulEntryCache()` clears it. source: `core-sdk`
-  `CoreBase.ts` — `ContentfulConfig` (~:66-79), `ContentfulEntryClient` (~:46-49), `contentful?`
-  config key, `fetchContentfulEntry`/`fetchOptimizedEntry`/`clearContentfulEntryCache`.
+  `cache: false` disables it; `clearContentfulEntryCache()` clears it.
+  source: core-sdk#CoreBase.ts#ContentfulConfig; core-sdk#CoreBase.ts#ContentfulEntryClient; core-sdk#CoreBase.ts#fetchContentfulEntry; core-sdk#CoreBase.ts#clearContentfulEntryCache
 
 Either way, the SDK sits at the hand-off where a fetched entry becomes a component and returns the
 resolved variant (or the baseline entry). Both paths are supported; a guide must not assert the SDK
-never fetches. source: `core-sdk` `CoreBase.ts` `contentful?` config.
+never fetches. source: core-sdk#CoreBase.ts#ContentfulConfig
 
 ## Entry resolution
 
@@ -30,33 +29,35 @@ Fetch with ONE concrete locale and an `include` depth deep enough to cover the p
 and linked variant entries. All-locale payloads (`withAllLocales` / CDA `locale=*`) use locale-keyed
 field maps the resolver cannot read ⇒ entries fall back to baseline. The entry wrapper's render prop
 hands back the resolved entry as a base `contentful` `Entry`; a narrower component type needs a
-cast. source: react-web `optimized-entry/optimizedEntryUtils.ts`; entry-personalization concept doc.
+cast.
+source: react-web-sdk#optimized-entry/optimizedEntryUtils.ts#RenderProp; concept:entry-personalization-and-variant-resolution
 
 ## Baseline fallback
 
 On denied consent, no matching variant, unresolved links, or an all-locale payload, the render prop
 receives the baseline (original) entry and the UI does not break. This is why an integration renders
-correctly even before any variant is authored. source: react-web `OptimizedEntry`.
+correctly even before any variant is authored.
+source: react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry
 
 ## Consent & persistence
 
 Two independent axes: `consent` (may personalize + send events) and `persistenceConsent` (may store
 the profile-id cookie). Consent policy is app-owned: the app records the choice and the SDK reads it
 (server-side per request, browser-side via seeded defaults). The consent record/cookie is
-reader-owned; the profile-id cookie is SDK-owned. source: factory `defaults`; per-SDK server
-consent.
+reader-owned; the profile-id cookie is SDK-owned.
+source: core-sdk#StatefulDefaults.ts#consent; core-sdk#StatefulDefaults.ts#persistenceConsent; core-sdk#constants.ts#ANONYMOUS_ID_COOKIE
 
 ## Live updates
 
 Opt-in. Most content is fixed for a request's life, so re-resolution after load is off by default.
 Turned on app-wide (factory `liveUpdates`) or per-entry; a per-entry value overrides the app-wide
-default. Triggers: consent/identity/profile changes in the browser. source: react-web
-`LiveUpdatesProvider`, `hooks/useLiveUpdates.ts`.
+default. Triggers: consent/identity/profile changes in the browser.
+source: react-web-sdk#provider/LiveUpdatesProvider.tsx#LiveUpdatesProvider; react-web-sdk#hooks/useLiveUpdates.ts#useLiveUpdates
 
 ## Page events
 
 A page event signals a page/route view. Auto-page trackers emit them on navigation and dedupe
 consecutive route keys. When the server already reported a consented page view, the browser must
 skip the duplicate (per-SDK `initialPageEvent` / tracker prop). Interaction events
-(view/click/hover) are consent-gated browser activity and use the resolved entry id. source:
-react-web `auto-page/*`, `router/*`. </content>
+(view/click/hover) are consent-gated browser activity and use the resolved entry id.
+source: react-web-sdk#auto-page/useAutoPageEmitter.ts; react-web-sdk#router/next-app.tsx
