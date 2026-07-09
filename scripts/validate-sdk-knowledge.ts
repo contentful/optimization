@@ -39,6 +39,8 @@
  *     pointers; exempt from all checks so the format's own docs are not graded as data.
  *   - shared/** — grammar + resolution only (mixed prose + facts).
  *   - everything else (per-SDK files) — all four checks.
+ *   - documentation/guides/** — NOT graded for facts (guides are prose), but scanned for stray
+ *     ESCALATE markers, since the writer's escalation handoff lives in the guide until resolved.
  *
  * Failures accumulate into `problems` and are printed sorted by file:line; a non-empty set exits 1.
  *
@@ -60,6 +62,7 @@ import { collectDeclaredSymbols } from './sdk-knowledge/source-symbols'
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const knowledgeDir = path.join(rootDir, 'documentation/internal/sdk-knowledge')
+const guidesDir = path.join(rootDir, 'documentation/guides')
 const packagesDir = path.join(rootDir, 'packages')
 const implementationsDir = path.join(rootDir, 'implementations')
 const conceptsDir = path.join(rootDir, 'documentation/concepts')
@@ -109,6 +112,13 @@ const symbolCache = new Map<string, Set<string>>()
 // Entry point: validate every markdown file in the base, then print the sorted report and exit.
 for (const file of listMarkdownFiles(knowledgeDir)) {
   validateFile(file)
+}
+
+// ESCALATE markers are a transient writer→knowledge-author handoff (see the author-guide workflow).
+// They must never ship, so scan both the knowledge base and the guides they can appear in and fail
+// on any survivor. This is the only guide-tree check the validator does.
+for (const file of [...listMarkdownFiles(knowledgeDir), ...listMarkdownFiles(guidesDir)]) {
+  checkNoEscalateMarker(file)
 }
 
 report()
@@ -515,6 +525,23 @@ function checkFeedsGuides(lines: string[], file: string): void {
       addProblem(file, markerLine + 1, `feeds-guides: → no such guide (${target})`)
     }
   }
+}
+
+/**
+ * Fails on a surviving `ESCALATE(...)` marker. The workflow's writer→knowledge-author handoff leaves
+ * an inline `<!-- ESCALATE(sdk-knowledge-author): … -->` comment where a fact is missing; it must be
+ * resolved and removed before the guide ships. A survivor means an unresolved escalation would go out
+ * in reader-facing prose, so it is an error wherever it appears.
+ */
+function checkNoEscalateMarker(absPath: string): void {
+  const relPath = path.relative(rootDir, absPath)
+  readFileSync(absPath, 'utf8')
+    .split('\n')
+    .forEach((line, index) => {
+      if (/\bESCALATE\s*\(/u.test(line)) {
+        addProblem(relPath, index + 1, `unresolved ESCALATE marker must be resolved and removed`)
+      }
+    })
 }
 
 /** The `##` section heading texts of a markdown file, in document order. */

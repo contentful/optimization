@@ -6,6 +6,11 @@ argument-hint: '[guide file under documentation/guides/]'
 Run the full authoring review loop on the guide: `$ARGUMENTS` (if empty, ask which guide under
 `documentation/guides/`).
 
+This runs standalone (review a guide that already shipped) and is also the review core that
+`/author-guide` and `/refresh-docs` delegate to. When one of those workflows invokes it, this command
+owns steps 1–5 in full — the workflow's own gate/funnel steps are the same loop, run once, not a
+second pass. Do not review, fix, and funnel twice.
+
 Do this in order:
 
 1. **Newcomer review.** Launch the `guide-newcomer-reviewer` agent on the guide. It reads the guide

@@ -129,6 +129,7 @@ jobs:
             # invalidate a symbol pointer without touching a fact.
             knowledge:
               - 'documentation/internal/sdk-knowledge/**'
+              - 'documentation/guides/**'
               - 'packages/**/src/**'
               - 'implementations/**'
               - 'scripts/validate-sdk-knowledge.ts'

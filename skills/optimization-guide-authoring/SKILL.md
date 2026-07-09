@@ -155,11 +155,13 @@ Router, React Native, iOS SwiftUI, iOS UIKit, Android Compose, Android Views.
    do not re-grep source. Use the matching reference implementation under `implementations/` for
    real-shaped patterns and "adapt" starting points, but the base, not the impl, is what makes a claim
    true (the impl proves one path works and can hide nuance). **If the base is missing a fact you
-   need, do not verify it from source yourself — escalate to `sdk-knowledge-authoring`**, which reads
-   source and records the fact; then compose from the fact it adds. That keeps comprehension in one
-   place and means the next guide reuses what this one needed. (When you author a guide for an SDK
-   whose KB file does not exist yet, that whole file is bootstrapped by `sdk-knowledge-authoring`
-   first — see the workflow command.)
+   need, do not verify it from source yourself — escalate** with an inline
+   `<!-- ESCALATE(sdk-knowledge-author): the fact you need -->` marker at the point of use; the
+   `sdk-knowledge-authoring` role reads source and records the fact, then you compose the claim from
+   it and remove the marker. That keeps comprehension in one place and means the next guide reuses
+   what this one needed. No `ESCALATE` marker may survive to a finished guide — `pnpm knowledge:check`
+   fails on one. (When you author a guide for an SDK whose KB file does not exist yet, that whole file
+   is bootstrapped by `sdk-knowledge-authoring` first — see the workflow command.)
 6. **Sync the TOC and anchors**, add `## Production checks` and (if there are known failure modes)
    `## Troubleshooting`, and link the reference implementation READMEs.
 7. **Self-review** against [references/authoring-checklist.md](references/authoring-checklist.md).

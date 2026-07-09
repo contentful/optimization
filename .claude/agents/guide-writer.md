@@ -15,8 +15,13 @@ block, and self-review checklist are your source of truth.
 Compose every SDK claim from the internal knowledge base (`documentation/internal/sdk-knowledge/`),
 which holds facts already verified against source — read facts, do not re-grep `packages/**/src`. Use
 the matching reference implementation under `implementations/` for real-shaped patterns and "adapt"
-starting points. If the base is missing a fact you need, escalate to `sdk-knowledge-authoring` to add
-it from source, then compose from that fact; do not verify source yourself.
+starting points.
+
+If the base is missing a fact you need, do not verify source yourself — **escalate** with an inline
+marker at the point of use: `<!-- ESCALATE(sdk-knowledge-author): the exact fact you need -->`. The
+`sdk-knowledge-author` adds it from source; you then compose the claim from that fact and **delete the
+marker**. The marker is a transient handoff and must never ship — `pnpm knowledge:check` fails on any
+`ESCALATE` marker left in a guide, so none may remain when you finish.
 
 You handle two jobs:
 

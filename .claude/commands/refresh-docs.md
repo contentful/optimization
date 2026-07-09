@@ -42,9 +42,10 @@ fact**, composing from the reconciled KB (not re-reading source, not rewriting t
 A fact that changed shape/behavior means the snippet or sentence that used it changes; an unaffected
 section is left as-is.
 
-## 4. Review only what changed (delegate to /review-guide, scoped)
+## 4. Review only what changed (delegate to the `review-guide` skill, scoped)
 
-Run `review-guide` on each recomposed guide, but focus the reviewers on the changed passages:
+Invoke the **`review-guide`** skill on each recomposed guide — it owns the review/fix/funnel/validate
+loop in one pass; do not re-run those steps yourself. Focus the reviewers on the changed passages:
 
 - **guide-source-verifier** — confirm the changed claims now trace to the reconciled KB facts.
 - **guide-newcomer-reviewer** — confirm the changed passages still read cleanly for a newcomer (a
@@ -52,10 +53,12 @@ Run `review-guide` on each recomposed guide, but focus the reviewers on the chan
 
 ## 5. Gate
 
-- `pnpm knowledge:check` passes.
+`review-guide` runs its own gate; this adds what is specific to an incremental refresh:
+
 - Every changed claim traces to a current KB fact; no newcomer blocker in the changed passages.
-- `pnpm format:fix <touched paths>` leaves the touched guides clean; TOC anchors still resolve. Pass
-  the specific files you changed — never a bare `pnpm format:fix`, which reformats the whole tree.
+- No `ESCALATE` marker remains in any touched guide.
+- `pnpm knowledge:check` passes; `pnpm format:fix <touched paths>` leaves the touched guides clean and
+  TOC anchors resolve. Pass the specific files you changed — never a bare `pnpm format:fix`.
 
 ## 6. Report
 
