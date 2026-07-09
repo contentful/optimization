@@ -65,9 +65,8 @@ source: `nextjs-sdk#bound-component-types.ts#NextjsBoundOptimizedEntryProps`; `r
 - Render prop hands back a base `contentful` `Entry`; cast `resolved as YourType`
   (`as unknown as YourType` only for genuinely disjoint types). Baseline-fallback contract: see
   [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback). Double-wrapping the same
-  baseline id renders `null` + dev warning. source:
-  `react-web-sdk#optimized-entry/optimizedEntryUtils.ts#OptimizedEntryRenderContext`;
-  `react-web-sdk#optimized-entry/OptimizedEntry.tsx#useDuplicateBaselineGuard`.
+  baseline id renders `null` + dev warning.
+  source: `react-web-sdk#optimized-entry/optimizedEntryUtils.ts#OptimizedEntryRenderContext`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#useDuplicateBaselineGuard`
 
 ## Identifier ownership
 
@@ -81,38 +80,32 @@ source: `nextjs-sdk#bound-component-types.ts#NextjsBoundOptimizedEntryProps`; `r
 
 - `NextAppAutoPageTracker` must stay inside `Suspense` (reads `useSearchParams`).
   Duplicate-page-event control: `initialPageEvent="skip"` when the server already reported the view,
-  `"emit"` for browser-owned routes. source: `react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker`;
-  `react-web-sdk#auto-page/useAutoPageEmitter.ts#InitialAutoPageEvent`.
+  `"emit"` for browser-owned routes.
+  source: `react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker`; `react-web-sdk#auto-page/useAutoPageEmitter.ts#InitialAutoPageEvent`
 - Interaction tracking on by default with `OptimizedEntry`; opt out via factory
-  `trackEntryInteraction`; uses resolved entry id. source:
-  `react-web-sdk#provider/OptimizationProvider.tsx#TrackEntryInteractionOptions`;
-  concept:interaction-tracking-in-web-sdks.
+  `trackEntryInteraction`; uses resolved entry id.
+  source: `react-web-sdk#provider/OptimizationProvider.tsx#TrackEntryInteractionOptions`; concept:interaction-tracking-in-web-sdks
 
 ## Consent & persistence
 
 - Model: see [`../shared/concepts.md`](../shared/concepts.md#consent--persistence). Per-request
-  `server.consent` reads request `cookies.get(NAME)`; browser seeded via `defaults`. source:
-  `nextjs-sdk#bound-component-types.ts#NextjsOptimizationServerConsentContext`;
-  `nextjs-sdk#app-router-server.tsx#resolveClientDefaults`.
+  `server.consent` reads request `cookies.get(NAME)`; browser seeded via `defaults`.
+  source: `nextjs-sdk#bound-component-types.ts#NextjsOptimizationServerConsentContext`; `nextjs-sdk#app-router-server.tsx#resolveClientDefaults`
 
 ## Version / runtime quirks
 
 - **Request-handler filename/export is Next.js-version-specific:** Next.js 16 loads a `proxy` export
   from `proxy.ts`; Next.js 15 loads a `middleware` export from `middleware.ts` (alias
   `export { proxy as middleware }`). Wrong filename/export ⇒ handler silently never runs, and with
-  `server.enabled: true` the bound root THROWS (not baseline). source:
-  `nextjs-sdk#app-router-server.tsx#loadServerData`;
-  `nextjs-sdk#request-handler.ts#createNextjsOptimizationContextHandler`;
-  `extern:Next.js 16 loads a proxy export from proxy.ts; Next.js 15 loads a middleware export from middleware.ts`.
+  `server.enabled: true` the bound root THROWS (not baseline).
+  source: `nextjs-sdk#app-router-server.tsx#loadServerData`; `nextjs-sdk#request-handler.ts#createNextjsOptimizationContextHandler`; `extern:Next.js 16 loads a proxy export from proxy.ts whereas Next.js 15 loads a middleware export from middleware.ts`
 - **Server personalization forces dynamic rendering:** bound server components read `headers()` ⇒
-  route can no longer use `revalidate` / `generateStaticParams` (ISR/SSG). source:
-  `nextjs-sdk#app-router-server.tsx#loadServerData`;
-  `extern:calling next/headers headers() opts a route into dynamic rendering, disabling revalidate and generateStaticParams`.
+  route can no longer use `revalidate` / `generateStaticParams` (ISR/SSG).
+  source: `nextjs-sdk#app-router-server.tsx#loadServerData`; `extern:calling next/headers headers() opts a route into dynamic rendering, disabling revalidate and generateStaticParams`
 
 ## Failure & fallback behavior
 
 - Baseline fallback on denied consent / no variant / unresolved links / all-locale payloads: see
   [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback). With `server.enabled: true`, a
-  missing/misnamed request handler makes the bound root throw rather than fall back. source:
-  `nextjs-sdk#app-router-server.tsx#loadServerData`;
-  `nextjs-sdk#app-router-server.tsx#isAutomaticServerOptimizationData`.
+  missing/misnamed request handler makes the bound root throw rather than fall back.
+  source: `nextjs-sdk#app-router-server.tsx#loadServerData`; `nextjs-sdk#app-router-server.tsx#isAutomaticServerOptimizationData`
