@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 
 export type NextjsBoundProviderConfig = Omit<
   OptimizationRootProps,
-  'children' | 'liveUpdates' | 'serverOptimizedEntries'
+  'children' | 'liveUpdates' | 'prefetchedManagedEntries' | 'prefetchManagedEntries'
 >
 
 export interface NextjsCookieValue {
@@ -47,7 +47,12 @@ export interface NextjsOptimizationCookieConfig {
 
 export type NextjsBoundRootConfig = Omit<
   OptimizationRootProps,
-  'children' | 'cookie' | 'sdk' | 'serverOptimizationState' | 'serverOptimizedEntries'
+  | 'children'
+  | 'cookie'
+  | 'sdk'
+  | 'serverOptimizationState'
+  | 'prefetchedManagedEntries'
+  | 'prefetchManagedEntries'
 > & {
   readonly cookie?: NextjsOptimizationCookieConfig
 }
@@ -74,5 +79,6 @@ export type NextjsServerOptimizedEntryProps = NextjsBoundOptimizedEntryProps
 
 export interface BoundNextjsOptimizationRootProps {
   readonly children?: ReactNode
-  readonly serverOptimizedEntries?: OptimizationRootProps['serverOptimizedEntries']
+  readonly prefetchedManagedEntries?: OptimizationRootProps['prefetchedManagedEntries']
+  readonly prefetchManagedEntries?: OptimizationRootProps['prefetchManagedEntries']
 }

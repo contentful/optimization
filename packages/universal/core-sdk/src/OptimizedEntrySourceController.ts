@@ -1,5 +1,8 @@
 import type { Entry } from 'contentful'
-import type { ContentfulEntryQuery } from './CoreBase'
+import type { ContentfulEntryQuery, ManagedEntryDescriptor, ManagedEntryHandoff } from './CoreBase'
+import { getOptimizedEntrySourceKey } from './managed-entry-key'
+
+export { getOptimizedEntrySourceKey } from './managed-entry-key'
 
 export interface OptimizedEntrySourceControllerOptions {
   /** Baseline entry supplied by the application. Takes precedence over `entryId`. */
@@ -29,17 +32,10 @@ export interface OptimizedEntrySourceSnapshot {
 
 export type OptimizedEntrySourceSnapshotListener = (snapshot: OptimizedEntrySourceSnapshot) => void
 
-export interface OptimizedEntryPrefetchDescriptor {
-  readonly entryId: string
-  readonly entryQuery?: ContentfulEntryQuery
-}
-
-export interface ServerOptimizedEntryHandoff extends OptimizedEntryPrefetchDescriptor {
-  readonly baselineEntry: Entry
-}
-
-export interface OptimizedEntryPrefetchRuntime {
-  fetchContentfulEntry: (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
+export interface ManagedEntryPrefetchRuntime {
+  prefetchManagedEntries: (
+    descriptors: readonly ManagedEntryDescriptor[],
+  ) => Promise<ManagedEntryHandoff[]>
 }
 
 type OptimizedEntrySourceSdk = NonNullable<OptimizedEntrySourceControllerOptions['sdk']>
@@ -53,13 +49,6 @@ const REQUEST_ERROR = REQUEST_SUCCESS + REQUEST_LOADING
 
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error))
-}
-
-export function getOptimizedEntrySourceKey(
-  entryId: string,
-  query: ContentfulEntryQuery | undefined,
-): string {
-  return `${entryId}:${JSON.stringify(query ?? {})}`
 }
 
 function areSourceSnapshotsEqual(
@@ -95,26 +84,11 @@ export function createOptimizedEntryLoadingEntry(entryId: string): Entry {
   }
 }
 
-export async function prefetchOptimizedEntries(
-  runtime: OptimizedEntryPrefetchRuntime,
-  descriptors: readonly OptimizedEntryPrefetchDescriptor[],
-): Promise<ServerOptimizedEntryHandoff[]> {
-  const entriesByKey = new Map<string, Promise<Entry>>()
-
-  return await Promise.all(
-    descriptors.map(async ({ entryId, entryQuery }) => {
-      const key = getOptimizedEntrySourceKey(entryId, entryQuery)
-      const baselineEntry =
-        entriesByKey.get(key) ?? runtime.fetchContentfulEntry(entryId, entryQuery)
-      entriesByKey.set(key, baselineEntry)
-
-      return {
-        ...(entryQuery === undefined ? {} : { entryQuery }),
-        baselineEntry: await baselineEntry,
-        entryId,
-      }
-    }),
-  )
+export async function prefetchManagedEntries(
+  runtime: ManagedEntryPrefetchRuntime,
+  descriptors: readonly ManagedEntryDescriptor[],
+): Promise<ManagedEntryHandoff[]> {
+  return await runtime.prefetchManagedEntries(descriptors)
 }
 
 /** Coordinates direct baseline entries and SDK-managed `entryId` fetching for framework wrappers. */

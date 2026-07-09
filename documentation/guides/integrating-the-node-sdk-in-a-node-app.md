@@ -211,7 +211,8 @@ You do not need a setup inventory up front. Everything else — consent, entry r
 tracking, caching — is introduced by the section that needs it. The Node SDK holds no per-visitor
 state between requests: it does not manage cookies, sessions, consent, long-lived profiles, or
 rendering. Your app owns those and passes request inputs in; the SDK evaluates the request, resolves
-entries, and returns request-local data.
+entries, and returns request-local data. When you give it your delivery client, it can fetch entries
+for you (managed fetching) via `client.getEntry()` for one entry or `client.getEntries()` for several.
 
 > [!NOTE]
 >
@@ -585,7 +586,10 @@ Contentful path passes an app-owned `contentful.js` client to the SDK, then call
 This is Milestone 2: the quick start proved an accepted event and a profile; here you turn that into
 a rendered variant. The one genuinely new call is `requestOptimization.fetchOptimizedEntry(entryId)`,
 which fetches the baseline entry, resolves the selected variant, and uses the latest accepted
-Experience response selections when you omit `selectedOptimizations`.
+Experience response selections when you omit `selectedOptimizations`. For several known entry IDs at
+once, `requestOptimization.fetchContentfulEntries()` and `requestOptimization.prefetchManagedEntries()`
+batch the fetch — entries sharing a normalized query go through one `getEntries()` call, split into
+100-ID chunks when large.
 
 Two similarly named values appear from here on, and the one-letter difference is intentional:
 
@@ -968,14 +972,14 @@ cache varies on every personalization input.
 
 Use this cache-safety table when planning production caching:
 
-| Artifact                                                       | Shared-cache safe? | Notes                                                                                                       |
-| -------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------- |
-| Raw `contentful.js` entry or query response                    | Yes                | Key by entry or query, locale, include depth, environment, host, and delivery mode                          |
-| SDK-managed entry cache                                        | Yes                | Caches baseline `getEntry()` results only; configure with `contentful.cache` or disable with `cache: false` |
-| `resolveOptimizedEntry(entry, selectedOptimizations)` result   | Conditional        | Safe only if keyed by the baseline entry version plus a `selectedOptimizations` fingerprint                 |
-| Merge-tag-rendered rich text                                   | No                 | Depends on the current request `profile`                                                                    |
-| SSR HTML with personalized content                             | Usually no         | Safe only when the cache varies on all personalization inputs                                               |
-| `page()`, `identify()`, `track()`, and `trackView()` responses | No                 | These methods perform side effects and must not be memoized                                                 |
+| Artifact                                                       | Shared-cache safe? | Notes                                                                                                                                          |
+| -------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Raw `contentful.js` entry or query response                    | Yes                | Key by entry or query, locale, include depth, environment, host, and delivery mode                                                             |
+| SDK-managed entry cache                                        | Yes                | Caches baseline entries from managed `getEntry()` and `getEntries()` fetches; configure with `contentful.cache` or disable with `cache: false` |
+| `resolveOptimizedEntry(entry, selectedOptimizations)` result   | Conditional        | Safe only if keyed by the baseline entry version plus a `selectedOptimizations` fingerprint                                                    |
+| Merge-tag-rendered rich text                                   | No                 | Depends on the current request `profile`                                                                                                       |
+| SSR HTML with personalized content                             | Usually no         | Safe only when the cache varies on all personalization inputs                                                                                  |
+| `page()`, `identify()`, `track()`, and `trackView()` responses | No                 | These methods perform side effects and must not be memoized                                                                                    |
 
 ## Production checks
 

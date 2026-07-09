@@ -1,4 +1,7 @@
-import type { CoreStatefulConfig as OptimizationConfig } from '@contentful/optimization-core'
+import type {
+  ManagedEntryDescriptor,
+  CoreStatefulConfig as OptimizationConfig,
+} from '@contentful/optimization-core'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import React, { useEffect, useRef, useState, type ReactNode } from 'react'
 import ContentfulOptimization from '../ContentfulOptimization'
@@ -42,6 +45,10 @@ export interface OptimizationProviderConfigProps extends OptimizationConfig {
    */
   children?: ReactNode
   /**
+   * Managed entries to prefetch after the SDK is ready.
+   */
+  prefetchManagedEntries?: readonly ManagedEntryDescriptor[]
+  /**
    * Called once SDK state initialization completes and before provider children mount.
    * Return a cleanup function to unsubscribe app-level state observers on teardown.
    */
@@ -59,6 +66,10 @@ export interface OptimizationProviderSdkProps {
    * Children components that will have access to the {@link ContentfulOptimization} instance.
    */
   children?: ReactNode
+  /**
+   * Managed entries to prefetch after the SDK is ready.
+   */
+  prefetchManagedEntries?: readonly ManagedEntryDescriptor[]
   /**
    * Called with the injected SDK state surface before provider children mount.
    * Return a cleanup function to unsubscribe app-level state observers on teardown.
@@ -168,7 +179,13 @@ export function OptimizationProvider(props: OptimizationProviderProps): React.JS
       }
     }
 
-    const { children: _children, onStatesReady, sdk: _sdk, ...config } = initialProps
+    const {
+      children: _children,
+      onStatesReady,
+      prefetchManagedEntries: _prefetchManagedEntries,
+      sdk: _sdk,
+      ...config
+    } = initialProps
 
     void ContentfulOptimization.create(config)
       .then((sdk) => {
@@ -220,6 +237,28 @@ export function OptimizationProvider(props: OptimizationProviderProps): React.JS
       setState({ error: err, isReady: true, sdk: state.sdk })
     }
   }, [liveLocale, props.sdk, state.sdk])
+
+  useEffect(() => {
+    const { sdk } = state
+
+    if (sdk === undefined || props.prefetchManagedEntries === undefined) {
+      return
+    }
+
+    let disposed = false
+
+    void sdk.prefetchManagedEntries(props.prefetchManagedEntries).catch((error: unknown) => {
+      if (disposed) return
+
+      const err = toError(error)
+      logger.error('Failed to prefetch managed entries:', err.message)
+      setState({ error: err, isReady: true, sdk })
+    })
+
+    return () => {
+      disposed = true
+    }
+  }, [props.prefetchManagedEntries, state.sdk])
 
   const shouldRenderChildren = state.isReady || state.error !== undefined
 

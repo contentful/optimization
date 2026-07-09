@@ -1,5 +1,6 @@
 import * as reactWeb from '@contentful/optimization-react-web'
 import type { Entry } from 'contentful'
+import { renderToString } from 'react-dom/server'
 import * as appRouter from './app-router-client'
 import * as client from './client'
 
@@ -30,12 +31,29 @@ function createEntry(id: string): Entry {
   }
 }
 
+function createEntryCollection(items: readonly Entry[]): {
+  readonly items: Entry[]
+  readonly limit: number
+  readonly skip: number
+  readonly total: number
+} {
+  return {
+    items: [...items],
+    limit: items.length,
+    skip: 0,
+    total: items.length,
+  }
+}
+
 describe('Next.js App Router client components', () => {
   it('creates bound client components from config props without server-only config', () => {
     const contentful = {
-      client: { getEntry: async () => await Promise.resolve(createEntry('unused')) },
+      client: {
+        getEntry: async () => await Promise.resolve(createEntry('unused')),
+        getEntries: async () => await Promise.resolve(createEntryCollection([])),
+      },
     }
-    const serverOptimizedEntries = [
+    const prefetchedManagedEntries = [
       {
         baselineEntry: createEntry('hero'),
         entryId: 'hero',
@@ -50,11 +68,11 @@ describe('Next.js App Router client components', () => {
 
     const element = components.OptimizationRoot({
       children: 'Bound content',
-      serverOptimizedEntries,
+      prefetchedManagedEntries,
     })
     const provider = components.OptimizationProvider({
       children: 'Provider content',
-      serverOptimizedEntries,
+      prefetchedManagedEntries,
     })
 
     expect(components.OptimizedEntry).toBe(client.OptimizedEntry)
@@ -68,17 +86,17 @@ describe('Next.js App Router client components', () => {
       clientId: testConfig.clientId,
       environment: testConfig.environment,
       liveUpdates: true,
-      serverOptimizedEntries,
+      prefetchedManagedEntries,
+      contentful,
     })
-    expect(element.props).not.toHaveProperty('contentful')
     expect(element.props).not.toHaveProperty('server')
     expect(provider?.props).toMatchObject({
       api: testConfig.api,
       clientId: testConfig.clientId,
       environment: testConfig.environment,
-      serverOptimizedEntries,
+      prefetchedManagedEntries,
+      contentful,
     })
-    expect(provider?.props).not.toHaveProperty('contentful')
     expect(provider?.props).not.toHaveProperty('liveUpdates')
     expect(provider).toMatchObject({
       props: {
@@ -90,6 +108,28 @@ describe('Next.js App Router client components', () => {
         },
       },
     })
+  })
+
+  it('renders client entryId content when a server handoff is provided', () => {
+    const getEntry = rs.fn(async () => await Promise.resolve(createEntry('client-fetch')))
+    const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
+    const components = appRouter.createNextjsAppRouterOptimization({
+      ...testConfig,
+      contentful: { client: { getEntry, getEntries } },
+    })
+    const baselineEntry = createEntry('hero')
+
+    const markup = renderToString(
+      <components.OptimizationRoot prefetchedManagedEntries={[{ baselineEntry, entryId: 'hero' }]}>
+        <components.OptimizedEntry entryId="hero">
+          {(entry) => entry.sys.id}
+        </components.OptimizedEntry>
+      </components.OptimizationRoot>,
+    )
+
+    expect(markup).toContain('hero')
+    expect(getEntry).not.toHaveBeenCalled()
+    expect(getEntries).not.toHaveBeenCalled()
   })
 
   it('keeps the low-level client entry free of router-specific exports', () => {

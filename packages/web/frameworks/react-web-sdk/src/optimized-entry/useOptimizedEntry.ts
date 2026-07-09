@@ -89,12 +89,12 @@ export function useManagedBaselineEntry({
   onEntryError,
 }: UseOptimizedEntryParams): UseManagedBaselineEntryResult {
   const optimizationContext = useOptimizationContext()
-  const { sdk, serverOptimizedEntries } = optimizationContext
+  const { sdk, prefetchedManagedEntries } = optimizationContext
   const isSdkLive = optimizationContext.isLive ?? sdk !== undefined
   const entrySourceKey =
     entryId === undefined ? undefined : getOptimizedEntrySourceKey(entryId, entryQuery)
   const handoffEntry =
-    entrySourceKey === undefined ? undefined : serverOptimizedEntries?.get(entrySourceKey)
+    entrySourceKey === undefined ? undefined : prefetchedManagedEntries?.get(entrySourceKey)
   const effectiveBaselineEntry = baselineEntry ?? handoffEntry
   const [controller] = useState(() => new OptimizedEntrySourceController())
   const [snapshot, setSnapshot] = useState<OptimizedEntrySourceSnapshot>(() => {

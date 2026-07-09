@@ -111,22 +111,23 @@ that need platform-native integration surfaces.
 `OptimizationRoot` accepts Core stateful configuration directly, plus React Native-specific props.
 Only `clientId` is required.
 
-| Option                  | Required? | Default                       | Description                                                                       |
-| ----------------------- | --------- | ----------------------------- | --------------------------------------------------------------------------------- |
-| `clientId`              | Yes       | N/A                           | Shared API key for Experience API and Insights API requests                       |
-| `environment`           | No        | `'main'`                      | Contentful environment identifier                                                 |
-| `api`                   | No        | See API options below         | Experience API and Insights API endpoint and request options                      |
-| `locale`                | No        | `undefined`                   | SDK Experience API and default event locale                                       |
-| `contentful`            | No        | `undefined`                   | App-provided `contentful.js` client for SDK-managed entry fetching                |
-| `defaults`              | No        | `undefined`                   | Initial state, commonly including consent, persistence consent, or profile values |
-| `allowedEventTypes`     | No        | `['identify', 'screen']`      | Event types allowed before consent is explicitly set                              |
-| `trackEntryInteraction` | No        | `{ views: true, taps: true }` | Default view and tap tracking for `OptimizedEntry` components                     |
-| `liveUpdates`           | No        | `false`                       | Whether optimized entries react continuously to SDK state changes                 |
-| `onStatesReady`         | No        | `undefined`                   | Provider-managed app-level state subscription hook                                |
-| `getAnonymousId`        | No        | `undefined`                   | Function used to provide an anonymous ID from application-owned identity state    |
-| `queuePolicy`           | No        | SDK defaults                  | Flush retry behavior and offline queue bounds                                     |
-| `logLevel`              | No        | `'error'`                     | Minimum log level for the default console sink                                    |
-| `onEventBlocked`        | No        | `undefined`                   | Callback invoked when consent or guard logic blocks an event                      |
+| Option                   | Required? | Default                       | Description                                                                       |
+| ------------------------ | --------- | ----------------------------- | --------------------------------------------------------------------------------- |
+| `clientId`               | Yes       | N/A                           | Shared API key for Experience API and Insights API requests                       |
+| `environment`            | No        | `'main'`                      | Contentful environment identifier                                                 |
+| `api`                    | No        | See API options below         | Experience API and Insights API endpoint and request options                      |
+| `locale`                 | No        | `undefined`                   | SDK Experience API and default event locale                                       |
+| `contentful`             | No        | `undefined`                   | App-provided `contentful.js` client for SDK-managed entry fetching                |
+| `prefetchManagedEntries` | No        | `undefined`                   | Managed entry descriptors to warm after the SDK is ready                          |
+| `defaults`               | No        | `undefined`                   | Initial state, commonly including consent, persistence consent, or profile values |
+| `allowedEventTypes`      | No        | `['identify', 'screen']`      | Event types allowed before consent is explicitly set                              |
+| `trackEntryInteraction`  | No        | `{ views: true, taps: true }` | Default view and tap tracking for `OptimizedEntry` components                     |
+| `liveUpdates`            | No        | `false`                       | Whether optimized entries react continuously to SDK state changes                 |
+| `onStatesReady`          | No        | `undefined`                   | Provider-managed app-level state subscription hook                                |
+| `getAnonymousId`         | No        | `undefined`                   | Function used to provide an anonymous ID from application-owned identity state    |
+| `queuePolicy`            | No        | SDK defaults                  | Flush retry behavior and offline queue bounds                                     |
+| `logLevel`               | No        | `'error'`                     | Minimum log level for the default console sink                                    |
+| `onEventBlocked`         | No        | `undefined`                   | Callback invoked when consent or guard logic blocks an event                      |
 
 Common `api` options:
 
@@ -225,6 +226,25 @@ Configure the SDK with `contentful: { client }` on `OptimizationRoot`, `Optimiza
 `ContentfulOptimization.create(...)`. SDK-managed fetching merges `contentful.defaultQuery`,
 per-entry `entryQuery`, the SDK `locale` fallback, and `include: 10`. Manual baseline entries remain
 supported and unchanged:
+
+Use `prefetchManagedEntries` on `OptimizationRoot` or `OptimizationProvider` to warm the SDK-managed
+entry cache after the React Native SDK is ready:
+
+```tsx
+<OptimizationRoot
+  clientId="your-client-id"
+  contentful={{ client }}
+  prefetchManagedEntries={[
+    'hero-entry-id',
+    { entryId: 'promo-entry-id', entryQuery: { locale: 'en-US' } },
+  ]}
+>
+  <YourApp />
+</OptimizationRoot>
+```
+
+React Native does not expose `prefetchedManagedEntries`; there is no SSR hydration handoff path for
+provider/root cache warming.
 
 ```tsx
 <OptimizedEntry baselineEntry={entry}>

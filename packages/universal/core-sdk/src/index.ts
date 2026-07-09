@@ -17,9 +17,11 @@ export {
   type Signal,
   type SignalFns,
   type Signals,
+  type SnapshotFn,
   type Subscription,
 } from './signals'
 
+export type * from './api-schemas'
 export * from './consent'
 export * from './constants'
 export type * from './CoreApiConfig'
@@ -39,7 +41,7 @@ export * from './locale'
 export type * from './OptimizedEntryMetadata'
 export * from './page-context'
 export type { ExperienceQueue } from './queues/ExperienceQueue'
-export type { InsightsQueue } from './queues/InsightsQueue'
+export type { InsightsQueue, InsightsQueueFlushOptions } from './queues/InsightsQueue'
 export * from './resolvers'
 export * from './StatefulDefaults'
 export * from './tracking'

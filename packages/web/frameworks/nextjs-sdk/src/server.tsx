@@ -26,10 +26,10 @@ export const DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE = ANONYMOUS_ID_COOKIE
 export type { OptimizationNodeConfig } from '@contentful/optimization-node'
 export type { OptimizationData, PartialProfile } from '@contentful/optimization-node/api-schemas'
 export {
-  prefetchOptimizedEntries,
-  type OptimizedEntryPrefetchDescriptor,
-  type OptimizedEntryPrefetchRuntime,
-  type ServerOptimizedEntryHandoff,
+  prefetchManagedEntries,
+  type ManagedEntryDescriptor,
+  type ManagedEntryHandoff,
+  type ManagedEntryPrefetchRuntime,
 } from '@contentful/optimization-node/core-sdk'
 export type {
   CoreStatelessInsightsOptions,

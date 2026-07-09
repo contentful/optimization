@@ -6,7 +6,6 @@ import type {
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import ContentfulOptimization from '../ContentfulOptimization'
-import type { OptimizationRootSdk } from '../presentation'
 import { isRecord } from '../test/typeGuards'
 import { ContentfulOptimizationRootElement } from './ContentfulOptimizationRootElement'
 import {
@@ -115,6 +114,30 @@ function createTestEntry(id: string): Entry {
   }
 }
 
+function createEntryCollection(items: readonly Entry[]): {
+  readonly items: Entry[]
+  readonly limit: number
+  readonly skip: number
+  readonly total: number
+} {
+  return {
+    items: [...items],
+    limit: items.length,
+    skip: 0,
+    total: items.length,
+  }
+}
+
+function getManagedEntryDescriptorId(entry: unknown): string {
+  if (typeof entry === 'string') return entry
+
+  if (entry !== null && typeof entry === 'object' && 'entryId' in entry) {
+    return String(entry.entryId)
+  }
+
+  return String(undefined)
+}
+
 function createOptimizableTestEntry(id: string): Entry {
   const entry = createTestEntry(id)
   entry.fields = {
@@ -172,12 +195,17 @@ function createSdk(
     flush: resolveVoid,
     fetchContentfulEntry: async (entryId: string) =>
       await Promise.resolve(createTestEntry(entryId)),
+    fetchContentfulEntries: async (entries: readonly unknown[]) =>
+      await Promise.resolve(
+        entries.map((entry) => createTestEntry(getManagedEntryDescriptorId(entry))),
+      ),
     getFlag: () => undefined,
     getMergeTagValue: () => undefined,
     hasConsent: () => true,
     identify: resolveAccepted,
     locale: undefined,
     page: resolveAccepted,
+    prefetchManagedEntries: async () => await Promise.resolve([]),
     reset: () => undefined,
     resolveOptimizedEntry,
     screen: resolveAccepted,
@@ -196,7 +224,7 @@ function createSdk(
     },
     trackCurrentPage: resolveAccepted,
     trackView: resolveAccepted,
-  } satisfies OptimizationRootSdk
+  }
 
   return {
     canOptimize,
@@ -449,6 +477,70 @@ describe('Contentful Optimization Web Components', () => {
       }),
     )
     expect(entry.dataset.ctflEntryId).toBe('baseline')
+  })
+
+  it('prefetches managed entries after the root SDK is ready', async () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const prefetchManagedEntries = rs.fn(async () => await Promise.resolve([]))
+    runtime.sdk.prefetchManagedEntries = prefetchManagedEntries
+    const root = createRootElement(runtime.sdk)
+
+    root.prefetchManagedEntries = [
+      'baseline',
+      { entryId: 'other', entryQuery: { locale: 'de-DE' } },
+    ]
+    document.body.append(root)
+    await flushMicrotasks()
+
+    expect(prefetchManagedEntries).toHaveBeenCalledWith([
+      'baseline',
+      { entryId: 'other', entryQuery: { locale: 'de-DE' } },
+    ])
+  })
+
+  it('uses the contentful property for owned-root managed entryId fetches', async () => {
+    ensureElementsDefined()
+    const getEntry = rs.fn(async () => await Promise.resolve(baseline))
+    const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
+    const root = document.createElement('ctfl-optimization-root')
+    const entry = document.createElement('ctfl-optimized-entry')
+
+    if (!(root instanceof ContentfulOptimizationRootElement)) {
+      throw new Error('ctfl-optimization-root is not registered.')
+    }
+
+    if (!(entry instanceof ContentfulOptimizedEntryElement)) {
+      throw new Error('ctfl-optimized-entry is not registered.')
+    }
+
+    const resolved = new Promise<ContentfulOptimizedEntryEventDetail>((resolve) => {
+      entry.addEventListener(
+        'ctfl-entry-resolved',
+        (event) => {
+          resolve(getEntryDetail(event))
+        },
+        { once: true },
+      )
+    })
+
+    root.clientId = 'client-id'
+    root.environment = 'main'
+    root.contentful = { client: { getEntry, getEntries }, cache: false }
+    entry.entryId = 'baseline'
+    root.append(entry)
+    document.body.append(root)
+    const detail = await resolved
+
+    expect(root.contentful).toEqual({ client: { getEntry, getEntries }, cache: false })
+    expect(getEntry).toHaveBeenCalledWith('baseline', { include: 10 })
+    expect(getEntries).not.toHaveBeenCalled()
+    expect(detail).toEqual(
+      expect.objectContaining({
+        entry: baseline,
+        metadata: expect.objectContaining({ baselineEntry: baseline }),
+      }),
+    )
   })
 
   it('lets baselineEntry take precedence over entryId', () => {

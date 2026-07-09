@@ -43,7 +43,10 @@ interface TestRenderer {
 
 type EventStream = ContentfulOptimization['states']['eventStream']
 type EventPayload = NonNullable<EventStream['current']>
-type TestSdk = Pick<ContentfulOptimization, 'destroy' | 'screen' | 'setLocale'> & {
+type TestSdk = Pick<
+  ContentfulOptimization,
+  'destroy' | 'prefetchManagedEntries' | 'screen' | 'setLocale'
+> & {
   states: Pick<ContentfulOptimization['states'], 'eventStream'>
 }
 
@@ -143,6 +146,7 @@ function createSdk(): {
     destroy: () => {
       teardownOrder.push('destroy')
     },
+    prefetchManagedEntries: rs.fn(async () => await Promise.resolve([])),
     setLocale: () => undefined,
     screen: async () => {
       eventStream.emit(screenEvent)
@@ -191,6 +195,7 @@ function requireError(value: Error | undefined): Error {
 function isContentfulOptimization(value: TestSdk): value is TestSdk & ContentfulOptimization {
   return (
     typeof value.destroy === 'function' &&
+    typeof value.prefetchManagedEntries === 'function' &&
     typeof value.screen === 'function' &&
     typeof value.setLocale === 'function' &&
     typeof value.states.eventStream.subscribe === 'function'
@@ -297,6 +302,30 @@ describe('OptimizationProvider onStatesReady', () => {
     expect(rootProps.onStatesReady).toBe(onStatesReady)
   })
 
+  it('accepts prefetchManagedEntries on provider and root props', () => {
+    const descriptors = ['hero-entry'] as const
+    const { sdk } = createSdk()
+    const providerConfigProps: OptimizationProviderProps = {
+      children: <></>,
+      clientId: 'test-client-id',
+      prefetchManagedEntries: descriptors,
+    }
+    const providerSdkProps: OptimizationProviderProps = {
+      children: <></>,
+      prefetchManagedEntries: descriptors,
+      sdk: createContentfulOptimizationStub(sdk),
+    }
+    const rootProps: OptimizationRootProps = {
+      children: <></>,
+      clientId: 'test-client-id',
+      prefetchManagedEntries: descriptors,
+    }
+
+    expect(providerConfigProps.prefetchManagedEntries).toBe(descriptors)
+    expect(providerSdkProps.prefetchManagedEntries).toBe(descriptors)
+    expect(rootProps.prefetchManagedEntries).toBe(descriptors)
+  })
+
   it('gates children until owned async initialization resolves', async () => {
     const { OptimizationProvider } = await import('./OptimizationProvider')
     const { sdk } = createSdk()
@@ -342,6 +371,69 @@ describe('OptimizationProvider onStatesReady', () => {
         locale: 'en-US',
       }),
     )
+  })
+
+  it('strips managed-entry prefetch descriptors from owned initialization and warms after readiness', async () => {
+    const { OptimizationProvider } = await import('./OptimizationProvider')
+    const { sdk } = createSdk()
+    const descriptors = ['hero-entry'] as const
+    createOptimization.mockResolvedValue(sdk)
+
+    renderer = await renderWithAct(
+      <OptimizationProvider clientId="test-client-id" prefetchManagedEntries={descriptors}>
+        <></>
+      </OptimizationProvider>,
+    )
+    await flushPromises()
+
+    expect(createOptimization).toHaveBeenCalledWith({ clientId: 'test-client-id' })
+    expect(sdk.prefetchManagedEntries).toHaveBeenCalledWith(descriptors)
+  })
+
+  it('keeps children mounted and preserves the owned SDK when managed-entry prefetch fails', async () => {
+    const [{ OptimizationProvider }, { default: OptimizationContext, useOptimization }] =
+      await Promise.all([
+        import('./OptimizationProvider'),
+        import('../context/OptimizationContext'),
+      ])
+    const { sdk, teardownOrder } = createSdk()
+    const error = new Error('prefetch failed')
+    const descriptors = ['hero-entry'] as const
+    const observedErrors: Array<Error | undefined> = []
+    let capturedSdk: OptimizationSdk | undefined = undefined
+    let unmountCount = 0
+    sdk.prefetchManagedEntries = rs.fn(async () => {
+      await Promise.resolve()
+      throw error
+    })
+    createOptimization.mockResolvedValue(sdk)
+
+    function Probe(): null {
+      capturedSdk = useOptimization()
+      observedErrors.push(React.useContext(OptimizationContext)?.error)
+
+      useEffect(
+        () => () => {
+          unmountCount += 1
+        },
+        [],
+      )
+
+      return null
+    }
+
+    renderer = await renderWithAct(
+      <OptimizationProvider clientId="test-client-id" prefetchManagedEntries={descriptors}>
+        <Probe />
+      </OptimizationProvider>,
+    )
+    await flushPromises()
+
+    expect(sdk.prefetchManagedEntries).toHaveBeenCalledWith(descriptors)
+    expect(capturedSdk).toBe(sdk)
+    expect(observedErrors).toContain(error)
+    expect(unmountCount).toBe(0)
+    expect(teardownOrder).toEqual([])
   })
 
   it('runs onStatesReady cleanup before destroying the sdk', async () => {

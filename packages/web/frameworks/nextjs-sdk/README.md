@@ -96,6 +96,10 @@ export const config = {
 
 Use the bound root in an App Router layout:
 
+Use either the bound `OptimizationRoot` or the bound `OptimizationProvider` for a subtree, not both.
+`OptimizationRoot` already composes the provider and live-updates provider; a nested provider
+creates another context and can hide server handoffs such as `prefetchedManagedEntries`.
+
 ```tsx
 import { getAppConsent } from '@/lib/consent'
 import { NextAppAutoPageTracker, OptimizationRoot } from '@/lib/optimization'
@@ -205,6 +209,15 @@ through the request-bound SDK, writes or clears `ctfl-opt-aid` on the response, 
 serializable `props.contentfulOptimization`. Its default `initialPageEvent` is `skip` only when the
 server already emitted a consented page event; pre-consent server resolution still emits the initial
 browser page event so client-side tracking state starts populated.
+
+When configured with `contentful: { client }`, Pages `getServerSideOptimizationProps()` accepts
+`prefetchManagedEntries` descriptors and returns `contentfulOptimization.prefetchedManagedEntries`
+for the bound root. App Router bound roots accept the same `prefetchManagedEntries` prop and fetch
+those entries on the server. Multi-entry prefetches share Core's managed cache and use
+`getEntries()` for uncached entries with the same normalized query. Large `getEntries()` fetches are
+split into 100-ID chunks. Client-side bound `OptimizedEntry entryId` rendering uses matching
+`prefetchedManagedEntries` first and can fetch through the configured `contentful.client` when the
+bound config provides a browser-safe client.
 
 ## Manual server setup
 

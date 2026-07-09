@@ -33,7 +33,7 @@ interface InsightsQueueOptions {
   }
 }
 
-interface InsightsQueueFlushOptions extends InsightsApiClientRequestOptions {
+export interface InsightsQueueFlushOptions extends InsightsApiClientRequestOptions {
   force?: boolean
 }
 

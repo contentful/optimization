@@ -28,7 +28,11 @@ export * from '@contentful/optimization-core/runtime'
  * @internal
  */
 type WebOnlyRuntimeMembers = 'tracking' | 'trackCurrentPage'
-type ManagedEntryFetchMembers = 'fetchContentfulEntry' | 'fetchOptimizedEntry'
+type ManagedEntryFetchMembers =
+  | 'fetchContentfulEntries'
+  | 'fetchContentfulEntry'
+  | 'fetchOptimizedEntry'
+  | 'prefetchManagedEntries'
 
 /**
  * The single runtime object framework layers (React Web, Angular, etc.) can consume.
@@ -86,8 +90,10 @@ export function createWebSnapshotRuntime(snapshot?: OptimizationSnapshot): WebOp
   const runtime = createSnapshotRuntime(snapshot)
 
   return Object.assign(runtime, {
+    fetchContentfulEntries: rejectSnapshotManagedEntryFetch,
     fetchContentfulEntry: rejectSnapshotManagedEntryFetch,
     fetchOptimizedEntry: rejectSnapshotManagedEntryFetch,
+    prefetchManagedEntries: rejectSnapshotManagedEntryFetch,
     tracking: NOOP_TRACKING,
     trackCurrentPage: async () => await Promise.resolve({ accepted: false as const }),
   })

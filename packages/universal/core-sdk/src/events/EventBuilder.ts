@@ -139,7 +139,7 @@ export const EntryInteractionBuilderArgsBase = z.extend(UniversalEventBuilderArg
   variantIndex: z.optional(z.number()),
 })
 
-interface EntryInteractionOptimizationContextArgs {
+export interface EntryInteractionOptimizationContextArgs {
   /** Opaque runtime-owned optimization context ID for SDK event-stream enrichment. */
   optimizationContextId?: string
 }

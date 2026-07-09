@@ -19,7 +19,7 @@ import type { EventOptimizationContext } from '../events'
 
 const logger = createScopedLogger('Optimization')
 
-type PendingEventOptimizationContext = Omit<EventOptimizationContext, 'contextId'>
+export type PendingEventOptimizationContext = Omit<EventOptimizationContext, 'contextId'>
 
 /**
  * Result returned by {@link OptimizedEntryResolver.resolve}.

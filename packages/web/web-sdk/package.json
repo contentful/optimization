@@ -130,19 +130,19 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "contentful-optimization-web.umd.js": 34550,
+        "contentful-optimization-web.umd.js": 35500,
         "index.cjs": 12500,
         "index.mjs": 12500,
         "bridge-support.cjs": 1200,
         "bridge-support.mjs": 1200,
         "runtime.cjs": 900,
-        "runtime.mjs": 320,
-        "contentful-optimization-web-components.umd.js": 39120,
+        "runtime.mjs": 350,
+        "contentful-optimization-web-components.umd.js": 40300,
         "presentation.cjs": 3200,
         "presentation.mjs": 3200,
         "tracking-attributes.cjs": 1200,
         "tracking-attributes.mjs": 1200,
-        "web-components.cjs": 16000,
+        "web-components.cjs": 16200,
         "web-components.mjs": 17500
       }
     }

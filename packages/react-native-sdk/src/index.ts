@@ -23,6 +23,7 @@ import type { CoreStatefulConfig } from '@contentful/optimization-core'
  * @public
  */
 export type OptimizationConfig = CoreStatefulConfig
+export type { ManagedEntryDescriptor } from '@contentful/optimization-core'
 export type { OptimizationPreviewRuntime, OptimizationSdk } from './OptimizationSdk'
 
 export { OptimizationProvider } from './components/OptimizationProvider'
@@ -37,7 +38,15 @@ export { OptimizationRoot } from './components/OptimizationRoot'
 export type { OptimizationRootProps } from './components/OptimizationRoot'
 
 export { OptimizedEntry } from './components/OptimizedEntry'
-export type { OptimizedEntryProps } from './components/OptimizedEntry'
+export type {
+  OptimizedEntryChildren,
+  OptimizedEntryErrorFallback,
+  OptimizedEntryLoadingFallback,
+  OptimizedEntryProps,
+  OptimizedEntryRenderProp,
+  OptimizedEntrySharedProps,
+  OptimizedEntrySourceProps,
+} from './components/OptimizedEntry'
 
 export { OptimizationScrollProvider, useScrollContext } from './context/OptimizationScrollContext'
 export type {

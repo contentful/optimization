@@ -130,7 +130,9 @@ const entry = document.querySelector('ctfl-optimized-entry')
 
 root.defaults = { consent: true }
 root.api = { preflight: false }
+root.contentful = { client: contentfulClient }
 root.trackEntryInteraction = { hovers: false }
+root.prefetchManagedEntries = ['hero-entry']
 root.onStatesReady = (states) => {
   const subscription = states.profile.subscribe((profile) => {
     console.log(profile?.id)
@@ -147,18 +149,20 @@ entry.addEventListener('ctfl-entry-resolved', (event) => {
 })
 ```
 
-`baselineEntry` is property-only because Contentful entries are structured objects. When the Web SDK
-is configured with `contentful: { client }`, `ctfl-optimized-entry` can also fetch by
-`entry-id`/`entryId`; `baselineEntry` takes precedence when both are set. Set the `entryQuery`
-property for per-entry CDA query overrides. For framework wrappers, assign `baselineEntry`,
-`entryQuery`, `sdk`, `defaults`, `api`, and callback properties after client hydration, then listen
-for `ctfl-entry-loading`, `ctfl-entry-resolved`, and `ctfl-entry-error` to render framework-owned
-UI. The custom element intentionally does not provide a framework-neutral render-prop API. Framework
-wrappers that render without the custom element but still use Web presentation helpers can import
-`OptimizedEntrySourceController` and `createOptimizedEntryLoadingEntry` from
-`@contentful/optimization-web/presentation` to share the same managed entry-source lifecycle.
-Core-only or non-Web custom runtime adapters can import those entry-source primitives directly from
-`@contentful/optimization-core/entry-source` without depending on the Web SDK.
+`baselineEntry` and root `contentful` are property-only because Contentful entries and clients are
+structured objects. When the Web SDK is configured with `contentful: { client }`,
+`ctfl-optimized-entry` can also fetch by `entry-id`/`entryId`; `baselineEntry` takes precedence when
+both are set. Set the `entryQuery` property for per-entry CDA query overrides. Set the root
+`prefetchManagedEntries` property to warm the configured SDK cache after the root SDK is ready. For
+framework wrappers, assign `baselineEntry`, `entryQuery`, `sdk`, `defaults`, `api`, and callback
+properties after client hydration, then listen for `ctfl-entry-loading`, `ctfl-entry-resolved`, and
+`ctfl-entry-error` to render framework-owned UI. The custom element intentionally does not provide a
+framework-neutral render-prop API. Framework wrappers that render without the custom element but
+still use Web presentation helpers can import `OptimizedEntrySourceController` and
+`createOptimizedEntryLoadingEntry` from `@contentful/optimization-web/presentation` to share the
+same managed entry-source lifecycle. Core-only or non-Web custom runtime adapters can import those
+entry-source primitives directly from `@contentful/optimization-core/entry-source` without depending
+on the Web SDK.
 
 For script-tag usage, load the main Web SDK UMD bundle and the separate Web Components UMD bundle:
 
@@ -299,6 +303,9 @@ const { baselineEntry, entry } = await optimization.fetchOptimizedEntry('hero-en
 
 `fetchOptimizedEntry(entryId)` fetches the baseline entry and resolves it with the Web SDK's current
 `selectedOptimizations` when omitted. `fetchContentfulEntry()` only performs the managed CDA fetch.
+Use `fetchContentfulEntries()` or `prefetchManagedEntries()` when a page knows several managed entry
+IDs. Entries with the same normalized query share one `getEntries()` call; same-tick single-entry
+calls can join that batch. Large `getEntries()` fetches are split into 100-ID chunks.
 
 If your application already fetched the baseline entry, keep using the manual resolver:
 

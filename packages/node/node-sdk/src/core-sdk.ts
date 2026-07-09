@@ -1,7 +1,7 @@
 export * from '@contentful/optimization-core'
 export {
-  prefetchOptimizedEntries,
-  type OptimizedEntryPrefetchDescriptor,
-  type OptimizedEntryPrefetchRuntime,
-  type ServerOptimizedEntryHandoff,
+  prefetchManagedEntries,
+  type ManagedEntryDescriptor,
+  type ManagedEntryHandoff,
+  type ManagedEntryPrefetchRuntime,
 } from '@contentful/optimization-core/entry-source'

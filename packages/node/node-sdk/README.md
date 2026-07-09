@@ -244,6 +244,10 @@ await requestOptimization.page()
 const { baselineEntry, entry } = await requestOptimization.fetchOptimizedEntry('hero-entry')
 ```
 
+Use `fetchContentfulEntries()` or `prefetchManagedEntries()` when a route knows several managed
+entry IDs. Entries with the same normalized query share one `getEntries()` call; same-tick
+single-entry calls can join that batch. Large `getEntries()` fetches are split into 100-ID chunks.
+
 If your application already fetched the baseline entry, keep using the manual resolver:
 
 ```ts

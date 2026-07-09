@@ -13,13 +13,19 @@ resolution hand-off:
 - **Manual:** the app fetches the entry itself and passes it in (`baselineEntry` /
   `resolveOptimizedEntry(entry)`). The app keeps its client, fetchers, caching, and rendering.
 - **Managed (opt-in):** the app hands the SDK its `contentful.js` client via `contentful` config
-  (`contentful: { client, defaultQuery?, cache? }`); the SDK then fetches by entry ID through that
-  client (`fetchContentfulEntry(id)` / `fetchOptimizedEntry(id)` / `<OptimizedEntry entryId>` /
-  `useOptimizedEntry({ entryId })`). The client is still app-owned; the SDK only calls `getEntry()`
-  on it, merging `contentful.defaultQuery`, the per-call query, an SDK locale fallback, and
-  `include: 10`. Per-instance cache defaults to `{ maxEntries: 100, ttlMs: 300_000 }`;
-  `cache: false` disables it; `clearContentfulEntryCache()` clears it.
-  source: core-sdk#CoreBase.ts#ContentfulConfig; core-sdk#CoreBase.ts#ContentfulEntryClient; core-sdk#CoreBase.ts#fetchContentfulEntry; core-sdk#CoreBase.ts#clearContentfulEntryCache
+  (`contentful: { client, defaultQuery?, cache? }`); the SDK then fetches explicit entry IDs through
+  that client (`fetchContentfulEntry(id)`, `fetchContentfulEntries(descriptors)`,
+  `prefetchManagedEntries(descriptors)`, `fetchOptimizedEntry(id)`, `<OptimizedEntry entryId>`,
+  `useOptimizedEntry({ entryId })`). The client is still app-owned; one uncached normalized entry
+  uses `getEntry()`, multiple uncached entries with the same normalized query use `getEntries()`,
+  and same-tick uncached single-entry calls with the same normalized query can share a
+  `getEntries()` call. Large `getEntries()` fetches split into 100-ID chunks. The SDK merges
+  `contentful.defaultQuery`, the per-entry query, an SDK or request locale fallback, and
+  `include: 10`; it preserves descriptor order and duplicates. Per-instance cache defaults to
+  `{ maxEntries: 100, ttlMs: 300_000 }`; `cache: false` disables it; `clearContentfulEntryCache()`
+  clears it. Managed prefetch takes explicit descriptors only; already included nested entries
+  remain part of the fetched `baselineEntry`.
+  source: core-sdk#CoreBase.ts#ContentfulConfig; core-sdk#CoreBase.ts#ContentfulEntryClient; core-sdk#CoreBase.ts#fetchContentfulEntry; core-sdk#CoreBase.ts#fetchContentfulEntries; core-sdk#CoreBase.ts#prefetchManagedEntries; core-sdk#CoreBase.ts#clearContentfulEntryCache; core-sdk#managed-entry-fetcher.ts#ManagedEntryFetcher; core-sdk#CoreStatelessRequest.ts#prefetchManagedEntries
 
 Either way, the SDK sits at the hand-off where a fetched entry becomes a component and returns the
 resolved variant (or the baseline entry). Both paths are supported; a guide must not assert the SDK

@@ -815,7 +815,7 @@ describe('OptimizedEntry', () => {
           clientId="test-client-id"
           environment="main"
           serverOptimizationState={createServerOptimizationState()}
-          serverOptimizedEntries={[
+          prefetchedManagedEntries={[
             {
               baselineEntry: variantA,
               entryId: 'baseline',
