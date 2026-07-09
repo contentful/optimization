@@ -148,18 +148,18 @@ Router, React Native, iOS SwiftUI, iOS UIKit, Android Compose, Android Views.
 4. **Fill feature sections in order**, each with its integration-category line and numbered
    procedure. Cover the shared concern checklist or mark concerns not-applicable (see
    [references/authoring-checklist.md](references/authoring-checklist.md)).
-5. **Ground every example in reality, then verify it against source.** Prefer patterns and values
-   from the matching reference implementation under `implementations/`, and for "adapt" snippets
-   model the reader's real starting shape so they can locate where SDK code slots in. Then confirm
-   every API used — hook, prop, config key, context field, return shape — exists in the SDK source
-   under `packages/**/src`, not only in the reference impl. The reference impl proves one path works
-   but can hide nuance (a factory field it does not use, a provider the bound component renders
-   internally), and a plausible-looking name is not proof it exists.
-   **Check the internal knowledge base first** (`documentation/internal/sdk-knowledge/`): it records
-   SDK facts already verified against source, each with a resolvable pointer, so you reuse them
-   instead of re-grepping. When you verify a new fact the base does not yet hold, record it there
-   (with its grammar pointer) as a byproduct — see the `sdk-knowledge-maintenance` skill. That is how
-   the next guide avoids re-deriving what this one established.
+5. **Compose every SDK claim from the knowledge base, not from source.** The internal knowledge base
+   (`documentation/internal/sdk-knowledge/`) is the source of truth for what the SDK does — facts
+   already verified against `packages/**/src`, each with a resolvable pointer. Every API you use — a
+   hook, prop, config key, context field, return shape — must come from a fact there; read the base,
+   do not re-grep source. Use the matching reference implementation under `implementations/` for
+   real-shaped patterns and "adapt" starting points, but the base, not the impl, is what makes a claim
+   true (the impl proves one path works and can hide nuance). **If the base is missing a fact you
+   need, do not verify it from source yourself — escalate to `sdk-knowledge-authoring`**, which reads
+   source and records the fact; then compose from the fact it adds. That keeps comprehension in one
+   place and means the next guide reuses what this one needed. (When you author a guide for an SDK
+   whose KB file does not exist yet, that whole file is bootstrapped by `sdk-knowledge-authoring`
+   first — see the workflow command.)
 6. **Sync the TOC and anchors**, add `## Production checks` and (if there are known failure modes)
    `## Troubleshooting`, and link the reference implementation READMEs.
 7. **Self-review** against [references/authoring-checklist.md](references/authoring-checklist.md).

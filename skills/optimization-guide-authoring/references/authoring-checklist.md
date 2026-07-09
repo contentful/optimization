@@ -25,12 +25,14 @@ add per-archetype checks.
       endpoints, and paths match reality, or a NOTE explains the discrepancy.
 - [ ] No placeholder-only snippet is labeled `**Copy this:**` when it actually needs relocation or
       structural change (that is an adapt).
-- [ ] **Every API in a code example is verified against the SDK source, not just the reference
-      implementation.** Confirm each hook, prop, config key, context field, and return shape exists
-      in `packages/**/src` (grep the type/export). The reference impl shows one working path but can
-      hide nuance (a factory field the impl does not use, a provider the bound component renders
-      internally); a plausible-looking field name such as `isEnabled` or `hasResults` is not proof
-      it exists. When source and reference impl seem to disagree, read the source and reconcile.
+- [ ] **Every API in a code example traces to a fact in the knowledge base.** Each hook, prop,
+      config key, context field, and return shape must be backed by a verified fact in
+      `documentation/internal/sdk-knowledge/` (which holds facts already checked against
+      `packages/**/src`). Compose from the base, do not re-grep source; a plausible-looking field
+      name such as `isEnabled` or `hasResults` is not proof it exists. If a needed fact is missing,
+      escalate to `sdk-knowledge-authoring` to add it from source, then compose from that fact — do
+      not verify from source in the guide. The reference impl shows one working path for shape and
+      "adapt" starting points, but the base, not the impl, is what makes a claim true.
 - [ ] Code comments explain only meaningful SDK-specific lines; no obvious-syntax narration.
 - [ ] **Every magic-value identifier states who owns it.** For each cookie name, env var, header,
       storage key, or config string in a snippet, the guide states whether the reader must match the
