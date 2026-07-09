@@ -29,7 +29,6 @@ documentation/internal/sdk-knowledge/
   shared/
     vocabulary.md               # canonical term → one-line meaning, used verbatim across web guides
     concepts.md                 # SDK-neutral shared concepts
-    consistency-notes.md        # where guides must share language; drift logged for review
   web/                          # web family
     nextjs-app-router.md
     nextjs-pages-router.md

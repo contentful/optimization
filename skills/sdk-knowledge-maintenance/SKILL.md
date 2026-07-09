@@ -5,8 +5,8 @@ description: >-
   of verified SDK facts (symbols, props, cookies, config keys, return shapes) that each carry a
   source pointer into packages/**/src. Covers the three-artifact split (guides teach, this KB
   records verified facts, the authoring skill holds principles — facts never go in a skill), the
-  _template.md skeleton every per-SDK file copies, capturing shared facts once in shared/, and
-  logging cross-guide drift in shared/consistency-notes.md. Use when adding or editing a per-SDK
+  _template.md skeleton every per-SDK file copies, and capturing shared facts once in shared/ so
+  guide families reuse one canonical wording. Use when adding or editing a per-SDK
   knowledge file, recording an SDK API you just verified against source while doing other work,
   reading the KB before re-grepping the SDK, keeping it in sync after the SDK changes, or editing
   any file under documentation/internal/sdk-knowledge/. Triggers on "sdk knowledge", "internal
@@ -53,9 +53,7 @@ These are the transferable behaviors this skill exists to preserve.
   "this changed because…". State the fact plainly in the present tense. When the SDK changes, _edit
   the fact in place_ so it reads as if it were always true — do not append a note about the change
   or strike through the old value. (Genuine runtime conditionals — "after reading headers the route
-  cannot use ISR" — are present-tense behavior, not history, and are fine.) The same rule governs
-  `shared/consistency-notes.md`: it records the status quo of what language must match across a
-  guide family, not a log of merges or fixes.
+  cannot use ISR" — are present-tense behavior, not history, and are fine.)
 - **While the SDK is pre-release/alpha, record no SDK-version deltas.** One moving version means
   there is nothing to compare — do not note what a prior SDK version did, "upgrade to the fixed
   version", or version-to-version differences of this SDK. Record the single current version's facts
@@ -82,9 +80,14 @@ These are the transferable behaviors this skill exists to preserve.
   do not wait for a follow-up.
 - **Capture shared facts once, in `shared/`.** SDK-neutral concepts go in `shared/concepts.md`;
   canonical terms in `shared/vocabulary.md`. Per-SDK files link to them instead of restating them.
-- **Log cross-guide drift in `shared/consistency-notes.md`.** When you spot language, an API name,
-  or a value that must match across a guide family but does not, record it there for the consistency
-  pass rather than silently reconciling it.
+  This single canonical wording is _how_ a guide family stays consistent: guides reuse it rather than
+  each paraphrasing the same fact.
+- **Fix cross-guide drift when you find it; do not log it.** If a term, API name, or value that must
+  match across a guide family has diverged, reconcile it now — correct the guide, and if the shared
+  wording was missing, add it once to `shared/`. Do not keep a running list of known-broken things to
+  reconcile later; an unfixed divergence is a bug, not a record. (A per-framework difference that is
+  _correct_ — e.g. `NEXT_PUBLIC_` vs a Vite-style prefix — is not drift; state it as a fact in the
+  relevant per-SDK file, not as a divergence to resolve.)
 
 ## Adding a new SDK file
 
@@ -118,6 +121,7 @@ These are the transferable behaviors this skill exists to preserve.
   place, not appended as history.
 - New per-SDK files match `_template.md` heading-for-heading, with `None.` for empty sections.
 - Shared facts live once in `shared/` and are linked, not restated.
-- Any cross-guide drift you noticed is logged in `shared/consistency-notes.md`.
+- Any cross-guide drift you noticed is fixed now (guide corrected, shared wording added to
+  `shared/` if it was missing), not deferred.
 - No SDK fact leaked into a skill; no reader-facing prose leaked into the base.
 - Formatting is clean: `pnpm format:fix documentation/internal/sdk-knowledge`.
