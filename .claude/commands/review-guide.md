@@ -34,8 +34,9 @@ Do this in order:
      only, never SDK facts),
    - a missing or corrected SDK fact → the knowledge base via `sdk-knowledge-author`.
 
-5. **Validate.** Run `pnpm knowledge:check` (KB must pass) and `pnpm format:fix` on the touched files,
-   and confirm the guide's TOC anchors resolve.
+5. **Validate.** Run `pnpm knowledge:check` (KB must pass) and `pnpm format:fix <touched paths>` —
+   pass the specific files you changed, never a bare `pnpm format:fix` (it reformats the whole tree
+   and pollutes the diff) — and confirm the guide's TOC anchors resolve.
 
 Report: the findings from each role, what you changed in the guide, what you funneled back into the
 skill vs. the knowledge base, and the validation result.

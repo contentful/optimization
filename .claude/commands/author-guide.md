@@ -47,7 +47,9 @@ Do not call it done until all hold; loop back to the responsible step for anythi
 - Every verifier **contradicts-KB** claim is corrected; every **no-backing-fact** claim is resolved
   (fact added by the knowledge author, or claim removed).
 - `pnpm knowledge:check` passes.
-- `pnpm format:fix` leaves the guide clean and its TOC anchors resolve.
+- `pnpm format:fix <touched paths>` leaves the guide clean and its TOC anchors resolve. Always pass
+  the specific files you changed — never a bare `pnpm format:fix`, which reformats the whole tree and
+  pulls unrelated files into your diff.
 
 ## 5. Funnel learnings back
 

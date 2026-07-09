@@ -54,7 +54,8 @@ Run `review-guide` on each recomposed guide, but focus the reviewers on the chan
 
 - `pnpm knowledge:check` passes.
 - Every changed claim traces to a current KB fact; no newcomer blocker in the changed passages.
-- `pnpm format:fix` leaves the touched guides clean; TOC anchors still resolve.
+- `pnpm format:fix <touched paths>` leaves the touched guides clean; TOC anchors still resolve. Pass
+  the specific files you changed — never a bare `pnpm format:fix`, which reformats the whole tree.
 
 ## 6. Report
 
