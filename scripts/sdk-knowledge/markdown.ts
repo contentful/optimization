@@ -34,10 +34,12 @@ export function parseTableRow(line: string): string[] | undefined {
   if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) {
     return undefined
   }
+  // Split on unescaped pipes only, then unescape `\|` within each cell — a `Returns` column value
+  // like `ReactElement \| null` is one cell, not two, so its `null` is never misread as a pointer.
   return trimmed
     .slice(1, -1)
-    .split('|')
-    .map((cell) => cell.trim())
+    .split(/(?<!\\)\|/u)
+    .map((cell) => cell.trim().replace(/\\\|/gu, '|'))
 }
 
 /** A `| --- | :--: |` divider row separating a table header from its body. */
