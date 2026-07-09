@@ -62,18 +62,24 @@ These are the transferable behaviors this skill exists to preserve.
   in present tense. (Host-framework version facts the reader must act on today — e.g. a framework
   that resolves a handler differently across its own major versions — are present-state environment
   facts and are fine.) Revisit at the SDK's first major.
-- **Every fact carries a `source:` pointer.** A path, `path#symbol`, or `path:line` into
-  `packages/**/src`. A fact without a source pointer is a claim, not knowledge — do not add it.
+- **Every fact carries a `source:` pointer in the grammar.** Pointers are machine-checked by
+  `pnpm knowledge:check`; the grammar is defined in the base's own `README.md#source-pointer-grammar`
+  and is symbol-anchored — `<sdk>#<relpath>#<symbol>` (plus `impl:`, `concept:`, `kb:`, `extern:`),
+  **never line numbers** (they drift). A fact without a resolvable pointer is a claim, not knowledge
+  — do not add it. Never point a fact at a guide or "the accepted guide" to satisfy the rule; that is
+  circular and the checker rejects it. Anchor on the symbol the fact is actually about.
 - **Capture once, as a byproduct of verification.** When you verify an SDK API against source while
   doing other work (writing a guide, fixing a bug, answering a question), record what you confirmed
-  here before the context is lost. Do not run net-new verification passes just to fill the base in;
-  do not re-derive a fact the base already holds.
+  here before the context is lost, with its grammar pointer. Do not run net-new verification passes
+  just to fill the base in; do not re-derive a fact the base already holds.
 - **Read the base before re-grepping the SDK.** It exists so authors and future regeneration reuse
   verified facts instead of re-searching `packages/**/src`. Check here first; only grep to confirm
   or extend.
 - **Keep it in sync when the SDK changes.** If a symbol, prop, cookie, config key, export path, or
   return shape you touched is recorded here, update the entry and its `source:` pointer in the same
-  change. Stale facts are worse than missing ones.
+  change. Stale facts are worse than missing ones. `pnpm knowledge:check` runs in CI on every change
+  to `packages/**/src`, so a rename that orphans a pointer fails the build on your PR — fix it here,
+  do not wait for a follow-up.
 - **Capture shared facts once, in `shared/`.** SDK-neutral concepts go in `shared/concepts.md`;
   canonical terms in `shared/vocabulary.md`. Per-SDK files link to them instead of restating them.
 - **Log cross-guide drift in `shared/consistency-notes.md`.** When you spot language, an API name,
@@ -101,7 +107,12 @@ These are the transferable behaviors this skill exists to preserve.
 
 ## Before you finish
 
-- Every new or changed fact has a `source:` pointer into `packages/**/src`.
+- **`pnpm knowledge:check` passes.** This is the gate: it resolves every `source:` pointer against
+  real files and symbols and enforces the grammar and template. Run it and fix every problem before
+  finishing — do not leave the base in a state that fails the checker. If you touched `packages/**/src`
+  in the same session, this also catches any recorded fact your change orphaned.
+- Every new or changed fact has a resolvable `source:` pointer in the grammar (symbol-anchored, no
+  line numbers, never pointing at a guide).
 - Every entry reads as present-tense current state, with no change-ledger language ("no longer",
   "now", "was removed", "used to", PR/issue numbers, version-bump framing). Changes were edited in
   place, not appended as history.
