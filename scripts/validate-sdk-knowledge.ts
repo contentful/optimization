@@ -44,7 +44,12 @@
  *
  * Failures accumulate into `problems` and are printed sorted by file:line; a non-empty set exits 1.
  *
- * Usage: tsx scripts/validate-sdk-knowledge.ts   (or `pnpm knowledge:check`)
+ * The success line always reports counts (files, source pointers, ESCALATE-scanned files) so a run
+ * that validated nothing is visibly distinct from one that validated the whole base — a green check
+ * over zero pointers is a bug, not a pass. Pass `--verbose`/`-v` (or set `KNOWLEDGE_CHECK_VERBOSE`)
+ * to additionally list every file and every source pointer as it is checked; CI enables this.
+ *
+ * Usage: tsx scripts/validate-sdk-knowledge.ts [--verbose]   (or `pnpm knowledge:check`)
  */
 
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -104,13 +109,23 @@ interface Pointer {
   tokens: string[]
 }
 
+// Verbose logging is opt-in: `--verbose`/`-v` on the CLI, or a truthy KNOWLEDGE_CHECK_VERBOSE env
+// var (how CI turns it on without changing the invocation). Off, the run prints only its final
+// summary; on, it also logs every file and source pointer as it is checked, so a CI reader can see
+// the base was actually traversed rather than trusting a bare ✓.
+const VERBOSE =
+  process.argv.slice(2).some((arg) => arg === '--verbose' || arg === '-v') ||
+  isTruthyEnv(process.env.KNOWLEDGE_CHECK_VERBOSE)
+
 // Module-level state, built once and shared across every file check:
 //   problems    — accumulates failures; a non-empty set makes report() exit 1.
 //   sdkSrcRoots — <sdk> grammar key → package src/ root, discovered from the workspace (not hardcoded).
 //   symbolCache — per-file declared-symbol sets, so a file parsed once serves many pointers.
+//   counts      — what was actually inspected, echoed in the summary so "checked nothing" is visible.
 const problems: Problem[] = []
 const sdkSrcRoots = discoverSdkSrcRoots()
 const symbolCache = new Map<string, Set<string>>()
+const counts = { factFiles: 0, pointers: 0, escalateScanned: 0 }
 
 // Entry point: validate every markdown file in the base, then print the sorted report and exit.
 for (const file of listMarkdownFiles(knowledgeDir)) {
@@ -137,10 +152,14 @@ function validateFile(absPath: string): void {
 
   const relPath = path.relative(rootDir, absPath)
   const lines = readFileSync(absPath, 'utf8').split('\n')
+  counts.factFiles += 1
+  verbose(`Checking ${relPath}`)
 
   // Grammar + resolution apply to every fact file: any `source:` pointer must be valid.
   for (const pointer of extractPointers(lines)) {
     for (const token of pointer.tokens) {
+      counts.pointers += 1
+      verbose(`  ${relPath}:${pointer.line}  source: ${token}`)
       checkToken(token, relPath, pointer.line)
     }
   }
@@ -513,6 +532,7 @@ function checkFeedsGuides(lines: string[], file: string): void {
  */
 function checkNoEscalateMarker(absPath: string): void {
   const relPath = path.relative(rootDir, absPath)
+  counts.escalateScanned += 1
   readFileSync(absPath, 'utf8')
     .split('\n')
     .forEach((line, index) => {
@@ -694,15 +714,33 @@ function addProblem(file: string, line: number, message: string): void {
   problems.push({ file, line, message })
 }
 
+/** Prints a progress line only when verbose logging is on; a no-op otherwise. */
+function verbose(message: string): void {
+  if (VERBOSE) {
+    console.log(message)
+  }
+}
+
+/** True for the usual truthy env-var spellings, so CI can set KNOWLEDGE_CHECK_VERBOSE=1 or true. */
+function isTruthyEnv(value: string | undefined): boolean {
+  return value !== undefined && ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+}
+
 /**
  * Prints the outcome and sets the process exit code: a success line (exit 0) when clean, or the
  * problems sorted by file then line with a pointer to the grammar docs (exit 1) otherwise. Exit 1 is
  * what makes CI and the pre-commit path fail on knowledge-base drift.
  */
 function report(): void {
+  // The counts make an empty run self-evident: "0 source pointers" is the signature of a check that
+  // silently validated nothing (a broken glob, a misrooted scan), which otherwise prints an identical ✓.
+  const tallied =
+    `checked ${counts.pointers} source pointer(s) across ${counts.factFiles} fact file(s); ` +
+    `scanned ${counts.escalateScanned} file(s) for ESCALATE markers`
+
   if (problems.length === 0) {
     console.log(
-      '✓ SDK knowledge base: source pointers resolve, templates conform, and guide links are valid.',
+      `✓ SDK knowledge base: source pointers resolve, templates conform, and guide links are valid — ${tallied}.`,
     )
     return
   }

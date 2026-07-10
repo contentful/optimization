@@ -232,7 +232,9 @@ jobs:
       # Validates that every knowledge-base source pointer still resolves to a real file and symbol
       # in packages/**/src. Runs when the KB OR any package source changes, so a source refactor
       # that renames or moves a symbol a pointer names fails here on the same PR.
-      - run: pnpm knowledge:check
+      # Verbose: log every file and pointer as it is checked, so the CI log shows the base was
+      # actually traversed (and how much) rather than a bare ✓ that could mask an empty run.
+      - run: pnpm knowledge:check --verbose
 
   build:
     name: 📦 Build
