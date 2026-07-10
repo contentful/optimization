@@ -57,12 +57,12 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   type Heading,
+  eachTableSourceCell,
   headingsOf,
   isFactUnitEnd,
   isLabelLeadIn,
   isListItem,
   isPlaceholderCell,
-  isTableDivider,
   looksLikeFact,
   parseTableRow,
 } from './sdk-knowledge/markdown'
@@ -173,6 +173,7 @@ function validateFile(absPath: string): void {
   // mix normative prose with facts and feed a family rather than a single guide.
   if (isPerSdkFile(absPath)) {
     checkPointerCoverage(lines, relPath)
+    checkTableSourceCoverage(lines, relPath)
     checkTemplateConformance(lines, relPath)
     checkFeedsGuides(lines, relPath)
   }
@@ -192,59 +193,27 @@ function validateFile(absPath: string): void {
  */
 function extractPointers(lines: string[]): Pointer[] {
   const pointers: Pointer[] = []
-  let sourceColumnIndex: number | undefined = undefined
 
+  // Prose carrier: a `source:` line, on any non-table line (a table cell never holds `source:`).
   lines.forEach((rawLine, index) => {
-    const line = rawLine.trimEnd()
-    const lineNumber = index + 1
-    const columns = parseTableRow(line)
-
-    if (columns !== undefined) {
-      sourceColumnIndex = handleTableRow(columns, sourceColumnIndex, lineNumber, pointers)
+    if (parseTableRow(rawLine.trimEnd()) !== undefined) {
       return
     }
-
-    // A blank or non-table line ends the current table, so its column mapping no longer applies.
-    if (line === '' || !line.includes('|')) {
-      sourceColumnIndex = undefined
-    }
-
-    const prosePointer = matchProseSource(line)
+    const prosePointer = matchProseSource(rawLine.trimEnd())
     if (prosePointer !== undefined) {
-      pointers.push({ line: lineNumber, tokens: splitTokens(prosePointer) })
+      pointers.push({ line: index + 1, tokens: splitTokens(prosePointer) })
+    }
+  })
+
+  // Table carrier: the `source` column of each body row. A cell that is empty or a `—`/`none`
+  // placeholder carries no pointer — coverage flags that separately (checkTableSourceCoverage).
+  eachTableSourceCell(lines, (lineNumber, cell) => {
+    if (cell !== '' && !isPlaceholderCell(cell)) {
+      pointers.push({ line: lineNumber, tokens: splitTokens(cell) })
     }
   })
 
   return pointers
-}
-
-/**
- * Processes one table row, threading the `source`-column index through the table's rows. Three cases:
- *   - Header row (has a `source` cell): remember that column index for the rows that follow.
- *   - Divider row (`| --- |`), or a body row before any header was seen: nothing to record.
- *   - Body row with a known source column: record that cell's pointers (unless it is an empty/`—`
- *     placeholder cell, which legitimately carries no pointer).
- * Returns the (possibly updated) source-column index for the next row.
- */
-function handleTableRow(
-  columns: string[],
-  sourceColumnIndex: number | undefined,
-  lineNumber: number,
-  pointers: Pointer[],
-): number | undefined {
-  const headerIndex = columns.findIndex((cell) => cell.toLowerCase() === 'source')
-  if (headerIndex !== -1) {
-    return headerIndex
-  }
-  if (isTableDivider(columns) || sourceColumnIndex === undefined) {
-    return sourceColumnIndex
-  }
-
-  const { [sourceColumnIndex]: cell } = columns
-  if (cell !== undefined && cell !== '' && !isPlaceholderCell(cell)) {
-    pointers.push({ line: lineNumber, tokens: splitTokens(cell) })
-  }
-  return sourceColumnIndex
 }
 
 /**
@@ -462,6 +431,28 @@ function itemHasPointerNearby(lines: string[], index: number): boolean {
     }
   }
   return false
+}
+
+/**
+ * Coverage for the OTHER fact carrier: table body rows. checkPointerCoverage grades list-item facts,
+ * but per-SDK files also state facts as table rows (import-path, component, and identifier-owner
+ * tables), and extractPointers deliberately skips a row whose `source` cell is empty or a `—`/`none`
+ * placeholder — so such a row would state an SDK fact with no pointer and pass unnoticed. This closes
+ * that gap: in a table that HAS a `source` column, every non-divider body row must carry a real
+ * pointer in it. Tables with no `source` column at all are illustrative, not fact tables, and are
+ * left alone (the file's template still governs which tables must exist).
+ */
+function checkTableSourceCoverage(lines: string[], file: string): void {
+  eachTableSourceCell(lines, (lineNumber, cell) => {
+    if (cell === '' || isPlaceholderCell(cell)) {
+      const rowText = (lines[lineNumber - 1] ?? '').trim()
+      addProblem(
+        file,
+        lineNumber,
+        `table fact row has no source: pointer in its source column — "${truncate(rowText)}"`,
+      )
+    }
+  })
 }
 
 // --- template conformance --------------------------------------------------------------------

@@ -12,10 +12,11 @@ input="$(cat)"
 cwd="$(printf '%s' "$input" | sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
 [ -n "$cwd" ] && cd "$cwd" 2>/dev/null || true
 
-# Only spend time when the knowledge base or package source changed in this working tree — a session
-# that never touched either cannot have introduced KB drift.
+# Only spend time when something the validator inspects changed in this working tree: the knowledge
+# base, package source (a refactor can orphan a pointer), or a guide (scanned for stray ESCALATE
+# markers). A session touching none of these cannot have introduced drift the validator would catch.
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  changed="$(git status --porcelain -- documentation/internal/sdk-knowledge 'packages/**/src/**' 2>/dev/null)"
+  changed="$(git status --porcelain -- documentation/internal/sdk-knowledge documentation/guides 'packages/**/src/**' 2>/dev/null)"
   [ -z "$changed" ] && exit 0
 fi
 

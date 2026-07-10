@@ -52,6 +52,44 @@ export function isPlaceholderCell(cell: string): boolean {
   return cell === '—' || cell === '-' || cell.toLowerCase() === 'none'
 }
 
+/**
+ * Visits every table BODY row that sits under a `source` column, yielding its 1-based line number
+ * and that row's raw source-column cell (`''` when the row is too short to have one). Threads the
+ * per-table source-column index exactly as the grammar requires: the column may sit at any index and
+ * differ between tables in one file, is (re)set on a `| … | source |` header, and cleared when the
+ * table ends (a blank or non-table line). Header rows, divider rows, and rows in tables with no
+ * `source` column at all are not visited. Both pointer extraction (which reads the cell's tokens) and
+ * coverage (which flags an empty/placeholder cell) walk tables through this one function.
+ */
+export function eachTableSourceCell(
+  lines: string[],
+  visit: (lineNumber: number, cell: string) => void,
+): void {
+  let sourceColumnIndex: number | undefined = undefined
+
+  lines.forEach((rawLine, index) => {
+    const line = rawLine.trimEnd()
+    const columns = parseTableRow(line)
+    if (columns === undefined) {
+      if (line === '' || !line.includes('|')) {
+        sourceColumnIndex = undefined
+      }
+      return
+    }
+
+    const headerIndex = columns.findIndex((cell) => cell.toLowerCase() === 'source')
+    if (headerIndex !== -1) {
+      sourceColumnIndex = headerIndex
+      return
+    }
+    if (isTableDivider(columns) || sourceColumnIndex === undefined) {
+      return
+    }
+
+    visit(index + 1, columns[sourceColumnIndex] ?? '')
+  })
+}
+
 /** A bullet (`-`/`*`) or ordered (`1.`) list item. */
 export function isListItem(line: string): boolean {
   return /^[-*]\s|^\d+\.\s/u.test(line)
