@@ -5,7 +5,7 @@ a custom SSR server, or a server-side function — using `@contentful/optimizati
 of the quick start, one route will emit a page event and report the profile the Experience API
 returns for that request, without changing how your server fetches or renders content.
 
-**New to personalization?** Here is the whole idea in five sentences:
+**New to personalization?** Here is the whole idea in five points:
 
 - In Contentful you author **variants** of an entry and attach them to an **experience** — a rule
   that decides which visitors see which variant.
@@ -17,7 +17,7 @@ returns for that request, without changing how your server fetches or renders co
 - Your server fetches Contentful entries and turns them into a response, and the SDK sits at that
   hand-off: it gives you the resolved variant instead of the original — or the original entry when
   no variant applies, the **baseline fallback**. You can fetch the entry yourself and hand it to the
-  SDK, or give the SDK your Contentful client and let it fetch by ID; either way the client stays
+  SDK, or give the SDK your Contentful client and let it fetch by ID — either way the client stays
   yours.
 - You render whatever the SDK hands back exactly as you render entries today.
 
