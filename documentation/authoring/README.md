@@ -60,3 +60,11 @@ Machine enforcement of recipe/fragment usage (a `guides:check` validator) is **d
 the `guide-writer` and the newcomer/source reviewers enforce it by following these files. Because
 fragment spines are reproduced verbatim, a future check can confirm instantiation by matching the
 fixed sentences.
+
+## Iterating
+
+To tune wording, tone, or sequence and re-render the guides fast, edit a recipe or fragment here and
+run **`/iterate-guide`** — it recomposes the affected guides from the existing knowledge base without
+reading source or re-verifying facts. It is editorial-only: a change that would alter what a guide
+_asserts_ about the SDK (a prop, a behavior, a return shape) hands off to `/refresh-docs` or
+`/review-guide`. Run `/review-guide` as the final pass before shipping.

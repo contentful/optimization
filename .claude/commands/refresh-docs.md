@@ -10,7 +10,9 @@ This is the **steady-state path**, and it is deliberately cheap. It does NOT re-
 recompose whole guides. The diff bounds the work: only the knowledge-base facts the change touches
 get re-verified, and only the guides that consume those facts get recomposed. If a change turns out
 to need a brand-new KB file (a new SDK, or a guide that was never authored the current way), stop and
-use **`/author-guide`** instead — that is the bootstrap path.
+use **`/author-guide`** instead — that is the bootstrap path. If nothing about the SDK changed and the
+edit is purely editorial — phrasing, tone, section order, a recipe/fragment wording — use
+**`/iterate-guide`** instead; it skips all fact work and just re-renders the prose.
 
 ## 1. Scope from the diff (deterministic — no agent)
 
