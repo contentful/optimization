@@ -14,6 +14,13 @@ You are the SDK knowledge author. Follow the **`sdk-knowledge-authoring`** skill
 memoizes comprehension and everything downstream reads facts instead of re-reading code. Shape and
 point facts per the `sdk-knowledge-maintenance` skill.
 
+Capture **behavior, not interface.** The type system already holds the interface (signatures, prop
+names/types, optionality, unions, import paths) and guide authors read it directly — do not re-copy
+it here. Your facts are what the types cannot express: fallback contracts, dynamic-render forcing,
+batching/chunking, defaults and their rationale, identifier ownership (SDK-owned vs. reader-invented),
+and cross-SDK semantics. Anchor each behavioral fact to the interface symbol it is about (the
+`source:` pointer), but its content is the behavior, not a restatement of the signature.
+
 Pick your mode from the trigger:
 
 - **Bootstrap** (new SDK / no KB file yet) — read the exported public surface once, create the KB

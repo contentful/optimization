@@ -28,10 +28,11 @@ reads source. It returns when `pnpm knowledge:check` passes for the new file.
 
 ## 2. Compose or reconcile the guide from the knowledge base (guide-writer)
 
-Launch the `guide-writer` agent for the target guide, working only from the KB facts created in step 1
-(reading facts, not re-grepping source) and the `optimization-guide-authoring` skill — archetype,
-quick-start-then-deepen, `## Before you start`, copy-vs-adapt labels — grounded in the matching
-reference implementation under `implementations/` for shape. Two sub-cases:
+Launch the `guide-writer` agent for the target guide. It composes **behavior** from the KB facts
+created in step 1 (never re-tracing behavior from source) and reads **interface** (shapes,
+signatures, props) directly from the types as needed, following the `optimization-guide-authoring`
+skill — archetype, quick-start-then-deepen, `## Before you start`, copy-vs-adapt labels — grounded in
+the matching reference implementation under `implementations/` for shape. Two sub-cases:
 
 - **Guide does not exist** — compose it from scratch against the template and the KB facts.
 - **Guide already exists** (predates the KB) — reconcile it: bring it to the current archetype and
@@ -51,9 +52,9 @@ Invoke the **`review-guide`** skill (`.claude/commands/review-guide.md`) on the 
 whole review loop in one pass — do not re-run it here:
 
 - runs `guide-newcomer-reviewer` and `guide-source-verifier` concurrently (reader-experience findings;
-  per-claim confirmed / contradicts-KB / no-backing-fact verdicts);
-- consolidates and applies the fixes (guide corrections; no-backing-fact claims resolved by having
-  `sdk-knowledge-author` add the fact from source, or the claim removed);
+  per-claim verdicts — interface checked against the types, behavior against the KB);
+- consolidates and applies the fixes (guide corrections; behavioral no-backing-fact claims resolved by
+  having `sdk-knowledge-author` trace and add the fact, or the claim removed);
 - funnels durable findings back — reader/structure rules to the `optimization-guide-authoring` skill,
   facts to the knowledge base, cross-guide consistency issues fixed now (never logged);
 - validates (`pnpm knowledge:check`; `pnpm format:fix <touched paths>`, never bare).

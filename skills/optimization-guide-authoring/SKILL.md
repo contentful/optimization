@@ -148,20 +148,34 @@ Router, React Native, iOS SwiftUI, iOS UIKit, Android Compose, Android Views.
 4. **Fill feature sections in order**, each with its integration-category line and numbered
    procedure. Cover the shared concern checklist or mark concerns not-applicable (see
    [references/authoring-checklist.md](references/authoring-checklist.md)).
-5. **Compose every SDK claim from the knowledge base, not from source.** The internal knowledge base
-   (`documentation/internal/sdk-knowledge/`) is the source of truth for what the SDK does — facts
-   already verified against `packages/**/src`, each with a resolvable pointer. Every API you use — a
-   hook, prop, config key, context field, return shape — must come from a fact there; read the base,
-   do not re-grep source. Use the matching reference implementation under `implementations/` for
-   real-shaped patterns and "adapt" starting points, but the base, not the impl, is what makes a claim
-   true (the impl proves one path works and can hide nuance). **If the base is missing a fact you
-   need, do not verify it from source yourself — escalate** with an inline
-   `<!-- ESCALATE(sdk-knowledge-author): the fact you need -->` marker at the point of use; the
-   `sdk-knowledge-authoring` role reads source and records the fact, then you compose the claim from
-   it and remove the marker. That keeps comprehension in one place and means the next guide reuses
-   what this one needed. No `ESCALATE` marker may survive to a finished guide — `pnpm knowledge:check`
-   fails on one. (When you author a guide for an SDK whose KB file does not exist yet, that whole file
-   is bootstrapped by `sdk-knowledge-authoring` first — see the workflow command.)
+5. **Split every SDK claim into interface vs. behavior, and source each from the right place.** These
+   are two different kinds of fact with two different costs, and the rule differs:
+   - **Interface** — what you'd see in a `.d.ts` or an editor hover: a symbol's existence, its
+     signature, prop/config-key names and types, optionality, union shape, return type, import path.
+     Reading this from `packages/**/src` (or the types) is cheap, deterministic, and self-verifying —
+     **just look it up when you need the shape.** You do not need the knowledge base for interface,
+     and you do not escalate for it; the type system is its always-current store.
+   - **Behavior** — anything you'd only learn by reading a function body or tracing control flow: what
+     happens on denied consent, when a render forces dynamic, batching/chunking, fallback contracts,
+     identifier ownership (SDK-owned vs. reader-invented), defaults and their rationale, cross-SDK
+     semantics. **Never re-trace behavior from source** — compose it from the knowledge base
+     (`documentation/internal/sdk-knowledge/`), which holds behavioral facts already traced and
+     verified, each with a pointer. Re-tracing is the expensive, error-prone work the base exists to
+     memoize.
+
+   So: read interfaces directly; compose behavior from the base. Use the matching reference
+   implementation under `implementations/` for real-shaped patterns and "adapt" starting points. **If
+   the base is missing a fact you need, escalate ONLY when it is behavioral** — an interface gap you
+   just look up. Escalate with an inline `<!-- ESCALATE(sdk-knowledge-author): the behavioral fact you
+need -->` marker at the point of use; the `sdk-knowledge-authoring` role traces source and records
+   the behavior, then you compose the claim from it and remove the marker. No `ESCALATE` marker may
+   survive to a finished guide — `pnpm knowledge:check` fails on one. (When you author a guide for an
+   SDK whose KB file does not exist yet, that whole file is bootstrapped by `sdk-knowledge-authoring`
+   first — see the workflow command.)
+
+   The line matters: if you catch yourself wanting to check what a prop _does_, that is behavior —
+   go to the base or escalate; do not quietly re-trace it under cover of an interface lookup.
+
 6. **Sync the TOC and anchors**, add `## Production checks` and (if there are known failure modes)
    `## Troubleshooting`, and link the reference implementation READMEs.
 7. **Self-review** against [references/authoring-checklist.md](references/authoring-checklist.md).

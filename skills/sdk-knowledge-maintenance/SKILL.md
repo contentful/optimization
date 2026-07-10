@@ -70,9 +70,11 @@ These are the transferable behaviors this skill exists to preserve.
   doing other work (writing a guide, fixing a bug, answering a question), record what you confirmed
   here before the context is lost, with its grammar pointer. Do not run net-new verification passes
   just to fill the base in; do not re-derive a fact the base already holds.
-- **Read the base before re-grepping the SDK.** It exists so authors and future regeneration reuse
-  verified facts instead of re-searching `packages/**/src`. Check here first; only grep to confirm
-  or extend.
+- **Read the base before re-tracing behavior from the SDK.** It exists so authors and future
+  regeneration reuse verified _behavioral_ facts instead of re-reading implementation in
+  `packages/**/src`. Check here first for behavior; only trace source to confirm or extend it.
+  (Interface shape — a signature, prop, or return type — is cheap to look up directly from the types
+  and does not need the base.)
 - **Keep it in sync when the SDK changes.** If a symbol, prop, cookie, config key, export path, or
   return shape you touched is recorded here, update the entry and its `source:` pointer in the same
   change. Stale facts are worse than missing ones. `pnpm knowledge:check` runs in CI on every change

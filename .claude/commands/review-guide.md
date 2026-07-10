@@ -17,21 +17,22 @@ Do this in order:
    cold as an average developer and returns reader-experience findings (undefined jargon, skim-mode,
    unperformable steps, dishonest labels), each with severity.
 
-2. **Technical-foundation review.** Launch the `guide-source-verifier` agent on the guide. It checks
-   that every load-bearing SDK claim traces to a verified fact in the knowledge base (a lookup, not a
-   source re-derivation), and returns a per-claim verdict: confirmed / contradicts-KB / no-backing-fact.
-   A claim with no backing fact is escalated to the `sdk-knowledge-author` (which owns reading source),
-   not verified against source here.
+2. **Technical-foundation review.** Launch the `guide-source-verifier` agent on the guide. It splits
+   each load-bearing claim into interface vs. behavior: interface (symbol/signature/prop/return shape)
+   is checked directly against the types in `packages/**/src`; behavior (fallback, dynamic render,
+   batching, defaults, ownership, cross-SDK semantics) is checked against the knowledge base and not
+   re-traced from source. It returns per-claim verdicts (confirmed / contradicted / behavioral
+   no-backing-fact). A behavioral claim with no backing fact is escalated to the `sdk-knowledge-author`.
 
    Run these two reviews concurrently — they are independent (one reads for the reader, one checks the
-   guide against the knowledge base).
+   guide's facts against the types and the knowledge base).
 
 3. **Consolidate and fix.** Collect both agents' findings. Apply the guide fixes via the
    `guide-writer` agent (or directly, following `optimization-guide-authoring`): reader-experience
-   fixes from the newcomer pass, and corrections for every claim the verifier marked contradicts-KB
-   (using the KB fact as the authority). For each **no-backing-fact** claim, resolve it: launch
-   `sdk-knowledge-author` to add the fact from source if the base should hold it, then recompose the
-   claim from that fact — or remove the claim if nothing backs it.
+   fixes from the newcomer pass, and corrections for every claim the verifier marked contradicted
+   (against the types for interface, the KB fact for behavior). For each **behavioral no-backing-fact**
+   claim, resolve it: launch `sdk-knowledge-author` to trace and add the fact if the base should hold
+   it, then recompose the claim from that fact — or remove the claim if nothing backs it.
 
 4. **Funnel learnings back.** For each finding that reflects a durable rule — not a one-off — fold it
    into the right artifact:

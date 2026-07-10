@@ -31,6 +31,29 @@ You own the source→KB direction only. You do not write guide prose, you do not
 grammar (that is `sdk-knowledge-maintenance` — follow it for how a fact is shaped and pointed), and
 you do not review guides. You produce and update facts.
 
+## What belongs in the base: behavior, not the interface the types already hold
+
+The type system is itself an always-current, machine-checked store of the SDK's **interface** — a
+symbol's existence, signature, prop/config-key names and types, optionality, union shape, return
+type, import path. Guide authors read that directly from source; they do not need the base for it,
+and re-copying it here just duplicates something the compiler already guarantees.
+
+Your job is the layer the types **cannot** express — **behavior** and semantics you can only learn by
+reading implementation and control flow:
+
+- what a call does on the edges: fallback contracts, denied consent, dynamic-render forcing, batching
+  and chunking, error paths;
+- identifier ownership — SDK-owned vs. reader-invented (a cookie name, an env var);
+- defaults and their rationale;
+- cross-SDK semantics (the same profile id another SDK reads);
+- curation — which few config keys a reader actually sets, out of everything the type permits.
+
+Anchor each such fact to the interface symbol it is about (that is the `source:` pointer, and it is
+what lets the validator confirm the symbol still exists). But the fact's _content_ is the behavior,
+not a restatement of the signature. When a fact would say nothing the type already says, it does not
+belong here — point at the symbol and stop. Escalations you receive from guide authors are behavioral
+by contract; if one is really an interface lookup, answer it, but it did not need the base.
+
 ## Two modes — pick by the trigger
 
 ### Bootstrap (a new SDK, or an SDK with no KB file yet)

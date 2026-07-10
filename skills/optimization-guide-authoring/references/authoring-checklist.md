@@ -43,14 +43,16 @@ add per-archetype checks.
       endpoints, and paths match reality, or a NOTE explains the discrepancy.
 - [ ] No placeholder-only snippet is labeled `**Copy this:**` when it actually needs relocation or
       structural change (that is an adapt).
-- [ ] **Every API in a code example traces to a fact in the knowledge base.** Each hook, prop,
-      config key, context field, and return shape must be backed by a verified fact in
-      `documentation/internal/sdk-knowledge/` (which holds facts already checked against
-      `packages/**/src`). Compose from the base, do not re-grep source; a plausible-looking field
-      name such as `isEnabled` or `hasResults` is not proof it exists. If a needed fact is missing,
-      escalate to `sdk-knowledge-authoring` to add it from source, then compose from that fact — do
-      not verify from source in the guide. The reference impl shows one working path for shape and
-      "adapt" starting points, but the base, not the impl, is what makes a claim true.
+- [ ] **Every API in a code example is real, sourced by kind — interface vs. behavior.** For
+      _interface_ (a symbol's existence, signature, prop/config-key names & types, optionality, union
+      shape, return type, import path): confirm it directly against `packages/**/src` or the types — a
+      cheap, self-verifying lookup; a plausible-looking field name such as `isEnabled` or `hasResults`
+      is not proof it exists. For _behavior_ (what a call does: fallback contracts, dynamic-render
+      forcing, batching, defaults, identifier ownership, cross-SDK semantics): it must trace to a
+      verified fact in `documentation/internal/sdk-knowledge/`; do not re-trace it from source. If a
+      needed _behavioral_ fact is missing, escalate to `sdk-knowledge-authoring` (an interface gap you
+      just look up, no escalation). The reference impl shows one working path for shape and "adapt"
+      starting points, but the base, not the impl, is what makes a behavioral claim true.
 - [ ] Code comments explain only meaningful SDK-specific lines; no obvious-syntax narration.
 - [ ] **Every magic-value identifier states who owns it.** For each cookie name, env var, header,
       storage key, or config string in a snippet, the guide states whether the reader must match the
