@@ -15,7 +15,7 @@ cwd="$(printf '%s' "$input" | sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*
 # Only spend time when the knowledge base or package source changed in this working tree — a session
 # that never touched either cannot have introduced KB drift.
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  changed="$(git status --porcelain -- documentation/internal/sdk-knowledge 'packages/**/src' 2>/dev/null)"
+  changed="$(git status --porcelain -- documentation/internal/sdk-knowledge 'packages/**/src/**' 2>/dev/null)"
   [ -z "$changed" ] && exit 0
 fi
 

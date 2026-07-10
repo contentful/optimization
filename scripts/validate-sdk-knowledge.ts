@@ -53,9 +53,12 @@ import { fileURLToPath } from 'node:url'
 import {
   type Heading,
   headingsOf,
+  isFactUnitEnd,
+  isLabelLeadIn,
   isListItem,
   isPlaceholderCell,
   isTableDivider,
+  looksLikeFact,
   parseTableRow,
 } from './sdk-knowledge/markdown'
 import { collectDeclaredSymbols } from './sdk-knowledge/source-symbols'
@@ -128,7 +131,7 @@ report()
 function validateFile(absPath: string): void {
   // README.md and _template.md are meta files: they hold placeholder `source:` guidance and
   // illustrative examples, not real facts. Exempt them so the format's own docs are not graded.
-  if (META_FILES.has(path.basename(absPath))) {
+  if (isMetaFile(absPath)) {
     return
   }
 
@@ -399,13 +402,21 @@ function checkFile(candidate: string, label: string, file: string, line: number)
 function checkPointerCoverage(lines: string[], file: string): void {
   lines.forEach((rawLine, index) => {
     const line = rawLine.trim()
-    if (!isListItem(line) || !line.endsWith('.') || line.endsWith('None.')) {
+    // Only a list item that is the last line of its own fact unit is a candidate: a single-line
+    // bullet (a wrapped fact's bullet line is not — its terminal prose, and pointer, live on a
+    // continuation line, so it is graded there via itemHasPointerNearby, not here). Skip `None.`
+    // placeholders and `Label:`/`Label:**` lead-ins that only head a group of sub-bullets, whose
+    // shared pointer sits on the group's last child.
+    if (!isListItem(line) || !isFactUnitEnd(lines, index) || line.endsWith('None.')) {
+      return
+    }
+    if (isLabelLeadIn(line)) {
       return
     }
     if (line.includes('source:') || itemHasPointerNearby(lines, index)) {
       return
     }
-    if (looksLikeFact(line)) {
+    if (looksLikeFact(line, LABEL_LEADIN_MAX)) {
       addProblem(file, index + 1, `fact has no source: pointer — "${truncate(line)}"`)
     }
   })
@@ -432,39 +443,6 @@ function itemHasPointerNearby(lines: string[], index: number): boolean {
     }
   }
   return false
-}
-
-/**
- * A heuristic for "this list item is an SDK fact that must be sourced" vs prose guidance. Facts
- * reference a concrete symbol/config key/path/identifier as inline code. A bullet that only
- * delegates to another doc ("Model: see ../shared/concepts.md#…") is a cross-reference, not a fact.
- */
-function looksLikeFact(line: string): boolean {
-  if (!/`[^`]+`/u.test(line)) {
-    return false
-  }
-  return !isCrossReference(line)
-}
-
-/**
- * True if a bullet is a pure cross-reference — it just points the reader at another doc ("Model: see
- * ../shared/concepts.md#…") rather than stating a fact of its own. Such a bullet inherits its source
- * from the referenced section and must NOT be required to carry a pointer.
- *
- * Detection: it must contain the word "see", and after stripping the list marker, an optional short
- * "Label:" lead-in, a leading "see", every markdown link, and every inline-code span, nothing but
- * punctuation may remain. A real fact leaves prose words behind and so is not treated as a reference.
- */
-function isCrossReference(line: string): boolean {
-  if (!/\bsee\b/iu.test(line)) {
-    return false
-  }
-  const body = line
-    .replace(/^[-*]\s+|^\d+\.\s+/u, '')
-    .replace(new RegExp(`^[^:]{0,${LABEL_LEADIN_MAX}}:\\s*`, 'u'), '')
-    .replace(/^see\s+/iu, '')
-  const withoutLinks = body.replace(/\[[^\]]*\]\([^)]*\)/gu, '').replace(/`[^`]*`/gu, '')
-  return withoutLinks.replace(/[\s.,;]/gu, '') === ''
 }
 
 // --- template conformance --------------------------------------------------------------------
@@ -652,7 +630,16 @@ function isPerSdkFile(absPath: string): boolean {
   if (firstSegment !== undefined && SHARED_DIRS.has(firstSegment)) {
     return false
   }
-  return !META_FILES.has(path.basename(absPath))
+  return !isMetaFile(absPath)
+}
+
+/**
+ * True only for the base's own format docs at its root: `README.md` (the grammar) and `_template.md`
+ * (the skeleton). Matched by path relative to the knowledge dir, NOT by basename — a per-SDK or family
+ * `README.md` nested under the base (e.g. `native/README.md`) is a fact file and must still be graded.
+ */
+function isMetaFile(absPath: string): boolean {
+  return META_FILES.has(path.relative(knowledgeDir, absPath))
 }
 
 function fileExists(candidate: string): boolean {

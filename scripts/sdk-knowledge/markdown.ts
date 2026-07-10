@@ -56,3 +56,63 @@ export function isPlaceholderCell(cell: string): boolean {
 export function isListItem(line: string): boolean {
   return /^[-*]\s|^\d+\.\s/u.test(line)
 }
+
+/**
+ * True if the list item at `index` is a single-line fact — nothing continues it. The next line is
+ * end-of-file, blank, another list item, or the item's own `source:` line. If instead an indented
+ * prose continuation follows, this bullet line is mid-fact (its terminal clause and pointer are
+ * below), so it must not be judged as a complete fact here. Multi-line facts are graded via their
+ * trailing `source:` line instead.
+ */
+export function isFactUnitEnd(lines: string[], index: number): boolean {
+  const { [index + 1]: next } = lines
+  if (next === undefined) {
+    return true
+  }
+  const trimmed = next.trim()
+  return trimmed === '' || isListItem(trimmed) || trimmed.includes('source:')
+}
+
+/**
+ * True for a `**Label:**` or `Label:` bullet that only introduces a group of sub-bullets. Such a
+ * lead-in states no fact of its own; the group's shared `source:` sits on its last child, so the
+ * lead-in must not be required to carry its own pointer.
+ */
+export function isLabelLeadIn(line: string): boolean {
+  const withoutMarker = line.replace(/^[-*]\s+/u, '')
+  return withoutMarker.endsWith(':') || withoutMarker.endsWith(':**')
+}
+
+/**
+ * A heuristic for "this list item is an SDK fact that must be sourced" vs prose guidance. Facts
+ * reference a concrete symbol/config key/path/identifier as inline code. A bullet that only
+ * delegates to another doc ("Model: see ../shared/concepts.md#…") is a cross-reference, not a fact.
+ */
+export function looksLikeFact(line: string, labelLeadInMax: number): boolean {
+  if (!/`[^`]+`/u.test(line)) {
+    return false
+  }
+  return !isCrossReference(line, labelLeadInMax)
+}
+
+/**
+ * True if a bullet is a pure cross-reference — it just points the reader at another doc ("Model: see
+ * ../shared/concepts.md#…") rather than stating a fact of its own. Such a bullet inherits its source
+ * from the referenced section and must NOT be required to carry a pointer.
+ *
+ * Detection: it must contain the word "see", and after stripping the list marker, an optional short
+ * "Label:" lead-in (up to `labelLeadInMax` chars), a leading "see", every markdown link, and every
+ * inline-code span, nothing but punctuation may remain. A real fact leaves prose words behind and so
+ * is not treated as a reference.
+ */
+export function isCrossReference(line: string, labelLeadInMax: number): boolean {
+  if (!/\bsee\b/iu.test(line)) {
+    return false
+  }
+  const body = line
+    .replace(/^[-*]\s+|^\d+\.\s+/u, '')
+    .replace(new RegExp(`^[^:]{0,${labelLeadInMax}}:\\s*`, 'u'), '')
+    .replace(/^see\s+/iu, '')
+  const withoutLinks = body.replace(/\[[^\]]*\]\([^)]*\)/gu, '').replace(/`[^`]*`/gu, '')
+  return withoutLinks.replace(/[\s.,;]/gu, '') === ''
+}
