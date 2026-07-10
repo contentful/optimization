@@ -9,6 +9,25 @@ guides, never one guide surgically, and never by editing agent logic. The compos
 LLM (`guide-writer`), not a deterministic templating engine: recipes and fragments are prose it reads
 and instantiates, not code it executes.
 
+## Start here (technical writers)
+
+This directory is your front door. To change how the guides read:
+
+1. **Edit the structure or wording** — a **recipe** (`recipes/`) for a guide archetype's section
+   spine and sequence, or a **fragment** (`fragments/`) for a shared paragraph reused across guides.
+   You never touch SDK facts (those live in the knowledge base) or agent logic.
+2. **Re-render fast** — run **`/iterate-guide`**; it recomposes the affected guides from the existing
+   knowledge base without reading source or re-verifying facts. This is the tight inner loop for
+   phrasing, tone, and sequence. A change that would alter what a guide _asserts_ about the SDK (a
+   prop, a behavior, a return shape) is out of scope and hands off to `/refresh-docs` or
+   `/review-guide`.
+3. **Gate before shipping** — run **`/review-guide`**; it runs the newcomer and technical-foundation
+   review roles and funnels durable lessons back into recipes, fragments, or the knowledge base.
+
+For the SDK-fact side of the pipeline (`/author-guide`, `/refresh-docs`, `pnpm knowledge:check`), see
+[`../internal/sdk-knowledge/README.md`](../internal/sdk-knowledge/README.md) and the "Guides and the
+knowledge base" section of the repository [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
+
 ## The layers
 
 | Layer                                         | Holds                                                                       | Owner                  |
