@@ -127,13 +127,12 @@ jobs:
             # the knowledge base itself, and any package source whose symbols its pointers name.
             # Deliberately NOT markdown-excluded — the KB is markdown, and a source change can
             # invalidate a symbol pointer without touching a fact.
+            # One brace-glob on purpose: the step sets `predicate-quantifier: every`, so a file must
+            # match every pattern in a filter. As separate positive globs these are mutually exclusive
+            # (no path is in two of these dirs at once), so `every` would be unsatisfiable and this
+            # filter would never fire. A single alternation matches if a file is in any listed area.
             knowledge:
-              - 'documentation/internal/sdk-knowledge/**'
-              - 'documentation/guides/**'
-              - 'packages/**/src/**'
-              - 'implementations/**'
-              - 'scripts/validate-sdk-knowledge.ts'
-              - '.github/workflows/main-pipeline.yaml'
+              - '{documentation/internal/sdk-knowledge/**,documentation/guides/**,packages/**/src/**,implementations/**,scripts/validate-sdk-knowledge.ts,.github/workflows/main-pipeline.yaml}'
 
   setup:
     name: 🛠️ pnpm install
