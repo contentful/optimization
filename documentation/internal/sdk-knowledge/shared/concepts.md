@@ -69,3 +69,15 @@ consecutive route keys. When the server already reported a consented page view, 
 skip the duplicate (per-SDK `initialPageEvent` / tracker prop). Interaction events
 (view/click/hover) are consent-gated browser activity and use the resolved entry id.
 source: react-web-sdk#auto-page/useAutoPageEmitter.ts; react-web-sdk#router/next-app.tsx
+
+## Experience response payload
+
+An accepted Experience API request (page/identify/screen/track) returns `OptimizationData`
+`{ profile, selectedOptimizations, changes }` — this response is the origin of the profile, the
+selected optimizations, and the computed flag `changes` the rest of the SDK consumes. `OptimizationData`
+mirrors the wire `ExperienceData` but renames its `experiences` field to `selectedOptimizations`. A
+stateful SDK applies the payload to its personalization signals (`profile`, `selectedOptimizations`,
+`changes`) in one batch, transitioning the Experience-request state to `success` atomically with the
+selections so consumers never see `!pending` while optimization is still unavailable; a stateless SDK
+returns the same payload per request instead of holding it.
+source: api-schemas#experience/ExperienceResponse.ts#OptimizationData; api-schemas#experience/ExperienceResponse.ts#ExperienceData; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals

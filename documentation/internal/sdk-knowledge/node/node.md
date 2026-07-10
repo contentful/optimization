@@ -107,9 +107,10 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
 - Request-bound event methods (on `CoreStatelessRequest`, awaited): Experience methods `page(payload?)`
   (payload defaults `{}`), `identify({ userId, traits? })` (`userId` required), `screen({ name, properties })`,
   `track({ event, properties? })` (`event` required) → return `EventEmissionResult`
-  `{ accepted, data? }` where `data` is `OptimizationData` `{ profile, selectedOptimizations, changes }`.
-  Accepted `page()`/`identify()` update the request client's `profile` and cached
-  `selectedOptimizations`.
+  `{ accepted, data? }` where `data` is the accepted Experience-response `OptimizationData` payload
+  (see [`../shared/concepts.md`](../shared/concepts.md#experience-response-payload)). Being stateless,
+  the request client does not apply it to any signals; instead accepted `page()`/`identify()` update
+  this request client's `profile` getter and cached `selectedOptimizations` for the rest of the request.
   source: core-sdk#CoreStatelessRequest.ts#page; core-sdk#CoreStatelessRequest.ts#identify; core-sdk#CoreStatelessRequest.ts#screen; core-sdk#CoreStatelessRequest.ts#track; core-sdk#events/EventEmissionResult.ts#EventEmissionResult; api-schemas#experience/ExperienceResponse.ts#OptimizationData
 - Insights methods: `trackView(payload)` returns `EventEmissionResult`; `trackClick`, `trackHover`,
   `trackFlagView` return `void`. `trackView({ componentId, viewId, viewDurationMs, experienceId?, variantIndex?, sticky? })`.

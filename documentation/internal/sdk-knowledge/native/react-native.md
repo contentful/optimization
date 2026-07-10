@@ -204,6 +204,12 @@ source: core-sdk#constants.ts#ANONYMOUS_ID_KEY; core-sdk#constants.ts#ANONYMOUS_
   `states.eventStream` for accepted events (dedupe by `messageId`) and `states.blockedEventStream`
   for consent/allow-list diagnostics. Flags: `states.flag(name)` is a reactive observable;
   `getFlag(name)` a non-reactive read. source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#CoreStatefulEventEmitter.ts#getFlag
+- Experience-response payload: an accepted Experience call returns the `{ profile,
+selectedOptimizations, changes }` payload, and this stateful SDK applies it to its Core signals
+  (`signals.profile`, `signals.selectedOptimizations`, `signals.changes`) — the origin of the profile
+  and the changes the SDK surfaces. See
+  [`../shared/concepts.md`](../shared/concepts.md#experience-response-payload).
+  source: core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals; core-sdk#CoreStateful.ts#CoreStates
 
 ## Consent & persistence
 
