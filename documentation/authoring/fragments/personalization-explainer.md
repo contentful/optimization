@@ -14,9 +14,10 @@ Two kinds of bullet, and they instantiate differently:
   These fixed sentences are what keep the family consistent — do not reword them.
 - **Composed bullets** — the entry-source hand-off bullet is composed from a knowledge-base fact
   around a fixed anchor: the sentence must end with the **baseline-fallback** contract (the exact
-  clause below), but the lead and the fetch-boundary wording are shaped to the SDK because the
-  boundary itself is SDK-shaped (manual-only vs. managed vs. both) and some SDKs reorder the sentence.
-  Keep the anchor exact; compose the rest from the KB entry-source-boundary fact.
+  clause below), and the only free choices are the lead (which of the three prescribed strings fits
+  the app) and whether the managed-fetch clause is present. Keep the rest as written; do not reorder
+  or reshape it — this bullet is near-verbatim, not open composition. Compose only from the KB
+  entry-source-boundary fact.
 
 Every slot resolves from a knowledge-base fact — never invent one.
 
@@ -35,7 +36,8 @@ Slots and where each is filled from:
 - **⟨profile bullet⟩** — include this bullet **only if the SDK persists a per-visitor profile**
   across requests or launches (Node, React Native). SDKs that hold no cross-request identity in the
   explainer omit the whole bullet (the web family). Fill the requests-vs-launches wording from the
-  KB runtime model.
+  KB runtime model. **This inclusion drives the opener count** (below): five points when the profile
+  bullet is included, four when it is omitted.
 - **entry-source hand-off bullet (composed)** — compose this bullet from the KB entry-source-boundary
   fact around one fixed anchor: it must state that the SDK hands back the resolved variant, **or the
   original entry when no variant applies, the baseline fallback** (that clause is the anchor — keep
@@ -44,15 +46,14 @@ Contentful entries and turns them into a response`, `Your app turns Contentful e
 markup`, `Your app already fetches Contentful entries and turns them into components`). If the SDK
   supports **managed fetching** (it can take the reader's client and fetch by ID), add the "fetch it
   yourself or give the SDK your client — either way the client stays yours" clause; omit it for
-  manual-only SDKs. A screen-first SDK (React Native) may reorder the sentence so the hand-off reads
-  naturally — that is allowed for this composed bullet, as long as the baseline-fallback anchor
-  survives intact.
+  manual-only SDKs. Do not reorder the sentence to lead with the fetch step — keep the hand-off →
+  baseline-fallback → fetch-boundary order shown in the Template.
 - **⟨deferred concepts⟩** — the not-yet list for this SDK, drawn from the sections this guide defers
   (audiences, interaction events, identity, preview, live updates…).
 
 ## Template
 
-**New to personalization?** Here is the whole idea in ⟨four | five⟩ sentences:
+**New to personalization?** Here is the whole idea in ⟨four | five⟩ points:
 
 - In Contentful you author **variants** of an entry and attach them to an **experience** — a rule
   that decides which visitors see which variant.
@@ -64,8 +65,9 @@ markup`, `Your app already fetches Contentful entries and turns them into compon
   personalization consistent across ⟨requests | app launches⟩.
 - ⟨entry-source hand-off bullet — composed from the KB entry-source-boundary fact; MUST end with the
   baseline-fallback anchor "…or the original entry when no variant applies, the **baseline
-  fallback**." Add the managed-fetch clause only if the SDK fetches by ID; a screen-first SDK may
-  reorder the sentence. Example (managed, browser): "Your app turns Contentful entries into markup,
+  fallback**." Add the managed-fetch clause only if the SDK fetches by ID; keep the sentence order
+  shown here (do not lead with the fetch step). Example (managed, browser): "Your app turns
+  Contentful entries into markup,
   and the SDK sits at that hand-off: it gives you the resolved variant instead of the original — or
   the original entry when no variant applies, the **baseline fallback**. You can fetch the entry
   yourself and hand it to the SDK, or give the SDK your Contentful client and let it fetch by ID —

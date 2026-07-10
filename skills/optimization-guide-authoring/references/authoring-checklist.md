@@ -8,6 +8,10 @@ add per-archetype checks.
 
 - [ ] The intro opens by naming the working result, not stacked jargon. The first sentence a reader
       hits does not use an undefined term.
+- [ ] **A stated count matches what follows.** If the intro explainer promises "the whole idea in N
+      points" (or sentences/steps), the actual count matches. Because explainer bullets can be
+      multi-sentence, count the unit named — the `personalization-explainer` fragment counts
+      **points** (bullets), five when the profile bullet is included, four when omitted.
 - [ ] Every term the quick start relies on is defined in plain language at or before first use (for
       SDK guides that includes the domain concepts — variant, experience, Experience API, resolving,
       baseline fallback — plus any SDK-owned config key, identifier, or event name the quick start
@@ -102,6 +106,11 @@ add per-archetype checks.
       start promises more than one observable result (e.g. "one entry resolving and one screen
       event"), the verify step confirms every promised result where the reader hits it — or the quick
       start is narrowed to a single proof. A promised proof with no matching verification is a defect.
+- [ ] **The inspection mechanism a verify step names is present in the pasted quick-start code.** If
+      the verify step tells the reader to watch `states.eventStream`, read a `logLevel` log line, or
+      inspect any accessor, the quick-start snippet the reader just pasted must already expose it — a
+      verify step that depends on an accessor only wired up in a later section is not performable
+      where the reader hits it.
 - [ ] **The quick start is grounded in a real app shape** — no invented fetch shapes (e.g. a
       hardcoded array of entry IDs). The most common real shape leads; other shapes are pointed to a
       feature section.

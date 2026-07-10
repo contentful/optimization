@@ -3,20 +3,23 @@
 Use this guide to add Contentful personalization to a React Native or Expo app using
 `@contentful/optimization-react-native`. By the end of the quick start, one Contentful entry will
 render the personalized variant for the current visitor — or the original entry when none applies —
-and one screen event will report the visitor's profile to Contentful.
+and one screen event will report the visitor's screen view to Contentful, which uses it to keep that
+visitor's personalization consistent.
 
-**New to personalization?** Here is the whole idea in five sentences:
+**New to personalization?** Here is the whole idea in five points:
 
 - In Contentful you author **variants** of an entry and attach them to an **experience** — a rule
   that decides which visitors see which variant.
 - As the app runs, Contentful's **Experience API** looks at who the visitor is and picks the variant
   for each experience. Swapping a fetched entry for its picked variant is called **resolving** the
   entry.
-- The Experience API also builds a **profile**: the anonymous, per-visitor identity and state the
-  SDK keeps consistent across app launches.
-- Your app gets a Contentful entry — you fetch it and hand it to the SDK, or you give the SDK your
-  Contentful client and let it fetch by ID — and the SDK resolves it, returning the picked variant
-  or, when no variant applies, the original entry (the **baseline fallback**).
+- The Experience API also returns a **profile**: the anonymous, per-visitor identity and state the
+  SDK uses to keep the same visitor's personalization consistent across app launches.
+- Your app already fetches Contentful entries and turns them into components, and the SDK sits at
+  that hand-off: it gives you the resolved variant instead of the original — or the original entry
+  when no variant applies, the **baseline fallback**. You can fetch the entry yourself and hand it to
+  the SDK, or give the SDK your Contentful client and let it fetch by ID — either way the client
+  stays yours.
 - You render whatever the SDK hands back exactly as you render entries today.
 
 That is enough to start. You do not need audiences, interaction events, identity, or the preview
@@ -45,12 +48,10 @@ baseline — and reports one screen event.** It mounts one `OptimizationRoot`, h
 Contentful client so it can fetch the entry by ID, and tracks the screen with `useScreenTracking`.
 
 This quick start assumes your application policy permits Optimization to start with accepted consent
-and renders no end-user consent UI. Consent has two independent parts: `events` (may the SDK
-personalize and send events) and `persistence` (may the SDK store profile continuity in
-AsyncStorage). The shorthand `consent: true` sets both to `true`; the object form
-`{ events, persistence }` sets them separately. If personalization must wait for a consent decision,
-keep this structure and add the [Consent and privacy-policy handoff](#consent-and-privacy-policy-handoff)
-step before you ship.
+and renders no end-user consent UI, so it seeds `defaults={{ consent: true }}` — the shorthand that
+accepts both consent axes at once. If personalization must wait for a consent decision, keep this
+structure and add the [Consent and privacy-policy handoff](#consent-and-privacy-policy-handoff) step
+before you ship, which explains the two axes and the object form that sets them separately.
 
 1. Install the React Native SDK, its required AsyncStorage peer dependency, and a Contentful
    delivery client if your app does not already have one.
@@ -109,11 +110,14 @@ step before you ship.
          contentful={{
            client: contentfulClient,
            defaultQuery: {
-             include: 10, // Resolve optimization and variant links before SDK resolution.
+             // An optimized entry links its experiences and their variants as nested entries; fetch
+             // deep enough to pull them back in one payload (see Contentful entry fetching below).
+             include: 10,
              locale: APP_LOCALE, // Keep CDA entries and SDK context on the same locale.
            },
          }}
          defaults={{ consent: true }}
+         logLevel="debug" // Surface SDK activity, including the accepted screen event, so you can verify it.
        >
          <HomeScreen />
        </OptimizationRoot>
@@ -127,12 +131,14 @@ step before you ship.
    `OptimizedEntry` — keep the rest of your components as they are.
 
 3. Verify the first run. Launch the app; the screen displays a resolved entry ID for either the
-   selected variant or the baseline. To confirm the screen event fired, watch your SDK logs or
-   `states.eventStream` for one accepted `screen` event (see
-   [Screen and navigation tracking](#screen-and-navigation-tracking)). To see personalization rather than the baseline, author (in
-   Contentful) a variant of `hero-entry-id` attached to an experience that targets all visitors —
-   every visitor matches it automatically, so the resolved ID changes to the variant. Without an
-   authored variant every launch shows the baseline entry, which is expected, not a failure.
+   selected variant or the baseline. Because `logLevel="debug"` is set above, the SDK logs its
+   activity to the console, so you can confirm the screen event fired by watching your Metro or
+   device logs on mount for the `screen` event the SDK sends (the [Screen and navigation tracking](#screen-and-navigation-tracking)
+   and [Analytics forwarding](#analytics-forwarding) sections add `states.eventStream` for a
+   programmatic check). To see personalization rather than the baseline, author (in Contentful) a
+   variant of `hero-entry-id` attached to an experience that targets all visitors — every visitor
+   matches it automatically, so the resolved ID changes to the variant. Without an authored variant
+   every launch shows the baseline entry, which is expected, not a failure.
 
 <details>
   <summary>Table of Contents</summary>
@@ -251,7 +257,10 @@ until the SDK is ready.
 
 **Integration category:** Common but policy-dependent
 
-Consent policy belongs to your application. The SDK stores event consent, stores separate durable
+Consent policy belongs to your application. Consent has two independent axes: `events` (may the SDK
+personalize and send events) and `persistence` (may the SDK store profile continuity in
+AsyncStorage). The shorthand `consent: true` sets both to `true`; the object form
+`{ events, persistence }` sets them separately. The SDK stores event consent, stores separate durable
 profile-continuity persistence consent, and blocks non-allowed event types until event consent is
 accepted.
 
@@ -300,8 +309,10 @@ allow-listed. Boolean consent calls control both event emission and durable prof
 `optimization.consent({ events: true, persistence: false })` when events can emit but the stored
 profile-continuity state must stay session-only. That state is the anonymous identity, the profile,
 the **selected optimizations** (which variant the Experience API picked for each experience), and the
-**changes** (the profile-backed flag and merge-tag values the Experience API returns) — all of which
-otherwise persist in AsyncStorage across launches.
+**changes** (the profile-backed values the Experience API returns for feature flags — named on/off or
+valued settings — and merge tags — profile-driven substitutions in Rich Text; both are covered in
+[Merge tags and Custom Flags](#merge-tags-and-custom-flags)) — all of which otherwise persist in
+AsyncStorage across launches.
 
 For cross-SDK policy details, see
 [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
@@ -319,11 +330,12 @@ direct values, not locale-keyed maps.
    layer.
 2. Configure `contentful.defaultQuery` on the SDK, pass per-entry `entryQuery`, or pass the locale
    to manual Contentful CDA requests.
-3. Request enough link depth for the SDK to resolve variants. `nt_experiences` is a fixed
-   Optimization field the SDK adds to an optimized entry (an SDK-owned content-model name you do not
-   choose); it links the experiences, and each experience links its variant entries. Your fetch must
-   `include` deeply enough to pull those linked entries back in one payload. `include: 10` is the
-   repository reference implementation's pattern.
+3. Request enough link depth for the SDK to resolve variants. `nt_experiences` (plural) is a fixed
+   Optimization link field the SDK adds to an optimized entry; it links that entry's experiences,
+   and each experience links its variant entries. Do not confuse it with `nt_experience` (singular),
+   the content type of the experience entries it links to. Both are SDK-owned content-model names you
+   do not choose. Your fetch must `include` deeply enough to pull those linked entries back in one
+   payload. `include: 10` is the repository reference implementation's pattern.
 4. Pass the same locale to SDK `locale` when Experience API responses and event context must use the
    same language.
 5. Do not pass `contentful.js` `withAllLocales` results or raw CDA `locale=*` responses to
