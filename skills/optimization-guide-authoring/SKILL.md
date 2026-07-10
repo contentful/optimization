@@ -19,9 +19,17 @@ paths: documentation/guides/**
 # Authoring Optimization SDK guides
 
 Use this skill whenever you create, rewrite, or review a guide under `documentation/guides/`. It
-owns the structure, voice, and self-review rules for those guides so they stay consistent and
-teachable. It supersedes the former long-form rules in `documentation/guides/AGENTS.md`, which is
-now a thin pointer to this skill.
+owns the **voice, teaching approach, and authoring workflow** for those guides so they stay
+consistent and teachable. It supersedes the former long-form rules in
+`documentation/guides/AGENTS.md`, which is now a thin pointer to this skill.
+
+**Structure lives in recipes, not here.** A guide's section spine, fixed heading order, integration
+categories, example-label rules, and the reusable shared prose (fragments) live in
+[`documentation/authoring/`](../../documentation/authoring/) — one recipe per archetype plus the
+fragments they compose. This skill holds the transferable principles (below); the recipe holds the
+shape of a given archetype. When you write or refresh a guide, open the matching recipe as the
+structural source of truth and this skill for the voice and workflow. Do not restate recipe structure
+here, and do not let SDK facts (which belong in the knowledge base) leak into either.
 
 ## Who the guides are for
 
@@ -57,76 +65,47 @@ go deeper. Two consequences drive everything below:
 
 - Guides under `documentation/guides/`: `integrating-*.md`, `choosing-the-right-sdk.md`,
   supplemental recipe guides, and the directory `README.md` routing index.
-- Structure (archetype and headings), teaching voice, example labels, TOC rules, and self-review.
+- This skill owns teaching voice, the copy-vs-adapt honesty principle, and the authoring workflow.
+  Section structure, heading order, integration categories, and the reusable shared prose belong to
+  the recipes and fragments under [`documentation/authoring/`](../../documentation/authoring/).
 
 ## Not in scope
 
+- **Guide structure** — the section spine, fixed heading order, integration categories, TOC rules,
+  and per-archetype skeletons live in the recipes under `documentation/authoring/recipes/`. Reusable
+  reader-facing prose (the personalization explainer, the authored-variant gotcha) lives in
+  `documentation/authoring/fragments/`. Open the matching recipe as the structural source of truth.
 - Concept docs under `documentation/concepts/` — they own deeper mechanics; guides link to them.
 - Package READMEs, implementation READMEs, and product docs.
 - Generated TypeDoc under `docs/` — it owns exhaustive, method-by-method API reference.
 - Prose style mechanics — follow the repo `STYLE_GUIDE.md`; let Prettier own formatting.
 
-## Archetypes
+## Archetypes and structure
 
 Every guide has exactly one primary archetype. Pick it by the reader's primary goal, then open the
-matching template.
+matching recipe under [`documentation/authoring/recipes/`](../../documentation/authoring/recipes/) —
+the recipe's `## Template` is the section spine and its `## Context` is the structural rationale.
 
-| Reader goal                                                   | Archetype           | Template                                                                                   |
-| ------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------ |
-| Integrate an SDK into a specific runtime (`integrating-*.md`) | Integration guide   | [references/integration-guide-template.md](references/integration-guide-template.md)       |
-| Choose between SDKs, runtimes, or patterns                    | Decision guide      | [references/decision-and-recipe-templates.md](references/decision-and-recipe-templates.md) |
-| Supplement an integration without replacing it                | Supplemental recipe | [references/decision-and-recipe-templates.md](references/decision-and-recipe-templates.md) |
+| Reader goal                                                   | Archetype           | Recipe                                                                                                                       |
+| ------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Integrate an SDK into a specific runtime (`integrating-*.md`) | Integration guide   | [../../documentation/authoring/recipes/integration.md](../../documentation/authoring/recipes/integration.md)                 |
+| Choose between SDKs, runtimes, or patterns                    | Decision guide      | [../../documentation/authoring/recipes/decision.md](../../documentation/authoring/recipes/decision.md)                       |
+| Supplement an integration without replacing it                | Supplemental recipe | [../../documentation/authoring/recipes/supplemental-recipe.md](../../documentation/authoring/recipes/supplemental-recipe.md) |
 
-## Core structure for integration guides
-
-The reader's journey is two milestones, layered inside the mandated section order:
-
-1. **Milestone 1 — the quick start.** The single shortest runnable path to one observable result
-   (personalized first paint, one accepted page event, one entry resolving, etc.). Complete and
-   shippable on its own. This is `## Quick start`.
-2. **Milestone 2 and beyond — feature sections.** Everything else, introduced by the section that
-   needs it: `## Core integration`, then `## Optional integrations`, then
-   `## Advanced integrations`.
-
-Section order is fixed: `# H1` → intro (`Use this guide…`) → `## Quick start` → collapsible TOC →
-`## Before you start` → `## Core integration` → `## Optional integrations` (if any) →
-`## Advanced integrations` (if any) → `## Production checks` → `## Troubleshooting` (if any) →
-`## Reference implementations to compare against`. The template has the full skeleton.
-
-Key rules (the template expands each):
-
-- Organize by feature/concept, not one monolithic flow. No `## The integration flow` /
-  `## Required steps` section, and no numbered headings at any level. Procedures are numbered lists
-  inside the relevant `###` section.
-- Each `###` feature section starts with a bold `**Integration category:**` line using exactly one
-  of: `Required for first integration`, `Common but policy-dependent`, `Optional`,
-  `Advanced or production-only`. Category placement maps to the parent `##` section.
-- **`## Before you start` replaces the old required-setup table.** List only what the reader must
-  gather from outside the guide (runtime prerequisites, credentials, and — critically — authored
-  Contentful data such as a variant attached to an experience). Do not restate the walkthrough as an
-  inventory; the sequenced sections own "where to configure." See
-  [references/before-you-start.md](references/before-you-start.md) for what belongs here and the
-  authored-variant gotcha every SDK guide must call out.
+The recipe owns the fixed section order, the `**Integration category:**` line values, the
+`## Before you start` prerequisites shape, the example-label set, and which fragments each archetype
+composes (the personalization explainer, the authored-variant gotcha). Do not re-derive structure
+from a sibling guide — the recipe is authoritative; sibling guides are examples of it.
 
 ## Example labels: make copy-vs-adapt honest
 
-Every fenced code block gets a bold intent label immediately before it. The label is a promise to
-the reader — keep it true.
-
-- `**Copy this:**` — pasteable with only simple value substitution (IDs, tokens, env var names,
-  versions, paths, config values). **The values must actually work against what the guide points
-  to.** If a snippet references env var names or endpoints, they must match reality (or the guide
-  must note the discrepancy). A placeholder alone does not make a snippet adaptive.
-- `**Adapt this to your use case:**` — realistic app-shaped code that needs structural changes,
-  placement, or business logic. Say explicitly what is the reader's (their fetch, their components)
-  and what is the pattern to copy. Where the change means "find X in your code and wrap/change it,"
-  say so — a before/after of the reader's likely code is the strongest form (see the template's
-  "composed sections" example).
-- `**Follow this pattern:**` — illustrative shape, not drop-in runnable.
-- `**Reference excerpt:**` — shortened or copied reference-implementation code.
-
-Add short comments only for SDK-specific lines that carry meaning (lifecycle placement, consent,
-event sequencing, fallback, duplicate-event prevention). Do not narrate obvious syntax.
+The recipe defines the label set and per-label rules. The transferable principle this skill owns: an
+example label is a **promise to the reader — keep it true.** `**Copy this:**` only when the values
+actually work as-is against what the guide points to; the moment a snippet needs relocation or
+structural change, it is `**Adapt this to your use case:**` and the guide names what is the reader's
+vs. the pattern to copy. Add short comments only for SDK-specific lines that carry meaning (lifecycle
+placement, consent, event sequencing, fallback, duplicate-event prevention); never narrate obvious
+syntax.
 
 ## Directory README (routing index)
 
@@ -138,13 +117,16 @@ Router, React Native, iOS SwiftUI, iOS UIKit, Android Compose, Android Views.
 
 ## Workflow
 
-1. **Identify the archetype and reader goal.** Open the matching template.
-2. **Draft the intro and quick start first.** Intro defines the essential terms in plain language
-   and frames the milestones. Quick start = one proof, one verification statement, minimum setup.
-   Keep optional concerns (analytics, preview, live updates, identity, strict consent, caching) out
-   of it unless that concern is the chosen proof.
+1. **Identify the archetype and reader goal.** Open the matching recipe under
+   `documentation/authoring/recipes/`. Its `## Template` is the section spine; its `## Context` is the
+   structural rationale. The fragments it references are the shared prose you will instantiate.
+2. **Draft the intro and quick start first.** The intro's teaching content is the
+   `personalization-explainer` fragment — instantiate it (copy its Template verbatim, fill each
+   `⟨slot⟩` from the knowledge base) rather than hand-writing an explainer. Quick start = one proof,
+   one verification statement, minimum setup. Keep optional concerns (analytics, preview, live
+   updates, identity, strict consent, caching) out of it unless that concern is the chosen proof.
 3. **Write `## Before you start`** as an outside-the-guide prerequisites list, including the
-   authored data the reader needs to tell personalization from a bug.
+   `authored-variant-gotcha` fragment (mandatory) so the reader can tell personalization from a bug.
 4. **Fill feature sections in order**, each with its integration-category line and numbered
    procedure. Cover the shared concern checklist or mark concerns not-applicable (see
    [references/authoring-checklist.md](references/authoring-checklist.md)).

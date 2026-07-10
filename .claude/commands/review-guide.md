@@ -36,9 +36,15 @@ Do this in order:
 
 4. **Funnel learnings back.** For each finding that reflects a durable rule — not a one-off — fold it
    into the right artifact:
-   - a reader-experience or structure rule → the `optimization-guide-authoring` skill (principles
-     only, never SDK facts),
+   - a reader-experience or **voice/teaching** rule → the `optimization-guide-authoring` skill
+     (principles only, never SDK facts),
+   - a **structure or shared-prose** rule → the recipe or fragment under `documentation/authoring/`
+     (section spine and integration categories → the archetype's recipe; a reusable sentence that
+     drifted across the family → the relevant fragment's Template),
    - a missing or corrected SDK fact → the knowledge base via `sdk-knowledge-author`.
+
+   When a fragment the recipe names is missing from the guide, or its fixed spine was reworded rather
+   than instantiated verbatim, that is a structure finding: have the writer instantiate it.
 
 5. **Validate.** Run `pnpm knowledge:check` (KB must pass) and `pnpm format:fix <touched paths>` —
    pass the specific files you changed, never a bare `pnpm format:fix` (it reformats the whole tree

@@ -28,11 +28,14 @@ reads source. It returns when `pnpm knowledge:check` passes for the new file.
 
 ## 2. Compose or reconcile the guide from the knowledge base (guide-writer)
 
-Launch the `guide-writer` agent for the target guide. It composes **behavior** from the KB facts
-created in step 1 (never re-tracing behavior from source) and reads **interface** (shapes,
-signatures, props) directly from the types as needed, following the `optimization-guide-authoring`
-skill — archetype, quick-start-then-deepen, `## Before you start`, copy-vs-adapt labels — grounded in
-the matching reference implementation under `implementations/` for shape. Two sub-cases:
+Launch the `guide-writer` agent for the target guide. It composes structure from the archetype's
+recipe under `documentation/authoring/recipes/` — the recipe's `## Template` is the section spine and
+it instantiates the fragments the recipe references (the personalization explainer, the
+authored-variant gotcha) by copying their Template verbatim and filling `⟨slots⟩` from the KB. It
+composes **behavior** from the KB facts created in step 1 (never re-tracing behavior from source) and
+reads **interface** (shapes, signatures, props) directly from the types as needed, following the
+`optimization-guide-authoring` skill for voice and workflow — grounded in the matching reference
+implementation under `implementations/` for shape. Two sub-cases:
 
 - **Guide does not exist** — compose it from scratch against the template and the KB facts.
 - **Guide already exists** (predates the KB) — reconcile it: bring it to the current archetype and

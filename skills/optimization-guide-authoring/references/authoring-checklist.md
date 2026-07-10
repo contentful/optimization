@@ -88,8 +88,9 @@ add per-archetype checks.
 
 ## B. Integration guides (`integrating-*.md`)
 
-- [ ] Section order and headings match integration-guide-template.md; no numbered headings; no
-      monolithic flow section.
+- [ ] Section order and headings match the integration recipe
+      (`documentation/authoring/recipes/integration.md`); no numbered headings; no monolithic flow
+      section.
 - [ ] Every `###` feature section has a correct `**Integration category:**` line, and its category
       matches its parent `##` (Required/Common under Core; Optional under Optional; Advanced under
       Advanced).
@@ -123,8 +124,9 @@ add per-archetype checks.
 - [ ] The quick start is self-contained: no step (the verify step included) is only actionable via a
       forward reference to a later section. A step may link onward for depth, but the instruction it
       needs to act must be present inline where the reader hits it.
-- [ ] `## Before you start` is a prerequisites list, not a setup-inventory table, and includes the
-      authored-variant gotcha (see before-you-start.md).
+- [ ] `## Before you start` is a prerequisites list, not a setup-inventory table, and instantiates
+      the `authored-variant-gotcha` fragment
+      (`documentation/authoring/fragments/authored-variant-gotcha.md`).
 - [ ] Each shared concern is either covered by the guide or explicitly marked not-applicable for
       this SDK: install/init/config; consent & privacy handoff; the fetch/SDK boundary; entry
       resolution + fallback; page/route/screen events; interaction tracking; identity/profile/reset;
