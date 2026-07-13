@@ -23,13 +23,11 @@ owns the **voice, teaching approach, and authoring workflow** for those guides s
 consistent and teachable. It supersedes the former long-form rules in
 `documentation/guides/AGENTS.md`, which is now a thin pointer to this skill.
 
-**Structure lives in recipes, not here.** A guide's section spine, fixed heading order, integration
-categories, example-label rules, and the reusable shared prose (fragments) live in
-[`documentation/authoring/`](../../documentation/authoring/) — one recipe per archetype plus the
-fragments they compose. This skill holds the transferable principles (below); the recipe holds the
-shape of a given archetype. When you write or refresh a guide, open the matching recipe as the
-structural source of truth and this skill for the voice and workflow. Do not restate recipe structure
-here, and do not let SDK facts (which belong in the knowledge base) leak into either.
+**Authoring structure lives under `documentation/authoring/`, not here.** The recipe owns the
+archetype-wide spine and rules; the SDK blueprint owns the quick-start proof, section map, categories,
+and required evidence; fragments own small pieces of shared wording. This skill owns voice and
+workflow. Do not infer a guide from siblings, and do not let SDK facts leak into recipes, blueprints,
+fragments, or this skill.
 
 ## Who the guides are for
 
@@ -66,15 +64,14 @@ go deeper. Two consequences drive everything below:
 - Guides under `documentation/guides/`: `integrating-*.md`, `choosing-the-right-sdk.md`,
   supplemental recipe guides, and the directory `README.md` routing index.
 - This skill owns teaching voice, the copy-vs-adapt honesty principle, and the authoring workflow.
-  Section structure, heading order, integration categories, and the reusable shared prose belong to
-  the recipes and fragments under [`documentation/authoring/`](../../documentation/authoring/).
+  Archetype structure belongs to recipes, per-SDK arrangement to blueprints, and reusable wording to
+  fragments under [`documentation/authoring/`](../../documentation/authoring/).
 
 ## Not in scope
 
-- **Guide structure** — the section spine, fixed heading order, integration categories, TOC rules,
-  and per-archetype skeletons live in the recipes under `documentation/authoring/recipes/`. Reusable
-  reader-facing prose (the personalization explainer, the authored-variant gotcha) lives in
-  `documentation/authoring/fragments/`. Open the matching recipe as the structural source of truth.
+- **Guide structure** — the recipe owns the archetype spine and category values; the SDK blueprint
+  owns its `###` inventory/order/category and required evidence. Reusable reader-facing wording lives
+  in `documentation/authoring/fragments/`. Open both recipe and blueprint before drafting.
 - Concept docs under `documentation/concepts/` — they own deeper mechanics; guides link to them.
 - Package READMEs, implementation READMEs, and product docs.
 - Generated TypeDoc under `docs/` — it owns exhaustive, method-by-method API reference.
@@ -92,10 +89,10 @@ the recipe's `## Template` is the section spine and its `## Context` is the stru
 | Choose between SDKs, runtimes, or patterns                    | Decision guide      | [../../documentation/authoring/recipes/decision.md](../../documentation/authoring/recipes/decision.md)                       |
 | Supplement an integration without replacing it                | Supplemental recipe | [../../documentation/authoring/recipes/supplemental-recipe.md](../../documentation/authoring/recipes/supplemental-recipe.md) |
 
-The recipe owns the fixed section order, the `**Integration category:**` line values, the
-`## Before you start` prerequisites shape, the example-label set, and which fragments each archetype
-composes (the personalization explainer, the authored-variant gotcha). Do not re-derive structure
-from a sibling guide — the recipe is authoritative; sibling guides are examples of it.
+The recipe owns the fixed `##` order, the `**Integration category:**` values, the
+`## Before you start` shape, labels, and fragment placement. For an integration guide, the SDK
+blueprint supplies the exact `###` map and completeness contract. Do not read sibling guides to infer
+either.
 
 ## Example labels: make copy-vs-adapt honest
 
@@ -117,19 +114,18 @@ Router, React Native, iOS SwiftUI, iOS UIKit, Android Compose, Android Views.
 
 ## Workflow
 
-1. **Identify the archetype and reader goal.** Open the matching recipe under
-   `documentation/authoring/recipes/`. Its `## Template` is the section spine; its `## Context` is the
-   structural rationale. The fragments it references are the shared prose you will instantiate.
-2. **Draft the intro and quick start first.** The intro's teaching content is the
-   `personalization-explainer` fragment — instantiate it (copy its Template verbatim, fill each
-   `⟨slot⟩` from the knowledge base) rather than hand-writing an explainer. Quick start = one proof,
-   one verification statement, minimum setup. Keep optional concerns (analytics, preview, live
-   updates, identity, strict consent, caching) out of it unless that concern is the chosen proof.
+1. **Identify the archetype and reader goal.** Open the matching recipe. For an integration guide,
+   also open `documentation/authoring/blueprints/<sdk>.md`. The recipe supplies the `##` spine; the
+   blueprint's Section map supplies every `###` in order and the evidence it must contain.
+2. **Draft the intro and quick start first.** Instantiate the `personalization-explainer` using only
+   the switches in the blueprint. Take the quick-start outcome, verification, reader shape, required
+   artifacts, and deliberate simplifications from the blueprint. Keep optional concerns out unless
+   the proof requires them.
 3. **Write `## Before you start`** as an outside-the-guide prerequisites list, including the
    `authored-variant-gotcha` fragment (mandatory) so the reader can tell personalization from a bug.
-4. **Fill feature sections in order**, each with its integration-category line and numbered
-   procedure. Cover the shared concern checklist or mark concerns not-applicable (see
-   [references/authoring-checklist.md](references/authoring-checklist.md)).
+4. **Fill feature sections in blueprint order**, each with its exact category and every item in its
+   Required evidence cell. Use the linked KB sections for behavior and the package types for exact
+   interface shape.
 5. **Split every SDK claim into interface vs. behavior, and source each from the right place.** These
    are two different kinds of fact with two different costs, and the rule differs:
    - **Interface** — what you'd see in a `.d.ts` or an editor hover: a symbol's existence, its
@@ -161,8 +157,8 @@ need -->` marker at the point of use; the `sdk-knowledge-authoring` role traces 
 6. **Sync the TOC and anchors**, add `## Production checks` and (if there are known failure modes)
    `## Troubleshooting`, and link the reference implementation READMEs.
 7. **Self-review** against [references/authoring-checklist.md](references/authoring-checklist.md).
-8. **Validate formatting**: `pnpm format:fix <file>` (or `format:check`), and confirm the
-   collapsible TOC anchors resolve to real headings.
+8. **Validate**: run `pnpm exec prettier --write <file>`, `pnpm guides:check`, and
+   `pnpm knowledge:check`; confirm the collapsible TOC anchors resolve.
 
 ## Self-review
 

@@ -84,7 +84,7 @@ add per-archetype checks.
       TypeScript body snippets) without a prose note stating the switch and how to run the new form.
       The run command shown for a `**Copy this:**` block must actually work for that block's
       language.
-- [ ] `pnpm format:fix <file>` leaves the file unchanged (run it; Prettier owns formatting).
+- [ ] `pnpm exec prettier --write <file>` leaves the file clean (run it; Prettier owns formatting).
 - [ ] The collapsible TOC preserves the mtoc markers, omits `## Quick start`, and every anchor
       resolves to a real heading.
 - [ ] Concept links and reference-implementation links are not front-loaded before the quick start
@@ -95,6 +95,8 @@ add per-archetype checks.
 - [ ] Section order and headings match the integration recipe
       (`documentation/authoring/recipes/integration.md`); no numbered headings; no monolithic flow
       section.
+- [ ] Section inventory, order, exact categories, and required evidence match the SDK blueprint under
+      `documentation/authoring/blueprints/`; every Fact sources link resolves.
 - [ ] Every `###` feature section has a correct `**Integration category:**` line, and its category
       matches its parent `##` (Required/Common under Core; Optional under Optional; Advanced under
       Advanced).

@@ -85,6 +85,11 @@ source: `nextjs-sdk#bound-component-types.ts#NextjsBoundOptimizedEntryProps`; `r
 
 ## Events & tracking
 
+- The configured App Router `proxy` runs `getNextjsServerOptimizationData()` for a matching request;
+  that helper calls the request-bound SDK's `page()` method. Therefore the quick-start server path
+  with event consent owns the initial page event; when server event consent is denied or another
+  route strategy is used, first-event ownership remains an application decision.
+  source: `nextjs-sdk#request-handler.ts#getRequestOptimizationData`; `nextjs-sdk#server.tsx#getNextjsServerOptimizationData`
 - `NextAppAutoPageTracker` must stay inside `Suspense` (reads `useSearchParams`).
   Duplicate-page-event control: `initialPageEvent="skip"` when the server already reported the view,
   `"emit"` for browser-owned routes.
@@ -109,6 +114,13 @@ source: `nextjs-sdk#bound-component-types.ts#NextjsBoundOptimizedEntryProps`; `r
 - **Server personalization forces dynamic rendering:** bound server components read `headers()` ⇒
   route can no longer use `revalidate` / `generateStaticParams` (ISR/SSG).
   source: `nextjs-sdk#app-router-server.tsx#loadServerData`; `extern:calling next/headers headers() opts a route into dynamic rendering, disabling revalidate and generateStaticParams`
+- **Rendered server output is request-specific:** the bound `OptimizedEntry` reads the current
+  request's forwarded `OptimizationData` and resolves a supplied or managed baseline entry with that
+  request's `selectedOptimizations`; merge tags can also read its profile. Forwarded server data,
+  resolved entries, and rendered personalized HTML are therefore not safe to share across visitors
+  unless a cache key covers the complete personalization context. Raw Contentful baseline-entry
+  caching is a separate application policy.
+  source: `nextjs-sdk#app-router-server.tsx#OptimizedEntry`; `nextjs-sdk#app-router-server.tsx#resolveManagedServerOptimizedEntry`; `core-sdk#CoreBase.ts#resolveOptimizedEntry`
 
 ## Failure & fallback behavior
 

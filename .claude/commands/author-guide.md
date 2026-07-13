@@ -28,22 +28,15 @@ family dir (making a new sibling like `node/` or `native/` if needed), sets its 
 to the target guide, and fills every section with facts + grammar pointers. This is the one step that
 reads source. It returns when `pnpm knowledge:check` passes for the new file.
 
-## 2. Author the guide blueprint (the editorial map)
+## 2. Author the guide blueprint (the editorial contract)
 
-Before composing prose, make sure this SDK has a **blueprint** at
-`documentation/authoring/blueprints/<sdk>.md`. The blueprint is the per-SDK editorial map — the
-ordered feature→section list with each section's integration category and the reasoning, the
-quick-start proof, the milestone split, and the troubleshooting reader-symptoms. It is the layer that
-otherwise lives only inside a finished guide, so a from-scratch bootstrap without it re-invents the
-structure and drifts (a reproduction test measured a documented guide's sections dropping and moving
-categories when this map was absent).
+Before composing prose, create the SDK blueprint from `blueprints/_template.md`. It records the
+quick-start and milestone contracts, the exact Section map, the reader purpose and Required evidence
+for each section, rare SDK-specific teaching overrides, troubleshooting scope, and link roles. Its
+Fact sources point to behavior; the blueprint never restates behavior or detailed interface shape.
 
-- **No blueprint yet (the common bootstrap case)** — author it now from the KB facts (step 1) and the
-  archetype recipe, making the editorial decisions once and recording the reasoning: what proves the
-  quick start for this SDK's shape, where the milestone boundary falls, which KB topics become which
-  sections in what order, and each section's category and why. It records editorial judgment only —
-  no SDK facts (cite the KB), no archetype structure (that is the recipe). Follow the shape of an
-  existing blueprint (e.g. `blueprints/node.md`).
+- **No blueprint yet** — copy `_template.md`, then make the editorial decisions from the recipe and
+  fresh KB. Do not copy a sibling blueprint's section choices.
 - **Guide already exists (predates the KB/blueprint)** — extract the blueprint from the existing
   guide's structure: read its section inventory, order, and categories and record them (plus the
   reasoning) as the map. This is the one time reading the existing guide is correct — you are
@@ -51,10 +44,9 @@ categories when this map was absent).
 
 ## 3. Compose or reconcile the guide from the blueprint + knowledge base (guide-writer)
 
-Launch the `guide-writer` agent for the target guide. It composes structure from the archetype's
-recipe under `documentation/authoring/recipes/` — the recipe's `## Template` is the section spine —
-and takes the **section inventory, order, categories, proof, and milestones** from this SDK's
-blueprint (step 2), rather than inventing them. It instantiates the fragments the recipe references
+Launch the `guide-writer` agent for the target guide. It takes the `##` spine from the recipe and the
+**section inventory, order, categories, proof, milestones, and required evidence** from the blueprint.
+Matching the headings without satisfying Required evidence is incomplete. It instantiates fragments
 (the personalization explainer, the authored-variant gotcha) by copying their Template verbatim and
 filling `⟨slots⟩` from the KB. It composes **behavior** from the KB facts created in step 1 (never
 re-tracing behavior from source) and reads **interface** (shapes, signatures, props) directly from
@@ -85,7 +77,8 @@ whole review loop in one pass — do not re-run it here:
   having `sdk-knowledge-author` trace and add the fact, or the claim removed);
 - funnels durable findings back — reader/structure rules to the `optimization-guide-authoring` skill,
   facts to the knowledge base, cross-guide consistency issues fixed now (never logged);
-- validates (`pnpm knowledge:check`; `pnpm format:fix <touched paths>`, never bare).
+- validates (`pnpm knowledge:check`; `pnpm guides:check`;
+  `pnpm exec prettier --write <touched paths>`).
 
 ## 5. Bootstrap gate
 
@@ -95,8 +88,8 @@ Do not finish until they hold:
 - The new KB file conforms: matches `_template.md`, has a `feeds-guides` marker, empty sections marked
   `None.`, and `pnpm knowledge:check` passes for it.
 - **The blueprint exists** at `documentation/authoring/blueprints/<sdk>.md` and its section inventory,
-  order, and categories match the guide the writer produced (they are the same map). It records
-  editorial judgment only — no SDK facts, no archetype structure.
+  order, categories, and required evidence match the guide. `pnpm guides:check` passes. The blueprint
+  records editorial judgment and KB links, not duplicated SDK facts or guide prose.
 - **No `ESCALATE` marker remains** in the guide — every escalation was resolved and its marker removed
   (`pnpm knowledge:check` fails on a survivor).
 - The guide is on the current archetype (Quick start, Before you start, category-ordered sections),

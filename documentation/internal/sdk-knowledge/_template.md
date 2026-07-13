@@ -18,24 +18,29 @@ this SDK.
 
 ## Package & entry points
 
-| Import path | Purpose | source |
-| ----------- | ------- | ------ |
+Keep only the documentation-relevant public symbol/import index. Do not copy signatures, props, or
+return shapes; the types own those.
+
+| Import path | Public symbol or purpose | source |
+| ----------- | ------------------------ | ------ |
 
 ## Setup / factory
 
-- Factory/init function name(s), the config keys they accept (name — type — what it does —
-  required?), and what they return. Note same-named factories on different subpaths. source: per
-  line.
+- Record behavioral setup facts: lifecycle, defaults, ownership, initialization timing, and
+  same-named-factory semantics. For exact config keys and returns, point the writer to the symbol and
+  let it read the types. source: per line.
 
 ## Components & hooks
 
-| Name | Kind (component/hook/provider) | Import path | Key props/args | Returns | source |
-| ---- | ------------------------------ | ----------- | -------------- | ------- | ------ |
+Keep only a navigation index. Behavioral lifecycle facts belong as sourced bullets below the table.
+
+| Name | Kind | Import path | source |
+| ---- | ---- | ----------- | ------ |
 
 ## Render / entry resolution
 
-- What the entry wrapper's render prop (or equivalent) hands back, its exact type, and any cast the
-  reader needs. source:
+- Behavioral resolution/fallback/mutation semantics and the integration consequence. Read the exact
+  render type from the types. source:
 
 ## Identifier ownership
 

@@ -5,174 +5,88 @@ kb: ../../internal/sdk-knowledge/web/nextjs-app-router.md
 guide: ../../guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md
 ---
 
-> Editorial map for the Next.js App Router integration guide — how its knowledge-base facts fill the
-> integration recipe. Conventions and the recipe/blueprint/KB split: [`_template.md`](./_template.md).
+# Next.js App Router guide blueprint
 
-The App Router SDK spans **Server Components and Client Components**, so the defining editorial
-concern is the server/client boundary: what renders on the server for first paint, what the browser
-takes over after load, and the two App-Router-specific hazards that sit on that boundary — a
-version-specific handler filename that fails silently, and a server-side call that forces dynamic
-rendering. This guide is the sibling of the Pages Router guide; the two cross-link.
+## Quick-start contract
 
-## What proves it works
+- **Outcome:** One Contentful entry renders its personalized variant in the raw server HTML and
+  remains stable after hydration.
+- **Verification:** Target all visitors, use View Source to find distinctive variant text, and
+  confirm the same text remains after hydration.
+- **Reader shape:** An App Router application that already fetches a page and hands its entries to
+  app-owned components.
+- **Required artifacts:** Package install; environment values; one bound factory module; the
+  version-appropriate request handler; a root-layout diff; an entry-renderer diff; the verification
+  step; the one-locale/include-depth fetch constraint. The quick start must contain runnable or
+  adaptable code for every artifact.
+- **Deliberate simplifications:** Consent is granted on server and browser only for the first proof;
+  the guide must point to the production consent section.
+- **Explainer switches:** profile point = omit; managed-fetch clause = include.
+- **Fact sources:** [setup and factory](../../internal/sdk-knowledge/web/nextjs-app-router.md#setup--factory),
+  [components](../../internal/sdk-knowledge/web/nextjs-app-router.md#components--hooks),
+  [identifiers](../../internal/sdk-knowledge/web/nextjs-app-router.md#identifier-ownership),
+  [events](../../internal/sdk-knowledge/web/nextjs-app-router.md#events--tracking),
+  [rendering](../../internal/sdk-knowledge/web/nextjs-app-router.md#render--entry-resolution),
+  [runtime quirks](../../internal/sdk-knowledge/web/nextjs-app-router.md#version--runtime-quirks),
+  [entry-source boundary](../../internal/sdk-knowledge/shared/concepts.md#entry-source-boundary-managed-or-manual),
+  [entry resolution](../../internal/sdk-knowledge/shared/concepts.md#entry-resolution),
+  [fallback](../../internal/sdk-knowledge/shared/concepts.md#baseline-fallback).
 
-The honest minimum proof for a **server-rendering web SDK** is one section rendering its personalized
-variant in the **server HTML** — visible in View Source or with JavaScript disabled, and still on
-screen after hydration. This is deliberately different from Node's proof: the stateless Node SDK
-leads with an accepted `page()` returning a `profile.id` and avoids resolution because resolution
-needs authored content. A render SDK has no profile-id surface a reader can inspect from a page; its
-whole observable _is_ the variant in the HTML. So App Router pays the authoring cost up front — the
-reader authors an experience that targets **all visitors** so they match it automatically. Without
-that variant the baseline-fallback contract (see the KB `Baseline fallback` fact) makes every section
-render baseline, which reads as broken; the authored all-visitors variant is what lets the reader
-tell personalization from a bug. One proof, one verification: View Source and find the variant text
-in the raw HTML, confirming it survives hydration.
+## Milestone contract
 
-Ground the quick start in the most common App Router + Contentful shape — fetch a page entry and
-render its content through the app's own components, wrapping at the content-type-to-component
-hand-off — not a hardcoded entry-id array (the recipe forbids invented fetch shapes). Show additions
-as `+` diffs against the reader's existing `layout.tsx` and renderer, keeping their own lines visible.
-The quick start uses always-on `defaults` and `server.consent` to reach a result fast; the Core
-sections factor real consent-gated startup back in.
+- **Milestone 1:** Personalized first paint from one server render; independently useful without
+  post-load re-personalization.
+- **Milestone 2:** Browser takeover and live updates after consent, identity, or profile changes.
+- **Boundary:** Server-render-time behavior versus post-load browser behavior.
+- **Fact sources:** [runtime model](../../internal/sdk-knowledge/web/nextjs-app-router.md#version--runtime-quirks),
+  [live updates](../../internal/sdk-knowledge/shared/concepts.md#live-updates).
 
-## Milestones
+## Section map
 
-- **Milestone 1 — personalized first paint (the quick start).** A visitor sees their variant in the
-  server HTML. Shippable on its own with no browser reactivity, which is exactly why it leads: it is
-  the smallest thing a reader can verify and deploy, and it is everything a single server render
-  produces.
-- **Milestone 2 — browser takeover and live updates.** Opt-in, later: content re-personalizes _after_
-  load when consent, identity, or profile changes, without a reload. It comes second because most
-  content is fixed for the life of a request, so post-load reactivity is additive.
+| Section                                                      | Category                       | Purpose                                                                                             | Required evidence                                                                                                   | Fact sources                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| How the SDK fits your app                                    | Required for first integration | Orient the reader to the bound factory and server/client entry points before deeper configuration.  | Import-path table; one-factory rule; bridge from the quick start instead of repeating it.                           | [package](../../internal/sdk-knowledge/web/nextjs-app-router.md#package--entry-points), [setup](../../internal/sdk-knowledge/web/nextjs-app-router.md#setup--factory)                                                                                                                                                                                                      |
+| Fetching Contentful entries                                  | Required for first integration | Establish the manual-versus-managed entry boundary before personalization.                          | Manual and managed examples; resolvable-payload checklist; ownership statement.                                     | [App Router setup](../../internal/sdk-knowledge/web/nextjs-app-router.md#setup--factory), [entry-source boundary](../../internal/sdk-knowledge/shared/concepts.md#entry-source-boundary-managed-or-manual), [entry resolution](../../internal/sdk-knowledge/shared/concepts.md#entry-resolution)                                                                           |
+| Request context and the profile cookie                       | Common but policy-dependent    | Teach how a request receives visitor context and where application policy enters.                   | Next.js 15/16 handler variants; matcher ownership; cookie ownership; failure warning.                               | [identifiers](../../internal/sdk-knowledge/web/nextjs-app-router.md#identifier-ownership), [runtime quirks](../../internal/sdk-knowledge/web/nextjs-app-router.md#version--runtime-quirks)                                                                                                                                                                                 |
+| Personalizing first paint on the server                      | Required for first integration | Show the entry-to-component handoff that produces Milestone 1.                                      | Renderer diff; render-prop definition and cast; baseline contract; dynamic-render consequence; nested-wrap warning. | [rendering](../../internal/sdk-knowledge/web/nextjs-app-router.md#render--entry-resolution), [runtime quirks](../../internal/sdk-knowledge/web/nextjs-app-router.md#version--runtime-quirks), [fallback](../../internal/sdk-knowledge/shared/concepts.md#baseline-fallback)                                                                                                |
+| The bound root and page events                               | Required for first integration | Explain the server-state handoff and ownership of the first page event.                             | Root/tracker example; emit-versus-skip decision; Suspense placement.                                                | [components](../../internal/sdk-knowledge/web/nextjs-app-router.md#components--hooks), [events](../../internal/sdk-knowledge/web/nextjs-app-router.md#events--tracking)                                                                                                                                                                                                    |
+| Browser takeover and live updates                            | Required for first integration | Explain the handoff mental model every integration uses while marking re-personalization as opt-in. | App-wide and per-entry choices; server/client import boundary; one state-changing example.                          | [components](../../internal/sdk-knowledge/web/nextjs-app-router.md#components--hooks), [live updates](../../internal/sdk-knowledge/shared/concepts.md#live-updates)                                                                                                                                                                                                        |
+| Entry interaction tracking                                   | Common but policy-dependent    | Make default interaction instrumentation and policy controls visible.                               | Tracked interactions; opt-out location; consent relationship.                                                       | [App Router events](../../internal/sdk-knowledge/web/nextjs-app-router.md#events--tracking), [shared consent](../../internal/sdk-knowledge/shared/concepts.md#consent--persistence)                                                                                                                                                                                        |
+| Consent, identity, profile, and reset                        | Common but policy-dependent    | Replace the quick-start consent shortcut with application-owned policy and identity flows.          | App-owned consent storage example; server/browser handoff; identify and reset example; ownership warning.           | [App Router consent](../../internal/sdk-knowledge/web/nextjs-app-router.md#consent--persistence), [identifiers](../../internal/sdk-knowledge/web/nextjs-app-router.md#identifier-ownership), [React Web consent/actions](../../internal/sdk-knowledge/web/react-web.md#consent--persistence)                                                                               |
+| Analytics forwarding                                         | Optional                       | Route readers to the supplemental workflow without reteaching it.                                   | Subscription seam and duplicate-forwarding warning; supplemental-guide link.                                        | [React Web events](../../internal/sdk-knowledge/web/react-web.md#events--tracking)                                                                                                                                                                                                                                                                                         |
+| Merge tags and Custom Flags                                  | Optional                       | Cover content-model-dependent personalization beyond entry replacement.                             | Merge-tag guard and resolver example; Custom Flag usage boundary.                                                   | [App Router components](../../internal/sdk-knowledge/web/nextjs-app-router.md#components--hooks), [React Web rendering](../../internal/sdk-knowledge/web/react-web.md#render--entry-resolution), [React Web events](../../internal/sdk-knowledge/web/react-web.md#events--tracking)                                                                                        |
+| Preview panel                                                | Optional                       | Provide an environment-gated authoring and debugging path.                                          | Separate-package install/import; attach timing; reader-owned environment gate.                                      | [React Web runtime quirks](../../internal/sdk-knowledge/web/react-web.md#version--runtime-quirks)                                                                                                                                                                                                                                                                          |
+| Route-level SSR, browser takeover, and browser-owned islands | Advanced or production-only    | Help mature applications choose ownership per route.                                                | Decision table covering the supported route strategies.                                                             | [App Router components](../../internal/sdk-knowledge/web/nextjs-app-router.md#components--hooks), [App Router runtime quirks](../../internal/sdk-knowledge/web/nextjs-app-router.md#version--runtime-quirks), [live updates](../../internal/sdk-knowledge/shared/concepts.md#live-updates)                                                                                 |
+| Manual server and client escape hatches                      | Advanced or production-only    | Expose lower-level APIs only after the bound path is understood.                                    | Server and client examples or a precise API map; state what remains app-owned.                                      | [package and setup](../../internal/sdk-knowledge/web/nextjs-app-router.md#package--entry-points), [components](../../internal/sdk-knowledge/web/nextjs-app-router.md#components--hooks)                                                                                                                                                                                    |
+| Caching and request deduplication                            | Advanced or production-only    | Prevent profile-specific output from entering shared caches.                                        | Cache-safety table; request-deduplication distinction; local validation.                                            | [runtime quirks](../../internal/sdk-knowledge/web/nextjs-app-router.md#version--runtime-quirks), [managed fetching](../../internal/sdk-knowledge/shared/concepts.md#entry-source-boundary-managed-or-manual)                                                                                                                                                               |
+| Strict consent and duplicate-event controls                  | Advanced or production-only    | Turn privacy and duplicate-event policy into explicit production decisions.                         | Strict allow-list example; blocked-event diagnostics; first-event ownership check.                                  | [App Router consent](../../internal/sdk-knowledge/web/nextjs-app-router.md#consent--persistence), [App Router events](../../internal/sdk-knowledge/web/nextjs-app-router.md#events--tracking), [React Web consent](../../internal/sdk-knowledge/web/react-web.md#consent--persistence), [React Web events](../../internal/sdk-knowledge/web/react-web.md#events--tracking) |
 
-The boundary is **server-render-time vs. post-load**: everything on the near side is what one server
-render emits; everything on the far side needs live-update subscriptions in the browser plus an
-interactive trigger (`identifyUser()`, `setConsent()`, `resetUser()`). Note the guide files the
-Milestone 2 section (`Browser takeover and live updates`) under `## Core integration` and marks it
-`Required for first integration` — a tension to preserve exactly, not smooth over: the section teaches
-the server-to-browser handoff mental model every integration relies on, even though live updates
-themselves are opt-in.
+## SDK-specific authoring overrides
 
-## Section order & category, and why
+- Put the request-handler filename/export choice in the quick start and repeat the failure symptom in
+  Troubleshooting; it can silently prevent all server state. Facts:
+  [runtime quirks](../../internal/sdk-knowledge/web/nextjs-app-router.md#version--runtime-quirks).
+- Put the dynamic-render consequence in the first-paint Core section, not only in caching. Facts:
+  [runtime quirks](../../internal/sdk-knowledge/web/nextjs-app-router.md#version--runtime-quirks).
+- Keep “Browser takeover and live updates” in Core because the handoff model is required knowledge,
+  but distinguish that from enabling live updates, which is opt-in. Facts:
+  [components](../../internal/sdk-knowledge/web/nextjs-app-router.md#components--hooks).
 
-App Router readers are building across the **server/client boundary**, so sections follow the render
-lifecycle across it — configure the factory, get data in, identify the visitor before render, render
-on the server, hand off to the browser, then browser behaviors — rather than walking the API surface
-alphabetically. Teach each dependency before the call that needs it.
+## Troubleshooting scope
 
-**Core integration** (Required + Common but policy-dependent):
+| Reader symptom                                                 | Why it belongs                                                                  | Fact sources                                                                                    |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Entries remain on baseline                                     | Most common first-run ambiguity; connect authoring, consent, and payload shape. | [fallback](../../internal/sdk-knowledge/web/nextjs-app-router.md#failure--fallback-behavior)    |
+| Authored variant never appears                                 | Makes the all-visitors verification actionable.                                 | [fallback](../../internal/sdk-knowledge/shared/concepts.md#baseline-fallback)                   |
+| Entry component has a type error                               | The public render type is wider than generated app types.                       | [rendering](../../internal/sdk-knowledge/web/nextjs-app-router.md#render--entry-resolution)     |
+| Server or browser sends duplicate/missing first page events    | The handoff requires explicit event ownership.                                  | [events](../../internal/sdk-knowledge/web/nextjs-app-router.md#events--tracking)                |
+| Live entries do not change after identity/reset                | Distinguishes the default locked render from opt-in live updates.               | [live updates](../../internal/sdk-knowledge/shared/concepts.md#live-updates)                    |
+| Server and browser use different profiles                      | Cookie scope and readability are cross-runtime integration work.                | [identifiers](../../internal/sdk-knowledge/web/nextjs-app-router.md#identifier-ownership)       |
+| Server code sees browser globals or personalized HTML is stale | These expose the defining server/client and cache boundaries.                   | [runtime quirks](../../internal/sdk-knowledge/web/nextjs-app-router.md#version--runtime-quirks) |
 
-- **How the SDK fits your app** — Required — explains the `lib/optimization.ts` factory the quick
-  start created; it lands first because every later section references its config surface, and it owns
-  the single `/app-router` import that resolves to the server build in Server Components and the
-  browser build in Client Components (the KB `Package & entry points` fact) plus the subpath map.
-- **Fetching Contentful entries** — Required — the fetch/SDK boundary; it teaches the resolvable-
-  payload rules (one concrete locale, deep enough `include`) before the first wrap, and disambiguates
-  manual `baselineEntry` from opt-in managed `entryId` fetching. Required because a personalization
-  integration that never produces a resolvable entry is incomplete. Cites the shared
-  `Entry-source boundary` and `Entry resolution` facts.
-- **Request context and the profile cookie** — Common but policy-dependent — explains the request
-  handler; it is here (not Optional) because server first paint cannot identify the visitor without
-  it, but it is policy-dependent because the `matcher` scope and persistence are app choices. This is
-  the section that carries the **filename/export convention that fails silently**: Next.js 16 loads a
-  `proxy` export from `proxy.ts`, Next.js 15 a `middleware` export from `middleware.ts`; get it wrong
-  and the handler never runs, and because `server.enabled` is `true` the bound root _throws_ instead
-  of degrading to baseline (KB `Version / runtime quirks`). It also owns the non-`HttpOnly`
-  `ctfl-opt-aid` cookie constraint (KB `Identifier ownership`).
-- **Personalizing first paint on the server** — Required — Milestone 1 made concrete: the entry-wrap
-  hand-off, the render-prop cast (`resolved as YourType`), the baseline-fallback contract, and the
-  double-wrap guard. This is the section that carries the **runtime-mode side effect**: bound server
-  components read `headers()`, which forces the route dynamic and disables `revalidate` /
-  `generateStaticParams` (KB `Version / runtime quirks`). Per the recipe, that side effect is flagged
-  here in the Core path, not deferred to the caching section.
-- **The bound root and page events** — Required — explains the root and tracker mounted in the quick
-  start; it owns the one decision that must be right — who owns the first page event
-  (`initialPageEvent="skip"` when the server already reported the view, `"emit"` for browser-owned
-  routes) — and the `Suspense`-around-the-tracker rule (it reads `useSearchParams()`).
-- **Browser takeover and live updates** — Required for first integration (preserve exactly; this is
-  Milestone 2 content) — opt-in live updates, the app-wide `liveUpdates` switch, and per-entry control
-  via the `/client` `OptimizedEntry`; it explains why the bound `/app-router` `OptimizedEntry` omits
-  per-entry `liveUpdates` so one import type-checks in both Server and Client Components.
-- **Entry interaction tracking** — Common but policy-dependent — views, clicks, and hovers are on by
-  default with `OptimizedEntry`; policy only decides whether to opt a detector out via factory
-  `trackEntryInteraction`. Uses the resolved entry id (shared `Page events` fact).
-- **Consent, identity, profile, and reset** — Common but policy-dependent — app-owned decisions where
-  the SDK supplies the runtime controls (`setConsent()`, `identifyUser()`, `resetUser()`) and the
-  reader owns the consent record and cookie; it sits late in Core because it is where consent-gated
-  startup and the identity flow converge, and it shows the Client Component that writes the reader's
-  own consent cookie that `server.consent` reads.
+## Link roles
 
-**Optional integrations** (additive capabilities a reader opts into):
-
-- **Analytics forwarding** — Optional — a hand-off to the analytics-forwarding supplemental guide;
-  keep it a pointer plus the `onStatesReady` subscribe-before-child-effects shape, not a re-teaching.
-  Link target: `./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md`.
-- **Merge tags and Custom Flags** — Optional — only relevant if the content model uses MergeTag
-  entries or experiences author Custom Flag changes; owns `getMergeTagValue` via the render prop and
-  the `isMergeTagEntry` guard from `/api-schemas`.
-- **Preview panel** — Optional — only when authors or engineers need browser authoring tooling;
-  attached from a Client Component and gated behind an app-owned `NEXT_PUBLIC_*` flag.
-
-**Advanced integrations** (production hardening, off the first-integration path):
-
-- **Route-level SSR, browser takeover, and browser-owned islands** — Advanced or production-only —
-  mixing rendering strategies per route; the server/client ownership decision matrix, needed only once
-  an app outgrows a single model.
-- **Manual server and client escape hatches** — Advanced or production-only — `/server`
-  `createNextjsOptimization()`, `getNextjsServerOptimizationData()`, manual `resolveOptimizedEntry()`;
-  used only when the bound App Router factory cannot express a route's needs.
-- **Caching and request deduplication** — Advanced or production-only — the cache-boundary discipline
-  (cache raw Contentful payloads by id/locale/env/include, never profile-evaluated output) and the
-  `export const dynamic = 'force-dynamic'` revisit of the first-paint side effect; Advanced because it
-  only bites at production scale.
-- **Strict consent and duplicate-event controls** — Advanced or production-only —
-  `allowedEventTypes: []`, `server.consent` returning `false` while undecided, and
-  `states.blockedEventStream` validation; production policy work done after privacy, analytics, and
-  platform owners agree on the event posture.
-
-Where App Router sits relative to the family: it is the **canonical web shape**, so the recipe's
-web-shaped guidance applies verbatim — the render-prop cast, the `NEXT_PUBLIC_`-prefix browser-visible
-env note — with no Node-style translation. Like Node, managed fetching is opt-in and the guide teaches
-the manual path as default, but here the managed `entryId` path is **server-side only** (the browser
-runtime does not carry the Contentful client), which the first-paint section must state.
-
-## Troubleshooting the reader will actually hit
-
-Rows map to real first-run symptoms, not every theoretical failure:
-
-- **Entries stay on baseline** → no variant applies, denied consent, unresolved Contentful links, or
-  an all-locale CDA payload. Ties directly to the authored-variant gotcha.
-- **The variant never appears even though it is authored** → the test visitor does not match the
-  experience audience. (Target all visitors for a first test, or force it via the preview panel.)
-- **`<Component entry={resolved} />` shows a type error** → the render prop returns a base `Entry`,
-  wider than the component's type; cast it (`as unknown as` only for a genuinely disjoint type).
-- **Two server-side page events for one request** → multiple bound factories, or a manual helper also
-  calling the server page path.
-- **Browser sends a duplicate first page event** → `initialPageEvent="emit"` used after the server
-  already emitted the same route.
-- **Browser does not send the first page event** → `initialPageEvent="skip"` used on a browser-owned
-  route with no matching server event.
-- **Live entries do not update after `identifyUser()` or `resetUser()`** → live updates are off (the
-  default) — Milestone 2 not enabled.
-- **Entry views, clicks, or hovers do not emit** → interaction tracking opted out, consent blocks the
-  event, or no profile is available.
-- **Server and browser use different profiles** → the `ctfl-opt-aid` cookie's domain, path,
-  readability, or consent cleanup differs between runtimes.
-- **Server Components fail with browser globals** → a Client Component hook or browser-only import
-  crossed into a server module.
-- **Personalized HTML appears stale** → route or CDN caching is sharing profile-evaluated output.
-- **Next.js 15 reports unsupported `export *` in a client boundary** → a `'use client'` module
-  re-exports with `export *`, in the app or a package.
-
-## Pinned link targets
-
-Testing showed guessed filenames are wrong; these are read from `documentation/guides/` and
-`implementations/`:
-
-- Sibling Pages Router guide (bidirectional cross-link):
-  `./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md`
-- Analytics-forwarding supplemental guide:
-  `./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md`
-- Reference implementation (App Router): `../../implementations/nextjs-sdk_app-router/README.md`
-- Reference implementation (Pages Router, for comparison):
-  `../../implementations/nextjs-sdk_pages-router/README.md`
+- [The sibling Next.js Pages Router integration guide](../../guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md).
+- [The analytics-forwarding supplemental guide](../../guides/forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+- [The maintained App Router reference implementation](../../../implementations/nextjs-sdk_app-router/README.md).
+- [The maintained Pages Router reference implementation for comparison](../../../implementations/nextjs-sdk_pages-router/README.md).

@@ -330,21 +330,20 @@ not hand-edit generated TypeDoc output.
 ### Guides and the knowledge base (authoring pipeline)
 
 The guides under `documentation/guides/` are not hand-maintained in isolation — they are composed by
-an agent-driven pipeline with four source-of-truth layers, so a source change propagates instead of
-being re-derived by hand:
+an agent-driven pipeline with distinct technical and editorial inputs, so a source change propagates
+instead of being re-derived by hand:
 
 1. **Knowledge base** (`documentation/internal/sdk-knowledge/`, internal, not published) — verified
    SDK _behavioral_ facts, each carrying a machine-checked `source:` pointer into `packages/**/src`.
    Interface (signatures, prop shapes) is read directly from the types, not stored here.
 2. **Recipes and fragments** (`documentation/authoring/recipes`, `.../fragments`, writer-owned, not
-   published) — the SDK-neutral editorial structure: one recipe per guide archetype and the reusable
-   prose fragments they compose. This is where a technical writer shapes an archetype's shape, wording,
-   and tone.
+   published) — the SDK-neutral editorial structure: one recipe per guide archetype and small pieces
+   of wording that must remain identical across guides. This is where a technical writer shapes an
+   archetype's structure, wording, and tone.
 3. **Blueprints** (`documentation/authoring/blueprints/`, writer-owned, not published) — one per SDK:
-   the editorial map of which KB facts become which guide sections, in what order and category, what
-   proves the quick start, and where the milestone boundary falls, with the reasoning. This memoizes
-   the per-SDK editorial judgment that otherwise lives only inside the finished guide (a from-scratch
-   compose without it re-invents the structure and drifts).
+   a compact editorial contract for the quick-start proof, milestone boundary, ordered sections,
+   categories, and required evidence. It links to KB facts without duplicating their behavior or
+   storing reader-facing prose.
 4. **Guides** (`documentation/guides/`, published) — reader-facing prose, composed from the KB facts,
    the archetype recipe, and the SDK's blueprint.
 
@@ -358,8 +357,9 @@ Four slash commands drive it; pick by what changed:
 | `/review-guide`  | the final pass before shipping — newcomer + technical-foundation review, then gate                             |
 
 `pnpm knowledge:check` validates the knowledge base (every `source:` pointer resolves, templates
-conform, `feeds-guides` links are valid) and runs in CI on knowledge-base and `packages/**/src`
-changes. For how the system works, start at
+conform, `feeds-guides` links are valid). `pnpm guides:check` validates blueprint shape, blueprint
+and guide links, and blueprint-to-guide section/category agreement. Both run in CI when technical or
+editorial inputs to this pipeline change. For how the system works, start at
 [`documentation/authoring/README.md`](./documentation/authoring/README.md) (recipes, blueprints, and
 fragments) and
 [`documentation/internal/sdk-knowledge/README.md`](./documentation/internal/sdk-knowledge/README.md)

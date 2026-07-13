@@ -5,128 +5,69 @@ kb: ../../internal/sdk-knowledge/node/node.md
 guide: ../../guides/integrating-the-node-sdk-in-a-node-app.md
 ---
 
-> Editorial map for the Node integration guide — how its knowledge-base facts fill the integration
-> recipe. Conventions and the recipe/blueprint/KB split: [`_template.md`](./_template.md).
+# Node guide blueprint
 
-## What proves it works
+## Quick-start contract
 
-The honest minimum proof for a **stateless server SDK** is an accepted `page()` that returns a
-profile for the request — not a resolved entry. Resolution needs an authored variant the reader
-almost never has on day one, so leading with it makes the quick start fail for the wrong reason
-(everything renders baseline and reads as broken). An accepted event plus a reported `profile.id`
-proves the SDK is wired, credentials work, and the Experience API answered — with zero Contentful
-authoring. One proof, one verification: the reader `curl`s the route and sees a `profileId` in the
-JSON.
+- **Outcome:** One request emits an accepted page event and returns the profile identifier supplied
+  by the Experience API.
+- **Verification:** Run the server, request the route with `curl`, and inspect the JSON profile ID.
+- **Reader shape:** A Node request handler that builds a response.
+- **Required artifacts:** Package install; environment values; one runnable server module; one
+  request; the `curl` verification.
+- **Deliberate simplifications:** Consent is granted per request and profile persistence is deferred.
+- **Explainer switches:** profile point = include; managed-fetch clause = include.
+- **Fact sources:** [setup](../../internal/sdk-knowledge/node/node.md#setup--factory),
+  [events](../../internal/sdk-knowledge/node/node.md#events--tracking),
+  [runtime](../../internal/sdk-knowledge/node/node.md#version--runtime-quirks).
 
-Ground the quick start in the most common real Node shape — a request handler that builds a response
-— not the reference implementation's hardcoded entry-id array (the recipe forbids invented fetch
-shapes, and both Node impls happen to use exactly that). Show the SDK inlined in a single
-`server.mjs` for the quick start; the sections below factor init into a shared `optimization.ts`
-module.
+## Milestone contract
 
-## Milestones
+- **Milestone 1:** Accepted page evaluation and a request profile without authored content.
+- **Milestone 2:** Resolve a Contentful entry using the request's selections.
+- **Boundary:** Work that can be verified before authoring a variant versus personalized rendering.
+- **Fact sources:** [events](../../internal/sdk-knowledge/node/node.md#events--tracking),
+  [rendering](../../internal/sdk-knowledge/node/node.md#render--entry-resolution).
 
-- **Milestone 1 — an accepted page event and a profile for the request.** Shippable on its own with
-  no authored content, which is exactly why it leads: it is the smallest thing a reader can verify
-  and deploy.
-- **Milestone 2 — a resolved entry in the response.** The first capability that requires Contentful
-  authoring, so it comes second. It is the payoff of the quick start's event: you take the request's
-  selections and turn them into a rendered variant.
+## Section map
 
-The boundary is authoring-cost: everything on the near side works with an empty Contentful space;
-everything on the far side needs a variant attached to an experience.
+| Section                                                 | Category                       | Purpose                                                      | Required evidence                                                                     | Fact sources                                                                                                                                                      |
+| ------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install and initialize the Node SDK                     | Required for first integration | Establish the process-level instance before request work.    | Complete initialization module; environment ownership; one-instance rule.             | [setup](../../internal/sdk-knowledge/node/node.md#setup--factory)                                                                                                 |
+| Bind request context and locale                         | Required for first integration | Teach the request-scoped inputs every later call consumes.   | Request-to-context adapter; locale precedence; ownership statement.                   | [events](../../internal/sdk-knowledge/node/node.md#events--tracking), [runtime](../../internal/sdk-knowledge/node/node.md#version--runtime-quirks)                |
+| Apply consent policy                                    | Common but policy-dependent    | Replace the quick-start shortcut with application policy.    | Boolean and split-axis forms; blocked result; app-owned policy seam.                  | [consent](../../internal/sdk-knowledge/node/node.md#consent--persistence)                                                                                         |
+| Evaluate route requests with `page()`                   | Required for first integration | Explain the main request evaluation and its result envelope. | Request example; result-field glossary; accepted-versus-blocked branch.               | [events](../../internal/sdk-knowledge/node/node.md#events--tracking)                                                                                              |
+| Identify known users                                    | Common but policy-dependent    | Place authentication identity in the request sequence.       | Identify-before-page sequence and app-owned traits example.                           | [events](../../internal/sdk-knowledge/node/node.md#events--tracking)                                                                                              |
+| Persist profile identity between requests               | Common but policy-dependent    | Make continuity explicit for a stateless SDK.                | Read/write lifecycle; consent gate; cookie ownership and hybrid note.                 | [identifiers](../../internal/sdk-knowledge/node/node.md#identifier-ownership), [consent](../../internal/sdk-knowledge/node/node.md#consent--persistence)          |
+| Fetch and resolve Contentful entries                    | Required for first integration | Turn request selections into rendered content.               | Managed and manual paths; result field distinction; fallback; mutation/cache warning. | [rendering](../../internal/sdk-knowledge/node/node.md#render--entry-resolution), [fallback](../../internal/sdk-knowledge/node/node.md#failure--fallback-behavior) |
+| Resolve merge tags                                      | Optional                       | Cover profile-backed Rich Text substitution.                 | Guard/resolver example and fallback behavior.                                         | [rendering](../../internal/sdk-knowledge/node/node.md#render--entry-resolution)                                                                                   |
+| Read Custom Flags                                       | Optional                       | Cover authored flag changes without implying event emission. | Flag read example and side-effect boundary.                                           | [rendering](../../internal/sdk-knowledge/node/node.md#render--entry-resolution)                                                                                   |
+| Track server-side interactions and business events      | Optional                       | Separate server-owned tracking from browser interactions.    | `track()` and `trackView()` examples; profile requirement.                            | [events](../../internal/sdk-knowledge/node/node.md#events--tracking)                                                                                              |
+| Forward optimization context to analytics               | Optional                       | Hand off to the supplemental workflow.                       | Context fields and supplemental-guide link.                                           | [events](../../internal/sdk-knowledge/node/node.md#events--tracking)                                                                                              |
+| Share continuity with the Web SDK                       | Optional                       | Explain the cross-runtime profile handoff.                   | Shared-cookie contract; duplicate-page ownership; reference link.                     | [identifiers](../../internal/sdk-knowledge/node/node.md#identifier-ownership)                                                                                     |
+| Control pre-consent event admission and request options | Advanced or production-only    | Expose strict policy and diagnostics after the default flow. | Empty allow-list; blocked callback; request-scoped options.                           | [consent](../../internal/sdk-knowledge/node/node.md#consent--persistence), [runtime](../../internal/sdk-knowledge/node/node.md#version--runtime-quirks)           |
+| Keep caches safe for personalized rendering             | Advanced or production-only    | Prevent visitor-specific output from entering shared caches. | Cache-safety table and cache-key boundary.                                            | [runtime](../../internal/sdk-knowledge/node/node.md#version--runtime-quirks)                                                                                      |
 
-## Section order & category, and why
+## SDK-specific authoring overrides
 
-Node readers are building a **request pipeline**, so sections follow the request lifecycle — set up
-the process, bind the request, then act on it — rather than walking the API surface alphabetically.
-Teach each dependency before the call that needs it.
+- Use a server `process.env` note rather than the recipe's browser-visible environment convention.
+- Do not force a React render-prop example into this guide; explain the generic returned-entry type
+  and mutation boundary instead. Facts:
+  [rendering](../../internal/sdk-knowledge/node/node.md#render--entry-resolution).
 
-**Core integration** (Required + Common but policy-dependent):
+## Troubleshooting scope
 
-- **Install and initialize the Node SDK** — Required — the process-level singleton; nothing works
-  until it exists, and the "one per process, bind per request with `forRequest()`" model has to land
-  first because every later section assumes it.
-- **Bind request context and locale** — Required — every event and managed fetch below needs the
-  per-request `eventContext` and `locale`, so teach how to build them before the first `page()`.
-  (This is the section a KB-only compose is most likely to drop, because the KB records the
-  `eventContext` shape as a fact but nothing tells the writer it deserves its own step — it does,
-  because populating `page.*` from a real request is app-integration work the reader cannot guess.)
-- **Apply consent policy** — Common but policy-dependent — policy decides whether it is on by
-  default, but it gates every call below it, so it is taught early in Core rather than deferred.
-- **Evaluate route requests with `page()`** — Required — the core call; this is where `profile`,
-  `selectedOptimizations`, and `changes` are introduced as the return envelope the rest of the guide
-  consumes.
-- **Identify known users** — Common but policy-dependent — most apps with a login will call it, and
-  it belongs next to `page()` because it shares the request-client flow and the identify-vs-page
-  ordering question. (A KB-only compose tends to misfile this as Optional; it is Common because a
-  typical authenticated app ships it.)
-- **Persist profile identity between requests** — Common but policy-dependent — the stateless SDK
-  cannot remember a visitor, so profile continuity is app work most integrations do; it pairs with
-  consent's `canPersistProfile` gate and owns the `ANONYMOUS_ID_COOKIE` cookie-sharing detail.
-- **Fetch and resolve Contentful entries** — Required — this is Milestone 2 made concrete; it is
-  Required because a personalization integration that never renders a variant is incomplete. Covers
-  managed `fetchOptimizedEntry()` vs. manual `resolveOptimizedEntry()`, and disambiguates
-  `selectedOptimizations` (plural, passed in) from `selectedOptimization` (singular, returned).
+| Reader symptom                                              | Why it belongs                      | Fact sources                                                                     |
+| ----------------------------------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------- |
+| Entry stays on baseline or authored variant never appears   | Most common resolution ambiguity.   | [fallback](../../internal/sdk-knowledge/node/node.md#failure--fallback-behavior) |
+| `page()` is not accepted                                    | Exposes consent admission directly. | [consent](../../internal/sdk-knowledge/node/node.md#consent--persistence)        |
+| Insights view lacks a request profile                       | Common sequencing error.            | [events](../../internal/sdk-knowledge/node/node.md#events--tracking)             |
+| Profile changes between requests or runtimes                | Continuity is application-owned.    | [identifiers](../../internal/sdk-knowledge/node/node.md#identifier-ownership)    |
+| Merge-tag output or personalized output leaks through cache | High-impact production failure.     | [runtime](../../internal/sdk-knowledge/node/node.md#version--runtime-quirks)     |
 
-**Optional integrations** (additive capabilities a reader opts into):
+## Link roles
 
-- **Resolve merge tags** — Optional — only relevant if the content model uses MergeTag entries.
-- **Read Custom Flags** — Optional — only relevant if experiences author Custom Flag changes; note
-  `getFlag()` is read-only in Node and never auto-emits a flag view.
-- **Track server-side interactions and business events** — Optional — server-owned `track()`/
-  `trackView()`; frame that browser clicks/hovers usually belong in browser SDK code.
-- **Forward optimization context to analytics** — Optional — a hand-off to the analytics-forwarding
-  supplemental guide; keep it a pointer, not a re-teaching. Link target:
-  `./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md`.
-- **Share continuity with the Web SDK** — Optional — the hybrid Node+Web handoff; belongs here (not
-  dropped, not in Core) because a pure-Node app never needs it but a common class of app does. Links
-  to the Web SDK guide (`./integrating-the-web-sdk-in-a-web-app.md`) and the
-  `node-sdk+web-sdk` reference implementation.
-
-**Advanced integrations** (production hardening, off the first-integration path):
-
-- **Control pre-consent event admission and request options** — Advanced or production-only —
-  `allowedEventTypes: []`, `onEventBlocked`, request-scoped `experienceOptions`/`insightsOptions`;
-  strict-consent and diagnostics concerns a first integration does not need.
-- **Keep caches safe for personalized rendering** — Advanced or production-only — the cache-boundary
-  discipline (what is shared-cache safe vs. request-local), including the cache-safety table. Advanced
-  because it only bites at production scale.
-
-Where Node diverges from the web family, say so: managed fetching is **Optional** here (most Node
-apps already own their Contentful client and fetch themselves), whereas the web guides lean managed.
-The render-prop / cast guidance and "browser-visible env var" notes from the recipe/fragments are
-web-shaped — for Node, translate them to a generic typing note and server `process.env`.
-
-## Troubleshooting the reader will actually hit
-
-Rows map to real first-run symptoms, not every theoretical failure:
-
-- **Entry always resolves to the baseline** → no variant applies / no `selectedOptimizations` passed
-  / entry not optimized / all-locale payload. Ties directly to the authored-variant gotcha.
-- **Variant never appears even though authored** → request does not match the experience audience, or
-  resolution ran without the request's selections. (Target all visitors for a first test.)
-- **`page()` returns `{ accepted: false }`** → event consent not granted and the type not
-  allow-listed.
-- **`trackView() requires a request-bound profile id` thrown** → a non-sticky Insights call ran
-  without a bound profile.
-- **Profile not consistent across requests** → the returned `profile.id` was not persisted, or
-  `canPersistProfile` was `false`.
-- **Hybrid browser sessions start with a different anonymous profile** → server and browser do not
-  share the readable `ctfl-opt-aid` cookie.
-- **Merge tags render the fallback for everyone** → no matching profile value, or profile/entry
-  locale mismatch.
-- **Personalized output leaks between visitors** → an event response or merge-tag output was shared
-  through a cache.
-
-## Pinned link targets
-
-Pin these exact paths — guessed filenames are wrong:
-
-- Analytics-forwarding supplemental guide:
-  `./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md`
-- Web SDK guide (for the hybrid browser-continuity handoff):
-  `./integrating-the-web-sdk-in-a-web-app.md`
-- Reference implementation (server-only SSR): `../../implementations/node-sdk/README.md`
-- Reference implementation (Node SSR + Web SDK continuity):
-  `../../implementations/node-sdk+web-sdk/README.md`
+- [The Web SDK integration guide](../../guides/integrating-the-web-sdk-in-a-web-app.md).
+- [The analytics-forwarding supplemental guide](../../guides/forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+- [The maintained Node-only reference implementation](../../../implementations/node-sdk/README.md).
+- [The maintained Node-plus-Web reference implementation](../../../implementations/node-sdk+web-sdk/README.md).

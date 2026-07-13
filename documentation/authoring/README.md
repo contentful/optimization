@@ -1,134 +1,115 @@
-# Guide authoring: recipes and fragments
+# Guide authoring inputs
 
-Writer-owned composition inputs for the public guides under [`../guides/`](../guides/). **Not
-published** — these are the source the `guide-writer` agent composes _from_, the reader-facing mirror
-of the internal [`../internal/sdk-knowledge/`](../internal/sdk-knowledge/) knowledge base.
+Internal composition inputs for the public guides under [`../guides/`](../guides/). Technical writers
+shape how guides teach here without having to understand SDK implementation details; SDK and
+knowledge authors maintain verified behavior separately.
 
-A technical writer shapes guide structure, sequence, and shared wording here — for a whole class of
-guides, never one guide surgically, and never by editing agent logic. The composition is done by an
-LLM (`guide-writer`), not a deterministic templating engine: recipes and fragments are prose it reads
-and instantiates, not code it executes.
+## The contract
 
-## Start here (technical writers)
+| Layer                                             | Owns                                                                                                         | Must not own                                             |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| **Recipe** (`recipes/`)                           | Archetype-wide section spine, allowed categories, and output rules                                           | Per-SDK section choices or SDK facts                     |
+| **Blueprint** (`blueprints/`)                     | One SDK's quick-start proof, milestones, ordered section map, required evidence, and rare teaching overrides | SDK behavior, detailed API shape, or reader-facing prose |
+| **Fragment** (`fragments/`)                       | Reader-facing wording that must stay consistent across several guides                                        | Hidden per-SDK decisions or SDK behavior                 |
+| **Knowledge base** (`../internal/sdk-knowledge/`) | Verified behavioral facts and provenance                                                                     | Editorial sequence or guide prose                        |
+| **Types/source** (`../../packages/`)              | Exact interface shape: exports, signatures, props, and returns                                               | Editorial decisions                                      |
+| **Guide** (`../guides/`)                          | Published explanation, examples, and task flow                                                               | New unsupported facts                                    |
 
-This directory is your front door. To change how the guides read:
+The guide writer composes these layers; it is not itself a source of truth.
 
-1. **Edit the structure or wording** — a **recipe** (`recipes/`) for a guide archetype's section
-   spine and sequence (SDK-neutral), a **blueprint** (`blueprints/`) for one SDK's section inventory,
-   order, and categories, or a **fragment** (`fragments/`) for a shared paragraph reused across
-   guides. You never touch SDK facts (those live in the knowledge base) or agent logic. Reorder a
-   guide's sections or recategorize one → its blueprint. Change how a whole archetype is shaped → its
-   recipe.
-2. **Re-render fast** — run **`/iterate-guide`**; it recomposes the affected guides from the existing
-   knowledge base without reading source or re-verifying facts. This is the tight inner loop for
-   phrasing, tone, and sequence. A change that would alter what a guide _asserts_ about the SDK (a
-   prop, a behavior, a return shape) is out of scope and hands off to `/refresh-docs` or
-   `/review-guide`.
-3. **Gate before shipping** — run **`/review-guide`**; it runs the newcomer and technical-foundation
-   review roles and funnels durable lessons back into recipes, fragments, or the knowledge base.
+Use this ownership test:
 
-For the SDK-fact side of the pipeline (`/author-guide`, `/refresh-docs`, `pnpm knowledge:check`), see
-[`../internal/sdk-knowledge/README.md`](../internal/sdk-knowledge/README.md) and the "Guides and the
-knowledge base" section of the repository [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
+- A fact about what the SDK does belongs in the knowledge base.
+- A rule that should change every guide of an archetype belongs in the recipe.
+- A decision about how one SDK should be taught belongs in its blueprint.
+- A sentence that must be identical across several guides belongs in a fragment.
+- Everything else is reader-facing guide prose.
 
-## The layers
+## What reproducible means
 
-| Layer                                         | Holds                                                                             | Owner                  |
-| --------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------- |
-| **Recipe** (`recipes/`)                       | an archetype's editorial spine + which fragments it composes (SDK-neutral)        | technical writer       |
-| **Fragment** (`fragments/`)                   | reusable reader-facing prose, fixed spine + KB-filled slots                       | technical writer       |
-| **Blueprint** (`blueprints/`)                 | one SDK's editorial map: which facts → which section → order → category, with why | technical writer       |
-| Knowledge base (`../internal/sdk-knowledge/`) | the values a fragment's slots resolve to (SDK behavior facts)                     | SDK / knowledge author |
-| `guide-writer` agent                          | renders the recipe + blueprint + fragments into a guide                           | the pipeline           |
+The pipeline aims to reproduce the same **reader outcome**, not identical prose. Independent writers
+should converge on:
 
-**Recipe vs. blueprint** — the recipe is the shape _every_ guide of an archetype shares (SDK-neutral:
-the `##` spine, heading order, the integration-category value set, the craft rules). The blueprint is
-how _one_ SDK's facts fill that shape (per-SDK judgment: which features become which `###` sections,
-in what order, under which category, what proves the quick start, where the milestone boundary falls —
-with the reasoning). The recipe answers "what does an integration guide look like?"; the blueprint
-answers "for Node specifically, how do its facts arrange into that?" A reproduction test showed that
-without the blueprint the section inventory and categories are re-invented on every compose and drift
-from the shipped guide — the blueprint memoizes that editorial judgment the way the knowledge base
-memoizes comprehension. It holds no SDK facts (those stay in the KB) and no archetype structure (that
-stays in the recipe).
+- the quick-start result and verification;
+- the section inventory, order, and categories;
+- the required explanations, examples, warnings, and decision aids in each section;
+- the SDK facts covered, with no unsupported behavioral claims;
+- a guide that passes newcomer and technical-foundation review.
 
-The `optimization-guide-authoring` skill keeps **voice and workflow** (how to write well, the
-authoring loop). Structure lives here, in the recipes — one source of truth, not scattered across the
-skill and sibling guides.
+Word-for-word similarity is not a success criterion. A blueprint that grows until it shadows the
+guide defeats the separation and creates a stale second fact store.
 
-## Every recipe and fragment file has two sections
+## How to work
 
-- **`## Context`** — addressed to the `guide-writer` agent. Rationale, how to fill each slot, when to
-  include or skip a fragment, which KB fact backs which slot. **Never rendered into a guide.**
-- **`## Template`** — the prose that becomes guide output. For a fragment this is near-verbatim reader
-  prose with `⟨slot⟩` markers; for a recipe it is the section spine plus fragment references and
-  local instructions.
+1. Pick the guide archetype and open its recipe.
+2. Open the SDK blueprint. Its Section map is the guide's exact `###` inventory and its Required
+   evidence column is the minimum completeness contract.
+3. Read behavioral facts from the linked KB sections. Read exact interface shapes directly from
+   package types. Use the maintained reference implementation for realistic application shape.
+4. Instantiate the fragments selected by the recipe and blueprint.
+5. Write or update the guide. Do not inspect sibling guides to infer structure.
+6. Run `pnpm guides:check`, the newcomer review, and the technical-foundation review.
 
-The frontmatter carries only machine identity (`archetype:` / `fragment:`).
+For a source change, update the KB first and then only the blueprint/guide sections that consume the
+changed facts. For a purely editorial change, update the recipe, blueprint, or fragment that owns the
+decision and recompose the affected guide.
 
-A **blueprint** is entirely agent-facing — the whole file is guidance for the `guide-writer`, never
-rendered into the guide. It is **prose, not a data format**: the consumer is the LLM, whose native
-interface is natural language (the same reason a YAML-token recipe format was rejected when this layer
-was built), so the value is the _reasoning_ — why a section is Required, why the milestone splits
-where it does — not a `section | category` table. Every blueprint copies
-[`blueprints/_template.md`](./blueprints/_template.md), which defines the role, the recipe/blueprint/KB
-split, and the fixed headings **once** — a per-SDK file carries only its own editorial map, never a
-restatement of what a blueprint is. Fill it in for one SDK; do not re-explain the artifact.
+## Blueprint design
 
-## How composition works
+Every blueprint copies [`blueprints/_template.md`](./blueprints/_template.md). It is deliberately
+structured Markdown rather than free-form narrative so agents and deterministic validation can read
+the same contract.
 
-- A recipe is the **caller**: it names each fragment it composes (as a markdown link) at the section
-  where it belongs, and may add a local instruction on that line ("include X, but drop the Y clause
-  here"). Fragments never name their callers — the recipe owns inclusion.
-- The `guide-writer` copies an instantiated fragment's Template **verbatim** and fills only its
-  `⟨slots⟩` from the knowledge base. The verbatim spine is what keeps a guide family consistent, so
-  the agent does not reword it.
-- Per-SDK variation lives in a fragment's **slots**, filled from the KB at compose time — not in the
-  recipe. The recipe only expresses per-archetype shape. This keeps the writer editing classes, not
-  individual guides.
-- Per-SDK **structure** — the specific section inventory, order, and categories — lives in that SDK's
-  **blueprint**, read alongside the recipe. The recipe gives the `##` spine and the category value
-  set; the blueprint fills the `###` inventory for this SDK. The `guide-writer` takes the section map
-  from the blueprint rather than inventing it or copying a sibling guide.
+The Section map records:
 
-## Coverage
+- exact section title and category;
+- the reader purpose—the editorial reasoning worth preserving;
+- required evidence, such as a runnable example, decision table, ownership warning, or failure mode;
+- links to KB sections that supply the behavior.
 
-Blueprints (and KB files) currently exist for the six JS/TS integration guides: `node`, `web`,
-`react-web`, `nextjs-app-router`, `nextjs-pages-router`, `react-native`. **Not yet covered:** the four
-native guides (iOS SwiftUI/UIKit, Android Compose/Views) have no KB file, no blueprint, and no
-`feeds-guides` edge, so `/refresh-docs` and `/iterate-guide` cannot see them — their structure and
-facts live only inside the guide prose. Native source is Swift/Kotlin (`packages/ios`,
-`packages/android`) with no `package.json`, so the knowledge-base validator cannot discover it as an
-SDK key or resolve `#symbol` pointers; bootstrapping native docs needs a different symbol-resolution
-strategy and is a separate effort. The decision guide (`choosing-the-right-sdk.md`) and the two
-supplemental guides also have no KB `feeds-guides` edge yet. Treat all of these as outside the
-refresh/iterate guarantee until they are bootstrapped.
+API names may identify a section or required example. Defaults, detailed signatures, fallback causes,
+and behavioral explanations stay in the KB or guide. Link roles use exact validated local links so an
+isolated writer does not have to inspect sibling guides or guess filenames.
+
+## Fragments
+
+A fragment is worthwhile only when exact shared wording improves the reader experience. Keep the
+fixed prose small. Any inclusion or variation switch must be explicit in the recipe or blueprint;
+never hide SDK-family logic inside the fragment.
+
+The integration recipe currently composes:
+
+- `personalization-explainer.md`—fixed conceptual wording plus two explicit blueprint switches;
+- `authored-variant-gotcha.md`—one invariant prerequisite warning with no SDK-specific slots.
+
+## Validation and coverage
+
+`pnpm guides:check` validates blueprint shape, local blueprint and guide links, and
+blueprint-to-guide section and category agreement. `pnpm knowledge:check` validates KB pointer
+integrity and unresolved escalations. Neither command proves behavioral truth; semantic freshness
+comes from the scoped knowledge-author and technical-foundation reviews.
+
+Blueprints and KB files currently cover the six JS/TS integration guides: Node, Web, React Web,
+Next.js App Router, Next.js Pages Router, and React Native. Native Swift/Kotlin guides, the decision
+guide, and supplemental guides remain outside the regeneration guarantee until their KB and planning
+edges are bootstrapped.
 
 ## Files
 
-```
-recipes/                  # SDK-neutral archetype shapes
-  integration.md          # integrating-*.md
-  decision.md             # choosing-the-right-sdk.md and future decision guides
-  supplemental-recipe.md  # analytics forwarding and similar
-blueprints/               # per-SDK editorial maps (integration archetype)
-  _template.md            # canonical skeleton + the recipe/blueprint/KB split, stated once
-  node.md                 # → integrating-the-node-sdk-in-a-node-app.md
-  web.md, react-web.md, nextjs-app-router.md, nextjs-pages-router.md, react-native.md
+```text
+recipes/
+  integration.md
+  decision.md
+  supplemental-recipe.md
+blueprints/
+  _template.md
+  node.md
+  web.md
+  react-web.md
+  nextjs-app-router.md
+  nextjs-pages-router.md
+  react-native.md
 fragments/
-  personalization-explainer.md  # intro explainer (integration guides)
-  authored-variant-gotcha.md    # the mandatory Before-you-start bullet
+  personalization-explainer.md
+  authored-variant-gotcha.md
 ```
-
-Machine enforcement of recipe/fragment usage (a `guides:check` validator) is **deferred**: for now
-the `guide-writer` and the newcomer/source reviewers enforce it by following these files. Because
-fragment spines are reproduced verbatim, a future check can confirm instantiation by matching the
-fixed sentences.
-
-## Iterating
-
-To tune wording, tone, or sequence and re-render the guides fast, edit a recipe or fragment here and
-run **`/iterate-guide`** — it recomposes the affected guides from the existing knowledge base without
-reading source or re-verifying facts. It is editorial-only: a change that would alter what a guide
-_asserts_ about the SDK (a prop, a behavior, a return shape) hands off to `/refresh-docs` or
-`/review-guide`. Run `/review-guide` as the final pass before shipping.

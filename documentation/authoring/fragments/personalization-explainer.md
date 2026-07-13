@@ -4,52 +4,15 @@ fragment: personalization-explainer
 
 ## Context
 
-The intro explainer that teaches an average developer — no personalization background — the whole
-idea before the quick start uses any of it. A guide instantiates this from the **Template** below.
+This fragment defines the common introductory explanation. The guide writer copies the fixed wording
+and fills only the explicit switches recorded in the SDK blueprint's `## Quick-start contract`:
 
-Two kinds of bullet, and they instantiate differently:
+- `profile point = include | omit` controls the complete profile bullet and the four/five count.
+- `managed-fetch clause = include | omit` controls the final sentence of the entry-source bullet.
 
-- **Verbatim bullets** — the variant/experience bullet, the resolving sentence, and the closing "You
-  render whatever the SDK hands back…" line are reproduced word-for-word, only their `⟨slots⟩` filled.
-  These fixed sentences are what keep the family consistent — do not reword them.
-- **Composed bullets** — the entry-source hand-off bullet is composed from a knowledge-base fact
-  around a fixed anchor: the sentence must end with the **baseline-fallback** contract (the exact
-  clause below), and the only free choices are the lead (which of the three prescribed strings fits
-  the app) and whether the managed-fetch clause is present. Keep the rest as written; do not reorder
-  or reshape it — this bullet is near-verbatim, not open composition. Compose only from the KB
-  entry-source-boundary fact.
-
-Every slot resolves from a knowledge-base fact — never invent one.
-
-Slots and where each is filled from:
-
-- **⟨timing phrase⟩** — when the Experience API picks the variant, in this runtime's terms:
-  `On each request` (stateless server), `When a page is requested` (server-rendered pages),
-  `As the visitor uses your app` (browser), `As the app runs` (native). Fill from the KB runtime
-  model.
-- **⟨visitor reference⟩** — how the sentence refers to the visitor after the timing phrase, chosen to
-  read cleanly with it: `who the visitor is` when the timing phrase has no visitor antecedent
-  (`On each request`, `As the app runs`), `who they are` when it already names the visitor
-  (`As the visitor uses your app` — avoids repeating "visitor"), or `the current visitor` for a
-  request framing that wants an explicit noun (`When a page is requested`). This co-varies with the
-  timing phrase; it is grammatical agreement, not free choice.
-- **⟨profile bullet⟩** — include this bullet **only if the SDK persists a per-visitor profile**
-  across requests or launches (Node, React Native). SDKs that hold no cross-request identity in the
-  explainer omit the whole bullet (the web family). Fill the requests-vs-launches wording from the
-  KB runtime model. **This inclusion drives the opener count** (below): five points when the profile
-  bullet is included, four when it is omitted.
-- **entry-source hand-off bullet (composed)** — compose this bullet from the KB entry-source-boundary
-  fact around one fixed anchor: it must state that the SDK hands back the resolved variant, **or the
-  original entry when no variant applies, the baseline fallback** (that clause is the anchor — keep
-  it). The lead names how this app turns Contentful entries into output today (`Your server fetches
-Contentful entries and turns them into a response`, `Your app turns Contentful entries into
-markup`, `Your app already fetches Contentful entries and turns them into components`). If the SDK
-  supports **managed fetching** (it can take the reader's client and fetch by ID), add the "fetch it
-  yourself or give the SDK your client — either way the client stays yours" clause; omit it for
-  manual-only SDKs. Do not reorder the sentence to lead with the fetch step — keep the hand-off →
-  baseline-fallback → fetch-boundary order shown in the Template.
-- **⟨deferred concepts⟩** — the not-yet list for this SDK, drawn from the sections this guide defers
-  (audiences, interaction events, identity, preview, live updates…).
+Runtime phrasing (`On each request`, `When a page is requested`, `As the visitor uses your app`, or
+`As the app runs`) comes from the KB runtime model. Grammatical agreement may change only the visitor
+reference in that sentence. No other SDK decision belongs in this fragment.
 
 ## Template
 
@@ -57,22 +20,20 @@ markup`, `Your app already fetches Contentful entries and turns them into compon
 
 - In Contentful you author **variants** of an entry and attach them to an **experience** — a rule
   that decides which visitors see which variant.
-- ⟨timing phrase⟩, Contentful's **Experience API** looks at ⟨visitor reference⟩ and picks the variant
-  for each experience. Swapping a fetched entry for its picked variant is called **resolving** the
-  entry.
-- ⟨profile bullet — only if the SDK persists a profile:⟩ The Experience API also returns a
-  **profile**: the anonymous, per-visitor identity and state the SDK uses to keep the same visitor's
-  personalization consistent across ⟨requests | app launches⟩.
-- ⟨entry-source hand-off bullet — composed from the KB entry-source-boundary fact; MUST end with the
-  baseline-fallback anchor "…or the original entry when no variant applies, the **baseline
-  fallback**." Add the managed-fetch clause only if the SDK fetches by ID; keep the sentence order
-  shown here (do not lead with the fetch step). Example (managed, browser): "Your app turns
-  Contentful entries into markup,
-  and the SDK sits at that hand-off: it gives you the resolved variant instead of the original — or
-  the original entry when no variant applies, the **baseline fallback**. You can fetch the entry
-  yourself and hand it to the SDK, or give the SDK your Contentful client and let it fetch by ID —
-  either way the client stays yours."⟩
-- You render whatever the SDK hands back exactly as you render entries today.
+- ⟨runtime timing phrase⟩, Contentful's **Experience API** looks at ⟨visitor reference⟩ and picks the
+  variant for each experience. Swapping a fetched entry for its picked variant is called
+  **resolving** the entry.
+- ⟨When the blueprint includes the profile point:⟩ The Experience API also returns a **profile**: the
+  anonymous, per-visitor identity and state used to keep personalization consistent across requests
+  or app launches.
+- Your app hands a Contentful entry to the SDK at the point where that entry becomes output. The SDK
+  gives back the selected variant, or the original entry when no variant applies—the **baseline
+  fallback**. ⟨When the blueprint includes the managed-fetch clause: You can fetch the entry yourself
+  or give the SDK your Contentful client and an entry ID; either way, the client stays yours.⟩
+- You render the returned entry with the same application components you already use.
 
-That is enough to start. You do not need ⟨deferred concepts⟩ yet; this guide introduces each idea at
-the point you need it.
+⟨When the blueprint includes the profile point: add one SDK-specific sentence from the KB stating
+who persists the profile and across which lifecycle.⟩
+
+That is enough to start. The guide introduces policy and optional capabilities at the point you need
+them.

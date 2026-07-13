@@ -52,9 +52,8 @@ Do this in order:
    When a fragment the recipe names is missing from the guide, or its fixed spine was reworded rather
    than instantiated verbatim, that is a structure finding: have the writer instantiate it.
 
-5. **Validate.** Run `pnpm knowledge:check` (KB must pass) and `pnpm format:fix <touched paths>` —
-   pass the specific files you changed, never a bare `pnpm format:fix` (it reformats the whole tree
-   and pollutes the diff) — and confirm the guide's TOC anchors resolve.
+5. **Validate.** Run `pnpm knowledge:check`, `pnpm guides:check`, and
+   `pnpm exec prettier --write <touched paths>`. Confirm the guide's TOC anchors resolve.
 
 Report: the findings from each role, what you changed in the guide, what you funneled back into the
 skill vs. the knowledge base, and the validation result.

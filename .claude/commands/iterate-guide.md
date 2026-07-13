@@ -63,12 +63,9 @@ variant or null" asserts a new fact — stop).
    current KB. It restructures and rewords per the `optimization-guide-authoring` skill, the archetype
    recipe, and the SDK's blueprint; it does not alter factual claims.
 
-3. **Validate cheaply.** `pnpm format:fix <touched guide paths>` (never bare) and confirm the
-   collapsible TOC anchors still resolve. If the blueprint changed, confirm the guide's section
-   inventory, order, and categories now match it. Run `pnpm knowledge:check` **only if** a
-   recipe/fragment or KB-adjacent file was touched (it is fast and confirms nothing drifted); a pure
-   guide-prose or blueprint edit does not require it. Do NOT run the newcomer/source reviewers here —
-   that is the final pass.
+3. **Validate cheaply.** Run `pnpm exec prettier --write <touched guide paths>` and
+   `pnpm guides:check`; confirm the TOC anchors resolve. Run `pnpm knowledge:check` if a fragment or
+   KB-adjacent file changed. Do NOT run the newcomer/source reviewers here — that is the final pass.
 
 4. **Report.** The change made, the guides re-rendered, anything the guardrail sent to `/refresh-docs`
    or `/review-guide`, and the validation result. Remind the writer to run **`/review-guide`** as the

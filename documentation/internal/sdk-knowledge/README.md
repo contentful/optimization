@@ -5,25 +5,26 @@ no teach-first narrative, no `Copy this` / `Adapt this` labels, no reader framin
 
 ## What this is
 
-APIs verified against `packages/**/src` captured once, so guide authors and future regeneration
-reuse them instead of re-grepping, and so guides in the same family share vocabulary and do not
-drift. Facts here are a byproduct of guide work: only record what a guide author already verified
-against source while drafting. No net-new verification passes just to fill these in.
+Behavior verified against `packages/**/src` is captured once so guide authors do not repeatedly trace
+control flow. Exact interface shape—exports, signatures, props, optionality, and returns—remains
+authoritative in the package types. Per-SDK files may keep a small public-symbol/import index for
+navigation, but must not copy detailed type shapes as facts.
 
-## The three-artifact split
+## Ownership
 
-- **This knowledge base** — SDK-specific verified facts (symbols, props, cookies, return shapes).
+- **This knowledge base** — SDK behavior, defaults, ownership, fallbacks, and cross-runtime semantics.
+- **Package types/source** — exact interface shape.
 - **The authoring skill** (`skills/optimization-guide-authoring`) — how to write good guides;
   principles only, never SDK facts.
 - **The guides** (`documentation/guides`) — teach-first prose for readers.
 
-If a fact names a concrete symbol/API/cookie/prop, it belongs here (or in a guide), never in the
-skill.
+Concrete symbols may anchor behavioral facts. A signature, prop list, or return type is looked up in
+the types instead of copied here.
 
-**Facts here, editorial mapping in the blueprint.** This base records _what is true_ about an SDK. It
+**Behavior here, editorial mapping in the blueprint.** This base records _what is true_ about an SDK. It
 does not decide _which_ of those facts become guide sections, in what order, or under which
 integration category — that per-SDK editorial judgment lives in the SDK's **blueprint**
-(`documentation/authoring/blueprints/<sdk>.md`), the reader-facing side of the pipeline. When a guide
+(`documentation/authoring/blueprints/<sdk>.md`), the writer-facing side of the pipeline. When a guide
 gains or loses a documented capability, the blueprint's section list changes; when a behavior changes,
 a fact here changes. See [`../../authoring/README.md`](../../authoring/README.md) for the recipe /
 blueprint / fragment layers.
@@ -64,10 +65,12 @@ Future families get sibling dirs (e.g. `native/`, `node/`). Do not create empty 
 
 ## Source pointer grammar
 
-A pointer is machine-checked by `pnpm knowledge:check`
+A pointer is integrity-checked by `pnpm knowledge:check`
 ([`scripts/validate-sdk-knowledge.ts`](../../../scripts/validate-sdk-knowledge.ts)). It must match
 this grammar exactly — free-text pointers (e.g. `source: accepted App Router guide`) are rejected,
-which is what keeps a fact grounded in source rather than in another doc.
+which keeps a fact traceable to source rather than circularly grounded in another guide. A resolving
+pointer proves that the provenance target still exists; it does not prove that the behavioral
+statement remains semantically true. Source changes still require scoped re-verification.
 
 Where a pointer lives:
 

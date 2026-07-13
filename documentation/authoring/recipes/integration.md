@@ -7,9 +7,9 @@ filename: integrating-*.md
 
 Write for **an average developer with little or no personalization background**, opening the guide
 cold and wanting a working result fast. This recipe is **SDK-neutral**: it is the shape every
-integration guide shares — the fixed section spine, the heading order, the integration-category value
-set, which fragments to instantiate, and the craft rules for each section. The `guide-writer` agent
-renders the **Template** below into a guide; it never emits this Context.
+integration guide shares — the fixed section spine, heading order, category values, fragment
+placement, and archetype-wide completeness rules. The `guide-writer` renders the **Template** below;
+it never emits this Context.
 
 Three artifacts own three different things — keep them separate:
 
@@ -17,28 +17,24 @@ Three artifacts own three different things — keep them separate:
   heading order, the four integration-category values, which fragments compose where, and the
   transferable rules for writing a quick start, showing diffs, labeling examples, and keeping verify
   performable. Rules here hold for _every_ integration guide.
-- **The SDK's blueprint owns the per-SDK editorial map** —
-  `documentation/authoring/blueprints/<sdk>.md` decides, for one SDK, which KB topics become which
-  sections, in what **order**, under which **category**, what proves its quick start, and where its
-  milestone boundary falls, with the reasoning. This recipe does not decide the specific section
-  inventory or per-section category for a given SDK — the blueprint does. (That mapping was
-  previously unwritten and re-invented on every compose; the blueprint memoizes it.)
+- **The SDK's blueprint owns the per-SDK editorial contract** —
+  `documentation/authoring/blueprints/<sdk>.md` decides the quick-start proof, milestones, exact
+  section inventory/order/category, and the evidence each section must show. Its Purpose cells keep
+  the editorial reasoning; its Fact sources link behavior back to the KB.
 - **The knowledge base owns the facts** — which behaviors exist, what a call does on the edges,
   identifier ownership. You do not restate SDK facts here. Facts flow from the KB into the guide at
-  compose time; the source-verifier flags any fact feeding this guide that the guide left out.
+  compose time; the blueprint makes the required coverage explicit, and the source verifier checks
+  the claims the guide makes.
 
-Fragments are reusable reader-facing prose with a fixed spine and knowledge-base-filled slots. When
-this recipe says to include one, the guide-writer copies that fragment's Template **verbatim** and
-fills only its `⟨slots⟩`. That verbatim spine is what keeps the guide family consistent, so do not
-reword an instantiated fragment. If a fragment needs a local adjustment for this archetype, say so on
-the line that references it.
+Fragments are small pieces of reader-facing wording shared verbatim. Any variation switch is explicit
+in the blueprint; fragments must not infer an SDK family or restate behavior.
 
 Voice: plain and direct, warm but not chatty. No hype or filler that reads oddly in a reference doc
 ("this is the payoff", "the magic happens here", "boom", gratuitous "just"). Describe the current SDK
 in present tense — never narrate change ("no longer", "now supports", "used to", PR/issue numbers).
 While the SDK is pre-release, document the single current version; do not compare SDK versions.
 
-Structure invariants (deterministic — a future `guides:check` will enforce these):
+Structure invariants (`pnpm guides:check` enforces the blueprint-to-guide section and category map):
 
 - Fixed section order: `# H1` → intro → `## Quick start` → collapsible TOC → `## Before you start` →
   `## Core integration` → `## Optional integrations` (if any) → `## Advanced integrations` (if any) →
@@ -161,16 +157,16 @@ Expanded guidance for the Template above. These are the rules a review (human or
 
 ### Intro
 
-The intro's teaching content is the `personalization-explainer` fragment — do not hand-write a
-competing explainer. After it, frame the two milestones (take the specific M1/M2 boundary and its
-wording from the SDK's blueprint) and name the package and what the app still owns. Do not front-load
-concept links or reference-implementation links before the quick start unless the reader must
+The intro's teaching content is the `personalization-explainer` fragment. Apply only the two switches
+recorded in the blueprint, then add the runtime-specific persistence/ownership sentence from the KB.
+After it, frame the two milestones from the blueprint and name the package and what the app still
+owns. Do not front-load concept or reference links before the quick start unless the reader must
 understand them before acting.
 
 ### Quick start (the part reviews scrutinize most)
 
 - One proof, one verification statement, minimum setup. **Which proof this SDK uses is the blueprint's
-  call** ("What proves it works"); this recipe only holds the archetype rule that there is exactly
+  call** (`## Quick-start contract`); this recipe only holds the archetype rule that there is exactly
   one. Valid proof shapes: SDK init + one accepted page event; one entry resolving to variant or
   baseline; server content surviving takeover without a duplicate page event.
 - **Ground it in a real app shape, not a test harness.** Do not invent fetch shapes such as a
@@ -196,6 +192,11 @@ understand them before acting.
 - **Native build step inline.** For iOS/Android/React Native, the native install step (`pod install`,
   `npx expo prebuild`, or equivalent) that must run before launch appears in the quick start where
   the reader installs, not deferred to `## Before you start`.
+- Include every item in the blueprint's **Required artifacts**. A quick start is incomplete when it
+  describes a required file without showing runnable or honestly adaptable content for it.
+- When the proof resolves a Contentful entry, state the minimum resolvable fetch shape in the quick
+  start: one concrete locale and enough include depth for the linked experience and variants. Do not
+  defer a constraint that can make the first verification silently return baseline.
 
 ### Before you start
 
@@ -204,7 +205,7 @@ the guide (runtime prerequisites, credentials, authored Contentful data, Optimiz
 values). If a sequenced section teaches it, it does not go here. Anti-patterns: a multi-column setup
 table; rows that restate quick-start steps; rows that only say "there is a section below";
 `Category` / `Required for quick start` columns; listing values the quick start never uses. The
-authored-variant bullet is the `authored-variant-gotcha` fragment — mandatory.
+authored-variant bullet is the slot-free `authored-variant-gotcha` fragment — mandatory.
 
 ### Rendering / entry-wrap (the recurring credibility trap)
 
@@ -236,12 +237,15 @@ authored-variant bullet is the `authored-variant-gotcha` fragment — mandatory.
 Must cover: credentials/runtime config, consent behavior, event delivery, content fallback,
 duplicate-tracking prevention, privacy/governance, and a local validation path.
 
+Any commands must be available in the reader's application and labeled `Adapt this to your use
+case` when script names vary. Repository-maintainer commands belong only in a clearly labeled
+`Reference excerpt` with the repository context stated; never present them as copyable app commands.
+
 ### Shared-concern coverage
 
 Each shared concern is either covered by the guide or explicitly marked not-applicable for this SDK:
 install/init/config; consent & privacy handoff; the fetch/SDK boundary; entry resolution + fallback;
 page/route/screen events; interaction tracking; identity/profile/reset; routing/lifecycle/request
-context; real-time updates/preview/analytics/caching; verification. This is the archetype-wide
-checklist of what must be addressed; the SDK's blueprint records _how_ this SDK maps those concerns to
-sections and categories. Coverage is judged against the knowledge-base facts that feed this guide —
-the source-verifier flags a fed fact the guide omits.
+context; real-time updates/preview/analytics/caching; verification. The blueprint's Section map
+records where applicable concerns land and what evidence each section must include. The writer checks
+the complete map; the source verifier checks claims that were made, not omissions it cannot infer.

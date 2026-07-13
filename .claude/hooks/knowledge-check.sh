@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stop hook: nudge (never block) when the SDK knowledge base is currently failing knowledge:check.
+# Stop hook: nudge (never block) when the documentation integrity checks are currently failing.
 #
 # This is the in-session half of the source→KB sync loop. CI is the hard gate; this hook just
 # surfaces drift in the same turn it was introduced, so an agent can fix it before finishing rather
@@ -13,20 +13,20 @@ cwd="$(printf '%s' "$input" | sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*
 [ -n "$cwd" ] && cd "$cwd" 2>/dev/null || true
 
 # Only spend time when something the validator inspects changed in this working tree: the knowledge
-# base, package source (a refactor can orphan a pointer), or a guide (scanned for stray ESCALATE
-# markers). A session touching none of these cannot have introduced drift the validator would catch.
+# base, authoring inputs, package source, or a guide. A session touching none of these cannot have
+# introduced drift the validators would catch.
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  changed="$(git status --porcelain -- documentation/internal/sdk-knowledge documentation/guides 'packages/**/src/**' 2>/dev/null)"
+  changed="$(git status --porcelain -- documentation/internal/sdk-knowledge documentation/authoring documentation/guides skills scripts/validate-guide-authoring.ts scripts/validate-sdk-knowledge.ts 'packages/**/src/**' 2>/dev/null)"
   [ -z "$changed" ] && exit 0
 fi
 
-# Run the deterministic validator. On success, stay silent and let the turn end.
-if output="$(pnpm --silent knowledge:check 2>&1)"; then
+# Run the deterministic validators. On success, stay silent and let the turn end.
+if output="$(pnpm --silent knowledge:check 2>&1)" && guide_output="$(pnpm --silent guides:check 2>&1)"; then
   exit 0
 fi
 
 # On failure, feed the report back to the model as context (not a block). Cap the report so a large
-# failure cannot flood the context window; the agent can always re-run knowledge:check for the rest.
+# failure cannot flood the context window; the agent can always re-run the checks for the rest.
 max_lines=40
 capped="$(printf '%s\n' "$output" | head -n "$max_lines")"
 [ "$(printf '%s\n' "$output" | wc -l)" -gt "$max_lines" ] &&
@@ -34,9 +34,10 @@ capped="$(printf '%s\n' "$output" | head -n "$max_lines")"
 … (truncated; run \`pnpm knowledge:check\` to see all problems)"
 
 # jq if present, else a minimal hand-built JSON payload — the hook must not depend on jq.
-reason="Knowledge base check (pnpm knowledge:check) is failing. Fix these before finishing:
+reason="Documentation integrity checks are failing. Fix these before finishing:
 
-${capped}"
+${capped}
+${guide_output:-}"
 
 if command -v jq >/dev/null 2>&1; then
   jq -n --arg ctx "$reason" \
