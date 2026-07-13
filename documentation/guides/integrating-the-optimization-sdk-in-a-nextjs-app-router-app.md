@@ -115,7 +115,7 @@ step before you ship.
    `server.enabled` is `true`, `OptimizationRoot` then throws instead of falling back to baseline.
    See [Request context and the profile cookie](#request-context-and-the-profile-cookie).
 
-   **Copy this** (Next.js 16):
+   **Copy this:** Next.js 16.
 
    ```ts
    // proxy.ts — at your Next.js app root
@@ -126,8 +126,8 @@ step before you ship.
    }
    ```
 
-   **Copy this** (Next.js 15 — same handler, aliased to the `middleware` export Next.js 15 looks
-   for):
+   **Copy this:** Next.js 15 uses the same handler, aliased to the `middleware` export that Next.js
+   15 looks for.
 
    ```ts
    // middleware.ts — at your Next.js app root
@@ -753,11 +753,11 @@ Contentful; forwarding is application-owned.
 5. Gate forwarding with the same consent and destination policy that governs the rest of your
    analytics stack.
 
-**Adapt this to your use case:**
-
 `canForwardSdkEvent`, `pickContentfulEventProperties`, `analytics`, and `diagnostics` below are
 application-owned policy and destination helpers. The supplemental guide after the example shows
 complete helper patterns.
+
+**Adapt this to your use case:**
 
 ```tsx
 const forwardedMessageIds = new Set<string>()

@@ -12,9 +12,8 @@ returns for that request, without changing how your server fetches or renders co
 - On each request, Contentful's **Experience API** looks at who the visitor is and picks the variant
   for each experience. Swapping a fetched entry for its picked variant is called **resolving** the
   entry.
-- The Experience API also returns a **profile**: the anonymous, per-visitor identity and state the
-  anonymous, per-visitor identity and state used to keep personalization consistent across requests
-  or app launches.
+- The Experience API also returns a **profile**: the anonymous, per-visitor identity and state used
+  to keep personalization consistent across requests or app launches.
 - Your app hands a Contentful entry to the SDK at the point where that entry becomes output. The SDK
   gives back the selected variant, or the original entry when no variant applies—the **baseline
   fallback**. You can fetch the entry yourself or give the SDK your Contentful client and an entry

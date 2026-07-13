@@ -867,7 +867,7 @@ optimized entry.
    when UI must re-render as the flag changes. Reading a flag emits a flag-view event when consent
    and profile state permit it, and repeated reads of the same value are deduplicated.
 
-**Copy this** (install the Rich Text renderer):
+**Copy this:** Install the Rich Text renderer.
 
 ```sh
 pnpm add @contentful/rich-text-html-renderer @contentful/rich-text-types
@@ -969,7 +969,7 @@ your Web SDK instance through the browser preview bridge.
    default; pass `optimization` when your instance is not the global one.
 4. Pass a CSP `nonce` when strict Content Security Policy rules require one for Lit styles.
 
-**Copy this** (install the package):
+**Copy this:** Install the preview package.
 
 ```sh
 pnpm add @contentful/optimization-web-preview-panel

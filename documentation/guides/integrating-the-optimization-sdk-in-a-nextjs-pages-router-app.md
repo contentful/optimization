@@ -356,6 +356,8 @@ export const { NextPagesAutoPageTracker, OptimizationRoot, OptimizedEntry } =
   })
 ```
 
+**Adapt this to your use case:** the matching server helper, with request-owned consent.
+
 ```ts
 // lib/optimization-server.ts — server helper
 import { createNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router/server'
