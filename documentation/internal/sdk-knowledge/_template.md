@@ -7,8 +7,10 @@ shared/concepts.md and shared/vocabulary.md instead of restating shared material
 
 # <SDK display name> — SDK knowledge
 
-> Internal, verified reference. Not a guide. Facts only, each with a source pointer. Last verified
-> against packages/\*\*/src during the guide rewrite.
+<!-- feeds-guides: documentation/guides/<the guide this file's facts compose into>.md -->
+
+> Internal, verified reference. Not a guide. Facts only, each with a source pointer verified against
+> packages/\*\*/src.
 
 Shared vocabulary and SDK-neutral concepts: see [`../shared/vocabulary.md`](../shared/vocabulary.md)
 and [`../shared/concepts.md`](../shared/concepts.md). This file records only what is specific to
@@ -57,4 +59,3 @@ this SDK.
 ## Failure & fallback behavior
 
 - What happens on API failure, missing variant, unresolved links, bad payload shape. source:
-  </content>

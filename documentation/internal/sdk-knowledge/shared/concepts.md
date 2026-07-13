@@ -1,7 +1,9 @@
-# Shared concepts (web family, SDK-neutral)
+# Shared concepts (SDK-neutral)
 
-SDK-neutral concepts common to Web, React Web, and both Next.js routers. Per-SDK files reference
-these instead of restating them. Terse; not a guide.
+SDK-neutral concepts that live in the shared `core-sdk` and so apply across the SDK families that
+consume them — currently Web, React Web, both Next.js routers, Node, and React Native. Per-SDK files
+reference these instead of restating them. A few entries are described with a web-oriented example
+(e.g. a render prop); the underlying contract is the same across runtimes. Terse; not a guide.
 
 ## Entry-source boundary (managed or manual)
 
@@ -22,16 +24,12 @@ resolution hand-off:
   `include: 10`; it preserves descriptor order and duplicates. Per-instance cache defaults to
   `{ maxEntries: 100, ttlMs: 300_000 }`; `cache: false` disables it; `clearContentfulEntryCache()`
   clears it. Managed prefetch takes explicit descriptors only; already included nested entries
-  remain part of the fetched `baselineEntry`. source: `packages/universal/core-sdk/src/CoreBase.ts`
-  `ContentfulConfig`, `ContentfulEntryClient`, `fetchContentfulEntry`, `fetchContentfulEntries`,
-  `prefetchManagedEntries`, `clearContentfulEntryCache`;
-  `packages/universal/core-sdk/src/managed-entry-fetcher.ts` `ManagedEntryFetcher`;
-  `packages/universal/core-sdk/src/CoreStatelessRequest.ts` `fetchContentfulEntries` /
-  `prefetchManagedEntries`.
+  remain part of the fetched `baselineEntry`.
+  source: core-sdk#CoreBase.ts#ContentfulConfig; core-sdk#CoreBase.ts#ContentfulEntryClient; core-sdk#CoreBase.ts#fetchContentfulEntry; core-sdk#CoreBase.ts#fetchContentfulEntries; core-sdk#CoreBase.ts#prefetchManagedEntries; core-sdk#CoreBase.ts#clearContentfulEntryCache; core-sdk#managed-entry-fetcher.ts#ManagedEntryFetcher; core-sdk#CoreStatelessRequest.ts#prefetchManagedEntries
 
 Either way, the SDK sits at the hand-off where a fetched entry becomes a component and returns the
 resolved variant (or the baseline entry). Both paths are supported; a guide must not assert the SDK
-never fetches. source: `core-sdk` `CoreBase.ts` `contentful?` config.
+never fetches. source: core-sdk#CoreBase.ts#ContentfulConfig
 
 ## Entry resolution
 
@@ -39,33 +37,47 @@ Fetch with ONE concrete locale and an `include` depth deep enough to cover the p
 and linked variant entries. All-locale payloads (`withAllLocales` / CDA `locale=*`) use locale-keyed
 field maps the resolver cannot read ⇒ entries fall back to baseline. The entry wrapper's render prop
 hands back the resolved entry as a base `contentful` `Entry`; a narrower component type needs a
-cast. source: react-web `optimized-entry/optimizedEntryUtils.ts`; entry-personalization concept doc.
+cast.
+source: react-web-sdk#optimized-entry/optimizedEntryUtils.ts#RenderProp; concept:entry-personalization-and-variant-resolution
 
 ## Baseline fallback
 
 On denied consent, no matching variant, unresolved links, or an all-locale payload, the render prop
 receives the baseline (original) entry and the UI does not break. This is why an integration renders
-correctly even before any variant is authored. source: react-web `OptimizedEntry`.
+correctly even before any variant is authored.
+source: react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry
 
 ## Consent & persistence
 
 Two independent axes: `consent` (may personalize + send events) and `persistenceConsent` (may store
 the profile-id cookie). Consent policy is app-owned: the app records the choice and the SDK reads it
 (server-side per request, browser-side via seeded defaults). The consent record/cookie is
-reader-owned; the profile-id cookie is SDK-owned. source: factory `defaults`; per-SDK server
-consent.
+reader-owned; the profile-id cookie is SDK-owned.
+source: core-sdk#StatefulDefaults.ts#consent; core-sdk#StatefulDefaults.ts#persistenceConsent; core-sdk#constants.ts#ANONYMOUS_ID_COOKIE
 
 ## Live updates
 
 Opt-in. Most content is fixed for a request's life, so re-resolution after load is off by default.
 Turned on app-wide (factory `liveUpdates`) or per-entry; a per-entry value overrides the app-wide
-default. Triggers: consent/identity/profile changes in the browser. source: react-web
-`LiveUpdatesProvider`, `hooks/useLiveUpdates.ts`.
+default. Triggers: consent/identity/profile changes in the browser.
+source: react-web-sdk#provider/LiveUpdatesProvider.tsx#LiveUpdatesProvider; react-web-sdk#hooks/useLiveUpdates.ts#useLiveUpdates
 
 ## Page events
 
 A page event signals a page/route view. Auto-page trackers emit them on navigation and dedupe
 consecutive route keys. When the server already reported a consented page view, the browser must
 skip the duplicate (per-SDK `initialPageEvent` / tracker prop). Interaction events
-(view/click/hover) are consent-gated browser activity and use the resolved entry id. source:
-react-web `auto-page/*`, `router/*`. </content>
+(view/click/hover) are consent-gated browser activity and use the resolved entry id.
+source: react-web-sdk#auto-page/useAutoPageEmitter.ts; react-web-sdk#router/next-app.tsx
+
+## Experience response payload
+
+An accepted Experience API request (page/identify/screen/track) returns `OptimizationData`
+`{ profile, selectedOptimizations, changes }` — this response is the origin of the profile, the
+selected optimizations, and the computed flag `changes` the rest of the SDK consumes. `OptimizationData`
+mirrors the wire `ExperienceData` but renames its `experiences` field to `selectedOptimizations`. A
+stateful SDK applies the payload to its personalization signals (`profile`, `selectedOptimizations`,
+`changes`) in one batch, transitioning the Experience-request state to `success` atomically with the
+selections so consumers never see `!pending` while optimization is still unavailable; a stateless SDK
+returns the same payload per request instead of holding it.
+source: api-schemas#experience/ExperienceResponse.ts#OptimizationData; api-schemas#experience/ExperienceResponse.ts#ExperienceData; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals

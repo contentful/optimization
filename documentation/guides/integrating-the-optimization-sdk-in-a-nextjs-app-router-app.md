@@ -4,16 +4,18 @@ Use this guide to add Contentful personalization to a Next.js App Router site yo
 the end of the quick start, one piece of content will be personalized per visitor in the
 server-rendered HTML — no flash of default content, no rewrite of how your app fetches or renders.
 
-**New to personalization?** Here is the whole idea in four sentences:
+**New to personalization?** Here is the whole idea in four points:
 
 - In Contentful you author **variants** of an entry and attach them to an **experience** — a rule
   that decides which visitors see which variant.
 - When a page is requested, Contentful's **Experience API** looks at the current visitor and picks
   the variant for each experience. Swapping a fetched entry for its picked variant is called
   **resolving** the entry.
-- Your app already fetches Contentful entries and turns them into components. The SDK's only job is
-  to sit at that hand-off and give you the resolved variant instead of the original — or the
-  original entry when no variant applies, which is the **baseline fallback**.
+- Your app already fetches Contentful entries and turns them into components, and the SDK sits at
+  that hand-off: it gives you the resolved variant instead of the original — or the original entry
+  when no variant applies, the **baseline fallback**. You can fetch the entry yourself and hand it
+  to the SDK, or give the SDK your Contentful client and let it fetch by ID — either way the client
+  stays yours.
 - You render whatever the SDK hands back exactly as you render entries today.
 
 That is enough to start. You do not need to understand audiences, traffic allocation, or events yet;
