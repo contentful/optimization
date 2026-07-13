@@ -51,8 +51,10 @@ Merge tags are a separate, profile-backed mechanism rather than entry replacemen
 value accepted by `isMergeTagEntry` to `getMergeTagValue`; the resolver reads the merge-tag selector
 from `fields.nt_mergetag_id`, looks it up in the supplied/current profile, and falls back to
 `fields.nt_fallback`. In a Contentful Rich Text renderer, the application owns extracting the
-embedded entry target before applying the guard.
-source: api-schemas#contentful/typeGuards.ts#isMergeTagEntry; api-schemas#contentful/MergeTagEntry.ts#MergeTagEntryFields; core-sdk#resolvers/MergeTagValueResolver.ts#resolve; react-web-sdk#optimized-entry/optimizedEntryUtils.ts#OptimizedEntryRenderContext
+embedded entry target before applying the guard. Import `documentToReactComponents` from
+`@contentful/rich-text-react-renderer`; import `INLINES` and Rich Text document types from
+`@contentful/rich-text-types`.
+source: api-schemas#contentful/typeGuards.ts#isMergeTagEntry; api-schemas#contentful/MergeTagEntry.ts#MergeTagEntryFields; core-sdk#resolvers/MergeTagValueResolver.ts#resolve; react-web-sdk#optimized-entry/optimizedEntryUtils.ts#OptimizedEntryRenderContext; impl:nextjs-sdk_app-router#components/EntryCardContent.tsx
 
 Resolution itself does NOT read consent. The resolver takes only `(entry, selectedOptimizations)` and
 returns variant-or-baseline purely from whether a selection matches; consent gates event _emission_
@@ -64,9 +66,10 @@ source: core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext; core-sd
 
 ## Baseline fallback
 
-On denied consent, no matching variant, unresolved links, or an all-locale payload, the render prop
-receives the baseline (original) entry and the UI does not break. This is why an integration renders
-correctly even before any variant is authored.
+When no matching selection exists, links are unresolved, or the payload is all-locale, the render
+prop receives the baseline (original) entry and the UI does not break. Denied or undecided event
+consent is one reason no accepted response may have populated selections; it is not an input to the
+resolver itself. This is why an integration renders correctly even before any variant is authored.
 source: react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry
 
 ## Consent & persistence

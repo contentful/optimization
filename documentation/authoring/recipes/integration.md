@@ -56,9 +56,39 @@ against`.
   parts: state the mechanism, identify its owner, state the failure consequence or tradeoff, show
   the smallest realistic example, and give a performable verification. These parts may share prose,
   a table, or code; they do not require five repeated paragraphs.
+- Before drafting, build the coverage ledger from the blueprint-owned Evidence ID in each Section
+  map row. Append `.1`, `.2`, and so on to that ID for the semicolon-delimited clauses in its
+  Required evidence cell, in written order; an explicit `MUST` inside a clause remains part of that
+  atom. Before finishing, map every atom to a concrete heading plus code block, table, verification,
+  or prose location in the draft. A prose mention cannot satisfy an atom that asks for code, a diff,
+  a table, or a performable verification. If any atom is unsatisfied, the guide is incomplete;
+  report its canonical ID instead of silently compressing or omitting it. Do not invent or renumber
+  IDs, and do not claim a total without returning the location map to the reviewer. The ledger is an
+  authoring and review receipt; it is not rendered into the public guide.
 - Preserve `<!-- mtoc-start -->` / `<!-- mtoc-end -->`. The TOC omits `## Quick start`, includes all
   `##` headings and the `###` feature headings under Core/Optional/Advanced, and every anchor
   resolves to a real heading.
+
+### Acceptance gate
+
+The writer's own coverage receipt is evidence, not acceptance. A new or substantially regenerated
+guide must then pass both independent roles in order:
+
+1. A newcomer reviewer reads the guide as its target developer and checks that every procedure can
+   actually be followed and verified without unstated domain knowledge.
+2. A technical-foundation reviewer verifies load-bearing interfaces against SDK types and
+   behavioral claims against the knowledge base.
+
+For interface evidence, use declarations and exported types in `packages/**/src`, as the technical
+review role requires. Do not treat generated `dist/**/*.d.ts` as authoring input: generated output
+can lag the source worktree and can therefore contradict the current public interface. A sealed
+authoring fixture must either expose the relevant source type declarations or generate a fresh
+interface-only pack from them.
+
+The writer revises blocker and high-severity findings before the guide is accepted. If the blueprint
+already required the omitted evidence, fix the guide or the reviewer enforcement; do not duplicate
+the requirement in more prescriptive prose. Expand a blueprint or knowledge fact only when the
+review demonstrates a real ambiguity or missing fact.
 
 ## Template
 
@@ -177,6 +207,9 @@ understand them before acting.
 - **Ground it in a real app shape, not a test harness.** Do not invent fetch shapes such as a
   hardcoded array of entry IDs. Model the reader's most common real shape and show changes as diffs
   against their existing files. Point readers with other shapes to the feature section.
+- When the reader shape already fetches Contentful, preserve and adapt that client/query. Do not
+  replace it with a hand-written raw CDA request plus a type assertion: that does not demonstrate
+  the app's existing link-resolution boundary and can make an unresolved payload look typed.
 - **Never hand over a full file the reader would paste over their own.** For layouts, providers,
   renderers, and the runtime root (`App.tsx`), show a `+`/`-` diff so the additions are unambiguous,
   keep the reader's existing lines visible around them, and add a one-line note that the surrounding
@@ -252,8 +285,10 @@ authored-variant bullet is the slot-free `authored-variant-gotcha` fragment — 
   the reader needs (`resolved as YourType`) and say why. Verify against the SDK source
   (`packages/**/src`), not just the reference implementation. Recommend the plain direct cast as the
   default; mention `as unknown as YourType` only as a rare escape for genuinely disjoint types.
-- State the fallback contract explicitly: on denied consent / no variant / unresolved links /
-  all-locale payloads, the render prop receives the baseline entry and the UI does not break.
+- State the fallback contract explicitly: when no selection exists (including when event policy
+  produced none) / no variant matches / links are unresolved / the payload is all-locale, the render
+  prop receives the baseline entry and the UI does not break. Never say consent is an input to the
+  resolver.
 - Define `render prop` in prose at first use — React-pattern vocabulary is not assumed for the target
   reader — tied back to the `{(entry) => ...}` form the reader already copied.
 
@@ -266,6 +301,10 @@ authored-variant bullet is the slot-free `authored-variant-gotcha` fragment — 
 - `**Adapt this to your use case:**` — realistic app-shaped code needing structural change or
   placement; name what is the reader's vs the pattern to copy; prefer a `+`/`-` diff of the reader's
   likely code.
+- A `+`/`-` example uses a fenced `diff` block. Never place literal diff markers inside a `ts` or
+  `tsx` fence, where they look like invalid source. Keep enough unchanged context to locate the edit,
+  and preserve representative existing providers, chrome, render dispatch, and fallbacks rather
+  than replacing them with invented app structure.
 - `**Follow this pattern:**` — illustrative shape, not drop-in runnable.
 - `**Reference excerpt:**` — shortened/copied reference-implementation code.
 - Before keeping any example, perform a local consistency pass: no prop/helper is redeclared or

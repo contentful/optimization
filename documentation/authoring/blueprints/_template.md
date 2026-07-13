@@ -47,13 +47,14 @@ types, KB, or guide.
 
 ## Section map
 
-Use the recipe's exact category values. Every row becomes one `###` section in this order. “Required
-evidence” names the explanation, example, decision table, or warning the section must contain; it
-does not state the SDK behavior itself.
+Use the recipe's exact category values. Every row becomes one `###` section in this order. Assign a
+short, unique, stable Evidence ID; the recipe uses it to make the writer's coverage receipt
+auditable. “Required evidence” names the explanation, example, decision table, or warning the
+section must contain; it does not state the SDK behavior itself.
 
-| Section | Category | Purpose | Required evidence | Fact sources |
-| ------- | -------- | ------- | ----------------- | ------------ |
-| ...     | ...      | ...     | ...               | ...          |
+| Evidence ID | Section | Category | Purpose | Required evidence | Fact sources |
+| ----------- | ------- | -------- | ------- | ----------------- | ------------ |
+| `SDK-TOPIC` | ...     | ...      | ...     | ...               | ...          |
 
 ## SDK-specific authoring overrides
 

@@ -173,7 +173,8 @@ None (imperative class + Web Components; no React surface). Web Components eleme
 
 ## Failure & fallback behavior
 
-- Baseline fallback on denied consent / no variant / unresolved links / all-locale payloads: see
+- Baseline fallback when event policy produced no selections / no variant / unresolved links /
+  all-locale payloads: see
   [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback). Concrete fallback returns in
   the resolver.
   source: core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext

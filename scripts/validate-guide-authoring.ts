@@ -16,6 +16,7 @@ const sectionMapColumns = [
   'Required evidence',
   'Fact sources',
 ] as const
+const sectionMapColumnsWithEvidenceId = ['Evidence ID', ...sectionMapColumns] as const
 const categories = new Set([
   'Required for first integration',
   'Common but policy-dependent',
@@ -32,6 +33,7 @@ interface Problem {
 }
 
 interface SectionRow {
+  evidenceId?: string
   title: string
   category: string
   line: number
@@ -156,7 +158,10 @@ function sectionMapHeader(
   const { lines: tableLines } = table
   const headerOffset = tableLines.findIndex((line) => {
     const cells = parseTableRow(line)
-    return cells?.join('\0') === sectionMapColumns.join('\0')
+    return (
+      cells?.join('\0') === sectionMapColumns.join('\0') ||
+      cells?.join('\0') === sectionMapColumnsWithEvidenceId.join('\0')
+    )
   })
   if (headerOffset === -1) {
     addProblem(file, table.firstLine, 'Section map table has the wrong columns')
@@ -188,20 +193,29 @@ function validateSectionMapFacts(file: string, line: number, facts: string): voi
   }
 }
 
+function validateEvidenceId(file: string, line: number, evidenceId: string | undefined): void {
+  if (evidenceId !== undefined && !/^`[A-Z][A-Z0-9-]*`$/u.test(evidenceId)) {
+    addProblem(file, line, `invalid Evidence ID: ${evidenceId}`)
+  }
+}
+
 function sectionMapRow(file: string, line: number, cells: string[]): SectionRow | undefined {
-  if (cells.length !== sectionMapColumns.length) {
+  const hasEvidenceId = cells.length === sectionMapColumnsWithEvidenceId.length
+  if (!hasEvidenceId && cells.length !== sectionMapColumns.length) {
     addProblem(
       file,
       line,
-      `Section map row has ${cells.length} cells; expected ${sectionMapColumns.length}`,
+      `Section map row has ${cells.length} cells; expected ${sectionMapColumns.length} or ${sectionMapColumnsWithEvidenceId.length}`,
     )
     return undefined
   }
-  const [title = '', category = '', purpose = '', evidence = '', facts = ''] = cells
+  const [evidenceId, title = '', category = '', purpose = '', evidence = '', facts = ''] =
+    hasEvidenceId ? cells : [undefined, ...cells]
   validateSectionMapContent(file, line, [title, purpose, evidence, facts])
+  validateEvidenceId(file, line, evidenceId)
   validateSectionMapCategory(file, line, category)
   validateSectionMapFacts(file, line, facts)
-  return { title, category, line }
+  return { evidenceId, title, category, line }
 }
 
 function sectionRows(file: string, lines: string[]): SectionRow[] {
@@ -213,7 +227,7 @@ function sectionRows(file: string, lines: string[]): SectionRow[] {
   if (headerOffset === undefined) {
     return []
   }
-  return table.lines
+  const rows = table.lines
     .slice(headerOffset + tableHeaderRowCount)
     .map((tableLine, index) => {
       const cells = parseTableRow(tableLine)
@@ -221,6 +235,11 @@ function sectionRows(file: string, lines: string[]): SectionRow[] {
       return cells === undefined ? undefined : sectionMapRow(file, line, cells)
     })
     .filter((row): row is SectionRow => row !== undefined)
+  const evidenceIds = rows.flatMap((row) => (row.evidenceId === undefined ? [] : [row.evidenceId]))
+  if (new Set(evidenceIds).size !== evidenceIds.length) {
+    addProblem(file, table.firstLine, 'Section map Evidence IDs must be unique')
+  }
+  return rows
 }
 
 function guideRows(file: string): SectionRow[] {
@@ -246,6 +265,24 @@ function guideRows(file: string): SectionRow[] {
     })
   })
   return rows
+}
+
+function validateGuideAcceptanceArtifacts(file: string, lines: string[]): void {
+  lines.forEach((line, index) => {
+    if (/\bESCALATE\b/u.test(line)) {
+      addProblem(file, index + 1, 'public guide contains an unresolved ESCALATE marker')
+    }
+  })
+  const receiptHeading = headingsOf(lines).find(
+    (heading) => heading.text.toLowerCase() === 'coverage receipt',
+  )
+  if (receiptHeading !== undefined) {
+    addProblem(
+      file,
+      receiptHeading.line,
+      'coverage receipts are review artifacts and must not be rendered into the public guide',
+    )
+  }
 }
 
 function compareRows(blueprint: string, guide: string, expected: SectionRow[]): void {
@@ -312,7 +349,9 @@ for (const name of blueprintFiles) {
     if (!existsSync(guide)) {
       addProblem(file, 1, `guide target does not exist: ${guideTarget}`)
     } else {
-      validateLinks(guide, readFileSync(guide, 'utf8').split(/\r?\n/u))
+      const guideLines = readFileSync(guide, 'utf8').split(/\r?\n/u)
+      validateLinks(guide, guideLines)
+      validateGuideAcceptanceArtifacts(guide, guideLines)
       compareRows(file, guide, rows)
     }
   }

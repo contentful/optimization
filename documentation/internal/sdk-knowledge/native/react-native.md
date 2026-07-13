@@ -290,8 +290,8 @@ run:android`) — Expo Go cannot load the native preview modules.
 
 ## Failure & fallback behavior
 
-- Baseline fallback on denied consent / no matching variant / unresolved links / all-locale
-  payloads: the render prop receives the baseline entry and the UI does not break. See
+- Baseline fallback when event policy produced no selections / no matching variant / unresolved
+  links / all-locale payloads: the render prop receives the baseline entry and the UI does not break. See
   [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback).
   source: react-native-sdk#hooks/useOptimizedEntry.ts#useOptimizedEntry; concept:entry-personalization-and-variant-resolution
 - Managed-fetch failure: when `entryId` is used and `fetchContentfulEntry` rejects, the source
