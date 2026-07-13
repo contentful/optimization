@@ -7,27 +7,27 @@ filename: integrating-*.md
 
 Write for **an average developer with little or no personalization background**, opening the guide
 cold and wanting a working result fast. This recipe is **SDK-neutral**: it is the shape every
-integration guide shares — the fixed section spine, heading order, category values, fragment
+integration guide shares — the fixed section spine, heading order, category values, shared-copy
 placement, and archetype-wide completeness rules. The `guide-writer` renders the **Template** below;
 it never emits this Context.
 
 Three artifacts own three different things — keep them separate:
 
 - **This recipe owns the archetype shape and craft** (SDK-neutral) — the fixed section spine and
-  heading order, the four integration-category values, which fragments compose where, and the
+  heading order, the four integration-category values, where shared copy appears, and the
   transferable rules for writing a quick start, showing diffs, labeling examples, and keeping verify
   performable. Rules here hold for _every_ integration guide.
 - **The SDK's blueprint owns the per-SDK editorial contract** —
   `documentation/authoring/blueprints/<sdk>.md` decides the quick-start proof, milestones, exact
-  section inventory/order/category, and the evidence each section must show. Its Purpose cells keep
+  section inventory/order/category, and what each section must teach or show. Its Purpose cells keep
   the editorial reasoning; its Fact sources link behavior back to the KB.
 - **The knowledge base owns the facts** — which behaviors exist, what a call does on the edges,
   identifier ownership. You do not restate SDK facts here. Facts flow from the KB into the guide at
   compose time; the blueprint makes the required coverage explicit, and the source verifier checks
   the claims the guide makes.
 
-Fragments are small pieces of reader-facing wording shared verbatim. Any variation switch is explicit
-in the blueprint; fragments must not infer an SDK family or restate behavior.
+Shared-copy files contain small pieces of reader-facing wording reused verbatim. Any variation choice
+is explicit in the blueprint; shared copy must not infer an SDK family or restate behavior.
 
 Voice: plain and direct, warm but not chatty. No hype or filler that reads oddly in a reference doc
 ("this is the payoff", "the magic happens here", "boom", gratuitous "just"). Describe the current SDK
@@ -51,44 +51,9 @@ against`.
   under `## Advanced integrations`.
 - Every fenced code block gets exactly one bold intent label immediately before it, from the set in
   the Example labels section below.
-- A blueprint evidence item is an **evidence atom**, not a keyword-presence check. Unless the
-  blueprint explicitly marks an item as a compact inventory, the section must connect all five
-  parts: state the mechanism, identify its owner, state the failure consequence or tradeoff, show
-  the smallest realistic example, and give a performable verification. These parts may share prose,
-  a table, or code; they do not require five repeated paragraphs.
-- Before drafting, build the coverage ledger from the blueprint-owned Evidence ID in each Section
-  map row. Append `.1`, `.2`, and so on to that ID for the semicolon-delimited clauses in its
-  Required evidence cell, in written order; an explicit `MUST` inside a clause remains part of that
-  atom. Before finishing, map every atom to a concrete heading plus code block, table, verification,
-  or prose location in the draft. A prose mention cannot satisfy an atom that asks for code, a diff,
-  a table, or a performable verification. If any atom is unsatisfied, the guide is incomplete;
-  report its canonical ID instead of silently compressing or omitting it. Do not invent or renumber
-  IDs, and do not claim a total without returning the location map to the reviewer. The ledger is an
-  authoring and review receipt; it is not rendered into the public guide.
 - Preserve `<!-- mtoc-start -->` / `<!-- mtoc-end -->`. The TOC omits `## Quick start`, includes all
   `##` headings and the `###` feature headings under Core/Optional/Advanced, and every anchor
   resolves to a real heading.
-
-### Acceptance gate
-
-The writer's own coverage receipt is evidence, not acceptance. A new or substantially regenerated
-guide must then pass both independent roles in order:
-
-1. A newcomer reviewer reads the guide as its target developer and checks that every procedure can
-   actually be followed and verified without unstated domain knowledge.
-2. A technical-foundation reviewer verifies load-bearing interfaces against SDK types and
-   behavioral claims against the knowledge base.
-
-For interface evidence, use declarations and exported types in `packages/**/src`, as the technical
-review role requires. Do not treat generated `dist/**/*.d.ts` as authoring input: generated output
-can lag the source worktree and can therefore contradict the current public interface. A sealed
-authoring fixture must either expose the relevant source type declarations or generate a fresh
-interface-only pack from them.
-
-The writer revises blocker and high-severity findings before the guide is accepted. If the blueprint
-already required the omitted evidence, fix the guide or the reviewer enforcement; do not duplicate
-the requirement in more prescriptive prose. Expand a blueprint or knowledge fact only when the
-review demonstrates a real ambiguity or missing fact.
 
 ## Template
 
@@ -192,7 +157,7 @@ Expanded guidance for the Template above. These are the rules a review (human or
 
 ### Intro
 
-The intro's teaching content is the `personalization-explainer` fragment. Apply only the two switches
+The intro's teaching content is the shared `personalization-explainer` copy. Apply only the two switches
 recorded in the blueprint, then add the runtime-specific persistence/ownership sentence from the KB.
 After it, frame the two milestones from the blueprint and name the package and what the app still
 owns. Do not front-load concept or reference links before the quick start unless the reader must
@@ -250,23 +215,13 @@ understand them before acting.
   defer a constraint that can make the first verification silently return baseline. Put it before
   the Verify step and name any common incompatible fetch mode the blueprint identifies.
 
-### Feature-section evidence
+### Feature sections
 
-Treat every blueprint row as a teaching contract, not a list of nouns to mention. For each evidence
-atom:
-
-1. **Mechanism:** say what the SDK or application actually does.
-2. **Owner:** distinguish SDK-owned names/state/lifecycle from reader-owned policy, data, and code.
-3. **Consequence:** name the failure symptom, boundary, or tradeoff that makes the fact useful.
-4. **Example:** show the smallest realistic code, diff, table row, or concrete shape needed to act.
-5. **Verification:** tell the reader what observable result distinguishes success from a silent
-   fallback or superficially working setup.
-
-The blueprint can narrow an atom, combine several atoms into one example, or explicitly request a
-compact inventory that does not need all five parts. Do not inflate obvious API lists merely to fill
-the pattern. Conversely, a section does not satisfy an atom by naming its mechanism without its
-reader consequence. Prefer one developed canonical path plus concise alternatives over several
-equally shallow examples.
+Treat every blueprint row as a teaching goal, not a list of nouns to mention. Explain the mechanism,
+ownership, and consequence the reader needs. Include a realistic example when the reader must change
+code, and a performable check when failure could otherwise look successful. Not every section needs
+all of these; the blueprint names what matters for that reader goal. Prefer one developed canonical
+path plus concise alternatives over several shallow examples.
 
 ### Before you start
 
@@ -275,22 +230,7 @@ the guide (runtime prerequisites, credentials, authored Contentful data, Optimiz
 values). If a sequenced section teaches it, it does not go here. Anti-patterns: a multi-column setup
 table; rows that restate quick-start steps; rows that only say "there is a section below";
 `Category` / `Required for quick start` columns; listing values the quick start never uses. The
-authored-variant bullet is the slot-free `authored-variant-gotcha` fragment — mandatory.
-
-### Rendering / entry-wrap (the recurring credibility trap)
-
-- The entry wrapper goes wherever an entry becomes a component. Use app-neutral wording — do not
-  assume a specific file or symbol name (e.g. "SectionRenderer") that varies between apps.
-- If the render prop returns a type wider than the app's schema type, the snippet must show the cast
-  the reader needs (`resolved as YourType`) and say why. Verify against the SDK source
-  (`packages/**/src`), not just the reference implementation. Recommend the plain direct cast as the
-  default; mention `as unknown as YourType` only as a rare escape for genuinely disjoint types.
-- State the fallback contract explicitly: when no selection exists (including when event policy
-  produced none) / no variant matches / links are unresolved / the payload is all-locale, the render
-  prop receives the baseline entry and the UI does not break. Never say consent is an input to the
-  resolver.
-- Define `render prop` in prose at first use — React-pattern vocabulary is not assumed for the target
-  reader — tied back to the `{(entry) => ...}` form the reader already copied.
+authored-variant bullet is the slot-free shared `authored-variant-gotcha` copy — mandatory.
 
 ### Example labels
 
@@ -327,7 +267,7 @@ case` when script names vary. Repository-maintainer commands belong only in a cl
 `Reference excerpt` with the repository context stated; never present them as copyable app commands.
 
 Resolve every reader-facing link relative to the rendered guide under `documentation/guides/`, not
-relative to the recipe, blueprint, fragment, or KB file where the link was discovered. Never copy a
+relative to the recipe, blueprint, shared-copy file, or KB file where the link was discovered. Never copy a
 blueprint-relative implementation or fact-source URL verbatim into the guide.
 
 ### Shared-concern coverage
@@ -336,5 +276,5 @@ Each shared concern is either covered by the guide or explicitly marked not-appl
 install/init/config; consent & privacy handoff; the fetch/SDK boundary; entry resolution + fallback;
 page/route/screen events; interaction tracking; identity/profile/reset; routing/lifecycle/request
 context; real-time updates/preview/analytics/caching; verification. The blueprint's Section map
-records where applicable concerns land and what evidence each section must include. The writer checks
+records where applicable concerns land and what each section must teach or show. The writer checks
 the complete map; the source verifier checks claims that were made, not omissions it cannot infer.

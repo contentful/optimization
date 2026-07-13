@@ -29,7 +29,7 @@ guide: ../../guides/integrating-the-web-sdk-in-a-web-app.md
 
 ## Section map
 
-| Section                                               | Category                       | Purpose                                                     | Required evidence                                                            | Fact sources                                                                  |
+| Section                                               | Category                       | Purpose                                                     | Must teach or show                                                           | Fact sources                                                                  |
 | ----------------------------------------------------- | ------------------------------ | ----------------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | How the SDK fits your app                             | Required for first integration | Establish the single stateful browser instance.             | Complete reusable singleton; config ownership; duplicate-instance warning.   | [setup](../../internal/sdk-knowledge/web/web.md#setup--factory)               |
 | The SDK lifecycle: create, emit, resolve              | Required for first integration | Teach the ordering that prevents silent baseline output.    | Lifecycle diagram or ordered example; accepted-event checkpoint.             | [runtime](../../internal/sdk-knowledge/web/web.md#version--runtime-quirks)    |

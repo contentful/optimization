@@ -10,10 +10,10 @@ guide: ../../guides/<guide>.md
 <!--
 Copy this file to blueprints/<sdk>.md. Keep the frontmatter keys and level-2 headings in this order.
 
-A blueprint is a compact per-SDK editorial contract. It records decisions that cannot be recovered
-from an SDK fact alone: the first proof, milestone boundary, section inventory and order, category,
-reader purpose, and the evidence a section must show. It must link those decisions to the knowledge
-base rather than restating behavior.
+A blueprint is a compact, human-editable brief for one SDK guide. It records decisions that cannot be
+recovered from an SDK fact alone: the reader's first proof, milestone boundary, section inventory and
+order, category, purpose, and what each section must teach or show. It links those decisions to the
+knowledge base rather than restating behavior.
 
 Ownership test:
 
@@ -47,14 +47,13 @@ types, KB, or guide.
 
 ## Section map
 
-Use the recipe's exact category values. Every row becomes one `###` section in this order. Assign a
-short, unique, stable Evidence ID; the recipe uses it to make the writer's coverage receipt
-auditable. “Required evidence” names the explanation, example, decision table, or warning the
-section must contain; it does not state the SDK behavior itself.
+Use the recipe's exact category values. Every row becomes one `###` section in this order. “Must
+teach or show” describes the explanation, example, decision table, or warning the reader needs; it
+does not state the SDK behavior itself.
 
-| Evidence ID | Section | Category | Purpose | Required evidence | Fact sources |
-| ----------- | ------- | -------- | ------- | ----------------- | ------------ |
-| `SDK-TOPIC` | ...     | ...      | ...     | ...               | ...          |
+| Section | Category | Purpose | Must teach or show | Fact sources |
+| ------- | -------- | ------- | ------------------ | ------------ |
+| ...     | ...      | ...     | ...                | ...          |
 
 ## SDK-specific authoring overrides
 

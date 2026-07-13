@@ -13,7 +13,7 @@ When you create, rewrite, or review any guide here — integration guides (`inte
   sibling guide.
 - **Per-SDK editorial contract** — the SDK blueprint under
   [`../authoring/blueprints/`](../authoring/blueprints/). It owns the quick-start proof, milestone
-  boundary, exact feature-section order/category, and the required evidence each section must show.
+  boundary, exact feature-section order/category, and what each section must teach or show.
   Follow its KB links for behavior; do not treat the blueprint itself as an SDK fact source.
 - **Voice and workflow** — the **`optimization-guide-authoring`** skill: the teach-first
   quick-start-then-deepen approach, the copy-vs-adapt honesty principle, the directory README rules,

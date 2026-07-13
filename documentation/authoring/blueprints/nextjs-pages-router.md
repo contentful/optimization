@@ -32,7 +32,7 @@ guide: ../../guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-ap
 
 ## Section map
 
-| Section                                                     | Category                       | Purpose                                                                  | Required evidence                                                                      | Fact sources                                                                                                                                                                         |
+| Section                                                     | Category                       | Purpose                                                                  | Must teach or show                                                                     | Fact sources                                                                                                                                                                         |
 | ----------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | How the SDK fits your app                                   | Required for first integration | Establish the explicit browser/server module split.                      | Import-path table; two factory modules; bridge from quick start.                       | [package and setup](../../internal/sdk-knowledge/web/nextjs-pages-router.md#package--entry-points)                                                                                   |
 | Fetching Contentful entries                                 | Required for first integration | Establish manual and managed server entry sources.                       | Both paths; locale/include rules; client ownership.                                    | [rendering](../../internal/sdk-knowledge/web/nextjs-pages-router.md#render--entry-resolution)                                                                                        |
@@ -54,7 +54,7 @@ guide: ../../guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-ap
 
 - State plainly that Pages Router server work happens in `getServerSideProps`, not middleware or a
   proxy. Facts: [runtime](../../internal/sdk-knowledge/web/nextjs-pages-router.md#version--runtime-quirks).
-- Treat the props merge and Experience API failure path as required evidence, not incidental notes.
+- Treat the props merge and Experience API failure path as teaching requirements, not incidental notes.
   Facts: [setup](../../internal/sdk-knowledge/web/nextjs-pages-router.md#setup--factory).
 
 ## Troubleshooting scope

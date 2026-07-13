@@ -336,14 +336,14 @@ instead of being re-derived by hand:
 1. **Knowledge base** (`documentation/internal/sdk-knowledge/`, internal, not published) — verified
    SDK _behavioral_ facts, each carrying a machine-checked `source:` pointer into `packages/**/src`.
    Interface (signatures, prop shapes) is read directly from the types, not stored here.
-2. **Recipes and fragments** (`documentation/authoring/recipes`, `.../fragments`, writer-owned, not
-   published) — the SDK-neutral editorial structure: one recipe per guide archetype and small pieces
-   of wording that must remain identical across guides. This is where a technical writer shapes an
-   archetype's structure, wording, and tone.
+2. **Recipes and shared copy** (`documentation/authoring/recipes`, `.../fragments`, writer-owned, not
+   published) — the SDK-neutral editorial structure: one recipe per guide archetype and the small
+   pieces of wording that must remain identical across guides. This is where a technical writer
+   shapes an archetype's structure, wording, and tone.
 3. **Blueprints** (`documentation/authoring/blueprints/`, writer-owned, not published) — one per SDK:
-   a compact editorial contract for the quick-start proof, milestone boundary, ordered sections,
-   categories, and required evidence. It links to KB facts without duplicating their behavior or
-   storing reader-facing prose.
+   a compact, human-editable brief for the reader goal, quick-start proof, milestone boundary,
+   ordered sections, and what each section must teach or show. It links to KB facts without
+   duplicating their behavior or storing reader-facing prose.
 4. **Guides** (`documentation/guides/`, published) — reader-facing prose, composed from the KB facts,
    the archetype recipe, and the SDK's blueprint.
 

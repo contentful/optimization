@@ -31,7 +31,7 @@ reads source. It returns when `pnpm knowledge:check` passes for the new file.
 ## 2. Author the guide blueprint (the editorial contract)
 
 Before composing prose, create the SDK blueprint from `blueprints/_template.md`. It records the
-quick-start and milestone contracts, the exact Section map, the reader purpose and Required evidence
+quick-start and milestone contracts, the exact Section map, the reader purpose and “Must teach or show”
 for each section, rare SDK-specific teaching overrides, troubleshooting scope, and link roles. Its
 Fact sources point to behavior; the blueprint never restates behavior or detailed interface shape.
 
@@ -45,8 +45,8 @@ Fact sources point to behavior; the blueprint never restates behavior or detaile
 ## 3. Compose or reconcile the guide from the blueprint + knowledge base (guide-writer)
 
 Launch the `guide-writer` agent for the target guide. It takes the `##` spine from the recipe and the
-**section inventory, order, categories, proof, milestones, and required evidence** from the blueprint.
-Matching the headings without satisfying Required evidence is incomplete. It instantiates fragments
+**section inventory, order, categories, proof, milestones, and teaching goals** from the blueprint.
+Matching the headings without satisfying “Must teach or show” is incomplete. It instantiates shared copy
 (the personalization explainer, the authored-variant gotcha) by copying their Template verbatim and
 filling `⟨slots⟩` from the KB. It composes **behavior** from the KB facts created in step 1 (never
 re-tracing behavior from source) and reads **interface** (shapes, signatures, props) directly from
@@ -88,7 +88,7 @@ Do not finish until they hold:
 - The new KB file conforms: matches `_template.md`, has a `feeds-guides` marker, empty sections marked
   `None.`, and `pnpm knowledge:check` passes for it.
 - **The blueprint exists** at `documentation/authoring/blueprints/<sdk>.md` and its section inventory,
-  order, categories, and required evidence match the guide. `pnpm guides:check` passes. The blueprint
+  order, categories, and teaching goals match the guide. `pnpm guides:check` passes. The blueprint
   records editorial judgment and KB links, not duplicated SDK facts or guide prose.
 - **No `ESCALATE` marker remains** in the guide — every escalation was resolved and its marker removed
   (`pnpm knowledge:check` fails on a survivor).
