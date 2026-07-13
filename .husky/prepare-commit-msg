@@ -6,5 +6,9 @@ set -e
 [ -n "$2" ] && exit 0
 [ -r /dev/tty ] || exit 0
 
+if [ -s "$1" ] && grep -vq '^#' "$1"; then
+  exit 0
+fi
+
 exec </dev/tty
 pnpm exec tsx scripts/prepare-commit-message.ts "$1"

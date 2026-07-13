@@ -27,6 +27,9 @@ jobs:
 
       - run: pnpm install --prefer-offline --frozen-lockfile
 
+      - name: Release self-check
+        run: pnpm release:self-check
+
       - name: Lint pull request title
         if: github.event_name == 'pull_request'
         env:

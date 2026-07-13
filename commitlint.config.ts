@@ -30,7 +30,7 @@ const scopeEnum = Object.fromEntries(
   ]),
 )
 
-module.exports = {
+export default {
   extends: ['@commitlint/config-conventional'],
   prompt: {
     questions: {

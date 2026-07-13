@@ -18,11 +18,13 @@
 /.pnpmfile.cjs @phobetron @Lp-Francois @TimBeyer
 
 # Commit workflow and repository hygiene.
-/.czrc @phobetron @Lp-Francois
-/.czvinylrc.yaml @phobetron @Lp-Francois
 /.gitignore @phobetron @Lp-Francois @TimBeyer
 /.lintstagedrc.yaml @phobetron @Lp-Francois @TimBeyer
 /.husky/** @phobetron @Lp-Francois @TimBeyer
+
+# Release automation policy.
+/release-please-config.json @phobetron @Lp-Francois @TimBeyer @fmamud
+/.release-please-manifest.json @phobetron @Lp-Francois @TimBeyer @fmamud
 
 # Documentation generation.
 /typedoc.json @phobetron @Lp-Francois @TimBeyer
