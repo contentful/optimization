@@ -66,16 +66,14 @@ skill and sibling guides.
 
 The frontmatter carries only machine identity (`archetype:` / `fragment:`).
 
-A **blueprint** is entirely agent-facing — the whole file is guidance, like a recipe's `## Context`,
-never rendered into the guide. It is **prose, not a data format**: the consumer is the `guide-writer`
-LLM, whose native interface is natural language (the same reason a YAML-token recipe format was
-rejected when this layer was built), so the value is the _reasoning_ — why a section is Required, why
-the milestone splits where it does — not a `section | category` table. It uses skill-style headed
-sections (`## What proves it works`, `## Milestones`, `## Section order & category, and why`,
-`## Troubleshooting the reader will actually hit`, `## Pinned link targets`) and frontmatter naming
-the SDK, archetype, its KB file, and its target guide. `## Pinned link targets` records the exact
-sibling-guide and reference-implementation filenames the guide links to — a from-scratch compose
-cannot read the sibling guides, and testing showed it otherwise guesses (and misspells) those paths.
+A **blueprint** is entirely agent-facing — the whole file is guidance for the `guide-writer`, never
+rendered into the guide. It is **prose, not a data format**: the consumer is the LLM, whose native
+interface is natural language (the same reason a YAML-token recipe format was rejected when this layer
+was built), so the value is the _reasoning_ — why a section is Required, why the milestone splits
+where it does — not a `section | category` table. Every blueprint copies
+[`blueprints/_template.md`](./blueprints/_template.md), which defines the role, the recipe/blueprint/KB
+split, and the fixed headings **once** — a per-SDK file carries only its own editorial map, never a
+restatement of what a blueprint is. Fill it in for one SDK; do not re-explain the artifact.
 
 ## How composition works
 
@@ -114,6 +112,7 @@ recipes/                  # SDK-neutral archetype shapes
   decision.md             # choosing-the-right-sdk.md and future decision guides
   supplemental-recipe.md  # analytics forwarding and similar
 blueprints/               # per-SDK editorial maps (integration archetype)
+  _template.md            # canonical skeleton + the recipe/blueprint/KB split, stated once
   node.md                 # → integrating-the-node-sdk-in-a-node-app.md
   web.md, react-web.md, nextjs-app-router.md, nextjs-pages-router.md, react-native.md
 fragments/

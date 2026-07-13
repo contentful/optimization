@@ -5,31 +5,8 @@ kb: ../../internal/sdk-knowledge/native/react-native.md
 guide: ../../guides/integrating-the-react-native-sdk-in-a-react-native-app.md
 ---
 
-## Context
-
-This blueprint is the **editorial map** for the React Native integration guide: for this one SDK,
-which of its facts become sections, in what order, under which integration category, what proves the
-quick start, and where the milestone boundary falls — with the reasoning, so a future compose
-re-derives the same guide instead of re-inventing it. The `guide-writer` reads it alongside the
-integration recipe (the archetype's shape) and the knowledge base (the facts). It is agent-facing
-guidance, like a recipe's `## Context` — the writer never emits this file; it emits the guide the map
-describes.
-
-What this file owns, and what it does not:
-
-- **Owns editorial judgment** — the section inventory and order, each section's category, the proof,
-  the milestones, and the troubleshooting reader-symptoms. This is the layer that otherwise lives
-  only inside the finished guide.
-- **Does not own SDK facts** — every symbol, config key, hook, cookie/storage key, and behavior lives
-  in the [knowledge base](../../internal/sdk-knowledge/native/react-native.md) and the shared
-  [`concepts.md`](../../internal/sdk-knowledge/shared/concepts.md); cite them here by name, never
-  restate them. If a fact is missing, that is a KB gap to escalate, not something to record here.
-- **Does not own archetype structure** — the fixed heading spine (`## Quick start` → `## Before you
-start` → `## Core integration` → …), the category value set, the fragments to compose, and the
-  example-label rules belong to [`recipes/integration.md`](../recipes/integration.md). This file only
-  decides how React Native's topics populate that spine.
-
-Read the recipe for the shape and this file for the arrangement; the two compose into the guide.
+> Editorial map for the React Native integration guide — how its knowledge-base facts fill the
+> integration recipe. Conventions and the recipe/blueprint/KB split: [`_template.md`](./_template.md).
 
 ## What proves it works
 
