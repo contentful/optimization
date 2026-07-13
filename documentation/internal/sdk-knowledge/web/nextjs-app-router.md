@@ -39,6 +39,14 @@ source: `nextjs-sdk#package.test.ts`; `nextjs-sdk#app-router-server.tsx#NextjsOp
   `app` (`name`, `version`), plus `liveUpdates?`, `trackEntryInteraction?`, `onStatesReady?`,
   `allowedEventTypes?`. Create bound components once.
   source: `nextjs-sdk#app-router-server.tsx#createNextjsAppRouterOptimization`; `nextjs-sdk#app-router-server.tsx#NextjsOptimizationComponents`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationServerOptions`
+- `api.experienceBaseUrl` and `api.insightsBaseUrl` override the API clients' built-in production
+  endpoints; omit them for the default hosts. `app: { name, version }` is attached to outgoing event
+  context as application attribution metadata.
+  source: `core-sdk#CoreApiConfig.ts#CoreSharedApiConfig`; `api-client#experience/ExperienceApiClient.ts#EXPERIENCE_BASE_URL`; `api-client#insights/InsightsApiClient.ts#INSIGHTS_BASE_URL`; `core-sdk#events/EventBuilder.ts#EventBuilderConfig`; `core-sdk#events/EventBuilder.ts#buildUniversalEventProperties`
+- API clients default an omitted `environment` to `main`; an explicitly configured environment is
+  used as supplied. Guides should still show the value when the reader must make project targeting
+  unambiguous.
+  source: `api-client#ApiClientBase.ts#DEFAULT_ENVIRONMENT`; `api-client#ApiClientBase.ts#ApiClientBase`
 - **`contentful?: ContentfulConfig` (managed fetching):** via the core `contentful` config. Lets the
   bound server `OptimizedEntry` fetch by `entryId` (via
   `sdk.fetchOptimizedEntry(entryId, { query })`) as an alternative to a manual `baselineEntry`. The
@@ -49,6 +57,22 @@ source: `nextjs-sdk#package.test.ts`; `nextjs-sdk#app-router-server.tsx#NextjsOp
   `sdk.prefetchManagedEntries()` and merged with any supplied handoff entries (via
   `resolvePrefetchedManagedEntries`) before passing `prefetchedManagedEntries` to React Web.
   source: `nextjs-sdk#app-router-server.tsx#resolveManagedServerOptimizedEntry`; `nextjs-sdk#app-router-server.tsx#resolvePrefetchedManagedEntries`; `nextjs-sdk#app-router-server.tsx#toClientProviderConfig`; `core-sdk#CoreBase.ts#ContentfulConfig`; `core-sdk#CoreBase.ts#prefetchManagedEntries`; `core-sdk#CoreBase.ts#fetchOptimizedEntry`
+- A bound server `<OptimizedEntry entryId>` fetches and resolves that one server render but does not
+  add its baseline entry to the browser handoff. A browser managed entry is seeded only when a
+  matching `ManagedEntryHandoff` reaches the root through `prefetchedManagedEntries` or is produced
+  from the root's `prefetchManagedEntries` descriptors. Otherwise the browser has no Contentful
+  client in its derived config and cannot infer the server component's managed fetch.
+  source: `nextjs-sdk#app-router-server.tsx#OptimizedEntry`; `nextjs-sdk#app-router-server.tsx#renderBoundProviderTree`; `nextjs-sdk#app-router-server.tsx#resolvePrefetchedManagedEntries`; `nextjs-sdk#app-router-server.tsx#toClientProviderConfig`; `react-web-sdk#provider/OptimizationProvider.tsx#createPrefetchedManagedEntries`
+- Manual `/server` flow: `createNextjsOptimization(config)` creates the long-lived stateless server
+  runtime; `bindNextjsOptimizationRequest(sdk, options)` binds consent, request/page context, locale,
+  and profile continuity to one request; `getNextjsServerOptimizationData()` additionally emits the
+  page event and returns both its `data` for `serverOptimizationState` handoff and the request-bound
+  runtime. `getServerTrackingAttributes(baselineEntry, resolvedData)` maps a manual resolution to
+  the `data-ctfl-*` attributes browser interaction tracking consumes. The application owns request
+  scoping, installing request forwarding, cookie persistence (`persistNextjsAnonymousId`), page
+  payloads, tracking markup, managed-entry handoffs, and passing `data` as
+  `serverOptimizationState` across its custom server/client boundary.
+  source: `nextjs-sdk#server.tsx#createNextjsOptimization`; `nextjs-sdk#server.tsx#bindNextjsOptimizationRequest`; `nextjs-sdk#server.tsx#getNextjsServerOptimizationData`; `nextjs-sdk#server.tsx#persistNextjsAnonymousId`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`; `nextjs-sdk#tracking-attributes.ts#getServerTrackingAttributes`; `react-web-sdk#provider/OptimizationProvider.tsx#ServerOptimizationStateProps`
 
 ## Components & hooks
 
@@ -66,6 +90,15 @@ Note: bound `/app-router` `OptimizedEntry` omits per-entry `liveUpdates`/`loadin
 same import type-checks in Server + Client Components; use `/client` `OptimizedEntry` for per-entry
 control.
 source: `nextjs-sdk#bound-component-types.ts#NextjsBoundOptimizedEntryProps`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntryProps`
+
+The bound `OptimizationRoot` and bound `OptimizationProvider` each create a React Web provider with
+provider-local server state and a managed-entry handoff map. Descendants consume the nearest React
+context: a raw nested client provider masks the outer root's `serverOptimizationState` and
+`prefetchedManagedEntries` unless equivalent props are supplied, and a second config-owned browser
+provider also attempts to create another SDK singleton. A nested bound server provider rereads the
+request state, but it still does not inherit or merge the outer managed-entry handoff map. Normally,
+keep one bound provider around the participating tree.
+source: `nextjs-sdk#app-router-server.tsx#renderBoundProviderTree`; `react-web-sdk#provider/OptimizationProvider.tsx#createInitialRuntime`; `react-web-sdk#provider/OptimizationProvider.tsx#createPrefetchedManagedEntries`; `react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider`; `react-web-sdk#context/OptimizationContext.tsx#OptimizationContext`; `web-sdk#ContentfulOptimization.ts#ContentfulOptimization`
 
 ## Render / entry resolution
 
@@ -121,6 +154,16 @@ source: `nextjs-sdk#bound-component-types.ts#NextjsBoundOptimizedEntryProps`; `r
   unless a cache key covers the complete personalization context. Raw Contentful baseline-entry
   caching is a separate application policy.
   source: `nextjs-sdk#app-router-server.tsx#OptimizedEntry`; `nextjs-sdk#app-router-server.tsx#resolveManagedServerOptimizedEntry`; `core-sdk#CoreBase.ts#resolveOptimizedEntry`
+- **The bound root provides a snapshot-to-live handoff:** request-handler data becomes
+  `serverOptimizationState`; React Web builds the initial browser render from that snapshot, then
+  hydrates the owned live SDK before switching the context runtime. Children remain mounted through
+  the transition, so the initial browser render uses the same profile, selections, and changes as
+  the server rather than briefly reverting to empty/default state.
+  source: `nextjs-sdk#app-router-server.tsx#toClientProviderConfig`; `react-web-sdk#provider/OptimizationProvider.tsx#createInitialRuntime`; `react-web-sdk#provider/OptimizationProvider.tsx#initializeServerOptimizationState`; `react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider`
+  This state handoff does not carry a Contentful baseline entry and, by itself, cannot guarantee no
+  visual change: stable takeover also requires the server and browser to render the same baseline
+  entry through the same component path (or to supply a matching managed-entry handoff).
+  source: `react-web-sdk#provider/OptimizationProvider.tsx#createInitialRuntime`; `react-web-sdk#provider/OptimizationProvider.tsx#createPrefetchedManagedEntries`; `react-web-sdk#optimized-entry/useOptimizedEntry.ts#useManagedBaselineEntry`
 
 ## Failure & fallback behavior
 

@@ -40,6 +40,20 @@ hands back the resolved entry as a base `contentful` `Entry`; a narrower compone
 cast.
 source: react-web-sdk#optimized-entry/optimizedEntryUtils.ts#RenderProp; concept:entry-personalization-and-variant-resolution
 
+Entry replacement depends on two fixed SDK content-model fields: a baseline entry's
+`fields.nt_experiences` contains its linked Optimization experience entries, and each matching
+experience's `fields.nt_variants` contains the linked replacement entries. These names are
+SDK-owned, not application aliases. If either link is unresolved or absent from the fetched payload,
+the resolver cannot select the authored replacement and returns baseline.
+source: api-schemas#contentful/OptimizedEntry.ts#OptimizedEntryFields; api-schemas#contentful/OptimizationEntry.ts#OptimizationEntryFields; core-sdk#resolvers/OptimizedEntryResolver.ts#getOptimizationEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry
+
+Merge tags are a separate, profile-backed mechanism rather than entry replacement. Pass only a
+value accepted by `isMergeTagEntry` to `getMergeTagValue`; the resolver reads the merge-tag selector
+from `fields.nt_mergetag_id`, looks it up in the supplied/current profile, and falls back to
+`fields.nt_fallback`. In a Contentful Rich Text renderer, the application owns extracting the
+embedded entry target before applying the guard.
+source: api-schemas#contentful/typeGuards.ts#isMergeTagEntry; api-schemas#contentful/MergeTagEntry.ts#MergeTagEntryFields; core-sdk#resolvers/MergeTagValueResolver.ts#resolve; react-web-sdk#optimized-entry/optimizedEntryUtils.ts#OptimizedEntryRenderContext
+
 Resolution itself does NOT read consent. The resolver takes only `(entry, selectedOptimizations)` and
 returns variant-or-baseline purely from whether a selection matches; consent gates event _emission_
 (and therefore whether selections ever populate), never the resolve call. So a resolved entry can be
@@ -98,3 +112,9 @@ stateful SDK applies the payload to its personalization signals (`profile`, `sel
 selections so consumers never see `!pending` while optimization is still unavailable; a stateless SDK
 returns the same payload per request instead of holding it.
 source: api-schemas#experience/ExperienceResponse.ts#OptimizationData; api-schemas#experience/ExperienceResponse.ts#ExperienceData; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals
+
+Event-method acceptance and response data are separate: `EventEmissionResult` is
+`{ accepted: false } | { accepted: true, data?: OptimizationData }`. An accepted queued/offline
+event can therefore have no `data` yet; only a returned `data` value contains the profile,
+selections, and changes described above.
+source: core-sdk#events/EventEmissionResult.ts#EventEmissionResult; core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult

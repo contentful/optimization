@@ -152,6 +152,12 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   `trackClicks`/`trackHovers` + duration props; uses RESOLVED entry id. Manual DOM:
   `sdk.tracking.enableElement('views', el, { data })` / `clearElement`.
   source: web-sdk#entry-tracking/EntryInteractionRuntime.ts#EntryInteractionRuntime; web-sdk#entry-tracking/resolveAutoTrackEntryInteractionOptions.ts#EntryInteractionApi; web-sdk#presentation/OptimizedEntryTrackingAttributes.ts#resolveOptimizedEntryTrackingAttributes
+- Automatic interaction detectors run only while the corresponding event method is allowed by
+  consent/`allowedEventTypes`. Insights delivery also requires a current Optimization profile; when
+  no profile exists, the queue warns and drops the interaction instead of emitting it. Therefore a
+  missing view/click/hover can mean consent policy, a factory/per-entry opt-out, missing tracking
+  attributes, or missing profile continuity.
+  source: web-sdk#entry-tracking/EntryInteractionRuntime.ts#reconcileInteraction; web-sdk#entry-tracking/EntryInteractionRuntime.ts#isInteractionAllowed; core-sdk#queues/InsightsQueue.ts#send
 - Flags: `getFlag(name)` nonreactive read (defaults to current changes signal, emits flag-view
   tracking when consent+profile allow); `states.flag(name)` reactive.
   source: core-sdk#CoreStatefulEventEmitter.ts#getFlag; core-sdk#CoreStatefulEventEmitter.ts#getFlagObservable; core-sdk#CoreStateful.ts#CoreStates
@@ -196,7 +202,11 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   `{ contentful?, entries?, optimization?, nonce? }` — pass a `contentful.js` client as `contentful`,
   `nonce` for a CSP style nonce; `optimization` defaults to `window.contentfulOptimization` (the
   React-Web root's owned instance registers there). Requires `contentful` or pre-fetched `entries`.
-  source: preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanel; preview-panel#attachOptimizationPreviewPanel.ts#AttachOptimizationPreviewPanelArgs
+  When using `useOptimizationContext`, wait for `isLive === true` before passing `sdk`: the initial
+  owned-root value is a read-only snapshot runtime, while the attachment requires the initialized
+  Web SDK and its preview bridge. `entries`, when supplied, is used instead of fetching through
+  `contentful`.
+  source: react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider; preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanel; preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanelToSdk; preview-panel#attachOptimizationPreviewPanel.ts#AttachOptimizationPreviewPanelArgs
 - `locale` prop change updates the SDK's Experience/event locale; the app still refetches Contentful
   and re-emits page events itself.
   source: react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider; core-sdk#CoreStateful.ts#setLocale

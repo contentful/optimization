@@ -185,8 +185,9 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   `attachOptimizationPreviewPanel({ contentful? | entries? | optimization?, nonce? })`;
   `entries: { audiences, experiences }`; defaults to `window.contentfulOptimization` when
   `optimization` omitted. Requires either `contentful` (a `contentful.js` client, used to fetch
-  audience + experience entries) or pre-fetched `entries`; throws if neither is given. Idempotent —
-  re-invoking reuses the in-flight/completed attachment.
+  audience + experience entries) or pre-fetched `entries`; throws if neither is given. When both
+  are supplied, `entries` takes precedence and no Contentful fetch is made. Idempotent — re-invoking
+  reuses the in-flight/completed attachment.
   source: preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanel; preview-panel#attachOptimizationPreviewPanel.ts#AttachOptimizationPreviewPanelArgs; preview-panel#lib/entries.ts#PreviewPanelEntries
 - Validation: `pnpm implementation:run -- web-sdk typecheck`; `pnpm test:e2e:web-sdk`.
   source: impl:web-sdk#package.json

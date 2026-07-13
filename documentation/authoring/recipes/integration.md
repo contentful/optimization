@@ -51,6 +51,11 @@ against`.
   under `## Advanced integrations`.
 - Every fenced code block gets exactly one bold intent label immediately before it, from the set in
   the Example labels section below.
+- A blueprint evidence item is an **evidence atom**, not a keyword-presence check. Unless the
+  blueprint explicitly marks an item as a compact inventory, the section must connect all five
+  parts: state the mechanism, identify its owner, state the failure consequence or tradeoff, show
+  the smallest realistic example, and give a performable verification. These parts may share prose,
+  a table, or code; they do not require five repeated paragraphs.
 - Preserve `<!-- mtoc-start -->` / `<!-- mtoc-end -->`. The TOC omits `## Quick start`, includes all
   `##` headings and the `###` feature headings under Core/Optional/Advanced, and every anchor
   resolves to a real heading.
@@ -182,6 +187,19 @@ understand them before acting.
   wrapper.
 - **Make verify performable.** The last step tells the reader how to cause the result, not just
   "load as a qualifying visitor."
+- A verification may use only an observation mechanism already available to the reader: a named
+  browser tool, visible UI state, server log, or diagnostic snippet defined before the assertion.
+  If a section says to inspect an event, blocked call, profile, or SDK state, it must show the
+  development-only observer (including cleanup) or point back to one already shown. Do not use a
+  gated production integration, such as analytics forwarding, as the only diagnostic for the gate
+  itself.
+- The guide must also mount any diagnostic it defines. A browser observer proves browser events and
+  blocked attempts only; it cannot retroactively prove a completed server event unless the KB
+  explicitly records that bridge. Use a server-observable outcome (for example, selected raw HTML)
+  for the server path and the browser observer to prove that takeover did not emit a duplicate.
+- A state-change proof must define its authored prerequisite and expected before/after result. For
+  identity-based personalization, name the audience trait/value the reader should substitute and
+  show both the state that should change and any locked/control state the verification compares.
 - **Call out version-specific filenames or exports that fail silently.** When a framework resolves a
   handler by filename/export and the current vs previous major differ, name both and state the
   failure mode (a wrong name silently no-ops). Verify names against the framework and SDK source.
@@ -196,7 +214,26 @@ understand them before acting.
   describes a required file without showing runnable or honestly adaptable content for it.
 - When the proof resolves a Contentful entry, state the minimum resolvable fetch shape in the quick
   start: one concrete locale and enough include depth for the linked experience and variants. Do not
-  defer a constraint that can make the first verification silently return baseline.
+  defer a constraint that can make the first verification silently return baseline. Put it before
+  the Verify step and name any common incompatible fetch mode the blueprint identifies.
+
+### Feature-section evidence
+
+Treat every blueprint row as a teaching contract, not a list of nouns to mention. For each evidence
+atom:
+
+1. **Mechanism:** say what the SDK or application actually does.
+2. **Owner:** distinguish SDK-owned names/state/lifecycle from reader-owned policy, data, and code.
+3. **Consequence:** name the failure symptom, boundary, or tradeoff that makes the fact useful.
+4. **Example:** show the smallest realistic code, diff, table row, or concrete shape needed to act.
+5. **Verification:** tell the reader what observable result distinguishes success from a silent
+   fallback or superficially working setup.
+
+The blueprint can narrow an atom, combine several atoms into one example, or explicitly request a
+compact inventory that does not need all five parts. Do not inflate obvious API lists merely to fill
+the pattern. Conversely, a section does not satisfy an atom by naming its mechanism without its
+reader consequence. Prefer one developed canonical path plus concise alternatives over several
+equally shallow examples.
 
 ### Before you start
 
@@ -224,11 +261,20 @@ authored-variant bullet is the slot-free `authored-variant-gotcha` fragment — 
 
 - `**Copy this:**` — pasteable with only simple value substitution; the values must actually work
   against what the guide points to. A path/file the reader must relocate is an adapt, not a copy.
+- Factory/root blocks containing app-owned locale, metadata, consent policy, imports, or placement
+  are normally `**Adapt this to your use case:**`, even when their SDK call shape is canonical.
 - `**Adapt this to your use case:**` — realistic app-shaped code needing structural change or
   placement; name what is the reader's vs the pattern to copy; prefer a `+`/`-` diff of the reader's
   likely code.
 - `**Follow this pattern:**` — illustrative shape, not drop-in runnable.
 - `**Reference excerpt:**` — shortened/copied reference-implementation code.
+- Before keeping any example, perform a local consistency pass: no prop/helper is redeclared or
+  shadowed, callbacks do not accidentally call themselves, every referenced helper is defined or
+  explicitly reader-owned, and the shown imports/return types agree with the body. An adaptable
+  snippet may omit surrounding application code; it may not contain a defect in the pattern being
+  taught.
+- Define or export a reused app helper before the first snippet that imports it. A later definition
+  does not make an earlier sequential step runnable.
 - Comment only meaningful SDK-specific lines (lifecycle placement, consent, event sequencing,
   fallback, duplicate-event prevention). Never narrate obvious syntax.
 
@@ -240,6 +286,10 @@ duplicate-tracking prevention, privacy/governance, and a local validation path.
 Any commands must be available in the reader's application and labeled `Adapt this to your use
 case` when script names vary. Repository-maintainer commands belong only in a clearly labeled
 `Reference excerpt` with the repository context stated; never present them as copyable app commands.
+
+Resolve every reader-facing link relative to the rendered guide under `documentation/guides/`, not
+relative to the recipe, blueprint, fragment, or KB file where the link was discovered. Never copy a
+blueprint-relative implementation or fact-source URL verbatim into the guide.
 
 ### Shared-concern coverage
 
