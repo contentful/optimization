@@ -1,5 +1,5 @@
 ---
-description: Fast prose/structure/sequence iteration on a guide — recompose from the existing knowledge base and recipes, no source read, no fact re-verification
+description: Fast prose/structure/sequence iteration on a guide — recompose from the existing knowledge base, blueprint, and recipes, no source read, no fact re-verification
 argument-hint: '[guide path + the phrasing/tone/sequence change, or a recipe/fragment edit to render]'
 ---
 
@@ -19,7 +19,11 @@ SDK, stop and hand off (see the guardrail) — that is `/refresh-docs` (source c
 ## What counts as in-scope (editorial)
 
 - Rewording for clarity, tone, or voice; tightening or expanding an explanation.
-- Reordering or re-sequencing sections; moving content between sections; changing what leads.
+- Reordering or re-sequencing sections; moving content between sections; changing what leads;
+  reassigning a section's integration category. **A change to the section inventory, order, or
+  category is an edit to the SDK's blueprint** (`documentation/authoring/blueprints/<sdk>.md`), then
+  re-rendered into the guide — the "edit the class, not the instance" move. Do the edit in the
+  blueprint (with its reasoning), not surgically in the guide.
 - Editing a recipe (`documentation/authoring/recipes/`) or fragment
   (`documentation/authoring/fragments/`) and re-rendering the guides that instantiate it.
 - Changing an example-intent label's prose, a heading's wording (with its TOC anchor), or a
@@ -45,22 +49,26 @@ variant or null" asserts a new fact — stop).
 ## Steps
 
 1. **Scope the change.** State the guide(s) affected and whether the edit is to the guide prose
-   directly, or to a recipe/fragment that several guides instantiate (then all instantiating guides
-   are in scope — find them by which archetype/fragment they use). Confirm the change is editorial;
-   if any part trips the guardrail, name it and stop for that part.
+   directly, to the SDK's blueprint (section inventory/order/category — affects that one guide), or to
+   a recipe/fragment that several guides instantiate (then all instantiating guides are in scope —
+   find them by which archetype/fragment they use). Confirm the change is editorial; if any part
+   trips the guardrail, name it and stop for that part.
 
 2. **Recompose the affected prose (guide-writer).** Launch `guide-writer` scoped to the editorial
    change. It composes from the **existing** knowledge base (fills fragment slots and behavioral prose
    from current facts — never re-tracing source, never escalating a fact) and reads interface only if
-   it must confirm a shape it is _rendering_ (not changing). If a recipe/fragment changed, it
-   re-instantiates that fragment verbatim into each affected guide, filling slots from the current KB.
-   It restructures and rewords per the `optimization-guide-authoring` skill and the archetype recipe;
-   it does not alter factual claims.
+   it must confirm a shape it is _rendering_ (not changing). If the blueprint changed, it re-renders
+   the guide's section inventory, order, and categories to match the updated map. If a recipe/fragment
+   changed, it re-instantiates that fragment verbatim into each affected guide, filling slots from the
+   current KB. It restructures and rewords per the `optimization-guide-authoring` skill, the archetype
+   recipe, and the SDK's blueprint; it does not alter factual claims.
 
 3. **Validate cheaply.** `pnpm format:fix <touched guide paths>` (never bare) and confirm the
-   collapsible TOC anchors still resolve. Run `pnpm knowledge:check` **only if** a recipe/fragment or
-   KB-adjacent file was touched (it is fast and confirms nothing drifted); a pure guide-prose edit
-   does not require it. Do NOT run the newcomer/source reviewers here — that is the final pass.
+   collapsible TOC anchors still resolve. If the blueprint changed, confirm the guide's section
+   inventory, order, and categories now match it. Run `pnpm knowledge:check` **only if** a
+   recipe/fragment or KB-adjacent file was touched (it is fast and confirms nothing drifted); a pure
+   guide-prose or blueprint edit does not require it. Do NOT run the newcomer/source reviewers here —
+   that is the final pass.
 
 4. **Report.** The change made, the guides re-rendered, anything the guardrail sent to `/refresh-docs`
    or `/review-guide`, and the validation result. Remind the writer to run **`/review-guide`** as the

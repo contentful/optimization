@@ -11,12 +11,14 @@ here, once. Use this whenever `documentation/internal/sdk-knowledge/<family>/<sd
 For an SDK whose KB file already exists and whose source merely changed, use **`/refresh-docs`**
 instead — it is far cheaper and does not re-comprehend the SDK.
 
-**The guide itself may or may not already exist — handle both (step 2).** A brand-new SDK has no
+**The guide itself may or may not already exist — handle both (steps 2–3).** A brand-new SDK has no
 guide (compose from scratch); a long-standing SDK often has a full guide that simply predates the
-knowledge base (Node and React Native were both like this — 900+ lines each). Either way the KB comes
-first: **knowledge first, guide second**, because the guide is composed from verified facts and the
-facts must exist before the prose. When a guide already exists, step 2 is a reconciliation against the
-now-authoritative KB, not a blank compose — do not expect an empty file.
+knowledge base (Node and React Native were both like this — 900+ lines each). Either way the order is
+**knowledge first, then the editorial map, then the guide prose**: the KB holds the verified facts
+(step 1), the blueprint records how those facts arrange into the archetype for this SDK (step 2), and
+the guide is composed from both (step 3). Facts must exist before the map, and the map before the
+prose. When a guide already exists, step 2 extracts its editorial map into the blueprint and step 3 is
+a reconciliation against the now-authoritative KB — do not expect an empty file.
 
 ## 1. Comprehend source → knowledge base (sdk-knowledge-author)
 
@@ -26,21 +28,44 @@ family dir (making a new sibling like `node/` or `native/` if needed), sets its 
 to the target guide, and fills every section with facts + grammar pointers. This is the one step that
 reads source. It returns when `pnpm knowledge:check` passes for the new file.
 
-## 2. Compose or reconcile the guide from the knowledge base (guide-writer)
+## 2. Author the guide blueprint (the editorial map)
+
+Before composing prose, make sure this SDK has a **blueprint** at
+`documentation/authoring/blueprints/<sdk>.md`. The blueprint is the per-SDK editorial map — the
+ordered feature→section list with each section's integration category and the reasoning, the
+quick-start proof, the milestone split, and the troubleshooting reader-symptoms. It is the layer that
+otherwise lives only inside a finished guide, so a from-scratch bootstrap without it re-invents the
+structure and drifts (a reproduction test measured a documented guide's sections dropping and moving
+categories when this map was absent).
+
+- **No blueprint yet (the common bootstrap case)** — author it now from the KB facts (step 1) and the
+  archetype recipe, making the editorial decisions once and recording the reasoning: what proves the
+  quick start for this SDK's shape, where the milestone boundary falls, which KB topics become which
+  sections in what order, and each section's category and why. It records editorial judgment only —
+  no SDK facts (cite the KB), no archetype structure (that is the recipe). Follow the shape of an
+  existing blueprint (e.g. `blueprints/node.md`).
+- **Guide already exists (predates the KB/blueprint)** — extract the blueprint from the existing
+  guide's structure: read its section inventory, order, and categories and record them (plus the
+  reasoning) as the map. This is the one time reading the existing guide is correct — you are
+  memoizing what it already encodes.
+
+## 3. Compose or reconcile the guide from the blueprint + knowledge base (guide-writer)
 
 Launch the `guide-writer` agent for the target guide. It composes structure from the archetype's
-recipe under `documentation/authoring/recipes/` — the recipe's `## Template` is the section spine and
-it instantiates the fragments the recipe references (the personalization explainer, the
-authored-variant gotcha) by copying their Template verbatim and filling `⟨slots⟩` from the KB. It
-composes **behavior** from the KB facts created in step 1 (never re-tracing behavior from source) and
-reads **interface** (shapes, signatures, props) directly from the types as needed, following the
-`optimization-guide-authoring` skill for voice and workflow — grounded in the matching reference
-implementation under `implementations/` for shape. Two sub-cases:
+recipe under `documentation/authoring/recipes/` — the recipe's `## Template` is the section spine —
+and takes the **section inventory, order, categories, proof, and milestones** from this SDK's
+blueprint (step 2), rather than inventing them. It instantiates the fragments the recipe references
+(the personalization explainer, the authored-variant gotcha) by copying their Template verbatim and
+filling `⟨slots⟩` from the KB. It composes **behavior** from the KB facts created in step 1 (never
+re-tracing behavior from source) and reads **interface** (shapes, signatures, props) directly from
+the types as needed, following the `optimization-guide-authoring` skill for voice and workflow —
+grounded in the matching reference implementation under `implementations/` for shape. Two sub-cases:
 
-- **Guide does not exist** — compose it from scratch against the template and the KB facts.
-- **Guide already exists** (predates the KB) — reconcile it: bring it to the current archetype and
-  make every SDK claim trace to a step-1 fact, preserving content that is still correct. This is the
-  writer's "refresh an existing guide" job. Expect a full file, not a blank one.
+- **Guide does not exist** — compose it from scratch against the recipe template, the blueprint's
+  editorial map, and the KB facts.
+- **Guide already exists** (predates the KB) — reconcile it: bring it to the current archetype and the
+  blueprint's map, and make every SDK claim trace to a step-1 fact, preserving content that is still
+  correct. This is the writer's "refresh an existing guide" job. Expect a full file, not a blank one.
 
 If the writer needs a fact the base does not hold, it escalates back to `sdk-knowledge-author` rather
 than reading source itself, using the escalation marker: an inline
@@ -49,7 +74,7 @@ use. The knowledge author adds the fact from source; the writer then composes th
 **removes the marker**. This is a transient handoff, never shipped — the gate below fails if any
 `ESCALATE` marker remains, and so does `pnpm knowledge:check`.
 
-## 3. Review, fix, and funnel back (delegate to the `review-guide` skill)
+## 4. Review, fix, and funnel back (delegate to the `review-guide` skill)
 
 Invoke the **`review-guide`** skill (`.claude/commands/review-guide.md`) on the guide. It owns the
 whole review loop in one pass — do not re-run it here:
@@ -62,20 +87,24 @@ whole review loop in one pass — do not re-run it here:
   facts to the knowledge base, cross-guide consistency issues fixed now (never logged);
 - validates (`pnpm knowledge:check`; `pnpm format:fix <touched paths>`, never bare).
 
-## 4. Bootstrap gate
+## 5. Bootstrap gate
 
 `review-guide` runs its own gate; these are the extra checks specific to a from-scratch bootstrap.
 Do not finish until they hold:
 
 - The new KB file conforms: matches `_template.md`, has a `feeds-guides` marker, empty sections marked
   `None.`, and `pnpm knowledge:check` passes for it.
+- **The blueprint exists** at `documentation/authoring/blueprints/<sdk>.md` and its section inventory,
+  order, and categories match the guide the writer produced (they are the same map). It records
+  editorial judgment only — no SDK facts, no archetype structure.
 - **No `ESCALATE` marker remains** in the guide — every escalation was resolved and its marker removed
   (`pnpm knowledge:check` fails on a survivor).
 - The guide is on the current archetype (Quick start, Before you start, category-ordered sections),
   and its TOC anchors resolve.
 
-## 5. Report
+## 6. Report
 
-Summarize: the KB file created and its facts, what the guide covers, each reviewer's findings and how
-they resolved, what was funneled into the skill vs. the KB, and the validation result. Note anything
-consciously deferred (e.g. Swift/Kotlin `#symbol` resolution for native SDKs).
+Summarize: the KB file created and its facts, the blueprint authored and its editorial map, what the
+guide covers, each reviewer's findings and how they resolved, what was funneled into the skill vs. the
+KB vs. the blueprint, and the validation result. Note anything consciously deferred (e.g. Swift/Kotlin
+`#symbol` resolution for native SDKs).

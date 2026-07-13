@@ -38,9 +38,15 @@ Do this in order:
    into the right artifact:
    - a reader-experience or **voice/teaching** rule → the `optimization-guide-authoring` skill
      (principles only, never SDK facts),
-   - a **structure or shared-prose** rule → the recipe or fragment under `documentation/authoring/`
-     (section spine and integration categories → the archetype's recipe; a reusable sentence that
-     drifted across the family → the relevant fragment's Template),
+   - an **archetype-wide structure or shared-prose** rule → the recipe or fragment under
+     `documentation/authoring/` (the section spine, the category value set, and rules that hold for
+     _every_ guide of the archetype → the archetype's recipe; a reusable sentence that drifted across
+     the family → the relevant fragment's Template),
+   - a **per-SDK editorial decision** — this SDK's section inventory, its order, or a specific
+     section's integration category — → the SDK's blueprint
+     (`documentation/authoring/blueprints/<sdk>.md`), with the reasoning. (The distinction: a rule
+     true for the whole archetype is the recipe's; a judgment specific to how _this_ SDK's features
+     arrange is the blueprint's.)
    - a missing or corrected SDK fact → the knowledge base via `sdk-knowledge-author`.
 
    When a fragment the recipe names is missing from the guide, or its fixed spine was reworded rather

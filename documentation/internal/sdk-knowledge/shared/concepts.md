@@ -40,6 +40,14 @@ hands back the resolved entry as a base `contentful` `Entry`; a narrower compone
 cast.
 source: react-web-sdk#optimized-entry/optimizedEntryUtils.ts#RenderProp; concept:entry-personalization-and-variant-resolution
 
+Resolution itself does NOT read consent. The resolver takes only `(entry, selectedOptimizations)` and
+returns variant-or-baseline purely from whether a selection matches; consent gates event _emission_
+(and therefore whether selections ever populate), never the resolve call. So a resolved entry can be
+returned before any explicit consent decision — an entry resolves to baseline-or-variant regardless of
+consent state, and denied/undecided consent surfaces as "no selections ⇒ baseline", not as a blocked
+resolution.
+source: core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext; core-sdk#CoreBase.ts#resolveOptimizedEntry
+
 ## Baseline fallback
 
 On denied consent, no matching variant, unresolved links, or an all-locale payload, the render prop
@@ -54,6 +62,15 @@ the profile-id cookie). Consent policy is app-owned: the app records the choice 
 (server-side per request, browser-side via seeded defaults). The consent record/cookie is
 reader-owned; the profile-id cookie is SDK-owned.
 source: core-sdk#StatefulDefaults.ts#consent; core-sdk#StatefulDefaults.ts#persistenceConsent; core-sdk#constants.ts#ANONYMOUS_ID_COOKIE
+
+With no configured `defaults.consent` and nothing persisted, the resolved `consent` default is
+`undefined` (not `false`) — a not-yet-decided state, distinct from an explicit denial;
+`persistenceConsent` falls back `defaults.persistenceConsent ?? defaults.consent ?? persisted`, so
+it is likewise `undefined` when unset. The pre-consent allow-list (`allowedEventTypes`, defaulting to
+`['identify','page']`) still admits `page`/`identify` while consent is `undefined` — `hasEventConsent`
+returns `true` for an allow-listed method when `consent !== true`, so an undecided visitor can emit
+`page` without an explicit consent call.
+source: core-sdk#StatefulDefaults.ts#resolveStatefulDefaults; core-sdk#consent/ConsentPolicy.ts#hasEventConsent
 
 ## Live updates
 

@@ -44,6 +44,13 @@ fact**, composing from the reconciled KB (not re-reading source, not rewriting t
 A fact that changed shape/behavior means the snippet or sentence that used it changes; an unaffected
 section is left as-is.
 
+If the change **adds or removes a documented capability** (a new feature the guide should now cover,
+or a removed one it should drop), the SDK's blueprint
+(`documentation/authoring/blueprints/<sdk>.md`) — the editorial map of which features become which
+sections — needs a matching entry added or removed, with its category and reasoning, before the guide
+gains or loses that section. A pure behavior change to an already-documented capability does not touch
+the blueprint; only the section inventory does.
+
 ## 4. Review only what changed (delegate to the `review-guide` skill, scoped)
 
 Invoke the **`review-guide`** skill on each recomposed guide — it owns the review/fix/funnel/validate

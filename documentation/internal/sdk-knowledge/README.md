@@ -20,6 +20,14 @@ against source while drafting. No net-new verification passes just to fill these
 If a fact names a concrete symbol/API/cookie/prop, it belongs here (or in a guide), never in the
 skill.
 
+**Facts here, editorial mapping in the blueprint.** This base records _what is true_ about an SDK. It
+does not decide _which_ of those facts become guide sections, in what order, or under which
+integration category — that per-SDK editorial judgment lives in the SDK's **blueprint**
+(`documentation/authoring/blueprints/<sdk>.md`), the reader-facing side of the pipeline. When a guide
+gains or loses a documented capability, the blueprint's section list changes; when a behavior changes,
+a fact here changes. See [`../../authoring/README.md`](../../authoring/README.md) for the recipe /
+blueprint / fragment layers.
+
 ## Organization
 
 ```

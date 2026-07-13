@@ -6,18 +6,26 @@ filename: integrating-*.md
 ## Context
 
 Write for **an average developer with little or no personalization background**, opening the guide
-cold and wanting a working result fast. This recipe is the caller: it names the sections in order,
-which fragments to instantiate, and what each section is for. The `guide-writer` agent renders the
-**Template** below into a guide; it never emits this Context.
+cold and wanting a working result fast. This recipe is **SDK-neutral**: it is the shape every
+integration guide shares — the fixed section spine, the heading order, the integration-category value
+set, which fragments to instantiate, and the craft rules for each section. The `guide-writer` agent
+renders the **Template** below into a guide; it never emits this Context.
 
-What you own vs. what the knowledge base owns:
+Three artifacts own three different things — keep them separate:
 
-- **You own sequence, voice, and honesty** — teach a term before using it; prove one result before
-  revealing the rest; order sections by when a reader needs them; keep example labels truthful.
-- **The knowledge base owns the SDK topic inventory** — which behaviors exist, what a call does on
-  the edges, identifier ownership. You do not decide the topic list, and you do not restate SDK
-  facts here. Facts flow from the KB into the guide at compose time; the source-verifier flags any
-  fact feeding this guide that the guide left out.
+- **This recipe owns the archetype shape and craft** (SDK-neutral) — the fixed section spine and
+  heading order, the four integration-category values, which fragments compose where, and the
+  transferable rules for writing a quick start, showing diffs, labeling examples, and keeping verify
+  performable. Rules here hold for _every_ integration guide.
+- **The SDK's blueprint owns the per-SDK editorial map** —
+  `documentation/authoring/blueprints/<sdk>.md` decides, for one SDK, which KB topics become which
+  sections, in what **order**, under which **category**, what proves its quick start, and where its
+  milestone boundary falls, with the reasoning. This recipe does not decide the specific section
+  inventory or per-section category for a given SDK — the blueprint does. (That mapping was
+  previously unwritten and re-invented on every compose; the blueprint memoizes it.)
+- **The knowledge base owns the facts** — which behaviors exist, what a call does on the edges,
+  identifier ownership. You do not restate SDK facts here. Facts flow from the KB into the guide at
+  compose time; the source-verifier flags any fact feeding this guide that the guide left out.
 
 Fragments are reusable reader-facing prose with a fixed spine and knowledge-base-filled slots. When
 this recipe says to include one, the guide-writer copies that fragment's Template **verbatim** and
@@ -102,9 +110,13 @@ it.
 > ⟨one-line env-var-convention note: match the prefix/convention the app already uses for
 > browser-visible variables⟩
 
+<!-- The specific feature sections under Core / Optional / Advanced — which they are, in what order,
+and each one's category — come from this SDK's blueprint, not from this recipe. The recipe fixes the
+`##` spine and the category value set; the blueprint fills the `###` inventory. -->
+
 ## Core integration
 
-### ⟨feature/concept⟩
+### ⟨feature — from the blueprint's Core section list⟩
 
 **Integration category:** Required for first integration | Common but policy-dependent
 
@@ -112,17 +124,17 @@ it.
 
 ## Optional integrations
 
-<!-- only if there are optional sections -->
+<!-- only if the blueprint lists Optional sections -->
 
-### ⟨feature/concept⟩
+### ⟨feature — from the blueprint's Optional section list⟩
 
 **Integration category:** Optional
 
 ## Advanced integrations
 
-<!-- only if there are advanced/production-only sections -->
+<!-- only if the blueprint lists Advanced/production-only sections -->
 
-### ⟨feature/concept⟩
+### ⟨feature — from the blueprint's Advanced section list⟩
 
 **Integration category:** Advanced or production-only
 
@@ -150,15 +162,17 @@ Expanded guidance for the Template above. These are the rules a review (human or
 ### Intro
 
 The intro's teaching content is the `personalization-explainer` fragment — do not hand-write a
-competing explainer. After it, frame the two milestones and name the package and what the app still
-owns. Do not front-load concept links or reference-implementation links before the quick start
-unless the reader must understand them before acting.
+competing explainer. After it, frame the two milestones (take the specific M1/M2 boundary and its
+wording from the SDK's blueprint) and name the package and what the app still owns. Do not front-load
+concept links or reference-implementation links before the quick start unless the reader must
+understand them before acting.
 
 ### Quick start (the part reviews scrutinize most)
 
-- One proof, one verification statement, minimum setup. Valid proofs: SDK init + one accepted page
-  event; one entry resolving to variant or baseline; server content surviving takeover without a
-  duplicate page event.
+- One proof, one verification statement, minimum setup. **Which proof this SDK uses is the blueprint's
+  call** ("What proves it works"); this recipe only holds the archetype rule that there is exactly
+  one. Valid proof shapes: SDK init + one accepted page event; one entry resolving to variant or
+  baseline; server content surviving takeover without a duplicate page event.
 - **Ground it in a real app shape, not a test harness.** Do not invent fetch shapes such as a
   hardcoded array of entry IDs. Model the reader's most common real shape and show changes as diffs
   against their existing files. Point readers with other shapes to the feature section.
@@ -227,5 +241,7 @@ duplicate-tracking prevention, privacy/governance, and a local validation path.
 Each shared concern is either covered by the guide or explicitly marked not-applicable for this SDK:
 install/init/config; consent & privacy handoff; the fetch/SDK boundary; entry resolution + fallback;
 page/route/screen events; interaction tracking; identity/profile/reset; routing/lifecycle/request
-context; real-time updates/preview/analytics/caching; verification. Coverage is judged against the
-knowledge-base facts that feed this guide — the source-verifier flags a fed fact the guide omits.
+context; real-time updates/preview/analytics/caching; verification. This is the archetype-wide
+checklist of what must be addressed; the SDK's blueprint records _how_ this SDK maps those concerns to
+sections and categories. Coverage is judged against the knowledge-base facts that feed this guide —
+the source-verifier flags a fed fact the guide omits.
