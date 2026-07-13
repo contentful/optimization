@@ -1,0 +1,9 @@
+{
+  "name": "@contentful/skill-sdk-knowledge-authoring",
+  "version": "0.1.0",
+  "description": "Derive verified SDK facts from packages source into the internal knowledge base",
+  "license": "MIT",
+  "files": [
+    "SKILL.md"
+  ]
+}

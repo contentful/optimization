@@ -5,8 +5,8 @@ description: >-
   of verified SDK facts (symbols, props, cookies, config keys, return shapes) that each carry a
   source pointer into packages/**/src. Covers the three-artifact split (guides teach, this KB
   records verified facts, the authoring skill holds principles — facts never go in a skill), the
-  _template.md skeleton every per-SDK file copies, capturing shared facts once in shared/, and
-  logging cross-guide drift in shared/consistency-notes.md. Use when adding or editing a per-SDK
+  _template.md skeleton every per-SDK file copies, and capturing shared facts once in shared/ so
+  guide families reuse one canonical wording. Use when adding or editing a per-SDK
   knowledge file, recording an SDK API you just verified against source while doing other work,
   reading the KB before re-grepping the SDK, keeping it in sync after the SDK changes, or editing
   any file under documentation/internal/sdk-knowledge/. Triggers on "sdk knowledge", "internal
@@ -53,32 +53,43 @@ These are the transferable behaviors this skill exists to preserve.
   "this changed because…". State the fact plainly in the present tense. When the SDK changes, _edit
   the fact in place_ so it reads as if it were always true — do not append a note about the change
   or strike through the old value. (Genuine runtime conditionals — "after reading headers the route
-  cannot use ISR" — are present-tense behavior, not history, and are fine.) The same rule governs
-  `shared/consistency-notes.md`: it records the status quo of what language must match across a
-  guide family, not a log of merges or fixes.
+  cannot use ISR" — are present-tense behavior, not history, and are fine.)
 - **While the SDK is pre-release/alpha, record no SDK-version deltas.** One moving version means
   there is nothing to compare — do not note what a prior SDK version did, "upgrade to the fixed
   version", or version-to-version differences of this SDK. Record the single current version's facts
   in present tense. (Host-framework version facts the reader must act on today — e.g. a framework
   that resolves a handler differently across its own major versions — are present-state environment
   facts and are fine.) Revisit at the SDK's first major.
-- **Every fact carries a `source:` pointer.** A path, `path#symbol`, or `path:line` into
-  `packages/**/src`. A fact without a source pointer is a claim, not knowledge — do not add it.
+- **Every fact carries a `source:` pointer in the grammar.** Pointers are machine-checked by
+  `pnpm knowledge:check`; the grammar is defined in the base's own `README.md#source-pointer-grammar`
+  and is symbol-anchored — `<sdk>#<relpath>#<symbol>` (plus `impl:`, `concept:`, `kb:`, `extern:`),
+  **never line numbers** (they drift). A fact without a resolvable pointer is a claim, not knowledge
+  — do not add it. Never point a fact at a guide or "the accepted guide" to satisfy the rule; that is
+  circular and the checker rejects it. Anchor on the symbol the fact is actually about.
 - **Capture once, as a byproduct of verification.** When you verify an SDK API against source while
   doing other work (writing a guide, fixing a bug, answering a question), record what you confirmed
-  here before the context is lost. Do not run net-new verification passes just to fill the base in;
-  do not re-derive a fact the base already holds.
-- **Read the base before re-grepping the SDK.** It exists so authors and future regeneration reuse
-  verified facts instead of re-searching `packages/**/src`. Check here first; only grep to confirm
-  or extend.
+  here before the context is lost, with its grammar pointer. Do not run net-new verification passes
+  just to fill the base in; do not re-derive a fact the base already holds.
+- **Read the base before re-tracing behavior from the SDK.** It exists so authors and future
+  regeneration reuse verified _behavioral_ facts instead of re-reading implementation in
+  `packages/**/src`. Check here first for behavior; only trace source to confirm or extend it.
+  (Interface shape — a signature, prop, or return type — is cheap to look up directly from the types
+  and does not need the base.)
 - **Keep it in sync when the SDK changes.** If a symbol, prop, cookie, config key, export path, or
   return shape you touched is recorded here, update the entry and its `source:` pointer in the same
-  change. Stale facts are worse than missing ones.
+  change. Stale facts are worse than missing ones. `pnpm knowledge:check` runs in CI on every change
+  to `packages/**/src`, so a rename that orphans a pointer fails the build on your PR — fix it here,
+  do not wait for a follow-up.
 - **Capture shared facts once, in `shared/`.** SDK-neutral concepts go in `shared/concepts.md`;
   canonical terms in `shared/vocabulary.md`. Per-SDK files link to them instead of restating them.
-- **Log cross-guide drift in `shared/consistency-notes.md`.** When you spot language, an API name,
-  or a value that must match across a guide family but does not, record it there for the consistency
-  pass rather than silently reconciling it.
+  This single canonical wording is _how_ a guide family stays consistent: guides reuse it rather than
+  each paraphrasing the same fact.
+- **Fix cross-guide drift when you find it; do not log it.** If a term, API name, or value that must
+  match across a guide family has diverged, reconcile it now — correct the guide, and if the shared
+  wording was missing, add it once to `shared/`. Do not keep a running list of known-broken things to
+  reconcile later; an unfixed divergence is a bug, not a record. (A per-framework difference that is
+  _correct_ — e.g. `NEXT_PUBLIC_` vs a Vite-style prefix — is not drift; state it as a fact in the
+  relevant per-SDK file, not as a divergence to resolve.)
 
 ## Adding a new SDK file
 
@@ -101,12 +112,18 @@ These are the transferable behaviors this skill exists to preserve.
 
 ## Before you finish
 
-- Every new or changed fact has a `source:` pointer into `packages/**/src`.
+- **`pnpm knowledge:check` passes.** This is the gate: it resolves every `source:` pointer against
+  real files and symbols and enforces the grammar and template. Run it and fix every problem before
+  finishing — do not leave the base in a state that fails the checker. If you touched `packages/**/src`
+  in the same session, this also catches any recorded fact your change orphaned.
+- Every new or changed fact has a resolvable `source:` pointer in the grammar (symbol-anchored, no
+  line numbers, never pointing at a guide).
 - Every entry reads as present-tense current state, with no change-ledger language ("no longer",
   "now", "was removed", "used to", PR/issue numbers, version-bump framing). Changes were edited in
   place, not appended as history.
 - New per-SDK files match `_template.md` heading-for-heading, with `None.` for empty sections.
 - Shared facts live once in `shared/` and are linked, not restated.
-- Any cross-guide drift you noticed is logged in `shared/consistency-notes.md`.
+- Any cross-guide drift you noticed is fixed now (guide corrected, shared wording added to
+  `shared/` if it was missing), not deferred.
 - No SDK fact leaked into a skill; no reader-facing prose leaked into the base.
 - Formatting is clean: `pnpm format:fix documentation/internal/sdk-knowledge`.

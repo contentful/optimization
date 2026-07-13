@@ -45,6 +45,7 @@ gotchas.
 - [Validation matrix](#validation-matrix)
 - [Code style and local hooks](#code-style-and-local-hooks)
 - [Documentation](#documentation)
+  - [Guides and the knowledge base (authoring pipeline)](#guides-and-the-knowledge-base-authoring-pipeline)
   - [README depth and render targets](#readme-depth-and-render-targets)
 - [Local troubleshooting](#local-troubleshooting)
 - [Troubleshooting CI issues](#troubleshooting-ci-issues)
@@ -325,6 +326,37 @@ keep these artifacts aligned:
 
 `documentation/` contains source markdown that TypeDoc publishes. `docs/` is generated output. Do
 not hand-edit generated TypeDoc output.
+
+### Guides and the knowledge base (authoring pipeline)
+
+The guides under `documentation/guides/` are not hand-maintained in isolation — they are composed by
+an agent-driven pipeline with three source-of-truth layers, so a source change propagates instead of
+being re-derived by hand:
+
+1. **Knowledge base** (`documentation/internal/sdk-knowledge/`, internal, not published) — verified
+   SDK _behavioral_ facts, each carrying a machine-checked `source:` pointer into `packages/**/src`.
+   Interface (signatures, prop shapes) is read directly from the types, not stored here.
+2. **Recipes and fragments** (`documentation/authoring/`, writer-owned, not published) — the editorial
+   structure: one recipe per guide archetype and the reusable prose fragments they compose. This is
+   where a technical writer shapes wording, tone, and sequence.
+3. **Guides** (`documentation/guides/`, published) — reader-facing prose, composed from the KB facts
+   and the recipes.
+
+Four slash commands drive it; pick by what changed:
+
+| Command          | Use when                                                                                           |
+| ---------------- | -------------------------------------------------------------------------------------------------- |
+| `/author-guide`  | a new SDK with no knowledge-base file yet (bootstrap; reads source once)                           |
+| `/refresh-docs`  | SDK source changed — re-verify only affected facts, recompose affected guides                      |
+| `/iterate-guide` | editorial-only change (phrasing, tone, sequence, a recipe/fragment) — no source read, no fact work |
+| `/review-guide`  | the final pass before shipping — newcomer + technical-foundation review, then gate                 |
+
+`pnpm knowledge:check` validates the knowledge base (every `source:` pointer resolves, templates
+conform, `feeds-guides` links are valid) and runs in CI on knowledge-base and `packages/**/src`
+changes. For how the system works, start at
+[`documentation/authoring/README.md`](./documentation/authoring/README.md) (recipes and fragments)
+and [`documentation/internal/sdk-knowledge/README.md`](./documentation/internal/sdk-knowledge/README.md)
+(the knowledge base and its pointer grammar).
 
 ### README depth and render targets
 

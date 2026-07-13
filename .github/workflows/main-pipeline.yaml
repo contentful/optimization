@@ -34,6 +34,7 @@ jobs:
       e2e_ios: ${{ steps.filter.outputs.e2e_ios }}
       swift_package: ${{ steps.filter.outputs.swift_package }}
       android_library: ${{ steps.filter.outputs.android_library }}
+      knowledge: ${{ steps.filter.outputs.knowledge }}
     steps:
       - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
 
@@ -122,6 +123,16 @@ jobs:
               - '{packages/android/**,packages/universal/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
+            # SDK knowledge-base scope. Change-triggered on BOTH sides of the source→KB edge:
+            # the knowledge base itself, and any package source whose symbols its pointers name.
+            # Deliberately NOT markdown-excluded — the KB is markdown, and a source change can
+            # invalidate a symbol pointer without touching a fact.
+            # One brace-glob on purpose: the step sets `predicate-quantifier: every`, so a file must
+            # match every pattern in a filter. As separate positive globs these are mutually exclusive
+            # (no path is in two of these dirs at once), so `every` would be unsatisfiable and this
+            # filter would never fire. A single alternation matches if a file is in any listed area.
+            knowledge:
+              - '{documentation/internal/sdk-knowledge/**,documentation/guides/**,packages/**/src/**,implementations/**,scripts/validate-sdk-knowledge.ts,.github/workflows/main-pipeline.yaml}'
 
   setup:
     name: 🛠️ pnpm install
@@ -196,6 +207,34 @@ jobs:
 
       - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm format:check
+
+  knowledge-check:
+    name: 📚 Knowledge Base Check
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    needs: [setup, changes]
+    if: needs.changes.outputs.knowledge == 'true'
+    timeout-minutes: 15
+    steps:
+      - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
+        with:
+          cache: pnpm
+
+      - run: pnpm install --prefer-offline --frozen-lockfile
+      # Validates that every knowledge-base source pointer still resolves to a real file and symbol
+      # in packages/**/src. Runs when the KB OR any package source changes, so a source refactor
+      # that renames or moves a symbol a pointer names fails here on the same PR.
+      # Verbose: log every file and pointer as it is checked, so the CI log shows the base was
+      # actually traversed (and how much) rather than a bare ✓ that could mask an empty run.
+      - run: pnpm knowledge:check --verbose
 
   build:
     name: 📦 Build
@@ -453,10 +492,8 @@ jobs:
           name: sdk-package-tarballs
           path: pkgs
       - run: pnpm store prune
-      - run:
-          pnpm run implementation:node-sdk+web-sdk -- implementation:install -- --no-frozen-lockfile
-      - run:
-          pnpm run implementation:node-sdk+web-sdk -- implementation:playwright:install --
+      - run: pnpm run implementation:node-sdk+web-sdk -- implementation:install -- --no-frozen-lockfile
+      - run: pnpm run implementation:node-sdk+web-sdk -- implementation:playwright:install --
           --with-deps
       - run: pnpm run implementation:node-sdk+web-sdk -- implementation:test:e2e:run
 
@@ -596,8 +633,7 @@ jobs:
           name: sdk-package-tarballs
           path: pkgs
       - run: pnpm store prune
-      - run:
-          pnpm run implementation:web-sdk_angular -- implementation:install -- --no-frozen-lockfile
+      - run: pnpm run implementation:web-sdk_angular -- implementation:install -- --no-frozen-lockfile
       - run: pnpm --dir lib/e2e-web install --no-frozen-lockfile
       - run: pnpm --dir lib/e2e-web run setup:e2e
       - run: pnpm run implementation:web-sdk_angular -- implementation:test:e2e:run
@@ -668,8 +704,7 @@ jobs:
       - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
 
       - name: Create .env from .env.example
-        run:
-          cp implementations/nextjs-sdk_app-router/.env.example
+        run: cp implementations/nextjs-sdk_app-router/.env.example
           implementations/nextjs-sdk_app-router/.env
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
@@ -693,8 +728,7 @@ jobs:
           name: sdk-package-tarballs
           path: pkgs
       - run: pnpm store prune
-      - run:
-          pnpm run implementation:nextjs-sdk_app-router -- implementation:install --
+      - run: pnpm run implementation:nextjs-sdk_app-router -- implementation:install --
           --no-frozen-lockfile
       - run: pnpm --dir lib/e2e-web install --no-frozen-lockfile
       - run: pnpm --dir lib/e2e-web run setup:e2e
@@ -719,8 +753,7 @@ jobs:
       - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
 
       - name: Create .env from .env.example
-        run:
-          cp implementations/nextjs-sdk_pages-router/.env.example
+        run: cp implementations/nextjs-sdk_pages-router/.env.example
           implementations/nextjs-sdk_pages-router/.env
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
@@ -744,8 +777,7 @@ jobs:
           name: sdk-package-tarballs
           path: pkgs
       - run: pnpm store prune
-      - run:
-          pnpm run implementation:nextjs-sdk_pages-router -- implementation:install --
+      - run: pnpm run implementation:nextjs-sdk_pages-router -- implementation:install --
           --no-frozen-lockfile
       - run: pnpm --dir lib/e2e-web install --no-frozen-lockfile
       - run: pnpm --dir lib/e2e-web run setup:e2e
@@ -935,8 +967,7 @@ jobs:
       ARCH: x86_64
       TARGET: aosp_atd
       PROFILE: pixel_7
-      EMULATOR_OPTIONS:
-        -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+      EMULATOR_OPTIONS: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 

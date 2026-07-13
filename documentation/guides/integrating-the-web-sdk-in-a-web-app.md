@@ -6,7 +6,7 @@ you want to own the browser SDK lifecycle directly. By the end of the quick star
 content will render its personalized variant in the page once you resolve it, without changing how
 your app fetches or renders content.
 
-**New to personalization?** Here is the whole idea in four sentences:
+**New to personalization?** Here is the whole idea in four points:
 
 - In Contentful you author **variants** of an entry and attach them to an **experience** — a rule
   that decides which visitors see which variant.
@@ -14,8 +14,8 @@ your app fetches or renders content.
   variant for each experience. Swapping a fetched entry for its picked variant is called
   **resolving** the entry.
 - Your app turns Contentful entries into markup, and the SDK sits at that hand-off: it gives you the
-  resolved variant instead of the original — or the original entry when no variant applies, which is
-  the **baseline fallback**. You can fetch the entry yourself and hand it to the SDK, or give the
+  resolved variant instead of the original — or the original entry when no variant applies, the
+  **baseline fallback**. You can fetch the entry yourself and hand it to the SDK, or give the
   SDK your Contentful client and let it fetch by ID — either way the client stays yours.
 - You render whatever the SDK hands back exactly as you render entries today.
 
