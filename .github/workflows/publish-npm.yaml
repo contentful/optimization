@@ -205,7 +205,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
           RELEASE_TARGETS: ${{ steps.npm_package_targets.outputs.release_targets }}
         run: |
-          publish_filters=()
+          publish_targets=()
 
           while IFS= read -r target_info; do
             if [ -z "$target_info" ]; then
@@ -219,16 +219,40 @@ jobs:
               continue
             fi
 
-            publish_filters+=(--filter "$package_name")
+            npm_tag='latest'
+            if [[ "$release_version" == *-* ]]; then
+              npm_tag='next'
+            fi
+
+            publish_targets+=("$package_name"$'\t'"$release_version"$'\t'"$npm_tag")
           done <<< "$RELEASE_TARGETS"
 
-          echo "pnpm_filters=${publish_filters[*]}" >> "$GITHUB_OUTPUT"
+          {
+            echo "publish_targets<<EOF"
+            printf '%s\n' "${publish_targets[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Publish
         if:
-          steps.unpublished_targets.outputs.pnpm_filters != '' && (github.event_name == 'release' ||
-          inputs.publish)
-        run: |
-          pnpm -r ${{ steps.unpublished_targets.outputs.pnpm_filters }} publish --access public --no-git-checks
+          steps.unpublished_targets.outputs.publish_targets != '' && (github.event_name == 'release'
+          || inputs.publish)
         env:
           NODE_AUTH_TOKEN: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
+          PUBLISH_TARGETS: ${{ steps.unpublished_targets.outputs.publish_targets }}
+        run: |
+          while IFS= read -r publish_target; do
+            if [ -z "$publish_target" ]; then
+              continue
+            fi
+
+            IFS=$'\t' read -r package_name release_version npm_tag <<< "$publish_target"
+
+            if [ -z "$package_name" ] || [ -z "$release_version" ] || [ -z "$npm_tag" ]; then
+              echo "Invalid npm publish target: $publish_target" >&2
+              exit 1
+            fi
+
+            echo "Publishing $package_name@$release_version with dist-tag $npm_tag."
+            pnpm --filter "$package_name" publish --access public --no-git-checks --tag "$npm_tag"
+          done <<< "$PUBLISH_TARGETS"
