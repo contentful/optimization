@@ -12,40 +12,55 @@ templating language, and they are not published as reader documentation.
 First classify the work by what changed. That choice determines which parts of the pipeline need to
 run and prevents an editorial iteration from repeating expensive SDK comprehension.
 
-| You want to…                                       | Workflow               | What it does                                                                                        |
-| -------------------------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------- |
-| Bootstrap documentation for an SDK with no KB file | **Author a guide**     | Derives behavior into a new KB file, authors the blueprint, composes the guide, and reviews it      |
-| Update docs after SDK source changed               | **Refresh docs**       | Re-verifies only affected KB facts, updates consuming guide passages, and reviews the changed scope |
-| Tune wording, structure, sequence, or shared copy  | **Iterate on a guide** | Recomposes from the existing KB without reading source or re-verifying facts                        |
-| Check an existing or newly written guide           | **Review a guide**     | Runs independent newcomer and technical-foundation reviews, applies fixes, and funnels lessons back |
+- **Author a guide** when an SDK has no knowledge-base file yet.
+- **Refresh docs** when SDK source changed.
+- **Iterate on a guide** for wording, structure, sequence, or shared-copy changes.
+- **Review a guide** to check an existing or newly written guide before shipping it.
 
-### Run the workflow in Claude Code
+### Run the workflows
 
-The repository provides four slash commands:
+Name the workflow and repository skills explicitly. Any skill-aware agent can run the process; no
+workflow depends on a particular agent product or command syntax.
 
-| Command          | Use when                                                                                           |
-| ---------------- | -------------------------------------------------------------------------------------------------- |
-| `/author-guide`  | The SDK has no knowledge-base file yet. This is the expensive, one-time bootstrap path.            |
-| `/refresh-docs`  | SDK source changed. This is the scoped, incremental fact-refresh path.                             |
-| `/iterate-guide` | The change is editorial only: prose, tone, sequence, a recipe, shared copy, or an SDK blueprint.   |
-| `/review-guide`  | A guide needs the final newcomer and technical-foundation gate, or a factual claim needs checking. |
+#### Author a guide
 
-The command definitions live under [`.claude/commands/`](../../.claude/commands/). They orchestrate
-the same skills and roles described below; the commands are convenience entry points, not a separate
-authoring system.
+Use this workflow when the SDK has no knowledge-base file yet.
 
-### Run the workflow with skills and roles
+1. Run `sdk-knowledge-authoring` in **BOOTSTRAP** mode to derive and verify the SDK's behavioral
+   knowledge.
+2. Create the SDK blueprint from the recipe and new KB file.
+3. Draft the guide with `optimization-guide-authoring` and the guide-writer role.
+4. Run `guide-newcomer-review` and `guide-source-verification` independently.
+5. Resolve review findings and any genuine behavioral gap, then validate the KB and guide.
 
-In Codex or another skill-aware agent, name the workflow and the repository skills explicitly. The
-project-scoped Codex roles under [`.codex/agents/`](../../.codex/agents/) provide the same writer,
-reviewer, verifier, and knowledge-author responsibilities.
+#### Refresh docs
 
-| Workflow            | Skills and roles, in order                                                                                                                                                                                                    |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Author a guide**  | `sdk-knowledge-authoring` in **BOOTSTRAP** mode → author the SDK blueprint → `optimization-guide-authoring` / guide writer → `guide-newcomer-review` + `guide-source-verification` → resolve any fact escalation and validate |
-| **Refresh docs**    | `sdk-knowledge-authoring` in **INCREMENTAL** mode → update only affected blueprint/guide passages → `guide-newcomer-review` + `guide-source-verification` on the changed scope → validate                                     |
-| **Iterate a guide** | `optimization-guide-authoring` / guide writer using the existing KB, recipe, blueprint, and shared copy → `pnpm guides:check`; run the two review skills before shipping substantial changes                                  |
-| **Review a guide**  | `guide-newcomer-review` and `guide-source-verification` independently → guide writer applies findings → `sdk-knowledge-authoring` resolves only genuine behavioral gaps → validate                                            |
+Use this workflow when SDK source changed.
+
+1. Scope the changed source files and the KB facts that point to them.
+2. Run `sdk-knowledge-authoring` in **INCREMENTAL** mode for those facts only.
+3. Update only the guide passages that consume changed facts. Update the blueprint only when the
+   change adds, removes, or materially changes a teaching obligation.
+4. Run both review skills on the changed passages, then validate the KB and guide.
+
+#### Iterate on a guide
+
+Use this workflow for editorial changes that do not alter an SDK claim.
+
+1. Keep the existing KB as-is; do not read source or re-verify behavior.
+2. Use `optimization-guide-authoring` and the guide-writer role to recompose from the recipe,
+   blueprint, shared copy, and accepted guide.
+3. Run `pnpm guides:check` while iterating.
+4. Run both review skills before shipping a new or substantially rewritten guide.
+
+#### Review a guide
+
+Use this workflow as the final quality gate or when an existing claim looks suspicious.
+
+1. Run `guide-newcomer-review` and `guide-source-verification` independently.
+2. Have the guide writer apply the reader and technical findings.
+3. Use `sdk-knowledge-authoring` only when verification exposes a genuine behavioral gap in the KB.
+4. Run `pnpm knowledge:check` and `pnpm guides:check` after resolving the findings.
 
 The relevant skill instructions are:
 
@@ -64,6 +79,23 @@ The required authoring order for a new or substantially rewritten guide is **wri
 reviewer → technical-foundation reviewer**. The writer never certifies its own draft. The two
 reviewers are independent and may run concurrently after the draft exists.
 
+### Tool integration
+
+The skills are shared. [`skills/`](../../skills/) is the source of truth;
+[`.agents/skills`](../../.agents/skills) and [`.claude/skills`](../../.claude/skills) both point to it
+for tool discovery. Both Claude Code and Codex invoke these same skills directly.
+
+The repository also provides optional adapters around that shared layer:
+
+- matching specialized roles under [`.claude/agents/`](../../.claude/agents/) and
+  [`.codex/agents/`](../../.codex/agents/); each role applies one or more of the shared skills;
+- `/author-guide`, `/refresh-docs`, `/iterate-guide`, and `/review-guide` shortcuts under
+  [`.claude/commands/`](../../.claude/commands/) for orchestrating the complete workflow in Claude
+  Code.
+
+These adapters do not own authoring rules. Other skill-aware agents should invoke the same skills in
+the same order and preserve the same role boundaries.
+
 ### Technical writer inner loop
 
 For wording, tone, teaching order, or structure:
@@ -73,12 +105,14 @@ For wording, tone, teaching order, or structure:
    - blueprint for how one SDK should be taught;
    - shared copy for wording that must stay consistent across several guides;
    - the guide itself for reader-facing detail that is neither shared nor structural.
-2. Run `/iterate-guide` or ask the guide-writer role to recompose the affected guide from the current
-   recipe, blueprint, shared copy, and KB.
+2. Run the **Iterate a guide** workflow: ask the guide-writer role to recompose the affected guide
+   from the current recipe, blueprint, shared copy, and KB. In Claude Code, `/iterate-guide` is a
+   convenience wrapper for this workflow.
 3. Read the resulting guide as a reader and repeat the editorial loop as needed.
 4. Run `pnpm guides:check` during iteration.
-5. Before shipping a new or substantial rewrite, run `/review-guide` or the newcomer and
-   technical-foundation review skills, resolve blocker/high findings, then run both validators.
+5. Before shipping a new or substantial rewrite, run the **Review a guide** workflow with the
+   newcomer and technical-foundation review skills, resolve blocker/high findings, then run both
+   validators. In Claude Code, `/review-guide` is a convenience wrapper for this workflow.
 
 Do not use the editorial loop to change what a guide asserts about the SDK. If SDK source changed,
 use the refresh workflow. If a claim merely looks suspicious, use the review workflow. If review

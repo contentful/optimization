@@ -405,14 +405,22 @@ instead of being re-derived by hand:
 4. **Guides** (`documentation/guides/`, published) — reader-facing prose, composed from the KB facts,
    the archetype recipe, and the SDK's blueprint.
 
-Four slash commands drive it; pick by what changed:
+Pick the workflow by what changed. The workflow and named skills are agent-agnostic; tool-specific
+commands are convenience wrappers.
 
-| Command          | Use when                                                                                                       |
-| ---------------- | -------------------------------------------------------------------------------------------------------------- |
-| `/author-guide`  | a new SDK with no knowledge-base file yet (bootstrap; reads source once, authors the blueprint, then composes) |
-| `/refresh-docs`  | SDK source changed — re-verify only affected facts, recompose affected guides                                  |
-| `/iterate-guide` | editorial-only change (phrasing, tone, sequence, a recipe/fragment/blueprint) — no source read, no fact work   |
-| `/review-guide`  | the final pass before shipping — newcomer + technical-foundation review, then gate                             |
+- **Author a guide** for a new SDK with no knowledge-base file yet.
+- **Refresh docs** after SDK source changes.
+- **Iterate on a guide** for editorial-only changes with no fact work.
+- **Review a guide** for the newcomer and technical-foundation gate before shipping.
+
+Skill-aware agents run the same workflows through `sdk-knowledge-authoring`,
+`optimization-guide-authoring`, `guide-newcomer-review`, and `guide-source-verification`, preserving
+the writer → newcomer reviewer → technical-foundation reviewer boundary.
+
+Claude Code and Codex both invoke the shared repository skills directly. Matching specialized roles
+under `.claude/agents/` and `.codex/agents/` apply those skills with role-specific boundaries. Claude
+Code additionally exposes `/author-guide`, `/refresh-docs`, `/iterate-guide`, and `/review-guide` as
+workflow shortcuts.
 
 `pnpm knowledge:check` validates the knowledge base (every `source:` pointer resolves, templates
 conform, `feeds-guides` links are valid). `pnpm guides:check` validates blueprint shape, blueprint
