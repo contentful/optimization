@@ -7,8 +7,8 @@ cd "$REPO_ROOT"
 
 REMOTE_NAME=${1:-origin}
 
-package_tarballs_exist() {
-  find pkgs -maxdepth 1 -name "contentful-*.tgz" -print -quit 2>/dev/null | grep -q .
+local_package_tarballs_exist() {
+  find pkgs -maxdepth 1 -name "contentful-optimization-*-local.tgz" -print -quit 2>/dev/null | grep -q .
 }
 
 is_documentation_file() {
@@ -109,7 +109,7 @@ fi
 if [ ${#changed_implementations[@]} -gt 0 ]; then
   package_tarballs_need_refresh=false
 
-  if ! package_tarballs_exist; then
+  if ! local_package_tarballs_exist; then
     package_tarballs_need_refresh=true
   else
     for workspace in "${changed_workspaces[@]}"; do
