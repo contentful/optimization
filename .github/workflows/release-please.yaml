@@ -33,8 +33,7 @@ jobs:
       - run: pnpm install --prefer-offline --frozen-lockfile
 
       - name: Create GitHub releases
-        run:
-          pnpm release:please -- github-release --repo-url "$GITHUB_REPOSITORY" --target-branch main
+        run: pnpm release:please -- github-release --repo-url "$GITHUB_REPOSITORY" --target-branch main
         env:
           RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
 

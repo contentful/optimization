@@ -18,8 +18,7 @@ on:
 
 jobs:
   publish:
-    if:
-      github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name,
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name,
       'optimization-swift-v')
     runs-on: macos-latest
     steps:
