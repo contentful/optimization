@@ -1,8 +1,89 @@
 # Guide authoring inputs
 
-Internal composition inputs for the public guides under [`../guides/`](../guides/). Technical writers
-shape how guides teach here without having to understand SDK implementation details; SDK and
-knowledge authors maintain verified behavior separately.
+Internal, unpublished composition inputs for the public guides under [`../guides/`](../guides/).
+Technical writers shape how guides teach here without having to understand SDK implementation
+details; SDK and knowledge authors maintain verified behavior separately.
+
+These files are read and instantiated by the guide-writer role. They are not a deterministic
+templating language, and they are not published as reader documentation.
+
+## Start here
+
+First classify the work by what changed. That choice determines which parts of the pipeline need to
+run and prevents an editorial iteration from repeating expensive SDK comprehension.
+
+| You want to…                                       | Workflow               | What it does                                                                                        |
+| -------------------------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------- |
+| Bootstrap documentation for an SDK with no KB file | **Author a guide**     | Derives behavior into a new KB file, authors the blueprint, composes the guide, and reviews it      |
+| Update docs after SDK source changed               | **Refresh docs**       | Re-verifies only affected KB facts, updates consuming guide passages, and reviews the changed scope |
+| Tune wording, structure, sequence, or shared copy  | **Iterate on a guide** | Recomposes from the existing KB without reading source or re-verifying facts                        |
+| Check an existing or newly written guide           | **Review a guide**     | Runs independent newcomer and technical-foundation reviews, applies fixes, and funnels lessons back |
+
+### Run the workflow in Claude Code
+
+The repository provides four slash commands:
+
+| Command          | Use when                                                                                           |
+| ---------------- | -------------------------------------------------------------------------------------------------- |
+| `/author-guide`  | The SDK has no knowledge-base file yet. This is the expensive, one-time bootstrap path.            |
+| `/refresh-docs`  | SDK source changed. This is the scoped, incremental fact-refresh path.                             |
+| `/iterate-guide` | The change is editorial only: prose, tone, sequence, a recipe, shared copy, or an SDK blueprint.   |
+| `/review-guide`  | A guide needs the final newcomer and technical-foundation gate, or a factual claim needs checking. |
+
+The command definitions live under [`.claude/commands/`](../../.claude/commands/). They orchestrate
+the same skills and roles described below; the commands are convenience entry points, not a separate
+authoring system.
+
+### Run the workflow with skills and roles
+
+In Codex or another skill-aware agent, name the workflow and the repository skills explicitly. The
+project-scoped Codex roles under [`.codex/agents/`](../../.codex/agents/) provide the same writer,
+reviewer, verifier, and knowledge-author responsibilities.
+
+| Workflow            | Skills and roles, in order                                                                                                                                                                                                    |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Author a guide**  | `sdk-knowledge-authoring` in **BOOTSTRAP** mode → author the SDK blueprint → `optimization-guide-authoring` / guide writer → `guide-newcomer-review` + `guide-source-verification` → resolve any fact escalation and validate |
+| **Refresh docs**    | `sdk-knowledge-authoring` in **INCREMENTAL** mode → update only affected blueprint/guide passages → `guide-newcomer-review` + `guide-source-verification` on the changed scope → validate                                     |
+| **Iterate a guide** | `optimization-guide-authoring` / guide writer using the existing KB, recipe, blueprint, and shared copy → `pnpm guides:check`; run the two review skills before shipping substantial changes                                  |
+| **Review a guide**  | `guide-newcomer-review` and `guide-source-verification` independently → guide writer applies findings → `sdk-knowledge-authoring` resolves only genuine behavioral gaps → validate                                            |
+
+The relevant skill instructions are:
+
+- [`optimization-guide-authoring`](../../skills/optimization-guide-authoring/SKILL.md) — teaching
+  voice, guide structure rules, and the writer workflow;
+- [`guide-newcomer-review`](../../skills/guide-newcomer-review/SKILL.md) — whether the target reader
+  can understand, perform, and verify the guide;
+- [`guide-source-verification`](../../skills/guide-source-verification/SKILL.md) — interface checks
+  against current package source and behavioral checks against the KB;
+- [`sdk-knowledge-authoring`](../../skills/sdk-knowledge-authoring/SKILL.md) — bootstrap or
+  incremental derivation of verified behavioral knowledge from source;
+- [`sdk-knowledge-maintenance`](../../skills/sdk-knowledge-maintenance/SKILL.md) — KB structure,
+  source pointers, and ownership rules.
+
+The required authoring order for a new or substantially rewritten guide is **writer → newcomer
+reviewer → technical-foundation reviewer**. The writer never certifies its own draft. The two
+reviewers are independent and may run concurrently after the draft exists.
+
+### Technical writer inner loop
+
+For wording, tone, teaching order, or structure:
+
+1. Edit the artifact that owns the decision:
+   - recipe for a rule that should affect every guide of an archetype;
+   - blueprint for how one SDK should be taught;
+   - shared copy for wording that must stay consistent across several guides;
+   - the guide itself for reader-facing detail that is neither shared nor structural.
+2. Run `/iterate-guide` or ask the guide-writer role to recompose the affected guide from the current
+   recipe, blueprint, shared copy, and KB.
+3. Read the resulting guide as a reader and repeat the editorial loop as needed.
+4. Run `pnpm guides:check` during iteration.
+5. Before shipping a new or substantial rewrite, run `/review-guide` or the newcomer and
+   technical-foundation review skills, resolve blocker/high findings, then run both validators.
+
+Do not use the editorial loop to change what a guide asserts about the SDK. If SDK source changed,
+use the refresh workflow. If a claim merely looks suspicious, use the review workflow. If review
+finds a behavioral fact missing from the KB, hand that specific gap to `sdk-knowledge-authoring`;
+do not make the technical writer trace implementation behavior.
 
 ## The contract
 
@@ -16,6 +97,9 @@ knowledge authors maintain verified behavior separately.
 | **Guide** (`../guides/`)                          | Published explanation, examples, and task flow                                              | New unsupported facts                                    |
 
 The guide writer composes these layers; it is not itself a source of truth.
+
+The `optimization-guide-authoring` skill owns teaching voice and workflow. It does not duplicate
+the recipe's archetype structure, the blueprint's per-SDK editorial decisions, or the KB's facts.
 
 Use this ownership test:
 
@@ -45,7 +129,7 @@ an occasional stress test for whether these inputs can stand on their own. It is
 refresh workflow. A genuinely new guide has no inherited detail, so plan extra writing and review
 iterations instead of making every blueprint encode a finished document in advance.
 
-## How to work
+## Composition order
 
 1. Pick the guide archetype and open its recipe.
 2. Open the SDK blueprint. Its Section map is the guide's exact `###` inventory and says what each
@@ -54,7 +138,8 @@ iterations instead of making every blueprint encode a finished document in advan
    package types. Use the maintained reference implementation for realistic application shape.
 4. Reuse the shared copy selected by the recipe and blueprint.
 5. Write or update the guide. Do not inspect sibling guides to infer structure.
-6. Run `pnpm guides:check`, the newcomer review, and the technical-foundation review.
+6. Run `pnpm guides:check`; before shipping a new or substantial rewrite, run the newcomer and
+   technical-foundation reviews.
 
 For a source change, update the KB first and then only the blueprint/guide sections that consume the
 changed facts. For a purely editorial change, update the recipe, blueprint, or shared-copy file that owns the
