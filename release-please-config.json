@@ -9,55 +9,46 @@
     "packages/universal/api-schemas": {
       "component": "optimization-api-schemas",
       "package-name": "@contentful/optimization-api-schemas",
-      "release-as": "1.0.0",
       "release-type": "node"
     },
     "packages/universal/api-client": {
       "component": "optimization-api-client",
       "package-name": "@contentful/optimization-api-client",
-      "release-as": "1.0.0",
       "release-type": "node"
     },
     "packages/universal/core-sdk": {
       "component": "optimization-core",
       "package-name": "@contentful/optimization-core",
-      "release-as": "1.0.0",
       "release-type": "node"
     },
     "packages/node/node-sdk": {
       "component": "optimization-node",
       "package-name": "@contentful/optimization-node",
-      "release-as": "1.0.0",
       "release-type": "node"
     },
     "packages/web/web-sdk": {
       "component": "optimization-web",
       "package-name": "@contentful/optimization-web",
-      "release-as": "1.0.0",
       "release-type": "node"
     },
     "packages/web/frameworks/react-web-sdk": {
       "component": "optimization-react-web",
       "package-name": "@contentful/optimization-react-web",
-      "release-as": "1.0.0",
       "release-type": "node"
     },
     "packages/web/frameworks/nextjs-sdk": {
       "component": "optimization-nextjs",
       "package-name": "@contentful/optimization-nextjs",
-      "release-as": "1.0.0",
       "release-type": "node"
     },
     "packages/web/preview-panel": {
       "component": "optimization-web-preview-panel",
       "package-name": "@contentful/optimization-web-preview-panel",
-      "release-as": "1.0.0",
       "release-type": "node"
     },
     "packages/react-native-sdk": {
       "component": "optimization-react-native",
       "package-name": "@contentful/optimization-react-native",
-      "release-as": "1.0.0-beta.0",
       "release-type": "node",
       "versioning": "prerelease",
       "prerelease": true,
@@ -66,7 +57,6 @@
     "packages/android/ContentfulOptimization": {
       "component": "optimization-android",
       "package-name": "optimization-android",
-      "release-as": "1.0.0-beta.0",
       "release-type": "simple",
       "version-file": "VERSION",
       "versioning": "prerelease",
@@ -76,7 +66,6 @@
     "packages/ios/ContentfulOptimization": {
       "component": "optimization-swift",
       "package-name": "optimization-swift",
-      "release-as": "1.0.0-beta.0",
       "release-type": "simple",
       "version-file": "VERSION",
       "versioning": "prerelease",
