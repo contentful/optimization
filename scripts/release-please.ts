@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import {
   GitHub,
@@ -8,8 +9,11 @@ import {
   type Strategy,
 } from 'release-please'
 import { parseConventionalCommits, type Commit } from 'release-please/build/src/commit'
+import type { CandidateReleasePullRequest } from 'release-please/build/src/manifest'
 import { ManifestPlugin } from 'release-please/build/src/plugin'
 import type { Release } from 'release-please/build/src/release'
+import type { Update, Updater } from 'release-please/build/src/update'
+import type { Logger } from 'release-please/build/src/util/logger'
 import { isRecord } from './typeGuards'
 
 const DEFAULT_CONFIG_FILE = 'release-please-config.json'
@@ -32,6 +36,12 @@ const NATIVE_TARGETS = [
 
 const RELEASE_COMMANDS = ['release-pr', 'github-release', 'self-check'] as const
 const RELEASABLE_TYPES = new Set(['feat', 'fix', 'perf'])
+const CHANGELOG_FILENAME = 'CHANGELOG.md'
+const CHANGELOG_SEED_PLACEHOLDER = 'Release notes are managed by Release Please.'
+const VERSIONED_LOCAL_PACKAGE_TARBALL_REFERENCE =
+  /file:\.\.\/\.\.\/pkgs\/contentful-optimization-[a-z0-9-]+-\d+\.\d+\.\d+(?:-[a-z0-9.-]+)?\.tgz/u
+const STABLE_LOCAL_PACKAGE_TARBALL_REFERENCE =
+  /file:\.\.\/\.\.\/pkgs\/contentful-optimization-[a-z0-9-]+-local\.tgz/u
 
 type ReleaseCommand = (typeof RELEASE_COMMANDS)[number]
 type NativeTarget = (typeof NATIVE_TARGETS)[number]
@@ -40,6 +50,11 @@ type ParsedOptions = ReturnType<typeof parseReleasePleaseArgs>['values']
 registerPlugin(
   'native-bridge-impact',
   (options: PluginFactoryOptions) => new NativeBridgeImpactPlugin(options),
+)
+
+registerPlugin(
+  'release-pr-changelog-format',
+  (options: PluginFactoryOptions) => new ReleasePrChangelogFormatPlugin(options),
 )
 
 class NativeBridgeImpactPlugin extends ManifestPlugin {
@@ -100,6 +115,37 @@ class NativeBridgeImpactPlugin extends ManifestPlugin {
     )
 
     return getReleasableSharedCommits(commits)
+  }
+}
+
+class ReleasePrChangelogFormatPlugin extends ManifestPlugin {
+  constructor(options: PluginFactoryOptions) {
+    super(options.github, options.targetBranch, options.repositoryConfig, options.logger)
+  }
+
+  override async run(
+    pullRequests: CandidateReleasePullRequest[],
+  ): Promise<CandidateReleasePullRequest[]> {
+    this.logger.debug('Formatting generated changelog updates')
+    await Promise.resolve()
+
+    for (const candidate of pullRequests) {
+      candidate.pullRequest.updates = candidate.pullRequest.updates.map(formatChangelogUpdate)
+    }
+
+    return pullRequests
+  }
+}
+
+class ChangelogFormatUpdater implements Updater {
+  private readonly updater: Updater
+
+  constructor(updater: Updater) {
+    this.updater = updater
+  }
+
+  updateContent(content: string | undefined, logger?: Logger): string {
+    return normalizeReleasePleaseChangelogMarkdown(this.updater.updateContent(content, logger))
   }
 }
 
@@ -233,6 +279,24 @@ async function runManifestCommand(
   await manifest.createReleases()
 }
 
+function formatChangelogUpdate(update: Update): Update {
+  if (!update.path.endsWith(`/${CHANGELOG_FILENAME}`) && update.path !== CHANGELOG_FILENAME) {
+    return update
+  }
+
+  return {
+    ...update,
+    updater: new ChangelogFormatUpdater(update.updater),
+  }
+}
+
+function normalizeReleasePleaseChangelogMarkdown(content: string): string {
+  return `${content
+    .replace(/\n{3,}/gu, '\n\n')
+    .replace(/^(\s*)\* /gmu, '$1- ')
+    .trimEnd()}\n`
+}
+
 function readCommand(command: string | undefined): ReleaseCommand {
   const selectedCommand = command ?? 'release-pr'
 
@@ -304,6 +368,35 @@ function createSyntheticNativeImpactCommit(target: NativeTarget, sharedCommits: 
 }
 
 function runSelfCheck(): void {
+  assert.equal(
+    normalizeReleasePleaseChangelogMarkdown(`# Changelog
+
+## [1.0.0](https://example.com) (2026-07-14)
+
+
+### Features
+
+* root item
+  * nested item
+`),
+    `# Changelog
+
+## [1.0.0](https://example.com) (2026-07-14)
+
+### Features
+
+- root item
+  - nested item
+`,
+  )
+
+  assertNoChangelogSeedPlaceholders()
+  assert.equal(
+    getStableLocalPackageTarballReference('@contentful/optimization-web'),
+    'file:../../pkgs/contentful-optimization-web-local.tgz',
+  )
+  assertImplementationLocalPackageTarballReferences()
+
   const releasableSharedCommit = {
     files: ['packages/universal/optimization-js-bridge/src/index.ts'],
     message: 'fix(bridge): refresh bridge payload',
@@ -321,6 +414,87 @@ function runSelfCheck(): void {
   const syntheticCommit = createSyntheticNativeImpactCommit(androidTarget, sharedCommits)
   assert.equal(syntheticCommit.message, 'fix(android): refresh shared native runtime')
   assert.equal(syntheticCommit.sha, releasableSharedCommit.sha)
+}
+
+function assertNoChangelogSeedPlaceholders(): void {
+  for (const changelogPath of findPackageChangelogPaths()) {
+    const changelog = readFileSync(changelogPath, 'utf8')
+    assert.equal(
+      changelog.includes(CHANGELOG_SEED_PLACEHOLDER),
+      false,
+      `${changelogPath} still contains the release-please seed placeholder.`,
+    )
+  }
+}
+
+function findPackageChangelogPaths(): string[] {
+  const changelogPaths: string[] = []
+
+  visit('packages')
+
+  return changelogPaths.sort((left, right) => left.localeCompare(right))
+
+  function visit(directory: string): void {
+    if (!existsSync(directory)) {
+      return
+    }
+
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const entryPath = `${directory}/${entry.name}`
+
+      if (entry.isDirectory()) {
+        visit(entryPath)
+      } else if (entry.isFile() && entry.name === CHANGELOG_FILENAME) {
+        changelogPaths.push(entryPath)
+      }
+    }
+  }
+}
+
+function getStableLocalPackageTarballReference(packageName: string): string {
+  const packageFileName = packageName.replace(/^@/u, '').replace(/\//gu, '-')
+  return `file:../../pkgs/${packageFileName}-local.tgz`
+}
+
+function assertImplementationLocalPackageTarballReferences(): void {
+  let stableReferenceCount = 0
+
+  for (const referencePath of findImplementationLocalPackageReferencePaths()) {
+    const content = readFileSync(referencePath, 'utf8')
+    const versionedReference = VERSIONED_LOCAL_PACKAGE_TARBALL_REFERENCE.exec(content)
+
+    assert.equal(
+      versionedReference,
+      null,
+      `${referencePath} contains a versioned local package tarball reference.`,
+    )
+
+    if (content.includes('file:../../pkgs/contentful-optimization-')) {
+      assert.match(content, STABLE_LOCAL_PACKAGE_TARBALL_REFERENCE)
+      stableReferenceCount += 1
+    }
+  }
+
+  assert(stableReferenceCount > 0)
+}
+
+function findImplementationLocalPackageReferencePaths(): string[] {
+  const referencePaths: string[] = []
+
+  for (const entry of readdirSync('implementations', { withFileTypes: true })) {
+    if (!entry.isDirectory()) {
+      continue
+    }
+
+    const workspaceConfigPath = `implementations/${entry.name}/pnpm-workspace.yaml`
+    if (existsSync(workspaceConfigPath)) {
+      referencePaths.push(workspaceConfigPath)
+    }
+  }
+
+  referencePaths.push('implementations/react-native-sdk/package.json')
+
+  return referencePaths.sort((left, right) => left.localeCompare(right))
 }
 
 function fail(message: string): never {

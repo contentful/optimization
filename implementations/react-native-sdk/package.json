@@ -73,10 +73,10 @@
   },
   "pnpm": {
     "overrides": {
-      "@contentful/optimization-api-client": "file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz",
-      "@contentful/optimization-api-schemas": "file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz",
-      "@contentful/optimization-core": "file:../../pkgs/contentful-optimization-core-0.0.0.tgz",
-      "@contentful/optimization-react-native": "file:../../pkgs/contentful-optimization-react-native-0.0.0.tgz"
+      "@contentful/optimization-api-client": "file:../../pkgs/contentful-optimization-api-client-local.tgz",
+      "@contentful/optimization-api-schemas": "file:../../pkgs/contentful-optimization-api-schemas-local.tgz",
+      "@contentful/optimization-core": "file:../../pkgs/contentful-optimization-core-local.tgz",
+      "@contentful/optimization-react-native": "file:../../pkgs/contentful-optimization-react-native-local.tgz"
     }
   }
 }

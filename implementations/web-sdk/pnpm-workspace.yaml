@@ -1,8 +1,8 @@
 sharedWorkspaceLockfile: false
 
 overrides:
-  '@contentful/optimization-api-client': 'file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz'
-  '@contentful/optimization-api-schemas': 'file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz'
-  '@contentful/optimization-core': 'file:../../pkgs/contentful-optimization-core-0.0.0.tgz'
-  '@contentful/optimization-web': 'file:../../pkgs/contentful-optimization-web-0.0.0.tgz'
-  '@contentful/optimization-web-preview-panel': 'file:../../pkgs/contentful-optimization-web-preview-panel-0.0.0.tgz'
+  '@contentful/optimization-api-client': 'file:../../pkgs/contentful-optimization-api-client-local.tgz'
+  '@contentful/optimization-api-schemas': 'file:../../pkgs/contentful-optimization-api-schemas-local.tgz'
+  '@contentful/optimization-core': 'file:../../pkgs/contentful-optimization-core-local.tgz'
+  '@contentful/optimization-web': 'file:../../pkgs/contentful-optimization-web-local.tgz'
+  '@contentful/optimization-web-preview-panel': 'file:../../pkgs/contentful-optimization-web-preview-panel-local.tgz'

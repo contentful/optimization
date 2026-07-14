@@ -8,6 +8,7 @@ const IMPLEMENTATIONS_DIRECTORY = 'implementations'
 const PACKAGE_JSON_FILENAME = 'package.json'
 const PNPM_COMMAND = 'pnpm'
 const DISABLE_VERIFY_DEPS_BEFORE_RUN_CONFIG = '--config.verify-deps-before-run=false'
+const LIST_NPM_PACKAGE_TARGETS_SCRIPT = 'scripts/list-npm-package-targets.ts'
 const SUCCESS_EXIT_CODE = 0
 const FAILURE_EXIT_CODE = 1
 const PLAYWRIGHT_PACKAGE_NAMES = new Set(['playwright', '@playwright/test'])
@@ -143,6 +144,60 @@ function runPnpm(implementation: string, args: readonly string[]): number {
   return result.status ?? FAILURE_EXIT_CODE
 }
 
+function getLocalPackageTarballPath(packageName: string): string {
+  const packageFileName = packageName.replace(/^@/u, '').replace(/\//gu, '-')
+  return path.join('pkgs', `${packageFileName}-local.tgz`)
+}
+
+function localPackageTarballsExist(): boolean {
+  const result = spawnSync(
+    PNPM_COMMAND,
+    ['exec', 'tsx', LIST_NPM_PACKAGE_TARGETS_SCRIPT, 'npm-targets'],
+    {
+      encoding: 'utf8',
+    },
+  )
+
+  if (result.error) {
+    process.stderr.write(`${result.error.message}\n`)
+    return false
+  }
+
+  if (result.status !== SUCCESS_EXIT_CODE) {
+    process.stderr.write(result.stderr.trim() || 'Failed to list npm package targets.\n')
+    return false
+  }
+
+  return result.stdout
+    .trim()
+    .split('\n')
+    .filter((line) => line !== '')
+    .every((line) => {
+      const [packageName] = line.split('\t')
+      return packageName !== undefined && existsSync(getLocalPackageTarballPath(packageName))
+    })
+}
+
+function ensureLocalPackageTarballs(): number {
+  if (localPackageTarballsExist()) {
+    return SUCCESS_EXIT_CODE
+  }
+
+  process.stdout.write('\n> building local package tarballs before implementation install\n')
+
+  const result = spawnSync(PNPM_COMMAND, ['run', 'build:pkgs'], {
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  })
+
+  if (result.error) {
+    process.stderr.write(`${result.error.message}\n`)
+    return FAILURE_EXIT_CODE
+  }
+
+  return result.status ?? FAILURE_EXIT_CODE
+}
+
 function ensureImplementationEnvFile(implementation: string): void {
   const implementationDir = path.join(IMPLEMENTATIONS_DIRECTORY, implementation)
   const envPath = path.join(implementationDir, '.env')
@@ -179,28 +234,39 @@ function runTypecheckAction(
   return runScript(implementation.name, 'typecheck', actionArgs)
 }
 
+function runImplementationInstallAction(
+  implementation: string,
+  actionArgs: readonly string[],
+): number {
+  const localPackageTarballsExitCode = ensureLocalPackageTarballs()
+  if (localPackageTarballsExitCode !== SUCCESS_EXIT_CODE) {
+    return localPackageTarballsExitCode
+  }
+
+  const installArgs = [
+    'install',
+    '--force',
+    '--no-lockfile',
+    '--no-optimistic-repeat-install',
+    '--update-checksums',
+    ...actionArgs,
+  ]
+
+  if (!hasExplicitFrozenLockfileFlag(actionArgs)) {
+    installArgs.push('--no-frozen-lockfile')
+  }
+
+  return runPnpm(implementation, installArgs)
+}
+
 function runAction(
   implementation: ImplementationConfig,
   requestedAction: string,
   actionArgs: readonly string[],
 ): number {
   switch (requestedAction) {
-    case 'implementation:install': {
-      const installArgs = [
-        'install',
-        '--force',
-        '--no-lockfile',
-        '--no-optimistic-repeat-install',
-        '--update-checksums',
-        ...actionArgs,
-      ]
-
-      if (!hasExplicitFrozenLockfileFlag(actionArgs)) {
-        installArgs.push('--no-frozen-lockfile')
-      }
-
-      return runPnpm(implementation.name, installArgs)
-    }
+    case 'implementation:install':
+      return runImplementationInstallAction(implementation.name, actionArgs)
     case 'implementation:build:run': {
       if (implementation.scripts.has('build')) {
         const buildExitCode = runScript(implementation.name, 'build')

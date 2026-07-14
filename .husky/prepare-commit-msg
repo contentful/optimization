@@ -2,11 +2,16 @@
 
 set -e
 
-# Only prompt for plain interactive `git commit`.
-[ -n "$2" ] && exit 0
+# Only skip when Git already populated the message from a known source.
+case "${2-}" in
+  message | template | merge | squash | commit)
+    exit 0
+    ;;
+esac
+
 [ -r /dev/tty ] || exit 0
 
-if [ -s "$1" ] && grep -vq '^#' "$1"; then
+if [ -s "$1" ] && grep -Eq '^[[:space:]]*[^#[:space:]]' "$1"; then
   exit 0
 fi
 
