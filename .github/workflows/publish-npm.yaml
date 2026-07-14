@@ -5,13 +5,17 @@ permissions:
   id-token: write
   packages: write
 
+concurrency:
+  group: publish-npm-${{ github.event.release.target_commitish || inputs.tag || github.run_id }}
+  cancel-in-progress: false
+
 on:
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing release tag (e.g. v1.2.3)'
+        description: 'Existing package release tag (e.g. optimization-core-v1.2.3)'
         required: true
       publish:
         description: 'Actually publish'
@@ -22,19 +26,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Retrieve Secrets from Vault
-        if: github.event_name == 'release' || inputs.publish
-        id: vault
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
-        with:
-          url: ${{ secrets.VAULT_URL }}
-          role: ${{ github.event.repository.name }}-github-action
-          method: jwt
-          path: github-actions
-          secrets: |
-            secret/data/github/github_packages_write GITHUB_PACKAGES_WRITE_TOKEN | GITHUB_PACKAGES_WRITE_TOKEN;
-
-      - name: Derive release version
+      - name: Derive release tag
+        id: release_tag
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
             TAG='${{ github.event.release.tag_name }}'
@@ -42,11 +35,12 @@ jobs:
             TAG='${{ inputs.tag }}'
           fi
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
-          echo "RELEASE_VERSION=${TAG#v}" >> "$GITHUB_ENV"
+          echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+          ref: ${{ steps.release_tag.outputs.release_tag }}
+          fetch-depth: 0
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
@@ -61,32 +55,86 @@ jobs:
       - name: Resolve npm package targets
         id: npm_package_targets
         run: |
-          echo "pnpm_filters=$(./node_modules/.bin/tsx scripts/list-npm-package-targets.ts npm-pnpm-filters)" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            mapfile -t release_tags < <(git tag --points-at HEAD 'optimization-*-v*' | sort)
+          else
+            release_tags=("$RELEASE_TAG")
+          fi
 
-      - name: Bump package.json versions
-        run: |
-          pnpm -r ${{ steps.npm_package_targets.outputs.pnpm_filters }} exec \
-            npm --no-git-tag-version --force version "$RELEASE_VERSION"
-        env:
-          RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
+          release_targets="$(./node_modules/.bin/tsx scripts/list-npm-package-targets.ts released-npm-targets "${release_tags[@]}")"
+          pnpm_filters="$(./node_modules/.bin/tsx scripts/list-npm-package-targets.ts released-npm-pnpm-filters "${release_tags[@]}")"
+
+          if [ -z "$release_targets" ]; then
+            echo "has_targets=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          IFS=$'\t' read -r package_name _package_dir _report_path _release_tag release_version <<< "$(printf '%s\n' "$release_targets" | head -n 1)"
+
+          if [ -z "$package_name" ] || [ -z "$release_version" ]; then
+            echo "Invalid npm release target: $release_targets" >&2
+            exit 1
+          fi
+
+          {
+            echo "has_targets=true"
+            echo "release_tags<<EOF"
+            printf '%s\n' "${release_tags[@]}"
+            echo "EOF"
+            echo "release_targets<<EOF"
+            printf '%s\n' "$release_targets"
+            echo "EOF"
+            echo "pnpm_filters=$pnpm_filters"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Retrieve Secrets from Vault
+        if:
+          steps.npm_package_targets.outputs.has_targets == 'true' && (github.event_name == 'release'
+          || inputs.publish)
+        id: vault
+        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ github.event.repository.name }}-github-action
+          method: jwt
+          path: github-actions
+          secrets: |
+            secret/data/github/github_packages_write GITHUB_PACKAGES_WRITE_TOKEN | GITHUB_PACKAGES_WRITE_TOKEN;
 
       - name: Build
+        if: steps.npm_package_targets.outputs.has_targets == 'true'
         run: pnpm build
-        env:
-          RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
 
       - name: Generate npm third-party notices
+        if: steps.npm_package_targets.outputs.has_targets == 'true'
         run: pnpm notices:generate:npm
 
       - name: Prepare package READMEs for publish
-        run: |
-          pnpm -r ${{ steps.npm_package_targets.outputs.pnpm_filters }} exec build-tools rewrite-readme prepare
+        if: steps.npm_package_targets.outputs.has_targets == 'true'
         env:
-          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+          RELEASE_TARGETS: ${{ steps.npm_package_targets.outputs.release_targets }}
+        run: |
+          while IFS= read -r target_info; do
+            if [ -z "$target_info" ]; then
+              continue
+            fi
+
+            IFS=$'\t' read -r _package_name package_dir _report_path release_tag _release_version <<< "$target_info"
+
+            if [ -z "$package_dir" ] || [ -z "$release_tag" ]; then
+              echo "Invalid npm README target: $target_info" >&2
+              exit 1
+            fi
+
+            RELEASE_TAG="$release_tag" pnpm --dir "$package_dir" exec build-tools rewrite-readme prepare
+          done <<< "$RELEASE_TARGETS"
 
       - name: Stage third-party notices for publish
+        if: steps.npm_package_targets.outputs.has_targets == 'true'
+        env:
+          NOTICE_TARGETS: ${{ steps.npm_package_targets.outputs.release_targets }}
         run: |
-          notice_targets="$(./node_modules/.bin/tsx scripts/list-npm-package-targets.ts npm-targets)"
+          notice_targets="$NOTICE_TARGETS"
 
           if [ -z "$notice_targets" ]; then
             echo "No npm notice targets found." >&2
@@ -98,7 +146,7 @@ jobs:
               continue
             fi
 
-            IFS=$'\t' read -r package_name package_dir report_path <<< "$target_info"
+            IFS=$'\t' read -r package_name package_dir report_path _release_tag _release_version <<< "$target_info"
 
             if [ -z "$package_name" ] || [ -z "$package_dir" ] || [ -z "$report_path" ]; then
               echo "Invalid npm notice target: $target_info" >&2
@@ -119,12 +167,18 @@ jobs:
           done <<< "$notice_targets"
 
       - name: Create packages for troubleshooting
-        run: pnpm run pack:pkgs
+        if: steps.npm_package_targets.outputs.has_targets == 'true'
+        run: |
+          rm -rf pkgs
+          mkdir -p pkgs
+          pnpm pack ${{ steps.npm_package_targets.outputs.pnpm_filters }} --pack-destination pkgs
 
       - name: Verify packages include third-party notices
+        if: steps.npm_package_targets.outputs.has_targets == 'true'
         run: bash ./scripts/verify-npm-package-notices.sh pkgs
 
       - name: Upload packages for troubleshooting
+        if: steps.npm_package_targets.outputs.has_targets == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ci-optimization-sdk-packages
@@ -133,16 +187,72 @@ jobs:
           retention-days: 3
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        if: github.event_name == 'release' || inputs.publish
+        if:
+          steps.npm_package_targets.outputs.has_targets == 'true' && (github.event_name == 'release'
+          || inputs.publish)
         with:
           node-version-file: '.nvmrc'
           registry-url: 'https://npm.pkg.github.com'
           scope: '@contentful'
           package-manager-cache: false
 
-      - name: Publish
-        if: github.event_name == 'release' || inputs.publish
-        run: |
-          pnpm -r ${{ steps.npm_package_targets.outputs.pnpm_filters }} publish --access public --no-git-checks
+      - name: Resolve unpublished targets
+        if:
+          steps.npm_package_targets.outputs.has_targets == 'true' && (github.event_name == 'release'
+          || inputs.publish)
+        id: unpublished_targets
         env:
           NODE_AUTH_TOKEN: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
+          RELEASE_TARGETS: ${{ steps.npm_package_targets.outputs.release_targets }}
+        run: |
+          publish_targets=()
+
+          while IFS= read -r target_info; do
+            if [ -z "$target_info" ]; then
+              continue
+            fi
+
+            IFS=$'\t' read -r package_name _package_dir _report_path _release_tag release_version <<< "$target_info"
+
+            if npm view "$package_name@$release_version" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
+              echo "$package_name@$release_version is already published; skipping."
+              continue
+            fi
+
+            npm_tag='latest'
+            if [[ "$release_version" == *-* ]]; then
+              npm_tag='next'
+            fi
+
+            publish_targets+=("$package_name"$'\t'"$release_version"$'\t'"$npm_tag")
+          done <<< "$RELEASE_TARGETS"
+
+          {
+            echo "publish_targets<<EOF"
+            printf '%s\n' "${publish_targets[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish
+        if:
+          steps.unpublished_targets.outputs.publish_targets != '' && (github.event_name == 'release'
+          || inputs.publish)
+        env:
+          NODE_AUTH_TOKEN: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
+          PUBLISH_TARGETS: ${{ steps.unpublished_targets.outputs.publish_targets }}
+        run: |
+          while IFS= read -r publish_target; do
+            if [ -z "$publish_target" ]; then
+              continue
+            fi
+
+            IFS=$'\t' read -r package_name release_version npm_tag <<< "$publish_target"
+
+            if [ -z "$package_name" ] || [ -z "$release_version" ] || [ -z "$npm_tag" ]; then
+              echo "Invalid npm publish target: $publish_target" >&2
+              exit 1
+            fi
+
+            echo "Publishing $package_name@$release_version with dist-tag $npm_tag."
+            pnpm --filter "$package_name" publish --access public --no-git-checks --tag "$npm_tag"
+          done <<< "$PUBLISH_TARGETS"

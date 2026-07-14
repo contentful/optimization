@@ -1,5 +1,6 @@
 /* eslint-disable no-console -- This CLI prints machine-readable records and errors. */
 
+import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -11,6 +12,7 @@ interface PackageManifest {
   name: string
   optionalDependencies: Record<string, string>
   private: boolean
+  version: string
 }
 
 interface WorkspacePackage {
@@ -19,13 +21,19 @@ interface WorkspacePackage {
   path: string
 }
 
+interface ReleasedNpmPublishTarget extends WorkspacePackage {
+  releaseTag: string
+  version: string
+}
+
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const workspacePackages = readWorkspacePackages()
 const packageByName = new Map(
   workspacePackages.map((workspacePackage) => [workspacePackage.name, workspacePackage]),
 )
 
-const [command, packageName] = process.argv.slice(2)
+const [command, ...args] = process.argv.slice(2)
+const [packageName] = args
 
 if (command === 'npm-targets') {
   for (const target of getNpmPublishTargets()) {
@@ -55,9 +63,30 @@ if (command === 'npm-targets') {
       .map((target) => `--filter=${target.name}`)
       .join(' '),
   )
+} else if (command === 'released-npm-targets') {
+  for (const target of getReleasedNpmPublishTargets(args)) {
+    console.log(
+      [
+        target.name,
+        path.relative(rootDir, target.path),
+        npmNoticeReportPath(target.name),
+        target.releaseTag,
+        target.version,
+      ].join('\t'),
+    )
+  }
+} else if (command === 'released-npm-pnpm-filters') {
+  console.log(
+    getReleasedNpmPublishTargets(args)
+      .map((target) => `--filter=${target.name}`)
+      .join(' '),
+  )
+} else if (command === 'self-check') {
+  runSelfCheck()
+  console.log('list-npm-package-targets self-check passed.')
 } else {
   fail(
-    'Usage: tsx scripts/list-npm-package-targets.ts npm-targets|npm-report-targets|report-target|npm-package-names|npm-pnpm-filters <package-name>',
+    'Usage: tsx scripts/list-npm-package-targets.ts npm-targets|npm-report-targets|report-target|npm-package-names|npm-pnpm-filters|released-npm-targets|released-npm-pnpm-filters|self-check <package-name|release-tag>',
   )
 }
 
@@ -147,7 +176,22 @@ function readPackageManifest(manifestPath: string): PackageManifest {
     name: manifest.name,
     optionalDependencies: readDependencyMap(manifest, 'optionalDependencies', manifestPath),
     private: manifest.private === true,
+    version: readPackageVersion(manifest, manifestPath),
   }
+}
+
+function readPackageVersion(manifest: Record<string, unknown>, manifestPath: string): string {
+  const { version } = manifest
+
+  if (version === undefined) {
+    return '0.0.0'
+  }
+
+  if (typeof version !== 'string') {
+    fail(`Expected version to be a string in ${manifestPath}`)
+  }
+
+  return version
 }
 
 function readDependencyMap(
@@ -230,6 +274,85 @@ function getProductionDependencies(workspacePackage: WorkspacePackage): Array<[s
   ]
 }
 
+function getReleasedNpmPublishTargets(releaseTags: string[]): ReleasedNpmPublishTarget[] {
+  const targetsByName = new Map(getNpmPublishTargets().map((target) => [target.name, target]))
+  const releasedTargets = new Map<string, ReleasedNpmPublishTarget>()
+
+  for (const releaseTag of releaseTags) {
+    const release = parseNpmReleaseTag(releaseTag)
+
+    if (release === undefined) {
+      continue
+    }
+
+    for (const target of targetsByName.values()) {
+      if (npmReleaseComponent(target.name) !== release.component) {
+        continue
+      }
+
+      releasedTargets.set(target.name, {
+        ...target,
+        releaseTag,
+        version: release.version,
+      })
+    }
+  }
+
+  return sortNpmPublishTargets([...releasedTargets.values()])
+}
+
+function parseNpmReleaseTag(
+  releaseTag: string,
+): { component: string; version: string } | undefined {
+  const match = /^(optimization-[a-z0-9-]+)-v(.+)$/u.exec(releaseTag)
+
+  if (match === null) {
+    return undefined
+  }
+
+  const [, component, version] = match
+
+  if (component === undefined || version === undefined) {
+    return undefined
+  }
+
+  return { component, version }
+}
+
+function npmReleaseComponent(packageName: string): string {
+  return packageName.replace(/^@contentful\//u, '')
+}
+
+function sortNpmPublishTargets(targets: ReleasedNpmPublishTarget[]): ReleasedNpmPublishTarget[] {
+  const targetsByName = new Map(targets.map((target) => [target.name, target]))
+  const sortedTargets: ReleasedNpmPublishTarget[] = []
+  const visited = new Set<string>()
+
+  for (const target of targets) {
+    visit(target)
+  }
+
+  return sortedTargets
+
+  function visit(target: ReleasedNpmPublishTarget): void {
+    if (visited.has(target.name)) {
+      return
+    }
+
+    visited.add(target.name)
+
+    for (const [dependencyName, dependencyRange] of getProductionDependencies(target)) {
+      const dependencyTarget = targetsByName.get(dependencyName)
+
+      if (dependencyTarget !== undefined && dependencyRange.startsWith('workspace:')) {
+        visit(dependencyTarget)
+      }
+    }
+
+    sortedTargets.push(target)
+  }
+}
+
 function findDuplicates(values: string[]): string[] {
   const seen = new Set<string>()
   const duplicates = new Set<string>()
@@ -243,6 +366,43 @@ function findDuplicates(values: string[]): string[] {
   }
 
   return [...duplicates].sort((left, right) => left.localeCompare(right))
+}
+
+function runSelfCheck(): void {
+  const [coreTarget] = getReleasedNpmPublishTargets(['optimization-core-v1.2.3'])
+  assert.equal(coreTarget?.name, '@contentful/optimization-core')
+  assert.equal(coreTarget.version, '1.2.3')
+
+  const sortedNames = getReleasedNpmPublishTargets([
+    'optimization-nextjs-v1.2.3',
+    'optimization-react-web-v1.2.3',
+    'optimization-web-v1.2.3',
+    'optimization-node-v1.2.3',
+    'optimization-core-v1.2.3',
+    'optimization-api-client-v1.2.3',
+    'optimization-api-schemas-v1.2.3',
+  ]).map((target) => target.name)
+
+  assert(
+    sortedNames.indexOf('@contentful/optimization-api-schemas') <
+      sortedNames.indexOf('@contentful/optimization-api-client'),
+  )
+  assert(
+    sortedNames.indexOf('@contentful/optimization-api-client') <
+      sortedNames.indexOf('@contentful/optimization-core'),
+  )
+  assert(
+    sortedNames.indexOf('@contentful/optimization-core') <
+      sortedNames.indexOf('@contentful/optimization-web'),
+  )
+  assert(
+    sortedNames.indexOf('@contentful/optimization-web') <
+      sortedNames.indexOf('@contentful/optimization-react-web'),
+  )
+  assert(
+    sortedNames.indexOf('@contentful/optimization-react-web') <
+      sortedNames.indexOf('@contentful/optimization-nextjs'),
+  )
 }
 
 function fail(message: string): never {

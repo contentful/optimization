@@ -1,7 +1,8 @@
 import { defineConfig } from '@rslib/core'
-import { getPackageName, maybeEnableRsDoctor } from 'build-tools'
+import { getPackageName, getPackageVersion, maybeEnableRsDoctor } from 'build-tools'
 
 const packageName = getPackageName(__dirname, '@contentful/optimization-node')
+const packageVersion = getPackageVersion(__dirname, '0.0.0')
 
 const common = {
   bundle: true,
@@ -27,7 +28,7 @@ export default defineConfig({
     tsconfigPath: './tsconfig.build.json',
     decorators: { version: '2022-03' }, // stage-3 decorators
     define: {
-      __OPTIMIZATION_VERSION__: JSON.stringify(process.env.RELEASE_VERSION ?? '0.0.0'),
+      __OPTIMIZATION_VERSION__: JSON.stringify(process.env.RELEASE_VERSION ?? packageVersion),
       __OPTIMIZATION_PACKAGE_NAME__: JSON.stringify(packageName),
     },
   },

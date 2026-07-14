@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing release tag (e.g. v1.2.3)'
+        description: 'Existing Android release tag (e.g. optimization-android-v1.2.3)'
         required: true
       publish:
         description: 'Actually publish'
@@ -18,6 +18,8 @@ on:
 
 jobs:
   publish:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name,
+      'optimization-android-v')
     runs-on: ubuntu-latest
     steps:
       - name: Derive release version
@@ -27,8 +29,15 @@ jobs:
           else
             TAG='${{ inputs.tag }}'
           fi
-          echo "RELEASE_TAG=$TAG"         >> "$GITHUB_ENV"
-          echo "RELEASE_VERSION=${TAG#v}" >> "$GITHUB_ENV"
+          case "$TAG" in
+            optimization-android-v*) ;;
+            *)
+              echo "Expected optimization-android-v* tag, got $TAG." >&2
+              exit 1
+              ;;
+          esac
+          echo "RELEASE_TAG=$TAG"                         >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION=${TAG#optimization-android-v}" >> "$GITHUB_ENV"
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:

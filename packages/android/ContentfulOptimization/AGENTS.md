@@ -35,8 +35,9 @@ assets.
 
 ## Releasing
 
-- Maven Central publishing uses `.github/workflows/publish-android.yaml` on `v*` tags with group
-  `com.contentful.java` and artifact `optimization-android`.
+- Maven Central publishing uses `.github/workflows/publish-android.yaml` on
+  `optimization-android-v*` tags with group `com.contentful.java` and artifact
+  `optimization-android`.
 - Published artifacts are generated; do not edit them by hand.
 - Android third-party notices are release assets. Debug/unit/local development must not depend on
   them. Release and publish flows that pass

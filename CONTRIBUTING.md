@@ -10,70 +10,84 @@
 
 <div align="center">
 
-[Readme](./README.md) · [Reference](https://contentful.github.io/optimization) ·
-[Contributing](./CONTRIBUTING.md)
+[Readme](./README.md) ·
+[Guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) ·
+[Reference](https://contentful.github.io/optimization) · [Contributing](./CONTRIBUTING.md)
 
 </div>
 
-We appreciate any community contributions to this project, whether in the form of issues or pull
-requests.
+> [!WARNING]
+>
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
-This document explains how to set up the repository, how packages and reference implementations fit
-together, which validation to run for common kinds of changes, and which local hooks and CI
-behaviors to expect.
+We appreciate community contributions in the form of issues and pull requests.
 
-Many subtrees also contain local `AGENTS.md` files. They are written for agent tooling, but they
-also serve as concise local runbooks for humans. When you begin working in a package,
-implementation, or `lib/` workspace, read the nearest `AGENTS.md` for subtree-specific commands and
-gotchas.
+Use this guide when you change SDK packages, reference implementations, documentation, release
+configuration, or repository tooling. It covers setup, the normal development flow, validation, pull
+request expectations, and common troubleshooting.
 
-**Working on your first Pull Request?** You can learn how from this extensive
-[list of resources for people who are new to contributing to Open Source](https://github.com/freeCodeCamp/how-to-contribute-to-open-source).
+Many subtrees include a local `AGENTS.md`. These files are written for agent tooling, but they also
+serve as concise local runbooks for humans. Read the nearest `AGENTS.md` before working in a
+package, implementation, or `lib/` workspace.
+
+**Working on your first pull request?** See this
+[list of resources for people who are new to contributing to open source](https://github.com/freeCodeCamp/how-to-contribute-to-open-source).
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
+- [Before you start](#before-you-start)
 - [Setup](#setup)
 - [Repository map](#repository-map)
-- [Common commands](#common-commands)
-- [Common workflows](#common-workflows)
-  - [Change a workspace package](#change-a-workspace-package)
-  - [Change an implementation](#change-an-implementation)
-  - [Run E2E for one implementation](#run-e2e-for-one-implementation)
-  - [Implementation helper usage](#implementation-helper-usage)
-- [Validation matrix](#validation-matrix)
-- [Code style and local hooks](#code-style-and-local-hooks)
+- [Development flow](#development-flow)
+  - [Package changes](#package-changes)
+  - [Implementation changes](#implementation-changes)
+  - [E2E changes](#e2e-changes)
+- [Commands](#commands)
+  - [Implementation helper](#implementation-helper)
+- [Validation](#validation)
+- [Pull requests and releases](#pull-requests-and-releases)
+  - [Commit scopes](#commit-scopes)
+  - [Release impact](#release-impact)
+  - [Contributor checklist](#contributor-checklist)
+  - [Maintainer checklist](#maintainer-checklist)
 - [Documentation](#documentation)
   - [Guides and the knowledge base (authoring pipeline)](#guides-and-the-knowledge-base-authoring-pipeline)
   - [README depth and render targets](#readme-depth-and-render-targets)
 - [Local troubleshooting](#local-troubleshooting)
-- [Troubleshooting CI issues](#troubleshooting-ci-issues)
-  - [E2E coverage and environment](#e2e-coverage-and-environment)
-  - [License check failure](#license-check-failure)
+- [CI troubleshooting](#ci-troubleshooting)
+  - [E2E jobs](#e2e-jobs)
+  - [License checks](#license-checks)
 
 <!-- mtoc-end -->
 </details>
 
+## Before you start
+
+- Use `pnpm` for repository commands.
+- Use the Node.js version from [`.nvmrc`](./.nvmrc). The pnpm workspace engine setting mirrors
+  `.nvmrc`.
+- Use the pnpm version pinned in the root [`package.json`](./package.json).
+- Change source-of-truth files, not generated output. Authored docs live in `documentation/`;
+  generated TypeDoc output lives in `docs/`.
+- Treat reference implementations as maintained product artifacts, not disposable examples.
+- Do not hand-edit `dist/`, `coverage/`, `docs/`, `pkgs/`, `.rslib/`, `.rsdoctor/`, `node_modules/`,
+  or local `.env` files unless the task explicitly targets them.
+
 ## Setup
 
-The following software is required or strongly recommended for day-to-day development:
+Install the day-to-day prerequisites:
 
-- [Node.js](https://nodejs.org/) (use [`.nvmrc`](./.nvmrc) when possible; the minimum supported
-  version is specified in [`package.json`](./package.json))
-- [pnpm](https://pnpm.io/installation) (the pinned version is recorded in the root
-  [`package.json`](./package.json))
-- [`jq`](https://jqlang.org/) for the local `pre-push` hook
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) or any Docker-compatible
-  container manager when working on `implementations/web-sdk`
-- An Android emulator when running React Native Detox flows in `implementations/react-native-sdk`
+- [Node.js](https://nodejs.org/) through `nvm` or another tool that respects `.nvmrc`.
+- [pnpm](https://pnpm.io/installation), using the version pinned in `package.json`.
+- [`jq`](https://jqlang.org/) for the local `pre-push` hook.
+- Playwright browser binaries for browser-based E2E. The targeted `setup:e2e` wrappers install them
+  for browser implementations.
+- Native toolchains only when working on those surfaces: Android Studio or an Android emulator for
+  Android and React Native flows, and Xcode, XcodeGen, and an iOS simulator for iOS flows.
 
-> [!NOTE]
->
-> Browser-based E2E flows also require Playwright browser binaries. The targeted
-> `pnpm setup:e2e:<implementation>` wrappers install them for browser implementations.
-
-After cloning the repository:
+After cloning the repository, run:
 
 ```sh
 nvm use
@@ -86,67 +100,40 @@ pnpm version:pnpm
 
 ## Repository map
 
-| Path                 | Purpose                                                                                    |
-| -------------------- | ------------------------------------------------------------------------------------------ |
-| `lib/`               | Internal shared tooling and mock services, such as `build-tools` and `mocks`               |
-| `packages/`          | Workspace packages, including the published SDKs and framework layers                      |
-| `implementations/`   | Reference applications used for integration testing, validation evidence, and E2E coverage |
-| `pkgs/`              | Generated tarballs created by `pnpm build:pkgs`; implementations install from these        |
-| `docs/`              | Generated TypeDoc output                                                                   |
-| `dist/`, `coverage/` | Generated build and test artifacts inside individual workspaces                            |
+| Path                 | Purpose                                                                             |
+| -------------------- | ----------------------------------------------------------------------------------- |
+| `lib/`               | Internal shared tooling and mock services, such as `build-tools` and `mocks`        |
+| `packages/`          | Workspace packages, including published SDKs and framework layers                   |
+| `packages/android/`  | Pre-release Android library                                                         |
+| `packages/ios/`      | Pre-release Swift package                                                           |
+| `implementations/`   | Reference apps used for integration testing, validation evidence, and E2E coverage  |
+| `documentation/`     | Authored guides and concepts published with TypeDoc                                 |
+| `docs/`              | Generated TypeDoc output                                                            |
+| `pkgs/`              | Generated tarballs created by `pnpm build:pkgs`; implementations install from these |
+| `dist/`, `coverage/` | Generated build and test artifacts inside individual workspaces                     |
+| `.github/workflows/` | CI, release, publish, and title-check workflows                                     |
 
-The most important repository-specific mechanic is this:
+The main repository-specific mechanic is package refresh:
 
 - Package changes do not automatically flow into reference implementations.
-- If an implementation consumes a package you changed, rebuild tarballs with `pnpm build:pkgs` and
-  reinstall that implementation before trusting local results.
-- The targeted `pnpm setup:e2e:<implementation>` wrappers do this refresh for you as part of E2E
-  setup.
+- To test an implementation after changing a package, run `pnpm build:pkgs`, then reinstall the
+  affected implementation.
+- The targeted `pnpm setup:e2e:<implementation>` wrappers perform that refresh for E2E flows that
+  consume local tarballs.
 
-## Common commands
+## Development flow
 
-The root [`package.json`](./package.json) contains more scripts than are listed below. These are the
-ones most contributors need regularly.
+1. Read the root `AGENTS.md`, then the nearest child `AGENTS.md` for the files you plan to edit.
+2. Make the narrow source-of-truth change in the package, implementation, docs, or tooling layer
+   that owns the behavior.
+3. Run the smallest meaningful validation for the changed surface.
+4. If a package change is consumed by an implementation, rebuild tarballs and reinstall that
+   implementation before trusting local integration or E2E results.
+5. Include the validation commands and any release impact in the pull request description.
 
-| Command                                           | When to use it                                                                 |
-| ------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `pnpm lint`                                       | Lint `lib/` and `packages/` workspaces                                         |
-| `pnpm implementation:lint`                        | Lint `implementations/`                                                        |
-| `pnpm implementation:install`                     | Refresh all implementations after rebuilding package tarballs                  |
-| `pnpm typecheck`                                  | Type-check all workspaces                                                      |
-| `pnpm implementation:typecheck`                   | Type-check all implementations                                                 |
-| `pnpm test:unit`                                  | Run unit tests across workspace packages                                       |
-| `pnpm build`                                      | Build all `@contentful/*` packages                                             |
-| `pnpm build:pkgs`                                 | Build packages and create implementation-consumable tarballs in `pkgs/`        |
-| `pnpm size:check`                                 | Validate bundle-size budgets for all built packages                            |
-| `pnpm size:report`                                | Report bundle sizes without failing on budgets                                 |
-| `pnpm docs:generate`                              | Generate TypeDoc output                                                        |
-| `pnpm format:check`                               | Check repository formatting                                                    |
-| `pnpm setup:e2e:<implementation>`                 | Prepare one implementation for E2E, including package refresh and local setup  |
-| `pnpm test:e2e:<implementation>`                  | Run one implementation's full E2E flow                                         |
-| `pnpm implementation:run -- <implementation> ...` | Run a specific helper action or package-local script inside one implementation |
-| `pnpm playwright:install`                         | Install Playwright browsers across implementations                             |
-| `pnpm playwright:install-deps`                    | Install Playwright system dependencies on Linux                                |
-| `pnpm serve:mocks`                                | Run the shared mock services used by local flows                               |
+### Package changes
 
-Most workspaces also define targeted local scripts such as `dev`, `build`, `test:unit`, and
-`size:check`. Prefer targeted validation in the affected package or implementation instead of
-running the whole repository when the change is narrow.
-
-Before running `pnpm implementation:lint` across the repository, run `pnpm implementation:install`
-so the reference implementations have current local package tarballs installed.
-
-## Common workflows
-
-### Change a workspace package
-
-1. Read the nearest package or `lib/` `AGENTS.md`.
-2. Make your change in the package source, tests, docs, or local harness.
-3. Run targeted validation in that workspace.
-4. If the package is consumed by an implementation you want to verify, rebuild tarballs and
-   reinstall the implementation before running local integration or E2E checks.
-
-Example:
+Run root lint plus targeted package checks when the change is narrow:
 
 ```sh
 pnpm lint
@@ -154,76 +141,109 @@ pnpm --filter @contentful/optimization-web typecheck
 pnpm --filter @contentful/optimization-web test:unit
 pnpm --filter @contentful/optimization-web build
 pnpm --filter @contentful/optimization-web size:check
+```
 
+If an implementation consumes the changed package, refresh it before testing:
+
+```sh
 pnpm build:pkgs
 pnpm implementation:run -- web-sdk implementation:install
 ```
 
-If your next step is E2E rather than a narrow manual reinstall, prefer the targeted wrapper:
+When E2E is the next step, use the targeted wrapper:
 
 ```sh
 pnpm setup:e2e:web-sdk
 pnpm test:e2e:web-sdk
 ```
 
-### Change an implementation
+Broaden validation for public exports, shared runtime behavior, generated artifacts, mocks,
+packaging, or behavior used by multiple SDKs.
 
-1. Read the nearest implementation `AGENTS.md`.
-2. If your change depends on freshly built local packages, run `pnpm build:pkgs` and reinstall the
-   implementation first.
-3. Run targeted implementation validation.
-4. Run the implementation's E2E flow for user-visible or integration-heavy changes.
+### Implementation changes
 
-Example:
+Run the implementation checks that match the changed app:
 
 ```sh
+pnpm implementation:lint
 pnpm implementation:run -- web-sdk_react typecheck
 pnpm implementation:run -- web-sdk_react build
 pnpm implementation:run -- web-sdk_react implementation:test:e2e:run
 ```
 
-### Run E2E for one implementation
+If the implementation depends on freshly built local packages, run `pnpm build:pkgs` and reinstall
+the implementation first.
 
-1. Create a local `.env` from the implementation's `.env.example` if the implementation expects one
-   and you do not already have it.
-2. Run the targeted setup wrapper.
-3. Run the targeted E2E wrapper.
+### E2E changes
 
-Example:
+Use root wrappers when they exist:
 
 ```sh
-cp implementations/web-sdk/.env.example implementations/web-sdk/.env
-pnpm setup:e2e:web-sdk
-pnpm test:e2e:web-sdk
+pnpm setup:e2e:<implementation>
+pnpm test:e2e:<implementation>
 ```
 
-Environment notes:
+The root wrappers cover `node-sdk`, `node-sdk+web-sdk`, `web-sdk`, `web-sdk_react`,
+`web-sdk_angular`, `react-web-sdk`, `nextjs-sdk_app-router`, `nextjs-sdk_pages-router`,
+`react-native-sdk`, and `ios-sdk`.
 
-- `web-sdk` requires Docker because the app is served via nginx.
-- Browser implementations require Playwright browser binaries.
-- `react-native-sdk` requires an Android emulator for Detox flows.
-- Several implementations use PM2-managed processes for local serving; stop only the relevant
-  implementation process rather than doing broad PM2 cleanup.
+Native Android uses implementation-local runners from the root:
 
-### Implementation helper usage
+```sh
+pnpm implementation:run -- android-sdk test:e2e:compose
+pnpm implementation:run -- android-sdk test:e2e:views
+pnpm implementation:run -- android-sdk test:e2e
+```
 
-`implementation:run` is the shared helper used by the implementation scripts listed above.
+The Android, iOS, and React Native runners start or verify the required local services, devices, or
+simulators where practical. Report the runner's concrete preflight failure if setup does not
+complete.
 
-Run a helper action for all implementations:
+## Commands
+
+The root [`package.json`](./package.json) contains the full script list. These commands cover most
+contributor workflows:
+
+| Command                                           | When to use it                                                          |
+| ------------------------------------------------- | ----------------------------------------------------------------------- |
+| `pnpm lint`                                       | Lint `lib/` and `packages/` workspaces                                  |
+| `pnpm implementation:lint`                        | Lint `implementations/`                                                 |
+| `pnpm typecheck`                                  | Type-check `lib/` and `packages/` workspaces                            |
+| `pnpm implementation:typecheck`                   | Type-check all implementations                                          |
+| `pnpm test:unit`                                  | Run unit tests across `lib/` and `packages/`                            |
+| `pnpm build`                                      | Build all `@contentful/*` packages                                      |
+| `pnpm build:pkgs`                                 | Build packages and create implementation-consumable tarballs in `pkgs/` |
+| `pnpm implementation:install`                     | Rebuild tarballs and refresh every implementation                       |
+| `pnpm size:check`                                 | Validate bundle-size budgets for all built packages                     |
+| `pnpm size:report`                                | Report bundle sizes without failing on budgets                          |
+| `pnpm docs:generate`                              | Generate TypeDoc output                                                 |
+| `pnpm format:check`                               | Check repository formatting                                             |
+| `pnpm setup:e2e:<implementation>`                 | Prepare one implementation for E2E                                      |
+| `pnpm test:e2e:<implementation>`                  | Run one implementation's full E2E flow                                  |
+| `pnpm implementation:run -- <implementation> ...` | Run a helper action or local script inside one implementation           |
+| `pnpm ios:test`                                   | Build the JS bridge and run Swift package tests                         |
+| `pnpm playwright:install`                         | Install Playwright browsers across implementations                      |
+| `pnpm playwright:install-deps`                    | Install Playwright system dependencies on Linux                         |
+| `pnpm serve:mocks`                                | Run the shared mock services used by local flows                        |
+
+Prefer targeted workspace commands when the change is narrow. Use aggregate commands when shared
+behavior, exports, packaging, mocks, or generated artifacts cross workspace boundaries.
+
+### Implementation helper
+
+`implementation:run` runs helper actions or implementation-local scripts from the repository root:
 
 ```sh
 pnpm implementation:run -- --all -- <action> [args...]
-```
-
-Run a helper action for one implementation:
-
-```sh
 pnpm implementation:run -- <implementation> <action> [args...]
 ```
 
-- `<implementation>` is a folder name under `implementations/` (for example: `web-sdk`,
-  `web-sdk_react`, `react-web-sdk`, `node-sdk`, `node-sdk+web-sdk`, `react-native-sdk`)
-- `<action>` can be one of these helper actions:
+`<implementation>` is a folder under `implementations/`, such as `web-sdk`, `web-sdk_react`,
+`react-web-sdk`, `node-sdk`, `node-sdk+web-sdk`, `nextjs-sdk_app-router`, `nextjs-sdk_pages-router`,
+`react-native-sdk`, `android-sdk`, or `ios-sdk`.
+
+Common helper actions include:
+
 - `implementation:install`
 - `implementation:build:run`
 - `implementation:test:unit:run`
@@ -231,101 +251,139 @@ pnpm implementation:run -- <implementation> <action> [args...]
 - `implementation:playwright:install-deps`
 - `implementation:setup:e2e`
 - `implementation:test:e2e:run`
-- `<action>` can also be any implementation-local script name (for example: `serve`, `serve:stop`,
-  `test:e2e:ui`)
-- `[args...]` are forwarded to the target script/action (when supported by that action/script)
+
+You can also pass an implementation-local script name, such as `serve`, `build`, `typecheck`,
+`test:e2e:ui`, `test:e2e:compose`, or `test:e2e:ios:build:release`.
 
 Examples:
 
 ```sh
-# Install dependencies for every implementation
 pnpm implementation:run -- --all -- implementation:install
-
-# Run the implementation-level E2E command for all implementations
-pnpm implementation:run -- --all -- implementation:test:e2e:run
-
-# Run one implementation's local script
 pnpm implementation:run -- web-sdk test:e2e:ui
-
-# Pass arguments through to the underlying E2E script
+pnpm implementation:run -- android-sdk test:e2e:compose -- --flow preview-panel
 pnpm implementation:run -- node-sdk implementation:test:e2e:run -- --grep "homepage"
 ```
 
-Prefer the root wrapper scripts when they already match what you want to do. For example:
+## Validation
 
-- `pnpm implementation:install`
-- `pnpm setup:e2e:<implementation>`
-- `pnpm test:e2e:<implementation>`
-
-## Validation matrix
-
-Use the smallest meaningful validation set for the change.
+Use the smallest meaningful validation set for the change:
 
 | Change type                                                 | Usually run                                                                                     | Notes                                                                       |
 | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Docs-only or markdown-only                                  | `pnpm format:check`                                                                             | Also run `pnpm docs:generate` if public API docs or linked markdown changed |
-| Package or `lib/` TypeScript change                         | Targeted `lint`, `typecheck`, `test:unit`, and `build`                                          | Prefer `pnpm --filter <workspace> ...` when the change is narrow            |
-| Built package runtime, export, dependency, or bundle change | Targeted `size:check` or root `pnpm size:check`                                                 | Bundle-size checks are contributor-run validation, not a dedicated CI job   |
-| Package change used by an implementation                    | `pnpm build:pkgs`, then reinstall the affected implementation                                   | Use `pnpm setup:e2e:<implementation>` if E2E is your next step              |
-| Implementation code change                                  | `pnpm implementation:lint`, targeted implementation `typecheck`, and implementation-local tests | Some implementations have no meaningful unit tests; E2E matters more there  |
+| Docs-only or Markdown-only                                  | `pnpm format:check`                                                                             | Also run `pnpm docs:generate` if public API docs or linked Markdown changed |
+| Package or `lib/` TypeScript change                         | Root `pnpm lint`, targeted `typecheck`, `test:unit`, and `build`                                | Prefer `pnpm --filter <workspace> ...` when the change is narrow            |
+| Built package runtime, export, dependency, or bundle change | Targeted `size:check` or root `pnpm size:check`                                                 | Bundle-size checks validate evidence; budget changes need maintainer review |
+| Package change used by an implementation                    | `pnpm build:pkgs`, then reinstall the affected implementation                                   | Use `pnpm setup:e2e:<implementation>` when E2E is the next step             |
+| Implementation code change                                  | `pnpm implementation:lint`, targeted implementation `typecheck`, and implementation-local tests | Some implementations rely more on E2E than unit tests                       |
+| Native Android change                                       | Build both apps and run targeted Maestro                                                        | Use `test:e2e:compose`, `test:e2e:views`, or both when parity matters       |
+| Native iOS change                                           | Targeted XCUITest or `pnpm test:e2e:ios-sdk`                                                    | Use `IOS_ONLY_TESTING` for focused release-run suites                       |
 | Shared build or packaging change                            | Broaden validation to downstream packages and at least one affected implementation              | Examples: `lib/build-tools`, package exports, tarball/install flow          |
 | User-visible integration or runtime behavior change         | Targeted implementation E2E                                                                     | Choose the implementation that exercises the changed surface                |
 
-When in doubt, start targeted and broaden only if the change crosses package or implementation
-boundaries.
+When an upstream package build fails, stop downstream validation. Stale downstream artifacts are not
+evidence.
 
-## Code style and local hooks
+## Pull requests and releases
 
-This project uses [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/) to enforce
-coding and formatting conventions. You can enable related editor plugins to get the same feedback
-while working on Optimization SDKs.
+This repository squash-merges pull requests. The pull request title becomes the commit header on
+`main`, so the title must be a scoped Conventional Commit header. Release Please reads commits on
+`main`, opens one shared release PR, and creates package-specific tags and GitHub releases after
+that release PR merges.
 
-Please review the following files to familiarize yourself with current configurations:
+Release tags use package components:
 
-- [eslint.config.ts](./eslint.config.ts)
-- [.prettierrc](./.prettierrc)
-- [.markdownlint.yaml](./.markdownlint.yaml)
-- [.lintstagedrc.yaml](./.lintstagedrc.yaml)
+| Artifact family | Release tag example                  | Publish target                                               |
+| --------------- | ------------------------------------ | ------------------------------------------------------------ |
+| NPM packages    | `optimization-web-v1.3.1`            | GitHub Packages                                              |
+| Android         | `optimization-android-v1.1.0-beta.0` | Maven Central                                                |
+| Swift           | `optimization-swift-v1.1.0-beta.0`   | `contentful/optimization.swift` with SPM tag `v1.1.0-beta.0` |
 
-Local Git hooks installed by Husky:
+### Commit scopes
 
-- `pre-commit` runs `lint-staged` on staged files.
-- `prepare-commit-msg` opens a Commitizen prompt when you do not supply a commit message and you are
-  not amending `HEAD`.
-- `pre-push` runs targeted type checks and unit tests for changed workspaces and implementations.
+Commitlint requires one of these scopes:
 
-Practical implications:
+```text
+android, api-client, api-schemas, bridge, build-tools, ci, core, deps,
+docs, implementations, nextjs, node, publish, react-native, react-web,
+repo, swift, test, web, web-preview-panel
+```
 
-- If you change TypeScript in a workspace package, expect targeted typecheck and unit-test work to
-  happen again on push.
-- If you change an implementation, expect targeted implementation typecheck and implementation
-  `test:unit` work to run on push.
-- Fix hook failures rather than bypassing them unless you have an explicit reviewed reason to skip
-  them.
+Use the package or runtime scope for user-facing behavior. Use shared scopes such as `repo`, `ci`,
+`docs`, `test`, `deps`, `build-tools`, `implementations`, or `publish` for maintenance-only work.
+
+### Release impact
+
+| Change intent                            | Pull request title pattern                      | Release effect                                          |
+| ---------------------------------------- | ----------------------------------------------- | ------------------------------------------------------- |
+| Bug fix or runtime correction            | `fix(core): handle empty profile state`         | Patch release for affected package paths                |
+| Performance fix                          | `perf(web): reduce client bundle work`          | Patch release for affected package paths                |
+| Feature                                  | `feat(web): support managed CDA client`         | Minor release for affected package paths                |
+| Breaking change                          | `feat(web)!: remove legacy optimized entry API` | Major release for affected package paths                |
+| Docs, tests, CI, or internal maintenance | `docs(nextjs): clarify app router setup`        | No package release unless paired with a breaking marker |
+
+For breaking changes, include a footer in the pull request description and squash commit body:
+
+```text
+BREAKING CHANGE: OptimizedEntry no longer accepts the legacy field shape.
+```
+
+Dependency updates follow the same rule as other changes. Use `fix(scope): ...` when a dependency
+change affects published runtime behavior. Use `chore(deps): ...` for maintenance-only dependency
+work.
+
+Release Please assigns releases by changed package paths and workspace dependency updates. Android
+and Swift are configured as beta prerelease packages. The native bridge impact plugin also
+synthesizes Android and Swift patch releases from releasable shared runtime commits that touch
+`packages/universal/api-schemas`, `packages/universal/api-client`, `packages/universal/core-sdk`, or
+`packages/universal/optimization-js-bridge`. When a change affects multiple packages, use the scope
+that best describes the user-facing change and list the affected packages in the pull request
+description.
+
+### Contributor checklist
+
+1. Keep the pull request focused on one coherent release intent.
+2. Use `pnpm commit`, plain `git commit`, or a manual Conventional Commit message.
+3. Set the pull request title to the Conventional Commit header that must land on `main`.
+4. Run the validation listed in this document plus any local validation from the nearest
+   `AGENTS.md`.
+5. Include validation commands and release impact in the pull request description.
+6. Update the title before merge if review changes the release impact.
+
+Ask a maintainer before changing release policy, release budgets, publish workflows, or exact first
+semantic versions. For an exact first semantic version, the maintainer must use a temporary
+per-package `release-as` override before the release PR is created.
+
+### Maintainer checklist
+
+1. Review the change, validation evidence, and nearest `AGENTS.md` requirements.
+2. Check that the pull request title is the Conventional Commit header that must land on `main`.
+3. For breaking changes, keep the `BREAKING CHANGE:` footer in the squash commit body.
+4. Squash-merge after required checks pass.
+5. Let the `Release Please` workflow run on `main`.
+6. Review the shared release PR named `chore(repo): release packages`.
+7. Confirm the release PR updates the expected package versions, changelogs, internal workspace
+   dependency ranges, Android `VERSION`, and Swift `VERSION` files.
+8. Merge the release PR when the release contents are correct.
+9. Monitor package-specific GitHub releases and publish workflows:
+   - NPM publish uses GitHub Packages only and skips package versions that already exist.
+   - Android publish runs only for `optimization-android-v*` tags.
+   - Swift publish runs only for `optimization-swift-v*` tags and pushes `v<version>` to
+     `contentful/optimization.swift`.
+
+Run `pnpm release:self-check` before changing Release Please config, native release synthesis, or
+NPM target resolution.
 
 ## Documentation
 
-Code is documented using TSDoc, and reference documentation is generated using TypeDoc and published
-automatically with each new version.
+Follow [`STYLE_GUIDE.md`](./STYLE_GUIDE.md) for human-authored prose.
 
-- authored supporting docs belong in `documentation/`, while `docs/` remains generated output
-- `pnpm docs:generate` generates documentation from TSDoc code comments, package README files, and
-  markdown files under `documentation/`
-- `pnpm docs:watch` watches for file updates and rebuilds documentation output; useful while writing
-  and updating documentation
+Code reference documentation is generated with TypeDoc:
 
-When changing public SDK behavior in this pre-release alpha period, update the same pull request to
-keep these artifacts aligned:
-
-- TSDoc/JSDoc comments near changed API surfaces
-- package READMEs that document those surfaces
-- package-local development harnesses or example flows when they are meant to demonstrate the
-  changed behavior
-- any replacement design, architecture, or specification artifacts that the repository adds for the
-  changed area
-
-`documentation/` contains source markdown that TypeDoc publishes. `docs/` is generated output. Do
-not hand-edit generated TypeDoc output.
+- Authored supporting docs belong in `documentation/`.
+- Generated TypeDoc output belongs in `docs/`; do not hand-edit it.
+- `pnpm docs:generate` generates documentation from TSDoc comments, package README files, and
+  Markdown files under `documentation/`.
+- `pnpm docs:watch` watches for file updates and rebuilds generated docs while writing.
 
 ### Guides and the knowledge base (authoring pipeline)
 
@@ -372,83 +430,76 @@ outside the automated refresh/iterate guarantee for now.
 
 ### README depth and render targets
 
-READMEs are orientation surfaces, not the only place for every detail. Match depth to the README
-category:
+When public SDK behavior changes, keep the related documentation aligned in the same pull request:
 
-- Application-facing package READMEs keep purpose, install, minimal setup, common options, critical
-  caveats, and links to guides, reference implementations, and generated API reference.
-- Lower-level package READMEs explain the package's role in the SDK stack, who uses it directly,
-  common setup options where useful, and where exhaustive API details live.
-- Reference implementation READMEs stay procedural: what the implementation validates,
-  prerequisites, setup, run/test commands, environment notes, and related package links.
-- Internal and placeholder READMEs stay short, explicit, and status-oriented.
+- TSDoc or JSDoc comments near changed API surfaces.
+- Package READMEs that document those surfaces.
+- Package-local harnesses or reference implementation flows that demonstrate the behavior.
+- Guides, concepts, architecture notes, or specifications that explain the changed area.
 
-Move step-by-step implementation material into the existing guide for that runtime when one exists.
-Create a new guide only when no existing guide covers the reader goal. Keep exhaustive method
-catalogs, callback payload shapes, and exported type details in TypeDoc.
+READMEs are orientation surfaces. Keep package READMEs focused on purpose, installation, minimal
+setup, common options, critical caveats, and links to guides, reference implementations, and
+generated API reference. Keep reference implementation READMEs procedural.
 
 Package README links must work in GitHub source browsing, generated TypeDoc project documents, and
-npmjs README rendering. Use canonical generated-doc URLs for shared header navigation and verify
+npm README rendering. Use canonical generated-doc URLs for shared header navigation and verify
 repo-relative links before relying on package README publish rewriting.
 
 ## Local troubleshooting
 
-- An implementation is not reflecting your package change: run `pnpm build:pkgs`, then reinstall the
-  affected implementation with `pnpm implementation:run -- <implementation> implementation:install`.
-- Playwright reports a missing browser: run `pnpm playwright:install`, or use the targeted
-  `pnpm setup:e2e:<implementation>` wrapper.
-- Playwright system dependencies are missing on Linux: run `pnpm playwright:install-deps`.
-- `implementations/web-sdk` fails to serve locally: confirm Docker is running.
-- React Native Detox cannot attach to a device: confirm an Android emulator is already running.
-- An implementation behaves differently from expected local settings: compare its local `.env` with
-  its checked-in `.env.example`.
-- A local port such as `3000`, `8000`, or `8081` is already in use: stop only the relevant local
-  process or implementation `serve` flow rather than using broad PM2 cleanup.
+| Symptom                                                  | What to do                                                                                                                                     |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| An implementation does not reflect a package change      | Run `pnpm build:pkgs`, then `pnpm implementation:run -- <implementation> implementation:install`.                                              |
+| Playwright reports a missing browser                     | Run `pnpm playwright:install`, or use the targeted `pnpm setup:e2e:<implementation>` wrapper.                                                  |
+| Playwright system dependencies are missing on Linux      | Run `pnpm playwright:install-deps`.                                                                                                            |
+| `implementations/web-sdk` fails to serve locally         | Check `implementations/web-sdk/.env` against `.env.example` and confirm port `3000` is free.                                                   |
+| React Native Detox cannot attach to a device             | Run the documented Detox runner; it can launch the configured emulator. Report the runner's actual failure if setup does not complete.         |
+| Android Maestro has no visible device before startup     | Run the documented Android runner; it resolves or launches the pinned emulator when possible.                                                  |
+| iOS XCUITest cannot find a simulator                     | Run the local iOS runner or root wrapper and report the concrete Xcode, simulator, XcodeGen, or signing preflight error.                       |
+| An implementation uses unexpected local settings         | Compare its local `.env` with its checked-in `.env.example`.                                                                                   |
+| A port such as `3000`, `8000`, or `8081` is already used | Stop only the relevant local process or implementation `serve` flow instead of using broad PM2 cleanup.                                        |
+| Commitlint rejects a commit or pull request title        | Add a supported scope. Example: use `fix(core): handle empty profile state`, not `fix: handle empty profile state`.                            |
+| The pull request has the wrong release impact            | Update the title before merge. For breaking changes, add `!` after the scope and include a `BREAKING CHANGE:` footer in the pull request body. |
 
-## Troubleshooting CI issues
+## CI troubleshooting
 
-### E2E coverage and environment
+`Main Pipeline` runs implementation E2E jobs when path filters request them for pull requests and
+pushes to `main`.
 
-`Main Pipeline` runs implementation E2E jobs when path filters request them for both:
-
-- pull requests
-- pushes to `main`
-
-This is an intentional CI policy:
+This is intentional CI policy:
 
 - E2E execution is path-filtered to reduce CI runtime and cost.
-- CI E2E runs against local mock services via checked-in `.env.example` values to keep runs
-  deterministic and stable.
-- Production/live-server E2E is a manual verification step when needed; it is intentionally not part
-  of default CI.
+- CI E2E uses local mock services and checked-in `.env.example` values.
+- Production or live-server E2E is manual verification when needed.
+- E2E setup does not depend on repository secrets, so fork pull requests follow the same checked-in
+  setup path.
 
-The path filters do not watch only implementation directories. Shared package and root changes can
-also trigger implementation E2E. At a high level:
+### E2E jobs
 
-| Workflow filter -> job(s)                                                                  | Also watches shared surfaces                                                                                                                            |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `e2e_node_sdk` -> `e2e-node-sdk`                                                           | `lib/**`, `packages/node/node-sdk/**`, universal packages, root package/workflow files                                                                  |
-| `e2e_node_sdk_web_sdk` -> `e2e-node-sdk-web-sdk`                                           | `lib/**`, `packages/node/node-sdk/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, shared root files                                    |
-| `e2e_web_sdk` -> `e2e-web-sdk`                                                             | `lib/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files                                             |
-| `e2e_web_sdk_react` -> `e2e-web-sdk_react`                                                 | `lib/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files                                             |
-| `e2e_react_web_sdk` -> `e2e-react-web-sdk`                                                 | `lib/**`, `packages/web/frameworks/react-web-sdk/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files |
-| `e2e_nextjs_sdk_app_router` -> `e2e-nextjs-sdk-app-router`                                 | `lib/**`, `packages/web/frameworks/nextjs-sdk/**`, Node SDK, React Web SDK, Web SDK, universal packages, shared root files                              |
-| `e2e_nextjs_sdk_pages_router` -> `e2e-nextjs-sdk-pages-router`                             | `lib/**`, `packages/web/frameworks/nextjs-sdk/**`, Node SDK, React Web SDK, Web SDK, preview panel, universal packages, shared root files               |
-| `e2e_react_native_android` -> `e2e-react-native-android-build`, `e2e-react-native-android` | `lib/**`, `packages/react-native-sdk/**`, universal packages, shared root files                                                                         |
+The path filters also watch shared package and root files that can affect the implementation:
+
+| Workflow filter               | Job family                              | Also watches shared surfaces                                 |
+| ----------------------------- | --------------------------------------- | ------------------------------------------------------------ |
+| `e2e_node_sdk`                | `e2e-node-sdk`                          | `lib/**`, `packages/node/**`, `packages/universal/**`        |
+| `e2e_node_sdk_web_sdk`        | `e2e-node-sdk-web-sdk`                  | Node, Web, Universal, and shared root files                  |
+| `e2e_web_sdk`                 | `e2e-web-sdk`                           | `lib/**`, `packages/web/**`, `packages/universal/**`         |
+| `e2e_web_sdk_react`           | `e2e-web-sdk_react`                     | `lib/**`, `packages/web/**`, `packages/universal/**`         |
+| `e2e_web_sdk_angular`         | `e2e-web-sdk_angular`                   | `lib/**`, Node, Web, Universal, and shared root files        |
+| `e2e_react_web_sdk`           | `e2e-react-web-sdk`                     | `lib/**`, `packages/web/**`, `packages/universal/**`         |
+| `e2e_nextjs_sdk_app_router`   | `e2e-nextjs-sdk-app-router`             | Node, Web, Universal, and shared root files                  |
+| `e2e_nextjs_sdk_pages_router` | `e2e-nextjs-sdk-pages-router`           | Node, Web, Universal, and shared root files                  |
+| `e2e_react_native_android`    | React Native Android build and E2E jobs | `packages/react-native-sdk/**`, Universal, and shared files  |
+| `e2e_android`                 | Android SDK build and Maestro jobs      | `lib/mocks/**`, `packages/android/**`, Universal, root files |
+| `e2e_ios`                     | iOS SDK build and XCUITest jobs         | `lib/mocks/**`, `packages/ios/**`, Universal, root files     |
 
 See [`.github/workflows/main-pipeline.yaml`](./.github/workflows/main-pipeline.yaml) for the exact
 authoritative filter list.
 
-Skipping an implementation E2E job because its filter did not match is expected behavior, not a CI
-coverage defect.
+Skipping an implementation E2E job because its filter did not match is expected behavior. If a
+change needs to trigger an implementation E2E job but does not match the current filters, update the
+path filters in `.github/workflows/main-pipeline.yaml` in the same pull request.
 
-If a change needs to trigger an implementation E2E job but does not match the current filters,
-update the path filters in `.github/workflows/main-pipeline.yaml` in the same pull request.
-
-E2E setup does not depend on repository secrets. Each implementation creates `.env` from its own
-checked-in `.env.example` file in CI, which keeps fork PR behavior aligned with internal PRs.
-
-### License check failure
+### License checks
 
 Run `license-checker` locally:
 
@@ -457,6 +508,6 @@ pnpx license-checker --summary
 pnpx license-checker > licenses.txt
 ```
 
-If the license for a package merely has a spelling or formatting difference from an existing entry
-in the `license-check` GitHub workflow allow list, update the list and submit the change via pull
-request. Otherwise, create an issue to receive further guidance from the maintainers.
+If the license for a package has a spelling or formatting difference from an existing entry in the
+`license-check` GitHub workflow allow list, update the list and submit the change via pull request.
+Otherwise, create an issue for further guidance from the maintainers.
