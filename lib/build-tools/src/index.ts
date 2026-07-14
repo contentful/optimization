@@ -11,6 +11,6 @@ export type {
   ClientBoundaryExportFailure,
 } from './clientBoundaryExports'
 export { emitDualDts } from './emitDualDts'
-export { getPackageName, hasPackageName } from './package'
+export { getPackageName, getPackageVersion, hasPackageName, hasPackageVersion } from './package'
 export { preparePublishReadme, rewriteReadmeForPublish } from './publishReadme'
 export { concatPolyfills, ensureUmdDefaultExport, maybeEnableRsDoctor } from './rslib'

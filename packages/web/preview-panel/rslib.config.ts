@@ -1,5 +1,10 @@
 import { defineConfig } from '@rslib/core'
-import { ensureUmdDefaultExport, getPackageName, maybeEnableRsDoctor } from 'build-tools'
+import {
+  ensureUmdDefaultExport,
+  getPackageName,
+  getPackageVersion,
+  maybeEnableRsDoctor,
+} from 'build-tools'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -7,6 +12,7 @@ import { fileURLToPath } from 'node:url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const packageName = getPackageName(__dirname, '@contentful/optimization-web-preview-panel')
+const packageVersion = getPackageVersion(__dirname, '0.0.0')
 /* eslint-enable @typescript-eslint/naming-convention -- standardized var names */
 
 const common = {
@@ -24,7 +30,7 @@ export default defineConfig({
   source: {
     tsconfigPath: './tsconfig.build.json',
     define: {
-      __OPTIMIZATION_VERSION__: JSON.stringify(process.env.RELEASE_VERSION ?? '0.0.0'),
+      __OPTIMIZATION_VERSION__: JSON.stringify(process.env.RELEASE_VERSION ?? packageVersion),
       __OPTIMIZATION_PACKAGE_NAME__: JSON.stringify(packageName),
     },
   },
