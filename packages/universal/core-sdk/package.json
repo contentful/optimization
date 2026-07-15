@@ -1,7 +1,7 @@
 {
   "name": "@contentful/optimization-core",
   "description": "Platform-agnostic core SDK for Contentful Optimization",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "repository": {
     "type": "git",
