@@ -15,10 +15,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 The Optimization React Web SDK provides React providers, hooks, router adapters, and entry-rendering
 primitives on top of the [Optimization Web SDK](../../web-sdk/README.md). Use it when a React
 browser application must not manage the lower-level Web SDK instance, state subscriptions, entry

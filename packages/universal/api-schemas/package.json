@@ -1,5 +1,6 @@
 {
   "name": "@contentful/optimization-api-schemas",
+  "description": "API schemas and types for Contentful Optimization",
   "version": "1.0.0",
   "license": "MIT",
   "repository": {

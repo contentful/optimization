@@ -51,13 +51,6 @@ go deeper. Two consequences drive everything below:
   reads as if it were always this way. (A `## Troubleshooting` row describing a present symptom and
   its fix — e.g. a build error and how to resolve it — is current-state guidance, not history, and
   is fine.)
-- **No SDK-version guidance while the SDK is pre-release/alpha.** With one moving version, do not
-  distinguish SDK versions, tell readers to "upgrade to the fixed version", or document
-  version-to-version deltas of _this SDK_ — there is no stable version surface to reason about yet.
-  Document the single current version in present tense. Revisit at the first major release, when
-  version differences become real to a reader. This applies only to _this SDK's_ versions;
-  host-framework version guidance (e.g. a Next.js 15 vs 16 filename/export the reader must choose
-  between today) is a present-state fact about the reader's environment and stays.
 
 ## Scope
 

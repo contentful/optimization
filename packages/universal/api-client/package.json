@@ -1,5 +1,6 @@
 {
   "name": "@contentful/optimization-api-client",
+  "description": "API client for Contentful Optimization services",
   "version": "1.0.0",
   "license": "MIT",
   "repository": {

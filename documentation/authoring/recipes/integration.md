@@ -32,7 +32,6 @@ is explicit in the blueprint; shared copy must not infer an SDK family or restat
 Voice: plain and direct, warm but not chatty. No hype or filler that reads oddly in a reference doc
 ("this is the payoff", "the magic happens here", "boom", gratuitous "just"). Describe the current SDK
 in present tense — never narrate change ("no longer", "now supports", "used to", PR/issue numbers).
-While the SDK is pre-release, document the single current version; do not compare SDK versions.
 
 Structure invariants (`pnpm guides:check` enforces the blueprint-to-guide section and category map):
 

@@ -16,10 +16,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 Reference implementation demonstrating `@contentful/optimization-nextjs` in a Next.js Pages Router
 application. Pages call `getServerSideOptimizationProps()` from `getServerSideProps`, pass the
 returned Optimization state through `pageProps`, and mount the bound Pages Router root and route

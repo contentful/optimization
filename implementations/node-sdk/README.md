@@ -16,10 +16,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 This is a reference implementation for the
 [Optimization Node SDK](../../packages/node/node-sdk/README.md) and is part of the
 [Contentful Optimization SDK Suite](../../README.md).

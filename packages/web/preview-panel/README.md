@@ -15,10 +15,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 This package implements the first-party browser preview panel for the
 [Optimization Web SDK](../web-sdk/README.md). It loads into the DOM as a Lit-based Web Component
 micro-frontend and talks to the Web SDK through the preview bridge exposed by the Optimization Web

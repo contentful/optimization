@@ -2,7 +2,7 @@
 
 ## High-level overview
 
-This directory contains the pre-release **Contentful Optimization iOS SDK** — a Swift Package (iOS
+This directory contains the beta **Contentful Optimization iOS SDK** — a Swift Package (iOS
 15+/macOS 12+) that enables content optimization and analytics tracking for native iOS apps. The SDK
 runs the existing JavaScript optimization core inside a **JavaScriptCore** context, bridged by a
 TypeScript adapter layer. Swift code handles native concerns (persistence, networking, app

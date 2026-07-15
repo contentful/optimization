@@ -18,7 +18,7 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
+> The Optimization iOS SDK is in beta. Breaking changes can be published at any time.
 
 > [!NOTE]
 >

@@ -1,5 +1,6 @@
 {
   "name": "@contentful/optimization-web",
+  "description": "Framework-agnostic Web client SDK for Contentful Optimization",
   "version": "1.0.0",
   "license": "MIT",
   "repository": {

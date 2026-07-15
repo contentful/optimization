@@ -15,10 +15,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 This SDK implements browser-specific optimization behavior on top of the
 [Optimization Core SDK](../../universal/core-sdk/README.md). Use it directly for non-React browser
 applications, framework adapters, and client-side runtimes that need consent state, anonymous ID
