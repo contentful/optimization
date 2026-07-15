@@ -6,31 +6,35 @@ filename: integrating-*.md
 ## Context
 
 Write for **an average developer with little or no personalization background**, opening the guide
-cold and wanting a working result fast. This recipe is the caller: it names the sections in order,
-which fragments to instantiate, and what each section is for. The `guide-writer` agent renders the
-**Template** below into a guide; it never emits this Context.
+cold and wanting a working result fast. This recipe is **SDK-neutral**: it is the shape every
+integration guide shares — the fixed section spine, heading order, category values, shared-copy
+placement, and archetype-wide completeness rules. The `guide-writer` renders the **Template** below;
+it never emits this Context.
 
-What you own vs. what the knowledge base owns:
+Three artifacts own three different things — keep them separate:
 
-- **You own sequence, voice, and honesty** — teach a term before using it; prove one result before
-  revealing the rest; order sections by when a reader needs them; keep example labels truthful.
-- **The knowledge base owns the SDK topic inventory** — which behaviors exist, what a call does on
-  the edges, identifier ownership. You do not decide the topic list, and you do not restate SDK
-  facts here. Facts flow from the KB into the guide at compose time; the source-verifier flags any
-  fact feeding this guide that the guide left out.
+- **This recipe owns the archetype shape and craft** (SDK-neutral) — the fixed section spine and
+  heading order, the four integration-category values, where shared copy appears, and the
+  transferable rules for writing a quick start, showing diffs, labeling examples, and keeping verify
+  performable. Rules here hold for _every_ integration guide.
+- **The SDK's blueprint owns the per-SDK editorial contract** —
+  `documentation/authoring/blueprints/<sdk>.md` decides the quick-start proof, milestones, exact
+  section inventory/order/category, and what each section must teach or show. Its Purpose cells keep
+  the editorial reasoning; its Fact sources link behavior back to the KB.
+- **The knowledge base owns the facts** — which behaviors exist, what a call does on the edges,
+  identifier ownership. You do not restate SDK facts here. Facts flow from the KB into the guide at
+  compose time; the blueprint makes the required coverage explicit, and the source verifier checks
+  the claims the guide makes.
 
-Fragments are reusable reader-facing prose with a fixed spine and knowledge-base-filled slots. When
-this recipe says to include one, the guide-writer copies that fragment's Template **verbatim** and
-fills only its `⟨slots⟩`. That verbatim spine is what keeps the guide family consistent, so do not
-reword an instantiated fragment. If a fragment needs a local adjustment for this archetype, say so on
-the line that references it.
+Shared-copy files contain small pieces of reader-facing wording reused verbatim. Any variation choice
+is explicit in the blueprint; shared copy must not infer an SDK family or restate behavior.
 
 Voice: plain and direct, warm but not chatty. No hype or filler that reads oddly in a reference doc
 ("this is the payoff", "the magic happens here", "boom", gratuitous "just"). Describe the current SDK
 in present tense — never narrate change ("no longer", "now supports", "used to", PR/issue numbers).
 While the SDK is pre-release, document the single current version; do not compare SDK versions.
 
-Structure invariants (deterministic — a future `guides:check` will enforce these):
+Structure invariants (`pnpm guides:check` enforces the blueprint-to-guide section and category map):
 
 - Fixed section order: `# H1` → intro → `## Quick start` → collapsible TOC → `## Before you start` →
   `## Core integration` → `## Optional integrations` (if any) → `## Advanced integrations` (if any) →
@@ -102,9 +106,13 @@ it.
 > ⟨one-line env-var-convention note: match the prefix/convention the app already uses for
 > browser-visible variables⟩
 
+<!-- The specific feature sections under Core / Optional / Advanced — which they are, in what order,
+and each one's category — come from this SDK's blueprint, not from this recipe. The recipe fixes the
+`##` spine and the category value set; the blueprint fills the `###` inventory. -->
+
 ## Core integration
 
-### ⟨feature/concept⟩
+### ⟨feature — from the blueprint's Core section list⟩
 
 **Integration category:** Required for first integration | Common but policy-dependent
 
@@ -112,17 +120,17 @@ it.
 
 ## Optional integrations
 
-<!-- only if there are optional sections -->
+<!-- only if the blueprint lists Optional sections -->
 
-### ⟨feature/concept⟩
+### ⟨feature — from the blueprint's Optional section list⟩
 
 **Integration category:** Optional
 
 ## Advanced integrations
 
-<!-- only if there are advanced/production-only sections -->
+<!-- only if the blueprint lists Advanced/production-only sections -->
 
-### ⟨feature/concept⟩
+### ⟨feature — from the blueprint's Advanced section list⟩
 
 **Integration category:** Advanced or production-only
 
@@ -149,19 +157,24 @@ Expanded guidance for the Template above. These are the rules a review (human or
 
 ### Intro
 
-The intro's teaching content is the `personalization-explainer` fragment — do not hand-write a
-competing explainer. After it, frame the two milestones and name the package and what the app still
-owns. Do not front-load concept links or reference-implementation links before the quick start
-unless the reader must understand them before acting.
+The intro's teaching content is the shared `personalization-explainer` copy. Apply only the two switches
+recorded in the blueprint, then add the runtime-specific persistence/ownership sentence from the KB.
+After it, frame the two milestones from the blueprint and name the package and what the app still
+owns. Do not front-load concept or reference links before the quick start unless the reader must
+understand them before acting.
 
 ### Quick start (the part reviews scrutinize most)
 
-- One proof, one verification statement, minimum setup. Valid proofs: SDK init + one accepted page
-  event; one entry resolving to variant or baseline; server content surviving takeover without a
-  duplicate page event.
+- One proof, one verification statement, minimum setup. **Which proof this SDK uses is the blueprint's
+  call** (`## Quick-start contract`); this recipe only holds the archetype rule that there is exactly
+  one. Valid proof shapes: SDK init + one accepted page event; one entry resolving to variant or
+  baseline; server content surviving takeover without a duplicate page event.
 - **Ground it in a real app shape, not a test harness.** Do not invent fetch shapes such as a
   hardcoded array of entry IDs. Model the reader's most common real shape and show changes as diffs
   against their existing files. Point readers with other shapes to the feature section.
+- When the reader shape already fetches Contentful, preserve and adapt that client/query. Do not
+  replace it with a hand-written raw CDA request plus a type assertion: that does not demonstrate
+  the app's existing link-resolution boundary and can make an unresolved payload look typed.
 - **Never hand over a full file the reader would paste over their own.** For layouts, providers,
   renderers, and the runtime root (`App.tsx`), show a `+`/`-` diff so the additions are unambiguous,
   keep the reader's existing lines visible around them, and add a one-line note that the surrounding
@@ -172,6 +185,19 @@ unless the reader must understand them before acting.
   wrapper.
 - **Make verify performable.** The last step tells the reader how to cause the result, not just
   "load as a qualifying visitor."
+- A verification may use only an observation mechanism already available to the reader: a named
+  browser tool, visible UI state, server log, or diagnostic snippet defined before the assertion.
+  If a section says to inspect an event, blocked call, profile, or SDK state, it must show the
+  development-only observer (including cleanup) or point back to one already shown. Do not use a
+  gated production integration, such as analytics forwarding, as the only diagnostic for the gate
+  itself.
+- The guide must also mount any diagnostic it defines. A browser observer proves browser events and
+  blocked attempts only; it cannot retroactively prove a completed server event unless the KB
+  explicitly records that bridge. Use a server-observable outcome (for example, selected raw HTML)
+  for the server path and the browser observer to prove that takeover did not emit a duplicate.
+- A state-change proof must define its authored prerequisite and expected before/after result. For
+  identity-based personalization, name the audience trait/value the reader should substitute and
+  show both the state that should change and any locked/control state the verification compares.
 - **Call out version-specific filenames or exports that fail silently.** When a framework resolves a
   handler by filename/export and the current vs previous major differ, name both and state the
   failure mode (a wrong name silently no-ops). Verify names against the framework and SDK source.
@@ -182,6 +208,20 @@ unless the reader must understand them before acting.
 - **Native build step inline.** For iOS/Android/React Native, the native install step (`pod install`,
   `npx expo prebuild`, or equivalent) that must run before launch appears in the quick start where
   the reader installs, not deferred to `## Before you start`.
+- Include every item in the blueprint's **Required artifacts**. A quick start is incomplete when it
+  describes a required file without showing runnable or honestly adaptable content for it.
+- When the proof resolves a Contentful entry, state the minimum resolvable fetch shape in the quick
+  start: one concrete locale and enough include depth for the linked experience and variants. Do not
+  defer a constraint that can make the first verification silently return baseline. Put it before
+  the Verify step and name any common incompatible fetch mode the blueprint identifies.
+
+### Feature sections
+
+Treat every blueprint row as a teaching goal, not a list of nouns to mention. Explain the mechanism,
+ownership, and consequence the reader needs. Include a realistic example when the reader must change
+code, and a performable check when failure could otherwise look successful. Not every section needs
+all of these; the blueprint names what matters for that reader goal. Prefer one developed canonical
+path plus concise alternatives over several shallow examples.
 
 ### Before you start
 
@@ -190,30 +230,30 @@ the guide (runtime prerequisites, credentials, authored Contentful data, Optimiz
 values). If a sequenced section teaches it, it does not go here. Anti-patterns: a multi-column setup
 table; rows that restate quick-start steps; rows that only say "there is a section below";
 `Category` / `Required for quick start` columns; listing values the quick start never uses. The
-authored-variant bullet is the `authored-variant-gotcha` fragment — mandatory.
-
-### Rendering / entry-wrap (the recurring credibility trap)
-
-- The entry wrapper goes wherever an entry becomes a component. Use app-neutral wording — do not
-  assume a specific file or symbol name (e.g. "SectionRenderer") that varies between apps.
-- If the render prop returns a type wider than the app's schema type, the snippet must show the cast
-  the reader needs (`resolved as YourType`) and say why. Verify against the SDK source
-  (`packages/**/src`), not just the reference implementation. Recommend the plain direct cast as the
-  default; mention `as unknown as YourType` only as a rare escape for genuinely disjoint types.
-- State the fallback contract explicitly: on denied consent / no variant / unresolved links /
-  all-locale payloads, the render prop receives the baseline entry and the UI does not break.
-- Define `render prop` in prose at first use — React-pattern vocabulary is not assumed for the target
-  reader — tied back to the `{(entry) => ...}` form the reader already copied.
+authored-variant bullet is the slot-free shared `authored-variant-gotcha` copy — mandatory.
 
 ### Example labels
 
 - `**Copy this:**` — pasteable with only simple value substitution; the values must actually work
   against what the guide points to. A path/file the reader must relocate is an adapt, not a copy.
+- Factory/root blocks containing app-owned locale, metadata, consent policy, imports, or placement
+  are normally `**Adapt this to your use case:**`, even when their SDK call shape is canonical.
 - `**Adapt this to your use case:**` — realistic app-shaped code needing structural change or
   placement; name what is the reader's vs the pattern to copy; prefer a `+`/`-` diff of the reader's
   likely code.
+- A `+`/`-` example uses a fenced `diff` block. Never place literal diff markers inside a `ts` or
+  `tsx` fence, where they look like invalid source. Keep enough unchanged context to locate the edit,
+  and preserve representative existing providers, chrome, render dispatch, and fallbacks rather
+  than replacing them with invented app structure.
 - `**Follow this pattern:**` — illustrative shape, not drop-in runnable.
 - `**Reference excerpt:**` — shortened/copied reference-implementation code.
+- Before keeping any example, perform a local consistency pass: no prop/helper is redeclared or
+  shadowed, callbacks do not accidentally call themselves, every referenced helper is defined or
+  explicitly reader-owned, and the shown imports/return types agree with the body. An adaptable
+  snippet may omit surrounding application code; it may not contain a defect in the pattern being
+  taught.
+- Define or export a reused app helper before the first snippet that imports it. A later definition
+  does not make an earlier sequential step runnable.
 - Comment only meaningful SDK-specific lines (lifecycle placement, consent, event sequencing,
   fallback, duplicate-event prevention). Never narrate obvious syntax.
 
@@ -222,10 +262,19 @@ authored-variant bullet is the `authored-variant-gotcha` fragment — mandatory.
 Must cover: credentials/runtime config, consent behavior, event delivery, content fallback,
 duplicate-tracking prevention, privacy/governance, and a local validation path.
 
+Any commands must be available in the reader's application and labeled `Adapt this to your use
+case` when script names vary. Repository-maintainer commands belong only in a clearly labeled
+`Reference excerpt` with the repository context stated; never present them as copyable app commands.
+
+Resolve every reader-facing link relative to the rendered guide under `documentation/guides/`, not
+relative to the recipe, blueprint, shared-copy file, or KB file where the link was discovered. Never copy a
+blueprint-relative implementation or fact-source URL verbatim into the guide.
+
 ### Shared-concern coverage
 
 Each shared concern is either covered by the guide or explicitly marked not-applicable for this SDK:
 install/init/config; consent & privacy handoff; the fetch/SDK boundary; entry resolution + fallback;
 page/route/screen events; interaction tracking; identity/profile/reset; routing/lifecycle/request
-context; real-time updates/preview/analytics/caching; verification. Coverage is judged against the
-knowledge-base facts that feed this guide — the source-verifier flags a fed fact the guide omits.
+context; real-time updates/preview/analytics/caching; verification. The blueprint's Section map
+records where applicable concerns land and what each section must teach or show. The writer checks
+the complete map; the source verifier checks claims that were made, not omissions it cannot infer.

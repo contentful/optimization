@@ -2,7 +2,8 @@
 name: sdk-knowledge-maintenance
 description: >-
   Maintain the internal SDK knowledge base under documentation/internal/sdk-knowledge/ — the layer
-  of verified SDK facts (symbols, props, cookies, config keys, return shapes) that each carry a
+  of verified SDK behavioral facts (defaults, fallbacks, ownership, lifecycle, cross-runtime
+  semantics) that each carry a
   source pointer into packages/**/src. Covers the three-artifact split (guides teach, this KB
   records verified facts, the authoring skill holds principles — facts never go in a skill), the
   _template.md skeleton every per-SDK file copies, and capturing shared facts once in shared/ so
@@ -38,9 +39,9 @@ Three artifacts, three jobs. Keep each fact in exactly the right one.
 - **The authoring skill** (`skills/optimization-guide-authoring`) — how to write good guides;
   transferable principles only.
 
-The load-bearing rule: **if a fact names a concrete symbol, API, cookie, prop, config key, or return
-shape, it belongs in the knowledge base (or a guide), never in a skill.** Skills hold principles;
-the base holds facts. When you catch an SDK-specific fact drifting into a skill, move it here.
+The load-bearing rule: **behavior belongs in the knowledge base; exact interface shape belongs in the
+types; neither belongs in a skill.** A concrete symbol may anchor a behavioral fact without copying
+its signature, props, or return shape into the base.
 
 ## Core maintenance behaviors
 
@@ -65,7 +66,8 @@ These are the transferable behaviors this skill exists to preserve.
   and is symbol-anchored — `<sdk>#<relpath>#<symbol>` (plus `impl:`, `concept:`, `kb:`, `extern:`),
   **never line numbers** (they drift). A fact without a resolvable pointer is a claim, not knowledge
   — do not add it. Never point a fact at a guide or "the accepted guide" to satisfy the rule; that is
-  circular and the checker rejects it. Anchor on the symbol the fact is actually about.
+  circular and the checker rejects it. Anchor on the symbol the fact is actually about. Resolution is
+  a provenance/integrity check, not semantic proof.
 - **Capture once, as a byproduct of verification.** When you verify an SDK API against source while
   doing other work (writing a guide, fixing a bug, answering a question), record what you confirmed
   here before the context is lost, with its grammar pointer. Do not run net-new verification passes
@@ -126,4 +128,4 @@ These are the transferable behaviors this skill exists to preserve.
 - Any cross-guide drift you noticed is fixed now (guide corrected, shared wording added to
   `shared/` if it was missing), not deferred.
 - No SDK fact leaked into a skill; no reader-facing prose leaked into the base.
-- Formatting is clean: `pnpm format:fix documentation/internal/sdk-knowledge`.
+- Formatting is clean: `pnpm exec prettier --write documentation/internal/sdk-knowledge`.

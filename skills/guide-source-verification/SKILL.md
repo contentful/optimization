@@ -43,9 +43,10 @@ re-derived per review.
    optionality, union, return) matches, directly in `packages/**/src`. A mismatch (a prop that does
    not exist, a wrong return shape) is a **guide bug** → correction to the writer.
 3. **Verify behavioral claims against the base.** Find the fact in the relevant per-SDK file (or
-   `shared/`) that backs the claim; it is **confirmed** when a matching fact exists and
-   `pnpm knowledge:check` passes (its pointer resolves, so it is current). A claim the base
-   **contradicts** is a guide bug → correction to the writer (the base is the behavioral authority).
+   `shared/`) that backs the claim. `pnpm knowledge:check` must pass so its provenance pointer is
+   structurally intact. Do not call that semantic re-verification: if the task includes source changes
+   in the fact's behavior path, require the scoped knowledge-author review first. A claim the current,
+   reviewed base contradicts is a guide bug.
 4. **Escalate only a behavioral claim with no backing fact.** If a behavioral claim has no
    corresponding KB fact, do NOT trace it from source yourself — escalate to
    **`sdk-knowledge-authoring`**: either the base is missing a fact it should hold (the author traces

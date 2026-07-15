@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(git rev-parse --show-toplevel)/scripts/documentation-integrity-hook.sh\" codex",
+            "timeout": 30,
+            "statusMessage": "Checking documentation integrity"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -44,6 +44,13 @@ fact**, composing from the reconciled KB (not re-reading source, not rewriting t
 A fact that changed shape/behavior means the snippet or sentence that used it changes; an unaffected
 section is left as-is.
 
+If the change **adds or removes a documented capability** (a new feature the guide should now cover,
+or a removed one it should drop), the SDK's blueprint
+(`documentation/authoring/blueprints/<sdk>.md`) needs a matching Section map change before the guide
+gains or loses that section. Update “Must teach or show” when the changed capability alters what the
+reader must see. A pure behavioral change that leaves the teaching contract intact changes only the KB
+and guide.
+
 ## 4. Review only what changed (delegate to the `review-guide` skill, scoped)
 
 Invoke the **`review-guide`** skill on each recomposed guide — it owns the review/fix/funnel/validate
@@ -59,8 +66,8 @@ loop in one pass; do not re-run those steps yourself. Focus the reviewers on the
 
 - Every changed claim traces to a current KB fact; no newcomer blocker in the changed passages.
 - No `ESCALATE` marker remains in any touched guide.
-- `pnpm knowledge:check` passes; `pnpm format:fix <touched paths>` leaves the touched guides clean and
-  TOC anchors resolve. Pass the specific files you changed — never a bare `pnpm format:fix`.
+- `pnpm knowledge:check` and `pnpm guides:check` pass;
+  `pnpm exec prettier --write <touched paths>` leaves the touched guides clean; TOC anchors resolve.
 
 ## 6. Report
 

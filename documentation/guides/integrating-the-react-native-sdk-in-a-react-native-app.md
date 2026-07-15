@@ -13,17 +13,18 @@ visitor's personalization consistent.
 - As the app runs, Contentful's **Experience API** looks at who the visitor is and picks the variant
   for each experience. Swapping a fetched entry for its picked variant is called **resolving** the
   entry.
-- The Experience API also returns a **profile**: the anonymous, per-visitor identity and state the
-  SDK uses to keep the same visitor's personalization consistent across app launches.
-- Your app already fetches Contentful entries and turns them into components, and the SDK sits at
-  that hand-off: it gives you the resolved variant instead of the original — or the original entry
-  when no variant applies, the **baseline fallback**. You can fetch the entry yourself and hand it to
-  the SDK, or give the SDK your Contentful client and let it fetch by ID — either way the client
-  stays yours.
-- You render whatever the SDK hands back exactly as you render entries today.
+- The Experience API also returns a **profile**: the anonymous, per-visitor identity and state used
+  to keep personalization consistent across requests or app launches.
+- Your app hands a Contentful entry to the SDK at the point where that entry becomes output. The SDK
+  gives back the selected variant, or the original entry when no variant applies—the **baseline
+  fallback**. You can fetch the entry yourself or give the SDK your Contentful client and an entry
+  ID; either way, the client stays yours.
+- You render the returned entry with the same application components you already use.
 
-That is enough to start. You do not need audiences, interaction events, identity, or the preview
-panel yet; this guide introduces each idea at the point you need it.
+The React Native SDK persists the profile across app launches when persistence consent allows it.
+
+That is enough to start. The guide introduces policy and optional capabilities at the point you need
+them.
 
 You will get there in two milestones:
 
@@ -181,9 +182,9 @@ outside this guide:
 - **Contentful delivery credentials** — space ID, delivery token, and environment — read from your
   app's runtime configuration.
 - **At least one entry with a variant attached to an experience**, authored in Contentful. Without
-  an authored variant the integration still runs, but every visitor sees the baseline, so you cannot
-  tell personalization from a bug. For your first test, an experience that targets all visitors is
-  the easiest to verify because you match it automatically.
+  an authored variant, the integration can still run correctly while returning the baseline, so you
+  cannot yet distinguish working personalization from a content-authoring gap. For the first
+  personalized-content test, target all visitors so the test request or visitor matches automatically.
 - **Your Optimization project values** — client ID and environment, from your Optimization project
   settings. The Experience API (which picks variants) and the Insights API (which receives event and
   interaction delivery) each have a base URL that defaults correctly; you only set them for mocks or

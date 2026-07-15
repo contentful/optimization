@@ -63,10 +63,9 @@ later change is incremental against what you leave behind.
 
 1. Find the package and its `src/` root; read its `package.json` exports to learn the public entry
    points (the reader can only import what is exported — start there, not at internal files).
-2. Walk the exported surface: factory/init functions and their config keys, components/hooks and
-   their props/returns, identifiers (cookies, headers, storage keys, env vars) and who owns them,
-   events and their semantics, consent/persistence model, runtime quirks, failure/fallback behavior.
-   The `_template.md` sections are the checklist of what to capture.
+2. Walk the exported surface to discover behavior. Keep only a small symbol/import navigation index;
+   do not copy config-key, prop, signature, or return shapes. Capture identifier ownership, event
+   semantics, consent/persistence, runtime quirks, and failure/fallback behavior.
 3. Copy `_template.md` into the right family dir (making a new sibling like `node/` or `native/` when
    the family is new), fill each section with facts + grammar pointers, set the `feeds-guides` marker
    to the guide(s) these facts compose into, and mark empty sections `None.`
@@ -76,26 +75,26 @@ later change is incremental against what you leave behind.
 
 The diff bounds the work. Do NOT re-read the whole SDK.
 
-1. **Scope from the diff.** Take the changed files under `packages/**/src`. The facts at risk are
-   exactly those whose `source:` pointer names a changed file — `pnpm knowledge:check` resolves every
-   pointer, so a pointer that now fails to resolve is a renamed/removed symbol you must fix. Grep the
-   KB for pointers into the changed files to find the rest.
+1. **Scope from the diff.** Facts whose pointers name a changed file are definitely at risk. Also
+   inspect the changed symbol's public callers/exports far enough to catch behavioral facts anchored
+   on an unchanged wrapper. `pnpm knowledge:check` catches renamed/removed pointer targets but not
+   semantic changes.
 2. **Re-verify only those facts** against the new source, and edit them in place (present tense, no
    change-ledger language — see `sdk-knowledge-maintenance`). A behavior that changed gets its fact
    rewritten; a symbol that moved gets its pointer re-anchored; a removed export gets its fact deleted.
-3. **Capture what is genuinely new in the changed area** — a new exported config key, prop, or event
-   that a guide would need to mention. Judge newness against the changed surface, not the whole SDK;
-   do not open a net-new comprehension pass of unrelated code.
-4. **Leave everything else untouched.** A fact whose pointer does not touch the diff is still true;
-   re-verifying it is wasted comprehension, which is the cost this whole design exists to avoid.
+3. **Capture what is genuinely new in the changed area** — new behavior or a new public symbol whose
+   behavior a guide needs. Exact new interface shape remains in the types.
+4. **Leave unrelated facts untouched.** Document the bounded caller/behavior path you inspected. Do
+   not assume that a non-matching pointer alone proves a fact unrelated; make that determination from
+   the changed dependency path.
 
 ## What a "fact" is (and is not)
 
-A fact is a verified statement about the current SDK, carrying a grammar pointer into the source that
-proves it. It is terse, present-tense, and reader-relevant. It is NOT: guide prose, an example, a
-tutorial step, a rationale, or a history of how the code got here. If it names a concrete
-symbol/prop/cookie/config key/return shape, it belongs here; if it teaches or persuades, it belongs
-in a guide.
+A fact is a verified statement about current SDK behavior, carrying a provenance pointer into the
+source. The pointer locates the verification target; it does not prove semantics merely by resolving.
+The fact is terse, present-tense, and reader-relevant. It is NOT: guide prose, an example, a
+tutorial step, detailed interface transcription, a rationale, or history. If it teaches or persuades,
+it belongs in a guide.
 
 ## Handing off
 

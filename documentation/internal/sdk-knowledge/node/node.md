@@ -74,6 +74,13 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   singleton there is no ambient state: omitting `selectedOptimizations` yields the baseline, so pass
   it explicitly for personalized content.
   source: core-sdk#CoreBase.ts#resolveOptimizedEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#ResolvedData
+- **Input-mutation contract:** `resolveOptimizedEntry` does NOT mutate the passed baseline entry and
+  does NOT clone. `ResolvedData.entry` is returned by reference — either the same baseline object
+  (baseline / control / broken-link fallback) or a variant entry nested inside the baseline's
+  `nt_variants`. So mutating the RETURNED entry mutates the object the caller passed in. When the
+  baseline comes from a shared application cache, clone before mutating the returned entry (the
+  reference implementation clones the input defensively for this reason).
+  source: core-sdk#CoreBase.ts#resolveOptimizedEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext
 - Request-bound `fetchOptimizedEntry(entryId, options?)` → `FetchOptimizedEntryResult`
   `{ baselineEntry, entry, selectedOptimization?, optimizationContextId?, isEmptyVariant? }`. When
   `options.selectedOptimizations` is omitted it defaults to the latest selections returned by an
@@ -137,7 +144,9 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   source: core-sdk#CoreStatelessRequest.ts#sendExperienceEvent; core-sdk#CoreStatelessRequest.ts#reportBlockedEvent; core-sdk#events/BlockedEvent.ts#BlockedEvent
 - `eventContext` (`UniversalEventBuilderArgs`: `locale?`, `userAgent?`, `page?`, `screen?`, `campaign?`,
   `location?`) is merged into every event built through the request client; a per-call payload wins over
-  it. `page.*` requires `path`, `query`, `referrer`, `search`, `url` (`title` optional).
+  it. `page.*` requires `path`, `query`, `referrer`, `search`, `url` (`title` optional). The app builds
+  the `page.*` object from its own incoming request (URL, headers, parsed query); the SDK does not
+  derive or infer any `page.*` field from the request — it only receives what the app passes.
   source: core-sdk#CoreStatelessRequest.ts#withEventContext; core-sdk#events/EventBuilder.ts#UniversalEventBuilderArgs; api-schemas#experience/event/properties/Page.ts#Page
 
 ## Consent & persistence
@@ -170,6 +179,15 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
 - SDK config is framework-agnostic; store the instance in a module-level singleton. No browser live
   updates or preview UI in Node.
   source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization
+- **SSR cache boundary:** raw Contentful payloads (the baseline entries the app fetches) are
+  visitor-agnostic content and are shared-cache safe. Per-request personalized outputs are NOT:
+  `page()`/`identify()`/`track()`/`trackView()` responses carry the request's `profile` +
+  `selectedOptimizations`, and `getMergeTagValue()` output is profile-dependent (its doc-comment: not
+  safe for shared-output caching) — memoize none of these across requests/visitors.
+  `resolveOptimizedEntry()` results are conditionally cacheable: the resolver is pure over
+  `(baselineEntry, selectedOptimizations)` with no ambient/consent input, so a result is reusable
+  keyed by the baseline entry version plus a fingerprint of the selections used to resolve it.
+  source: core-sdk#CoreStatelessRequest.ts#page; core-sdk#CoreBase.ts#getMergeTagValue; core-sdk#CoreBase.ts#resolveOptimizedEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext
 
 ## Failure & fallback behavior
 

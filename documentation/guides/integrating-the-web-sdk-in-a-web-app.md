@@ -13,14 +13,14 @@ your app fetches or renders content.
 - As the visitor uses your app, Contentful's **Experience API** looks at who they are and picks the
   variant for each experience. Swapping a fetched entry for its picked variant is called
   **resolving** the entry.
-- Your app turns Contentful entries into markup, and the SDK sits at that hand-off: it gives you the
-  resolved variant instead of the original — or the original entry when no variant applies, the
-  **baseline fallback**. You can fetch the entry yourself and hand it to the SDK, or give the
-  SDK your Contentful client and let it fetch by ID — either way the client stays yours.
-- You render whatever the SDK hands back exactly as you render entries today.
+- Your app hands a Contentful entry to the SDK at the point where that entry becomes output. The SDK
+  gives back the selected variant, or the original entry when no variant applies—the **baseline
+  fallback**. You can fetch the entry yourself or give the SDK your Contentful client and an entry
+  ID; either way, the client stays yours.
+- You render the returned entry with the same application components you already use.
 
-That is enough to start. You do not need to understand audiences, traffic allocation, or events yet;
-this guide introduces each idea at the point you need it.
+That is enough to start. The guide introduces policy and optional capabilities at the point you need
+them.
 
 You will get there in two milestones:
 
@@ -174,9 +174,9 @@ outside this guide:
   you do not already have a Delivery API client.
 - **Contentful delivery credentials** — space ID, delivery token, and environment.
 - **At least one entry with a variant attached to an experience**, authored in Contentful. Without
-  an authored variant the integration still runs, but every visitor sees the baseline, so you cannot
-  tell personalization from a bug. For your first test, an experience that targets all visitors is
-  the easiest to verify because you match it automatically.
+  an authored variant, the integration can still run correctly while returning the baseline, so you
+  cannot yet distinguish working personalization from a content-authoring gap. For the first
+  personalized-content test, target all visitors so the test request or visitor matches automatically.
 - **Your Optimization project values** — client ID and environment, from your Optimization project
   settings. The Experience and Insights API base URLs default correctly; you only set them for mocks
   or non-default hosts (see [How the SDK fits your app](#how-the-sdk-fits-your-app)).
@@ -867,7 +867,7 @@ optimized entry.
    when UI must re-render as the flag changes. Reading a flag emits a flag-view event when consent
    and profile state permit it, and repeated reads of the same value are deduplicated.
 
-**Copy this** (install the Rich Text renderer):
+**Copy this:** Install the Rich Text renderer.
 
 ```sh
 pnpm add @contentful/rich-text-html-renderer @contentful/rich-text-types
@@ -969,7 +969,7 @@ your Web SDK instance through the browser preview bridge.
    default; pass `optimization` when your instance is not the global one.
 4. Pass a CSP `nonce` when strict Content Security Policy rules require one for Lit styles.
 
-**Copy this** (install the package):
+**Copy this:** Install the preview package.
 
 ```sh
 pnpm add @contentful/optimization-web-preview-panel
