@@ -15,10 +15,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 The Contentful Optimization API Client provides low-level transport for the Experience API and
 Insights API. Application-facing SDKs compose this package with event builders, state management,
 queueing, and runtime-specific defaults.

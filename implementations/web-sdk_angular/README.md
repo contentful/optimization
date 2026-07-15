@@ -16,10 +16,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 Reference implementation demonstrating `@contentful/optimization-web` usage in an Angular
 application. It uses Angular services and standalone components directly with the Web SDK, without
 an Angular-specific SDK adapter.

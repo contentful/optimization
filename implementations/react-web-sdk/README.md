@@ -16,10 +16,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 Reference implementation demonstrating `@contentful/optimization-react-web` usage in a React SPA.
 This is the primary React Web reference implementation for customer-style usage of the official
 React framework package.

@@ -15,10 +15,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 The Optimization Node SDK implements stateless server-side optimization behavior on top of the
 [Optimization Core SDK](../../universal/core-sdk/README.md). Use it for server rendering, server
 functions, and Node services that need request-scoped profile evaluation or event emission.

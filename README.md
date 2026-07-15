@@ -16,10 +16,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 ## Introduction
 
 A [pnpm](https://pnpm.io/) monorepo hosting a suite of SDKs, supporting libraries, and reference
@@ -91,21 +87,21 @@ General selection rules:
 
 ## Native and planned SDKs
 
-React Native support is available through
+React Native support is available as a beta SDK through
 [`@contentful/optimization-react-native`](./packages/react-native-sdk/README.md).
 
-Native iOS work is also present in this repository as a pre-release Swift Package under
+Native iOS work is also present in this repository as a beta Swift Package under
 [`packages/ios`](./packages/ios/README.md), backed by the shared
 [`@contentful/optimization-js-bridge`](./packages/universal/optimization-js-bridge/README.md)
 adapter and the [iOS reference app](./implementations/ios-sdk/README.md). Treat this surface as
-alpha implementation work rather than a stable public native SDK.
+beta implementation work rather than a stable public native SDK.
 
-Native Android support is also present as a pre-release Kotlin Android library under
+Native Android support is also present as a beta Kotlin Android library under
 [`packages/android`](./packages/android/README.md), published as the Maven AAR
 `com.contentful.java:optimization-android`, backed by the shared
 [`@contentful/optimization-js-bridge`](./packages/universal/optimization-js-bridge/README.md)
 adapter and the [Android reference app](./implementations/android-sdk/README.md). Treat this surface
-as alpha implementation work rather than a stable public native SDK.
+as beta implementation work rather than a stable public native SDK.
 
 The following framework SDKs are planned but are not published from this repository:
 

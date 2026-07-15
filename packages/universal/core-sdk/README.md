@@ -15,10 +15,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 The Optimization Core SDK owns the platform-agnostic optimization state machine, event builders,
 queues, resolvers, and interceptors used by the application-facing SDKs. Web, React Web, Node, React
 Native, and native bridge layers build on this package.

@@ -17,9 +17,9 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
+> The Optimization iOS SDK is in beta. Breaking changes can be published at any time.
 
-The Optimization iOS SDK is a pre-release Swift Package for native iOS applications. It is part of
+The Optimization iOS SDK is a beta Swift Package for native iOS applications. It is part of
 the [Contentful Optimization SDK Suite](../../README.md) and runs shared optimization behavior
 through the local JavaScriptCore bridge while Swift code owns native app concerns such as
 persistence, networking, lifecycle handling, SwiftUI views, and preview-panel UI.
@@ -53,7 +53,7 @@ persistence, networking, lifecycle handling, SwiftUI views, and preview-panel UI
   [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
   For the broader locale model, see
   [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md).
-- This surface is alpha implementation work. Treat the API, setup flow, and bridge contract as
+- Treat this surface as beta-stage implementation work. The API, setup flow, and bridge contract are
   subject to change until a stable native iOS SDK release is declared.
 
 ## When to use this package

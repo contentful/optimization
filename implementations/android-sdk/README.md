@@ -18,7 +18,7 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
+> The Optimization Android SDK is in beta. Breaking changes can be published at any time.
 
 This is the native Android reference implementation for the
 [Contentful Optimization Android SDK](../../packages/android/README.md). It demonstrates the

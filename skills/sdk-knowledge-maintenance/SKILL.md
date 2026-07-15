@@ -55,12 +55,6 @@ These are the transferable behaviors this skill exists to preserve.
   the fact in place_ so it reads as if it were always true — do not append a note about the change
   or strike through the old value. (Genuine runtime conditionals — "after reading headers the route
   cannot use ISR" — are present-tense behavior, not history, and are fine.)
-- **While the SDK is pre-release/alpha, record no SDK-version deltas.** One moving version means
-  there is nothing to compare — do not note what a prior SDK version did, "upgrade to the fixed
-  version", or version-to-version differences of this SDK. Record the single current version's facts
-  in present tense. (Host-framework version facts the reader must act on today — e.g. a framework
-  that resolves a handler differently across its own major versions — are present-state environment
-  facts and are fine.) Revisit at the SDK's first major.
 - **Every fact carries a `source:` pointer in the grammar.** Pointers are machine-checked by
   `pnpm knowledge:check`; the grammar is defined in the base's own `README.md#source-pointer-grammar`
   and is symbol-anchored — `<sdk>#<relpath>#<symbol>` (plus `impl:`, `concept:`, `kb:`, `extern:`),

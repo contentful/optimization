@@ -16,10 +16,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 Reference implementation demonstrating `@contentful/optimization-web` usage in a React web
 application with a local adapter layer.
 

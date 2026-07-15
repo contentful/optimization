@@ -16,7 +16,7 @@ Applies to all workspace packages under `packages/`.
 
 - Follow root Markdown rules and [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md).
 - Public package READMEs use the repo-standard Contentful header, package-specific `<h3>`, Guides,
-  Reference, Contributing links, pre-release warning, and SDK-layer summary.
+  Reference, Contributing links, native beta status warning when applicable, and SDK-layer summary.
 - Application-facing READMEs stay orientation-first: install, minimal initialization, common setup,
   critical caveats, and links to guides, reference implementations, and generated reference docs.
 - Lower-level package READMEs are maintainer-oriented: direct users, stack position, minimal

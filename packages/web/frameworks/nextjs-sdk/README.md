@@ -16,10 +16,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 `@contentful/optimization-nextjs` is a thin adapter for Next.js applications. It composes the Node
 SDK on the server with the React Web SDK on the client; it is not a new optimization runtime. The
 package root intentionally has no runtime export. Import one of the documented subpaths so the

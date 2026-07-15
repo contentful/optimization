@@ -16,10 +16,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 We appreciate community contributions in the form of issues and pull requests.
 
 Use this guide when you change SDK packages, reference implementations, documentation, release
@@ -104,8 +100,8 @@ pnpm version:pnpm
 | -------------------- | ----------------------------------------------------------------------------------- |
 | `lib/`               | Internal shared tooling and mock services, such as `build-tools` and `mocks`        |
 | `packages/`          | Workspace packages, including published SDKs and framework layers                   |
-| `packages/android/`  | Pre-release Android library                                                         |
-| `packages/ios/`      | Pre-release Swift package                                                           |
+| `packages/android/`  | Beta Android library                                                                |
+| `packages/ios/`      | Beta Swift package                                                                  |
 | `implementations/`   | Reference apps used for integration testing, validation evidence, and E2E coverage  |
 | `documentation/`     | Authored guides and concepts published with TypeDoc                                 |
 | `docs/`              | Generated TypeDoc output                                                            |

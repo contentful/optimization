@@ -16,10 +16,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
-
 Reference implementation demonstrating `@contentful/optimization-nextjs` in a Next.js App Router
 application with bound server/client components, server-provided Optimization state handoff, and
 browser-side entry resolution after startup. The implementation binds `OptimizationRoot`,

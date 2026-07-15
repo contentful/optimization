@@ -209,7 +209,7 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
 - Follow [`STYLE_GUIDE.md`](./STYLE_GUIDE.md) for human-authored prose. Authored docs live in
   `documentation/`; generated TypeDoc output lives in `docs/`.
 - Preserve existing README families: repo/package/reference implementation headers, navigation, and
-  pre-release warnings; documentation indexes; short status READMEs for placeholders or
+  release-status warnings where applicable; documentation indexes; short status READMEs for placeholders or
   internal-only surfaces.
 - Use sentence-case Markdown headings, official product/API casing, fenced code blocks with language
   tags, and `pnpm` commands.
