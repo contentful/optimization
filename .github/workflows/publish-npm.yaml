@@ -19,6 +19,10 @@ on:
         description: 'Actually publish'
         type: boolean
         default: false
+      retag_existing:
+        description: 'Update dist-tags for already-published versions'
+        type: boolean
+        default: false
 
 jobs:
   publish:
@@ -89,16 +93,73 @@ jobs:
           secrets: |
             secret/data/github/github_packages_write GITHUB_PACKAGES_WRITE_TOKEN | GITHUB_PACKAGES_WRITE_TOKEN;
 
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        if: steps.npm_package_targets.outputs.has_targets == 'true' && inputs.publish
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@contentful'
+          package-manager-cache: false
+
+      - name: Resolve unpublished targets
+        if: steps.npm_package_targets.outputs.has_targets == 'true' && inputs.publish
+        id: unpublished_targets
+        env:
+          NODE_AUTH_TOKEN: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
+          RELEASE_TARGETS: ${{ steps.npm_package_targets.outputs.release_targets }}
+          RETAG_EXISTING: ${{ inputs.retag_existing }}
+        run: |
+          publish_targets=()
+          dist_tag_targets=()
+
+          while IFS= read -r target_info; do
+            if [ -z "$target_info" ]; then
+              continue
+            fi
+
+            IFS=$'\t' read -r package_name _package_dir _report_path _release_tag release_version <<< "$target_info"
+
+            npm_tag='latest'
+            if [[ "$release_version" == *-* && "$package_name" != '@contentful/optimization-react-native' ]]; then
+              npm_tag='next'
+            fi
+
+            if npm view "$package_name@$release_version" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
+              if [ "$RETAG_EXISTING" = 'true' ]; then
+                echo "$package_name@$release_version is already published; updating dist-tag $npm_tag."
+                dist_tag_targets+=("$package_name"$'\t'"$release_version"$'\t'"$npm_tag")
+              else
+                echo "$package_name@$release_version is already published; skipping."
+              fi
+              continue
+            fi
+
+            publish_targets+=("$package_name"$'\t'"$release_version"$'\t'"$npm_tag")
+          done <<< "$RELEASE_TARGETS"
+
+          {
+            echo "publish_targets<<EOF"
+            if [ ${#publish_targets[@]} -gt 0 ]; then
+              printf '%s\n' "${publish_targets[@]}"
+            fi
+            echo "EOF"
+            echo "dist_tag_targets<<EOF"
+            if [ ${#dist_tag_targets[@]} -gt 0 ]; then
+              printf '%s\n' "${dist_tag_targets[@]}"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build
-        if: steps.npm_package_targets.outputs.has_targets == 'true'
+        if: steps.npm_package_targets.outputs.has_targets == 'true' && (inputs.publish != true || inputs.retag_existing != true || steps.unpublished_targets.outputs.publish_targets != '')
         run: pnpm build
 
       - name: Generate npm third-party notices
-        if: steps.npm_package_targets.outputs.has_targets == 'true'
+        if: steps.npm_package_targets.outputs.has_targets == 'true' && (inputs.publish != true || inputs.retag_existing != true || steps.unpublished_targets.outputs.publish_targets != '')
         run: pnpm notices:generate:npm
 
       - name: Prepare package READMEs for publish
-        if: steps.npm_package_targets.outputs.has_targets == 'true'
+        if: steps.npm_package_targets.outputs.has_targets == 'true' && (inputs.publish != true || inputs.retag_existing != true || steps.unpublished_targets.outputs.publish_targets != '')
         env:
           RELEASE_TARGETS: ${{ steps.npm_package_targets.outputs.release_targets }}
         run: |
@@ -118,7 +179,7 @@ jobs:
           done <<< "$RELEASE_TARGETS"
 
       - name: Stage third-party notices for publish
-        if: steps.npm_package_targets.outputs.has_targets == 'true'
+        if: steps.npm_package_targets.outputs.has_targets == 'true' && (inputs.publish != true || inputs.retag_existing != true || steps.unpublished_targets.outputs.publish_targets != '')
         env:
           NOTICE_TARGETS: ${{ steps.npm_package_targets.outputs.release_targets }}
         run: |
@@ -155,18 +216,18 @@ jobs:
           done <<< "$notice_targets"
 
       - name: Create packages for troubleshooting
-        if: steps.npm_package_targets.outputs.has_targets == 'true'
+        if: steps.npm_package_targets.outputs.has_targets == 'true' && (inputs.publish != true || inputs.retag_existing != true || steps.unpublished_targets.outputs.publish_targets != '')
         run: |
           rm -rf pkgs
           mkdir -p pkgs
           pnpm pack ${{ steps.npm_package_targets.outputs.pnpm_filters }} --pack-destination pkgs
 
       - name: Verify packages include third-party notices
-        if: steps.npm_package_targets.outputs.has_targets == 'true'
+        if: steps.npm_package_targets.outputs.has_targets == 'true' && (inputs.publish != true || inputs.retag_existing != true || steps.unpublished_targets.outputs.publish_targets != '')
         run: bash ./scripts/verify-npm-package-notices.sh pkgs
 
       - name: Upload packages for troubleshooting
-        if: steps.npm_package_targets.outputs.has_targets == 'true'
+        if: steps.npm_package_targets.outputs.has_targets == 'true' && (inputs.publish != true || inputs.retag_existing != true || steps.unpublished_targets.outputs.publish_targets != '')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ci-optimization-sdk-packages
@@ -174,48 +235,27 @@ jobs:
             ./pkgs/
           retention-days: 3
 
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        if: steps.npm_package_targets.outputs.has_targets == 'true' && inputs.publish
-        with:
-          node-version-file: '.nvmrc'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@contentful'
-          package-manager-cache: false
-
-      - name: Resolve unpublished targets
-        if: steps.npm_package_targets.outputs.has_targets == 'true' && inputs.publish
-        id: unpublished_targets
+      - name: Update existing dist-tags
+        if: steps.unpublished_targets.outputs.dist_tag_targets != '' && inputs.publish
         env:
           NODE_AUTH_TOKEN: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
-          RELEASE_TARGETS: ${{ steps.npm_package_targets.outputs.release_targets }}
+          DIST_TAG_TARGETS: ${{ steps.unpublished_targets.outputs.dist_tag_targets }}
         run: |
-          publish_targets=()
-
-          while IFS= read -r target_info; do
-            if [ -z "$target_info" ]; then
+          while IFS= read -r dist_tag_target; do
+            if [ -z "$dist_tag_target" ]; then
               continue
             fi
 
-            IFS=$'\t' read -r package_name _package_dir _report_path _release_tag release_version <<< "$target_info"
+            IFS=$'\t' read -r package_name release_version npm_tag <<< "$dist_tag_target"
 
-            if npm view "$package_name@$release_version" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
-              echo "$package_name@$release_version is already published; skipping."
-              continue
+            if [ -z "$package_name" ] || [ -z "$release_version" ] || [ -z "$npm_tag" ]; then
+              echo "Invalid npm dist-tag target: $dist_tag_target" >&2
+              exit 1
             fi
 
-            npm_tag='latest'
-            if [[ "$release_version" == *-* ]]; then
-              npm_tag='next'
-            fi
-
-            publish_targets+=("$package_name"$'\t'"$release_version"$'\t'"$npm_tag")
-          done <<< "$RELEASE_TARGETS"
-
-          {
-            echo "publish_targets<<EOF"
-            printf '%s\n' "${publish_targets[@]}"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+            echo "Updating $package_name@$release_version with dist-tag $npm_tag."
+            npm dist-tag add "$package_name@$release_version" "$npm_tag" --registry=https://npm.pkg.github.com
+          done <<< "$DIST_TAG_TARGETS"
 
       - name: Publish
         if: steps.unpublished_targets.outputs.publish_targets != '' && inputs.publish
