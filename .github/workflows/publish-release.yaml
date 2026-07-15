@@ -1,0 +1,36 @@
+name: Dispatch Package Publish
+
+permissions:
+  actions: write
+  contents: read
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch matching publish workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          case "$RELEASE_TAG" in
+            optimization-android-v*)
+              workflow='publish-android.yaml'
+              ;;
+            optimization-swift-v*)
+              workflow='publish-spm.yaml'
+              ;;
+            optimization-api-schemas-v*|optimization-api-client-v*|optimization-core-v*|optimization-node-v*|optimization-web-v*|optimization-react-web-v*|optimization-nextjs-v*|optimization-web-preview-panel-v*|optimization-react-native-v*)
+              workflow='publish-npm.yaml'
+              ;;
+            *)
+              echo "No publish workflow configured for $RELEASE_TAG."
+              exit 0
+              ;;
+          esac
+
+          gh workflow run "$workflow" --ref "$RELEASE_TAG" -f tag="$RELEASE_TAG" -f publish=true
