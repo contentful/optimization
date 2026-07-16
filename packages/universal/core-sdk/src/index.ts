@@ -30,6 +30,7 @@ export * from './CoreStateful'
 export * from './CoreStateless'
 export * from './CoreStatelessRequest'
 export * from './events'
+export * from './handoff'
 export * from './lib/decorators'
 export * from './lib/interceptor'
 export type {

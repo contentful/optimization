@@ -2,7 +2,6 @@ import type {
   ChangeArray,
   Json,
   MergeTagEntry,
-  OptimizationData,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
@@ -12,6 +11,7 @@ import { hasEventConsent, UNLOCKING_EVENT_TYPES } from '../consent/ConsentPolicy
 import type { CoreStates } from '../CoreStateful'
 import type { EventEmissionResult } from '../events/EventEmissionResult'
 import { type AllowedEventType, DEFAULT_ALLOWED_EVENT_TYPES } from '../events/EventType'
+import type { OptimizationSelectionState } from '../handoff'
 import FlagsResolver from '../resolvers/FlagsResolver'
 import MergeTagValueResolver from '../resolvers/MergeTagValueResolver'
 import type { ResolvedData } from '../resolvers/OptimizedEntryResolver'
@@ -27,8 +27,8 @@ const logger = createScopedLogger('Optimization:SnapshotRuntime')
  * @public
  */
 export interface OptimizationSnapshot {
-  /** Optimization data returned by a server-side Experience API request. */
-  readonly data?: OptimizationData
+  /** Optimization state used by a server-side, static, or edge render. */
+  readonly data?: OptimizationSelectionState
   /** Tracking consent for the current request or render. */
   readonly consent?: boolean
   /** Persistence consent for the current request or render. */

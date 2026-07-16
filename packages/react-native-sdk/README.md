@@ -87,12 +87,12 @@ export default function App() {
 }
 ```
 
-For non-component ownership paths, create the SDK instance explicitly and call methods directly:
+For non-component ownership paths, initialize the SDK explicitly and call methods directly:
 
 ```ts
 import { ContentfulOptimization } from '@contentful/optimization-react-native'
 
-const optimization = await ContentfulOptimization.create({
+const optimization = await ContentfulOptimization.initialize({
   clientId: 'your-client-id',
   environment: 'main',
   locale: 'en-US',
@@ -149,7 +149,7 @@ should use the same language. See
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the full locale model.
 
-For provider-owned SDK instances, changing the `locale` prop calls `sdk.setLocale()` after
+For provider-owned SDK runtimes, changing the `locale` prop calls `sdk.setLocale()` after
 initialization while the rest of the SDK config remains initialization-scoped. Locale updates do not
 fetch content or refresh profile state; trigger your app's normal `screen()`, `identify()`, or CDA
 fetch flow when localized data needs to change.
@@ -223,7 +223,7 @@ function HeroEntry() {
 ```
 
 Configure the SDK with `contentful: { client }` on `OptimizationRoot`, `OptimizationProvider`, or
-`ContentfulOptimization.create(...)`. SDK-managed fetching merges `contentful.defaultQuery`,
+`ContentfulOptimization.initialize(...)`. SDK-managed fetching merges `contentful.defaultQuery`,
 per-entry `entryQuery`, the SDK `locale` fallback, and `include: 10`. Manual baseline entries remain
 supported and unchanged:
 
@@ -243,8 +243,8 @@ entry cache after the React Native SDK is ready:
 </OptimizationRoot>
 ```
 
-React Native does not expose `prefetchedManagedEntries`; there is no SSR hydration handoff path for
-provider/root cache warming.
+React Native has no SSR handoff path for provider/root cache warming. Use `prefetchManagedEntries`
+only for post-ready cache warmup.
 
 ```tsx
 <OptimizedEntry baselineEntry={entry}>
@@ -402,7 +402,7 @@ queued events and drains pending AsyncStorage persistence. Tune queue bounds and
 
 ## Runtime notes
 
-- `ContentfulOptimization.create(...)` is asynchronous. Prefer `OptimizationRoot` when React needs
+- `ContentfulOptimization.initialize(...)` is asynchronous. Prefer `OptimizationRoot` when React needs
   to own initialization.
 - View and tap tracking default to enabled.
 - Live updates default to disabled so entries lock to the first resolved value unless enabled
@@ -410,7 +410,7 @@ queued events and drains pending AsyncStorage persistence. Tune queue bounds and
 - React Native compatibility polyfills are imported automatically for Iterator Helpers,
   `crypto.randomUUID()`, and `crypto.getRandomValues()`; applications do not need additional setup
   beyond installing this SDK and its documented dependencies.
-- Call `destroy()` before creating replacement instances in tests or hot-reload workflows.
+- Call `destroy()` before reinitializing the SDK in tests or hot-reload workflows.
 
 ## Related
 

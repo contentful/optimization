@@ -139,7 +139,7 @@ describe('NextPagesAutoPageTracker', () => {
     await rendered.unmount()
   })
 
-  it('can skip only the initial ready render emission', async () => {
+  it('skips only the initial route when server rendering already emitted its page event', async () => {
     const page = rs.fn(async () => {
       await Promise.resolve()
       return undefined
@@ -155,14 +155,17 @@ describe('NextPagesAutoPageTracker', () => {
     await rendered.rerender(<NextPagesAutoPageTracker initialPageEvent="skip" />)
 
     expect(page).toHaveBeenCalledTimes(1)
-    expect(page).toHaveBeenCalledWith({
-      properties: {
-        path: '/products',
-        query: {},
-        search: '',
-        url: `${window.location.origin}/products`,
-      },
-    })
+
+    await rendered.rerender(<NextPagesAutoPageTracker />)
+
+    expect(page).toHaveBeenCalledTimes(1)
+
+    routerState.asPath = '/'
+    routerState.pathname = '/'
+
+    await rendered.rerender(<NextPagesAutoPageTracker initialPageEvent="skip" />)
+
+    expect(page).toHaveBeenCalledTimes(2)
 
     await rendered.unmount()
   })

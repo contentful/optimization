@@ -1194,10 +1194,13 @@ describe('CoreStateful blocked event handling', () => {
     }
     core.interceptors.state.add((incoming) => ({
       ...incoming,
-      profile: {
-        ...incoming.profile,
-        traits: { ...incoming.profile.traits, bridged: true },
-      },
+      profile:
+        incoming.profile === undefined
+          ? undefined
+          : {
+              ...incoming.profile,
+              traits: { ...incoming.profile.traits, bridged: true },
+            },
     }))
 
     await hydrateOptimizationData(core, data)

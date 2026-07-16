@@ -4,6 +4,13 @@ import type { OptimizationSdk } from './context/OptimizationContext'
 
 export type { OptimizationWebRuntime } from '@contentful/optimization-web'
 export type {
+  AnalyticsOptimizationHandoff,
+  BrowserOptimizationHandoff,
+  ContentOptimizationHandoff,
+  ContentOptimizationHydrationMode,
+  OptimizationHydrationMode,
+} from '@contentful/optimization-web/handoff'
+export type {
   AutoPageEmissionContext,
   AutoPagePayload,
   AutoPagePayloadOptions,
@@ -46,9 +53,12 @@ export type { LiveUpdatesProviderProps } from './provider/LiveUpdatesProvider'
 export { OptimizationProvider } from './provider/OptimizationProvider'
 export type {
   OnStatesReady,
+  OptimizationProviderConfigProps,
   OptimizationProviderProps,
   TrackEntryInteractionOptions,
 } from './provider/OptimizationProvider'
+export { OptimizationAnalyticsRoot } from './root/OptimizationAnalyticsRoot'
+export type { OptimizationAnalyticsRootProps } from './root/OptimizationAnalyticsRoot'
 export { OptimizationRoot } from './root/OptimizationRoot'
 export type { OptimizationRootProps } from './root/OptimizationRoot'
 export {

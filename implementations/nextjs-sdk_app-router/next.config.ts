@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 const configDir = dirname(fileURLToPath(import.meta.url))
 
 const nextConfig: NextConfig = {
+  cacheComponents: true,
   transpilePackages: ['e2e-web'],
   env: {
     PUBLIC_NINETAILED_CLIENT_ID: process.env.PUBLIC_NINETAILED_CLIENT_ID,
@@ -17,6 +18,8 @@ const nextConfig: NextConfig = {
     PUBLIC_CONTENTFUL_CDA_HOST: process.env.PUBLIC_CONTENTFUL_CDA_HOST,
     PUBLIC_CONTENTFUL_BASE_PATH: process.env.PUBLIC_CONTENTFUL_BASE_PATH,
     PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL: process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL,
+    PUBLIC_OPTIMIZATION_STATIC_HANDOFF_MISSING_ENTRY:
+      process.env.PUBLIC_OPTIMIZATION_STATIC_HANDOFF_MISSING_ENTRY,
   },
   turbopack: {
     root: configDir,

@@ -4,6 +4,7 @@ import { LiveEntryCard } from '@/components/LiveEntryCard'
 import { loadPageEntries } from '@/lib/contentful'
 import { toIdMap } from '@/lib/util'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
+import { RequestRouteShell } from './RequestRouteShell'
 
 export default async function Home() {
   const entries = await loadPageEntries(PAGES.home.ids)
@@ -11,7 +12,7 @@ export default async function Home() {
   const liveUpdatesEntry = entriesById.get(PAGES.home.liveUpdates)
 
   return (
-    <>
+    <RequestRouteShell>
       <div className="page-header">
         <h1>Next.js SDK App Router</h1>
         <p className="page-header__subtitle">
@@ -86,6 +87,6 @@ export default async function Home() {
           </div>
         </section>
       </div>
-    </>
+    </RequestRouteShell>
   )
 }

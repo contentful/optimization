@@ -7,6 +7,7 @@ import { createRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
 import {
   LiveUpdatesProvider,
+  OptimizationAnalyticsRoot,
   OptimizationContext,
   OptimizationProvider,
   OptimizationRoot,
@@ -83,6 +84,7 @@ describe('@contentful/optimization-react-web core providers', () => {
   it('exports core API symbols', () => {
     expect(OptimizationContext).toBeDefined()
     expect(LiveUpdatesProvider).toBeTypeOf('function')
+    expect(OptimizationAnalyticsRoot).toBeTypeOf('function')
     expect(OptimizationProvider).toBeTypeOf('function')
     expect(OptimizationRoot).toBeTypeOf('function')
     expect(useEntryResolver).toBeTypeOf('function')

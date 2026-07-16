@@ -375,6 +375,7 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
   ): OptimizedEntryControllerOptions {
     return {
       isPresentationReady: true,
+      hydration: this.optimizationRootContext?.hydration,
       baselineEntry,
       entryLiveUpdatesEnabled: this.liveUpdates,
       rootLiveUpdatesEnabled: this.optimizationRootContext?.rootLiveUpdatesEnabled ?? false,
@@ -399,8 +400,8 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
         this.dispatchEntryEvent(ENTRY_LOADING_EVENT, snapshot)
       }
     } else if (
-      previousSnapshot?.loadingPresentation.showLoadingFallback === true ||
-      hasResolvedDataChanged(previousSnapshot, snapshot)
+      snapshot.isResolved &&
+      (previousSnapshot?.isResolved !== true || hasResolvedDataChanged(previousSnapshot, snapshot))
     ) {
       this.dispatchEntryEvent(ENTRY_RESOLVED_EVENT, snapshot)
     }

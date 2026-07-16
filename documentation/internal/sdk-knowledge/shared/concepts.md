@@ -47,6 +47,22 @@ SDK-owned, not application aliases. If either link is unresolved or absent from 
 the resolver cannot select the authored replacement and returns baseline.
 source: api-schemas#contentful/OptimizedEntry.ts#OptimizedEntryFields; api-schemas#contentful/OptimizationEntry.ts#OptimizationEntryFields; core-sdk#resolvers/OptimizedEntryResolver.ts#getOptimizationEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry
 
+After an attached `nt_experience` entry matches a selection by
+`selectedOptimization.experienceId === optimizationEntry.fields.nt_experience_id`, the resolver reads
+that entry's `nt_config` to find a non-hidden EntryReplacement component whose baseline id equals the
+baseline entry id. `variantIndex === 0` returns the baseline with selected-optimization metadata;
+positive variant indexes are one-based into that component's `variants`. Missing config/components,
+a hidden baseline component, an out-of-range or invalid selected variant, or a linked variant in
+`nt_variants` that is unresolved or has a different content type returns the baseline. An empty
+variant (`id === ""`) returns the baseline with `isEmptyVariant: true`.
+source: core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedOptimization; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariant; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext; api-schemas#contentful/OptimizationConfig.ts#normalizeOptimizationConfig
+
+`SelectedOptimization.variants` is not read during entry resolution; public cache identity includes
+it through the selection fingerprint. Keep it consistent with the source selection because cache
+keys can change when the variant map changes even though the resolver chooses from `nt_config` and
+`nt_variants`.
+source: core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariant; core-sdk#handoff.ts#formatVariants; core-sdk#handoff.ts#createSelectionFingerprint; api-schemas#experience/optimization/SelectedOptimization.ts#SelectedOptimization
+
 Merge tags are a separate, profile-backed mechanism rather than entry replacement. Pass only a
 value accepted by `isMergeTagEntry` to `getMergeTagValue`; the resolver reads the merge-tag selector
 from `fields.nt_mergetag_id`, looks it up in the supplied/current profile, and falls back to
@@ -92,8 +108,8 @@ source: core-sdk#StatefulDefaults.ts#resolveStatefulDefaults; core-sdk#consent/C
 ## Live updates
 
 Opt-in. Most content is fixed for a request's life, so re-resolution after load is off by default.
-Turned on app-wide (factory `liveUpdates`) or per-entry; a per-entry value overrides the app-wide
-default. Triggers: consent/identity/profile changes in the browser.
+Turned on app-wide through root or binding `liveUpdates` configuration, or per-entry; a per-entry
+value overrides the app-wide default. Triggers: consent/identity/profile changes in the browser.
 source: react-web-sdk#provider/LiveUpdatesProvider.tsx#LiveUpdatesProvider; react-web-sdk#hooks/useLiveUpdates.ts#useLiveUpdates
 
 ## Page events
@@ -104,6 +120,29 @@ skip the duplicate (per-SDK `initialPageEvent` / tracker prop). Interaction even
 (view/click/hover) are consent-gated browser activity and use the resolved entry id.
 source: react-web-sdk#auto-page/useAutoPageEmitter.ts; react-web-sdk#router/next-app.tsx
 
+## Event streams and blocked events
+
+Stateful JS SDK event forwarding is a current-value signal surface, not a durable event queue.
+`states.eventStream` and `states.blockedEventStream` emit the current value immediately on subscribe
+and then later signal updates; the exposed streams keep only the latest accepted or blocked event
+value while Experience/Insights delivery queues remain internal. A late subscriber must dedupe from
+the events it observes; the SDK does not replay a full event history through these observables.
+source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#CoreStateful.ts#CoreStateful; core-sdk#signals/Observable.ts#toObservable; core-sdk#signals/signals.ts#event; core-sdk#signals/signals.ts#blockedEvent; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue; core-sdk#queues/InsightsQueue.ts#InsightsQueue
+
+Consent-blocked stateful events stop before API delivery or queueing: Experience methods return
+`{ accepted: false }`, Insights methods return without enqueueing, and Core writes only
+`blockedEventStream` / `onEventBlocked` diagnostics. `consent(true)` changes future policy but does
+not replay blocked diagnostics or rebuild the blocked call. Current-page/screen trackers do not mark
+blocked attempts as accepted, so a later caller/effect can retry the same current key and build a
+fresh payload under the current consent state.
+source: core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult; core-sdk#CoreStatefulEventEmitter.ts#sendInsightsEvent; core-sdk#CoreStatefulEventEmitter.ts#reportBlockedEvent; core-sdk#CoreStateful.ts#consent; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker; web-sdk#ContentfulOptimization.ts#trackCurrentPage; optimization-js-bridge#index.ts#Bridge
+
+Event-stream `optimization` is runtime-only forwarding enrichment. Core attaches it only to the
+`eventStream` value when an optimized-entry interaction has an `EventOptimizationContext`;
+Experience and Insights API queues validate and send the original event payload without that
+property.
+source: core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent; core-sdk#queues/ExperienceQueue.ts#send; core-sdk#queues/InsightsQueue.ts#send
+
 ## Experience response payload
 
 An accepted Experience API request (page/identify/screen/track) returns `OptimizationData`
@@ -112,8 +151,10 @@ selected optimizations, and the computed flag `changes` the rest of the SDK cons
 mirrors the wire `ExperienceData` but renames its `experiences` field to `selectedOptimizations`. A
 stateful SDK applies the payload to its personalization signals (`profile`, `selectedOptimizations`,
 `changes`) in one batch, transitioning the Experience-request state to `success` atomically with the
-selections so consumers never see `!pending` while optimization is still unavailable; a stateless SDK
-returns the same payload per request instead of holding it.
+selections so consumers never see `!pending` while optimization is still unavailable. Stateful Core
+state interceptors are field-presence aware: omitted interceptor fields keep the original payload
+field, while an own present `undefined` field is applied intentionally. A stateless SDK returns the
+same payload per request instead of holding it.
 source: api-schemas#experience/ExperienceResponse.ts#OptimizationData; api-schemas#experience/ExperienceResponse.ts#ExperienceData; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals
 
 Event-method acceptance and response data are separate: `EventEmissionResult` is
@@ -121,3 +162,63 @@ Event-method acceptance and response data are separate: `EventEmissionResult` is
 event can therefore have no `data` yet; only a returned `data` value contains the profile,
 selections, and changes described above.
 source: core-sdk#events/EventEmissionResult.ts#EventEmissionResult; core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult
+
+## Optimization handoff
+
+`OptimizationHandoff` is the framework-neutral handoff shape for server, static, and edge rendered
+Optimization state. It can carry selected state (`selectedOptimizations`, `changes`, optional
+`profile`), managed-entry baseline snapshots, and cache metadata. Public/static handoffs must not
+carry request-derived profile state; public permutations need an application-owned `cache.key`. The
+generated public-permutation `cache.key` is SDK identity and transport metadata, while framework
+tags are caller-owned invalidation labels. The generic helper reports cache-safety warnings instead
+of throwing. Node request handoff creation
+throws a `TypeError` when request data with profile state is paired with `public-permutation` or
+`static` cache metadata.
+source: core-sdk#handoff.ts#OptimizationHandoff; core-sdk#handoff.ts#createPublicPermutationCacheMetadata; core-sdk#handoff.ts#getOptimizationCacheSafetyWarnings; node-sdk#handoff.ts#createRequestHandoffFromData
+
+`createHandoffFromSelections()` builds a selection handoff from application-owned selected
+optimizations and optional managed-entry snapshots. It does not include profile state and requires
+`selectedOptimizations` to be an array.
+source: core-sdk#handoff.ts#createHandoffFromSelections
+
+`createHandoffFromSelections()` serializes caller-supplied selected optimizations, changes, entries,
+and cache metadata into the handoff. It does not call the Experience API or derive selections from
+route, cookie, header, locale, or cache-key inputs. Next.js public-permutation helpers only add
+browser handoff metadata and create cache metadata around the same caller-supplied selections.
+source: core-sdk#handoff.ts#createHandoffFromSelections; nextjs-sdk#handoff.ts#createPublicPermutationHandoff; nextjs-sdk#handoff.ts#createPublicPermutationCacheMetadata
+
+`createSelectionFingerprint()` returns a deterministic versioned fingerprint for selected
+optimizations: `undefined` and an empty array have distinct sentinels, selections are sorted by
+their formatted optimization fields using JS code-unit order, and each variant map is sorted by
+baseline entry id using the same code-unit order before encoding. `createOptimizationCacheKey()`
+composes that fingerprint with cache scope, optional locale, and code-unit-sorted entry ids; missing
+locale or entry ids are encoded as `-`. It does not fingerprint Custom Flag `changes`; cacheable
+renders that output Custom Flag values need an app-owned key, cache version, or tag dimension for
+those rendered changes.
+source: core-sdk#handoff.ts#createSelectionFingerprint; core-sdk#handoff.ts#createOptimizationCacheKey; core-sdk#handoff.ts#createHandoffFromSelections
+
+`resolveEntriesForSelections()` resolves each supplied baseline entry with the same selected
+optimizations, preserves the input entry order, and returns each resolved result with its original
+baseline entry.
+source: core-sdk#handoff.ts#resolveEntriesForSelections; core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext
+
+Browser handoffs extend the core handoff with `hydration` and `initialPageEvent`. Content handoffs
+are accepted by `hydrateOptimizationHandoff`; analytics-only handoffs are accepted by the analytics
+runtime. Both hydration paths validate `initialPageEvent` and enforce cache safety before state is
+published. Browser SDK state hydration is Web handoff-owned: `@contentful/optimization-web/handoff`
+exports `hydrateOptimizationHandoffState` for customer adapters; that helper awaits the Web SDK
+state interceptor only when handoff state contains present `selectedOptimizations`, `changes`, or
+`profile` own fields, keeps input handoff fields when an interceptor omits them, applies own present
+`undefined` fields intentionally, and marks the Experience request state successful even for
+undefined or empty handoff state. Content handoff state hydration starts from a content reset for
+`selectedOptimizations` and `changes`, so a new content-capable handoff that omits those fields
+clears stale browser content state while preserving `profile` unless `profile` is an own field.
+source: web-sdk#handoff.ts#BrowserOptimizationHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoffState; web-sdk#handoff.ts#applyHydratedSignals; web-sdk#handoff.ts#applySuccessfulEmptyHandoffHydration; core-sdk#handoff.ts#assertOptimizationCacheSafety
+
+Snapshot and preview-override paths consume selection state, not necessarily a full Experience
+response: snapshot runtimes resolve from whichever `selectedOptimizations`, `changes`, and `profile`
+fields are present, while preview overrides update their clean baselines only from own present
+`selectedOptimizations` and `changes` fields. Omitted refresh fields leave the cached baseline
+unchanged; own present `undefined` is a resettable baseline, and override derivation falls back to
+empty arrays only when no baseline exists.
+source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#preview-support/PreviewOverrideManager.ts#PreviewOverrideManager; core-sdk#CoreBase.ts#LifecycleInterceptors

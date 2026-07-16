@@ -12,7 +12,9 @@ import {
 } from '@contentful/optimization-nextjs/client'
 import { type JSX } from 'react'
 
-export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): JSX.Element {
+export function ControlPanel({
+  customViewAction,
+}: { readonly customViewAction?: boolean } = {}): JSX.Element {
   const sdk = useOptimization()
   const { identifyUser, resetUser } = useOptimizationActions()
   const { consent, setConsent } = useConsent()
@@ -158,14 +160,14 @@ export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): 
         <span />
       </div>
 
-      {demoCTA ? (
+      {customViewAction ? (
         <div className="control-panel__actions">
           <button
             className="btn btn--secondary btn--sm"
             data-testid="track-conversion-button"
             onClick={() => {
               void sdk.trackView({
-                componentId: 'page-two-demo-cta',
+                componentId: 'page-two-custom-view-cta',
                 viewId: crypto.randomUUID(),
                 viewDurationMs: 0,
               })

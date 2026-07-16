@@ -215,6 +215,11 @@ add per-archetype checks.
 - [ ] `## Quick start` is one minimal viable recipe; `## Default recipe` explains the reusable
       pattern; variants are grouped by runtime/vendor/destination and each states when it applies.
 - [ ] TOC omits both `## Quick start` and `## Do you need this?`.
+- [ ] If the quick start requires app-owned precomputed state, the guide defines where that state
+      comes from, its minimum shape, and which helper names are reader-owned before the first code
+      block.
+- [ ] `## Validate the integration` contains performable checks with an observable location or
+      action; it is not an assertion-only checklist of things to "confirm".
 
 ## E. Directory README (`documentation/guides/README.md`)
 

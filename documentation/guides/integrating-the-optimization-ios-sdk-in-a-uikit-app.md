@@ -667,11 +667,11 @@ client.reset()
 `reset()` clears profile continuity (profile, changes, selected optimizations, the anonymous ID, the
 current-screen dedupe tracker, and sticky-view keys) but **preserves consent state**, and it no-ops
 before initialization. When persistence consent is allowed, the SDK writes continuity to
-`UserDefaults` and publishes SDK state from an Experience response after that write settles. In tests
-and relaunch flows, wait for SDK-derived UI or state instead of adding arbitrary storage delays. The
-SDK persists to `UserDefaults` under the `com.contentful.optimization.` prefix, not to cookies, and
-provides no built-in cross-platform identity handoff — implement any web, server, or account
-continuity in application code. For the identifier model, see
+`UserDefaults` before publishing SDK state from an Experience response. In tests and relaunch flows,
+wait for SDK-derived UI or state instead of adding arbitrary storage delays. The SDK persists to
+`UserDefaults` under the `com.contentful.optimization.` prefix, not to cookies, and provides no
+built-in cross-platform identity handoff — implement any web, server, or account continuity in
+application code. For the identifier model, see
 [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md#revocation-and-profile-cleanup).
 
 ## Optional integrations

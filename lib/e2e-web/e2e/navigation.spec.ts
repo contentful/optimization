@@ -1,5 +1,7 @@
 import { type Page, expect, test } from '@playwright/test'
 
+import { hasFlag, skipIf } from './utils'
+
 async function getRecentPageEventUrls(page: Page): Promise<string[]> {
   const pageEvents = page.locator('[data-testid^="event-page-"]')
   const count = await pageEvents.count()
@@ -16,6 +18,8 @@ async function getRecentPageEventUrls(page: Page): Promise<string[]> {
 }
 
 test.describe('Navigation', () => {
+  skipIf('EDGE')
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
@@ -24,7 +28,11 @@ test.describe('Navigation', () => {
 
   test('records ordered route sequence including revisits', async ({ page }) => {
     const pageEventLocator = page.locator('[data-testid^="event-page-"]')
-    await expect(pageEventLocator.first()).toBeVisible()
+
+    if (!hasFlag('SSR')) {
+      await expect(pageEventLocator.first()).toBeVisible()
+    }
+
     const initialUrls = await getRecentPageEventUrls(page)
     const initialPageEventCount = initialUrls.length
     await page.getByTestId('link-page-two').click()

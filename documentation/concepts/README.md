@@ -8,6 +8,7 @@ children:
   - ./interaction-tracking-in-web-sdks.md
   - ./interaction-tracking-in-node-and-stateless-environments.md
   - ./profile-synchronization-between-client-and-server.md
+  - ./optimization-handoff-and-cache-safe-rendering.md
   - ./react-native-sdk-interaction-tracking-mechanics.md
   - ./ios-sdk-runtime-and-interaction-mechanics.md
   - ./android-sdk-runtime-and-interaction-mechanics.md
@@ -46,6 +47,9 @@ they are not the first stop for installation or setup commands.
 - [Profile synchronization between client and server](./profile-synchronization-between-client-and-server.md) -
   explains how profile identity, profile data, cookies, browser storage, and Experience API
   responses work together when Node and Web SDK runtimes share a visitor journey.
+- [Optimization handoff and cache-safe rendering](./optimization-handoff-and-cache-safe-rendering.md) -
+  explains how server, static, ISR, and edge-rendered Optimization state reaches the browser, how
+  cache scopes work, and why request profile state must not enter public caches.
 - [React Native SDK interaction tracking mechanics](./react-native-sdk-interaction-tracking-mechanics.md) -
   explains how the React Native SDK observes, gates, and emits tracking events, covering event
   types, the viewport state machine, default visibility and timing, consent gating, scroll context,

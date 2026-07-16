@@ -1,9 +1,9 @@
 import type {
-  OptimizationData,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { signal, type Signal } from '@preact/signals-core'
+import type { OptimizationSelectionState } from '../handoff'
 import { InterceptorManager } from '../lib/interceptor'
 import { PreviewOverrideManager } from './PreviewOverrideManager'
 import { BASELINE, makeOptimizationData } from './PreviewOverrideManager.test-utils'
@@ -22,7 +22,7 @@ interface Harness {
 function createHarness(initialProfile: Profile | undefined): Harness {
   const profileSignal = signal<Profile | undefined>(initialProfile)
   const selectedOptimizations = signal<SelectedOptimizationArray | undefined>(BASELINE)
-  const stateInterceptors = new InterceptorManager<OptimizationData>()
+  const stateInterceptors = new InterceptorManager<OptimizationSelectionState>()
   const manager = new PreviewOverrideManager({
     selectedOptimizations,
     profile: profileSignal,
@@ -131,7 +131,7 @@ describe('PreviewOverrideManager — audience qualification baseline', () => {
 
   it('is a no-op when no profile signal was provided (backward compat)', () => {
     const selectedOptimizations = signal<SelectedOptimizationArray | undefined>(BASELINE)
-    const stateInterceptors = new InterceptorManager<OptimizationData>()
+    const stateInterceptors = new InterceptorManager<OptimizationSelectionState>()
     const mgr = new PreviewOverrideManager({
       selectedOptimizations,
       stateInterceptors,

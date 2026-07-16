@@ -37,6 +37,7 @@ source of truth for exported API signatures.
   - [Consent](#consent)
   - [Provider and hook access](#provider-and-hook-access)
   - [Provider-managed state subscriptions](#provider-managed-state-subscriptions)
+  - [Analytics-only handoff](#analytics-only-handoff)
   - [OptimizedEntry](#optimizedentry)
   - [Entry interaction tracking](#entry-interaction-tracking)
   - [Router page events](#router-page-events)
@@ -95,35 +96,35 @@ or custom framework adapters.
 ## Common configuration
 
 `OptimizationRoot` accepts most Web SDK configuration props directly and adds React-specific props
-such as `liveUpdates`, `onStatesReady`, and `serverOptimizationState`. The Web SDK
+such as `liveUpdates`, `onStatesReady`, `handoff`, and `hydration`. The Web SDK
 `autoTrackEntryInteraction` option is exposed as the React `trackEntryInteraction` prop.
 
-| Prop                       | Required? | Default                                       | Description                                                                |
-| -------------------------- | --------- | --------------------------------------------- | -------------------------------------------------------------------------- |
-| `clientId`                 | Yes       | N/A                                           | Shared API key for Experience API and Insights API requests                |
-| `environment`              | No        | `'main'`                                      | Contentful environment identifier                                          |
-| `api`                      | No        | Web SDK defaults                              | Experience API and Insights API endpoint and request options               |
-| `app`                      | No        | `undefined`                                   | Application metadata attached to outgoing event context                    |
-| `contentful`               | No        | `undefined`                                   | App-owned `contentful.js` client, default query, and cache                 |
-| `locale`                   | No        | `undefined`                                   | SDK Experience API and default event locale                                |
-| `defaults`                 | No        | `undefined`                                   | Configuration/default state such as consent or persistence consent         |
-| `serverOptimizationState`  | No        | `undefined`                                   | Server-returned Optimization state to apply before provider children mount |
-| `prefetchedManagedEntries` | No        | `undefined`                                   | Server-fetched baseline entries for managed `entryId` hydration            |
-| `prefetchManagedEntries`   | No        | `undefined`                                   | Managed entry descriptors to warm after the live SDK is ready              |
-| `allowedEventTypes`        | No        | `['identify', 'page']`                        | Event types allowed before consent is explicitly set                       |
-| `trackEntryInteraction`    | No        | `{ views: true, clicks: true, hovers: true }` | Automatic entry interaction tracking for `OptimizedEntry` elements         |
-| `cookie`                   | No        | `{ domain: undefined, expires: 365 }`         | Anonymous ID cookie settings inherited from the Web SDK                    |
-| `liveUpdates`              | No        | `false`                                       | Whether `OptimizedEntry` components react continuously to SDK state        |
-| `onStatesReady`            | No        | `undefined`                                   | Provider-managed app-level state subscription hook                         |
-| `queuePolicy`              | No        | SDK defaults                                  | Flush retry behavior and offline queue bounds                              |
-| `logLevel`                 | No        | `'error'`                                     | Minimum log level for the default console sink                             |
-| `onEventBlocked`           | No        | `undefined`                                   | Callback invoked when consent or guard logic blocks an event               |
+| Prop                     | Required? | Default                                       | Description                                                         |
+| ------------------------ | --------- | --------------------------------------------- | ------------------------------------------------------------------- |
+| `clientId`               | Yes       | N/A                                           | Shared API key for Experience API and Insights API requests         |
+| `environment`            | No        | `'main'`                                      | Contentful environment identifier                                   |
+| `api`                    | No        | Web SDK defaults                              | Experience API and Insights API endpoint and request options        |
+| `app`                    | No        | `undefined`                                   | Application metadata attached to outgoing event context             |
+| `contentful`             | No        | `undefined`                                   | App-owned `contentful.js` client, default query, and cache          |
+| `locale`                 | No        | `undefined`                                   | SDK Experience API and default event locale                         |
+| `defaults`               | No        | `undefined`                                   | Configuration/default state such as consent or persistence consent  |
+| `handoff`                | No        | `undefined`                                   | Server, static, or edge Optimization handoff to hydrate             |
+| `hydration`              | No        | `handoff?.hydration`                          | Content hydration presentation mode for optimized entries           |
+| `prefetchManagedEntries` | No        | `undefined`                                   | Managed entry descriptors to warm after the live SDK is ready       |
+| `allowedEventTypes`      | No        | `['identify', 'page']`                        | Event types allowed before consent is explicitly set                |
+| `trackEntryInteraction`  | No        | `{ views: true, clicks: true, hovers: true }` | Automatic entry interaction tracking for `OptimizedEntry` elements  |
+| `cookie`                 | No        | `{ domain: undefined, expires: 365 }`         | Anonymous ID cookie settings inherited from the Web SDK             |
+| `liveUpdates`            | No        | `false`                                       | Whether `OptimizedEntry` components react continuously to SDK state |
+| `onStatesReady`          | No        | `undefined`                                   | Provider-managed app-level state subscription hook                  |
+| `queuePolicy`            | No        | SDK defaults                                  | Flush retry behavior and offline queue bounds                       |
+| `logLevel`               | No        | `'error'`                                     | Minimum log level for the default console sink                      |
+| `onEventBlocked`         | No        | `undefined`                                   | Callback invoked when consent or guard logic blocks an event        |
 
 Use `OptimizationProvider` directly when an application or framework adapter needs direct provider
 control, including integrations that supply an SDK instance. Use it instead of `OptimizationRoot`,
 not inside `OptimizationRoot`: the root already composes the provider and live-updates provider.
 Nesting providers can create a second owned SDK instance or shadow the root context, including
-prefetched managed entries.
+handoff entries.
 
 ```tsx
 <OptimizationProvider sdk={optimization}>
@@ -131,12 +132,13 @@ prefetched managed entries.
 </OptimizationProvider>
 ```
 
-Injected SDK instances render children on the initial render. When `serverOptimizationState` is
-provided, that initial render uses a snapshot runtime while provider setup hydrates the injected
-SDK. The provider still leaves SDK teardown to the owner that created the instance.
+Injected SDK instances render children on the initial render. When `handoff` is provided, that
+initial render uses a snapshot runtime while provider setup hydrates the injected SDK. The provider
+still leaves SDK teardown to the owner that created the instance.
 
-For server-to-browser state handoff, pass server-returned Optimization data through
-`serverOptimizationState` on `OptimizationRoot` or `OptimizationProvider`. Keep `defaults` for
+For server-to-browser state handoff, pass the server, static, or edge `OptimizationHandoff` through
+`handoff` on `OptimizationRoot` or `OptimizationProvider`. Pass `hydration` on the same component
+when the route needs to override the handoff's content presentation mode. Keep `defaults` for
 configuration or default state such as consent policy:
 
 ```tsx
@@ -144,7 +146,7 @@ configuration or default state such as consent policy:
   clientId="your-client-id"
   defaults={{ consent: true }}
   environment="main"
-  serverOptimizationState={optimizationData}
+  handoff={handoff}
 >
   <YourApp />
 </OptimizationRoot>
@@ -325,6 +327,33 @@ live state surface. Initial children can already render against a snapshot runti
 subscriptions can still observe events emitted by child effects such as router page tracking. For
 component-local UI state, keep using hooks and React effects under the provider.
 
+### Analytics-only handoff
+
+Use `OptimizationAnalyticsRoot` when a route already rendered optimized content on the server,
+during static generation, ISR, or at the edge, and the browser only needs to hydrate analytics, page
+tracking, and entry interaction tracking. The handoff must use `hydration: 'analytics-only'`;
+content-capable handoffs still belong on `OptimizationRoot` or `OptimizationProvider`.
+
+```tsx
+import { OptimizationAnalyticsRoot } from '@contentful/optimization-react-web'
+
+function App({ handoff, routeKey }) {
+  return (
+    <OptimizationAnalyticsRoot
+      clientId="your-client-id"
+      environment="main"
+      handoff={handoff}
+      routeKey={routeKey}
+    >
+      <YourApp />
+    </OptimizationAnalyticsRoot>
+  )
+}
+```
+
+Pass `initialPagePayload` or `buildPagePayload` when an initial browser page event needs route
+payload fields beyond the default route identity.
+
 ### OptimizedEntry
 
 `OptimizedEntry` fetches a Contentful entry by ID when the root SDK is configured with
@@ -364,9 +393,9 @@ function HeroEntry() {
 ```
 
 Use `prefetchManagedEntries` on `OptimizationRoot` or `OptimizationProvider` to warm the client-side
-managed entry cache after the live SDK is ready. For SSR handoff, pass `ManagedEntryHandoff[]`
-values to `prefetchedManagedEntries`; `prefetchManagedEntries(runtime, descriptors)` returns that
-shape when the runtime is available on the server.
+managed entry cache after the live SDK is ready. For SSR handoff, put `ManagedEntryHandoff[]` values
+in `handoff.entries`; `prefetchManagedEntries(runtime, descriptors)` returns that shape when the
+runtime is available on the server.
 
 Hooks use the same managed entry source:
 
@@ -440,7 +469,7 @@ Router adapters emit `page()` events for supported client-side routers:
 | TanStack Router    | `@contentful/optimization-react-web/router/tanstack-router` | Mount under the TanStack router tree and inside `OptimizationRoot`   |
 
 The `next-pages` tracker remains available for low-level Pages Router wiring. For full Next.js Pages
-Router SSR setup with `getServerSideProps`, server state handoff, and anonymous ID cookie writes,
+Router SSR setup with `getServerSideProps`, request handoff, and anonymous ID cookie writes,
 prefer the
 [`@contentful/optimization-nextjs/pages-router`](../nextjs-sdk/README.md#pages-router-setup) adapter
 path.

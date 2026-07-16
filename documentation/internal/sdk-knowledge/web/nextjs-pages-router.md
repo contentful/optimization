@@ -1,6 +1,6 @@
 # Next.js Pages Router (`@contentful/optimization-nextjs`) — SDK knowledge
 
-<!-- feeds-guides: documentation/guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md -->
+<!-- feeds-guides: documentation/guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md, documentation/guides/rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md -->
 
 > Internal, verified reference. Not a guide. Facts only, each with a source pointer verified against
 > packages/\*\*/src.
@@ -11,82 +11,97 @@ App Router surface: see [`nextjs-app-router.md`](./nextjs-app-router.md).
 
 ## Package & entry points
 
-| Import path                                           | Purpose                                                                                                                                                                                                                      | source                                                                                                                                                                                                       |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@contentful/optimization-nextjs/pages-router`        | **Client** factory → bound `OptimizationRoot`, `OptimizationProvider`, `OptimizedEntry`, `NextPagesAutoPageTracker`. Exports the factory + `NextPagesAutoPageTracker` + bound types (React Web hooks import from `/client`). | `nextjs-sdk#pages-router.ts#createNextjsPagesRouterOptimization`; `nextjs-sdk#pages-router.ts#NextPagesAutoPageTracker`                                                                                      |
-| `@contentful/optimization-nextjs/pages-router/server` | **Server** factory → `getServerSideOptimizationProps`; also exports `prefetchManagedEntries`, `ManagedEntryDescriptor`, `ManagedEntryHandoff`                                                                                | `nextjs-sdk#pages-router-server.ts#getServerSideOptimizationProps`; `core-sdk#CoreBase.ts#prefetchManagedEntries`; `core-sdk#CoreBase.ts#ManagedEntryDescriptor`; `core-sdk#CoreBase.ts#ManagedEntryHandoff` |
-| `@contentful/optimization-nextjs/client`              | Browser-only hooks + per-entry controls                                                                                                                                                                                      | `nextjs-sdk#client.ts`; `nextjs-sdk#../package.json`                                                                                                                                                         |
-| `@contentful/optimization-nextjs/server`              | Manual server SDK control (escape hatches)                                                                                                                                                                                   | `nextjs-sdk#server.tsx`; `nextjs-sdk#../package.json`                                                                                                                                                        |
-| `@contentful/optimization-nextjs/api-schemas`         | Type guards `isMergeTagEntry`, `isResolvedContentfulEntry`                                                                                                                                                                   | `nextjs-sdk#api-schemas.ts`; `api-schemas#contentful/typeGuards.ts#isMergeTagEntry`; `api-schemas#contentful/typeGuards.ts#isResolvedContentfulEntry`                                                        |
+| Import path                                           | Purpose                                                                                                                                                                                                      | source                                                                                                                                                                                                                                                                                                                        |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-nextjs/pages-router`        | **Client** binding helper for bound `OptimizationRoot`, `OptimizationProvider`, `OptimizedEntry`, `NextPagesAutoPageTracker`, and public permutation handoff helpers. React Web hooks import from `/client`. | `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#pages-router.ts#NextPagesAutoPageTracker`; `nextjs-sdk#pages-router.ts#createPublicPermutationHandoff`                                                                                                                                            |
+| `@contentful/optimization-nextjs/pages-router/server` | **Server** binding helper for `createRequestHandoff`; also exports public permutation handoff helpers, selection resolution, `prefetchManagedEntries`, `ManagedEntryDescriptor`, `ManagedEntryHandoff`       | `nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization`; `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterOptimization`; `nextjs-sdk#pages-router-server.ts`; `core-sdk#CoreBase.ts#prefetchManagedEntries`; `core-sdk#CoreBase.ts#ManagedEntryDescriptor`; `core-sdk#CoreBase.ts#ManagedEntryHandoff` |
+| `@contentful/optimization-nextjs/client`              | Browser-only hooks + per-entry controls                                                                                                                                                                      | `nextjs-sdk#client.ts`; `nextjs-sdk#../package.json`                                                                                                                                                                                                                                                                          |
+| `@contentful/optimization-nextjs/server`              | Manual server SDK control (escape hatches)                                                                                                                                                                   | `nextjs-sdk#server.tsx`; `nextjs-sdk#../package.json`                                                                                                                                                                                                                                                                         |
+| `@contentful/optimization-nextjs/api-schemas`         | Type guards `isMergeTagEntry`, `isResolvedContentfulEntry`                                                                                                                                                   | `nextjs-sdk#api-schemas.ts`; `api-schemas#contentful/typeGuards.ts#isMergeTagEntry`; `api-schemas#contentful/typeGuards.ts#isResolvedContentfulEntry`                                                                                                                                                                         |
 
-Note: `/pages-router` and `/pages-router/server` export DIFFERENT functions both named
-`createNextjsPagesRouterOptimization`.
+Note: `/pages-router` and `/pages-router/server` export separate binding helpers:
+`bindNextjsPagesRouterOptimization` for the browser component set and
+`bindNextjsPagesRouterServerOptimization` for request handoff.
 
 The package root (`@contentful/optimization-nextjs`) is not an import path — the `package.json`
-exports map starts at `./app-router`, with no `.` entry. `/pages-router` exports the factory,
+exports map starts at `./app-router`, with no `.` entry. `/pages-router` exports the binding helper,
 tracker, and bound types only; import React Web hooks/providers from `/client`. (A `'use client'`
 module cannot wildcard-re-export React Web without breaking Next.js 15 builds.)
-source: `nextjs-sdk#../package.json`; `nextjs-sdk#pages-router.ts#createNextjsPagesRouterOptimization`.
+source: `nextjs-sdk#../package.json`; `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`.
 
-## Setup / factory
+## Setup / initialization and binding
 
-- **Client:** `createNextjsPagesRouterOptimization(config)` →
+- **Client:** `bindNextjsPagesRouterOptimization(config)` →
   `{ OptimizationRoot, OptimizationProvider, OptimizedEntry, NextPagesAutoPageTracker }`. Config
-  `NextjsPagesRouterOptimizationComponentsConfig` passes through to react-web `OptimizationRoot`
-  props: `clientId`, `environment`, `locale`, `api?`, `defaults` (`consent`, `persistenceConsent`),
-  `trackEntryInteraction?`, `liveUpdates?`, `app` (`name`, `version`), `logLevel?`. **The client
-  factory strips `contentful` from the config** it forwards (`toClientRootConfig` /
-  `toClientProviderConfig` destructure `contentful: _contentful`), so managed fetching on the client
-  is not wired here; server-side prefetch is the Pages Router managed path (see below).
-  source: `nextjs-sdk#pages-router.ts#createNextjsPagesRouterOptimization`; `nextjs-sdk#pages-router.ts#toClientRootConfig`; `nextjs-sdk#pages-router.ts#toClientProviderConfig`.
-- **Server:** `createNextjsPagesRouterOptimization(config)` → `{ getServerSideOptimizationProps }`.
-  source: `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterOptimization`.
-  - Config `NextjsPagesRouterOptimizationConfig extends OptimizationNodeConfig`. **Requires**
-    `server.consent` — a `CoreStatelessRequestConsent` value OR
-    `(context: GetServerSidePropsContext) => CoreStatelessRequestConsent | Promise<...>`.
-    source: `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterOptimizationConfig`; `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterServerConsentResolver`; `core-sdk#CoreStatelessRequest.ts#CoreStatelessRequestConsent`.
+  passes through to react-web providers; binding calls are not isolated browser SDK runtimes. Browser
+  defaults are supplied through `consent.clientDefaults`; when a request handoff carries defaults
+  from resolved server consent, the handoff defaults override those static browser defaults for the
+  same axes.
+  source: `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#pages-router.ts#toClientRootConfig`; `nextjs-sdk#pages-router.ts#toClientProviderConfig`; `nextjs-sdk#pages-router.ts#withRequestDefaults`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationConsentConfig`; `web-sdk#ContentfulOptimization.ts#ContentfulOptimization`.
+- **Server:** `bindNextjsPagesRouterServerOptimization(config)` → `{ createRequestHandoff }`. Server
+  consent is supplied through `consent.server`, which receives `{ cookies, headers }`.
+  source: `nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization`; `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterOptimization`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationServerConsentResolver`.
   - Optional `cookie?` (`domain`, `expires` in days → maxAge seconds).
-    source: `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterOptimizationConfig`; `nextjs-sdk#pages-router-server.ts#toAnonymousIdCookieOptions`.
+    source: `nextjs-sdk#bound-component-types.ts#NextjsOptimizationCookieConfig`; `nextjs-sdk#pages-router-server.ts#toAnonymousIdCookieOptions`.
   - **`contentful?: ContentfulConfig` (managed fetching):** via `OptimizationNodeConfig` → core
     `contentful` config; enables server-side managed fetch through the request optimization instance
     (`requestOptimization.fetchOptimizedEntry(id)`) and the `prefetchManagedEntries` option below.
     source: `core-sdk#CoreBase.ts#CoreConfig`; `core-sdk#CoreBase.ts#ContentfulConfig`; `core-sdk#CoreStatelessRequest.ts#fetchOptimizedEntry`.
-  - Consent resolver reads cookies as `context.req.cookies[NAME]` (NOT App Router's `cookies.get()`).
-    source: `nextjs-sdk#pages-router-server.ts#createPagesRouterCookieReader`; `impl:nextjs-sdk_pages-router#lib/optimization-server.ts`.
-  - `getServerSideOptimizationProps(context, options?)` return shape:
-    `{ props: { contentfulOptimization: { clientDefaults?, initialPageEvent, serverOptimizationState?, prefetchedManagedEntries? } }, data, requestOptimization }`.
-    `clientDefaults` + `serverOptimizationState` + `prefetchedManagedEntries` optional;
-    `initialPageEvent` required. Also writes the anonymous-id `Set-Cookie`.
-    source: `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterOptimizationPropsResult`; `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterOptimizationPageProps`; `nextjs-sdk#pages-router-server.ts#getNextjsPagesRouterOptimizationProps`; `nextjs-sdk#pages-router-server.ts#appendSetCookie`.
+  - Consent resolver reads a merged Pages Router cookie reader built from `context.req.cookies` and
+    the raw `cookie` header.
+    source: `nextjs-sdk#pages-router-server.ts#createPagesRouterCookieReader`; `nextjs-sdk#pages-router-server.ts#resolveServerConsent`.
+  - `createRequestHandoff(context, options)` returns a browser handoff. It also writes the anonymous
+    ID `Set-Cookie` when profile persistence permits it.
+    source: `nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization`; `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `nextjs-sdk#pages-router-server.ts#appendSetCookie`.
+  - Request handoffs carry browser defaults derived from the resolved server consent: boolean consent
+    seeds both consent axes, while object consent seeds `consent` only when `events` is present and
+    always seeds `persistenceConsent`, defaulting missing `persistence` to `false`. Managed-entry
+    prefetch appends `handoff.entries` without dropping those defaults.
+    source: `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `nextjs-sdk#pages-router-server.ts#addRequestDefaultsToHandoff`; `nextjs-sdk#app-router-request-handoff.ts#toHandoffDefaults`.
   - **`prefetchManagedEntries` option:** `options.prefetchManagedEntries?: readonly`
     `ManagedEntryDescriptor[]` (`string | { entryId, entryQuery? }`). When present, the server calls
     `prefetchManagedEntries(requestOptimization, descriptors)` and puts the resulting
-    `ManagedEntryHandoff[]` (each `{ entryId, entryQuery?, baselineEntry }`) into
-    `contentfulOptimization.prefetchedManagedEntries`, which `OptimizationRoot` forwards to
-    react-web's `prefetchedManagedEntries` prop so managed-`entryId` entries hydrate without a client
-    fetch.
-    source: `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterOptimizationPropsOptions`; `core-sdk#CoreBase.ts#prefetchManagedEntries`; `core-sdk#CoreBase.ts#ManagedEntryDescriptor`; `core-sdk#CoreBase.ts#ManagedEntryHandoff`.
+    `ManagedEntryHandoff[]` (each `{ entryId, entryQuery?, baselineEntry }`) and merges them into
+    `handoff.entries`, which `OptimizationRoot` forwards to React Web so managed-`entryId` entries
+    hydrate without a client fetch.
+    source: `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterRequestHandoffOptions`; `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `core-sdk#CoreBase.ts#prefetchManagedEntries`; `core-sdk#CoreBase.ts#ManagedEntryDescriptor`; `core-sdk#CoreBase.ts#ManagedEntryHandoff`.
+- `resolveEntriesForSelections` is re-exported through the Pages Router binding so public/static
+  selection renders can resolve multiple baseline entries with one selected-optimization set; shared
+  behavior is recorded in [`../shared/concepts.md`](../shared/concepts.md#optimization-handoff).
+  source: `nextjs-sdk#pages-router.ts#resolveEntriesForSelections`; `core-sdk#handoff.ts#resolveEntriesForSelections`
+- Public permutation helpers: `createPublicPermutationHandoff(input)` creates public-permutation
+  cache metadata from `permutationKey`, optional `cacheVersion`, locale, entry IDs, selected
+  optimizations, and optional caller-owned tags, then delegates to the selection handoff path.
+  The helper does not evaluate the Experience API or derive selections from public route
+  dimensions; the caller supplies the selected-optimization list.
+  `cacheVersion` can be omitted by API shape; when present, it is encoded as a `version=...` key
+  field. The generated `cache.key` is SDK identity and transport metadata, not a Next.js
+  `cacheTag()` or `revalidateTag()` tag. Supplied tags are validated as Next.js caller-owned
+  invalidation labels: at most 128 tags, each non-empty after trimming, 256 characters or fewer, and
+  without commas.
+  source: `nextjs-sdk#handoff.ts#createPublicPermutationHandoff`; `nextjs-sdk#handoff.ts#createPublicPermutationCacheMetadata`; `nextjs-sdk#cache-tags.ts#validateNextjsPublicPermutationCacheTags`; `core-sdk#handoff.ts#createPublicPermutationCacheMetadata`; `nextjs-sdk#pages-router.ts#createPublicPermutationHandoff`; `nextjs-sdk#pages-router-server.ts`
 
 ## Components & hooks
 
-| Name                       | Kind      | Import path                      | Key props/args                                                                                                                                                               | Returns                                   | source                                                                                                                                    |
-| -------------------------- | --------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `OptimizationRoot`         | component | `/pages-router`                  | `clientDefaults?`, `serverOptimizationState?`, `prefetchedManagedEntries?`, `prefetchManagedEntries?`, `children`                                                            | `ReactElement`                            | `nextjs-sdk#pages-router.ts#OptimizationRoot`; `nextjs-sdk#pages-router.ts#BoundNextjsPagesRouterOptimizationRootProps`                   |
-| `OptimizationProvider`     | component | `/pages-router`                  | same; internally wraps `LiveUpdatesProvider` (`globalLiveUpdates`)                                                                                                           | `ReactElement` / `null`                   | `nextjs-sdk#pages-router.ts#OptimizationProvider`                                                                                         |
-| `OptimizedEntry`           | component | `/pages-router` (factory return) | discriminated union `baselineEntry` XOR `entryId` (+`entryQuery?`), render-prop child, `liveUpdates?`, `loadingFallback?`, `errorFallback?`, `onEntryError?`, tracking props | `ReactElement` / `null`                   | `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry`                            |
-| `NextPagesAutoPageTracker` | component | `/pages-router`                  | `initialPageEvent?: 'emit' / 'skip'`, `getPagePayload?`                                                                                                                      | `null`                                    | `nextjs-sdk#pages-router.ts#NextPagesAutoPageTracker`; `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker`                     |
-| `useConsentState`          | hook      | `/client`                        | —                                                                                                                                                                            | consent state                             | `react-web-sdk#hooks/useOptimizationState.ts#useConsentState`                                                                             |
-| `useProfileState`          | hook      | `/client`                        | —                                                                                                                                                                            | profile (`traits`)                        | `react-web-sdk#hooks/useOptimizationState.ts#useProfileState`                                                                             |
-| `useOptimizationActions`   | hook      | `/client`                        | —                                                                                                                                                                            | `{ setConsent, identifyUser, resetUser }` | `react-web-sdk#hooks/useOptimizationActions.ts#useOptimizationActions`                                                                    |
-| `useOptimizationContext`   | hook      | `/client`                        | —                                                                                                                                                                            | `{ sdk }` (undefined until ready)         | `react-web-sdk#hooks/useOptimization.ts#useOptimizationContext`; `react-web-sdk#context/OptimizationContext.tsx#OptimizationContextValue` |
-| `useMergeTagResolver`      | hook      | `/client`                        | —                                                                                                                                                                            | merge-tag resolver                        | `react-web-sdk#hooks/useMergeTagResolver.ts#useMergeTagResolver`                                                                          |
-| `useOptimizedEntry`        | hook      | `/client`                        | entry + options (same `baselineEntry` XOR `entryId` union)                                                                                                                   | resolved entry state                      | `react-web-sdk#optimized-entry/useOptimizedEntry.ts#useOptimizedEntry`                                                                    |
+| Name                        | Kind      | Import path                      | Key props/args                                                                                                                                                               | Returns                                   | source                                                                                                                                    |
+| --------------------------- | --------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `OptimizationRoot`          | component | `/pages-router`                  | `handoff?`, `hydration?`, `prefetchManagedEntries?`, `routeKey?`, `buildPagePayload?`, `initialPagePayload?`, `children`                                                     | `ReactElement`                            | `nextjs-sdk#pages-router.ts#OptimizationRoot`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationRootProps`                     |
+| `OptimizationProvider`      | component | `/pages-router`                  | `children`; `handoff?`; `hydration?`; `prefetchManagedEntries?`; internally wraps `LiveUpdatesProvider` (`globalLiveUpdates`)                                                | `ReactElement` / `null`                   | `nextjs-sdk#pages-router.ts#OptimizationProvider`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationProviderProps`             |
+| `OptimizationAnalyticsRoot` | component | `/pages-router`                  | analytics handoff, route key, page payload builder, children                                                                                                                 | `ReactElement`                            | `nextjs-sdk#pages-router.ts#OptimizationAnalyticsRoot`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationAnalyticsRootProps`   |
+| `OptimizedEntry`            | component | `/pages-router` (binding return) | discriminated union `baselineEntry` XOR `entryId` (+`entryQuery?`), render-prop child, `liveUpdates?`, `loadingFallback?`, `errorFallback?`, `onEntryError?`, tracking props | `ReactElement` / `null`                   | `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry`                            |
+| `NextPagesAutoPageTracker`  | component | `/pages-router`                  | `initialPageEvent?: 'emit' / 'skip'`, `getPagePayload?`                                                                                                                      | `null`                                    | `nextjs-sdk#pages-router.ts#NextPagesAutoPageTracker`; `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker`                     |
+| `useConsentState`           | hook      | `/client`                        | —                                                                                                                                                                            | consent state                             | `react-web-sdk#hooks/useOptimizationState.ts#useConsentState`                                                                             |
+| `useProfileState`           | hook      | `/client`                        | —                                                                                                                                                                            | profile (`traits`)                        | `react-web-sdk#hooks/useOptimizationState.ts#useProfileState`                                                                             |
+| `useOptimizationActions`    | hook      | `/client`                        | —                                                                                                                                                                            | `{ setConsent, identifyUser, resetUser }` | `react-web-sdk#hooks/useOptimizationActions.ts#useOptimizationActions`                                                                    |
+| `useOptimizationContext`    | hook      | `/client`                        | —                                                                                                                                                                            | `{ sdk }` (undefined until ready)         | `react-web-sdk#hooks/useOptimization.ts#useOptimizationContext`; `react-web-sdk#context/OptimizationContext.tsx#OptimizationContextValue` |
+| `useMergeTagResolver`       | hook      | `/client`                        | —                                                                                                                                                                            | merge-tag resolver                        | `react-web-sdk#hooks/useMergeTagResolver.ts#useMergeTagResolver`                                                                          |
+| `useOptimizedEntry`         | hook      | `/client`                        | entry + options (same `baselineEntry` XOR `entryId` union)                                                                                                                   | resolved entry state                      | `react-web-sdk#optimized-entry/useOptimizedEntry.ts#useOptimizedEntry`                                                                    |
 
 Note: the hooks
 (`useConsentState`/`useProfileState`/`useOptimizationActions`/`useOptimizationContext`/
 `useMergeTagResolver`/`useOptimizedEntry`) import from `/client`, not `/pages-router` (which exports
-the factory + tracker + types only).
-source: `nextjs-sdk#pages-router.ts#createNextjsPagesRouterOptimization`; `nextjs-sdk#client.ts`.
+the binding helper + tracker + types only).
+source: `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#client.ts`.
 
 Note: unlike App Router's bound `OptimizedEntry`, the Pages Router `OptimizedEntry` IS the react-web
 component directly, so it accepts per-entry `liveUpdates`, `loadingFallback`, and the managed
@@ -108,8 +123,8 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
 
 | Identifier                                               | Owner  | Notes                                                                                                                                                                           | source                                                                                                                                                                  |
 | -------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ctfl-opt-aid` (profile/anon-id cookie)                  | SDK    | Written by server props helper via `Set-Cookie`; must NOT be `HttpOnly` (browser reads it)                                                                                      | `core-sdk#constants.ts#ANONYMOUS_ID_COOKIE`; `nextjs-sdk#server.tsx#DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE`; `nextjs-sdk#cookies.ts#createNextjsAnonymousIdSetCookieHeader` |
-| app consent cookie (e.g. `personalizationConsentCookie`) | reader | Reader names/writes/reads; SDK only calls `server.consent` and personalizes on the result                                                                                       | `impl:nextjs-sdk_pages-router#lib/config.ts`; `impl:nextjs-sdk_pages-router#lib/optimization-server.ts`                                                                 |
+| `ctfl-opt-aid` (profile/anon-id cookie)                  | SDK    | Written by server props helper via `Set-Cookie`; must NOT be `HttpOnly` (browser reads it)                                                                                      | `core-sdk#constants.ts#ANONYMOUS_ID_COOKIE`; `nextjs-sdk#cookies.ts#DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE`; `nextjs-sdk#cookies.ts#createNextjsAnonymousIdSetCookieHeader` |
+| app consent cookie (e.g. `personalizationConsentCookie`) | reader | Reader names/writes/reads; SDK only calls `consent.server` and personalizes on the result                                                                                       | `impl:nextjs-sdk_pages-router#lib/config.ts`; `impl:nextjs-sdk_pages-router#lib/optimization-server.ts`                                                                 |
 | `NEXT_PUBLIC_*` env vars                                 | reader | Next.js exposes only `NEXT_PUBLIC_`-prefixed vars to the browser                                                                                                                | `extern:Next.js exposes only NEXT_PUBLIC_-prefixed vars to the browser`                                                                                                 |
 | preview-panel enable flag                                | reader | Reader-owned, gated on a browser env var; the guide uses the standard `NEXT_PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL` prefix (the ref impl's bare `PUBLIC_...` is non-standard) | `impl:nextjs-sdk_pages-router#lib/config.ts`                                                                                                                            |
 
@@ -124,39 +139,56 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
   `({ context: { pathname } }) => ...`. Arbitrary `properties` keys are allowed (`Page` is
   `z.catchall(z.json())`).
   source: `react-web-sdk#auto-page/types.ts#AutoPageEmissionContext`; `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageContext`; `react-web-sdk#auto-page/pagePayload.ts#buildAutoPagePayload`; `api-schemas#experience/event/properties/Page.ts#Page`; `core-sdk#events/EventBuilder.ts#PageViewBuilderArgs`.
-- Duplicate-page-event control: `initialPageEvent: 'emit' | 'skip'`. Server auto-resolves to
-  `'skip'` when data present AND event consent, else `'emit'`; overridable via 2nd arg. Flows
-  through `contentfulOptimization.initialPageEvent` → tracker prop.
-  source: `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterInitialPageEvent`; `nextjs-sdk#pages-router-server.ts#resolveInitialPageEvent`; `nextjs-sdk#pages-router-server.ts#toContentfulOptimizationProps`.
+- Request handoff calls `page()` inside `getServerSideProps` and returns a browser handoff with
+  explicit `initialPageEvent`; it is `'skip'` exactly when `pageResult.accepted` is true.
+  source: `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`.
 - Interaction tracking (views/clicks/hovers): on by default with `OptimizedEntry`; opt out per-type
-  via factory `trackEntryInteraction`; uses resolved entry id.
+  via binding config `trackEntryInteraction`; uses resolved entry id.
   source: `impl:nextjs-sdk_pages-router#lib/optimization.ts`.
+- Bound browser roots forward `onStatesReady` to React Web client providers. Browser event
+  forwarding uses the shared React Web/Core behavior: subscribers registered with `onStatesReady`
+  attach before child auto-page effects emit through the live runtime, event streams are not durable
+  histories, blocked events are diagnostic only, and event-stream `optimization` is not sent to
+  Experience/Insights API payloads.
+  source: `nextjs-sdk#pages-router.ts#toClientRootConfig`; `react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider`; kb:shared/concepts.md; kb:web/react-web.md
 
 ## Consent & persistence
 
 - Model: see [`../shared/concepts.md`](../shared/concepts.md#consent--persistence).
-- Server-derived client defaults: `server.consent` value/resolver → `resolveClientDefaults` maps to
-  `{ consent, persistenceConsent }` → `contentfulOptimization.clientDefaults` →
-  `OptimizationRoot clientDefaults`, so the browser starts in the same consent state the server used.
-  source: `nextjs-sdk#pages-router-server.ts#resolveClientDefaults`; `nextjs-sdk#pages-router.ts#resolveClientDefaults`.
+- Static browser defaults are configured through `consent.clientDefaults`; request consent is
+  evaluated by `consent.server` inside the server binding helper and, when present on the handoff,
+  overrides matching static defaults on the bound root/provider/analytics root.
+  source: `nextjs-sdk#pages-router.ts#toClientRootConfig`; `nextjs-sdk#pages-router.ts#withRequestDefaults`; `nextjs-sdk#pages-router-server.ts#resolveServerConsent`; `nextjs-sdk#pages-router-server.ts#addRequestDefaultsToHandoff`.
+- Omitted `consent.server` resolves Pages Router request consent to `false`.
+  source: `nextjs-sdk#pages-router-server.ts#resolveServerConsent`
 
 ## Version / runtime quirks
 
 - **No proxy/middleware.** Server identity + resolution + `Set-Cookie` all happen inside
-  `getServerSideProps` via `getServerSideOptimizationProps(context)`.
-  source: `nextjs-sdk#pages-router-server.ts#getNextjsPagesRouterOptimizationProps`; `nextjs-sdk#pages-router-server.ts#appendSetCookie`.
+  `getServerSideProps` via `createRequestHandoff(context, options)`.
+  source: `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `nextjs-sdk#pages-router-server.ts#appendSetCookie`.
 - `getServerSideProps` is already per-request dynamic — no static/ISR conflict; the page is the
   request boundary. (Contrast App Router, where server personalization forces a route dynamic.)
   source: `extern:Next.js getServerSideProps runs per request (never statically pre-rendered)`.
-- `_app.tsx` is the mount point for `OptimizationRoot` + tracker (reads
-  `pageProps.contentfulOptimization`). source: `impl:nextjs-sdk_pages-router#pages/_app.tsx`.
+- Request handoff helpers accept `private-request` cache metadata and reject public or static cache
+  metadata through the shared Node request handoff path.
+  source: `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `node-sdk#handoff.ts#createRequestHandoffFromData`
+- Static and ISR Pages Router routes do not have request context. Public permutation handoffs are
+  valid for those routes only when application code supplies selected optimizations and public
+  permutation dimensions without reading request profile state.
+  source: `nextjs-sdk#handoff.ts#createPublicPermutationHandoff`; `core-sdk#handoff.ts#createPublicPermutationCacheMetadata`; `core-sdk#handoff.ts#assertOptimizationCacheSafety`
+- `_app.tsx` is the mount point for `OptimizationRoot` + tracker and passes
+  `pageProps.contentfulOptimization.handoff` to the bound root. source: `impl:nextjs-sdk_pages-router#pages/_app.tsx`.
+- The bound `OptimizationProvider` handles content SDK context, handoff, hydration mode, and
+  managed-entry prefetch; the bound `OptimizationRoot` additionally accepts route/page-event inputs.
+  source: `nextjs-sdk#pages-router.ts#OptimizationRoot`; `nextjs-sdk#pages-router.ts#OptimizationProvider`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationRootProps`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationProviderProps`.
 
 ## Failure & fallback behavior
 
 - Baseline fallback: see [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback).
 - **Experience API failure inside `getServerSideProps` REJECTS the request ⇒ 500** (no internal
   try/catch to baseline): `page()` → `sendAllowedExperienceEvent` awaits `upsertProfile` with no
-  catch. Reader should wrap `getServerSideOptimizationProps` in try/catch and render baseline on
+  catch. Reader should wrap request handoff creation in try/catch and render baseline on
   failure. Denied consent short-circuits to `{ accepted: false }` with no API call.
   source: `core-sdk#CoreStatelessRequest.ts#page`; `core-sdk#CoreStatelessRequest.ts#sendAllowedExperienceEvent`.
 - All-locale payloads (`withAllLocales` / `locale=*`) ⇒ baseline. Model: see

@@ -15,5 +15,6 @@ import ContentfulOptimization from './ContentfulOptimization'
 
 export { OPTIMIZATION_NODE_SDK_NAME, OPTIMIZATION_NODE_SDK_VERSION } from './constants'
 export * from './ContentfulOptimization'
+export * from './handoff'
 
 export default ContentfulOptimization

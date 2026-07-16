@@ -33,7 +33,8 @@ const clientEntries = {
 const serverEntries = {
   'api-schemas': './src/api-schemas.ts',
   'app-router-server': './src/app-router-server.tsx',
-  esr: './src/esr.ts',
+  'cache-middleware': './src/cache-middleware.ts',
+  edge: './src/edge.ts',
   'pages-router/server': './src/pages-router-server.ts',
   'request-handler': './src/request-handler.ts',
   server: './src/server.tsx',

@@ -1,8 +1,6 @@
-import type {
-  OptimizationData,
-  SelectedOptimizationArray,
-} from '@contentful/optimization-api-client/api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-api-client/api-schemas'
 import { signal } from '@preact/signals-core'
+import type { OptimizationSelectionState } from '../handoff'
 import { InterceptorManager } from '../lib/interceptor'
 import { PreviewOverrideManager } from './PreviewOverrideManager'
 import {
@@ -12,7 +10,7 @@ import {
 } from './PreviewOverrideManager.test-utils'
 
 let selectedOptimizations: ReturnType<typeof signal<SelectedOptimizationArray | undefined>>
-let stateInterceptors: InterceptorManager<OptimizationData>
+let stateInterceptors: InterceptorManager<OptimizationSelectionState>
 let addSpy: ReturnType<typeof rs.spyOn>
 let removeSpy: ReturnType<typeof rs.spyOn>
 let onOverridesChanged: ReturnType<typeof rs.fn>
@@ -23,7 +21,7 @@ const REGISTERED_ID = 42
 
 function createManager(): PreviewOverrideManager {
   selectedOptimizations = signal<SelectedOptimizationArray | undefined>(BASELINE)
-  stateInterceptors = new InterceptorManager<OptimizationData>()
+  stateInterceptors = new InterceptorManager<OptimizationSelectionState>()
   capturedInterceptor = undefined
   addSpy = rs.spyOn(stateInterceptors, 'add').mockImplementation((fn: InterceptorFn) => {
     capturedInterceptor = fn
@@ -50,6 +48,12 @@ function sv(): SelectedOptimizationArray {
   return v
 }
 
+function selectedFrom(state: OptimizationSelectionState): SelectedOptimizationArray {
+  const { selectedOptimizations: value } = state
+  if (value === undefined) throw new Error('Expected selected optimizations')
+  return value
+}
+
 describe('PreviewOverrideManager', () => {
   afterEach(() => {
     manager?.destroy()
@@ -64,7 +68,7 @@ describe('PreviewOverrideManager', () => {
 
     it('leaves baseline null when initial signal is undefined', () => {
       const sig = signal<SelectedOptimizationArray | undefined>(undefined)
-      const interceptors = new InterceptorManager<OptimizationData>()
+      const interceptors = new InterceptorManager<OptimizationSelectionState>()
       const mgr = new PreviewOverrideManager({
         selectedOptimizations: sig,
         stateInterceptors: interceptors,
@@ -299,7 +303,7 @@ describe('PreviewOverrideManager', () => {
 
     it('handles resetAll when baseline is null (signal initially undefined)', () => {
       const sig = signal<SelectedOptimizationArray | undefined>(undefined)
-      const interceptors = new InterceptorManager<OptimizationData>()
+      const interceptors = new InterceptorManager<OptimizationSelectionState>()
       const mgr = new PreviewOverrideManager({
         selectedOptimizations: sig,
         stateInterceptors: interceptors,
@@ -348,6 +352,24 @@ describe('PreviewOverrideManager', () => {
       expect(mgr.getBaselineSelectedOptimizations()).toEqual(NEW_API)
     })
 
+    it('leaves selected baseline unchanged when refresh omits selectedOptimizations', async () => {
+      const mgr = createManager()
+
+      await invokeInterceptor()({ profile: makeOptimizationData(NEW_API).profile })
+
+      expect(mgr.getBaselineSelectedOptimizations()).toEqual(BASELINE)
+    })
+
+    it('captures present undefined selected baseline for resetAll', async () => {
+      const mgr = createManager()
+      mgr.setVariantOverride('exp-1', 7)
+
+      await invokeInterceptor()({ selectedOptimizations: undefined })
+      mgr.resetAll()
+
+      expect(selectedOptimizations.value).toBeUndefined()
+    })
+
     it('passes through unchanged when no overrides are active', async () => {
       createManager()
       const input = makeOptimizationData(NEW_API)
@@ -360,11 +382,12 @@ describe('PreviewOverrideManager', () => {
       const mgr = createManager()
       mgr.setVariantOverride('exp-1', 7)
       const result = await invokeInterceptor()(makeOptimizationData(NEW_API))
+      const resultSelectedOptimizations = selectedFrom(result)
       expect(
-        result.selectedOptimizations.find((s) => s.experienceId === 'exp-1')?.variantIndex,
+        resultSelectedOptimizations.find((s) => s.experienceId === 'exp-1')?.variantIndex,
       ).toBe(7)
       expect(
-        result.selectedOptimizations.find((s) => s.experienceId === 'exp-2')?.variantIndex,
+        resultSelectedOptimizations.find((s) => s.experienceId === 'exp-2')?.variantIndex,
       ).toBe(2)
     })
 
@@ -372,8 +395,9 @@ describe('PreviewOverrideManager', () => {
       const mgr = createManager()
       mgr.setVariantOverride('exp-new', 3)
       const result = await invokeInterceptor()(makeOptimizationData(NEW_API))
-      expect(result.selectedOptimizations).toHaveLength(NEW_API.length + 1)
-      expect(result.selectedOptimizations.find((s) => s.experienceId === 'exp-new')).toEqual({
+      const resultSelectedOptimizations = selectedFrom(result)
+      expect(resultSelectedOptimizations).toHaveLength(NEW_API.length + 1)
+      expect(resultSelectedOptimizations.find((s) => s.experienceId === 'exp-new')).toEqual({
         experienceId: 'exp-new',
         variantIndex: 3,
         variants: {},

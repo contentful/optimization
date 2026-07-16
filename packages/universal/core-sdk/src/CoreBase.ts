@@ -9,7 +9,6 @@ import type {
   InsightsEvent as InsightsEventPayload,
   Json,
   MergeTagEntry,
-  OptimizationData,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
@@ -26,6 +25,7 @@ import type {
 } from 'contentful'
 import { OPTIMIZATION_CORE_SDK_NAME, OPTIMIZATION_CORE_SDK_VERSION } from './constants'
 import { EventBuilder, type EventBuilderConfig } from './events'
+import type { OptimizationSelectionState } from './handoff'
 import { InterceptorManager } from './lib/interceptor'
 import { createManagedEntryHandoffs, normalizeManagedEntryDescriptor } from './managed-entry'
 import { ManagedEntryFetcher } from './managed-entry-fetcher'
@@ -147,7 +147,7 @@ export interface LifecycleInterceptors {
   /** Interceptors invoked for individual events prior to validation/sending. */
   event: InterceptorManager<InsightsEventPayload | ExperienceEventPayload>
   /** Interceptors invoked before optimization state updates. */
-  state: InterceptorManager<OptimizationData>
+  state: InterceptorManager<OptimizationSelectionState>
 }
 
 /**
@@ -206,7 +206,7 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
   /** Lifecycle interceptors for events and state updates. */
   readonly interceptors: LifecycleInterceptors = {
     event: new InterceptorManager<InsightsEventPayload | ExperienceEventPayload>(),
-    state: new InterceptorManager<OptimizationData>(),
+    state: new InterceptorManager<OptimizationSelectionState>(),
   }
 
   private resolvedLocale: string | undefined

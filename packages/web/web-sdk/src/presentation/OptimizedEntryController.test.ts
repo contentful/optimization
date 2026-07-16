@@ -268,6 +268,43 @@ describe('OptimizedEntryController', () => {
     controller.disconnect()
   })
 
+  it('keeps server-rendered content visible in preserve-server hydration while state is unresolved', () => {
+    const runtime = createSdk((entry) => ({ entry }))
+    const controller = new OptimizedEntryController({
+      hydration: 'preserve-server',
+      isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+
+    expect(controller.getSnapshot()).toMatchObject({
+      hostAttributes: {},
+      isLoading: true,
+      isResolved: false,
+      loadingPresentation: {
+        hideLoadingLayoutTarget: false,
+        showLoadingFallback: false,
+      },
+    })
+
+    runtime.experienceRequestState.emit({ status: 'success' })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      hostAttributes: {
+        'data-ctfl-baseline-id': 'optimized-baseline',
+        'data-ctfl-entry-id': 'optimized-baseline',
+        'data-ctfl-variant-index': 0,
+      },
+      isLoading: false,
+      isResolved: true,
+    })
+
+    controller.disconnect()
+  })
+
   it('renders server-seeded optimizations without waiting for a client page request', () => {
     const runtime = createSdk((entry, selectedOptimizations) => ({
       entry: selectedOptimizations ? variantA : entry,

@@ -2,7 +2,7 @@ import {
   resolveOptimizedEntryTrackingAttributes,
   type OptimizedEntryTrackingAttributeOptions,
   type OptimizedEntryTrackingAttributes,
-} from '@contentful/optimization-web/tracking-attributes'
+} from '@contentful/optimization-react-web/tracking-attributes'
 
 type ResolveTrackingAttributeArgs = Parameters<typeof resolveOptimizedEntryTrackingAttributes>
 

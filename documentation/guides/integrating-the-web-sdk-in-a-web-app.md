@@ -1044,6 +1044,13 @@ function buildAnonymousIdSetCookie(id: string | undefined): string {
 mechanics, see
 [Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md).
 
+If you hydrate a browser handoff with `hydrateOptimizationHandoff()` from
+`@contentful/optimization-web/handoff`, cache safety is enforced before state is published.
+Profileless `static` and `public-permutation` handoffs publish selected optimizations and Custom
+Flag changes to live browser state without overwriting durable profile continuity in browser
+storage. `private-request` handoffs, and profile-backed handoffs that pass cache safety, follow
+normal persistence behavior when persistence consent allows.
+
 ### Strict consent, storage, and delivery controls
 
 **Integration category:** Advanced or production-only

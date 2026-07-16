@@ -404,10 +404,11 @@ entry interaction payload does not use it.
 Managed entry fetching expects the same single-locale CDA entry shape as manual `baselineEntry`
 resolution. Do not use `withAllLocales` or `locale=*` for Web or React Web optimization surfaces.
 
-During loading, `OptimizedEntry` does not emit resolved entry tracking attributes. Loading UI is
+During loading, `OptimizedEntry` does not emit resolved entry tracking attributes, even when
+`preserve-server` hydration keeps server-rendered content visible while state settles. Loading UI is
 therefore not tracked as the resolved Contentful entry. If `children` is a direct `ReactNode`
-instead of a render prop, the wrapper still receives tracking attributes, but the child content does
-not change based on the resolved entry.
+instead of a render prop, the wrapper still receives tracking attributes after resolution, but the
+child content does not change based on the resolved entry.
 
 `useOptimizedEntry()` only resolves data. It does not add DOM attributes or register an element. If
 a component uses `useOptimizedEntry()` directly, it must either render the `data-ctfl-*` attributes
@@ -422,6 +423,14 @@ itself or use `sdk.tracking.enableElement(...)`.
 React Web router adapters emit `page()` calls when supported routers change route. They are page
 event helpers, not entry interaction detectors. Entry views, clicks, and hovers still come from the
 Web SDK runtime.
+
+`OptimizationRoot` and `OptimizationAnalyticsRoot` use handoff `initialPageEvent` ownership for the
+first browser route. When an analytics-only handoff skips that route, React StrictMode effect replay
+does not emit a duplicate page event; later route-key changes still emit through the analytics
+runtime. If the analytics root unmounts or a newer hydration starts before async hydration finishes,
+the stale hydration stops before state apply, warning, or page tracking. Profileless static or
+public analytics handoffs hydrate live tracking state without overwriting durable browser
+continuity.
 
 ## Delivery and flushing
 

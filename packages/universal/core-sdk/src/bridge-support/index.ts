@@ -6,12 +6,15 @@
 
 import type { OptimizationData } from '@contentful/optimization-api-client/api-schemas'
 import {
+  CORE_BRIDGE_CAPABILITIES_SYMBOL,
   getCoreBridgeCapabilities,
   type CoreBridgeCapabilities,
+  type CoreBridgeHost,
   type PreviewPanelBridge,
 } from './coreBridgeCapabilities'
 
-export type { CoreBridgeCapabilities, PreviewPanelBridge }
+export { CORE_BRIDGE_CAPABILITIES_SYMBOL }
+export type { CoreBridgeCapabilities, CoreBridgeHost, PreviewPanelBridge }
 
 function getRequiredBridge(sdk: unknown): CoreBridgeCapabilities {
   const bridge = getCoreBridgeCapabilities(sdk)

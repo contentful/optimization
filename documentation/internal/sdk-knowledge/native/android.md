@@ -50,7 +50,7 @@ imperative `.core` client.
   `globalThis.__bridge`; the Kotlin `OptimizationClient` is a thin native facade over it.
   source: optimization-js-bridge#index.ts#Bridge; core-sdk#CoreStateful.ts#CoreStatefulConfig
 
-## Setup / factory
+## Setup / initialization and binding
 
 - Two usage modes for one client. **Compose**: `OptimizationRoot(config, …)` owns the client
   (`remember { OptimizationClient(...) }`), calls `initialize(config)` in a `LaunchedEffect`, provides
@@ -229,6 +229,12 @@ viewportHeight }` via `LocalScrollContext` that descendant `Modifier.trackViews`
   last 64 events to a late subscriber**. `eventStream` carries accepted events (fed by the bridge's
   `onEventEmitted`); `blockedEventStream` carries consent/allow-list-blocked events and also fires the
   `onEventBlocked` config callback. source: extern:eventStream/blockedEventStream are replay-64 SharedFlows — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationClient.kt#OptimizationClient; concept:android-sdk-runtime-and-interaction-mechanics
+- Consent/allow-list-blocked Android events are diagnostics only: shared Core rejects the call before
+  queue/API delivery, then the bridge emits `onEventBlocked` into `blockedEventStream` and the config
+  callback. Later `consent(true)` does not re-send the blocked call. Compose and Views screen
+  tracking retry by making a fresh `trackCurrentScreen` call on consent/state changes, and the bridge
+  tracker marks only accepted screen keys.
+  source: optimization-js-bridge#index.ts#Bridge; core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult; core-sdk#CoreStatefulEventEmitter.ts#sendInsightsEvent; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker; extern:ScreenTrackingEffect reruns on screenName and consent - packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/ScreenTrackingEffect.kt; extern:ScreenTracker collects state and calls trackCurrentScreen - packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/ScreenTracker.kt
 - `eventStream` elements are JSON-decoded `OptimizationEventStreamEvent` maps keyed by a `type` string
   discriminator (the accepted `InsightsEvent | ExperienceEvent` the bridge forwards via
   `__nativeOnEventEmitted`). Screen events carry exactly `type == "screen"` — the single value

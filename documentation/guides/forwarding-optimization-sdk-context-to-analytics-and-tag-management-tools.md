@@ -13,8 +13,8 @@ without changing which events the SDK sends to Contentful.
 
 This guide supplements the SDK integration guides. It does not install a vendor SDK, define a full
 tracking plan, or replace Contentful Analytics delivery. The Optimization SDK still sends its own
-events to Contentful. Your application decides which Contentful context, if any, can also reach a
-third-party destination.
+supported events to Contentful when your integration and consent policy allow them. Your
+application decides which Contentful context, if any, can also reach a third-party destination.
 
 ## Do you need this?
 
@@ -26,9 +26,9 @@ Use this guide when one of these statements is true:
 - A server-rendered or native app already has an analytics event owner and needs request-local or
   runtime-local Optimization context.
 
-Skip this guide when you only need Contentful Personalization and Analytics. The SDK already sends
-page, screen, entry interaction, Custom Flag, and profile-updating events to Contentful when your
-integration and consent policy allow them.
+Skip this guide when you only need Contentful Personalization and Analytics. The SDK integration
+guides own the Contentful event-delivery setup; this recipe only covers app-owned forwarding to
+other destinations.
 
 ## Quick start
 
@@ -41,6 +41,42 @@ subscriber lifecycle, and forward only primitive fields.
 ```ts
 // Keep this cache in module or app-singleton scope so remounts do not reset it.
 const forwardedMessageIds = new Set<string>()
+
+type ComponentOptimizationEvent = {
+  type: 'component' | 'component_click' | 'component_hover'
+  messageId: string
+  componentId: string
+  componentType: 'Entry' | 'Variable'
+  experienceId?: string
+  variantIndex: number
+  viewId?: string
+  hoverId?: string
+}
+
+function isComponentOptimizationEvent(event: {
+  type: string
+}): event is ComponentOptimizationEvent {
+  return (
+    event.type === 'component' ||
+    event.type === 'component_click' ||
+    event.type === 'component_hover'
+  )
+}
+
+function pickQuickStartContentfulProperties(event: { type: string; messageId: string }) {
+  const componentEvent = isComponentOptimizationEvent(event) ? event : undefined
+
+  return {
+    contentful_event_type: event.type,
+    contentful_message_id: event.messageId,
+    contentful_component_id: componentEvent?.componentId,
+    contentful_component_type: componentEvent?.componentType,
+    contentful_experience_id: componentEvent?.experienceId,
+    contentful_variant_index: componentEvent?.variantIndex,
+    contentful_view_id: componentEvent?.viewId,
+    contentful_hover_id: componentEvent?.hoverId,
+  }
+}
 
 // Skip the synchronous current snapshot when this handoff forwards only later SDK events.
 const initialMessageId = optimization.states.eventStream.current?.messageId
@@ -62,26 +98,18 @@ const subscription = optimization.states.eventStream.subscribe((event) => {
   forwardedMessageIds.add(event.messageId)
 
   // Forward only the approved primitive fields that your analytics owner expects.
-  analytics.track(`Contentful ${event.type}`, {
-    contentful_event_type: event.type,
-    contentful_message_id: event.messageId,
-    contentful_component_id: event.componentId,
-    contentful_component_type: event.componentType,
-    contentful_experience_id: event.experienceId,
-    contentful_variant_index: event.variantIndex,
-    contentful_view_id: event.viewId,
-    contentful_hover_id: event.hoverId,
-  })
+  analytics.track(`Contentful ${event.type}`, pickQuickStartContentfulProperties(event))
 })
 ```
 
 Keep the returned `subscription` for teardown in tests, hot reloads, or route-level provider
 unmounts. The message-ID cache, not the subscription object, prevents re-forwarding across
-subscriber or provider remounts. Remove the initial snapshot guard when forwarding the current
-accepted SDK event at subscription time is intentional. Verify one SDK activity creates one intended
-destination event before adding more vendors or fields. Use the helper in the default recipe when
-the destination rejects `undefined` values or when exposure reports need view and hover
-deduplication.
+subscriber or provider remounts. The helper narrows before reading component-specific fields, so
+page, screen, identify, and custom track events forward only event-level properties. Remove the
+initial snapshot guard when forwarding the current accepted SDK event at subscription time is
+intentional. Verify one SDK activity creates one intended destination event before adding more
+vendors or fields. Use the helper in the default recipe when the destination rejects `undefined`
+values or when exposure reports need view and hover deduplication.
 
 <details>
   <summary>Table of Contents</summary>
@@ -131,10 +159,10 @@ JavaScript observables emit the current value when a subscriber registers, then 
 do not replay the full history, and a new empty `Set` inside a new subscriber does not know which
 current `messageId` an earlier subscriber already forwarded. Keep the message-ID cache in
 longer-lived app state, or seed an initial message ID to skip when only later events belong in the
-destination. iOS uses a Combine `PassthroughSubject`, and Android exposes a `SharedFlow` with a
-finite recent-event replay buffer. Register native collectors before the page, screen, flag, or
-entry interaction events that you need to own instead of treating either stream as a durable
-analytics queue.
+destination. React Native uses the same stateful Core stream through `onStatesReady`. iOS uses a
+Combine `PassthroughSubject`, and Android exposes a `SharedFlow` with a finite recent-event replay
+buffer. Register native collectors before the page, screen, flag, or entry interaction events that
+you need to own instead of treating either stream as a durable analytics queue.
 
 Optimized entry interaction events can include an `optimization` object on the event-stream payload.
 That object is runtime-only enrichment for application subscribers; the SDK does not send it to the
@@ -233,8 +261,9 @@ function dropUndefined<TValue>(values: Record<string, TValue | undefined>): Reco
 If a destination can store engagement duration, aggregate by `viewId` or `hoverId` and send the
 maximum or final duration value instead of dropping later duration records.
 
-For Custom Flags, forward analytics from the same code path that reads or renders the flag. In
-stateful SDKs, `getFlag()` and `states.flag(name)` or native flag observers can emit Contentful
+For Custom Flags, forward analytics from the same code path that reads or renders the flag. In Web,
+React Web, Next.js-bound, and React Native integrations, `getFlag()` and reactive flag state can
+emit Contentful flag-view tracking. On iOS and Android, flag observers can emit the same Contentful
 flag-view tracking. Do not add an analytics-only flag subscription unless you intentionally want
 that additional Contentful flag-view observation.
 
@@ -250,26 +279,26 @@ Native integrations, prefer `onStatesReady` on the provider root so the subscrip
 child effects can emit SDK events.
 
 For Next.js App Router integrations, configure `onStatesReady` once in
-`createNextjsAppRouterOptimization()` from `@contentful/optimization-nextjs/app-router`. The bound
-`OptimizationRoot` uses that factory config and renders without per-render `clientId`,
-`environment`, or `onStatesReady` props. Use lower-level `/client` root props only for manual
-server/client escape hatches.
+`bindNextjsAppRouterOptimization(...)` from `@contentful/optimization-nextjs/app-router`. The bound
+`OptimizationRoot` uses that binding config and renders without per-render `clientId`,
+`environment`, or `onStatesReady` props. The binding call is not an isolation context; call it once
+for the app-local helper set. Use lower-level `/client` root props only for manual server/client
+escape hatches.
 
 For Pages Router integrations, configure `onStatesReady` once in
-`createNextjsPagesRouterOptimization()` from `@contentful/optimization-nextjs/pages-router`, then
-pass `pageProps.contentfulOptimization.serverOptimizationState` to the bound root in
-`pages/_app.tsx`.
+`bindNextjsPagesRouterOptimization(...)` from `@contentful/optimization-nextjs/pages-router`, then
+pass `pageProps.contentfulOptimization.handoff` to the bound root in `pages/_app.tsx`.
 
 **Adapt this to your use case:**
 
 ```tsx
-import { createNextjsAppRouterOptimization } from '@contentful/optimization-nextjs/app-router'
+import { bindNextjsAppRouterOptimization } from '@contentful/optimization-nextjs/app-router'
 
 const forwardedMessageIds = new Set<string>()
 
-export const { proxy, NextAppAutoPageTracker, OptimizationRoot, OptimizedEntry } =
-  createNextjsAppRouterOptimization({
-    // ...clientId, environment, locale, server, defaults
+export const { NextAppAutoPageTracker, OptimizationRoot, OptimizedEntry } =
+  bindNextjsAppRouterOptimization({
+    // ...clientId, environment, locale, consent
     onStatesReady: (states) => {
       const initialMessageId = states.eventStream.current?.messageId
 
@@ -321,15 +350,17 @@ Applies when a Node route, server action, middleware/proxy flow, or lower-level/
 server flow already called a request-bound SDK method and owns the analytics event for that request.
 
 Use the `data` from the same accepted SDK call that rendered the response or handled the server
-event. App Router Next.js integrations load request server data through the bound components created
-by `createNextjsAppRouterOptimization()`. Use the config-bound `getServerSideOptimizationProps()`
-helper for Pages Router `getServerSideProps`; it returns the same `OptimizationData` shape in its
-`data` field and serializable `props.contentfulOptimization`. Use
-`getNextjsServerOptimizationData()` only when you intentionally build a lower-level/manual `/server`
-flow. When the SDK is configured with `contentful: { client }`, prefer the request-bound managed
+event. App Router integrations use `createRequestHandoff()` from the app-local bound helper set when a
+route should pass request state to the browser. Pages Router integrations use the config-bound
+`createRequestHandoff()` helper from `@contentful/optimization-nextjs/pages-router/server` inside
+`getServerSideProps` and return `props.contentfulOptimization.handoff`. Use
+`configureNextjsServerOptimization(...)` only when you intentionally configure a lower-level/manual
+stateless `/server` runtime. That configuration is not a request-isolation context; bind each request
+with the request helpers before reading request-local data. When the SDK is configured with
+`contentful: { client }`, prefer the request-bound managed
 entry helper so the entry decision and analytics context share the same request data. Browser state
 streams cannot explain a server-rendered first paint unless you intentionally hydrate the browser
-with the same Optimization data.
+with the same handoff.
 
 **Adapt this to your use case:**
 
@@ -445,12 +476,12 @@ lifecycleScope.launch {
 ```
 
 Native events arrive as dictionary or map payloads with fields such as `type`, `messageId`,
-`componentId`, `experienceId`, `variantIndex`, `viewId`, and `viewDurationMs`. Native mobile SDKs
+`componentId`, `experienceId`, `variantIndex`, `viewId`, and `viewDurationMs`. iOS and Android
 expose view and tap tracking, not hover tracking; `hoverId` and `hoverDurationMs` apply to Web and
-Node runtimes that emit hover events. Optimized entry interaction events can also include the same
-optional `optimization` enrichment object. Keep the same mapping and consent rules that you use for
-JavaScript destinations, and prefer approved display strings, such as audience name, over full
-nested objects.
+Node runtimes that emit hover events. If an optimized-entry interaction payload includes the
+optional `optimization` enrichment object, prefer approved display strings, such as audience name,
+over full nested objects. Apply the same destination policy in every runtime: destination consent
+first, payload shaping second.
 
 ### Destination variants
 

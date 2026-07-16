@@ -5,11 +5,11 @@ import { loadTestRenderer } from '../test/testRenderer'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
-const createOptimization = rs.fn()
+const initializeOptimization = rs.fn()
 
 rs.mock('../ContentfulOptimization', () => ({
   default: {
-    create: createOptimization,
+    initialize: initializeOptimization,
   },
 }))
 
@@ -80,7 +80,7 @@ describe('OptimizationProvider locale prop', () => {
 
   void beforeEach(() => {
     renderer = undefined
-    createOptimization.mockReset()
+    initializeOptimization.mockReset()
   })
 
   void afterEach(async () => {
@@ -97,7 +97,7 @@ describe('OptimizationProvider locale prop', () => {
   it('updates the owned SDK when the locale prop changes', async () => {
     const { OptimizationProvider } = await import('./OptimizationProvider')
     const sdk = createSdk()
-    createOptimization.mockResolvedValue(sdk)
+    initializeOptimization.mockResolvedValue(sdk)
 
     renderer = await renderWithAct(
       <OptimizationProvider clientId="test-client-id" locale="en-US">
