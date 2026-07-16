@@ -207,7 +207,7 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
   const trackCurrentPage =
     sdkOverrides.trackCurrentPage ??
     (async ({ buildPayload, initialPageEvent = 'emit', routeKey }) => {
-      if (initialPageEvent === 'skip' && acceptedRouteKey === undefined) {
+      if (initialPageEvent === 'skip') {
         acceptedRouteKey = routeKey
         return { accepted: true }
       }
@@ -478,24 +478,35 @@ export async function renderWithOptimizationProviders(
   optimization: OptimizationSdk,
   liveUpdatesContext = defaultLiveUpdatesContext(),
   optimizationContext: Partial<OptimizationContextValue> = {},
-): Promise<{ container: HTMLDivElement; unmount: () => Promise<void> }> {
+): Promise<{
+  container: HTMLDivElement
+  rerender: (nextNode: ReactNode) => Promise<void>
+  unmount: () => Promise<void>
+}> {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
 
-  await act(async () => {
-    await Promise.resolve()
-    root.render(
-      <OptimizationContext.Provider
-        value={{ sdk: optimization, error: undefined, ...optimizationContext }}
-      >
-        <LiveUpdatesContext.Provider value={liveUpdatesContext}>{node}</LiveUpdatesContext.Provider>
-      </OptimizationContext.Provider>,
-    )
-  })
+  async function render(nextNode: ReactNode): Promise<void> {
+    await act(async () => {
+      await Promise.resolve()
+      root.render(
+        <OptimizationContext.Provider
+          value={{ sdk: optimization, error: undefined, ...optimizationContext }}
+        >
+          <LiveUpdatesContext.Provider value={liveUpdatesContext}>
+            {nextNode}
+          </LiveUpdatesContext.Provider>
+        </OptimizationContext.Provider>,
+      )
+    })
+  }
+
+  await render(node)
 
   return {
     container,
+    rerender: render,
     async unmount() {
       await act(async () => {
         await Promise.resolve()

@@ -1,7 +1,10 @@
 import ContentfulOptimization from '@contentful/optimization-web'
-import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
-import { hydrateOptimizationData } from '@contentful/optimization-web/bridge-support'
 import { DEFAULT_WEB_ALLOWED_EVENT_TYPES } from '@contentful/optimization-web/constants'
+import {
+  hydrateOptimizationHandoff,
+  type ContentOptimizationHandoff,
+  type ContentOptimizationHydrationMode,
+} from '@contentful/optimization-web/handoff'
 import {
   createOptimizationRootSdkBinding,
   disposeOptimizationRootSdkBinding,
@@ -25,6 +28,7 @@ import {
   type WebOptimizationRuntime,
 } from '@contentful/optimization-web/runtime'
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
+import { OptimizationHydrationContext } from '../context/OptimizationHydrationContext'
 import type { ManagedEntryDescriptor, ManagedEntryHandoff } from '../server-optimized-entries'
 
 /**
@@ -44,19 +48,15 @@ interface ProviderState {
   readonly runtime: WebOptimizationRuntime | undefined
 }
 
-interface ServerOptimizationStateProps {
+interface OptimizationHandoffProps {
   /**
-   * Server-returned Optimization state to apply before provider children mount.
-   *
-   * @remarks
-   * Use this for server-to-browser state handoff. Keep `defaults` for configuration and default
-   * state such as consent policy.
+   * Server/static/edge Optimization handoff to apply before provider children mount.
    */
-  readonly serverOptimizationState?: OptimizationData
+  readonly handoff?: ContentOptimizationHandoff
   /**
-   * Server-fetched baseline entries for SDK-managed OptimizedEntry hydration.
+   * Overrides the content hydration presentation mode published to optimized entries.
    */
-  readonly prefetchedManagedEntries?: readonly ManagedEntryHandoff[]
+  readonly hydration?: ContentOptimizationHydrationMode
   /**
    * Managed entries to prefetch after the live SDK is ready.
    */
@@ -65,7 +65,7 @@ interface ServerOptimizationStateProps {
 
 export type OptimizationProviderConfigProps = PropsWithChildren<
   OptimizationProviderBaseConfigProps &
-    ServerOptimizationStateProps & {
+    OptimizationHandoffProps & {
       /**
        * Controls automatic entry interaction tracking for OptimizedEntry components.
        *
@@ -82,7 +82,7 @@ export type OptimizationProviderConfigProps = PropsWithChildren<
 >
 
 export type OptimizationProviderSdkProps = PropsWithChildren<
-  ServerOptimizationStateProps & {
+  OptimizationHandoffProps & {
     /**
      * Called with the injected SDK state surface before provider children mount unless a server
      * snapshot is provided for the initial render.
@@ -112,8 +112,8 @@ function createOwnedSdkBinding(props: OptimizationProviderConfigProps): Provider
     children: _children,
     onStatesReady: _onStatesReady,
     sdk: _sdk,
-    serverOptimizationState: _serverOptimizationState,
-    prefetchedManagedEntries: _prefetchedManagedEntries,
+    handoff: _handoff,
+    hydration: _hydration,
     prefetchManagedEntries: _prefetchManagedEntries,
     trackEntryInteraction,
     ...config
@@ -145,11 +145,18 @@ function bindOnStatesReady(
 
 async function initializeServerOptimizationState(
   sdkBinding: ProviderSdkBinding,
-  serverOptimizationState: OptimizationData,
+  handoff: ContentOptimizationHandoff,
   onStatesReady: OnStatesReady | undefined,
 ): Promise<ProviderSdkBinding> {
   try {
-    await hydrateOptimizationData(sdkBinding.sdk, serverOptimizationState)
+    const hydrationResult: unknown = Reflect.apply(hydrateOptimizationHandoff, undefined, [
+      sdkBinding.sdk,
+      handoff,
+    ])
+
+    if (isPromiseLike(hydrationResult)) {
+      await hydrationResult
+    }
 
     return bindOnStatesReady(sdkBinding, onStatesReady)
   } catch (error: unknown) {
@@ -164,7 +171,7 @@ function initializeProviderSdk(
   const sdkBinding =
     props.sdk === undefined ? createOwnedSdkBinding(props) : createInjectedSdkBinding(props)
 
-  if (props.serverOptimizationState === undefined) {
+  if (props.handoff === undefined) {
     try {
       return bindOnStatesReady(sdkBinding, props.onStatesReady)
     } catch (error: unknown) {
@@ -173,11 +180,7 @@ function initializeProviderSdk(
     }
   }
 
-  return initializeServerOptimizationState(
-    sdkBinding,
-    props.serverOptimizationState,
-    props.onStatesReady,
-  )
+  return initializeServerOptimizationState(sdkBinding, props.handoff, props.onStatesReady)
 }
 
 function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
@@ -185,28 +188,24 @@ function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
 }
 
 function canUseInjectedSdkDuringInitialRender(props: OptimizationProviderProps): boolean {
-  return (
-    props.sdk !== undefined &&
-    props.onStatesReady === undefined &&
-    props.serverOptimizationState === undefined
-  )
+  return props.sdk !== undefined && props.onStatesReady === undefined && props.handoff === undefined
 }
 
 function injectedSdkBacksInitialRender(props: OptimizationProviderProps): boolean {
-  return props.sdk !== undefined && props.serverOptimizationState === undefined
+  return props.sdk !== undefined && props.handoff === undefined
 }
 
 function createInitialRuntime(props: OptimizationProviderProps): WebOptimizationRuntime {
   if (props.sdk !== undefined) {
     return injectedSdkBacksInitialRender(props)
       ? props.sdk
-      : createWebSnapshotRuntime({ data: props.serverOptimizationState })
+      : createWebSnapshotRuntime({ data: props.handoff?.state })
   }
 
   return createWebSnapshotRuntime({
     allowedEventTypes: props.allowedEventTypes ?? DEFAULT_WEB_ALLOWED_EVENT_TYPES,
     consent: props.defaults?.consent,
-    data: props.serverOptimizationState,
+    data: props.handoff?.state,
     locale: props.locale,
     persistenceConsent: props.defaults?.persistenceConsent,
   })
@@ -228,6 +227,7 @@ function createPrefetchedManagedEntries(
 export function OptimizationProvider(props: OptimizationProviderProps): ReactElement {
   const { children } = props
   const initialPropsRef = useRef(props)
+  const hydratedHandoffRef = useRef(props.handoff)
   const liveLocale = props.sdk === undefined ? props.locale : undefined
   const [state, setState] = useState<ProviderState>(() => ({
     error: undefined,
@@ -235,8 +235,8 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     runtime: createInitialRuntime(props),
   }))
   const prefetchedManagedEntries = useMemo(
-    () => createPrefetchedManagedEntries(props.prefetchedManagedEntries),
-    [props.prefetchedManagedEntries],
+    () => createPrefetchedManagedEntries(props.handoff?.entries),
+    [props.handoff?.entries],
   )
 
   useLayoutEffect(() => {
@@ -298,6 +298,45 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   }, [])
 
   useLayoutEffect(() => {
+    const { handoff } = props
+    const { runtime } = state
+
+    if (!state.isLive || runtime === undefined || handoff === undefined) {
+      return
+    }
+
+    if (hydratedHandoffRef.current === handoff) {
+      return
+    }
+
+    let disposed = false
+    hydratedHandoffRef.current = handoff
+
+    function setHydrationError(error: unknown): void {
+      if (!disposed) {
+        setState({ error: toError(error), isLive: true, runtime })
+      }
+    }
+
+    try {
+      const hydrationResult: unknown = Reflect.apply(hydrateOptimizationHandoff, undefined, [
+        runtime,
+        handoff,
+      ])
+
+      if (isPromiseLike(hydrationResult)) {
+        void hydrationResult.catch(setHydrationError)
+      }
+    } catch (error: unknown) {
+      setHydrationError(error)
+    }
+
+    return () => {
+      disposed = true
+    }
+  }, [props.handoff, state.isLive, state.runtime])
+
+  useLayoutEffect(() => {
     if (!state.isLive || state.runtime === undefined || props.sdk !== undefined) {
       return
     }
@@ -348,6 +387,10 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   )
 
   return (
-    <OptimizationContext.Provider value={contextValue}>{children}</OptimizationContext.Provider>
+    <OptimizationContext.Provider value={contextValue}>
+      <OptimizationHydrationContext.Provider value={props.hydration ?? props.handoff?.hydration}>
+        {children}
+      </OptimizationHydrationContext.Provider>
+    </OptimizationContext.Provider>
   )
 }

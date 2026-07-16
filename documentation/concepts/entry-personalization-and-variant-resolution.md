@@ -92,10 +92,10 @@ the runtime:
 | Android      | `suspend OptimizationClient.resolveOptimizedEntry(...)`                                 | Compose `OptimizedEntry`; XML Views `OptimizedEntryView`     |
 
 For Next.js App Router integrations, prefer the app-local bound `OptimizedEntry` returned by
-`createNextjsAppRouterOptimization()` from `@contentful/optimization-nextjs/app-router`. In Server
+`bindNextjsAppRouterOptimization()` from `@contentful/optimization-nextjs/app-router`. In Server
 Components it resolves through the Node SDK and server data; in Client Components the same app-local
 name resolves through React Web. Pages Router integrations use
-`createNextjsPagesRouterOptimization()` from `@contentful/optimization-nextjs/pages-router` for
+`bindNextjsPagesRouterOptimization()` from `@contentful/optimization-nextjs/pages-router` for
 client rendering, and routes that resolve entries manually can call `getServerTrackingAttributes()`
 or `ServerOptimizedEntry` when they need SSR tracking attributes. `ServerOptimizedEntry` accepts
 either manual `baselineEntry` and `resolvedData` props or the result returned by managed

@@ -1,18 +1,21 @@
 # AGENTS.md
 
-Next.js adapter package for composing the Node SDK on the server with the React Web SDK on the
-client.
+Next.js adapter package for composing lower-layer Optimization SDK behavior with Next.js router and
+runtime ergonomics.
 
 ## Rules
 
-- Keep this package as glue only. Server and request-handler helpers delegate to
-  `@contentful/optimization-node`; client exports delegate to `@contentful/optimization-react-web`.
-- Keep router-specific bound-component factories explicit. App Router components live under
-  `@contentful/optimization-nextjs/app-router`; Pages Router client components live under
-  `@contentful/optimization-nextjs/pages-router`; Pages `getServerSideProps` support lives under
-  `@contentful/optimization-nextjs/pages-router/server`.
-- Keep `/client` as the router-neutral client-safe lower-level export. The package root is
-  intentionally unexported; do not add a bound component factory or client alias there.
+- Keep this package as glue only. Server, request-handler, client, and edge helpers delegate to the
+  SDK layer that owns the behavior. Import lower-layer helpers directly only when this package's
+  public dependency contract declares that dependency; otherwise use the direct SDK dependency's
+  public pass-through entrypoints.
+- Keep router-specific bound-component binding helpers explicit. App Router components live under
+  `@contentful/optimization-nextjs/app-router`; Pages Router components live under
+  `@contentful/optimization-nextjs/pages-router`; low-level server, edge, or client capabilities
+  should be exposed from the canonical entrypoint for the capability instead of adding overlapping
+  aliases.
+- The package root is intentionally unexported; do not add a bound component helper or client alias
+  there.
 - Do not import `@contentful/optimization-core` directly.
 - Keep server entries free of client directives and browser-only assumptions.
 - Keep client entries marked with `"use client"` and free of Node-only imports.

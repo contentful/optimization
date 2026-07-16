@@ -10,6 +10,7 @@ const E2E_FLAGS = new Set(
 )
 
 export const isPreviewPanelEnabled = process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
+export const implementation = process.env.IMPLEMENTATION
 
 export function hasFlag(flag: E2EFlag): boolean {
   return E2E_FLAGS.has(flag)
@@ -28,6 +29,13 @@ export function skipIf(...flags: E2EFlag[]): void {
 
 export function onlyWithPreviewPanel(): void {
   test.skip(!isPreviewPanelEnabled, 'Preview panel is disabled for this build.')
+}
+
+export function runIfImplementation(...implementations: string[]): void {
+  test.skip(
+    implementation === undefined || !implementations.includes(implementation),
+    `Only runs for implementation: ${implementations.join(' or ')}.`,
+  )
 }
 
 export const CONSENT_COOKIE = 'app-personalization-consent'

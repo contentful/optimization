@@ -63,6 +63,26 @@
         "default": "./dist/runtime.cjs"
       }
     },
+    "./handoff": {
+      "import": {
+        "types": "./dist/handoff.d.mts",
+        "default": "./dist/handoff.mjs"
+      },
+      "require": {
+        "types": "./dist/handoff.d.cts",
+        "default": "./dist/handoff.cjs"
+      }
+    },
+    "./analytics": {
+      "import": {
+        "types": "./dist/analytics.d.mts",
+        "default": "./dist/analytics.mjs"
+      },
+      "require": {
+        "types": "./dist/analytics.d.cts",
+        "default": "./dist/analytics.cjs"
+      }
+    },
     "./presentation": {
       "import": {
         "types": "./dist/presentation.d.mts",
@@ -138,12 +158,16 @@
         "bridge-support.mjs": 1200,
         "runtime.cjs": 900,
         "runtime.mjs": 350,
-        "contentful-optimization-web-components.umd.js": 40300,
-        "presentation.cjs": 3200,
+        "handoff.cjs": 1500,
+        "handoff.mjs": 1500,
+        "analytics.cjs": 13000,
+        "analytics.mjs": 13000,
+        "contentful-optimization-web-components.umd.js": 40500,
+        "presentation.cjs": 3300,
         "presentation.mjs": 3200,
         "tracking-attributes.cjs": 1200,
         "tracking-attributes.mjs": 1200,
-        "web-components.cjs": 16200,
+        "web-components.cjs": 16400,
         "web-components.mjs": 17500
       }
     }

@@ -11,6 +11,7 @@ import {
 } from '@contentful/optimization-web/presentation'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useOptimizationHydrationMode } from '../context/OptimizationHydrationContext'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimizationContext } from '../hooks/useOptimization'
 
@@ -169,12 +170,14 @@ export function useOptimizedEntrySnapshot({
   viewDurationUpdateIntervalMs,
 }: UseOptimizedEntrySnapshotParams): OptimizedEntrySnapshot {
   const { sdk } = useOptimizationContext()
+  const hydration = useOptimizationHydrationMode()
   const liveUpdatesContext = useLiveUpdates()
   const isSdkReady = sdk !== undefined
   const [isPresentationReady, setIsPresentationReady] = useState(isSdkReady)
 
   const controllerOptions = useMemo(
     () => ({
+      hydration,
       isPresentationReady,
       baselineEntry,
       entryLiveUpdatesEnabled: liveUpdates,
@@ -197,6 +200,7 @@ export function useOptimizedEntrySnapshot({
       clickable,
       hasCustomLoadingFallback,
       hoverDurationUpdateIntervalMs,
+      hydration,
       isSdkReady,
       liveUpdates,
       liveUpdatesContext.globalLiveUpdates,

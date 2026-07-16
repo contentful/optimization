@@ -24,7 +24,7 @@ import type {
 } from '@contentful/optimization-node/core-sdk'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import { hydrateOptimizationData } from '@contentful/optimization-web/bridge-support'
+import { hydrateOptimizationHandoff } from '@contentful/optimization-web/handoff'
 import { createScopedLogger } from '@contentful/optimization-web/logger'
 import {
   createWebSnapshotRuntime,
@@ -109,7 +109,12 @@ function hydrateSnapshotAndPromote(
     runtimeSignal.set(sdk)
     return
   }
-  hydrateOptimizationData(sdk, snapshot.data)
+  hydrateOptimizationHandoff(sdk, {
+    cache: { scope: 'private-request' },
+    hydration: 'preserve-server',
+    initialPageEvent: snapshot.consent === true ? 'skip' : 'emit',
+    state: snapshot.data,
+  })
     .then(() => {
       runtimeSignal.set(sdk)
     })

@@ -7,6 +7,8 @@ import type {
 } from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
+import type { ContentOptimizationHydrationMode } from '../handoff'
+import { resolveLoadingPresentation } from './OptimizedEntryLoadingPresentation'
 import {
   resolveOptimizedEntryTrackingAttributes,
   type OptimizedEntryTrackingAttributes,
@@ -100,6 +102,8 @@ export interface OptimizedEntrySnapshot {
  * @public
  */
 export interface OptimizedEntryControllerOptions {
+  /** Initial browser hydration presentation mode. */
+  readonly hydration?: ContentOptimizationHydrationMode
   /** Whether the client presentation layer is ready to reveal rendered content. */
   readonly isPresentationReady?: boolean
   /** Baseline Contentful entry fetched by the application. */
@@ -142,6 +146,7 @@ export interface OptimizedEntryControllerOptions {
 export type OptimizedEntrySnapshotListener = (snapshot: OptimizedEntrySnapshot) => void
 
 interface NormalizedOptimizedEntryControllerOptions {
+  readonly hydration: ContentOptimizationHydrationMode
   readonly isPresentationReady: boolean
   readonly baselineEntry: Entry
   readonly entryLiveUpdatesEnabled?: boolean
@@ -176,6 +181,7 @@ function normalizeOptions(
   options: OptimizedEntryControllerOptions,
 ): NormalizedOptimizedEntryControllerOptions {
   return {
+    hydration: options.hydration ?? 'client-only-hidden-until-ready',
     isPresentationReady: options.isPresentationReady ?? false,
     baselineEntry: options.baselineEntry,
     entryLiveUpdatesEnabled: options.entryLiveUpdatesEnabled,
@@ -499,11 +505,16 @@ export class OptimizedEntryController {
   private createSnapshot(): OptimizedEntrySnapshot {
     const isLoading = this.resolveIsLoading()
     const isServerRender = typeof window === 'undefined'
-    const showLoadingFallback = isLoading || (isServerRender && !this.options.isPresentationReady)
-    const shouldRenderBaselineWhileLoading =
-      !this.options.hasCustomLoadingFallback || this.hasBaselineRevealTimedOut
-    const hideLoadingLayoutTarget =
-      isServerRender || (shouldRenderBaselineWhileLoading && !this.hasBaselineRevealTimedOut)
+    const loadingPresentation = resolveLoadingPresentation({
+      hasBaselineRevealTimedOut: this.hasBaselineRevealTimedOut,
+      hasCustomLoadingFallback: this.options.hasCustomLoadingFallback,
+      hydration: this.options.hydration,
+      isLoading,
+      isPresentationReady: this.options.isPresentationReady,
+      isServerRender,
+      targetDisplay: this.options.targetDisplay,
+    })
+    const { showLoadingFallback } = loadingPresentation
     const resolvedData =
       this.options.sdk && this.options.isSdkStateReady
         ? this.options.sdk.resolveOptimizedEntry(
@@ -537,12 +548,7 @@ export class OptimizedEntryController {
       isLoading,
       isPresentationReady: this.options.isPresentationReady,
       isResolved,
-      loadingPresentation: {
-        showLoadingFallback,
-        hideLoadingLayoutTarget,
-        shouldRenderBaselineWhileLoading,
-        targetDisplay: this.options.targetDisplay,
-      },
+      loadingPresentation,
       metadata,
       resolvedData,
       selectedOptimization: metadata.selectedOptimization,

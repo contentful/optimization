@@ -209,7 +209,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('uses top-level locale as the SDK Experience API/event locale', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
       locale: ' de_DE ',
@@ -226,7 +226,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('omits the Experience API locale when top-level locale is omitted', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
     })
@@ -239,7 +239,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('updates live locale without refreshing optimization data', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
       locale: 'en-US',
@@ -256,7 +256,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('defaults allowedEventTypes to identify/screen for React Native', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
     })
@@ -268,7 +268,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('keeps explicit default profile in memory until persistence consent is granted', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
       defaults: {
@@ -295,7 +295,7 @@ describe('ContentfulOptimization locale resolution', () => {
     ])
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
     })
@@ -331,7 +331,7 @@ describe('ContentfulOptimization locale resolution', () => {
     })
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
     })
@@ -361,7 +361,7 @@ describe('ContentfulOptimization locale resolution', () => {
     })
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
     })
@@ -384,7 +384,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('waits for profile-continuity persistence before publishing identified state', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
       defaults: { consent: true },
@@ -427,7 +427,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('publishes identified state after failed profile-continuity persistence is handled', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
       defaults: { consent: true },
@@ -457,7 +457,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
     const store = await getAsyncStorageStore()
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
       defaults: { consent: true },

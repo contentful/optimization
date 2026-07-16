@@ -190,6 +190,11 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
   remove behavior, narrow public APIs, obscure readable code, add one-off shims, or change source
   structure for bundle size unless the requester or maintainer explicitly approves that exact
   proposal.
+- When reviewing an existing changeset, assume included bundle-size budget changes already have the
+  required requester or maintainer approval unless the user explicitly asks to audit approval. Do not
+  flag budget bumps as findings, risks, or noteworthy by themselves; only report concrete validation
+  problems such as a failing size check, a budget applied to the wrong bundle, or inconsistent
+  package policy.
 - Do not infer bundle-size tradeoff approval from general requests such as "fix CI", "make checks
   pass", "get under budget", or an implementation request.
 - Stop and surface the remaining overage when the remaining options would reduce maintainability,

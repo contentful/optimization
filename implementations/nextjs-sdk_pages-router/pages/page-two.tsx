@@ -2,15 +2,17 @@ import { ControlPanel } from '@/components/ControlPanel'
 import { CustomViewTracker } from '@/components/CustomViewTracker'
 import { EntryCard } from '@/components/EntryCard'
 import { loadPageEntries, type ContentEntry } from '@/lib/contentful'
-import { getPagesRouterOptimizationProps } from '@/lib/optimization-server'
+import {
+  getPagesRouterOptimizationProps,
+  type PagesRouterOptimizationProps,
+} from '@/lib/optimization-server'
 import { toIdMap } from '@/lib/util'
-import type { NextjsPagesRouterOptimizationProps } from '@contentful/optimization-nextjs/pages-router/server'
 import { PAGES } from 'e2e-web'
 import type { GetServerSideProps } from 'next'
 import Link from 'next/link'
 import type { JSX } from 'react'
 
-type PageTwoProps = NextjsPagesRouterOptimizationProps & {
+type PageTwoProps = PagesRouterOptimizationProps & {
   readonly entries: ContentEntry[]
 }
 
@@ -22,13 +24,13 @@ export const getServerSideProps: GetServerSideProps<PageTwoProps> = async (conte
 
   return {
     props: {
-      ...optimization.props,
+      contentfulOptimization: optimization,
       entries,
     },
   }
 }
 
-export default function PageTwo({ entries }: PageTwoProps): JSX.Element {
+export default function PageTwo({ contentfulOptimization, entries }: PageTwoProps): JSX.Element {
   const entriesById = toIdMap(entries)
   const autoEntry = entriesById.get(PAGES.pageTwo.auto)
   const manualEntry = entriesById.get(PAGES.pageTwo.manual)
@@ -43,7 +45,7 @@ export default function PageTwo({ entries }: PageTwoProps): JSX.Element {
       </div>
 
       <CustomViewTracker componentId="page-two-hero" />
-      <ControlPanel demoCTA />
+      <ControlPanel demoCTA initialConsent={contentfulOptimization.consent} />
 
       <div className="sections-grid sections-grid--split" data-testid="page-two-optimization">
         <section className="page-section">

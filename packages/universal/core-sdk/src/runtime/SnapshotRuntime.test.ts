@@ -1,5 +1,6 @@
 import type { OptimizationData } from '@contentful/optimization-api-client/api-schemas'
 import { describe, expect, it } from '@rstest/core'
+import type { OptimizationSelectionState } from '../handoff'
 import { mergeTagEntry } from '../test/fixtures/mergeTagEntry'
 import { optimizedEntry } from '../test/fixtures/optimizedEntry'
 import { profile } from '../test/fixtures/profile'
@@ -68,6 +69,17 @@ describe('SnapshotRuntime', () => {
     expect(runtime.states.canOptimize.current).toBe(false)
     expect(runtime.states.optimizationPossible.current).toBe(false)
     expect(runtime.getMergeTagValue(mergeTagEntry)).toBe('Nowhere')
+  })
+
+  it('accepts profile-optional selection state', () => {
+    const selectionState: OptimizationSelectionState = { selectedOptimizations }
+    const runtime = createSnapshotRuntime({ data: selectionState })
+    const resolved = runtime.resolveOptimizedEntry(optimizedEntry)
+
+    expect(resolved.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(runtime.states.profile.current).toBeUndefined()
+    expect(runtime.states.selectedOptimizations.current).toBe(selectedOptimizations)
+    expect(runtime.states.canOptimize.current).toBe(true)
   })
 
   it('treats server-side actions as inert no-ops', async () => {

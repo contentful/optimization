@@ -2,11 +2,14 @@
 
 import {
   LiveUpdatesProvider as ReactWebLiveUpdatesProvider,
+  OptimizationAnalyticsRoot as ReactWebOptimizationAnalyticsRoot,
   OptimizationProvider as ReactWebOptimizationProvider,
   OptimizationRoot as ReactWebOptimizationRoot,
   OptimizedEntry as ReactWebOptimizedEntry,
   type OptimizationRootProps,
+  type OptimizationAnalyticsRootProps as ReactWebOptimizationAnalyticsRootProps,
 } from '@contentful/optimization-react-web'
+import { resolveEntriesForSelections } from '@contentful/optimization-react-web/core-sdk'
 import {
   NextAppAutoPageTracker,
   type NextAppAutoPageContext,
@@ -14,60 +17,76 @@ import {
 } from '@contentful/optimization-react-web/router/next-app'
 import { createElement, type ReactElement } from 'react'
 import type {
+  BoundNextjsOptimizationAnalyticsRootProps,
+  BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
   NextjsBoundOptimizedEntryProps,
   NextjsBoundProviderConfig,
   NextjsOptimizationComponentsConfig,
 } from './bound-component-types'
+import { createHandoffFromSelections, createOptimizationCacheKey } from './handoff'
 
 export type {
+  BoundNextjsOptimizationAnalyticsRootProps,
+  BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
   NextjsBoundOptimizedEntryProps,
   NextjsCookieReader,
   NextjsCookieValue,
   NextjsOptimizationComponentsConfig,
+  NextjsOptimizationConsentConfig,
   NextjsOptimizationCookieConfig,
   NextjsOptimizationServerConsent,
   NextjsOptimizationServerConsentContext,
   NextjsOptimizationServerConsentResolver,
-  NextjsOptimizationServerOptions,
 } from './bound-component-types'
-export { NextAppAutoPageTracker, type NextAppAutoPageContext, type NextAppAutoPageTrackerProps }
+export {
+  createHandoffFromSelections,
+  createOptimizationCacheKey,
+  NextAppAutoPageTracker,
+  resolveEntriesForSelections,
+  type NextAppAutoPageContext,
+  type NextAppAutoPageTrackerProps,
+}
 
 export interface NextjsOptimizationComponents {
   readonly OptimizationRoot: (props: BoundNextjsOptimizationRootProps) => ReactElement
-  readonly OptimizationProvider: (props: BoundNextjsOptimizationRootProps) => ReactElement | null
+  readonly OptimizationProvider: (
+    props: BoundNextjsOptimizationProviderProps,
+  ) => ReactElement | null
+  readonly OptimizationAnalyticsRoot: (
+    props: BoundNextjsOptimizationAnalyticsRootProps,
+  ) => ReactElement
   readonly OptimizedEntry: (props: NextjsBoundOptimizedEntryProps) => ReactElement | null
   readonly NextAppAutoPageTracker: typeof NextAppAutoPageTracker
-  readonly proxy: undefined
+  readonly createHandoffFromSelections: typeof createHandoffFromSelections
+  readonly createOptimizationCacheKey: typeof createOptimizationCacheKey
+  readonly resolveEntriesForSelections: typeof resolveEntriesForSelections
 }
 
-export function createNextjsAppRouterOptimization(
+export function bindNextjsAppRouterOptimization(
   config: NextjsOptimizationComponentsConfig,
 ): NextjsOptimizationComponents {
   const rootConfig = toClientRootConfig(config)
   const providerConfig = toClientProviderConfig(config)
+  const analyticsRootConfig = toAnalyticsRootConfig(config)
 
   function OptimizationRoot({
     children,
-    prefetchedManagedEntries,
-    prefetchManagedEntries,
+    ...rootProps
   }: BoundNextjsOptimizationRootProps): ReactElement {
-    return createElement(
-      ReactWebOptimizationRoot,
-      { ...rootConfig, prefetchedManagedEntries, prefetchManagedEntries },
-      children,
-    )
+    return createElement(ReactWebOptimizationRoot, { ...rootConfig, ...rootProps }, children)
   }
 
   function OptimizationProvider({
     children,
-    prefetchedManagedEntries,
+    handoff,
+    hydration,
     prefetchManagedEntries,
-  }: BoundNextjsOptimizationRootProps): ReactElement | null {
+  }: BoundNextjsOptimizationProviderProps): ReactElement | null {
     return createElement(
       ReactWebOptimizationProvider,
-      { ...providerConfig, prefetchedManagedEntries, prefetchManagedEntries },
+      { ...providerConfig, handoff, hydration, prefetchManagedEntries },
       createElement(
         ReactWebLiveUpdatesProvider,
         { globalLiveUpdates: config.liveUpdates },
@@ -76,33 +95,47 @@ export function createNextjsAppRouterOptimization(
     )
   }
 
+  function OptimizationAnalyticsRoot(
+    props: BoundNextjsOptimizationAnalyticsRootProps,
+  ): ReactElement {
+    return createElement(ReactWebOptimizationAnalyticsRoot, { ...analyticsRootConfig, ...props })
+  }
+
   return {
     NextAppAutoPageTracker,
+    OptimizationAnalyticsRoot,
     OptimizationProvider,
     OptimizationRoot,
     OptimizedEntry: ReactWebOptimizedEntry,
-    proxy: undefined,
+    createHandoffFromSelections,
+    createOptimizationCacheKey,
+    resolveEntriesForSelections,
   }
 }
 
 function toClientRootConfig(
   config: NextjsOptimizationComponentsConfig,
-): Omit<
-  OptimizationRootProps,
-  | 'children'
-  | 'prefetchedManagedEntries'
-  | 'prefetchManagedEntries'
-  | 'sdk'
-  | 'serverOptimizationState'
-> {
-  const { server: _server, ...clientConfig } = config
-  return clientConfig
+): NextjsBoundProviderConfig & Pick<OptimizationRootProps, 'liveUpdates'> {
+  const { consent, cookie: _cookie, ...clientConfig } = config
+
+  return {
+    ...clientConfig,
+    defaults: consent?.clientDefaults,
+  }
 }
 
 function toClientProviderConfig(
   config: NextjsOptimizationComponentsConfig,
 ): NextjsBoundProviderConfig {
-  const { liveUpdates: _liveUpdates, server: _server, ...providerConfig } = config
-  const clientProviderConfig: NextjsBoundProviderConfig = providerConfig
-  return clientProviderConfig
+  const { liveUpdates: _liveUpdates, ...providerConfig } = toClientRootConfig(config)
+
+  return providerConfig
+}
+
+function toAnalyticsRootConfig(
+  config: NextjsOptimizationComponentsConfig,
+): Omit<ReactWebOptimizationAnalyticsRootProps, keyof BoundNextjsOptimizationAnalyticsRootProps> {
+  const { liveUpdates: _liveUpdates, ...rootConfig } = toClientRootConfig(config)
+
+  return rootConfig
 }

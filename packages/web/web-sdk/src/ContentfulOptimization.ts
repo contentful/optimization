@@ -21,6 +21,11 @@ import {
   type PageViewBuilderArgs,
 } from '@contentful/optimization-core'
 import type { App } from '@contentful/optimization-core/api-schemas'
+import {
+  CORE_BRIDGE_CAPABILITIES_SYMBOL,
+  type CoreBridgeCapabilities,
+  type CoreBridgeHost,
+} from '@contentful/optimization-core/bridge-support'
 import { ANONYMOUS_ID_COOKIE_LEGACY } from '@contentful/optimization-core/constants'
 import { getPageProperties, getUserAgent } from './builders/EventBuilder'
 import {
@@ -107,7 +112,7 @@ export interface CurrentPageEmissionMetadata {
 }
 
 /**
- * Controls how {@link ContentfulOptimization.trackCurrentPage} treats the first route.
+ * Controls how {@link ContentfulOptimization.trackCurrentPage} treats the current route.
  *
  * @public
  */
@@ -124,8 +129,8 @@ export interface TrackCurrentPageOptions {
    */
   readonly routeKey: string
   /**
-   * Controls the first route emission. SSR integrations can use `skip` when
-   * the server already emitted the same page event.
+   * Controls the current route emission. SSR integrations can use `skip` when
+   * the server already emitted this route's page event.
    */
   readonly initialPageEvent?: InitialCurrentPageEvent
   /**
@@ -230,7 +235,9 @@ function mergeConfig({
  * A singleton instance is attached to `window.contentfulOptimization` when constructed
  * in a browser environment.
  */
-class ContentfulOptimization extends CoreStateful {
+class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
+  declare readonly [CORE_BRIDGE_CAPABILITIES_SYMBOL]: CoreBridgeCapabilities
+
   private readonly currentPageTracker = new AcceptedCurrentStateTracker<string>()
 
   /**
@@ -462,7 +469,7 @@ class ContentfulOptimization extends CoreStateful {
     initialPageEvent = 'emit',
     routeKey,
   }: TrackCurrentPageOptions): Promise<EventEmissionResult> {
-    if (initialPageEvent === 'skip' && !this.currentPageTracker.hasAccepted()) {
+    if (initialPageEvent === 'skip') {
       this.currentPageTracker.markAccepted(routeKey)
       return { accepted: true }
     }

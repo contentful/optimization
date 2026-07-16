@@ -1,5 +1,6 @@
 import ContentfulOptimization from '../ContentfulOptimization'
 import type { ContentfulConfig, ManagedEntryDescriptor } from '../core-sdk'
+import type { ContentOptimizationHydrationMode } from '../handoff'
 import {
   OPTIMIZED_ENTRY_HOST_DISPLAY,
   createOptimizationRootSdkBinding,
@@ -18,6 +19,7 @@ type OptimizationRootContextSubscriber = (context: ContentfulOptimizationRootCon
 
 export interface ContentfulOptimizationRootContext {
   readonly error: Error | undefined
+  readonly hydration: ContentOptimizationHydrationMode
   readonly rootLiveUpdatesEnabled: boolean
   readonly isSdkReady: boolean
   readonly isPreviewPanelOpen: boolean
@@ -50,12 +52,13 @@ function getGlobalSdk(): ContentfulOptimization | undefined {
 
 export class ContentfulOptimizationRootElement extends HTMLElement {
   static get observedAttributes(): string[] {
-    return ['client-id', 'environment', 'live-updates', 'locale']
+    return ['client-id', 'environment', 'hydration', 'live-updates', 'locale']
   }
 
   private apiOptions: OptimizationRootSdkConfig['api'] | undefined
   private context: ContentfulOptimizationRootContext = {
     error: undefined,
+    hydration: 'client-only-hidden-until-ready',
     rootLiveUpdatesEnabled: false,
     isSdkReady: false,
     isPreviewPanelOpen: false,
@@ -106,6 +109,16 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
     }
 
     this.removeAttribute('live-updates')
+  }
+
+  get hydration(): ContentOptimizationHydrationMode {
+    const value = this.getAttribute('hydration')
+
+    return value === 'preserve-server' ? 'preserve-server' : 'client-only-hidden-until-ready'
+  }
+
+  set hydration(value: ContentOptimizationHydrationMode) {
+    this.setAttribute('hydration', value)
   }
 
   get defaults(): OptimizationRootSdkConfig['defaults'] | undefined {
@@ -195,8 +208,11 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
       return
     }
 
-    if (name === 'live-updates') {
-      this.publishContext({ rootLiveUpdatesEnabled: this.liveUpdates })
+    if (name === 'hydration' || name === 'live-updates') {
+      this.publishContext({
+        hydration: this.hydration,
+        rootLiveUpdatesEnabled: this.liveUpdates,
+      })
       return
     }
 
@@ -248,6 +264,7 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
       const isPreviewPanelOpen = this.bindPreviewPanelOpenState(sdk)
       this.publishContext({
         error: undefined,
+        hydration: this.hydration,
         rootLiveUpdatesEnabled: this.liveUpdates,
         isSdkReady: true,
         isPreviewPanelOpen,

@@ -576,13 +576,14 @@ provider-owned place to subscribe to `eventStream`, `blockedEventStream`, or oth
 soon as SDK state is available and before child router, screen, or entry effects run. Each
 subscription still immediately emits its current snapshot.
 
-Both framework roots set up provider-owned SDK instances outside render and render no children while
-SDK initialization or provider-managed state subscriber setup is pending. React Web uses
-layout-effect scheduling for provider-owned browser SDK creation so ready children normally mount
-before first visible paint. React Native keeps async effect scheduling because SDK creation depends
-on platform storage and device state. When a framework adapter injects an already-created SDK,
-children can render immediately unless `onStatesReady` is provided. React Web also holds children
-when `serverOptimizationState` is provided so hydration happens first.
+Both framework roots set up provider-owned SDK instances outside render and expose provider-owned
+state only after the relevant runtime setup path has started. React Web creates a snapshot runtime
+for the first render, then hydrates or creates the live browser SDK in a layout effect so ready
+children normally mount before first visible paint. React Native keeps async effect scheduling
+because SDK creation depends on platform storage and device state. When a framework adapter injects
+an already-created SDK, children can render immediately unless `onStatesReady` is provided. React
+Web seeds the initial snapshot from `handoff` when server/static/edge handoff data is provided, so
+children can render from that state before the live SDK takes over.
 
 ## Diagnostics
 

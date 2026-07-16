@@ -3,6 +3,7 @@ import type {
   OptimizationData,
   SelectedOptimizationArray,
 } from '@contentful/optimization-web/api-schemas'
+import type { ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
 import { act, createElement } from 'react'
 import { renderToString } from 'react-dom/server'
 import { OptimizationRoot } from '../root/OptimizationRoot'
@@ -96,6 +97,18 @@ describe('OptimizedEntry', () => {
           averageSessionLength: 0,
         },
       },
+    }
+  }
+
+  function createContentHandoff(
+    overrides: Partial<ContentOptimizationHandoff> = {},
+  ): ContentOptimizationHandoff {
+    return {
+      cache: { scope: 'private-request' },
+      hydration: 'preserve-server',
+      initialPageEvent: 'skip',
+      state: createServerOptimizationState(),
+      ...overrides,
     }
   }
 
@@ -814,19 +827,20 @@ describe('OptimizedEntry', () => {
         <OptimizationRoot
           clientId="test-client-id"
           environment="main"
-          serverOptimizationState={createServerOptimizationState()}
-          prefetchedManagedEntries={[
-            {
-              baselineEntry: variantA,
-              entryId: 'baseline',
-              entryQuery: { locale: 'fr-FR' },
-            },
-            {
-              baselineEntry: baseline,
-              entryId: 'baseline',
-              entryQuery: { locale: 'de-DE' },
-            },
-          ]}
+          handoff={createContentHandoff({
+            entries: [
+              {
+                baselineEntry: variantA,
+                entryId: 'baseline',
+                entryQuery: { locale: 'fr-FR' },
+              },
+              {
+                baselineEntry: baseline,
+                entryId: 'baseline',
+                entryQuery: { locale: 'de-DE' },
+              },
+            ],
+          })}
         >
           <OptimizedEntry
             entryId="baseline"

@@ -250,26 +250,26 @@ Native integrations, prefer `onStatesReady` on the provider root so the subscrip
 child effects can emit SDK events.
 
 For Next.js App Router integrations, configure `onStatesReady` once in
-`createNextjsAppRouterOptimization()` from `@contentful/optimization-nextjs/app-router`. The bound
-`OptimizationRoot` uses that factory config and renders without per-render `clientId`,
-`environment`, or `onStatesReady` props. Use lower-level `/client` root props only for manual
-server/client escape hatches.
+`bindNextjsAppRouterOptimization(...)` from `@contentful/optimization-nextjs/app-router`. The bound
+`OptimizationRoot` uses that binding config and renders without per-render `clientId`,
+`environment`, or `onStatesReady` props. The binding call is not an isolation context; call it once
+for the app-local helper set. Use lower-level `/client` root props only for manual server/client
+escape hatches.
 
 For Pages Router integrations, configure `onStatesReady` once in
-`createNextjsPagesRouterOptimization()` from `@contentful/optimization-nextjs/pages-router`, then
-pass `pageProps.contentfulOptimization.serverOptimizationState` to the bound root in
-`pages/_app.tsx`.
+`bindNextjsPagesRouterOptimization(...)` from `@contentful/optimization-nextjs/pages-router`, then
+pass `pageProps.contentfulOptimization.handoff` to the bound root in `pages/_app.tsx`.
 
 **Adapt this to your use case:**
 
 ```tsx
-import { createNextjsAppRouterOptimization } from '@contentful/optimization-nextjs/app-router'
+import { bindNextjsAppRouterOptimization } from '@contentful/optimization-nextjs/app-router'
 
 const forwardedMessageIds = new Set<string>()
 
-export const { proxy, NextAppAutoPageTracker, OptimizationRoot, OptimizedEntry } =
-  createNextjsAppRouterOptimization({
-    // ...clientId, environment, locale, server, defaults
+export const { NextAppAutoPageTracker, OptimizationRoot, OptimizedEntry } =
+  bindNextjsAppRouterOptimization({
+    // ...clientId, environment, locale, consent
     onStatesReady: (states) => {
       const initialMessageId = states.eventStream.current?.messageId
 
@@ -321,15 +321,17 @@ Applies when a Node route, server action, middleware/proxy flow, or lower-level/
 server flow already called a request-bound SDK method and owns the analytics event for that request.
 
 Use the `data` from the same accepted SDK call that rendered the response or handled the server
-event. App Router Next.js integrations load request server data through the bound components created
-by `createNextjsAppRouterOptimization()`. Use the config-bound `getServerSideOptimizationProps()`
-helper for Pages Router `getServerSideProps`; it returns the same `OptimizationData` shape in its
-`data` field and serializable `props.contentfulOptimization`. Use
-`getNextjsServerOptimizationData()` only when you intentionally build a lower-level/manual `/server`
-flow. When the SDK is configured with `contentful: { client }`, prefer the request-bound managed
+event. App Router integrations use `createRequestHandoff()` from the app-local bound helper set when a
+route should pass request state to the browser. Pages Router integrations use the config-bound
+`createRequestHandoff()` helper from `@contentful/optimization-nextjs/pages-router/server` inside
+`getServerSideProps` and return `props.contentfulOptimization.handoff`. Use
+`configureNextjsServerOptimization(...)` only when you intentionally configure a lower-level/manual
+stateless `/server` runtime. That configuration is not a request-isolation context; bind each request
+with the request helpers before reading request-local data. When the SDK is configured with
+`contentful: { client }`, prefer the request-bound managed
 entry helper so the entry decision and analytics context share the same request data. Browser state
 streams cannot explain a server-rendered first paint unless you intentionally hydrate the browser
-with the same Optimization data.
+with the same handoff.
 
 **Adapt this to your use case:**
 

@@ -50,7 +50,7 @@ imperative `.core` client.
   `globalThis.__bridge`; the Kotlin `OptimizationClient` is a thin native facade over it.
   source: optimization-js-bridge#index.ts#Bridge; core-sdk#CoreStateful.ts#CoreStatefulConfig
 
-## Setup / factory
+## Setup / initialization and binding
 
 - Two usage modes for one client. **Compose**: `OptimizationRoot(config, …)` owns the client
   (`remember { OptimizationClient(...) }`), calls `initialize(config)` in a `LaunchedEffect`, provides

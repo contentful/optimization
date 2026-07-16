@@ -1,9 +1,14 @@
-import type { OptimizationRootProps, OptimizedEntryProps } from '@contentful/optimization-react-web'
+import type {
+  OptimizationAnalyticsRootProps,
+  OptimizationProviderConfigProps,
+  OptimizationRootProps,
+  OptimizedEntryProps,
+} from '@contentful/optimization-react-web'
 import type { ReactNode } from 'react'
 
 export type NextjsBoundProviderConfig = Omit<
-  OptimizationRootProps,
-  'children' | 'liveUpdates' | 'prefetchedManagedEntries' | 'prefetchManagedEntries'
+  OptimizationProviderConfigProps,
+  'children' | 'cookie' | 'handoff' | 'hydration' | 'prefetchManagedEntries' | 'sdk'
 >
 
 export interface NextjsCookieValue {
@@ -30,36 +35,22 @@ export type NextjsOptimizationServerConsentResolver = (
   context: NextjsOptimizationServerConsentContext,
 ) => NextjsOptimizationServerConsent | Promise<NextjsOptimizationServerConsent>
 
-export type NextjsOptimizationServerOptions =
-  | {
-      readonly enabled: true
-      readonly consent: NextjsOptimizationServerConsent | NextjsOptimizationServerConsentResolver
-    }
-  | {
-      readonly enabled?: false
-      readonly consent?: never
-    }
-
 export interface NextjsOptimizationCookieConfig {
   readonly domain?: string
   readonly expires?: number
 }
 
-export type NextjsBoundRootConfig = Omit<
-  OptimizationRootProps,
-  | 'children'
-  | 'cookie'
-  | 'sdk'
-  | 'serverOptimizationState'
-  | 'prefetchedManagedEntries'
-  | 'prefetchManagedEntries'
-> & {
-  readonly cookie?: NextjsOptimizationCookieConfig
+export interface NextjsOptimizationConsentConfig {
+  readonly server?: NextjsOptimizationServerConsent | NextjsOptimizationServerConsentResolver
+  readonly clientDefaults?: NextjsPagesRouterClientDefaults
 }
 
-export type NextjsOptimizationComponentsConfig = NextjsBoundRootConfig & {
-  readonly server?: NextjsOptimizationServerOptions
-}
+export type NextjsBoundRootConfig = Omit<NextjsBoundProviderConfig, 'defaults'> & {
+  readonly consent?: NextjsOptimizationConsentConfig
+  readonly cookie?: NextjsOptimizationCookieConfig
+} & Pick<OptimizationRootProps, 'liveUpdates'>
+
+export type NextjsOptimizationComponentsConfig = NextjsBoundRootConfig
 
 export type NextjsPagesRouterOptimizationComponentsConfig = NextjsBoundRootConfig
 
@@ -77,8 +68,28 @@ export type NextjsBoundOptimizedEntryProps = DistributiveOmit<
 
 export type NextjsServerOptimizedEntryProps = NextjsBoundOptimizedEntryProps
 
-export interface BoundNextjsOptimizationRootProps {
+export interface BoundNextjsOptimizationProviderProps extends Pick<
+  OptimizationProviderConfigProps,
+  'handoff' | 'hydration' | 'prefetchManagedEntries'
+> {
   readonly children?: ReactNode
-  readonly prefetchedManagedEntries?: OptimizationRootProps['prefetchedManagedEntries']
-  readonly prefetchManagedEntries?: OptimizationRootProps['prefetchManagedEntries']
 }
+
+export interface BoundNextjsOptimizationRootProps
+  extends
+    BoundNextjsOptimizationProviderProps,
+    Pick<OptimizationRootProps, 'buildPagePayload' | 'initialPagePayload' | 'routeKey'> {}
+
+export type BoundNextjsOptimizationAnalyticsRootProps = Omit<
+  OptimizationAnalyticsRootProps,
+  | 'api'
+  | 'clientId'
+  | 'contentful'
+  | 'cookie'
+  | 'environment'
+  | 'fetchOptions'
+  | 'locale'
+  | 'logLevel'
+  | 'sdk'
+  | 'trackEntryInteraction'
+>

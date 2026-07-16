@@ -443,6 +443,20 @@ describe('Contentful Optimization Web Components', () => {
     expect(entry.style.visibility).toBe('')
   })
 
+  it('keeps optimized-entry hosts visible when the root uses preserve-server hydration', () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const root = createRootElement(runtime.sdk)
+    const entry = createEntryElement(optimizedBaseline)
+
+    root.hydration = 'preserve-server'
+    root.append(entry)
+    document.body.append(root)
+
+    expect(entry.style.visibility).toBe('')
+    expect(root.hydration).toBe('preserve-server')
+  })
+
   it('fetches entryId entries through the SDK before resolving', async () => {
     ensureElementsDefined()
     const runtime = createSdk((entry) => ({ entry }))

@@ -161,7 +161,7 @@ before you ship, which explains the two axes and the object form that sets them 
   - [Offline event delivery](#offline-event-delivery)
   - [Analytics forwarding](#analytics-forwarding)
 - [Advanced integrations](#advanced-integrations)
-  - [Explicit SDK instance ownership](#explicit-sdk-instance-ownership)
+  - [Explicit SDK runtime ownership](#explicit-sdk-runtime-ownership)
   - [Strict event admission and queue controls](#strict-event-admission-and-queue-controls)
   - [Platform build boundaries](#platform-build-boundaries)
 - [Production checks](#production-checks)
@@ -385,7 +385,7 @@ not refetch Contentful entries or refresh profile state. Refetch entries and run
 
 `prefetchManagedEntries` accepts entry ID strings or `{ entryId, entryQuery }` descriptors. The
 provider keeps rendering children while the cache warms. React Native does not expose
-`prefetchedManagedEntries` because it has no server-to-client hydration handoff path.
+server-to-client managed-entry snapshots because it has no server-to-client hydration handoff path.
 
 For the entry contract, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
@@ -649,7 +649,7 @@ queues. Live SDK state after startup comes from in-memory SDK state, not repeate
 reads.
 
 For advanced anonymous ID ownership, pass `getAnonymousId` to `OptimizationRoot` or
-`ContentfulOptimization.create(...)` only when your app owns an approved anonymous ID that
+`ContentfulOptimization.initialize(...)` only when your app owns an approved anonymous ID that
 Optimization can use. Otherwise, omit it and rely on the React Native SDK's AsyncStorage-backed
 anonymous ID default.
 
@@ -876,24 +876,25 @@ for destination mapping, consent, identity, dedupe, and governance guidance.
 
 ## Advanced integrations
 
-### Explicit SDK instance ownership
+### Explicit SDK runtime ownership
 
 **Integration category:** Advanced or production-only
 
-Use explicit instance ownership only when a framework adapter, test harness, or application service
-must create the SDK before React renders. `OptimizationRoot` is the preferred path for normal React
-Native apps.
+Use explicit runtime ownership only when a framework adapter, test harness, or application service
+must initialize the SDK before React renders. `OptimizationRoot` is the preferred path for normal
+React Native apps.
 
-1. Create the SDK with `await ContentfulOptimization.create(config)`. `create` is `async` and
-   returns a `Promise<ContentfulOptimization>` because it reads AsyncStorage before constructing.
+1. Initialize the SDK with `await ContentfulOptimization.initialize(config)`. `initialize` is
+   `async` and returns a `Promise<ContentfulOptimization>` because it reads AsyncStorage before
+   constructing the single React Native runtime. It is not an isolation context.
 2. Pass the resolved instance to `OptimizationProvider sdk={sdk}`.
 3. Wrap the tree in the exported `LiveUpdatesProvider` only when preview tooling or global
    live-update state must work without `OptimizationRoot`.
 4. Call `destroy()` from the owner during teardown, once the instance is done. `OptimizationProvider`
    does not destroy an injected SDK; `destroy()` clears the singleton so a new instance can be
-   created.
+   initialized.
 5. Do not create a second active React Native SDK instance without destroying the first one:
-   `create` throws `ContentfulOptimization React Native SDK is already initialized. Reuse the
+   `initialize` throws `ContentfulOptimization React Native SDK is already initialized. Reuse the
 existing instance.` while a live instance exists.
 6. Use per-entry `trackViews` and `trackTaps` for interaction policy in injected-provider flows;
    `trackEntryInteraction` is an `OptimizationRoot` convenience.
@@ -903,7 +904,7 @@ existing instance.` while a live instance exists.
 ```tsx
 import { ContentfulOptimization, OptimizationProvider } from '@contentful/optimization-react-native'
 
-const sdk = await ContentfulOptimization.create({
+const sdk = await ContentfulOptimization.initialize({
   clientId: 'your-optimization-client-id',
   environment: 'main',
   locale: 'en-US',

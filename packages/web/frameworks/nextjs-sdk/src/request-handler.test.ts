@@ -6,7 +6,7 @@ import {
 } from './request-context'
 import * as requestHandlerExports from './request-handler'
 import { createNextjsOptimizationContextHandler } from './request-handler'
-import { createNextjsOptimization, type OptimizationData } from './server'
+import { configureNextjsServerOptimization, type OptimizationData } from './server'
 
 type RemovedRequestHandlerPrefix = 'createNextjsOptimization'
 type RemovedRequestHandlerSuffix = 'RequestHandler'
@@ -144,7 +144,7 @@ describe('createNextjsOptimizationContextHandler', () => {
 
   it('calls Experience once, forwards server data, and persists the returned profile ID', async () => {
     const nextSpy = rs.spyOn(NextResponse, 'next')
-    const sdk = createNextjsOptimization(sdkConfig)
+    const sdk = configureNextjsServerOptimization(sdkConfig)
     const upsertProfile = rs
       .spyOn(sdk.api.experience, 'upsertProfile')
       .mockResolvedValue(optimizationData)
@@ -183,7 +183,7 @@ describe('createNextjsOptimizationContextHandler', () => {
   })
 
   it('binds an incoming anonymous ID before persisting the returned profile ID', async () => {
-    const sdk = createNextjsOptimization(sdkConfig)
+    const sdk = configureNextjsServerOptimization(sdkConfig)
     const upsertProfile = rs
       .spyOn(sdk.api.experience, 'upsertProfile')
       .mockResolvedValue(optimizationData)
@@ -204,7 +204,7 @@ describe('createNextjsOptimizationContextHandler', () => {
   })
 
   it('clears the profile cookie when persistence is not allowed', async () => {
-    const sdk = createNextjsOptimization(sdkConfig)
+    const sdk = configureNextjsServerOptimization(sdkConfig)
     rs.spyOn(sdk.api.experience, 'upsertProfile').mockResolvedValue(optimizationData)
     const requestHandler = createNextjsOptimizationContextHandler({
       consent: { events: true, persistence: false },

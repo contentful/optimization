@@ -12,10 +12,16 @@ import {
 } from '@contentful/optimization-nextjs/client'
 import { type JSX } from 'react'
 
-export function ControlPanel({ demoCTA }: { readonly demoCTA?: boolean } = {}): JSX.Element {
+export function ControlPanel({
+  demoCTA,
+  initialConsent,
+}: {
+  readonly demoCTA?: boolean
+  readonly initialConsent?: boolean
+} = {}): JSX.Element {
   const sdk = useOptimization()
   const { identifyUser, resetUser } = useOptimizationActions()
-  const { consent, setConsent } = useConsent()
+  const { consent, setConsent } = useConsent(initialConsent)
   const profile = useProfileState()
   const selectedOptimizations = useSelectedOptimizationsState()
   const { globalLiveUpdates, onToggleGlobalLiveUpdates } = useGlobalLiveUpdatesControls()

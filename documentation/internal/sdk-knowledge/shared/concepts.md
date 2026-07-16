@@ -92,8 +92,8 @@ source: core-sdk#StatefulDefaults.ts#resolveStatefulDefaults; core-sdk#consent/C
 ## Live updates
 
 Opt-in. Most content is fixed for a request's life, so re-resolution after load is off by default.
-Turned on app-wide (factory `liveUpdates`) or per-entry; a per-entry value overrides the app-wide
-default. Triggers: consent/identity/profile changes in the browser.
+Turned on app-wide through root or binding `liveUpdates` configuration, or per-entry; a per-entry
+value overrides the app-wide default. Triggers: consent/identity/profile changes in the browser.
 source: react-web-sdk#provider/LiveUpdatesProvider.tsx#LiveUpdatesProvider; react-web-sdk#hooks/useLiveUpdates.ts#useLiveUpdates
 
 ## Page events
@@ -121,3 +121,37 @@ Event-method acceptance and response data are separate: `EventEmissionResult` is
 event can therefore have no `data` yet; only a returned `data` value contains the profile,
 selections, and changes described above.
 source: core-sdk#events/EventEmissionResult.ts#EventEmissionResult; core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult
+
+## Optimization handoff
+
+`OptimizationHandoff` is the framework-neutral handoff shape for server, static, and edge rendered
+Optimization state. It can carry selected state (`selectedOptimizations`, `changes`, optional
+`profile`), managed-entry baseline snapshots, and cache metadata. Public/static handoffs must not
+carry request-derived profile state; public permutations need an application-owned `cache.key`. The
+generic helper reports cache-safety warnings instead of throwing. Node request handoff creation
+throws a `TypeError` when request data with profile state is paired with `public-permutation` or
+`static` cache metadata.
+source: core-sdk#handoff.ts#OptimizationHandoff; core-sdk#handoff.ts#getOptimizationCacheSafetyWarnings; node-sdk#handoff.ts#createRequestHandoffFromData
+
+`createHandoffFromSelections()` builds a selection handoff from application-owned selected
+optimizations and optional managed-entry snapshots. It does not include profile state and requires
+`selectedOptimizations` to be an array.
+source: core-sdk#handoff.ts#createHandoffFromSelections
+
+`createSelectionFingerprint()` returns a deterministic versioned fingerprint for selected
+optimizations: `undefined` and an empty array have distinct sentinels, selections are sorted by
+their formatted optimization fields, and each variant map is sorted by baseline entry id before
+encoding. `createOptimizationCacheKey()` composes that fingerprint with cache scope, optional locale,
+and sorted entry ids; missing locale or entry ids are encoded as `-`.
+source: core-sdk#handoff.ts#createSelectionFingerprint; core-sdk#handoff.ts#createOptimizationCacheKey
+
+`resolveEntriesForSelections()` resolves each supplied baseline entry with the same selected
+optimizations, preserves the input entry order, and returns each resolved result with its original
+baseline entry.
+source: core-sdk#handoff.ts#resolveEntriesForSelections; core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext
+
+Browser handoffs extend the core handoff with `hydration` and `initialPageEvent`. Content handoffs
+are accepted by `hydrateOptimizationHandoff`; analytics-only handoffs are accepted by the analytics
+runtime. Hydration copies `selectedOptimizations`, `changes`, and `profile` into the browser SDK and
+marks the Experience request state successful when any state is present.
+source: web-sdk#handoff.ts#BrowserOptimizationHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff; web-sdk#handoff-state.ts#hydrateOptimizationSelectionState

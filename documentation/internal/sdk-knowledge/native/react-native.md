@@ -27,13 +27,13 @@ source root: `packages/react-native-sdk/src`; shared core: `packages/universal/c
 | `@contentful/optimization-react-native/logger`          | Re-export of `@contentful/optimization-core/logger` (incl. default)                                                                                                                                                                           | react-native-sdk#logger.ts                                                                                                                                                                                                                                                                                                   |
 | `@contentful/optimization-react-native/preview-support` | Re-export of `@contentful/optimization-core/preview-support`                                                                                                                                                                                  | react-native-sdk#preview-support.ts                                                                                                                                                                                                                                                                                          |
 
-## Setup / factory
+## Setup / initialization and binding
 
 - Two entry points: the `OptimizationRoot`/`OptimizationProvider` component path (React creates the
-  instance) and the `ContentfulOptimization.create(config)` factory (caller creates the instance and
-  injects it via `OptimizationProvider sdk={sdk}`). `create` is `async` and returns a
-  `Promise<ContentfulOptimization>` because it reads AsyncStorage before constructing.
-  source: react-native-sdk#components/OptimizationRoot.tsx#OptimizationRoot; react-native-sdk#ContentfulOptimization.ts#ContentfulOptimization
+  instance) and the `ContentfulOptimization.initialize(config)` initializer (caller creates the
+  active singleton and injects it via `OptimizationProvider sdk={sdk}`). `initialize` is `async`
+  because it reads AsyncStorage before constructing.
+  source: react-native-sdk#components/OptimizationRoot.tsx#OptimizationRoot; react-native-sdk#ContentfulOptimization.ts#initialize
 - Config type is `CoreStatefulConfig` (aliased as `OptimizationConfig`); only `clientId` is
   required, and its keys are: `clientId` (required), `environment?`, `fetchOptions?` (from
   `api-client` `ApiConfig`);
@@ -67,15 +67,15 @@ OptimizationConfig`, `sdk?: never`) or injected form (`OptimizationProviderSdkPr
 OptimizationSdk`). `onStatesReady(states)` runs once after state init and before children mount;
   returning a function registers a teardown cleanup.
   source: react-native-sdk#components/OptimizationProvider.tsx#OptimizationProviderConfigProps; react-native-sdk#components/OptimizationProvider.tsx#OptimizationProviderSdkProps; react-native-sdk#components/OptimizationProvider.tsx#OnStatesReady
-- `ContentfulOptimization.create(config)` merges RN defaults over the caller config: `eventBuilder`
-  `channel: 'mobile'` + library name/version; AsyncStorage-backed `defaults` and `getAnonymousId`;
-  `logLevel` forced to `debug` when the stored debug flag is set; and `allowedEventTypes` defaulting
-  to `['identify', 'screen']` when the caller omits it.
-  source: react-native-sdk#ContentfulOptimization.ts#mergeConfig
-- Single active instance: `ContentfulOptimization.create` throws `ContentfulOptimization React
+- `ContentfulOptimization.initialize(config)` merges RN defaults over the caller config:
+  `eventBuilder` `channel: 'mobile'` + library name/version; AsyncStorage-backed `defaults` and
+  `getAnonymousId`; `logLevel` forced to `debug` when the stored debug flag is set; and
+  `allowedEventTypes` defaulting to `['identify', 'screen']` when the caller omits it.
+  source: react-native-sdk#ContentfulOptimization.ts#initialize; react-native-sdk#ContentfulOptimization.ts#mergeConfig
+- Single active instance: `ContentfulOptimization.initialize` throws `ContentfulOptimization React
 Native SDK is already initialized. Reuse the existing instance.` if a live instance already exists.
   `destroy()` (or a failed post-init persistence) clears the singleton so a new instance can be
-  created. source: react-native-sdk#ContentfulOptimization.ts#ContentfulOptimization
+  created. source: react-native-sdk#ContentfulOptimization.ts#initialize; react-native-sdk#ContentfulOptimization.ts#destroy
 - Managed entry fetching: `contentful?: ContentfulConfig` (`{ client, defaultQuery?, cache? }`) on
   the root/provider config enables `<OptimizedEntry entryId>` / `useOptimizedEntry({ entryId })` to
   fetch by ID through the app's `contentful.js` client. See
@@ -236,7 +236,7 @@ selectedOptimizations, changes }` payload, and this stateful SDK applies it to i
   source: core-sdk#consent/ConsentStorage.ts#decodeConsentStorageValue; core-sdk#consent/ConsentStorage.ts#resolvePersistedPersistenceConsent
 - AsyncStorage is read only during startup: `AsyncStorage.multiGet` runs only in
   `initializeConsentState` / `initializeProfileContinuity` (each guarded by a one-shot initialized
-  flag, invoked from `mergeConfig` during `create`). After startup, live SDK state comes from Core
+  flag, invoked from `mergeConfig` during `initialize`). After startup, live SDK state comes from Core
   signals (`signals.consent`, `signals.profile`, `signals.selectedOptimizations`, `signals.changes`);
   the store's getters read only its in-memory `cache` Map. State changes write through to
   AsyncStorage but runtime reads never hit it.
@@ -250,7 +250,7 @@ selectedOptimizations, changes }` payload, and this stateful SDK applies it to i
   `onStatesReady` is ready from the first render.
   source: react-native-sdk#components/OptimizationProvider.tsx#OptimizationProvider
 - Instance ownership: `OptimizationProvider` `destroy()`s on unmount only an instance it created
-  itself (`ownsSdkRef` is set only on the `ContentfulOptimization.create` path). An injected
+  itself (`ownsSdkRef` is set only on the `ContentfulOptimization.initialize` path). An injected
   `sdk={instance}` is NOT destroyed by the provider — the owner that created it must call `destroy()`
   (which clears the singleton so a new instance can be created).
   source: react-native-sdk#components/OptimizationProvider.tsx#OptimizationProvider; react-native-sdk#ContentfulOptimization.ts#ContentfulOptimization

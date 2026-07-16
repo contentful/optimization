@@ -17,18 +17,18 @@
 </div>
 
 Reference implementation demonstrating `@contentful/optimization-nextjs` in a Next.js Pages Router
-application. Pages call `getServerSideOptimizationProps()` from `getServerSideProps`, pass the
-returned Optimization state through `pageProps`, and mount the bound Pages Router root and route
-tracker once in `pages/_app.tsx`.
+application. Pages call `createRequestHandoff()` from `getServerSideProps`, pass the returned
+browser handoff through `pageProps`, and mount the bound Pages Router root and route tracker once in
+`pages/_app.tsx`.
 
 The implementation binds `OptimizationRoot`, `OptimizedEntry`, and `NextPagesAutoPageTracker` once
-in `@/lib/optimization` with `createNextjsPagesRouterOptimization()`. Browser runtime imports use
+in `@/lib/optimization` with `bindNextjsPagesRouterOptimization()`. Browser runtime imports use
 Next.js SDK package subpaths. The package root is not imported:
 
 - `@contentful/optimization-nextjs/pages-router` in `@/lib/optimization` for the bound component
-  factory and route tracker
+  binding and route tracker
 - `@contentful/optimization-nextjs/pages-router/server` in `@/lib/optimization-server` for
-  `getServerSideProps` state handoff
+  `getServerSideProps` request handoff
 - `@contentful/optimization-nextjs/client` for browser hooks and providers
 - `@contentful/optimization-nextjs/api-schemas` in components that need SDK schema guards
 
@@ -38,10 +38,12 @@ Use this implementation when you need a Pages Router example where `getServerSid
 Contentful entries, prepares Optimization state, and lets the browser SDK continue from that state
 after hydration. It demonstrates:
 
-- App-local bound components from `createNextjsPagesRouterOptimization()`
-- Server state handoff from `getServerSideOptimizationProps()` through `pageProps`
+- App-local bound components from `bindNextjsPagesRouterOptimization()`
+- Request handoff from `createRequestHandoff()` through `pageProps`
 - Pages Router route tracking with `NextPagesAutoPageTracker`
 - Browser-side entry resolution with the app-local `OptimizedEntry`
+- `initialPageEvent` ownership from the handoff so the browser skips only when the server request
+  accepted the first page event
 - Live re-resolution after consent, identify, reset, and client-side route changes
 - Preview panel attachment behind `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`
 
@@ -56,9 +58,9 @@ single-locale fields such as `fields.nt_experiences` and `fields.nt_variants`.
 
 Use `getServerSideProps` for pages that need server-personalized first paint. It fetches entries,
 calls the Pages Router Optimization helper, and returns both through `props`. `pages/_app.tsx`
-passes `pageProps.contentfulOptimization.clientDefaults` and `serverOptimizationState` to the bound
-`OptimizationRoot` and uses `initialPageEvent` from the same object to avoid duplicate consented
-initial page events.
+passes `pageProps.contentfulOptimization.handoff` to the bound `OptimizationRoot` with the current
+`routeKey` and `buildPagePayload`; the handoff carries the first-page-event decision so the browser
+does not duplicate an accepted server page event.
 
 ## Prerequisites
 

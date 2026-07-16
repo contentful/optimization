@@ -2,7 +2,7 @@
   "name": "@implementation/nextjs-sdk_pages-router",
   "private": true,
   "version": "0.0.0",
-  "description": "Reference implementation for Next.js Pages Router using @contentful/optimization-nextjs with getServerSideProps state handoff",
+  "description": "Reference implementation for Next.js Pages Router using @contentful/optimization-nextjs with getServerSideProps request handoff",
   "license": "MIT",
   "type": "module",
   "scripts": {

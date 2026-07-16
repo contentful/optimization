@@ -268,6 +268,29 @@ describe('OptimizedEntryController', () => {
     controller.disconnect()
   })
 
+  it('keeps server-rendered content visible in preserve-server hydration while state is unresolved', () => {
+    const runtime = createSdk((entry) => ({ entry }))
+    const controller = new OptimizedEntryController({
+      hydration: 'preserve-server',
+      isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+
+    expect(controller.getSnapshot()).toMatchObject({
+      isLoading: true,
+      loadingPresentation: {
+        hideLoadingLayoutTarget: false,
+        showLoadingFallback: false,
+      },
+    })
+
+    controller.disconnect()
+  })
+
   it('renders server-seeded optimizations without waiting for a client page request', () => {
     const runtime = createSdk((entry, selectedOptimizations) => ({
       entry: selectedOptimizations ? variantA : entry,
