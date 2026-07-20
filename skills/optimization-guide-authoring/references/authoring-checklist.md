@@ -24,7 +24,17 @@ add per-archetype checks.
       nouns to the fields of the SDK's return envelope. It applies wherever the noun first appears in
       prose, even in a section far from the feature that owns it (e.g. `selected optimizations` and
       `changes` first surfacing in a Consent or Identity section) — define it there, do not defer to
-      the owning feature section below.
+      the owning feature section below. **Result and payload wrapper _types_, not just their fields,
+      get a first-use gloss and an ownership signal** — a reader must be able to tell an SDK-provided
+      type (`ResolvedOptimizedEntry`, `TrackingMetadata`, `EventEmissionResult`, `TrackClickPayload`)
+      from a type they define themselves, and a config type whose name is non-obvious for what it holds
+      (e.g. consent living inside a `StorageDefaults`) says so at first use.
+- [ ] **A published/reactive state field is attributed to the exact object that exposes it.** When
+      the guide says the SDK "publishes" or "observes" a value, it names whether that value is a
+      top-level reactive property or a field on a published state snapshot (e.g. on iOS,
+      `selectedOptimizations`/`locale` are `@Published` on the client, while `profile`/`consent`/
+      `changes` are fields on the published `state` snapshot) — it does not list snapshot fields as if
+      they were top-level published properties.
 - [ ] **Every SDK-fixed content-model identifier is glossed and its ownership stated at first use.**
       A fixed Contentful content-type or field name the SDK relies on (`nt_experiences`, `nt_audience`,
       `nt_experience`) gets a one-line plain-language gloss and a statement that it is SDK-owned, not a
@@ -100,6 +110,11 @@ add per-archetype checks.
 - [ ] Every `###` feature section has a correct `**Integration category:**` line, and its category
       matches its parent `##` (Required/Common under Core; Optional under Optional; Advanced under
       Advanced).
+- [ ] **No single `###` section bundles multiple independent features under `####` sub-headings.**
+      Each independent capability the blueprint lists as its own reader goal (e.g. screen tracking vs.
+      entry-interaction tracking vs. custom events) is its own `###` section with its own category
+      line and its own TOC entry, not several `####` features sharing one `###` and one category —
+      such a mega-section is invisible to a TOC reader and blurs distinct categories.
 - [ ] **A Core section that revisits a quick-start step opens with a bridge, not a verbatim recap.**
       The first feature section (typically install/initialize) does not repeat the quick start's
       install/mount steps word-for-word; it opens by naming what is genuinely new below (the full
@@ -113,16 +128,34 @@ add per-archetype checks.
       inspect any accessor, the quick-start snippet the reader just pasted must already expose it — a
       verify step that depends on an accessor only wired up in a later section is not performable
       where the reader hits it.
+- [ ] **A "read a log line" verify names the recognizable signature to look for.** When the proof is
+      observed by reading a `logLevel`/console log, presence of the log switch is not enough — a
+      `.debug`/verbose console is high-noise, so the guide shows the recognizable token, prefix, or
+      line shape the reader searches for (and the subsystem/filter to narrow to), and that shape
+      matches what the SDK actually logs. "Watch the console for the event" with no target line is not
+      performable.
+- [ ] **A verify step with an observable failure state wires a diagnostic for the failure path.** If
+      the proof can render a "blocked"/"failed"/"error" outcome and the shown code `try?`-swallows or
+      otherwise hides the cause, the quick start gives the reader one way to see _why_ (a `logLevel`
+      note, an `onEventBlocked`/error callback, or an error stream) — otherwise landing on the failure
+      branch is a dead end.
+- [ ] **The proof's load-bearing state word is defined in the quick start and scoped honestly.** Any
+      adjective the proof turns on (`accepted`, `resolved`, `ready`) is defined where the quick start
+      first uses it, not only in a downstream section, and the verify names whose acceptance/readiness
+      it observes — a client-side signal (a debug log, a returned `accepted` flag) proves the SDK
+      emitted/allowed the event locally, not that the server received it, so the wording does not imply
+      server receipt.
 - [ ] **The quick start is grounded in a real app shape** — no invented fetch shapes (e.g. a
       hardcoded array of entry IDs). The most common real shape leads; other shapes are pointed to a
       feature section.
 - [ ] **Files the reader already owns (layout, providers, renderer, and the runtime root component
-      such as `App.tsx`) are shown as `+`/`-` diffs that preserve existing content**, not full files
-      to paste over, and not with the additions blended invisibly into a rewritten file. A reader's
-      app root is something they always already own, so a full standalone `App` is never a
-      `**Copy this:**` paste-over. The `+` lines must be unambiguously the additions. A short prose
-      note states the surrounding code is illustrative context to match against, not a block to paste
-      verbatim.
+      such as `App.tsx`, or the native runtime root such as `SceneDelegate`/`AppDelegate` on iOS and
+      the `Activity`/`Application` on Android) are shown as `+`/`-` diffs that preserve existing
+      content**, not full files to paste over, and not with the additions blended invisibly into a
+      rewritten file. A reader's app root is something they always already own, so a full standalone
+      `App`/`SceneDelegate` is never a `**Copy this:**` paste-over. The `+` lines must be unambiguously
+      the additions. A short prose note states the surrounding code is illustrative context to match
+      against, not a block to paste verbatim.
 - [ ] **Native integration guides put the native build step inline in the quick start.** For iOS /
       Android / React Native targets, the native install step (`pod install`, `npx expo prebuild`, or
       equivalent) that must run before the app launches appears in the quick start where the reader
