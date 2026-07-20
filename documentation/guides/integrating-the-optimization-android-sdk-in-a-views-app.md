@@ -1,21 +1,64 @@
 # Integrating the Optimization Android SDK in an Android Views app
 
-Use this guide when you want to add Optimization, Analytics, screen tracking, Custom Flags, MergeTag
-rendering, and preview overrides to a native Android application built with XML layouts or Android
-Views. Use the Compose guide when the screen is built with Jetpack Compose:
-[Integrating the Optimization Android SDK in a Jetpack Compose app](./integrating-the-optimization-android-sdk-in-a-compose-app.md).
+Use this guide to add Contentful personalization to a native Android app built with XML layouts and
+Android Views. By the end of the quick start, the SDK is running from your application and one screen
+event has passed the SDK's consent gate, with a visible label confirming it.
+
+**New to personalization?** Here is the whole idea in five points:
+
+- In Contentful you author **variants** of an entry and attach them to an **experience** — a rule
+  that decides which visitors see which variant.
+- As the app runs, Contentful's **Experience API** looks at who the visitor is and picks the variant
+  for each experience. Swapping a fetched entry for its picked variant is called **resolving** the
+  entry.
+- The Experience API also returns a **profile**: the anonymous, per-visitor identity and state used
+  to keep personalization consistent across requests or app launches.
+- Your app hands a Contentful entry to the SDK at the point where that entry becomes output. The SDK
+  gives back the selected variant, or the original entry when no variant applies—the **baseline
+  fallback**.
+- You render the returned entry with the same application components you already use.
+
+The Android SDK persists the profile in `SharedPreferences` across app launches when persistence
+consent allows it.
+
+That is enough to start. The guide introduces policy and optional capabilities at the point you need
+them.
+
+You will get there in two milestones:
+
+- **Milestone 1 — the SDK initialized from your application and one accepted screen event (the quick
+  start below).** Once your app also hands the SDK a fetched Contentful entry, that entry resolves to
+  a variant or the baseline through `OptimizedEntryView` and `resolveOptimizedEntry` (the
+  [Contentful fetching and entry resolution](#contentful-fetching-and-entry-resolution) section).
+  This is complete and shippable on its own.
+- **Milestone 2 — the opt-in layers (later).** Consent handoff, interaction tracking, identity,
+  Custom Flags, live updates, the preview panel, and offline delivery, each introduced by the section
+  that needs it. Start with [Consent and privacy-policy handoff](#consent-and-privacy-policy-handoff).
+
+This guide uses `com.contentful.java:optimization-android`. Android Views apps drive the SDK through
+an application-scoped `OptimizationManager` singleton: you initialize it once from your `Application`,
+then read `OptimizationManager.client` from the activities and fragments that track events or resolve
+entries. The SDK does not replace your Contentful client — your app still owns Contentful fetching,
+link resolution, consent UX, identity policy, navigation, caching, and rendering. If your screens are
+built with Jetpack Compose instead, use the
+[Integrating the Optimization Android SDK in a Jetpack Compose app](./integrating-the-optimization-android-sdk-in-a-compose-app.md)
+guide.
 
 ## Quick start
 
-This path uses the Android/native default pre-consent allow-list, where `screen` can emit before an
-explicit consent decision. If your policy requires strict opt-in before any Optimization event, set
-`allowedEventTypes = emptyList()` and complete the consent handoff section before sending events or
-expecting selected variants.
+Most Android Views apps share one shape: an `Application` subclass runs process-wide setup, and an
+`Activity` presents content. This quick start assumes that shape and proves the smallest result: **the
+SDK initializes from your application and one screen event is accepted, and a visible label flips to
+confirm it.** It initializes one manager in `Application.onCreate`, registers the subclass in the
+manifest, and tracks the current screen from an activity's `onResume`.
 
-This path initializes the SDK, emits one screen event for selection context, fetches one
-single-locale Contentful entry, and renders the resolved entry in an Android View.
+This quick start assumes your application policy permits Optimization to start with accepted consent
+and renders no end-user consent UI, so it seeds `StorageDefaults(consent = true)` — the shorthand
+that accepts both consent axes at once. If personalization must wait for a consent decision, keep this
+structure and add the [Consent and privacy-policy handoff](#consent-and-privacy-policy-handoff) step
+before you ship; it explains the two axes and the split form that sets them separately.
 
-1. Add the Android SDK dependency to the application module.
+1. Add the SDK dependency to your application module from Maven Central.
 
    **Copy this:**
 
@@ -29,98 +72,152 @@ single-locale Contentful entry, and renders the resolved entry in an Android Vie
    }
    ```
 
-2. Initialize the process-wide Views client.
+2. Initialize the SDK from your `Application` subclass. `OptimizationManager.initialize(...)` is a
+   normal (non-suspend) call that constructs the process-wide client and starts it in the background;
+   activities read `OptimizationManager.client` afterward.
 
    **Adapt this to your use case:**
 
-   ```kotlin
-   class MyApplication : Application() {
-       override fun onCreate() {
-           super.onCreate()
+   ```diff
+   +import com.contentful.optimization.core.OptimizationConfig
+   +import com.contentful.optimization.core.OptimizationLogLevel
+   +import com.contentful.optimization.core.StorageDefaults
+   +import com.contentful.optimization.views.OptimizationManager
+    import android.app.Application
 
-           val appLocale = "en-US"
+    class MyApplication : Application() {
+        override fun onCreate() {
+            super.onCreate()
 
-           OptimizationManager.initialize(
-               context = this,
-               config = OptimizationConfig(
-                   clientId = "your-client-id",
-                   environment = "main",
-                   locale = appLocale,
-                   logLevel = if (BuildConfig.DEBUG) {
-                       OptimizationLogLevel.debug
-                   } else {
-                       OptimizationLogLevel.error
-                   },
-               ),
-           )
-       }
-   }
+   +        // Initialize once for the process, before any activity reads OptimizationManager.client.
+   +        // StorageDefaults carries startup state; consent = true accepts both consent axes now.
+   +        OptimizationManager.initialize(
+   +            context = this,
+   +            config = OptimizationConfig(
+   +                clientId = "your-optimization-client-id",
+   +                // environment defaults to "main"; pass it only when your setup differs.
+   +                locale = "en-US",
+   +                defaults = StorageDefaults(consent = true),
+   +                logLevel = OptimizationLogLevel.debug,
+   +            ),
+   +        )
+        }
+    }
    ```
 
-3. Emit one screen event, fetch a single-locale Contentful entry with linked optimization data, and
-   render it through `OptimizedEntryView`.
+   The unchanged lines above are illustrative context to match against your own `Application`
+   subclass, not a block to paste over it. If your app has no `Application` subclass yet, the whole
+   file is new. `StorageDefaults` is an SDK config type that carries the SDK's startup state,
+   including the two consent axes; `StorageDefaults(consent = true)` grants both at launch.
+
+   Then register the subclass in `AndroidManifest.xml` with `android:name`. Without it,
+   `Application.onCreate` never runs and the SDK never initializes.
 
    **Adapt this to your use case:**
 
-   ```kotlin
-   class HomeActivity : AppCompatActivity() {
-       override fun onCreate(savedInstanceState: Bundle?) {
-           super.onCreate(savedInstanceState)
-
-           val heroSlot = OptimizedEntryView(this).apply {
-               accessibilityIdentifier = "content-entry-home-hero"
-               setContentRenderer { resolvedEntry ->
-                   // Render the resolver output; it falls back to baseline content.
-                   HeroBinder.create(context, resolvedEntry)
-               }
-           }
-           setContentView(heroSlot)
-
-           lifecycleScope.launch {
-               // Wait until the bridge can accept events and resolve optimized entries.
-               OptimizationManager.client.isInitialized.first { it }
-
-               // Emit screen context once before fetching content that can use selected variants.
-               OptimizationManager.client.screen("Home")
-
-               // Your app owns Contentful fetching; request one concrete locale with resolved links.
-               val heroEntry = contentfulClient.fetchEntry(
-                   id = "home-hero",
-                   include = 10,
-                   locale = "en-US",
-               )
-
-               heroSlot.setEntry(heroEntry)
-           }
-       }
-   }
+   ```diff
+    <application
+   +    android:name=".MyApplication"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.MyApp">
    ```
 
-4. Verify that the entry renders either its baseline content or selected variant content in the
-   Android View.
+3. Track the current screen from an activity and reflect the outcome in a label. `HomeActivity` below
+   is illustrative app shape — adapt it to a screen you already render, keeping the two stream
+   subscriptions and the `ScreenTracker.trackScreen` call in `onResume`.
+
+   **Adapt this to your use case:**
+
+   ```diff
+   +import androidx.lifecycle.Lifecycle
+   +import androidx.lifecycle.lifecycleScope
+   +import androidx.lifecycle.repeatOnLifecycle
+   +import com.contentful.optimization.views.OptimizationManager
+   +import com.contentful.optimization.views.ScreenTracker
+   +import kotlinx.coroutines.launch
+    import android.os.Bundle
+    import android.widget.TextView
+    import androidx.appcompat.app.AppCompatActivity
+
+    class HomeActivity : AppCompatActivity() {
+   +    private val statusLabel by lazy { findViewById<TextView>(R.id.optimization_status) }
+
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
+            setContentView(R.layout.activity_home)
+   +        statusLabel.text = "Waiting for Optimization"
+   +
+   +        // eventStream carries accepted events. It is a replay-buffered SharedFlow, so this
+   +        // collector still receives the screen event even if it subscribes just after it fired.
+   +        lifecycleScope.launch {
+   +            repeatOnLifecycle(Lifecycle.State.STARTED) {
+   +                OptimizationManager.client.eventStream.collect { event ->
+   +                    // Screen events carry type == "screen" (the value the SDK emits).
+   +                    if (event["type"] as? String == "screen") {
+   +                        statusLabel.text = "Optimization screen event accepted"
+   +                    }
+   +                }
+   +            }
+   +        }
+   +        // blockedEventStream carries events the consent or allow-list gate stopped.
+   +        lifecycleScope.launch {
+   +            repeatOnLifecycle(Lifecycle.State.STARTED) {
+   +                OptimizationManager.client.blockedEventStream.collect { blocked ->
+   +                    statusLabel.text = "Optimization screen event blocked: ${blocked.reason}"
+   +                }
+   +            }
+   +        }
+        }
+
+   +    override fun onResume() {
+   +        super.onResume()
+   +        // ScreenTracker tracks the current screen and retries once the SDK is ready and consent
+   +        // allows, so it is safe to call here without awaiting initialization yourself.
+   +        ScreenTracker.trackScreen("Home")
+   +    }
+    }
+   ```
+
+   The surrounding activity code is illustrative context to match against your own screen, not a block
+   to paste over it. `statusLabel` is a reader-owned `TextView`; give it an id in the layout you
+   already use for this screen.
+
+4. Verify the first run. Build and run the application module on a device or emulator. The status
+   label reads `Optimization screen event accepted`. It flips when the `screen` event reaches
+   `eventStream`, which carries events that passed the SDK's local consent and allow-list gate. Here,
+   "accepted" means the SDK let the event through and queued it for delivery — it does not confirm
+   that Contentful received the event, only that the local gate let it through. Because
+   `StorageDefaults(consent = true)` grants consent and `screen` is on the SDK's default pre-consent
+   allow-list, the event is accepted.
+
+   If the label reads `Optimization screen event blocked: <reason>`, the consent or allow-list gate
+   rejected the event and the reason names why. If the label stays on `Waiting for Optimization`, no
+   event reached either stream, which means the SDK never initialized. Filter logcat by the tag
+   `ContentfulOptimization`: a successful start logs `[init] SDK initialized successfully` (visible
+   because `logLevel = OptimizationLogLevel.debug`). If that line never appears, the most common
+   Android cause is the missing manifest registration — without `android:name=".MyApplication"` on
+   `<application>`, `Application.onCreate` never runs and `OptimizationManager.initialize(...)` is
+   never called.
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Required setup](#required-setup)
+- [Before you start](#before-you-start)
 - [Core integration](#core-integration)
   - [SDK installation and process-wide client](#sdk-installation-and-process-wide-client)
   - [Consent and privacy-policy handoff](#consent-and-privacy-policy-handoff)
-  - [Contentful fetching and entry shape](#contentful-fetching-and-entry-shape)
-  - [Entry rendering and fallback behavior](#entry-rendering-and-fallback-behavior)
-  - [Screen and custom event tracking](#screen-and-custom-event-tracking)
+  - [Contentful fetching and entry resolution](#contentful-fetching-and-entry-resolution)
+  - [Screen and navigation tracking](#screen-and-navigation-tracking)
   - [Entry interaction tracking](#entry-interaction-tracking)
+  - [Identity, profile continuity, and reset](#identity-profile-continuity-and-reset)
 - [Optional integrations](#optional-integrations)
-  - [Scrollable entry lists](#scrollable-entry-lists)
-  - [Identity and reset controls](#identity-and-reset-controls)
-  - [Runtime locale changes](#runtime-locale-changes)
-  - [Analytics diagnostics and forwarding](#analytics-diagnostics-and-forwarding)
+  - [Custom events and analytics diagnostics](#custom-events-and-analytics-diagnostics)
   - [Custom Flags and MergeTag rendering](#custom-flags-and-mergetag-rendering)
-  - [Live updates and variant locking](#live-updates-and-variant-locking)
-- [Advanced integrations](#advanced-integrations)
+  - [Live updates and locked variants](#live-updates-and-locked-variants)
   - [Preview panel](#preview-panel)
-  - [Offline delivery and queue observability](#offline-delivery-and-queue-observability)
+- [Advanced integrations](#advanced-integrations)
+  - [Offline delivery, queue observability, and app-owned caching](#offline-delivery-queue-observability-and-app-owned-caching)
 - [Production checks](#production-checks)
 - [Troubleshooting](#troubleshooting)
 - [Reference implementations to compare against](#reference-implementations-to-compare-against)
@@ -128,34 +225,38 @@ single-locale Contentful entry, and renders the resolved entry in an Android Vie
 <!-- mtoc-end -->
 </details>
 
-## Required setup
+## Before you start
 
-Use this setup inventory for the full guide:
+The sections below walk the integration in order. First, gather the few things you can only get from
+outside this guide:
 
-| Setup item                                                           | Category                       | Required for quick start | Where to configure                                                                                   |
-| -------------------------------------------------------------------- | ------------------------------ | ------------------------ | ---------------------------------------------------------------------------------------------------- |
-| Android SDK dependency                                               | Required for first integration | Yes                      | Application module Gradle dependency                                                                 |
-| Optimization client ID and environment                               | Required for first integration | Yes                      | `OptimizationConfig(clientId = ..., environment = ...)`                                              |
-| Experience API and Insights API endpoint overrides                   | Common but policy-dependent    | No                       | `OptimizationApiConfig` for staging, mock, or non-default hosts                                      |
-| SDK Experience and event locale                                      | Common but policy-dependent    | Conditional              | `OptimizationConfig(locale = appLocale)`                                                             |
-| Consent and profile-continuity policy                                | Common but policy-dependent    | Conditional              | `StorageDefaults`, `allowedEventTypes`, `client.consent(...)`, and consent UI                        |
-| Contentful Delivery or Preview API client, credentials, and API host | Required for first integration | Yes                      | Application-owned Contentful client configuration                                                    |
-| Single-locale Contentful entries with linked optimization data       | Required for first integration | Yes                      | Application-owned Contentful Delivery API or Content Preview API fetch code                          |
-| Android process entry point                                          | Required for first integration | Yes                      | `Application.onCreate` with `OptimizationManager.initialize(...)`                                    |
-| Activity, Fragment, or navigation lifecycle hooks                    | Required for first integration | Yes                      | `ScreenTracker.trackScreen(...)` or direct `client.screen(...)` calls                                |
-| Android Views entry-rendering adapter                                | Required for first integration | Yes                      | `OptimizedEntryView` in XML layouts, Activity code, Fragment code, or adapters                       |
-| Entry view and tap tracking defaults                                 | Common but policy-dependent    | No                       | `OptimizationManager.initialize(...)` and per-view `OptimizedEntryView` properties                   |
-| Scrollable entry-list helper                                         | Optional                       | No                       | `TrackingRecyclerView` for RecyclerView-based screens                                                |
-| Identity, profile, and reset controls                                | Optional                       | No                       | Login, account, logout, or reset handlers calling `client.identify(...)` or reset                    |
-| Runtime locale changes                                               | Optional                       | No                       | App locale state, `client.setLocale(...)`, and Contentful refetch logic                              |
-| Analytics diagnostics or forwarding                                  | Optional                       | No                       | `client.eventStream`, `client.blockedEventStream`, and app-owned destinations                        |
-| Custom Flags and MergeTag rendering                                  | Optional                       | No                       | Views, adapters, or binders that call `getFlag(...)`, `observeFlag(...)`, or `getMergeTagValue(...)` |
-| Preview-panel UI and preview Contentful definitions                  | Advanced or production-only    | No                       | Debug or internal Activity code with `PreviewPanelConfig` and `attachPreviewPanel`                   |
-| Strict pre-consent event policy                                      | Advanced or production-only    | Conditional              | `OptimizationConfig.allowedEventTypes`, usually `emptyList()` for strict opt-in                      |
-| Offline queue bounds, retry policy, and delivery callbacks           | Advanced or production-only    | No                       | `QueuePolicy` in `OptimizationConfig`                                                                |
+- **An Android Views app and its Gradle build**, able to add a Maven Central dependency and run a
+  build. The SDK requires `minSdk` 24 or later and Java 11 bytecode, and it publishes to Maven
+  Central. Package requirements and the published coordinate are in the
+  [Optimization Android SDK README](../../packages/android/README.md).
+- **Contentful delivery credentials** — space ID, delivery token, environment, and one concrete
+  locale — read from your app's configuration layer, used by your own Contentful fetching.
+- **At least one entry with a variant attached to an experience**, authored in Contentful. Without
+  an authored variant, the integration can still run correctly while returning the baseline, so you
+  cannot yet distinguish working personalization from a content-authoring gap. For the first
+  personalized-content test, target all visitors so the test request or visitor matches automatically.
+- **Your Optimization project values** — client ID and environment, from your Optimization project
+  settings. The `environment` defaults to `main`, so pass it only when your setup differs. The
+  Experience API (which picks variants) and the Insights API (which receives event and interaction
+  delivery) each have a base URL that defaults correctly; you only set them for mocks or non-default
+  hosts (see [SDK installation and process-wide client](#sdk-installation-and-process-wide-client)).
 
-The SDK does not replace your Contentful delivery client. Your application still owns Contentful
-fetching, consent UX, identity policy, routing, caching, and rendering.
+You do not need a setup inventory up front. Everything else — consent, entry resolution, screen
+tracking, interaction tracking, identity, live updates, preview, and offline delivery — is introduced
+by the section that needs it.
+
+> [!NOTE]
+>
+> Read the SDK client ID, Contentful credentials, and any base-URL overrides from your app's own
+> configuration layer — `BuildConfig` fields, a Gradle build value, or a generated config type. This
+> guide's examples use inline placeholder strings for clarity; the Android reference app centralizes
+> these in a shared `AppConfig` because it runs against shared mock defaults. Use whatever
+> configuration convention your app already uses and keep it consistent.
 
 ## Core integration
 
@@ -163,10 +264,12 @@ fetching, consent UX, identity policy, routing, caching, and rendering.
 
 **Integration category:** Required for first integration
 
-1. Confirm that the consuming Android app supports Android `minSdk` 24 or later, Java 11 bytecode,
-   Kotlin, and Maven Central. The package requirements and published coordinate are documented in
-   the [Optimization Android SDK README](../../packages/android/README.md).
-2. Add the SDK dependency to the app module.
+The Android SDK ships as one AAR on Maven Central and runs its shared optimization logic in a small
+runtime embedded in the AAR (referred to as the bridge below). That runtime starts asynchronously, so
+callers wait for readiness before making direct calls that depend on it.
+
+1. Confirm the consuming app supports `minSdk` 24 or later, Java 11 bytecode, Kotlin, and Maven
+   Central, then add the dependency to the application module.
 
    **Copy this:**
 
@@ -180,19 +283,24 @@ fetching, consent UX, identity policy, routing, caching, and rendering.
    }
    ```
 
-3. Create one `OptimizationConfig` with the Optimization client ID, Contentful environment, and SDK
-   Experience or event locale.
+2. Build one `OptimizationConfig`. Only `clientId` is required; the rest have working defaults.
+   1. Pass `clientId` from your configuration layer.
+   2. Pass `environment` only when it is not the Kotlin-side default `"main"`.
+   3. Pass `locale` when Experience API requests and event context must use the same language as the
+      Contentful entries you render.
+   4. Set `api = OptimizationApiConfig(...)` (`experienceBaseUrl`/`insightsBaseUrl`) only for mock,
+      staging, or other non-default endpoints — both default correctly otherwise.
+   5. Keep `logLevel` at its default `OptimizationLogLevel.error` in production unless your
+      operational policy allows more verbose logging.
 
    **Adapt this to your use case:**
 
    ```kotlin
-   val appLocale = "en-US"
-
    val optimizationConfig = OptimizationConfig(
-       clientId = "your-client-id",
-       environment = "main",
-       // Match this to the locale used by the app-owned Contentful fetch.
-       locale = appLocale,
+       clientId = "your-optimization-client-id",
+       // environment defaults to "main"; pass it only when your setup differs.
+       // Keep the SDK event and Experience locale aligned with the CDA entries you render.
+       locale = "en-US",
        logLevel = if (BuildConfig.DEBUG) {
            OptimizationLogLevel.debug
        } else {
@@ -201,11 +309,11 @@ fetching, consent UX, identity policy, routing, caching, and rendering.
    )
    ```
 
-   Pass `api = OptimizationApiConfig(...)` only when the app uses staging, mock, or non-default
-   Experience API or Insights API hosts. Omit it for the default Contentful Optimization endpoints.
-
-4. Initialize `OptimizationManager` once for the app process. Production apps usually do this from
-   `Application.onCreate` before any Activity or Fragment reads `OptimizationManager.client`.
+3. Initialize `OptimizationManager` once for the process, from `Application.onCreate`, and register
+   the `Application` subclass in the manifest (see the quick start). `initialize` is idempotent — the
+   first call constructs and starts the client; later calls only update the global tracking defaults
+   and preview client and do not recreate it. Reading `OptimizationManager.client` before `initialize`
+   throws.
 
    **Adapt this to your use case:**
 
@@ -213,30 +321,26 @@ fetching, consent UX, identity policy, routing, caching, and rendering.
    class MyApplication : Application() {
        override fun onCreate() {
            super.onCreate()
-
-           // Initialize once before Activities or Fragments read OptimizationManager.client.
-           OptimizationManager.initialize(
-               context = this,
-               config = optimizationConfig,
-           )
+           // Initialize once before any activity or fragment reads OptimizationManager.client.
+           OptimizationManager.initialize(context = this, config = optimizationConfig)
        }
    }
    ```
 
-5. Treat `OptimizationManager.initialize(...)` as asynchronous. `OptimizationManager.client` is
-   available immediately after initialization is requested, but suspend APIs that depend on the
-   bridge require `client.isInitialized` to become `true`.
+4. Await readiness for direct suspend calls. `OptimizationManager.client` is available immediately,
+   but the underlying `OptimizationClient.initialize(config)` is a `suspend` function that
+   `OptimizationManager` launches in the background, so suspend APIs that touch the bridge require
+   `client.isInitialized` to become `true` first. (Screen tracking through `ScreenTracker` and entry
+   rendering through `OptimizedEntryView` handle this readiness for you; the await matters when you
+   call the client directly.)
 
    **Copy this:**
 
    ```kotlin
    lifecycleScope.launch {
-       // Direct suspend APIs require the async bridge initialization to finish first.
+       // Direct suspend APIs require the background initialization to finish first.
        OptimizationManager.client.isInitialized.first { it }
-       OptimizationManager.client.track(
-           event = "App Ready",
-           properties = mapOf("surface" to "views"),
-       )
+       OptimizationManager.client.track(event = "App Ready", properties = mapOf("surface" to "views"))
    }
    ```
 
@@ -247,689 +351,677 @@ For lifecycle and coroutine behavior, see
 
 **Integration category:** Common but policy-dependent
 
-1. Decide whether the application can start SDK event emission and durable profile continuity before
-   rendering a consent UI. The SDK stores and applies consent state, but the application or CMP owns
-   notice text, jurisdiction logic, consent records, and withdrawal policy.
-2. For a default-on accepted policy, seed accepted consent during initialization.
+Consent policy belongs to your application. The SDK provides the runtime gate; your app or CMP owns
+notice text, user choices, consent records, jurisdiction logic, and withdrawal behavior. Consent has
+two independent axes: event consent (may the SDK personalize and emit events) and persistence consent
+(may the SDK store profile continuity in `SharedPreferences`).
+
+1. Use `StorageDefaults(consent = true)` at startup only when application policy permits SDK activity
+   at launch. `StorageDefaults` values take precedence over persisted `SharedPreferences` values on
+   every launch, so a seeded value can replace a stored choice — apps that persist a user's decision
+   leave `defaults` unset and call `consent(...)` from resolved policy instead.
 
    **Copy this:**
 
    ```kotlin
    val optimizationConfig = OptimizationConfig(
-       clientId = "your-client-id",
+       clientId = "your-optimization-client-id",
        // Seed accepted consent only when your app policy permits event emission at startup.
        defaults = StorageDefaults(consent = true),
    )
    ```
 
-3. For a user-choice policy, leave consent unset and call `client.consent(true)` or
-   `client.consent(false)` from application-owned UI after initialization completes.
+2. Leave `defaults` unset when the app must collect a choice before gated events can emit, and call
+   `consent(...)` from an app-owned banner, CMP callback, or settings flow. `consent(...)` no-ops
+   before initialization, so wait for readiness before applying a choice.
 
    **Adapt this to your use case:**
 
    ```kotlin
    class ConsentActivity : AppCompatActivity() {
+       private val client get() = OptimizationManager.client
+
        override fun onCreate(savedInstanceState: Bundle?) {
            super.onCreate(savedInstanceState)
+           setContentView(R.layout.activity_consent)
 
-           acceptButton.isEnabled = false
-           rejectButton.isEnabled = false
-
-           lifecycleScope.launch {
-               OptimizationManager.client.isInitialized.first { it }
-               acceptButton.isEnabled = true
-               rejectButton.isEnabled = true
-           }
-
-           acceptButton.setOnClickListener {
-               // Boolean consent applies to events and durable profile-continuity persistence.
-               applyConsent(true)
-           }
-
-           rejectButton.setOnClickListener {
-               // Rejection blocks gated SDK events such as view, tap, and custom track calls.
-               applyConsent(false)
-           }
-
-           lifecycleScope.launch {
-               repeatOnLifecycle(Lifecycle.State.STARTED) {
-                   OptimizationManager.client.state.collect { state ->
-                       consentBanner.isVisible = state.consent == null
-                   }
-               }
-           }
+           // acceptButton and rejectButton are reader-owned views from your layout.
+           acceptButton.setOnClickListener { applyConsent(true) }
+           rejectButton.setOnClickListener { applyConsent(false) }
        }
 
        private fun applyConsent(accepted: Boolean) {
            lifecycleScope.launch {
                // consent(...) no-ops before initialization, so wait before applying the choice.
-               OptimizationManager.client.isInitialized.first { it }
-               OptimizationManager.client.consent(accepted)
+               client.isInitialized.first { it }
+               // Boolean consent sets both event emission and durable profile continuity.
+               client.consent(accepted)
            }
        }
    }
    ```
 
-4. Use object-form consent when event emission is allowed but durable profile-continuity storage
-   must stay session-only.
+3. Use the split form when event emission is allowed but durable profile continuity must stay
+   session-only. `consent(events = false)` withdraws event consent and purges queues but leaves
+   persistence unless you also pass `persistence = false`; `consent(false)` clears both axes, purges
+   queues, and clears durable continuity while in-memory state stays usable until reset or teardown.
 
    **Adapt this to your use case:**
 
    ```kotlin
    lifecycleScope.launch {
        OptimizationManager.client.isInitialized.first { it }
+       // Emit events but keep profile continuity session-only.
        OptimizationManager.client.consent(events = true, persistence = false)
    }
    ```
 
-By default, Android/native `identify` and `screen` are allowed before consent so a mobile journey
-can establish profile context and anonymous screen analytics. View, tap, custom `track(...)`, and
-most other events are blocked until event consent is accepted. For strict opt-in before any
-Optimization event, replace the default allow-list during initialization:
+When `allowedEventTypes` is unset, the SDK's default pre-consent allow-list lets `identify` and
+`screen` emit before event consent, so a mobile journey can establish profile context and anonymous
+screen analytics. Entry views, entry taps, and custom `track` events are blocked until consent is
+accepted. To require strict opt-in before any Optimization event, replace the default allow-list
+during initialization.
 
 **Copy this:**
 
 ```kotlin
 val strictConfig = OptimizationConfig(
-    clientId = "your-client-id",
-    // Empty means no SDK events are allowed before explicit consent.
+    clientId = "your-optimization-client-id",
+    // Empty means no SDK event emits before explicit consent.
     allowedEventTypes = emptyList(),
 )
 ```
 
-For cross-SDK policy guidance, see
-[Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
+For the consent responsibility model and blocked-event behavior, see
+[Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md#event-allow-lists-and-blocked-events).
 
-### Contentful fetching and entry shape
+### Contentful fetching and entry resolution
 
 **Integration category:** Required for first integration
 
-1. Keep Contentful entry fetching in the application layer. The Android SDK resolves entries that
-   the app provides; it does not fetch Contentful entries for your UI.
-2. Fetch entries with one Contentful locale and enough include depth for linked optimization data.
-   Do not pass all-locale CDA responses or `locale=*` payloads into `OptimizedEntryView`.
-3. Use the same application Contentful locale for the SDK `locale` when Experience API responses and
-   event context must match the rendered content language.
+The Android SDK has no fetch-by-ID path, so your app always owns the Contentful Delivery API fetch.
+You fetch the entry, hand it to the SDK, and the SDK resolves it locally against the current
+visitor's selected optimizations — the SDK's current set of picked variants, one per experience the
+profile matched.
+
+`OptimizedEntryView` is the Views renderer: it detects an optimized entry by the SDK-fixed
+`fields.nt_experiences` link field, observes the client's `selectedOptimizations` (plural — the
+current set), resolves the entry, and renders the result through a renderer you supply.
+`nt_experiences` links each experience's `nt_variants` and audience entries; these are SDK-owned
+Optimization content-model names, not names you choose, so your fetch must `include` deeply enough to
+pull them back in one payload. Each resolved result carries a single `selectedOptimization`
+(singular) — the one selection applied to that entry. Note the one-letter difference:
+`selectedOptimizations` is the set the view observes, while `selectedOptimization` is the one applied
+to a given entry.
+
+1. Keep Contentful fetching in the application layer, with one concrete locale and enough include
+   depth for the linked optimization data. Do not pass all-locale CDA responses or `locale=*` payloads
+   to `OptimizedEntryView` — they fall back to baseline.
+2. Add `OptimizedEntryView` from XML or create it in activity, fragment, or adapter code.
+
+   **Copy this:**
+
+   ```xml
+   <com.contentful.optimization.views.OptimizedEntryView
+       android:id="@+id/hero_slot"
+       android:layout_width="match_parent"
+       android:layout_height="wrap_content" />
+   ```
+
+3. Set a renderer that turns the resolved entry map into a child `View`, then call `setEntry(...)`
+   with the fetched baseline entry.
+
+   **Adapt this to your use case:**
+
+   ```kotlin
+   val heroSlot = findViewById<OptimizedEntryView>(R.id.hero_slot)
+   // Optional, reader-chosen: OptimizedEntryView.accessibilityIdentifier sets the view's
+   // contentDescription so tests and accessibility tooling can find the slot. Omit it if you don't need it.
+   heroSlot.accessibilityIdentifier = "content-entry-home-hero"
+   heroSlot.setContentRenderer { resolvedEntry ->
+       // ContentEntryBinder is reader-owned: your code that turns a resolved entry map into a View.
+       // resolvedEntry is the variant when one applies, or the baseline entry otherwise.
+       ContentEntryBinder.create(context = heroSlot.context, entry = resolvedEntry)
+   }
+
+   lifecycleScope.launch {
+       // contentfulFetcher is reader-owned: your CDA fetch and link resolution. One concrete
+       // locale, include depth deep enough to resolve nt_experiences and nt_variants in one payload.
+       val heroEntry = contentfulFetcher.fetchEntry(id = "home-hero", include = 10, locale = "en-US")
+       // The view resolves the entry locally and re-resolves as profile state arrives.
+       heroSlot.setEntry(heroEntry)
+   }
+   ```
+
+4. Treat baseline fallback as expected behavior. `resolveOptimizedEntry` (which `OptimizedEntryView`
+   calls for you) is a `suspend`, fail-soft resolver. It returns a `ResolvedOptimizedEntry` — an
+   SDK-owned result wrapper carrying `entry` (the entry to render) and `selectedOptimization` (the
+   applied selection, or null). Its `entry` is the resolved variant when one applies and the baseline
+   entry unchanged otherwise — when the client is not initialized, when the entry is not optimized,
+   when no selected optimization matches, when linked optimization data is missing, on all-locale
+   payloads, or when the variant is not in the payload — so it never throws or breaks the UI.
+
+For custom rendering surfaces, call `resolveOptimizedEntry(baseline, selectedOptimizations)` directly
+instead of through the view.
 
 **Follow this pattern:**
 
 ```kotlin
-suspend fun fetchHomeEntries(
-    contentfulClient: ContentfulDeliveryClient,
-    appLocale: String,
-): List<Map<String, Any>> {
-    return contentfulClient.getEntries(
-        contentType = "homePage",
-        // Resolve linked optimization entries before handing the payload to OptimizedEntryView.
-        include = 10,
-        // Use one concrete Contentful locale; do not pass locale=* responses to the SDK.
-        locale = appLocale,
-    )
-}
+// Passing null uses the SDK's current selection state; pass an explicit snapshot to lock a screen.
+val result = OptimizationManager.client.resolveOptimizedEntry(baseline = entry)
+// Always render result.entry; result.selectedOptimization is the applied selection, or null.
+render(result.entry)
 ```
 
-4. Pass direct single-locale entry maps to the Views adapter after the SDK is initialized or after
-   the app has enough profile state for its rendering policy.
-
-**Adapt this to your use case:**
-
-```kotlin
-lifecycleScope.launch {
-    val appLocale = getAppLocale()
-
-    // Wait until the SDK can resolve optimized entries against profile state.
-    OptimizationManager.client.isInitialized.first { it }
-
-    val entries = contentfulClient.fetchHomeEntries(locale = appLocale)
-    renderEntries(entries)
-}
-```
-
-The resolver expects direct field values such as `fields.nt_experiences` and linked variant entries
-such as `optimizationEntry.fields.nt_variants`. For the full locale model, see
+If the app locale changes at runtime, call `client.setLocale(locale)` to update the SDK Experience
+and event locale, then refetch Contentful entries in the new locale and re-render — `setLocale`
+updates the SDK locale only and does not refetch entries; it throws before initialization or on an
+invalid locale. For the entry contract and fallback rules, see
+[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract),
+and for the locale boundary see
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
-For the Contentful entry contract and fallback rules, see
-[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
 
-### Entry rendering and fallback behavior
+### Screen and navigation tracking
 
 **Integration category:** Required for first integration
 
-1. Add `OptimizedEntryView` from XML or create it from Activity, Fragment, or adapter code.
+The quick start tracked one screen from `onResume`. Real Android navigation repeats lifecycle
+callbacks across activity, fragment, and in-activity transitions, so choose the call that matches the
+event you want.
 
-**Copy this:**
+`ScreenTracker.trackScreen(name)` is the idiomatic Views API. It sets the current screen name,
+observes the client's state, and calls `trackCurrentScreen` on each state emission — so it retries
+once the SDK is ready and consent allows, and it swallows early-lifecycle failures. `trackCurrentScreen`
+deduplicates the current route in the bridge by `routeKey` (which defaults to `name`), so a repeat of
+the same current screen is skipped. Use plain `client.screen(name, properties)` only for intentional
+one-off raw screen events, which carry no dedupe, or when a screen event needs properties. The suspend
+emitters `screen` and `trackCurrentScreen` return an `EventEmissionResult` — an SDK result type with
+an `accepted` flag (and optional `data`) that is `true` when the event passed the local consent and
+allow-list gate.
 
-```xml
-<com.contentful.optimization.views.OptimizedEntryView
-    android:id="@+id/hero_slot"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content" />
-```
+1. Call `ScreenTracker.trackScreen(name)` from `Activity.onResume` (or `Fragment.onResume`) so it
+   fires once per visible screen lifecycle.
 
-2. Set `accessibilityIdentifier`, set a renderer that turns the resolved entry map into a child
-   `View`, then call `setEntry(...)` with the baseline Contentful entry.
+   **Copy this:**
 
-**Adapt this to your use case:**
+   ```kotlin
+   override fun onResume() {
+       super.onResume()
+       // Track once per visible screen lifecycle, not from repeated child-view binding.
+       ScreenTracker.trackScreen("Home")
+   }
+   ```
 
-```kotlin
-val heroSlot = findViewById<OptimizedEntryView>(R.id.hero_slot)
+2. Emit a new screen event after an in-activity navigation state change when several logical screens
+   share one activity.
 
-heroSlot.accessibilityIdentifier = "content-entry-home-hero"
-heroSlot.setContentRenderer { resolvedEntry ->
-    // Render the resolver output; it is the baseline fallback when no variant resolves.
-    HeroBinder.create(context = heroSlot.context, entry = resolvedEntry)
-}
-heroSlot.setEntry(heroEntry)
-```
+   **Adapt this to your use case:**
 
-3. Render the map passed to the renderer. It can be the baseline entry, the selected variant entry,
-   or the baseline fallback when no variant resolves.
-4. Treat baseline fallback as expected behavior. Missing optimization data, unresolved Contentful
-   links, all-locale payloads, absent selected optimizations, and out-of-range variants all render
-   the baseline entry instead of throwing.
+   ```kotlin
+   private fun transitionTo(destination: Destination) {
+       // renderDestination is reader-owned: your own view-state swap.
+       renderDestination(destination)
+       // Emit the screen event after the app has committed its navigation state.
+       when (destination) {
+           Destination.HOME -> ScreenTracker.trackScreen("NavigationHome")
+           Destination.DETAIL -> ScreenTracker.trackScreen("NavigationDetail")
+       }
+   }
+   ```
 
-`OptimizedEntryView` mirrors the Compose `OptimizedEntry` behavior for non-optimized entries,
-variant resolution, variant locking, live updates, view tracking, tap tracking, and
-`accessibilityIdentifier` as `contentDescription`. For deeper resolution mechanics, see
-[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#fallback-behavior).
+3. Use a direct client call when a screen event needs properties.
 
-### Screen and custom event tracking
+   **Adapt this to your use case:**
 
-**Integration category:** Required for first integration
+   ```kotlin
+   lifecycleScope.launch {
+       // Wait for initialization before calling suspend client APIs directly.
+       OptimizationManager.client.isInitialized.first { it }
+       // postId is reader-owned: the value that identifies this destination.
+       OptimizationManager.client.screen(name = "BlogPostDetail", properties = mapOf("postId" to postId))
+   }
+   ```
 
-1. Emit screen events when an Activity or Fragment becomes the active application screen. For simple
-   Activity screens, call `ScreenTracker.trackScreen(...)` from `onResume`.
-
-**Copy this:**
-
-```kotlin
-override fun onResume() {
-    super.onResume()
-    // Track once per visible screen lifecycle instead of from repeated child view binding.
-    ScreenTracker.trackScreen("Home")
-}
-```
-
-2. Emit a new screen event after an in-Activity navigation state change when multiple logical
-   screens share one Activity.
-
-**Adapt this to your use case:**
-
-```kotlin
-private fun transitionTo(destination: Destination) {
-    renderDestination(destination)
-
-    // Emit the screen event after the app has committed its navigation state.
-    when (destination) {
-        Destination.HOME -> ScreenTracker.trackScreen("NavigationHome")
-        Destination.DETAIL -> ScreenTracker.trackScreen("NavigationDetail")
-    }
-}
-```
-
-3. Use direct client calls when a screen event needs properties or when a business interaction needs
-   a custom event.
-
-**Adapt this to your use case:**
-
-```kotlin
-lifecycleScope.launch {
-    // Wait for bridge initialization before calling suspend client APIs directly.
-    OptimizationManager.client.isInitialized.first { it }
-
-    OptimizationManager.client.screen(
-        name = "BlogPostDetail",
-        properties = mapOf("postId" to postId),
-    )
-
-    OptimizationManager.client.track(
-        event = "Purchase Completed",
-        properties = mapOf("sku" to "sku-1"),
-    )
-}
-```
-
-`ScreenTracker` uses the same client as `OptimizationManager.client` and swallows initialization
-failures so early lifecycle calls do not crash the host Activity. Wait for `isInitialized` before
-calling suspend APIs directly.
+For shared tracking mechanics and event delivery, see
+[Android SDK runtime and interaction mechanics](../concepts/android-sdk-runtime-and-interaction-mechanics.md#tracking-mechanics).
 
 ### Entry interaction tracking
 
 **Integration category:** Common but policy-dependent
 
-1. Leave global view and tap tracking defaults enabled when your Analytics and privacy policy
-   permits them. Pass `trackViews = false` or `trackTaps = false` globally when a surface must opt
-   out by default.
+`OptimizedEntryView` wires entry view tracking and tap tracking for you: it installs a view-timing
+controller for visibility-based view events and a click listener for taps, so you own only the
+enablement policy, not the geometry or the payloads. Entry views deliver on the wire as `component`
+events; entry taps as `component_click`. Both still respect the SDK consent gate. Your app decides
+whether these events are allowed by its Analytics and privacy policy.
 
-**Copy this:**
+1. Leave the global `trackViews` and `trackTaps` defaults enabled when your policy permits them. Pass
+   `trackViews = false` or `trackTaps = false` to `initialize` when a surface must opt out by default.
 
-```kotlin
-OptimizationManager.initialize(
-    context = this,
-    config = optimizationConfig,
-    // Opt out globally only when this app must not emit tap analytics by default.
-    trackTaps = false,
-)
-```
+   **Copy this:**
 
-2. Override tracking per entry when a component needs different behavior from the global default.
+   ```kotlin
+   OptimizationManager.initialize(
+       context = this,
+       config = optimizationConfig,
+       // Opt out globally only when this app must not emit tap analytics by default.
+       trackTaps = false,
+   )
+   ```
 
-**Adapt this to your use case:**
+2. Override tracking per entry when a component needs different behavior from the global default. A
+   non-null `onTap` keeps the entry tappable even when global `trackTaps` is on; setting per-entry
+   `trackViews = false` or `trackTaps = false` opts that one entry out.
 
-```kotlin
-OptimizedEntryView(context).apply {
-    // Disable SDK view tracking for entries tracked by a different application surface.
-    trackViews = false
-    setContentRenderer { resolvedEntry ->
-        HeroBinder.create(context, resolvedEntry)
-    }
-    setEntry(hero)
-}
+   **Adapt this to your use case:**
 
-OptimizedEntryView(context).apply {
-    setContentRenderer { resolvedEntry ->
-        CtaBinder.create(context, resolvedEntry)
-    }
-    setEntry(cta)
-}
+   ```kotlin
+   OptimizedEntryView(context).apply {
+       // Disable SDK view tracking for entries tracked by a different application surface.
+       trackViews = false
+       setContentRenderer { resolvedEntry -> ContentEntryBinder.create(context, resolvedEntry) }
+       setEntry(hero)
+   }
 
-OptimizedEntryView(context).apply {
-    onTap = { baselineEntry ->
-        navigateToEntry(baselineEntry)
-    }
-    // Direct onTap is a per-entry override; it keeps this entry tappable even
-    // when global trackTaps is false.
-    setContentRenderer { resolvedEntry ->
-        CtaBinder.create(context, resolvedEntry)
-    }
-    setEntry(cta)
-}
-```
+   OptimizedEntryView(context).apply {
+       // onTap is a per-entry override; navigateToEntry is reader-owned navigation.
+       onTap = { baselineEntry -> navigateToEntry(baselineEntry) }
+       setContentRenderer { resolvedEntry -> ContentEntryBinder.create(context, resolvedEntry) }
+       setEntry(cta)
+   }
+   ```
 
-3. Set per-entry `trackTaps = false` only when that entry must opt out of the SDK tap handling path.
-   Do not combine it with `onTap`; if a component needs an app-owned tap handler without SDK tap
-   tracking, attach a normal Android click listener inside the rendered child view instead.
-4. Tune view-tracking timing only when the default 2 second dwell time, 80% visible ratio, or 5
-   second update interval does not match the component.
+3. Tune view-tracking timing only when the default 2-second dwell time, 80% visible ratio, or
+   5-second update interval does not match the component.
 
-**Adapt this to your use case:**
+   **Adapt this to your use case:**
 
-```kotlin
-OptimizedEntryView(context).apply {
-    // Changing timing changes when verification-visible view events are emitted.
-    minVisibleRatio = 0.75
-    dwellTimeMs = 1500
-    viewDurationUpdateIntervalMs = 5000
-    setContentRenderer { resolvedEntry ->
-        PromoBinder.create(context, resolvedEntry)
-    }
-    setEntry(promo)
-}
-```
+   ```kotlin
+   OptimizedEntryView(context).apply {
+       // Changing timing changes when view events are emitted for this entry.
+       minVisibleRatio = 0.75
+       dwellTimeMs = 1500
+       viewDurationUpdateIntervalMs = 5000
+       setContentRenderer { resolvedEntry -> ContentEntryBinder.create(context, resolvedEntry) }
+       setEntry(promo)
+   }
+   ```
 
-SDK view and tap event emission still respects the SDK consent gate. For interaction timing,
-component event metadata, and offline delivery behavior, see
+4. For a `RecyclerView` screen, use the SDK's `TrackingRecyclerView` (a `RecyclerView` subclass) so
+   descendant `OptimizedEntryView` instances re-check visibility on each scroll frame. It is an
+   optional, redundant signal — each `OptimizedEntryView` also re-checks from its own layout callbacks
+   — so plain scroll containers work without it. Keep item views stable across rebinding so dwell
+   timers are not reset mid-view.
+
+   **Adapt this to your use case:**
+
+   ```kotlin
+   val recyclerView = TrackingRecyclerView(this).apply {
+       layoutManager = LinearLayoutManager(this@HomeActivity)
+       // ContentEntryAdapter is reader-owned; each item view holder wraps its entry in an
+       // OptimizedEntryView and calls setContentRenderer + setEntry on a stable instance.
+       adapter = ContentEntryAdapter(entries)
+   }
+   ```
+
+For interaction timing, component event metadata, and duplicate prevention, see
 [Android SDK runtime and interaction mechanics](../concepts/android-sdk-runtime-and-interaction-mechanics.md#tracking-mechanics).
+
+### Identity, profile continuity, and reset
+
+**Integration category:** Common but policy-dependent
+
+Identity policy belongs to the application. The SDK can identify a visitor, update selected
+optimizations and `changes` (the inline field and flag values the Experience API returned for the
+visitor) from Experience API responses, persist profile-continuity state when allowed, and reset
+SDK-managed profile state — but it does not decide when a user becomes known or how account data is
+governed.
+
+1. Call `identify(userId, traits)` after sign-in or when the app has a stable application user ID.
+   Gate traits before sending sensitive or restricted data.
+
+   **Adapt this to your use case:**
+
+   ```kotlin
+   lifecycleScope.launch {
+       // Identify after the app has made its own login or account-selection decision.
+       OptimizationManager.client.isInitialized.first { it }
+       OptimizationManager.client.identify(userId = "user-123", traits = mapOf("plan" to "pro"))
+   }
+   ```
+
+2. Call `reset()` on logout, account switch, or a privacy flow that must clear SDK-managed profile
+   state, then emit a fresh profile-producing event before expecting new selections.
+
+   **Adapt this to your use case:**
+
+   ```kotlin
+   lifecycleScope.launch {
+       OptimizationManager.client.isInitialized.first { it }
+       OptimizationManager.client.reset()
+       // Emit fresh profile-producing context after reset before expecting new variants.
+       ScreenTracker.trackScreen("Home")
+   }
+   ```
+
+`reset()` clears profile continuity (profile, changes, selected optimizations, the anonymous ID, the
+current-screen dedupe tracker, and sticky-view keys) but **preserves consent state**, and it no-ops
+before initialization. When persistence consent is allowed, the SDK writes continuity to
+`SharedPreferences` under the `com.contentful.optimization.` key prefix and publishes state from an
+Experience response after that write settles; in tests and relaunch flows, wait for SDK-derived state
+instead of adding storage delays. The SDK provides no built-in cross-platform identity handoff — store
+account IDs, consent records, and cross-device identity state in application code. For the identifier
+model, see
+[Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md#revocation-and-profile-cleanup).
 
 ## Optional integrations
 
-### Scrollable entry lists
+### Custom events and analytics diagnostics
 
 **Integration category:** Optional
 
-1. Use `TrackingRecyclerView` when a `RecyclerView` screen needs an extra scroll-frame signal for
-   descendant `OptimizedEntryView` visibility checks.
+Use custom events for business actions that are not tied to a Contentful entry swap, and the event
+streams for local diagnostics or app-owned analytics forwarding.
 
-**Adapt this to your use case:**
+1. Call `track(event, properties)` for a business event. It is a suspend emitter that returns an
+   `EventEmissionResult`.
 
-```kotlin
-val recyclerView = TrackingRecyclerView(this).apply {
-    // RecyclerView scrolls can need an extra visibility signal for descendant entry views.
-    layoutManager = LinearLayoutManager(this@HomeActivity)
-    adapter = ContentEntryAdapter(entries)
-}
-```
+   **Copy this:**
 
-2. In each adapter item, wrap the rendered Contentful entry with `OptimizedEntryView`.
+   ```kotlin
+   lifecycleScope.launch {
+       OptimizationManager.client.isInitialized.first { it }
+       // A custom business event, not tied to a Contentful entry swap.
+       OptimizationManager.client.track(event = "Purchase Completed", properties = mapOf("sku" to "ABC-123"))
+   }
+   ```
 
-**Adapt this to your use case:**
+2. Collect `eventStream` for accepted events and `blockedEventStream` for events stopped by consent or
+   the allow-list. Both are `SharedFlow`s with a replay buffer of 64, so a late subscriber still
+   receives up to the last 64 events — unlike the iOS passthrough streams, you do not have to subscribe
+   before the events fire. Deduplicate forwarded events by event semantics, not UI lifecycle, because
+   Android views can be recreated on configuration or navigation changes.
 
-```kotlin
-class ContentEntryViewHolder(
-    private val parent: ViewGroup,
-) : RecyclerView.ViewHolder(
-        OptimizedEntryView(parent.context),
-    ) {
-    private val optimizedEntryView = itemView as OptimizedEntryView
+   **Adapt this to your use case:**
 
-    fun bind(entry: Map<String, Any>) {
-        // Keep item views stable so dwell timers are not reset by repeated rebinding.
-        optimizedEntryView.setContentRenderer { resolvedEntry ->
-            ContentEntryBinder.create(parent.context, resolvedEntry)
-        }
-        optimizedEntryView.setEntry(entry)
-    }
-}
-```
+   ```kotlin
+   lifecycleScope.launch {
+       repeatOnLifecycle(Lifecycle.State.STARTED) {
+           // analyticsDebugger is reader-owned: your debug display or forwarding sink.
+           OptimizationManager.client.eventStream.collect { event -> analyticsDebugger.render(event) }
+       }
+   }
 
-`OptimizedEntryView` also rechecks visibility from layout callbacks, so plain `ScrollView` screens
-can use normal child views unless a RecyclerView adapter needs the additional helper.
+   lifecycleScope.launch {
+       repeatOnLifecycle(Lifecycle.State.STARTED) {
+           // blockedEventStream (or the onEventBlocked config callback) is the diagnostic for a
+           // missing event during integration.
+           OptimizationManager.client.blockedEventStream.collect { blocked ->
+               Log.w("Optimization", "blocked ${blocked.method}: ${blocked.reason}")
+           }
+       }
+   }
+   ```
 
-### Identity and reset controls
-
-**Integration category:** Optional
-
-1. Call `identify(...)` after login, account selection, or another application-owned identity
-   decision. Gate traits before sending sensitive or restricted data.
-
-**Adapt this to your use case:**
-
-```kotlin
-lifecycleScope.launch {
-    // Identify after the app has made its own login or account-selection decision.
-    OptimizationManager.client.isInitialized.first { it }
-    OptimizationManager.client.identify(
-        userId = "user-123",
-        traits = mapOf("plan" to "pro"),
-    )
-}
-```
-
-2. Call `reset()` when the app must clear SDK-managed profile continuity, such as during logout or a
-   local test reset.
-
-**Adapt this to your use case:**
-
-```kotlin
-lifecycleScope.launch {
-    OptimizationManager.client.isInitialized.first { it }
-    OptimizationManager.client.reset()
-    // Emit fresh profile-producing context after reset before expecting new variants.
-    ScreenTracker.trackScreen("Home")
-}
-```
-
-After reset, emit a fresh screen, identify, page, or other approved profile-producing event before
-expecting new selected optimizations. Store account IDs, consent records, and cross-device identity
-state outside the SDK.
-
-### Runtime locale changes
-
-**Integration category:** Optional
-
-1. When the app locale changes, update the SDK Experience and event locale.
-2. Refetch Contentful entries with the same app Contentful locale before rendering localized content
-   through `OptimizedEntryView`.
-3. Invalidate application caches that were keyed by the previous locale.
-
-**Adapt this to your use case:**
-
-```kotlin
-lifecycleScope.launch {
-    OptimizationManager.client.isInitialized.first { it }
-
-    val nextLocale = getAppLocale()
-    // setLocale updates SDK Experience/event locale; the app still refetches Contentful entries.
-    OptimizationManager.client.setLocale(nextLocale)
-
-    val entries = contentfulClient.fetchHomeEntries(locale = nextLocale)
-    renderEntries(entries)
-}
-```
-
-`setLocale(...)` changes the SDK Experience/event locale. It does not refetch Contentful entries,
-infer device language, or validate that the locale is enabled in the Contentful environment. For the
-locale boundary, see
-[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
-
-### Analytics diagnostics and forwarding
-
-**Integration category:** Optional
-
-1. Use `eventStream` for debug surfaces, local tests, or application-owned analytics forwarding.
-2. Use `blockedEventStream` and `onEventBlocked` to verify consent and `allowedEventTypes` blocks
-   for SDK calls that reach Core.
-3. Deduplicate forwarded events by event semantics, not by UI lifecycle, because Android views can
-   be recreated during configuration or navigation changes.
-4. Use `eventStream`, `EventEmissionResult`, queue callbacks, tracking timing checks, adapter state,
-   debug logs, or app-owned diagnostics for other suppressed behavior.
-
-**Adapt this to your use case:**
-
-```kotlin
-lifecycleScope.launch {
-    repeatOnLifecycle(Lifecycle.State.STARTED) {
-        OptimizationManager.client.eventStream.collect { event ->
-            // Deduplicate before forwarding outside debug displays or test assertions.
-            analyticsDebugger.render(event)
-        }
-    }
-}
-```
-
-For forwarding SDK context to other destinations, see
+When forwarding SDK events to third-party destinations, apply the same app-owned consent policy,
+deduplication, and data-minimization rules that govern the destination. For destination mapping,
+consent, identity, dedupe, and governance guidance, see
 [Forwarding Optimization SDK context to analytics and tag management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
 
 ### Custom Flags and MergeTag rendering
 
 **Integration category:** Optional
 
-Custom Flags and MergeTag helpers read profile-backed values from the initialized
-`OptimizationClient`. Use them from Views, adapters, or binders that already wait for SDK
-initialization.
+Use Custom Flags when your Optimization data includes profile-backed feature values, and merge tags
+when it includes profile-driven text substitutions in Rich Text. Both read from SDK state separately
+from entry-variant resolution, and they wait for initialization before returning real values.
 
-1. Use `client.getFlag(name)` for a one-time Custom Flag read.
-2. Use `client.observeFlag(name)` when a View needs a `StateFlow` that updates with flag value
-   changes.
-3. Use `client.getMergeTagValue(mergeTagEntry)` while rendering Contentful Rich Text that includes
-   resolved `nt_mergetag` entries.
-4. Provide fallback text when a merge tag is unresolved, missing, or unavailable for the active
-   profile.
+1. Read a flag once with `getFlag(name)` when a synchronous value is enough (returns `null` before
+   init or when unresolved).
 
-**Adapt this to your use case:**
+   **Adapt this to your use case:**
 
-```kotlin
-lifecycleScope.launch {
-    OptimizationManager.client.isInitialized.first { it }
+   ```kotlin
+   lifecycleScope.launch {
+       OptimizationManager.client.isInitialized.first { it }
+       // headlineBadge is reader-owned UI; getFlag returns a JSONValue? read from SDK state.
+       val headlineFlag = OptimizationManager.client.getFlag("homepage-headline")
+       headlineBadge.text = headlineFlag?.stringValue ?: "default"
+   }
+   ```
 
-    val headlineFlag = OptimizationManager.client.getFlag("homepage-headline")
-    headlineBadge.text = headlineFlag?.toString() ?: "default"
-}
-```
+2. Observe with `observeFlag(name)` when a view must update as flag values change. It returns a
+   `StateFlow<JSONValue?>` (the Android reactive idiom, where iOS uses a Combine publisher).
+   Subscribing to a flag observable emits a `component` flag-view event when consent and profile
+   allow, so treat a flag subscription as a tracked analytics exposure, not a free read, and govern it
+   like any other event.
 
-**Adapt this to your use case:**
+   **Adapt this to your use case:**
 
-```kotlin
-lifecycleScope.launch {
-    OptimizationManager.client.isInitialized.first { it }
-    val ctaFlag = OptimizationManager.client.observeFlag("homepage-cta")
+   ```kotlin
+   lifecycleScope.launch {
+       OptimizationManager.client.isInitialized.first { it }
+       val ctaFlag = OptimizationManager.client.observeFlag("homepage-cta")
+       repeatOnLifecycle(Lifecycle.State.STARTED) {
+           ctaFlag.collect { flagValue -> ctaButton.text = flagValue?.stringValue ?: "Continue" }
+       }
+   }
+   ```
 
-    repeatOnLifecycle(Lifecycle.State.STARTED) {
-        ctaFlag.collect { flagValue ->
-            ctaButton.text = flagValue?.toString() ?: "Continue"
-        }
-    }
-}
-```
+3. Resolve merge tags with `getMergeTagValue(mergeTagEntry)` while rendering Rich Text. `nt_mergetag`
+   is the SDK-fixed Optimization content type for a merge tag — a profile-driven text substitution
+   embedded inline in Rich Text; it is not a name you choose. Your app owns extracting the embedded
+   `nt_mergetag` entry from the Rich Text node before calling the SDK, which resolves the selector
+   against the current profile and returns the resolved string or `null`.
 
-**Follow this pattern:**
+   **Follow this pattern:**
 
-```kotlin
-suspend fun resolveMergeTagText(
-    mergeTagEntry: Map<String, Any>,
-): String {
-    OptimizationManager.client.isInitialized.first { it }
+   ```kotlin
+   suspend fun resolveMergeTagText(mergeTagEntry: Map<String, Any>): String {
+       OptimizationManager.client.isInitialized.first { it }
+       // Keep fallback copy in the app so an unresolved merge tag does not break Rich Text rendering.
+       return OptimizationManager.client.getMergeTagValue(mergeTagEntry)
+           ?: readFallbackValue(mergeTagEntry)
+           ?: "[Merge Tag]"
+   }
+   ```
 
-    // Keep fallback copy in the app so unresolved merge tags do not break Rich Text rendering.
-    return OptimizationManager.client.getMergeTagValue(mergeTagEntry)
-        ?: readFallbackValue(mergeTagEntry)
-        ?: "[Merge Tag]"
-}
-```
+For the merge-tag data model, see
+[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#merge-tags-and-localized-profile-values).
 
-### Live updates and variant locking
+### Live updates and locked variants
 
 **Integration category:** Optional
 
-1. Keep live updates disabled for reading surfaces where content must not change while the visitor
-   is looking at it. This is the default global Views behavior.
+Views apps choose whether optimized content updates live or locks to the first selected variant for
+the screen. The global default is locked: with `liveUpdates = false` (the default),
+`OptimizedEntryView` snapshots the first non-null selection it sees and resolves against that locked
+value thereafter, so content does not change while the visitor is looking at it.
+
+1. Keep the default for reading surfaces where content must not shift mid-view.
 2. Enable live updates globally when most rendered entries must react to profile or preview changes
    without remounting.
 
-**Adapt this to your use case:**
+   **Adapt this to your use case:**
 
-```kotlin
-OptimizationManager.initialize(
-    context = this,
-    config = optimizationConfig,
-    // Live updates let mounted OptimizedEntryView instances react to profile changes.
-    liveUpdates = true,
-)
-```
+   ```kotlin
+   OptimizationManager.initialize(
+       context = this,
+       config = optimizationConfig,
+       // Live updates let mounted OptimizedEntryView instances re-resolve as selections change.
+       liveUpdates = true,
+   )
+   ```
 
 3. Override live updates per entry when only one component needs live behavior.
 
-**Adapt this to your use case:**
+   **Adapt this to your use case:**
 
-```kotlin
-OptimizedEntryView(context).apply {
-    // Override the global locking behavior only for entries that must update while mounted.
-    liveUpdates = true
-    setContentRenderer { resolvedEntry ->
-        DashboardBinder.create(context, resolvedEntry)
-    }
-    setEntry(dashboardEntry)
-}
-```
+   ```kotlin
+   OptimizedEntryView(context).apply {
+       liveUpdates = true
+       // ContentEntryBinder and dashboardEntry are reader-owned, as elsewhere in this guide.
+       setContentRenderer { resolvedEntry -> ContentEntryBinder.create(context, resolvedEntry) }
+       setEntry(dashboardEntry)
+   }
+   ```
 
-When the preview panel is open, `OptimizedEntryView` instances re-resolve live so audience and
-variant overrides apply immediately. When the panel closes, only non-live optimized entries without
-a caller-supplied `selectedOptimizations` override lock to the previewed selection. Live entries
-continue following `client.selectedOptimizations`, and explicit overrides keep resolving from their
-explicit value. For precedence rules, see
+To drive your own optimization state, pass an explicit selections snapshot to
+`setEntry(entry, selectedOptimizations)`: a non-null list resolves against exactly that snapshot,
+while the default `null` observes the SDK's current selection state. An open preview panel forces live
+updates in every `OptimizedEntryView` (overriding an explicit `liveUpdates = false`) so applied
+overrides appear immediately; when the panel closes, non-live entries without a caller-supplied
+selections override lock to the previewed selection. For the precedence rules, see
 [Android SDK runtime and interaction mechanics](../concepts/android-sdk-runtime-and-interaction-mechanics.md#live-updates-and-preview-behavior).
-
-## Advanced integrations
 
 ### Preview panel
 
+**Integration category:** Optional
+
+The preview panel is a debug and authoring surface that lets an internal user force audience
+qualification and variant selection on the local device. An audience is the rule an experience uses to
+target a set of visitors. Gate the panel behind a debug or internal-build condition so production users
+cannot open local overrides.
+
+1. Pass a `PreviewPanelConfig` to `initialize` under a debug gate. Supply a `PreviewContentfulClient`
+   (the built-in `ContentfulHTTPPreviewClient` fetches `nt_audience` and `nt_experience` definitions)
+   so the panel shows audience and experience names; without it the panel still opens but falls back
+   to raw identifiers.
+
+   **Adapt this to your use case:**
+
+   ```kotlin
+   OptimizationManager.initialize(
+       context = this,
+       config = optimizationConfig,
+       // Keep preview definitions behind a debug or internal-build gate.
+       previewPanel = if (BuildConfig.DEBUG) {
+           PreviewPanelConfig(
+               contentfulClient = ContentfulHTTPPreviewClient(
+                   spaceId = "your-space-id",
+                   accessToken = "your-cda-token",
+                   environment = "main",
+               ),
+           )
+       } else {
+           null
+       },
+   )
+   ```
+
+2. Attach the floating entry point after `setContentView(...)` in each activity that should show it.
+   `attachPreviewPanel` uses the same initialized client the rest of the app uses, so overrides affect
+   the same resolver and event state.
+
+   **Adapt this to your use case:**
+
+   ```kotlin
+   override fun onCreate(savedInstanceState: Bundle?) {
+       super.onCreate(savedInstanceState)
+       setContentView(R.layout.home)
+       if (BuildConfig.DEBUG) {
+           // Attach after setContentView so the floating entry point mounts into this activity.
+           OptimizationManager.attachPreviewPanel(this)
+       }
+   }
+   ```
+
+Do not expose preview controls in production traffic unless your organization has an explicit
+internal-access policy.
+
+## Advanced integrations
+
+### Offline delivery, queue observability, and app-owned caching
+
 **Integration category:** Advanced or production-only
 
-1. Gate the preview panel behind a debug, internal-build, or staff-only condition. In Android Views
-   integrations, the Activity controls visibility by deciding whether to call
-   `OptimizationManager.attachPreviewPanel(...)`.
-2. Pass `PreviewPanelConfig(contentfulClient = previewContentfulClient)` during initialization when
-   the panel must display audience and experience names. Without a `PreviewContentfulClient`, the
-   panel falls back to identifiers.
+The Android SDK monitors network reachability, queues events while offline, flushes when connectivity
+returns, and flushes as the app moves to the background. No setup is required for the default offline
+path.
 
-**Adapt this to your use case:**
+1. Add a `QueuePolicy` only when production telemetry needs queue bounds or delivery callbacks. The
+   offline Experience queue holds up to 100 events by default (tunable via
+   `QueuePolicy.offlineMaxEvents`); queues are in-memory only, with no durable outbox, and do not
+   survive process death.
 
-```kotlin
-OptimizationManager.initialize(
-    context = this,
-    config = optimizationConfig,
-    // Keep preview definitions behind a debug or internal-build gate.
-    previewPanel = if (BuildConfig.DEBUG) {
-        PreviewPanelConfig(contentfulClient = previewContentfulClient)
-    } else {
-        null
-    },
-)
-```
+   **Adapt this to your use case:**
 
-3. Call `attachPreviewPanel(...)` after `setContentView(...)` in each Activity that displays the
-   floating entry point.
+   ```kotlin
+   val optimizationConfig = OptimizationConfig(
+       clientId = "your-optimization-client-id",
+       queuePolicy = QueuePolicy(
+           // Cap offline storage to the app's production delivery budget.
+           offlineMaxEvents = 100,
+           onOfflineDrop = { event -> Log.w("Optimization", "Dropped offline event: ${event.context}") },
+       ),
+   )
+   ```
 
-**Adapt this to your use case:**
+2. Use queue callbacks for operational diagnostics, not for resending blocked or dropped events.
+3. Keep Contentful entry caching in the application layer — the SDK does not cache CDA responses for
+   Views rendering; you own content caching with locale-aware keys.
+4. Call `flush()` only for deliberate release, test, or lifecycle flows; the SDK already flushes on
+   background and reconnect.
 
-```kotlin
-class HomeActivity : AppCompatActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.home)
-
-        if (BuildConfig.DEBUG) {
-            // Attach after setContentView so the floating entry point mounts into this Activity.
-            OptimizationManager.attachPreviewPanel(this)
-        }
-    }
-}
-```
-
-4. Do not expose preview controls in production traffic unless your organization has an explicit
-   internal-access policy. Preview overrides can force audience qualification and variant selection
-   for the local device.
-
-### Offline delivery and queue observability
-
-**Integration category:** Advanced or production-only
-
-1. Use the default queue behavior unless the app has production delivery budgets or observability
-   requirements that need custom bounds.
-2. Configure `QueuePolicy` for offline event caps, retry behavior, and delivery callbacks.
-
-**Adapt this to your use case:**
-
-```kotlin
-val optimizationConfig = OptimizationConfig(
-    clientId = "your-client-id",
-    queuePolicy = QueuePolicy(
-        // Cap offline storage according to the app's production delivery budget.
-        offlineMaxEvents = 100,
-        onOfflineDrop = { event ->
-            Log.w("Optimization", "Dropped offline event: ${event.context}")
-        },
-    ),
-)
-```
-
-The Android SDK monitors network reachability, queues events while offline, flushes when
-connectivity returns, and flushes when the app moves toward the background. For the runtime model,
-see
+For the runtime delivery model, see
 [Android SDK runtime and interaction mechanics](../concepts/android-sdk-runtime-and-interaction-mechanics.md#offline-and-app-lifecycle-delivery).
 
 ## Production checks
 
-Before releasing an Android Views integration, verify these points:
+Before releasing an Android Views integration, verify these checks:
 
-- **Credentials and runtime configuration** - The app uses the correct Maven coordinate, client ID,
-  Contentful environment, SDK locale, and any non-default Experience API or Insights API endpoints.
-- **Consent behavior** - Default-on consent is seeded only when policy permits it, consent UI calls
-  `client.consent(...)` for every choice, withdrawal blocks later gated events, and suppressed
-  interactions are not replayed later.
-- **Event delivery** - Screen, custom, view, and tap events are accepted in the expected consent
-  states, offline delivery flushes after reconnect, and debug event displays or forwarding code are
-  not exposed to unintended audiences.
-- **Content fallback behavior** - Optimized entries are fetched with one Contentful locale and
-  resolved optimization links. Baseline fallback is accepted for missing selections, unresolved
-  links, out-of-range variants, blocked or non-allow-listed profile-producing events, and users who
-  do not qualify for a variant.
-- **Duplicate tracking prevention** - RecyclerView adapters and state collectors do not recreate
-  `OptimizedEntryView` instances on every SDK state emission. Stable item rendering prevents dwell
-  timers and component event metadata from resetting mid-view.
-- **Privacy and governance** - Identity traits, custom event properties, forwarded analytics events,
-  preview overrides, and persisted profile continuity follow the app's privacy policy and consent
-  record.
-- **Local validation path** - For the reference implementation, run targeted Views Maestro flows
-  such as `pnpm implementation:run -- android-sdk test:e2e:views -- --flow tap-tracking`,
-  `pnpm implementation:run -- android-sdk test:e2e:views -- --flow screen-tracking`, and
-  `pnpm implementation:run -- android-sdk test:e2e:views -- --flow live-updates` when those
-  behaviors are relevant.
+- **Credentials and runtime configuration** — The app uses the intended Maven coordinate, client ID,
+  Contentful environment, SDK `locale`, and CDA locale. Non-default Experience or Insights API base
+  URLs and `OptimizationLogLevel.debug` logging are absent from production builds unless explicitly
+  approved.
+- **Consent behavior** — Startup consent is seeded only when policy permits it, consent UI calls
+  `consent(...)` for every choice, withdrawal blocks later gated events, split event and persistence
+  consent behaves as intended, and `reset()` behavior matches legal and privacy requirements.
+- **Event delivery** — Screen, custom, tap, view, identify, and flag-view events appear when allowed
+  and are blocked or omitted when policy denies them; offline delivery flushes after reconnect.
+- **Content fallback behavior** — Baseline entries render when selected optimizations are missing,
+  Contentful links are unresolved, variants are out of range, all-locale payloads are fetched, or the
+  visitor does not qualify.
+- **Duplicate tracking prevention** — Activity and fragment lifecycle hooks, RecyclerView adapters,
+  and state collectors do not recreate `OptimizedEntryView` instances or re-emit screen, tap, or view
+  events for one intended interaction or visibility cycle.
+- **Privacy and governance** — Identity traits, custom event properties, forwarded analytics events,
+  preview-panel access, and persisted profile continuity follow the app's data-minimization and
+  retention policy.
+- **Local validation path** — Compare your integration against the Android reference implementation.
+  The repository's maintainers validate Views behavior with Maestro flows driven from
+  `implementations/android-sdk/`; those runners are maintainer commands, not app commands.
+
+  **Reference excerpt:**
+
+  ```sh
+  # From the optimization monorepo root — a maintainer command that runs the Views Maestro suite.
+  pnpm implementation:run -- android-sdk test:e2e:views -- --flow screen-tracking
+  ```
 
 ## Troubleshooting
 
-| Symptom                                  | Likely cause                                                                                                                                                           | Action                                                                                                               |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `OptimizationManager.client` throws      | The app read the client before calling `OptimizationManager.initialize(...)`.                                                                                          | Initialize once before Activity or Fragment code reads the client.                                                   |
-| Suspend API calls fail or no-op          | The bridge has not finished initializing.                                                                                                                              | Wait for `client.isInitialized.first { it }` before direct suspend calls.                                            |
-| Entries always render baseline content   | Blocked or non-allow-listed profile-producing events, strict opt-in without accepted consent, missing selections, unresolved links, or all-locale Contentful payloads. | Accept consent or allow the needed screen or identity event, verify selections, fetch one locale, and include links. |
-| View or tap events do not appear         | Consent blocks tracking, tracking is opted out, dwell timing is not met, or views are recreated mid-dwell.                                                             | Check consent state, `trackViews`, `trackTaps`, visibility timing, and adapter stability.                            |
-| Preview panel shows identifiers only     | No preview `PreviewContentfulClient` was passed during initialization.                                                                                                 | Pass `PreviewPanelConfig(contentfulClient = previewContentfulClient)` for rich definitions.                          |
-| Preview panel appears in the wrong build | The Activity calls `attachPreviewPanel(...)` without an app-owned gate.                                                                                                | Wrap the attach call in a debug, internal-build, or staff-only condition.                                            |
+- **SDK never initializes or events never emit** — Confirm the `Application` subclass is registered
+  with `android:name` in `AndroidManifest.xml` (without it `onCreate` never runs), and that direct
+  suspend calls await `client.isInitialized.first { it }` before running.
+- **Optimized entries always render the baseline** — Confirm the app fetched a single-locale entry
+  with enough `include` depth for `nt_experiences` and `nt_variants`, that consent or the allow-list
+  is not blocking profile-producing events, and that `client.selectedOptimizations` is non-empty for
+  the visitor.
+- **Tap or view events do not appear** — Check consent, `allowedEventTypes`, per-entry `trackViews`
+  and `trackTaps`, whether the view reached the configured visibility threshold long enough to emit,
+  and whether views are recreated mid-dwell.
+- **Screen events appear more than once** — Review `onResume` calls across activity, fragment, and
+  in-activity transitions, and prefer `ScreenTracker.trackScreen` (which dedupes the current route by
+  `routeKey`) over raw `screen` for lifecycle tracking.
+- **Preview panel opens but shows identifiers** — Pass a `PreviewContentfulClient` that can fetch
+  `nt_audience` and `nt_experience` entries from the correct space and environment.
 
 ## Reference implementations to compare against
 
-- [Android reference implementation](../../implementations/android-sdk/README.md) - Demonstrates the
-  same native SDK behavior in Compose and Android Views shells, including entry resolution,
-  interaction tracking, screen tracking, live updates, Custom Flags, `getMergeTagValue(...)`,
-  preview-panel overrides, and mock API flows.
+- [Android reference implementation](../../implementations/android-sdk/README.md) — Maintained Compose
+  and Android Views shells that exercise the native Android bridge against the shared mock API:
+  accepted-consent startup, single-locale CDA fetching, entry resolution, screen and navigation
+  tracking, interaction tracking, Custom Flags and merge tags, live updates, offline queueing, and
+  preview-panel overrides. Use it as the comparison and validation target for Views integration
+  behavior.
