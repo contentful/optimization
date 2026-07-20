@@ -373,7 +373,9 @@ two independent axes: event consent (may the SDK personalize and emit events) an
 
 2. Leave `defaults` unset when the app must collect a choice before gated events can emit, and call
    `consent(...)` from an app-owned banner, CMP callback, or settings flow. `consent(...)` no-ops
-   before initialization, so wait for readiness before applying a choice.
+   before initialization, so wait for readiness before applying a choice. `client.state` exposes the
+   current decision as a tri-state `consent: Boolean?` — `true`, `false`, or `null` when the visitor
+   has not decided yet — so you can observe `state.consent == null` to know when to show the banner.
 
    **Adapt this to your use case:**
 
@@ -385,9 +387,18 @@ two independent axes: event consent (may the SDK personalize and emit events) an
            super.onCreate(savedInstanceState)
            setContentView(R.layout.activity_consent)
 
-           // acceptButton and rejectButton are reader-owned views from your layout.
+           // acceptButton, rejectButton, and consentBanner are reader-owned views from your layout.
            acceptButton.setOnClickListener { applyConsent(true) }
            rejectButton.setOnClickListener { applyConsent(false) }
+
+           // Show the banner only while consent is undecided (null); hide it once the visitor chooses.
+           lifecycleScope.launch {
+               repeatOnLifecycle(Lifecycle.State.STARTED) {
+                   client.state.collect { state ->
+                       consentBanner.isVisible = state.consent == null
+                   }
+               }
+           }
        }
 
        private fun applyConsent(accepted: Boolean) {
@@ -611,7 +622,11 @@ whether these events are allowed by its Analytics and privacy policy.
 
 2. Override tracking per entry when a component needs different behavior from the global default. A
    non-null `onTap` keeps the entry tappable even when global `trackTaps` is on; setting per-entry
-   `trackViews = false` or `trackTaps = false` opts that one entry out.
+   `trackViews = false` or `trackTaps = false` opts that one entry out. `onTap` runs through the same
+   tap path as SDK tap tracking, so `trackTaps = false` disables both the `component_click` event and
+   `onTap` — do not combine them. When a component needs an app-owned tap handler without SDK tap
+   analytics, set `trackTaps = false` and attach a normal Android click listener inside the child view
+   your renderer returns instead.
 
    **Adapt this to your use case:**
 

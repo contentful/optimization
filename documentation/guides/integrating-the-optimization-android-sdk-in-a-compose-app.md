@@ -250,6 +250,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import com.contentful.optimization.compose.LocalOptimizationClient
 import com.contentful.optimization.compose.OptimizationRoot
+import com.contentful.optimization.core.OptimizationApiConfig
 import com.contentful.optimization.core.OptimizationConfig
 import com.contentful.optimization.core.OptimizationLogLevel
 import kotlinx.coroutines.launch
@@ -263,6 +264,11 @@ fun AppRoot() {
             // environment defaults to "main"; set it only when your Contentful environment differs.
             locale = "en-US",
             logLevel = OptimizationLogLevel.warn,
+            // Both base URLs default correctly; set api only for staging, mocks, or non-default hosts.
+            api = OptimizationApiConfig(
+                experienceBaseUrl = "https://experience.staging.example.com/",
+                insightsBaseUrl = "https://insights.staging.example.com/",
+            ),
         ),
     ) {
         AppNavGraph()
@@ -562,7 +568,8 @@ uses the real scroll position; without an enclosing scroll context, tracking ass
 and uses the system display height as the viewport, which suits only non-scrolling or already-visible
 layouts. The default view threshold is 80% visibility (`minVisibleRatio` `0.8`) held for 2000 ms
 (`dwellTimeMs`); after the first view event, duration updates emit every 5000 ms
-(`viewDurationUpdateIntervalMs`) while the entry stays visible.
+(`viewDurationUpdateIntervalMs`) while the entry stays visible, and a final duration update emits when
+the entry leaves the viewport once at least one view event has fired.
 
 A tap uses Compose's `clickable {}` on the `OptimizedEntry` wrapper: it emits the `component_click`
 event, then calls the optional `onTap` lambda. That lambda receives the **baseline** entry you passed
