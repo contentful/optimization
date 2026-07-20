@@ -220,10 +220,14 @@ blueprint-to-guide section and category agreement. `pnpm knowledge:check` valida
 integrity and unresolved escalations. Neither command proves behavioral truth; semantic freshness
 comes from the scoped knowledge-author and technical-foundation reviews.
 
-Blueprints and KB files currently cover the six JS/TS integration guides: Node, Web, React Web,
-Next.js App Router, Next.js Pages Router, and React Native. Native Swift/Kotlin guides, the decision
-guide, and supplemental guides remain outside the regeneration guarantee until their KB and planning
-edges are bootstrapped.
+Blueprints and KB files currently cover the six JS/TS integration guides — Node, Web, React Web,
+Next.js App Router, Next.js Pages Router, and React Native — plus the two native iOS guides (SwiftUI
+and UIKit), which share one KB file (`native/ios.md`) and one per-UI blueprint each. Because the iOS
+package is a Swift Package rather than a TypeScript one, `knowledge:check` cannot resolve Swift
+`#symbol` pointers; iOS Swift facts use `extern:` pointers naming the exact file and symbol, while
+behavior that executes in the shared JS bridge (`optimization-js-bridge`) or core uses resolvable
+keys. The Android Kotlin guides, the decision guide, and supplemental guides remain outside the
+regeneration guarantee until their KB and planning edges are bootstrapped.
 
 ## Files
 
@@ -240,6 +244,8 @@ blueprints/
   nextjs-app-router.md
   nextjs-pages-router.md
   react-native.md
+  ios-swiftui.md
+  ios-uikit.md
 fragments/
   personalization-explainer.md
   authored-variant-gotcha.md
