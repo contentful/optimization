@@ -615,6 +615,12 @@ final class OptimizedEntryView: UIView {
 }
 ```
 
+`ViewTrackingController` is the recommended path because it applies the SDK's visibility timing for
+you. If your app already computes its own visibility and duration — or needs a single one-off view
+event — call `client.trackView(TrackViewPayload(...))` directly instead of using the controller; it
+is the lower-level `async throws` primitive the controller wraps, and you then own the timing the
+controller would otherwise apply.
+
 To opt an entry out of view or tap tracking, do not install its controller or gesture recognizer.
 For shared tracking mechanics, see
 [iOS SDK runtime and interaction mechanics](../concepts/ios-sdk-runtime-and-interaction-mechanics.md#tracking-mechanics).
