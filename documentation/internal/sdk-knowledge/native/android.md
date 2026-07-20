@@ -229,6 +229,15 @@ viewportHeight }` via `LocalScrollContext` that descendant `Modifier.trackViews`
   last 64 events to a late subscriber**. `eventStream` carries accepted events (fed by the bridge's
   `onEventEmitted`); `blockedEventStream` carries consent/allow-list-blocked events and also fires the
   `onEventBlocked` config callback. source: extern:eventStream/blockedEventStream are replay-64 SharedFlows — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationClient.kt#OptimizationClient; concept:android-sdk-runtime-and-interaction-mechanics
+- `eventStream` elements are JSON-decoded `OptimizationEventStreamEvent` maps keyed by a `type` string
+  discriminator (the accepted `InsightsEvent | ExperienceEvent` the bridge forwards via
+  `__nativeOnEventEmitted`). Screen events carry exactly `type == "screen"` — the single value
+  `buildScreenView` emits (`ScreenViewEvent` schema `type: z.literal('screen')`) — with the screen name
+  at the top-level `name` key. **`screenViewEvent` is never emitted by core**: it is not a wire/insights
+  type, and the reference apps' `type == "screen" || type == "screenViewEvent"` screen filter matches
+  only through `"screen"`; the `screenViewEvent` arm is dead/defensive (no SDK event uses it). Other
+  emitted discriminators are the wire types documented above (`identify`/`page`/`track`, `component`
+  entry views, `component_click`). source: core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent; core-sdk#events/EventBuilder.ts#buildScreenView; api-schemas#experience/event/ScreenViewEvent.ts#ScreenViewEvent; optimization-js-bridge#index.ts#initialize; impl:android-sdk#views/src/main/kotlin/com/contentful/optimization/app/views/NavigationTestActivity.kt
 - Experience-response payload → published state: an accepted Experience call returns
   `{ profile, selectedOptimizations, changes }`; the bridge applies it to core signals and pushes
   `readBridgeState()` through `__nativeOnStateChange`, which `OptimizationClient.handleStateUpdate`
