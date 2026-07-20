@@ -222,12 +222,13 @@ comes from the scoped knowledge-author and technical-foundation reviews.
 
 Blueprints and KB files currently cover the six JS/TS integration guides — Node, Web, React Web,
 Next.js App Router, Next.js Pages Router, and React Native — plus the two native iOS guides (SwiftUI
-and UIKit), which share one KB file (`native/ios.md`) and one per-UI blueprint each. Because the iOS
-package is a Swift Package rather than a TypeScript one, `knowledge:check` cannot resolve Swift
-`#symbol` pointers; iOS Swift facts use `extern:` pointers naming the exact file and symbol, while
-behavior that executes in the shared JS bridge (`optimization-js-bridge`) or core uses resolvable
-keys. The Android Kotlin guides, the decision guide, and supplemental guides remain outside the
-regeneration guarantee until their KB and planning edges are bootstrapped.
+and UIKit) and the two native Android guides (Jetpack Compose and XML Views). Each native family
+shares one KB file (`native/ios.md`, `native/android.md`) with one per-UI blueprint each. Because the
+native packages are a Swift Package and a Kotlin/Gradle library rather than TypeScript ones,
+`knowledge:check` cannot resolve Swift or Kotlin `#symbol` pointers; native facts use `extern:`
+pointers naming the exact file and symbol, while behavior that executes in the shared JS bridge
+(`optimization-js-bridge`) or core uses resolvable keys. The decision guide and supplemental guides
+remain outside the regeneration guarantee until their KB and planning edges are bootstrapped.
 
 ## Files
 
@@ -246,6 +247,8 @@ blueprints/
   react-native.md
   ios-swiftui.md
   ios-uikit.md
+  android-compose.md
+  android-views.md
 fragments/
   personalization-explainer.md
   authored-variant-gotcha.md
