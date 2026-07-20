@@ -275,6 +275,17 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   app-supplied `PreviewContentfulClient` (100-entry paginated `ContentfulHTTPPreviewClient`), then
   call `loadDefinitions` so the bridge bakes a preview model. Opening/closing the panel toggles
   `client.isPreviewPanelOpen` (and the bridge `previewPanelOpen` signal). source: extern:PreviewPanelViewController.addFloatingButton + viewDidAppear toggles preview open — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Preview/PreviewPanelViewController.swift#PreviewPanelViewController; optimization-js-bridge#index.ts#Bridge
+- Preview panel without a `contentfulClient` (`PreviewPanelConfig(enabled: true)` / omitted client)
+  still opens, but **degraded, not disabled**: `loadDefinitions()` early-returns on its
+  `guard let contentfulClient` (nil ⇒ no CDA fetch, `client.loadDefinitions` never called), so the
+  bridge keeps `audienceDefinitions`/`experienceDefinitions` `null` and `computePreviewModel` returns
+  `null` with empty `audienceNameMap`/`experienceNameMap`. Confirmed consequences: the "Audiences &
+  Experiences" section renders "No audience data" (empty `audiencesWithExperiences` ⇒ no `AudienceItem`
+  rows ⇒ no audience-qualify / variant-select controls for _setting_ overrides); Profile/Debug sections
+  and the reset-to-actual footer still render from bridge state; any pre-existing overrides (set
+  imperatively via `overrideAudience`/`overrideVariant`, or restored) still list, but their summaries
+  show raw audience/experience ids because `activeAudienceOverrides`/`activeVariantOverrides` fall back
+  `nameMap[id] ?? id`. source: extern:PreviewPanelContent loadDefinitions guards on contentfulClient — no client ⇒ empty audience section, no set-override controls, override summaries fall back to raw ids — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Preview/PreviewPanelContent.swift#PreviewPanelContent; optimization-js-bridge#previewStateHelpers.ts#computePreviewModel
 
 ## Failure & fallback behavior
 
