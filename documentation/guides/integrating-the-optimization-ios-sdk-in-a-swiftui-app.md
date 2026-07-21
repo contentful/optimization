@@ -298,7 +298,9 @@ choice. Apps that persist a user's own decision leave `StorageDefaults.consent` 
    `client.consent(false)` after they reject.
 3. Use the split form when events are allowed but durable profile continuity must stay session-only.
 4. Read `client.state.consent` and `client.state.persistenceConsent` when consent UI must reflect SDK
-   state.
+   state. `client.state.consent` is tri-state — `true`, `false`, or `nil` when the visitor has not
+   decided yet — so gate the banner on `client.state.consent == nil` to show it only until a choice is
+   made.
 
 **Adapt this to your use case:**
 
@@ -316,6 +318,20 @@ struct ConsentBanner: View {
                 // Blocks non-allowed events and clears persisted profile continuity.
                 client.consent(false)
             }
+        }
+    }
+}
+
+struct ConsentGate<Content: View>: View {
+    @EnvironmentObject private var client: OptimizationClient
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        // consent is nil until the visitor decides; show the banner only while undecided.
+        if client.state.consent == nil {
+            ConsentBanner()
+        } else {
+            content()
         }
     }
 }
@@ -369,6 +385,10 @@ events use. Keep them aligned when rendered content and Experience responses mus
 4. When the app locale changes, call `client.setLocale(...)`, refetch entries with the new locale, and
    re-render. `setLocale(...)` updates only the SDK Experience/event locale; it does not refetch
    Contentful or refresh profile state, and it throws before initialization or on an invalid locale.
+5. After the locale change, emit a fresh Experience event — the `screen`, `identify`, or `page` call
+   your app already owns for the current state — when rendered output depends on SDK-derived profile
+   data, selected optimizations, flags, or MergeTags that must reflect the new locale. Without a new
+   event, those stay on the previous locale's response.
 
 **Adapt this to your use case:**
 
