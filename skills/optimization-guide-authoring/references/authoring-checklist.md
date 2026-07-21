@@ -50,6 +50,11 @@ add per-archetype checks.
 - [ ] No informal filler or hype that reads oddly in a reference doc ("this is the payoff", "the
       magic happens here", "boom", gratuitous "just"). Section openers state what the section does
       plainly.
+- [ ] **Cross-SDK contrast asides are bounded in a single-target guide.** A guide for one SDK may note
+      once that its idiom differs from a sibling ("these are `StateFlow`s, not the iOS Combine
+      publishers") where that genuinely prevents a wrong assumption, but does not repeat the contrast on
+      every reactive/suspend/lifecycle surface — the target reader knows their own platform, not the
+      sibling's, so repeated "unlike iOS…" asides are jargon that adds noise.
 - [ ] Every fenced code block has exactly one bold intent label immediately before it
       (`**Copy this:**`, `**Adapt this to your use case:**`, `**Follow this pattern:**`, or
       `**Reference excerpt:**`). No former/other labels.
@@ -145,6 +150,12 @@ add per-archetype checks.
       it observes — a client-side signal (a debug log, a returned `accepted` flag) proves the SDK
       emitted/allowed the event locally, not that the server received it, so the wording does not imply
       server receipt.
+- [ ] **The verify step can distinguish success from failure.** A proof whose only observable outcome
+      is true under both success and failure is not a verification — e.g. "confirm the entry renders
+      its baseline or its variant," when the SDK renders baseline on _any_ failure, cannot tell working
+      personalization from a broken integration or an unauthored variant. Pair a render proof with the
+      `authored-variant-gotcha` prerequisite and a distinguishable signal, or prove a
+      state-changing/event outcome the reader can see succeed or fail.
 - [ ] **The quick start is grounded in a real app shape** — no invented fetch shapes (e.g. a
       hardcoded array of entry IDs). The most common real shape leads; other shapes are pointed to a
       feature section.
@@ -160,6 +171,12 @@ add per-archetype checks.
       Android / React Native targets, the native install step (`pod install`, `npx expo prebuild`, or
       equivalent) that must run before the app launches appears in the quick start where the reader
       installs, not deferred to `## Before you start` — the reader needs it before the verify step.
+- [ ] **A required host-registration step is shown inline, with its silent-failure mode named.** When
+      the SDK only runs because the host framework wires up a reader-owned entry point — most sharply,
+      an Android `Application` subclass that does nothing unless registered via `android:name` in
+      `AndroidManifest.xml` — the quick start shows that registration and states that omitting it makes
+      initialization silently never run. A create-the-class step whose registration is implied is a
+      quick start that cannot be performed.
 - [ ] The entry-wrap example shows any cast the render prop requires and states the fallback
       contract; the cast matches the matching reference implementation (verify against
       `implementations/`).
