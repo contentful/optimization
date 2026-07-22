@@ -239,7 +239,7 @@ export default class ExperienceApiClient extends ApiClientBase {
     try {
       const response = await this.fetch(
         this.constructUrl(
-          `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${id}`,
+          `v3/spaces/${this.clientId}/environments/${this.environment}/profiles/${id}`,
           options,
         ),
         {
@@ -315,7 +315,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles`,
+        url: `v3/spaces/${this.clientId}/environments/${this.environment}/profiles`,
         body,
         options,
       })
@@ -370,7 +370,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${profileId}`,
+        url: `v3/spaces/${this.clientId}/environments/${this.environment}/profiles/${profileId}`,
         body,
         options,
       })
@@ -459,7 +459,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `v2/organizations/${this.clientId}/environments/${this.environment}/events`,
+        url: `v3/spaces/${this.clientId}/environments/${this.environment}/events`,
         body,
         options: { plainText: false, ...options },
       })

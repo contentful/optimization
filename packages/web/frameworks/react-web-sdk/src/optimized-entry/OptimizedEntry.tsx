@@ -31,6 +31,7 @@ import {
   type RenderProp,
   type WrapperElement,
 } from './optimizedEntryUtils'
+import { useCfEntitiesVariantFetch } from './useCfEntitiesVariantFetch'
 import {
   useManagedBaselineEntry,
   useOptimizedEntrySnapshot,
@@ -276,7 +277,11 @@ function renderOptimizedEntryBody({
     )
   }
 
-  const { entry, hostAttributes, isEmptyVariant, loadingPresentation } = snapshot
+  const { hostAttributes, isEmptyVariant, loadingPresentation } = snapshot
+  // `renderContext.entry` is the swap-aware resolved entry (may differ from
+  // `snapshot.entry` when the cf-entities variants-map hydration hook fetched
+  // the variant via `sdk.fetchContentfulEntry`).
+  const { entry } = renderContext
   const {
     hideLoadingLayoutTarget,
     shouldRenderBaselineWhileLoading,
@@ -391,13 +396,26 @@ export function OptimizedEntry({
     viewDurationUpdateIntervalMs,
   })
   const { metadata } = snapshot
+  const cfEntitiesFetchedVariant = useCfEntitiesVariantFetch(
+    sdk,
+    baselineEntry,
+    metadata.entry,
+    metadata.selectedOptimization?.variants[baselineEntry.sys.id],
+  )
+  const renderMetadata: typeof metadata = useMemo(
+    () =>
+      cfEntitiesFetchedVariant
+        ? { ...metadata, entry: cfEntitiesFetchedVariant, entryId: cfEntitiesFetchedVariant.sys.id }
+        : metadata,
+    [cfEntitiesFetchedVariant, metadata],
+  )
   const renderContext = useMemo<OptimizedEntryRenderContext>(
     () => ({
-      ...metadata,
+      ...renderMetadata,
       getMergeTagValue: (embeddedEntryNodeTarget, profile) =>
         sdk.getMergeTagValue(embeddedEntryNodeTarget, profile),
     }),
-    [metadata, sdk],
+    [renderMetadata, sdk],
   )
 
   useEffect(() => {

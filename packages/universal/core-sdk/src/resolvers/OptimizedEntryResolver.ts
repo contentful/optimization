@@ -100,6 +100,61 @@ function isResolvedEntryForBaseline<
 }
 
 /**
+ * Resolve a variant for a cf-entities-backed selection — no CT-twin
+ * optimization entry walks us to the variant; the lookup uses XP's
+ * `selectedOptimization.variants` baseline→variant entry-ID map instead.
+ *
+ * @internal
+ */
+function resolveCfEntitiesVariant<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+>(
+  entry: Entry<S, M, L> & OptimizedEntry,
+  selectedOptimization: SelectedOptimization,
+  resolveTo: (
+    resolvedEntry: Entry<S, M, L>,
+    selectedVariant?: EntryReplacementVariant,
+    isEmptyVariant?: true,
+  ) => ResolvedDataWithOptimizationContext<S, M, L>,
+): ResolvedDataWithOptimizationContext<S, M, L> {
+  const mappedVariantId: string | undefined = selectedOptimization.variants[entry.sys.id]
+
+  if (mappedVariantId === '') {
+    logger.debug(
+      `Entry ${entry.sys.id} resolved to empty variant via variants map — rendering nothing`,
+    )
+    return resolveTo(entry, undefined, true)
+  }
+
+  if (typeof mappedVariantId !== 'string') {
+    return { resolvedData: { entry } }
+  }
+
+  // Fast path — hydrate variant from any co-present `nt_experiences` graph
+  // (retains CT-identity check). Not reachable → fall back to baseline for
+  // the hackathon; a follow-up will thread an async
+  // `sdk.fetchContentfulEntry(mappedVariantId, { include: 10 })` here.
+  const linkedVariant: unknown = entry.fields.nt_experiences
+    .filter((maybeOptimization) => isResolvedOptimizationEntry(maybeOptimization))
+    .flatMap((optimization) => optimization.fields.nt_variants ?? [])
+    .find((candidate) => candidate.sys.id === mappedVariantId)
+
+  if (isResolvedEntryForBaseline<S, M, L>(linkedVariant, entry)) {
+    logger.debug(
+      `Entry ${entry.sys.id} resolved to variant entry ${mappedVariantId} via variants map`,
+    )
+    return resolveTo(linkedVariant)
+  }
+
+  logger.warn(
+    `${RESOLUTION_WARNING_BASE} variants map named variant ${mappedVariantId} for baseline ${entry.sys.id}, but it was not reachable in the resolved graph`,
+  )
+  return resolveTo(entry)
+}
+
+/**
  * Resolve the selected entry (baseline or variant) for an optimized entry
  * and optional selected optimizations, returning both the entry and the
  * optimization metadata.
@@ -181,25 +236,23 @@ function resolveWithContext<
     selectedOptimizations,
   })
 
-  if (!optimizationEntry) {
-    logger.warn(
-      `${RESOLUTION_WARNING_BASE} could not find an optimization entry for ${entry.sys.id}`,
-    )
-    return { resolvedData: { entry } }
-  }
-
-  const selectedOptimization = OptimizedEntryResolver.getSelectedOptimization({
-    optimizationEntry,
-    selectedOptimizations,
-  })
+  const selectedOptimization = optimizationEntry
+    ? OptimizedEntryResolver.getSelectedOptimization({
+        optimizationEntry,
+        selectedOptimizations,
+      })
+    : selectedOptimizations.find((candidate) => candidate.variants[entry.sys.id] !== undefined)
 
   if (!selectedOptimization) {
+    if (!optimizationEntry) {
+      logger.warn(
+        `${RESOLUTION_WARNING_BASE} could not find an optimization entry for ${entry.sys.id}`,
+      )
+    }
     return { resolvedData: { entry } }
   }
 
-  const {
-    fields: { nt_audience: maybeAudienceEntry },
-  } = optimizationEntry
+  const maybeAudienceEntry = optimizationEntry?.fields.nt_audience
 
   const resolveTo = (
     resolvedEntry: Entry<S, M, L>,
@@ -216,22 +269,54 @@ function resolveWithContext<
         selectedOptimization,
         ...(isEmptyVariant ? { isEmptyVariant } : {}),
       },
-      optimizationContext: {
-        selectedOptimization,
-        optimizationEntry,
-        ...(audienceEntry ? { audienceEntry } : {}),
-        baselineEntry: entry,
-        resolvedEntry,
-        ...(selectedVariant ? { selectedVariant } : {}),
-      } satisfies PendingEventOptimizationContext,
+      // cf-entities-backed selections have no CT-twin `optimizationEntry`; the
+      // tracking-context payload loses `experience` / `audience` refs. Documented
+      // degradation — XP-side contract addition tracked elsewhere.
+      optimizationContext: optimizationEntry
+        ? ({
+            selectedOptimization,
+            optimizationEntry,
+            ...(audienceEntry ? { audienceEntry } : {}),
+            baselineEntry: entry,
+            resolvedEntry,
+            ...(selectedVariant ? { selectedVariant } : {}),
+          } satisfies PendingEventOptimizationContext)
+        : undefined,
     }
   }
 
+  // cf-entities-backed short-circuit — no CT-twin optimization entry walks us
+  // to the variant, but XP emits `selectedOptimization.variants` as a
+  // baseline→variant entry-ID map (see `SelectedOptimization.variants`).
+  //
+  // Only fires when the CT-twin graph is absent; the CT-backed path owns the
+  // tracking-context payload's `experience` / `audience` / `selectedVariant`
+  // refs. Rationale is documented in
+  // specs/adhoc-cf-entities-migration/coin-demo-spec.md § Change B.
+  return optimizationEntry
+    ? resolveCtBackedVariant<S, M, L>(entry, optimizationEntry, selectedOptimization, resolveTo)
+    : resolveCfEntitiesVariant<S, M, L>(entry, selectedOptimization, resolveTo)
+}
+
+/** @internal */
+function resolveCtBackedVariant<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+>(
+  entry: Entry<S, M, L> & OptimizedEntry,
+  optimizationEntry: OptimizationEntry,
+  selectedOptimization: SelectedOptimization,
+  resolveTo: (
+    resolvedEntry: Entry<S, M, L>,
+    selectedVariant?: EntryReplacementVariant,
+    isEmptyVariant?: true,
+  ) => ResolvedDataWithOptimizationContext<S, M, L>,
+): ResolvedDataWithOptimizationContext<S, M, L> {
   const { variantIndex: selectedVariantIndex } = selectedOptimization
 
   if (selectedVariantIndex === 0) {
     logger.debug(`Resolved optimization entry for entry ${entry.sys.id} is baseline`)
-
     return resolveTo(entry)
   }
 
@@ -271,12 +356,11 @@ function resolveWithContext<
       `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${entry.sys.id}`,
     )
     return resolveTo(entry, selectedVariant)
-  } else {
-    logger.debug(
-      `Entry ${entry.sys.id} has been resolved to variant entry ${selectedVariantEntry.sys.id}`,
-    )
   }
 
+  logger.debug(
+    `Entry ${entry.sys.id} has been resolved to variant entry ${selectedVariantEntry.sys.id}`,
+  )
   return resolveTo(selectedVariantEntry, selectedVariant)
 }
 
