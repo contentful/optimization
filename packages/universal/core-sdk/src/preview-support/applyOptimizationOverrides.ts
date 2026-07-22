@@ -14,10 +14,12 @@ import type { OptimizationOverride } from './types'
  * Synthesise the `variants` map (baseline entry ID → variant entry ID) an XP
  * response would carry for the given forced variant. Rules:
  *
- * - `variantIndex === 0` → every baseline maps to `''` (empty variant marker;
- *   the resolver's cf-entities short-circuit will render baseline).
- * - Out-of-range index → same as an empty variant per component.
- * - Picked variant `hidden: true` → empty variant per component.
+ * - `variantIndex === 0` → no key emitted for the baseline. The resolver's
+ *   cf-entities short-circuit falls through to baseline when the map has no
+ *   entry for a baseline id (distinct from `''`, which means "empty variant —
+ *   render nothing").
+ * - Out-of-range index → treated as an empty variant per component (`''`).
+ * - Picked variant `hidden: true` → empty variant per component (`''`).
  * - Otherwise → `{ [baseline.id]: variants[index-1].id }`.
  *
  * Mirrors what XP's `ExperienceVariantSelector.getBaselineVariantMappings` emits
@@ -40,10 +42,10 @@ function synthesiseVariantsMap(
     } = entryReplacement
     if (baselineId === '') continue
 
-    if (variantIndex === 0) {
-      entries.push([baselineId, ''])
-      continue
-    }
+    // variantIndex 0 → baseline: omit the key so the resolver falls through
+    // to baseline rendering. Emitting '' would trigger the empty-variant
+    // (render-nothing) path instead.
+    if (variantIndex === 0) continue
 
     const picked = entryReplacement.variants.at(variantIndex - 1)
     if (!picked || picked.hidden === true) {

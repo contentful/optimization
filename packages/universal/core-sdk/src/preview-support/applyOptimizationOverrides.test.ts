@@ -81,7 +81,7 @@ describe('applyOptimizationOverrides', () => {
     })
   })
 
-  it('emits empty strings for every baseline when the override picks index 0', () => {
+  it('omits the baseline key when the override picks index 0 so the resolver falls through to baseline', () => {
     const entry = buildEntry('exp-1', [
       {
         type: 'EntryReplacement',
@@ -93,7 +93,7 @@ describe('applyOptimizationOverrides', () => {
       { experienceId: 'exp-1', variantIndex: 1, variants: { 'baseline-a': 'variant-a-1' } },
     ]
     const result = applyOptimizationOverrides(baseline, { 'exp-1': OVERRIDE('exp-1', 0) }, [entry])
-    expect(result[0]?.variants).toEqual({ 'baseline-a': '' })
+    expect(result[0]?.variants).toEqual({})
   })
 
   it('emits an empty string when the picked variant is out of range', () => {
