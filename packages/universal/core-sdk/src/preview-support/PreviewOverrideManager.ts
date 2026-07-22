@@ -149,6 +149,7 @@ export class PreviewOverrideManager {
               selectedOptimizations: applyOptimizationOverrides(
                 data.selectedOptimizations,
                 this.overrides.selectedOptimizations,
+                this.optimizationEntries?.(),
               ),
               changes: this.deriveChanges(data.changes),
             }
@@ -379,6 +380,7 @@ export class PreviewOverrideManager {
     const nextSelected = applyOptimizationOverrides(
       this.baselineSelectedOptimizations ?? [],
       this.overrides.selectedOptimizations,
+      this.optimizationEntries?.(),
     )
 
     if (this.changes) {
