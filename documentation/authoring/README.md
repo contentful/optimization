@@ -16,6 +16,8 @@ run and prevents an editorial iteration from repeating expensive SDK comprehensi
 - **Refresh docs** when SDK source changed.
 - **Iterate on a guide** for wording, structure, sequence, or shared-copy changes.
 - **Review a guide** to check an existing or newly written guide before shipping it.
+- **Author a migration guide** when an existing integration is moving from a legacy SDK to the
+  Optimization SDK Suite.
 
 ### Run the workflows
 
@@ -61,6 +63,20 @@ Use this workflow as the final quality gate or when an existing claim looks susp
 2. Have the guide writer apply the reader and technical findings.
 3. Use `sdk-knowledge-authoring` only when verification exposes a genuine behavioral gap in the KB.
 4. Run `pnpm knowledge:check` and `pnpm guides:check` after resolving the findings.
+
+#### Author a migration guide
+
+Use this workflow when a guide moves an existing integration from a legacy SDK to the Optimization
+SDK Suite.
+
+1. Read the migration recipe, the matching migration blueprint, and the migration knowledge file.
+2. Read the target SDK blueprint and KB sections linked by the migration blueprint.
+3. Draft the guide with `optimization-guide-authoring` and the guide-writer role. Keep runtime
+   migrations split; use the plugin/privacy/preview and content-model migration guides for shared
+   replacement work.
+4. Hand missing legacy facts to the migration-knowledge author and missing target behavior facts to
+   `sdk-knowledge-authoring`; do not invent either in the guide.
+5. Run the newcomer and technical-foundation reviews before shipping.
 
 The relevant skill instructions are:
 
@@ -125,6 +141,7 @@ do not make the technical writer trace implementation behavior.
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | **Recipe** (`recipes/`)                           | Archetype-wide section spine, allowed categories, and output rules                          | Per-SDK section choices or SDK facts                     |
 | **Blueprint** (`blueprints/`)                     | One SDK's reader goal, quick-start proof, milestones, section plan, and teaching priorities | SDK behavior, detailed API shape, or reader-facing prose |
+| **Migration blueprint** (`migration-blueprints/`) | One legacy-to-target guide's route, guide order, section plan, and fact links               | Legacy facts, SDK behavior, detailed API shape, or prose |
 | **Shared copy** (`fragments/`)                    | Reader-facing wording that must stay consistent across several guides                       | Hidden per-SDK decisions or SDK behavior                 |
 | **Knowledge base** (`../internal/sdk-knowledge/`) | Verified behavioral facts and provenance                                                    | Editorial sequence or guide prose                        |
 | **Types/source** (`../../packages/`)              | Exact interface shape: exports, signatures, props, and returns                              | Editorial decisions                                      |
@@ -220,6 +237,38 @@ blueprint-to-guide section and category agreement. `pnpm knowledge:check` valida
 integrity and unresolved escalations. Neither command proves behavioral truth; semantic freshness
 comes from the scoped knowledge-author and technical-foundation reviews.
 
+Migration blueprints live in `migration-blueprints/` instead of `blueprints/` because the current
+`guides:check` contract treats every file in `blueprints/` as a rendered integration guide blueprint.
+Until migration guides are added to that validator, validate migration authoring inputs with
+Prettier, link review, and the migration-blueprint structural review below.
+
+### Migration-blueprint structural review
+
+Apply this review to every migration blueprint before handing it to a guide writer. It is the
+dedicated migration-blueprint check until `guides:check` covers migration guides.
+
+- Frontmatter has `migration`, `archetype: migration`, `source`, and `guide`; the `guide` link and
+  Reader goal guide file name agree.
+- Reader goal names the legacy state, target result, guide file, and guide order dependency.
+- Migration route covers each legacy surface the guide promises to replace and assigns a target route
+  plus a detail owner; unsupported or manual replacements route to migration knowledge, not guessed
+  guide prose.
+- Section plan rows match the intended `###` sections. Each row has a reader purpose, and the Must
+  route to column names the target guide, supplemental guide, concept, or decision the writer should
+  use.
+- Fact sources are links only; legacy behavior points to migration knowledge, target behavior points
+  to SDK KB or shared concepts, and interface details are left for source/types lookup while writing.
+- Cross-guide prerequisites are explicit: content-model migration before runtime rendering when
+  legacy mapper output is involved; plugin/privacy/preview migration after the app has a target
+  runtime.
+- Validation obligations include a first performable authored variant or baseline check, accepted and
+  blocked event observability when events/consent are touched, first-page-event ownership when server
+  and browser can both report it, and cache/dynamic consequences for request-bound personalization.
+- Ownership boundaries are explicit for app-owned config, consent records, vendor forwarding, manual
+  Node/Web hybrid cookies, and SDK-owned target profile cookies.
+- Handoffs list only missing legacy or target behavior facts; no `None.` if a section relies on an
+  unlinked behavior claim.
+
 Blueprints and KB files currently cover the six JS/TS integration guides — Node, Web, React Web,
 Next.js App Router, Next.js Pages Router, and React Native — plus the two native iOS guides (SwiftUI
 and UIKit) and the two native Android guides (Jetpack Compose and XML Views). Each native family
@@ -237,6 +286,7 @@ recipes/
   integration.md
   decision.md
   supplemental-recipe.md
+  migration.md
 blueprints/
   _template.md
   node.md
@@ -252,4 +302,14 @@ blueprints/
 fragments/
   personalization-explainer.md
   authored-variant-gotcha.md
+migration-blueprints/
+  _template.md
+  experience-js-web.md
+  experience-js-react-web.md
+  experience-js-nextjs-router-choice.md
+  experience-js-nextjs-app-router.md
+  experience-js-nextjs-pages-router.md
+  experience-js-node-ssr-esr.md
+  experience-js-plugins-preview-privacy.md
+  experience-js-contentful-model.md
 ```
