@@ -17,6 +17,7 @@ export {
   type OptimizedEntrySourceSnapshot,
   type OptimizedEntrySourceSnapshotListener,
 } from '@contentful/optimization-core/entry-source'
+export type { ContentOptimizationHydrationMode } from '../handoff'
 export {
   createOptimizationRootSdkBinding,
   disposeOptimizationRootSdkBinding,

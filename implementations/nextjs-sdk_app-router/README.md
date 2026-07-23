@@ -17,18 +17,20 @@
 </div>
 
 Reference implementation demonstrating `@contentful/optimization-nextjs` in a Next.js App Router
-application with bound server/client components, server-provided Optimization state handoff, and
-browser-side entry resolution after startup. The implementation binds `OptimizationRoot`,
-`OptimizedEntry`, and `NextAppAutoPageTracker` once in `@/lib/optimization` with
-`createNextjsAppRouterOptimization()`. Routes and shared components import those app-local
-components for Server Component first paint and Client Component live-update surfaces. Other SDK
-runtime imports use Next.js SDK package subpaths. The package root is not imported:
+application with bound server/client components, explicit Optimization handoff, analytics-only
+handoff, computed public cache metadata, and Edge runtime handoff examples. The implementation binds `OptimizationRoot`,
+`OptimizationAnalyticsRoot`, `OptimizedEntry`, `NextAppAutoPageTracker`, request handoff helpers, and
+selection handoff helpers once in `@/lib/optimization` with `bindNextjsAppRouterOptimization()`.
+Routes and shared components import those app-local exports for Server Component first paint,
+Client Component live-update surfaces, static/ISR selection handoff, and analytics-only routes.
+Other SDK runtime imports use Next.js SDK package subpaths. The package root is not imported:
 
 - `@contentful/optimization-nextjs/app-router` in `@/lib/optimization` for the bound component
-  factory and route tracker
+  binding, route tracker, request handoff, selection handoff, cache middleware, and tracking helpers
 - `@contentful/optimization-nextjs/client` for browser hooks and providers
 - `@contentful/optimization-nextjs/api-schemas` in components that need SDK schema guards
-- `@contentful/optimization-nextjs/app-router` in proxy through the app-local `proxy` export
+- `@contentful/optimization-nextjs/edge` in `@/lib/edge-optimization` for Edge runtime handoff
+  helpers
 
 The Next.js SDK adapter delegates server and browser SDK work internally, so this implementation
 does not import, configure, or externalize lower-level SDK packages directly for Optimization
@@ -40,20 +42,25 @@ Use this implementation when you need a Next.js example where Server Components 
 entries, the bound server root prepares Optimization state for handoff, and the browser SDK resolves
 live surfaces after startup. It demonstrates:
 
-- App-local bound components from `createNextjsAppRouterOptimization()`
-- Server request context forwarding through proxy
+- App-local bound components from `bindNextjsAppRouterOptimization()`
+- Request handoff from `createRequestHandoff()` through the bound `OptimizationRoot`
+- Customer-owned selection handoff with production-style computed public cache keys
+- Edge request handoff, Edge selection handoff, and Edge HTML analytics handoff from app-local Edge
+  routes
+- Analytics-only tracking over server-rendered markup through `OptimizationAnalyticsRoot`
+- Client-only hidden-until-ready hydration for static or browser-owned routes
 - Server-resolved first paint and static content with bound `OptimizedEntry`
 - Browser-side entry resolution with the same app-local `OptimizedEntry` in Client Components
 - Rich Text merge tags passed from the `OptimizedEntry` render-prop `getMergeTagValue` into shared
   render options
 - Live re-resolution after consent, identify, reset, and client-side route changes
-- `initialPageEvent` skips when the app consent cookie lets the bound server root emit the initial
-  page event, and emits from the browser otherwise
+- `initialPageEvent` ownership from the handoff so the browser skips only when the server or edge
+  request accepted the first page event
 - Preview panel attachment behind `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`
 
-This App Router pattern keeps server fetching in place, lets the bound `OptimizationRoot` hand
-server state to the browser, uses Server Components for first paint and static content, and uses
-Client Components for live-update surfaces that need browser takeover.
+This App Router pattern keeps server fetching in place, passes explicit handoff state to the
+browser, uses Server Components for first paint and static content, and uses Client Components for
+live-update surfaces that need browser takeover.
 
 ## Architecture
 
@@ -61,22 +68,49 @@ Client Components for live-update surfaces that need browser takeover.
 First request
   proxy.ts
     re-exports proxy from lib/optimization.ts and declares the literal Next.js matcher config
-      calls Experience, persists ctfl-opt-aid, and forwards server state
+      forwards the original request URL and applies customer-owned cache-key rewrites
 
   lib/optimization.ts
-    createNextjsAppRouterOptimization()
-      exports proxy, OptimizationRoot, OptimizedEntry, and NextAppAutoPageTracker
+    bindNextjsAppRouterOptimization()
+      exports OptimizationRoot, OptimizationAnalyticsRoot, OptimizedEntry, NextAppAutoPageTracker,
+      createRequestHandoff, createHandoffFromSelections, createOptimizationCacheKey, cache
+      middleware, tracking helpers, and selection resolution helpers
 
-  app/page.tsx and app/page-two/page.tsx
+  app/(request)/layout.tsx
+    renders the persistent bound OptimizationRoot, preview panel, route tracker, and request route
+    shell from the cached current request handoff
+
+  app/(request)/request-handoff.ts
+    creates the cached current request handoff from explicit headers/cookies/url request input
+
+  app/(request)/RequestRouteShell.tsx
+    creates the current request handoff before returning the route subtree with server entries
+
+  app/(request)/page.tsx and app/(request)/page-two/page.tsx
     fetch CDA entries server-side
-    render server first-paint entries through the bound OptimizedEntry
+    render RequestRouteShell before server first-paint entries through the bound OptimizedEntry
+
+  app/(static)/selection-handoff/[segment]/layout.tsx and page.tsx
+    render the customer-owned public permutation selected by the static layout handoff with computed
+    public cache metadata
+
+  app/(static)/analytics-only/[segment]/layout.tsx and page.tsx
+    render selected content plus data-ctfl-* attributes for the layout analytics root with the same
+    computed cache metadata
+
+  app/edge-request/route.ts and app/edge-selection/[segment]/route.ts
+    exercise Edge request and public-permutation handoff JSON examples
+
+  app/edge-html/[segment]/page.tsx
+    renders selected optimized HTML in the Edge runtime with data-ctfl-* attributes and
+    analytics-only browser hydration
 
   app/layout.tsx
-    renders one bound OptimizationRoot without per-request config props
-    renders NextAppAutoPageTracker with consent-based skip/emit initialPageEvent
+    stays request-neutral so static/ISR handoff route groups can pre-render
 
 Browser runtime
-  Bound OptimizationRoot hydrates server state and owns browser handoff
+  Bound OptimizationRoot hydrates explicit handoff state
+  OptimizationAnalyticsRoot hydrates analytics-only handoff without content re-resolution
   NextAppAutoPageTracker emits route page events
   The same app-local OptimizedEntry resolves entries from current selectedOptimizations
   LiveUpdatesProvider controls reactive re-resolution
@@ -99,13 +133,20 @@ and
 
 Use Server Components for routes that fetch Contentful entries and render first-paint/static content
 through the bound `OptimizedEntry`. Use Client Components for entry surfaces that resolve and react
-after browser startup. The bound `OptimizationRoot` handles server state handoff; route pages do not
-render `NextjsOptimizationState` or call `getOptimizationData()`. This implementation demonstrates
-both:
+after browser startup. Pass request, selection, or analytics-only handoff to the bound root instead
+of sharing package-internal state objects. This implementation demonstrates:
 
 - The home route fetches entries server-side, renders static first-paint entries on the server, and
   keeps merge-tag and live-update examples on the client
 - The page-two route demonstrates client navigation and browser-observable page events
+- The selection-handoff route renders a customer-owned segment through `createHandoffFromSelections`
+  with cache metadata computed from the segment slug, version, locale, baseline entries, and selected
+  optimizations
+- The analytics-only route renders selected markup with tracking attributes and no browser content
+  re-resolution
+- The hidden-until-ready route demonstrates client-only hidden-until-ready hydration
+- The Edge routes exercise request-personalized, customer-owned public-permutation, and selected
+  Edge HTML handoff
 - The same app-local bound `OptimizedEntry` chooses the server or client implementation from the
   component boundary
 

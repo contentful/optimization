@@ -1,17 +1,20 @@
-import {
+import * as serverExports from './server'
+import type { ServerTrackingBaselineEntry, ServerTrackingResolvedData } from './tracking-attributes'
+
+const {
   NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER,
   ServerOptimizedEntry,
   bindNextjsOptimizationRequest,
-  createNextjsOptimization,
+  configureNextjsServerOptimization,
   createNextjsPageContext,
   createNextjsRequestContext,
   getNextjsServerOptimizationData,
   persistNextjsAnonymousId,
-  type ContentfulOptimization,
-  type CoreStatelessRequest,
-  type OptimizationData,
-} from './server'
-import type { ServerTrackingBaselineEntry, ServerTrackingResolvedData } from './tracking-attributes'
+} = serverExports
+
+type ContentfulOptimization = serverExports.ContentfulOptimization
+type CoreStatelessRequest = serverExports.CoreStatelessRequest
+type OptimizationData = serverExports.OptimizationData
 
 const sdkConfig = {
   clientId: 'test-client-id',
@@ -112,7 +115,7 @@ function createSdk(
       }),
   ),
 ): CreatedSdk {
-  const sdk = createNextjsOptimization(sdkConfig)
+  const sdk = configureNextjsServerOptimization(sdkConfig)
   const requestOptimization = sdk.forRequest({ consent: true })
   const forRequest = rs
     .fn<ContentfulOptimization['forRequest']>()
@@ -128,6 +131,11 @@ function createSdk(
 }
 
 describe('Next.js server helpers', () => {
+  it('exports the server configure helper without the removed create helper name', () => {
+    expect(serverExports.configureNextjsServerOptimization).toBeTypeOf('function')
+    expect(serverExports).not.toHaveProperty('createNextjsOptimization')
+  })
+
   it('builds request context from a Next-like request', () => {
     expect(
       createNextjsRequestContext({

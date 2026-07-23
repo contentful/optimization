@@ -375,6 +375,7 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
   ): OptimizedEntryControllerOptions {
     return {
       isPresentationReady: true,
+      hydration: this.optimizationRootContext?.hydration,
       baselineEntry,
       entryLiveUpdatesEnabled: this.liveUpdates,
       rootLiveUpdatesEnabled: this.optimizationRootContext?.rootLiveUpdatesEnabled ?? false,

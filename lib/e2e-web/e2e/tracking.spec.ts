@@ -1,6 +1,6 @@
 import { type Page, expect, test } from '@playwright/test'
 import { CLICK_SCENARIO_IDS } from '../src/fixtures'
-import { scrollThroughEntries, setup } from './utils'
+import { hasFlag, scrollThroughEntries, setup } from './utils'
 
 // --- click tracking helpers ---
 
@@ -198,7 +198,9 @@ test.describe('Tracking', () => {
       const pageEvents = page.locator('[data-testid^="event-page-"]')
       const viewEvents = page.locator('[data-testid^="event-view-"]')
 
-      await expect(pageEvents.first()).toBeVisible()
+      if (!hasFlag('SSR')) {
+        await expect(pageEvents.first()).toBeVisible()
+      }
 
       await scrollThroughEntries(page)
       await expect(viewEvents).toHaveCount(0)
@@ -208,7 +210,9 @@ test.describe('Tracking', () => {
       const pageEvents = page.locator('[data-testid^="event-page-"]')
       const viewEvents = page.locator('[data-testid^="event-view-"]')
 
-      await expect(pageEvents.first()).toBeVisible()
+      if (!hasFlag('SSR')) {
+        await expect(pageEvents.first()).toBeVisible()
+      }
 
       await page.getByTestId('consent-button').click()
       await scrollThroughEntries(page)

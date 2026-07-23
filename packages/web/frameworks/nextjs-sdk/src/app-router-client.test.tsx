@@ -46,55 +46,66 @@ function createEntryCollection(items: readonly Entry[]): {
 }
 
 describe('Next.js App Router client components', () => {
-  it('creates bound client components from config props without server-only config', () => {
+  it('creates bound client components from v2 config props', () => {
     const contentful = {
       client: {
         getEntry: async () => await Promise.resolve(createEntry('unused')),
         getEntries: async () => await Promise.resolve(createEntryCollection([])),
       },
     }
-    const prefetchedManagedEntries = [
-      {
-        baselineEntry: createEntry('hero'),
-        entryId: 'hero',
-      },
-    ]
-    const components = appRouter.createNextjsAppRouterOptimization({
+    const components = appRouter.bindNextjsAppRouterOptimization({
       ...testConfig,
+      consent: { clientDefaults: { consent: false, persistenceConsent: false } },
       contentful,
       liveUpdates: true,
-      server: { enabled: false },
+    })
+    const handoff = components.createHandoffFromSelections({
+      cache: { scope: 'static' },
+      entries: [{ baselineEntry: createEntry('hero'), entryId: 'hero' }],
+      hydration: 'preserve-server',
+      initialPageEvent: 'emit',
+      selectedOptimizations: [],
     })
 
     const element = components.OptimizationRoot({
       children: 'Bound content',
-      prefetchedManagedEntries,
+      handoff,
+      initialPagePayload: { properties: { route: '/products' } },
+      routeKey: '/products',
     })
     const provider = components.OptimizationProvider({
       children: 'Provider content',
-      prefetchedManagedEntries,
+      handoff,
+      hydration: 'client-only-hidden-until-ready',
+      prefetchManagedEntries: ['hero'],
     })
 
     expect(components.OptimizedEntry).toBe(client.OptimizedEntry)
     expect(components.NextAppAutoPageTracker).toBe(appRouter.NextAppAutoPageTracker)
-    expect(components.proxy).toBeUndefined()
+    expect(components).not.toHaveProperty('createCacheMiddleware')
+    expect(components).not.toHaveProperty('proxy')
     expect(components).not.toHaveProperty('config')
     expect(components).not.toHaveProperty('NextPagesAutoPageTracker')
     expect(element.props).toMatchObject({
       api: testConfig.api,
       children: 'Bound content',
       clientId: testConfig.clientId,
+      defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,
+      handoff,
+      initialPagePayload: { properties: { route: '/products' } },
       liveUpdates: true,
-      prefetchedManagedEntries,
+      routeKey: '/products',
       contentful,
     })
-    expect(element.props).not.toHaveProperty('server')
     expect(provider?.props).toMatchObject({
       api: testConfig.api,
       clientId: testConfig.clientId,
+      defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,
-      prefetchedManagedEntries,
+      handoff,
+      hydration: 'client-only-hidden-until-ready',
+      prefetchManagedEntries: ['hero'],
       contentful,
     })
     expect(provider?.props).not.toHaveProperty('liveUpdates')
@@ -110,17 +121,24 @@ describe('Next.js App Router client components', () => {
     })
   })
 
-  it('renders client entryId content when a server handoff is provided', () => {
+  it('renders client entryId content from handoff entries during SSR', () => {
     const getEntry = rs.fn(async () => await Promise.resolve(createEntry('client-fetch')))
     const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
-    const components = appRouter.createNextjsAppRouterOptimization({
+    const components = appRouter.bindNextjsAppRouterOptimization({
       ...testConfig,
       contentful: { client: { getEntry, getEntries } },
     })
     const baselineEntry = createEntry('hero')
+    const handoff = components.createHandoffFromSelections({
+      cache: { scope: 'static' },
+      entries: [{ baselineEntry, entryId: 'hero' }],
+      hydration: 'preserve-server',
+      initialPageEvent: 'emit',
+      selectedOptimizations: [],
+    })
 
     const markup = renderToString(
-      <components.OptimizationRoot prefetchedManagedEntries={[{ baselineEntry, entryId: 'hero' }]}>
+      <components.OptimizationRoot handoff={handoff}>
         <components.OptimizedEntry entryId="hero">
           {(entry) => entry.sys.id}
         </components.OptimizedEntry>
@@ -139,10 +157,13 @@ describe('Next.js App Router client components', () => {
     expect(client).not.toHaveProperty('createNextjsOptimizationComponents')
   })
 
-  it('keeps the App Router entry scoped to the factory and tracker', () => {
+  it('keeps the App Router client entry scoped to client-safe binding helpers', () => {
     expect(Object.keys(appRouter).sort()).toEqual([
       'NextAppAutoPageTracker',
-      'createNextjsAppRouterOptimization',
+      'bindNextjsAppRouterOptimization',
+      'createHandoffFromSelections',
+      'createOptimizationCacheKey',
+      'resolveEntriesForSelections',
     ])
   })
 })

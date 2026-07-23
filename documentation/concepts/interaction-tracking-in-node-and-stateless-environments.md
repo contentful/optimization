@@ -75,13 +75,13 @@ Apply these constraints before choosing server-only, hybrid, or manual tracking:
   views without entry views.
 - Browser Insights delivery needs a current Web SDK profile. In direct Web SDK initialization, the
   profile can come from `defaults.profile`. In React Web provider handoff and manual Next.js
-  provider or root setup, pass server-returned Optimization data through `serverOptimizationState`.
-  In the preferred App Router bound setup, the server root or provider from
-  `createNextjsAppRouterOptimization()` hands off server data for the browser side automatically. In
-  Pages Router, pass the server data returned by `getServerSideOptimizationProps()` through
-  `serverOptimizationState` in `pages/_app.tsx`. The profile can also come from browser-persisted
-  profile state that persistence consent allows the SDK to load, or a browser Experience API call
-  such as `page()`, `identify()`, `track()`, or sticky `trackView()`.
+  provider or root setup, pass server/static/edge Optimization state through the `handoff` prop. In
+  App Router bound setup, pass the `handoff` returned by `createRequestHandoff()` or
+  `createHandoffFromSelections()` to the bound root or provider. In Pages Router, pass
+  `pageProps.contentfulOptimization.handoff` through the bound root or provider in `pages/_app.tsx`.
+  The profile can also come from browser-persisted profile state that persistence consent allows the
+  SDK to load, or a browser Experience API call such as `page()`, `identify()`, `track()`, or sticky
+  `trackView()`.
 - Browser storage is best-effort. The Web SDK uses `localStorage` and the `ctfl-opt-aid` cookie when
   persistence consent permits continuity; if storage fails or is unavailable, continuity is limited
   to in-memory state.
@@ -325,7 +325,7 @@ of tracking that can only be measured in the browser.
 
 Use SDK wrappers or helpers when available instead of copying the attribute map into application
 code. In Next.js App Router integrations, the preferred wrapper is the app-local bound
-`OptimizedEntry` returned by `createNextjsAppRouterOptimization()`. In Server Components, it
+`OptimizedEntry` returned by `bindNextjsAppRouterOptimization()`. In Server Components, it
 resolves the baseline entry, renders the server-selected entry, and emits the Web SDK tracking
 attributes through server internals. For custom SSR wrappers, call `getServerTrackingAttributes()`
 from `@contentful/optimization-nextjs/tracking-attributes`. Non-Next runtimes can call
@@ -406,10 +406,10 @@ delivery. Choose one of these patterns before enabling interaction tracking:
 
 - **Bootstrap the server profile.** For direct Web SDK initialization, serialize the `profile`
   returned by the server's `page()` or `identify()` call and pass it as `defaults.profile`. For
-  React Web and manual Next.js provider or root setup, pass the server `OptimizationData` through
-  `serverOptimizationState`. Preferred Next.js bound roots and providers hand off server data
-  automatically. Use this when the same server response already rendered personalized HTML from that
-  profile.
+  React Web and manual Next.js provider or root setup, pass a browser `handoff` built from the server
+  data through the root or provider. Next.js bound roots and providers receive request or selection
+  handoffs from their framework helper. Use this when the same server response already rendered
+  personalized HTML from that profile.
 - **Re-evaluate in the browser.** Persist `ctfl-opt-aid` on the server, initialize the Web SDK in
   the browser, call `page()` after your consent policy allows it, then enable tracking after the
   page response populates browser profile state.
@@ -419,10 +419,10 @@ delivery. Choose one of these patterns before enabling interaction tracking:
   Web SDK auto-tracking path.
 
 In Next.js server-rendered integrations, `initialPageEvent="skip"` intentionally avoids the initial
-browser Experience API `page()` request when the server already emitted that page event. If that
-skip leaves the browser with neither a bound server root or provider handoff nor manual
-`serverOptimizationState`, and without a prior persisted browser profile, automatic entry views,
-clicks, and hovers cannot deliver until a later browser Experience API call populates profile state.
+browser Experience API `page()` request when the server or edge helper already accepted that page
+event. If that skip leaves the browser with neither a bound root or provider `handoff` nor manual
+handoff, and without a prior persisted browser profile, automatic entry views, clicks, and hovers
+cannot deliver until a later browser Experience API call populates profile state.
 
 If the Web SDK must read `ctfl-opt-aid`, do not mark that cookie as `HttpOnly`. Configure `path`,
 `domain`, and `SameSite` so the server route and browser code refer to the same profile.
@@ -447,7 +447,7 @@ remains server-owned.
 The
 [Next.js SDK App Router reference implementation](../../implementations/nextjs-sdk_app-router/README.md)
 is one concrete example of the same server-to-browser tracking pattern. In Next.js App Router,
-prefer the `@contentful/optimization-nextjs/app-router` factory so app code imports app-local bound
+prefer the `@contentful/optimization-nextjs/app-router` binding so app code imports app-local bound
 `OptimizationRoot`, `OptimizationProvider`, `OptimizedEntry`, and route trackers from one binding
 module. Use `/pages-router` for Pages Router client components and `/pages-router/server` for
 `getServerSideProps`. Use adapter subpaths for manual server, tracking-attribute, request, or client
@@ -459,7 +459,7 @@ Keep personalization server-owned by enforcing these boundaries:
 
 - Next.js App Router Server Components can import the app-local bound `OptimizationRoot`,
   `OptimizationProvider`, `OptimizedEntry`, and route trackers from the binding module created by
-  `createNextjsAppRouterOptimization()`. The bound server root or provider owns request data and
+  `bindNextjsAppRouterOptimization()`. The bound server root or provider owns request data and
   profile handoff, and the bound server `OptimizedEntry` resolves and renders tracked entries.
 - Lower-level Next.js server modules can still import `/server` helpers, call the request-bound page
   path, call `sdk.resolveOptimizedEntry(...)`, and render attributes from

@@ -31,8 +31,8 @@ You will get there in two milestones:
 This guide uses `@contentful/optimization-react-web`, which wraps the lower-level
 `@contentful/optimization-web` browser SDK in React providers, hooks, and an entry-rendering
 component. You configure it by passing props to one `OptimizationRoot` component you mount once —
-there is no separate factory call. Your app keeps ownership of the Contentful client, consent
-policy, identity, routing, and rendering.
+that root initializes the single browser runtime for the mounted React tree. Your app keeps
+ownership of the Contentful client, consent policy, identity, routing, and rendering.
 
 Because this SDK runs entirely in the browser, there is no server-rendered first paint: the SDK
 becomes ready _after_ React mounts, so loading and error states are a first-class part of the
@@ -245,7 +245,9 @@ The props you pass break down like this:
 6. `contentful` opts into managed entry fetching by handing the SDK your Contentful client
    (`contentful: { client, defaultQuery?, cache? }`); leave it unset to fetch entries yourself. See
    [Fetching Contentful entries](#fetching-contentful-entries).
-7. `liveUpdates`, `trackEntryInteraction`, and `onStatesReady` are optional and covered in their own
+7. `handoff` and `hydration` are for server, static, or edge handoff and browser-owned presentation
+   control. `hydration` overrides the mode from `handoff.hydration`.
+8. `liveUpdates`, `trackEntryInteraction`, and `onStatesReady` are optional and covered in their own
    sections below.
 
 The quick start used always-on `defaults` to get you a result. For production, make startup depend
@@ -256,15 +258,15 @@ owns the visitor's decision, as shown in
 The only import path you need to start is the package root, `@contentful/optimization-react-web`.
 Other subpaths cover specific needs you reach for later:
 
-| Import path                                                 | Use it for                                                         |
-| ----------------------------------------------------------- | ------------------------------------------------------------------ |
-| `@contentful/optimization-react-web`                        | `OptimizationRoot`, `OptimizedEntry`, and every hook               |
-| `@contentful/optimization-react-web/router/react-router`    | The React Router auto page tracker                                 |
-| `@contentful/optimization-react-web/router/tanstack-router` | The TanStack Router auto page tracker                              |
-| `@contentful/optimization-react-web/router/next-pages`      | The Next.js Pages Router auto page tracker (React Web only setups) |
-| `@contentful/optimization-react-web/router/next-app`        | The Next.js App Router auto page tracker (React Web only setups)   |
-| `@contentful/optimization-react-web/api-schemas`            | Type guards such as `isMergeTagEntry` and `isRichTextDocument`     |
-| `@contentful/optimization-react-web/logger`                 | `createScopedLogger` for app-owned diagnostic logging              |
+| Import path                                                 | Use it for                                                                   |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `@contentful/optimization-react-web`                        | `OptimizationRoot`, `OptimizationProvider`, `OptimizedEntry`, and every hook |
+| `@contentful/optimization-react-web/router/react-router`    | The React Router auto page tracker                                           |
+| `@contentful/optimization-react-web/router/tanstack-router` | The TanStack Router auto page tracker                                        |
+| `@contentful/optimization-react-web/router/next-pages`      | The Next.js Pages Router auto page tracker (React Web only setups)           |
+| `@contentful/optimization-react-web/router/next-app`        | The Next.js App Router auto page tracker (React Web only setups)             |
+| `@contentful/optimization-react-web/api-schemas`            | Type guards such as `isMergeTagEntry` and `isRichTextDocument`               |
+| `@contentful/optimization-react-web/logger`                 | `createScopedLogger` for app-owned diagnostic logging                        |
 
 **Adapt this to your use case:** the root with app metadata and API overrides, the way a real app
 configures it.
@@ -996,26 +998,30 @@ function App() {
 }
 ```
 
-The provider always renders its children — they are never withheld or unmounted. When you pass
-`serverOptimizationState`, children render against a read-only snapshot until the live SDK state is
-applied in a layout effect. With an injected `sdk` and no `serverOptimizationState`, children render
-against the live injected SDK from the first render; `onStatesReady` alone does not add a snapshot
-phase.
+The provider always renders its children — they are never withheld or unmounted. With an injected
+`sdk` and no `handoff`, children render against the live injected SDK from the first render;
+`onStatesReady` alone does not add a snapshot phase. When a server, static, or edge renderer passes a
+content `handoff`, children render against that snapshot first and the provider hydrates the live SDK
+from the same state after React commits.
 
-**Prefetching managed entries for a server handoff.** When a managed (`entryId`) `OptimizedEntry`
-renders on a server before the browser SDK is live, you can hand it its baseline entry so it renders
-resolved content immediately instead of a loading state. The package root exports the symbols for
-this: `prefetchManagedEntries(runtime, descriptors)` returns a `ManagedEntryHandoff[]` you pass to
-the `prefetchedManagedEntries` prop on `OptimizationRoot` (or `OptimizationProvider`), keyed by
-`entryId` + `entryQuery`. `descriptors` are `ManagedEntryDescriptor` values (`'entry-id'` or
-`{ entryId, entryQuery? }`); `runtime` is any `ManagedEntryPrefetchRuntime` — an object exposing
-`prefetchManagedEntries(descriptors)`. Core uses `getEntries()` for multiple uncached descriptors
-with the same normalized query, split into 100-ID chunks for large fetches. This SDK ships no server
-runtime of its own, so you supply that runtime yourself. For a full server-rendered integration with
-request-scoped state and page-event handoff, use the
+Put `hydration` on the component that owns the content SDK context: `OptimizationRoot` in the normal
+root path or `OptimizationProvider` in explicit provider composition. It overrides the content
+presentation mode from `handoff.hydration`.
+
+**Managed entries in a handoff.** A managed (`entryId`) `OptimizedEntry` can receive baseline
+managed-entry snapshots through `handoff.entries` so the browser can preserve already-rendered
+content without a client Contentful round trip. The package root also exports
+`prefetchManagedEntries(runtime, descriptors)` for adapter authors; it returns a
+`ManagedEntryHandoff[]` that a framework adapter can place in `handoff.entries`. `descriptors` are
+`ManagedEntryDescriptor` values (`'entry-id'` or `{ entryId, entryQuery? }`); `runtime` is any
+`ManagedEntryPrefetchRuntime` — an object exposing `prefetchManagedEntries(descriptors)`. Core uses
+`getEntries()` for multiple uncached descriptors with the same normalized query, split into 100-ID
+chunks for large fetches. The React Web SDK does not include a server runtime, so applications that
+need full server-rendered request handoff usually use the
 [Next.js App Router guide](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md) or
 [Next.js Pages Router guide](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md),
-which own that path end to end.
+which own that path end to end. The `prefetchManagedEntries` prop on `OptimizationRoot` or
+`OptimizationProvider` is for browser-owned cache warming after the live SDK is ready.
 
 ### Strict consent, storage, and delivery controls
 

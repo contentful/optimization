@@ -161,7 +161,7 @@ export type TrackCurrentScreenPayload = ScreenViewBuilderArgs & {
  * ```ts
  * import { ContentfulOptimization } from '@contentful/optimization-react-native'
  *
- * const optimization = await ContentfulOptimization.create({
+ * const optimization = await ContentfulOptimization.initialize({
  *   clientId: 'your-client-id',
  *   environment: 'main',
  * })
@@ -199,14 +199,14 @@ class ContentfulOptimization extends CoreStateful {
   }
 
   /**
-   * Creates and initializes a new ContentfulOptimization instance with React Native defaults.
+   * Async initializer for a ContentfulOptimization SDK instance with React Native defaults.
    *
    * @param config - SDK configuration options
-   * @returns A fully initialized ContentfulOptimization instance
+   * @returns An initialized ContentfulOptimization instance
    *
    * @example
    * ```ts
-   * const optimization = await ContentfulOptimization.create({
+   * const optimization = await ContentfulOptimization.initialize({
    *   clientId: 'your-client-id',
    *   environment: 'main',
    * })
@@ -214,7 +214,7 @@ class ContentfulOptimization extends CoreStateful {
    *
    * @public
    */
-  static async create(config: CoreStatefulConfig): Promise<ContentfulOptimization> {
+  static async initialize(config: CoreStatefulConfig): Promise<ContentfulOptimization> {
     if (activeOptimizationInstance) {
       throw new Error(
         'ContentfulOptimization React Native SDK is already initialized. Reuse the existing instance.',

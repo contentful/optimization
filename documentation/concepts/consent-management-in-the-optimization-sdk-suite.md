@@ -10,9 +10,9 @@ consent management platform (CMP) decisions into SDK configuration, and how comm
 expectations affect integration choices.
 
 This document applies to the Web, React Web, Next.js adapter, Node, React Native, iOS, and Android
-SDKs. Next.js server and ESR paths follow Node consent mechanics; Next.js client components follow
-React Web consent mechanics. The Next.js context handler is request-context forwarding only; it is
-not a consent path. This document uses these terms:
+SDKs. Next.js server and edge paths follow Node consent mechanics; Next.js client components follow
+React Web consent mechanics. Request-context forwarding is not a consent path. This document uses
+these terms:
 
 - **Event consent** - The SDK runtime value that gates Optimization event emission.
 - **Persistence consent** - The SDK runtime value that gates durable profile-continuity storage.
@@ -83,26 +83,26 @@ the affected method calls or forwarding code in the application layer.
 
 Use the runtime surface that matches where the consent decision is applied:
 
-| Runtime          | Consent API surface                                                                                                                                                                                                                                                                                       | Storage and persistence                                                                                                  | Default allow-list                                                                                      | Blocked-event diagnostics                                                             |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| **Web**          | `defaults.consent`, `defaults.persistenceConsent`, and `optimization.consent(true \| false \| { events, persistence })`                                                                                                                                                                                   | Browser `localStorage`; readable `ctfl-opt-aid` cookie for profile continuity when persistence consent permits it.       | `identify` and `page` can emit before event consent unless `allowedEventTypes` changes.                 | `onEventBlocked` and `optimization.states.blockedEventStream`                         |
-| **React Web**    | `OptimizationRoot` `defaults` and `useOptimizationActions().setConsent(true \| false \| { events, persistence })`; injected SDKs can call `sdk.consent(...)`                                                                                                                                              | Same Web SDK storage: browser `localStorage` and the readable `ctfl-opt-aid` cookie when persistence consent permits it. | `identify` and `page` can emit before event consent unless `allowedEventTypes` changes.                 | `onEventBlocked` and `states.blockedEventStream`                                      |
-| **Next.js**      | Preferred App Router `createNextjsAppRouterOptimization({ server: { enabled: true, consent } })`; Pages Router `getServerSideOptimizationProps()`; manual server `getNextjsServerOptimizationData(..., { consent })`; ESR `getNextjsEsrOptimizationData(..., { consent })`; and client `OptimizationRoot` | Server and ESR paths use application-owned cookies and request state; client paths use React Web storage.                | Server, ESR, and client paths follow `identify` and `page` defaults unless `allowedEventTypes` changes. | Server-side `onEventBlocked`; client `onEventBlocked` and `states.blockedEventStream` |
-| **Node**         | Request-scoped `optimization.forRequest({ consent })`                                                                                                                                                                                                                                                     | No SDK storage; applications own cookies, sessions, consent records, and profile ID persistence.                         | `identify` and `page` can emit before request event consent unless `allowedEventTypes` changes.         | `onEventBlocked` only                                                                 |
-| **React Native** | `OptimizationRoot` `defaults` and `useOptimization().consent(true \| false \| { events, persistence })`                                                                                                                                                                                                   | AsyncStorage persists consent and, when persistence consent permits it, profile-continuity state across launches.        | `identify` and `screen` can emit before event consent unless `allowedEventTypes` changes.               | `onEventBlocked` and `states.blockedEventStream`                                      |
-| **iOS**          | `StorageDefaults(consent:)`, `client.consent(_:)`, and `client.consent(events:persistence:)`                                                                                                                                                                                                              | UserDefaults persists consent and, when persistence consent permits it, profile-continuity state across launches.        | `identify` and `screen` can emit before event consent unless `allowedEventTypes` changes.               | `OptimizationConfig.onEventBlocked` and `client.blockedEventStream`                   |
-| **Android**      | `StorageDefaults(consent = true)`, `client.consent(true \| false)`, and `client.consent(events = true, persistence = false)`                                                                                                                                                                              | SharedPreferences persists consent and, when persistence consent permits it, profile-continuity state across launches.   | `identify` and `screen` can emit before event consent unless `allowedEventTypes` changes.               | `OptimizationConfig.onEventBlocked` and `client.blockedEventStream`                   |
+| Runtime          | Consent API surface                                                                                                                                                                                                                                                                                  | Storage and persistence                                                                                                  | Default allow-list                                                                                       | Blocked-event diagnostics                                                             |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **Web**          | `defaults.consent`, `defaults.persistenceConsent`, and `optimization.consent(true \| false \| { events, persistence })`                                                                                                                                                                              | Browser `localStorage`; readable `ctfl-opt-aid` cookie for profile continuity when persistence consent permits it.       | `identify` and `page` can emit before event consent unless `allowedEventTypes` changes.                  | `onEventBlocked` and `optimization.states.blockedEventStream`                         |
+| **React Web**    | `OptimizationRoot` `defaults` and `useOptimizationActions().setConsent(true \| false \| { events, persistence })`; injected SDKs can call `sdk.consent(...)`                                                                                                                                         | Same Web SDK storage: browser `localStorage` and the readable `ctfl-opt-aid` cookie when persistence consent permits it. | `identify` and `page` can emit before event consent unless `allowedEventTypes` changes.                  | `onEventBlocked` and `states.blockedEventStream`                                      |
+| **Next.js**      | App Router and Pages Router bindings with `consent.server` and `consent.clientDefaults`; request handoff helpers such as `createRequestHandoff(...)`; edge runtime `createEdgeRequestHandoff(...)`; manual server `getNextjsServerOptimizationData(..., { consent })`; and client `OptimizationRoot` | Server and edge paths use application-owned cookies and request state; client paths use React Web storage.               | Server, edge, and client paths follow `identify` and `page` defaults unless `allowedEventTypes` changes. | Server-side `onEventBlocked`; client `onEventBlocked` and `states.blockedEventStream` |
+| **Node**         | Request-scoped `optimization.forRequest({ consent })`                                                                                                                                                                                                                                                | No SDK storage; applications own cookies, sessions, consent records, and profile ID persistence.                         | `identify` and `page` can emit before request event consent unless `allowedEventTypes` changes.          | `onEventBlocked` only                                                                 |
+| **React Native** | `OptimizationRoot` `defaults` and `useOptimization().consent(true \| false \| { events, persistence })`                                                                                                                                                                                              | AsyncStorage persists consent and, when persistence consent permits it, profile-continuity state across launches.        | `identify` and `screen` can emit before event consent unless `allowedEventTypes` changes.                | `onEventBlocked` and `states.blockedEventStream`                                      |
+| **iOS**          | `StorageDefaults(consent:)`, `client.consent(_:)`, and `client.consent(events:persistence:)`                                                                                                                                                                                                         | UserDefaults persists consent and, when persistence consent permits it, profile-continuity state across launches.        | `identify` and `screen` can emit before event consent unless `allowedEventTypes` changes.                | `OptimizationConfig.onEventBlocked` and `client.blockedEventStream`                   |
+| **Android**      | `StorageDefaults(consent = true)`, `client.consent(true \| false)`, and `client.consent(events = true, persistence = false)`                                                                                                                                                                         | SharedPreferences persists consent and, when persistence consent permits it, profile-continuity state across launches.   | `identify` and `screen` can emit before event consent unless `allowedEventTypes` changes.                | `OptimizationConfig.onEventBlocked` and `client.blockedEventStream`                   |
 
 ## Choose a pre-consent posture
 
 There are three common implementation postures. Choose the runtime column that matches where the SDK
 is initialized; server paths also bind consent on each request:
 
-| Posture                         | Web, React Web, and React Native                                                                                       | iOS                                                                                                                   | Android                                                                                                                 | Node and Next.js server paths                                                                                                                                                                                                         | Use when                                                                                                                         |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **Strict opt-in**               | Initialize with `allowedEventTypes: []`; leave `defaults.consent` unset and persistence consent unset or false.        | Pass `allowedEventTypes: []`; do not pass `StorageDefaults(consent: true)`; keep persistence consent unset or false.  | Pass `allowedEventTypes = emptyList()`; do not pass `StorageDefaults(consent = true)`; keep persistence consent false.  | Configure the singleton with `allowedEventTypes: []`; bind `forRequest({ consent: { events: false, persistence: false } })`, set Next App Router `server.consent` to the same value, or pass the equivalent server/ESR helper option. | Policy does not permit non-essential event emission or durable profile-continuity storage before opt-in.                         |
-| **Limited pre-consent context** | Leave consent unset; use the runtime default or custom `allowedEventTypes`; keep persistence consent unset or false.   | Don't pass `StorageDefaults(consent: true)`; pass a narrow `allowedEventTypes` list; keep persistence consent false.  | Don't pass `StorageDefaults(consent = true)`; pass a narrow `allowedEventTypes` list; keep persistence consent false.   | Configure a narrow singleton `allowedEventTypes`; derive consent for `forRequest({ consent })`, Next App Router `server.consent`, or server/ESR helper options from application request state.                                        | Legal review permits specific first-party context events before broader tracking consent.                                        |
-| **Default-on accepted context** | Seed `defaults.consent: true`; set `defaults.persistenceConsent: false` only when profile continuity must be deferred. | Seed `StorageDefaults(consent: true)`; set `persistenceConsent: false` only when profile continuity must be deferred. | Seed `StorageDefaults(consent = true)`; set `persistenceConsent = false` only when profile continuity must be deferred. | Bind accepted request consent with `forRequest({ consent: { events: true, persistence: true } })`, set Next App Router `server.consent` to accepted consent, or pass the equivalent server/ESR helper option.                         | Application policy permits SDK event emission and profile continuity at startup, with or without a separate end-user consent UI. |
+| Posture                         | Web, React Web, and React Native                                                                                       | iOS                                                                                                                   | Android                                                                                                                 | Node and Next.js server paths                                                                                                                                                                                                     | Use when                                                                                                                         |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Strict opt-in**               | Initialize with `allowedEventTypes: []`; leave `defaults.consent` unset and persistence consent unset or false.        | Pass `allowedEventTypes: []`; do not pass `StorageDefaults(consent: true)`; keep persistence consent unset or false.  | Pass `allowedEventTypes = emptyList()`; do not pass `StorageDefaults(consent = true)`; keep persistence consent false.  | Configure the singleton with `allowedEventTypes: []`; bind `forRequest({ consent: { events: false, persistence: false } })`, set Next.js `consent.server` to the same value, or pass the equivalent manual server request option. | Policy does not permit non-essential event emission or durable profile-continuity storage before opt-in.                         |
+| **Limited pre-consent context** | Leave consent unset; use the runtime default or custom `allowedEventTypes`; keep persistence consent unset or false.   | Don't pass `StorageDefaults(consent: true)`; pass a narrow `allowedEventTypes` list; keep persistence consent false.  | Don't pass `StorageDefaults(consent = true)`; pass a narrow `allowedEventTypes` list; keep persistence consent false.   | Configure a narrow singleton `allowedEventTypes`; derive consent for `forRequest({ consent })`, Next.js `consent.server`, or manual server request options from application request state.                                        | Legal review permits specific first-party context events before broader tracking consent.                                        |
+| **Default-on accepted context** | Seed `defaults.consent: true`; set `defaults.persistenceConsent: false` only when profile continuity must be deferred. | Seed `StorageDefaults(consent: true)`; set `persistenceConsent: false` only when profile continuity must be deferred. | Seed `StorageDefaults(consent = true)`; set `persistenceConsent = false` only when profile continuity must be deferred. | Bind accepted request consent with `forRequest({ consent: { events: true, persistence: true } })`, set Next.js `consent.server` to accepted consent, or pass the equivalent manual server request option.                         | Application policy permits SDK event emission and profile continuity at startup, with or without a separate end-user consent UI. |
 
 For browser applications, storage policy can matter as much as event policy. `allowedEventTypes: []`
 prevents pre-consent event emission, while persistence consent gates durable profile-continuity
@@ -179,28 +179,28 @@ unset and call the runtime's boolean or split-consent API from the CMP or banner
 
 ### Node and stateless runtimes
 
-The Node SDK does not store consent. Next.js server and ESR paths use this same request-scoped model
-through adapter helpers. For App Router integrations, prefer the `/app-router` factory and put the
-request policy in `server.consent`. For Pages Router `getServerSideProps`, pass the same policy to
-`getServerSideOptimizationProps()`:
+The Node SDK does not store consent. Next.js server and edge paths use this same request-scoped
+model through adapter helpers. For App Router integrations, prefer the `/app-router` binding and put
+the request policy in `consent.server`. For Pages Router `getServerSideProps`, use the
+`/pages-router/server` binding and put the same policy in `consent.server`:
 
 Next.js App Router / TypeScript:
 
 ```ts
-createNextjsAppRouterOptimization({
+bindNextjsAppRouterOptimization({
   clientId: 'your-client-id',
   environment: 'main',
-  server: { enabled: true, consent },
+  consent: { server: consent },
 })
 ```
 
-`server.consent` can be a boolean, object-form consent, or resolver that receives
-`{ cookies, headers }`. The bound server root or provider resolves it, calls the server page path,
-and passes consent-derived client defaults and server optimization state through. Manual
-`getNextjsServerOptimizationData(..., { consent })` and ESR
-`getNextjsEsrOptimizationData(..., { consent })` remain lower-level paths when the application owns
-request binding directly. When the application policy permits Optimization by default, bind each
-request with accepted event and persistence consent:
+`consent.server` can be a boolean, object-form consent, or resolver that receives
+`{ cookies, headers }`. Request handoff helpers resolve it, call the server page path, and return a
+browser handoff. `consent.clientDefaults` seeds browser defaults when configured. Manual
+`getNextjsServerOptimizationData(..., { consent })`, manual `createNextjsRequestHandoff(...)` with a
+`consent` option, and edge `createEdgeRequestHandoff(...)` remain lower-level paths when the
+application owns request binding directly. When the application policy permits Optimization by
+default, bind each request with accepted event and persistence consent:
 
 Node / TypeScript:
 
@@ -401,8 +401,9 @@ server and the Web or React Web SDK in the browser. Use the same consent decisio
 
 - The server reads consent before calling `page()`, `identify()`, or follow-up tracking methods and
   calls the Node SDK only when the application policy allows the server event.
-- Next.js App Router bound components read consent from `server.consent`; manual server and ESR
-  paths pass the same decision through their `{ consent }` option.
+- Next.js App Router and Pages Router helpers read consent from `consent.server`; manual server
+  paths pass the same decision through their `{ consent }` option, and edge helpers read the same
+  policy from their `consent.server` config.
 - The browser calls `consent(true)` or `consent(false)` from the same CMP state after hydration.
 - Both runtimes clear profile continuity when withdrawal requires it.
 - The server does not set `ctfl-opt-aid` when the browser is not allowed to use profile continuity.
@@ -485,10 +486,9 @@ Before releasing a consent-aware Optimization SDK integration, verify these impl
 - Bind Node SDK calls with `forRequest()`; use `allowedEventTypes` only for intentionally permitted
   pre-consent server events, and never persist returned IDs unless
   `requestOptimization.canPersistProfile` is true.
-- For Next.js App Router, put the same request policy in `server.consent` on
-  `createNextjsAppRouterOptimization()`. For Pages Router, pass it to
-  `getServerSideOptimizationProps()`. Use manual server or ESR `{ consent }` options only when
-  direct request binding is needed.
+- For Next.js App Router and Pages Router, put the same request policy in `consent.server` on the
+  relevant binding. Use manual server request options or the edge request helper only when direct
+  request binding is needed.
 - Clear active in-memory profile state with the runtime reset method and server profile cookies when
   revocation requires it.
 - Use JavaScript or React Native `consent({ events, persistence })`, iOS
@@ -527,7 +527,7 @@ Before releasing a consent-aware Optimization SDK integration, verify these impl
 - [Interaction tracking in Node and stateless environments](./interaction-tracking-in-node-and-stateless-environments.md) -
   Request-scoped consent, stateless tracking, and server-side profile persistence.
 - [Next.js SDK README](../../packages/web/frameworks/nextjs-sdk/README.md) - Adapter boundaries for
-  server consent, ESR consent and persistence, request-context forwarding, and client consent.
+  server consent, edge consent and persistence, request-context forwarding, and client consent.
 - [React Native SDK interaction tracking mechanics](./react-native-sdk-interaction-tracking-mechanics.md) -
   React Native consent, AsyncStorage persistence, offline delivery, and tracking behavior.
 - [iOS SDK runtime and interaction mechanics](./ios-sdk-runtime-and-interaction-mechanics.md) - iOS

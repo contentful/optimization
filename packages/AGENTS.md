@@ -11,6 +11,25 @@ Applies to all workspace packages under `packages/`.
 - Keep package-local `dev/` harnesses aligned with the SDK behavior they exercise.
 - When public SDK behavior changes, update relevant TSDoc/JSDoc and package README guidance in the
   same change.
+- Stateful SDK APIs that wire shared runtime state must not use `create*` or factory wording unless
+  they create truly isolated state; name and document them by purpose with initialize, bind, or
+  configure.
+- Exception to the root `eslint-disable` rule: package constants may use the standardized
+  `// eslint-disable-next-line @typescript-eslint/naming-convention -- Replaced at build-time`
+  suppression for bundler-injected replacement globals such as `__OPTIMIZATION_VERSION__`. Keep the
+  suppression text and injected global naming consistent across packages.
+
+## Dependency surfaces
+
+- SDK packages may expose pass-through entrypoints for lower-layer exports they intentionally make
+  available to downstream adapters. A downstream SDK can depend on a single upstream SDK and reach
+  lower-layer-owned exports through that upstream SDK's public pass-through entrypoints instead of
+  adding direct dependencies on every source package.
+- Keep ownership clear when using pass-throughs: implement behavior in the owning lower-layer
+  package, export it through the chosen pass-through surface, and validate both the owner and the
+  downstream consumer.
+- Do not add direct workspace dependencies merely to reach exports that are already part of an
+  intended public pass-through contract.
 
 ## Package READMEs
 

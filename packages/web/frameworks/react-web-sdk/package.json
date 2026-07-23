@@ -53,6 +53,36 @@
         "default": "./dist/core-sdk.cjs"
       }
     },
+    "./handoff": {
+      "import": {
+        "types": "./dist/handoff.d.mts",
+        "default": "./dist/handoff.mjs"
+      },
+      "require": {
+        "types": "./dist/handoff.d.cts",
+        "default": "./dist/handoff.cjs"
+      }
+    },
+    "./analytics": {
+      "import": {
+        "types": "./dist/analytics.d.mts",
+        "default": "./dist/analytics.mjs"
+      },
+      "require": {
+        "types": "./dist/analytics.d.cts",
+        "default": "./dist/analytics.cjs"
+      }
+    },
+    "./tracking-attributes": {
+      "import": {
+        "types": "./dist/tracking-attributes.d.mts",
+        "default": "./dist/tracking-attributes.mjs"
+      },
+      "require": {
+        "types": "./dist/tracking-attributes.d.cts",
+        "default": "./dist/tracking-attributes.cjs"
+      }
+    },
     "./api-client": {
       "import": {
         "types": "./dist/api-client.d.mts",
@@ -122,8 +152,14 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 4900,
-        "index.mjs": 4200
+        "index.cjs": 5750,
+        "index.mjs": 5000,
+        "handoff.cjs": 700,
+        "handoff.mjs": 300,
+        "analytics.cjs": 700,
+        "analytics.mjs": 300,
+        "tracking-attributes.cjs": 700,
+        "tracking-attributes.mjs": 300
       }
     }
   },

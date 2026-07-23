@@ -24,11 +24,11 @@ return shapes; the types own those.
 | Import path | Public symbol or purpose | source |
 | ----------- | ------------------------ | ------ |
 
-## Setup / factory
+## Setup / initialization and binding
 
-- Record behavioral setup facts: lifecycle, defaults, ownership, initialization timing, and
-  same-named-factory semantics. For exact config keys and returns, point the writer to the symbol and
-  let it read the types. source: per line.
+- Record behavioral setup facts: lifecycle, defaults, ownership, initialization timing, and setup
+  helper semantics. For exact config keys and returns, point the writer to the symbol and let it
+  read the types. source: per line.
 
 ## Components & hooks
 

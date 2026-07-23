@@ -8,7 +8,7 @@ unless a client-only entry island needs `/client` props such as per-entry `liveU
 ## Rules
 
 - App Router only; no Pages Router.
-- `lib/optimization.ts` is the only place that imports `createNextjsAppRouterOptimization()` from
+- `lib/optimization.ts` is the only place that imports `bindNextjsAppRouterOptimization()` from
   `@contentful/optimization-nextjs/app-router`.
 - Routes and shared components import `OptimizationRoot`, the bound `OptimizedEntry`, and
   `NextAppAutoPageTracker` from `@/lib/optimization`; do not import those components from
@@ -22,7 +22,7 @@ unless a client-only entry island needs `/client` props such as per-entry `liveU
 - Landing/SEO pages should be Server Components; interactive/reactive surfaces should be Client
   Components using browser hooks and either the app-local `<OptimizedEntry>` or the `/client`
   `<OptimizedEntry>` when per-entry live-update control is required.
-- Configure app-local `<OptimizedEntry>` live updates through the factory or `LiveUpdatesProvider`;
+- Configure app-local `<OptimizedEntry>` live updates through the binding or `LiveUpdatesProvider`;
   use `/client` `<OptimizedEntry liveUpdates>` for per-entry overrides.
 - Use the app-local bound `OptimizationRoot` directly; do not add custom provider wrappers around
   it.

@@ -1,7 +1,6 @@
 import type { Entry } from 'contentful'
 import { renderToString } from 'react-dom/server'
 import * as pagesRouter from './pages-router'
-import type { OptimizationData } from './server'
 
 const testConfig = {
   clientId: 'test-client-id',
@@ -9,34 +8,6 @@ const testConfig = {
   api: {
     insightsBaseUrl: 'http://localhost:8000/insights/',
     experienceBaseUrl: 'http://localhost:8000/experience/',
-  },
-}
-
-const serverOptimizationState: OptimizationData = {
-  changes: [],
-  selectedOptimizations: [],
-  profile: {
-    id: 'server-profile-id',
-    stableId: 'server-profile-id',
-    random: 0.5,
-    audiences: [],
-    traits: {},
-    location: {},
-    session: {
-      id: 'server-session-id',
-      isReturningVisitor: false,
-      landingPage: {
-        path: '/',
-        query: {},
-        referrer: '',
-        search: '',
-        title: '',
-        url: 'https://example.test/',
-      },
-      count: 1,
-      activeSessionLength: 0,
-      averageSessionLength: 0,
-    },
   },
 }
 
@@ -73,47 +44,60 @@ function createEntryCollection(items: readonly Entry[]): {
 }
 
 describe('Next.js Pages Router client components', () => {
-  it('passes config and render-time server state through the bound root and provider', () => {
+  it('passes config and handoff through the bound root and provider', () => {
     const contentful = {
       client: {
         getEntry: async () => await Promise.resolve(createEntry('unused')),
         getEntries: async () => await Promise.resolve(createEntryCollection([])),
       },
     }
-    const components = pagesRouter.createNextjsPagesRouterOptimization({
+    const components = pagesRouter.bindNextjsPagesRouterOptimization({
       ...testConfig,
+      consent: { clientDefaults: { consent: false, persistenceConsent: false } },
       contentful,
       liveUpdates: true,
     })
-    const prefetchedManagedEntries = [{ baselineEntry: createEntry('hero'), entryId: 'hero' }]
+    const handoff = components.createHandoffFromSelections({
+      cache: { scope: 'static' },
+      entries: [{ baselineEntry: createEntry('hero'), entryId: 'hero' }],
+      hydration: 'preserve-server',
+      initialPageEvent: 'emit',
+      selectedOptimizations: [],
+    })
 
     const root = components.OptimizationRoot({
       children: 'Root content',
-      serverOptimizationState,
-      prefetchedManagedEntries,
+      handoff,
+      initialPagePayload: { properties: { route: '/products' } },
+      routeKey: '/products',
     })
     const provider = components.OptimizationProvider({
       children: 'Provider content',
-      serverOptimizationState,
-      prefetchedManagedEntries,
+      handoff,
+      hydration: 'client-only-hidden-until-ready',
+      prefetchManagedEntries: ['hero'],
     })
 
     expect(root.props).toMatchObject({
       api: testConfig.api,
       children: 'Root content',
       clientId: testConfig.clientId,
+      defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,
       liveUpdates: true,
-      serverOptimizationState,
-      prefetchedManagedEntries,
+      handoff,
+      initialPagePayload: { properties: { route: '/products' } },
+      routeKey: '/products',
       contentful,
     })
     expect(provider?.props).toMatchObject({
       api: testConfig.api,
       clientId: testConfig.clientId,
+      defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,
-      serverOptimizationState,
-      prefetchedManagedEntries,
+      handoff,
+      hydration: 'client-only-hidden-until-ready',
+      prefetchManagedEntries: ['hero'],
       contentful,
     })
     expect(provider?.props).not.toHaveProperty('liveUpdates')
@@ -129,43 +113,24 @@ describe('Next.js Pages Router client components', () => {
     })
   })
 
-  it('merges request-specific client defaults through the bound root and provider', () => {
-    const components = pagesRouter.createNextjsPagesRouterOptimization({
-      ...testConfig,
-      defaults: { consent: false, persistenceConsent: false },
-    })
-
-    const root = components.OptimizationRoot({
-      children: 'Root content',
-      clientDefaults: { consent: true, persistenceConsent: true },
-    })
-    const provider = components.OptimizationProvider({
-      children: 'Provider content',
-      clientDefaults: { consent: true, persistenceConsent: true },
-    })
-
-    expect(root.props).toMatchObject({
-      defaults: { consent: true, persistenceConsent: true },
-    })
-    expect(provider?.props).toMatchObject({
-      defaults: { consent: true, persistenceConsent: true },
-    })
-  })
-
   it('renders client OptimizedEntry content from Pages Router handoff during SSR', () => {
     const getEntry = rs.fn(async () => await Promise.resolve(createEntry('client-fetch')))
     const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
-    const components = pagesRouter.createNextjsPagesRouterOptimization({
+    const components = pagesRouter.bindNextjsPagesRouterOptimization({
       ...testConfig,
       contentful: { client: { getEntry, getEntries } },
     })
     const baselineEntry = createEntry('hero')
+    const handoff = components.createHandoffFromSelections({
+      cache: { scope: 'static' },
+      entries: [{ baselineEntry, entryId: 'hero' }],
+      hydration: 'preserve-server',
+      initialPageEvent: 'emit',
+      selectedOptimizations: [],
+    })
 
     const markup = renderToString(
-      <components.OptimizationRoot
-        serverOptimizationState={serverOptimizationState}
-        prefetchedManagedEntries={[{ baselineEntry, entryId: 'hero' }]}
-      >
+      <components.OptimizationRoot handoff={handoff}>
         <components.OptimizedEntry entryId="hero" loadingFallback="loading">
           {(entry) => entry.sys.id}
         </components.OptimizedEntry>
@@ -178,17 +143,24 @@ describe('Next.js Pages Router client components', () => {
     expect(getEntries).not.toHaveBeenCalled()
   })
 
-  it('returns the Pages tracker only', () => {
-    const components = pagesRouter.createNextjsPagesRouterOptimization(testConfig)
+  it('returns Pages Router v2 helpers only', () => {
+    const components = pagesRouter.bindNextjsPagesRouterOptimization(testConfig)
 
     expect(components.NextPagesAutoPageTracker).toBe(pagesRouter.NextPagesAutoPageTracker)
+    expect(components.OptimizationAnalyticsRoot).toBeTypeOf('function')
+    expect(components.createHandoffFromSelections).toBeTypeOf('function')
+    expect(components.createOptimizationCacheKey).toBeTypeOf('function')
+    expect(components.resolveEntriesForSelections).toBeTypeOf('function')
     expect(components).not.toHaveProperty('NextAppAutoPageTracker')
   })
 
-  it('keeps the Pages Router entry scoped to the factory and tracker', () => {
+  it('keeps the Pages Router entry scoped to the client binding and pass-through helpers', () => {
     expect(Object.keys(pagesRouter).sort()).toEqual([
       'NextPagesAutoPageTracker',
-      'createNextjsPagesRouterOptimization',
+      'bindNextjsPagesRouterOptimization',
+      'createHandoffFromSelections',
+      'createOptimizationCacheKey',
+      'resolveEntriesForSelections',
     ])
   })
 })

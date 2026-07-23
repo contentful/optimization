@@ -576,6 +576,39 @@ describe('ContentfulOptimization', () => {
     expect(upsertProfile).not.toHaveBeenCalled()
   })
 
+  it('can mark an SSR-emitted current page as accepted after another route', async () => {
+    const web = new ContentfulOptimization(config)
+    const upsertProfile = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const skippedPayload = rs.fn(() => ({}))
+    const dedupedPayload = rs.fn(() => ({}))
+
+    await expect(
+      web.trackCurrentPage({
+        routeKey: '/',
+        buildPayload: () => ({}),
+      }),
+    ).resolves.toEqual({ accepted: true, data: EMPTY_OPTIMIZATION_DATA })
+    await expect(
+      web.trackCurrentPage({
+        initialPageEvent: 'skip',
+        routeKey: '/page-two',
+        buildPayload: skippedPayload,
+      }),
+    ).resolves.toEqual({ accepted: true })
+    await expect(
+      web.trackCurrentPage({
+        routeKey: '/page-two',
+        buildPayload: dedupedPayload,
+      }),
+    ).resolves.toEqual({ accepted: false })
+
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+    expect(skippedPayload).not.toHaveBeenCalled()
+    expect(dedupedPayload).not.toHaveBeenCalled()
+  })
+
   it('forwards onEventBlocked callback to core stateful guards', async () => {
     const onEventBlocked = rs.fn()
     const web = new ContentfulOptimization({ ...config, onEventBlocked })

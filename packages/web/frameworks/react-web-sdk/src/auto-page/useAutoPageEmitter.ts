@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useOptimization } from '../hooks/useOptimization'
 import { useConsentState } from '../hooks/useOptimizationState'
 import type { AutoPagePayload } from './types'
@@ -23,8 +23,9 @@ export interface UseAutoPageEmitterArgs {
    */
   readonly routeKey: string
   /**
-   * Controls the first route emission. Next.js SSR integrations can use
-   * `skip` when the server already emitted the same page event.
+   * Controls the first eligible route emission. SSR integrations can use
+   * `skip` when the server already emitted the mounted route's page event.
+   * Later client-side route changes still emit normally.
    */
   readonly initialPageEvent?: InitialAutoPageEvent
   /**
@@ -53,15 +54,26 @@ export function useAutoPageEmitter({
 }: UseAutoPageEmitterArgs): void {
   const sdk = useOptimization()
   const consent = useConsentState()
+  const skippedInitialRouteKey = useRef<string | null | undefined>(undefined)
 
   useEffect(() => {
     if (!enabled) {
       return
     }
 
+    if (skippedInitialRouteKey.current === undefined) {
+      skippedInitialRouteKey.current = initialPageEvent === 'skip' ? routeKey : null
+    }
+
+    const currentInitialPageEvent = skippedInitialRouteKey.current === routeKey ? 'skip' : 'emit'
+
+    if (skippedInitialRouteKey.current !== routeKey) {
+      skippedInitialRouteKey.current = null
+    }
+
     void sdk
       .trackCurrentPage({
-        initialPageEvent,
+        initialPageEvent: currentInitialPageEvent,
         routeKey,
         buildPayload,
       })

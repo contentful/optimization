@@ -187,7 +187,7 @@ export function OptimizationProvider(props: OptimizationProviderProps): React.JS
       ...config
     } = initialProps
 
-    void ContentfulOptimization.create(config)
+    void ContentfulOptimization.initialize(config)
       .then((sdk) => {
         if (destroyed) {
           sdk.destroy()

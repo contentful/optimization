@@ -48,7 +48,7 @@ apps mostly use the view surface, UIKit apps mostly use the imperative `Optimiza
   `globalThis.__bridge`; the Swift `OptimizationClient` is a thin native facade over it.
   source: optimization-js-bridge#index.ts#Bridge; core-sdk#CoreStateful.ts#CoreStatefulConfig
 
-## Setup / factory
+## Setup / initialization and binding
 
 - Two usage modes for the one client. SwiftUI: `OptimizationRoot(config:)` owns the client
   (`@StateObject`), calls `initialize(config:)` in a `.task`, injects it via `@EnvironmentObject`

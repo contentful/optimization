@@ -39,15 +39,15 @@ package setup, use the relevant integration guide or package README.
 
 Each runtime exposes the SDK Experience/event locale through its own API surface:
 
-| Runtime          | Locale API surface                                                                                                                                                                                                                                                                                                                                                            |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Web**          | `new ContentfulOptimization({ locale })`, `optimization.locale`, `optimization.states.locale`, `optimization.setLocale(locale)`, and `<ctfl-optimization-root locale="...">`                                                                                                                                                                                                  |
-| **React Web**    | `<OptimizationRoot locale>`, provider-owned `<OptimizationProvider locale>`, and `useOptimization()` access to `sdk.locale`, `sdk.states.locale`, and `sdk.setLocale(locale)`                                                                                                                                                                                                 |
-| **Next.js**      | Preferred App Router `createNextjsAppRouterOptimization({ locale })` bound components, Pages Router `getServerSideOptimizationProps(context)`, lower-level server `createNextjsOptimization({ locale })`, request-scoped `getNextjsServerOptimizationData(sdk, { locale })`, ESR `getNextjsEsrOptimizationData(sdk, { locale })`, and manual client `OptimizationRoot locale` |
-| **Node**         | `new ContentfulOptimization({ locale })` for a default, `optimization.forRequest({ locale })` for request scope, and `experienceOptions.locale` as an advanced pass-through when request `locale` is absent                                                                                                                                                                   |
-| **React Native** | `<OptimizationRoot locale>`, provider-owned `<OptimizationProvider locale>`, `ContentfulOptimization.create({ locale })`, `sdk.locale`, and `sdk.setLocale(locale)`                                                                                                                                                                                                           |
-| **iOS**          | `OptimizationConfig(locale:)`, `OptimizationRoot(config:)`, `OptimizationClient.locale`, and `OptimizationClient.setLocale(_:)`                                                                                                                                                                                                                                               |
-| **Android**      | `OptimizationConfig(locale = ...)`, Compose `OptimizationRoot(config = ...)`, XML Views `OptimizationManager.initialize(config = ...)`, `OptimizationClient.locale`, and `OptimizationClient.setLocale(locale)`                                                                                                                                                               |
+| Runtime          | Locale API surface                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Web**          | `new ContentfulOptimization({ locale })`, `optimization.locale`, `optimization.states.locale`, `optimization.setLocale(locale)`, and `<ctfl-optimization-root locale="...">`                                                                                                                                                                                                                                           |
+| **React Web**    | `<OptimizationRoot locale>`, provider-owned `<OptimizationProvider locale>`, and `useOptimization()` access to `sdk.locale`, `sdk.states.locale`, and `sdk.setLocale(locale)`                                                                                                                                                                                                                                          |
+| **Next.js**      | App Router `bindNextjsAppRouterOptimization({ locale })` bound components and `createRequestHandoff({ locale })`; Pages Router `/pages-router/server` `createRequestHandoff(context, { locale })`; lower-level server `configureNextjsServerOptimization({ locale })` and `getNextjsServerOptimizationData(sdk, { locale })`; edge `createEdgeRequestHandoff({ locale })`; and manual client `OptimizationRoot locale` |
+| **Node**         | `new ContentfulOptimization({ locale })` for a default, `optimization.forRequest({ locale })` for request scope, and `experienceOptions.locale` as an advanced pass-through when request `locale` is absent                                                                                                                                                                                                            |
+| **React Native** | `<OptimizationRoot locale>`, provider-owned `<OptimizationProvider locale>`, `ContentfulOptimization.initialize({ locale })`, `sdk.locale`, and `sdk.setLocale(locale)`                                                                                                                                                                                                                                                |
+| **iOS**          | `OptimizationConfig(locale:)`, `OptimizationRoot(config:)`, `OptimizationClient.locale`, and `OptimizationClient.setLocale(_:)`                                                                                                                                                                                                                                                                                        |
+| **Android**      | `OptimizationConfig(locale = ...)`, Compose `OptimizationRoot(config = ...)`, XML Views `OptimizationManager.initialize(config = ...)`, `OptimizationClient.locale`, and `OptimizationClient.setLocale(locale)`                                                                                                                                                                                                        |
 
 ## The locale channels
 
@@ -183,8 +183,8 @@ const entry = await contentfulClient.getEntry(entryId, {
 ## Next.js adapter
 
 Next.js composes the stateless Node SDK on the server with the React Web SDK on the client. For App
-Router integrations, prefer the `/app-router` `createNextjsAppRouterOptimization({ locale })`
-factory. It returns app-local bound `OptimizationRoot`, `OptimizationProvider`, `OptimizedEntry`,
+Router integrations, prefer the `/app-router` `bindNextjsAppRouterOptimization({ locale })`
+binding. It returns app-local bound `OptimizationRoot`, `OptimizationProvider`, `OptimizedEntry`,
 and route trackers. Next.js resolves those bound exports to the automatic server implementation in
 Server Components and to React Web-backed client exports in Client Components.
 
@@ -192,31 +192,28 @@ Next.js App Router binding module (TypeScript):
 
 ```ts
 export const { NextAppAutoPageTracker, OptimizationRoot, OptimizedEntry } =
-  createNextjsAppRouterOptimization({
+  bindNextjsAppRouterOptimization({
     clientId,
     locale: appLocale,
-    server: {
-      enabled: true,
-      consent,
-    },
+    consent: { server: consent },
   })
 ```
 
-The bound server root and bound server `OptimizedEntry` use the factory `locale` when they load
+The bound server root and bound server `OptimizedEntry` use the binding `locale` when they load
 server Optimization data. The bound client root applies the same locale through React Web
 configuration.
 
-Keep lower-level/manual surfaces for direct request control. `createNextjsOptimization({ locale })`
+Keep lower-level/manual surfaces for direct request control. `configureNextjsServerOptimization({ locale })`
 sets the server SDK default locale, `getNextjsServerOptimizationData(sdk, { locale })` binds an App
-Router Server Component request, `getServerSideOptimizationProps(context)` binds a Pages Router
-`getServerSideProps` request with explicit `locale` taking precedence over `context.locale`,
-`getNextjsEsrOptimizationData(sdk, { locale })` binds a request-rendered ESR flow, and manual client
-`OptimizationRoot locale` follows the React Web behavior.
+Router Server Component request, the Pages Router server binding's `createRequestHandoff(context, {
+locale })` binds a Pages Router `getServerSideProps` request with explicit `locale` taking
+precedence over `context.locale`, `createEdgeRequestHandoff({ locale })` binds an edge request, and
+manual client `OptimizationRoot locale` follows the React Web behavior.
 
 Next.js manual server runtime (TypeScript):
 
 ```ts
-const optimization = createNextjsOptimization({
+const optimization = configureNextjsServerOptimization({
   clientId,
   locale: defaultLocale,
 })
@@ -232,17 +229,18 @@ export const proxy = createNextjsOptimizationContextHandler()
 ```
 
 Use the request-scoped manual `locale` path when a manual route can serve different locales. A
-module-level `createNextjsOptimization({ locale })` value is a default for the server SDK instance,
+module-level `configureNextjsServerOptimization({ locale })` value is a default for the server SDK runtime,
 not the current request locale. Manual Server Components pass `headers()` to
 `getNextjsServerOptimizationData()` so the SDK can derive page context from the request URL captured
 by the Next.js proxy or middleware helper.
 
-Locale handoff is separate from server optimization state handoff. When the browser provider has the
-server data at its boundary, pass it with `serverOptimizationState` on `OptimizationRoot`. With App
-Router bound components, the bound server root handles that state handoff. With Pages Router,
-`pages/_app.tsx` receives the helper result through `pageProps` and passes it to the bound root.
-Keep `defaults` for configuration or default state such as consent policy, not for server-returned
-profile, selected optimizations, or changes.
+Locale selection is separate from browser state handoff. When the browser provider has the
+server/static/edge data at its boundary, pass it with the `handoff` prop on `OptimizationRoot`. With
+App Router bound components, pass the `handoff` returned by `createRequestHandoff()` or
+`createHandoffFromSelections()` to the bound root. With Pages Router, `pages/_app.tsx` receives
+`pageProps.contentfulOptimization.handoff` and passes it to the bound root. Keep `defaults` for
+configuration or default state such as consent policy, not for server-returned profile, selected
+optimizations, or changes.
 
 ## Node and stateless SDKs
 
@@ -293,8 +291,8 @@ Pass direct single-locale field values to the runtime-specific entry resolution 
   `entryId` plus optional `entryQuery`.
 - Web Component `ctfl-optimized-entry` with either `baselineEntry` or managed `entry-id`/`entryId`
   plus optional `entryQuery`.
-- Next.js bound `OptimizedEntry` from `createNextjsAppRouterOptimization()` for App Router Server
-  and Client Components, or from `createNextjsPagesRouterOptimization()` for Pages Router client
+- Next.js bound `OptimizedEntry` from `bindNextjsAppRouterOptimization()` for App Router Server
+  and Client Components, or from `bindNextjsPagesRouterOptimization()` for Pages Router client
   rendering. Lower-level server flows can use `resolveOptimizedEntry()` or managed
   `fetchOptimizedEntry()`, then pass manual `baselineEntry` and `resolvedData` props or the managed
   result to `ServerOptimizedEntry` when server-rendered tracking attributes are needed.
@@ -321,10 +319,10 @@ Applications own:
 - Passing the Contentful locale to manual CDA and CPA requests or SDK-managed `contentful.js`
   fetching.
 - Passing the SDK Experience/event locale through top-level SDK `locale`, provider `locale`, Next.js
-  `createNextjsAppRouterOptimization({ locale })`, Pages Router `getServerSideOptimizationProps()`,
-  lower-level Next.js `getNextjsServerOptimizationData({ locale })`, Next.js ESR
-  `getNextjsEsrOptimizationData({ locale })`, native config `locale`, native `setLocale`, or Node
-  `forRequest({ locale })`.
+  `bindNextjsAppRouterOptimization({ locale })`, App Router and Pages Router
+  `createRequestHandoff({ locale })`, lower-level Next.js
+  `getNextjsServerOptimizationData({ locale })`, edge `createEdgeRequestHandoff({ locale })`,
+  native config `locale`, native `setLocale`, or Node `forRequest({ locale })`.
 - Keeping localized content cache keys distinct.
 - Refetching Contentful content after locale changes.
 - Ensuring the Contentful locale is supported by the target Contentful environment.

@@ -44,6 +44,16 @@
         "default": "./dist/api-schemas.cjs"
       }
     },
+    "./cache-middleware": {
+      "import": {
+        "types": "./dist/cache-middleware.d.mts",
+        "default": "./dist/cache-middleware.mjs"
+      },
+      "require": {
+        "types": "./dist/cache-middleware.d.cts",
+        "default": "./dist/cache-middleware.cjs"
+      }
+    },
     "./server": {
       "import": {
         "types": "./dist/server.d.mts",
@@ -54,14 +64,14 @@
         "default": "./dist/server.cjs"
       }
     },
-    "./esr": {
+    "./edge": {
       "import": {
-        "types": "./dist/esr.d.mts",
-        "default": "./dist/esr.mjs"
+        "types": "./dist/edge.d.mts",
+        "default": "./dist/edge.mjs"
       },
       "require": {
-        "types": "./dist/esr.d.cts",
-        "default": "./dist/esr.cjs"
+        "types": "./dist/edge.d.cts",
+        "default": "./dist/edge.cjs"
       }
     },
     "./pages-router": {
@@ -115,20 +125,22 @@
       "gzipBudgets": {
         "app-router.cjs": 1200,
         "app-router.mjs": 1200,
-        "app-router-server.cjs": 3800,
-        "app-router-server.mjs": 4250,
+        "app-router-server.cjs": 3900,
+        "app-router-server.mjs": 5500,
+        "cache-middleware.cjs": 1400,
+        "cache-middleware.mjs": 1000,
         "client.cjs": 1200,
         "client.mjs": 1200,
-        "esr.cjs": 4200,
-        "esr.mjs": 4200,
+        "edge.cjs": 4200,
+        "edge.mjs": 4200,
         "pages-router.cjs": 1200,
         "pages-router.mjs": 1200,
         "pages-router/server.cjs": 3600,
-        "pages-router/server.mjs": 4000,
+        "pages-router/server.mjs": 4300,
         "server.cjs": 4500,
         "server.mjs": 4500,
         "request-handler.cjs": 2500,
-        "request-handler.mjs": 2800,
+        "request-handler.mjs": 4300,
         "tracking-attributes.cjs": 1200,
         "tracking-attributes.mjs": 1200
       }
@@ -147,8 +159,7 @@
   },
   "dependencies": {
     "@contentful/optimization-node": "workspace:*",
-    "@contentful/optimization-react-web": "workspace:*",
-    "@contentful/optimization-web": "workspace:*"
+    "@contentful/optimization-react-web": "workspace:*"
   },
   "devDependencies": {
     "@rsbuild/plugin-react": "^1.4.2",

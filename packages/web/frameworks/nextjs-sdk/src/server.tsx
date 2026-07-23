@@ -1,19 +1,35 @@
 import ContentfulOptimizationRuntime, {
+  createRequestHandoffFromData,
   type OptimizationNodeConfig,
 } from '@contentful/optimization-node'
 import type { OptimizationData, PartialProfile } from '@contentful/optimization-node/api-schemas'
-import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import type {
   CoreStatelessInsightsOptions,
   CoreStatelessRequest,
   CoreStatelessRequestConsent,
   CoreStatelessRequestOptions,
+  EventEmissionResult,
+  ManagedEntryHandoff,
+  OptimizationCacheMetadata,
   PageViewBuilderArgs,
   UniversalEventBuilderArgs,
 } from '@contentful/optimization-node/core-sdk'
 import { createPageContextFromUrl } from '@contentful/optimization-node/core-sdk'
 import type { JSX, ReactElement, ReactNode } from 'react'
 import type { NextjsCookieReader } from './bound-component-types'
+import {
+  DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE,
+  type NextjsAnonymousIdCookieOptions,
+  type PersistNextjsAnonymousIdOptions,
+} from './cookies'
+import type {
+  AnalyticsOptimizationHandoff,
+  BrowserOptimizationHandoff,
+  ContentOptimizationHandoff,
+  ContentOptimizationHydrationMode,
+  OptimizationHydrationMode,
+} from './handoff'
+import { addBrowserHandoffMetadata } from './handoff'
 import { NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER } from './request-context'
 import { renderOptimizedEntryOnServer } from './server-entry-renderer'
 import type {
@@ -22,7 +38,6 @@ import type {
   ServerTrackingResolvedData,
 } from './tracking-attributes'
 
-export const DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE = ANONYMOUS_ID_COOKIE
 export type { OptimizationNodeConfig } from '@contentful/optimization-node'
 export type { OptimizationData, PartialProfile } from '@contentful/optimization-node/api-schemas'
 export {
@@ -36,6 +51,7 @@ export type {
   CoreStatelessRequest,
   CoreStatelessRequestConsent,
   CoreStatelessRequestOptions,
+  EventEmissionResult,
   FetchOptimizedEntryResult,
   PageViewBuilderArgs,
   ResolvedData,
@@ -48,6 +64,11 @@ export type {
   NextjsOptimizationServerConsentContext,
   NextjsOptimizationServerConsentResolver,
 } from './bound-component-types'
+export {
+  DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE,
+  type NextjsAnonymousIdCookieOptions,
+  type PersistNextjsAnonymousIdOptions,
+} from './cookies'
 export {
   NEXTJS_OPTIMIZATION_REQUEST_HEADER_PREFIX,
   NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER,
@@ -75,16 +96,6 @@ export interface NextjsResponseLike {
   readonly cookies: NextjsCookieWriter
 }
 
-export interface NextjsAnonymousIdCookieOptions {
-  readonly domain?: string
-  readonly expires?: Date
-  readonly httpOnly?: boolean
-  readonly maxAge?: number
-  readonly path?: string
-  readonly sameSite?: boolean | 'lax' | 'none' | 'strict'
-  readonly secure?: boolean
-}
-
 export interface BindNextjsOptimizationRequestOptions {
   readonly anonymousIdCookieName?: string
   readonly consent: CoreStatelessRequestConsent
@@ -105,13 +116,19 @@ export interface NextjsServerOptimizationDataOptions extends BindNextjsOptimizat
 
 export interface NextjsServerOptimizationData {
   readonly data: OptimizationData | undefined
+  readonly pageResult: EventEmissionResult
   readonly requestOptimization: CoreStatelessRequest
 }
 
-export interface PersistNextjsAnonymousIdOptions {
-  readonly anonymousIdCookieName?: string
-  readonly cookieOptions?: NextjsAnonymousIdCookieOptions
-  readonly deleteWhenProfileCannotPersist?: boolean
+export interface NextjsRequestHandoffOptions extends NextjsServerOptimizationDataOptions {
+  readonly cache?: OptimizationCacheMetadata
+  readonly entries?: readonly ManagedEntryHandoff[]
+  readonly hydration: OptimizationHydrationMode
+  readonly pagePayload: PageViewBuilderArgs
+}
+
+export interface NextjsRequestHandoffResult extends NextjsServerOptimizationData {
+  readonly handoff: BrowserOptimizationHandoff
 }
 
 /**
@@ -180,7 +197,9 @@ export type ServerOptimizedEntryProps<TElement extends keyof JSX.IntrinsicElemen
       keyof ServerOptimizedEntryOwnProps<TElement> | DataCtflAttributeName
     >
 
-export function createNextjsOptimization(config: OptimizationNodeConfig): ContentfulOptimization {
+export function configureNextjsServerOptimization(
+  config: OptimizationNodeConfig,
+): ContentfulOptimization {
   return new ContentfulOptimizationRuntime(config)
 }
 
@@ -330,7 +349,43 @@ export async function getNextjsServerOptimizationData(
   const requestOptimization = bindNextjsOptimizationRequest(sdk, options)
   const pageResult = await requestOptimization.page(options.pagePayload)
 
-  return { data: pageResult.data, requestOptimization }
+  return { data: pageResult.data, pageResult, requestOptimization }
+}
+
+export function createNextjsRequestHandoff(
+  sdk: ContentfulOptimization,
+  options: NextjsRequestHandoffOptions & { readonly hydration: 'analytics-only' },
+): Promise<NextjsServerOptimizationData & { readonly handoff: AnalyticsOptimizationHandoff }>
+export function createNextjsRequestHandoff(
+  sdk: ContentfulOptimization,
+  options: NextjsRequestHandoffOptions & { readonly hydration: ContentOptimizationHydrationMode },
+): Promise<NextjsServerOptimizationData & { readonly handoff: ContentOptimizationHandoff }>
+export function createNextjsRequestHandoff(
+  sdk: ContentfulOptimization,
+  options: NextjsRequestHandoffOptions,
+): Promise<NextjsRequestHandoffResult>
+export async function createNextjsRequestHandoff(
+  sdk: ContentfulOptimization,
+  options: NextjsRequestHandoffOptions,
+): Promise<NextjsRequestHandoffResult> {
+  const { cache, entries, hydration, ...requestOptions } = options
+  const { data, pageResult, requestOptimization } = await getNextjsServerOptimizationData(
+    sdk,
+    requestOptions,
+  )
+  const handoff = addBrowserHandoffMetadata(
+    createRequestHandoffFromData({
+      ...(cache === undefined ? {} : { cache }),
+      data,
+      ...(entries === undefined ? {} : { entries }),
+    }),
+    {
+      hydration,
+      initialPageEvent: pageResult.accepted ? 'skip' : 'emit',
+    },
+  )
+
+  return { data, handoff, pageResult, requestOptimization }
 }
 
 export function persistNextjsAnonymousId(

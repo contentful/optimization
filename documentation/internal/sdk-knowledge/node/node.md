@@ -14,17 +14,17 @@ per-visitor state between requests. Package source root: `packages/node/node-sdk
 
 ## Package & entry points
 
-| Import path                                      | Purpose                                                                                                                                                      | source                                                                                                                         |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `@contentful/optimization-node` (default export) | Node `ContentfulOptimization` class (extends `CoreStateless`)                                                                                                | node-sdk#index.ts; node-sdk#ContentfulOptimization.ts#ContentfulOptimization                                                   |
-| `@contentful/optimization-node` (named)          | `OPTIMIZATION_NODE_SDK_NAME`, `OPTIMIZATION_NODE_SDK_VERSION`, `OptimizationNodeConfig`, `PublicNodeEventBuilderConfig`                                      | node-sdk#index.ts; node-sdk#constants.ts#OPTIMIZATION_NODE_SDK_NAME; node-sdk#ContentfulOptimization.ts#OptimizationNodeConfig |
-| `@contentful/optimization-node/constants`        | `ANONYMOUS_ID_COOKIE`, `ANONYMOUS_ID_KEY`, Node SDK name/version                                                                                             | node-sdk#constants.ts; core-sdk#constants.ts#ANONYMOUS_ID_COOKIE; core-sdk#constants.ts#ANONYMOUS_ID_KEY                       |
-| `@contentful/optimization-node/core-sdk`         | Re-exports all of core-sdk (incl. `UniversalEventBuilderArgs`, `CoreStateless`, `CoreStatelessRequest`) plus `prefetchOptimizedEntries` entry-source helpers | node-sdk#core-sdk.ts; core-sdk#events/EventBuilder.ts#UniversalEventBuilderArgs                                                |
-| `@contentful/optimization-node/api-schemas`      | Schemas + type guards incl. `isMergeTagEntry`                                                                                                                | node-sdk#api-schemas.ts; api-schemas#contentful/typeGuards.ts#isMergeTagEntry                                                  |
-| `@contentful/optimization-node/api-client`       | API client re-export                                                                                                                                         | node-sdk#api-client.ts                                                                                                         |
-| `@contentful/optimization-node/logger`           | logger utilities (default + named)                                                                                                                           | node-sdk#logger.ts                                                                                                             |
+| Import path                                      | Purpose                                                                                                                                                      | source                                                                                                                                                                           |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-node` (default export) | Node `ContentfulOptimization` class (extends `CoreStateless`)                                                                                                | node-sdk#index.ts; node-sdk#ContentfulOptimization.ts#ContentfulOptimization                                                                                                     |
+| `@contentful/optimization-node` (named)          | `OPTIMIZATION_NODE_SDK_NAME`, `OPTIMIZATION_NODE_SDK_VERSION`, `OptimizationNodeConfig`, `PublicNodeEventBuilderConfig`, `createRequestHandoffFromData`      | node-sdk#index.ts; node-sdk#constants.ts#OPTIMIZATION_NODE_SDK_NAME; node-sdk#ContentfulOptimization.ts#OptimizationNodeConfig; node-sdk#handoff.ts#createRequestHandoffFromData |
+| `@contentful/optimization-node/constants`        | `ANONYMOUS_ID_COOKIE`, `ANONYMOUS_ID_KEY`, Node SDK name/version                                                                                             | node-sdk#constants.ts; core-sdk#constants.ts#ANONYMOUS_ID_COOKIE; core-sdk#constants.ts#ANONYMOUS_ID_KEY                                                                         |
+| `@contentful/optimization-node/core-sdk`         | Re-exports all of core-sdk (incl. `UniversalEventBuilderArgs`, `CoreStateless`, `CoreStatelessRequest`) plus `prefetchOptimizedEntries` entry-source helpers | node-sdk#core-sdk.ts; core-sdk#events/EventBuilder.ts#UniversalEventBuilderArgs                                                                                                  |
+| `@contentful/optimization-node/api-schemas`      | Schemas + type guards incl. `isMergeTagEntry`                                                                                                                | node-sdk#api-schemas.ts; api-schemas#contentful/typeGuards.ts#isMergeTagEntry                                                                                                    |
+| `@contentful/optimization-node/api-client`       | API client re-export                                                                                                                                         | node-sdk#api-client.ts                                                                                                                                                           |
+| `@contentful/optimization-node/logger`           | logger utilities (default + named)                                                                                                                           | node-sdk#logger.ts                                                                                                                                                               |
 
-## Setup / factory
+## Setup / initialization and binding
 
 - `new ContentfulOptimization(config)` — extends `CoreStateless extends CoreBase`; stateless. Create
   ONE per process/module and reuse across requests. Constructing it does NOT attach to any global and
@@ -99,6 +99,13 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   `getMergeTagValue(mergeTagEntry, profile?)` → resolves a MergeTag value against the request profile,
   falling back to the entry's configured fallback.
   source: core-sdk#CoreBase.ts#getFlag; core-sdk#CoreBase.ts#getMergeTagValue; core-sdk#resolvers/MergeTagValueResolver.ts#MergeTagValueResolver
+- `createRequestHandoffFromData({ data, entries?, cache? })` serializes
+  already-returned request data into a framework-neutral handoff. It does not emit page or analytics
+  events; the caller owns when the request-bound Experience call happens and which browser framework
+  receives the handoff. When `data.profile` is present, `cache.scope` must be `private-request`; the
+  helper throws a `TypeError` for `public-permutation` or `static` cache metadata with request
+  profile state.
+  source: node-sdk#handoff.ts#createRequestHandoffFromData; node-sdk#handoff.ts#assertRequestHandoffCacheSafety; core-sdk#handoff.ts#OptimizationHandoff
 
 ## Identifier ownership
 
@@ -183,7 +190,8 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   visitor-agnostic content and are shared-cache safe. Per-request personalized outputs are NOT:
   `page()`/`identify()`/`track()`/`trackView()` responses carry the request's `profile` +
   `selectedOptimizations`, and `getMergeTagValue()` output is profile-dependent (its doc-comment: not
-  safe for shared-output caching) — memoize none of these across requests/visitors.
+  safe for shared-output caching) — memoize none of these across requests/visitors. Request handoffs
+  carrying profile state are private-request only.
   `resolveOptimizedEntry()` results are conditionally cacheable: the resolver is pure over
   `(baselineEntry, selectedOptimizations)` with no ambient/consent input, so a result is reusable
   keyed by the baseline entry version plus a fingerprint of the selections used to resolve it.

@@ -16,24 +16,25 @@
 
 </div>
 
-`@contentful/optimization-nextjs` is a thin adapter for Next.js applications. It composes the Node
-SDK on the server with the React Web SDK on the client; it is not a new optimization runtime. The
-package root intentionally has no runtime export. Import one of the documented subpaths so the
-server, client, and router boundaries stay explicit.
+`@contentful/optimization-nextjs` is a thin adapter for Next.js applications. It composes Node
+server helpers, React Web roots, and edge-safe Core pass-throughs; it is not a new optimization
+runtime. The package root intentionally has no runtime export. Import one of the documented
+subpaths so server, client, router, and edge boundaries stay explicit.
 
 ## What this package provides
 
-| Runtime         | Import path                                           | Responsibility                                            |
-| --------------- | ----------------------------------------------------- | --------------------------------------------------------- |
-| App Router      | `@contentful/optimization-nextjs/app-router`          | App Router factory, route tracker, and SDK proxy          |
-| Pages Router    | `@contentful/optimization-nextjs/pages-router`        | Pages Router factory and route tracker                    |
-| Pages server    | `@contentful/optimization-nextjs/pages-router/server` | Config-bound `getServerSideProps` state handoff           |
-| Client          | `@contentful/optimization-nextjs/client`              | Router-neutral React SDK providers, hooks, and components |
-| Schemas         | `@contentful/optimization-nextjs/api-schemas`         | Shared API types, schemas, and structural guards          |
-| Server          | `@contentful/optimization-nextjs/server`              | Node SDK creation, request binding, and state handoff     |
-| ESR             | `@contentful/optimization-nextjs/esr`                 | Edge/request-rendered data and response persistence       |
-| Request handler | `@contentful/optimization-nextjs/request-handler`     | Next middleware/proxy request context forwarding          |
-| Shared          | `@contentful/optimization-nextjs/tracking-attributes` | SSR `data-ctfl-*` tracking attributes                     |
+| Runtime          | Import path                                           | Responsibility                                     |
+| ---------------- | ----------------------------------------------------- | -------------------------------------------------- |
+| App Router       | `@contentful/optimization-nextjs/app-router`          | App Router binding and handoff helpers             |
+| Cache middleware | `@contentful/optimization-nextjs/cache-middleware`    | Next proxy or middleware cache rewrites            |
+| Pages Router     | `@contentful/optimization-nextjs/pages-router`        | Pages Router client binding and React roots        |
+| Pages server     | `@contentful/optimization-nextjs/pages-router/server` | Pages Router `getServerSideProps` request handoff  |
+| Edge             | `@contentful/optimization-nextjs/edge`                | Edge request handoff and selection handoff helpers |
+| Client           | `@contentful/optimization-nextjs/client`              | Router-neutral React SDK providers, hooks, roots   |
+| Schemas          | `@contentful/optimization-nextjs/api-schemas`         | Shared API types, schemas, and structural guards   |
+| Server           | `@contentful/optimization-nextjs/server`              | Node SDK configuration, request binding, wrappers  |
+| Request handler  | `@contentful/optimization-nextjs/request-handler`     | Next middleware/proxy request context forwarding   |
+| Shared           | `@contentful/optimization-nextjs/tracking-attributes` | SSR `data-ctfl-*` tracking attributes              |
 
 ## Install
 
@@ -43,274 +44,216 @@ pnpm add @contentful/optimization-nextjs contentful
 
 Next.js, React, and React DOM are application-owned peer dependencies. The adapter uses the runtime
 already installed by your app instead of installing its own copy. The `contentful` package is the
-app-owned CDA client used by the managed entry fetching example.
+app-owned CDA client used by managed entry fetching examples.
+
+The bound `OptimizationProvider` handles the React Web content SDK context, browser handoff,
+hydration mode, and managed-entry prefetch for a subtree. Use the bound `OptimizationRoot` at route
+roots because it adds initial page-event wiring through `routeKey`, `buildPagePayload`, or
+`initialPagePayload`. Do not pass those page-event props to `OptimizationProvider`.
 
 ## App Router setup
 
 Start App Router integrations from `/app-router` and define app-local bound exports once. Next.js
-resolves that import to the automatic server implementation for Server Components and to the client
-implementation for Client Components. The `/app-router` subpath is a factory and tracker surface;
-import browser hooks, providers, and generic client entry components from `/client`.
+resolves that import to the server implementation for Server Components and to the client
+implementation for Client Components.
 
 ```tsx
-import { createNextjsAppRouterOptimization } from '@contentful/optimization-nextjs/app-router'
+import { bindNextjsAppRouterOptimization } from '@contentful/optimization-nextjs/app-router'
+import { contentfulClient } from './contentful'
 import { getAppConsent } from './consent'
 
 export const {
-  proxy,
-  NextAppAutoPageTracker,
-  OptimizationProvider,
   OptimizationRoot,
+  OptimizationAnalyticsRoot,
   OptimizedEntry,
-} = createNextjsAppRouterOptimization({
+  createRequestHandoff,
+  createHandoffFromSelections,
+  createOptimizationCacheKey,
+  getServerTrackingAttributes,
+  resolveEntriesForSelections,
+} = bindNextjsAppRouterOptimization({
   clientId: 'client-id',
   environment: 'main',
   locale: 'en-US',
-  defaults: { consent: false, persistenceConsent: false },
-  server: {
-    enabled: true,
-    consent: ({ cookies }) =>
-      getAppConsent(cookies) ? { events: true, persistence: true } : false,
+  contentful: { client: contentfulClient },
+  consent: {
+    server: ({ cookies }) => (getAppConsent(cookies) ? { events: true, persistence: true } : false),
+    clientDefaults: { consent: false, persistenceConsent: false },
   },
 })
 ```
 
-`server.consent` is required when `server.enabled` is `true`. It can be a consent value or a
-resolver that receives the values read from the proxy request cookies and headers.
-
-Export the SDK proxy from `proxy.ts` and declare the matcher as a literal Next.js config object so
-Next.js can statically analyze it. The SDK proxy calls `page()`, persists `ctfl-opt-aid`, and
-forwards server state before Server Components render:
-
-```ts
-export { proxy } from '@/lib/optimization'
-
-export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
-}
-```
-
-Use the bound root in an App Router layout:
-
-Use either the bound `OptimizationRoot` or the bound `OptimizationProvider` for a subtree, not both.
-`OptimizationRoot` already composes the provider and live-updates provider; a nested provider
-creates another context and can hide server handoffs such as `prefetchedManagedEntries`.
+Use `createRequestHandoff()` when a route should call `page()` on the server and pass canonical
+browser handoff state into the React Web root:
 
 ```tsx
-import { getAppConsent } from '@/lib/consent'
-import { NextAppAutoPageTracker, OptimizationRoot } from '@/lib/optimization'
-import { cookies } from 'next/headers'
-import { Suspense, type ReactNode } from 'react'
+import { cookies, headers } from 'next/headers'
+import { OptimizationRoot, createRequestHandoff } from '@/lib/optimization'
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  const cookieStore = await cookies()
-  const appConsent = getAppConsent(cookieStore)
+export default async function Page() {
+  const requestHeaders = new Headers(await headers())
+  const handoff = await createRequestHandoff({
+    cache: { scope: 'private-request' },
+    hydration: 'preserve-server',
+    pagePayload: { properties: { route: '/products' } },
+    request: {
+      cookies: await cookies(),
+      headers: requestHeaders,
+      url: 'https://example.com/products',
+    },
+  })
 
   return (
-    <OptimizationRoot>
-      <Suspense>
-        <NextAppAutoPageTracker initialPageEvent={appConsent ? 'skip' : 'emit'} />
-      </Suspense>
-      {children}
+    <OptimizationRoot
+      handoff={handoff}
+      routeKey="/products"
+      buildPagePayload={() => ({ properties: { route: '/products' } })}
+    >
+      {/* route content */}
     </OptimizationRoot>
   )
 }
 ```
 
-Use the same app-local `OptimizedEntry` name on either side of the component boundary:
+Use `createHandoffFromSelections()` for app-owned static, ISR, or public edge permutations. The
+application supplies the selected optimizations and cache key. Request-derived profile handoffs must
+use `private-request` cache scope.
 
 ```tsx
-import { OptimizedEntry } from '@/lib/optimization'
-
-export function ServerEntry({ entry }) {
-  return (
-    <OptimizedEntry baselineEntry={entry}>
-      {(resolvedEntry, { getMergeTagValue }) => (
-        <EntryCard entry={resolvedEntry} getMergeTagValue={getMergeTagValue} />
-      )}
-    </OptimizedEntry>
-  )
-}
+const optimizationKey = createOptimizationCacheKey({
+  scope: 'public-permutation',
+  selectedOptimizations: permutation.selectedOptimizations,
+  locale: permutation.locale,
+  entryIds: permutation.entryIds,
+})
+const handoff = createHandoffFromSelections({
+  selectedOptimizations: permutation.selectedOptimizations,
+  cache: {
+    scope: 'public-permutation',
+    key: `${permutation.slug}:v${permutation.cacheVersion}:${optimizationKey}`,
+  },
+  hydration: 'preserve-server',
+  initialPageEvent: 'emit',
+})
 ```
 
-A file without `'use client'` gets server-resolved first paint through the Node SDK. The bound root
-and provider pass server data as `serverOptimizationState`, and the bound `OptimizedEntry` resolves
-through the server SDK. A file with `'use client'` gets browser resolution and live updates through
-the React Web SDK with server-only config removed. `OptimizedEntry` render props receive
-`(resolvedEntry, { getMergeTagValue })` in both cases. The automatic API accepts config props only;
-it does not accept injected SDK instances.
+Use `OptimizationAnalyticsRoot` for analytics-only routes. Render personalized content on the
+server, attach tracking attributes with `getServerTrackingAttributes()`, and pass an
+`analytics-only` handoff to the root.
 
 ## Pages Router setup
 
-Start Pages Router integrations from `/pages-router` and pass server state through `_app.tsx`
-because `getServerSideProps` delivers it through `pageProps`. The `/pages-router` subpath is a
-factory and tracker surface; import browser hooks, providers, and generic client entry components
-from `/client`.
+Use `/pages-router` for client roots in `_app.tsx` and `/pages-router/server` for
+`getServerSideProps`. The server helper is separate because the client binding is a `"use client"`
+entry.
 
 ```tsx
-import { createNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router'
+import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router'
 
-export const { NextPagesAutoPageTracker, OptimizationProvider, OptimizationRoot, OptimizedEntry } =
-  createNextjsPagesRouterOptimization({
+export const { OptimizationRoot, OptimizationAnalyticsRoot, OptimizedEntry } =
+  bindNextjsPagesRouterOptimization({
     clientId: 'client-id',
     environment: 'main',
-    locale: 'en-US',
-    defaults: { consent: false, persistenceConsent: false },
+    consent: {
+      clientDefaults: { consent: false, persistenceConsent: false },
+    },
   })
 ```
 
-Use the bound root and tracker in `pages/_app.tsx`:
-
 ```tsx
-import { NextPagesAutoPageTracker, OptimizationRoot } from '@/lib/optimization'
+import { OptimizationRoot } from '@/lib/optimization'
 import type { AppProps } from 'next/app'
+import { useRouter } from 'next/router'
 
 export default function App({ Component, pageProps }: AppProps) {
-  const contentfulOptimization = pageProps.contentfulOptimization
+  const router = useRouter()
+  const routeKey = router.asPath || router.pathname
 
   return (
     <OptimizationRoot
-      clientDefaults={contentfulOptimization?.clientDefaults}
-      serverOptimizationState={contentfulOptimization?.serverOptimizationState}
+      buildPagePayload={() => ({ properties: { route: routeKey } })}
+      handoff={pageProps.contentfulOptimization?.handoff}
+      routeKey={routeKey}
     >
-      <NextPagesAutoPageTracker initialPageEvent={contentfulOptimization?.initialPageEvent} />
       <Component {...pageProps} />
     </OptimizationRoot>
   )
 }
 ```
 
-Use the config-bound server helper from `getServerSideProps` on personalized Pages routes:
-
 ```tsx
-import { createNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router/server'
+import { bindNextjsPagesRouterServerOptimization } from '@contentful/optimization-nextjs/pages-router/server'
 
-const { getServerSideOptimizationProps } = createNextjsPagesRouterOptimization({
+const { createRequestHandoff } = bindNextjsPagesRouterServerOptimization({
   clientId: 'client-id',
   environment: 'main',
-  server: {
-    consent: { events: true, persistence: true },
+  consent: {
+    server: { events: true, persistence: true },
   },
 })
 
 export async function getServerSideProps(context) {
-  const optimization = await getServerSideOptimizationProps(context)
-
-  return { props: optimization.props }
-}
-```
-
-The Pages helper builds request context from the `getServerSideProps` context, calls `page()`
-through the request-bound SDK, writes or clears `ctfl-opt-aid` on the response, and returns
-serializable `props.contentfulOptimization`. Its default `initialPageEvent` is `skip` only when the
-server already emitted a consented page event; pre-consent server resolution still emits the initial
-browser page event so client-side tracking state starts populated.
-
-When configured with `contentful: { client }`, Pages `getServerSideOptimizationProps()` accepts
-`prefetchManagedEntries` descriptors and returns `contentfulOptimization.prefetchedManagedEntries`
-for the bound root. App Router bound roots accept the same `prefetchManagedEntries` prop and fetch
-those entries on the server. Multi-entry prefetches share Core's managed cache and use
-`getEntries()` for uncached entries with the same normalized query. Large `getEntries()` fetches are
-split into 100-ID chunks. Client-side bound `OptimizedEntry entryId` rendering uses matching
-`prefetchedManagedEntries` first and can fetch through the configured `contentful.client` when the
-bound config provides a browser-safe client.
-
-## Manual server setup
-
-Use `/server` helpers only when an application needs direct Node SDK request control instead of a
-router-specific bound setup.
-
-```tsx
-import { OptimizationRoot } from '@contentful/optimization-nextjs/client'
-import {
-  createNextjsOptimization,
-  getNextjsServerOptimizationData,
-  ServerOptimizedEntry,
-} from '@contentful/optimization-nextjs/server'
-import { createClient } from 'contentful'
-import { cookies, headers } from 'next/headers'
-
-const contentfulClient = createClient({
-  accessToken: process.env.CONTENTFUL_ACCESS_TOKEN!,
-  space: process.env.CONTENTFUL_SPACE_ID!,
-})
-
-const sdk = createNextjsOptimization({
-  clientId: 'client-id',
-  contentful: { client: contentfulClient },
-  environment: 'main',
-  locale: 'en-US',
-})
-
-export default async function Page() {
-  const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
-  const { data, requestOptimization } = await getNextjsServerOptimizationData(sdk, {
-    consent: { events: true, persistence: true },
-    cookies: cookieStore,
-    headers: headerStore,
-    locale: 'en-US',
+  const handoff = await createRequestHandoff(context, {
+    cache: { scope: 'private-request' },
+    hydration: 'preserve-server',
+    pagePayload: { properties: { route: context.resolvedUrl } },
   })
 
-  const result = await requestOptimization.fetchOptimizedEntry('hero-entry')
-
-  return (
-    <OptimizationRoot clientId="client-id" environment="main" serverOptimizationState={data}>
-      <ServerOptimizedEntry result={result}>{result.entry.fields.title}</ServerOptimizedEntry>
-    </OptimizationRoot>
-  )
+  return { props: { contentfulOptimization: { handoff } } }
 }
 ```
 
-`ServerOptimizedEntry` also keeps the manual `baselineEntry` plus `resolvedData` props for apps that
-fetch Contentful entries outside the SDK.
+## Edge runtime
 
-## Manual client setup
+Use `/edge` for Edge runtime request handoff. The helper accepts Web-standard `Request`, `Headers`,
+and cookie snapshots and does not import the Node SDK.
 
-Use `/client` imports when a client-only provider must be wired manually. App Router layouts that
-use the bound root import do not need this setup.
+```ts
+import { configureNextjsEdgeOptimization } from '@contentful/optimization-nextjs/edge'
 
-```tsx
-import { NextAppAutoPageTracker } from '@contentful/optimization-nextjs/app-router'
-import { OptimizationRoot } from '@contentful/optimization-nextjs/client'
-import { Suspense, type ReactNode } from 'react'
+const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
+  clientId: 'client-id',
+  environment: 'main',
+  consent: {
+    server: { events: true, persistence: true },
+    clientDefaults: { consent: false, persistenceConsent: false },
+  },
+})
 
-export function Providers({ children }: { children: ReactNode }) {
-  return (
-    <OptimizationRoot clientId="client-id" environment="main">
-      <Suspense>
-        <NextAppAutoPageTracker initialPageEvent="skip" />
-      </Suspense>
-      {children}
-    </OptimizationRoot>
-  )
+export async function GET(request: Request) {
+  const { handoff, persist } = await createEdgeRequestHandoff({
+    cache: { scope: 'private-request' },
+    hydration: 'preserve-server',
+    pagePayload: { properties: { route: new URL(request.url).pathname } },
+    request,
+  })
+  const response = new Response(renderHtml({ handoff }), {
+    headers: { 'content-type': 'text/html; charset=utf-8' },
+  })
+
+  persist(response)
+
+  return response
 }
 ```
 
-Use `initialPageEvent="skip"` only when the server already called `page()` for the same initial
-route. Route changes still emit normally.
+Public edge permutations use the same `createHandoffFromSelections()` path as static and ISR
+routes.
 
-## Server-to-browser state handoff
+## Server and tracking helpers
 
-App Router bound roots and providers pass `serverOptimizationState` from Server Components. Pages
-Router bound roots and providers accept it at render time from `pageProps`. In manual server/client
-setups, use `serverOptimizationState={data}` on `OptimizationRoot` or `OptimizationProvider` when
-that provider or root receives the server Optimization data directly:
+`@contentful/optimization-nextjs/server` exposes low-level Node utilities such as
+`configureNextjsServerOptimization()`, `createNextjsRequestHandoff()`, `ServerOptimizedEntry`, and
+`getNextjsServerOptimizationData()` for applications that need direct Node request control.
 
-```tsx
-<OptimizationRoot
-  clientId="client-id"
-  environment="main"
-  defaults={{ consent: true }}
-  serverOptimizationState={data}
->
-  {children}
-</OptimizationRoot>
-```
+`@contentful/optimization-nextjs/tracking-attributes` exposes `getServerTrackingAttributes()`, a
+Next.js wrapper around the React Web/Web tracking-attribute pass-through. Use it for
+server/static/edge-rendered markup that should be observed by analytics-only browser roots.
 
-Keep `defaults` for configuration or default state such as consent. Pass server-returned profile,
-selected optimizations, and changes through `serverOptimizationState`.
+## Request handler helpers
 
-## Request context setup
+`@contentful/optimization-nextjs/request-handler` exposes proxy and middleware helpers for
+request-context forwarding.
 
 ```ts
 import { createNextjsOptimizationContextHandler } from '@contentful/optimization-nextjs/request-handler'
@@ -318,43 +261,7 @@ import { createNextjsOptimizationContextHandler } from '@contentful/optimization
 export const proxy = createNextjsOptimizationContextHandler()
 ```
 
-The returned handler can be exported from `middleware.ts` or `proxy.ts`. It forwards sanitized
-request context headers, including the SDK-owned request URL header that the bound and manual server
-paths read from `headers()`. It does not call `page()`, resolve consent, or write response cookies.
-
-## Edge/request-rendered personalization
-
-Use the ESR helper when a route handler, edge function, or request-rendered surface owns both the
-incoming `Request` and outgoing `Response` instead of using App Router `cookies()` and `headers()`
-as the integration boundary:
-
-```ts
-import { getNextjsEsrOptimizationData } from '@contentful/optimization-nextjs/esr'
-import { createNextjsOptimization } from '@contentful/optimization-nextjs/server'
-
-const sdk = createNextjsOptimization({
-  clientId: 'client-id',
-  environment: 'main',
-})
-
-export async function GET(request: Request) {
-  const esr = await getNextjsEsrOptimizationData(sdk, {
-    consent: { events: true, persistence: true },
-    locale: 'en-US',
-    request,
-  })
-
-  const response = new Response(renderHtml(esr.data), {
-    headers: { 'content-type': 'text/html; charset=utf-8' },
-  })
-
-  esr.persist(response)
-
-  return response
-}
-```
-
-The ESR helper derives page context from `request.url`, reads `ctfl-opt-aid` from request cookies
-when available, calls `page()`, and returns an object containing `data`, `requestOptimization`, and
-`persist()`. Call `persist(response)` only after your application creates the response that is safe
-to personalize and not shared across visitors.
+The request-context handler forwards sanitized request context headers. It does not call `page()`,
+resolve consent, or write response cookies.
+Use `createNextjsCacheMiddleware()` from `@contentful/optimization-nextjs/cache-middleware` when
+proxy code needs cache-key rewrites.

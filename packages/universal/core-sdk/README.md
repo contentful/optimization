@@ -185,6 +185,7 @@ Core exposes reusable primitives for SDK layers:
 | `CoreStateless`                 | Stateless optimization runtime for server SDKs                                                                                                                |
 | Event methods                   | `identify`, `page`, `screen`, `track`, `trackView`, `trackClick`, etc.                                                                                        |
 | Resolution and fetch helpers    | `resolveOptimizedEntry`, `fetchContentfulEntry`, `fetchContentfulEntries`, `fetchOptimizedEntry`, `prefetchManagedEntries`, `getMergeTagValue`, and `getFlag` |
+| Selection handoff helpers       | Framework-neutral selection state, cache keys, cache-safety warnings, bulk entry resolution, and `createHandoffFromSelections`                                |
 | Current-state tracking          | `AcceptedCurrentStateTracker` for SDK-owned page or screen adapters                                                                                           |
 | `states`                        | Stateful observable state streams                                                                                                                             |
 | Interceptors                    | First-party hooks for event and state lifecycle customization                                                                                                 |
@@ -205,6 +206,13 @@ entries the app already fetched. Stateful Core uses the current `selectedOptimiz
 omitted, request-bound stateless clients use the latest accepted Experience selections and request
 `locale` fallback for managed Contentful fetches, and root stateless callers pass explicit
 `selectedOptimizations`.
+
+Framework SDKs use Core selection handoff helpers when server, static, or edge rendering already
+knows the selected optimizations. `createHandoffFromSelections()` records that explicit selection
+state and cache metadata without choosing browser hydration behavior. `resolveEntriesForSelections()`
+resolves a batch of baseline entries in input order for server-rendered markup, and
+`createSelectionFingerprint()`, `createOptimizationCacheKey()`, and
+`getOptimizationCacheSafetyWarnings()` support customer-owned cache keys and diagnostics.
 
 Do not pass all-locale CDA responses from `withAllLocales` or `locale=*`; optimization fields such
 as `fields.nt_experiences` and `fields.nt_variants` must be direct single-locale field values. See

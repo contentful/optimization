@@ -1,12 +1,31 @@
-import { isRecord } from '@contentful/optimization-node/api-schemas'
 import {
-  DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE,
+  ANONYMOUS_ID_COOKIE,
   type CoreStatelessRequest,
-  type NextjsAnonymousIdCookieOptions,
-  type NextjsCookieReader,
   type OptimizationData,
-  type PersistNextjsAnonymousIdOptions,
-} from './server'
+} from '@contentful/optimization-react-web/core-sdk'
+import type { NextjsCookieReader } from './bound-component-types'
+
+export const DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE = ANONYMOUS_ID_COOKIE
+
+export interface NextjsAnonymousIdCookieOptions {
+  readonly domain?: string
+  readonly expires?: Date
+  readonly httpOnly?: boolean
+  readonly maxAge?: number
+  readonly path?: string
+  readonly sameSite?: boolean | 'lax' | 'none' | 'strict'
+  readonly secure?: boolean
+}
+
+export interface PersistNextjsAnonymousIdOptions {
+  readonly anonymousIdCookieName?: string
+  readonly cookieOptions?: NextjsAnonymousIdCookieOptions
+  readonly deleteWhenProfileCannotPersist?: boolean
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
 
 export function isNextjsCookieReader(value: unknown): value is NextjsCookieReader {
   return isRecord(value) && typeof value.get === 'function'

@@ -645,9 +645,6 @@ importers:
       '@contentful/optimization-react-web':
         specifier: workspace:*
         version: link:../react-web-sdk
-      '@contentful/optimization-web':
-        specifier: workspace:*
-        version: link:../../web-sdk
     devDependencies:
       '@rsbuild/plugin-react':
         specifier: ^1.4.2

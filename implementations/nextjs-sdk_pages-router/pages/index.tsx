@@ -2,14 +2,16 @@ import { ControlPanel } from '@/components/ControlPanel'
 import { EntryCard } from '@/components/EntryCard'
 import { LiveEntryCard } from '@/components/LiveEntryCard'
 import { loadPageEntries, type ContentEntry } from '@/lib/contentful'
-import { getPagesRouterOptimizationProps } from '@/lib/optimization-server'
+import {
+  getPagesRouterOptimizationProps,
+  type PagesRouterOptimizationProps,
+} from '@/lib/optimization-server'
 import { toIdMap } from '@/lib/util'
-import type { NextjsPagesRouterOptimizationProps } from '@contentful/optimization-nextjs/pages-router/server'
 import { CLICK_SCENARIOS, PAGES } from 'e2e-web'
 import type { GetServerSideProps } from 'next'
 import type { JSX } from 'react'
 
-type HomeProps = NextjsPagesRouterOptimizationProps & {
+type HomeProps = PagesRouterOptimizationProps & {
   readonly entries: ContentEntry[]
 }
 
@@ -21,13 +23,13 @@ export const getServerSideProps: GetServerSideProps<HomeProps> = async (context)
 
   return {
     props: {
-      ...optimization.props,
+      contentfulOptimization: optimization,
       entries,
     },
   }
 }
 
-export default function Home({ entries }: HomeProps): JSX.Element {
+export default function Home({ contentfulOptimization, entries }: HomeProps): JSX.Element {
   const entriesById = toIdMap(entries)
   const liveUpdatesEntry = entriesById.get(PAGES.home.liveUpdates)
 
@@ -36,12 +38,12 @@ export default function Home({ entries }: HomeProps): JSX.Element {
       <div className="page-header">
         <h1>Next.js SDK Pages Router</h1>
         <p className="page-header__subtitle">
-          Reference implementation of @contentful/optimization-nextjs with getServerSideProps state
-          handoff
+          Reference implementation of @contentful/optimization-nextjs with getServerSideProps
+          request handoff
         </p>
       </div>
 
-      <ControlPanel />
+      <ControlPanel initialConsent={contentfulOptimization.consent} />
 
       <section className="page-section" data-testid="live-updates-section">
         <header className="page-section__header">

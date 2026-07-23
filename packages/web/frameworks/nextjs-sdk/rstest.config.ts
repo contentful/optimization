@@ -6,6 +6,11 @@ const coverageReporters = process.env.CI === 'true' ? ['text-summary', 'lcov'] :
 
 export default defineConfig({
   plugins: [pluginReact()],
+  source: {
+    define: {
+      __OPTIMIZATION_VERSION__: JSON.stringify('9.8.7'),
+    },
+  },
   resolve: {
     alias: {
       '@contentful/optimization-api-client': resolve(

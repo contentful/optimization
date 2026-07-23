@@ -17,7 +17,7 @@ guide: ../../guides/integrating-the-node-sdk-in-a-node-app.md
   request; the `curl` verification.
 - **Deliberate simplifications:** Consent is granted per request and profile persistence is deferred.
 - **Explainer switches:** profile point = include; managed-fetch clause = include.
-- **Fact sources:** [setup](../../internal/sdk-knowledge/node/node.md#setup--factory),
+- **Fact sources:** [setup](../../internal/sdk-knowledge/node/node.md#setup--initialization-and-binding),
   [events](../../internal/sdk-knowledge/node/node.md#events--tracking),
   [runtime](../../internal/sdk-knowledge/node/node.md#version--runtime-quirks).
 
@@ -33,7 +33,7 @@ guide: ../../guides/integrating-the-node-sdk-in-a-node-app.md
 
 | Section                                                 | Category                       | Purpose                                                      | Must teach or show                                                                    | Fact sources                                                                                                                                                      |
 | ------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Install and initialize the Node SDK                     | Required for first integration | Establish the process-level instance before request work.    | Complete initialization module; environment ownership; one-instance rule.             | [setup](../../internal/sdk-knowledge/node/node.md#setup--factory)                                                                                                 |
+| Install and initialize the Node SDK                     | Required for first integration | Establish the process-level instance before request work.    | Complete initialization module; environment ownership; one-instance rule.             | [setup](../../internal/sdk-knowledge/node/node.md#setup--initialization-and-binding)                                                                              |
 | Bind request context and locale                         | Required for first integration | Teach the request-scoped inputs every later call consumes.   | Request-to-context adapter; locale precedence; ownership statement.                   | [events](../../internal/sdk-knowledge/node/node.md#events--tracking), [runtime](../../internal/sdk-knowledge/node/node.md#version--runtime-quirks)                |
 | Apply consent policy                                    | Common but policy-dependent    | Replace the quick-start shortcut with application policy.    | Boolean and split-axis forms; blocked result; app-owned policy seam.                  | [consent](../../internal/sdk-knowledge/node/node.md#consent--persistence)                                                                                         |
 | Evaluate route requests with `page()`                   | Required for first integration | Explain the main request evaluation and its result envelope. | Request example; result-field glossary; accepted-versus-blocked branch.               | [events](../../internal/sdk-knowledge/node/node.md#events--tracking)                                                                                              |

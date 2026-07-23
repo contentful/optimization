@@ -1,37 +1,41 @@
 import type { GetServerSidePropsContext } from 'next'
 import type { IncomingHttpHeaders } from 'node:http'
 import type {
+  NextjsOptimizationComponentsConfig,
   NextjsOptimizationCookieConfig,
-  NextjsPagesRouterClientDefaults,
+  NextjsOptimizationServerConsent,
+  NextjsOptimizationServerConsentResolver,
 } from './bound-component-types'
 import {
   createCookieReaderFromHeader,
   createCookieReaderFromRecord,
   createNextjsAnonymousIdSetCookieHeader,
+  type PersistNextjsAnonymousIdOptions,
 } from './cookies'
+import type { BrowserOptimizationHandoff } from './handoff'
 import {
-  createNextjsOptimization,
-  getNextjsServerOptimizationData,
+  configureNextjsServerOptimization,
+  createNextjsRequestHandoff,
   prefetchManagedEntries as prefetchServerManagedEntries,
   type ContentfulOptimization,
-  type CoreStatelessRequest,
   type CoreStatelessRequestConsent,
   type ManagedEntryDescriptor,
-  type ManagedEntryHandoff,
   type NextjsCookieReader,
+  type NextjsRequestHandoffOptions,
+  type NextjsRequestHandoffResult,
   type NextjsRequestLike,
-  type NextjsServerOptimizationDataOptions,
-  type OptimizationData,
   type OptimizationNodeConfig,
-  type PersistNextjsAnonymousIdOptions,
 } from './server'
 
 const SECONDS_IN_DAY = 86_400
+const EMPTY_COOKIE_READER = {
+  get: () => undefined,
+}
 
-export type NextjsPagesRouterInitialPageEvent = 'emit' | 'skip'
 export type {
+  NextjsOptimizationComponentsConfig,
+  NextjsOptimizationConsentConfig,
   NextjsOptimizationCookieConfig,
-  NextjsPagesRouterClientDefaults,
 } from './bound-component-types'
 export {
   prefetchManagedEntries,
@@ -39,116 +43,88 @@ export {
   type ManagedEntryHandoff,
 } from './server'
 
-export interface NextjsPagesRouterOptimizationPageProps {
-  readonly clientDefaults?: NextjsPagesRouterClientDefaults
-  readonly initialPageEvent: NextjsPagesRouterInitialPageEvent
-  readonly serverOptimizationState?: OptimizationData
-  readonly prefetchedManagedEntries?: readonly ManagedEntryHandoff[]
-}
-
-export interface NextjsPagesRouterOptimizationProps {
-  readonly contentfulOptimization: NextjsPagesRouterOptimizationPageProps
-}
-
-export interface NextjsPagesRouterOptimizationPropsOptions
-  extends
-    Omit<NextjsServerOptimizationDataOptions, 'cookies' | 'headers' | 'locale' | 'request'>,
-    PersistNextjsAnonymousIdOptions {
-  readonly initialPageEvent?: NextjsPagesRouterInitialPageEvent
-  readonly locale?: string
-  readonly prefetchManagedEntries?: readonly ManagedEntryDescriptor[]
-}
-
-export type NextjsPagesRouterServerConsentResolver = (
-  context: GetServerSidePropsContext,
-) => CoreStatelessRequestConsent | Promise<CoreStatelessRequestConsent>
-
-export interface NextjsPagesRouterOptimizationConfig extends OptimizationNodeConfig {
-  readonly cookie?: NextjsOptimizationCookieConfig
-  readonly defaults?: unknown
-  readonly liveUpdates?: unknown
-  readonly onStatesReady?: unknown
-  readonly server: {
-    readonly consent: CoreStatelessRequestConsent | NextjsPagesRouterServerConsentResolver
+export type NextjsPagesRouterRequestHandoffOptions = Omit<
+  NextjsRequestHandoffOptions,
+  'consent' | 'cookies' | 'headers' | 'locale' | 'request'
+> &
+  PersistNextjsAnonymousIdOptions & {
+    readonly locale?: string
+    readonly prefetchManagedEntries?: readonly ManagedEntryDescriptor[]
   }
-  readonly trackEntryInteraction?: unknown
-}
-
-export type GetNextjsPagesRouterOptimizationPropsOptions = Omit<
-  NextjsPagesRouterOptimizationPropsOptions,
-  'consent' | 'cookieOptions' | 'locale'
->
-
-export interface NextjsPagesRouterOptimizationPropsResult {
-  readonly props: NextjsPagesRouterOptimizationProps
-  readonly data: OptimizationData | undefined
-  readonly requestOptimization: CoreStatelessRequest
-}
 
 export interface NextjsPagesRouterOptimization {
-  readonly getServerSideOptimizationProps: (
+  readonly createRequestHandoff: (
     context: GetServerSidePropsContext,
-    options?: GetNextjsPagesRouterOptimizationPropsOptions,
-  ) => Promise<NextjsPagesRouterOptimizationPropsResult>
+    options: NextjsPagesRouterRequestHandoffOptions,
+  ) => Promise<BrowserOptimizationHandoff>
 }
 
-export function createNextjsPagesRouterOptimization(
-  config: NextjsPagesRouterOptimizationConfig,
+export function bindNextjsPagesRouterServerOptimization(
+  config: NextjsOptimizationComponentsConfig,
 ): NextjsPagesRouterOptimization {
-  const sdk = createNextjsOptimization(toServerOptimizationConfig(config))
+  const sdk = configureNextjsServerOptimization(toServerOptimizationConfig(config))
 
   return {
-    getServerSideOptimizationProps: async (context, options = {}) =>
-      await getNextjsPagesRouterOptimizationProps(sdk, context, {
+    createRequestHandoff: async (context, options) => {
+      const consent = await resolveServerConsent(config.consent?.server, context)
+      const { handoff } = await createNextjsPagesRouterRequestHandoff(sdk, context, {
         ...options,
-        consent: await resolveServerConsent(config.server.consent, context),
-        cookieOptions: toAnonymousIdCookieOptions(config.cookie),
-        locale: config.locale ?? context.locale,
-      }),
+        consent,
+        cookieOptions: options.cookieOptions ?? toAnonymousIdCookieOptions(config.cookie),
+        locale: options.locale ?? config.locale ?? context.locale,
+      })
+
+      return handoff
+    },
   }
 }
 
-export async function getNextjsPagesRouterOptimizationProps(
+export async function createNextjsPagesRouterRequestHandoff(
   sdk: ContentfulOptimization,
   context: GetServerSidePropsContext,
-  options: NextjsPagesRouterOptimizationPropsOptions,
-): Promise<NextjsPagesRouterOptimizationPropsResult> {
+  options: NextjsPagesRouterRequestHandoffOptions & {
+    readonly consent: CoreStatelessRequestConsent
+  },
+): Promise<NextjsRequestHandoffResult> {
   const {
     cookieOptions,
     deleteWhenProfileCannotPersist,
-    initialPageEvent,
     locale,
     prefetchManagedEntries,
     ...requestOptions
   } = options
   const request = createPagesRouterRequest(context)
-  const { data, requestOptimization } = await getNextjsServerOptimizationData(sdk, {
+  const result = await createNextjsRequestHandoff(sdk, {
     ...requestOptions,
     locale: locale ?? context.locale,
     request,
   })
-  const setCookie = createNextjsAnonymousIdSetCookieHeader(requestOptimization, data, {
-    anonymousIdCookieName: requestOptions.anonymousIdCookieName,
-    cookieOptions,
-    deleteWhenProfileCannotPersist,
-  })
+  const setCookie = createNextjsAnonymousIdSetCookieHeader(
+    result.requestOptimization,
+    result.data,
+    {
+      anonymousIdCookieName: requestOptions.anonymousIdCookieName,
+      cookieOptions,
+      deleteWhenProfileCannotPersist,
+    },
+  )
   if (setCookie !== undefined) appendSetCookie(context, setCookie)
-  const prefetchedManagedEntries =
-    prefetchManagedEntries === undefined
-      ? undefined
-      : await prefetchServerManagedEntries(requestOptimization, prefetchManagedEntries)
+
+  if (prefetchManagedEntries === undefined) return result
+
+  const entries = await prefetchServerManagedEntries(
+    result.requestOptimization,
+    prefetchManagedEntries,
+  )
+
+  const handoff: BrowserOptimizationHandoff = {
+    ...result.handoff,
+    entries: [...(result.handoff.entries ?? []), ...entries],
+  }
 
   return {
-    data,
-    requestOptimization,
-    props: {
-      contentfulOptimization: toContentfulOptimizationProps(
-        data,
-        initialPageEvent ?? resolveInitialPageEvent(data, requestOptions.consent),
-        resolveClientDefaults(requestOptions.consent),
-        prefetchedManagedEntries,
-      ),
-    },
+    ...result,
+    handoff,
   }
 }
 
@@ -246,70 +222,37 @@ function appendSetCookie(context: GetServerSidePropsContext, setCookie: string):
   ])
 }
 
-function toContentfulOptimizationProps(
-  data: OptimizationData | undefined,
-  initialPageEvent: NextjsPagesRouterInitialPageEvent,
-  clientDefaults: NextjsPagesRouterClientDefaults | undefined,
-  prefetchedManagedEntries: readonly ManagedEntryHandoff[] | undefined,
-): NextjsPagesRouterOptimizationPageProps {
-  const props: NextjsPagesRouterOptimizationPageProps = {
-    ...(clientDefaults === undefined ? {} : { clientDefaults }),
-    initialPageEvent,
-    ...(prefetchedManagedEntries === undefined ? {} : { prefetchedManagedEntries }),
-  }
+function resolveServerConsent(
+  consent: NextjsOptimizationServerConsent | NextjsOptimizationServerConsentResolver | undefined,
+  context: GetServerSidePropsContext,
+): CoreStatelessRequestConsent | Promise<CoreStatelessRequestConsent> {
+  if (consent === undefined) return false
 
-  if (data === undefined) return props
-
-  return {
-    ...props,
-    serverOptimizationState: data,
-  }
-}
-
-function resolveInitialPageEvent(
-  data: OptimizationData | undefined,
-  consent: CoreStatelessRequestConsent,
-): NextjsPagesRouterInitialPageEvent {
-  return data !== undefined && hasEventConsent(consent) ? 'skip' : 'emit'
-}
-
-function hasEventConsent(consent: CoreStatelessRequestConsent): boolean {
-  return typeof consent === 'boolean' ? consent : consent.events === true
-}
-
-function resolveClientDefaults(
-  consent: CoreStatelessRequestConsent,
-): NextjsPagesRouterClientDefaults | undefined {
-  if (typeof consent === 'boolean') {
-    return { consent, persistenceConsent: consent }
-  }
-
-  const defaults: NextjsPagesRouterClientDefaults = {
-    ...(consent.events === undefined ? {} : { consent: consent.events }),
-    ...(consent.persistence === undefined ? {} : { persistenceConsent: consent.persistence }),
-  }
-
-  return Object.keys(defaults).length === 0 ? undefined : defaults
+  return typeof consent === 'function'
+    ? consent({
+        cookies: createPagesRouterCookieReader(context) ?? EMPTY_COOKIE_READER,
+        headers: createHeadersFromNodeHeaders(context.req.headers),
+      })
+    : consent
 }
 
 function toServerOptimizationConfig(
-  config: NextjsPagesRouterOptimizationConfig,
+  config: NextjsOptimizationComponentsConfig,
 ): OptimizationNodeConfig {
   const {
+    consent: _consent,
     cookie: _cookie,
-    defaults: _defaults,
     liveUpdates: _liveUpdates,
     onStatesReady: _onStatesReady,
-    server: _server,
     trackEntryInteraction: _trackEntryInteraction,
     ...serverConfig
   } = config
 
-  return serverConfig
+  return serverConfig as OptimizationNodeConfig
 }
 
 function toAnonymousIdCookieOptions(
-  cookie: NextjsPagesRouterOptimizationConfig['cookie'],
+  cookie: NextjsOptimizationCookieConfig | undefined,
 ): PersistNextjsAnonymousIdOptions['cookieOptions'] {
   if (cookie === undefined) return undefined
 
@@ -321,11 +264,4 @@ function toAnonymousIdCookieOptions(
   }
 
   return Object.keys(cookieOptions).length === 0 ? undefined : cookieOptions
-}
-
-function resolveServerConsent(
-  consent: CoreStatelessRequestConsent | NextjsPagesRouterServerConsentResolver,
-  context: GetServerSidePropsContext,
-): CoreStatelessRequestConsent | Promise<CoreStatelessRequestConsent> {
-  return typeof consent === 'function' ? consent(context) : consent
 }
