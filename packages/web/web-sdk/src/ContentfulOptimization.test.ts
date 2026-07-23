@@ -10,6 +10,7 @@ import {
 } from '@contentful/optimization-core/constants'
 import ContentfulOptimization from './ContentfulOptimization'
 import { OPTIMIZATION_WEB_SDK_NAME } from './constants'
+import { EntryInteractionRuntime } from './entry-tracking/EntryInteractionRuntime'
 import { getCookie, removeCookie, setCookie } from './lib/cookies'
 
 const CLIENT_ID = 'key_123'
@@ -623,6 +624,41 @@ describe('ContentfulOptimization', () => {
     expect(typeof beacon).toBe('function')
     expect(beacon?.('/collect', '[]')).toBe(true)
     expect(sendBeacon).toHaveBeenCalledWith('/collect', '[]')
+  })
+
+  it('flushes active entry interactions before the lifecycle Insights flush', async () => {
+    const web = new ContentfulOptimization({
+      ...config,
+      defaults: { consent: true, profile: DEFAULT_PROFILE },
+    })
+
+    const runtime: unknown = Reflect.get(web, 'entryInteractionRuntime')
+    if (!(runtime instanceof EntryInteractionRuntime)) {
+      throw new Error('entryInteractionRuntime is unavailable')
+    }
+
+    const invocations: string[] = []
+    const flushActiveInteractions = rs
+      .spyOn(runtime, 'flushActiveInteractions')
+      .mockImplementation(() => {
+        invocations.push('flushActiveInteractions')
+      })
+    const sendBatchEvents = rs
+      .spyOn(web.api.insights, 'sendBatchEvents')
+      .mockImplementation(async () => {
+        invocations.push('sendBatchEvents')
+        await Promise.resolve()
+        return true
+      })
+
+    await web.trackClick({ componentId: 'hero-banner' })
+    window.dispatchEvent(new Event('pagehide'))
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(flushActiveInteractions).toHaveBeenCalledTimes(1)
+    expect(sendBatchEvents).toHaveBeenCalledTimes(1)
+    expect(invocations).toEqual(['flushActiveInteractions', 'sendBatchEvents'])
   })
 
   it('allows creating a new instance after destroy', () => {

@@ -234,10 +234,16 @@ export class EntryInteractionRuntime {
     this.reconcileAllInteractions()
   }
 
+  public flushActiveInteractions(): void {
+    for (const interaction of ENTRY_INTERACTIONS) {
+      if (!this.isInteractionRunning[interaction]) continue
+      const { flushActive: fn, onError } = this.getDetector(interaction)
+      if (fn) safeCall(fn, onError)
+    }
+  }
+
   private reconcileAllInteractions(): void {
-    ENTRY_INTERACTIONS.forEach((interaction) => {
-      this.reconcileInteraction(interaction)
-    })
+    for (const i of ENTRY_INTERACTIONS) this.reconcileInteraction(i)
   }
 
   private reconcileInteraction(interaction: EntryInteraction, restart = false): void {
@@ -310,9 +316,7 @@ export class EntryInteractionRuntime {
   }
 
   private stopAllEntryInteractions(): void {
-    ENTRY_INTERACTIONS.forEach((interaction) => {
-      this.stopEntryInteraction(interaction)
-    })
+    for (const i of ENTRY_INTERACTIONS) this.stopEntryInteraction(i)
   }
 
   private ensureEntryElementObservation(): void {

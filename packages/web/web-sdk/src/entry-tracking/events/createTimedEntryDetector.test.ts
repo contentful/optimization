@@ -13,12 +13,14 @@ interface TestObserver {
   observe: ReturnType<typeof rs.fn>
   unobserve: ReturnType<typeof rs.fn>
   disconnect: ReturnType<typeof rs.fn>
+  flushActive: ReturnType<typeof rs.fn>
 }
 
 const makeObserver = (): TestObserver => ({
   observe: rs.fn(),
   unobserve: rs.fn(),
   disconnect: rs.fn(),
+  flushActive: rs.fn(),
 })
 
 const makeEntryElement = (id = 'entry-1'): EntryElement => {

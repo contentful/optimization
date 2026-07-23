@@ -379,4 +379,51 @@ describe('ElementHoverObserver', () => {
 
     expect(cb).not.toHaveBeenCalled()
   })
+
+  it('flushActive emits a latest-duration heartbeat for active hovers past dwell', async () => {
+    const el = makeElement()
+    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
+
+    const obs = new ElementHoverObserver(cb, {
+      dwellTimeMs: 1000,
+      hoverDurationUpdateIntervalMs: 10_000,
+    })
+    obs.observe(el)
+
+    dispatchHoverEnter(el)
+
+    await advance(1000)
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    await advance(750)
+    obs.flushActive()
+    await Promise.resolve()
+
+    expect(cb).toHaveBeenCalledTimes(2)
+
+    const firstMeta = cb.mock.calls[0]?.[1]
+    const secondMeta = cb.mock.calls[1]?.[1]
+    if (!isMeta(firstMeta) || !isMeta(secondMeta)) {
+      throw new Error('Unexpected callback payload')
+    }
+
+    expect(secondMeta.hoverId).toBe(firstMeta.hoverId)
+    expect(secondMeta.totalHoverMs).toBe(1750)
+  })
+
+  it('flushActive does not emit for hovers that have not passed dwell yet', async () => {
+    const el = makeElement()
+    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
+
+    const obs = new ElementHoverObserver(cb, { dwellTimeMs: 1000 })
+    obs.observe(el)
+
+    dispatchHoverEnter(el)
+
+    await advance(500)
+    obs.flushActive()
+    await Promise.resolve()
+
+    expect(cb).not.toHaveBeenCalled()
+  })
 })

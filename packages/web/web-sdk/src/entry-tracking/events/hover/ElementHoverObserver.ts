@@ -126,6 +126,17 @@ class ElementHoverObserver {
     this.stopSweeper()
   }
 
+  public flushActive(): void {
+    const now = NOW()
+
+    for (const state of this.activeStates) {
+      if (state.done || state.inFlight || state.hoverId === null || state.attempts === 0) continue
+      if (!state.isHovered) continue
+
+      this.trigger(state, now)
+    }
+  }
+
   private static initOptions(options?: ElementHoverObserverOptions): EffectiveObserverOptions {
     return {
       dwellTimeMs: nonNegativeNumber(options?.dwellTimeMs, DEFAULTS.DWELL_MS),

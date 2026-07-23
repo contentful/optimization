@@ -435,4 +435,53 @@ describe('ElementViewObserver', () => {
     expect(rs.getTimerCount()).toBe(0)
     expect(removeSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
   })
+
+  it('flushActive emits a latest-duration heartbeat for active views past dwell', async () => {
+    const el = makeElement()
+    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
+
+    const obs = new ElementViewObserver(cb, {
+      dwellTimeMs: 1000,
+      viewDurationUpdateIntervalMs: 10_000,
+    })
+    obs.observe(el)
+
+    const inst = mustGetIO()
+    inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
+
+    await advance(1000)
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    await advance(750)
+    obs.flushActive()
+    await Promise.resolve()
+
+    expect(cb).toHaveBeenCalledTimes(2)
+
+    const firstMeta = cb.mock.calls[0]?.[1]
+    const secondMeta = cb.mock.calls[1]?.[1]
+    if (!isMeta(firstMeta) || !isMeta(secondMeta)) {
+      throw new Error('Unexpected callback payload')
+    }
+
+    expect(secondMeta.viewId).toBe(firstMeta.viewId)
+    expect(secondMeta.totalVisibleMs).toBe(1750)
+  })
+
+  it('flushActive does not emit for views that have not passed dwell yet', async () => {
+    const el = makeElement()
+    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
+
+    const obs = new ElementViewObserver(cb, { dwellTimeMs: 1000 })
+    obs.observe(el)
+
+    const inst = mustGetIO()
+    inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
+
+    await advance(500)
+    obs.flushActive()
+    await Promise.resolve()
+
+    expect(cb).not.toHaveBeenCalled()
+  })
 })

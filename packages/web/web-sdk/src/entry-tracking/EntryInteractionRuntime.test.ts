@@ -17,6 +17,7 @@ interface DetectorMocks<
   enableElement: ReturnType<typeof rs.fn>
   disableElement: ReturnType<typeof rs.fn>
   clearElement: ReturnType<typeof rs.fn>
+  flushActive: ReturnType<typeof rs.fn>
 }
 
 const createDetectorMocks = <TStartOptions, TElementOptions>(): DetectorMocks<
@@ -32,6 +33,7 @@ const createDetectorMocks = <TStartOptions, TElementOptions>(): DetectorMocks<
   enableElement: rs.fn(),
   disableElement: rs.fn(),
   clearElement: rs.fn(),
+  flushActive: rs.fn(),
 })
 
 function createRuntime(
@@ -390,5 +392,29 @@ describe('EntryInteractionRuntime', () => {
     expect(hoverDetector.stop).toHaveBeenCalledTimes(1)
     expect(viewDetector.stop).toHaveBeenCalledTimes(1)
     expect(Reflect.get(runtime, 'entryElementObserver')).toBeUndefined()
+  })
+
+  it('flushActiveInteractions asks running view and hover detectors to flush', () => {
+    const { clickDetector, hoverDetector, runtime, viewDetector } = createRuntime()
+
+    runtime.tracking.enable('views')
+    runtime.tracking.enable('hovers')
+
+    runtime.flushActiveInteractions()
+
+    expect(viewDetector.flushActive).toHaveBeenCalledTimes(1)
+    expect(hoverDetector.flushActive).toHaveBeenCalledTimes(1)
+    expect(clickDetector.flushActive).not.toHaveBeenCalled()
+  })
+
+  it('flushActiveInteractions skips detectors that are not running', () => {
+    const { hoverDetector, runtime, viewDetector } = createRuntime()
+
+    runtime.tracking.enable('views')
+
+    runtime.flushActiveInteractions()
+
+    expect(viewDetector.flushActive).toHaveBeenCalledTimes(1)
+    expect(hoverDetector.flushActive).not.toHaveBeenCalled()
   })
 })

@@ -133,6 +133,17 @@ class ElementViewObserver {
     this.stopSweeper()
   }
 
+  public flushActive(): void {
+    const now = NOW()
+
+    for (const state of this.activeStates) {
+      if (state.done || state.inFlight || state.viewId === null || state.attempts === 0) continue
+      if (!state.lastKnownVisible) continue
+
+      this.trigger(state, now)
+    }
+  }
+
   private onPageVisibilityChange(): void {
     const now = NOW()
     const hidden = !isPageVisible()
