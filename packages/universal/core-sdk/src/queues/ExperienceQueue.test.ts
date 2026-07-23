@@ -1,12 +1,15 @@
 import type {
   ExperienceEventArray,
   OptimizationData,
+  PageViewEvent,
 } from '@contentful/optimization-api-client/api-schemas'
+import EventBuilder from '../events/EventBuilder'
 import { InterceptorManager } from '../lib/interceptor'
 import { resolveQueueFlushPolicy } from '../lib/queue'
 import {
   experienceRequestState,
   online as onlineSignal,
+  previewMode as previewModeSignal,
   selectedOptimizations as selectedOptimizationsSignal,
   type ExperienceRequestState,
 } from '../signals'
@@ -62,6 +65,24 @@ const observeRequestState = (): {
     states.push(value)
   })
   return { states, unsubscribe }
+}
+
+// NT-3678: schema-valid page event used to exercise the preview-mode
+// short-circuit. Constructed via the real EventBuilder so the event survives
+// the queue's parseWithFriendlyError step.
+function buildProbeEvent(): PageViewEvent {
+  return new EventBuilder({
+    channel: 'web',
+    library: { name: '@contentful/optimization-web', version: '0.0.1' },
+    getPageProperties: () => ({
+      path: '/',
+      query: {},
+      referrer: '',
+      search: '',
+      title: 'preview',
+      url: 'https://example.test/',
+    }),
+  }).buildPageView({})
 }
 
 describe('ExperienceQueue.experienceRequestState transitions', () => {
@@ -129,6 +150,20 @@ describe('ExperienceQueue.experienceRequestState transitions', () => {
     expect(states.at(-1)).toEqual({ status: 'failed', reason: 'api-error' })
 
     unsubscribe()
+  })
+
+  it('suppresses the network write under preview mode (NT-3678)', async () => {
+    const { queue, upsertProfile } = buildQueue()
+    previewModeSignal.value = true
+
+    try {
+      const result = await queue.send(buildProbeEvent())
+
+      expect(result).toBeUndefined()
+      expect(upsertProfile).not.toHaveBeenCalled()
+    } finally {
+      previewModeSignal.value = false
+    }
   })
 
   it('overwrites a terminal failed state with pending on the next request', async () => {

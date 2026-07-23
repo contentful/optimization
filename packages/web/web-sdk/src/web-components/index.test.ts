@@ -185,6 +185,7 @@ function createSdk(
     previewPanelAttached:
       createObservable<WebRuntimeStates['previewPanelAttached']['current']>(false),
     previewPanelOpen,
+    previewMode: createObservable<WebRuntimeStates['previewMode']['current']>(false),
     profile: createObservable<WebRuntimeStates['profile']['current']>(undefined),
     selectedOptimizations,
   } satisfies WebRuntimeStates

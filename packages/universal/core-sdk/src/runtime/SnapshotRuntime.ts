@@ -81,6 +81,7 @@ class SnapshotRuntime implements OptimizationRuntime {
       selectedOptimizations: staticObservable(this.currentSelectedOptimizations),
       previewPanelAttached: staticObservable(false),
       previewPanelOpen: staticObservable(false),
+      previewMode: staticObservable(false),
       profile: staticObservable(this.currentProfile),
       flag: (name: string) => staticObservable<Json>(this.getFlag(name)),
     }

@@ -11,7 +11,12 @@ import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { LifecycleInterceptors } from '../CoreBase'
 import type { EventOptimizationContext, OptimizationEventStreamEvent } from '../events'
 import { QueueFlushRuntime, type ResolvedQueueFlushPolicy } from '../lib/queue'
-import { event as eventSignal, online as onlineSignal, profile as profileSignal } from '../signals'
+import {
+  event as eventSignal,
+  online as onlineSignal,
+  previewMode as previewModeSignal,
+  profile as profileSignal,
+} from '../signals'
 
 const coreLogger = createScopedLogger('CoreStateful')
 
@@ -89,6 +94,15 @@ export class InsightsQueue {
     event: InsightsEventPayload,
     optimizationContext?: EventOptimizationContext,
   ): Promise<void> {
+    // NT-3678: preview traffic must not land in the real profile store or the
+    // analytics pipeline. Under ExO preview the editor pins audience/variant
+    // choices synthetically; there is no natural user to record.
+    // Short-circuited before validation/interceptors to save work.
+    if (previewModeSignal.value) {
+      coreLogger.debug(`Suppressing ${event.type} insights event under preview mode`)
+      return
+    }
+
     const { value: profile } = profileSignal
 
     if (!profile) {

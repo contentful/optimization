@@ -76,6 +76,19 @@ export const previewPanelAttached = signal<boolean>(false)
 export const previewPanelOpen = signal<boolean>(false)
 
 /**
+ * NT-3678: whether the SDK is running under ExO preview.
+ *
+ * When true, event queues suppress network writes so preview traffic does not
+ * land in the real profile store or analytics pipeline. The web-side entry
+ * detects preview mode from URL params (`nt_preview=1` or `preview_session_id`)
+ * at bootstrap; non-browser hosts can set the signal explicitly.
+ *
+ * @defaultValue `false`
+ * @public
+ */
+export const previewMode = signal<boolean>(false)
+
+/**
  * Most recent selected optimization variants.
  *
  * @public
@@ -155,6 +168,8 @@ export interface Signals {
   previewPanelAttached: typeof previewPanelAttached
   /** Preview panel open-state signal. */
   previewPanelOpen: typeof previewPanelOpen
+  /** Whether the SDK is running under ExO preview (NT-3678). */
+  previewMode: typeof previewMode
   /** Durable profile-continuity persistence consent signal. */
   persistenceConsent: typeof persistenceConsent
   /** Selected optimization variants signal. */
@@ -197,6 +212,7 @@ export const signals: Signals = {
   online,
   previewPanelAttached,
   previewPanelOpen,
+  previewMode,
   persistenceConsent,
   selectedOptimizations,
   canOptimize,

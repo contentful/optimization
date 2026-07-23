@@ -13,6 +13,7 @@
 import {
   AcceptedCurrentStateTracker,
   CoreStateful,
+  detectPreviewMode,
   effect,
   resolveStatefulDefaults,
   signals,
@@ -371,6 +372,14 @@ class ContentfulOptimization extends CoreStateful {
     })
 
     this.initializeFromCookieValues(cookieValue, legacyCookieValue)
+
+    // NT-3678: enable ExO preview mode when the URL indicates the SDK is
+    // loading under a preview session. Under preview the queues suppress
+    // network writes so preview traffic does not land in the real profile
+    // store or the analytics pipeline.
+    if (detectPreviewMode()) {
+      signals.previewMode.value = true
+    }
 
     if (typeof window !== 'undefined') window.contentfulOptimization ??= this
   }

@@ -46,6 +46,7 @@ import {
   type Observable,
   online as onlineSignal,
   persistenceConsent as persistenceConsentSignal,
+  previewMode as previewModeSignal,
   previewPanelAttached as previewPanelAttachedSignal,
   previewPanelOpen as previewPanelOpenSignal,
   profile as profileSignal,
@@ -140,6 +141,8 @@ export interface CoreStates {
   previewPanelAttached: Observable<boolean>
   /** Whether the preview panel is open in the host runtime. */
   previewPanelOpen: Observable<boolean>
+  /** Whether the SDK is running under ExO preview (NT-3678). */
+  previewMode: Observable<boolean>
   /** Stream of the most recent blocked event payload. */
   blockedEventStream: Observable<BlockedEvent | undefined>
   /** Stream of the most recent event emitted. */
@@ -236,6 +239,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     selectedOptimizations: toObservable(selectedOptimizationsSignal),
     previewPanelAttached: toObservable(previewPanelAttachedSignal),
     previewPanelOpen: toObservable(previewPanelOpenSignal),
+    previewMode: toObservable(previewModeSignal),
     profile: toObservable(profileSignal),
   }
 

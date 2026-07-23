@@ -40,6 +40,7 @@ export type {
 export * from './locale'
 export type * from './OptimizedEntryMetadata'
 export * from './page-context'
+export * from './preview-mode'
 export type { ExperienceQueue } from './queues/ExperienceQueue'
 export type { InsightsQueue, InsightsQueueFlushOptions } from './queues/InsightsQueue'
 export * from './resolvers'

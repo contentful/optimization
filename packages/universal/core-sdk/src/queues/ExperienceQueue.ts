@@ -13,6 +13,7 @@ import {
   event as eventSignal,
   experienceRequestState as experienceRequestStateSignal,
   online as onlineSignal,
+  previewMode as previewModeSignal,
   profile as profileSignal,
   type ExperienceRequestFailureReason,
 } from '../signals'
@@ -112,6 +113,15 @@ export class ExperienceQueue {
     event: ExperienceEventPayload,
     optimizationContext?: EventOptimizationContext,
   ): Promise<OptimizationData | undefined> {
+    // NT-3678: preview traffic must not land in the real profile store. Under
+    // PUSH_EDITOR the SDK still ingests the DVS-hydrated view but does not
+    // send events to XP API; the editor's synthesized payload is authoritative.
+    // Short-circuited before validation/interceptors to save work.
+    if (previewModeSignal.value) {
+      coreLogger.debug(`Suppressing ${event.type} Experience event under preview mode`)
+      return undefined
+    }
+
     const intercepted = await this.eventInterceptors.run(event)
     const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)
 
