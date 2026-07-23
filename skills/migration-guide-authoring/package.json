@@ -1,0 +1,9 @@
+{
+  "name": "@contentful/skill-migration-guide-authoring",
+  "version": "0.1.0",
+  "description": "Author Optimization SDK migration guide structure and prose",
+  "license": "MIT",
+  "files": [
+    "SKILL.md"
+  ]
+}

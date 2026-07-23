@@ -138,7 +138,7 @@ jobs:
             # (no path is in two of these dirs at once), so `every` would be unsatisfiable and this
             # filter would never fire. A single alternation matches if a file is in any listed area.
             knowledge:
-              - '{documentation/internal/sdk-knowledge/**,documentation/authoring/**,documentation/guides/**,skills/{optimization-guide-authoring,guide-newcomer-review,guide-source-verification,sdk-knowledge-authoring,sdk-knowledge-maintenance}/**,packages/**/src/**,implementations/**,scripts/{validate-sdk-knowledge.ts,validate-guide-authoring.ts,sdk-knowledge/**},.claude/{agents,commands,hooks}/**,.github/workflows/main-pipeline.yaml}'
+              - '{documentation/internal/sdk-knowledge/**,documentation/internal/migration-knowledge/**,documentation/authoring/**,documentation/guides/**,skills/{optimization-guide-authoring,guide-newcomer-review,guide-source-verification,migration-guide-authoring,migration-knowledge-authoring,sdk-knowledge-authoring,sdk-knowledge-maintenance}/**,packages/**/src/**,implementations/**,scripts/{validate-sdk-knowledge.ts,validate-guide-authoring.ts,sdk-knowledge/**},.claude/{agents,commands,hooks}/**,.codex/{agents,hooks}/**,.github/workflows/main-pipeline.yaml}'
 
   setup:
     name: 🛠️ pnpm install

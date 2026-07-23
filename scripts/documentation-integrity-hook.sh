@@ -12,7 +12,7 @@ cwd="$(printf '%s' "$input" | sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*
 
 # Only spend time when something the validators inspect changed in this working tree.
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  changed="$(git status --porcelain -- documentation/internal/sdk-knowledge documentation/authoring documentation/guides skills scripts/validate-guide-authoring.ts scripts/validate-sdk-knowledge.ts 'packages/**/src/**' 2>/dev/null)"
+  changed="$(git status --porcelain -- documentation/internal/sdk-knowledge documentation/internal/migration-knowledge documentation/authoring documentation/guides skills scripts/validate-guide-authoring.ts scripts/validate-sdk-knowledge.ts 'packages/**/src/**' 2>/dev/null)"
   [ -z "$changed" ] && exit 0
 fi
 

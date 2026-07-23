@@ -20,6 +20,9 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
 - When `.nvmrc` and `nodeVersion` drift, suggest updating `nodeVersion`. Whenever `pnpm-lock.yaml`
   changes, verify `.nvmrc` and `nodeVersion` still match.
 - Use `pnpm` only; prefer `pnpm <script>` when equivalent. Prefer `rg`/`rg --files` for search.
+- Never write absolute filesystem paths into Git-tracked documentation or agent instructions. Use
+  paths relative to the repository root, or workspace-relative paths when referring to another
+  checkout. Platform-required runtime paths belong only in executable configuration or scripts.
 - Edit source of truth for normal source, docs, config, and test changes: `src/**`, `e2e/**`,
   `__tests__/**`, `scripts/**`, `documentation/**`, `README.md`, `package.json`, `tsconfig*.json`,
   `rstest.config.ts`, `playwright.config.mjs`, `eslint.config.ts`, `.prettierrc`, and

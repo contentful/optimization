@@ -1,0 +1,9 @@
+{
+  "name": "@contentful/skill-migration-knowledge-authoring",
+  "version": "0.1.0",
+  "description": "Derive legacy migration facts into documentation/internal/migration-knowledge/",
+  "license": "MIT",
+  "files": [
+    "SKILL.md"
+  ]
+}

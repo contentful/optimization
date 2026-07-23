@@ -202,6 +202,13 @@ source: `nextjs-sdk#app-router-server.tsx#renderBoundRootTree`; `nextjs-sdk#app-
   histories, blocked events are diagnostic only, and event-stream `optimization` is not sent to
   Experience/Insights API payloads.
   source: `nextjs-sdk#app-router-server.tsx#toClientRootConfig`; `react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider`; kb:shared/concepts.md; kb:web/react-web.md
+- Browser/client flags use the React Web stateful runtime: `sdk.getFlag()` and `sdk.states.flag()`
+  auto-attempt flag-view tracking, while `sdk.trackFlagView()` is the explicit/manual path.
+  source: `react-web-sdk#hooks/useOptimization.ts#useOptimizationContext`; core-sdk#CoreStatefulEventEmitter.ts#getFlag; core-sdk#CoreStatefulEventEmitter.ts#getFlagObservable; core-sdk#CoreStatefulEventEmitter.ts#trackFlagView
+- Preview-panel attachment is a browser/client concern; once attached to the live client SDK, its
+  audience, variant, and inline-variable overrides use the shared preview override behavior and
+  force live updates while open.
+  source: preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanelToSdk; core-sdk#preview-support/PreviewOverrideManager.ts#setVariantOverride; core-sdk#preview-support/applyChangeOverrides.ts#applyChangeOverrides; react-web-sdk#provider/LiveUpdatesProvider.tsx#LiveUpdatesProvider
 
 ## Consent & persistence
 

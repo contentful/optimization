@@ -19,10 +19,11 @@ Do this in order:
 
 2. **Technical-foundation review.** Launch the `guide-source-verifier` agent on the guide. It splits
    each load-bearing claim into interface vs. behavior: interface (symbol/signature/prop/return shape)
-   is checked directly against the types in `packages/**/src`; behavior (fallback, dynamic render,
-   batching, defaults, ownership, cross-SDK semantics) is checked against the knowledge base and not
-   re-traced from source. It returns per-claim verdicts (confirmed / contradicted / behavioral
-   no-backing-fact). A behavioral claim with no backing fact is escalated to the `sdk-knowledge-author`.
+   is checked directly against the relevant source/types; behavior (fallback, dynamic render,
+   batching, defaults, ownership, cross-SDK semantics, legacy migration boundaries) is checked against
+   the SDK or migration fact store and not re-traced from source. It returns per-claim verdicts
+   (confirmed / contradicted / behavioral no-backing-fact). A behavioral claim with no backing fact is
+   escalated to `sdk-knowledge-authoring` or `migration-knowledge-authoring`.
 
    Run these two reviews concurrently — they are independent (one reads for the reader, one checks the
    guide's facts against the types and the knowledge base).
@@ -31,8 +32,9 @@ Do this in order:
    `guide-writer` agent (or directly, following `optimization-guide-authoring`): reader-experience
    fixes from the newcomer pass, and corrections for every claim the verifier marked contradicted
    (against the types for interface, the KB fact for behavior). For each **behavioral no-backing-fact**
-   claim, resolve it: launch `sdk-knowledge-author` to trace and add the fact if the base should hold
-   it, then recompose the claim from that fact — or remove the claim if nothing backs it.
+   claim, resolve it: use `sdk-knowledge-authoring` for target SDK behavior or
+   `migration-knowledge-authoring` for legacy behavior to trace and add the fact if the base should
+   hold it, then recompose the claim from that fact — or remove the claim if nothing backs it.
 
 4. **Funnel learnings back.** For each finding that reflects a durable rule — not a one-off — fold it
    into the right artifact:
@@ -47,7 +49,9 @@ Do this in order:
      (`documentation/authoring/blueprints/<sdk>.md`), with the reasoning. (The distinction: a rule
      true for the whole archetype is the recipe's; a judgment specific to how _this_ SDK's features
      arrange is the blueprint's.)
-   - a missing or corrected SDK fact → the knowledge base via `sdk-knowledge-author`.
+   - a missing or corrected SDK fact → the SDK knowledge base via `sdk-knowledge-authoring`.
+   - a missing or corrected legacy migration fact → migration knowledge via
+     `migration-knowledge-authoring`.
 
    When a fragment the recipe names is missing from the guide, or its fixed spine was reworded rather
    than instantiated verbatim, that is a structure finding: have the writer instantiate it.

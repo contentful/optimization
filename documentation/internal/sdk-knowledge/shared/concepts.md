@@ -145,14 +145,37 @@ skip the duplicate (per-SDK `initialPageEvent` / tracker prop). Interaction even
 (view/click/hover) are consent-gated browser activity and use the resolved entry id.
 source: react-web-sdk#auto-page/useAutoPageEmitter.ts; react-web-sdk#router/next-app.tsx
 
-## Event streams and blocked events
+## Custom flag views
+
+Stateful flag reads auto-attempt flag-view tracking: `getFlag(name)` tracks the read immediately,
+and `states.flag(name)` tracks `.current`, `subscribe()`, and `subscribeOnce()` reads. The explicit
+manual equivalent is `trackFlagView()`, which builds a `component` view event with
+`componentType: 'Variable'`.
+source: core-sdk#CoreStatefulEventEmitter.ts#getFlag; core-sdk#CoreStatefulEventEmitter.ts#getFlagObservable; core-sdk#CoreStatefulEventEmitter.ts#trackFlagView; core-sdk#events/EventBuilder.ts#buildFlagView
+
+Auto flag-view attempts require consent for `trackFlagView` and a current profile id. A pre-consent
+or pre-profile flag read does not suppress a later accepted same-value track, active
+`states.flag(name)` subscriptions re-attempt when tracking becomes allowed, and accepted attempts are
+deduped by flag value, component id, experience id, variant index, and profile id.
+source: core-sdk#CoreStatefulEventEmitter.ts#attemptFlagViewTracking; core-sdk#CoreStatefulEventEmitter.ts#initializeFlagViewConsentEffect; core-sdk#CoreStatefulEventEmitter.ts#buildFlagViewTrackingSignature
+
+## Stateful event forwarding streams
 
 Stateful JS SDK event forwarding is a current-value signal surface, not a durable event queue.
-`states.eventStream` and `states.blockedEventStream` emit the current value immediately on subscribe
-and then later signal updates; the exposed streams keep only the latest accepted or blocked event
-value while Experience/Insights delivery queues remain internal. A late subscriber must dedupe from
-the events it observes; the SDK does not replay a full event history through these observables.
-source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#CoreStateful.ts#CoreStateful; core-sdk#signals/Observable.ts#toObservable; core-sdk#signals/signals.ts#event; core-sdk#signals/signals.ts#blockedEvent; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue; core-sdk#queues/InsightsQueue.ts#InsightsQueue
+`states.eventStream` emits the most recent accepted Experience or Insights event after event
+interceptors and schema validation; `states.blockedEventStream` emits only consent-blocked calls as
+`{ reason: 'consent', method, args }`. Both observables emit the current value immediately on
+subscribe and then later signal updates; the exposed streams keep only the latest accepted or
+blocked event value while Experience/Insights delivery queues remain internal. A late subscriber
+must dedupe from the events it observes; the SDK does not replay a full event history through these
+observables. Blocked callback failures are logged rather than thrown.
+source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#CoreStateful.ts#CoreStateful; core-sdk#signals/Observable.ts#toObservable; core-sdk#signals/signals.ts#event; core-sdk#signals/signals.ts#blockedEvent; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue; core-sdk#queues/InsightsQueue.ts#InsightsQueue; core-sdk#events/BlockedEvent.ts#BlockedEvent; core-sdk#CoreStatefulEventEmitter.ts#reportBlockedEvent
+
+Event-stream payloads carry each event's normal schema plus universal event fields such as
+`messageId`, `channel`, `context`, and timestamps. Optimized-entry interactions add `optimization`
+context only to the stream payload, not to the strict API payload. Flag-view stream events are not
+enriched with `optimization`.
+source: api-schemas#experience/event/UniversalEventProperties.ts#UniversalEventProperties; core-sdk#queues/ExperienceQueue.ts#send; core-sdk#queues/InsightsQueue.ts#send; core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent
 
 Consent-blocked stateful events stop before API delivery or queueing: Experience methods return
 `{ accepted: false }`, Insights methods return without enqueueing, and Core writes only
@@ -161,12 +184,6 @@ not replay blocked diagnostics or rebuild the blocked call. Current-page/screen 
 blocked attempts as accepted, so a later caller/effect can retry the same current key and build a
 fresh payload under the current consent state.
 source: core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult; core-sdk#CoreStatefulEventEmitter.ts#sendInsightsEvent; core-sdk#CoreStatefulEventEmitter.ts#reportBlockedEvent; core-sdk#CoreStateful.ts#consent; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker; web-sdk#ContentfulOptimization.ts#trackCurrentPage; optimization-js-bridge#index.ts#Bridge
-
-Event-stream `optimization` is runtime-only forwarding enrichment. Core attaches it only to the
-`eventStream` value when an optimized-entry interaction has an `EventOptimizationContext`;
-Experience and Insights API queues validate and send the original event payload without that
-property.
-source: core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent; core-sdk#queues/ExperienceQueue.ts#send; core-sdk#queues/InsightsQueue.ts#send
 
 ## Experience response payload
 
@@ -247,3 +264,22 @@ fields are present, while preview overrides update their clean baselines only fr
 unchanged; own present `undefined` is a resettable baseline, and override derivation falls back to
 empty arrays only when no baseline exists.
 source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#preview-support/PreviewOverrideManager.ts#PreviewOverrideManager; core-sdk#CoreBase.ts#LifecycleInterceptors
+
+## Preview overrides
+
+The web preview panel attaches through the SDK bridge, registers a `PreviewOverrideManager`, and
+mutates the stateful SDK's `selectedOptimizations` and `changes` signals from a clean API baseline
+plus current overrides. Opening the panel sets `previewPanelOpen`, which forces optimized entries to
+live-update while the panel is open.
+source: preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanelToSdk; core-sdk#bridge-support/capabilities.ts#installCoreBridgeCapabilities; core-sdk#preview-support/PreviewOverrideManager.ts#syncOverridesToSignal; web-sdk#presentation/OptimizedEntryController.ts#resolveShouldLiveUpdate
+
+Audience overrides activate all associated experiences at variant index `1` or deactivate them at
+variant index `0`; single-experience overrides replace that experience's `variantIndex`, appending a
+selection with an empty `variants` map when the API baseline did not include it. Reset restores the
+cached API baseline.
+source: core-sdk#preview-support/PreviewOverrideManager.ts#activateAudience; core-sdk#preview-support/PreviewOverrideManager.ts#deactivateAudience; core-sdk#preview-support/PreviewOverrideManager.ts#setVariantOverride; core-sdk#preview-support/applyOptimizationOverrides.ts#applyOptimizationOverrides; core-sdk#preview-support/PreviewOverrideManager.ts#resetAll
+
+Inline-variable preview overrides are represented as `Variable` changes so `getFlag()` and
+`states.flag(name)` resolve the preview-selected value; variant index `0` and out-of-range variant
+indexes use the component baseline value.
+source: core-sdk#preview-support/applyChangeOverrides.ts#applyChangeOverrides; core-sdk#preview-support/PreviewOverrideManager.ts#deriveChanges
