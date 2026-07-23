@@ -7,6 +7,14 @@ children:
   - ./integrating-the-react-web-sdk-in-a-react-app.md
   - ./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md
   - ./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md
+  - ./migrating-experience-js-contentful-model-to-optimization.md
+  - ./migrating-experience-js-to-the-web-sdk.md
+  - ./migrating-experience-js-react-to-react-web.md
+  - ./choosing-a-nextjs-migration-path-from-experience-js.md
+  - ./migrating-experience-js-next-to-nextjs-app-router.md
+  - ./migrating-experience-js-next-to-nextjs-pages-router.md
+  - ./migrating-experience-js-node-ssr-and-esr.md
+  - ./migrating-experience-js-plugins-and-preview.md
   - ./integrating-the-react-native-sdk-in-a-react-native-app.md
   - ./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md
   - ./integrating-the-optimization-ios-sdk-in-a-uikit-app.md
@@ -51,6 +59,23 @@ Native and mobile SDK guides route to beta SDK surfaces.
 | [iOS SDK in UIKit](./integrating-the-optimization-ios-sdk-in-a-uikit-app.md)                     | Native iOS app built with UIKit                            | `ContentfulOptimization` Swift Package     |
 | [Android SDK in Jetpack Compose](./integrating-the-optimization-android-sdk-in-a-compose-app.md) | Native Android app built with Jetpack Compose              | `com.contentful.java:optimization-android` |
 | [Android SDK in Android Views](./integrating-the-optimization-android-sdk-in-a-views-app.md)     | Native Android app built with Android Views or XML layouts | `com.contentful.java:optimization-android` |
+
+## experience.js migration guides
+
+Use these guides when an app already uses `@ninetailed/experience.js` packages and you are replacing
+that integration with the Optimization SDK Suite. Start with the Contentful model guide when legacy
+`nt_*` fields or mapper utilities feed personalized rendering.
+
+| Guide                                                                                       | Legacy integration type                                                | Target path                                                   |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------- |
+| [Contentful model migration](./migrating-experience-js-contentful-model-to-optimization.md) | Legacy Ninetailed-authored entries, `nt_*` fields, mapper utilities    | Optimization-authored experiences and target entry resolution |
+| [Web SDK migration](./migrating-experience-js-to-the-web-sdk.md)                            | Plain browser, static site, SPA, Angular, or custom JavaScript runtime | `@contentful/optimization-web`                                |
+| [React Web migration](./migrating-experience-js-react-to-react-web.md)                      | React provider, hook, component, or flag surfaces                      | `@contentful/optimization-react-web`                          |
+| [Next.js migration path choice](./choosing-a-nextjs-migration-path-from-experience-js.md)   | Legacy Next.js, SSR plugin, ESR, or manual hybrid wiring               | App Router, Pages Router, or manual Node/Web path             |
+| [Next.js App Router migration](./migrating-experience-js-next-to-nextjs-app-router.md)      | Next.js app moving to App Router                                       | `@contentful/optimization-nextjs/app-router`                  |
+| [Next.js Pages Router migration](./migrating-experience-js-next-to-nextjs-pages-router.md)  | Pages Router app with legacy SSR/plugin wiring                         | `@contentful/optimization-nextjs/pages-router`                |
+| [Node, SSR, and ESR migration](./migrating-experience-js-node-ssr-and-esr.md)               | Server API-client, SSR, ESR, or manual handoff code                    | Node SDK, framework SDK, or manual Node/Web hybrid            |
+| [Plugins and preview migration](./migrating-experience-js-plugins-and-preview.md)           | Legacy privacy, analytics, insights, or preview plugins                | Target consent, event streams, forwarding, and preview panel  |
 
 ## Supplemental guides
 

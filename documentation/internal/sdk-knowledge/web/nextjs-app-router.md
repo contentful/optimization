@@ -130,6 +130,14 @@ source: `nextjs-sdk#app-router-server.tsx#renderBoundProviderTree`; `react-web-s
 - Interaction tracking on by default with `OptimizedEntry`; opt out via factory
   `trackEntryInteraction`; uses resolved entry id.
   source: `react-web-sdk#provider/OptimizationProvider.tsx#TrackEntryInteractionOptions`; concept:interaction-tracking-in-web-sdks
+- Browser/client flags use the React Web stateful runtime: `sdk.getFlag()` and `sdk.states.flag()`
+  auto-attempt flag-view tracking, while `sdk.trackFlagView()` is the explicit/manual path. Event
+  forwarding uses the live client `sdk.states.eventStream` and `sdk.states.blockedEventStream`.
+  source: `react-web-sdk#hooks/useOptimization.ts#useOptimizationContext`; core-sdk#CoreStatefulEventEmitter.ts#getFlag; core-sdk#CoreStatefulEventEmitter.ts#getFlagObservable; core-sdk#CoreStatefulEventEmitter.ts#trackFlagView; core-sdk#CoreStateful.ts#CoreStates
+- Preview-panel attachment is a browser/client concern; once attached to the live client SDK, its
+  audience, variant, and inline-variable overrides use the shared preview override behavior and
+  force live updates while open.
+  source: preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanelToSdk; core-sdk#preview-support/PreviewOverrideManager.ts#setVariantOverride; core-sdk#preview-support/applyChangeOverrides.ts#applyChangeOverrides; react-web-sdk#provider/LiveUpdatesProvider.tsx#LiveUpdatesProvider
 
 ## Consent & persistence
 

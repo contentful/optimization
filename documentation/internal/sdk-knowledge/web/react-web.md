@@ -161,13 +161,14 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   missing view/click/hover can mean consent policy, a factory/per-entry opt-out, missing tracking
   attributes, or missing profile continuity.
   source: web-sdk#entry-tracking/EntryInteractionRuntime.ts#reconcileInteraction; web-sdk#entry-tracking/EntryInteractionRuntime.ts#isInteractionAllowed; core-sdk#queues/InsightsQueue.ts#send
-- Flags: `getFlag(name)` nonreactive read (defaults to current changes signal, emits flag-view
-  tracking when consent+profile allow); `states.flag(name)` reactive.
-  source: core-sdk#CoreStatefulEventEmitter.ts#getFlag; core-sdk#CoreStatefulEventEmitter.ts#getFlagObservable; core-sdk#CoreStateful.ts#CoreStates
-- Analytics forwarding: `states.eventStream.current?.messageId` + `.subscribe`; dedupe by
-  `messageId`; `states.blockedEventStream` for blocked-event diagnostics;
-  `subscription.unsubscribe()`.
-  source: api-schemas#experience/event/UniversalEventProperties.ts#UniversalEventProperties; core-sdk#CoreStateful.ts#CoreStates; core-sdk#signals/Observable.ts#Subscription; core-sdk#signals/Observable.ts#Observable
+- Flags: `getFlag(name)` nonreactive reads and `states.flag(name)` reactive reads auto-attempt
+  flag-view tracking; explicit/manual replacement is `trackFlagView()` on the live `sdk`. See
+  [`../shared/concepts.md`](../shared/concepts.md#custom-flag-views).
+  source: core-sdk#CoreStatefulEventEmitter.ts#getFlag; core-sdk#CoreStatefulEventEmitter.ts#getFlagObservable; core-sdk#CoreStatefulEventEmitter.ts#trackFlagView; react-web-sdk#hooks/useOptimization.ts#useOptimizationContext
+- Analytics forwarding: subscribe to the live `sdk.states.eventStream` for accepted events and
+  `sdk.states.blockedEventStream` for consent-blocked diagnostics; dedupe accepted events by
+  `messageId`.
+  source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent; core-sdk#events/BlockedEvent.ts#BlockedEvent; react-web-sdk#hooks/useOptimization.ts#useOptimizationContext
 - `useEventStreamState()` subscribes internally and returns only the latest accepted event payload;
   it has no `.subscribe()` method. Code that needs accepted and blocked diagnostics or forwarding
   subscriptions must obtain a guarded live `sdk` from `useOptimizationContext()`, then subscribe to
@@ -216,6 +217,10 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   Web SDK and its preview bridge. `entries`, when supplied, is used instead of fetching through
   `contentful`.
   source: react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider; preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanel; preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanelToSdk; preview-panel#attachOptimizationPreviewPanel.ts#AttachOptimizationPreviewPanelArgs
+- Preview overrides force audiences, variants, and inline-variable flag values by mutating
+  stateful SDK signals from an API baseline; panel-open state forces optimized entries to
+  live-update. See [`../shared/concepts.md`](../shared/concepts.md#preview-overrides).
+  source: preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanelToSdk; core-sdk#preview-support/PreviewOverrideManager.ts#setVariantOverride; core-sdk#preview-support/applyChangeOverrides.ts#applyChangeOverrides; react-web-sdk#provider/LiveUpdatesProvider.tsx#LiveUpdatesProvider
 - `locale` prop change updates the SDK's Experience/event locale; the app still refetches Contentful
   and re-emits page events itself.
   source: react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider; core-sdk#CoreStateful.ts#setLocale
