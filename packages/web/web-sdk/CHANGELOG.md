@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.2](https://github.com/contentful/optimization/compare/optimization-web-v1.0.1...optimization-web-v1.0.2) (2026-07-23)
+
+### Bug Fixes
+
+- **web:** flush active view and hover heartbeats on page hide/unload ([#385](https://github.com/contentful/optimization/issues/385)) ([99e35bb](https://github.com/contentful/optimization/commit/99e35bb4f93a4a4cdfdea3d95cee0300c05803b2))
+
 ## [1.0.1](https://github.com/contentful/optimization/compare/optimization-web-v1.0.0...optimization-web-v1.0.1) (2026-07-15)
 
 ### Bug Fixes
