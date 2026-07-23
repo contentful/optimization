@@ -9,6 +9,7 @@ interface TimedObserver<TElementOptions> {
   observe: (element: Element, options?: TElementOptions) => void
   unobserve: (element: Element) => void
   disconnect: () => void
+  flushActive: () => void
 }
 
 interface ElementOverride<TOptions> {
@@ -199,6 +200,9 @@ export function createTimedEntryDetector<
       if (!elementOverrides.delete(element)) return
 
       applyElementObservation(element)
+    },
+    flushActive: (): void => {
+      observer?.flushActive()
     },
   }
 }

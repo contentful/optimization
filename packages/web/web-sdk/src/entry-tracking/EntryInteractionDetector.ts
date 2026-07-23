@@ -18,4 +18,5 @@ export interface EntryInteractionDetector<TStartOptions = never, TElementOptions
   enableElement?: (element: Element, options?: TElementOptions) => void
   disableElement?: (element: Element) => void
   clearElement?: (element: Element) => void
+  flushActive?: () => void
 }

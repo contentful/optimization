@@ -187,6 +187,42 @@ test.describe('Tracking', () => {
 
       expect(finalHoverDurationMs).toBeGreaterThan(firstHoverDurationMs)
     })
+
+    test('emits a final hover heartbeat when the page becomes hidden while still hovered', async ({
+      page,
+    }) => {
+      await page.getByTestId('consent-button').click()
+
+      const target = page.getByTestId(`content-${HOVER_ENTRY_BASELINE_ID}`)
+      await target.scrollIntoViewIfNeeded()
+      await target.hover()
+
+      const hoverEvents = page.locator('[data-hover-id]')
+      await expect(hoverEvents.first()).toBeVisible()
+
+      const hoverId = await readHoverEventId(page)
+      expect(hoverId).toBeTruthy()
+      if (!hoverId) return
+
+      await expect
+        .poll(async () => await readHoverDurationMs(page, hoverId))
+        .toBeGreaterThanOrEqual(1000)
+      const beforeHiddenDurationMs = await readHoverDurationMs(page, hoverId)
+
+      await page.waitForTimeout(300)
+
+      await page.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          get: () => 'hidden',
+        })
+        document.dispatchEvent(new Event('visibilitychange'))
+      })
+
+      await expect
+        .poll(async () => await readHoverDurationMs(page, hoverId))
+        .toBeGreaterThan(beforeHiddenDurationMs)
+    })
   })
 
   test.describe('Consent Gating', () => {

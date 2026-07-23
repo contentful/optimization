@@ -314,6 +314,7 @@ class ContentfulOptimization extends CoreStateful {
     })
 
     this.cleanupVisibilityListener = createVisibilityChangeListener(async () => {
+      this.entryInteractionRuntime.flushActiveInteractions()
       await this.flushQueues({ force: true, beacon: beaconHandler })
     })
 
