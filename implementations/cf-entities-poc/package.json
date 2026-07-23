@@ -1,0 +1,25 @@
+{
+  "name": "@implementation/cf-entities-poc",
+  "private": true,
+  "version": "0.0.0",
+  "description": "PoC: React app using CF-Entities audiences/experiences via V3 Experience API",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "rsbuild dev",
+    "build": "rsbuild build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@contentful/optimization-web": "0.0.0",
+    "react": "19.2.5",
+    "react-dom": "19.2.5"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "1.7.3",
+    "@rsbuild/plugin-react": "1.4.5",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.9.3"
+  }
+}
