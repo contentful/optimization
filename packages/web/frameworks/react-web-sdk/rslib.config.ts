@@ -26,6 +26,7 @@ const CLIENT_DIRECTIVE = "'use client';"
 
 const reactClientEntries = {
   index: './src/index.ts',
+  'experiences-adapter': './src/experiences-adapter/index.ts',
   'router/next-app': './src/router/next-app.tsx',
   'router/next-pages': './src/router/next-pages.tsx',
   'router/react-router': './src/router/react-router.tsx',

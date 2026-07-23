@@ -7,6 +7,7 @@ import {
   type HoverEvent,
   type IdentifyEvent,
   type Library,
+  type NodeViewEvent,
   Page,
   PageEventContext,
   type PageViewEvent,
@@ -277,6 +278,40 @@ export const TrackBuilderArgs = z.extend(UniversalEventBuilderArgs, {
  * @public
  */
 export type TrackBuilderArgs = z.infer<typeof TrackBuilderArgs>
+
+export const NodeViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
+  anonymousId: z.string(),
+  entityId: z.string(),
+  entityKind: z.union([z.literal('Experience'), z.literal('Fragment')]),
+  variantId: z.string(),
+  variantIndex: z.number(),
+  optimizationId: z.string(),
+  viewId: z.string(),
+  viewDurationMs: z.number(),
+  parentExperienceId: z.optional(z.string()),
+})
+
+/**
+ * Arguments for constructing `exo_node_view` events.
+ *
+ * @public
+ */
+export type NodeViewBuilderArgs = z.infer<typeof NodeViewBuilderArgs>
+
+export const NodeViewTrackingArgs = z.extend(NodeViewBuilderArgs, {
+  anonymousId: z.optional(z.string()),
+})
+
+/**
+ * Arguments accepted by runtime `trackNodeView` callers.
+ *
+ * @remarks
+ * Runtime integrations may omit `anonymousId`; the emitter derives it from
+ * the active profile when not provided.
+ *
+ * @public
+ */
+export type NodeViewTrackingArgs = z.infer<typeof NodeViewTrackingArgs>
 
 /**
  * Default page properties used when no explicit page information is available.
@@ -735,6 +770,58 @@ class EventBuilder {
       type: 'track',
       event,
       properties,
+    }
+  }
+
+  /**
+   * Builds an `exo_node_view` event payload for XDA graph node viewport
+   * tracking.
+   *
+   * @param args - {@link NodeViewBuilderArgs} arguments describing the node view.
+   * @returns A {@link NodeViewEvent} payload.
+   *
+   * @example
+   * ```ts
+   * const event = builder.buildNodeView({
+   *   anonymousId: 'anon-id',
+   *   entityId: 'experience-sys-id',
+   *   entityKind: 'Experience',
+   *   variantId: 'variant-a',
+   *   variantIndex: 1,
+   *   optimizationId: 'optimization-id',
+   *   viewId: crypto.randomUUID(),
+   *   viewDurationMs: 1_000,
+   * })
+   * ```
+   *
+   * @public
+   */
+  buildNodeView(args: NodeViewBuilderArgs): NodeViewEvent {
+    const {
+      anonymousId,
+      entityId,
+      entityKind,
+      variantId,
+      variantIndex,
+      optimizationId,
+      viewId,
+      viewDurationMs,
+      parentExperienceId,
+      ...universal
+    } = parseWithFriendlyError(NodeViewBuilderArgs, args)
+
+    return {
+      ...this.buildUniversalEventProperties(universal),
+      anonymousId,
+      type: 'exo_node_view',
+      entityId,
+      entityKind,
+      variantId,
+      variantIndex,
+      optimizationId,
+      viewId,
+      viewDurationMs,
+      parentExperienceId,
     }
   }
 }

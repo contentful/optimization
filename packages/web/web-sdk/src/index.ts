@@ -26,6 +26,7 @@ export {
   OPTIMIZATION_WEB_SDK_VERSION,
 } from './constants'
 export * from './ContentfulOptimization'
+export { NodeInteractionRuntime, resolveNodeViewPayload } from './entry-tracking'
 export type {
   AutoTrackEntryInteractionOptions,
   EntryClickInteractionElementOptions,
@@ -42,6 +43,11 @@ export type {
   EntryInteractionTrackers,
   EntryViewInteractionElementOptions,
   EntryViewInteractionStartOptions,
+  NodeInteraction,
+  NodeInteractionRuntimeCore,
+  NodeInteractionRuntimeOptions,
+  OptimizationTrackingApi as NodeInteractionTrackingApi,
+  ResolvedNodeMetadata,
 } from './entry-tracking'
 export * from './handlers/beaconHandler'
 export * from './storage/LocalStore'

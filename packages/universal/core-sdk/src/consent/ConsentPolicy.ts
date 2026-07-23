@@ -23,6 +23,10 @@ export const hasEventConsent = (
   }
   if (method === 'trackClick') return allowedEventTypes.includes('component_click')
   if (method === 'trackHover') return allowedEventTypes.includes('component_hover')
+  if (method === 'trackNodeView') return allowedEventTypes.includes('exo_node_view')
+  if (method === 'getPersonalizationRequest') {
+    return UNLOCKING_EVENT_TYPES.some((type) => allowedEventTypes.includes(type))
+  }
 
   return allowedEventTypes.some((eventType) => eventType === method)
 }

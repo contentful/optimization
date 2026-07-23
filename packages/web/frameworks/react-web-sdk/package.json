@@ -113,6 +113,16 @@
         "default": "./dist/router/tanstack-router.cjs"
       }
     },
+    "./experiences-adapter": {
+      "import": {
+        "types": "./dist/experiences-adapter.d.mts",
+        "default": "./dist/experiences-adapter.mjs"
+      },
+      "require": {
+        "types": "./dist/experiences-adapter.d.cts",
+        "default": "./dist/experiences-adapter.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
