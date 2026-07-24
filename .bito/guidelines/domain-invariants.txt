@@ -1,0 +1,56 @@
+These are the behavioral and architectural invariants that matter most in this SDK suite. Flag a
+violation only when you can point to a specific location in the diff that breaks the rule.
+
+PUBLIC API CONTRACTS
+- Adding a required parameter to an existing public function is a breaking change. Flag it.
+- Removing or renaming a public export without a deprecation path is a breaking change. Flag it.
+- Narrowing a public type (e.g. making a field non-optional that was optional, or removing a union
+  member) is a breaking change. Flag it.
+- TSDoc/JSDoc on public exports must stay accurate. If a PR changes behavior but not the doc, flag
+  the gap if it would mislead a consumer.
+
+TEST COVERAGE
+- New behavior — a new function, branch, configuration path, or error case — must have a unit test.
+  If the PR adds behavior and no test file is touched, flag it unless the behavior is exclusively
+  exercised by existing E2E coverage and that is stated explicitly.
+- Tests that only assert the happy path for a function that has meaningful error or edge-case
+  branches are incomplete. Flag the specific missing branch.
+- Do not flag test-style preferences (naming conventions, describe/it structure) — the linter owns
+  those.
+
+BUNDLE SIZE AND IMPORTS
+- Importing from a package root when a subpath import would exclude a heavy chunk is a
+  tree-shaking hazard. Flag it for published packages.
+- Adding a new runtime dependency to a published package without a corresponding bundle-size
+  assessment is risky. Flag it if size:check output is absent from the PR.
+- Do not duplicate logic that already exists in packages/universal/core-sdk. Flag duplication that
+  creates size and divergence risk.
+
+TYPE SAFETY AT SDK BOUNDARIES
+- External API responses (Contentful Delivery API, Experience API) must be validated at the
+  boundary — either via generated types from packages/universal/api-schemas or explicit runtime
+  checks. Accepting unknown/any at the boundary and propagating it inward is a safety issue.
+- Do not widen a type to any or unknown to suppress a TypeScript error. Flag it if the diff shows
+  this pattern.
+
+PLATFORM-SPECIFIC INVARIANTS
+- CDA entry fetches in reference implementations must be single-locale. Do not use withAllLocales
+  or locale=*; the locale must be chosen by the application and passed explicitly.
+- React Native: async storage operations and bridge calls must handle rejection. Fire-and-forget
+  promises in lifecycle hooks are a reliability issue.
+- iOS/Android native: SDK initialization that can fail silently (no error callback, no log) is a
+  debuggability issue.
+
+REFERENCE IMPLEMENTATION INTEGRITY
+- Reference implementations must consume the SDK via its public API, the same way a customer would.
+  Implementation-local patches, direct imports from packages/*/src, or workarounds for SDK gaps are
+  violations unless accompanied by a tracked SDK issue.
+- Removing a scenario or E2E flow from a reference implementation without a corresponding AGENTS.md
+  or PREVIEW_PANEL_SCENARIOS.md update is incomplete. The scenario may still be in the cross-platform
+  E2E contract.
+
+DOCUMENTATION
+- If a PR changes a public SDK option, event, or initialization parameter, and the change is not
+  reflected in the affected package README or TSDoc, flag the gap.
+- knowledge-base pointer files under documentation/internal/sdk-knowledge/ must stay consistent
+  with packages/**/src. If the diff renames or removes a symbol that a KB pointer names, flag it.

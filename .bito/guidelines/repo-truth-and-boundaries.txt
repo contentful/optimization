@@ -1,0 +1,49 @@
+AUTHORITATIVE SOURCE FILES
+When assessing whether a change is correct and complete, treat these as ground truth:
+- AGENTS.md (root) — repo-wide policy: validation order, bundle-size policy, failure handling,
+  safety rules, parallel-build constraints
+- packages/AGENTS.md — package-layer policy: public API ownership, build/size validation rules,
+  downstream dependency graph
+- implementations/AGENTS.md — reference implementation policy: first-class artifacts, not demos;
+  preview panel contract; shared failure modes
+- STYLE_GUIDE.md — prose and documentation standards
+- CONTRIBUTING.md — contributor workflow, E2E job mapping
+
+LAYER BOUNDARIES
+- Published SDK behavior belongs in packages/. Reference implementations consume the public SDK
+  surface as customers do. Do not accept implementation-local shims that paper over SDK gaps.
+- Shared cross-platform behavior belongs in packages/universal/core-sdk unless clearly
+  platform-specific.
+- Reusable helpers added to an implementation that belong in a package are a layering violation.
+
+BLAST-RADIUS TIERS
+Flag these explicitly when they appear in a PR without corresponding downstream updates:
+
+HIGH — requires broader validation than the changed file alone:
+- Changes to public exports or TypeScript types in any packages/** package
+- Changes to packages/universal/ (consumed by all platform SDKs)
+- Changes to pnpm-workspace.yaml, tsconfig*.json, or eslint.config.ts
+- Changes to .github/workflows/main-pipeline.yaml (affects all CI jobs)
+
+MEDIUM — check adjacent surfaces:
+- Changes to a packages/**/src entry point or Rslib bundle config (may affect bundle size of
+  downstream packages; run size:check for the changed package and its downstream consumers)
+- Changes to shared mocks in lib/mocks/ (consumed by Android Maestro, iOS XCUITest, and Node/Web
+  E2E implementations)
+- Changes to implementations/PREVIEW_PANEL_SCENARIOS.md (cross-platform E2E contract)
+
+LOW — self-contained unless evidence suggests otherwise:
+- Changes isolated to a single implementation under implementations/ with no package edits
+- Documentation-only changes under documentation/ or docs/
+
+BUNDLE-SIZE POLICY (from AGENTS.md)
+- buildTools.bundleSize.gzipBudgets values in package.json are release policy; do not approve
+  changes to budget numbers without explicit maintainer sign-off.
+- When a new Rslib bundle entry is added, a matching gzipBudgets entry must appear in the same PR.
+- If a PR adds or changes imports in a published package and does not include a size:check result,
+  flag that the check was not run.
+
+REFERENCE IMPLEMENTATIONS
+Treat broken, stale, or incomplete reference implementations as SDK-suite quality issues.
+If a PR changes public SDK behavior and does not update the affected reference implementations,
+flag it. The affected set is defined by the path filters in main-pipeline.yaml (the e2e_* outputs).
