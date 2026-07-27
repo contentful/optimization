@@ -178,8 +178,11 @@ outside this guide:
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
 - **Your Optimization project values** — client ID and environment, from your Optimization project
-  settings. The Experience and Insights API base URLs default correctly; you only set them for mocks
-  or non-default hosts (see [How the SDK fits your app](#how-the-sdk-fits-your-app)).
+  settings. Find them in the Contentful web app under **Apps → Installed apps → Contentful
+  Personalization → SDK keys**.
+
+  The Experience and Insights API base URLs default correctly; you only set them for mocks or
+  non-default hosts (see [How the SDK fits your app](#how-the-sdk-fits-your-app)).
 
 You do not need a setup inventory up front. Everything else — consent, page events, state
 subscriptions, tracking, identity — is introduced by the section that needs it.

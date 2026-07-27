@@ -95,7 +95,10 @@ outside this guide:
   fetching already works⟩.
 - ⟨credentials — delivery/API tokens, space, environment⟩.
 - Include [authored-variant-gotcha](../fragments/authored-variant-gotcha.md).
-- ⟨Optimization project values — which default, which the reader must set⟩.
+- ⟨Optimization project values — which default, which the reader must set⟩. Immediately after the
+  "from your Optimization project settings." sentence, include
+  [optimization-client-id](../fragments/optimization-client-id.md) as a nested list, then continue
+  with any SDK-specific tail (for example, API base URL defaults).
 
 You do not need a setup inventory up front. Everything else is introduced by the section that needs
 it.
@@ -229,7 +232,10 @@ the guide (runtime prerequisites, credentials, authored Contentful data, Optimiz
 values). If a sequenced section teaches it, it does not go here. Anti-patterns: a multi-column setup
 table; rows that restate quick-start steps; rows that only say "there is a section below";
 `Category` / `Required for quick start` columns; listing values the quick start never uses. The
-authored-variant bullet is the slot-free shared `authored-variant-gotcha` copy — mandatory.
+authored-variant bullet is the slot-free shared `authored-variant-gotcha` copy — mandatory. The
+Optimization project values bullet nests the slot-free shared `optimization-client-id` copy right
+after "from your Optimization project settings." so both navigation paths reach every guide
+verbatim — also mandatory.
 
 ### Example labels
 
