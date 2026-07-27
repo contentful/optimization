@@ -190,7 +190,10 @@ outside this guide:
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
 - **Your Optimization project values** — client ID and environment, from your Optimization project
-  settings. `environment` has a Kotlin-side default of `"main"`, so pass it only when your Contentful
+  settings. Find them in the Contentful web app under **Apps → Installed apps → Contentful
+  Personalization → SDK keys**.
+
+  `environment` has a Kotlin-side default of `"main"`, so pass it only when your Contentful
   environment differs. The Experience API (which picks variants) and the Insights API (which receives
   event and interaction delivery) each have a base URL that defaults correctly; you set them through
   `OptimizationApiConfig` only for mocks or non-default hosts (see
