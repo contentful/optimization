@@ -1,0 +1,17 @@
+suggestion_mode: essential
+post_description: false
+post_changelist: false
+exclude_draft_pr: true
+secret_scanner_feedback: true
+linters_feedback: false
+repo_level_guidelines_enabled: true
+sequence_diagram_enabled: false
+exclude_files: 'pnpm-lock.yaml,**/dist/**,**/.rslib/**,**/.rsdoctor/**,**/pkgs/**,**/docs/**,**/coverage/**,**/*.snap,**/*.d.ts,**/node_modules/**'
+custom_guidelines:
+  general:
+    - name: 'Review Posture'
+      path: './.bito/guidelines/review-posture.txt'
+    - name: 'Repo Truth And Boundaries'
+      path: './.bito/guidelines/repo-truth-and-boundaries.txt'
+    - name: 'Domain Invariants'
+      path: './.bito/guidelines/domain-invariants.txt'
