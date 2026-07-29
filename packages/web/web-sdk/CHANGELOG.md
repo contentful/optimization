@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.0](https://github.com/contentful/optimization/compare/optimization-web-v1.0.1...optimization-web-v1.1.0) (2026-07-29)
+
+### Features
+
+- **nextjs:** add cache-safe optimization handoff support ([#379](https://github.com/contentful/optimization/issues/379)) ([a169e6d](https://github.com/contentful/optimization/commit/a169e6d993fbca309d6ab3c44642fcca423dbb58))
+
+### Bug Fixes
+
+- **web:** flush active view and hover heartbeats on page hide/unload ([#385](https://github.com/contentful/optimization/issues/385)) ([99e35bb](https://github.com/contentful/optimization/commit/99e35bb4f93a4a4cdfdea3d95cee0300c05803b2))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 1.1.0
+
 ## [1.0.1](https://github.com/contentful/optimization/compare/optimization-web-v1.0.0...optimization-web-v1.0.1) (2026-07-15)
 
 ### Bug Fixes
