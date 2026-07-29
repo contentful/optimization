@@ -33,4 +33,4 @@ jobs:
               ;;
           esac
 
-          gh workflow run "$workflow" --ref "$RELEASE_TAG" -f tag="$RELEASE_TAG" -f publish=true
+          gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref "$RELEASE_TAG" -f tag="$RELEASE_TAG" -f publish=true
