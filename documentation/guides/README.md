@@ -13,6 +13,7 @@ children:
   - ./integrating-the-optimization-android-sdk-in-a-compose-app.md
   - ./integrating-the-optimization-android-sdk-in-a-views-app.md
   - ./building-a-custom-javascript-optimization-adapter.md
+  - ./rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md
   - ./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md
 ---
 
@@ -32,13 +33,13 @@ Server and web SDK guides are listed before native and mobile SDK guides.
 
 ### Server and web SDKs
 
-| Guide                                                                                             | Runtime or app type                                                                                   | Package                              |
-| ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| [Node SDK](./integrating-the-node-sdk-in-a-node-app.md)                                           | Node server, custom SSR server, or server-side function                                               | `@contentful/optimization-node`      |
-| [Web SDK](./integrating-the-web-sdk-in-a-web-app.md)                                              | Browser app, static site, multi-page app, SPA, Angular app, or custom frontend runtime                | `@contentful/optimization-web`       |
-| [React Web SDK](./integrating-the-react-web-sdk-in-a-react-app.md)                                | React browser app                                                                                     | `@contentful/optimization-react-web` |
-| [Next.js SDK in App Router](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)     | Next.js App Router app with server-personalized first paint and browser re-resolution after hydration | `@contentful/optimization-nextjs`    |
-| [Next.js SDK in Pages Router](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md) | Next.js Pages Router app with `getServerSideProps` personalization and state handoff                  | `@contentful/optimization-nextjs`    |
+| Guide                                                                                             | Runtime or app type                                                                    | Package                              |
+| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------ |
+| [Node SDK](./integrating-the-node-sdk-in-a-node-app.md)                                           | Node server, custom SSR server, or server-side function                                | `@contentful/optimization-node`      |
+| [Web SDK](./integrating-the-web-sdk-in-a-web-app.md)                                              | Browser app, static site, multi-page app, SPA, Angular app, or custom frontend runtime | `@contentful/optimization-web`       |
+| [React Web SDK](./integrating-the-react-web-sdk-in-a-react-app.md)                                | React browser app                                                                      | `@contentful/optimization-react-web` |
+| [Next.js SDK in App Router](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)     | Next.js App Router app with request, selection, edge, and analytics-only handoff paths | `@contentful/optimization-nextjs`    |
+| [Next.js SDK in Pages Router](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md) | Next.js Pages Router app with `getServerSideProps` request handoff                     | `@contentful/optimization-nextjs`    |
 
 ### Native and mobile SDKs
 
@@ -57,6 +58,9 @@ Native and mobile SDK guides route to beta SDK surfaces.
 - [Building a custom JavaScript Optimization adapter](./building-a-custom-javascript-optimization-adapter.md) -
   Build a low-level adapter only when no official SDK package fits your JavaScript runtime or
   framework.
+- [Rendering personalized Next.js routes with static, ISR, and edge handoffs](./rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md) -
+  Choose cache-safe handoff patterns for Next.js static, ISR, edge, and analytics-only routes after
+  integrating the Next.js SDK.
 - [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
   Forward optimization context to analytics, tag-management, customer-data, or product-analytics
   tools after SDK integration.

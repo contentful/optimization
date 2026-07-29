@@ -8,11 +8,11 @@ import type { OptimizationRootProps } from './OptimizationRoot'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
-const createOptimization = rs.fn()
+const initializeOptimization = rs.fn()
 
 rs.mock('../ContentfulOptimization', () => ({
   default: {
-    create: createOptimization,
+    initialize: initializeOptimization,
   },
 }))
 
@@ -227,7 +227,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
   void beforeEach(() => {
     renderer = undefined
-    createOptimization.mockReset()
+    initializeOptimization.mockReset()
   })
 
   void afterEach(async () => {
@@ -248,7 +248,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const { sdk, screenEvent } = createSdk()
     const observedEvents: unknown[] = []
     const order: string[] = []
-    createOptimization.mockResolvedValue(sdk)
+    initializeOptimization.mockResolvedValue(sdk)
 
     function ScreenEmitter(): null {
       const optimization = useOptimization()
@@ -331,7 +331,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const { sdk } = createSdk()
     const deferred = createDeferred<TestSdk>()
     let childRendered = false
-    createOptimization.mockReturnValue(deferred.promise)
+    initializeOptimization.mockReturnValue(deferred.promise)
 
     function Probe(): null {
       childRendered = true
@@ -358,7 +358,7 @@ describe('OptimizationProvider onStatesReady', () => {
   it('passes locale through owned initialization', async () => {
     const { OptimizationProvider } = await import('./OptimizationProvider')
     const { sdk } = createSdk()
-    createOptimization.mockResolvedValue(sdk)
+    initializeOptimization.mockResolvedValue(sdk)
 
     renderer = await renderWithAct(
       <OptimizationProvider clientId="test-client-id" locale="en-US">
@@ -366,7 +366,7 @@ describe('OptimizationProvider onStatesReady', () => {
       </OptimizationProvider>,
     )
 
-    expect(createOptimization).toHaveBeenCalledWith(
+    expect(initializeOptimization).toHaveBeenCalledWith(
       expect.objectContaining({
         locale: 'en-US',
       }),
@@ -377,7 +377,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const { OptimizationProvider } = await import('./OptimizationProvider')
     const { sdk } = createSdk()
     const descriptors = ['hero-entry'] as const
-    createOptimization.mockResolvedValue(sdk)
+    initializeOptimization.mockResolvedValue(sdk)
 
     renderer = await renderWithAct(
       <OptimizationProvider clientId="test-client-id" prefetchManagedEntries={descriptors}>
@@ -386,7 +386,7 @@ describe('OptimizationProvider onStatesReady', () => {
     )
     await flushPromises()
 
-    expect(createOptimization).toHaveBeenCalledWith({ clientId: 'test-client-id' })
+    expect(initializeOptimization).toHaveBeenCalledWith({ clientId: 'test-client-id' })
     expect(sdk.prefetchManagedEntries).toHaveBeenCalledWith(descriptors)
   })
 
@@ -406,7 +406,7 @@ describe('OptimizationProvider onStatesReady', () => {
       await Promise.resolve()
       throw error
     })
-    createOptimization.mockResolvedValue(sdk)
+    initializeOptimization.mockResolvedValue(sdk)
 
     function Probe(): null {
       capturedSdk = useOptimization()
@@ -439,7 +439,7 @@ describe('OptimizationProvider onStatesReady', () => {
   it('runs onStatesReady cleanup before destroying the sdk', async () => {
     const { OptimizationProvider } = await import('./OptimizationProvider')
     const { sdk, teardownOrder } = createSdk()
-    createOptimization.mockResolvedValue(sdk)
+    initializeOptimization.mockResolvedValue(sdk)
 
     renderer = await renderWithAct(
       <OptimizationProvider
@@ -460,12 +460,12 @@ describe('OptimizationProvider onStatesReady', () => {
     expect(teardownOrder).toEqual(['cleanup', 'destroy'])
   })
 
-  it('skips onStatesReady when unmounted before async creation resolves', async () => {
+  it('skips onStatesReady when unmounted before async initialization resolves', async () => {
     const { OptimizationProvider } = await import('./OptimizationProvider')
     const { sdk, teardownOrder } = createSdk()
     const deferred = createDeferred<TestSdk>()
     const onStatesReady = rs.fn()
-    createOptimization.mockReturnValue(deferred.promise)
+    initializeOptimization.mockReturnValue(deferred.promise)
 
     const testRenderer = await loadTestRenderer<TestRenderer>()
     act(() => {
@@ -495,7 +495,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const { sdk, teardownOrder } = createSdk()
     const error = new Error('states setup failed')
     const capturedError: { error: Error | undefined } = { error: undefined }
-    createOptimization.mockResolvedValue(sdk)
+    initializeOptimization.mockResolvedValue(sdk)
 
     function BrokenProbe(): null {
       useOptimization()

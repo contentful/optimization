@@ -30,6 +30,8 @@ describe('Next.js package manifest', () => {
     const manifest = readPackageManifest()
 
     expect(Object.hasOwn(manifest.exports ?? {}, '.')).toBe(false)
+    expect(Object.hasOwn(manifest.exports ?? {}, './cache-middleware')).toBe(true)
+    expect(Object.hasOwn(manifest.exports ?? {}, './edge')).toBe(true)
     expect(manifest).not.toHaveProperty('main')
     expect(manifest).not.toHaveProperty('module')
     expect(manifest).not.toHaveProperty('types')

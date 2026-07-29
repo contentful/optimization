@@ -7,17 +7,17 @@ uses Next.js SDK subpaths only for non-component runtime surfaces.
 ## Rules
 
 - Pages Router only; no App Router.
-- `lib/optimization.ts` is the only place that imports `createNextjsPagesRouterOptimization()` from
+- `lib/optimization.ts` is the only place that imports `bindNextjsPagesRouterOptimization()` from
   `@contentful/optimization-nextjs/pages-router`.
 - `lib/optimization-server.ts` is the only place that imports
-  `createNextjsPagesRouterOptimization()` from
+  `bindNextjsPagesRouterServerOptimization()` from
   `@contentful/optimization-nextjs/pages-router/server`.
 - Routes and shared components import `OptimizationRoot`, `OptimizedEntry`, and
   `NextPagesAutoPageTracker` from `@/lib/optimization`; do not import those components from
   `@contentful/optimization-nextjs/server` or `@contentful/optimization-nextjs/client`.
 - Browser hooks and providers import from `@contentful/optimization-nextjs/client`.
 - Do not import lower-level SDK packages directly from this implementation.
-- Personalized pages should load server state in `getServerSideProps`; interactive/reactive surfaces
+- Personalized pages should load request handoff in `getServerSideProps`; interactive/reactive surfaces
   use the app-local `<OptimizedEntry>` and browser hooks.
 - Use `liveUpdates={true}` on `<OptimizedEntry>` for entries that should re-resolve on profile
   changes.

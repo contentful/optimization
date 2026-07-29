@@ -32,9 +32,9 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "contentful-optimization-web-preview-panel.umd.js": 37500,
-        "index.cjs": 25000,
-        "index.mjs": 24600
+        "contentful-optimization-web-preview-panel.umd.js": 37100,
+        "index.cjs": 24300,
+        "index.mjs": 22700
       }
     }
   },

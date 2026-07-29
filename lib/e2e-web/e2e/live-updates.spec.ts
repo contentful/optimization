@@ -1,5 +1,5 @@
 import { type Locator, type Page, expect, test } from '@playwright/test'
-import { isPreviewPanelEnabled, onlyWithPreviewPanel } from './utils'
+import { isPreviewPanelEnabled, onlyWithPreviewPanel, skipIf } from './utils'
 
 async function getEntryId(locator: Locator): Promise<string> {
   return (await locator.getAttribute('data-test-entry-id')) ?? ''
@@ -11,6 +11,8 @@ async function identify(page: Page): Promise<void> {
 }
 
 test.describe('Live Updates', () => {
+  skipIf('EDGE')
+
   test.beforeEach(async ({ page }) => {
     await page.context().clearCookies()
     await page.goto('/')

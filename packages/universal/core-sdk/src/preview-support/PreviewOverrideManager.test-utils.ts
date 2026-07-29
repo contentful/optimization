@@ -2,6 +2,7 @@ import type {
   OptimizationData,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
+import type { OptimizationSelectionState } from '../handoff'
 
 export const BASELINE: SelectedOptimizationArray = [
   { experienceId: 'exp-1', variantIndex: 1, variants: { b1: 'v1' }, sticky: false },
@@ -40,5 +41,5 @@ export function makeOptimizationData(so: SelectedOptimizationArray): Optimizatio
 }
 
 export type InterceptorFn = (
-  data: Readonly<OptimizationData>,
-) => OptimizationData | Promise<OptimizationData>
+  data: Readonly<OptimizationSelectionState>,
+) => OptimizationSelectionState | Promise<OptimizationSelectionState>

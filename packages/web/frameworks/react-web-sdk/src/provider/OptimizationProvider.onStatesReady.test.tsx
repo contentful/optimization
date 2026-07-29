@@ -2,12 +2,14 @@ import { optimizedEntry } from '@contentful/optimization-core/test/fixtures/opti
 import { selectedOptimizations } from '@contentful/optimization-core/test/fixtures/selectedOptimizations'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
+import type { ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
 import { beforeEach, describe, expect, it, rs } from '@rstest/core'
-import { act, type ReactElement } from 'react'
+import { act, type ReactElement, useContext } from 'react'
 import { createRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
 import { resetAutoPageEmitterState, useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
 import type { OptimizationContextValue } from '../context/OptimizationContext'
+import { OptimizationHydrationContext } from '../context/OptimizationHydrationContext'
 import {
   OptimizationProvider,
   type OptimizationProviderProps,
@@ -97,6 +99,37 @@ function createServerOptimizationState(profileId: string): OptimizationData {
         activeSessionLength: 0,
         averageSessionLength: 0,
       },
+    },
+  }
+}
+
+function createContentHandoff(
+  profileId: string,
+  overrides: Partial<ContentOptimizationHandoff> = {},
+): ContentOptimizationHandoff {
+  return {
+    cache: { scope: 'private-request' },
+    hydration: 'preserve-server',
+    initialPageEvent: 'skip',
+    state: createServerOptimizationState(profileId),
+    ...overrides,
+  }
+}
+
+function createDeferred(): {
+  readonly promise: Promise<void>
+  readonly resolve: () => void
+} {
+  let resolveDeferred: (() => void) | undefined
+  const promise = new Promise<void>((resolve) => {
+    resolveDeferred = resolve
+  })
+
+  return {
+    promise,
+    resolve() {
+      if (resolveDeferred === undefined) throw new Error('Expected deferred resolver.')
+      resolveDeferred()
     },
   }
 }
@@ -239,8 +272,47 @@ describe('OptimizationProvider onStatesReady', () => {
     rendered.unmount()
   })
 
-  it('renders serverOptimizationState from a snapshot before owned SDK setup finishes', async () => {
-    const serverOptimizationState = createServerOptimizationState('owned-server-profile')
+  it('makes standalone hydration visible to provider children without a handoff', async () => {
+    let capturedHydration: unknown
+
+    function Probe(): null {
+      capturedHydration = useContext(OptimizationHydrationContext)
+      return null
+    }
+
+    const rendered = await renderClientAsync(
+      <OptimizationProvider {...testConfig} hydration="preserve-server">
+        <Probe />
+      </OptimizationProvider>,
+    )
+
+    expect(capturedHydration).toBe('preserve-server')
+    rendered.unmount()
+  })
+
+  it('lets the provider hydration prop override handoff hydration for children', async () => {
+    const handoff = createContentHandoff('provider-server-profile', {
+      hydration: 'client-only-hidden-until-ready',
+    })
+    let capturedHydration: unknown
+
+    function Probe(): null {
+      capturedHydration = useContext(OptimizationHydrationContext)
+      return null
+    }
+
+    const rendered = await renderClientAsync(
+      <OptimizationProvider {...testConfig} handoff={handoff} hydration="preserve-server">
+        <Probe />
+      </OptimizationProvider>,
+    )
+
+    expect(capturedHydration).toBe('preserve-server')
+    rendered.unmount()
+  })
+
+  it('renders handoff state from a snapshot before owned SDK setup finishes', async () => {
+    const handoff = createContentHandoff('owned-server-profile')
     const setupOrder: string[] = []
     let profileFromOnStatesReady: OptimizationData['profile'] | undefined = undefined
     const childProfiles: Array<OptimizationData['profile'] | undefined> = []
@@ -256,7 +328,7 @@ describe('OptimizationProvider onStatesReady', () => {
         clientId={testConfig.clientId}
         environment={testConfig.environment}
         api={testConfig.api}
-        serverOptimizationState={serverOptimizationState}
+        handoff={handoff}
         onStatesReady={(states) => {
           setupOrder.push('onStatesReady')
           profileFromOnStatesReady = states.profile.current
@@ -267,16 +339,13 @@ describe('OptimizationProvider onStatesReady', () => {
     )
 
     expect(setupOrder).toEqual(['child', 'onStatesReady', 'child'])
-    expect(profileFromOnStatesReady).toEqual(serverOptimizationState.profile)
-    expect(childProfiles).toEqual([
-      serverOptimizationState.profile,
-      serverOptimizationState.profile,
-    ])
+    expect(profileFromOnStatesReady).toEqual(handoff.state?.profile)
+    expect(childProfiles).toEqual([handoff.state?.profile, handoff.state?.profile])
     rendered.unmount()
   })
 
-  it('applies serverOptimizationState to injected SDK instances before child render', async () => {
-    const serverOptimizationState = createServerOptimizationState('injected-server-profile')
+  it('applies handoff state to injected SDK instances before child render', async () => {
+    const handoff = createContentHandoff('injected-server-profile')
     const sdk = new ContentfulOptimization(testConfig)
     let profileFromChild: OptimizationData['profile'] | undefined = undefined
 
@@ -286,18 +355,18 @@ describe('OptimizationProvider onStatesReady', () => {
     }
 
     const rendered = await renderClientAsync(
-      <OptimizationProvider sdk={sdk} serverOptimizationState={serverOptimizationState}>
+      <OptimizationProvider sdk={sdk} handoff={handoff}>
         <Probe />
       </OptimizationProvider>,
     )
 
-    expect(profileFromChild).toEqual(serverOptimizationState.profile)
+    expect(profileFromChild).toEqual(handoff.state?.profile)
     rendered.unmount()
     sdk.destroy()
   })
 
-  it('renders serverOptimizationState from a snapshot before injected SDK setup finishes', async () => {
-    const serverOptimizationState = createServerOptimizationState('injected-ready-profile')
+  it('renders handoff state from a snapshot before injected SDK setup finishes', async () => {
+    const handoff = createContentHandoff('injected-ready-profile')
     const sdk = new ContentfulOptimization(testConfig)
     const setupOrder: string[] = []
     let profileFromOnStatesReady: OptimizationData['profile'] | undefined = undefined
@@ -312,7 +381,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const rendered = await renderClientAsync(
       <OptimizationProvider
         sdk={sdk}
-        serverOptimizationState={serverOptimizationState}
+        handoff={handoff}
         onStatesReady={(states) => {
           setupOrder.push('onStatesReady')
           profileFromOnStatesReady = states.profile.current
@@ -323,17 +392,14 @@ describe('OptimizationProvider onStatesReady', () => {
     )
 
     expect(setupOrder).toEqual(['child', 'onStatesReady', 'child'])
-    expect(profileFromOnStatesReady).toEqual(serverOptimizationState.profile)
-    expect(childProfiles).toEqual([
-      serverOptimizationState.profile,
-      serverOptimizationState.profile,
-    ])
+    expect(profileFromOnStatesReady).toEqual(handoff.state?.profile)
+    expect(childProfiles).toEqual([handoff.state?.profile, handoff.state?.profile])
     rendered.unmount()
     sdk.destroy()
   })
 
-  it('passes serverOptimizationState through OptimizationRoot before child render', async () => {
-    const serverOptimizationState = createServerOptimizationState('root-server-profile')
+  it('passes handoff state through OptimizationRoot before child render', async () => {
+    const handoff = createContentHandoff('root-server-profile')
     let profileFromChild: OptimizationData['profile'] | undefined = undefined
 
     function Probe(): null {
@@ -346,14 +412,107 @@ describe('OptimizationProvider onStatesReady', () => {
         clientId={testConfig.clientId}
         environment={testConfig.environment}
         api={testConfig.api}
-        serverOptimizationState={serverOptimizationState}
+        handoff={handoff}
       >
         <Probe />
       </OptimizationRoot>,
     )
 
-    expect(profileFromChild).toEqual(serverOptimizationState.profile)
+    expect(profileFromChild).toEqual(handoff.state?.profile)
     rendered.unmount()
+  })
+
+  it('hydrates changed handoff state into the existing live SDK', async () => {
+    const firstHandoff = createContentHandoff('first-server-profile')
+    const secondHandoff = createContentHandoff('second-server-profile')
+    let liveStates: OptimizationSdk['states'] | undefined = undefined
+    const onStatesReady = rs.fn((states: OptimizationSdk['states']) => {
+      liveStates = states
+    })
+    const rendered = createClientRoot()
+    const requireLiveStates = (): OptimizationSdk['states'] => {
+      if (liveStates === undefined) throw new Error('Expected live states to be ready.')
+
+      return liveStates
+    }
+
+    await rendered.renderAsync(
+      <OptimizationProvider
+        clientId={testConfig.clientId}
+        environment={testConfig.environment}
+        api={testConfig.api}
+        handoff={firstHandoff}
+        onStatesReady={onStatesReady}
+      >
+        <div />
+      </OptimizationProvider>,
+    )
+
+    expect(requireLiveStates().profile.current).toEqual(firstHandoff.state?.profile)
+
+    await rendered.renderAsync(
+      <OptimizationProvider
+        clientId={testConfig.clientId}
+        environment={testConfig.environment}
+        api={testConfig.api}
+        handoff={secondHandoff}
+        onStatesReady={onStatesReady}
+      >
+        <div />
+      </OptimizationProvider>,
+    )
+
+    expect(requireLiveStates().profile.current).toEqual(secondHandoff.state?.profile)
+    expect(onStatesReady).toHaveBeenCalledTimes(1)
+    rendered.unmount()
+  })
+
+  it('keeps a newer provider handoff authoritative when an older interceptor resolves last', async () => {
+    const firstHandoff = createContentHandoff('first-delayed-profile')
+    const secondHandoff = createContentHandoff('second-delayed-profile')
+    const firstHydration = createDeferred()
+    const secondHydration = createDeferred()
+    const sdk = new ContentfulOptimization(testConfig)
+    sdk.interceptors.state.add(async (incoming) => {
+      if (incoming.profile?.id === firstHandoff.state?.profile?.id) await firstHydration.promise
+      if (incoming.profile?.id === secondHandoff.state?.profile?.id) await secondHydration.promise
+
+      return incoming
+    })
+    const rendered = createClientRoot()
+
+    rendered.render(
+      <OptimizationProvider sdk={sdk}>
+        <div />
+      </OptimizationProvider>,
+    )
+    await rendered.renderAsync(
+      <OptimizationProvider sdk={sdk} handoff={firstHandoff}>
+        <div />
+      </OptimizationProvider>,
+    )
+    await rendered.renderAsync(
+      <OptimizationProvider sdk={sdk} handoff={secondHandoff}>
+        <div />
+      </OptimizationProvider>,
+    )
+
+    secondHydration.resolve()
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(sdk.states.profile.current).toEqual(secondHandoff.state?.profile)
+
+    firstHydration.resolve()
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(sdk.states.profile.current).toEqual(secondHandoff.state?.profile)
+
+    rendered.unmount()
+    sdk.destroy()
   })
 
   it('renders config-only children from a snapshot during server render', () => {
@@ -381,8 +540,8 @@ describe('OptimizationProvider onStatesReady', () => {
     expect(window.contentfulOptimization).toBeUndefined()
   })
 
-  it('renders serverOptimizationState during server render', () => {
-    const serverOptimizationState = createServerOptimizationState('server-profile')
+  it('renders handoff state during server render', () => {
+    const handoff = createContentHandoff('server-profile')
     let profileFromChild: OptimizationData['profile'] | undefined = undefined
     let consentFromChild: boolean | undefined = undefined
     let pageConsentFromChild = false
@@ -404,25 +563,55 @@ describe('OptimizationProvider onStatesReady', () => {
         defaults={{ consent: false, persistenceConsent: false }}
         environment={testConfig.environment}
         api={testConfig.api}
-        serverOptimizationState={serverOptimizationState}
+        handoff={handoff}
       >
         <Probe />
       </OptimizationProvider>,
     )
 
     expect(markup).toContain('server-profile')
-    expect(profileFromChild).toEqual(serverOptimizationState.profile)
+    expect(profileFromChild).toEqual(handoff.state?.profile)
     expect(consentFromChild).toBe(false)
     expect(pageConsentFromChild).toBe(true)
     expect(trackConsentFromChild).toBe(false)
     expect(window.contentfulOptimization).toBeUndefined()
   })
 
-  it('resolves server-selected entries from the snapshot during server render', () => {
-    const serverOptimizationState = {
-      ...createServerOptimizationState('server-profile'),
-      selectedOptimizations,
+  it('rejects unsafe handoff state before server snapshot children render', () => {
+    const handoff = createContentHandoff('unsafe-static-profile', {
+      cache: { scope: 'static' },
+    })
+    let childRendered = false
+
+    function Probe(): ReactElement {
+      childRendered = true
+
+      return <span>unsafe</span>
     }
+
+    expect(() => {
+      renderToString(
+        <OptimizationProvider
+          clientId={testConfig.clientId}
+          environment={testConfig.environment}
+          api={testConfig.api}
+          handoff={handoff}
+        >
+          <Probe />
+        </OptimizationProvider>,
+      )
+    }).toThrow('Profile state should not be included in public or static optimization caches.')
+    expect(childRendered).toBe(false)
+    expect(window.contentfulOptimization).toBeUndefined()
+  })
+
+  it('resolves server-selected entries from the snapshot during server render', () => {
+    const handoff = createContentHandoff('server-profile', {
+      state: {
+        ...createServerOptimizationState('server-profile'),
+        selectedOptimizations,
+      },
+    })
     let resolvedEntryId: string | undefined = undefined
 
     function Probe(): ReactElement {
@@ -436,7 +625,7 @@ describe('OptimizationProvider onStatesReady', () => {
         clientId={testConfig.clientId}
         environment={testConfig.environment}
         api={testConfig.api}
-        serverOptimizationState={serverOptimizationState}
+        handoff={handoff}
       >
         <Probe />
       </OptimizationProvider>,

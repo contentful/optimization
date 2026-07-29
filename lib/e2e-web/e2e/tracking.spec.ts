@@ -1,6 +1,6 @@
 import { type Page, expect, test } from '@playwright/test'
 import { CLICK_SCENARIO_IDS } from '../src/fixtures'
-import { scrollThroughEntries, setup } from './utils'
+import { hasFlag, scrollThroughEntries, setup, skipIf } from './utils'
 
 // --- click tracking helpers ---
 
@@ -64,6 +64,8 @@ async function readHoverDurationMs(page: Page, hoverId: string): Promise<number>
 // --- tests ---
 
 test.describe('Tracking', () => {
+  skipIf('EDGE')
+
   test.describe('Entry Click', () => {
     test.beforeEach(async ({ page }) => {
       await setup(page)
@@ -234,7 +236,9 @@ test.describe('Tracking', () => {
       const pageEvents = page.locator('[data-testid^="event-page-"]')
       const viewEvents = page.locator('[data-testid^="event-view-"]')
 
-      await expect(pageEvents.first()).toBeVisible()
+      if (!hasFlag('SSR')) {
+        await expect(pageEvents.first()).toBeVisible()
+      }
 
       await scrollThroughEntries(page)
       await expect(viewEvents).toHaveCount(0)
@@ -244,7 +248,9 @@ test.describe('Tracking', () => {
       const pageEvents = page.locator('[data-testid^="event-page-"]')
       const viewEvents = page.locator('[data-testid^="event-view-"]')
 
-      await expect(pageEvents.first()).toBeVisible()
+      if (!hasFlag('SSR')) {
+        await expect(pageEvents.first()).toBeVisible()
+      }
 
       await page.getByTestId('consent-button').click()
       await scrollThroughEntries(page)

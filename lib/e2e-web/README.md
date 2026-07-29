@@ -23,7 +23,7 @@ pnpm test:e2e:report
 ```
 
 Supported implementations: `web-sdk`, `react-web-sdk`, `web-sdk_react`, `web-sdk_angular`,
-`nextjs-sdk_app-router`, and `nextjs-sdk_pages-router`.
+`nextjs-sdk_app-router`, `nextjs-sdk_app-router_edge-runtime`, and `nextjs-sdk_pages-router`.
 
 Root wrappers are available for the current implementations:
 
@@ -33,6 +33,7 @@ pnpm test:e2e:react-web-sdk
 pnpm test:e2e:web-sdk_react
 pnpm test:e2e:web-sdk_angular
 pnpm test:e2e:nextjs-sdk_app-router
+pnpm test:e2e:nextjs-sdk_app-router_edge-runtime
 pnpm test:e2e:nextjs-sdk_pages-router
 ```
 
@@ -53,14 +54,15 @@ spec groups to run:
 
 Current implementation env defaults:
 
-| Implementation            | `APP_PORT` | `E2E_FLAGS`                    |
-| ------------------------- | ---------- | ------------------------------ |
-| `web-sdk`                 | `3000`     | `CSR`                          |
-| `react-web-sdk`           | `3000`     | `CSR`                          |
-| `web-sdk_react`           | `3000`     | `CSR`                          |
-| `web-sdk_angular`         | `4200`     | `CSR,HYDRATION,SSR,SKIP_NO_JS` |
-| `nextjs-sdk_pages-router` | `3001`     | `CSR,HYDRATION,SSR`            |
-| `nextjs-sdk_app-router`   | `3002`     | `CSR,HYDRATION,SSR`            |
+| Implementation                       | `APP_PORT` | `E2E_FLAGS`                    |
+| ------------------------------------ | ---------- | ------------------------------ |
+| `web-sdk`                            | `3000`     | `CSR`                          |
+| `react-web-sdk`                      | `3000`     | `CSR`                          |
+| `web-sdk_react`                      | `3000`     | `CSR`                          |
+| `web-sdk_angular`                    | `4200`     | `CSR,HYDRATION,SSR,SKIP_NO_JS` |
+| `nextjs-sdk_pages-router`            | `3001`     | `CSR,HYDRATION,SSR`            |
+| `nextjs-sdk_app-router`              | `3002`     | `CSR,HYDRATION,SSR,SKIP_NO_JS` |
+| `nextjs-sdk_app-router_edge-runtime` | `3003`     | `EDGE`                         |
 
 The config also starts the shared mock server from `lib/mocks` as a Playwright `webServer`. Both web
 servers use `reuseExistingServer: true`, so Playwright can reuse a server that is already listening
@@ -89,7 +91,10 @@ IMPLEMENTATION=web-sdk_angular APP_PORT=4200 E2E_FLAGS=CSR,HYDRATION,SSR,SKIP_NO
 IMPLEMENTATION=nextjs-sdk_pages-router APP_PORT=3001 E2E_FLAGS=CSR,HYDRATION,SSR pnpm --dir ../../lib/e2e-web test
 
 # nextjs-sdk_app-router
-IMPLEMENTATION=nextjs-sdk_app-router APP_PORT=3002 E2E_FLAGS=CSR,HYDRATION,SSR pnpm --dir ../../lib/e2e-web test
+IMPLEMENTATION=nextjs-sdk_app-router APP_PORT=3002 E2E_FLAGS=CSR,HYDRATION,SSR,SKIP_NO_JS pnpm --dir ../../lib/e2e-web test
+
+# nextjs-sdk_app-router_edge-runtime
+IMPLEMENTATION=nextjs-sdk_app-router_edge-runtime APP_PORT=3003 E2E_FLAGS=EDGE pnpm --dir ../../lib/e2e-web test
 ```
 
 Playwright browsers are installed once in `lib/e2e-web` and shared across all implementations. Run

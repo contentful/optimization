@@ -1,15 +1,16 @@
 import type NodeContentfulOptimization from '@contentful/optimization-node'
-import type WebContentfulOptimization from '@contentful/optimization-web'
 import type {
+  BoundNextjsOptimizationProviderProps,
+  BoundNextjsOptimizationRootProps,
   NextjsOptimizationComponents as NextjsAppClientComponents,
   NextjsBoundOptimizedEntryProps,
 } from './app-router-client'
 import type { NextjsOptimizationComponents as NextjsAppServerComponents } from './app-router-server'
-import type { OptimizationSdk, OptimizedEntryProps } from './client'
+import type { OptimizationSdk, OptimizationWebRuntime, OptimizedEntryProps } from './client'
 import type { NextjsPagesRouterOptimization } from './pages-router'
 import type { ContentfulOptimization as NextjsServerOptimization } from './server'
 
-export function acceptNextjsClientSdk(runtime: WebContentfulOptimization): OptimizationSdk {
+export function acceptNextjsClientSdk(runtime: OptimizationWebRuntime): OptimizationSdk {
   return runtime
 }
 
@@ -65,11 +66,90 @@ export function rejectAppRouterEntryLoadingFallback(
   })
 }
 
+export function acceptAppRouterProviderProps(
+  components: NextjsAppClientComponents,
+  handoff: BoundNextjsOptimizationProviderProps['handoff'],
+): void {
+  components.OptimizationProvider({
+    children: null,
+    handoff,
+    hydration: 'preserve-server',
+    prefetchManagedEntries: ['hero'],
+  })
+}
+
+export function acceptAppRouterServerProviderProps(
+  components: NextjsAppServerComponents,
+  props: BoundNextjsOptimizationProviderProps,
+): void {
+  void components.OptimizationProvider({
+    ...props,
+    hydration: 'preserve-server',
+    prefetchManagedEntries: ['hero'],
+  })
+}
+
+export function acceptAppRouterRootPageEventProps(
+  components: NextjsAppClientComponents,
+  props: BoundNextjsOptimizationRootProps,
+): void {
+  components.OptimizationRoot({
+    ...props,
+    buildPagePayload: () => ({ properties: { route: '/products' } }),
+    initialPagePayload: { properties: { route: '/products' } },
+    routeKey: '/products',
+  })
+}
+
+export function rejectAppRouterProviderRouteKey(
+  components: NextjsAppClientComponents,
+  props: BoundNextjsOptimizationProviderProps,
+): void {
+  components.OptimizationProvider({
+    ...props,
+    // @ts-expect-error Bound provider does not own page route wiring.
+    routeKey: '/products',
+  })
+}
+
+export function rejectAppRouterProviderBuildPagePayload(
+  components: NextjsAppClientComponents,
+  props: BoundNextjsOptimizationProviderProps,
+): void {
+  components.OptimizationProvider({
+    ...props,
+    // @ts-expect-error Bound provider does not own initial page payload builders.
+    buildPagePayload: () => ({ properties: { route: '/products' } }),
+  })
+}
+
+export function rejectAppRouterProviderInitialPagePayload(
+  components: NextjsAppClientComponents,
+  props: BoundNextjsOptimizationProviderProps,
+): void {
+  components.OptimizationProvider({
+    ...props,
+    // @ts-expect-error Bound provider does not own initial page payloads.
+    initialPagePayload: { properties: { route: '/products' } },
+  })
+}
+
 export function acceptPagesRouterEntryProps(
   components: NextjsPagesRouterOptimization,
   props: OptimizedEntryProps,
 ): void {
   components.OptimizedEntry(props)
+}
+
+export function acceptPagesRouterProviderProps(
+  components: NextjsPagesRouterOptimization,
+  props: BoundNextjsOptimizationProviderProps,
+): void {
+  components.OptimizationProvider({
+    ...props,
+    hydration: 'preserve-server',
+    prefetchManagedEntries: ['hero'],
+  })
 }
 
 describe('Next.js runtime type contracts', () => {

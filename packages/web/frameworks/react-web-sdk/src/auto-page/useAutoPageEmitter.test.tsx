@@ -6,23 +6,40 @@ import {
   renderWithOptimizationProviders,
 } from '../test/sdkTestUtils'
 import type { AutoPagePayload } from './types'
-import { resetAutoPageEmitterState, useAutoPageEmitter } from './useAutoPageEmitter'
+import {
+  resetAutoPageEmitterState,
+  useAutoPageEmitter,
+  type InitialAutoPageEvent,
+} from './useAutoPageEmitter'
 
 function TestAutoPageEmitter({
   enabled = true,
+  initialPageEvent,
   routeKey,
   payload,
   buildPayload,
 }: {
   enabled?: boolean
+  initialPageEvent?: InitialAutoPageEvent
   routeKey: string
   payload?: AutoPagePayload
   buildPayload?: (metadata: { isInitialEmission: boolean }) => AutoPagePayload
 }): null {
   useAutoPageEmitter({
     enabled,
+    initialPageEvent,
     routeKey,
     buildPayload: buildPayload ?? ((): AutoPagePayload => payload ?? {}),
+  })
+
+  return null
+}
+
+function TestSkipOnlyAutoPageEmitter({ routeKey }: { routeKey: string }): null {
+  useAutoPageEmitter({
+    enabled: true,
+    initialPageEvent: 'skip',
+    routeKey,
   })
 
   return null
@@ -209,6 +226,61 @@ describe('useAutoPageEmitter', () => {
     expect(page).toHaveBeenCalledTimes(1)
 
     await second.unmount()
+  })
+
+  it('skips only the initial route when server rendering already emitted its page event', async () => {
+    const page = rs.fn(async (_payload?: AutoPagePayload) => {
+      await Promise.resolve()
+      return undefined
+    })
+    const buildPayload = rs.fn((): AutoPagePayload => ({}))
+    const sdk = createOptimizationSdk({ page })
+    const rendered = await renderWithOptimizationProviders(
+      <TestAutoPageEmitter initialPageEvent="skip" routeKey="/" buildPayload={buildPayload} />,
+      sdk,
+    )
+
+    expect(buildPayload).not.toHaveBeenCalled()
+    expect(page).not.toHaveBeenCalled()
+
+    await rendered.rerender(
+      <TestAutoPageEmitter
+        initialPageEvent="skip"
+        routeKey="/products"
+        buildPayload={buildPayload}
+      />,
+    )
+
+    expect(buildPayload).toHaveBeenCalledTimes(1)
+    expect(page).toHaveBeenCalledTimes(1)
+
+    await rendered.rerender(
+      <TestAutoPageEmitter initialPageEvent="skip" routeKey="/" buildPayload={buildPayload} />,
+    )
+
+    expect(buildPayload).toHaveBeenCalledTimes(2)
+    expect(page).toHaveBeenCalledTimes(2)
+
+    await rendered.unmount()
+  })
+
+  it('marks a skipped initial route without a payload builder', async () => {
+    const trackCurrentPage = rs.fn(async () => {
+      await Promise.resolve()
+      return { accepted: true as const }
+    })
+    const sdk = createOptimizationSdk({ trackCurrentPage })
+    const rendered = await renderWithOptimizationProviders(
+      <TestSkipOnlyAutoPageEmitter routeKey="/" />,
+      sdk,
+    )
+
+    expect(trackCurrentPage).toHaveBeenCalledWith({
+      initialPageEvent: 'skip',
+      routeKey: '/',
+    })
+
+    await rendered.unmount()
   })
 
   it('does not emit when disabled', async () => {

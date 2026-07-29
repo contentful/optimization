@@ -48,7 +48,7 @@ apps mostly use the view surface, UIKit apps mostly use the imperative `Optimiza
   `globalThis.__bridge`; the Swift `OptimizationClient` is a thin native facade over it.
   source: optimization-js-bridge#index.ts#Bridge; core-sdk#CoreStateful.ts#CoreStatefulConfig
 
-## Setup / factory
+## Setup / initialization and binding
 
 - Two usage modes for the one client. SwiftUI: `OptimizationRoot(config:)` owns the client
   (`@StateObject`), calls `initialize(config:)` in a `.task`, injects it via `@EnvironmentObject`
@@ -208,6 +208,12 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   `readBridgeState()` through `__nativeOnStateChange`, which `OptimizationClient.handleStateUpdate`
   decodes into `@Published state`/`selectedOptimizations`/`optimizationPossible`/
   `experienceRequestState` (and writes continuity to `UserDefaults` when permitted). source: optimization-js-bridge#index.ts#initialize; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals; extern:handleStateUpdate decodes pushed bridge state into @Published props — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift#OptimizationClient; kb:shared/concepts.md
+- On a bridge state push, `OptimizationClient.handleStateUpdate` writes consent and permitted
+  profile continuity through `UserDefaultsStore` before assigning `@Published`
+  `selectedOptimizations`, `optimizationPossible`, `experienceRequestState`, and `state`.
+  `UserDefaultsStore` writes with `UserDefaults.set` / `removeObject`; it does not provide a
+  commit-or-synchronize barrier.
+  source: extern:handleStateUpdate writes UserDefaults before Published state - packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift; extern:UserDefaultsStore uses UserDefaults set and removeObject - packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Storage/UserDefaultsStore.swift
 
 ## Consent & persistence
 

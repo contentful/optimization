@@ -4,11 +4,13 @@ import {
   CoreStateful,
   type CoreStatefulConfig,
   type EventEmissionResult,
+  hasOptimizationSelectionStateField,
+  type OptimizationSelectionState,
   resolveStatefulDefaults,
   type ScreenViewBuilderArgs,
   signals,
 } from '@contentful/optimization-core'
-import type { OptimizationData, PartialProfile } from '@contentful/optimization-core/api-schemas'
+import type { PartialProfile } from '@contentful/optimization-core/api-schemas'
 import { merge } from 'es-toolkit'
 import {
   OPTIMIZATION_REACT_NATIVE_SDK_NAME,
@@ -96,12 +98,25 @@ async function enqueueCurrentProfileContinuityPersistence(): Promise<void> {
   })
 }
 
-async function enqueueContinuityWriteForPolicy(data?: OptimizationData): Promise<void> {
+async function enqueueContinuityWriteForPolicy(state?: OptimizationSelectionState): Promise<void> {
   switch (signals.persistenceConsent.value) {
     case true:
-      await (data
-        ? AsyncStorageStore.writeProfileContinuity(data)
-        : enqueueCurrentProfileContinuityPersistence())
+      if (!state) {
+        await enqueueCurrentProfileContinuityPersistence()
+        break
+      }
+
+      await AsyncStorageStore.writeProfileContinuity({
+        changes: hasOptimizationSelectionStateField(state, 'changes')
+          ? state.changes
+          : AsyncStorageStore.changes,
+        profile: hasOptimizationSelectionStateField(state, 'profile')
+          ? state.profile
+          : AsyncStorageStore.profile,
+        selectedOptimizations: hasOptimizationSelectionStateField(state, 'selectedOptimizations')
+          ? state.selectedOptimizations
+          : AsyncStorageStore.selectedOptimizations,
+      })
       break
     case false:
       await AsyncStorageStore.clearProfileContinuity()
@@ -119,9 +134,9 @@ async function persistCurrentStateForPolicy(): Promise<void> {
   await continuityWrite
 }
 
-async function persistOptimizationData(data: OptimizationData): Promise<void> {
+async function persistOptimizationState(state: OptimizationSelectionState): Promise<void> {
   const consentWrite = enqueueConsentStatePersistence()
-  const continuityWrite = enqueueContinuityWriteForPolicy(data)
+  const continuityWrite = enqueueContinuityWriteForPolicy(state)
 
   await consentWrite
   await continuityWrite
@@ -161,7 +176,7 @@ export type TrackCurrentScreenPayload = ScreenViewBuilderArgs & {
  * ```ts
  * import { ContentfulOptimization } from '@contentful/optimization-react-native'
  *
- * const optimization = await ContentfulOptimization.create({
+ * const optimization = await ContentfulOptimization.initialize({
  *   clientId: 'your-client-id',
  *   environment: 'main',
  * })
@@ -184,7 +199,7 @@ class ContentfulOptimization extends CoreStateful {
     super(config)
 
     this.statePersistenceInterceptorId = this.interceptors.state.add(async (data) => {
-      await persistOptimizationData(data)
+      await persistOptimizationState(data)
       return data
     })
 
@@ -199,14 +214,14 @@ class ContentfulOptimization extends CoreStateful {
   }
 
   /**
-   * Creates and initializes a new ContentfulOptimization instance with React Native defaults.
+   * Async initializer for a ContentfulOptimization SDK instance with React Native defaults.
    *
    * @param config - SDK configuration options
-   * @returns A fully initialized ContentfulOptimization instance
+   * @returns An initialized ContentfulOptimization instance
    *
    * @example
    * ```ts
-   * const optimization = await ContentfulOptimization.create({
+   * const optimization = await ContentfulOptimization.initialize({
    *   clientId: 'your-client-id',
    *   environment: 'main',
    * })
@@ -214,7 +229,7 @@ class ContentfulOptimization extends CoreStateful {
    *
    * @public
    */
-  static async create(config: CoreStatefulConfig): Promise<ContentfulOptimization> {
+  static async initialize(config: CoreStatefulConfig): Promise<ContentfulOptimization> {
     if (activeOptimizationInstance) {
       throw new Error(
         'ContentfulOptimization React Native SDK is already initialized. Reuse the existing instance.',

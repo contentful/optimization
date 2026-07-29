@@ -25,6 +25,18 @@ export type MaybePromise<T> = T | Promise<T>
 export type Interceptor<T> = (value: Readonly<T>) => MaybePromise<T>
 
 /**
+ * Optional reducer used by callers that accept sparse interceptor returns.
+ *
+ * @typeParam T - The value type intercepted and returned.
+ * @param previous - The value passed into the current interceptor.
+ * @param next - The value returned by the current interceptor.
+ * @returns The value to pass to the next interceptor.
+ *
+ * @public
+ */
+export type InterceptorMerge<T> = (previous: Readonly<T>, next: T) => T
+
+/**
  * Manages a list of interceptors and provides a way to run them in sequence.
  *
  * Interceptors are executed in insertion order. Each interceptor receives the
@@ -132,6 +144,7 @@ export class InterceptorManager<T> {
    * for consistency.
    *
    * @param input - The initial value to pass to the first interceptor.
+   * @param merge - Optional reducer for callers that accept sparse interceptor returns.
    * @returns A promise resolving to the final value after all interceptors have run.
    * @throws Rethrows errors from interceptors. <!-- Intentionally vague: error type depends on interceptor implementation -->
    * @remarks The interceptor list is snapshotted at invocation time; changes to
@@ -142,7 +155,7 @@ export class InterceptorManager<T> {
    * ```
    * @public
    */
-  async run(input: T): Promise<T> {
+  async run(input: T, merge?: InterceptorMerge<T>): Promise<T> {
     // Snapshot to avoid issues if interceptors are added/removed during execution.
     const fns: ReadonlyArray<Interceptor<T>> = Array.from(this.interceptors.values())
 
@@ -151,7 +164,9 @@ export class InterceptorManager<T> {
     for (const fn of fns) {
       // Pass a deep-cloned readonly view to prevent in-place interceptor
       // mutations from affecting references held outside the interceptor chain.
-      acc = await fn(cloneDeep(acc))
+      const previous = acc
+      const next = await fn(cloneDeep(acc))
+      acc = merge?.(previous, next) ?? next
     }
 
     return acc

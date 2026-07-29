@@ -346,11 +346,19 @@ runtime:
 
 | Runtime                | Persistence path                                                                                                                                                                                                  | Publication consequence                                                                                                                                           |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stateful Core          | `interceptors.state` runs before Experience response data is written to `profile`, `selectedOptimizations`, `changes`, and `experienceRequestState`.                                                              | SDK layers can await storage or transform `OptimizationData` before Core publishes response state. Core itself does not write platform storage.                   |
-| React Native           | The SDK registers a state interceptor that writes Experience `OptimizationData` to AsyncStorage when persistence consent is `true`, or clears continuity when false.                                              | Experience response state is published after the interceptor completes. Consent and reset persistence use separate AsyncStorage paths.                            |
+| Stateful Core          | `interceptors.state` runs before Optimization selection state is written to `profile`, `selectedOptimizations`, `changes`, and `experienceRequestState`.                                                          | SDK layers can await storage or transform `OptimizationSelectionState` before Core publishes response state. Core itself does not write platform storage.         |
+| React Native           | The SDK registers a state interceptor that writes profile-continuity selection state to AsyncStorage when persistence consent is `true`, or clears continuity when false.                                         | Profile-optional state preserves stored continuity for omitted fields. Experience response state is published after the interceptor completes.                    |
 | Web                    | The SDK uses signal `effect()` handlers to mirror consent, persistence consent, profile, changes, selected optimizations, and anonymous ID to `localStorage` and cookies.                                         | Web persistence runs from signal effects after state changes. Browser storage failures are swallowed, so live state can continue as session-only.                 |
 | iOS and Android native | The JS bridge uses signal effects to push Core snapshots to Swift or Kotlin. Native handlers write consent and profile-continuity values to `UserDefaults` or SharedPreferences according to persistence consent. | Native public state is republished from bridge snapshots. Native storage is platform-owned, and the JS bridge remains the source for live Core state transitions. |
 | Node/stateless         | The SDK has no shared state store. `forRequest()` binds consent, locale, and profile for one request.                                                                                                             | The host application decides whether and where to persist returned profile continuity.                                                                            |
+
+Profileless static and public content or analytics handoff hydration applies selection state to live
+Web memory without overwriting durable continuity. `private-request` handoffs, and profile-backed
+handoffs that pass cache safety, follow normal Web persistence behavior when persistence consent
+allows.
+For content handoffs, an undefined or empty Web handoff state still marks
+`experienceRequestState` as `success` and clears stale selected optimizations and changes while
+preserving the existing profile unless the handoff explicitly includes `profile`.
 
 When durable persistence consent is `false` or unset, profile-continuity values are not loaded for
 initial state and are not written as durable continuity for responses. The SDK can still publish
@@ -576,13 +584,14 @@ provider-owned place to subscribe to `eventStream`, `blockedEventStream`, or oth
 soon as SDK state is available and before child router, screen, or entry effects run. Each
 subscription still immediately emits its current snapshot.
 
-Both framework roots set up provider-owned SDK instances outside render and render no children while
-SDK initialization or provider-managed state subscriber setup is pending. React Web uses
-layout-effect scheduling for provider-owned browser SDK creation so ready children normally mount
-before first visible paint. React Native keeps async effect scheduling because SDK creation depends
-on platform storage and device state. When a framework adapter injects an already-created SDK,
-children can render immediately unless `onStatesReady` is provided. React Web also holds children
-when `serverOptimizationState` is provided so hydration happens first.
+Both framework roots set up provider-owned SDK instances outside render and expose provider-owned
+state only after the relevant runtime setup path has started. React Web creates a snapshot runtime
+for the first render, then hydrates or creates the live browser SDK in a layout effect so ready
+children normally mount before first visible paint. React Native keeps async effect scheduling
+because SDK creation depends on platform storage and device state. When a framework adapter injects
+an already-created SDK, children can render immediately unless `onStatesReady` is provided. React
+Web seeds the initial snapshot from `handoff` when server/static/edge handoff data is provided, so
+children can render from that state before the live SDK takes over.
 
 ## Diagnostics
 
@@ -694,9 +703,11 @@ is in flight does not affect that event.
 
 ### State interceptors
 
-`interceptors.state` applies the same mechanism to `OptimizationData` responses from the Experience
-API before Core writes them to `profile`, `selectedOptimizations`, `changes`, and
-`experienceRequestState`. State interceptors run during stateful Experience response publication:
+`interceptors.state` applies the same mechanism to `OptimizationSelectionState` before Core writes
+available `profile`, `selectedOptimizations`, `changes`, and `experienceRequestState` values. Full
+Experience API responses include profile data; handoff hydration can carry profileless selection
+state. State interceptors run during stateful Experience response publication and handoff state
+hydration:
 
 Web and React Native stateful TypeScript SDK instance:
 
@@ -716,6 +727,10 @@ sdk.interceptors.state.add((data) => {
 State interceptors run after the API responds but before the batch signal write, so every subscriber
 sees the transformed values. SDK layers can also use async state interceptors for runtime work that
 must complete before Experience response state is published.
+
+Returned state is interpreted by own-field presence. Omit a field to keep the incoming `profile`,
+`selectedOptimizations`, or `changes`; return the field with value `undefined` when the interceptor
+intentionally wants that value published as undefined.
 
 Node and other stateless request clients do not run `interceptors.state`; transform returned
 `OptimizationData` or `request.profile` in application code.

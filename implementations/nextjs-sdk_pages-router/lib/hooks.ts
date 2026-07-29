@@ -6,18 +6,35 @@ import {
   useOptimizationContext,
 } from '@contentful/optimization-nextjs/client'
 import { useEffect, useReducer, useRef, useState } from 'react'
-import { setAppConsent } from './util'
+import { getBrowserAppConsent, setAppConsent } from './util'
 
-export function useConsent(): {
+export function useConsent(initialConsent?: boolean): {
   consent: boolean | undefined
   setConsent: (value: boolean) => void
 } {
   const consent = useConsentState()
   const { setConsent } = useOptimizationActions()
+  const { isLive } = useOptimizationContext()
+  const bootstrappedBrowserConsent = useRef(false)
+  const displayedConsent = isLive === false ? (initialConsent ?? consent) : consent
+
   useEffect(() => {
+    if (isLive !== true) return
+
+    if (!bootstrappedBrowserConsent.current) {
+      bootstrappedBrowserConsent.current = true
+      const browserConsent = getBrowserAppConsent()
+
+      if (browserConsent !== undefined && browserConsent !== consent) {
+        setConsent(browserConsent)
+        return
+      }
+    }
+
     if (typeof consent === 'boolean') setAppConsent(consent)
-  }, [consent])
-  return { consent, setConsent }
+  }, [consent, isLive, setConsent])
+
+  return { consent: displayedConsent, setConsent }
 }
 
 const MS_PER_SECOND = 1000

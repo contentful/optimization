@@ -1,6 +1,7 @@
 import type { OptimizationData } from '@contentful/optimization-api-client/api-schemas'
 import { isEqual } from 'es-toolkit/predicate'
 import type { LifecycleInterceptors } from '../CoreBase'
+import { mergeOptimizationSelectionState } from '../handoff'
 import {
   batch,
   changes as changesSignal,
@@ -13,7 +14,10 @@ export async function applyOptimizationDataToSignals(
   data: OptimizationData,
   stateInterceptors: LifecycleInterceptors['state'],
 ): Promise<void> {
-  const intercepted = await stateInterceptors.run(data)
+  const intercepted = mergeOptimizationSelectionState(
+    data,
+    await stateInterceptors.run(data, mergeOptimizationSelectionState),
+  )
   const { changes, profile, selectedOptimizations } = intercepted
 
   // success must be written inside this batch because experienceRequestState transitions

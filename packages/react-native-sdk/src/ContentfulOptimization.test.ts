@@ -168,6 +168,18 @@ function getProfileWriteCalls(): Array<ReadonlyArray<[string, string]>> {
   return entries.filter(isStorageEntries).filter(hasProfileCacheEntry)
 }
 
+function hasProfileRemoveCall(): boolean {
+  const calls: unknown = asyncStorageMock.multiRemove.mock.calls
+  if (!Array.isArray(calls)) return false
+
+  return calls.some((call) => {
+    if (!Array.isArray(call)) return false
+
+    const [keys] = call
+    return Array.isArray(keys) && keys.includes(PROFILE_CACHE_KEY)
+  })
+}
+
 function getAppStateChangeHandler(): (nextAppState: string) => void {
   if (!appStateChangeHandler) {
     throw new Error('Expected AppState change handler to be registered')
@@ -209,7 +221,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('uses top-level locale as the SDK Experience API/event locale', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
       locale: ' de_DE ',
@@ -226,7 +238,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('omits the Experience API locale when top-level locale is omitted', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
     })
@@ -239,7 +251,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('updates live locale without refreshing optimization data', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
       locale: 'en-US',
@@ -256,7 +268,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('defaults allowedEventTypes to identify/screen for React Native', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
     })
@@ -268,7 +280,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('keeps explicit default profile in memory until persistence consent is granted', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
       defaults: {
@@ -295,7 +307,7 @@ describe('ContentfulOptimization locale resolution', () => {
     ])
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
     })
@@ -331,7 +343,7 @@ describe('ContentfulOptimization locale resolution', () => {
     })
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
     })
@@ -351,6 +363,79 @@ describe('ContentfulOptimization locale resolution', () => {
     expect(created.states.profile.current).toEqual(DEFAULT_PROFILE)
   })
 
+  it('persists profileless selection state without clearing stored profile continuity', async () => {
+    const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
+
+    const created = await ContentfulOptimization.initialize({
+      clientId: 'test-client-id',
+      environment: 'main',
+      defaults: {
+        consent: true,
+        persistenceConsent: true,
+        profile: DEFAULT_PROFILE,
+      },
+    })
+    optimization = created
+
+    asyncStorageMock.multiRemove.mockClear()
+    asyncStorageMock.multiSet.mockClear()
+
+    await created.interceptors.state.run({
+      changes: [],
+      selectedOptimizations: [],
+    })
+    await drainAsyncStorageStore()
+
+    expect(hasProfileRemoveCall()).toBe(false)
+    expect(asyncStorageMock.multiSet).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        [CHANGES_CACHE_KEY, JSON.stringify([])],
+        [PROFILE_CACHE_KEY, JSON.stringify(DEFAULT_PROFILE)],
+        [SELECTED_OPTIMIZATIONS_CACHE_KEY, JSON.stringify([])],
+      ]),
+    )
+  })
+
+  it('clears stored selection continuity fields when state owns undefined values', async () => {
+    const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
+
+    const created = await ContentfulOptimization.initialize({
+      clientId: 'test-client-id',
+      environment: 'main',
+      defaults: {
+        changes: [],
+        consent: true,
+        persistenceConsent: true,
+        profile: DEFAULT_PROFILE,
+        selectedOptimizations: [],
+      },
+    })
+    optimization = created
+
+    asyncStorageMock.multiRemove.mockClear()
+    asyncStorageMock.multiSet.mockClear()
+
+    await created.interceptors.state.run({
+      changes: undefined,
+      profile: undefined,
+      selectedOptimizations: undefined,
+    })
+    await drainAsyncStorageStore()
+
+    expect(asyncStorageMock.multiRemove).toHaveBeenCalledWith([
+      CHANGES_CACHE_KEY,
+      PROFILE_CACHE_KEY,
+      SELECTED_OPTIMIZATIONS_CACHE_KEY,
+    ])
+    expect(asyncStorageMock.multiSet).not.toHaveBeenCalledWith(
+      expect.arrayContaining([
+        [CHANGES_CACHE_KEY, JSON.stringify([])],
+        [PROFILE_CACHE_KEY, JSON.stringify(DEFAULT_PROFILE)],
+        [SELECTED_OPTIMIZATIONS_CACHE_KEY, JSON.stringify([])],
+      ]),
+    )
+  })
+
   it('uses stored anonymous ID only while persistence consent is accepted', async () => {
     asyncStorageMock.multiGet.mockImplementation(async (keys: string[]) => {
       if (keys.includes(ANONYMOUS_ID_KEY)) {
@@ -361,7 +446,7 @@ describe('ContentfulOptimization locale resolution', () => {
     })
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
     })
@@ -384,7 +469,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('waits for profile-continuity persistence before publishing identified state', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
       defaults: { consent: true },
@@ -427,7 +512,7 @@ describe('ContentfulOptimization locale resolution', () => {
   it('publishes identified state after failed profile-continuity persistence is handled', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
       defaults: { consent: true },
@@ -457,7 +542,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
     const store = await getAsyncStorageStore()
 
-    const created = await ContentfulOptimization.create({
+    const created = await ContentfulOptimization.initialize({
       clientId: 'test-client-id',
       environment: 'main',
       defaults: { consent: true },

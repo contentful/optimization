@@ -3,8 +3,10 @@ import type {
   OptimizationData,
   SelectedOptimizationArray,
 } from '@contentful/optimization-web/api-schemas'
+import type { ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
 import { act, createElement } from 'react'
 import { renderToString } from 'react-dom/server'
+import { OptimizationHydrationContext } from '../context/OptimizationHydrationContext'
 import { OptimizationRoot } from '../root/OptimizationRoot'
 import { OptimizedEntry, type OptimizedEntryProps } from './OptimizedEntry'
 import {
@@ -96,6 +98,18 @@ describe('OptimizedEntry', () => {
           averageSessionLength: 0,
         },
       },
+    }
+  }
+
+  function createContentHandoff(
+    overrides: Partial<ContentOptimizationHandoff> = {},
+  ): ContentOptimizationHandoff {
+    return {
+      cache: { scope: 'private-request' },
+      hydration: 'preserve-server',
+      initialPageEvent: 'skip',
+      state: createServerOptimizationState(),
+      ...overrides,
     }
   }
 
@@ -429,6 +443,36 @@ describe('OptimizedEntry', () => {
         optimizationContextId: 'ctx-1',
       }),
     )
+
+    await view.unmount()
+  })
+
+  it('keeps preserve-server content visible while onEntryResolved waits for settled state', async () => {
+    const onEntryResolved = rs.fn()
+    const { optimization, setExperienceRequestState } = createRuntime((entry) => ({ entry }))
+
+    const view = await renderComponent(
+      <OptimizationHydrationContext.Provider value="preserve-server">
+        <OptimizedEntry baselineEntry={optimizedBaseline} onEntryResolved={onEntryResolved}>
+          {(resolved) => readTitle(resolved)}
+        </OptimizedEntry>
+      </OptimizationHydrationContext.Provider>,
+      optimization,
+    )
+
+    expect(view.container.textContent).toContain('optimized-baseline')
+    expect(getWrapper(view.container).dataset.ctflEntryId).toBeUndefined()
+    expect(onEntryResolved).not.toHaveBeenCalled()
+
+    await setExperienceRequestState({ status: 'success' })
+
+    expect(onEntryResolved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baselineEntryId: 'optimized-baseline',
+        entryId: 'optimized-baseline',
+      }),
+    )
+    expect(getWrapper(view.container).dataset.ctflEntryId).toBe('optimized-baseline')
 
     await view.unmount()
   })
@@ -814,19 +858,20 @@ describe('OptimizedEntry', () => {
         <OptimizationRoot
           clientId="test-client-id"
           environment="main"
-          serverOptimizationState={createServerOptimizationState()}
-          prefetchedManagedEntries={[
-            {
-              baselineEntry: variantA,
-              entryId: 'baseline',
-              entryQuery: { locale: 'fr-FR' },
-            },
-            {
-              baselineEntry: baseline,
-              entryId: 'baseline',
-              entryQuery: { locale: 'de-DE' },
-            },
-          ]}
+          handoff={createContentHandoff({
+            entries: [
+              {
+                baselineEntry: variantA,
+                entryId: 'baseline',
+                entryQuery: { locale: 'fr-FR' },
+              },
+              {
+                baselineEntry: baseline,
+                entryId: 'baseline',
+                entryQuery: { locale: 'de-DE' },
+              },
+            ],
+          })}
         >
           <OptimizedEntry
             entryId="baseline"

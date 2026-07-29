@@ -20,6 +20,7 @@ const CORS_HEADERS = { 'Access-Control-Allow-Origin': '*' }
 type State = Record<string, boolean>
 
 let identifiedState: State = {}
+let knownProfileIds = new Set<string>()
 
 let newVisitor: ExperienceResponse | undefined = undefined
 let identifiedVisitor: ExperienceResponse | undefined = undefined
@@ -34,6 +35,7 @@ async function loadFixtures(): Promise<void> {
 
   newVisitor = ExperienceResponse.parse(JSON.parse(newVisitorData))
   identifiedVisitor = ExperienceResponse.parse(JSON.parse(identifiedVisitorData))
+  resetState()
 }
 
 async function ensureFixturesLoaded(): Promise<void> {
@@ -66,6 +68,14 @@ function getLoadedFixtures(): {
   return { identifiedVisitor, newVisitor }
 }
 
+function resetState(): void {
+  identifiedState = {}
+  knownProfileIds = new Set()
+
+  if (newVisitor) knownProfileIds.add(newVisitor.data.profile.id)
+  if (identifiedVisitor) knownProfileIds.add(identifiedVisitor.data.profile.id)
+}
+
 // Helper to parse JSON whether body is application/json or text/plain
 async function parseJson<T>(req: Request): Promise<T> {
   const content = req.headers.get('content-type') ?? ''
@@ -91,6 +101,7 @@ function getResponseBody(profileId?: string, events?: ExperienceEventArray): Exp
   const fixtures = getLoadedFixtures()
 
   profileId ??= crypto.randomUUID()
+  knownProfileIds.add(profileId)
 
   const identified = identifiedState[profileId] ?? false
 
@@ -208,17 +219,9 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
           return fixturesUnavailableResponse()
         }
 
-        const fixtures = getLoadedFixtures()
         const { profileId } = params
 
-        if (
-          !profileId ||
-          typeof profileId !== 'string' ||
-          ![
-            fixtures.identifiedVisitor.data.profile.id,
-            fixtures.newVisitor.data.profile.id,
-          ].includes(profileId)
-        ) {
+        if (!profileId || typeof profileId !== 'string' || !knownProfileIds.has(profileId)) {
           return HttpResponse.json(
             { message: 'Profile not found', data: {}, error: { code: 'ERR_PROFILE_NOT_FOUND' } },
             { status: 404, headers: CORS_HEADERS },
@@ -264,7 +267,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
     ),
 
     http.post(`${baseUrl}reset-state`, () => {
-      identifiedState = {}
+      resetState()
 
       return HttpResponse.json(
         { message: 'Internal state has been reset' },

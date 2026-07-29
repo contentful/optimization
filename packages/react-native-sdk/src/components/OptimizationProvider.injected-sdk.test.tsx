@@ -6,11 +6,11 @@ import { loadTestRenderer } from '../test/testRenderer'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
-const createOptimization = rs.fn()
+const initializeOptimization = rs.fn()
 
 rs.mock('../ContentfulOptimization', () => ({
   default: {
-    create: createOptimization,
+    initialize: initializeOptimization,
   },
 }))
 
@@ -75,7 +75,7 @@ describe('OptimizationProvider injected SDK performance', () => {
   let renderer: TestRenderer | undefined = undefined
 
   void beforeEach(() => {
-    createOptimization.mockReset()
+    initializeOptimization.mockReset()
   })
 
   void afterEach(() => {
@@ -115,10 +115,10 @@ describe('OptimizationProvider injected SDK performance', () => {
 
     expect(childRendered).toBe(true)
     expect(capturedSdk).toBe(injectedSdk)
-    expect(createOptimization).not.toHaveBeenCalled()
+    expect(initializeOptimization).not.toHaveBeenCalled()
   })
 
-  it('prefetches managed entries for injected SDKs without creating an SDK', async () => {
+  it('prefetches managed entries for injected SDKs without initializing an SDK', async () => {
     const { OptimizationProvider } = await import('./OptimizationProvider')
     const injectedSdk = createSdk()
     const descriptors = ['hero-entry'] as const
@@ -135,7 +135,7 @@ describe('OptimizationProvider injected SDK performance', () => {
     })
 
     expect(injectedSdk.prefetchManagedEntries).toHaveBeenCalledWith(descriptors)
-    expect(createOptimization).not.toHaveBeenCalled()
+    expect(initializeOptimization).not.toHaveBeenCalled()
   })
 
   it('preserves context identity across unchanged provider rerenders', async () => {

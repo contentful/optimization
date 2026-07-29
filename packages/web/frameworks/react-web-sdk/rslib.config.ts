@@ -36,6 +36,9 @@ const supportEntries = {
   logger: './src/logger.ts',
   'web-sdk': './src/web-sdk.ts',
   'core-sdk': './src/core-sdk.ts',
+  handoff: './src/handoff.ts',
+  analytics: './src/analytics.ts',
+  'tracking-attributes': './src/tracking-attributes.ts',
   'api-client': './src/api-client.ts',
   'api-schemas': './src/api-schemas.ts',
 } as const

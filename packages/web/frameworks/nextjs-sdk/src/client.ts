@@ -3,6 +3,7 @@
 export {
   LiveUpdatesContext,
   LiveUpdatesProvider,
+  OptimizationAnalyticsRoot,
   OptimizationContext,
   OptimizationProvider,
   OptimizationRoot,
@@ -34,6 +35,7 @@ export type {
   ManagedEntryHandoff,
   ManagedEntryPrefetchRuntime,
   OnStatesReady,
+  OptimizationAnalyticsRootProps,
   OptimizationContextValue,
   OptimizationProviderProps,
   OptimizationRootProps,

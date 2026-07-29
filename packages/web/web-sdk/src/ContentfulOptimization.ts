@@ -21,6 +21,11 @@ import {
   type PageViewBuilderArgs,
 } from '@contentful/optimization-core'
 import type { App } from '@contentful/optimization-core/api-schemas'
+import {
+  CORE_BRIDGE_CAPABILITIES_SYMBOL,
+  type CoreBridgeCapabilities,
+  type CoreBridgeHost,
+} from '@contentful/optimization-core/bridge-support'
 import { ANONYMOUS_ID_COOKIE_LEGACY } from '@contentful/optimization-core/constants'
 import { getPageProperties, getUserAgent } from './builders/EventBuilder'
 import {
@@ -37,6 +42,11 @@ import {
   createVisibilityChangeListener,
 } from './handlers'
 import { getCookie, removeCookie, setCookie, type CookieAttributes } from './lib/cookies'
+import {
+  clearProfilelessHandoffDurableContinuity,
+  isDurableContinuityPersistenceSuppressed,
+  shouldSkipDurableContinuityPersistence,
+} from './storage/durableContinuityPersistence'
 import LocalStore from './storage/LocalStore'
 
 export type { CookieAttributes } from './lib/cookies'
@@ -107,7 +117,7 @@ export interface CurrentPageEmissionMetadata {
 }
 
 /**
- * Controls how {@link ContentfulOptimization.trackCurrentPage} treats the first route.
+ * Controls how {@link ContentfulOptimization.trackCurrentPage} treats the current route.
  *
  * @public
  */
@@ -124,14 +134,34 @@ export interface TrackCurrentPageOptions {
    */
   readonly routeKey: string
   /**
-   * Controls the first route emission. SSR integrations can use `skip` when
-   * the server already emitted the same page event.
+   * Controls the current route emission. SSR integrations can use `skip` when
+   * the server already emitted this route's page event.
    */
   readonly initialPageEvent?: InitialCurrentPageEvent
   /**
    * Builds the page payload only when a page event will be emitted.
    */
   readonly buildPayload: (metadata: CurrentPageEmissionMetadata) => PageViewBuilderArgs | undefined
+}
+
+/**
+ * Skip-only options for {@link ContentfulOptimization.trackCurrentPage}.
+ *
+ * @public
+ */
+export interface TrackCurrentPageSkipOptions {
+  /**
+   * Stable route identity used for current-page deduplication.
+   */
+  readonly routeKey: string
+  /**
+   * Marks the current route accepted without emitting a page event.
+   */
+  readonly initialPageEvent: 'skip'
+  /**
+   * Ignored for skip-only tracking. Kept for callers that share option builders.
+   */
+  readonly buildPayload?: TrackCurrentPageOptions['buildPayload']
 }
 
 function resolveDefaultState(
@@ -215,6 +245,16 @@ function mergeConfig({
   return mergedConfig
 }
 
+function canPersistDurableContinuity(persistenceConsent: boolean | undefined): boolean {
+  const hasProfile = signals.profile.value !== undefined
+
+  if (hasProfile && !isDurableContinuityPersistenceSuppressed()) {
+    clearProfilelessHandoffDurableContinuity()
+  }
+
+  return persistenceConsent === true && !shouldSkipDurableContinuityPersistence(hasProfile)
+}
+
 /**
  * Stateful Web SDK built on top of {@link CoreStateful}.
  *
@@ -230,7 +270,9 @@ function mergeConfig({
  * A singleton instance is attached to `window.contentfulOptimization` when constructed
  * in a browser environment.
  */
-class ContentfulOptimization extends CoreStateful {
+class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
+  declare readonly [CORE_BRIDGE_CAPABILITIES_SYMBOL]: CoreBridgeCapabilities
+
   private readonly currentPageTracker = new AcceptedCurrentStateTracker<string>()
 
   /**
@@ -295,6 +337,7 @@ class ContentfulOptimization extends CoreStateful {
     const mergedConfig: OptimizationWebConfig = mergeConfig(restConfig)
 
     super(mergedConfig)
+    clearProfilelessHandoffDurableContinuity()
 
     const canLoadPersistedContinuity = mergedConfig.defaults?.persistenceConsent === true
     const { cookieValue, legacyCookieValue } = readInitialCookieValues(canLoadPersistedContinuity)
@@ -324,7 +367,7 @@ class ContentfulOptimization extends CoreStateful {
         persistenceConsent: { value: persistenceConsent },
       } = signals
 
-      if (persistenceConsent === true) LocalStore.changes = value
+      if (canPersistDurableContinuity(persistenceConsent)) LocalStore.changes = value
     })
 
     effect(() => {
@@ -356,6 +399,10 @@ class ContentfulOptimization extends CoreStateful {
         profile: { value },
       } = signals
 
+      if (value !== undefined && !isDurableContinuityPersistenceSuppressed()) {
+        clearProfilelessHandoffDurableContinuity()
+      }
+
       if (persistenceConsent !== true) return
 
       LocalStore.profile = value
@@ -368,7 +415,7 @@ class ContentfulOptimization extends CoreStateful {
         selectedOptimizations: { value },
       } = signals
 
-      if (persistenceConsent === true) LocalStore.selectedOptimizations = value
+      if (canPersistDurableContinuity(persistenceConsent)) LocalStore.selectedOptimizations = value
     })
 
     this.initializeFromCookieValues(cookieValue, legacyCookieValue)
@@ -446,6 +493,7 @@ class ContentfulOptimization extends CoreStateful {
     this.entryInteractionRuntime.reset()
     removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
     LocalStore.reset()
+    clearProfilelessHandoffDurableContinuity()
     super.reset()
   }
 
@@ -458,16 +506,17 @@ class ContentfulOptimization extends CoreStateful {
    *
    * @public
    */
-  async trackCurrentPage({
-    buildPayload,
-    initialPageEvent = 'emit',
-    routeKey,
-  }: TrackCurrentPageOptions): Promise<EventEmissionResult> {
-    if (initialPageEvent === 'skip' && !this.currentPageTracker.hasAccepted()) {
+  async trackCurrentPage(
+    options: TrackCurrentPageOptions | TrackCurrentPageSkipOptions,
+  ): Promise<EventEmissionResult> {
+    const { routeKey } = options
+
+    if (options.initialPageEvent === 'skip') {
       this.currentPageTracker.markAccepted(routeKey)
       return { accepted: true }
     }
 
+    const { buildPayload } = options
     const isInitialEmission = !this.currentPageTracker.hasAccepted()
     const result = await this.currentPageTracker.emitIfNeeded({
       key: routeKey,
@@ -492,6 +541,7 @@ class ContentfulOptimization extends CoreStateful {
     this.entryInteractionRuntime.destroy()
     this.cleanupOnlineListener()
     this.cleanupVisibilityListener()
+    clearProfilelessHandoffDurableContinuity()
 
     if (typeof window !== 'undefined' && window.contentfulOptimization === this) {
       delete window.contentfulOptimization

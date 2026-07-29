@@ -6,7 +6,7 @@ import {
   useOptimizationContext,
 } from '@contentful/optimization-nextjs/client'
 import { useEffect, useReducer, useRef, useState } from 'react'
-import { setAppConsent } from './util'
+import { getBrowserAppConsent, setAppConsent } from './util'
 
 export function useConsent(): {
   consent: boolean | undefined
@@ -14,9 +14,22 @@ export function useConsent(): {
 } {
   const consent = useConsentState()
   const { setConsent } = useOptimizationActions()
+  const bootstrappedBrowserConsent = useRef(false)
+
   useEffect(() => {
+    if (!bootstrappedBrowserConsent.current) {
+      bootstrappedBrowserConsent.current = true
+      const browserConsent = getBrowserAppConsent()
+
+      if (browserConsent !== undefined && browserConsent !== consent) {
+        setConsent(browserConsent)
+        return
+      }
+    }
+
     if (typeof consent === 'boolean') setAppConsent(consent)
-  }, [consent])
+  }, [consent, setConsent])
+
   return { consent, setConsent }
 }
 

@@ -443,6 +443,35 @@ describe('Contentful Optimization Web Components', () => {
     expect(entry.style.visibility).toBe('')
   })
 
+  it('keeps optimized-entry hosts visible when the root uses preserve-server hydration', () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const root = createRootElement(runtime.sdk)
+    const entry = createEntryElement(optimizedBaseline)
+    const resolved = rs.fn((event: Event) => getEntryDetail(event))
+
+    root.hydration = 'preserve-server'
+    entry.addEventListener('ctfl-entry-resolved', resolved)
+    root.append(entry)
+    document.body.append(root)
+
+    expect(entry.style.visibility).toBe('')
+    expect(entry.dataset.ctflEntryId).toBeUndefined()
+    expect(resolved).not.toHaveBeenCalled()
+    expect(root.hydration).toBe('preserve-server')
+
+    runtime.experienceRequestState.emit({ status: 'success' })
+
+    expect(resolved).toHaveReturnedWith(
+      expect.objectContaining({
+        entry: optimizedBaseline,
+        snapshot: expect.objectContaining({ isResolved: true }),
+      }),
+    )
+    expect(entry.dataset.ctflBaselineId).toBe('optimized-baseline')
+    expect(entry.dataset.ctflEntryId).toBe('optimized-baseline')
+  })
+
   it('fetches entryId entries through the SDK before resolving', async () => {
     ensureElementsDefined()
     const runtime = createSdk((entry) => ({ entry }))
