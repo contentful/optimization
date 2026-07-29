@@ -42,7 +42,7 @@
     "hermes-compiler": "250829098.0.7"
   },
   "devDependencies": {
-    "@babel/core": "7.29.0",
+    "@babel/core": "7.29.6",
     "@babel/plugin-proposal-decorators": "7.29.0",
     "@babel/plugin-transform-class-properties": "7.28.6",
     "@babel/plugin-transform-class-static-block": "7.28.6",
