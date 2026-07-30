@@ -45,11 +45,11 @@ const createTestEntry = (id: string): TestEntry => ({
 
 const selectedOptimizations: OptimizationData['selectedOptimizations'] = [
   {
-    experienceId: 'experience-id',
+    experienceId: '6IueRX1pS3iMJncbhUQTba',
     sticky: false,
     variantIndex: 1,
     variants: {
-      baseline: 'variant',
+      '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb',
     },
   },
 ]
@@ -57,14 +57,14 @@ const selectedOptimizations: OptimizationData['selectedOptimizations'] = [
 const requestData: OptimizationData = {
   changes: [],
   profile: {
-    id: 'response-profile-id',
-    stableId: 'response-profile-id',
+    id: 'f0837d7dc6344c36a3a0a06c4cde754b',
+    stableId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     random: 1,
     audiences: [],
     traits: {},
     location: {},
     session: {
-      id: 'session-id',
+      id: 'e77eab64-93ca-4f6e-8492-037c1ff67caa',
       isReturningVisitor: false,
       landingPage: {
         path: '/',
@@ -89,8 +89,8 @@ describe('createRequestHandoffFromData', () => {
     }
     const entries: readonly ManagedEntryHandoff[] = [
       {
-        baselineEntry: createTestEntry('entry-id'),
-        entryId: 'entry-id',
+        baselineEntry: createTestEntry('4ib0hsHWoSOnCVdDkizE8d'),
+        entryId: '4ib0hsHWoSOnCVdDkizE8d',
       },
     ]
     const handoff = createRequestHandoffFromData({

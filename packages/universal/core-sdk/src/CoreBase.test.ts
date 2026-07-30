@@ -50,7 +50,7 @@ const CHANGES: ChangeArray = [
     type: 'Variable',
     value: true,
     meta: {
-      experienceId: 'experience-id',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       variantIndex: 0,
     },
   },
@@ -64,7 +64,7 @@ const CHANGES: ChangeArray = [
       },
     },
     meta: {
-      experienceId: 'experience-id',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       variantIndex: 1,
     },
   },
@@ -249,8 +249,8 @@ describe('CoreBase', () => {
       contentful: { client, cache: false },
     })
 
-    const entry = await core.fetchContentfulEntry<ProductEntrySkeleton>('entry-id')
-    const result = await core.fetchOptimizedEntry<ProductEntrySkeleton>('entry-id')
+    const entry = await core.fetchContentfulEntry<ProductEntrySkeleton>('4ib0hsHWoSOnCVdDkizE8d')
+    const result = await core.fetchOptimizedEntry<ProductEntrySkeleton>('4ib0hsHWoSOnCVdDkizE8d')
     const typedEntry: Entry<ProductEntrySkeleton, undefined> = entry
     const typedBaselineEntry: Entry<ProductEntrySkeleton, undefined> = result.baselineEntry
     const typedResolvedEntry: Entry<ProductEntrySkeleton, undefined> = result.entry
@@ -277,14 +277,14 @@ describe('CoreBase', () => {
       'de-DE',
     )
 
-    await core.fetchContentfulEntry('entry-a', { locale: 'fr-FR' })
-    await core.fetchContentfulEntry('entry-b', { include: 1 })
+    await core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d', { locale: 'fr-FR' })
+    await core.fetchContentfulEntry('4k6ZyFQnR2POY5IJLLlJRb', { include: 1 })
 
-    expect(client.getEntry).toHaveBeenNthCalledWith(1, 'entry-a', {
+    expect(client.getEntry).toHaveBeenNthCalledWith(1, '4ib0hsHWoSOnCVdDkizE8d', {
       include: 2,
       locale: 'fr-FR',
     })
-    expect(client.getEntry).toHaveBeenNthCalledWith(2, 'entry-b', {
+    expect(client.getEntry).toHaveBeenNthCalledWith(2, '4k6ZyFQnR2POY5IJLLlJRb', {
       include: 1,
       locale: 'en-US',
     })
@@ -301,9 +301,9 @@ describe('CoreBase', () => {
       'de-DE',
     )
 
-    await core.fetchContentfulEntry('entry-id')
+    await core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
 
-    expect(client.getEntry).toHaveBeenCalledWith('entry-id', {
+    expect(client.getEntry).toHaveBeenCalledWith('4ib0hsHWoSOnCVdDkizE8d', {
       include: 10,
       locale: 'de-DE',
     })
@@ -316,8 +316,8 @@ describe('CoreBase', () => {
       contentful: { client },
     })
 
-    await core.fetchContentfulEntry('entry-id', { locale: 'de-DE', include: 1 })
-    await core.fetchContentfulEntry('entry-id', { include: 1, locale: 'de-DE' })
+    await core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d', { locale: 'de-DE', include: 1 })
+    await core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d', { include: 1, locale: 'de-DE' })
 
     expect(client.getEntry).toHaveBeenCalledTimes(1)
   })
@@ -332,11 +332,11 @@ describe('CoreBase', () => {
       contentful: { client, cache: false },
     })
 
-    await expect(core.fetchContentfulEntries(['entry-a'])).resolves.toMatchObject([
-      { sys: { id: 'entry-a' } },
+    await expect(core.fetchContentfulEntries(['4ib0hsHWoSOnCVdDkizE8d'])).resolves.toMatchObject([
+      { sys: { id: '4ib0hsHWoSOnCVdDkizE8d' } },
     ])
 
-    expect(client.getEntry).toHaveBeenCalledWith('entry-a', { include: 10 })
+    expect(client.getEntry).toHaveBeenCalledWith('4ib0hsHWoSOnCVdDkizE8d', { include: 10 })
     expect(client.getEntries).not.toHaveBeenCalled()
   })
 
@@ -357,19 +357,19 @@ describe('CoreBase', () => {
       'de-DE',
     )
 
-    const first = core.fetchContentfulEntry('entry-a')
-    const second = core.fetchContentfulEntry('entry-b')
+    const first = core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const second = core.fetchContentfulEntry('4k6ZyFQnR2POY5IJLLlJRb')
 
     await expect(Promise.all([first, second])).resolves.toMatchObject([
-      { sys: { id: 'entry-a' } },
-      { sys: { id: 'entry-b' } },
+      { sys: { id: '4ib0hsHWoSOnCVdDkizE8d' } },
+      { sys: { id: '4k6ZyFQnR2POY5IJLLlJRb' } },
     ])
 
     expect(client.getEntry).not.toHaveBeenCalled()
     expect(client.getEntries).toHaveBeenCalledWith({
       include: 10,
       locale: 'de-DE',
-      'sys.id[in]': ['entry-a', 'entry-b'],
+      'sys.id[in]': ['4ib0hsHWoSOnCVdDkizE8d', '4k6ZyFQnR2POY5IJLLlJRb'],
       limit: 2,
     })
   })
@@ -388,13 +388,19 @@ describe('CoreBase', () => {
     })
 
     await expect(
-      core.fetchContentfulEntries(['entry-a', { entryId: 'entry-b' }]),
-    ).resolves.toMatchObject([{ sys: { id: 'entry-a' } }, { sys: { id: 'entry-b' } }])
+      core.fetchContentfulEntries([
+        '4ib0hsHWoSOnCVdDkizE8d',
+        { entryId: '4k6ZyFQnR2POY5IJLLlJRb' },
+      ]),
+    ).resolves.toMatchObject([
+      { sys: { id: '4ib0hsHWoSOnCVdDkizE8d' } },
+      { sys: { id: '4k6ZyFQnR2POY5IJLLlJRb' } },
+    ])
 
     expect(client.getEntry).not.toHaveBeenCalled()
     expect(client.getEntries).toHaveBeenCalledWith({
       include: 10,
-      'sys.id[in]': ['entry-a', 'entry-b'],
+      'sys.id[in]': ['4ib0hsHWoSOnCVdDkizE8d', '4k6ZyFQnR2POY5IJLLlJRb'],
       limit: 2,
     })
   })
@@ -413,8 +419,8 @@ describe('CoreBase', () => {
     })
 
     await core.fetchContentfulEntries([
-      { entryId: 'entry-a', entryQuery: { locale: 'de-DE', include: 2 } },
-      { entryId: 'entry-b', entryQuery: { include: 2, locale: 'de-DE' } },
+      { entryId: '4ib0hsHWoSOnCVdDkizE8d', entryQuery: { locale: 'de-DE', include: 2 } },
+      { entryId: '4k6ZyFQnR2POY5IJLLlJRb', entryQuery: { include: 2, locale: 'de-DE' } },
     ])
 
     expect(client.getEntry).not.toHaveBeenCalled()
@@ -422,7 +428,7 @@ describe('CoreBase', () => {
     expect(client.getEntries).toHaveBeenCalledWith({
       locale: 'de-DE',
       include: 2,
-      'sys.id[in]': ['entry-a', 'entry-b'],
+      'sys.id[in]': ['4ib0hsHWoSOnCVdDkizE8d', '4k6ZyFQnR2POY5IJLLlJRb'],
       limit: 2,
     })
   })
@@ -445,22 +451,22 @@ describe('CoreBase', () => {
     )
 
     await core.fetchContentfulEntries([
-      'entry-a',
-      'entry-b',
-      { entryId: 'entry-c', entryQuery: { locale: 'fr-FR' } },
-      { entryId: 'entry-d', entryQuery: { locale: 'fr-FR' } },
+      '4ib0hsHWoSOnCVdDkizE8d',
+      '4k6ZyFQnR2POY5IJLLlJRb',
+      { entryId: '2qVK4T5lnScbswoyBuGipd', entryQuery: { locale: 'fr-FR' } },
+      { entryId: '3Z2hP4vR8sT1nY6mK9qL0a', entryQuery: { locale: 'fr-FR' } },
     ])
 
     expect(client.getEntries).toHaveBeenNthCalledWith(1, {
       include: 10,
       locale: 'de-DE',
-      'sys.id[in]': ['entry-a', 'entry-b'],
+      'sys.id[in]': ['4ib0hsHWoSOnCVdDkizE8d', '4k6ZyFQnR2POY5IJLLlJRb'],
       limit: 2,
     })
     expect(client.getEntries).toHaveBeenNthCalledWith(2, {
       include: 10,
       locale: 'fr-FR',
-      'sys.id[in]': ['entry-c', 'entry-d'],
+      'sys.id[in]': ['2qVK4T5lnScbswoyBuGipd', '3Z2hP4vR8sT1nY6mK9qL0a'],
       limit: 2,
     })
     expect(client.getEntry).not.toHaveBeenCalled()
@@ -479,8 +485,8 @@ describe('CoreBase', () => {
       contentful: { client },
     })
 
-    await core.fetchContentfulEntries(['entry-a', 'entry-b'])
-    await core.fetchContentfulEntries(['entry-b', 'entry-a'])
+    await core.fetchContentfulEntries(['4ib0hsHWoSOnCVdDkizE8d', '4k6ZyFQnR2POY5IJLLlJRb'])
+    await core.fetchContentfulEntries(['4k6ZyFQnR2POY5IJLLlJRb', '4ib0hsHWoSOnCVdDkizE8d'])
 
     expect(client.getEntries).toHaveBeenCalledTimes(1)
     expect(client.getEntry).not.toHaveBeenCalled()
@@ -497,20 +503,25 @@ describe('CoreBase', () => {
       contentful: { client },
     })
 
-    const first = core.fetchContentfulEntries(['entry-a', 'entry-b'])
-    const second = core.fetchContentfulEntries(['entry-b', 'entry-a'])
+    const first = core.fetchContentfulEntries(['4ib0hsHWoSOnCVdDkizE8d', '4k6ZyFQnR2POY5IJLLlJRb'])
+    const second = core.fetchContentfulEntries(['4k6ZyFQnR2POY5IJLLlJRb', '4ib0hsHWoSOnCVdDkizE8d'])
 
     expect(client.getEntries).toHaveBeenCalledTimes(1)
 
-    deferred.resolve(createEntryCollection([createEntry('entry-a'), createEntry('entry-b')]))
+    deferred.resolve(
+      createEntryCollection([
+        createEntry('4ib0hsHWoSOnCVdDkizE8d'),
+        createEntry('4k6ZyFQnR2POY5IJLLlJRb'),
+      ]),
+    )
 
     await expect(first).resolves.toMatchObject([
-      { sys: { id: 'entry-a' } },
-      { sys: { id: 'entry-b' } },
+      { sys: { id: '4ib0hsHWoSOnCVdDkizE8d' } },
+      { sys: { id: '4k6ZyFQnR2POY5IJLLlJRb' } },
     ])
     await expect(second).resolves.toMatchObject([
-      { sys: { id: 'entry-b' } },
-      { sys: { id: 'entry-a' } },
+      { sys: { id: '4k6ZyFQnR2POY5IJLLlJRb' } },
+      { sys: { id: '4ib0hsHWoSOnCVdDkizE8d' } },
     ])
     expect(client.getEntry).not.toHaveBeenCalled()
   })
@@ -528,12 +539,20 @@ describe('CoreBase', () => {
       contentful: { client, cache: false },
     })
 
-    const entries = await core.fetchContentfulEntries(['entry-a', 'entry-b', 'entry-a'])
+    const entries = await core.fetchContentfulEntries([
+      '4ib0hsHWoSOnCVdDkizE8d',
+      '4k6ZyFQnR2POY5IJLLlJRb',
+      '4ib0hsHWoSOnCVdDkizE8d',
+    ])
 
-    expect(entries.map((entry) => entry.sys.id)).toEqual(['entry-a', 'entry-b', 'entry-a'])
+    expect(entries.map((entry) => entry.sys.id)).toEqual([
+      '4ib0hsHWoSOnCVdDkizE8d',
+      '4k6ZyFQnR2POY5IJLLlJRb',
+      '4ib0hsHWoSOnCVdDkizE8d',
+    ])
     expect(client.getEntries).toHaveBeenCalledWith({
       include: 10,
-      'sys.id[in]': ['entry-a', 'entry-b'],
+      'sys.id[in]': ['4ib0hsHWoSOnCVdDkizE8d', '4k6ZyFQnR2POY5IJLLlJRb'],
       limit: 2,
     })
     expect(client.getEntry).not.toHaveBeenCalled()
@@ -551,7 +570,10 @@ describe('CoreBase', () => {
       ...config,
       contentful: { client, cache: false },
     })
-    const entryIds = Array.from({ length: 205 }, (_, index) => `entry-${index}`)
+    const entryIds = Array.from(
+      { length: 205 },
+      (_, index) => `4ib0hsHWoSOnCVdDki${index.toString(36).padStart(4, '0')}`,
+    )
 
     const entries = await core.fetchContentfulEntries(entryIds)
     const { getEntries } = client
@@ -576,18 +598,21 @@ describe('CoreBase', () => {
   it('rejects cleanly when getEntries omits a requested entry', async () => {
     const client = createContentfulClient(
       async (entryId) => await Promise.resolve(createEntry(entryId)),
-      async () => await Promise.resolve(createEntryCollection([createEntry('entry-a')])),
+      async () =>
+        await Promise.resolve(createEntryCollection([createEntry('4ib0hsHWoSOnCVdDkizE8d')])),
     )
     const core = new TestCore({
       ...config,
       contentful: { client },
     })
 
-    await expect(core.fetchContentfulEntries(['entry-a', 'entry-b'])).rejects.toThrow(
-      'Contentful getEntries() response did not include entry "entry-b".',
+    await expect(
+      core.fetchContentfulEntries(['4ib0hsHWoSOnCVdDkizE8d', '4k6ZyFQnR2POY5IJLLlJRb']),
+    ).rejects.toThrow(
+      'Contentful getEntries() response did not include entry "4k6ZyFQnR2POY5IJLLlJRb".',
     )
-    await expect(core.fetchContentfulEntry('entry-a')).resolves.toMatchObject({
-      sys: { id: 'entry-a' },
+    await expect(core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')).resolves.toMatchObject({
+      sys: { id: '4ib0hsHWoSOnCVdDkizE8d' },
     })
 
     expect(client.getEntries).toHaveBeenCalledTimes(1)
@@ -609,17 +634,17 @@ describe('CoreBase', () => {
 
     await expect(
       core.prefetchManagedEntries([
-        'entry-a',
-        { entryId: 'entry-b', entryQuery: { locale: 'de-DE' } },
+        '4ib0hsHWoSOnCVdDkizE8d',
+        { entryId: '4k6ZyFQnR2POY5IJLLlJRb', entryQuery: { locale: 'de-DE' } },
       ]),
     ).resolves.toEqual([
       {
-        baselineEntry: createEntry('entry-a'),
-        entryId: 'entry-a',
+        baselineEntry: createEntry('4ib0hsHWoSOnCVdDkizE8d'),
+        entryId: '4ib0hsHWoSOnCVdDkizE8d',
       },
       {
-        baselineEntry: createEntry('entry-b'),
-        entryId: 'entry-b',
+        baselineEntry: createEntry('4k6ZyFQnR2POY5IJLLlJRb'),
+        entryId: '4k6ZyFQnR2POY5IJLLlJRb',
         entryQuery: { locale: 'de-DE' },
       },
     ])
@@ -628,7 +653,7 @@ describe('CoreBase', () => {
   it('throws when managed Contentful fetching is used without a client', async () => {
     const core = new TestCore(config)
 
-    await expect(core.fetchContentfulEntry('entry-id')).rejects.toThrow(
+    await expect(core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')).rejects.toThrow(
       'Managed Contentful entry fetching requires contentful.client in SDK config.',
     )
   })
@@ -641,19 +666,19 @@ describe('CoreBase', () => {
       contentful: { client },
     })
 
-    const first = core.fetchContentfulEntry('entry-id')
-    const second = core.fetchContentfulEntry('entry-id')
+    const first = core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const second = core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
 
     await Promise.resolve()
 
     expect(client.getEntry).toHaveBeenCalledTimes(1)
 
-    const entry = createEntry('entry-id')
+    const entry = createEntry('4ib0hsHWoSOnCVdDkizE8d')
     deferred.resolve(entry)
 
     await expect(first).resolves.toBe(entry)
     await expect(second).resolves.toBe(entry)
-    await expect(core.fetchContentfulEntry('entry-id')).resolves.toBe(entry)
+    await expect(core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')).resolves.toBe(entry)
     expect(client.getEntry).toHaveBeenCalledTimes(1)
   })
 
@@ -666,11 +691,11 @@ describe('CoreBase', () => {
       contentful: { client, cache: { ttlMs: 1000 } },
     })
 
-    await core.fetchContentfulEntry('entry-id')
+    await core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
     rs.setSystemTime(new Date('2026-01-01T00:00:00.999Z'))
-    await core.fetchContentfulEntry('entry-id')
+    await core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
     rs.setSystemTime(new Date('2026-01-01T00:00:01.001Z'))
-    await core.fetchContentfulEntry('entry-id')
+    await core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
 
     expect(client.getEntry).toHaveBeenCalledTimes(2)
   })
@@ -682,11 +707,11 @@ describe('CoreBase', () => {
       contentful: { client, cache: { maxEntries: 2 } },
     })
 
-    await core.fetchContentfulEntry('entry-a')
-    await core.fetchContentfulEntry('entry-b')
-    await core.fetchContentfulEntry('entry-a')
-    await core.fetchContentfulEntry('entry-c')
-    await core.fetchContentfulEntry('entry-b')
+    await core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
+    await core.fetchContentfulEntry('4k6ZyFQnR2POY5IJLLlJRb')
+    await core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
+    await core.fetchContentfulEntry('2qVK4T5lnScbswoyBuGipd')
+    await core.fetchContentfulEntry('4k6ZyFQnR2POY5IJLLlJRb')
 
     expect(client.getEntry).toHaveBeenCalledTimes(4)
   })
@@ -699,9 +724,9 @@ describe('CoreBase', () => {
       contentful: { client },
     })
 
-    await expect(core.fetchContentfulEntry('entry-id')).rejects.toThrow('CDA failed')
-    await expect(core.fetchContentfulEntry('entry-id')).resolves.toMatchObject({
-      sys: { id: 'entry-id' },
+    await expect(core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')).rejects.toThrow('CDA failed')
+    await expect(core.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')).resolves.toMatchObject({
+      sys: { id: '4ib0hsHWoSOnCVdDkizE8d' },
     })
 
     expect(client.getEntry).toHaveBeenCalledTimes(2)
@@ -714,8 +739,8 @@ describe('CoreBase', () => {
       contentful: { client: uncachedClient, cache: false },
     })
 
-    await uncachedCore.fetchContentfulEntry('entry-id')
-    await uncachedCore.fetchContentfulEntry('entry-id')
+    await uncachedCore.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
+    await uncachedCore.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
     expect(uncachedClient.getEntry).toHaveBeenCalledTimes(2)
 
     const cachedClient = createContentfulClient()
@@ -724,9 +749,9 @@ describe('CoreBase', () => {
       contentful: { client: cachedClient },
     })
 
-    await cachedCore.fetchContentfulEntry('entry-id')
+    await cachedCore.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
     cachedCore.clearContentfulEntryCache()
-    await cachedCore.fetchContentfulEntry('entry-id')
+    await cachedCore.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
     expect(cachedClient.getEntry).toHaveBeenCalledTimes(2)
   })
 
@@ -737,7 +762,9 @@ describe('CoreBase', () => {
       contentful: { client, cache: false },
     })
 
-    const result = await core.fetchOptimizedEntry('entry-id', { selectedOptimizations })
+    const result = await core.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d', {
+      selectedOptimizations,
+    })
 
     expect(result.baselineEntry).toBe(optimizedEntry)
     expect(result.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')

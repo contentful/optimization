@@ -55,24 +55,24 @@ describe('buildPreviewModel', () => {
 
   test('groups experiences by audience and marks qualified via profile.audiences', () => {
     const model = buildPreviewModel({
-      audienceDefinitions: [audience('aud-1'), audience('aud-2')],
+      audienceDefinitions: [audience('2WzXDaWtDmstHl9p8Wufpp'), audience('5Lk9Mn2OpQ4RsT6UvW8XyZ')],
       experienceDefinitions: [
-        experience('exp-1', { audienceId: 'aud-1' }),
-        experience('exp-2', { audienceId: 'aud-2' }),
+        experience('6IueRX1pS3iMJncbhUQTba', { audienceId: '2WzXDaWtDmstHl9p8Wufpp' }),
+        experience('5jT8mNPxQ2rVuY4wZaB6Cd', { audienceId: '5Lk9Mn2OpQ4RsT6UvW8XyZ' }),
       ],
-      signals: { ...EMPTY_SIGNALS, profile: makeProfile(['aud-1']) },
+      signals: { ...EMPTY_SIGNALS, profile: makeProfile(['2WzXDaWtDmstHl9p8Wufpp']) },
       overrides: EMPTY_OVERRIDES,
     })
 
     expect(model.audiencesWithExperiences).toHaveLength(2)
     const [a1, a2] = model.audiencesWithExperiences
-    expect(a1?.audience.id).toBe('aud-1')
+    expect(a1?.audience.id).toBe('2WzXDaWtDmstHl9p8Wufpp')
     expect(a1?.isQualified).toBe(true)
     expect(a1?.isActive).toBe(true)
     expect(a1?.overrideState).toBe('default')
-    expect(a1?.experiences.map((e) => e.id)).toEqual(['exp-1'])
+    expect(a1?.experiences.map((e) => e.id)).toEqual(['6IueRX1pS3iMJncbhUQTba'])
 
-    expect(a2?.audience.id).toBe('aud-2')
+    expect(a2?.audience.id).toBe('5Lk9Mn2OpQ4RsT6UvW8XyZ')
     expect(a2?.isQualified).toBe(false)
     expect(a2?.isActive).toBe(false)
     expect(a2?.overrideState).toBe('default')
@@ -80,16 +80,18 @@ describe('buildPreviewModel', () => {
 
   test("override 'on' forces isActive true even when user is unqualified", () => {
     const model = buildPreviewModel({
-      audienceDefinitions: [audience('aud-1')],
-      experienceDefinitions: [experience('exp-1', { audienceId: 'aud-1' })],
+      audienceDefinitions: [audience('2WzXDaWtDmstHl9p8Wufpp')],
+      experienceDefinitions: [
+        experience('6IueRX1pS3iMJncbhUQTba', { audienceId: '2WzXDaWtDmstHl9p8Wufpp' }),
+      ],
       signals: EMPTY_SIGNALS,
       overrides: {
         audiences: {
-          'aud-1': {
-            audienceId: 'aud-1',
+          '2WzXDaWtDmstHl9p8Wufpp': {
+            audienceId: '2WzXDaWtDmstHl9p8Wufpp',
             isActive: true,
             source: 'manual',
-            experienceIds: ['exp-1'],
+            experienceIds: ['6IueRX1pS3iMJncbhUQTba'],
           },
         },
         selectedOptimizations: {},
@@ -103,16 +105,18 @@ describe('buildPreviewModel', () => {
 
   test("override 'off' forces isActive false even when user is qualified", () => {
     const model = buildPreviewModel({
-      audienceDefinitions: [audience('aud-1')],
-      experienceDefinitions: [experience('exp-1', { audienceId: 'aud-1' })],
-      signals: { ...EMPTY_SIGNALS, profile: makeProfile(['aud-1']) },
+      audienceDefinitions: [audience('2WzXDaWtDmstHl9p8Wufpp')],
+      experienceDefinitions: [
+        experience('6IueRX1pS3iMJncbhUQTba', { audienceId: '2WzXDaWtDmstHl9p8Wufpp' }),
+      ],
+      signals: { ...EMPTY_SIGNALS, profile: makeProfile(['2WzXDaWtDmstHl9p8Wufpp']) },
       overrides: {
         audiences: {
-          'aud-1': {
-            audienceId: 'aud-1',
+          '2WzXDaWtDmstHl9p8Wufpp': {
+            audienceId: '2WzXDaWtDmstHl9p8Wufpp',
             isActive: false,
             source: 'manual',
-            experienceIds: ['exp-1'],
+            experienceIds: ['6IueRX1pS3iMJncbhUQTba'],
           },
         },
         selectedOptimizations: {},
@@ -126,25 +130,28 @@ describe('buildPreviewModel', () => {
 
   test('unassociated experiences produce All-Visitors bucket qualified and active by default', () => {
     const model = buildPreviewModel({
-      audienceDefinitions: [audience('aud-1')],
-      experienceDefinitions: [experience('exp-1'), experience('exp-2', { audienceId: 'aud-1' })],
+      audienceDefinitions: [audience('2WzXDaWtDmstHl9p8Wufpp')],
+      experienceDefinitions: [
+        experience('6IueRX1pS3iMJncbhUQTba'),
+        experience('5jT8mNPxQ2rVuY4wZaB6Cd', { audienceId: '2WzXDaWtDmstHl9p8Wufpp' }),
+      ],
       signals: EMPTY_SIGNALS,
       overrides: EMPTY_OVERRIDES,
     })
-    expect(model.unassociatedExperiences.map((e) => e.id)).toEqual(['exp-1'])
+    expect(model.unassociatedExperiences.map((e) => e.id)).toEqual(['6IueRX1pS3iMJncbhUQTba'])
     const allVisitors = model.audiencesWithExperiences.find(
       (a) => a.audience.id === ALL_VISITORS_AUDIENCE_ID,
     )
     expect(allVisitors).toBeDefined()
     expect(allVisitors?.isQualified).toBe(true)
     expect(allVisitors?.isActive).toBe(true)
-    expect(allVisitors?.experiences.map((e) => e.id)).toEqual(['exp-1'])
+    expect(allVisitors?.experiences.map((e) => e.id)).toEqual(['6IueRX1pS3iMJncbhUQTba'])
   })
 
   test("All-Visitors respects override 'off'", () => {
     const model = buildPreviewModel({
       audienceDefinitions: [],
-      experienceDefinitions: [experience('exp-1')],
+      experienceDefinitions: [experience('6IueRX1pS3iMJncbhUQTba')],
       signals: EMPTY_SIGNALS,
       overrides: {
         audiences: {
@@ -152,7 +159,7 @@ describe('buildPreviewModel', () => {
             audienceId: ALL_VISITORS_AUDIENCE_ID,
             isActive: false,
             source: 'manual',
-            experienceIds: ['exp-1'],
+            experienceIds: ['6IueRX1pS3iMJncbhUQTba'],
           },
         },
         selectedOptimizations: {},
@@ -171,40 +178,47 @@ describe('buildPreviewModel', () => {
       signals: {
         ...EMPTY_SIGNALS,
         selectedOptimizations: [
-          { experienceId: 'exp-1', variantIndex: 2, variants: {} },
-          { experienceId: 'exp-2', variantIndex: 0, variants: {} },
+          { experienceId: '6IueRX1pS3iMJncbhUQTba', variantIndex: 2, variants: {} },
+          { experienceId: '5jT8mNPxQ2rVuY4wZaB6Cd', variantIndex: 0, variants: {} },
         ],
       },
       overrides: EMPTY_OVERRIDES,
     })
-    expect(model.sdkVariantIndices).toEqual({ 'exp-1': 2, 'exp-2': 0 })
+    expect(model.sdkVariantIndices).toEqual({
+      '6IueRX1pS3iMJncbhUQTba': 2,
+      '5jT8mNPxQ2rVuY4wZaB6Cd': 0,
+    })
   })
 
   test('experience pointing at non-existent audience goes into unassociated', () => {
     const model = buildPreviewModel({
-      audienceDefinitions: [audience('aud-1')],
+      audienceDefinitions: [audience('2WzXDaWtDmstHl9p8Wufpp')],
       experienceDefinitions: [
-        experience('exp-orphan', { audienceId: 'aud-missing' }),
-        experience('exp-targeted', { audienceId: 'aud-1' }),
+        experience('8RsT1UvW3XyZ5AbC7DeFgH', { audienceId: '8L0sR4oV6xY8zA0bC2dEfG' }),
+        experience('7LcA9DeF2GhI4JkL6MnOpQ', { audienceId: '2WzXDaWtDmstHl9p8Wufpp' }),
       ],
       signals: EMPTY_SIGNALS,
       overrides: EMPTY_OVERRIDES,
     })
-    expect(model.unassociatedExperiences.map((e) => e.id)).toEqual(['exp-orphan'])
+    expect(model.unassociatedExperiences.map((e) => e.id)).toEqual(['8RsT1UvW3XyZ5AbC7DeFgH'])
     const allVisitors = model.audiencesWithExperiences.find(
       (a) => a.audience.id === ALL_VISITORS_AUDIENCE_ID,
     )
-    expect(allVisitors?.experiences.map((e) => e.id)).toEqual(['exp-orphan'])
+    expect(allVisitors?.experiences.map((e) => e.id)).toEqual(['8RsT1UvW3XyZ5AbC7DeFgH'])
   })
 
   describe('per-experience state enrichment', () => {
     test('currentVariantIndex reflects sdkVariantIndices', () => {
       const model = buildPreviewModel({
-        audienceDefinitions: [audience('aud-1')],
-        experienceDefinitions: [experience('exp-1', { audienceId: 'aud-1' })],
+        audienceDefinitions: [audience('2WzXDaWtDmstHl9p8Wufpp')],
+        experienceDefinitions: [
+          experience('6IueRX1pS3iMJncbhUQTba', { audienceId: '2WzXDaWtDmstHl9p8Wufpp' }),
+        ],
         signals: {
           ...EMPTY_SIGNALS,
-          selectedOptimizations: [{ experienceId: 'exp-1', variantIndex: 3, variants: {} }],
+          selectedOptimizations: [
+            { experienceId: '6IueRX1pS3iMJncbhUQTba', variantIndex: 3, variants: {} },
+          ],
         },
         overrides: EMPTY_OVERRIDES,
       })
@@ -214,8 +228,10 @@ describe('buildPreviewModel', () => {
 
     test('currentVariantIndex defaults to 0 when no selection is present', () => {
       const model = buildPreviewModel({
-        audienceDefinitions: [audience('aud-1')],
-        experienceDefinitions: [experience('exp-1', { audienceId: 'aud-1' })],
+        audienceDefinitions: [audience('2WzXDaWtDmstHl9p8Wufpp')],
+        experienceDefinitions: [
+          experience('6IueRX1pS3iMJncbhUQTba', { audienceId: '2WzXDaWtDmstHl9p8Wufpp' }),
+        ],
         signals: EMPTY_SIGNALS,
         overrides: EMPTY_OVERRIDES,
       })
@@ -225,35 +241,41 @@ describe('buildPreviewModel', () => {
 
     test('isOverridden tracks membership in overrides.selectedOptimizations', () => {
       const model = buildPreviewModel({
-        audienceDefinitions: [audience('aud-1')],
+        audienceDefinitions: [audience('2WzXDaWtDmstHl9p8Wufpp')],
         experienceDefinitions: [
-          experience('exp-a', { audienceId: 'aud-1' }),
-          experience('exp-b', { audienceId: 'aud-1' }),
+          experience('6IueRX1pS3iMJncbhUQTba', { audienceId: '2WzXDaWtDmstHl9p8Wufpp' }),
+          experience('5jT8mNPxQ2rVuY4wZaB6Cd', { audienceId: '2WzXDaWtDmstHl9p8Wufpp' }),
         ],
         signals: EMPTY_SIGNALS,
         overrides: {
           audiences: {},
           selectedOptimizations: {
-            'exp-a': { experienceId: 'exp-a', variantIndex: 2 },
+            '6IueRX1pS3iMJncbhUQTba': { experienceId: '6IueRX1pS3iMJncbhUQTba', variantIndex: 2 },
           },
         },
       })
       const [a1] = model.audiencesWithExperiences
       const byId = Object.fromEntries((a1?.experiences ?? []).map((e) => [e.id, e]))
-      expect(byId['exp-a']?.isOverridden).toBe(true)
-      expect(byId['exp-b']?.isOverridden).toBe(false)
+      expect(byId['6IueRX1pS3iMJncbhUQTba']?.isOverridden).toBe(true)
+      expect(byId['5jT8mNPxQ2rVuY4wZaB6Cd']?.isOverridden).toBe(false)
     })
 
     test('naturalVariantIndex is undefined when not overridden', () => {
       const model = buildPreviewModel({
-        audienceDefinitions: [audience('aud-1')],
-        experienceDefinitions: [experience('exp-1', { audienceId: 'aud-1' })],
+        audienceDefinitions: [audience('2WzXDaWtDmstHl9p8Wufpp')],
+        experienceDefinitions: [
+          experience('6IueRX1pS3iMJncbhUQTba', { audienceId: '2WzXDaWtDmstHl9p8Wufpp' }),
+        ],
         signals: {
           ...EMPTY_SIGNALS,
-          selectedOptimizations: [{ experienceId: 'exp-1', variantIndex: 1, variants: {} }],
+          selectedOptimizations: [
+            { experienceId: '6IueRX1pS3iMJncbhUQTba', variantIndex: 1, variants: {} },
+          ],
         },
         overrides: EMPTY_OVERRIDES,
-        baselineSelectedOptimizations: [{ experienceId: 'exp-1', variantIndex: 1, variants: {} }],
+        baselineSelectedOptimizations: [
+          { experienceId: '6IueRX1pS3iMJncbhUQTba', variantIndex: 1, variants: {} },
+        ],
       })
       const [a1] = model.audiencesWithExperiences
       expect(a1?.experiences[0]?.naturalVariantIndex).toBeUndefined()
@@ -261,19 +283,25 @@ describe('buildPreviewModel', () => {
 
     test('naturalVariantIndex is sourced from baseline when overridden', () => {
       const model = buildPreviewModel({
-        audienceDefinitions: [audience('aud-1')],
-        experienceDefinitions: [experience('exp-1', { audienceId: 'aud-1' })],
+        audienceDefinitions: [audience('2WzXDaWtDmstHl9p8Wufpp')],
+        experienceDefinitions: [
+          experience('6IueRX1pS3iMJncbhUQTba', { audienceId: '2WzXDaWtDmstHl9p8Wufpp' }),
+        ],
         signals: {
           ...EMPTY_SIGNALS,
-          selectedOptimizations: [{ experienceId: 'exp-1', variantIndex: 2, variants: {} }],
+          selectedOptimizations: [
+            { experienceId: '6IueRX1pS3iMJncbhUQTba', variantIndex: 2, variants: {} },
+          ],
         },
         overrides: {
           audiences: {},
           selectedOptimizations: {
-            'exp-1': { experienceId: 'exp-1', variantIndex: 2 },
+            '6IueRX1pS3iMJncbhUQTba': { experienceId: '6IueRX1pS3iMJncbhUQTba', variantIndex: 2 },
           },
         },
-        baselineSelectedOptimizations: [{ experienceId: 'exp-1', variantIndex: 0, variants: {} }],
+        baselineSelectedOptimizations: [
+          { experienceId: '6IueRX1pS3iMJncbhUQTba', variantIndex: 0, variants: {} },
+        ],
       })
       const [a1] = model.audiencesWithExperiences
       expect(a1?.experiences[0]?.isOverridden).toBe(true)
@@ -282,13 +310,15 @@ describe('buildPreviewModel', () => {
 
     test('naturalVariantIndex is omitted when no baseline snapshot is supplied', () => {
       const model = buildPreviewModel({
-        audienceDefinitions: [audience('aud-1')],
-        experienceDefinitions: [experience('exp-1', { audienceId: 'aud-1' })],
+        audienceDefinitions: [audience('2WzXDaWtDmstHl9p8Wufpp')],
+        experienceDefinitions: [
+          experience('6IueRX1pS3iMJncbhUQTba', { audienceId: '2WzXDaWtDmstHl9p8Wufpp' }),
+        ],
         signals: EMPTY_SIGNALS,
         overrides: {
           audiences: {},
           selectedOptimizations: {
-            'exp-1': { experienceId: 'exp-1', variantIndex: 1 },
+            '6IueRX1pS3iMJncbhUQTba': { experienceId: '6IueRX1pS3iMJncbhUQTba', variantIndex: 1 },
           },
         },
       })
@@ -301,10 +331,10 @@ describe('buildPreviewModel', () => {
   describe('audience ordering', () => {
     test('All-Visitors bucket is placed first', () => {
       const model = buildPreviewModel({
-        audienceDefinitions: [audience('aud-1', 'Alpha')],
+        audienceDefinitions: [audience('2WzXDaWtDmstHl9p8Wufpp', 'Alpha')],
         experienceDefinitions: [
-          experience('exp-orphan'),
-          experience('exp-targeted', { audienceId: 'aud-1' }),
+          experience('8RsT1UvW3XyZ5AbC7DeFgH'),
+          experience('7LcA9DeF2GhI4JkL6MnOpQ', { audienceId: '2WzXDaWtDmstHl9p8Wufpp' }),
         ],
         signals: EMPTY_SIGNALS,
         overrides: EMPTY_OVERRIDES,
@@ -317,23 +347,36 @@ describe('buildPreviewModel', () => {
       // — the panel must stay stable when an override flips an audience's
       // active state.
       const model = buildPreviewModel({
-        audienceDefinitions: [audience('aud-b', 'Banana'), audience('aud-a', 'Apple')],
+        audienceDefinitions: [
+          audience('5R6yX0uB2dE4gH6iJ8kLmN', 'Banana'),
+          audience('4Q5xW9tA1cD3fG5hI7jKlM', 'Apple'),
+        ],
         experienceDefinitions: [],
-        signals: { ...EMPTY_SIGNALS, profile: makeProfile(['aud-a']) },
+        signals: { ...EMPTY_SIGNALS, profile: makeProfile(['4Q5xW9tA1cD3fG5hI7jKlM']) },
         overrides: EMPTY_OVERRIDES,
       })
-      expect(model.audiencesWithExperiences.map((a) => a.audience.id)).toEqual(['aud-a', 'aud-b'])
+      expect(model.audiencesWithExperiences.map((a) => a.audience.id)).toEqual([
+        '4Q5xW9tA1cD3fG5hI7jKlM',
+        '5R6yX0uB2dE4gH6iJ8kLmN',
+      ])
     })
 
     test('audiences are sorted alphabetically by name', () => {
       const model = buildPreviewModel({
         audienceDefinitions: [
-          audience('aud-c', 'Charlie'),
-          audience('aud-a', 'Alpha'),
-          audience('aud-b', 'Bravo'),
+          audience('6S7zY1vC3eF5hI7jK9lMnO', 'Charlie'),
+          audience('4Q5xW9tA1cD3fG5hI7jKlM', 'Alpha'),
+          audience('5R6yX0uB2dE4gH6iJ8kLmN', 'Bravo'),
         ],
         experienceDefinitions: [],
-        signals: { ...EMPTY_SIGNALS, profile: makeProfile(['aud-a', 'aud-b', 'aud-c']) },
+        signals: {
+          ...EMPTY_SIGNALS,
+          profile: makeProfile([
+            '4Q5xW9tA1cD3fG5hI7jKlM',
+            '5R6yX0uB2dE4gH6iJ8kLmN',
+            '6S7zY1vC3eF5hI7jK9lMnO',
+          ]),
+        },
         overrides: EMPTY_OVERRIDES,
       })
       expect(model.audiencesWithExperiences.map((a) => a.audience.name)).toEqual([
@@ -348,21 +391,24 @@ describe('buildPreviewModel', () => {
       // first, then strict alphabetical regardless of qualification.
       const model = buildPreviewModel({
         audienceDefinitions: [
-          audience('aud-u2', 'Zeta'),
-          audience('aud-q2', 'Beta'),
-          audience('aud-u1', 'Alpha'),
-          audience('aud-q1', 'Acorn'),
+          audience('3P4wV8sZ0bC2eF4gH6iJkL', 'Zeta'),
+          audience('2O3vU7rY9aB1dE3fG5hIjK', 'Beta'),
+          audience('1N2uT6qX8zA0cD2eF4gHiJ', 'Alpha'),
+          audience('9M1tS5pW7yZ9bC1dE3fGhI', 'Acorn'),
         ],
-        experienceDefinitions: [experience('exp-orphan')],
-        signals: { ...EMPTY_SIGNALS, profile: makeProfile(['aud-q1', 'aud-q2']) },
+        experienceDefinitions: [experience('8RsT1UvW3XyZ5AbC7DeFgH')],
+        signals: {
+          ...EMPTY_SIGNALS,
+          profile: makeProfile(['9M1tS5pW7yZ9bC1dE3fGhI', '2O3vU7rY9aB1dE3fG5hIjK']),
+        },
         overrides: EMPTY_OVERRIDES,
       })
       expect(model.audiencesWithExperiences.map((a) => a.audience.id)).toEqual([
         ALL_VISITORS_AUDIENCE_ID,
-        'aud-q1',
-        'aud-u1',
-        'aud-q2',
-        'aud-u2',
+        '9M1tS5pW7yZ9bC1dE3fGhI',
+        '1N2uT6qX8zA0cD2eF4gHiJ',
+        '2O3vU7rY9aB1dE3fG5hIjK',
+        '3P4wV8sZ0bC2eF4gH6iJkL',
       ])
     })
   })

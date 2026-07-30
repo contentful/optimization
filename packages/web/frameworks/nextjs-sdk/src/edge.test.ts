@@ -17,14 +17,14 @@ const OPTIMIZATION_DATA: OptimizationData = {
   changes: [],
   selectedOptimizations: [],
   profile: {
-    id: 'profile-from-page',
-    stableId: 'profile-from-page',
+    id: 'f0837d7dc6344c36a3a0a06c4cde754b',
+    stableId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     random: 1,
     audiences: [],
     traits: {},
     location: {},
     session: {
-      id: 'session-id',
+      id: 'e77eab64-93ca-4f6e-8492-037c1ff67caa',
       isReturningVisitor: false,
       landingPage: {
         path: '/',
@@ -106,7 +106,7 @@ describe('Next.js Edge runtime helpers', () => {
         'user-agent': 'test-agent',
       },
     })
-    request.headers.set('cookie', 'ctfl-opt-aid=anonymous-id')
+    request.headers.set('cookie', 'ctfl-opt-aid=f0837d7dc6344c36a3a0a06c4cde754b')
 
     const result = await createEdgeRequestHandoff({
       cache: { scope: 'private-request' },
@@ -116,7 +116,7 @@ describe('Next.js Edge runtime helpers', () => {
     })
 
     expect(result.handoff.initialPageEvent).toBe('skip')
-    expect(result.handoff.state?.profile?.id).toBe('profile-from-page')
+    expect(result.handoff.state?.profile?.id).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
     expect(page).toHaveBeenCalledWith({ properties: { route: '/products' } })
     expect(forRequest).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -133,7 +133,7 @@ describe('Next.js Edge runtime helpers', () => {
           userAgent: 'test-agent',
         }),
         locale: 'en-US',
-        profile: { id: 'anonymous-id' },
+        profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
       }),
     )
 
@@ -142,7 +142,9 @@ describe('Next.js Edge runtime helpers', () => {
     })
     result.persist(response)
 
-    expect(response.headers.get('set-cookie')).toContain('ctfl-opt-aid=profile-from-page')
+    expect(response.headers.get('set-cookie')).toContain(
+      'ctfl-opt-aid=f0837d7dc6344c36a3a0a06c4cde754b',
+    )
     expect(response.headers.get('set-cookie')).toContain('Path=/')
     expect(response.headers.get('set-cookie')).toContain('SameSite=Lax')
   })
@@ -158,7 +160,7 @@ describe('Next.js Edge runtime helpers', () => {
         'user-agent': 'test-agent',
       },
     })
-    request.cookies.set('ctfl-opt-aid', 'next-anonymous-id')
+    request.cookies.set('ctfl-opt-aid', 'a19c3f54d2b84e37a93f6d1c0e5b7284')
 
     await createEdgeRequestHandoff({
       hydration: 'preserve-server',
@@ -167,7 +169,7 @@ describe('Next.js Edge runtime helpers', () => {
     })
 
     expect(forRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ profile: { id: 'next-anonymous-id' } }),
+      expect.objectContaining({ profile: { id: 'a19c3f54d2b84e37a93f6d1c0e5b7284' } }),
     )
   })
 
@@ -233,7 +235,7 @@ describe('Next.js Edge runtime helpers', () => {
     })
     const permutationHandoff = createPublicPermutationHandoff({
       cacheVersion: 'version 1',
-      entryIds: ['hero'],
+      entryIds: ['4ib0hsHWoSOnCVdDkizE8d'],
       hydration: 'preserve-server',
       initialPageEvent: 'emit',
       locale: 'en-US',
@@ -241,7 +243,7 @@ describe('Next.js Edge runtime helpers', () => {
       selectedOptimizations: [],
     })
     const key = createOptimizationCacheKey({
-      entryIds: ['hero'],
+      entryIds: ['4ib0hsHWoSOnCVdDkizE8d'],
       locale: 'en-US',
       scope: 'public-permutation',
       selectedOptimizations: [],

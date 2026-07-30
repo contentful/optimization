@@ -64,7 +64,7 @@ function createPageEvent(): EventPayload {
       locale: 'en-US',
       page: properties,
     },
-    messageId: 'message-id',
+    messageId: '11111111-1111-4111-8111-111111111111',
     originalTimestamp: timestamp,
     properties,
     sentAt: timestamp,
@@ -85,7 +85,7 @@ function createServerOptimizationState(profileId: string): OptimizationData {
       traits: {},
       location: {},
       session: {
-        id: `${profileId}-session`,
+        id: 'e77eab64-93ca-4f6e-8492-037c1ff67caa',
         isReturningVisitor: false,
         landingPage: {
           path: '/',
@@ -291,7 +291,7 @@ describe('OptimizationProvider onStatesReady', () => {
   })
 
   it('lets the provider hydration prop override handoff hydration for children', async () => {
-    const handoff = createContentHandoff('provider-server-profile', {
+    const handoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b', {
       hydration: 'client-only-hidden-until-ready',
     })
     let capturedHydration: unknown
@@ -312,7 +312,7 @@ describe('OptimizationProvider onStatesReady', () => {
   })
 
   it('renders handoff state from a snapshot before owned SDK setup finishes', async () => {
-    const handoff = createContentHandoff('owned-server-profile')
+    const handoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b')
     const setupOrder: string[] = []
     let profileFromOnStatesReady: OptimizationData['profile'] | undefined = undefined
     const childProfiles: Array<OptimizationData['profile'] | undefined> = []
@@ -345,7 +345,7 @@ describe('OptimizationProvider onStatesReady', () => {
   })
 
   it('applies handoff state to injected SDK instances before child render', async () => {
-    const handoff = createContentHandoff('injected-server-profile')
+    const handoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b')
     const sdk = new ContentfulOptimization(testConfig)
     let profileFromChild: OptimizationData['profile'] | undefined = undefined
 
@@ -366,7 +366,7 @@ describe('OptimizationProvider onStatesReady', () => {
   })
 
   it('renders handoff state from a snapshot before injected SDK setup finishes', async () => {
-    const handoff = createContentHandoff('injected-ready-profile')
+    const handoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b')
     const sdk = new ContentfulOptimization(testConfig)
     const setupOrder: string[] = []
     let profileFromOnStatesReady: OptimizationData['profile'] | undefined = undefined
@@ -399,7 +399,7 @@ describe('OptimizationProvider onStatesReady', () => {
   })
 
   it('passes handoff state through OptimizationRoot before child render', async () => {
-    const handoff = createContentHandoff('root-server-profile')
+    const handoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b')
     let profileFromChild: OptimizationData['profile'] | undefined = undefined
 
     function Probe(): null {
@@ -423,8 +423,8 @@ describe('OptimizationProvider onStatesReady', () => {
   })
 
   it('hydrates changed handoff state into the existing live SDK', async () => {
-    const firstHandoff = createContentHandoff('first-server-profile')
-    const secondHandoff = createContentHandoff('second-server-profile')
+    const firstHandoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b')
+    const secondHandoff = createContentHandoff('a19c3f54d2b84e37a93f6d1c0e5b7284')
     let liveStates: OptimizationSdk['states'] | undefined = undefined
     const onStatesReady = rs.fn((states: OptimizationSdk['states']) => {
       liveStates = states
@@ -468,8 +468,8 @@ describe('OptimizationProvider onStatesReady', () => {
   })
 
   it('keeps a newer provider handoff authoritative when an older interceptor resolves last', async () => {
-    const firstHandoff = createContentHandoff('first-delayed-profile')
-    const secondHandoff = createContentHandoff('second-delayed-profile')
+    const firstHandoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b')
+    const secondHandoff = createContentHandoff('a19c3f54d2b84e37a93f6d1c0e5b7284')
     const firstHydration = createDeferred()
     const secondHydration = createDeferred()
     const sdk = new ContentfulOptimization(testConfig)
@@ -541,7 +541,7 @@ describe('OptimizationProvider onStatesReady', () => {
   })
 
   it('renders handoff state during server render', () => {
-    const handoff = createContentHandoff('server-profile')
+    const handoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b')
     let profileFromChild: OptimizationData['profile'] | undefined = undefined
     let consentFromChild: boolean | undefined = undefined
     let pageConsentFromChild = false
@@ -569,7 +569,7 @@ describe('OptimizationProvider onStatesReady', () => {
       </OptimizationProvider>,
     )
 
-    expect(markup).toContain('server-profile')
+    expect(markup).toContain('f0837d7dc6344c36a3a0a06c4cde754b')
     expect(profileFromChild).toEqual(handoff.state?.profile)
     expect(consentFromChild).toBe(false)
     expect(pageConsentFromChild).toBe(true)
@@ -578,7 +578,7 @@ describe('OptimizationProvider onStatesReady', () => {
   })
 
   it('rejects unsafe handoff state before server snapshot children render', () => {
-    const handoff = createContentHandoff('unsafe-static-profile', {
+    const handoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b', {
       cache: { scope: 'static' },
     })
     let childRendered = false
@@ -606,9 +606,9 @@ describe('OptimizationProvider onStatesReady', () => {
   })
 
   it('resolves server-selected entries from the snapshot during server render', () => {
-    const handoff = createContentHandoff('server-profile', {
+    const handoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b', {
       state: {
-        ...createServerOptimizationState('server-profile'),
+        ...createServerOptimizationState('f0837d7dc6344c36a3a0a06c4cde754b'),
         selectedOptimizations,
       },
     })

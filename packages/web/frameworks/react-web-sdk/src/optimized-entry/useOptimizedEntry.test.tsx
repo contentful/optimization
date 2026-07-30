@@ -57,7 +57,7 @@ async function renderHook(params: {
 
 describe('useOptimizedEntry', () => {
   it('returns baseline state before optimization is available', async () => {
-    const baselineEntry = makeOptimizableEntry('baseline')
+    const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
     const { optimization } = createRuntime((entry) => ({ entry }))
     const rendered = await renderHook({ baselineEntry, optimization })
 
@@ -75,14 +75,14 @@ describe('useOptimizedEntry', () => {
   })
 
   it('returns resolved variant data once selectedOptimizations are available', async () => {
-    const baselineEntry = makeOptimizableEntry('baseline')
-    const variantEntry = makeEntry('variant-a')
+    const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const variantEntry = makeEntry('4k6ZyFQnR2POY5IJLLlJRb')
     const variantState: SelectedOptimizationArray = [
       {
-        experienceId: 'exp-hero',
+        experienceId: '6IueRX1pS3iMJncbhUQTba',
         sticky: true,
         variantIndex: 1,
-        variants: { baseline: 'variant-a' },
+        variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
       },
     ]
     const { emit, optimization } = createRuntime((entry, selectedOptimizations) => ({
@@ -101,9 +101,9 @@ describe('useOptimizedEntry', () => {
       isResolved: true,
       metadata: {
         baselineEntry,
-        baselineEntryId: 'baseline',
+        baselineEntryId: '4ib0hsHWoSOnCVdDkizE8d',
         entry: variantEntry,
-        entryId: 'variant-a',
+        entryId: '4k6ZyFQnR2POY5IJLLlJRb',
         optimizationContextId: 'ctx-1',
         selectedOptimization: variantState[0],
         selectedOptimizations: variantState,
@@ -116,23 +116,23 @@ describe('useOptimizedEntry', () => {
   })
 
   it('locks on the first optimization when live updates are disabled', async () => {
-    const baselineEntry = makeOptimizableEntry('baseline')
-    const variantOne = makeEntry('variant-a')
-    const variantTwo = makeEntry('variant-b')
+    const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const variantOne = makeEntry('4k6ZyFQnR2POY5IJLLlJRb')
+    const variantTwo = makeEntry('2qVK4T5lnScbswoyBuGipd')
     const variantOneState: SelectedOptimizationArray = [
       {
-        experienceId: 'exp-hero',
+        experienceId: '6IueRX1pS3iMJncbhUQTba',
         sticky: true,
         variantIndex: 1,
-        variants: { baseline: 'variant-a' },
+        variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
       },
     ]
     const variantTwoState: SelectedOptimizationArray = [
       {
-        experienceId: 'exp-hero',
+        experienceId: '6IueRX1pS3iMJncbhUQTba',
         sticky: false,
         variantIndex: 2,
-        variants: { baseline: 'variant-b' },
+        variants: { '4ib0hsHWoSOnCVdDkizE8d': '2qVK4T5lnScbswoyBuGipd' },
       },
     ]
     const { emit, optimization } = createRuntime((entry, selectedOptimizations) => ({
@@ -157,23 +157,23 @@ describe('useOptimizedEntry', () => {
   })
 
   it('follows optimization changes when live updates are enabled', async () => {
-    const baselineEntry = makeOptimizableEntry('baseline')
-    const variantOne = makeEntry('variant-a')
-    const variantTwo = makeEntry('variant-b')
+    const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const variantOne = makeEntry('4k6ZyFQnR2POY5IJLLlJRb')
+    const variantTwo = makeEntry('2qVK4T5lnScbswoyBuGipd')
     const variantOneState: SelectedOptimizationArray = [
       {
-        experienceId: 'exp-hero',
+        experienceId: '6IueRX1pS3iMJncbhUQTba',
         sticky: true,
         variantIndex: 1,
-        variants: { baseline: 'variant-a' },
+        variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
       },
     ]
     const variantTwoState: SelectedOptimizationArray = [
       {
-        experienceId: 'exp-hero',
+        experienceId: '6IueRX1pS3iMJncbhUQTba',
         sticky: false,
         variantIndex: 2,
-        variants: { baseline: 'variant-b' },
+        variants: { '4ib0hsHWoSOnCVdDkizE8d': '2qVK4T5lnScbswoyBuGipd' },
       },
     ]
     const { emit, optimization } = createRuntime((entry, selectedOptimizations) => ({
@@ -198,7 +198,7 @@ describe('useOptimizedEntry', () => {
   })
 
   it('treats non-optimized entries as ready immediately', async () => {
-    const baselineEntry = makeEntry('baseline')
+    const baselineEntry = makeEntry('4ib0hsHWoSOnCVdDkizE8d')
     const { optimization } = createRuntime((entry) => ({ entry }))
     const rendered = await renderHook({ baselineEntry, optimization })
 
@@ -215,8 +215,8 @@ describe('useOptimizedEntry', () => {
   })
 
   it('returns updated baselineEntry props during the first render after manual entry changes', async () => {
-    const firstEntry = makeEntry('baseline')
-    const secondEntry = makeEntry('updated-baseline')
+    const firstEntry = makeEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const secondEntry = makeEntry('3Z2hP4vR8sT1nY6mK9qL0a')
     const optimization = createOptimizationSdk()
     const renderedEntryIdsAfterUpdate: string[] = []
     let setBaselineEntry: ((entry: typeof firstEntry) => void) | undefined
@@ -238,13 +238,13 @@ describe('useOptimizedEntry', () => {
       await Promise.resolve()
     })
 
-    expect(renderedEntryIdsAfterUpdate[0]).toBe('updated-baseline')
+    expect(renderedEntryIdsAfterUpdate[0]).toBe('3Z2hP4vR8sT1nY6mK9qL0a')
 
     await view.unmount()
   })
 
   it('fetches entryId entries through the SDK', async () => {
-    const baselineEntry = makeEntry('baseline')
+    const baselineEntry = makeEntry('4ib0hsHWoSOnCVdDkizE8d')
     const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(baselineEntry))
     const optimization = createOptimizationSdk({
       fetchContentfulEntry,
@@ -253,7 +253,7 @@ describe('useOptimizedEntry', () => {
 
     function Probe(): null {
       captured = useOptimizedEntry({
-        entryId: 'baseline',
+        entryId: '4ib0hsHWoSOnCVdDkizE8d',
         entryQuery: { locale: 'de-DE' },
       })
       return null
@@ -270,7 +270,7 @@ describe('useOptimizedEntry', () => {
       await Promise.resolve()
     })
 
-    expect(fetchContentfulEntry).toHaveBeenCalledWith('baseline', { locale: 'de-DE' })
+    expect(fetchContentfulEntry).toHaveBeenCalledWith('4ib0hsHWoSOnCVdDkizE8d', { locale: 'de-DE' })
     expect(getCaptured().entry).toBe(baselineEntry)
     expect(getCaptured().baselineEntry).toBe(baselineEntry)
     expect(getCaptured().error).toBeUndefined()
@@ -279,12 +279,14 @@ describe('useOptimizedEntry', () => {
   })
 
   it('does not fetch entryId entries while the context is snapshot-backed', async () => {
-    const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(makeEntry('baseline')))
+    const fetchContentfulEntry = rs.fn(
+      async () => await Promise.resolve(makeEntry('4ib0hsHWoSOnCVdDkizE8d')),
+    )
     const optimization = createOptimizationSdk({ fetchContentfulEntry })
     let captured: UseOptimizedEntryResult | undefined = undefined
 
     function Probe(): null {
-      captured = useOptimizedEntry({ entryId: 'baseline' })
+      captured = useOptimizedEntry({ entryId: '4ib0hsHWoSOnCVdDkizE8d' })
       return null
     }
 
@@ -314,15 +316,15 @@ describe('useOptimizedEntry', () => {
   })
 
   it('uses server handoff entries before fetching new live entry IDs', async () => {
-    const preloadedEntry = makeEntry('preloaded')
-    const liveEntry = makeEntry('live-entry')
+    const preloadedEntry = makeEntry('5mN8rY2pL6qT9vW3xA4bCd')
+    const liveEntry = makeEntry('7pQ2rS5tU8vW1xY4zA6bCd')
     const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(liveEntry))
     const optimization = createOptimizationSdk({ fetchContentfulEntry })
     let setEntryId: ((entryId: string) => void) | undefined = undefined
     let captured: UseOptimizedEntryResult | undefined = undefined
 
     function Probe(): null {
-      const [entryId, setCurrentEntryId] = useState('hero')
+      const [entryId, setCurrentEntryId] = useState('4ib0hsHWoSOnCVdDkizE8d')
       setEntryId = setCurrentEntryId
       captured = useOptimizedEntry({
         entryId,
@@ -343,7 +345,10 @@ describe('useOptimizedEntry', () => {
       {
         isLive: true,
         prefetchedManagedEntries: new Map([
-          [getOptimizedEntrySourceKey('hero', { locale: 'de-DE' }), preloadedEntry],
+          [
+            getOptimizedEntrySourceKey('4ib0hsHWoSOnCVdDkizE8d', { locale: 'de-DE' }),
+            preloadedEntry,
+          ],
         ]),
       },
     )
@@ -352,12 +357,12 @@ describe('useOptimizedEntry', () => {
     expect(fetchContentfulEntry).not.toHaveBeenCalled()
 
     await act(async () => {
-      setEntryId?.('other')
+      setEntryId?.('3Z2hP4vR8sT1nY6mK9qL0a')
       await Promise.resolve()
       await Promise.resolve()
     })
 
-    expect(fetchContentfulEntry).toHaveBeenCalledWith('other', { locale: 'de-DE' })
+    expect(fetchContentfulEntry).toHaveBeenCalledWith('3Z2hP4vR8sT1nY6mK9qL0a', { locale: 'de-DE' })
     expect(getCaptured().entry).toBe(liveEntry)
 
     await view.unmount()
@@ -372,7 +377,7 @@ describe('useOptimizedEntry', () => {
     let captured: UseOptimizedEntryResult | undefined = undefined
 
     function Probe(): null {
-      captured = useOptimizedEntry({ entryId: 'baseline', onEntryError })
+      captured = useOptimizedEntry({ entryId: '4ib0hsHWoSOnCVdDkizE8d', onEntryError })
       return null
     }
 

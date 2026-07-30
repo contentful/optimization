@@ -23,14 +23,14 @@ const OPTIMIZATION_DATA: OptimizationData = {
   changes: [],
   selectedOptimizations: [],
   profile: {
-    id: 'profile-from-page',
-    stableId: 'profile-from-page',
+    id: 'f0837d7dc6344c36a3a0a06c4cde754b',
+    stableId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     random: 1,
     audiences: [],
     traits: {},
     location: {},
     session: {
-      id: 'session-id',
+      id: 'e77eab64-93ca-4f6e-8492-037c1ff67caa',
       isReturningVisitor: false,
       landingPage: {
         path: '/',
@@ -232,7 +232,7 @@ describe('Next.js Pages Router server handoff helpers', () => {
     )
 
     expect(result.handoff.initialPageEvent).toBe('skip')
-    expect(result.handoff.state?.profile?.id).toBe('profile-from-page')
+    expect(result.handoff.state?.profile?.id).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
     expect(forRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         consent: { events: true, persistence: true },
@@ -293,7 +293,7 @@ describe('Next.js Pages Router server handoff helpers', () => {
     await createNextjsPagesRouterRequestHandoff(
       sdk,
       createContext({
-        cookies: { 'ctfl-opt-aid': 'parsed-cookie-id' },
+        cookies: { 'ctfl-opt-aid': 'f0837d7dc6344c36a3a0a06c4cde754b' },
         headers: { cookie: 'ctfl-opt-aid=raw-cookie-id' },
       }),
       {
@@ -304,13 +304,13 @@ describe('Next.js Pages Router server handoff helpers', () => {
     )
 
     expect(forRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ profile: { id: 'parsed-cookie-id' } }),
+      expect.objectContaining({ profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' } }),
     )
   })
 
   it('prefetches declared managed entries into handoff entries after request data loads', async () => {
     const calls: string[] = []
-    const baselineEntry = createEntry('hero')
+    const baselineEntry = createEntry('4ib0hsHWoSOnCVdDkizE8d')
     const getEntry = rs.fn(async () => {
       calls.push('fetch')
       return await Promise.resolve(baselineEntry)
@@ -330,8 +330,8 @@ describe('Next.js Pages Router server handoff helpers', () => {
       hydration: 'preserve-server',
       pagePayload: {},
       prefetchManagedEntries: [
-        { entryId: 'hero', entryQuery: { locale: 'de-DE' } },
-        { entryId: 'hero', entryQuery: { locale: 'de-DE' } },
+        { entryId: '4ib0hsHWoSOnCVdDkizE8d', entryQuery: { locale: 'de-DE' } },
+        { entryId: '4ib0hsHWoSOnCVdDkizE8d', entryQuery: { locale: 'de-DE' } },
       ],
     })
 
@@ -339,12 +339,12 @@ describe('Next.js Pages Router server handoff helpers', () => {
     expect(result.handoff.entries).toEqual([
       {
         baselineEntry,
-        entryId: 'hero',
+        entryId: '4ib0hsHWoSOnCVdDkizE8d',
         entryQuery: { locale: 'de-DE' },
       },
       {
         baselineEntry,
-        entryId: 'hero',
+        entryId: '4ib0hsHWoSOnCVdDkizE8d',
         entryQuery: { locale: 'de-DE' },
       },
     ])
@@ -362,7 +362,7 @@ describe('Next.js Pages Router server handoff helpers', () => {
 
     expect(context.res.getHeader('Set-Cookie')).toEqual([
       'app-cookie=1; Path=/',
-      expect.stringContaining('ctfl-opt-aid=profile-from-page'),
+      expect.stringContaining('ctfl-opt-aid=f0837d7dc6344c36a3a0a06c4cde754b'),
     ])
   })
 })

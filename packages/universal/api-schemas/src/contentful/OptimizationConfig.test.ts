@@ -27,7 +27,7 @@ const optimizationEntryBase = {
       },
     },
     publishedVersion: 1,
-    id: 'experience-id',
+    id: '6IueRX1pS3iMJncbhUQTba',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     revision: 1,
@@ -51,7 +51,7 @@ const optimizationEntryBase = {
     nt_description: null,
     nt_type: 'nt_personalization' as const,
     nt_audience: null,
-    nt_experience_id: 'experience-id',
+    nt_experience_id: '6IueRX1pS3iMJncbhUQTba',
   },
 }
 
@@ -70,7 +70,7 @@ const entryBase = {
       },
     },
     publishedVersion: 1,
-    id: 'entry-id',
+    id: '4ib0hsHWoSOnCVdDkizE8d',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     revision: 1,
@@ -103,7 +103,7 @@ const mergeTagEntryBase = {
         id: 'nt_mergetag',
       },
     },
-    id: 'merge-tag-entry-id',
+    id: '7pQ2rS5tU8vW1xY4zA6bCd',
   },
   fields: {
     nt_name: 'Location',
@@ -116,7 +116,7 @@ const unresolvedEntryLink = {
   sys: {
     type: 'Link',
     linkType: 'Entry',
-    id: 'entry-link-id',
+    id: '4k6ZyFQnR2POY5IJLLlJRb',
   },
 }
 
@@ -173,7 +173,7 @@ describe('Contentful entry guards', () => {
       ...entryBase,
       sys: {
         ...entryBase.sys,
-        id: 'child-entry-id',
+        id: '2qVK4T5lnScbswoyBuGipd',
       },
       fields: {
         richText: {
@@ -202,7 +202,7 @@ describe('Contentful entry guards', () => {
         sys: {
           type: 'Link',
           linkType: 'Entry',
-          id: 'entry-id',
+          id: '4ib0hsHWoSOnCVdDkizE8d',
         },
       }),
     ).toBe(false)
@@ -211,9 +211,13 @@ describe('Contentful entry guards', () => {
   it('continues recognizing unresolved entry links', () => {
     expect(isUnresolvedEntryLink(unresolvedEntryLink)).toBe(true)
     expect(
-      isUnresolvedEntryLink({ sys: { type: 'Link', linkType: 'Asset', id: 'asset-id' } }),
+      isUnresolvedEntryLink({
+        sys: { type: 'Link', linkType: 'Asset', id: '3Z2hP4vR8sT1nY6mK9qL0a' },
+      }),
     ).toBe(false)
-    expect(isUnresolvedEntryLink({ sys: { type: 'Entry', id: 'entry-id' } })).toBe(false)
+    expect(isUnresolvedEntryLink({ sys: { type: 'Entry', id: '4ib0hsHWoSOnCVdDkizE8d' } })).toBe(
+      false,
+    )
   })
 
   it('continues recognizing merge-tag entries', () => {

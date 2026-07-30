@@ -185,7 +185,7 @@ describe('AsyncStorageStore', () => {
     const store = await getStore()
     const cache = getCache(store)
 
-    cache.set(ANONYMOUS_ID_KEY, 'profile-id')
+    cache.set(ANONYMOUS_ID_KEY, 'f0837d7dc6344c36a3a0a06c4cde754b')
     cache.set(CHANGES_CACHE_KEY, [])
     cache.set(PROFILE_CACHE_KEY, {})
     cache.set(SELECTED_OPTIMIZATIONS_CACHE_KEY, [])
@@ -210,7 +210,7 @@ describe('AsyncStorageStore', () => {
 
   it('batches profile-continuity writes through AsyncStorage.multiSet', async () => {
     const store = await getStore()
-    const profile = { id: 'profile-id' }
+    const profile = { id: 'f0837d7dc6344c36a3a0a06c4cde754b' }
 
     await store.writeProfileContinuity({
       changes: [],
@@ -219,7 +219,7 @@ describe('AsyncStorageStore', () => {
     })
 
     expect(asyncStorageMock.multiSet).toHaveBeenCalledWith([
-      [ANONYMOUS_ID_KEY, 'profile-id'],
+      [ANONYMOUS_ID_KEY, 'f0837d7dc6344c36a3a0a06c4cde754b'],
       [CHANGES_CACHE_KEY, '[]'],
       [PROFILE_CACHE_KEY, JSON.stringify(profile)],
       [SELECTED_OPTIMIZATIONS_CACHE_KEY, '[]'],
@@ -238,7 +238,7 @@ describe('AsyncStorageStore', () => {
 
     const write = store.writeProfileContinuity({
       changes: [],
-      profile: { id: 'profile-id' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
       selectedOptimizations: [],
     })
     const clear = store.clearProfileContinuity()
