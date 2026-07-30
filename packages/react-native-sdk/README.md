@@ -215,7 +215,7 @@ import { OptimizedEntry } from '@contentful/optimization-react-native'
 
 function HeroEntry() {
   return (
-    <OptimizedEntry entryId="hero-entry-id" entryQuery={{ locale: 'en-US' }}>
+    <OptimizedEntry entryId="4ib0hsHWoSOnCVdDkizE8d" entryQuery={{ locale: 'en-US' }}>
       {(resolvedEntry) => <Hero data={resolvedEntry.fields} />}
     </OptimizedEntry>
   )
@@ -235,8 +235,8 @@ entry cache after the React Native SDK is ready:
   clientId="your-client-id"
   contentful={{ client }}
   prefetchManagedEntries={[
-    'hero-entry-id',
-    { entryId: 'promo-entry-id', entryQuery: { locale: 'en-US' } },
+    '4ib0hsHWoSOnCVdDkizE8d',
+    { entryId: '4k6ZyFQnR2POY5IJLLlJRb', entryQuery: { locale: 'en-US' } },
   ]}
 >
   <YourApp />
@@ -269,7 +269,7 @@ Use `useOptimizedEntry()` when a component needs the same managed `entryId` or m
 import { useOptimizedEntry } from '@contentful/optimization-react-native'
 
 function HeroData() {
-  const { entry, isLoading, error } = useOptimizedEntry({ entryId: 'hero-entry-id' })
+  const { entry, isLoading, error } = useOptimizedEntry({ entryId: '4ib0hsHWoSOnCVdDkizE8d' })
 
   if (isLoading || error || !entry) return null
 

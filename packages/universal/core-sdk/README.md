@@ -70,7 +70,7 @@ const requestOptimization = statelessOptimization.forRequest({
   locale: 'en-US',
   eventContext: { locale: 'en-US' },
   experienceOptions: { preflight: false },
-  profile: { id: 'profile-id' },
+  profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
 })
 
 const { accepted, data } = await requestOptimization.page()

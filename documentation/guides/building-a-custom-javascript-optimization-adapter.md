@@ -54,7 +54,7 @@ source.setSnapshotListener((snapshot) => {
 })
 
 source.updateOptions({
-  entryId: 'hero-entry',
+  entryId: '4ib0hsHWoSOnCVdDkizE8d',
   entryQuery: { locale: appLocale },
   sdk: optimization,
   isSdkStateReady: true,

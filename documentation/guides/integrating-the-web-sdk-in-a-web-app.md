@@ -109,7 +109,7 @@ step before you ship.
    // Emit the page event first so the SDK has current selections before you resolve.
    await optimization.page()
 
-   const baselineEntry = await contentfulClient.getEntry('hero-entry-id', {
+   const baselineEntry = await contentfulClient.getEntry('4ib0hsHWoSOnCVdDkizE8d', {
      include: 10, // resolve linked experience and variant entries before rendering
      locale: APP_LOCALE, // one concrete locale — never withAllLocales / locale=*
    })
@@ -391,7 +391,7 @@ const optimization = new ContentfulOptimization({
 })
 
 // getEntry() through your client, with include: 10 and the SDK locale merged in.
-const baselineEntry = await optimization.fetchContentfulEntry('hero-entry-id')
+const baselineEntry = await optimization.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
 ```
 
 For the combined fetch-and-resolve call — `fetchOptimizedEntry(id)`, which fetches and resolves in
@@ -436,7 +436,7 @@ entry yourself.
 ```ts
 // options?: { query?, selectedOptimizations? } — omit to use current SDK state.
 const { entry, baselineEntry, selectedOptimization } =
-  await optimization.fetchOptimizedEntry('hero-entry-id')
+  await optimization.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
 ```
 
 Two facts hold everywhere:
@@ -826,7 +826,7 @@ attribute; the script reads it to decide what to fetch.
 
 ```html
 <ctfl-optimization-root client-id="your-optimization-client-id" environment="main" locale="en-US">
-  <ctfl-optimized-entry data-entry-id="hero-entry-id"></ctfl-optimized-entry>
+  <ctfl-optimized-entry data-entry-id="4ib0hsHWoSOnCVdDkizE8d"></ctfl-optimized-entry>
 </ctfl-optimization-root>
 ```
 
@@ -839,7 +839,7 @@ resolve by ID on its own — you write no fetch and assign no `baselineEntry`.
 ```html
 <!-- The shared SDK was constructed with contentful: { client }, so the element can fetch by ID. -->
 <ctfl-optimization-root>
-  <ctfl-optimized-entry entry-id="hero-entry-id"></ctfl-optimized-entry>
+  <ctfl-optimized-entry entry-id="4ib0hsHWoSOnCVdDkizE8d"></ctfl-optimized-entry>
 </ctfl-optimization-root>
 ```
 

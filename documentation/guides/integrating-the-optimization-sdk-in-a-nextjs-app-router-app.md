@@ -280,7 +280,7 @@ There are two entry-source paths. Use the one that matches where your app alread
 **Follow this pattern:**
 
 ```tsx
-<OptimizedEntry entryId="hero-entry-id" entryQuery={{ locale: 'en-US', include: 10 }}>
+<OptimizedEntry entryId="4ib0hsHWoSOnCVdDkizE8d" entryQuery={{ locale: 'en-US', include: 10 }}>
   {(entry) => <Hero entry={entry} />}
 </OptimizedEntry>
 ```

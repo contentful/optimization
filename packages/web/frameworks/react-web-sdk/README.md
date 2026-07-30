@@ -381,7 +381,7 @@ surfaces can fetch by entry ID:
 function HeroEntry() {
   return (
     <OptimizedEntry
-      entryId="hero-entry"
+      entryId="4ib0hsHWoSOnCVdDkizE8d"
       entryQuery={{ locale: 'en-US' }}
       loadingFallback={() => <HeroSkeleton />}
       errorFallback={() => <HeroFallback />}
@@ -404,7 +404,7 @@ import { useOptimizedEntry } from '@contentful/optimization-react-web'
 
 function HeroEntry() {
   const { entry, error, isLoading } = useOptimizedEntry({
-    entryId: 'hero-entry',
+    entryId: '4ib0hsHWoSOnCVdDkizE8d',
     entryQuery: { locale: 'en-US' },
   })
 

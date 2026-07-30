@@ -237,7 +237,8 @@ const optimization = new ContentfulOptimization({
 
 const requestOptimization = optimization.forRequest({ consent: true, profile })
 await requestOptimization.page()
-const { baselineEntry, entry } = await requestOptimization.fetchOptimizedEntry('hero-entry')
+const { baselineEntry, entry } =
+  await requestOptimization.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
 ```
 
 Use `fetchContentfulEntries()` or `prefetchManagedEntries()` when a route knows several managed

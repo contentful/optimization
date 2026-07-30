@@ -501,7 +501,7 @@ to a given entry.
    lifecycleScope.launch {
        // contentfulFetcher is reader-owned: your CDA fetch and link resolution. One concrete
        // locale, include depth deep enough to resolve nt_experiences and nt_variants in one payload.
-       val heroEntry = contentfulFetcher.fetchEntry(id = "home-hero", include = 10, locale = "en-US")
+       val heroEntry = contentfulFetcher.fetchEntry(id = "4ib0hsHWoSOnCVdDkizE8d", include = 10, locale = "en-US")
        // The view resolves the entry locally and re-resolves as profile state arrives.
        heroSlot.setEntry(heroEntry)
    }

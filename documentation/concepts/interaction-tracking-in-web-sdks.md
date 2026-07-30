@@ -388,10 +388,10 @@ The wrapper receives:
 
 ```html
 <div
-  data-ctfl-baseline-id="baseline-entry-id"
-  data-ctfl-entry-id="resolved-entry-id"
-  data-ctfl-optimization-id="experience-id"
-  data-ctfl-optimization-context-id="optimization-context-id"
+  data-ctfl-baseline-id="4ib0hsHWoSOnCVdDkizE8d"
+  data-ctfl-entry-id="4k6ZyFQnR2POY5IJLLlJRb"
+  data-ctfl-optimization-id="6IueRX1pS3iMJncbhUQTba"
+  data-ctfl-optimization-context-id="e77eab64-93ca-4f6e-8492-037c1ff67caa"
   data-ctfl-sticky="true"
   data-ctfl-variant-index="1"
   data-ctfl-duplication-scope="session"

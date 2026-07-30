@@ -128,7 +128,7 @@ root.defaults = { consent: true }
 root.api = { preflight: false }
 root.contentful = { client: contentfulClient }
 root.trackEntryInteraction = { hovers: false }
-root.prefetchManagedEntries = ['hero-entry']
+root.prefetchManagedEntries = ['4ib0hsHWoSOnCVdDkizE8d']
 root.onStatesReady = (states) => {
   const subscription = states.profile.subscribe((profile) => {
     console.log(profile?.id)
@@ -294,7 +294,7 @@ const optimization = new ContentfulOptimization({
   locale: appLocale,
 })
 
-const { baselineEntry, entry } = await optimization.fetchOptimizedEntry('hero-entry')
+const { baselineEntry, entry } = await optimization.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
 ```
 
 `fetchOptimizedEntry(entryId)` fetches the baseline entry and resolves it with the Web SDK's current

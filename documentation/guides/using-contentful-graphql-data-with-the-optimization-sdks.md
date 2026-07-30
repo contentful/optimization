@@ -68,7 +68,7 @@ and each value is the selected variant entry ID.
 ```ts
 const selectedOptimizations = [
   {
-    experienceId: '2qVK4T5lnScbswoyBuGipd',
+    experienceId: '6IueRX1pS3iMJncbhUQTba',
     variantIndex: 1,
     variants: {
       '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb',
@@ -215,7 +215,7 @@ function toPageVariantEntry(page: GraphQlPage): Entry<EntrySkeletonType> {
 }
 
 const graphqlData = await runContentfulGraphQlQuery({
-  id: 'homepage',
+  id: '4ib0hsHWoSOnCVdDkizE8d',
   locale: appLocale,
   preview,
 })

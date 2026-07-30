@@ -273,7 +273,9 @@ const contentfulOptimization = {
     cache: { scope: 'private-request' },
     hydration: 'preserve-server',
     pagePayload: { properties: { path: context.resolvedUrl } },
-    prefetchManagedEntries: [{ entryId: 'hero-entry-id', entryQuery: { locale: 'en-US' } }],
+    prefetchManagedEntries: [
+      { entryId: '4ib0hsHWoSOnCVdDkizE8d', entryQuery: { locale: 'en-US' } },
+    ],
   }),
 }
 ```

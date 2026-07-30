@@ -121,7 +121,7 @@ Experience API methods are scoped to `client.experience` and return profile and 
 ```ts
 const { profile, selectedOptimizations, changes } = await client.experience.upsertProfile(
   {
-    profileId: 'profile-id',
+    profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     events: [pageEvent],
   },
   { locale: 'de-DE' },
