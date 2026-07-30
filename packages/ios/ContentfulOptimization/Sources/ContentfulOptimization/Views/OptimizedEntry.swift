@@ -17,7 +17,7 @@ import SwiftUI
 /// }
 /// ```
 public struct OptimizedEntry<Content: View>: View {
-    let entry: [String: Any]
+    let entry: CTEntry
     let dwellTimeMs: Int
     let minVisibleRatio: Double
     let viewDurationUpdateIntervalMs: Int
@@ -47,7 +47,7 @@ public struct OptimizedEntry<Content: View>: View {
         onTap: (([String: Any]) -> Void)? = nil,
         @ViewBuilder content: @escaping ([String: Any]) -> Content
     ) {
-        self.entry = entry
+        self.entry = (try? CTEntry(any: entry)) ?? (try! CTEntry(any: [String: Any]()))
         self.dwellTimeMs = dwellTimeMs
         self.minVisibleRatio = minVisibleRatio
         self.viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs
@@ -62,8 +62,7 @@ public struct OptimizedEntry<Content: View>: View {
     /// Accepts a `contentful.swift` `Entry` directly, encoding it to the `{sys, fields, metadata}`
     /// shape the resolver expects (see `CTEntry(_: Contentful.Entry)`) and handing the resolved
     /// variant back through `CTEntry` — `getField`, not `as?` casts on a raw map.
-    /// The encoding happens once, here, at construction — `content` itself stays dict-shaped
-    /// internally so `body` doesn't need to know which initializer built this instance.
+    /// The encoding happens once, here, at construction.
     public init(
         entry: Contentful.Entry,
         dwellTimeMs: Int = 2000,
@@ -76,7 +75,7 @@ public struct OptimizedEntry<Content: View>: View {
         onTap: (([String: Any]) -> Void)? = nil,
         @ViewBuilder content: @escaping (CTEntry) -> Content
     ) {
-        self.entry = CTEntry(entry).toFoundation() as? [String: Any] ?? [:]
+        self.entry = CTEntry(entry)
         self.dwellTimeMs = dwellTimeMs
         self.minVisibleRatio = minVisibleRatio
         self.viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs
@@ -89,7 +88,10 @@ public struct OptimizedEntry<Content: View>: View {
     }
 
     private var isOptimized: Bool {
-        guard let fields = entry["fields"] as? [String: Any] else { return false }
+        // Not `entry.getField("nt_experiences")` — `getField<T>` with `T` inferred as `Any`
+        // returns a non-nil `Optional(nil)` for a missing field (`nil as? Any` always
+        // succeeds), so an `Any?` read can't distinguish "absent" from "present but nil".
+        guard let fields = (entry.toFoundation() as? [String: Any])?["fields"] as? [String: Any] else { return false }
         return fields["nt_experiences"] != nil
     }
 
@@ -117,15 +119,16 @@ public struct OptimizedEntry<Content: View>: View {
     }
 
     public var body: some View {
+        let entryDict = entry.toFoundation() as? [String: Any] ?? [:]
         let result: ResolvedOptimizedEntry = {
             if isOptimized {
                 return client.resolveOptimizedEntry(
-                    baseline: entry,
+                    baseline: entryDict,
                     selectedOptimizations: effectiveOptimizations
                 )
             } else {
                 return ResolvedOptimizedEntry(
-                    entry: (try? CTEntry(any: entry)) ?? (try! CTEntry(any: [String: Any]())),
+                    entry: entry,
                     selectedOptimization: nil,
                     optimizationContextId: nil
                 )
@@ -134,7 +137,7 @@ public struct OptimizedEntry<Content: View>: View {
 
         content(result.entry.toFoundation() as? [String: Any] ?? [:])
             .modifier(ViewTrackingModifier(
-                entry: entry,
+                entry: entryDict,
                 optimizationContextId: result.optimizationContextId,
                 selectedOptimization: result.selectedOptimization,
                 minVisibleRatio: minVisibleRatio,
@@ -144,7 +147,7 @@ public struct OptimizedEntry<Content: View>: View {
                 client: client
             ))
             .modifier(TapTrackingModifier(
-                entry: entry,
+                entry: entryDict,
                 optimizationContextId: result.optimizationContextId,
                 selectedOptimization: result.selectedOptimization,
                 enabled: tapsEnabled,

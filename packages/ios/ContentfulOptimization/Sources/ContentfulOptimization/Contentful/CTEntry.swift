@@ -151,6 +151,10 @@ public struct CTEntry {
     }
 
     /// A field's resolved value, or nil if absent.
+    ///
+    /// Do not call this with `T` inferred as `Any` (or `Any?`) to check presence — `nil as? Any`
+    /// always succeeds, so a missing field comes back as a non-nil `Optional(nil)` rather than
+    /// `nil`. Check presence via `toFoundation()` instead, or infer a concrete `T`.
     public func getField<T>(_ name: String) -> T? {
         self["fields"]?[name]?.toFoundation() as? T
     }

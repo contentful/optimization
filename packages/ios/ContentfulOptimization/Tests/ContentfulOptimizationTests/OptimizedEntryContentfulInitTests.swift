@@ -57,11 +57,12 @@ final class OptimizedEntryContentfulInitTests: XCTestCase {
         let sut = OptimizedEntry(entry: entry) { (_: CTEntry) in EmptyView() }
 
         XCTAssertEqual(
-            NSDictionary(dictionary: sut.entry),
+            NSDictionary(dictionary: sut.entry.toFoundation() as? [String: Any] ?? [:]),
             NSDictionary(dictionary: CTEntry(entry).toFoundation() as? [String: Any] ?? [:])
         )
-        XCTAssertEqual((sut.entry["sys"] as? [String: Any])?["id"] as? String, "e1")
-        XCTAssertNotNil(sut.entry["metadata"], "the always-present metadata guarantee must hold through the initializer, not just the mapper")
+        XCTAssertEqual(sut.entry.id, "e1")
+        let dict = sut.entry.toFoundation() as? [String: Any]
+        XCTAssertNotNil(dict?["metadata"], "the always-present metadata guarantee must hold through the initializer, not just the mapper")
     }
 
     // MARK: - The stored `content` closure forwards its actual argument, not the captured baseline entry
@@ -108,8 +109,8 @@ final class OptimizedEntryContentfulInitTests: XCTestCase {
             SwiftUI.Text("entry")
         }
 
-        XCTAssertEqual((fromDict.entry["sys"] as? [String: Any])?["id"] as? String, "x")
-        XCTAssertEqual((fromEntry.entry["sys"] as? [String: Any])?["id"] as? String, "e1")
+        XCTAssertEqual(fromDict.entry.id, "x")
+        XCTAssertEqual(fromEntry.entry.id, "e1")
     }
 
     // MARK: - Non-optimized entries: the Contentful.Entry initializer still round-trips through body's baseline path
@@ -121,7 +122,7 @@ final class OptimizedEntryContentfulInitTests: XCTestCase {
         // `nt_experiences` key, which is the input `isOptimized` reads.
         let sut = OptimizedEntry(entry: entry) { (_: CTEntry) in EmptyView() }
 
-        let fields = sut.entry["fields"] as? [String: Any]
+        let fields = (sut.entry.toFoundation() as? [String: Any])?["fields"] as? [String: Any]
         XCTAssertNil(fields?["nt_experiences"])
     }
 
@@ -149,7 +150,7 @@ final class OptimizedEntryContentfulInitTests: XCTestCase {
 
         // Exercises the same call `TapTrackingModifier` makes: `onTap?(entry)`, with the view's
         // own stored baseline `entry` (`sut.entry`) — not a resolved variant.
-        sut.onTap?(sut.entry)
+        sut.onTap?(sut.entry.toFoundation() as? [String: Any] ?? [:])
 
         XCTAssertEqual((receivedOnTapArgument?["sys"] as? [String: Any])?["id"] as? String, "e1")
     }
