@@ -4,11 +4,8 @@ import com.contentful.java.cda.CDAAsset
 import com.contentful.java.cda.CDAContentType
 import com.contentful.java.cda.CDAEntry
 import com.contentful.java.cda.CDAMetadata
-import com.contentful.java.cda.CDAResource
 import com.contentful.java.cda.CDATag
 import com.contentful.java.cda.CDATaxonomyConcept
-import com.contentful.java.cda.LocalizedResource
-import com.contentful.java.cda.rich.CDARichBlock
 import com.contentful.java.cda.rich.CDARichDocument
 import com.contentful.java.cda.rich.CDARichMark
 import com.contentful.java.cda.rich.CDARichParagraph
@@ -321,13 +318,9 @@ private fun makeMetadata(
     return metadata
 }
 
-/**
- * Reflectively write to a field declared on the given instance's class or any of its supers.
- * The `contentful.java` value types keep the fields the SDK needs (`attrs`, `rawFields`,
- * `fields`, `contentType`, `metadata`, `tags`, `concepts`) package-private or private with
- * only getter methods; deserializing full CDA responses to build fixtures would be much
- * heavier than reaching in directly here.
- */
+// contentful.java value types keep the fields we need to set (attrs, rawFields, fields,
+// metadata, tags, concepts) package-private, and building fixtures via full CDA response
+// deserialization would be far heavier than reflection.
 private fun setField(target: Any, name: String, value: Any?) {
     var clazz: Class<*>? = target::class.java
     while (clazz != null) {
@@ -342,12 +335,3 @@ private fun setField(target: Any, name: String, value: Any?) {
     }
     throw NoSuchFieldException("$name on ${target::class.java}")
 }
-
-@Suppress("unused")
-private val forceCDAResourceImport: Class<*> = CDAResource::class.java
-
-@Suppress("unused")
-private val forceLocalizedImport: Class<*> = LocalizedResource::class.java
-
-@Suppress("unused")
-private val forceRichBlockImport: Class<*> = CDARichBlock::class.java

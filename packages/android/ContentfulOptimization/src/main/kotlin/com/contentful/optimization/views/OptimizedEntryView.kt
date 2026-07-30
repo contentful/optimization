@@ -104,13 +104,8 @@ public class OptimizedEntryView @JvmOverloads constructor(
     }
 
     /**
-     * Typed renderer that receives the full [ResolvedOptimizedEntry] instead of a raw
-     * `Map<String, Any>`. Recommended when [setEntry] is called with a [CDAEntry] — read
-     * fields through [ResolvedOptimizedEntry.getField] / [ResolvedOptimizedEntry.getEntry] /
-     * [ResolvedOptimizedEntry.getAsset] rather than walking Map casts by hand.
-     *
-     * Named distinctly from the Map-based [setContentRenderer] because both lambda types
-     * erase to `Function1<Object, View>` on the JVM.
+     * Typed variant of [setContentRenderer] that receives a [ResolvedOptimizedEntry]. Named
+     * distinctly because both lambda types erase to `Function1<Object, View>` on the JVM.
      */
     fun setResolvedContentRenderer(renderer: (ResolvedOptimizedEntry) -> View) {
         this.contentRenderer = { entryMap ->
@@ -135,11 +130,7 @@ public class OptimizedEntryView @JvmOverloads constructor(
         restartObservation()
     }
 
-    /**
-     * Typed overload that accepts a `contentful.java` [CDAEntry]. Routes through the
-     * SDK-owned adapter so the `metadata` block the resolver requires is always populated —
-     * a call site physically cannot forget it.
-     */
+    /** Typed overload that routes a [CDAEntry] through the SDK-owned adapter. */
     fun setEntry(
         entry: CDAEntry,
         selectedOptimizations: List<Map<String, Any>>? = null,

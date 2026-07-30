@@ -148,15 +148,9 @@ public fun OptimizedEntry(
 }
 
 /**
- * Typed overload that accepts a `contentful.java` [CDAEntry] and hands back a
- * [ResolvedOptimizedEntry] to the `content` callback.
- *
- * This is the recommended entry point: the metadata block the resolver requires is populated
- * by the SDK-owned adapter (a call site physically cannot forget it), and the callback
- * receives typed accessors ([ResolvedOptimizedEntry.id], [ResolvedOptimizedEntry.getField],
- * [ResolvedOptimizedEntry.getEntry], [ResolvedOptimizedEntry.getAsset]) instead of raw
- * `Map<String, Any>` walks. Behavior otherwise matches the base [OptimizedEntry] composable;
- * the underlying Map is still reachable via `resolved.entry` as an escape hatch.
+ * Typed overload that accepts a [CDAEntry] and hands the `content` callback a
+ * [ResolvedOptimizedEntry]. The `metadata` block the resolver requires is populated by the
+ * SDK-owned adapter. Recommended over the [Map]-based overload.
  */
 @Composable
 public fun OptimizedEntry(

@@ -17,30 +17,14 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Adapts a `contentful.java` [CDAEntry] into the `{sys, fields, metadata}` entry Map that the
- * Optimization SDK's resolver expects.
- *
- * `CDAEntry.rawFields()` does not expose `metadata` (it is a sys-level sibling on the CDA
- * response, not a field), and the resolver's structural guard requires a `metadata` record
- * present on every entry. Omitting it makes the resolver treat the entry as unresolved and
- * silently fall back to baseline with no user-visible signal. Routing every mapping through
- * this adapter makes that omission impossible by construction: the `metadata` block is always
- * built, populated from [CDAMetadata] when present and left as empty tag/concept lists when
- * absent.
- *
- * Resolved links returned by `CDAEntry.getField` come back as nested [CDAEntry] / [CDAAsset]
- * objects, which are walked recursively so the resulting Map mirrors the shape of a raw CDA
- * response with `include` expansion. Rich Text ([CDARichNode]) fields are re-serialized to the
- * `{nodeType, data, content, ...}` JSON shape the JS bridge consumes.
- *
- * Cycles: `contentful.java` resolves links into shared object references, so a `nt_experiences
- * -> variants -> baseline` back-edge is a real cycle in the object graph. The walk tracks
- * ancestor entry ids on the current path and emits an unresolved Link stub when it would
- * recurse into an entry already on the path — the same shape that back-edge would carry in a
- * raw CDA response.
+ * Adapts a `contentful.java` [CDAEntry] into the `{sys, fields, metadata}` entry Map the
+ * Optimization SDK's resolver expects. `metadata` is always emitted — the resolver's entry
+ * guard requires it and `CDAEntry.rawFields()` does not expose it.
  */
 public fun CDAEntry.toOptimizedEntryMap(): Map<String, Any> = entryToMap(this, emptySet())
 
+// `ancestors` tracks entry ids on the current path; recursing into one would loop forever on
+// a real cycle in the resolved-link graph. Back-edges emit an unresolved Link stub instead.
 private fun entryToMap(entry: CDAEntry, ancestors: Set<String>): Map<String, Any> {
     val sys = mapOf(
         "id" to (entry.id() ?: ""),
@@ -95,10 +79,6 @@ private fun convertValue(value: Any?, ancestors: Set<String>): Any? = when (valu
     else -> value
 }
 
-// ISO-8601 for `Date`-typed field values. Matches the string a raw CDA response carries and the
-// format `contentful.swift`'s adapter emits via `ISO8601DateFormatter`. Without this, `Date`
-// values fall through to `else -> value` and `JSONObject` emits `Date.toString()` (a locale
-// string), which is not decodable JSON.
 private val iso8601Formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
     timeZone = TimeZone.getTimeZone("UTC")
 }
@@ -111,10 +91,6 @@ private fun linkStub(entry: CDAEntry): Map<String, Any> = mapOf(
     ),
 )
 
-// Asset mapping mirrors the raw CDA response shape:
-// `{sys, fields: {title, description?, file: {fileName?, contentType?, details?, url}}}`. Matches
-// the shape iOS's adapter emits, so downstream code reading `asset.contentType`,
-// `asset.details.image.width`, etc. finds it. `details.image` is only present for image files.
 private fun assetToMap(asset: CDAAsset): Map<String, Any> {
     val fileMap = asset.getField<Map<String, Any?>?>("file") ?: emptyMap()
     val detailsRaw = fileMap["details"] as? Map<*, *>
@@ -150,13 +126,9 @@ private fun assetToMap(asset: CDAAsset): Map<String, Any> {
     )
 }
 
-// Rich Text node -> raw JSON shape. Embedded resource nodes (`CDARichEmbeddedBlock` /
-// `CDARichEmbeddedInline`) carry their linked resource under `data.target`, while a plain URI
-// hyperlink (`CDARichHyperLink` whose `data` is a `String`) carries it under `data.uri`. Both
-// extend `CDARichHyperLink` at the class level, so ordering matters: embedded-resource cases must
-// be matched first, before falling into the generic hyperlink case. Falling through would emit
-// `data.uri` for an embedded entry (silently dropping the target) or `data.target` for a URI
-// hyperlink (nonsensical shape).
+// Embedded resource nodes extend CDARichHyperLink, so their branches must match before the
+// generic hyperlink case — otherwise an embedded entry would emit `data.uri` instead of
+// `data.target` and silently lose its linked resource.
 private fun richNodeToMap(node: CDARichNode, ancestors: Set<String>): Map<String, Any> = when (node) {
     is CDARichText -> mapOf(
         "nodeType" to (node.nodeType ?: "text"),
