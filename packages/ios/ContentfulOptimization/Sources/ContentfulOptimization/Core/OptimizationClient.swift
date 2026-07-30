@@ -1,4 +1,5 @@
 import Combine
+import Contentful
 import Foundation
 import JavaScriptCore
 
@@ -404,6 +405,26 @@ public final class OptimizationClient: ObservableObject {
                 optimizationContextId: nil
             )
         }
+    }
+
+    /// `Contentful.Entry` overload of `resolveOptimizedEntry(baseline:selectedOptimizations:)` —
+    /// maps `baseline` through `OptimizationEntryMapping` once, so callers stop hand-writing the
+    /// `Entry -> {sys, fields, metadata}` mapping outside of `OptimizedEntry`'s view initializer.
+    /// Delegates to the dict-based overload above, so it inherits the same fail-soft behavior: not
+    /// initialized, a serialization error, or an unparseable bridge result all fall back to the
+    /// mapped baseline with `selectedOptimization`/`optimizationContextId` nil, logging rather than
+    /// throwing.
+    public func resolveOptimizedEntry(
+        baseline: Contentful.Entry,
+        selectedOptimizations: [[String: Any]]? = nil
+    ) -> ResolvedContentfulOptimizedEntry {
+        let mappedBaseline = OptimizationEntryMapping.toOptimizationEntry(baseline)
+        let result = resolveOptimizedEntry(baseline: mappedBaseline, selectedOptimizations: selectedOptimizations)
+        return ResolvedContentfulOptimizedEntry(
+            entry: ResolvedEntry(result.entry),
+            selectedOptimization: result.selectedOptimization,
+            optimizationContextId: result.optimizationContextId
+        )
     }
 
     /// Resolve a merge-tag entry's display value against the current profile.
