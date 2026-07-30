@@ -26,17 +26,28 @@ public fun CDAEntry.toOptimizedEntryMap(): Map<String, Any> = entryToMap(this, e
 // `ancestors` tracks entry ids on the current path; recursing into one would loop forever on
 // a real cycle in the resolved-link graph. Back-edges emit an unresolved Link stub instead.
 private fun entryToMap(entry: CDAEntry, ancestors: Set<String>): Map<String, Any> {
-    val sys = mapOf(
-        "id" to (entry.id() ?: ""),
-        "type" to "Entry",
-        "contentType" to mapOf(
-            "sys" to mapOf(
-                "id" to (entry.contentType()?.id() ?: ""),
-                "type" to "Link",
-                "linkType" to "ContentType",
+    val sys = buildMap {
+        put("id", entry.id() ?: "")
+        put("type", "Entry")
+        put(
+            "contentType",
+            mapOf(
+                "sys" to mapOf(
+                    "id" to (entry.contentType()?.id() ?: ""),
+                    "type" to "Link",
+                    "linkType" to "ContentType",
+                ),
             ),
-        ),
-    )
+        )
+        // Optional sys attrs a raw CDA response carries. `attrs` is the raw `sys` object; only
+        // emit keys the source actually populated so the mapper matches Entry.sys optionality.
+        entry.getAttribute<String?>("createdAt")?.let { put("createdAt", it) }
+        entry.getAttribute<String?>("updatedAt")?.let { put("updatedAt", it) }
+        entry.getAttribute<Number?>("revision")?.let { put("revision", it) }
+        entry.getAttribute<String?>("locale")?.let { put("locale", it) }
+        linkRefOrNull(entry.getAttribute("space"), "Space")?.let { put("space", it) }
+        linkRefOrNull(entry.getAttribute("environment"), "Environment")?.let { put("environment", it) }
+    }
     val childAncestors = ancestors + entry.id()
     val fields = entry.rawFields().keys.associateWith { key ->
         convertValue(entry.getField<Any?>(key), childAncestors)
@@ -46,6 +57,14 @@ private fun entryToMap(entry: CDAEntry, ancestors: Set<String>): Map<String, Any
         "fields" to fields,
         "metadata" to metadataOf(entry.metadata()),
     )
+}
+
+// The CDA response carries `space` and `environment` as `{sys: {type: Link, linkType, id}}`
+// blobs. `attrs` decodes them as plain nested Maps.
+private fun linkRefOrNull(value: Any?, linkType: String): Map<String, Any>? {
+    val sys = (value as? Map<*, *>)?.get("sys") as? Map<*, *> ?: return null
+    val id = sys["id"] as? String ?: return null
+    return mapOf("sys" to mapOf("id" to id, "type" to "Link", "linkType" to linkType))
 }
 
 private fun metadataOf(metadata: CDAMetadata?): Map<String, Any> = mapOf(

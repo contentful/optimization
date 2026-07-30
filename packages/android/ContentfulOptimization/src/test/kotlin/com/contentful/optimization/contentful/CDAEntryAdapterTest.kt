@@ -7,10 +7,13 @@ import com.contentful.java.cda.CDAMetadata
 import com.contentful.java.cda.CDATag
 import com.contentful.java.cda.CDATaxonomyConcept
 import com.contentful.java.cda.rich.CDARichDocument
+import com.contentful.java.cda.rich.CDARichHyperLink
 import com.contentful.java.cda.rich.CDARichMark
 import com.contentful.java.cda.rich.CDARichParagraph
 import com.contentful.java.cda.rich.CDARichText
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -195,6 +198,227 @@ class CDAEntryAdapterTest {
         assertEquals("2023-11-14T22:13:20Z", published)
     }
 
+    // -- sys optional attrs -------------------------------------------------
+
+    @Test
+    fun `maps sys timestamps, revision, locale, space, and environment when present`() {
+        val entry = makeEntry(
+            id = "entry-1",
+            contentTypeId = "page",
+            rawFields = emptyMap(),
+            createdAt = "2024-01-01T00:00:00Z",
+            updatedAt = "2024-06-15T12:30:00Z",
+            revision = 3,
+            locale = "en-US",
+            spaceId = "space-1",
+            environmentId = "master",
+        )
+
+        val map = entry.toOptimizedEntryMap()
+        val sys = map["sys"] as Map<*, *>
+        assertEquals("2024-01-01T00:00:00Z", sys["createdAt"])
+        assertEquals("2024-06-15T12:30:00Z", sys["updatedAt"])
+        assertEquals(3, sys["revision"])
+        assertEquals("en-US", sys["locale"])
+
+        val space = (sys["space"] as Map<*, *>)["sys"] as Map<*, *>
+        assertEquals("space-1", space["id"])
+        assertEquals("Space", space["linkType"])
+
+        val environment = (sys["environment"] as Map<*, *>)["sys"] as Map<*, *>
+        assertEquals("master", environment["id"])
+        assertEquals("Environment", environment["linkType"])
+    }
+
+    @Test
+    fun `omits sys optional attrs when the source entry has none`() {
+        val entry = makeEntry(
+            id = "entry-1",
+            contentTypeId = "page",
+            rawFields = emptyMap(),
+        )
+
+        val sys = entry.toOptimizedEntryMap()["sys"] as Map<*, *>
+        assertFalse("sys.locale must be omitted, not emitted as null", sys.containsKey("locale"))
+        assertFalse(sys.containsKey("createdAt"))
+        assertFalse(sys.containsKey("updatedAt"))
+        assertFalse(sys.containsKey("revision"))
+        assertFalse(sys.containsKey("space"))
+        assertFalse(sys.containsKey("environment"))
+    }
+
+    // -- link resolution ----------------------------------------------------
+
+    @Test
+    fun `expands a diamond so both branches carry the full nested entry`() {
+        val shared = makeEntry(
+            id = "shared",
+            contentTypeId = "author",
+            rawFields = mapOf("name" to "Ada"),
+        )
+        val parent = makeEntry(
+            id = "parent",
+            contentTypeId = "post",
+            rawFields = mapOf("author" to shared, "editor" to shared),
+        )
+
+        val map = parent.toOptimizedEntryMap()
+        val fields = map["fields"] as Map<*, *>
+        val authorFields = (fields["author"] as Map<*, *>)["fields"] as Map<*, *>
+        val editorFields = (fields["editor"] as Map<*, *>)["fields"] as Map<*, *>
+        assertEquals("Ada", authorFields["name"])
+        assertEquals("Ada", editorFields["name"])
+    }
+
+    @Test
+    fun `three-node cycle emits a link stub instead of recursing forever`() {
+        val a = makeEntry(id = "a", contentTypeId = "n", rawFields = emptyMap())
+        val b = makeEntry(id = "b", contentTypeId = "n", rawFields = emptyMap())
+        val c = makeEntry(id = "c", contentTypeId = "n", rawFields = mapOf("next" to a))
+        setField(a, "rawFields", localizeFields(mapOf("next" to b)))
+        setField(a, "fields", localizeFields(mapOf("next" to b)))
+        setField(b, "rawFields", localizeFields(mapOf("next" to c)))
+        setField(b, "fields", localizeFields(mapOf("next" to c)))
+
+        val map = a.toOptimizedEntryMap()
+        val bMap = (map["fields"] as Map<*, *>)["next"] as Map<*, *>
+        val cMap = (bMap["fields"] as Map<*, *>)["next"] as Map<*, *>
+        val backEdge = (cMap["fields"] as Map<*, *>)["next"] as Map<*, *>
+        val backSys = backEdge["sys"] as Map<*, *>
+        assertEquals("a", backSys["id"])
+        assertEquals("Link", backSys["type"])
+        assertNull(backEdge["fields"])
+    }
+
+    @Test
+    fun `self-referencing entry emits a link stub at the self edge`() {
+        val self = makeEntry(id = "self", contentTypeId = "n", rawFields = emptyMap())
+        setField(self, "rawFields", localizeFields(mapOf("self" to self)))
+        setField(self, "fields", localizeFields(mapOf("self" to self)))
+
+        val map = self.toOptimizedEntryMap()
+        val backRef = (map["fields"] as Map<*, *>)["self"] as Map<*, *>
+        val backSys = backRef["sys"] as Map<*, *>
+        assertEquals("self", backSys["id"])
+        assertEquals("Link", backSys["type"])
+    }
+
+    @Test
+    fun `five-level linear chain expands at every level`() {
+        val a5 = makeEntry(id = "e5", contentTypeId = "n", rawFields = mapOf("name" to "leaf"))
+        val a4 = makeEntry(id = "e4", contentTypeId = "n", rawFields = mapOf("next" to a5))
+        val a3 = makeEntry(id = "e3", contentTypeId = "n", rawFields = mapOf("next" to a4))
+        val a2 = makeEntry(id = "e2", contentTypeId = "n", rawFields = mapOf("next" to a3))
+        val a1 = makeEntry(id = "e1", contentTypeId = "n", rawFields = mapOf("next" to a2))
+
+        val map = a1.toOptimizedEntryMap()
+        val level2 = ((map["fields"] as Map<*, *>)["next"]) as Map<*, *>
+        val level3 = (level2["fields"] as Map<*, *>)["next"] as Map<*, *>
+        val level4 = (level3["fields"] as Map<*, *>)["next"] as Map<*, *>
+        val level5 = (level4["fields"] as Map<*, *>)["next"] as Map<*, *>
+        assertEquals("leaf", (level5["fields"] as Map<*, *>)["name"])
+    }
+
+    @Test
+    fun `raw unresolved link Map inside a field passes through unchanged`() {
+        val stub = mapOf(
+            "sys" to mapOf("id" to "e2", "type" to "Link", "linkType" to "Entry"),
+        )
+        val entry = makeEntry(
+            id = "entry-1",
+            contentTypeId = "page",
+            rawFields = mapOf("editor" to stub),
+        )
+
+        val editor = (entry.toOptimizedEntryMap()["fields"] as Map<*, *>)["editor"] as Map<*, *>
+        val editorSys = editor["sys"] as Map<*, *>
+        assertEquals("e2", editorSys["id"])
+        assertEquals("Link", editorSys["type"])
+        assertEquals("Entry", editorSys["linkType"])
+        assertFalse("unresolved link must not gain a fields block", editor.containsKey("fields"))
+    }
+
+    // -- asset edge cases ---------------------------------------------------
+
+    @Test
+    fun `asset without description or image omits description and details_image keys`() {
+        val asset = makeAsset(
+            id = "asset-1",
+            title = "PDF",
+            url = "//assets.ctfassets.net/x/spec.pdf",
+            fileName = "spec.pdf",
+            mimeType = "application/pdf",
+            size = 4096,
+        )
+        val entry = makeEntry(
+            id = "entry-1",
+            contentTypeId = "page",
+            rawFields = mapOf("hero" to asset),
+        )
+
+        val hero = (entry.toOptimizedEntryMap()["fields"] as Map<*, *>)["hero"] as Map<*, *>
+        val heroFields = hero["fields"] as Map<*, *>
+        assertFalse("no description → key must be omitted", heroFields.containsKey("description"))
+        val details = ((heroFields["file"] as Map<*, *>)["details"]) as Map<*, *>
+        assertEquals(4096, details["size"])
+        assertFalse("non-image → details.image must be omitted", details.containsKey("image"))
+    }
+
+    @Test
+    fun `asset with no file still maps sys and title with an empty file record`() {
+        val asset = CDAAsset()
+        setField(asset, "attrs", mutableMapOf<String, Any>("id" to "asset-1", "type" to "Asset"))
+        setField(asset, "defaultLocale", TEST_LOCALE)
+        setField(asset, "fields", localizeFields(mapOf("title" to "Missing")))
+        setField(asset, "rawFields", localizeFields(mapOf("title" to "Missing")))
+
+        val entry = makeEntry(
+            id = "entry-1",
+            contentTypeId = "page",
+            rawFields = mapOf("hero" to asset),
+        )
+        val hero = (entry.toOptimizedEntryMap()["fields"] as Map<*, *>)["hero"] as Map<*, *>
+        val heroFields = hero["fields"] as Map<*, *>
+        assertEquals("Missing", heroFields["title"])
+        val file = heroFields["file"] as Map<*, *>
+        assertEquals("", file["url"])
+        assertEquals("", file["fileName"])
+    }
+
+    // -- rich text hyperlink vs embedded resource ---------------------------
+
+    @Test
+    fun `plain URI hyperlink emits data uri and content, not a target`() {
+        val hyperlink = CDARichHyperLink("https://example.com").apply {
+            setNodeType("hyperlink")
+            content.add(
+                CDARichText("click", mutableListOf<CDARichMark>()).apply { setNodeType("text") },
+            )
+        }
+        val paragraph = CDARichParagraph().apply {
+            setNodeType("paragraph")
+            content.add(hyperlink)
+        }
+        val document = CDARichDocument().apply {
+            setNodeType("document")
+            content.add(paragraph)
+        }
+        val entry = makeEntry(
+            id = "entry-1",
+            contentTypeId = "page",
+            rawFields = mapOf("body" to document),
+        )
+
+        val body = (entry.toOptimizedEntryMap()["fields"] as Map<*, *>)["body"] as Map<*, *>
+        val p = (body["content"] as List<*>)[0] as Map<*, *>
+        val h = (p["content"] as List<*>)[0] as Map<*, *>
+        assertEquals("hyperlink", h["nodeType"])
+        val data = h["data"] as Map<*, *>
+        assertEquals("https://example.com", data["uri"])
+        assertFalse("URI hyperlink must not carry data.target", data.containsKey("target"))
+        assertNotNull("hyperlink must preserve inner text", h["content"])
+    }
+
     @Test
     fun `serializes rich text node tree into JSON node shape`() {
         val paragraph = CDARichParagraph().apply {
@@ -239,9 +463,28 @@ private fun makeEntry(
     contentTypeId: String,
     rawFields: Map<String, Any?>,
     metadata: CDAMetadata? = makeMetadata(),
+    createdAt: String? = null,
+    updatedAt: String? = null,
+    revision: Number? = null,
+    locale: String? = null,
+    spaceId: String? = null,
+    environmentId: String? = null,
 ): CDAEntry {
     val entry = CDAEntry()
-    setField(entry, "attrs", mutableMapOf<String, Any>("id" to id, "type" to "Entry"))
+    val attrs = mutableMapOf<String, Any>("id" to id, "type" to "Entry")
+    createdAt?.let { attrs["createdAt"] = it }
+    updatedAt?.let { attrs["updatedAt"] = it }
+    revision?.let { attrs["revision"] = it }
+    locale?.let { attrs["locale"] = it }
+    spaceId?.let {
+        attrs["space"] = mapOf("sys" to mapOf("id" to it, "type" to "Link", "linkType" to "Space"))
+    }
+    environmentId?.let {
+        attrs["environment"] = mapOf(
+            "sys" to mapOf("id" to it, "type" to "Link", "linkType" to "Environment"),
+        )
+    }
+    setField(entry, "attrs", attrs)
     setField(entry, "defaultLocale", TEST_LOCALE)
     setField(entry, "rawFields", localizeFields(rawFields))
     setField(entry, "fields", localizeFields(rawFields))
