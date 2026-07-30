@@ -11,6 +11,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import com.contentful.java.cda.CDAEntry
+import com.contentful.optimization.contentful.toOptimizedEntryMap
 import com.contentful.optimization.core.ResolvedOptimizedEntry
 import com.contentful.optimization.core.resolvePreviewCloseLockState
 
@@ -142,5 +144,45 @@ public fun OptimizedEntry(
 
     Box(modifier = modifier) {
         content(result.entry)
+    }
+}
+
+/**
+ * Typed overload that accepts a `contentful.java` [CDAEntry] and hands back a
+ * [ResolvedOptimizedEntry] to the `content` callback.
+ *
+ * This is the recommended entry point: the metadata block the resolver requires is populated
+ * by the SDK-owned adapter (a call site physically cannot forget it), and the callback
+ * receives typed accessors ([ResolvedOptimizedEntry.id], [ResolvedOptimizedEntry.getField],
+ * [ResolvedOptimizedEntry.getEntry], [ResolvedOptimizedEntry.getAsset]) instead of raw
+ * `Map<String, Any>` walks. Behavior otherwise matches the base [OptimizedEntry] composable;
+ * the underlying Map is still reachable via `resolved.entry` as an escape hatch.
+ */
+@Composable
+public fun OptimizedEntry(
+    entry: CDAEntry,
+    dwellTimeMs: Int = 2000,
+    minVisibleRatio: Double = 0.8,
+    viewDurationUpdateIntervalMs: Int = 5000,
+    liveUpdates: Boolean? = null,
+    trackViews: Boolean? = null,
+    trackTaps: Boolean? = null,
+    accessibilityIdentifier: String? = null,
+    onTap: ((Map<String, Any>) -> Unit)? = null,
+    content: @Composable (ResolvedOptimizedEntry) -> Unit,
+) {
+    val entryMap = remember(entry) { entry.toOptimizedEntryMap() }
+    OptimizedEntry(
+        entry = entryMap,
+        dwellTimeMs = dwellTimeMs,
+        minVisibleRatio = minVisibleRatio,
+        viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
+        liveUpdates = liveUpdates,
+        trackViews = trackViews,
+        trackTaps = trackTaps,
+        accessibilityIdentifier = accessibilityIdentifier,
+        onTap = onTap,
+    ) { resolvedMap ->
+        content(ResolvedOptimizedEntry(entry = resolvedMap, selectedOptimization = null))
     }
 }

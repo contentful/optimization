@@ -6,6 +6,8 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.ViewTreeObserver
 import android.widget.FrameLayout
+import com.contentful.java.cda.CDAEntry
+import com.contentful.optimization.contentful.toOptimizedEntryMap
 import com.contentful.optimization.core.ResolvedOptimizedEntry
 import com.contentful.optimization.core.TrackClickPayload
 import com.contentful.optimization.core.resolvePreviewCloseLockState
@@ -102,6 +104,22 @@ public class OptimizedEntryView @JvmOverloads constructor(
     }
 
     /**
+     * Typed renderer that receives the full [ResolvedOptimizedEntry] instead of a raw
+     * `Map<String, Any>`. Recommended when [setEntry] is called with a [CDAEntry] — read
+     * fields through [ResolvedOptimizedEntry.getField] / [ResolvedOptimizedEntry.getEntry] /
+     * [ResolvedOptimizedEntry.getAsset] rather than walking Map casts by hand.
+     *
+     * Named distinctly from the Map-based [setContentRenderer] because both lambda types
+     * erase to `Function1<Object, View>` on the JVM.
+     */
+    fun setResolvedContentRenderer(renderer: (ResolvedOptimizedEntry) -> View) {
+        this.contentRenderer = { entryMap ->
+            renderer(ResolvedOptimizedEntry(entry = entryMap, selectedOptimization = null))
+        }
+        lastResult?.let { renderContent(it.entry) }
+    }
+
+    /**
      * Set the entry to optimize. Optional [selectedOptimizations] forces a specific set instead
      * of observing the live selectedOptimizations stream (used by tests or callers driving their own
      * optimization state).
@@ -115,6 +133,18 @@ public class OptimizedEntryView @JvmOverloads constructor(
         this.lockedOptimizations = null
         this.isLocked = false
         restartObservation()
+    }
+
+    /**
+     * Typed overload that accepts a `contentful.java` [CDAEntry]. Routes through the
+     * SDK-owned adapter so the `metadata` block the resolver requires is always populated —
+     * a call site physically cannot forget it.
+     */
+    fun setEntry(
+        entry: CDAEntry,
+        selectedOptimizations: List<Map<String, Any>>? = null,
+    ) {
+        setEntry(entry.toOptimizedEntryMap(), selectedOptimizations)
     }
 
     /** Force a visibility re-check from outside (e.g., from [TrackingRecyclerView] on scroll). */

@@ -291,6 +291,25 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
 
+    // contentful.java is compileOnly so the CDAEntry adapter compiles without forcing every
+    // Optimization SDK consumer to depend on it. Consumers that pass a CDAEntry into the SDK
+    // already have contentful.java on their classpath; consumers that only ever pass entry
+    // Maps do not.
+    compileOnly("com.contentful.java:java-sdk:10.6.0") {
+        // okhttp 5 splits its implementation across per-platform artifacts (okhttp-jvm vs
+        // okhttp-android) that carry duplicate classes. contentful.java is a plain-JVM library
+        // and pulls in okhttp-jvm; the Android variant resolution brings okhttp-android — both
+        // on the classpath is a duplicate-class build failure. Drop the JVM variant so the
+        // Android one wins for consumers of this SDK too.
+        exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
+    }
+    testCompileOnly("com.contentful.java:java-sdk:10.6.0") {
+        exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
+    }
+    testImplementation("com.contentful.java:java-sdk:10.6.0") {
+        exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
+    }
+
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     testImplementation("androidx.lifecycle:lifecycle-runtime-testing:2.8.7")

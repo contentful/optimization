@@ -1,0 +1,191 @@
+package com.contentful.optimization.contentful
+
+import com.contentful.java.cda.CDAAsset
+import com.contentful.java.cda.CDAEntry
+import com.contentful.java.cda.CDAMetadata
+import com.contentful.java.cda.CDATag
+import com.contentful.java.cda.CDATaxonomyConcept
+import com.contentful.java.cda.rich.CDARichBlock
+import com.contentful.java.cda.rich.CDARichEmbeddedBlock
+import com.contentful.java.cda.rich.CDARichEmbeddedInline
+import com.contentful.java.cda.rich.CDARichHyperLink
+import com.contentful.java.cda.rich.CDARichNode
+import com.contentful.java.cda.rich.CDARichText
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+
+/**
+ * Adapts a `contentful.java` [CDAEntry] into the `{sys, fields, metadata}` entry Map that the
+ * Optimization SDK's resolver expects.
+ *
+ * `CDAEntry.rawFields()` does not expose `metadata` (it is a sys-level sibling on the CDA
+ * response, not a field), and the resolver's structural guard requires a `metadata` record
+ * present on every entry. Omitting it makes the resolver treat the entry as unresolved and
+ * silently fall back to baseline with no user-visible signal. Routing every mapping through
+ * this adapter makes that omission impossible by construction: the `metadata` block is always
+ * built, populated from [CDAMetadata] when present and left as empty tag/concept lists when
+ * absent.
+ *
+ * Resolved links returned by `CDAEntry.getField` come back as nested [CDAEntry] / [CDAAsset]
+ * objects, which are walked recursively so the resulting Map mirrors the shape of a raw CDA
+ * response with `include` expansion. Rich Text ([CDARichNode]) fields are re-serialized to the
+ * `{nodeType, data, content, ...}` JSON shape the JS bridge consumes.
+ *
+ * Cycles: `contentful.java` resolves links into shared object references, so a `nt_experiences
+ * -> variants -> baseline` back-edge is a real cycle in the object graph. The walk tracks
+ * ancestor entry ids on the current path and emits an unresolved Link stub when it would
+ * recurse into an entry already on the path — the same shape that back-edge would carry in a
+ * raw CDA response.
+ */
+public fun CDAEntry.toOptimizedEntryMap(): Map<String, Any> = entryToMap(this, emptySet())
+
+private fun entryToMap(entry: CDAEntry, ancestors: Set<String>): Map<String, Any> {
+    val sys = mapOf(
+        "id" to (entry.id() ?: ""),
+        "type" to "Entry",
+        "contentType" to mapOf(
+            "sys" to mapOf(
+                "id" to (entry.contentType()?.id() ?: ""),
+                "type" to "Link",
+                "linkType" to "ContentType",
+            ),
+        ),
+    )
+    val childAncestors = ancestors + entry.id()
+    val fields = entry.rawFields().keys.associateWith { key ->
+        convertValue(entry.getField<Any?>(key), childAncestors)
+    }
+    return mapOf(
+        "sys" to sys,
+        "fields" to fields,
+        "metadata" to metadataOf(entry.metadata()),
+    )
+}
+
+private fun metadataOf(metadata: CDAMetadata?): Map<String, Any> = mapOf(
+    "tags" to (metadata?.tags?.map { tagToMap(it) } ?: emptyList<Any>()),
+    "concepts" to (metadata?.concepts?.map { conceptToMap(it) } ?: emptyList<Any>()),
+)
+
+private fun tagToMap(tag: CDATag): Map<String, Any> = mapOf(
+    "sys" to mapOf(
+        "id" to (tag.id() ?: ""),
+        "type" to "Link",
+        "linkType" to "Tag",
+    ),
+)
+
+private fun conceptToMap(concept: CDATaxonomyConcept): Map<String, Any> = mapOf(
+    "sys" to mapOf(
+        "id" to (concept.id() ?: ""),
+        "type" to "Link",
+        "linkType" to "TaxonomyConcept",
+    ),
+)
+
+private fun convertValue(value: Any?, ancestors: Set<String>): Any? = when (value) {
+    is CDAEntry -> if (value.id() in ancestors) linkStub(value) else entryToMap(value, ancestors)
+    is CDAAsset -> assetToMap(value)
+    is CDARichNode -> richNodeToMap(value, ancestors)
+    is Date -> iso8601Formatter.format(value)
+    is List<*> -> value.map { convertValue(it, ancestors) }
+    is Map<*, *> -> value.entries.associate { (k, v) -> k.toString() to convertValue(v, ancestors) }
+    else -> value
+}
+
+// ISO-8601 for `Date`-typed field values. Matches the string a raw CDA response carries and the
+// format `contentful.swift`'s adapter emits via `ISO8601DateFormatter`. Without this, `Date`
+// values fall through to `else -> value` and `JSONObject` emits `Date.toString()` (a locale
+// string), which is not decodable JSON.
+private val iso8601Formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+    timeZone = TimeZone.getTimeZone("UTC")
+}
+
+private fun linkStub(entry: CDAEntry): Map<String, Any> = mapOf(
+    "sys" to mapOf(
+        "id" to (entry.id() ?: ""),
+        "type" to "Link",
+        "linkType" to "Entry",
+    ),
+)
+
+// Asset mapping mirrors the raw CDA response shape:
+// `{sys, fields: {title, description?, file: {fileName?, contentType?, details?, url}}}`. Matches
+// the shape iOS's adapter emits, so downstream code reading `asset.contentType`,
+// `asset.details.image.width`, etc. finds it. `details.image` is only present for image files.
+private fun assetToMap(asset: CDAAsset): Map<String, Any> {
+    val fileMap = asset.getField<Map<String, Any?>?>("file") ?: emptyMap()
+    val detailsRaw = fileMap["details"] as? Map<*, *>
+    val details = buildMap<String, Any> {
+        put("size", (detailsRaw?.get("size") as? Number) ?: 0)
+        val imageInfo = detailsRaw?.get("image") as? Map<*, *>
+        if (imageInfo != null) {
+            put(
+                "image",
+                mapOf(
+                    "width" to ((imageInfo["width"] as? Number) ?: 0),
+                    "height" to ((imageInfo["height"] as? Number) ?: 0),
+                ),
+            )
+        }
+    }
+    val file = mapOf(
+        "fileName" to ((fileMap["fileName"] as? String) ?: ""),
+        "contentType" to (asset.mimeType() ?: ""),
+        "details" to details,
+        "url" to (asset.url() ?: ""),
+    )
+    return mapOf(
+        "sys" to mapOf(
+            "id" to (asset.id() ?: ""),
+            "type" to "Asset",
+        ),
+        "fields" to buildMap {
+            put("title", asset.title() ?: "")
+            asset.getField<String?>("description")?.let { put("description", it) }
+            put("file", file)
+        },
+    )
+}
+
+// Rich Text node -> raw JSON shape. Embedded resource nodes (`CDARichEmbeddedBlock` /
+// `CDARichEmbeddedInline`) carry their linked resource under `data.target`, while a plain URI
+// hyperlink (`CDARichHyperLink` whose `data` is a `String`) carries it under `data.uri`. Both
+// extend `CDARichHyperLink` at the class level, so ordering matters: embedded-resource cases must
+// be matched first, before falling into the generic hyperlink case. Falling through would emit
+// `data.uri` for an embedded entry (silently dropping the target) or `data.target` for a URI
+// hyperlink (nonsensical shape).
+private fun richNodeToMap(node: CDARichNode, ancestors: Set<String>): Map<String, Any> = when (node) {
+    is CDARichText -> mapOf(
+        "nodeType" to (node.nodeType ?: "text"),
+        "value" to node.text.toString(),
+        "marks" to node.marks.map { mapOf("type" to (it.type ?: "")) },
+        "data" to emptyMap<String, Any>(),
+    )
+    is CDARichEmbeddedBlock -> mapOf(
+        "nodeType" to (node.nodeType ?: ""),
+        "data" to mapOf("target" to (convertValue(node.data, ancestors) ?: emptyMap<String, Any>())),
+        "content" to node.content.map { richNodeToMap(it, ancestors) },
+    )
+    is CDARichEmbeddedInline -> mapOf(
+        "nodeType" to (node.nodeType ?: ""),
+        "data" to mapOf("target" to (convertValue(node.data, ancestors) ?: emptyMap<String, Any>())),
+        "content" to node.content.map { richNodeToMap(it, ancestors) },
+    )
+    is CDARichHyperLink -> mapOf(
+        "nodeType" to (node.nodeType ?: ""),
+        "data" to mapOf("uri" to (node.data as? String ?: "")),
+        "content" to node.content.map { richNodeToMap(it, ancestors) },
+    )
+    is CDARichBlock -> mapOf(
+        "nodeType" to (node.nodeType ?: ""),
+        "data" to emptyMap<String, Any>(),
+        "content" to node.content.map { richNodeToMap(it, ancestors) },
+    )
+    else -> mapOf(
+        "nodeType" to (node.nodeType ?: ""),
+        "data" to emptyMap<String, Any>(),
+    )
+}
