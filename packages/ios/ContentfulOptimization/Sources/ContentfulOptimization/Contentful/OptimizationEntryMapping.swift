@@ -54,6 +54,13 @@ enum OptimizationEntryMapping {
             return jsonLink(link, ancestors: ancestors)
         case let richText as Contentful.RichTextDocument:
             return jsonNode(richText, ancestors: ancestors)
+        // A field of Contentful type "Object" shaped exactly like a file metadata blob
+        // (`{fileName, contentType, url, details: {size, image: {width, height}}}`) decodes to
+        // this type — the generic `[String: Any]` decoder (`Decodable.swift`) tries it before
+        // falling back to a plain dictionary. Reuses `jsonFileMetadata`, the same helper a
+        // resolved asset link's `file` field goes through.
+        case let file as Contentful.Asset.FileMetadata:
+            return jsonFileMetadata(file)
         case let array as [Any]:
             return array.compactMap { jsonValue($0, ancestors: ancestors) }
         case let dictionary as [String: Any]:
@@ -122,10 +129,12 @@ enum OptimizationEntryMapping {
         case let .entry(entry) where !ancestors.contains(entry.id):
             return entryMap(entry, ancestors: ancestors)
         case let .asset(asset):
-            return [
-                "sys": ["id": asset.id, "type": "Asset"],
-                "fields": ["title": asset.title ?? "", "file": ["url": asset.urlString ?? ""]],
-            ]
+            var fields: [String: Any] = ["title": asset.title ?? ""]
+            if let description = asset.description {
+                fields["description"] = description
+            }
+            fields["file"] = asset.file.map(jsonFileMetadata) ?? ["url": asset.urlString ?? ""]
+            return ["sys": ["id": asset.id, "type": "Asset"], "fields": fields]
         case let .unresolved(sys):
             return ["sys": ["id": sys.id, "type": sys.type, "linkType": sys.linkType]]
         // A back-edge, or a typed `EntryDecodable` this mapper never registers: emit the stub an
@@ -133,5 +142,23 @@ enum OptimizationEntryMapping {
         case .entry, .entryDecodable:
             return ["sys": ["id": link.id, "type": "Link", "linkType": "Entry"]]
         }
+    }
+
+    /// An asset's `file` metadata, reduced to the raw CDA response shape
+    /// (`{fileName, contentType, details: {size, image: {width, height}}, url}`) — the same shape
+    /// whether it arrived via a resolved asset link (`jsonLink`'s `.asset` case) or as a directly
+    /// decoded field value (`jsonValue`'s `Asset.FileMetadata` case, for a custom "Object" field
+    /// shaped like one). `details.image` is only present for image files.
+    private static func jsonFileMetadata(_ file: Contentful.Asset.FileMetadata) -> [String: Any] {
+        var details: [String: Any] = ["size": file.details?.size ?? 0]
+        if let imageInfo = file.details?.imageInfo {
+            details["image"] = ["width": imageInfo.width, "height": imageInfo.height]
+        }
+        return [
+            "fileName": file.fileName,
+            "contentType": file.contentType,
+            "details": details,
+            "url": file.url?.absoluteString ?? "",
+        ]
     }
 }

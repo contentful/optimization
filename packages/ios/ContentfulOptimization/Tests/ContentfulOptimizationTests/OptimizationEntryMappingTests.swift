@@ -269,6 +269,111 @@ final class OptimizationEntryMappingTests: XCTestCase {
         XCTAssertEqual(file?["url"] as? String, "https://images.ctfassets.net/a.jpg")
     }
 
+    /// `Asset` exposes `description`, `file.contentType`, and `file.details.{size,image}` beyond
+    /// `title`/`file.url` — the previous mapping dropped all of them. This proves the full asset
+    /// shape survives, not just the two fields the minimal mapping used to surface.
+    func testResolvedAssetLinkMapsDescriptionContentTypeSizeAndImageDimensions() throws {
+        let entry = try decodeEntry("""
+        {
+          "sys": {"id": "e1", "type": "Entry", "locale": "en-US",
+                   "contentType": {"sys": {"id": "test", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {"image": {"sys": {"id": "asset-1", "type": "Link", "linkType": "Asset"}}}
+        }
+        """)
+        let assetDecoder = JSONDecoder.withoutLocalizationContext()
+        assetDecoder.update(with: Self.localizationContext)
+        assetDecoder.userInfo[.init(rawValue: "linkResolverContext")!] = NSObject()
+        let asset = try assetDecoder.decode(Asset.self, from: Data("""
+        {
+          "sys": {"id": "asset-1", "type": "Asset", "locale": "en-US"},
+          "fields": {"title": "A photo", "description": "A scenic view",
+                       "file": {"fileName": "a.jpg", "contentType": "image/jpeg",
+                       "details": {"size": 1024, "image": {"width": 800, "height": 600}},
+                       "url": "//images.ctfassets.net/a.jpg"}}
+        }
+        """.utf8))
+
+        entry.resolveLinks(against: [:], and: ["asset-1": asset])
+
+        let mapped = OptimizationEntryMapping.toOptimizationEntry(entry)
+        let imageFields = ((mapped["fields"] as? [String: Any])?["image"] as? [String: Any])?["fields"] as? [String: Any]
+        XCTAssertEqual(imageFields?["description"] as? String, "A scenic view")
+        let file = imageFields?["file"] as? [String: Any]
+        XCTAssertEqual(file?["fileName"] as? String, "a.jpg")
+        XCTAssertEqual(file?["contentType"] as? String, "image/jpeg")
+        let details = file?["details"] as? [String: Any]
+        XCTAssertEqual(details?["size"] as? Int, 1024)
+        let image = details?["image"] as? [String: Any]
+        XCTAssertEqual(image?["width"] as? Double, 800)
+        XCTAssertEqual(image?["height"] as? Double, 600)
+    }
+
+    /// A non-image asset's `file.details` has no `image` key at all in a raw CDA response — this
+    /// proves the mapper omits the key rather than emitting `image: null` or a zeroed dimension.
+    func testResolvedAssetLinkWithoutDescriptionOrImageOmitsThoseKeys() throws {
+        let entry = try decodeEntry("""
+        {
+          "sys": {"id": "e1", "type": "Entry", "locale": "en-US",
+                   "contentType": {"sys": {"id": "test", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {"attachment": {"sys": {"id": "asset-1", "type": "Link", "linkType": "Asset"}}}
+        }
+        """)
+        let assetDecoder = JSONDecoder.withoutLocalizationContext()
+        assetDecoder.update(with: Self.localizationContext)
+        assetDecoder.userInfo[.init(rawValue: "linkResolverContext")!] = NSObject()
+        let asset = try assetDecoder.decode(Asset.self, from: Data("""
+        {
+          "sys": {"id": "asset-1", "type": "Asset", "locale": "en-US"},
+          "fields": {"title": "A PDF", "file": {"fileName": "doc.pdf", "contentType": "application/pdf",
+                       "details": {"size": 2048}, "url": "//assets.ctfassets.net/doc.pdf"}}
+        }
+        """.utf8))
+
+        entry.resolveLinks(against: [:], and: ["asset-1": asset])
+
+        let mapped = OptimizationEntryMapping.toOptimizationEntry(entry)
+        let attachmentFields = ((mapped["fields"] as? [String: Any])?["attachment"] as? [String: Any])?["fields"] as? [String: Any]
+        XCTAssertNil(attachmentFields?["description"], "an asset with no description must omit the key, not emit an empty string or null")
+        let details = (attachmentFields?["file"] as? [String: Any])?["details"] as? [String: Any]
+        XCTAssertNil(details?["image"], "a non-image asset's details must omit the image key entirely")
+        XCTAssertEqual(details?["size"] as? Int, 2048)
+    }
+
+    /// `Asset.file` is `nil` when a `select()` query excludes it, or the media is still
+    /// processing after upload — a raw CDA response's `fields` in that case carries no `file` key
+    /// at all. This proves the mapper falls back to `urlString` instead of crashing on
+    /// `asset.file`'s optional or emitting a `file` key shaped like `jsonFileMetadata`'s output
+    /// with missing pieces.
+    func testResolvedAssetLinkWithoutFileFallsBackToURLStringShape() throws {
+        let entry = try decodeEntry("""
+        {
+          "sys": {"id": "e1", "type": "Entry", "locale": "en-US",
+                   "contentType": {"sys": {"id": "test", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {"image": {"sys": {"id": "asset-1", "type": "Link", "linkType": "Asset"}}}
+        }
+        """)
+        let assetDecoder = JSONDecoder.withoutLocalizationContext()
+        assetDecoder.update(with: Self.localizationContext)
+        assetDecoder.userInfo[.init(rawValue: "linkResolverContext")!] = NSObject()
+        // No "file" key at all — the shape a `select(fields: ["title"])` query or a
+        // still-processing upload produces.
+        let asset = try assetDecoder.decode(Asset.self, from: Data("""
+        {
+          "sys": {"id": "asset-1", "type": "Asset", "locale": "en-US"},
+          "fields": {"title": "Still processing"}
+        }
+        """.utf8))
+
+        entry.resolveLinks(against: [:], and: ["asset-1": asset])
+
+        let mapped = OptimizationEntryMapping.toOptimizationEntry(entry)
+        let imageFields = ((mapped["fields"] as? [String: Any])?["image"] as? [String: Any])?["fields"] as? [String: Any]
+        XCTAssertEqual(imageFields?["title"] as? String, "Still processing")
+        let file = imageFields?["file"] as? [String: Any]
+        XCTAssertEqual(file?["url"] as? String, "", "with no file metadata, the mapper must still emit a file.url key (empty), matching the pre-existing fallback shape")
+        XCTAssertNil(file?["fileName"], "the fallback shape must not claim fileName/contentType/details it doesn't have")
+    }
+
     // MARK: - Location
 
     func testLocationFieldMapsToLatLon() throws {
@@ -702,11 +807,6 @@ final class OptimizationEntryMappingTests: XCTestCase {
     // MARK: - Unsupported values are dropped, not thrown
 
     func testUnsupportedFieldTypeIsDroppedNotThrown() throws {
-        // FileMetadata.Details (nested under an Asset's "file" field) is one of the few decoded
-        // types `OptimizationEntryMapping.jsonValue` has no case for, and is only reachable at
-        // all when an Asset is inlined directly as a field value rather than via a Link — an
-        // edge case worth documenting: it is silently dropped, matching the mapper's stated
-        // policy of losing an unmapped field rather than risking the whole entry.
         let entry = try decodeEntry("""
         {
           "sys": {"id": "e1", "type": "Entry", "locale": "en-US",
@@ -719,5 +819,35 @@ final class OptimizationEntryMappingTests: XCTestCase {
         let fields = mapped["fields"] as? [String: Any]
         XCTAssertEqual(fields?["title"] as? String, "kept")
         XCTAssertEqual(fields?["count"] as? Int, 3)
+    }
+
+    // MARK: - Asset.FileMetadata decoded directly as a field value
+
+    /// A field of Contentful type "Object" shaped exactly like a file metadata blob decodes to
+    /// `Asset.FileMetadata` directly — no `Asset`/`Link` wrapper at all (contentful.swift's
+    /// generic `[String: Any]` field decoder tries `Asset.FileMetadata` before falling back to a
+    /// plain dictionary). This is distinct from `testResolvedAssetLinkMapsDescriptionContentTypeSizeAndImageDimensions`,
+    /// which covers the same shape arriving through a resolved asset *link* instead.
+    func testFileMetadataShapedObjectFieldMapsSameAsAssetFile() throws {
+        let entry = try decodeEntry("""
+        {
+          "sys": {"id": "e1", "type": "Entry", "locale": "en-US",
+                   "contentType": {"sys": {"id": "test", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {"rawFile": {"fileName": "raw.png", "contentType": "image/png",
+                       "details": {"size": 512, "image": {"width": 100, "height": 50}},
+                       "url": "//images.ctfassets.net/raw.png"}}
+        }
+        """)
+
+        let mapped = OptimizationEntryMapping.toOptimizationEntry(entry)
+        let rawFile = (mapped["fields"] as? [String: Any])?["rawFile"] as? [String: Any]
+        XCTAssertEqual(rawFile?["fileName"] as? String, "raw.png")
+        XCTAssertEqual(rawFile?["contentType"] as? String, "image/png")
+        XCTAssertEqual(rawFile?["url"] as? String, "https://images.ctfassets.net/raw.png")
+        let details = rawFile?["details"] as? [String: Any]
+        XCTAssertEqual(details?["size"] as? Int, 512)
+        let image = details?["image"] as? [String: Any]
+        XCTAssertEqual(image?["width"] as? Double, 100)
+        XCTAssertEqual(image?["height"] as? Double, 50)
     }
 }
