@@ -278,6 +278,93 @@ final class OptimizationEntryMappingTests: XCTestCase {
         }
     }
 
+    /// `testMultiLevelNestedEntriesExpandAtEveryLevel` only proves 3 levels expand; a depth-limit
+    /// bug (e.g. an accidental cap, or an off-by-one in how `ancestors` is threaded through each
+    /// recursive call) could still exist beyond that. This chains 5 levels
+    /// (l1 -> l2 -> l3 -> l4 -> l5) through a single-entry `child` link at each hop — not a
+    /// diamond or a cycle — to prove recursion itself has no hidden depth ceiling.
+    func testFiveLevelLinearChainExpandsAtEveryLevel() throws {
+        func entryJSON(level: Int) -> String {
+            let childField = level < 5
+                ? """
+                , "child": {"sys": {"id": "l\(level + 1)", "type": "Link", "linkType": "Entry"}}
+                """
+                : ""
+            return """
+            {
+              "sys": {"id": "l\(level)", "type": "Entry", "locale": "en-US",
+                       "contentType": {"sys": {"id": "test", "type": "Link", "linkType": "ContentType"}}},
+              "fields": {"name": "level \(level)"\(childField)}
+            }
+            """
+        }
+        let levels = try (1 ... 5).map { try decodeEntry(entryJSON(level: $0)) }
+        let entriesMap = Dictionary(uniqueKeysWithValues: levels.map { ($0.id, $0) })
+        for entry in levels {
+            entry.resolveLinks(against: entriesMap, and: [:])
+        }
+
+        let mapped = OptimizationEntryMapping.toOptimizationEntry(levels[0])
+
+        var fields = mapped["fields"] as? [String: Any]
+        for level in 1 ... 5 {
+            XCTAssertEqual(fields?["name"] as? String, "level \(level)", "level \(level) must have expanded, not stopped short")
+            let child = fields?["child"] as? [String: Any]
+            if level < 5 {
+                XCTAssertNotNil(child?["fields"], "level \(level + 1) must have expanded inline, not been left as an unresolved-link stub")
+            }
+            fields = child?["fields"] as? [String: Any]
+        }
+    }
+
+    /// The existing cycle tests (`testSelfReferencingLinkDoesNotRecurseInfinitely`,
+    /// `testRichTextEmbeddedEntryCycleDoesNotRecurseInfinitely`) only cover a 2-node cycle
+    /// (parent <-> child). This proves the ancestor guard also terminates a longer cycle —
+    /// a -> b -> c -> a — where the back-edge closes several hops later rather than immediately,
+    /// so a bug that only checked the immediate parent (instead of the full `ancestors` path)
+    /// would not be caught by the 2-node case alone.
+    func testThreeNodeCycleDoesNotRecurseInfinitely() throws {
+        let a = try decodeEntry("""
+        {
+          "sys": {"id": "a", "type": "Entry", "locale": "en-US",
+                   "contentType": {"sys": {"id": "test", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {"next": {"sys": {"id": "b", "type": "Link", "linkType": "Entry"}}}
+        }
+        """)
+        let b = try decodeEntry("""
+        {
+          "sys": {"id": "b", "type": "Entry", "locale": "en-US",
+                   "contentType": {"sys": {"id": "test", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {"next": {"sys": {"id": "c", "type": "Link", "linkType": "Entry"}}}
+        }
+        """)
+        let c = try decodeEntry("""
+        {
+          "sys": {"id": "c", "type": "Entry", "locale": "en-US",
+                   "contentType": {"sys": {"id": "test", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {"next": {"sys": {"id": "a", "type": "Link", "linkType": "Entry"}}}
+        }
+        """)
+
+        let entriesMap = ["a": a, "b": b, "c": c]
+        for entry in [a, b, c] {
+            entry.resolveLinks(against: entriesMap, and: [:])
+        }
+
+        // Must terminate — the assertions below are only reachable if it does.
+        let mapped = OptimizationEntryMapping.toOptimizationEntry(a)
+
+        let bField = (mapped["fields"] as? [String: Any])?["next"] as? [String: Any]
+        XCTAssertEqual((bField?["sys"] as? [String: Any])?["id"] as? String, "b")
+        let cField = (bField?["fields"] as? [String: Any])?["next"] as? [String: Any]
+        XCTAssertEqual((cField?["sys"] as? [String: Any])?["id"] as? String, "c")
+        let backToA = (cField?["fields"] as? [String: Any])?["next"] as? [String: Any]
+        let backSys = backToA?["sys"] as? [String: Any]
+        XCTAssertEqual(backSys?["id"] as? String, "a")
+        XCTAssertEqual(backSys?["type"] as? String, "Link", "the back-edge closing a 3-node cycle must be an unresolved-link stub, not a full re-expansion")
+        XCTAssertNil(backToA?["fields"], "the cycle-closing back-edge must not have been expanded into a full entry map")
+    }
+
     // MARK: - Asset mapping
 
     func testResolvedAssetLinkMapsTitleAndURL() throws {
