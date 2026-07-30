@@ -2,26 +2,26 @@ import Contentful
 import Foundation
 
 /// Both directions of the `Contentful.Entry <-> JSON` boundary `OptimizedEntry` and
-/// `OptimizationClient.resolveOptimizedEntry` need, wrapping the package's existing `JSONValue`
-/// AST rather than a hand-built `[String: Any]` dictionary read back with `as?` casts:
+/// `OptimizationClient.resolveOptimizedEntry` need, backed by `CDA.EntryEnvelope` — a typed
+/// `{sys, fields, metadata}` contract — rather than a hand-built `[String: Any]` dictionary read
+/// back with `as?` casts:
 ///
 /// - **Encode**: `CTEntry(_: Contentful.Entry)` builds the `{sys, fields, metadata}` tree a
 ///   `Contentful.Entry` maps to, reconstructing the resolved-link JSON shape a raw CDA response
 ///   carried before the Delivery SDK decoded it. Every fixed-shape piece (`Sys`, a content-type
 ///   link, `Metadata`, a link stub, an asset envelope, a Structured Text node) is a small
-///   `Codable` struct (`CDA`, below the type) with its own `static func from(...)`
-///   factory, converted to `JSONValue` with a real `JSONEncoder` round trip — not a hand-assembled
-///   `.object([...])` dictionary literal. `toJSON()` serializes the whole tree the same way.
+///   `Codable` struct (`CDA`, below the type) with its own `static func from(...)` factory. A
+///   field's own *value* (as opposed to the envelope's fixed shape) still goes through
+///   `JSONValue` — `EntryEnvelope.fields` is `[String: JSONValue]`, since a field's runtime type
+///   is only known once `CDA.Field.from` inspects it, not upfront like `sys`/`metadata`.
+///   `toJSON()` serializes `envelope` directly via `JSONEncoder`.
 /// - **Decode**: `init(any:)` wraps the resolver's already-parsed `[String: Any]` bridge output;
-///   `init(json:)` decodes a raw JSON string via `JSONValue`'s `Codable` conformance and
-///   `JSONDecoder`. The reader surface below (`id`, `localeCode`, `createdAt`, `updatedAt`,
-///   `getField`) mirrors `Contentful.Entry`'s own readable surface, so resolved content reads
-///   like a fetched entry instead of a raw map dug through with `as?` casts.
-///
-/// `JSONValue` itself is the plain, Contentful-agnostic JSON tree (already used by
-/// `EventPayloads`/`PreviewState`/the bridge); this type is the higher-level, entry-specific layer
-/// on top — it delegates all actual parsing/serialization to `JSONValue`'s existing `Codable`
-/// conformance and `JSONEncoder`/`JSONDecoder`, rather than reimplementing either.
+///   `init(json:)` decodes a raw JSON string. Both land on the same `CDA.EntryEnvelope`, whose
+///   `init(from:)` decodes `sys`/`fields`/`metadata` independently (see the type for why) so a
+///   caller's partial or malformed input loses only the missing/malformed piece, not the whole
+///   entry. The reader surface below (`id`, `localeCode`, `createdAt`, `updatedAt`, `getField`)
+///   mirrors `Contentful.Entry`'s own readable surface, so resolved content reads like a fetched
+///   entry instead of a raw map dug through with `as?` casts.
 ///
 /// Ported from the reference implementation's simulation of this exact gap:
 /// `examples/apps/travel-guide-ios/Sources/OptimizationAdapter.swift`
@@ -50,28 +50,36 @@ import Foundation
 ///   reads `fields` from; a resolved tree is already a single-locale snapshot with no such state
 ///   to mutate.
 public struct CTEntry {
-    private let json: JSONValue
+    private let envelope: CDA.EntryEnvelope
 
-    private init(_ json: JSONValue) {
-        self.json = json
+    private init(_ envelope: CDA.EntryEnvelope) {
+        self.envelope = envelope
     }
 
     // MARK: - Parsing
 
+    /// Decodes a raw JSON string directly into `CDA.EntryEnvelope` — no separate `JSONValue`
+    /// parse step, since the envelope's own tolerant `init(from:)` (see the type) already handles
+    /// a partial or malformed tree without throwing.
     init(json: String) throws {
         guard let data = json.data(using: .utf8) else {
             throw OptimizationError.configError("JSON string is not valid UTF-8")
         }
-        self.json = try JSONDecoder().decode(JSONValue.self, from: data)
+        envelope = try JSONDecoder().decode(CDA.EntryEnvelope.self, from: data)
     }
 
     /// Wraps an already-decoded `Any` value (e.g. `JSONSerialization`'s output, or a hand-built
-    /// `[String: Any]` at a call site that hasn't adopted this type). Throws rather than silently
-    /// treating an unrecognized value as absent — a caller that got something wrong here should
-    /// see a parse error, not a value that quietly reads back as missing everywhere `getField`/the
-    /// subscript check it.
+    /// `[String: Any]` at a call site that hasn't adopted this type). `parseValue` validates every
+    /// leaf is JSON-safe first and throws a Swift error on one that isn't (e.g. `Date`) — calling
+    /// `JSONSerialization.data(withJSONObject:)` directly on an unvalidated `Any` is not safe here:
+    /// on an unsupported type it raises an uncaught `NSException`, not a catchable `Error`. Once
+    /// validated, the value is JSON-encoded and decoded into `CDA.EntryEnvelope`, whose own
+    /// tolerant `init(from:)` (see the type) degrades a merely wrong-shaped-for-an-entry tree to
+    /// `nil` fields rather than throwing.
     init(any: Any) throws {
-        json = try Self.parseValue(from: any)
+        let validated = try Self.parseValue(from: any)
+        let data = try JSONEncoder().encode(validated)
+        envelope = try JSONDecoder().decode(CDA.EntryEnvelope.self, from: data)
     }
 
     private static func parseValue(from any: Any) throws -> JSONValue {
@@ -97,44 +105,35 @@ public struct CTEntry {
 
     // MARK: - Serializing
 
-    /// Serializes via `JSONValue`'s `Codable` conformance and `JSONEncoder` — a real encoder, not
-    /// `JSONSerialization.data(withJSONObject:)` over a `toFoundation()`-produced `Any`.
     func toJSON() throws -> String {
-        let data = try JSONEncoder().encode(json)
+        let data = try JSONEncoder().encode(envelope)
         guard let string = String(data: data, encoding: .utf8) else {
             throw OptimizationError.configError("Failed to encode CTEntry as UTF-8 JSON")
         }
         return string
     }
 
-    /// The Foundation type (`String`, `Int`/`Double`, `Bool`, `NSNull`, `[Any]`, `[String: Any]`)
-    /// call sites still on `[String: Any]` (`OptimizedEntry`'s dict-based initializer,
-    /// `resolveOptimizedEntry(baseline: [String: Any])`) expect.
+    /// The Foundation type (`[String: Any]`) call sites still on `[String: Any]`
+    /// (`OptimizedEntry`'s dict-based initializer, `resolveOptimizedEntry(baseline: [String: Any])`)
+    /// expect. Round-trips through `JSONEncoder`/`JSONSerialization` rather than hand-assembling
+    /// the dict from `envelope`'s typed properties.
     func toFoundation() -> Any {
-        json.toFoundation()
+        guard let data = try? JSONEncoder().encode(envelope) else { return [String: Any]() }
+        return (try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])) ?? [String: Any]()
     }
 
     // MARK: - Reading a resolved entry
 
-    private subscript(key: String) -> CTEntry? {
-        guard case let .object(dict) = json, let value = dict[key] else { return nil }
-        return CTEntry(value)
-    }
-
-    private var stringValue: String? {
-        json.stringValue
-    }
-
     /// The entry `sys.id` — stable across a variant swap, so it's safe for navigation.
     public var id: String? {
-        self["sys"]?["id"]?.stringValue
+        envelope.sys?.id
     }
 
     /// Mirrors `Entry.localeCode` (via `FlatResource`) — the code of the locale this resolved
     /// variant's `fields` were read for. Absent on a raw CDA response fetched via `/sync` or the
     /// wildcard `locale=*` query, same as on `Entry` itself.
     public var localeCode: String? {
-        self["sys"]?["locale"]?.stringValue
+        envelope.sys?.locale
     }
 
     /// Mirrors `Entry.createdAt`. `nil` if the resolved tree never carried a `sys.createdAt` — a
@@ -142,12 +141,12 @@ public struct CTEntry {
     /// have no creation timestamp to report, same as `Entry.createdAt` returning `nil` for a
     /// resource `select()`-queried without `sys`.
     public var createdAt: Date? {
-        self["sys"]?["createdAt"]?.stringValue.flatMap { ISO8601DateFormatter().date(from: $0) }
+        envelope.sys?.createdAt.flatMap { ISO8601DateFormatter().date(from: $0) }
     }
 
     /// Mirrors `Entry.updatedAt`. See `createdAt` for why this can be `nil`.
     public var updatedAt: Date? {
-        self["sys"]?["updatedAt"]?.stringValue.flatMap { ISO8601DateFormatter().date(from: $0) }
+        envelope.sys?.updatedAt.flatMap { ISO8601DateFormatter().date(from: $0) }
     }
 
     /// A field's resolved value, or nil if absent.
@@ -156,7 +155,7 @@ public struct CTEntry {
     /// always succeeds, so a missing field comes back as a non-nil `Optional(nil)` rather than
     /// `nil`. Check presence via `toFoundation()` instead, or infer a concrete `T`.
     public func getField<T>(_ name: String) -> T? {
-        self["fields"]?[name]?.toFoundation() as? T
+        envelope.fields[name]?.toFoundation() as? T
     }
 
     /// Mirrors `Entry`'s `String` convenience subscript, which reads directly from `fields`.
@@ -166,19 +165,10 @@ public struct CTEntry {
 
     // MARK: - Encoding a `Contentful.Entry`
 
-    /// Encodes a `contentful.swift` `Entry` into the `{sys, fields, metadata}` tree
+    /// Encodes a `contentful.swift` `Entry` into the `{sys, fields, metadata}` envelope
     /// `OptimizedEntry`/`resolveOptimizedEntry` expect.
-    ///
-    /// `JSONValue.encoded` can fail only on a non-finite `Double` (`NaN`/`±infinity`) reaching a
-    /// `CDA` struct's `Double` field. `sys`'s own fields are never `Double`, so this call can't
-    /// fail that way — `try!` here is a real invariant, not a swallowed error. Every *nested*
-    /// value that could carry a non-finite `Double` (a field via `CDA.Field.from`, a link via
-    /// `CDA.LinkValue.from`) is already funneled through one of those two, both of which drop
-    /// the offending value with `try?` rather than let a failure propagate up into this call —
-    /// losing an unused field beats losing personalization on the entry that holds it, the
-    /// policy `CDA.Field.from` documents for its own `default` case.
     public init(_ entry: Contentful.Entry) {
-        json = try! JSONValue.encoded(CDA.EntryEnvelope.from(entry, ancestors: []))
+        envelope = CDA.EntryEnvelope.from(entry, ancestors: [])
     }
 }
 
@@ -308,10 +298,18 @@ private enum CDA {
         }
     }
 
+    /// `id`/`locale`/`createdAt`/`updatedAt` are all plain optional properties decoded
+    /// independently via `try?` (see `init(from:)`) rather than a synthesized `Codable`
+    /// conformance: a synthesized decoder throws — failing the *entire* `Sys`, and by extension
+    /// the entry that holds it — the moment any one key is absent or the wrong type (e.g.
+    /// `sys.id` being a number instead of a string). A caller-supplied baseline is not guaranteed
+    /// well-formed (see `CTEntry.init(any:)`), so a per-field `try?` degrades exactly the
+    /// offending key to `nil` and leaves the rest of `Sys` — and every other entry field —
+    /// intact, matching this type's "lose a field, not the entry" policy.
     struct Sys: Codable {
-        let id: String
-        let type: String
-        let contentType: ContentTypeLink
+        let id: String?
+        let type: String?
+        let contentType: ContentTypeLink?
         let createdAt: String?
         let updatedAt: String?
         let revision: Int?
@@ -319,6 +317,31 @@ private enum CDA {
 
         struct ContentTypeLink: Codable {
             let sys: LinkStub.Sys
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case id, type, contentType, createdAt, updatedAt, revision, locale
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try? container.decode(String.self, forKey: .id)
+            type = try? container.decode(String.self, forKey: .type)
+            contentType = try? container.decode(ContentTypeLink.self, forKey: .contentType)
+            createdAt = try? container.decode(String.self, forKey: .createdAt)
+            updatedAt = try? container.decode(String.self, forKey: .updatedAt)
+            revision = try? container.decode(Int.self, forKey: .revision)
+            locale = try? container.decode(String.self, forKey: .locale)
+        }
+
+        init(id: String?, type: String?, contentType: ContentTypeLink?, createdAt: String?, updatedAt: String?, revision: Int?, locale: String?) {
+            self.id = id
+            self.type = type
+            self.contentType = contentType
+            self.createdAt = createdAt
+            self.updatedAt = updatedAt
+            self.revision = revision
+            self.locale = locale
         }
 
         /// All of `createdAt`/`updatedAt`/`revision`/`locale` are independently optional on
@@ -338,10 +361,31 @@ private enum CDA {
         }
     }
 
+    /// `sys`/`fields`/`metadata` decode independently via `try?`, for the same reason `Sys`'s own
+    /// properties do: a caller-supplied baseline can be missing any of them (see
+    /// `CTEntry.init(any:)`/`init(json:)`), and losing the whole entry to one absent or
+    /// wrong-shaped top-level key would be worse than reading that piece back as `nil`/empty.
     struct EntryEnvelope: Codable {
-        let sys: Sys
+        let sys: Sys?
         let fields: [String: JSONValue]
-        let metadata: Metadata
+        let metadata: Metadata?
+
+        private enum CodingKeys: String, CodingKey {
+            case sys, fields, metadata
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            sys = try? container.decode(Sys.self, forKey: .sys)
+            fields = (try? container.decode([String: JSONValue].self, forKey: .fields)) ?? [:]
+            metadata = try? container.decode(Metadata.self, forKey: .metadata)
+        }
+
+        init(sys: Sys?, fields: [String: JSONValue], metadata: Metadata?) {
+            self.sys = sys
+            self.fields = fields
+            self.metadata = metadata
+        }
 
         /// `ancestors` is the set of entry ids on the path from the root to here. The Delivery
         /// SDK resolves links into shared object references, so a variant that links back to
