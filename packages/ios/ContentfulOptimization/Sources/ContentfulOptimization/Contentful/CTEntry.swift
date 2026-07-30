@@ -69,48 +69,29 @@ public struct CTEntry {
     }
 
     /// Wraps an already-decoded `Any` value (e.g. `JSONSerialization`'s output, or a hand-built
-    /// `[String: Any]` at a call site that hasn't adopted this type). `parseValue` validates every
-    /// leaf is JSON-safe first and throws a Swift error on one that isn't (e.g. `Date`) — calling
-    /// `JSONSerialization.data(withJSONObject:)` directly on an unvalidated `Any` is not safe here:
-    /// on an unsupported type it raises an uncaught `NSException`, not a catchable `Error`. Once
-    /// validated, the value is JSON-encoded and decoded into `CDA.EntryEnvelope`, whose own
-    /// tolerant `init(from:)` (see the type) degrades a merely wrong-shaped-for-an-entry tree to
-    /// `nil` fields rather than throwing.
+    /// `[String: Any]` at a call site that hasn't adopted this type). Guarded by
+    /// `isValidJSONObject` first — calling `JSONSerialization.data(withJSONObject:)` on a value
+    /// it can't serialize (e.g. `Date`) raises an uncaught `NSException`, not a catchable `Error`,
+    /// so that check has to happen before the call, not around it. Once validated, the value is
+    /// JSON-encoded and decoded into `CDA.EntryEnvelope`, whose own tolerant `init(from:)` (see
+    /// the type) degrades a merely wrong-shaped-for-an-entry tree to `nil` fields rather than
+    /// throwing.
     init(any: Any) throws {
-        let validated = try Self.parseValue(from: any)
-        let data = try JSONEncoder().encode(validated)
-        envelope = try JSONDecoder().decode(CDA.EntryEnvelope.self, from: data)
-    }
-
-    private static func parseValue(from any: Any) throws -> JSONValue {
-        switch any {
-        case is NSNull:
-            return .null
-        case let bool as Bool:
-            return .bool(bool)
-        case let number as Int:
-            return .number(Double(number))
-        case let number as Double:
-            return .number(number)
-        case let string as String:
-            return .string(string)
-        case let array as [Any]:
-            return .array(try array.map { try parseValue(from: $0) })
-        case let object as [String: Any]:
-            return .object(try object.mapValues { try parseValue(from: $0) })
-        default:
+        guard JSONSerialization.isValidJSONObject(any) else {
             throw OptimizationError.configError("Unsupported value of type \(Swift.type(of: any)) in CTEntry(any:)")
         }
+        let data = try JSONSerialization.data(withJSONObject: any)
+        envelope = try JSONDecoder().decode(CDA.EntryEnvelope.self, from: data)
     }
 
     // MARK: - Serializing
 
+    /// `JSONEncoder`'s output is always valid UTF-8 by spec, so `String(decoding:as:)` — which
+    /// never fails — is correct here; `String(data:encoding:.utf8)`'s optional would just be
+    /// unreachable dead code on this input.
     func toJSON() throws -> String {
         let data = try JSONEncoder().encode(envelope)
-        guard let string = String(data: data, encoding: .utf8) else {
-            throw OptimizationError.configError("Failed to encode CTEntry as UTF-8 JSON")
-        }
-        return string
+        return String(decoding: data, as: UTF8.self)
     }
 
     /// The Foundation type (`[String: Any]`) call sites still on `[String: Any]`
