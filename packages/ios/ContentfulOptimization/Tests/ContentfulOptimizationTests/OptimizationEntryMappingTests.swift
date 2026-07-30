@@ -46,6 +46,47 @@ final class OptimizationEntryMappingTests: XCTestCase {
         XCTAssertEqual(fields?["title"] as? String, "Hello")
     }
 
+    /// `ResolvedEntry.createdAt`/`updatedAt`/`localeCode` (see `ResolvedEntryTests`) can only
+    /// mirror real values if `entryMap`'s `sys` block actually carries them — this proves that
+    /// side of the round trip, not just that `ResolvedEntry` parses whatever it's given.
+    func testMapsSysTimestampsRevisionAndLocale() throws {
+        let entry = try decodeEntry("""
+        {
+          "sys": {"id": "e1", "type": "Entry", "locale": "en-US", "revision": 3,
+                   "createdAt": "2024-01-01T00:00:00Z", "updatedAt": "2024-06-15T12:30:00Z",
+                   "contentType": {"sys": {"id": "landingPage", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {}
+        }
+        """)
+
+        let mapped = OptimizationEntryMapping.toOptimizationEntry(entry)
+        let sys = mapped["sys"] as? [String: Any]
+        XCTAssertEqual(sys?["locale"] as? String, "en-US")
+        XCTAssertEqual(sys?["revision"] as? Int, 3)
+        XCTAssertEqual(sys?["createdAt"] as? String, "2024-01-01T00:00:00Z")
+        XCTAssertEqual(sys?["updatedAt"] as? String, "2024-06-15T12:30:00Z")
+    }
+
+    /// A `/sync` response, or one fetched with the wildcard `locale=*` query, carries no
+    /// `sys.locale` — this proves the mapper omits the key entirely rather than emitting
+    /// `locale: null`, matching `Entry.sys.locale`'s own optionality.
+    func testOmitsSysLocaleWhenAbsentFromSource() throws {
+        let entry = try decodeEntry("""
+        {
+          "sys": {"id": "e1", "type": "Entry",
+                   "contentType": {"sys": {"id": "landingPage", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {}
+        }
+        """)
+
+        let mapped = OptimizationEntryMapping.toOptimizationEntry(entry)
+        let sys = mapped["sys"] as? [String: Any]
+        XCTAssertNil(sys?["locale"], "sys.locale must be omitted, not emitted as null, when the source entry has none")
+        XCTAssertNil(sys?["createdAt"])
+        XCTAssertNil(sys?["updatedAt"])
+        XCTAssertNil(sys?["revision"])
+    }
+
     // MARK: - The silent metadata requirement
 
     /// The resolver's entry guard (`isResolvedContentfulEntry` in

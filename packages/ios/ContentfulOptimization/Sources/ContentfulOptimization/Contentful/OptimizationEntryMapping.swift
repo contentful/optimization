@@ -22,14 +22,32 @@ enum OptimizationEntryMapping {
     private static func entryMap(_ entry: Contentful.Entry, ancestors: Set<String>) -> [String: Any] {
         let childAncestors = ancestors.union([entry.id])
 
-        return [
-            "sys": [
-                "id": entry.id,
-                "type": "Entry",
-                "contentType": [
-                    "sys": ["id": entry.sys.contentTypeId ?? "", "type": "Link", "linkType": "ContentType"],
-                ],
+        var sys: [String: Any] = [
+            "id": entry.id,
+            "type": "Entry",
+            "contentType": [
+                "sys": ["id": entry.sys.contentTypeId ?? "", "type": "Link", "linkType": "ContentType"],
             ],
+        ]
+        // Carried through so `ResolvedEntry` can mirror `Entry.createdAt`/`updatedAt`/`localeCode`
+        // from the resolved output, not just `id`. All four are independently optional on `Sys`
+        // itself (e.g. `locale` is absent on a `/sync` or wildcard-locale response), so each is
+        // added only when present, matching the raw CDA response shape rather than emitting null.
+        if let createdAt = entry.sys.createdAt {
+            sys["createdAt"] = ISO8601DateFormatter().string(from: createdAt)
+        }
+        if let updatedAt = entry.sys.updatedAt {
+            sys["updatedAt"] = ISO8601DateFormatter().string(from: updatedAt)
+        }
+        if let revision = entry.sys.revision {
+            sys["revision"] = revision
+        }
+        if let locale = entry.sys.locale {
+            sys["locale"] = locale
+        }
+
+        return [
+            "sys": sys,
             "fields": entry.fields.compactMapValues { jsonValue($0, ancestors: childAncestors) },
             // Required, not cosmetic: the resolver's entry guard rejects any entry without a
             // `metadata` object, and a rejected baseline is never given its variant. A raw CDA

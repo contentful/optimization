@@ -35,6 +35,7 @@ apps mostly use the view surface, UIKit apps mostly use the imperative `Optimiza
 | Config                                 | `OptimizationConfig`, `OptimizationApiConfig`, `StorageDefaults`, `OptimizationLogLevel`, `QueuePolicy`, `QueueFlushPolicy`, `QueueEvent`/`QueueEventType`, `BlockedEvent`    | extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationConfig.swift#OptimizationConfig; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationConfig.swift#StorageDefaults                                        |
 | Event payloads                         | `IdentifyPayload`, `PageEventPayload`, `ScreenEventPayload`, `TrackEventPayload`, `TrackViewPayload`, `TrackClickPayload`                                                     | extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/EventPayloads.swift#ScreenEventPayload; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/TrackViewPayload.swift#TrackViewPayload                                              |
 | State / result types                   | `OptimizationState`, `ResolvedOptimizedEntry`, `PreviewState` (+ DTOs), `JSONValue`, `OptimizationError`                                                                      | extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationState.swift#OptimizationState; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationError.swift#OptimizationError                                         |
+| `contentful.swift` adapter             | `OptimizationEntryMapping.toOptimizationEntry(_:)` (`Contentful.Entry` → `[String: Any]`); `ResolvedEntry`                                                                    | extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Contentful/OptimizationEntryMapping.swift#OptimizationEntryMapping; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Contentful/ResolvedEntry.swift#ResolvedEntry                       |
 | Tracking (imperative)                  | `ViewTrackingController`, `TrackingMetadata`                                                                                                                                  | extern:ViewTrackingController is a @MainActor imperative view-timing engine for UIKit — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Tracking/ViewTrackingController.swift#ViewTrackingController                                                                    |
 | Preview panel                          | `PreviewPanelOverlay` (SwiftUI), `PreviewPanelViewController` (UIKit), `PreviewPanelConfig`, `PreviewContentfulClient` / `ContentfulHTTPPreviewClient`, `PreviewPanelContent` | extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Preview/PreviewPanelViewController.swift#PreviewPanelViewController; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Preview/PreviewContentfulClient.swift#ContentfulHTTPPreviewClient |
 
@@ -152,6 +153,23 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   expanded inline `nt_mergetag` entry to the bridge, which reads the selector against the current
   profile and returns the resolved string or `nil` (fallback). The app owns extracting the embedded
   entry from Rich Text before calling it. source: extern:getMergeTagValue passes the mergetag entry to the bridge — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift#OptimizationClient; core-sdk#resolvers/MergeTagValueResolver.ts#resolve; kb:shared/concepts.md
+- `contentful.swift` integration: `OptimizationEntryMapping.toOptimizationEntry(_:)` converts a
+  `Contentful.Entry` into the `{sys, fields, metadata}` map the resolver expects, recursively
+  expanding resolved links/assets/rich text and always emitting `metadata: {tags, concepts}` (empty
+  when absent) so the resolver's entry guard never silently treats a real optimized entry as
+  non-optimized. `OptimizedEntry(entry: Contentful.Entry, ...)` is a second SwiftUI initializer that
+  runs the map once at construction and hands the resolved variant back through `ResolvedEntry`
+  instead of a raw dict; both initializers produce the same `OptimizedEntry<Content>` type.
+  source: extern:OptimizationEntryMapping.toOptimizationEntry always emits metadata, recurses links/rich text — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Contentful/OptimizationEntryMapping.swift#OptimizationEntryMapping; extern:OptimizedEntry(entry: Contentful.Entry) initializer wraps the mapping and ResolvedEntry — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Views/OptimizedEntry.swift#OptimizedEntry
+- `ResolvedEntry` mirrors `Contentful.Entry`'s own readable surface — `id`, `localeCode`,
+  `createdAt`, `updatedAt`, `getField<T>(_:)`, and the `String`/`Int` convenience subscripts — so a
+  resolved variant reads exactly like a fetched `Entry` instead of a raw map. It does **not** mirror
+  `Entry.type`/`currentlySelectedLocale`/`metadata`/`setLocale(withCode:)`: `type: ContentType?` and
+  `currentlySelectedLocale: Locale` are full fetched resources the resolved map never carries and
+  `contentful.swift` gives no public initializer to fabricate, and `Metadata` has no public
+  initializer either, so `metadata.tags` on the resolved map can only be read via `getField`, never
+  wrapped back into a real `Metadata` value.
+  source: extern:ResolvedEntry mirrors Entry.id/localeCode/createdAt/updatedAt/getField/subscripts, omits type/currentlySelectedLocale/metadata/setLocale by design — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Contentful/ResolvedEntry.swift#ResolvedEntry
 
 ## Identifier ownership
 
