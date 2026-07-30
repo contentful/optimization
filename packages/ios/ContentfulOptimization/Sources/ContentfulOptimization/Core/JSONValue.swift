@@ -50,6 +50,13 @@ extension JSONValue: Codable {
         case .object(let v): try container.encode(v)
         }
     }
+
+    /// Encodes any `Encodable` value into `JSONValue` via a real `JSONEncoder` -> `JSONDecoder`
+    /// round trip, rather than a hand-assembled dictionary literal.
+    public static func encoded(_ value: some Encodable) throws -> JSONValue {
+        let data = try JSONEncoder().encode(value)
+        return try JSONDecoder().decode(JSONValue.self, from: data)
+    }
 }
 
 // MARK: - Accessors

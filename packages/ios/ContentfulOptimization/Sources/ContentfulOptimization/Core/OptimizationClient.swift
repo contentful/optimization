@@ -357,9 +357,14 @@ public final class OptimizationClient: ObservableObject {
         baseline: [String: Any],
         selectedOptimizations: [[String: Any]]? = nil
     ) -> ResolvedOptimizedEntry {
+        // `baseline` is caller-supplied and not guaranteed JSON-safe, so `CTEntry(any:)` can
+        // itself throw on a value it doesn't recognize; every fallback path below returns
+        // `baseline` unchanged and falls back further, to an empty entry, if even that fails.
+        let baselineEntry = (try? CTEntry(any: baseline)) ?? (try! CTEntry(any: [String: Any]()))
+
         guard isInitialized else {
             return ResolvedOptimizedEntry(
-                entry: baseline,
+                entry: baselineEntry,
                 selectedOptimization: nil,
                 optimizationContextId: nil
             )
@@ -382,7 +387,7 @@ public final class OptimizationClient: ObservableObject {
                 let entryId = (baseline["sys"] as? [String: Any])?["id"] as? String ?? "unknown"
                 log.warning("[resolveOptimizedEntry] Failed to parse bridge result for entry \(entryId)")
                 return ResolvedOptimizedEntry(
-                    entry: baseline,
+                    entry: baselineEntry,
                     selectedOptimization: nil,
                     optimizationContextId: nil
                 )
@@ -392,7 +397,7 @@ public final class OptimizationClient: ObservableObject {
             let selectedOptimization = dict["selectedOptimization"] as? [String: Any]
             let optimizationContextId = dict["optimizationContextId"] as? String
             return ResolvedOptimizedEntry(
-                entry: entry,
+                entry: (try? CTEntry(any: entry)) ?? (baselineEntry),
                 selectedOptimization: selectedOptimization,
                 optimizationContextId: optimizationContextId
             )
@@ -400,7 +405,7 @@ public final class OptimizationClient: ObservableObject {
             let entryId = (baseline["sys"] as? [String: Any])?["id"] as? String ?? "unknown"
             log.error("[resolveOptimizedEntry] Serialization error for entry \(entryId): \(error.localizedDescription)")
             return ResolvedOptimizedEntry(
-                entry: baseline,
+                entry: baselineEntry,
                 selectedOptimization: nil,
                 optimizationContextId: nil
             )
@@ -408,23 +413,19 @@ public final class OptimizationClient: ObservableObject {
     }
 
     /// `Contentful.Entry` overload of `resolveOptimizedEntry(baseline:selectedOptimizations:)` —
-    /// maps `baseline` through `OptimizationEntryMapping` once, so callers stop hand-writing the
-    /// `Entry -> {sys, fields, metadata}` mapping outside of `OptimizedEntry`'s view initializer.
-    /// Delegates to the dict-based overload above, so it inherits the same fail-soft behavior: not
-    /// initialized, a serialization error, or an unparseable bridge result all fall back to the
-    /// mapped baseline with `selectedOptimization`/`optimizationContextId` nil, logging rather than
-    /// throwing.
+    /// encodes `baseline` through `CTEntry(_: Contentful.Entry)` once, so callers stop
+    /// hand-writing the `Entry -> {sys, fields, metadata}` mapping outside of `OptimizedEntry`'s
+    /// view initializer. Delegates to the dict-based overload above (via `toFoundation()`), so it
+    /// inherits the same fail-soft behavior: not initialized, a serialization error, or an
+    /// unparseable bridge result all fall back to the mapped baseline with
+    /// `selectedOptimization`/`optimizationContextId` nil, logging rather than throwing.
     public func resolveOptimizedEntry(
         baseline: Contentful.Entry,
         selectedOptimizations: [[String: Any]]? = nil
-    ) -> ResolvedContentfulOptimizedEntry {
-        let mappedBaseline = OptimizationEntryMapping.toOptimizationEntry(baseline)
-        let result = resolveOptimizedEntry(baseline: mappedBaseline, selectedOptimizations: selectedOptimizations)
-        return ResolvedContentfulOptimizedEntry(
-            entry: ResolvedEntry(result.entry),
-            selectedOptimization: result.selectedOptimization,
-            optimizationContextId: result.optimizationContextId
-        )
+    ) -> ResolvedOptimizedEntry {
+        let mappedBaseline = CTEntry(baseline)
+        let dictBaseline = mappedBaseline.toFoundation() as? [String: Any] ?? [:]
+        return resolveOptimizedEntry(baseline: dictBaseline, selectedOptimizations: selectedOptimizations)
     }
 
     /// Resolve a merge-tag entry's display value against the current profile.

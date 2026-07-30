@@ -59,10 +59,10 @@ public struct OptimizedEntry<Content: View>: View {
         self.content = content
     }
 
-    /// Accepts a `contentful.swift` `Entry` directly, mapping it to the `{sys, fields, metadata}`
-    /// shape the resolver expects (see `OptimizationEntryMapping`) and handing the resolved
-    /// variant back through `ResolvedEntry` — `getField`, not `as?` casts on a raw map. The
-    /// wrapping happens once, here, at construction — `content` itself stays dict-shaped
+    /// Accepts a `contentful.swift` `Entry` directly, encoding it to the `{sys, fields, metadata}`
+    /// shape the resolver expects (see `CTEntry(_: Contentful.Entry)`) and handing the resolved
+    /// variant back through `CTEntry` — `getField`, not `as?` casts on a raw map.
+    /// The encoding happens once, here, at construction — `content` itself stays dict-shaped
     /// internally so `body` doesn't need to know which initializer built this instance.
     public init(
         entry: Contentful.Entry,
@@ -74,9 +74,9 @@ public struct OptimizedEntry<Content: View>: View {
         trackTaps: Bool? = nil,
         accessibilityIdentifier: String? = nil,
         onTap: (([String: Any]) -> Void)? = nil,
-        @ViewBuilder content: @escaping (ResolvedEntry) -> Content
+        @ViewBuilder content: @escaping (CTEntry) -> Content
     ) {
-        self.entry = OptimizationEntryMapping.toOptimizationEntry(entry)
+        self.entry = CTEntry(entry).toFoundation() as? [String: Any] ?? [:]
         self.dwellTimeMs = dwellTimeMs
         self.minVisibleRatio = minVisibleRatio
         self.viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs
@@ -85,7 +85,7 @@ public struct OptimizedEntry<Content: View>: View {
         self.trackTaps = trackTaps
         self.accessibilityIdentifier = accessibilityIdentifier
         self.onTap = onTap
-        self.content = { raw in content(ResolvedEntry(raw)) }
+        self.content = { raw in content((try? CTEntry(any: raw)) ?? CTEntry(entry)) }
     }
 
     private var isOptimized: Bool {
@@ -125,14 +125,14 @@ public struct OptimizedEntry<Content: View>: View {
                 )
             } else {
                 return ResolvedOptimizedEntry(
-                    entry: entry,
+                    entry: (try? CTEntry(any: entry)) ?? (try! CTEntry(any: [String: Any]())),
                     selectedOptimization: nil,
                     optimizationContextId: nil
                 )
             }
         }()
 
-        content(result.entry)
+        content(result.entry.toFoundation() as? [String: Any] ?? [:])
             .modifier(ViewTrackingModifier(
                 entry: entry,
                 optimizationContextId: result.optimizationContextId,

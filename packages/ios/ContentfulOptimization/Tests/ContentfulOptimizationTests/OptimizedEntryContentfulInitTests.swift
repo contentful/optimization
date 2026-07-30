@@ -5,11 +5,12 @@ import SwiftUI
 import XCTest
 
 /// Tests `OptimizedEntry` itself at the `Contentful.Entry` initializer boundary — not the
-/// standalone `OptimizationEntryMapping` function, but that the initializer actually wires the
-/// mapped dict into the stored `entry` property and wraps the caller's `(ResolvedEntry) ->
-/// Content` closure into the stored `([String: Any]) -> Content` shape `body` calls. Both
-/// `entry` and `content` are internal (no access modifier), so `@testable import` reaches them
-/// directly — no rendering harness or `OptimizationClient` environment needed for this layer.
+/// standalone `CTEntry(_: Contentful.Entry)` function, but that the initializer actually wires
+/// the mapped dict into the stored `entry` property and wraps the caller's
+/// `(CTEntry) -> Content` closure into the stored `([String: Any]) -> Content`
+/// shape `body` calls. Both `entry` and `content` are internal (no access modifier), so
+/// `@testable import` reaches them directly — no rendering harness or `OptimizationClient`
+/// environment needed for this layer.
 final class OptimizedEntryContentfulInitTests: XCTestCase {
     private static let localizationContext: LocalizationContext = {
         let localeJSON = Data("""
@@ -53,11 +54,11 @@ final class OptimizedEntryContentfulInitTests: XCTestCase {
     // MARK: - The initializer stores the mapped dict, not the raw Entry
 
     func testContentfulInitializerStoresMappedDictAsEntry() throws {
-        let sut = OptimizedEntry(entry: entry) { (_: ResolvedEntry) in EmptyView() }
+        let sut = OptimizedEntry(entry: entry) { (_: CTEntry) in EmptyView() }
 
         XCTAssertEqual(
             NSDictionary(dictionary: sut.entry),
-            NSDictionary(dictionary: OptimizationEntryMapping.toOptimizationEntry(entry))
+            NSDictionary(dictionary: CTEntry(entry).toFoundation() as? [String: Any] ?? [:])
         )
         XCTAssertEqual((sut.entry["sys"] as? [String: Any])?["id"] as? String, "e1")
         XCTAssertNotNil(sut.entry["metadata"], "the always-present metadata guarantee must hold through the initializer, not just the mapper")
@@ -66,9 +67,9 @@ final class OptimizedEntryContentfulInitTests: XCTestCase {
     // MARK: - The stored `content` closure forwards its actual argument, not the captured baseline entry
 
     func testStoredContentClosureForwardsResolvedVariantNotCapturedBaselineEntry() throws {
-        var received: ResolvedEntry?
+        var received: CTEntry?
 
-        func makeContent(for resolved: ResolvedEntry) -> SwiftUI.Text {
+        func makeContent(for resolved: CTEntry) -> SwiftUI.Text {
             received = resolved
             return SwiftUI.Text("rendered")
         }
@@ -76,14 +77,14 @@ final class OptimizedEntryContentfulInitTests: XCTestCase {
         let sut = OptimizedEntry(entry: entry, content: makeContent)
 
         // Deliberately distinct from `entry`'s own id/title ("e1"/"Hello"), and fed through
-        // `sut.content` rather than reused from `OptimizationEntryMapping.toOptimizationEntry`.
-        // At runtime `body` calls the stored `content` with `result.entry` — the *resolved
-        // variant* a live OptimizationClient hands back, which for a personalized entry can
-        // genuinely differ from the baseline stored in `sut.entry`. A distinguishing value here
-        // is what actually proves the closure forwards its argument: if the wrapping closure had
-        // a bug like `{ _ in content(ResolvedEntry(OptimizationEntryMapping.toOptimizationEntry(entry))) }`
-        // — ignoring its parameter and re-deriving from the captured baseline entry instead — a
-        // same-shaped stand-in would pass by coincidence and this bug would go undetected.
+        // `sut.content` rather than reused from `CTEntry(_: Contentful.Entry)`. At runtime
+        // `body` calls the stored `content` with `result.entry` — the *resolved variant* a live
+        // OptimizationClient hands back, which for a personalized entry can genuinely differ from
+        // the baseline stored in `sut.entry`. A distinguishing value here is what actually proves
+        // the closure forwards its argument: if the wrapping closure had a bug like
+        // `{ _ in content(CTEntry(entry)) }` — ignoring its parameter and
+        // re-deriving from the captured baseline entry instead — a same-shaped stand-in would pass
+        // by coincidence and this bug would go undetected.
         let resolverOutput: [String: Any] = [
             "sys": ["id": "resolved-1"],
             "fields": ["title": "Resolved Title"],
@@ -103,7 +104,7 @@ final class OptimizedEntryContentfulInitTests: XCTestCase {
         let fromDict: OptimizedEntry<SwiftUI.Text> = OptimizedEntry(entry: ["sys": ["id": "x"], "fields": [:]]) { _ in
             SwiftUI.Text("dict")
         }
-        let fromEntry: OptimizedEntry<SwiftUI.Text> = OptimizedEntry(entry: entry) { (_: ResolvedEntry) in
+        let fromEntry: OptimizedEntry<SwiftUI.Text> = OptimizedEntry(entry: entry) { (_: CTEntry) in
             SwiftUI.Text("entry")
         }
 
@@ -118,7 +119,7 @@ final class OptimizedEntryContentfulInitTests: XCTestCase {
         // `body` takes the non-optimized branch, but that's an OptimizationClient-dependent path.
         // What's testable without rendering is that the mapped dict itself carries no
         // `nt_experiences` key, which is the input `isOptimized` reads.
-        let sut = OptimizedEntry(entry: entry) { (_: ResolvedEntry) in EmptyView() }
+        let sut = OptimizedEntry(entry: entry) { (_: CTEntry) in EmptyView() }
 
         let fields = sut.entry["fields"] as? [String: Any]
         XCTAssertNil(fields?["nt_experiences"])
@@ -127,22 +128,23 @@ final class OptimizedEntryContentfulInitTests: XCTestCase {
     // MARK: - onTap stays dict-typed on both initializers — by design, not by oversight
 
     /// `onTap` on the `Contentful.Entry` initializer is `(([String: Any]) -> Void)?` — the same
-    /// raw-dict shape as the dict-based initializer's `onTap`, *not* `((ResolvedEntry) -> Void)?`
-    /// like `content`. This looks like an asymmetry against `content`'s typed wrapping, but it
-    /// isn't one: `TapTrackingModifier.body(content:)` (`Tracking/TapTrackingModifier.swift`)
-    /// calls `onTap?(entry)` with the view's *baseline* `entry` — never `result.entry`, the
-    /// resolved variant `content` receives — on both initializers equally. `onTap` reports which
-    /// baseline entry was tapped, for tracking; `content` renders the resolved variant, for
-    /// display. Different roles, so no `ResolvedEntry` wrapping applies to `onTap` on either
-    /// initializer. This test pins that down so a future change to `onTap`'s type is a deliberate
-    /// decision, not a silent regression.
+    /// raw-dict shape as the dict-based initializer's `onTap`, *not*
+    /// `((CTEntry) -> Void)?` like `content`. This looks like an asymmetry against
+    /// `content`'s typed wrapping, but it isn't one: `TapTrackingModifier.body(content:)`
+    /// (`Tracking/TapTrackingModifier.swift`) calls `onTap?(entry)` with the view's *baseline*
+    /// `entry` — never `result.entry`, the resolved variant `content` receives — on both
+    /// initializers equally. `onTap` reports which baseline entry was tapped, for tracking;
+    /// `content` renders the resolved variant, for display. Different roles, so no
+    /// `CTEntry` wrapping applies to `onTap` on either initializer. This test pins
+    /// that down so a future change to `onTap`'s type is a deliberate decision, not a silent
+    /// regression.
     func testOnTapReceivesBaselineDictOnContentfulInitializerNotResolvedEntry() throws {
         var receivedOnTapArgument: [String: Any]?
 
         let sut = OptimizedEntry(
             entry: entry,
             onTap: { raw in receivedOnTapArgument = raw },
-            content: { (_: ResolvedEntry) in EmptyView() }
+            content: { (_: CTEntry) in EmptyView() }
         )
 
         // Exercises the same call `TapTrackingModifier` makes: `onTap?(entry)`, with the view's
