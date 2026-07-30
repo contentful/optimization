@@ -2,7 +2,7 @@
 
 import PackageDescription
 
-let package = Package(
+let package: Package = Package(
     name: "ContentfulOptimization",
     platforms: [.iOS(.v15), .macOS(.v12)],
     products: [
@@ -11,9 +11,15 @@ let package = Package(
             targets: ["ContentfulOptimization"]
         ),
     ],
+    dependencies: [
+        .package(url: "https://github.com/contentful/contentful.swift", exact: "5.5.15"),
+    ],
     targets: [
         .target(
             name: "ContentfulOptimization",
+            dependencies: [
+                .product(name: "Contentful", package: "contentful.swift"),
+            ],
             resources: [
                 .copy("Resources/optimization-ios-bridge.umd.js"),
             ],
@@ -23,7 +29,10 @@ let package = Package(
         ),
         .testTarget(
             name: "ContentfulOptimizationTests",
-            dependencies: ["ContentfulOptimization"]
+            dependencies: [
+                "ContentfulOptimization",
+                .product(name: "Contentful", package: "contentful.swift"),
+            ]
         ),
     ]
 )

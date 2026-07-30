@@ -1,0 +1,137 @@
+import Contentful
+import Foundation
+
+/// Maps a `contentful.swift` `Entry` into the `{sys, fields, metadata}` map
+/// `OptimizedEntry` expects, reconstructing the resolved-link JSON shape the raw CDA response
+/// carried before the Delivery SDK decoded it.
+///
+/// Ported from the reference implementation's in-app simulation of this exact gap:
+/// `examples/apps/travel-guide-ios/Sources/OptimizationAdapter.swift` (`Entry.optimizationMap`).
+enum OptimizationEntryMapping {
+    static func toOptimizationEntry(_ entry: Contentful.Entry) -> [String: Any] {
+        entryMap(entry, ancestors: [])
+    }
+
+    /// `ancestors` is the set of entry ids on the path from the root to here. The Delivery SDK
+    /// resolves links into shared object references, so a variant that links back to its
+    /// baseline is a real cycle in the object graph; recursing an entry already on the current
+    /// path would loop forever. Re-linking an ancestor emits an unresolved link stub instead —
+    /// the shape a back-edge has in a raw CDA response. Scoping to the current path (not a
+    /// global visited set) still expands diamonds: an entry reached by two sibling branches
+    /// expands fully in both.
+    private static func entryMap(_ entry: Contentful.Entry, ancestors: Set<String>) -> [String: Any] {
+        let childAncestors = ancestors.union([entry.id])
+
+        return [
+            "sys": [
+                "id": entry.id,
+                "type": "Entry",
+                "contentType": [
+                    "sys": ["id": entry.sys.contentTypeId ?? "", "type": "Link", "linkType": "ContentType"],
+                ],
+            ],
+            "fields": entry.fields.compactMapValues { jsonValue($0, ancestors: childAncestors) },
+            // Required, not cosmetic: the resolver's entry guard rejects any entry without a
+            // `metadata` object, and a rejected baseline is never given its variant. A raw CDA
+            // response carries it on every entry; `Entry` keeps it out of `fields`, so the
+            // mapper has to put it back. `concepts` is always empty — `contentful.swift`'s
+            // `Metadata` models only `tags`, so the SDK gives us nothing else to forward.
+            "metadata": [
+                "tags": (entry.metadata?.tags ?? []).map { jsonLink($0, ancestors: childAncestors) },
+                "concepts": [],
+            ],
+        ]
+    }
+
+    /// One field value, reduced to something `JSONSerialization` accepts — the resolver
+    /// serializes the whole map before handing it to its JS bridge, and one illegal value fails
+    /// the entry outright (it falls back to baseline, logging rather than throwing). Anything
+    /// not listed here is dropped rather than risking that: losing an unused field beats losing
+    /// personalization on the entry that holds it.
+    private static func jsonValue(_ value: Any, ancestors: Set<String>) -> Any? {
+        switch value {
+        case let link as Contentful.Link:
+            return jsonLink(link, ancestors: ancestors)
+        case let richText as Contentful.RichTextDocument:
+            return jsonNode(richText, ancestors: ancestors)
+        case let array as [Any]:
+            return array.compactMap { jsonValue($0, ancestors: ancestors) }
+        case let dictionary as [String: Any]:
+            return dictionary.compactMapValues { jsonValue($0, ancestors: ancestors) }
+        case let location as Contentful.Location:
+            return ["lat": location.latitude, "lon": location.longitude]
+        case let date as Date:
+            return ISO8601DateFormatter().string(from: date)
+        case is String, is Int, is Double, is Bool:
+            return value
+        default:
+            return nil
+        }
+    }
+
+    /// One Structured Text node, reduced to the same `{nodeType, data, content}` shape a raw CDA
+    /// response carries. `ResourceLinkBlock`/`ResourceLinkInline` (embedded entries and assets —
+    /// both `-block` and `-inline` variants share these two Swift types across all five
+    /// `embedded-*`/`*-hyperlink` node types) must be matched before the generic `RecursiveNode`
+    /// case, since both conform to it; falling through to the generic case would silently drop
+    /// the embedded resource's resolved-or-unresolved link entirely; ordering matters here.
+    private static func jsonNode(_ node: Contentful.Node, ancestors: Set<String>) -> [String: Any] {
+        switch node {
+        case let resourceLink as Contentful.ResourceLinkBlock:
+            return [
+                "nodeType": resourceLink.nodeType.rawValue,
+                "data": ["target": jsonLink(resourceLink.data.target, ancestors: ancestors)],
+                "content": resourceLink.content.map { jsonNode($0, ancestors: ancestors) },
+            ]
+        case let resourceLink as Contentful.ResourceLinkInline:
+            return [
+                "nodeType": resourceLink.nodeType.rawValue,
+                "data": ["target": jsonLink(resourceLink.data.target, ancestors: ancestors)],
+                "content": resourceLink.content.map { jsonNode($0, ancestors: ancestors) },
+            ]
+        case let hyperlink as Contentful.Hyperlink:
+            return [
+                "nodeType": hyperlink.nodeType.rawValue,
+                "data": ["uri": hyperlink.data.uri],
+                "content": hyperlink.content.map { jsonNode($0, ancestors: ancestors) },
+            ]
+        case let text as Contentful.Text:
+            return [
+                "nodeType": text.nodeType.rawValue,
+                "value": text.value,
+                "marks": text.marks.map { ["type": $0.type.rawValue] },
+                "data": [String: Any](),
+            ]
+        // Table/TableRow/TableRowHeaderCell/TableRowCell/Paragraph/Heading/BlockQuote/
+        // HorizontalRule/OrderedList/UnorderedList/ListItem, and the top-level
+        // RichTextDocument itself — all plain containers with no data beyond their children.
+        case let recursive as Contentful.RecursiveNode:
+            return [
+                "nodeType": recursive.nodeType.rawValue,
+                "data": [String: Any](),
+                "content": recursive.content.map { jsonNode($0, ancestors: ancestors) },
+            ]
+        default:
+            return ["nodeType": node.nodeType.rawValue, "data": [String: Any](), "content": [Any]()]
+        }
+    }
+
+    /// A link field, expanded into the linked resource when the Delivery SDK resolved it.
+    private static func jsonLink(_ link: Contentful.Link, ancestors: Set<String>) -> [String: Any] {
+        switch link {
+        case let .entry(entry) where !ancestors.contains(entry.id):
+            return entryMap(entry, ancestors: ancestors)
+        case let .asset(asset):
+            return [
+                "sys": ["id": asset.id, "type": "Asset"],
+                "fields": ["title": asset.title ?? "", "file": ["url": asset.urlString ?? ""]],
+            ]
+        case let .unresolved(sys):
+            return ["sys": ["id": sys.id, "type": sys.type, "linkType": sys.linkType]]
+        // A back-edge, or a typed `EntryDecodable` this mapper never registers: emit the stub an
+        // unresolved link has in a raw CDA response.
+        case .entry, .entryDecodable:
+            return ["sys": ["id": link.id, "type": "Link", "linkType": "Entry"]]
+        }
+    }
+}

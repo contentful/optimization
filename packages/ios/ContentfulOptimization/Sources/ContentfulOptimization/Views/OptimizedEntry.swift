@@ -1,4 +1,5 @@
 import Combine
+import Contentful
 import SwiftUI
 
 /// Unified component for tracking and optimizing Contentful entries.
@@ -56,6 +57,35 @@ public struct OptimizedEntry<Content: View>: View {
         self.accessibilityIdentifier = accessibilityIdentifier
         self.onTap = onTap
         self.content = content
+    }
+
+    /// Accepts a `contentful.swift` `Entry` directly, mapping it to the `{sys, fields, metadata}`
+    /// shape the resolver expects (see `OptimizationEntryMapping`) and handing the resolved
+    /// variant back through `ResolvedEntry` — `getField`, not `as?` casts on a raw map. The
+    /// wrapping happens once, here, at construction — `content` itself stays dict-shaped
+    /// internally so `body` doesn't need to know which initializer built this instance.
+    public init(
+        entry: Contentful.Entry,
+        dwellTimeMs: Int = 2000,
+        minVisibleRatio: Double = 0.8,
+        viewDurationUpdateIntervalMs: Int = 5000,
+        liveUpdates: Bool? = nil,
+        trackViews: Bool? = nil,
+        trackTaps: Bool? = nil,
+        accessibilityIdentifier: String? = nil,
+        onTap: (([String: Any]) -> Void)? = nil,
+        @ViewBuilder content: @escaping (ResolvedEntry) -> Content
+    ) {
+        self.entry = OptimizationEntryMapping.toOptimizationEntry(entry)
+        self.dwellTimeMs = dwellTimeMs
+        self.minVisibleRatio = minVisibleRatio
+        self.viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs
+        self.liveUpdates = liveUpdates
+        self.trackViews = trackViews
+        self.trackTaps = trackTaps
+        self.accessibilityIdentifier = accessibilityIdentifier
+        self.onTap = onTap
+        self.content = { raw in content(ResolvedEntry(raw)) }
     }
 
     private var isOptimized: Bool {
