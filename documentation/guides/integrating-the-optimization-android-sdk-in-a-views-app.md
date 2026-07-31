@@ -509,11 +509,15 @@ to a given entry.
 
 4. Treat baseline fallback as expected behavior. `resolveOptimizedEntry` (which `OptimizedEntryView`
    calls for you) is a `suspend`, fail-soft resolver. It returns a `ResolvedOptimizedEntry` — an
-   SDK-owned result wrapper carrying `entry` (the entry to render) and `selectedOptimization` (the
-   applied selection, or null). Its `entry` is the resolved variant when one applies and the baseline
-   entry unchanged otherwise — when the client is not initialized, when the entry is not optimized,
-   when no selected optimization matches, when linked optimization data is missing, on all-locale
-   payloads, or when the variant is not in the payload — so it never throws or breaks the UI.
+   SDK-owned result wrapper carrying `entry` (a `CTEntry` — the SDK-owned typed view over the entry
+   map, with `id`, `getField<T>`, `hasField`, and `toFoundation()` accessors) and
+   `selectedOptimization` (the applied selection, or null). Its `entry` is the resolved variant when
+   one applies and the baseline entry unchanged otherwise — when the client is not initialized, when
+   the entry is not optimized, when no selected optimization matches, when linked optimization data
+   is missing, on all-locale payloads, or when the variant is not in the payload — so it never
+   throws or breaks the UI. If you fetch with `contentful.java`, pass the `CDAEntry` to the typed
+   `setEntry(entry: CDAEntry)` overload; the SDK-owned adapter builds the `{sys, fields, metadata}`
+   shape the resolver requires.
 
 For custom rendering surfaces, call `resolveOptimizedEntry(baseline, selectedOptimizations)` directly
 instead of through the view.
@@ -523,8 +527,9 @@ instead of through the view.
 ```kotlin
 // Passing null uses the SDK's current selection state; pass an explicit snapshot to lock a screen.
 val result = OptimizationManager.client.resolveOptimizedEntry(baseline = entry)
-// Always render result.entry; result.selectedOptimization is the applied selection, or null.
-render(result.entry)
+// result.entry is a CTEntry; use its accessors (getField, hasField, id) or unwrap the raw map
+// via toFoundation(). result.selectedOptimization is the applied selection, or null.
+render(result.entry.toFoundation())
 ```
 
 If the app locale changes at runtime, call `client.setLocale(locale)` to update the SDK Experience

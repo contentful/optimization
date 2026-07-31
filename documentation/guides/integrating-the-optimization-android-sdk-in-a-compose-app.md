@@ -436,10 +436,11 @@ branching on whether a variant was applied.
 Resolution is fail-soft, and `client.resolveOptimizedEntry(baseline, selectedOptimizations)` is a
 `suspend` function on Android (the iOS SDK's is synchronous; Android must suspend because the bridge
 call hops to the QuickJS dispatcher). It returns a `ResolvedOptimizedEntry` — the SDK-owned result
-wrapper holding the resolved `entry` and the `selectedOptimization` (singular) applied to it. If the
-client is not initialized, serialization fails, or the bridge result cannot be parsed, it returns the
-baseline entry unchanged (with `selectedOptimization` null) and continues rather than throwing or
-breaking the UI. The `selectedOptimizations` argument (plural) is the visitor's current per-experience
+wrapper holding the resolved `entry` (a `CTEntry` — the SDK-owned typed view over the entry map,
+with `id`, `getField<T>`, `hasField`, and `toFoundation()` accessors) and the `selectedOptimization`
+(singular) applied to it. If the client is not initialized, serialization fails, or the bridge result
+cannot be parsed, it returns the baseline entry unchanged (with `selectedOptimization` null) and
+continues rather than throwing or breaking the UI. The `selectedOptimizations` argument (plural) is the visitor's current per-experience
 selections: pass `null` (the default) to omit the argument and resolve against the SDK's live selection
 state, or pass an explicit snapshot to resolve against exactly that. `client.selectedOptimizations` is
 the `StateFlow` that publishes that plural set as it changes.
@@ -468,6 +469,21 @@ fun HeroSection(entry: Map<String, Any>) {
 }
 ```
 
+If you fetch with `contentful.java`, pass the `CDAEntry` directly to the typed overload. The
+SDK-owned adapter builds the required `{sys, fields, metadata}` shape (the resolver rejects any
+entry without `metadata`), and the render lambda receives a `CTEntry` you read with `getField<T>`
+instead of walking a raw map:
+
+```kotlin
+@Composable
+fun HeroSection(entry: CDAEntry) {
+    OptimizedEntry(entry = entry) { resolvedEntry ->
+        val title = resolvedEntry.getField<String>("title")
+        HeroCard(title = title)
+    }
+}
+```
+
 **Follow this pattern:**
 
 ```kotlin
@@ -480,10 +496,12 @@ fun DirectResolution(entry: Map<String, Any>) {
         // Collect the flow so re-resolution follows every profile, preview, or consent change;
         // reading selectedOptimizations.value would capture only the current snapshot.
         client.selectedOptimizations.collect { selectedOptimizations ->
+            // .entry is a CTEntry; unwrap via toFoundation() to keep the same Map shape as
+            // the baseline this composable was called with.
             resolvedEntry = client.resolveOptimizedEntry(
                 baseline = entry,
                 selectedOptimizations = selectedOptimizations,
-            ).entry
+            ).entry.toFoundation()
         }
     }
 
