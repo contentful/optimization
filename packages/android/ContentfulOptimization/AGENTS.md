@@ -21,8 +21,11 @@ assets.
 
 ## Commands
 
-- Kotlin/unit validation from this module: `./gradlew testDebugUnitTest`.
-- Bridge build: `pnpm --filter @contentful/optimization-js-bridge build`
+- Kotlin/unit validation from this module: `./gradlew testDebugUnitTest`. From the repo root the
+  equivalent shortcut is `pnpm android:test` (rebuilds the bridge first).
+- Bridge build: `pnpm --filter @contentful/optimization-js-bridge build` (or `pnpm android:bridge`
+  from the repo root).
+- Full Gradle build from the repo root: `pnpm android:build`.
 - Local Maven smoke test:
   `./gradlew publishToMavenLocal -Pcontentful.optimization.version=0.0.0-local --no-configuration-cache --no-daemon --console=plain`
 - Broad Gradle graph validation from this module:

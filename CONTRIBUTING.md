@@ -217,6 +217,7 @@ contributor workflows:
 | `pnpm setup:e2e:<implementation>`                 | Prepare one implementation for E2E                                      |
 | `pnpm test:e2e:<implementation>`                  | Run one implementation's full E2E flow                                  |
 | `pnpm implementation:run -- <implementation> ...` | Run a helper action or local script inside one implementation           |
+| `pnpm android:test`                               | Build the JS bridge and run Android SDK unit tests                      |
 | `pnpm ios:test`                                   | Build the JS bridge and run Swift package tests                         |
 | `pnpm playwright:install`                         | Install Playwright browsers across implementations                      |
 | `pnpm playwright:install-deps`                    | Install Playwright system dependencies on Linux                         |
