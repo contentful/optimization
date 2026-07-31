@@ -357,10 +357,9 @@ public final class OptimizationClient: ObservableObject {
         baseline: [String: Any],
         selectedOptimizations: [[String: Any]]? = nil
     ) -> ResolvedOptimizedEntry {
-        // `baseline` is caller-supplied and not guaranteed JSON-safe, so `CTEntry(any:)` can
-        // itself throw on a value it doesn't recognize; every fallback path below returns
-        // `baseline` unchanged and falls back further, to an empty entry, if even that fails.
-        let baselineEntry = (try? CTEntry(any: baseline)) ?? (try! CTEntry(any: [String: Any]()))
+        // `baseline` is caller-supplied and not guaranteed JSON-safe — `.parseWithFallback` logs
+        // and falls back to `.empty` rather than throwing.
+        let baselineEntry = CTEntry.parseWithFallback(baseline)
 
         guard isInitialized else {
             return ResolvedOptimizedEntry(
@@ -397,7 +396,7 @@ public final class OptimizationClient: ObservableObject {
             let selectedOptimization = dict["selectedOptimization"] as? [String: Any]
             let optimizationContextId = dict["optimizationContextId"] as? String
             return ResolvedOptimizedEntry(
-                entry: (try? CTEntry(any: entry)) ?? (baselineEntry),
+                entry: .parseWithFallback(entry, fallback: baselineEntry),
                 selectedOptimization: selectedOptimization,
                 optimizationContextId: optimizationContextId
             )

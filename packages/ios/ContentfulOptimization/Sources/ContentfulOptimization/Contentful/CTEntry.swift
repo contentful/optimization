@@ -22,6 +22,11 @@ public struct CTEntry {
 
     // Parsing
 
+    /// An entry with no `sys`/`fields`/`metadata` — the fallback for a baseline that fails to
+    /// parse (see `init(any:)`), since every reader below (`id`, `getField`, `hasField`, etc.)
+    /// already treats an empty envelope as "absent."
+    static let empty = CTEntry(CDA.Entry(sys: nil, fields: [:], metadata: nil))
+
     public init(_ entry: Contentful.Entry) {
         envelope = CDA.Entry(entry, ancestors: [])
     }
@@ -39,6 +44,17 @@ public struct CTEntry {
         }
         let data = try JSONSerialization.data(withJSONObject: any)
         envelope = try JSONDecoder().decode(CDA.Entry.self, from: data)
+    }
+
+    /// `init(any:)`, but for a caller with a fallback rather than a `throws` path — logs and
+    /// returns `fallback` (`.empty` by default) instead of throwing.
+    static func parseWithFallback(_ any: Any, fallback: @autoclosure () -> CTEntry = .empty) -> CTEntry {
+        do {
+            return try CTEntry(any: any)
+        } catch {
+            DiagnosticLogger.shared.warning("[CTEntry] Failed to parse entry: \(error.localizedDescription)")
+            return fallback()
+        }
     }
 
     // Serializing
