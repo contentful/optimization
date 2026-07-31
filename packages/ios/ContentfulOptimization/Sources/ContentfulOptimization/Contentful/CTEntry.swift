@@ -64,12 +64,19 @@ public struct CTEntry {
         return String(decoding: data, as: UTF8.self)
     }
 
+    func toFoundation() -> Any {
+        guard let data = try? JSONEncoder().encode(envelope) else { return [String: Any]() }
+        return (try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])) ?? [String: Any]()
+    }
+
+    /// `toFoundation()`, narrowed to `[String: Any]` — an entry's top level is always
+    /// `{sys, fields, metadata}`, so this only fails to cast if `toFoundation()` itself already
+    /// degraded (e.g. encoding failed), in which case it returns `fallback` (`[:]` by default).
     /// For call sites that still work with `[String: Any]` — e.g. the reference UIKit
     /// implementation's dict-based render closures, or `OptimizedEntry`'s own `[String: Any]`
     /// initializer.
-    public func toFoundation() -> Any {
-        guard let data = try? JSONEncoder().encode(envelope) else { return [String: Any]() }
-        return (try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])) ?? [String: Any]()
+    public func toDictionary(fallback: @autoclosure () -> [String: Any] = [:]) -> [String: Any] {
+        toFoundation() as? [String: Any] ?? fallback()
     }
 
     /// A field's resolved value, or nil if absent.

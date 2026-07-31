@@ -115,7 +115,7 @@ public struct OptimizedEntry<Content: View>: View {
     }
 
     public var body: some View {
-        let entryDict = entry.toFoundation() as? [String: Any] ?? [:]
+        let entryDict = entry.toDictionary()
         let result: ResolvedOptimizedEntry = {
             if isOptimized {
                 return client.resolveOptimizedEntry(
@@ -131,7 +131,7 @@ public struct OptimizedEntry<Content: View>: View {
             }
         }()
 
-        content(result.entry.toFoundation() as? [String: Any] ?? [:])
+        content(result.entry.toDictionary())
             .modifier(ViewTrackingModifier(
                 entry: entryDict,
                 optimizationContextId: result.optimizationContextId,
