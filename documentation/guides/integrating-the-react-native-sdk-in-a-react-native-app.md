@@ -95,7 +95,7 @@ before you ship, which explains the two axes and the object form that sets them 
 
      // OptimizedEntry passes the selected variant or baseline fallback to the renderer.
      return (
-       <OptimizedEntry entryId="hero-entry-id">
+       <OptimizedEntry entryId="4ib0hsHWoSOnCVdDkizE8d">
          {(resolvedEntry) => <Text>{`Resolved entry: ${resolvedEntry.sys.id}`}</Text>}
        </OptimizedEntry>
      )
@@ -137,9 +137,10 @@ before you ship, which explains the two axes and the object form that sets them 
    device logs on mount for the `screen` event the SDK sends (the [Screen and navigation tracking](#screen-and-navigation-tracking)
    and [Analytics forwarding](#analytics-forwarding) sections add `states.eventStream` for a
    programmatic check). To see personalization rather than the baseline, author (in Contentful) a
-   variant of `hero-entry-id` attached to an experience that targets all visitors — every visitor
-   matches it automatically, so the resolved ID changes to the variant. Without an authored variant
-   every launch shows the baseline entry, which is expected, not a failure.
+   variant of the baseline entry whose ID you copied from Contentful, then attach it to an experience
+   that targets all visitors — every visitor matches it automatically, so the resolved ID changes to
+   the variant. Without an authored variant every launch shows the baseline entry, which is expected,
+   not a failure.
 
 <details>
   <summary>Table of Contents</summary>
@@ -364,7 +365,7 @@ const APP_LOCALE = 'en-US'
     },
   }}
 >
-  <OptimizedEntry entryId="hero-entry-id">
+  <OptimizedEntry entryId="4ib0hsHWoSOnCVdDkizE8d">
     {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
   </OptimizedEntry>
 </OptimizationRoot>
@@ -375,7 +376,7 @@ Manual fetching remains supported when your app needs request ownership around o
 **Adapt this to your use case:**
 
 ```tsx
-const entry = await contentfulClient.getEntry('hero-entry-id', {
+const entry = await contentfulClient.getEntry('4ib0hsHWoSOnCVdDkizE8d', {
   include: 10,
   locale: APP_LOCALE,
 })
@@ -434,7 +435,7 @@ import type { Entry } from 'contentful'
 function HeroSection() {
   return (
     <OptimizedEntry
-      entryId="hero-entry-id"
+      entryId="4ib0hsHWoSOnCVdDkizE8d"
       loadingFallback={null}
       errorFallback={null}
       onEntryError={(error) => diagnostics.report(error)}
@@ -446,7 +447,7 @@ function HeroSection() {
 
 function HeroData() {
   // isPresentationReady is true once the entry is fetched and resolved and is safe to render.
-  const { entry, isPresentationReady } = useOptimizedEntry({ entryId: 'hero-entry-id' })
+  const { entry, isPresentationReady } = useOptimizedEntry({ entryId: '4ib0hsHWoSOnCVdDkizE8d' })
 
   if (!isPresentationReady || !entry) return null
 

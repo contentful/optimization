@@ -40,6 +40,31 @@ hands back the resolved entry as a base `contentful` `Entry`; a narrower compone
 cast.
 source: react-web-sdk#optimized-entry/optimizedEntryUtils.ts#RenderProp; concept:entry-personalization-and-variant-resolution
 
+Contentful GraphQL Content API responses are schema-shaped, not `contentful.js` Entry-shaped: the
+generated schema exposes `sys`, `contentfulMetadata`, and typed content fields directly; Object
+fields are `JSON`; single-entry links are selected by their field name; array links are selected
+through generated `*Collection` fields; `locale`, `useFallbackLocale`, and `preview` arguments
+cascade to resolved references unless overridden; GraphQL has no CDA `locale=*` wildcard. App-owned
+GraphQL fetching stays on the manual side of the entry-source boundary.
+source: extern:Contentful GraphQL Content API schema generation docs; extern:Contentful GraphQL Content API locale handling docs; extern:Contentful GraphQL Content API preview and collection fields docs; core-sdk#CoreBase.ts#ContentfulConfig
+
+`resolveOptimizedEntry()` and the shared resolver guards consume a resolved Contentful Entry-like
+object: `sys.type` must be `Entry`, `sys.id` and `sys.contentType.sys.id` must exist, and `metadata`
+and `fields` must be objects. An optimized baseline must carry `fields.nt_experiences`; each usable
+optimization entry under it must validate as `nt_experience` with SDK-owned `nt_name`, `nt_type`, and
+`nt_experience_id` fields. Entry replacement can resolve to a variant only when `nt_config` describes
+a matching component and variant entries in `nt_variants` are already resolved entries for the
+baseline content type; otherwise the resolver returns baseline.
+source: core-sdk#CoreBase.ts#resolveOptimizedEntry; api-schemas#contentful/typeGuards.ts#isResolvedContentfulEntry; api-schemas#contentful/typeGuards.ts#isResolvedOptimizedEntry; api-schemas#contentful/typeGuards.ts#isResolvedOptimizationEntry; api-schemas#contentful/OptimizedEntry.ts#OptimizedEntryFields; api-schemas#contentful/OptimizationEntry.ts#OptimizationEntryFields; core-sdk#resolvers/OptimizedEntryResolver.ts#getOptimizationEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry
+
+GraphQL integrations that keep app-owned fetching must query enough optimization-owned fields
+(`nt_experiences`, each linked `nt_experience` entry's `nt_name`, `nt_type`, `nt_config`,
+`nt_variants`, and `nt_experience_id`, plus linked variant entries) and either reshape those GraphQL
+results into the resolver's Entry-like object before calling the resolver or map the resolved
+`entry.sys.id` back to the app's GraphQL-native objects. The SDK does not add a GraphQL client; the
+managed fetch path calls the configured `contentful.js`-style `getEntry()` / `getEntries()` client.
+source: core-sdk#CoreBase.ts#ContentfulEntryClient; core-sdk#CoreBase.ts#fetchOptimizedEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry; extern:Contentful GraphQL Content API schema generation docs
+
 Entry replacement depends on two fixed SDK content-model fields: a baseline entry's
 `fields.nt_experiences` contains its linked Optimization experience entries, and each matching
 experience's `fields.nt_variants` contains the linked replacement entries. These names are

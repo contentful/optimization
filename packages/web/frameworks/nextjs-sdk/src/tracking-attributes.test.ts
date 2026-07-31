@@ -7,7 +7,7 @@ const resolvedData = createResolvedData()
 
 function createBaselineEntry(): ServerTrackingBaselineEntry {
   const entry = {
-    sys: { id: 'baseline-entry' },
+    sys: { id: '4ib0hsHWoSOnCVdDkizE8d' },
   }
 
   if (isServerTrackingBaselineEntry(entry)) {
@@ -20,11 +20,11 @@ function createBaselineEntry(): ServerTrackingBaselineEntry {
 function createResolvedData(): ServerTrackingResolvedData {
   const data = {
     entry: {
-      sys: { id: 'variant-entry' },
+      sys: { id: '4k6ZyFQnR2POY5IJLLlJRb' },
     },
     selectedOptimization: {
       duplicationScope: 'profile',
-      experienceId: 'experience-id',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       sticky: true,
       variantIndex: 2,
     },
@@ -63,12 +63,12 @@ describe('getServerTrackingAttributes', () => {
         viewDurationUpdateIntervalMs: 2500,
       }),
     ).toEqual({
-      'data-ctfl-baseline-id': 'baseline-entry',
+      'data-ctfl-baseline-id': '4ib0hsHWoSOnCVdDkizE8d',
       'data-ctfl-clickable': true,
       'data-ctfl-duplication-scope': 'profile',
-      'data-ctfl-entry-id': 'variant-entry',
+      'data-ctfl-entry-id': '4k6ZyFQnR2POY5IJLLlJRb',
       'data-ctfl-hover-duration-update-interval-ms': 1000,
-      'data-ctfl-optimization-id': 'experience-id',
+      'data-ctfl-optimization-id': '6IueRX1pS3iMJncbhUQTba',
       'data-ctfl-sticky': true,
       'data-ctfl-track-clicks': true,
       'data-ctfl-track-hovers': false,

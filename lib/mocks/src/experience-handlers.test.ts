@@ -22,7 +22,7 @@ function makeTrackEvent(): ExperienceEvent {
       library: { name: 'test-lib', version: '1.0.0' },
       locale: 'en-US',
     },
-    messageId: 'created-profile-regression',
+    messageId: '11111111-1111-4111-8111-111111111111',
     originalTimestamp: '2026-01-01T00:00:00.000Z',
     sentAt: '2026-01-01T00:00:00.000Z',
     timestamp: '2026-01-01T00:00:00.000Z',
@@ -80,7 +80,7 @@ describe('experience handlers', () => {
   })
 
   it('returns an updated profile by id', async () => {
-    const profileId = 'updated-profile-id'
+    const profileId = 'f0837d7dc6344c36a3a0a06c4cde754b'
     const updatedResponse = await fetch(`${PROFILES_URL}/${profileId}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -101,7 +101,7 @@ describe('experience handlers', () => {
   })
 
   it('returns profile not found for unknown profile ids', async () => {
-    const fetchedResponse = await fetch(`${PROFILES_URL}/stale-profile-id`)
+    const fetchedResponse = await fetch(`${PROFILES_URL}/a19c3f54d2b84e37a93f6d1c0e5b7284`)
 
     expect(fetchedResponse.status).toBe(404)
 

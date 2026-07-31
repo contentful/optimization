@@ -14,14 +14,14 @@ const OPTIMIZATION_DATA = {
   changes: [],
   selectedOptimizations: [],
   profile: {
-    id: 'profile-id',
-    stableId: 'profile-id',
+    id: 'f0837d7dc6344c36a3a0a06c4cde754b',
+    stableId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     random: 1,
     audiences: [],
     traits: {},
     location: {},
     session: {
-      id: 'session-id',
+      id: 'e77eab64-93ca-4f6e-8492-037c1ff67caa',
       isReturningVisitor: false,
       landingPage: {
         path: '/',
@@ -94,7 +94,7 @@ describe('ContentfulOptimization', () => {
     const sendBatchEvents = rs.spyOn(node.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = node.forRequest({
       consent: false,
-      profile: { id: 'profile-id' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.identify({ userId: 'user-123' })
@@ -117,14 +117,14 @@ describe('ContentfulOptimization', () => {
     const requestOptimization = node.forRequest({
       consent: true,
       experienceOptions: { locale: 'de-DE', preflight: true },
-      profile: { id: 'profile-id' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.page()
 
     expect(upsertProfile).toHaveBeenCalledWith(
       expect.objectContaining({
-        profileId: 'profile-id',
+        profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
         events: [
           expect.objectContaining({
             context: expect.objectContaining({
@@ -148,14 +148,14 @@ describe('ContentfulOptimization', () => {
       eventContext: { locale: 'en-US' },
       experienceOptions: { locale: 'fr-FR', preflight: true },
       locale: ' de_DE ',
-      profile: { id: 'profile-id' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.page()
 
     expect(upsertProfile).toHaveBeenCalledWith(
       expect.objectContaining({
-        profileId: 'profile-id',
+        profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
         events: [
           expect.objectContaining({
             context: expect.objectContaining({
@@ -177,10 +177,10 @@ describe('ContentfulOptimization', () => {
       .mockResolvedValue(OPTIMIZATION_DATA)
 
     await node
-      .forRequest({ consent: true, profile: { id: 'profile-id' } })
+      .forRequest({ consent: true, profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' } })
       .page({ locale: 'en-US' })
     await node
-      .forRequest({ consent: false, profile: { id: 'profile-id' } })
+      .forRequest({ consent: false, profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' } })
       .page({ locale: 'en-US' })
 
     expect(
@@ -198,13 +198,13 @@ describe('ContentfulOptimization', () => {
     await node
       .forRequest({
         consent: true,
-        profile: { id: 'profile-id' },
+        profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
       })
       .trackClick({ componentId: 'hero-banner' })
     await node
       .forRequest({
         consent: false,
-        profile: { id: 'profile-id' },
+        profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
       })
       .trackHover({
         componentId: 'hero-banner',
@@ -224,7 +224,7 @@ describe('ContentfulOptimization', () => {
       .mockResolvedValue(OPTIMIZATION_DATA)
     const requestOptimization = node.forRequest({
       consent: false,
-      profile: { id: 'profile-id' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.page()
@@ -246,7 +246,9 @@ describe('ContentfulOptimization', () => {
       .spyOn(node.api.experience, 'upsertProfile')
       .mockResolvedValue(OPTIMIZATION_DATA)
 
-    await node.forRequest({ consent: true, profile: { id: 'profile-id' } }).page()
+    await node
+      .forRequest({ consent: true, profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' } })
+      .page()
 
     expect(upsertProfile.mock.calls[0]?.[0].events[0]?.context.gdpr.isConsentGiven).toBe(true)
   })

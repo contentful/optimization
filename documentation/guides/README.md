@@ -12,6 +12,7 @@ children:
   - ./integrating-the-optimization-ios-sdk-in-a-uikit-app.md
   - ./integrating-the-optimization-android-sdk-in-a-compose-app.md
   - ./integrating-the-optimization-android-sdk-in-a-views-app.md
+  - ./using-contentful-graphql-data-with-the-optimization-sdks.md
   - ./building-a-custom-javascript-optimization-adapter.md
   - ./rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md
   - ./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md
@@ -55,6 +56,9 @@ Native and mobile SDK guides route to beta SDK surfaces.
 
 ## Supplemental guides
 
+- [Using Contentful GraphQL data with the Optimization SDKs](./using-contentful-graphql-data-with-the-optimization-sdks.md) -
+  Query Optimization-owned fields through Contentful GraphQL, adapt GraphQL-shaped entries for the
+  resolver, and keep your app's GraphQL client and cache.
 - [Building a custom JavaScript Optimization adapter](./building-a-custom-javascript-optimization-adapter.md) -
   Build a low-level adapter only when no official SDK package fits your JavaScript runtime or
   framework.

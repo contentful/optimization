@@ -59,7 +59,9 @@ describe('Next.js Pages Router client components', () => {
     })
     const handoff = components.createHandoffFromSelections({
       cache: { scope: 'static' },
-      entries: [{ baselineEntry: createEntry('hero'), entryId: 'hero' }],
+      entries: [
+        { baselineEntry: createEntry('4ib0hsHWoSOnCVdDkizE8d'), entryId: '4ib0hsHWoSOnCVdDkizE8d' },
+      ],
       hydration: 'preserve-server',
       initialPageEvent: 'emit',
       selectedOptimizations: [],
@@ -75,7 +77,7 @@ describe('Next.js Pages Router client components', () => {
       children: 'Provider content',
       handoff,
       hydration: 'client-only-hidden-until-ready',
-      prefetchManagedEntries: ['hero'],
+      prefetchManagedEntries: ['4ib0hsHWoSOnCVdDkizE8d'],
     })
 
     expect(root.props).toMatchObject({
@@ -97,7 +99,7 @@ describe('Next.js Pages Router client components', () => {
       environment: testConfig.environment,
       handoff,
       hydration: 'client-only-hidden-until-ready',
-      prefetchManagedEntries: ['hero'],
+      prefetchManagedEntries: ['4ib0hsHWoSOnCVdDkizE8d'],
       contentful,
     })
     expect(provider?.props).not.toHaveProperty('liveUpdates')
@@ -170,10 +172,10 @@ describe('Next.js Pages Router client components', () => {
       ...testConfig,
       contentful: { client: { getEntry, getEntries } },
     })
-    const baselineEntry = createEntry('hero')
+    const baselineEntry = createEntry('4ib0hsHWoSOnCVdDkizE8d')
     const handoff = components.createHandoffFromSelections({
       cache: { scope: 'static' },
-      entries: [{ baselineEntry, entryId: 'hero' }],
+      entries: [{ baselineEntry, entryId: '4ib0hsHWoSOnCVdDkizE8d' }],
       hydration: 'preserve-server',
       initialPageEvent: 'emit',
       selectedOptimizations: [],
@@ -181,13 +183,13 @@ describe('Next.js Pages Router client components', () => {
 
     const markup = renderToString(
       <components.OptimizationRoot handoff={handoff}>
-        <components.OptimizedEntry entryId="hero" loadingFallback="loading">
+        <components.OptimizedEntry entryId="4ib0hsHWoSOnCVdDkizE8d" loadingFallback="loading">
           {(entry) => entry.sys.id}
         </components.OptimizedEntry>
       </components.OptimizationRoot>,
     )
 
-    expect(markup).toContain('hero')
+    expect(markup).toContain('4ib0hsHWoSOnCVdDkizE8d')
     expect(markup).not.toContain('loading')
     expect(getEntry).not.toHaveBeenCalled()
     expect(getEntries).not.toHaveBeenCalled()

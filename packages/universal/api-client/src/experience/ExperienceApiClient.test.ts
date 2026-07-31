@@ -54,7 +54,7 @@ function makeBatchTrackEvent(anonymousId: string): BatchExperienceEvent {
       library: { name: 'test-lib', version: '1.0.0' },
       locale: 'en-US',
     },
-    messageId: `msg-${anonymousId}`,
+    messageId: '22222222-2222-4222-8222-222222222222',
     originalTimestamp: '2026-01-01T00:00:00.000Z',
     sentAt: '2026-01-01T00:00:00.000Z',
     timestamp: '2026-01-01T00:00:00.000Z',
@@ -74,7 +74,7 @@ function makeTrackEvent(event = 'test-event'): ExperienceEvent {
       library: { name: 'test-lib', version: '1.0.0' },
       locale: 'en-US',
     },
-    messageId: `msg-${event}`,
+    messageId: '11111111-1111-4111-8111-111111111111',
     originalTimestamp: '2026-01-01T00:00:00.000Z',
     sentAt: '2026-01-01T00:00:00.000Z',
     timestamp: '2026-01-01T00:00:00.000Z',
@@ -146,17 +146,19 @@ describe('ExperienceApiClient', () => {
       const client = makeClient()
 
       // without locale
-      const profile = await client.getProfile('prof_1')
+      const profile = await client.getProfile('f0837d7dc6344c36a3a0a06c4cde754b')
       expect(profile).toBeDefined()
       expect(requested.org).toBe(CLIENT_ID)
       expect(requested.env).toBe(ENVIRONMENT)
-      expect(requested.id).toBe('prof_1')
+      expect(requested.id).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
       expect(requested.locale).toBeNull()
 
       // with locale
-      const profile2 = await client.getProfile('prof_2', { locale: 'de-DE' })
+      const profile2 = await client.getProfile('a19c3f54d2b84e37a93f6d1c0e5b7284', {
+        locale: 'de-DE',
+      })
       expect(profile2).toBeDefined()
-      expect(requested.id).toBe('prof_2')
+      expect(requested.id).toBe('a19c3f54d2b84e37a93f6d1c0e5b7284')
       expect(requested.locale).toBe('de-DE')
 
       expect(mockLogger.info).toHaveBeenCalledWith(
@@ -178,21 +180,24 @@ describe('ExperienceApiClient', () => {
           ({ request }) => {
             requested.locale = getLocaleParam(request.url)
 
-            return HttpResponse.json({ data: { id: 'profile-id' } }, { status: 200 })
+            return HttpResponse.json(
+              { data: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' } },
+              { status: 200 },
+            )
           },
         ),
       )
 
       const client = makeClient({ locale: 'en-US' })
 
-      await client.getProfile('profile-id')
+      await client.getProfile('f0837d7dc6344c36a3a0a06c4cde754b')
       expect(requested.locale).toBe('en-US')
 
       client.setLocale('de-DE')
-      await client.getProfile('profile-id')
+      await client.getProfile('f0837d7dc6344c36a3a0a06c4cde754b')
       expect(requested.locale).toBe('de-DE')
 
-      await client.getProfile('profile-id', { locale: 'fr-FR' })
+      await client.getProfile('f0837d7dc6344c36a3a0a06c4cde754b', { locale: 'fr-FR' })
       expect(requested.locale).toBe('fr-FR')
     })
 
@@ -343,11 +348,14 @@ describe('ExperienceApiClient', () => {
       const client = makeClient({ environment: ENVIRONMENT })
       const events = [makeTrackEvent('update-profile-url')]
 
-      const result = await client.updateProfile({ profileId: 'prof_42', events }, {})
+      const result = await client.updateProfile(
+        { profileId: 'f0837d7dc6344c36a3a0a06c4cde754b', events },
+        {},
+      )
 
       expect(result).toBeDefined()
       expect(hitPath).toBe(
-        `/v2/organizations/${CLIENT_ID}/environments/${ENVIRONMENT}/profiles/prof_42`,
+        `/v2/organizations/${CLIENT_ID}/environments/${ENVIRONMENT}/profiles/f0837d7dc6344c36a3a0a06c4cde754b`,
       )
     })
 
@@ -364,7 +372,10 @@ describe('ExperienceApiClient', () => {
             forcedIp = getHeader(request.headers, 'X-Force-IP')
             const body = await request.json()
             features = getFeaturesFromBody(body)
-            return HttpResponse.json({ data: { id: 'p' } }, { status: 200 })
+            return HttpResponse.json(
+              { data: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' } },
+              { status: 200 },
+            )
           },
         ),
       )
@@ -376,7 +387,13 @@ describe('ExperienceApiClient', () => {
       })
       const events = [makeTrackEvent('update-profile-defaults')]
 
-      const res = await client.updateProfile({ profileId: 'p', events }, {})
+      const res = await client.updateProfile(
+        {
+          profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
+          events,
+        },
+        {},
+      )
       expect(res).toBeDefined()
 
       // Inherited from client config
@@ -389,7 +406,7 @@ describe('ExperienceApiClient', () => {
       const client = makeClient()
 
       await expect(
-        client.updateProfile({ profileId: 'prof_42', events: [] }, {}),
+        client.updateProfile({ profileId: 'f0837d7dc6344c36a3a0a06c4cde754b', events: [] }, {}),
       ).rejects.toBeDefined()
     })
   })
@@ -424,7 +441,14 @@ describe('ExperienceApiClient', () => {
             }
 
             return HttpResponse.json(
-              { data: { profiles: [{ id: 'a' }, { id: 'b' }] } },
+              {
+                data: {
+                  profiles: [
+                    { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
+                    { id: 'a19c3f54d2b84e37a93f6d1c0e5b7284' },
+                  ],
+                },
+              },
               { status: 200 },
             )
           },
@@ -434,12 +458,12 @@ describe('ExperienceApiClient', () => {
       const client = makeClient()
 
       const profiles = await client.upsertManyProfiles(
-        { events: [makeBatchTrackEvent('anon-1')] },
+        { events: [makeBatchTrackEvent('f0837d7dc6344c36a3a0a06c4cde754b')] },
         {},
       )
       expect(Array.isArray(profiles)).toBe(true)
       expect(content).toBe('application/json')
-      expect(anonymousId).toBe('anon-1')
+      expect(anonymousId).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
     })
 
     it('throws when upsertManyProfiles is called with an empty event batch', async () => {

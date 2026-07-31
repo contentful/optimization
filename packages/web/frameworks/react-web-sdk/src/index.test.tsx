@@ -292,9 +292,9 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     const selectedOptimizationState: SelectedOptimizationArray = [
       {
-        experienceId: 'exp-a',
+        experienceId: '6IueRX1pS3iMJncbhUQTba',
         variantIndex: 1,
-        variants: { baseline: 'entry-variant' },
+        variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
       },
     ]
     const sdk = createOptimizationSdk({
@@ -305,7 +305,7 @@ describe('@contentful/optimization-react-web core providers', () => {
             ...entry,
             sys: {
               ...entry.sys,
-              id: 'entry-variant',
+              id: '4k6ZyFQnR2POY5IJLLlJRb',
             },
           },
           selectedOptimization: undefined,
@@ -324,17 +324,17 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     const optimization = requireOptimizationSdk(capturedOptimization)
     const resolver = requireEntryResolver(capturedResolver)
-    const baselineEntry = createTestEntry('entry-1')
+    const baselineEntry = createTestEntry('4ib0hsHWoSOnCVdDkizE8d')
 
     expect(optimization.tracking).toBe(sdk.tracking)
     expect(optimization.trackHover).toBe(sdk.trackHover)
-    expect(resolver.resolveEntry(baselineEntry).sys.id).toBe('entry-variant')
+    expect(resolver.resolveEntry(baselineEntry).sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
     expect(resolver.resolveEntryData(baselineEntry)).toEqual({
       entry: {
         ...baselineEntry,
         sys: {
           ...baselineEntry.sys,
-          id: 'entry-variant',
+          id: '4k6ZyFQnR2POY5IJLLlJRb',
         },
       },
       selectedOptimization: undefined,
@@ -344,9 +344,9 @@ describe('@contentful/optimization-react-web core providers', () => {
         baselineEntry,
         [
           {
-            experienceId: 'exp-a',
+            experienceId: '6IueRX1pS3iMJncbhUQTba',
             variantIndex: 1,
-            variants: { baseline: 'entry-variant' },
+            variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
           },
         ],
       ],
@@ -354,9 +354,9 @@ describe('@contentful/optimization-react-web core providers', () => {
         baselineEntry,
         [
           {
-            experienceId: 'exp-a',
+            experienceId: '6IueRX1pS3iMJncbhUQTba',
             variantIndex: 1,
-            variants: { baseline: 'entry-variant' },
+            variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
           },
         ],
       ],

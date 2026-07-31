@@ -39,15 +39,15 @@ function createDeferred<T>(): {
 }
 
 describe('OptimizedEntry', () => {
-  const baseline = makeEntry('baseline')
-  const optimizedBaseline = makeOptimizableEntry('optimized-baseline')
-  const variantA = makeEntry('variant-a')
-  const variantB = makeEntry('variant-b')
+  const baseline = makeEntry('4ib0hsHWoSOnCVdDkizE8d')
+  const optimizedBaseline = makeOptimizableEntry('6KfLDCdA75BGwr5HfSeXac')
+  const variantA = makeEntry('4k6ZyFQnR2POY5IJLLlJRb')
+  const variantB = makeEntry('2qVK4T5lnScbswoyBuGipd')
 
-  const baselineParent = makeEntry('parent-baseline')
-  const variantParent = makeEntry('parent-variant')
-  const baselineChild = makeEntry('child-baseline')
-  const variantChild = makeEntry('child-variant')
+  const baselineParent = makeEntry('3Z2hP4vR8sT1nY6mK9qL0a')
+  const variantParent = makeEntry('5mN8rY2pL6qT9vW3xA4bCd')
+  const baselineChild = makeEntry('7pQ2rS5tU8vW1xY4zA6bCd')
+  const variantChild = makeEntry('9sT4uV7wX0yZ3aB6cD8eFg')
 
   function makeMergeTagEntry(id: string): MergeTagEntry {
     const entry = makeEntry(id)
@@ -76,14 +76,14 @@ describe('OptimizedEntry', () => {
       changes: [],
       selectedOptimizations: [],
       profile: {
-        id: 'server-profile',
-        stableId: 'server-profile',
+        id: 'f0837d7dc6344c36a3a0a06c4cde754b',
+        stableId: 'f0837d7dc6344c36a3a0a06c4cde754b',
         random: 0.5,
         audiences: [],
         traits: {},
         location: {},
         session: {
-          id: 'server-session',
+          id: 'e77eab64-93ca-4f6e-8492-037c1ff67caa',
           isReturningVisitor: false,
           landingPage: {
             path: '/',
@@ -115,23 +115,19 @@ describe('OptimizedEntry', () => {
 
   const variantOneState: SelectedOptimizationArray = [
     {
-      experienceId: 'exp-hero',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       sticky: true,
       variantIndex: 1,
-      variants: {
-        baseline: 'variant-a',
-      },
+      variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
     },
   ]
 
   const variantTwoState: SelectedOptimizationArray = [
     {
-      experienceId: 'exp-hero',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       sticky: false,
       variantIndex: 2,
-      variants: {
-        baseline: 'variant-b',
-      },
+      variants: { '4ib0hsHWoSOnCVdDkizE8d': '2qVK4T5lnScbswoyBuGipd' },
     },
   ]
 
@@ -150,10 +146,10 @@ describe('OptimizedEntry', () => {
       optimization,
     )
 
-    expect(view.container.textContent).toContain('baseline')
+    expect(view.container.textContent).toContain('4ib0hsHWoSOnCVdDkizE8d')
 
     const wrapper = getWrapper(view.container)
-    expect(wrapper.dataset.ctflEntryId).toBe('baseline')
+    expect(wrapper.dataset.ctflEntryId).toBe('4ib0hsHWoSOnCVdDkizE8d')
     expect(wrapper.dataset.ctflOptimizationId).toBeUndefined()
     expect(wrapper.dataset.ctflVariantIndex).toBe('0')
 
@@ -196,10 +192,10 @@ describe('OptimizedEntry', () => {
     )
 
     await emit(variantOneState)
-    expect(view.container.textContent).toContain('variant-a')
+    expect(view.container.textContent).toContain('4k6ZyFQnR2POY5IJLLlJRb')
 
     await emit(variantTwoState)
-    expect(view.container.textContent).toContain('variant-a')
+    expect(view.container.textContent).toContain('4k6ZyFQnR2POY5IJLLlJRb')
 
     await view.unmount()
   })
@@ -220,10 +216,10 @@ describe('OptimizedEntry', () => {
     )
 
     await emit(variantOneState)
-    expect(view.container.textContent).toContain('variant-a')
+    expect(view.container.textContent).toContain('4k6ZyFQnR2POY5IJLLlJRb')
 
     await emit(variantTwoState)
-    expect(view.container.textContent).toContain('variant-b')
+    expect(view.container.textContent).toContain('2qVK4T5lnScbswoyBuGipd')
 
     await view.unmount()
   })
@@ -255,11 +251,11 @@ describe('OptimizedEntry', () => {
 
     await emit(variantOneState)
 
-    expect(view.container.textContent).toContain('variant-a')
+    expect(view.container.textContent).toContain('4k6ZyFQnR2POY5IJLLlJRb')
     const resolvedWrapper = getWrapper(view.container)
     expect(resolvedWrapper.dataset.ctflClickable).toBe('true')
-    expect(resolvedWrapper.dataset.ctflBaselineId).toBe('optimized-baseline')
-    expect(resolvedWrapper.dataset.ctflEntryId).toBe('variant-a')
+    expect(resolvedWrapper.dataset.ctflBaselineId).toBe('6KfLDCdA75BGwr5HfSeXac')
+    expect(resolvedWrapper.dataset.ctflEntryId).toBe('4k6ZyFQnR2POY5IJLLlJRb')
     expect(resolvedWrapper.dataset.ctflHoverDurationUpdateIntervalMs).toBe('1000')
 
     await view.unmount()
@@ -272,22 +268,26 @@ describe('OptimizedEntry', () => {
     Reflect.set(optimization, 'fetchContentfulEntry', fetchContentfulEntry)
 
     const view = await renderComponent(
-      <OptimizedEntry entryId="baseline" entryQuery={{ locale: 'de-DE' }} loadingFallback="loading">
+      <OptimizedEntry
+        entryId="4ib0hsHWoSOnCVdDkizE8d"
+        entryQuery={{ locale: 'de-DE' }}
+        loadingFallback="loading"
+      >
         {(resolved) => readTitle(resolved)}
       </OptimizedEntry>,
       optimization,
     )
 
     expect(view.container.textContent).toContain('loading')
-    expect(fetchContentfulEntry).toHaveBeenCalledWith('baseline', { locale: 'de-DE' })
+    expect(fetchContentfulEntry).toHaveBeenCalledWith('4ib0hsHWoSOnCVdDkizE8d', { locale: 'de-DE' })
 
     await act(async () => {
       deferred.resolve(baseline)
       await deferred.promise
     })
 
-    expect(view.container.textContent).toContain('baseline')
-    expect(getWrapper(view.container).dataset.ctflEntryId).toBe('baseline')
+    expect(view.container.textContent).toContain('4ib0hsHWoSOnCVdDkizE8d')
+    expect(getWrapper(view.container).dataset.ctflEntryId).toBe('4ib0hsHWoSOnCVdDkizE8d')
 
     await view.unmount()
   })
@@ -301,7 +301,7 @@ describe('OptimizedEntry', () => {
 
     const view = await renderComponent(
       <OptimizedEntry
-        entryId="baseline"
+        entryId="4ib0hsHWoSOnCVdDkizE8d"
         errorFallback={(entryError) => `error: ${entryError.message}`}
         onEntryError={onEntryError}
       >
@@ -337,13 +337,13 @@ describe('OptimizedEntry', () => {
     )
 
     expect(view.container.textContent).toContain('loading')
-    expect(view.container.textContent).not.toContain('optimized-baseline')
+    expect(view.container.textContent).not.toContain('6KfLDCdA75BGwr5HfSeXac')
 
     await act(async () => {
       await rs.advanceTimersByTimeAsync(5000)
     })
 
-    expect(view.container.textContent).toContain('optimized-baseline')
+    expect(view.container.textContent).toContain('6KfLDCdA75BGwr5HfSeXac')
     expect(view.container.textContent).not.toContain('loading')
 
     const loadingWrapper = getWrapper(view.container)
@@ -373,7 +373,7 @@ describe('OptimizedEntry', () => {
 
     await setExperienceRequestState({ status: 'failed', reason: 'api-error' })
 
-    expect(view.container.textContent).toContain('optimized-baseline')
+    expect(view.container.textContent).toContain('6KfLDCdA75BGwr5HfSeXac')
     expect(view.container.textContent).not.toContain('loading')
 
     await view.unmount()
@@ -401,9 +401,9 @@ describe('OptimizedEntry', () => {
     await emit(variantTwoState)
 
     const wrapper = getWrapper(view.container)
-    expect(wrapper.dataset.ctflBaselineId).toBe('baseline')
-    expect(wrapper.dataset.ctflEntryId).toBe('variant-b')
-    expect(wrapper.dataset.ctflOptimizationId).toBe('exp-hero')
+    expect(wrapper.dataset.ctflBaselineId).toBe('4ib0hsHWoSOnCVdDkizE8d')
+    expect(wrapper.dataset.ctflEntryId).toBe('2qVK4T5lnScbswoyBuGipd')
+    expect(wrapper.dataset.ctflOptimizationId).toBe('6IueRX1pS3iMJncbhUQTba')
     expect(wrapper.dataset.ctflSticky).toBe('false')
     expect(wrapper.dataset.ctflVariantIndex).toBe('2')
     expect(wrapper.dataset.ctflDuplicationScope).toBe('session')
@@ -433,13 +433,15 @@ describe('OptimizedEntry', () => {
 
     await emit(variantOneState)
 
-    expect(view.container.textContent).toContain('variant-a:optimized-baseline:variant-a:ctx-1')
+    expect(view.container.textContent).toContain(
+      '4k6ZyFQnR2POY5IJLLlJRb:6KfLDCdA75BGwr5HfSeXac:4k6ZyFQnR2POY5IJLLlJRb:ctx-1',
+    )
     expect(onEntryResolved).toHaveBeenCalledWith(
       expect.objectContaining({
         baselineEntry: optimizedBaseline,
-        baselineEntryId: 'optimized-baseline',
+        baselineEntryId: '6KfLDCdA75BGwr5HfSeXac',
         entry: variantA,
-        entryId: 'variant-a',
+        entryId: '4k6ZyFQnR2POY5IJLLlJRb',
         optimizationContextId: 'ctx-1',
       }),
     )
@@ -460,7 +462,7 @@ describe('OptimizedEntry', () => {
       optimization,
     )
 
-    expect(view.container.textContent).toContain('optimized-baseline')
+    expect(view.container.textContent).toContain('6KfLDCdA75BGwr5HfSeXac')
     expect(getWrapper(view.container).dataset.ctflEntryId).toBeUndefined()
     expect(onEntryResolved).not.toHaveBeenCalled()
 
@@ -468,11 +470,11 @@ describe('OptimizedEntry', () => {
 
     expect(onEntryResolved).toHaveBeenCalledWith(
       expect.objectContaining({
-        baselineEntryId: 'optimized-baseline',
-        entryId: 'optimized-baseline',
+        baselineEntryId: '6KfLDCdA75BGwr5HfSeXac',
+        entryId: '6KfLDCdA75BGwr5HfSeXac',
       }),
     )
-    expect(getWrapper(view.container).dataset.ctflEntryId).toBe('optimized-baseline')
+    expect(getWrapper(view.container).dataset.ctflEntryId).toBe('6KfLDCdA75BGwr5HfSeXac')
 
     await view.unmount()
   })
@@ -532,10 +534,10 @@ describe('OptimizedEntry', () => {
     const props: DerivedMetadataOverrideProps = {
       baselineEntry: baseline,
       children: (resolved: TestEntry) => readTitle(resolved),
-      'data-ctfl-baseline-id': 'caller-baseline',
+      'data-ctfl-baseline-id': '4ib0hsHWoSOnCVdDkizE8d',
       'data-ctfl-duplication-scope': 'caller-scope',
-      'data-ctfl-entry-id': 'caller-entry',
-      'data-ctfl-optimization-id': 'caller-exp',
+      'data-ctfl-entry-id': '4k6ZyFQnR2POY5IJLLlJRb',
+      'data-ctfl-optimization-id': '6IueRX1pS3iMJncbhUQTba',
       'data-ctfl-sticky': 'true',
       'data-ctfl-variant-index': '99',
     }
@@ -545,10 +547,10 @@ describe('OptimizedEntry', () => {
     await emit(variantTwoState)
 
     const wrapper = getWrapper(view.container)
-    expect(wrapper.dataset.ctflBaselineId).toBe('baseline')
+    expect(wrapper.dataset.ctflBaselineId).toBe('4ib0hsHWoSOnCVdDkizE8d')
     expect(wrapper.dataset.ctflDuplicationScope).toBe('session')
-    expect(wrapper.dataset.ctflEntryId).toBe('variant-b')
-    expect(wrapper.dataset.ctflOptimizationId).toBe('exp-hero')
+    expect(wrapper.dataset.ctflEntryId).toBe('2qVK4T5lnScbswoyBuGipd')
+    expect(wrapper.dataset.ctflOptimizationId).toBe('6IueRX1pS3iMJncbhUQTba')
     expect(wrapper.dataset.ctflSticky).toBe('false')
     expect(wrapper.dataset.ctflVariantIndex).toBe('2')
 
@@ -578,8 +580,8 @@ describe('OptimizedEntry', () => {
         sticky: true,
         variantIndex: 1,
         variants: {
-          'parent-baseline': 'parent-variant',
-          'child-baseline': 'child-variant',
+          '3Z2hP4vR8sT1nY6mK9qL0a': '5mN8rY2pL6qT9vW3xA4bCd',
+          '7pQ2rS5tU8vW1xY4zA6bCd': '9sT4uV7wX0yZ3aB6cD8eFg',
         },
       },
     ]
@@ -588,11 +590,11 @@ describe('OptimizedEntry', () => {
       const selected = selectedOptimizations?.[0]
       if (!selected) return { entry }
 
-      if (entry.sys.id === 'parent-baseline') {
+      if (entry.sys.id === '3Z2hP4vR8sT1nY6mK9qL0a') {
         return { entry: variantParent, selectedOptimization: selected }
       }
 
-      if (entry.sys.id === 'child-baseline') {
+      if (entry.sys.id === '7pQ2rS5tU8vW1xY4zA6bCd') {
         return { entry: variantChild, selectedOptimization: selected }
       }
 
@@ -615,8 +617,8 @@ describe('OptimizedEntry', () => {
 
     await emit(nestedState)
 
-    expect(view.container.textContent).toContain('parent-variant')
-    expect(view.container.textContent).toContain('child-variant')
+    expect(view.container.textContent).toContain('5mN8rY2pL6qT9vW3xA4bCd')
+    expect(view.container.textContent).toContain('9sT4uV7wX0yZ3aB6cD8eFg')
 
     await view.unmount()
   })
@@ -644,10 +646,10 @@ describe('OptimizedEntry', () => {
     )
 
     await emit(variantOneState)
-    expect(view.container.textContent).toContain('variant-a')
+    expect(view.container.textContent).toContain('4k6ZyFQnR2POY5IJLLlJRb')
 
     await emit(variantTwoState)
-    expect(view.container.textContent).toContain('variant-b')
+    expect(view.container.textContent).toContain('2qVK4T5lnScbswoyBuGipd')
 
     await view.unmount()
   })
@@ -685,7 +687,7 @@ describe('OptimizedEntry', () => {
       optimization,
     )
 
-    expect(view.container.textContent).toContain('optimized-baseline')
+    expect(view.container.textContent).toContain('6KfLDCdA75BGwr5HfSeXac')
 
     const loadingWrapper = getWrapper(view.container)
     expect(loadingWrapper.dataset.ctflEntryId).toBeUndefined()
@@ -708,14 +710,14 @@ describe('OptimizedEntry', () => {
       optimization,
     )
 
-    expect(view.container.textContent).toContain('optimized-baseline')
-    expect(view.container.textContent).not.toContain('variant-a')
+    expect(view.container.textContent).toContain('6KfLDCdA75BGwr5HfSeXac')
+    expect(view.container.textContent).not.toContain('4k6ZyFQnR2POY5IJLLlJRb')
     expect(getWrapper(view.container).dataset.ctflEntryId).toBeUndefined()
 
     await emit(variantOneState)
 
-    expect(view.container.textContent).toContain('variant-a')
-    expect(view.container.textContent).not.toContain('optimized-baseline')
+    expect(view.container.textContent).toContain('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(view.container.textContent).not.toContain('6KfLDCdA75BGwr5HfSeXac')
 
     await view.unmount()
   })
@@ -742,7 +744,7 @@ describe('OptimizedEntry', () => {
       await rs.advanceTimersByTimeAsync(5000)
     })
 
-    expect(view.container.textContent).toContain('optimized-baseline')
+    expect(view.container.textContent).toContain('6KfLDCdA75BGwr5HfSeXac')
     expect(loadingTarget.style.visibility).toBe('')
     expect(getWrapper(view.container).dataset.ctflEntryId).toBeUndefined()
 
@@ -766,7 +768,7 @@ describe('OptimizedEntry', () => {
       optimization,
     )
 
-    expect(view.container.textContent).toContain('baseline')
+    expect(view.container.textContent).toContain('4ib0hsHWoSOnCVdDkizE8d')
     expect(view.container.querySelector('[data-testid="nested-same-id"]')).toBeNull()
 
     await view.unmount()
@@ -848,7 +850,7 @@ describe('OptimizedEntry', () => {
       ),
     )
 
-    expect(markup).toContain('baseline')
+    expect(markup).toContain('4ib0hsHWoSOnCVdDkizE8d')
     expect(markup).not.toContain('visibility:hidden')
   })
 
@@ -862,19 +864,19 @@ describe('OptimizedEntry', () => {
             entries: [
               {
                 baselineEntry: variantA,
-                entryId: 'baseline',
+                entryId: '4ib0hsHWoSOnCVdDkizE8d',
                 entryQuery: { locale: 'fr-FR' },
               },
               {
                 baselineEntry: baseline,
-                entryId: 'baseline',
+                entryId: '4ib0hsHWoSOnCVdDkizE8d',
                 entryQuery: { locale: 'de-DE' },
               },
             ],
           })}
         >
           <OptimizedEntry
-            entryId="baseline"
+            entryId="4ib0hsHWoSOnCVdDkizE8d"
             entryQuery={{ locale: 'de-DE' }}
             loadingFallback="loading"
           >
@@ -884,8 +886,8 @@ describe('OptimizedEntry', () => {
       ),
     )
 
-    expect(markup).toContain('baseline')
-    expect(markup).not.toContain('variant-a')
+    expect(markup).toContain('4ib0hsHWoSOnCVdDkizE8d')
+    expect(markup).not.toContain('4k6ZyFQnR2POY5IJLLlJRb')
     expect(markup).not.toContain('loading')
   })
 
@@ -897,7 +899,7 @@ describe('OptimizedEntry', () => {
       optimization,
     )
 
-    expect(view.container.textContent).toContain('baseline')
+    expect(view.container.textContent).toContain('4ib0hsHWoSOnCVdDkizE8d')
 
     await view.unmount()
   })
@@ -905,10 +907,10 @@ describe('OptimizedEntry', () => {
   describe('empty variant', () => {
     const emptyVariantState: SelectedOptimizationArray = [
       {
-        experienceId: 'exp-hero',
+        experienceId: '6IueRX1pS3iMJncbhUQTba',
         sticky: false,
         variantIndex: 1,
-        variants: { 'optimized-baseline': '' },
+        variants: { '6KfLDCdA75BGwr5HfSeXac': '' },
       },
     ]
 
@@ -961,8 +963,8 @@ describe('OptimizedEntry', () => {
 
       const wrapper = getWrapper(view.container)
       expect(wrapper.dataset.ctflEmptyVariant).toBe('true')
-      expect(wrapper.dataset.ctflBaselineId).toBe('optimized-baseline')
-      expect(wrapper.dataset.ctflOptimizationId).toBe('exp-hero')
+      expect(wrapper.dataset.ctflBaselineId).toBe('6KfLDCdA75BGwr5HfSeXac')
+      expect(wrapper.dataset.ctflOptimizationId).toBe('6IueRX1pS3iMJncbhUQTba')
       expect(wrapper.dataset.ctflVariantIndex).toBe('1')
 
       await view.unmount()
@@ -989,7 +991,7 @@ describe('OptimizedEntry', () => {
 
       await emit(emptyVariantState)
 
-      expect(view.container.textContent).not.toContain('optimized-baseline')
+      expect(view.container.textContent).not.toContain('6KfLDCdA75BGwr5HfSeXac')
 
       await view.unmount()
     })

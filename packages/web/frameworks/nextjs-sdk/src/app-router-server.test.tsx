@@ -66,11 +66,11 @@ const sdkConfig = {
   locale: 'en-US',
 }
 
-const baselineEntry = createEntry('baseline-entry')
-const variantEntry = createEntry('variant-entry', { title: 'Variant entry' })
+const baselineEntry = createEntry('4ib0hsHWoSOnCVdDkizE8d')
+const variantEntry = createEntry('4k6ZyFQnR2POY5IJLLlJRb', { title: 'Variant entry' })
 const selectedOptimizations: OptimizationData['selectedOptimizations'] = [
   {
-    experienceId: 'experience-entry',
+    experienceId: '6IueRX1pS3iMJncbhUQTba',
     sticky: false,
     variantIndex: 1,
     variants: { [baselineEntry.sys.id]: variantEntry.sys.id },
@@ -81,8 +81,8 @@ const optimizationData: OptimizationData = {
   changes: [],
   selectedOptimizations,
   profile: {
-    id: 'server-profile-id',
-    stableId: 'server-profile-id',
+    id: 'f0837d7dc6344c36a3a0a06c4cde754b',
+    stableId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     random: 0.5,
     audiences: [],
     traits: {
@@ -90,7 +90,7 @@ const optimizationData: OptimizationData = {
     },
     location: {},
     session: {
-      id: 'server-session-id',
+      id: 'e77eab64-93ca-4f6e-8492-037c1ff67caa',
       isReturningVisitor: false,
       landingPage: {
         path: '/',
@@ -167,7 +167,7 @@ function createOptimizedEntry(
   selectedVariantEntry: ServerTrackingBaselineEntry,
 ): ServerTrackingBaselineEntry {
   const optimizationEntry = createEntry(
-    'experience-entry',
+    '6IueRX1pS3iMJncbhUQTba',
     {
       nt_config: {
         components: [
@@ -178,7 +178,7 @@ function createOptimizedEntry(
           },
         ],
       },
-      nt_experience_id: 'experience-entry',
+      nt_experience_id: '6IueRX1pS3iMJncbhUQTba',
       nt_name: 'Experience entry',
       nt_type: 'nt_personalization',
       nt_variants: [selectedVariantEntry],
@@ -352,10 +352,12 @@ describe('Next.js App Router v2 binding', () => {
     const element = await OptimizationRoot({
       children: 'Server content',
       handoff,
-      prefetchManagedEntries: [{ entryId: 'baseline-entry', entryQuery: { locale: 'de-DE' } }],
+      prefetchManagedEntries: [
+        { entryId: '4ib0hsHWoSOnCVdDkizE8d', entryQuery: { locale: 'de-DE' } },
+      ],
     })
 
-    expect(getEntry).toHaveBeenCalledWith('baseline-entry', {
+    expect(getEntry).toHaveBeenCalledWith('4ib0hsHWoSOnCVdDkizE8d', {
       include: 10,
       locale: 'de-DE',
     })
@@ -363,7 +365,9 @@ describe('Next.js App Router v2 binding', () => {
       children: 'Server content',
       defaults: { consent: false, persistenceConsent: false },
       handoff: {
-        entries: [{ baselineEntry, entryId: 'baseline-entry', entryQuery: { locale: 'de-DE' } }],
+        entries: [
+          { baselineEntry, entryId: '4ib0hsHWoSOnCVdDkizE8d', entryQuery: { locale: 'de-DE' } },
+        ],
       },
     })
     expect(element.props).not.toHaveProperty('contentful')
@@ -382,16 +386,20 @@ describe('Next.js App Router v2 binding', () => {
     const element = await OptimizationProvider({
       children: 'Provider content',
       hydration: 'client-only-hidden-until-ready',
-      prefetchManagedEntries: [{ entryId: 'baseline-entry', entryQuery: { locale: 'de-DE' } }],
+      prefetchManagedEntries: [
+        { entryId: '4ib0hsHWoSOnCVdDkizE8d', entryQuery: { locale: 'de-DE' } },
+      ],
     })
 
-    expect(getEntry).toHaveBeenCalledWith('baseline-entry', {
+    expect(getEntry).toHaveBeenCalledWith('4ib0hsHWoSOnCVdDkizE8d', {
       include: 10,
       locale: 'de-DE',
     })
     expect(element?.props).toMatchObject({
       handoff: {
-        entries: [{ baselineEntry, entryId: 'baseline-entry', entryQuery: { locale: 'de-DE' } }],
+        entries: [
+          { baselineEntry, entryId: '4ib0hsHWoSOnCVdDkizE8d', entryQuery: { locale: 'de-DE' } },
+        ],
       },
       hydration: 'client-only-hidden-until-ready',
     })
@@ -457,7 +465,7 @@ describe('Next.js App Router v2 binding', () => {
       setForwardedServerData(request.headers, {
         consent: { events: true, persistence: false },
         pageAccepted,
-        profileId: 'server-profile-id',
+        profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
       })
 
       const handoff = await createRequestHandoff({
@@ -474,7 +482,7 @@ describe('Next.js App Router v2 binding', () => {
       expect(getProfile).toHaveBeenCalledTimes(1)
       const profileUrl = getProfile.mock.calls[0]?.[0]
       if (typeof profileUrl !== 'string') throw new Error('Expected getProfile URL string.')
-      expect(profileUrl).toContain('/profiles/server-profile-id')
+      expect(profileUrl).toContain('/profiles/f0837d7dc6344c36a3a0a06c4cde754b')
       expect(profileUrl).toContain('locale=en-US')
       expect(handoff.initialPageEvent).toBe(pageAccepted ? 'skip' : 'emit')
       expect(handoff.cache).toEqual({ scope: 'private-request' })
@@ -562,7 +570,7 @@ describe('Next.js App Router v2 binding', () => {
       serializeNextjsOptimizationRequestContext({
         consent: false,
         pageAccepted: false,
-        profileId: 'forged-profile-id',
+        profileId: 'a19c3f54d2b84e37a93f6d1c0e5b7284',
       }),
     )
 
@@ -589,7 +597,7 @@ describe('Next.js App Router v2 binding', () => {
     setForwardedServerData(request.headers, {
       consent: false,
       pageAccepted: undefined,
-      profileId: 'server-profile-id',
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
 
     const handoff = await createRequestHandoff({
@@ -739,11 +747,11 @@ describe('Next.js App Router v2 binding', () => {
       }),
     )
 
-    expect(html).toContain('data-ctfl-baseline-id="baseline-entry"')
-    expect(html).toContain('data-ctfl-entry-id="baseline-entry"')
+    expect(html).toContain('data-ctfl-baseline-id="4ib0hsHWoSOnCVdDkizE8d"')
+    expect(html).toContain('data-ctfl-entry-id="4ib0hsHWoSOnCVdDkizE8d"')
     expect(html).toContain('data-ctfl-track-views="true"')
     expect(html).toContain('data-testid="entry"')
-    expect(html).toContain('baseline-entry')
+    expect(html).toContain('4ib0hsHWoSOnCVdDkizE8d')
   })
 
   it('passes explicit merge-tag profile helpers to server render props', async () => {
@@ -787,7 +795,7 @@ describe('Next.js App Router v2 binding', () => {
 
     expect(html).toContain(`data-ctfl-baseline-id="${baselineEntry.sys.id}"`)
     expect(html).toContain(`data-ctfl-entry-id="${variantEntry.sys.id}"`)
-    expect(html).toContain('data-ctfl-optimization-id="experience-entry"')
+    expect(html).toContain('data-ctfl-optimization-id="6IueRX1pS3iMJncbhUQTba"')
     expect(html).toContain('data-ctfl-variant-index="1"')
     expect(html).toContain(variantEntry.sys.id)
   })

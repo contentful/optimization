@@ -30,14 +30,14 @@ const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
   changes: [],
   selectedOptimizations: [],
   profile: {
-    id: 'profile-id',
-    stableId: 'profile-id',
+    id: 'f0837d7dc6344c36a3a0a06c4cde754b',
+    stableId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     random: 1,
     audiences: [],
     traits: {},
     location: {},
     session: {
-      id: 'session-id',
+      id: 'e77eab64-93ca-4f6e-8492-037c1ff67caa',
       isReturningVisitor: false,
       landingPage: {
         path: '/',
@@ -176,7 +176,7 @@ describe('CoreStateless', () => {
         userAgent: 'unit-test',
       },
       experienceOptions: requestOptions,
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.identify({ userId: 'user-123' })
@@ -184,7 +184,7 @@ describe('CoreStateless', () => {
     expect(requestOptimization.canPersistProfile).toBe(true)
     expect(upsertProfile).toHaveBeenCalledWith(
       expect.objectContaining({
-        profileId: 'profile-123',
+        profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
         events: [
           expect.objectContaining({
             context: expect.objectContaining({
@@ -218,7 +218,7 @@ describe('CoreStateless', () => {
           url: 'https://example.test/products?audience=beta',
         },
       },
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.page()
@@ -248,14 +248,14 @@ describe('CoreStateless', () => {
       consent: true,
       eventContext: { locale: 'en-US' },
       experienceOptions: { locale: 'de-DE' },
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.page()
 
     expect(upsertProfile).toHaveBeenCalledWith(
       expect.objectContaining({
-        profileId: 'profile-123',
+        profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
         events: [
           expect.objectContaining({ context: expect.objectContaining({ locale: 'en-US' }) }),
         ],
@@ -274,14 +274,14 @@ describe('CoreStateless', () => {
       eventContext: { locale: 'en-US' },
       experienceOptions: { locale: 'fr-FR', preflight: true },
       locale: ' de_DE ',
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.page()
 
     expect(upsertProfile).toHaveBeenCalledWith(
       expect.objectContaining({
-        profileId: 'profile-123',
+        profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
         events: [
           expect.objectContaining({ context: expect.objectContaining({ locale: 'de-DE' }) }),
         ],
@@ -303,11 +303,11 @@ describe('CoreStateless', () => {
     })
     const requestOptimization = core.forRequest({
       consent: true,
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.page()
-    const result = await requestOptimization.fetchOptimizedEntry('entry-id')
+    const result = await requestOptimization.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
 
     expect(result.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
     expect(result.selectedOptimization).toEqual(
@@ -327,8 +327,10 @@ describe('CoreStateless', () => {
     })
     const requestOptimization = core.forRequest({ consent: true })
 
-    const entry = await requestOptimization.fetchContentfulEntry<ProductEntrySkeleton>('entry-id')
-    const result = await requestOptimization.fetchOptimizedEntry<ProductEntrySkeleton>('entry-id')
+    const entry =
+      await requestOptimization.fetchContentfulEntry<ProductEntrySkeleton>('4ib0hsHWoSOnCVdDkizE8d')
+    const result =
+      await requestOptimization.fetchOptimizedEntry<ProductEntrySkeleton>('4ib0hsHWoSOnCVdDkizE8d')
     const typedEntry: Entry<ProductEntrySkeleton, undefined> = entry
     const typedBaselineEntry: Entry<ProductEntrySkeleton, undefined> = result.baselineEntry
     const typedResolvedEntry: Entry<ProductEntrySkeleton, undefined> = result.entry
@@ -357,17 +359,17 @@ describe('CoreStateless', () => {
       locale: 'de-DE',
     })
 
-    await requestOptimization.fetchContentfulEntry('entry-id')
-    await requestOptimization.fetchOptimizedEntry('entry-id', {
+    await requestOptimization.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
+    await requestOptimization.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d', {
       query: { locale: 'fr-FR' },
       selectedOptimizations: [],
     })
 
-    expect(client.getEntry).toHaveBeenNthCalledWith(1, 'entry-id', {
+    expect(client.getEntry).toHaveBeenNthCalledWith(1, '4ib0hsHWoSOnCVdDkizE8d', {
       include: 2,
       locale: 'de-DE',
     })
-    expect(client.getEntry).toHaveBeenNthCalledWith(2, 'entry-id', {
+    expect(client.getEntry).toHaveBeenNthCalledWith(2, '4ib0hsHWoSOnCVdDkizE8d', {
       include: 2,
       locale: 'fr-FR',
     })
@@ -387,9 +389,9 @@ describe('CoreStateless', () => {
       locale: 'de-DE',
     })
 
-    await defaultLocaleRequest.fetchContentfulEntry('entry-id')
+    await defaultLocaleRequest.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
 
-    expect(defaultLocaleClient.getEntry).toHaveBeenCalledWith('entry-id', {
+    expect(defaultLocaleClient.getEntry).toHaveBeenCalledWith('4ib0hsHWoSOnCVdDkizE8d', {
       include: 10,
       locale: 'it-IT',
     })
@@ -424,29 +426,32 @@ describe('CoreStateless', () => {
       locale: 'de-DE',
     })
 
-    await requestOptimization.fetchContentfulEntries(['entry-a', 'entry-b'])
+    await requestOptimization.fetchContentfulEntries([
+      '4ib0hsHWoSOnCVdDkizE8d',
+      '4k6ZyFQnR2POY5IJLLlJRb',
+    ])
     const handoffs = await requestOptimization.prefetchManagedEntries([
-      'entry-c',
-      { entryId: 'entry-d', entryQuery: { locale: 'fr-FR' } },
+      '2qVK4T5lnScbswoyBuGipd',
+      { entryId: '3Z2hP4vR8sT1nY6mK9qL0a', entryQuery: { locale: 'fr-FR' } },
     ])
 
     expect(client.getEntries).toHaveBeenNthCalledWith(1, {
       include: 2,
       locale: 'de-DE',
-      'sys.id[in]': ['entry-a', 'entry-b'],
+      'sys.id[in]': ['4ib0hsHWoSOnCVdDkizE8d', '4k6ZyFQnR2POY5IJLLlJRb'],
       limit: 2,
     })
-    expect(client.getEntry).toHaveBeenNthCalledWith(1, 'entry-c', {
+    expect(client.getEntry).toHaveBeenNthCalledWith(1, '2qVK4T5lnScbswoyBuGipd', {
       include: 2,
       locale: 'de-DE',
     })
-    expect(client.getEntry).toHaveBeenNthCalledWith(2, 'entry-d', {
+    expect(client.getEntry).toHaveBeenNthCalledWith(2, '3Z2hP4vR8sT1nY6mK9qL0a', {
       include: 2,
       locale: 'fr-FR',
     })
     expect(handoffs.map(({ entryId, entryQuery }) => ({ entryId, entryQuery }))).toEqual([
-      { entryId: 'entry-c', entryQuery: undefined },
-      { entryId: 'entry-d', entryQuery: { locale: 'fr-FR' } },
+      { entryId: '2qVK4T5lnScbswoyBuGipd', entryQuery: undefined },
+      { entryId: '3Z2hP4vR8sT1nY6mK9qL0a', entryQuery: { locale: 'fr-FR' } },
     ])
   })
 
@@ -462,7 +467,7 @@ describe('CoreStateless', () => {
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const requestOptimization = core.forRequest({
       consent: { events: false },
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.identify({ userId: 'user-123' })
@@ -486,7 +491,7 @@ describe('CoreStateless', () => {
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const requestOptimization = core.forRequest({
       consent: false,
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await expect(requestOptimization.track({ event: 'conversion' })).resolves.toEqual({
@@ -516,7 +521,7 @@ describe('CoreStateless', () => {
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const requestOptimization = core.forRequest({
       consent: false,
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await expect(requestOptimization.page()).resolves.toEqual({ accepted: false })
@@ -537,7 +542,7 @@ describe('CoreStateless', () => {
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const requestOptimization = core.forRequest({
       consent: false,
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.track({ event: 'server-preflight' })
@@ -556,7 +561,7 @@ describe('CoreStateless', () => {
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = core.forRequest({
       consent: false,
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.trackView({
@@ -569,7 +574,7 @@ describe('CoreStateless', () => {
     expect(blockedEvents.map((event) => event.method)).toEqual(['trackView'])
     expect(sendBatchEvents).toHaveBeenCalledWith([
       {
-        profile: { id: 'profile-123' },
+        profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
         events: [
           expect.objectContaining({
             componentId: 'dark-mode',
@@ -592,7 +597,7 @@ describe('CoreStateless', () => {
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = core.forRequest({
       consent: false,
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.trackView({
@@ -650,7 +655,7 @@ describe('CoreStateless', () => {
     const requestOptimization = core.forRequest({
       consent: true,
       experienceOptions: { preflight: true },
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.trackView({
@@ -662,7 +667,7 @@ describe('CoreStateless', () => {
 
     expect(upsertProfile).toHaveBeenCalledWith(
       expect.objectContaining({
-        profileId: 'profile-123',
+        profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
         events: [expect.objectContaining({ type: 'component' })],
       }),
       expect.objectContaining({ preflight: true }),
@@ -692,7 +697,7 @@ describe('CoreStateless', () => {
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = core.forRequest({
       consent: false,
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.trackClick({ componentId: 'hero-banner' })
@@ -708,7 +713,7 @@ describe('CoreStateless', () => {
     const requestOptimization = core.forRequest({
       consent: true,
       insightsOptions: { beacon },
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await requestOptimization.trackClick({ componentId: 'hero-banner' })
@@ -772,7 +777,7 @@ describe('CoreStateless', () => {
     const requestOptimization = core.forRequest({
       consent: true,
       experienceOptions: { preflight: true },
-      profile: { id: 'profile-123' },
+      profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
     await expect(
@@ -786,7 +791,7 @@ describe('CoreStateless', () => {
     expect(upsertProfile).not.toHaveBeenCalled()
     expect(sendBatchEvents).toHaveBeenCalledWith([
       {
-        profile: { id: 'profile-123' },
+        profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
         events: [
           expect.objectContaining({
             context: expect.objectContaining({
@@ -817,7 +822,10 @@ describe('CoreStateless', () => {
 
   it('reuses the Experience response profile for sticky entry views without an input profile', async () => {
     const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
-    const responseProfile = { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'profile-from-experience' }
+    const responseProfile = {
+      ...EMPTY_OPTIMIZATION_DATA.profile,
+      id: 'a19c3f54d2b84e37a93f6d1c0e5b7284',
+    }
     const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue({
       ...EMPTY_OPTIMIZATION_DATA,
       profile: responseProfile,

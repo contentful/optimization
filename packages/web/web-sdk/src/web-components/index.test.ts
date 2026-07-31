@@ -292,26 +292,26 @@ function ensureElementsDefined(): void {
 }
 
 describe('Contentful Optimization Web Components', () => {
-  const baseline = createTestEntry('baseline')
-  const optimizedBaseline = createOptimizableTestEntry('optimized-baseline')
-  const variantA = createTestEntry('variant-a')
-  const variantB = createTestEntry('variant-b')
+  const baseline = createTestEntry('4ib0hsHWoSOnCVdDkizE8d')
+  const optimizedBaseline = createOptimizableTestEntry('6KfLDCdA75BGwr5HfSeXac')
+  const variantA = createTestEntry('4k6ZyFQnR2POY5IJLLlJRb')
+  const variantB = createTestEntry('2qVK4T5lnScbswoyBuGipd')
 
   const variantOneState: SelectedOptimizationArray = [
     {
-      experienceId: 'exp-hero',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       sticky: true,
       variantIndex: 1,
-      variants: { baseline: 'variant-a' },
+      variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
     },
   ]
 
   const variantTwoState: SelectedOptimizationArray = [
     {
-      experienceId: 'exp-hero',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       sticky: false,
       variantIndex: 2,
-      variants: { baseline: 'variant-b' },
+      variants: { '4ib0hsHWoSOnCVdDkizE8d': '2qVK4T5lnScbswoyBuGipd' },
     },
   ]
 
@@ -356,7 +356,7 @@ describe('Contentful Optimization Web Components', () => {
     root.append(entry)
     document.body.append(root)
 
-    expect(entry.dataset.ctflEntryId).toBe('baseline')
+    expect(entry.dataset.ctflEntryId).toBe('4ib0hsHWoSOnCVdDkizE8d')
   })
 
   it('binds injected root SDKs without destroying them on disconnect', () => {
@@ -397,7 +397,7 @@ describe('Contentful Optimization Web Components', () => {
       }),
     )
     expect(entry.style.display).toBe('contents')
-    expect(entry.dataset.ctflEntryId).toBe('baseline')
+    expect(entry.dataset.ctflEntryId).toBe('4ib0hsHWoSOnCVdDkizE8d')
     expect(entry.dataset.ctflVariantIndex).toBe('0')
   })
 
@@ -431,14 +431,14 @@ describe('Contentful Optimization Web Components', () => {
         entry: variantA,
         metadata: expect.objectContaining({
           baselineEntry: optimizedBaseline,
-          entryId: 'variant-a',
+          entryId: '4k6ZyFQnR2POY5IJLLlJRb',
           selectedOptimization: variantOneState[0],
         }),
       }),
     )
-    expect(entry.dataset.ctflBaselineId).toBe('optimized-baseline')
-    expect(entry.dataset.ctflEntryId).toBe('variant-a')
-    expect(entry.dataset.ctflOptimizationId).toBe('exp-hero')
+    expect(entry.dataset.ctflBaselineId).toBe('6KfLDCdA75BGwr5HfSeXac')
+    expect(entry.dataset.ctflEntryId).toBe('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(entry.dataset.ctflOptimizationId).toBe('6IueRX1pS3iMJncbhUQTba')
     expect(entry.dataset.ctflVariantIndex).toBe('1')
     expect(entry.style.visibility).toBe('')
   })
@@ -468,8 +468,8 @@ describe('Contentful Optimization Web Components', () => {
         snapshot: expect.objectContaining({ isResolved: true }),
       }),
     )
-    expect(entry.dataset.ctflBaselineId).toBe('optimized-baseline')
-    expect(entry.dataset.ctflEntryId).toBe('optimized-baseline')
+    expect(entry.dataset.ctflBaselineId).toBe('6KfLDCdA75BGwr5HfSeXac')
+    expect(entry.dataset.ctflEntryId).toBe('6KfLDCdA75BGwr5HfSeXac')
   })
 
   it('fetches entryId entries through the SDK before resolving', async () => {
@@ -487,7 +487,7 @@ describe('Contentful Optimization Web Components', () => {
     const loading = rs.fn()
     const resolved = rs.fn((event: Event) => getEntryDetail(event))
 
-    entry.entryId = 'baseline'
+    entry.entryId = '4ib0hsHWoSOnCVdDkizE8d'
     entry.entryQuery = { locale: 'de-DE' }
     entry.addEventListener('ctfl-entry-loading', loading)
     entry.addEventListener('ctfl-entry-resolved', resolved)
@@ -496,7 +496,7 @@ describe('Contentful Optimization Web Components', () => {
     await flushMicrotasks()
 
     expect(loading).toHaveBeenCalledTimes(1)
-    expect(fetchContentfulEntry).toHaveBeenCalledWith('baseline', { locale: 'de-DE' })
+    expect(fetchContentfulEntry).toHaveBeenCalledWith('4ib0hsHWoSOnCVdDkizE8d', { locale: 'de-DE' })
     expect(resolved).toHaveReturnedWith(
       expect.objectContaining({
         entry: baseline,
@@ -505,7 +505,7 @@ describe('Contentful Optimization Web Components', () => {
         }),
       }),
     )
-    expect(entry.dataset.ctflEntryId).toBe('baseline')
+    expect(entry.dataset.ctflEntryId).toBe('4ib0hsHWoSOnCVdDkizE8d')
   })
 
   it('prefetches managed entries after the root SDK is ready', async () => {
@@ -516,15 +516,15 @@ describe('Contentful Optimization Web Components', () => {
     const root = createRootElement(runtime.sdk)
 
     root.prefetchManagedEntries = [
-      'baseline',
-      { entryId: 'other', entryQuery: { locale: 'de-DE' } },
+      '4ib0hsHWoSOnCVdDkizE8d',
+      { entryId: '3Z2hP4vR8sT1nY6mK9qL0a', entryQuery: { locale: 'de-DE' } },
     ]
     document.body.append(root)
     await flushMicrotasks()
 
     expect(prefetchManagedEntries).toHaveBeenCalledWith([
-      'baseline',
-      { entryId: 'other', entryQuery: { locale: 'de-DE' } },
+      '4ib0hsHWoSOnCVdDkizE8d',
+      { entryId: '3Z2hP4vR8sT1nY6mK9qL0a', entryQuery: { locale: 'de-DE' } },
     ])
   })
 
@@ -556,13 +556,13 @@ describe('Contentful Optimization Web Components', () => {
     root.clientId = 'client-id'
     root.environment = 'main'
     root.contentful = { client: { getEntry, getEntries }, cache: false }
-    entry.entryId = 'baseline'
+    entry.entryId = '4ib0hsHWoSOnCVdDkizE8d'
     root.append(entry)
     document.body.append(root)
     const detail = await resolved
 
     expect(root.contentful).toEqual({ client: { getEntry, getEntries }, cache: false })
-    expect(getEntry).toHaveBeenCalledWith('baseline', { include: 10 })
+    expect(getEntry).toHaveBeenCalledWith('4ib0hsHWoSOnCVdDkizE8d', { include: 10 })
     expect(getEntries).not.toHaveBeenCalled()
     expect(detail).toEqual(
       expect.objectContaining({
@@ -580,12 +580,12 @@ describe('Contentful Optimization Web Components', () => {
     const root = createRootElement(runtime.sdk)
     const entry = createEntryElement(baseline)
 
-    entry.entryId = 'variant-a'
+    entry.entryId = '4k6ZyFQnR2POY5IJLLlJRb'
     root.append(entry)
     document.body.append(root)
 
     expect(fetchContentfulEntry).not.toHaveBeenCalled()
-    expect(entry.dataset.ctflEntryId).toBe('baseline')
+    expect(entry.dataset.ctflEntryId).toBe('4ib0hsHWoSOnCVdDkizE8d')
   })
 
   it('starts a fresh entryId fetch when baselineEntry precedence is removed', async () => {
@@ -606,20 +606,20 @@ describe('Contentful Optimization Web Components', () => {
       throw new Error('ctfl-optimized-entry is not registered.')
     }
 
-    entry.entryId = 'baseline'
+    entry.entryId = '4ib0hsHWoSOnCVdDkizE8d'
     root.append(entry)
     document.body.append(root)
 
     expect(fetchContentfulEntry).toHaveBeenCalledTimes(1)
 
     entry.baselineEntry = variantA
-    expect(entry.dataset.ctflEntryId).toBe('variant-a')
+    expect(entry.dataset.ctflEntryId).toBe('4k6ZyFQnR2POY5IJLLlJRb')
 
     entry.baselineEntry = undefined
     await flushMicrotasks()
 
     expect(fetchContentfulEntry).toHaveBeenCalledTimes(2)
-    expect(entry.dataset.ctflEntryId).toBe('baseline')
+    expect(entry.dataset.ctflEntryId).toBe('4ib0hsHWoSOnCVdDkizE8d')
     firstFetch.resolve(baseline)
     await flushMicrotasks()
   })
@@ -638,7 +638,7 @@ describe('Contentful Optimization Web Components', () => {
 
     const errored = rs.fn((event: Event) => getEntryError(event))
 
-    entry.entryId = 'baseline'
+    entry.entryId = '4ib0hsHWoSOnCVdDkizE8d'
     entry.addEventListener('ctfl-entry-error', errored)
     root.append(entry)
     document.body.append(root)
@@ -665,10 +665,10 @@ describe('Contentful Optimization Web Components', () => {
     runtime.canOptimize.emit(true)
     runtime.experienceRequestState.emit({ status: 'success' })
 
-    expect(resolved).toHaveReturnedWith('variant-a')
-    expect(entry.dataset.ctflEntryId).toBe('variant-a')
-    expect(entry.dataset.ctflBaselineId).toBe('optimized-baseline')
-    expect(entry.dataset.ctflOptimizationId).toBe('exp-hero')
+    expect(resolved).toHaveReturnedWith('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(entry.dataset.ctflEntryId).toBe('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(entry.dataset.ctflBaselineId).toBe('6KfLDCdA75BGwr5HfSeXac')
+    expect(entry.dataset.ctflOptimizationId).toBe('6IueRX1pS3iMJncbhUQTba')
     expect(entry.dataset.ctflSticky).toBe('true')
     expect(entry.dataset.ctflVariantIndex).toBe('1')
 
@@ -684,7 +684,7 @@ describe('Contentful Optimization Web Components', () => {
 
     entry.baselineEntry = optimizedBaseline
 
-    expect(resolved).toHaveReturnedWith('variant-a')
+    expect(resolved).toHaveReturnedWith('4k6ZyFQnR2POY5IJLLlJRb')
   })
 
   it('clears loading presentation when the SDK context becomes unavailable', () => {
@@ -723,15 +723,15 @@ describe('Contentful Optimization Web Components', () => {
     document.body.append(root)
 
     runtime.selectedOptimizations.emit(variantOneState)
-    expect(entry.dataset.ctflEntryId).toBe('variant-a')
+    expect(entry.dataset.ctflEntryId).toBe('4k6ZyFQnR2POY5IJLLlJRb')
 
     runtime.selectedOptimizations.emit(variantTwoState)
-    expect(entry.dataset.ctflEntryId).toBe('variant-a')
+    expect(entry.dataset.ctflEntryId).toBe('4k6ZyFQnR2POY5IJLLlJRb')
 
     root.liveUpdates = true
 
-    expect(entry.dataset.ctflEntryId).toBe('variant-b')
-    expect(resolved).toHaveReturnedWith('variant-b')
+    expect(entry.dataset.ctflEntryId).toBe('2qVK4T5lnScbswoyBuGipd')
+    expect(resolved).toHaveReturnedWith('2qVK4T5lnScbswoyBuGipd')
   })
 
   it('preserves initial preview panel state so entries follow live updates', () => {
@@ -755,10 +755,10 @@ describe('Contentful Optimization Web Components', () => {
     document.body.append(root)
 
     runtime.selectedOptimizations.emit(variantOneState)
-    expect(entry.dataset.ctflEntryId).toBe('variant-a')
+    expect(entry.dataset.ctflEntryId).toBe('4k6ZyFQnR2POY5IJLLlJRb')
 
     runtime.selectedOptimizations.emit(variantTwoState)
-    expect(entry.dataset.ctflEntryId).toBe('variant-b')
+    expect(entry.dataset.ctflEntryId).toBe('2qVK4T5lnScbswoyBuGipd')
   })
 
   it('applies only changed host attributes', () => {
@@ -785,10 +785,13 @@ describe('Contentful Optimization Web Components', () => {
 
     runtime.selectedOptimizations.emit(variantTwoState)
 
-    expect(setAttribute).toHaveBeenCalledWith('data-ctfl-entry-id', 'variant-b')
+    expect(setAttribute).toHaveBeenCalledWith('data-ctfl-entry-id', '2qVK4T5lnScbswoyBuGipd')
     expect(setAttribute).toHaveBeenCalledWith('data-ctfl-sticky', 'false')
     expect(setAttribute).toHaveBeenCalledWith('data-ctfl-variant-index', '2')
-    expect(setAttribute).not.toHaveBeenCalledWith('data-ctfl-optimization-id', 'exp-hero')
+    expect(setAttribute).not.toHaveBeenCalledWith(
+      'data-ctfl-optimization-id',
+      '6IueRX1pS3iMJncbhUQTba',
+    )
   })
 
   it('bubbles resolved entry events for delegated listeners', () => {

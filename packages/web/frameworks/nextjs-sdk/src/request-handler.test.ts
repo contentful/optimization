@@ -31,14 +31,14 @@ const optimizationData: OptimizationData = {
   changes: [],
   selectedOptimizations: [],
   profile: {
-    id: 'profile-from-page',
-    stableId: 'profile-from-page',
+    id: 'f0837d7dc6344c36a3a0a06c4cde754b',
+    stableId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     random: 1,
     audiences: [],
     traits: {},
     location: {},
     session: {
-      id: 'session-id',
+      id: 'e77eab64-93ca-4f6e-8492-037c1ff67caa',
       isReturningVisitor: false,
       landingPage: {
         path: '/',
@@ -172,9 +172,9 @@ describe('createNextjsOptimizationContextHandler', () => {
     expect(context).toEqual({
       consent: { events: true, persistence: true },
       pageAccepted: true,
-      profileId: 'profile-from-page',
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
-    expect(response.cookies.get('ctfl-opt-aid')?.value).toBe('profile-from-page')
+    expect(response.cookies.get('ctfl-opt-aid')?.value).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
   })
 
   it('preserves an existing JSON response without SDK work or request-header mutation', async () => {
@@ -256,9 +256,9 @@ describe('createNextjsOptimizationContextHandler', () => {
     expect(context).toEqual({
       consent: { events: true, persistence: true },
       pageAccepted: true,
-      profileId: 'profile-from-page',
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
-    expect(response.cookies.get('ctfl-opt-aid')?.value).toBe('profile-from-page')
+    expect(response.cookies.get('ctfl-opt-aid')?.value).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
   })
 
   it('does not forward oversized OptimizationData in the trusted server context header', async () => {
@@ -290,7 +290,7 @@ describe('createNextjsOptimizationContextHandler', () => {
     expect(context).toEqual({
       consent: true,
       pageAccepted: true,
-      profileId: 'profile-from-page',
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
   })
 
@@ -358,9 +358,9 @@ describe('createNextjsOptimizationContextHandler', () => {
         'user-agent': 'test-agent',
       },
     })
-    request.cookies.set('ctfl-opt-aid', 'stale-profile')
+    request.cookies.set('ctfl-opt-aid', 'a19c3f54d2b84e37a93f6d1c0e5b7284')
     request.cookies.set('consent', 'no')
-    const forwardedCookie = 'ctfl-opt-aid=forwarded-profile; consent=yes'
+    const forwardedCookie = 'ctfl-opt-aid=f0837d7dc6344c36a3a0a06c4cde754b; consent=yes'
     const forwardedHeaders = new Headers(request.headers)
     forwardedHeaders.set('cookie', forwardedCookie)
     const existingResponse = NextResponse.next({ request: { headers: forwardedHeaders } })
@@ -377,15 +377,15 @@ describe('createNextjsOptimizationContextHandler', () => {
     expect(seenConsentCookies).toEqual(['yes'])
     expect(upsertProfile).toHaveBeenCalledTimes(1)
     expect(upsertProfile).toHaveBeenCalledWith(
-      expect.objectContaining({ profileId: 'forwarded-profile' }),
+      expect.objectContaining({ profileId: 'f0837d7dc6344c36a3a0a06c4cde754b' }),
       undefined,
     )
     expect(context).toEqual({
       consent: { events: true, persistence: true },
       pageAccepted: true,
-      profileId: 'profile-from-page',
+      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
     })
-    expect(response.cookies.get('ctfl-opt-aid')?.value).toBe('profile-from-page')
+    expect(response.cookies.get('ctfl-opt-aid')?.value).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
   })
 
   it('clears the profile cookie when persistence is not allowed', async () => {

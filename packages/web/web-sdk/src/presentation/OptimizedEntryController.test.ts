@@ -123,26 +123,26 @@ function createSdk(
 }
 
 describe('OptimizedEntryController', () => {
-  const baseline = createTestEntry('baseline')
-  const optimizedBaseline = createOptimizableTestEntry('optimized-baseline')
-  const variantA = createTestEntry('variant-a')
-  const variantB = createTestEntry('variant-b')
+  const baseline = createTestEntry('4ib0hsHWoSOnCVdDkizE8d')
+  const optimizedBaseline = createOptimizableTestEntry('6KfLDCdA75BGwr5HfSeXac')
+  const variantA = createTestEntry('4k6ZyFQnR2POY5IJLLlJRb')
+  const variantB = createTestEntry('2qVK4T5lnScbswoyBuGipd')
 
   const variantOneState: SelectedOptimizationArray = [
     {
-      experienceId: 'exp-hero',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       sticky: true,
       variantIndex: 1,
-      variants: { baseline: 'variant-a' },
+      variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
     },
   ]
 
   const variantTwoState: SelectedOptimizationArray = [
     {
-      experienceId: 'exp-hero',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       sticky: false,
       variantIndex: 2,
-      variants: { baseline: 'variant-b' },
+      variants: { '4ib0hsHWoSOnCVdDkizE8d': '2qVK4T5lnScbswoyBuGipd' },
     },
   ]
 
@@ -155,18 +155,22 @@ describe('OptimizedEntryController', () => {
   })
 
   it('resolves duplicate baseline nesting state', () => {
-    const ancestorBaselineIds = new Set(['ancestor-baseline', 'duplicate-baseline'])
+    const ancestorBaselineIds = new Set(['3Z2hP4vR8sT1nY6mK9qL0a', '5mN8rY2pL6qT9vW3xA4bCd'])
 
-    expect(resolveOptimizedEntryNestingState('child-baseline', ancestorBaselineIds)).toEqual({
+    expect(
+      resolveOptimizedEntryNestingState('7pQ2rS5tU8vW1xY4zA6bCd', ancestorBaselineIds),
+    ).toEqual({
       currentAndAncestorBaselineIds: new Set([
-        'ancestor-baseline',
-        'duplicate-baseline',
-        'child-baseline',
+        '3Z2hP4vR8sT1nY6mK9qL0a',
+        '5mN8rY2pL6qT9vW3xA4bCd',
+        '7pQ2rS5tU8vW1xY4zA6bCd',
       ]),
       hasDuplicateBaselineAncestor: false,
     })
 
-    expect(resolveOptimizedEntryNestingState('duplicate-baseline', ancestorBaselineIds)).toEqual({
+    expect(
+      resolveOptimizedEntryNestingState('5mN8rY2pL6qT9vW3xA4bCd', ancestorBaselineIds),
+    ).toEqual({
       currentAndAncestorBaselineIds: ancestorBaselineIds,
       hasDuplicateBaselineAncestor: true,
     })
@@ -194,12 +198,12 @@ describe('OptimizedEntryController', () => {
       isResolved: true,
       metadata: {
         baselineEntry: baseline,
-        baselineEntryId: 'baseline',
+        baselineEntryId: '4ib0hsHWoSOnCVdDkizE8d',
         entry: baseline,
-        entryId: 'baseline',
+        entryId: '4ib0hsHWoSOnCVdDkizE8d',
       },
       hostAttributes: {
-        'data-ctfl-entry-id': 'baseline',
+        'data-ctfl-entry-id': '4ib0hsHWoSOnCVdDkizE8d',
         'data-ctfl-track-clicks': true,
         'data-ctfl-track-hovers': false,
         'data-ctfl-variant-index': 0,
@@ -217,9 +221,9 @@ describe('OptimizedEntryController', () => {
         selectedOptimizations: variantOneState,
       },
       hostAttributes: {
-        'data-ctfl-entry-id': 'variant-a',
+        'data-ctfl-entry-id': '4k6ZyFQnR2POY5IJLLlJRb',
         'data-ctfl-optimization-context-id': 'ctx-1',
-        'data-ctfl-optimization-id': 'exp-hero',
+        'data-ctfl-optimization-id': '6IueRX1pS3iMJncbhUQTba',
         'data-ctfl-sticky': true,
         'data-ctfl-variant-index': 1,
       },
@@ -260,8 +264,8 @@ describe('OptimizedEntryController', () => {
       entry: variantA,
       isLoading: false,
       hostAttributes: {
-        'data-ctfl-baseline-id': 'optimized-baseline',
-        'data-ctfl-entry-id': 'variant-a',
+        'data-ctfl-baseline-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-entry-id': '4k6ZyFQnR2POY5IJLLlJRb',
       },
     })
 
@@ -294,8 +298,8 @@ describe('OptimizedEntryController', () => {
 
     expect(controller.getSnapshot()).toMatchObject({
       hostAttributes: {
-        'data-ctfl-baseline-id': 'optimized-baseline',
-        'data-ctfl-entry-id': 'optimized-baseline',
+        'data-ctfl-baseline-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-entry-id': '6KfLDCdA75BGwr5HfSeXac',
         'data-ctfl-variant-index': 0,
       },
       isLoading: false,
@@ -324,8 +328,8 @@ describe('OptimizedEntryController', () => {
       entry: variantA,
       isLoading: false,
       hostAttributes: {
-        'data-ctfl-baseline-id': 'optimized-baseline',
-        'data-ctfl-entry-id': 'variant-a',
+        'data-ctfl-baseline-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-entry-id': '4k6ZyFQnR2POY5IJLLlJRb',
       },
       selectedOptimizations: variantOneState,
     })
@@ -414,7 +418,7 @@ describe('OptimizedEntryController', () => {
 
   it('resets the loading reveal timeout state when the baseline entry changes', async () => {
     rs.useFakeTimers()
-    const nextOptimizedBaseline = createOptimizableTestEntry('next-optimized-baseline')
+    const nextOptimizedBaseline = createOptimizableTestEntry('3Z2hP4vR8sT1nY6mK9qL0a')
     const runtime = createSdk((entry) => ({ entry }))
     const controller = new OptimizedEntryController({
       isPresentationReady: true,

@@ -272,18 +272,19 @@ type PublicOptimizationPermutation = {
 }
 
 const summerHeroSelection = {
-  experienceId: 'exp-homepage-hero',
+  experienceId: '6IueRX1pS3iMJncbhUQTba',
   variantIndex: 2,
   variants: {
-    'hero-baseline': 'hero-variant-summer',
+    '4ib0hsHWoSOnCVdDkizE8d': '2qVK4T5lnScbswoyBuGipd',
   },
   sticky: true,
 } satisfies SelectedOptimization
 ```
 
 Prefer selected-optimization records generated from reviewed segment, CMS, or static config based on
-the same Optimization content model. Hand-author this shape only when your app config can name the
-matching experience and variant entry IDs exactly. A selected-optimization record has four fields:
+the same Optimization content model. Hand-author this shape only when your app config uses matching
+experience and variant entry IDs copied from Contentful or reviewed selection data. A
+selected-optimization record has four fields:
 
 | Field          | Rule                                                                                                                                                                    |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

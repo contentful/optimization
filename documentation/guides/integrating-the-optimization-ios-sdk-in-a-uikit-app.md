@@ -481,7 +481,7 @@ the same current screen is skipped and a blocked attempt is retried once consent
 override func viewDidAppear(_ animated: Bool) {
     super.viewDidAppear(animated)
     Task { @MainActor in
-        // entryId is reader-owned: the value that identifies this destination.
+        // entryId comes from your route or Contentful lookup; when it is a Contentful entry ID, use the opaque ID.
         _ = try? await client.trackCurrentScreen(
             name: "ProductDetail",
             properties: ["entryId": entryId],

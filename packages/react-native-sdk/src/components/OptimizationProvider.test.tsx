@@ -133,7 +133,7 @@ function createSdk(): {
       locale: 'en-US',
       screen: { name: 'Home' },
     },
-    messageId: 'message-id',
+    messageId: '11111111-1111-4111-8111-111111111111',
     name: 'Home',
     originalTimestamp: timestamp,
     properties: {},

@@ -83,54 +83,64 @@ describe('createAudienceDefinitions', () => {
   test('maps nt_audience_id, nt_name, nt_description', () => {
     const [audience] = createAudienceDefinitions(
       contentfulCollection([
-        audienceEntry('sys-1', {
-          nt_audience_id: 'aud-1',
+        audienceEntry('4ib0hsHWoSOnCVdDkizE8d', {
+          nt_audience_id: '2WzXDaWtDmstHl9p8Wufpp',
           nt_name: 'Audience One',
           nt_description: 'a description',
         }),
       ]),
     )
-    expect(audience).toEqual({ id: 'aud-1', name: 'Audience One', description: 'a description' })
+    expect(audience).toEqual({
+      id: '2WzXDaWtDmstHl9p8Wufpp',
+      name: 'Audience One',
+      description: 'a description',
+    })
   })
 
   test('falls back to sys.id when nt_audience_id missing', () => {
     const [audience] = createAudienceDefinitions(
-      contentfulCollection([audienceEntry('sys-1', { nt_name: 'Only Name' })]),
+      contentfulCollection([audienceEntry('4ib0hsHWoSOnCVdDkizE8d', { nt_name: 'Only Name' })]),
     )
-    expect(audience).toEqual({ id: 'sys-1', name: 'Only Name', description: undefined })
+    expect(audience).toEqual({
+      id: '4ib0hsHWoSOnCVdDkizE8d',
+      name: 'Only Name',
+      description: undefined,
+    })
   })
 
   test('falls back to id for name when nt_name missing', () => {
     const [audience] = createAudienceDefinitions(
-      contentfulCollection([audienceEntry('sys-1', { nt_audience_id: 'aud-1' })]),
+      contentfulCollection([
+        audienceEntry('4ib0hsHWoSOnCVdDkizE8d', { nt_audience_id: '2WzXDaWtDmstHl9p8Wufpp' }),
+      ]),
     )
-    expect(audience?.name).toBe('aud-1')
+    expect(audience?.name).toBe('2WzXDaWtDmstHl9p8Wufpp')
   })
 })
 
 describe('createExperienceDefinitions', () => {
   test('maps baseline and variants with percentages and names from linked entries', () => {
-    const variantA = contentfulEntry('v-baseline', { internalTitle: 'Baseline' })
-    const variantB = contentfulEntry('v-one', { title: 'Variant One' })
-    const variantC = contentfulEntry('v-two', { name: 'Variant Two' })
+    const variantA = contentfulEntry('4ib0hsHWoSOnCVdDkizE8d', { internalTitle: 'Baseline' })
+    const variantB = contentfulEntry('4k6ZyFQnR2POY5IJLLlJRb', { title: 'Variant One' })
+    const variantC = contentfulEntry('2qVK4T5lnScbswoyBuGipd', { name: 'Variant Two' })
 
     const [exp] = createExperienceDefinitions(
       contentfulCollection(
         [
-          experienceEntry('sys-exp-1', {
-            nt_experience_id: 'exp-1',
+          experienceEntry('6IueRX1pS3iMJncbhUQTba', {
+            nt_experience_id: '6IueRX1pS3iMJncbhUQTba',
             nt_name: 'Experience One',
             nt_type: 'nt_experiment',
             nt_config: {
               distribution: [0.5, 0.3, 0.2],
               components: [
                 {
-                  baseline: { id: 'v-baseline' },
-                  variants: [{ id: 'v-one' }, { id: 'v-two' }],
+                  baseline: { id: '4ib0hsHWoSOnCVdDkizE8d' },
+                  variants: [{ id: '4k6ZyFQnR2POY5IJLLlJRb' }, { id: '2qVK4T5lnScbswoyBuGipd' }],
                 },
               ],
             },
-            nt_audience: unresolvedEntryLink('aud-1'),
+            nt_audience: unresolvedEntryLink('2WzXDaWtDmstHl9p8Wufpp'),
           }),
         ],
         [variantA, variantB, variantC],
@@ -138,30 +148,35 @@ describe('createExperienceDefinitions', () => {
     )
 
     expect(exp).toEqual({
-      id: 'exp-1',
+      id: '6IueRX1pS3iMJncbhUQTba',
       name: 'Experience One',
       type: 'nt_experiment',
       distribution: [
-        { index: 0, variantRef: 'v-baseline', percentage: 50, name: 'Baseline' },
-        { index: 1, variantRef: 'v-one', percentage: 30, name: 'Variant One' },
-        { index: 2, variantRef: 'v-two', percentage: 20, name: 'Variant Two' },
+        { index: 0, variantRef: '4ib0hsHWoSOnCVdDkizE8d', percentage: 50, name: 'Baseline' },
+        { index: 1, variantRef: '4k6ZyFQnR2POY5IJLLlJRb', percentage: 30, name: 'Variant One' },
+        { index: 2, variantRef: '2qVK4T5lnScbswoyBuGipd', percentage: 20, name: 'Variant Two' },
       ],
-      audience: { id: 'aud-1' },
+      audience: { id: '2WzXDaWtDmstHl9p8Wufpp' },
     })
   })
 
   test('resolves variant name via internalTitle -> title -> name fallback chain', () => {
-    const onlyTitle = contentfulEntry('v-a', { title: 'T' })
-    const onlyName = contentfulEntry('v-b', { name: 'N' })
+    const onlyTitle = contentfulEntry('4ib0hsHWoSOnCVdDkizE8d', { title: 'T' })
+    const onlyName = contentfulEntry('4k6ZyFQnR2POY5IJLLlJRb', { name: 'N' })
 
     const [exp] = createExperienceDefinitions(
       contentfulCollection(
         [
-          experienceEntry('sys-exp-1', {
-            nt_experience_id: 'exp-1',
+          experienceEntry('6IueRX1pS3iMJncbhUQTba', {
+            nt_experience_id: '6IueRX1pS3iMJncbhUQTba',
             nt_config: {
               distribution: [1, 0],
-              components: [{ baseline: { id: 'v-a' }, variants: [{ id: 'v-b' }] }],
+              components: [
+                {
+                  baseline: { id: '4ib0hsHWoSOnCVdDkizE8d' },
+                  variants: [{ id: '4k6ZyFQnR2POY5IJLLlJRb' }],
+                },
+              ],
             },
           }),
         ],
@@ -176,7 +191,10 @@ describe('createExperienceDefinitions', () => {
   test('returns empty distribution when nt_config is missing', () => {
     const [exp] = createExperienceDefinitions(
       contentfulCollection([
-        experienceEntry('sys-exp-1', { nt_experience_id: 'exp-1', nt_name: 'No Config' }),
+        experienceEntry('6IueRX1pS3iMJncbhUQTba', {
+          nt_experience_id: '6IueRX1pS3iMJncbhUQTba',
+          nt_name: 'No Config',
+        }),
       ]),
     )
     expect(exp?.distribution).toEqual([])
@@ -185,8 +203,8 @@ describe('createExperienceDefinitions', () => {
   test('returns empty distribution when distribution array is empty', () => {
     const [exp] = createExperienceDefinitions(
       contentfulCollection([
-        experienceEntry('sys-exp-1', {
-          nt_experience_id: 'exp-1',
+        experienceEntry('6IueRX1pS3iMJncbhUQTba', {
+          nt_experience_id: '6IueRX1pS3iMJncbhUQTba',
           nt_config: { distribution: [], components: [] },
         }),
       ]),
@@ -197,8 +215,8 @@ describe('createExperienceDefinitions', () => {
   test('omits audience when nt_audience is null', () => {
     const [exp] = createExperienceDefinitions(
       contentfulCollection([
-        experienceEntry('sys-exp-1', {
-          nt_experience_id: 'exp-1',
+        experienceEntry('6IueRX1pS3iMJncbhUQTba', {
+          nt_experience_id: '6IueRX1pS3iMJncbhUQTba',
           nt_audience: null,
         }),
       ]),
@@ -208,7 +226,9 @@ describe('createExperienceDefinitions', () => {
 
   test('falls back to nt_personalization default type when nt_type missing', () => {
     const [exp] = createExperienceDefinitions(
-      contentfulCollection([experienceEntry('sys-exp-1', { nt_experience_id: 'exp-1' })]),
+      contentfulCollection([
+        experienceEntry('6IueRX1pS3iMJncbhUQTba', { nt_experience_id: '6IueRX1pS3iMJncbhUQTba' }),
+      ]),
     )
     expect(exp?.type).toBe('nt_personalization')
   })
@@ -218,29 +238,37 @@ describe('createExperienceNameMap', () => {
   test('maps nt_experience_id to nt_name', () => {
     const map = createExperienceNameMap(
       contentfulCollection([
-        experienceEntry('sys-1', { nt_experience_id: 'exp-1', nt_name: 'One' }),
-        experienceEntry('sys-2', { nt_experience_id: 'exp-2', nt_name: 'Two' }),
+        experienceEntry('4ib0hsHWoSOnCVdDkizE8d', {
+          nt_experience_id: '6IueRX1pS3iMJncbhUQTba',
+          nt_name: 'One',
+        }),
+        experienceEntry('4k6ZyFQnR2POY5IJLLlJRb', {
+          nt_experience_id: '5jT8mNPxQ2rVuY4wZaB6Cd',
+          nt_name: 'Two',
+        }),
       ]),
     )
-    expect(map).toEqual({ 'exp-1': 'One', 'exp-2': 'Two' })
+    expect(map).toEqual({ '6IueRX1pS3iMJncbhUQTba': 'One', '5jT8mNPxQ2rVuY4wZaB6Cd': 'Two' })
   })
 
   test('prefers nt_personalization_id over nt_experience_id when both present', () => {
     const map = createExperienceNameMap(
       contentfulCollection([
-        experienceEntry('sys-1', {
-          nt_personalization_id: 'per-1',
-          nt_experience_id: 'exp-1',
+        experienceEntry('4ib0hsHWoSOnCVdDkizE8d', {
+          nt_personalization_id: '6IueRX1pS3iMJncbhUQTba',
+          nt_experience_id: '6IueRX1pS3iMJncbhUQTba',
           nt_name: 'Name',
         }),
       ]),
     )
-    expect(map).toEqual({ 'per-1': 'Name' })
+    expect(map).toEqual({ '6IueRX1pS3iMJncbhUQTba': 'Name' })
   })
 
   test('skips entries without nt_name', () => {
     const map = createExperienceNameMap(
-      contentfulCollection([experienceEntry('sys-1', { nt_experience_id: 'exp-1' })]),
+      contentfulCollection([
+        experienceEntry('4ib0hsHWoSOnCVdDkizE8d', { nt_experience_id: '6IueRX1pS3iMJncbhUQTba' }),
+      ]),
     )
     expect(map).toEqual({})
   })

@@ -143,11 +143,11 @@ const createOptimizationEntry = ({
   variantEntry: TestEntry
 }): TestEntry =>
   createTestEntry(
-    'experience-entry',
+    '6IueRX1pS3iMJncbhUQTba',
     {
       nt_name: 'Personalized featured post',
       nt_type: 'nt_personalization',
-      nt_experience_id: 'experience-entry',
+      nt_experience_id: '6IueRX1pS3iMJncbhUQTba',
       nt_config: {
         components: [
           {
@@ -170,7 +170,7 @@ const createSelectedOptimizations = ({
   variantEntry: TestEntry
 }): SelectedOptimizationArray => [
   {
-    experienceId: 'experience-entry',
+    experienceId: '6IueRX1pS3iMJncbhUQTba',
     variantIndex: 1,
     variants: {
       [baselineEntry.sys.id]: variantEntry.sys.id,
@@ -546,8 +546,8 @@ describe('OptimizedEntryResolver', () => {
 
     it('resolves the selected variant when an unrelated rich-text linked entry graph contains a cycle', () => {
       const baselineFields: Record<string, unknown> = {}
-      const baselineEntry = createTestEntry('baseline-entry', baselineFields)
-      const variantEntry = createTestEntry('variant-entry', {
+      const baselineEntry = createTestEntry('4ib0hsHWoSOnCVdDkizE8d', baselineFields)
+      const variantEntry = createTestEntry('4k6ZyFQnR2POY5IJLLlJRb', {
         internalTitle: 'Selected variant',
       })
       const linkedEntry = createTestEntry('linked-entry', {
@@ -565,7 +565,7 @@ describe('OptimizedEntryResolver', () => {
       expect(result.entry).toBe(variantEntry)
       expect(result.selectedOptimization).toEqual(
         expect.objectContaining({
-          experienceId: 'experience-entry',
+          experienceId: '6IueRX1pS3iMJncbhUQTba',
           variantIndex: 1,
         }),
       )
@@ -576,8 +576,8 @@ describe('OptimizedEntryResolver', () => {
       const variantFields: Record<string, unknown> = {
         internalTitle: 'Selected variant',
       }
-      const baselineEntry = createTestEntry('baseline-entry', baselineFields)
-      const variantEntry = createTestEntry('variant-entry', variantFields)
+      const baselineEntry = createTestEntry('4ib0hsHWoSOnCVdDkizE8d', baselineFields)
+      const variantEntry = createTestEntry('4k6ZyFQnR2POY5IJLLlJRb', variantFields)
       const linkedEntry = createTestEntry('variant-linked-entry', {
         text: createRichTextLinkedEntryDocument(variantEntry),
       })
@@ -593,7 +593,7 @@ describe('OptimizedEntryResolver', () => {
       expect(result.entry).toBe(variantEntry)
       expect(result.selectedOptimization).toEqual(
         expect.objectContaining({
-          experienceId: 'experience-entry',
+          experienceId: '6IueRX1pS3iMJncbhUQTba',
           variantIndex: 1,
         }),
       )
@@ -632,11 +632,11 @@ describe('OptimizedEntryResolver', () => {
     describe('empty variant (id: "")', () => {
       const createOptimizationEntryWithEmptyVariant = (baselineEntry: TestEntry): TestEntry =>
         createTestEntry(
-          'experience-entry-empty',
+          '5jT8mNPxQ2rVuY4wZaB6Cd',
           {
             nt_name: 'Personalization with empty variant',
             nt_type: 'nt_personalization',
-            nt_experience_id: 'experience-entry-empty',
+            nt_experience_id: '5jT8mNPxQ2rVuY4wZaB6Cd',
             nt_config: {
               components: [
                 {
@@ -657,7 +657,7 @@ describe('OptimizedEntryResolver', () => {
         baselineEntry: TestEntry,
       ): SelectedOptimizationArray => [
         {
-          experienceId: 'experience-entry-empty',
+          experienceId: '5jT8mNPxQ2rVuY4wZaB6Cd',
           variantIndex: 1,
           variants: { [baselineEntry.sys.id]: '' },
           sticky: false,
@@ -666,7 +666,7 @@ describe('OptimizedEntryResolver', () => {
 
       it('returns isEmptyVariant: true and does not render baseline content', () => {
         const baselineFields: Record<string, unknown> = {}
-        const baselineEntry = createTestEntry('baseline-entry', baselineFields)
+        const baselineEntry = createTestEntry('4ib0hsHWoSOnCVdDkizE8d', baselineFields)
         const optimizationEntry = createOptimizationEntryWithEmptyVariant(baselineEntry)
         baselineFields.nt_experiences = [optimizationEntry]
 
@@ -681,7 +681,7 @@ describe('OptimizedEntryResolver', () => {
         // selectedOptimization is preserved for tracking
         expect(result.selectedOptimization).toEqual(
           expect.objectContaining({
-            experienceId: 'experience-entry-empty',
+            experienceId: '5jT8mNPxQ2rVuY4wZaB6Cd',
             variantIndex: 1,
           }),
         )
@@ -689,7 +689,7 @@ describe('OptimizedEntryResolver', () => {
 
       it('does not log a "could not resolve" warning for an empty variant', () => {
         const baselineFields: Record<string, unknown> = {}
-        const baselineEntry = createTestEntry('baseline-entry', baselineFields)
+        const baselineEntry = createTestEntry('4ib0hsHWoSOnCVdDkizE8d', baselineFields)
         const optimizationEntry = createOptimizationEntryWithEmptyVariant(baselineEntry)
         baselineFields.nt_experiences = [optimizationEntry]
 
@@ -706,7 +706,7 @@ describe('OptimizedEntryResolver', () => {
 
       it('logs a debug message for the empty variant resolution', () => {
         const baselineFields: Record<string, unknown> = {}
-        const baselineEntry = createTestEntry('baseline-entry', baselineFields)
+        const baselineEntry = createTestEntry('4ib0hsHWoSOnCVdDkizE8d', baselineFields)
         const optimizationEntry = createOptimizationEntryWithEmptyVariant(baselineEntry)
         baselineFields.nt_experiences = [optimizationEntry]
 
@@ -723,7 +723,7 @@ describe('OptimizedEntryResolver', () => {
 
       it('preserves optimizationContext with selectedVariant for the empty variant', () => {
         const baselineFields: Record<string, unknown> = {}
-        const baselineEntry = createTestEntry('baseline-entry', baselineFields)
+        const baselineEntry = createTestEntry('4ib0hsHWoSOnCVdDkizE8d', baselineFields)
         const optimizationEntry = createOptimizationEntryWithEmptyVariant(baselineEntry)
         baselineFields.nt_experiences = [optimizationEntry]
 
@@ -743,21 +743,21 @@ describe('OptimizedEntryResolver', () => {
 
       it('still falls back to baseline with a warning for a genuine missing variant entry (non-empty id, no matching nt_variants entry)', () => {
         const baselineFields: Record<string, unknown> = {}
-        const baselineEntry = createTestEntry('baseline-entry', baselineFields)
+        const baselineEntry = createTestEntry('4ib0hsHWoSOnCVdDkizE8d', baselineFields)
         // Variant has a real (non-empty) id but no matching entry in nt_variants — a real data error,
         // not an intentional empty variant.
         const optimizationEntry = createTestEntry(
-          'experience-entry-broken',
+          '7LcA9DeF2GhI4JkL6MnOpQ',
           {
             nt_name: 'Broken variant',
             nt_type: 'nt_personalization',
-            nt_experience_id: 'experience-entry-broken',
+            nt_experience_id: '7LcA9DeF2GhI4JkL6MnOpQ',
             nt_config: {
               components: [
                 {
                   type: 'EntryReplacement',
                   baseline: { id: baselineEntry.sys.id },
-                  variants: [{ id: 'missing-variant-id' }],
+                  variants: [{ id: '3Z2hP4vR8sT1nY6mK9qL0a' }],
                 },
               ],
             },
@@ -769,9 +769,9 @@ describe('OptimizedEntryResolver', () => {
 
         const result = OptimizedEntryResolver.resolve(baselineEntry, [
           {
-            experienceId: 'experience-entry-broken',
+            experienceId: '7LcA9DeF2GhI4JkL6MnOpQ',
             variantIndex: 1,
-            variants: { [baselineEntry.sys.id]: 'missing-variant-id' },
+            variants: { [baselineEntry.sys.id]: '3Z2hP4vR8sT1nY6mK9qL0a' },
             sticky: false,
           },
         ])

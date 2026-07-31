@@ -376,7 +376,7 @@ const {
   baselineEntry,
   entry: resolvedHeroEntry,
   selectedOptimization,
-} = await requestOptimization.fetchOptimizedEntry('hero-entry-id')
+} = await requestOptimization.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
 
 if (appPolicyAllowsThirdPartyAnalytics()) {
   // The server event owner decides which Contentful fields belong on this business event.

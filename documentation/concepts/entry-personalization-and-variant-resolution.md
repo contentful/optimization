@@ -314,34 +314,34 @@ state changes around that decision, then choose again when their live-update rul
 
 ### Worked example
 
-Assume the application fetched a baseline entry with `sys.id: "hero-baseline"`. The entry includes a
-resolved `nt_experience` entry with `nt_experience_id: "exp-homepage-hero"` and an
+Assume the application fetched a baseline entry with `sys.id: "4ib0hsHWoSOnCVdDkizE8d"`. The entry includes a
+resolved `nt_experience` entry with `nt_experience_id: "6IueRX1pS3iMJncbhUQTba"` and an
 `EntryReplacement` component:
 
 ```json
 {
-  "baseline": { "id": "hero-baseline" },
-  "variants": [{ "id": "hero-variant-spring" }, { "id": "hero-variant-summer" }]
+  "baseline": { "id": "4ib0hsHWoSOnCVdDkizE8d" },
+  "variants": [{ "id": "4k6ZyFQnR2POY5IJLLlJRb" }, { "id": "2qVK4T5lnScbswoyBuGipd" }]
 }
 ```
 
-The same optimization entry includes `hero-variant-spring` and `hero-variant-summer` as resolved
+The same optimization entry includes `4k6ZyFQnR2POY5IJLLlJRb` and `2qVK4T5lnScbswoyBuGipd` as resolved
 entries in `nt_variants`. If the Experience API returns this selection:
 
 ```json
 {
-  "experienceId": "exp-homepage-hero",
+  "experienceId": "6IueRX1pS3iMJncbhUQTba",
   "variantIndex": 2,
   "variants": {
-    "hero-baseline": "hero-variant-summer"
+    "4ib0hsHWoSOnCVdDkizE8d": "2qVK4T5lnScbswoyBuGipd"
   },
   "sticky": true
 }
 ```
 
 resolution matches `experienceId` to `nt_experience_id`, finds the component whose `baseline.id` is
-`hero-baseline`, reads the second configured variant because `variantIndex` is `2`, and returns the
-resolved Contentful entry whose `sys.id` is `hero-variant-summer`.
+`4ib0hsHWoSOnCVdDkizE8d`, reads the second configured variant because `variantIndex` is `2`, and
+returns the resolved Contentful entry whose `sys.id` is `2qVK4T5lnScbswoyBuGipd`.
 
 ### Variant indexing
 

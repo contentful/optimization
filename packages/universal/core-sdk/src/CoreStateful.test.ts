@@ -30,7 +30,7 @@ const DARK_MODE_CHANGE: ChangeArray[number] = {
   type: 'Variable',
   value: true,
   meta: {
-    experienceId: 'experience-id',
+    experienceId: '6IueRX1pS3iMJncbhUQTba',
     variantIndex: 0,
   },
 }
@@ -40,7 +40,7 @@ const OTHER_FLAG_CHANGE: ChangeArray[number] = {
   type: 'Variable',
   value: 'A',
   meta: {
-    experienceId: 'experience-id',
+    experienceId: '6IueRX1pS3iMJncbhUQTba',
     variantIndex: 1,
   },
 }
@@ -588,9 +588,9 @@ describe('CoreStateful blocked event handling', () => {
 
     signals.selectedOptimizations.value = selectedOptimizationsFixture
 
-    const result = await core.fetchOptimizedEntry('entry-id')
+    const result = await core.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
 
-    expect(getEntry).toHaveBeenCalledWith('entry-id', { include: 10 })
+    expect(getEntry).toHaveBeenCalledWith('4ib0hsHWoSOnCVdDkizE8d', { include: 10 })
     expect(result.baselineEntry).toBe(optimizedEntry)
     expect(result.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
     expect(result.optimizationContextId).toEqual(expect.any(String))
@@ -770,7 +770,7 @@ describe('CoreStateful blocked event handling', () => {
     expect(trackFlagView).toHaveBeenCalledTimes(1)
     expect(trackFlagView).toHaveBeenCalledWith({
       componentId: 'dark-mode',
-      experienceId: 'experience-id',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       variantIndex: 0,
     })
   })
@@ -794,7 +794,7 @@ describe('CoreStateful blocked event handling', () => {
     expect(trackFlagView).toHaveBeenCalledTimes(1)
     expect(trackFlagView).toHaveBeenCalledWith({
       componentId: 'dark-mode',
-      experienceId: 'experience-id',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       variantIndex: 0,
     })
   })
@@ -901,7 +901,7 @@ describe('CoreStateful blocked event handling', () => {
     expect(core.getFlag('dark-mode')).toBe(true)
     await flushMicrotasks()
 
-    signals.profile.value = { ...profileFixture, id: 'profile-id-2' }
+    signals.profile.value = { ...profileFixture, id: 'a19c3f54d2b84e37a93f6d1c0e5b7284' }
     expect(core.getFlag('dark-mode')).toBe(true)
 
     expect(trackFlagView).toHaveBeenCalledTimes(2)
@@ -930,7 +930,7 @@ describe('CoreStateful blocked event handling', () => {
     expect(trackFlagView).toHaveBeenCalledTimes(1)
     expect(trackFlagView).toHaveBeenCalledWith({
       componentId: 'dark-mode',
-      experienceId: 'experience-id',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       variantIndex: 0,
     })
 
@@ -987,7 +987,7 @@ describe('CoreStateful blocked event handling', () => {
         type: 'Variable',
         value: { a: 1, b: 2 },
         meta: {
-          experienceId: 'experience-id',
+          experienceId: '6IueRX1pS3iMJncbhUQTba',
           variantIndex: 0,
         },
       },
@@ -1001,7 +1001,7 @@ describe('CoreStateful blocked event handling', () => {
         type: 'Variable',
         value: { b: 2, a: 1 },
         meta: {
-          experienceId: 'experience-id',
+          experienceId: '6IueRX1pS3iMJncbhUQTba',
           variantIndex: 0,
         },
       },
@@ -1073,7 +1073,7 @@ describe('CoreStateful blocked event handling', () => {
           type: 'Variable',
           value: 'x',
           meta: {
-            experienceId: 'experience-id',
+            experienceId: '6IueRX1pS3iMJncbhUQTba',
             variantIndex: 2,
           },
         },
@@ -1095,12 +1095,12 @@ describe('CoreStateful blocked event handling', () => {
     expect(trackFlagView).toHaveBeenNthCalledWith(1, { componentId: 'dark-mode' })
     expect(trackFlagView).toHaveBeenNthCalledWith(2, {
       componentId: 'dark-mode',
-      experienceId: 'experience-id',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       variantIndex: 0,
     })
     expect(trackFlagView).toHaveBeenNthCalledWith(3, {
       componentId: 'dark-mode',
-      experienceId: 'experience-id',
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
       variantIndex: 0,
     })
 
