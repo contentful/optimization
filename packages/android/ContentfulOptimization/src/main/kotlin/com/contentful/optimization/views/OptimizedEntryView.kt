@@ -100,7 +100,7 @@ public class OptimizedEntryView @JvmOverloads constructor(
      */
     fun setContentRenderer(renderer: (Map<String, Any>) -> View) {
         this.contentRenderer = renderer
-        lastResult?.let { renderContent(it.entry) }
+        lastResult?.let { renderContent(it.entry.toFoundation()) }
     }
 
     /**
@@ -239,7 +239,7 @@ public class OptimizedEntryView @JvmOverloads constructor(
 
     private fun publishResult(result: ResolvedOptimizedEntry) {
         lastResult = result
-        renderContent(result.entry)
+        renderContent(result.entry.toFoundation())
         attachController(result)
     }
 

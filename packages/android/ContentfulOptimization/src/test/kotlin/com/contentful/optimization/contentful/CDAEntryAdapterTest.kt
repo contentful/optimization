@@ -453,57 +453,6 @@ class CDAEntryAdapterTest {
         assertEquals("bold", (marks[0] as Map<*, *>)["type"])
     }
 
-    // -- variant lookup ------------------------------------------------------
-
-    @Test
-    fun `findVariantEntry returns the baseline itself when its own id is queried`() {
-        val baseline = makeEntry(id = "baseline", contentTypeId = "page", rawFields = emptyMap())
-        assertEquals(baseline, findVariantEntry(baseline, "baseline"))
-    }
-
-    @Test
-    fun `findVariantEntry walks nt_experiences and nt_variants to locate a winning variant`() {
-        val variantA = makeEntry(id = "va", contentTypeId = "page", rawFields = mapOf("t" to "A"))
-        val variantB = makeEntry(id = "vb", contentTypeId = "page", rawFields = mapOf("t" to "B"))
-        val experience = makeEntry(
-            id = "exp-1",
-            contentTypeId = "nt_experience",
-            rawFields = mapOf("nt_variants" to listOf(variantA, variantB)),
-        )
-        val baseline = makeEntry(
-            id = "baseline",
-            contentTypeId = "page",
-            rawFields = mapOf("t" to "baseline", "nt_experiences" to listOf(experience)),
-        )
-
-        val winner = findVariantEntry(baseline, "vb")
-        assertNotNull(winner)
-        assertEquals("vb", winner?.id())
-        assertEquals("B", winner?.getField("t"))
-    }
-
-    @Test
-    fun `findVariantEntry returns null when no variant with that id is reachable`() {
-        val variant = makeEntry(id = "va", contentTypeId = "page", rawFields = emptyMap())
-        val experience = makeEntry(
-            id = "exp-1",
-            contentTypeId = "nt_experience",
-            rawFields = mapOf("nt_variants" to listOf(variant)),
-        )
-        val baseline = makeEntry(
-            id = "baseline",
-            contentTypeId = "page",
-            rawFields = mapOf("nt_experiences" to listOf(experience)),
-        )
-
-        assertNull(findVariantEntry(baseline, "not-in-graph"))
-    }
-
-    @Test
-    fun `findVariantEntry returns null when the baseline has no nt_experiences field`() {
-        val baseline = makeEntry(id = "baseline", contentTypeId = "page", rawFields = emptyMap())
-        assertNull(findVariantEntry(baseline, "anything"))
-    }
 }
 
 // -- test fixtures --------------------------------------------------------

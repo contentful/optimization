@@ -12,8 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.contentful.java.cda.CDAEntry
-import com.contentful.optimization.contentful.findVariantEntry
-import com.contentful.optimization.contentful.toOptimizedEntryMap
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.core.ResolvedOptimizedEntry
 import com.contentful.optimization.core.resolvePreviewCloseLockState
 
@@ -51,8 +50,9 @@ public fun OptimizedEntry(
         else -> trackingConfig.trackTaps
     }
 
+    val baselineCTEntry = remember(entry) { CTEntry.from(entry) }
     var result by remember(entry) {
-        mutableStateOf(ResolvedOptimizedEntry(entry = entry, selectedOptimization = null))
+        mutableStateOf(ResolvedOptimizedEntry(entry = baselineCTEntry, selectedOptimization = null))
     }
 
     // Re-resolve by collecting the selectedOptimizations StateFlow directly rather
@@ -77,7 +77,7 @@ public fun OptimizedEntry(
     // until the component is remounted.
     LaunchedEffect(entry) {
         if (!isOptimized) {
-            result = ResolvedOptimizedEntry(entry = entry, selectedOptimization = null)
+            result = ResolvedOptimizedEntry(entry = baselineCTEntry, selectedOptimization = null)
             return@LaunchedEffect
         }
         client.selectedOptimizations.collect { newValue ->
@@ -144,15 +144,14 @@ public fun OptimizedEntry(
         }
 
     Box(modifier = modifier) {
-        content(result.entry)
+        content(result.entry.toFoundation())
     }
 }
 
 /**
- * Typed overload that accepts a [CDAEntry] and hands the `content` callback a [CDAEntry] —
- * the winning variant CDAEntry when personalization selected one (looked up in the baseline's
- * `nt_experiences → nt_variants` link graph by id), or the baseline entry itself when the
- * resolver picked the baseline or no matching variant is reachable.
+ * Typed overload that accepts a [CDAEntry] and hands the `content` callback a [CTEntry] built
+ * from the resolver's output — read with `getField` / `hasField` / `id` instead of `as?` casts
+ * on a raw map. The winning variant reads the same way as the baseline.
  */
 @Composable
 public fun OptimizedEntry(
@@ -165,9 +164,9 @@ public fun OptimizedEntry(
     trackTaps: Boolean? = null,
     accessibilityIdentifier: String? = null,
     onTap: ((Map<String, Any>) -> Unit)? = null,
-    content: @Composable (CDAEntry) -> Unit,
+    content: @Composable (CTEntry) -> Unit,
 ) {
-    val entryMap = remember(entry) { toOptimizedEntryMap(entry) }
+    val entryMap = remember(entry) { CTEntry.from(entry).toFoundation() }
     OptimizedEntry(
         entry = entryMap,
         dwellTimeMs = dwellTimeMs,
@@ -179,8 +178,6 @@ public fun OptimizedEntry(
         accessibilityIdentifier = accessibilityIdentifier,
         onTap = onTap,
     ) { resolvedMap ->
-        val resolvedId = (resolvedMap["sys"] as? Map<*, *>)?.get("id") as? String
-        val resolvedEntry = resolvedId?.let { findVariantEntry(entry, it) } ?: entry
-        content(resolvedEntry)
+        content(CTEntry.from(resolvedMap))
     }
 }
