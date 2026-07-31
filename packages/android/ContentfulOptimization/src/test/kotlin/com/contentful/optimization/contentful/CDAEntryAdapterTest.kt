@@ -28,7 +28,7 @@ class CDAEntryAdapterTest {
             rawFields = mapOf("title" to "Hello"),
         )
 
-        val map = entry.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(entry)
 
         val sys = map["sys"] as Map<*, *>
         assertEquals("entry-1", sys["id"])
@@ -51,7 +51,7 @@ class CDAEntryAdapterTest {
             metadata = null,
         )
 
-        val map = entry.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(entry)
 
         val metadata = map["metadata"]
         assertTrue("metadata must always be present", metadata is Map<*, *>)
@@ -71,7 +71,7 @@ class CDAEntryAdapterTest {
             metadata = makeMetadata(tags = listOf(tag), concepts = listOf(concept)),
         )
 
-        val map = entry.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(entry)
         val md = map["metadata"] as Map<*, *>
 
         val tags = md["tags"] as List<*>
@@ -98,7 +98,7 @@ class CDAEntryAdapterTest {
             rawFields = mapOf("author" to child),
         )
 
-        val map = parent.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(parent)
         val fields = map["fields"] as Map<*, *>
         val authorMap = fields["author"] as Map<*, *>
         val authorSys = authorMap["sys"] as Map<*, *>
@@ -118,7 +118,7 @@ class CDAEntryAdapterTest {
         setField(parent, "rawFields", localizeFields(mapOf("author" to child)))
         setField(parent, "fields", localizeFields(mapOf("author" to child)))
 
-        val map = parent.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(parent)
         val author = ((map["fields"] as Map<*, *>)["author"] as Map<*, *>)
         val posts = author["fields"] as Map<*, *>
         val backRef = posts["posts"] as Map<*, *>
@@ -142,7 +142,7 @@ class CDAEntryAdapterTest {
             rawFields = mapOf("hero" to asset),
         )
 
-        val map = entry.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(entry)
         val hero = (map["fields"] as Map<*, *>)["hero"] as Map<*, *>
         val heroSys = hero["sys"] as Map<*, *>
         assertEquals("asset-1", heroSys["id"])
@@ -170,7 +170,7 @@ class CDAEntryAdapterTest {
             rawFields = mapOf("hero" to asset),
         )
 
-        val map = entry.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(entry)
         val hero = (map["fields"] as Map<*, *>)["hero"] as Map<*, *>
         val heroFields = hero["fields"] as Map<*, *>
         assertEquals("A sunset over the mountains", heroFields["description"])
@@ -193,7 +193,7 @@ class CDAEntryAdapterTest {
             rawFields = mapOf("publishedAt" to instant),
         )
 
-        val map = entry.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(entry)
         val published = (map["fields"] as Map<*, *>)["publishedAt"] as String
         assertEquals("2023-11-14T22:13:20Z", published)
     }
@@ -214,7 +214,7 @@ class CDAEntryAdapterTest {
             environmentId = "master",
         )
 
-        val map = entry.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(entry)
         val sys = map["sys"] as Map<*, *>
         assertEquals("2024-01-01T00:00:00Z", sys["createdAt"])
         assertEquals("2024-06-15T12:30:00Z", sys["updatedAt"])
@@ -238,7 +238,7 @@ class CDAEntryAdapterTest {
             rawFields = emptyMap(),
         )
 
-        val sys = entry.toOptimizedEntryMap()["sys"] as Map<*, *>
+        val sys = toOptimizedEntryMap(entry)["sys"] as Map<*, *>
         assertFalse("sys.locale must be omitted, not emitted as null", sys.containsKey("locale"))
         assertFalse(sys.containsKey("createdAt"))
         assertFalse(sys.containsKey("updatedAt"))
@@ -262,7 +262,7 @@ class CDAEntryAdapterTest {
             rawFields = mapOf("author" to shared, "editor" to shared),
         )
 
-        val map = parent.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(parent)
         val fields = map["fields"] as Map<*, *>
         val authorFields = (fields["author"] as Map<*, *>)["fields"] as Map<*, *>
         val editorFields = (fields["editor"] as Map<*, *>)["fields"] as Map<*, *>
@@ -280,7 +280,7 @@ class CDAEntryAdapterTest {
         setField(b, "rawFields", localizeFields(mapOf("next" to c)))
         setField(b, "fields", localizeFields(mapOf("next" to c)))
 
-        val map = a.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(a)
         val bMap = (map["fields"] as Map<*, *>)["next"] as Map<*, *>
         val cMap = (bMap["fields"] as Map<*, *>)["next"] as Map<*, *>
         val backEdge = (cMap["fields"] as Map<*, *>)["next"] as Map<*, *>
@@ -296,7 +296,7 @@ class CDAEntryAdapterTest {
         setField(self, "rawFields", localizeFields(mapOf("self" to self)))
         setField(self, "fields", localizeFields(mapOf("self" to self)))
 
-        val map = self.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(self)
         val backRef = (map["fields"] as Map<*, *>)["self"] as Map<*, *>
         val backSys = backRef["sys"] as Map<*, *>
         assertEquals("self", backSys["id"])
@@ -311,7 +311,7 @@ class CDAEntryAdapterTest {
         val a2 = makeEntry(id = "e2", contentTypeId = "n", rawFields = mapOf("next" to a3))
         val a1 = makeEntry(id = "e1", contentTypeId = "n", rawFields = mapOf("next" to a2))
 
-        val map = a1.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(a1)
         val level2 = ((map["fields"] as Map<*, *>)["next"]) as Map<*, *>
         val level3 = (level2["fields"] as Map<*, *>)["next"] as Map<*, *>
         val level4 = (level3["fields"] as Map<*, *>)["next"] as Map<*, *>
@@ -330,7 +330,7 @@ class CDAEntryAdapterTest {
             rawFields = mapOf("editor" to stub),
         )
 
-        val editor = (entry.toOptimizedEntryMap()["fields"] as Map<*, *>)["editor"] as Map<*, *>
+        val editor = (toOptimizedEntryMap(entry)["fields"] as Map<*, *>)["editor"] as Map<*, *>
         val editorSys = editor["sys"] as Map<*, *>
         assertEquals("e2", editorSys["id"])
         assertEquals("Link", editorSys["type"])
@@ -356,7 +356,7 @@ class CDAEntryAdapterTest {
             rawFields = mapOf("hero" to asset),
         )
 
-        val hero = (entry.toOptimizedEntryMap()["fields"] as Map<*, *>)["hero"] as Map<*, *>
+        val hero = (toOptimizedEntryMap(entry)["fields"] as Map<*, *>)["hero"] as Map<*, *>
         val heroFields = hero["fields"] as Map<*, *>
         assertFalse("no description → key must be omitted", heroFields.containsKey("description"))
         val details = ((heroFields["file"] as Map<*, *>)["details"]) as Map<*, *>
@@ -377,7 +377,7 @@ class CDAEntryAdapterTest {
             contentTypeId = "page",
             rawFields = mapOf("hero" to asset),
         )
-        val hero = (entry.toOptimizedEntryMap()["fields"] as Map<*, *>)["hero"] as Map<*, *>
+        val hero = (toOptimizedEntryMap(entry)["fields"] as Map<*, *>)["hero"] as Map<*, *>
         val heroFields = hero["fields"] as Map<*, *>
         assertEquals("Missing", heroFields["title"])
         val file = heroFields["file"] as Map<*, *>
@@ -409,7 +409,7 @@ class CDAEntryAdapterTest {
             rawFields = mapOf("body" to document),
         )
 
-        val body = (entry.toOptimizedEntryMap()["fields"] as Map<*, *>)["body"] as Map<*, *>
+        val body = (toOptimizedEntryMap(entry)["fields"] as Map<*, *>)["body"] as Map<*, *>
         val p = (body["content"] as List<*>)[0] as Map<*, *>
         val h = (p["content"] as List<*>)[0] as Map<*, *>
         assertEquals("hyperlink", h["nodeType"])
@@ -440,7 +440,7 @@ class CDAEntryAdapterTest {
             rawFields = mapOf("body" to document),
         )
 
-        val map = entry.toOptimizedEntryMap()
+        val map = toOptimizedEntryMap(entry)
         val body = (map["fields"] as Map<*, *>)["body"] as Map<*, *>
         assertEquals("document", body["nodeType"])
         val paragraphs = body["content"] as List<*>
@@ -451,6 +451,58 @@ class CDAEntryAdapterTest {
         assertEquals("hi", text["value"])
         val marks = text["marks"] as List<*>
         assertEquals("bold", (marks[0] as Map<*, *>)["type"])
+    }
+
+    // -- variant lookup ------------------------------------------------------
+
+    @Test
+    fun `findVariantEntry returns the baseline itself when its own id is queried`() {
+        val baseline = makeEntry(id = "baseline", contentTypeId = "page", rawFields = emptyMap())
+        assertEquals(baseline, findVariantEntry(baseline, "baseline"))
+    }
+
+    @Test
+    fun `findVariantEntry walks nt_experiences and nt_variants to locate a winning variant`() {
+        val variantA = makeEntry(id = "va", contentTypeId = "page", rawFields = mapOf("t" to "A"))
+        val variantB = makeEntry(id = "vb", contentTypeId = "page", rawFields = mapOf("t" to "B"))
+        val experience = makeEntry(
+            id = "exp-1",
+            contentTypeId = "nt_experience",
+            rawFields = mapOf("nt_variants" to listOf(variantA, variantB)),
+        )
+        val baseline = makeEntry(
+            id = "baseline",
+            contentTypeId = "page",
+            rawFields = mapOf("t" to "baseline", "nt_experiences" to listOf(experience)),
+        )
+
+        val winner = findVariantEntry(baseline, "vb")
+        assertNotNull(winner)
+        assertEquals("vb", winner?.id())
+        assertEquals("B", winner?.getField("t"))
+    }
+
+    @Test
+    fun `findVariantEntry returns null when no variant with that id is reachable`() {
+        val variant = makeEntry(id = "va", contentTypeId = "page", rawFields = emptyMap())
+        val experience = makeEntry(
+            id = "exp-1",
+            contentTypeId = "nt_experience",
+            rawFields = mapOf("nt_variants" to listOf(variant)),
+        )
+        val baseline = makeEntry(
+            id = "baseline",
+            contentTypeId = "page",
+            rawFields = mapOf("nt_experiences" to listOf(experience)),
+        )
+
+        assertNull(findVariantEntry(baseline, "not-in-graph"))
+    }
+
+    @Test
+    fun `findVariantEntry returns null when the baseline has no nt_experiences field`() {
+        val baseline = makeEntry(id = "baseline", contentTypeId = "page", rawFields = emptyMap())
+        assertNull(findVariantEntry(baseline, "anything"))
     }
 }
 

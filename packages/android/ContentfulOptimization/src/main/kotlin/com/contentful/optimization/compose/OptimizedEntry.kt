@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.contentful.java.cda.CDAEntry
+import com.contentful.optimization.contentful.findVariantEntry
 import com.contentful.optimization.contentful.toOptimizedEntryMap
 import com.contentful.optimization.core.ResolvedOptimizedEntry
 import com.contentful.optimization.core.resolvePreviewCloseLockState
@@ -148,9 +149,10 @@ public fun OptimizedEntry(
 }
 
 /**
- * Typed overload that accepts a [CDAEntry] and hands the `content` callback a
- * [ResolvedOptimizedEntry]. The `metadata` block the resolver requires is populated by the
- * SDK-owned adapter. Recommended over the [Map]-based overload.
+ * Typed overload that accepts a [CDAEntry] and hands the `content` callback a [CDAEntry] —
+ * the winning variant CDAEntry when personalization selected one (looked up in the baseline's
+ * `nt_experiences → nt_variants` link graph by id), or the baseline entry itself when the
+ * resolver picked the baseline or no matching variant is reachable.
  */
 @Composable
 public fun OptimizedEntry(
@@ -163,9 +165,9 @@ public fun OptimizedEntry(
     trackTaps: Boolean? = null,
     accessibilityIdentifier: String? = null,
     onTap: ((Map<String, Any>) -> Unit)? = null,
-    content: @Composable (ResolvedOptimizedEntry) -> Unit,
+    content: @Composable (CDAEntry) -> Unit,
 ) {
-    val entryMap = remember(entry) { entry.toOptimizedEntryMap() }
+    val entryMap = remember(entry) { toOptimizedEntryMap(entry) }
     OptimizedEntry(
         entry = entryMap,
         dwellTimeMs = dwellTimeMs,
@@ -177,6 +179,8 @@ public fun OptimizedEntry(
         accessibilityIdentifier = accessibilityIdentifier,
         onTap = onTap,
     ) { resolvedMap ->
-        content(ResolvedOptimizedEntry(entry = resolvedMap, selectedOptimization = null))
+        val resolvedId = (resolvedMap["sys"] as? Map<*, *>)?.get("id") as? String
+        val resolvedEntry = resolvedId?.let { findVariantEntry(entry, it) } ?: entry
+        content(resolvedEntry)
     }
 }

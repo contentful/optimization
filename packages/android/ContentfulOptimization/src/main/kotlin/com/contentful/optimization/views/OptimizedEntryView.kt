@@ -104,17 +104,6 @@ public class OptimizedEntryView @JvmOverloads constructor(
     }
 
     /**
-     * Typed variant of [setContentRenderer] that receives a [ResolvedOptimizedEntry]. Named
-     * distinctly because both lambda types erase to `Function1<Object, View>` on the JVM.
-     */
-    fun setResolvedContentRenderer(renderer: (ResolvedOptimizedEntry) -> View) {
-        this.contentRenderer = { entryMap ->
-            renderer(ResolvedOptimizedEntry(entry = entryMap, selectedOptimization = null))
-        }
-        lastResult?.let { renderContent(it.entry) }
-    }
-
-    /**
      * Set the entry to optimize. Optional [selectedOptimizations] forces a specific set instead
      * of observing the live selectedOptimizations stream (used by tests or callers driving their own
      * optimization state).
@@ -135,7 +124,7 @@ public class OptimizedEntryView @JvmOverloads constructor(
         entry: CDAEntry,
         selectedOptimizations: List<Map<String, Any>>? = null,
     ) {
-        setEntry(entry.toOptimizedEntryMap(), selectedOptimizations)
+        setEntry(toOptimizedEntryMap(entry), selectedOptimizations)
     }
 
     /** Force a visibility re-check from outside (e.g., from [TrackingRecyclerView] on scroll). */

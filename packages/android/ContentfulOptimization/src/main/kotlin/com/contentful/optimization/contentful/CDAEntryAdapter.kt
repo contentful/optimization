@@ -21,7 +21,26 @@ import java.util.TimeZone
  * Optimization SDK's resolver expects. `metadata` is always emitted — the resolver's entry
  * guard requires it and `CDAEntry.rawFields()` does not expose it.
  */
-public fun CDAEntry.toOptimizedEntryMap(): Map<String, Any> = entryToMap(this, emptySet())
+public fun toOptimizedEntryMap(entry: CDAEntry): Map<String, Any> = entryToMap(entry, emptySet())
+
+/**
+ * Locates the resolved variant [CDAEntry] with [variantId] inside the baseline's
+ * `nt_experiences → nt_variants` link graph. Returns `null` when no such variant is reachable
+ * (the resolver picked the baseline, or the customer's baseline doesn't link the winning
+ * variant).
+ */
+public fun findVariantEntry(baseline: CDAEntry, variantId: String): CDAEntry? {
+    if (baseline.id() == variantId) return baseline
+    val experiences = baseline.getField<Any?>("nt_experiences") as? List<*> ?: return null
+    for (experience in experiences) {
+        if (experience !is CDAEntry) continue
+        val variants = experience.getField<Any?>("nt_variants") as? List<*> ?: continue
+        for (variant in variants) {
+            if (variant is CDAEntry && variant.id() == variantId) return variant
+        }
+    }
+    return null
+}
 
 // `ancestors` tracks entry ids on the current path; recursing into one would loop forever on
 // a real cycle in the resolved-link graph. Back-edges emit an unresolved Link stub instead.
