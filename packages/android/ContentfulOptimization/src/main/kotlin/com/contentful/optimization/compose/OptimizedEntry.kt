@@ -148,11 +148,7 @@ public fun OptimizedEntry(
     }
 }
 
-/**
- * Typed overload that accepts a [CDAEntry] and hands the `content` callback a [CTEntry] built
- * from the resolver's output — read with `getField` / `hasField` / `id` instead of `as?` casts
- * on a raw map. The winning variant reads the same way as the baseline.
- */
+/** Typed overload that accepts a [CDAEntry] and hands the callback a [CTEntry]. */
 @Composable
 public fun OptimizedEntry(
     entry: CDAEntry,

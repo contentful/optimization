@@ -119,7 +119,6 @@ public class OptimizedEntryView @JvmOverloads constructor(
         restartObservation()
     }
 
-    /** Typed overload that routes a [CDAEntry] through the SDK-owned adapter. */
     fun setEntry(
         entry: CDAEntry,
         selectedOptimizations: List<Map<String, Any>>? = null,

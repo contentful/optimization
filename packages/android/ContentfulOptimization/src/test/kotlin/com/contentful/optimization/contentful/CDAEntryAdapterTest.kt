@@ -198,8 +198,6 @@ class CDAEntryAdapterTest {
         assertEquals("2023-11-14T22:13:20Z", published)
     }
 
-    // -- sys optional attrs -------------------------------------------------
-
     @Test
     fun `maps sys timestamps, revision, locale, space, and environment when present`() {
         val entry = makeEntry(
@@ -246,8 +244,6 @@ class CDAEntryAdapterTest {
         assertFalse(sys.containsKey("space"))
         assertFalse(sys.containsKey("environment"))
     }
-
-    // -- link resolution ----------------------------------------------------
 
     @Test
     fun `expands a diamond so both branches carry the full nested entry`() {
@@ -338,8 +334,6 @@ class CDAEntryAdapterTest {
         assertFalse("unresolved link must not gain a fields block", editor.containsKey("fields"))
     }
 
-    // -- asset edge cases ---------------------------------------------------
-
     @Test
     fun `asset without description or image omits description and details_image keys`() {
         val asset = makeAsset(
@@ -384,8 +378,6 @@ class CDAEntryAdapterTest {
         assertEquals("", file["url"])
         assertEquals("", file["fileName"])
     }
-
-    // -- rich text hyperlink vs embedded resource ---------------------------
 
     @Test
     fun `plain URI hyperlink emits data uri and content, not a target`() {
@@ -454,8 +446,6 @@ class CDAEntryAdapterTest {
     }
 
 }
-
-// -- test fixtures --------------------------------------------------------
 
 private const val TEST_LOCALE = "en-US"
 
@@ -562,9 +552,8 @@ private fun makeMetadata(
     return metadata
 }
 
-// contentful.java value types keep the fields we need to set (attrs, rawFields, fields,
-// metadata, tags, concepts) package-private, and building fixtures via full CDA response
-// deserialization would be far heavier than reflection.
+// contentful.java keeps fixture-relevant fields (attrs, rawFields, fields, metadata) package-
+// private; reflection is lighter than round-tripping a full CDA response for every test.
 private fun setField(target: Any, name: String, value: Any?) {
     var clazz: Class<*>? = target::class.java
     while (clazz != null) {

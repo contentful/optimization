@@ -17,14 +17,14 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Adapts a `contentful.java` [CDAEntry] into the `{sys, fields, metadata}` entry Map the
- * Optimization SDK's resolver expects. `metadata` is always emitted — the resolver's entry
- * guard requires it and `CDAEntry.rawFields()` does not expose it.
+ * Adapts a [CDAEntry] into the `{sys, fields, metadata}` Map the resolver expects. `metadata`
+ * is always emitted — the resolver's entry guard requires it and `CDAEntry.rawFields()` does
+ * not expose it.
  */
 internal fun toOptimizedEntryMap(entry: CDAEntry): Map<String, Any> = entryToMap(entry, emptySet())
 
-// `ancestors` tracks entry ids on the current path; recursing into one would loop forever on
-// a real cycle in the resolved-link graph. Back-edges emit an unresolved Link stub instead.
+// `ancestors` tracks entry ids on the current path. Recursing into one would loop forever on a
+// real cycle in the resolved link graph; back-edges emit an unresolved Link stub instead.
 private fun entryToMap(entry: CDAEntry, ancestors: Set<String>): Map<String, Any> {
     val sys = buildMap {
         put("id", entry.id() ?: "")
@@ -39,8 +39,6 @@ private fun entryToMap(entry: CDAEntry, ancestors: Set<String>): Map<String, Any
                 ),
             ),
         )
-        // Optional sys attrs a raw CDA response carries. `attrs` is the raw `sys` object; only
-        // emit keys the source actually populated so the mapper matches Entry.sys optionality.
         entry.getAttribute<String?>("createdAt")?.let { put("createdAt", it) }
         entry.getAttribute<String?>("updatedAt")?.let { put("updatedAt", it) }
         entry.getAttribute<Number?>("revision")?.let { put("revision", it) }
@@ -59,8 +57,6 @@ private fun entryToMap(entry: CDAEntry, ancestors: Set<String>): Map<String, Any
     )
 }
 
-// The CDA response carries `space` and `environment` as `{sys: {type: Link, linkType, id}}`
-// blobs. `attrs` decodes them as plain nested Maps.
 private fun linkRefOrNull(value: Any?, linkType: String): Map<String, Any>? {
     val sys = (value as? Map<*, *>)?.get("sys") as? Map<*, *> ?: return null
     val id = sys["id"] as? String ?: return null
@@ -145,9 +141,8 @@ private fun assetToMap(asset: CDAAsset): Map<String, Any> {
     )
 }
 
-// Embedded resource nodes extend CDARichHyperLink, so their branches must match before the
-// generic hyperlink case — otherwise an embedded entry would emit `data.uri` instead of
-// `data.target` and silently lose its linked resource.
+// Embedded resource nodes extend CDARichHyperLink; their branches must match before the
+// generic hyperlink case, or an embedded entry would emit `data.uri` and lose its target.
 private fun richNodeToMap(node: CDARichNode, ancestors: Set<String>): Map<String, Any> = when (node) {
     is CDARichText -> mapOf(
         "nodeType" to (node.nodeType ?: "text"),

@@ -29,8 +29,6 @@ class CTEntryTest {
         "metadata" to mapOf("tags" to emptyList<Any>(), "concepts" to emptyList<Any>()),
     )
 
-    // -- accessors ------------------------------------------------------------
-
     @Test
     fun `id returns sys id`() {
         assertEquals("e1", CTEntry.from(minimalEntry).id)
@@ -71,10 +69,9 @@ class CTEntryTest {
         val entry = CTEntry.from(minimalEntry)
         assertEquals("Hello", entry.getField<String>("title"))
         assertEquals(42, entry.getField<Int>("count"))
-        assertNull("missing field must return null", entry.getField<String>("nope"))
-        // Note: JVM generic erasure means `getField<Int>("title")` does not throw and does not
-        // return null — the actual `String` slips through, and the ClassCastException fires
-        // later at the caller's use site. Mirrors `CDAEntry.getField<T>` semantics.
+        assertNull(entry.getField<String>("nope"))
+        // No wrong-type case: JVM generic erasure means `getField<Int>("title")` doesn't throw
+        // here — the String slips through and the ClassCastException fires at the caller.
     }
 
     @Test
@@ -91,8 +88,6 @@ class CTEntryTest {
         assertNull(entry["nope"])
     }
 
-    // -- constructors ---------------------------------------------------------
-
     @Test
     fun `from(any) round-trips the input map through org_json normalization`() {
         val entry = CTEntry.from(minimalEntry)
@@ -102,15 +97,11 @@ class CTEntryTest {
 
     @Test
     fun `from(any) with an unserializable value falls back to an empty CTEntry`() {
-        // A raw java.util.Date is not JSON-safe; JSONObject reports it as a String, but the point
-        // of the fallback is that pathological input never propagates as an exception into the
-        // bridge call — the resolver just treats it as non-optimized.
         val nonJsonSafe = mapOf<String, Any>(
             "sys" to mapOf("id" to "e1"),
             "fields" to mapOf("weird" to Any()),
         )
         val entry = CTEntry.from(nonJsonSafe)
-        // The entry loads without throwing. Downstream reads may return null; that's fine.
         assertEquals("e1", entry.id)
     }
 
@@ -139,23 +130,17 @@ class CTEntryTest {
     fun `from(json) with malformed input falls back to the caller-supplied fallback`() {
         val baseline = CTEntry.from(minimalEntry)
         val entry = CTEntry.from("{ not valid", fallback = baseline)
-        // Mirrors OptimizationClient.resolveOptimizedEntry: an unparseable resolver output
-        // decays to the mapped baseline entry, not empty — so the caller sees baseline content
-        // instead of a blank render.
         assertEquals("e1", entry.id)
     }
 
     @Test
     fun `from(any) with unserializable input falls back to the caller-supplied fallback`() {
         val baseline = CTEntry.from(minimalEntry)
-        // A recursive self-referential map isn't JSON-safe; org.json's stringify eventually errors.
         val cyclic = mutableMapOf<String, Any>("self" to Any())
         cyclic["self"] = cyclic
         val entry = CTEntry.from(cyclic, fallback = baseline)
         assertEquals("e1", entry.id)
     }
-
-    // -- serialization --------------------------------------------------------
 
     @Test
     fun `toJSON round-trips through from(json) with the same accessible surface`() {
