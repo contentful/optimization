@@ -88,11 +88,7 @@ public struct OptimizedEntry<Content: View>: View {
     }
 
     private var isOptimized: Bool {
-        // Not `entry.getField("nt_experiences")` — `getField<T>` with `T` inferred as `Any`
-        // returns a non-nil `Optional(nil)` for a missing field (`nil as? Any` always
-        // succeeds), so an `Any?` read can't distinguish "absent" from "present but nil".
-        guard let fields = (entry.toFoundation() as? [String: Any])?["fields"] as? [String: Any] else { return false }
-        return fields["nt_experiences"] != nil
+        entry.hasField("nt_experiences")
     }
 
     // An open preview panel always forces live updates, overriding an explicit

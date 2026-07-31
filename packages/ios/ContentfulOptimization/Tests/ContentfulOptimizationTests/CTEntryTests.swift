@@ -1205,6 +1205,24 @@ final class CTEntryTests: XCTestCase {
         XCTAssertNil(value)
     }
 
+    func testHasFieldReturnsTrueForPresentFieldRegardlessOfValueType() throws {
+        let resolved = try CTEntry(any: ["sys": [:], "fields": ["nt_experiences": NSNull()]])
+
+        XCTAssertTrue(resolved.hasField("nt_experiences"))
+    }
+
+    func testHasFieldReturnsFalseForAbsentField() throws {
+        let resolved = try CTEntry(any: ["sys": [:], "fields": ["title": "Hello"]])
+
+        XCTAssertFalse(resolved.hasField("nt_experiences"))
+    }
+
+    func testHasFieldReturnsFalseWhenFieldsKeyIsAbsent() throws {
+        let resolved = try CTEntry(any: ["sys": ["id": "e1"]])
+
+        XCTAssertFalse(resolved.hasField("nt_experiences"))
+    }
+
     func testIdReturnsSysId() throws {
         let resolved = try CTEntry(any: ["sys": ["id": "e1"], "fields": [:]])
 

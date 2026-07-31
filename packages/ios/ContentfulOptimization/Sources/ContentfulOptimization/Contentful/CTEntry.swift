@@ -56,10 +56,15 @@ public struct CTEntry {
     /// A field's resolved value, or nil if absent.
     ///
     /// Don't call this with `T` inferred as `Any`/`Any?` to check presence — `nil as? Any` always
-    /// succeeds, so a missing field comes back `Optional(nil)`, not `nil`. Use `toFoundation()` or
-    /// a concrete `T` instead.
+    /// succeeds, so a missing field comes back `Optional(nil)`, not `nil`. Use `hasField` or a
+    /// concrete `T` instead.
     public func getField<T>(_ name: String) -> T? {
         envelope.fields[name]?.toFoundation() as? T
+    }
+
+    /// Whether a field is present, regardless of its value's type.
+    public func hasField(_ name: String) -> Bool {
+        envelope.fields[name] != nil
     }
 
     // Mirrors Contenful Entry
