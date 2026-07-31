@@ -48,7 +48,10 @@ public struct CTEntry {
         return String(decoding: data, as: UTF8.self)
     }
 
-    func toFoundation() -> Any {
+    /// For call sites that still work with `[String: Any]` — e.g. the reference UIKit
+    /// implementation's dict-based render closures, or `OptimizedEntry`'s own `[String: Any]`
+    /// initializer.
+    public func toFoundation() -> Any {
         guard let data = try? JSONEncoder().encode(envelope) else { return [String: Any]() }
         return (try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])) ?? [String: Any]()
     }

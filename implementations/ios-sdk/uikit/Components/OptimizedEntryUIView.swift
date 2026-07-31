@@ -107,7 +107,7 @@ final class OptimizedEntryUIView: UIView {
                 baseline: entry,
                 selectedOptimizations: effectiveOptimizations
             )
-            resolvedEntry = result.entry
+            resolvedEntry = result.entry.toFoundation() as? [String: Any] ?? entry
             resolvedOptimization = result.selectedOptimization
         } else {
             resolvedEntry = entry
