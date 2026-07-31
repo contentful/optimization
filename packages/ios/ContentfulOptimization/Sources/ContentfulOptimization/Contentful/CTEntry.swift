@@ -23,9 +23,9 @@ public struct CTEntry {
     // Parsing
 
     public init(_ entry: Contentful.Entry) {
-        envelope = CDA.Entry.from(entry, ancestors: [])
+        envelope = CDA.Entry(entry, ancestors: [])
     }
-    
+
     init(json: String) throws {
         guard let data = json.data(using: .utf8) else {
             throw OptimizationError.configError("JSON string is not valid UTF-8")
@@ -94,8 +94,8 @@ public struct CTEntry {
 // MARK: - Codable envelopes for the raw CDA response shapes
 
 /// Small `Codable` structs mirroring the fixed parts of a raw CDA response — `sys`, a content-type
-/// link, `metadata`, an unresolved-link stub, an asset, a Structured Text node. Each has a
-/// `static func from(...)` built from the corresponding `contentful.swift` type.
+/// link, `metadata`, an unresolved-link stub, an asset, a Structured Text node. Each has an
+/// `init(_:)` built from the corresponding `contentful.swift` type.
 private enum CDA {
     /// The `{sys: {id, type: "Link", linkType}}` shape an unresolved link has in a raw CDA
     /// response.
@@ -127,27 +127,27 @@ private enum CDA {
         }
 
         /// `ancestors` is the set of entry ids on the path from the root to here — see
-        /// `CDA.Entry.from` for why a back-edge becomes `.stub` instead of recursing.
-        static func from(_ link: Contentful.Link, ancestors: Set<String>) -> LinkValue {
+        /// `CDA.Entry.init(_:ancestors:)` for why a back-edge becomes `.stub` instead of recursing.
+        init(_ link: Contentful.Link, ancestors: Set<String>) {
             switch link {
             case let .entry(entry) where !ancestors.contains(entry.id):
-                return .entry(.from(entry, ancestors: ancestors))
+                self = .entry(Entry(entry, ancestors: ancestors))
             case let .asset(asset):
-                return .asset(.from(asset))
+                self = .asset(AssetEnvelope(asset))
             case let .unresolved(sys):
-                return .stub(.init(id: sys.id, linkType: sys.linkType))
+                self = .stub(.init(id: sys.id, linkType: sys.linkType))
             // A back-edge, or a typed `EntryDecodable` this mapper never registers: emit the
             // stub an unresolved link has in a raw CDA response.
             case .entry, .entryDecodable:
-                return .stub(.init(id: link.id, linkType: "Entry"))
+                self = .stub(.init(id: link.id, linkType: "Entry"))
             }
         }
     }
 
     /// One field value's resolved shape, one step before it becomes `JSONValue`.
     enum Field {
-        /// A leaf/container `JSONValue`, or `nil` for a value `from` drops (no case for it, or a
-        /// non-finite `Double`/`Location` coordinate).
+        /// A leaf/container `JSONValue`, or `nil` for a value `init(_:ancestors:)` drops (no case
+        /// for it, or a non-finite `Double`/`Location` coordinate).
         case value(JSONValue?)
         case link(LinkValue)
         case richText(RichTextNodeEnvelope)
@@ -168,35 +168,35 @@ private enum CDA {
 
         /// One field value, reduced to something the bridge accepts. Anything not listed here is
         /// dropped: losing an unused field beats losing personalization on the entry that holds it.
-        static func from(_ value: Any, ancestors: Set<String>) -> Field {
+        init(_ value: Any, ancestors: Set<String>) {
             switch value {
             case let link as Contentful.Link:
-                return .link(.from(link, ancestors: ancestors))
+                self = .link(LinkValue(link, ancestors: ancestors))
             case let richText as Contentful.RichTextDocument:
-                return .richText(.from(richText, ancestors: ancestors))
+                self = .richText(RichTextNodeEnvelope(richText, ancestors: ancestors))
             // A field of Contentful type "Object" shaped like a file metadata blob
             // (`{fileName, contentType, url, details: {size, image: {width, height}}}`) decodes to
             // this type before falling back to a plain dictionary.
             case let file as Contentful.Asset.FileMetadata:
-                return .fileMetadata(.from(file))
+                self = .fileMetadata(FileMetadataEnvelope(file))
             case let array as [Any]:
-                return .value(.array(array.compactMap { from($0, ancestors: ancestors).encoded() }))
+                self = .value(.array(array.compactMap { Field($0, ancestors: ancestors).encoded() }))
             case let dictionary as [String: Any]:
-                return .value(.object(dictionary.compactMapValues { from($0, ancestors: ancestors).encoded() }))
+                self = .value(.object(dictionary.compactMapValues { Field($0, ancestors: ancestors).encoded() }))
             case let location as Contentful.Location:
-                return .location(.from(location))
+                self = .location(LocationEnvelope(location))
             case let date as Date:
-                return .value(.string(ISO8601DateFormatter().string(from: date)))
+                self = .value(.string(ISO8601DateFormatter().string(from: date)))
             case let string as String:
-                return .value(.string(string))
+                self = .value(.string(string))
             case let int as Int:
-                return .value(.number(Double(int)))
+                self = .value(.number(Double(int)))
             case let double as Double:
-                return .value(double.isFinite ? .number(double) : nil)
+                self = .value(double.isFinite ? .number(double) : nil)
             case let bool as Bool:
-                return .value(.bool(bool))
+                self = .value(.bool(bool))
             default:
-                return .value(nil)
+                self = .value(nil)
             }
         }
     }
@@ -243,8 +243,8 @@ private enum CDA {
             self.locale = locale
         }
 
-        static func from(_ sys: Contentful.Sys) -> Sys {
-            Sys(
+        init(_ sys: Contentful.Sys) {
+            self.init(
                 id: sys.id,
                 type: "Entry",
                 contentType: .init(sys: .init(id: sys.contentTypeId ?? "", type: "Link", linkType: "ContentType")),
@@ -285,21 +285,21 @@ private enum CDA {
         /// baseline is a real cycle; recursing an entry already on the current path would loop
         /// forever, so a re-linked ancestor emits an unresolved link stub instead. Scoping to the
         /// current path (not a global visited set) still expands diamonds fully on both branches.
-        static func from(_ entry: Contentful.Entry, ancestors: Set<String>) -> Entry {
+        init(_ entry: Contentful.Entry, ancestors: Set<String>) {
             let childAncestors = ancestors.union([entry.id])
 
-            let sys = Sys.from(entry.sys)
-            let fields = entry.fields.compactMapValues { Field.from($0, ancestors: childAncestors).encoded() }
+            let sys = Sys(entry.sys)
+            let fields = entry.fields.compactMapValues { Field($0, ancestors: childAncestors).encoded() }
 
             // Required, not cosmetic: the resolver's entry guard rejects any entry without a
             // `metadata` object. `concepts` is always empty — `contentful.swift`'s `Metadata`
             // models only `tags`.
             let metadata = Metadata(
-                tags: (entry.metadata?.tags ?? []).compactMap { try? LinkValue.from($0, ancestors: childAncestors).encoded() },
+                tags: (entry.metadata?.tags ?? []).compactMap { try? LinkValue($0, ancestors: childAncestors).encoded() },
                 concepts: []
             )
 
-            return Entry(sys: sys, fields: fields, metadata: metadata)
+            self.init(sys: sys, fields: fields, metadata: metadata)
         }
     }
 
@@ -323,15 +323,13 @@ private enum CDA {
             let file: FileMetadataEnvelope
         }
 
-        static func from(_ asset: Contentful.Asset) -> AssetEnvelope {
-            AssetEnvelope(
-                sys: .init(id: asset.id, type: "Asset"),
-                fields: .init(
-                    title: asset.title ?? "",
-                    description: asset.description,
-                    file: asset.file.map(FileMetadataEnvelope.from) ?? FileMetadataEnvelope(
-                        fileName: nil, contentType: nil, details: nil, url: asset.urlString ?? ""
-                    )
+        init(_ asset: Contentful.Asset) {
+            sys = .init(id: asset.id, type: "Asset")
+            fields = .init(
+                title: asset.title ?? "",
+                description: asset.description,
+                file: asset.file.map(FileMetadataEnvelope.init) ?? FileMetadataEnvelope(
+                    fileName: nil, contentType: nil, details: nil, url: asset.urlString ?? ""
                 )
             )
         }
@@ -355,8 +353,15 @@ private enum CDA {
             }
         }
 
-        static func from(_ file: Contentful.Asset.FileMetadata) -> FileMetadataEnvelope {
-            FileMetadataEnvelope(
+        init(fileName: String?, contentType: String?, details: Details?, url: String) {
+            self.fileName = fileName
+            self.contentType = contentType
+            self.details = details
+            self.url = url
+        }
+
+        init(_ file: Contentful.Asset.FileMetadata) {
+            self.init(
                 fileName: file.fileName,
                 contentType: file.contentType,
                 details: .init(
@@ -373,8 +378,9 @@ private enum CDA {
         let lat: Double
         let lon: Double
 
-        static func from(_ location: Contentful.Location) -> LocationEnvelope {
-            LocationEnvelope(lat: location.latitude, lon: location.longitude)
+        init(_ location: Contentful.Location) {
+            lat = location.latitude
+            lon = location.longitude
         }
     }
 
@@ -410,28 +416,28 @@ private enum CDA {
         /// `ResourceLinkBlock`/`ResourceLinkInline` must be matched before the generic
         /// `RecursiveNode` case, since both conform to it — falling through would silently drop
         /// the embedded resource's link entirely.
-        static func from(_ node: Contentful.Node, ancestors: Set<String>) -> RichTextNodeEnvelope {
+        init(_ node: Contentful.Node, ancestors: Set<String>) {
             switch node {
             case let resourceLink as Contentful.ResourceLinkBlock:
-                return RichTextNodeEnvelope(
+                self.init(
                     nodeType: resourceLink.nodeType.rawValue,
-                    data: .init(target: try? LinkValue.from(resourceLink.data.target, ancestors: ancestors).encoded()),
-                    content: resourceLink.content.map { from($0, ancestors: ancestors) }
+                    data: .init(target: try? LinkValue(resourceLink.data.target, ancestors: ancestors).encoded()),
+                    content: resourceLink.content.map { RichTextNodeEnvelope($0, ancestors: ancestors) }
                 )
             case let resourceLink as Contentful.ResourceLinkInline:
-                return RichTextNodeEnvelope(
+                self.init(
                     nodeType: resourceLink.nodeType.rawValue,
-                    data: .init(target: try? LinkValue.from(resourceLink.data.target, ancestors: ancestors).encoded()),
-                    content: resourceLink.content.map { from($0, ancestors: ancestors) }
+                    data: .init(target: try? LinkValue(resourceLink.data.target, ancestors: ancestors).encoded()),
+                    content: resourceLink.content.map { RichTextNodeEnvelope($0, ancestors: ancestors) }
                 )
             case let hyperlink as Contentful.Hyperlink:
-                return RichTextNodeEnvelope(
+                self.init(
                     nodeType: hyperlink.nodeType.rawValue,
                     data: .init(uri: hyperlink.data.uri),
-                    content: hyperlink.content.map { from($0, ancestors: ancestors) }
+                    content: hyperlink.content.map { RichTextNodeEnvelope($0, ancestors: ancestors) }
                 )
             case let text as Contentful.Text:
-                return RichTextNodeEnvelope(
+                self.init(
                     nodeType: text.nodeType.rawValue,
                     value: text.value,
                     marks: text.marks.map { .init(type: $0.type.rawValue) }
@@ -440,12 +446,12 @@ private enum CDA {
             // HorizontalRule/OrderedList/UnorderedList/ListItem, and the top-level
             // RichTextDocument itself — all plain containers with no data beyond their children.
             case let recursive as Contentful.RecursiveNode:
-                return RichTextNodeEnvelope(
+                self.init(
                     nodeType: recursive.nodeType.rawValue,
-                    content: recursive.content.map { from($0, ancestors: ancestors) }
+                    content: recursive.content.map { RichTextNodeEnvelope($0, ancestors: ancestors) }
                 )
             default:
-                return RichTextNodeEnvelope(nodeType: node.nodeType.rawValue)
+                self.init(nodeType: node.nodeType.rawValue)
             }
         }
     }
