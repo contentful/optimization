@@ -475,7 +475,7 @@ public final class OptimizationClient: ObservableObject {
     }
 
     /// Return whether Core would currently allow the named event method.
-    func hasConsent(method: String) -> Bool {
+    public func hasConsent(method: String) -> Bool {
         guard isInitialized else { return false }
         let escaped = NativePolyfills.escapeForJS(method)
 
