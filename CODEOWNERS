@@ -1,33 +1,33 @@
 # Default owners for files without a more specific rule.
-* @akfreas @phobetron @Lotfi-Arif @TimBeyer @fmamud
+* @elton-muteswa-cf @TimBeyer @phobetron @Lotfi-Arif @fmamud @nalchevanidze
 
 # GitHub repository automation and policy.
-.github/**/* @phobetron @Lp-Francois @Lotfi-Arif @TimBeyer @fmamud
-
-# Code ownership policy.
-/CODEOWNERS @phobetron @Lp-Francois @TimBeyer
-
-# Dependency management and update automation.
-/package.json @phobetron @Lp-Francois @TimBeyer
-/pnpm-lock.yaml @phobetron @Lp-Francois @TimBeyer
-/pnpm-workspace.yaml @phobetron @Lp-Francois @TimBeyer
-/renovate.json @phobetron @Lp-Francois @TimBeyer
-
-# Node and package-manager runtime configuration.
-/.nvmrc @phobetron @Lp-Francois @TimBeyer
-/.pnpmfile.cjs @phobetron @Lp-Francois @TimBeyer
-
-# Commit workflow and repository hygiene.
-/.gitignore @phobetron @Lp-Francois @TimBeyer
-/.lintstagedrc.yaml @phobetron @Lp-Francois @TimBeyer
-/.husky/** @phobetron @Lp-Francois @TimBeyer
-
-# Release automation policy.
-/release-please-config.json @phobetron @Lp-Francois @TimBeyer @fmamud
-/.release-please-manifest.json @phobetron @Lp-Francois @TimBeyer @fmamud
-
-# Documentation generation.
-/typedoc.json @phobetron @Lp-Francois @TimBeyer
+.github/**/* @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @Lotfi-Arif @fmamud
 
 # Contentful operational configuration.
-/.contentful/** @phobetron @Lp-Francois @TimBeyer
+/.contentful/** @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @Lotfi-Arif @fmamud
+
+# Release automation policy.
+/release-please-config.json @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @Lotfi-Arif @fmamud
+/.release-please-manifest.json @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @Lotfi-Arif @fmamud
+
+# Commit workflow and repository hygiene.
+/.husky/** @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @fmamud
+/.gitignore @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @fmamud
+/.lintstagedrc.yaml @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @fmamud
+
+# Dependency management and update automation.
+/package.json @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @Lotfi-Arif @fmamud
+/pnpm-lock.yaml @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @Lotfi-Arif @fmamud
+/pnpm-workspace.yaml @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @Lotfi-Arif @fmamud
+/renovate.json @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @Lotfi-Arif @fmamud
+
+# Node and package-manager runtime configuration.
+/.nvmrc @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @fmamud
+/.pnpmfile.cjs @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @fmamud
+
+# Documentation generation.
+/typedoc.json @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @fmamud
+
+# Code ownership policy.
+/CODEOWNERS @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron
