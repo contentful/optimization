@@ -1,6 +1,8 @@
 package com.contentful.optimization.contentful
 
+import com.contentful.java.cda.CDAContentType
 import com.contentful.java.cda.CDAEntry
+import com.contentful.java.cda.CDAMetadata
 import com.contentful.optimization.core.DiagnosticLogger
 import org.json.JSONArray
 import org.json.JSONObject
@@ -11,46 +13,42 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Bridges `contentful.java`'s [CDAEntry] and the resolver's raw JSON (`{sys, fields, metadata}`).
- * Accessors mirror `CDAEntry` so a resolved variant reads the same way as a fetched entry.
- * Backed by a typed internal envelope; the raw Map shape is reachable via [toFoundation].
+ * Wraps a `contentful.java` [CDAEntry] so a resolved variant reads through the same accessors
+ * as a fetched entry. [from]`(any: Map)` and [from]`(json: String)` fabricate a [CDAEntry]
+ * from the resolver's Map so downstream code always reads through the same surface.
  */
-public class CTEntry internal constructor(private val envelope: Envelope) {
+public class CTEntry internal constructor(private val entry: CDAEntry) {
 
-    public fun toFoundation(): Map<String, Any> = envelope.toFoundation()
+    public fun toFoundation(): Map<String, Any> = toOptimizedEntryMap(entry)
 
     public fun toJSON(): String = JSONObject(toFoundation()).toString()
 
-    public val id: String?
-        get() = envelope.sys?.id
+    public val id: String? get() = entry.id()
 
-    public val localeCode: String?
-        get() = envelope.sys?.locale
+    public val contentTypeId: String? get() = entry.contentType()?.id()
+
+    public val localeCode: String? get() = entry.getAttribute<String?>("locale")
 
     public val createdAt: Date?
-        get() = envelope.sys?.createdAt?.let(::parseIso8601)
+        get() = entry.getAttribute<String?>("createdAt")?.let(::parseIso8601)
 
     public val updatedAt: Date?
-        get() = envelope.sys?.updatedAt?.let(::parseIso8601)
+        get() = entry.getAttribute<String?>("updatedAt")?.let(::parseIso8601)
 
-    public val contentTypeId: String?
-        get() = envelope.sys?.contentTypeId
+    public fun <T> getField(name: String): T? = entry.getField(name)
 
-    @Suppress("UNCHECKED_CAST")
-    public fun <T> getField(name: String): T? = envelope.fields[name] as? T
-
-    public fun hasField(name: String): Boolean = envelope.fields.containsKey(name)
+    public fun hasField(name: String): Boolean = entry.rawFields().containsKey(name)
 
     public operator fun get(name: String): String? = getField(name)
 
     public companion object {
-        internal val EMPTY: CTEntry = CTEntry(Envelope.empty())
+        internal val EMPTY: CTEntry = CTEntry(fabricateEntry(emptyMap()))
 
-        public fun from(entry: CDAEntry): CTEntry = CTEntry(Envelope.fromMap(toOptimizedEntryMap(entry)))
+        public fun from(entry: CDAEntry): CTEntry = CTEntry(entry)
 
         /** Logs and returns [fallback] on parse failure — avoids throwing into the bridge. */
         public fun from(any: Map<String, Any>, fallback: CTEntry = EMPTY): CTEntry = try {
-            CTEntry(Envelope.fromMap(jsonObjectToMap(JSONObject(any))))
+            CTEntry(fabricateEntry(jsonObjectToMap(JSONObject(any))))
         } catch (e: Exception) {
             DiagnosticLogger.warning { "[CTEntry] Failed to parse entry map: ${e.message}" }
             fallback
@@ -67,103 +65,72 @@ public class CTEntry internal constructor(private val envelope: Envelope) {
                 DiagnosticLogger.warning { "[CTEntry] Failed to parse entry JSON: root is not a JSON object" }
                 return fallback
             }
-            return CTEntry(Envelope.fromMap(jsonObjectToMap(obj)))
+            return try {
+                CTEntry(fabricateEntry(jsonObjectToMap(obj)))
+            } catch (e: Exception) {
+                DiagnosticLogger.warning { "[CTEntry] Failed to build CDAEntry: ${e.message}" }
+                fallback
+            }
         }
     }
+}
 
-    /**
-     * Typed internal shape mirroring iOS's `CDA.Entry` Codable struct. The resolver's Map shape
-     * is preserved end-to-end: [fromMap] parses a resolver Map into this envelope, and
-     * [toFoundation] reconstructs the same Map for consumers/bridge calls.
-     */
-    internal data class Envelope(
-        val sys: Sys?,
-        val fields: Map<String, Any>,
-        val metadata: Metadata?,
-    ) {
+// `LocalizedResource.getField(name)` expects fields shaped as `Map<name, Map<locale, value>>`
+// with a non-null `defaultLocale`. The resolver Map is single-locale, so we bucket every value
+// under a synthetic locale marker.
+private const val FABRICATED_LOCALE = "_"
 
-        fun toFoundation(): Map<String, Any> = buildMap {
-            sys?.let { put("sys", it.toFoundation()) }
-            put("fields", fields)
-            metadata?.let { put("metadata", it.toFoundation()) }
-        }
+@Suppress("UNCHECKED_CAST")
+private fun fabricateEntry(map: Map<String, Any>): CDAEntry {
+    val entry = CDAEntry()
+    setPrivateField(entry, "attrs", (map["sys"] as? Map<String, Any>)?.toMutableMap() ?: mutableMapOf<String, Any>())
+    setPrivateField(entry, "defaultLocale", FABRICATED_LOCALE)
+    val rawFields = (map["fields"] as? Map<String, Any>) ?: emptyMap()
+    setPrivateField(entry, "rawFields", rawFields.toMutableMap())
+    setPrivateField(entry, "fields", localizeFields(rawFields))
+    val contentTypeId = ((map["sys"] as? Map<*, *>)
+        ?.get("contentType") as? Map<*, *>)
+        ?.let { it["sys"] as? Map<*, *> }
+        ?.let { it["id"] as? String }
+    setPrivateField(entry, "contentType", contentTypeId?.let(::fabricateContentType))
+    setPrivateField(entry, "metadata", (map["metadata"] as? Map<String, Any>)?.let(::fabricateMetadata))
+    return entry
+}
 
-        internal data class Sys(
-            val id: String?,
-            val type: String?,
-            val contentTypeId: String?,
-            val createdAt: String?,
-            val updatedAt: String?,
-            val revision: Number?,
-            val locale: String?,
-            val extras: Map<String, Any>,
-        ) {
+private fun fabricateContentType(id: String): CDAContentType {
+    val ct = CDAContentType()
+    setPrivateField(ct, "attrs", mutableMapOf<String, Any>("id" to id, "type" to "ContentType"))
+    return ct
+}
 
-            fun toFoundation(): Map<String, Any> = buildMap {
-                id?.let { put("id", it) }
-                type?.let { put("type", it) }
-                contentTypeId?.let {
-                    put(
-                        "contentType",
-                        mapOf(
-                            "sys" to mapOf("id" to it, "type" to "Link", "linkType" to "ContentType"),
-                        ),
-                    )
-                }
-                createdAt?.let { put("createdAt", it) }
-                updatedAt?.let { put("updatedAt", it) }
-                revision?.let { put("revision", it) }
-                locale?.let { put("locale", it) }
-                putAll(extras)
-            }
+private fun fabricateMetadata(map: Map<String, Any>): CDAMetadata {
+    val metadata = CDAMetadata()
+    setPrivateField(metadata, "tags", (map["tags"] as? List<*>)?.toMutableList() ?: mutableListOf<Any>())
+    setPrivateField(metadata, "concepts", (map["concepts"] as? List<*>)?.toMutableList() ?: mutableListOf<Any>())
+    return metadata
+}
 
-            companion object {
-                fun fromMap(map: Map<*, *>): Sys {
-                    // Pull out the keys we type explicitly; carry unknowns through in `extras`
-                    // so a resolver Map with e.g. `space`/`environment` links round-trips.
-                    val known = setOf("id", "type", "contentType", "createdAt", "updatedAt", "revision", "locale")
-                    val contentTypeId = (map["contentType"] as? Map<*, *>)
-                        ?.let { it["sys"] as? Map<*, *> }
-                        ?.let { it["id"] as? String }
-                    return Sys(
-                        id = map["id"] as? String,
-                        type = map["type"] as? String,
-                        contentTypeId = contentTypeId,
-                        createdAt = map["createdAt"] as? String,
-                        updatedAt = map["updatedAt"] as? String,
-                        revision = map["revision"] as? Number,
-                        locale = map["locale"] as? String,
-                        extras = map.entries
-                            .filter { it.key is String && it.key !in known }
-                            .associate { (k, v) -> (k as String) to (v as Any) },
-                    )
-                }
-            }
-        }
+private fun localizeFields(fields: Map<String, Any>): MutableMap<String, Any?> =
+    fields.mapValuesTo(mutableMapOf()) { (_, value) ->
+        mutableMapOf<String, Any?>(FABRICATED_LOCALE to value)
+    }
 
-        internal data class Metadata(val tags: List<Any>, val concepts: List<Any>) {
-            fun toFoundation(): Map<String, Any> = mapOf("tags" to tags, "concepts" to concepts)
-
-            companion object {
-                @Suppress("UNCHECKED_CAST")
-                fun fromMap(map: Map<*, *>): Metadata = Metadata(
-                    tags = (map["tags"] as? List<Any>) ?: emptyList(),
-                    concepts = (map["concepts"] as? List<Any>) ?: emptyList(),
-                )
-            }
-        }
-
-        companion object {
-            fun empty(): Envelope = Envelope(sys = null, fields = emptyMap(), metadata = null)
-
-            @Suppress("UNCHECKED_CAST")
-            fun fromMap(map: Map<String, Any>): Envelope = Envelope(
-                sys = (map["sys"] as? Map<*, *>)?.let(Sys.Companion::fromMap),
-                fields = (map["fields"] as? Map<String, Any>) ?: emptyMap(),
-                metadata = (map["metadata"] as? Map<*, *>)?.let(Metadata.Companion::fromMap),
-            )
+// contentful.java's LocalizedResource/CDAResource/CDAMetadata declare the fields we need to
+// set as package-private with no public setters; a future rename here fails at runtime with
+// NoSuchFieldException. Pinned to 10.6.0 (see build.gradle.kts).
+private fun setPrivateField(target: Any, name: String, value: Any?) {
+    var clazz: Class<*>? = target::class.java
+    while (clazz != null) {
+        try {
+            val field = clazz.getDeclaredField(name)
+            field.isAccessible = true
+            field.set(target, value)
+            return
+        } catch (_: NoSuchFieldException) {
+            clazz = clazz.superclass
         }
     }
+    throw NoSuchFieldException("$name on ${target::class.java}")
 }
 
 private fun jsonObjectToMap(obj: JSONObject): Map<String, Any> {

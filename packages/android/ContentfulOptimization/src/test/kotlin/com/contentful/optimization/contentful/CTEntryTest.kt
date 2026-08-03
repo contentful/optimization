@@ -1,5 +1,7 @@
 package com.contentful.optimization.contentful
 
+import com.contentful.java.cda.CDAContentType
+import com.contentful.java.cda.CDAEntry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -150,4 +152,60 @@ class CTEntryTest {
         assertEquals(original.contentTypeId, roundTripped.contentTypeId)
         assertEquals(original.getField<String>("title"), roundTripped.getField<String>("title"))
     }
+
+    @Test
+    fun `from(entry) reads through the real CDAEntry accessors`() {
+        val cda = CDAEntry().apply {
+            setPrivateField(this, "attrs", mutableMapOf<String, Any>("id" to "cda-1", "type" to "Entry"))
+            setPrivateField(this, "defaultLocale", "en-US")
+            setPrivateField(this, "rawFields", mutableMapOf("title" to Any()))
+            setPrivateField(this, "fields", mutableMapOf("title" to mutableMapOf<String, Any?>("en-US" to "From CDA")))
+            setPrivateField(this, "contentType", makeContentType("post"))
+        }
+
+        val ct = CTEntry.from(cda)
+        assertEquals("cda-1", ct.id)
+        assertEquals("post", ct.contentTypeId)
+        assertEquals("From CDA", ct.getField<String>("title"))
+    }
+
+    @Test
+    fun `fabricated CDAEntry from a Map reads through the real CDAEntry accessors`() {
+        // Regression guard: `getField(...)` here goes through CDAEntry's Localizer, so the
+        // fabricated `defaultLocale` and nested `fields` shape must both be correct.
+        val ct = CTEntry.from(minimalEntry)
+        assertEquals("Hello", ct.getField<String>("title"))
+        assertEquals(42, ct.getField<Int>("count"))
+    }
+
+    @Test
+    fun `fabricated entry with a bad contentType Map falls back to null contentTypeId`() {
+        val ct = CTEntry.from(mapOf(
+            "sys" to mapOf("id" to "e1", "type" to "Entry", "contentType" to "not-a-map"),
+            "fields" to emptyMap<String, Any>(),
+        ))
+        assertEquals("e1", ct.id)
+        assertNull(ct.contentTypeId)
+    }
+}
+
+private fun makeContentType(id: String): CDAContentType {
+    val ct = CDAContentType()
+    setPrivateField(ct, "attrs", mutableMapOf<String, Any>("id" to id, "type" to "ContentType"))
+    return ct
+}
+
+private fun setPrivateField(target: Any, name: String, value: Any?) {
+    var clazz: Class<*>? = target::class.java
+    while (clazz != null) {
+        try {
+            val field = clazz.getDeclaredField(name)
+            field.isAccessible = true
+            field.set(target, value)
+            return
+        } catch (_: NoSuchFieldException) {
+            clazz = clazz.superclass
+        }
+    }
+    throw NoSuchFieldException("$name on ${target::class.java}")
 }
