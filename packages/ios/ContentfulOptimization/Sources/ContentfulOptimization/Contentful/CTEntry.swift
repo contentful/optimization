@@ -131,9 +131,9 @@ private enum CDA {
 
         func encoded() throws -> JSONValue {
             switch self {
-            case let .entry(envelope): return try jsonValueEncoded(envelope)
-            case let .asset(envelope): return try jsonValueEncoded(envelope)
-            case let .stub(envelope): return try jsonValueEncoded(envelope)
+            case let .entry(entry): return try jsonValueEncoded(entry)
+            case let .asset(asset): return try jsonValueEncoded(asset)
+            case let .stub(stub): return try jsonValueEncoded(stub)
             }
         }
 
@@ -166,10 +166,10 @@ private enum CDA {
         func encoded() -> JSONValue? {
             switch self {
             case let .value(value): return value
-            case let .link(linkValue): return try? linkValue.encoded()
-            case let .richText(envelope): return try? jsonValueEncoded(envelope)
-            case let .fileMetadata(envelope): return try? jsonValueEncoded(envelope)
-            case let .location(envelope): return try? jsonValueEncoded(envelope)
+            case let .link(link): return try? link.encoded()
+            case let .richText(richText): return try? jsonValueEncoded(richText)
+            case let .fileMetadata(fileMetadata): return try? jsonValueEncoded(fileMetadata)
+            case let .location(location): return try? jsonValueEncoded(location)
             }
         }
 
