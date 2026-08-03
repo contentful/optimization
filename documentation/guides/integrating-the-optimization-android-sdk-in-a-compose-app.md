@@ -79,6 +79,10 @@ explains the two axes and the split form that sets them separately.
    }
    ```
 
+   The SDK ships okhttp on the runtime classpath through `com.squareup.okhttp3:okhttp-android:5.x`.
+   If your app declares okhttp directly, use the same `okhttp-android` artifact at 5.x to avoid
+   duplicate-class packaging failures.
+
 2. Wrap your app UI in `OptimizationRoot`, pass your Optimization client ID, set
    `logLevel = OptimizationLogLevel.debug` so the SDK logs its activity, and add `ScreenTrackingEffect`
    to one screen you already render.

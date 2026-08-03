@@ -72,6 +72,10 @@ before you ship; it explains the two axes and the split form that sets them sepa
    }
    ```
 
+   The SDK ships okhttp on the runtime classpath through `com.squareup.okhttp3:okhttp-android:5.x`.
+   If your app declares okhttp directly, use the same `okhttp-android` artifact at 5.x to avoid
+   duplicate-class packaging failures.
+
 2. Initialize the SDK from your `Application` subclass. `OptimizationManager.initialize(...)` is a
    normal (non-suspend) call that constructs the process-wide client and starts it in the background;
    activities read `OptimizationManager.client` afterward.
@@ -285,6 +289,10 @@ callers wait for readiness before making direct calls that depend on it.
        implementation("com.contentful.java:optimization-android:<version>")
    }
    ```
+
+   The SDK ships okhttp on the runtime classpath through `com.squareup.okhttp3:okhttp-android:5.x`.
+   If your app declares okhttp directly, use the same `okhttp-android` artifact at 5.x to avoid
+   duplicate-class packaging failures.
 
 2. Build one `OptimizationConfig`. Only `clientId` is required; the rest have working defaults.
    1. Pass `clientId` from your configuration layer.
