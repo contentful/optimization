@@ -509,9 +509,10 @@ to a given entry.
 
 4. Treat baseline fallback as expected behavior. `resolveOptimizedEntry` (which `OptimizedEntryView`
    calls for you) is a `suspend`, fail-soft resolver. It returns a `ResolvedOptimizedEntry` — an
-   SDK-owned result wrapper carrying `entry` (a `CTEntry` — the SDK-owned typed view over the entry
-   map, with `id`, `getField<T>`, `hasField`, and `toFoundation()` accessors) and
-   `selectedOptimization` (the applied selection, or null). Its `entry` is the resolved variant when
+   SDK-owned result wrapper carrying `entry` (a `CTEntry` — the SDK-owned wrapper around a
+   `CDAEntry` whose accessors delegate to it: `id`, `getField<T>`, `hasField`, plus
+   `toFoundation()` to reach the raw entry map when needed) and `selectedOptimization` (the
+   applied selection, or null). Its `entry` is the resolved variant when
    one applies and the baseline entry unchanged otherwise — when the client is not initialized, when
    the entry is not optimized, when no selected optimization matches, when linked optimization data
    is missing, on all-locale payloads, or when the variant is not in the payload — so it never

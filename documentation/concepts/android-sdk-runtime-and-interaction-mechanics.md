@@ -212,8 +212,8 @@ The application provides:
   resolution.
 
 The SDK returns either the baseline entry or the resolved variant entry, wrapped in a `CTEntry`
-(the SDK-owned typed view over the entry map — read with `getField<T>`, `hasField`, `id`, or unwrap
-the raw map via `toFoundation()`):
+(the SDK-owned wrapper around a `CDAEntry` whose accessors delegate to it — read with
+`getField<T>`, `hasField`, `id`, or unwrap the raw entry map via `toFoundation()`):
 
 ```kotlin
 val result = client.resolveOptimizedEntry(baseline = entry)
