@@ -1,7 +1,9 @@
 import Combine
+@testable import Contentful
+@testable import ContentfulOptimization
+import Foundation
 import JavaScriptCore
 import XCTest
-@testable import ContentfulOptimization
 
 final class OptimizationClientTests: XCTestCase {
 
@@ -1053,7 +1055,7 @@ final class OptimizationClientTests: XCTestCase {
         let baseline: [String: Any] = ["sys": ["id": "entry1"], "fields": ["title": "Hello"]]
 
         let result = client.resolveOptimizedEntry(baseline: baseline)
-        XCTAssertEqual(result.entry["fields"] as? [String: String], ["title": "Hello"])
+        XCTAssertEqual(result.entry.getField("title"), "Hello")
         XCTAssertNil(result.selectedOptimization)
     }
 
@@ -1138,9 +1140,128 @@ final class OptimizationClientTests: XCTestCase {
         // resolveOptimizedEntry should round-trip the entry through JS and back
         // without losing fields (i.e. the JS bridge should actually process it)
         let result = client.resolveOptimizedEntry(baseline: baseline)
-        let fields = result.entry["fields"] as? [String: Any]
-        XCTAssertEqual(fields?["title"] as? String, "Hello")
-        XCTAssertEqual(fields?["slug"] as? String, "hello-world")
+        XCTAssertEqual(result.entry.getField("title"), "Hello")
+        XCTAssertEqual(result.entry.getField("slug"), "hello-world")
+    }
+
+    // MARK: - Phase 2: resolveOptimizedEntry(baseline: Contentful.Entry) Tests
+
+    private static let localizationContext: LocalizationContext = {
+        let localeJSON = Data("""
+        {"code":"en-US","default":true,"name":"English","fallbackCode":null}
+        """.utf8)
+        let locale = try! JSONDecoder.withoutLocalizationContext().decode(Contentful.Locale.self, from: localeJSON)
+        return LocalizationContext(locales: [locale])!
+    }()
+
+    private func decodeEntry(_ json: String) throws -> Entry {
+        let decoder = JSONDecoder.withoutLocalizationContext()
+        decoder.update(with: Self.localizationContext)
+        decoder.userInfo[.init(rawValue: "linkResolverContext")!] = NSObject()
+        return try decoder.decode(Entry.self, from: Data(json.utf8))
+    }
+
+    @MainActor
+    func testResolveOptimizedEntryContentfulOverloadFallsBackToMappedBaselineEntry() throws {
+        let entry = try decodeEntry("""
+        {
+          "sys": {"id": "entry-1", "type": "Entry", "locale": "en-US",
+                   "contentType": {"sys": {"id": "test", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {"title": "Default Title"}
+        }
+        """)
+        let client = OptimizationClient()
+
+        let result = client.resolveOptimizedEntry(baseline: entry)
+
+        XCTAssertEqual(result.entry.id, "entry-1")
+        XCTAssertEqual(result.entry.getField("title"), "Default Title")
+        XCTAssertNil(result.selectedOptimization)
+        XCTAssertNil(result.optimizationContextId)
+    }
+
+    /// Proves this overload actually routes through `CTEntry(_: Contentful.Entry)` rather than some
+    /// other conversion: a resolved link on the baseline must come back expanded exactly as
+    /// `CTEntry(_: Contentful.Entry)` would produce it, readable via `getField`.
+    @MainActor
+    func testResolveOptimizedEntryContentfulOverloadFallbackEntryHasLinksExpanded() throws {
+        let parent = try decodeEntry("""
+        {
+          "sys": {"id": "parent", "type": "Entry", "locale": "en-US",
+                   "contentType": {"sys": {"id": "test", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {"child": {"sys": {"id": "child-1", "type": "Link", "linkType": "Entry"}}}
+        }
+        """)
+        let child = try decodeEntry("""
+        {
+          "sys": {"id": "child-1", "type": "Entry", "locale": "en-US",
+                   "contentType": {"sys": {"id": "test", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {"name": "child entry"}
+        }
+        """)
+        parent.resolveLinks(against: ["parent": parent, "child-1": child], and: [:])
+        let client = OptimizationClient()
+
+        let result = client.resolveOptimizedEntry(baseline: parent)
+
+        let childField: [String: Any]? = result.entry.getField("child")
+        XCTAssertEqual((childField?["sys"] as? [String: Any])?["id"] as? String, "child-1")
+        XCTAssertEqual((childField?["fields"] as? [String: Any])?["name"] as? String, "child entry", "the resolved link must have expanded inline, matching CTEntry's own behavior")
+    }
+
+    /// This overload must be a true *overload* of the existing method — same name,
+    /// `resolveOptimizedEntry`, resolved by Swift purely from the static type of `baseline` at the
+    /// call site (a dict picks the `[String: Any]` overload; a `Contentful.Entry` picks this one) —
+    /// not a differently-named method that merely does something similar. The identical call
+    /// syntax below, against two differently-typed `baseline` arguments, is what actually proves
+    /// overload resolution picked two distinct declarations rather than one generic one.
+    @MainActor
+    func testResolveOptimizedEntryIsATrueOverloadResolvedByBaselineArgumentType() throws {
+        let entry = try decodeEntry("""
+        {
+          "sys": {"id": "entry-1", "type": "Entry", "locale": "en-US",
+                   "contentType": {"sys": {"id": "test", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {"title": "Hello"}
+        }
+        """)
+        let dict: [String: Any] = ["sys": ["id": "entry-1"], "fields": ["title": "Hello"]]
+        let client = OptimizationClient()
+
+        let dictResult = client.resolveOptimizedEntry(baseline: dict)
+        let entryResult = client.resolveOptimizedEntry(baseline: entry)
+
+        XCTAssertEqual(dictResult.entry.id, "entry-1")
+        XCTAssertEqual(entryResult.entry.id, "entry-1")
+    }
+
+    /// The fallback tests above only prove the fallback path; this round-trips a real
+    /// `Contentful.Entry` through an initialized client's JS bridge (mirroring
+    /// `testResolveOptimizedEntryPreservesFieldsWhenInitialized`, the dict-based overload's
+    /// equivalent test) and confirms fields survive and are readable via `getField`.
+    @MainActor
+    func testResolveOptimizedEntryContentfulOverloadRoundTripsFieldsThroughRealBridge() throws {
+        let entry = try decodeEntry("""
+        {
+          "sys": {"id": "entry1", "type": "Entry", "locale": "en-US",
+                   "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}}},
+          "fields": {"title": "Hello", "slug": "hello-world"}
+        }
+        """)
+        let client = OptimizationClient()
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            api: OptimizationApiConfig(
+                experienceBaseUrl: "http://localhost:8000/experience/",
+                insightsBaseUrl: "http://localhost:8000/insights/"
+            )
+        )
+        try client.initialize(config: config)
+
+        let result = client.resolveOptimizedEntry(baseline: entry)
+
+        XCTAssertEqual(result.entry.getField("title"), "Hello", "the entry must actually round-trip through the JS bridge, not just fall back to the pre-mapped baseline")
+        XCTAssertEqual(result.entry.getField("slug"), "hello-world")
     }
 
     // MARK: - Phase 2: Payload Serialization Tests
@@ -1776,7 +1897,7 @@ final class OptimizationClientTests: XCTestCase {
 
         // Without initialization, resolveOptimizedEntry returns baseline
         let result = client.resolveOptimizedEntry(baseline: baseline)
-        XCTAssertEqual(result.entry["sys"] as? [String: String], ["id": "4ib0hsHWoSOnCVdDkizE8d"])
+        XCTAssertEqual(result.entry.id, "4ib0hsHWoSOnCVdDkizE8d")
         XCTAssertNil(result.selectedOptimization)
         XCTAssertNil(result.optimizationContextId)
     }

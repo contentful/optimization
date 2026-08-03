@@ -1,4 +1,5 @@
 import Combine
+import Contentful
 import SwiftUI
 
 /// Unified component for tracking and optimizing Contentful entries.
@@ -16,7 +17,7 @@ import SwiftUI
 /// }
 /// ```
 public struct OptimizedEntry<Content: View>: View {
-    let entry: [String: Any]
+    let entry: CTEntry
     let dwellTimeMs: Int
     let minVisibleRatio: Double
     let viewDurationUpdateIntervalMs: Int
@@ -46,7 +47,7 @@ public struct OptimizedEntry<Content: View>: View {
         onTap: (([String: Any]) -> Void)? = nil,
         @ViewBuilder content: @escaping ([String: Any]) -> Content
     ) {
-        self.entry = entry
+        self.entry = CTEntry(any: entry)
         self.dwellTimeMs = dwellTimeMs
         self.minVisibleRatio = minVisibleRatio
         self.viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs
@@ -58,9 +59,36 @@ public struct OptimizedEntry<Content: View>: View {
         self.content = content
     }
 
+    /// Accepts a `contentful.swift` `Entry` directly, encoding it to the `{sys, fields, metadata}`
+    /// shape the resolver expects (see `CTEntry(_: Contentful.Entry)`) and handing the resolved
+    /// variant back through `CTEntry` — `getField`, not `as?` casts on a raw map.
+    /// The encoding happens once, here, at construction.
+    public init(
+        entry: Contentful.Entry,
+        dwellTimeMs: Int = 2000,
+        minVisibleRatio: Double = 0.8,
+        viewDurationUpdateIntervalMs: Int = 5000,
+        liveUpdates: Bool? = nil,
+        trackViews: Bool? = nil,
+        trackTaps: Bool? = nil,
+        accessibilityIdentifier: String? = nil,
+        onTap: (([String: Any]) -> Void)? = nil,
+        @ViewBuilder content: @escaping (CTEntry) -> Content
+    ) {
+        self.entry = CTEntry(entry)
+        self.dwellTimeMs = dwellTimeMs
+        self.minVisibleRatio = minVisibleRatio
+        self.viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs
+        self.liveUpdates = liveUpdates
+        self.trackViews = trackViews
+        self.trackTaps = trackTaps
+        self.accessibilityIdentifier = accessibilityIdentifier
+        self.onTap = onTap
+        self.content = { raw in content(CTEntry(any: raw, fallback: CTEntry(entry))) }
+    }
+
     private var isOptimized: Bool {
-        guard let fields = entry["fields"] as? [String: Any] else { return false }
-        return fields["nt_experiences"] != nil
+        entry.hasField("nt_experiences")
     }
 
     // An open preview panel always forces live updates, overriding an explicit
@@ -87,10 +115,11 @@ public struct OptimizedEntry<Content: View>: View {
     }
 
     public var body: some View {
+        let entryDict = entry.toDictionary()
         let result: ResolvedOptimizedEntry = {
             if isOptimized {
                 return client.resolveOptimizedEntry(
-                    baseline: entry,
+                    baseline: entryDict,
                     selectedOptimizations: effectiveOptimizations
                 )
             } else {
@@ -102,9 +131,9 @@ public struct OptimizedEntry<Content: View>: View {
             }
         }()
 
-        content(result.entry)
+        content(result.entry.toDictionary())
             .modifier(ViewTrackingModifier(
-                entry: entry,
+                entry: entryDict,
                 optimizationContextId: result.optimizationContextId,
                 selectedOptimization: result.selectedOptimization,
                 minVisibleRatio: minVisibleRatio,
@@ -114,7 +143,7 @@ public struct OptimizedEntry<Content: View>: View {
                 client: client
             ))
             .modifier(TapTrackingModifier(
-                entry: entry,
+                entry: entryDict,
                 optimizationContextId: result.optimizationContextId,
                 selectedOptimization: result.selectedOptimization,
                 enabled: tapsEnabled,

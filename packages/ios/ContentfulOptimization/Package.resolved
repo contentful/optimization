@@ -1,0 +1,14 @@
+{
+  "pins" : [
+    {
+      "identity" : "contentful.swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/contentful/contentful.swift",
+      "state" : {
+        "revision" : "687a62d7b11c0772dc99119763c4a9a6365a4c32",
+        "version" : "5.5.15"
+      }
+    }
+  ],
+  "version" : 2
+}
