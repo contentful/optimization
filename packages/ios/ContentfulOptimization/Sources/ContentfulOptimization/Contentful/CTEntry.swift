@@ -124,9 +124,9 @@ private enum CDA {
         }
     }
 
-    enum LinkValue {
+    enum Link {
         case entry(Entry)
-        case asset(AssetEnvelope)
+        case asset(Asset)
         case stub(LinkStub)
 
         func encoded() throws -> JSONValue {
@@ -144,7 +144,7 @@ private enum CDA {
             case let .entry(entry) where !ancestors.contains(entry.id):
                 self = .entry(Entry(entry, ancestors: ancestors))
             case let .asset(asset):
-                self = .asset(AssetEnvelope(asset))
+                self = .asset(Asset(asset))
             case let .unresolved(sys):
                 self = .stub(.init(id: sys.id, linkType: sys.linkType))
             // A back-edge, or a typed `EntryDecodable` this mapper never registers: emit the
@@ -157,10 +157,10 @@ private enum CDA {
 
     enum Field {
         case value(JSONValue?)
-        case link(LinkValue)
-        case richText(RichTextNodeEnvelope)
-        case fileMetadata(FileMetadataEnvelope)
-        case location(LocationEnvelope)
+        case link(Link)
+        case richText(RichTextNode)
+        case fileMetadata(FileMetadata)
+        case location(Location)
 
         /// `nil` if unrepresentable — caller drops the field rather than losing the whole entry.
         func encoded() -> JSONValue? {
@@ -176,19 +176,19 @@ private enum CDA {
         init(_ value: Any, ancestors: Set<String>) {
             switch value {
             case let link as Contentful.Link:
-                self = .link(LinkValue(link, ancestors: ancestors))
+                self = .link(Link(link, ancestors: ancestors))
             case let richText as Contentful.RichTextDocument:
-                self = .richText(RichTextNodeEnvelope(richText, ancestors: ancestors))
+                self = .richText(RichTextNode(richText, ancestors: ancestors))
             // An "Object" field shaped like file metadata decodes to this type before falling
             // back to a plain dictionary.
             case let file as Contentful.Asset.FileMetadata:
-                self = .fileMetadata(FileMetadataEnvelope(file))
+                self = .fileMetadata(FileMetadata(file))
             case let array as [Any]:
                 self = .value(.array(array.compactMap { Field($0, ancestors: ancestors).encoded() }))
             case let dictionary as [String: Any]:
                 self = .value(.object(dictionary.compactMapValues { Field($0, ancestors: ancestors).encoded() }))
             case let location as Contentful.Location:
-                self = .location(LocationEnvelope(location))
+                self = .location(Location(location))
             case let date as Date:
                 self = .value(.string(iso8601DateFormatter.string(from: date)))
             case let string as String:
@@ -294,7 +294,7 @@ private enum CDA {
 
             // The resolver's entry guard rejects any entry without a `metadata` object.
             let metadata = Metadata(
-                tags: (entry.metadata?.tags ?? []).compactMap { try? LinkValue($0, ancestors: childAncestors).encoded() },
+                tags: (entry.metadata?.tags ?? []).compactMap { try? Link($0, ancestors: childAncestors).encoded() },
                 concepts: []
             )
 
@@ -307,7 +307,7 @@ private enum CDA {
         let concepts: [JSONValue]
     }
 
-    struct AssetEnvelope: Codable {
+    struct Asset: Codable {
         let sys: AssetSys
         let fields: AssetFields
 
@@ -319,7 +319,7 @@ private enum CDA {
         struct AssetFields: Codable {
             let title: String
             let description: String?
-            let file: FileMetadataEnvelope
+            let file: FileMetadata
         }
 
         init(_ asset: Contentful.Asset) {
@@ -327,14 +327,14 @@ private enum CDA {
             fields = .init(
                 title: asset.title ?? "",
                 description: asset.description,
-                file: asset.file.map(FileMetadataEnvelope.init) ?? FileMetadataEnvelope(
+                file: asset.file.map(FileMetadata.init) ?? FileMetadata(
                     fileName: nil, contentType: nil, details: nil, url: asset.urlString ?? ""
                 )
             )
         }
     }
 
-    struct FileMetadataEnvelope: Codable {
+    struct FileMetadata: Codable {
         let fileName: String?
         let contentType: String?
         let details: Details?
@@ -370,7 +370,7 @@ private enum CDA {
         }
     }
 
-    struct LocationEnvelope: Codable {
+    struct Location: Codable {
         let lat: Double
         let lon: Double
 
@@ -380,12 +380,12 @@ private enum CDA {
         }
     }
 
-    struct RichTextNodeEnvelope: Codable {
+    struct RichTextNode: Codable {
         let nodeType: String
         var value: String?
         var marks: [Mark]?
         var data: NodeData
-        var content: [RichTextNodeEnvelope]?
+        var content: [RichTextNode]?
 
         struct Mark: Codable { let type: String }
 
@@ -399,7 +399,7 @@ private enum CDA {
             }
         }
 
-        init(nodeType: String, value: String? = nil, marks: [Mark]? = nil, data: NodeData = NodeData(), content: [RichTextNodeEnvelope]? = nil) {
+        init(nodeType: String, value: String? = nil, marks: [Mark]? = nil, data: NodeData = NodeData(), content: [RichTextNode]? = nil) {
             self.nodeType = nodeType
             self.value = value
             self.marks = marks
@@ -415,20 +415,20 @@ private enum CDA {
             case let resourceLink as Contentful.ResourceLinkBlock:
                 self.init(
                     nodeType: resourceLink.nodeType.rawValue,
-                    data: .init(target: try? LinkValue(resourceLink.data.target, ancestors: ancestors).encoded()),
-                    content: resourceLink.content.map { RichTextNodeEnvelope($0, ancestors: ancestors) }
+                    data: .init(target: try? Link(resourceLink.data.target, ancestors: ancestors).encoded()),
+                    content: resourceLink.content.map { RichTextNode($0, ancestors: ancestors) }
                 )
             case let resourceLink as Contentful.ResourceLinkInline:
                 self.init(
                     nodeType: resourceLink.nodeType.rawValue,
-                    data: .init(target: try? LinkValue(resourceLink.data.target, ancestors: ancestors).encoded()),
-                    content: resourceLink.content.map { RichTextNodeEnvelope($0, ancestors: ancestors) }
+                    data: .init(target: try? Link(resourceLink.data.target, ancestors: ancestors).encoded()),
+                    content: resourceLink.content.map { RichTextNode($0, ancestors: ancestors) }
                 )
             case let hyperlink as Contentful.Hyperlink:
                 self.init(
                     nodeType: hyperlink.nodeType.rawValue,
                     data: .init(uri: hyperlink.data.uri),
-                    content: hyperlink.content.map { RichTextNodeEnvelope($0, ancestors: ancestors) }
+                    content: hyperlink.content.map { RichTextNode($0, ancestors: ancestors) }
                 )
             case let text as Contentful.Text:
                 self.init(
@@ -441,7 +441,7 @@ private enum CDA {
             case let recursive as Contentful.RecursiveNode:
                 self.init(
                     nodeType: recursive.nodeType.rawValue,
-                    content: recursive.content.map { RichTextNodeEnvelope($0, ancestors: ancestors) }
+                    content: recursive.content.map { RichTextNode($0, ancestors: ancestors) }
                 )
             default:
                 self.init(nodeType: node.nodeType.rawValue)
