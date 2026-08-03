@@ -6,6 +6,8 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.ViewTreeObserver
 import android.widget.FrameLayout
+import com.contentful.java.cda.CDAEntry
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.core.ResolvedOptimizedEntry
 import com.contentful.optimization.core.TrackClickPayload
 import com.contentful.optimization.core.resolvePreviewCloseLockState
@@ -98,7 +100,7 @@ public class OptimizedEntryView @JvmOverloads constructor(
      */
     fun setContentRenderer(renderer: (Map<String, Any>) -> View) {
         this.contentRenderer = renderer
-        lastResult?.let { renderContent(it.entry) }
+        lastResult?.let { renderContent(it.entry.toMap()) }
     }
 
     /**
@@ -115,6 +117,13 @@ public class OptimizedEntryView @JvmOverloads constructor(
         this.lockedOptimizations = null
         this.isLocked = false
         restartObservation()
+    }
+
+    fun setEntry(
+        entry: CDAEntry,
+        selectedOptimizations: List<Map<String, Any>>? = null,
+    ) {
+        setEntry(CTEntry.from(entry).toMap(), selectedOptimizations)
     }
 
     /** Force a visibility re-check from outside (e.g., from [TrackingRecyclerView] on scroll). */
@@ -229,7 +238,7 @@ public class OptimizedEntryView @JvmOverloads constructor(
 
     private fun publishResult(result: ResolvedOptimizedEntry) {
         lastResult = result
-        renderContent(result.entry)
+        renderContent(result.entry.toMap())
         attachController(result)
     }
 

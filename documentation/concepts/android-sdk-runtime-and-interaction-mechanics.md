@@ -211,12 +211,14 @@ The application provides:
 - An optional selected-optimizations snapshot when a custom abstraction needs deterministic
   resolution.
 
-The SDK returns either the baseline entry or the resolved variant entry:
+The SDK returns either the baseline entry or the resolved variant entry, wrapped in a `CTEntry`
+(an SDK-owned view over the resolved entry — read with `getField<T>`, `hasField`, `id`, or
+unwrap the raw entry map via `toMap()`):
 
 ```kotlin
 val result = client.resolveOptimizedEntry(baseline = entry)
 
-val resolvedEntry = result.entry
+val resolvedEntry = result.entry // CTEntry
 val selectedOptimization = result.selectedOptimization
 val optimizationContextId = result.optimizationContextId
 ```

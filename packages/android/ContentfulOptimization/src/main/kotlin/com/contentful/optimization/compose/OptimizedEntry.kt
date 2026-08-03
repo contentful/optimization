@@ -11,6 +11,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import com.contentful.java.cda.CDAEntry
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.core.ResolvedOptimizedEntry
 import com.contentful.optimization.core.resolvePreviewCloseLockState
 
@@ -48,8 +50,9 @@ public fun OptimizedEntry(
         else -> trackingConfig.trackTaps
     }
 
+    val baselineCTEntry = remember(entry) { CTEntry.from(entry) }
     var result by remember(entry) {
-        mutableStateOf(ResolvedOptimizedEntry(entry = entry, selectedOptimization = null))
+        mutableStateOf(ResolvedOptimizedEntry(entry = baselineCTEntry, selectedOptimization = null))
     }
 
     // Re-resolve by collecting the selectedOptimizations StateFlow directly rather
@@ -74,7 +77,7 @@ public fun OptimizedEntry(
     // until the component is remounted.
     LaunchedEffect(entry) {
         if (!isOptimized) {
-            result = ResolvedOptimizedEntry(entry = entry, selectedOptimization = null)
+            result = ResolvedOptimizedEntry(entry = baselineCTEntry, selectedOptimization = null)
             return@LaunchedEffect
         }
         client.selectedOptimizations.collect { newValue ->
@@ -141,6 +144,36 @@ public fun OptimizedEntry(
         }
 
     Box(modifier = modifier) {
-        content(result.entry)
+        content(result.entry.toMap())
+    }
+}
+
+/** Typed overload that accepts a [CDAEntry] and hands the callback a [CTEntry]. */
+@Composable
+public fun OptimizedEntry(
+    entry: CDAEntry,
+    dwellTimeMs: Int = 2000,
+    minVisibleRatio: Double = 0.8,
+    viewDurationUpdateIntervalMs: Int = 5000,
+    liveUpdates: Boolean? = null,
+    trackViews: Boolean? = null,
+    trackTaps: Boolean? = null,
+    accessibilityIdentifier: String? = null,
+    onTap: ((Map<String, Any>) -> Unit)? = null,
+    content: @Composable (CTEntry) -> Unit,
+) {
+    val entryMap = remember(entry) { CTEntry.from(entry).toMap() }
+    OptimizedEntry(
+        entry = entryMap,
+        dwellTimeMs = dwellTimeMs,
+        minVisibleRatio = minVisibleRatio,
+        viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
+        liveUpdates = liveUpdates,
+        trackViews = trackViews,
+        trackTaps = trackTaps,
+        accessibilityIdentifier = accessibilityIdentifier,
+        onTap = onTap,
+    ) { resolvedMap ->
+        content(CTEntry.from(resolvedMap))
     }
 }

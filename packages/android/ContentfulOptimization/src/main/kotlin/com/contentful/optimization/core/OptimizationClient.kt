@@ -3,6 +3,7 @@ package com.contentful.optimization.core
 import android.content.Context
 import android.util.Log
 import com.contentful.optimization.bridge.QuickJsContextManager
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.handlers.AppLifecycleHandler
 import com.contentful.optimization.handlers.NetworkMonitor
 import com.contentful.optimization.polyfills.escapeForJS
@@ -275,8 +276,9 @@ public class OptimizationClient(private val applicationContext: Context) {
         baseline: Map<String, Any>,
         selectedOptimizations: List<Map<String, Any>>? = null,
     ): ResolvedOptimizedEntry {
+        val baselineEntry = CTEntry.from(baseline)
         if (!_isInitialized.value) {
-            return ResolvedOptimizedEntry(entry = baseline, selectedOptimization = null)
+            return ResolvedOptimizedEntry(entry = baselineEntry, selectedOptimization = null)
         }
 
         return try {
@@ -290,14 +292,16 @@ public class OptimizationClient(private val applicationContext: Context) {
 
             val resultStr = bridge.callSync("resolveOptimizedEntry", args)
             if (resultStr == null || resultStr == "null" || resultStr == "undefined") {
-                return ResolvedOptimizedEntry(entry = baseline, selectedOptimization = null)
+                return ResolvedOptimizedEntry(entry = baselineEntry, selectedOptimization = null)
             }
 
             val dict = parseJSONDict(resultStr)
-                ?: return ResolvedOptimizedEntry(entry = baseline, selectedOptimization = null)
+                ?: return ResolvedOptimizedEntry(entry = baselineEntry, selectedOptimization = null)
 
             @Suppress("UNCHECKED_CAST")
-            val entry = dict["entry"] as? Map<String, Any> ?: baseline
+            val entry = (dict["entry"] as? Map<String, Any>)
+                ?.let { CTEntry.from(it, fallback = baselineEntry) }
+                ?: baselineEntry
             @Suppress("UNCHECKED_CAST")
             val selectedOptimization = dict["selectedOptimization"] as? Map<String, Any>
             val optimizationContextId = dict["optimizationContextId"] as? String
@@ -307,7 +311,7 @@ public class OptimizationClient(private val applicationContext: Context) {
                 optimizationContextId = optimizationContextId,
             )
         } catch (_: Exception) {
-            ResolvedOptimizedEntry(entry = baseline, selectedOptimization = null)
+            ResolvedOptimizedEntry(entry = baselineEntry, selectedOptimization = null)
         }
     }
 

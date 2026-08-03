@@ -282,6 +282,10 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.json:json:20240303")
+    // CTEntry serializes its entry model via Gson at runtime. contentful.java pulls Gson too, but
+    // it's declared compileOnly below so consumers who never touch CDAEntry aren't forced onto it —
+    // Gson has to be a direct runtime dep here to keep CTEntry's static init from blowing up.
+    implementation("com.google.code.gson:gson:2.11.0")
 
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.ui:ui")
@@ -290,6 +294,18 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
+
+    // compileOnly so consumers who only pass entry Maps don't need it. okhttp-jvm is excluded
+    // to avoid a duplicate-class conflict with the okhttp-android variant.
+    compileOnly("com.contentful.java:java-sdk:10.6.0") {
+        exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
+    }
+    testCompileOnly("com.contentful.java:java-sdk:10.6.0") {
+        exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
+    }
+    testImplementation("com.contentful.java:java-sdk:10.6.0") {
+        exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
+    }
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
