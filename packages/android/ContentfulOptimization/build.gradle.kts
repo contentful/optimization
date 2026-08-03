@@ -282,6 +282,10 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.json:json:20240303")
+    // CTEntry serializes its entry model via Gson at runtime. contentful.java pulls Gson too, but
+    // it's declared compileOnly below so consumers who never touch CDAEntry aren't forced onto it —
+    // Gson has to be a direct runtime dep here to keep CTEntry's static init from blowing up.
+    implementation("com.google.code.gson:gson:2.11.0")
 
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.ui:ui")
