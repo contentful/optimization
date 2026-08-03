@@ -173,37 +173,34 @@ viewportHeight }` via `LocalScrollContext` that descendant `Modifier.trackViews`
   the expanded inline `nt_mergetag` entry to the bridge, which reads the selector against the current
   profile and returns the resolved string or `null` (fallback, also returned pre-init). The app owns
   extracting the embedded entry from Rich Text before calling it. source: extern:getMergeTagValue passes the mergetag entry to the bridge, returns null on fallback/pre-init — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationClient.kt#OptimizationClient; core-sdk#resolvers/MergeTagValueResolver.ts#resolve; kb:shared/concepts.md
-- `CTEntry` wraps a real `contentful.java` `CDAEntry` so every accessor delegates to it (`id` →
-  `entry.id()`; `contentTypeId` → `entry.contentType()?.id()`; `getField<T>(name)` →
-  `entry.getField(name)`; `hasField` → `entry.rawFields().containsKey(name)`; `localeCode` /
-  `createdAt` / `updatedAt` → `entry.getAttribute(...)`; plus a `String` `operator get(name)`
-  subscript). Three factory methods normalize input to the same wrapped-CDAEntry shape:
-  `CTEntry.from(entry: CDAEntry)` is a thin wrapper (`CTEntry(entry)`);
-  `CTEntry.from(any: Map<String, Any>, fallback = EMPTY)` and `CTEntry.from(json: String, fallback = EMPTY)`
-  fabricate a `CDAEntry` from the resolver Map via reflection (writing package-private fields
-  `attrs`, `defaultLocale`, `rawFields`, `fields`, `contentType`, `metadata` on `CDAEntry` /
-  `LocalizedResource` / `CDAResource` / `CDAMetadata`, with a synthetic `"_"` locale so
-  `LocalizedResource.getField` resolves). Both `Map` and `String` forms are fail-soft: on parse
-  or fabrication failure they log a `DiagnosticLogger.warning` and return the caller-supplied
-  `fallback` (default empty) rather than throwing. Serializers: `toMap(): Map<String, Any>`
-  (delegates to the SDK's internal `toOptimizedEntryMap(entry)` adapter, which centralizes the
-  `metadata` block the resolver requires), `toJSON(): String`. `ResolvedOptimizedEntry.entry` is
-  a `CTEntry` regardless of the input path — both `OptimizedEntry(Map, ...)` and
-  `OptimizedEntry(CDAEntry, ...)` wrap their result the same way, so callers on the CDAEntry
-  overload read the resolved variant through `getField` / `hasField` / `id` instead of `as?` casts
-  on a raw map. Reflection into `contentful.java`'s package-private fields pins to the declared
-  `10.6.0` dependency; a future rename fails at runtime with a clear `NoSuchFieldException`.
-  source: extern:CTEntry wraps CDAEntry, from(CDAEntry)/from(Map, fallback)/from(String, fallback), toMap/toJSON, mirrored accessors, fabricates CDAEntry via reflection — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/contentful/CTEntry.kt#CTEntry; extern:internal toOptimizedEntryMap adapter — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/contentful/CDAEntryAdapter.kt#toOptimizedEntryMap; kb:native/ios.md
+- `CTEntry` is backed by an SDK-owned `CTEntry.Entry` data class (typed `Sys` / `fields: Map<String, Any>` / `Metadata`
+  sub-classes) that Gson serializes and deserializes natively — no reflection into `contentful.java`
+  internals. Accessors mirror `CDAEntry`: `id` → `entry.sys?.id`; `contentTypeId` →
+  `entry.sys?.contentType?.sys?.id`; `getField<T>(name)` → `entry.fields[name] as? T`; `hasField` →
+  `entry.fields.containsKey(name)`; `localeCode` / `createdAt` / `updatedAt` → `entry.sys?...`; plus a
+  `String` `operator get(name)` subscript. Three factory methods produce the same `Entry` shape:
+  `CTEntry.from(entry: CDAEntry)` walks a live entry through the internal `toOptimizedEntryMap(entry)`
+  adapter (which centralizes the `metadata` block the resolver requires) and Gson-decodes the
+  resulting Map into `Entry`; `CTEntry.from(any: Map<String, Any>, fallback = EMPTY)` cycle-checks the
+  input up front (Gson's serializer would otherwise blow its stack on a self-referential Map) and
+  round-trips it through Gson; `CTEntry.from(json: String, fallback = EMPTY)` decodes via
+  `gson.fromJson(json, Entry::class.java)` directly. All `Map` / `String` forms are fail-soft: on parse
+  failure they log a `DiagnosticLogger.warning` and return the caller-supplied `fallback` (default
+  empty) rather than throwing. Serializers: `toMap(): Map<String, Any>` (Gson round-trip of the
+  internal `Entry`), `toJSON(): String`. `ResolvedOptimizedEntry.entry` is a `CTEntry` regardless of
+  the input path — both `OptimizedEntry(Map, ...)` and `OptimizedEntry(CDAEntry, ...)` wrap their
+  result the same way, so callers on the CDAEntry overload read the resolved variant through
+  `getField` / `hasField` / `id` instead of `as?` casts on a raw map. Numbers round-trip through JSON
+  as `Double` (Gson's default); read numeric fields as `Double`, not `Int`. source: extern:CTEntry backed by SDK-owned Entry data class, from(CDAEntry)/from(Map, fallback)/from(String, fallback), Gson round-trip, toMap/toJSON, mirrored accessors — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/contentful/CTEntry.kt#CTEntry; extern:internal toOptimizedEntryMap adapter — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/contentful/CDAEntryAdapter.kt#toOptimizedEntryMap
 - `OptimizedEntry(CDAEntry, ...)` (Compose) and `OptimizedEntryView.setEntry(CDAEntry, ...)` (Views)
   are typed overloads on the `Map<String, Any>` public surface: they route through
   `toOptimizedEntryMap(entry)` at construction, so the `metadata` block the resolver requires is
   always populated. The Compose CDAEntry overload's content callback receives a `CTEntry`; the Views
   side's `setContentRenderer` still takes a `(Map<String, Any>) -> View` renderer (the `.entry` on
-  the internal `ResolvedOptimizedEntry` is a `CTEntry` and is unwrapped via `toMap()` before
-  handing to the renderer, preserving the existing renderer signature). The dependency on
-  `contentful.java` is declared `compileOnly` (with `okhttp-jvm` excluded to avoid a duplicate-class
-  conflict against `okhttp-android`), so consumers who only pass entry Maps are not forced onto it.
-  source: extern:OptimizedEntry CDAEntry overload wraps result in CTEntry — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/OptimizedEntry.kt#OptimizedEntry; extern:OptimizedEntryView.setEntry(CDAEntry) delegates to setEntry(Map) via toOptimizedEntryMap — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/OptimizedEntryView.kt#OptimizedEntryView; extern:contentful.java is compileOnly with okhttp-jvm exclusion — packages/android/ContentfulOptimization/build.gradle.kts
+  the internal `ResolvedOptimizedEntry` is a `CTEntry` and is unwrapped via `toMap()` before handing
+  to the renderer, preserving the existing renderer signature). The dependency on `contentful.java`
+  is declared `compileOnly` (with `okhttp-jvm` excluded to avoid a duplicate-class conflict against
+  `okhttp-android`), so consumers who only pass entry Maps are not forced onto it. source: extern:OptimizedEntry CDAEntry overload builds CTEntry from the adapter output — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/OptimizedEntry.kt#OptimizedEntry; extern:OptimizedEntryView.setEntry(CDAEntry) delegates to setEntry(Map) via toOptimizedEntryMap — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/OptimizedEntryView.kt#OptimizedEntryView; extern:contentful.java is compileOnly with okhttp-jvm exclusion — packages/android/ContentfulOptimization/build.gradle.kts
 
 ## Identifier ownership
 

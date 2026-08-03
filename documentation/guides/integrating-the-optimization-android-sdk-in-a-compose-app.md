@@ -436,9 +436,9 @@ branching on whether a variant was applied.
 Resolution is fail-soft, and `client.resolveOptimizedEntry(baseline, selectedOptimizations)` is a
 `suspend` function on Android (the iOS SDK's is synchronous; Android must suspend because the bridge
 call hops to the QuickJS dispatcher). It returns a `ResolvedOptimizedEntry` — the SDK-owned result
-wrapper holding the resolved `entry` (a `CTEntry` — the SDK-owned wrapper around a `CDAEntry`
-whose accessors delegate to it: `id`, `getField<T>`, `hasField`, plus `toMap()` to reach
-the raw entry map when needed) and the `selectedOptimization`
+wrapper holding the resolved `entry` (a `CTEntry` — an SDK-owned view over the resolved entry
+with `id`, `getField<T>`, `hasField`, `contentTypeId`, `createdAt`, `updatedAt`, `localeCode`
+accessors, plus `toMap()` to reach the raw entry map when needed) and the `selectedOptimization`
 (singular) applied to it. If the client is not initialized, serialization fails, or the bridge result
 cannot be parsed, it returns the baseline entry unchanged (with `selectedOptimization` null) and
 continues rather than throwing or breaking the UI. The `selectedOptimizations` argument (plural) is the visitor's current per-experience
