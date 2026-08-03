@@ -7,7 +7,7 @@ import android.view.View
 import android.view.ViewTreeObserver
 import android.widget.FrameLayout
 import com.contentful.java.cda.CDAEntry
-import com.contentful.optimization.contentful.toOptimizedEntryMap
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.core.ResolvedOptimizedEntry
 import com.contentful.optimization.core.TrackClickPayload
 import com.contentful.optimization.core.resolvePreviewCloseLockState
@@ -123,7 +123,7 @@ public class OptimizedEntryView @JvmOverloads constructor(
         entry: CDAEntry,
         selectedOptimizations: List<Map<String, Any>>? = null,
     ) {
-        setEntry(toOptimizedEntryMap(entry), selectedOptimizations)
+        setEntry(CTEntry.from(entry).toMap(), selectedOptimizations)
     }
 
     /** Force a visibility re-check from outside (e.g., from [TrackingRecyclerView] on scroll). */

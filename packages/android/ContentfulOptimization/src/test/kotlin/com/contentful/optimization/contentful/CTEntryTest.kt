@@ -1,9 +1,5 @@
 package com.contentful.optimization.contentful
 
-import com.contentful.java.cda.CDAContentType
-import com.contentful.java.cda.CDAEntry
-import com.contentful.java.cda.CDAResource
-import com.contentful.java.cda.ResourceFactory
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -29,10 +25,7 @@ class CTEntryTest {
             "createdAt" to "2024-01-01T00:00:00Z",
             "updatedAt" to "2024-06-15T12:30:00Z",
         ),
-        "fields" to mapOf(
-            "title" to "Hello",
-            "count" to 42,
-        ),
+        "fields" to mapOf("title" to "Hello", "count" to 42),
         "metadata" to mapOf("tags" to emptyList<Any>(), "concepts" to emptyList<Any>()),
     )
 
@@ -56,7 +49,7 @@ class CTEntryTest {
     @Test
     fun `createdAt and updatedAt parse ISO-8601 sys timestamps`() {
         val entry = CTEntry.from(minimalEntry)
-        val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+        val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }
         assertEquals(formatter.parse("2024-01-01T00:00:00Z"), entry.createdAt)
@@ -75,14 +68,12 @@ class CTEntryTest {
     fun `getField returns the value cast to T, null on absent`() {
         val entry = CTEntry.from(minimalEntry)
         assertEquals("Hello", entry.getField<String>("title"))
-        // JSON round-trip converts every number to Double (Gson's default). Read `Double` for
-        // numeric fields that crossed a JSON boundary; `getField<Int>` won't match.
         assertEquals(42.0, entry.getField<Double>("count")!!, 0.0)
         assertNull(entry.getField<String>("nope"))
     }
 
     @Test
-    fun `hasField distinguishes present-with-wrong-type from absent`() {
+    fun `hasField distinguishes present from absent`() {
         val entry = CTEntry.from(minimalEntry)
         assertTrue(entry.hasField("title"))
         assertFalse(entry.hasField("nope"))
@@ -96,13 +87,6 @@ class CTEntryTest {
     }
 
     @Test
-    fun `from(any) round-trips the input map through org_json normalization`() {
-        val entry = CTEntry.from(minimalEntry)
-        assertEquals("e1", entry.id)
-        assertEquals("Hello", entry.getField<String>("title"))
-    }
-
-    @Test
     fun `from(any) with an unserializable value falls back to an empty CTEntry`() {
         val nonJsonSafe = mapOf<String, Any>(
             "sys" to mapOf("id" to "e1"),
@@ -113,88 +97,39 @@ class CTEntryTest {
     }
 
     @Test
-    fun `from(json) parses a JSON object into the same map shape`() {
-        val json = """{"sys":{"id":"j1","contentType":{"sys":{"id":"page"}}},"fields":{"title":"Hi"}}"""
-        val entry = CTEntry.from(json)
-        assertEquals("j1", entry.id)
-        assertEquals("page", entry.contentTypeId)
-        assertEquals("Hi", entry.getField<String>("title"))
-    }
-
-    @Test
     fun `from(json) with a non-object root falls back to an empty CTEntry`() {
-        val entry = CTEntry.from("[1, 2, 3]")
-        assertNull(entry.id)
+        assertNull(CTEntry.from("[1, 2, 3]").id)
     }
 
     @Test
     fun `from(json) with malformed input falls back to an empty CTEntry`() {
-        val entry = CTEntry.from("{ not valid")
-        assertNull(entry.id)
+        assertNull(CTEntry.from("{ not valid").id)
     }
 
     @Test
     fun `from(json) with malformed input falls back to the caller-supplied fallback`() {
         val baseline = CTEntry.from(minimalEntry)
-        val entry = CTEntry.from("{ not valid", fallback = baseline)
-        assertEquals("e1", entry.id)
+        assertEquals("e1", CTEntry.from("{ not valid", fallback = baseline).id)
     }
 
     @Test
-    fun `from(any) with unserializable input falls back to the caller-supplied fallback`() {
+    fun `from(any) with cyclic input falls back to the caller-supplied fallback`() {
         val baseline = CTEntry.from(minimalEntry)
         val cyclic = mutableMapOf<String, Any>("self" to Any())
         cyclic["self"] = cyclic
-        val entry = CTEntry.from(cyclic, fallback = baseline)
-        assertEquals("e1", entry.id)
+        assertEquals("e1", CTEntry.from(cyclic, fallback = baseline).id)
     }
 
-    @Test
-    fun `toJSON round-trips through from(json) with the same accessible surface`() {
-        val original = CTEntry.from(minimalEntry)
-        val roundTripped = CTEntry.from(original.toJSON())
-        assertEquals(original.id, roundTripped.id)
-        assertEquals(original.contentTypeId, roundTripped.contentTypeId)
-        assertEquals(original.getField<String>("title"), roundTripped.getField<String>("title"))
-    }
+    // The CDAEntry-walk path (`Entry.from(CDAEntry)`) is exercised end-to-end by the reference
+    // implementations' Compose/Views E2E, not here — that path needs a live `CDAClient` to
+    // hydrate a `CDAEntry` correctly.
 
     @Test
-    fun `from(entry) reads through the real CDAEntry accessors`() {
-        val cda = CDAEntry().apply {
-            setPrivateField(this, "attrs", mutableMapOf<String, Any>("id" to "cda-1", "type" to "Entry"))
-            setPrivateField(this, "defaultLocale", "en-US")
-            setPrivateField(this, "rawFields", mutableMapOf("title" to Any()))
-            setPrivateField(this, "fields", mutableMapOf("title" to mutableMapOf<String, Any?>("en-US" to "From CDA")))
-            setPrivateField(this, "contentType", makeContentType("post"))
-        }
-
-        val ct = CTEntry.from(cda)
-        assertEquals("cda-1", ct.id)
-        assertEquals("post", ct.contentTypeId)
-        assertEquals("From CDA", ct.getField<String>("title"))
-    }
-
-    @Test
-    fun `from(Map) round-trips fields through the entry model`() {
-        val ct = CTEntry.from(minimalEntry)
-        assertEquals("Hello", ct.getField<String>("title"))
-        // Numeric fields cross the JSON boundary as Double (see the getField test above).
-        assertEquals(42.0, ct.getField<Double>("count")!!, 0.0)
-    }
-
-    // -- JSON identity round-trip (String -> CTEntry -> toJSON) -----------------------------
-    //
-    // Proves the full pipeline: parse a JSON string, wrap in a CTEntry, re-serialize to JSON,
-    // and assert the parsed tree equals the input tree (structural equality, not raw text).
-
-    @Test
-    fun `json identity - baseline sys plus contentType plus metadata`() {
+    fun `identity - baseline sys and contentType with empty metadata`() {
         assertJsonIdentity("""
             {
-              "sys": {
-                "id": "e1", "type": "Entry", "locale": "en-US",
-                "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}}
-              },
+              "sys": {"id": "e1", "type": "Entry",
+                       "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}}},
               "fields": {"title": "Hello"},
               "metadata": {"tags": [], "concepts": []}
             }
@@ -202,13 +137,15 @@ class CTEntryTest {
     }
 
     @Test
-    fun `json identity - sys timestamps and revision round-trip`() {
+    fun `identity - sys timestamps, revision, locale, space, environment`() {
         assertJsonIdentity("""
             {
               "sys": {
                 "id": "e1", "type": "Entry", "locale": "en-US", "revision": 3,
                 "createdAt": "2024-01-01T00:00:00Z", "updatedAt": "2024-06-15T12:30:00Z",
-                "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}}
+                "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}},
+                "space": {"sys": {"id": "space-1", "type": "Link", "linkType": "Space"}},
+                "environment": {"sys": {"id": "master", "type": "Link", "linkType": "Environment"}}
               },
               "fields": {},
               "metadata": {"tags": [], "concepts": []}
@@ -217,103 +154,152 @@ class CTEntryTest {
     }
 
     @Test
-    fun `json identity - metadata tags round-trip as link stubs`() {
+    fun `identity - metadata tags and concepts round-trip as link references`() {
         assertJsonIdentity("""
             {
-              "sys": {"id": "e1", "type": "Entry", "locale": "en-US",
+              "sys": {"id": "e1", "type": "Entry",
                        "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}}},
               "fields": {},
-              "metadata": {"tags": [{"sys": {"id": "tag1", "type": "Link", "linkType": "Tag"}}], "concepts": []}
+              "metadata": {
+                "tags": [{"sys": {"id": "spring-sale", "type": "Link", "linkType": "Tag"}}],
+                "concepts": [{"sys": {"id": "travel", "type": "Link", "linkType": "TaxonomyConcept"}}]
+              }
+            }
+        """)
+    }
+
+    @Test
+    fun `identity - nested resolved entry link round-trips as a nested envelope`() {
+        assertJsonIdentity("""
+            {
+              "sys": {"id": "parent", "type": "Entry",
+                       "contentType": {"sys": {"id": "post", "type": "Link", "linkType": "ContentType"}}},
+              "fields": {
+                "author": {
+                  "sys": {"id": "child", "type": "Entry",
+                           "contentType": {"sys": {"id": "author", "type": "Link", "linkType": "ContentType"}}},
+                  "fields": {"name": "Ada"},
+                  "metadata": {"tags": [], "concepts": []}
+                }
+              },
+              "metadata": {"tags": [], "concepts": []}
+            }
+        """)
+    }
+
+    @Test
+    fun `identity - unresolved link stub in a field passes through unchanged`() {
+        assertJsonIdentity("""
+            {
+              "sys": {"id": "e1", "type": "Entry",
+                       "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}}},
+              "fields": {"editor": {"sys": {"id": "e2", "type": "Link", "linkType": "Entry"}}},
+              "metadata": {"tags": [], "concepts": []}
+            }
+        """)
+    }
+
+    @Test
+    fun `identity - asset link with minimal file details`() {
+        assertJsonIdentity("""
+            {
+              "sys": {"id": "entry-1", "type": "Entry",
+                       "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}}},
+              "fields": {
+                "hero": {
+                  "sys": {"id": "asset-1", "type": "Asset"},
+                  "fields": {
+                    "title": "Sunset",
+                    "file": {"fileName": "", "contentType": "", "details": {"size": 0}, "url": "//images.ctfassets.net/x/sunset.jpg"}
+                  }
+                }
+              },
+              "metadata": {"tags": [], "concepts": []}
+            }
+        """)
+    }
+
+    @Test
+    fun `identity - asset link with description and image details`() {
+        assertJsonIdentity("""
+            {
+              "sys": {"id": "entry-1", "type": "Entry",
+                       "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}}},
+              "fields": {
+                "hero": {
+                  "sys": {"id": "asset-1", "type": "Asset"},
+                  "fields": {
+                    "title": "Sunset",
+                    "description": "A sunset over the mountains",
+                    "file": {
+                      "fileName": "sunset.jpg", "contentType": "image/jpeg",
+                      "details": {"size": 12345, "image": {"width": 1920, "height": 1080}},
+                      "url": "//images.ctfassets.net/x/sunset.jpg"
+                    }
+                  }
+                }
+              },
+              "metadata": {"tags": [], "concepts": []}
+            }
+        """)
+    }
+
+    @Test
+    fun `identity - rich text document with paragraph and text with marks`() {
+        assertJsonIdentity("""
+            {
+              "sys": {"id": "e1", "type": "Entry",
+                       "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}}},
+              "fields": {
+                "body": {
+                  "nodeType": "document",
+                  "data": {},
+                  "content": [{
+                    "nodeType": "paragraph",
+                    "data": {},
+                    "content": [{
+                      "nodeType": "text",
+                      "value": "hi",
+                      "marks": [{"type": "bold"}],
+                      "data": {}
+                    }]
+                  }]
+                }
+              },
+              "metadata": {"tags": [], "concepts": []}
+            }
+        """)
+    }
+
+    @Test
+    fun `identity - rich text URI hyperlink emits data uri, not data target`() {
+        assertJsonIdentity("""
+            {
+              "sys": {"id": "e1", "type": "Entry",
+                       "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}}},
+              "fields": {
+                "body": {
+                  "nodeType": "document",
+                  "data": {},
+                  "content": [{
+                    "nodeType": "paragraph",
+                    "data": {},
+                    "content": [{
+                      "nodeType": "hyperlink",
+                      "data": {"uri": "https://example.com"},
+                      "content": [{"nodeType": "text", "value": "click", "marks": [], "data": {}}]
+                    }]
+                  }]
+                }
+              },
+              "metadata": {"tags": [], "concepts": []}
             }
         """)
     }
 }
 
-private fun makeContentType(id: String): CDAContentType {
-    val ct = CDAContentType()
-    setPrivateField(ct, "attrs", mutableMapOf<String, Any>("id" to id, "type" to "ContentType"))
-    return ct
-}
-
-private fun setPrivateField(target: Any, name: String, value: Any?) {
-    var clazz: Class<*>? = target::class.java
-    while (clazz != null) {
-        try {
-            val field = clazz.getDeclaredField(name)
-            field.isAccessible = true
-            field.set(target, value)
-            return
-        } catch (_: NoSuchFieldException) {
-            clazz = clazz.superclass
-        }
-    }
-    throw NoSuchFieldException("$name on ${target::class.java}")
-}
-
-// -- Test-scope JSON -> CDAEntry helpers --------------------------------------
-//
-// Decodes the input JSON via contentful.java's real Gson (`ResourceFactory.createGson()`)
-// and then runs the localization + rawFields post-decode steps that `CDAClient` would run
-// after a fetch. Reflection here is confined to test scope to bridge the gap that
-// contentful.java's package-private `normalizeFields` / `setRawFields` leaves for us.
-
-private fun decodeEntryFromJson(json: String): CDAEntry {
-    val resource: CDAResource = ResourceFactory.createGson().fromJson(json, CDAResource::class.java)
-    val entry = resource as CDAEntry
-    val locale = entry.getAttribute<String?>("locale") ?: DEFAULT_TEST_LOCALE
-    hydrateForTests(entry, locale)
-    entry.attrs()["contentType"]
-        ?.let { it as? Map<*, *> }
-        ?.let { it["sys"] as? Map<*, *> }
-        ?.let { it["id"] as? String }
-        ?.let { setPrivateField(entry, "contentType", contentTypeFor(it)) }
-    return entry
-}
-
-// contentful.java stores `fields` as Map<name, Map<locale, value>> after `normalizeFields`, and
-// separately holds `rawFields` (the un-localized copy). Gson populates only the flat `fields`
-// (from the JSON key of the same name); we wrap here to match the post-decode shape that
-// `getField(name)` expects.
-@Suppress("UNCHECKED_CAST")
-private fun hydrateForTests(entry: CDAEntry, locale: String) {
-    val gsonFields = readPrivateField(entry, "fields") as? Map<String, Any?> ?: emptyMap()
-    val rawCopy = LinkedHashMap<String, Any?>(gsonFields)
-    val localized = LinkedHashMap<String, Any?>(gsonFields.size)
-    for ((key, value) in gsonFields) {
-        localized[key] = mutableMapOf<String, Any?>(locale to value)
-    }
-    setPrivateField(entry, "defaultLocale", locale)
-    setPrivateField(entry, "rawFields", rawCopy)
-    setPrivateField(entry, "fields", localized)
-}
-
-private fun readPrivateField(target: Any, name: String): Any? {
-    var clazz: Class<*>? = target::class.java
-    while (clazz != null) {
-        try {
-            val field = clazz.getDeclaredField(name)
-            field.isAccessible = true
-            return field.get(target)
-        } catch (_: NoSuchFieldException) {
-            clazz = clazz.superclass
-        }
-    }
-    throw NoSuchFieldException("$name on ${target::class.java}")
-}
-
-private const val DEFAULT_TEST_LOCALE = "en-US"
-
-private fun contentTypeFor(id: String): CDAContentType {
-    val ct = CDAContentType()
-    setPrivateField(ct, "attrs", mutableMapOf<String, Any>("id" to id, "type" to "ContentType"))
-    return ct
-}
-
 private fun assertJsonIdentity(inputJson: String) {
-    val entry = decodeEntryFromJson(inputJson)
-    val ct = CTEntry.from(entry)
-    val output = ct.toJSON()
-    assertJsonTreeEquals(inputJson, output)
+    assertJsonTreeEquals(inputJson, CTEntry.from(inputJson).toJSON())
 }
 
 private fun assertJsonTreeEquals(expectedJson: String, actualJson: String) {
@@ -327,8 +313,6 @@ private fun normalize(value: Any?): Any = when (value) {
         LinkedHashMap<String, Any>().also { out -> keys.forEach { out[it] = normalize(value.get(it)) } }
     }
     is JSONArray -> List(value.length()) { normalize(value.get(it)) }
-    // JSON round-trip converts every number to Double; compare numbers by value so `3` and
-    // `3.0` are equal on the parsed tree.
     is Number -> value.toDouble()
     else -> value
 }
