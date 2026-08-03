@@ -241,7 +241,7 @@ verbatim — also mandatory.
 
 - `**Copy this:**` — pasteable with only simple value substitution; the values must actually work
   against what the guide points to. A path/file the reader must relocate is an adapt, not a copy.
-- Factory/root blocks containing app-owned locale, metadata, consent policy, imports, or placement
+- Setup/root blocks containing app-owned locale, metadata, consent policy, imports, or placement
   are normally `**Adapt this to your use case:**`, even when their SDK call shape is canonical.
 - `**Adapt this to your use case:**` — realistic app-shaped code needing structural change or
   placement; name what is the reader's vs the pattern to copy; prefer a `+`/`-` diff of the reader's

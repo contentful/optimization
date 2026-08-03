@@ -159,17 +159,6 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   `tracking.enableElement('views', el, { data, dwellTimeMs })` / `disableElement` / `clearElement`
   (manual data precedes attributes). Uses RESOLVED entry id.
   source: web-sdk#entry-tracking/EntryInteractionRuntime.ts#EntryInteractionRuntime; web-sdk#entry-tracking/resolveAutoTrackEntryInteractionOptions.ts#EntryInteractionApi; web-sdk#presentation/OptimizedEntryTrackingAttributes.ts#resolveOptimizedEntryTrackingAttributes
-- Flags: `getFlag(name)` one-off; `states.flag(name)` reactive; flag-view emission gated on
-  consent+profile and deduped.
-  source: core-sdk#CoreStatefulEventEmitter.ts#getFlag
-- Analytics forwarding: `states.eventStream.current?.messageId` + `.subscribe`; dedupe by
-  `messageId`; every event carries `messageId` + `type`.
-  source: api-schemas#experience/event/UniversalEventProperties.ts#UniversalEventProperties; api-schemas#experience/event/PageViewEvent.ts#PageViewEvent
-- Browser event forwarding and blocked-event behavior follow shared stateful Core semantics:
-  current-value observables, not durable history; consent-blocked events are diagnostic only and are
-  not replayed by later consent; event-stream `optimization` is not sent to Experience/Insights API
-  payloads.
-  source: kb:shared/concepts.md
 - Analytics-only handoff: `initializeOptimizationAnalyticsRuntime(config)` creates a narrow Web
   runtime with `tracking`, `trackCurrentPage`, `flush`, and `destroy`, but no content-resolution
   surface. It removes the global browser SDK reference if construction registered this analytics
@@ -180,6 +169,16 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   `static` and `public-permutation` analytics handoffs suppress durable continuity persistence the
   same way content handoffs do.
   source: web-sdk#analytics.ts#initializeOptimizationAnalyticsRuntime; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff; web-sdk#analytics.ts#warnSkippedInitialPageWithoutProfileContinuity; web-sdk#handoff.ts#shouldPreserveDurableContinuity
+- Flags: `getFlag(name)` one-off and `states.flag(name)` reactive reads auto-attempt flag-view
+  tracking; explicit/manual replacement is `trackFlagView()`. See
+  [`../shared/concepts.md`](../shared/concepts.md#custom-flag-views).
+  source: core-sdk#CoreStatefulEventEmitter.ts#getFlag; core-sdk#CoreStatefulEventEmitter.ts#getFlagObservable; core-sdk#CoreStatefulEventEmitter.ts#trackFlagView
+- Analytics forwarding: subscribe to `states.eventStream` for accepted events and
+  `states.blockedEventStream` for consent-blocked diagnostics; dedupe accepted events by
+  `messageId`. Event-stream payloads carry each event's normal schema plus universal fields such as
+  `messageId`, `channel`, `context`, and timestamps. See
+  [`../shared/concepts.md`](../shared/concepts.md#stateful-event-forwarding-streams).
+  source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent; core-sdk#events/BlockedEvent.ts#BlockedEvent; api-schemas#experience/event/UniversalEventProperties.ts#UniversalEventProperties; kb:shared/concepts.md
 
 ## Consent & persistence
 
@@ -233,5 +232,9 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   are supplied, `entries` takes precedence and no Contentful fetch is made. Idempotent — re-invoking
   reuses the in-flight/completed attachment.
   source: preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanel; preview-panel#attachOptimizationPreviewPanel.ts#AttachOptimizationPreviewPanelArgs; preview-panel#lib/entries.ts#PreviewPanelEntries
+- Preview overrides force audiences, variants, and inline-variable flag values by mutating
+  stateful SDK signals from an API baseline; panel-open state forces optimized entries to
+  live-update. See [`../shared/concepts.md`](../shared/concepts.md#preview-overrides).
+  source: preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanelToSdk; core-sdk#preview-support/PreviewOverrideManager.ts#setVariantOverride; core-sdk#preview-support/applyChangeOverrides.ts#applyChangeOverrides; web-sdk#presentation/OptimizedEntryController.ts#resolveShouldLiveUpdate
 - Validation: `pnpm implementation:run -- web-sdk typecheck`; `pnpm test:e2e:web-sdk`.
   source: impl:web-sdk#package.json

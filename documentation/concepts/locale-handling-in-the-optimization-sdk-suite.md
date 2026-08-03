@@ -300,7 +300,7 @@ Pass direct single-locale field values to the runtime-specific entry resolution 
   `entryId` plus optional `entryQuery`; `useEntryResolver()` remains manual-only.
 - iOS `OptimizationClient.resolveOptimizedEntry(baseline:selectedOptimizations:)` and SwiftUI
   `OptimizedEntry(entry:)`.
-- Android `OptimizationClient.resolveOptimizedEntry(...)`, Compose `OptimizedEntry(entry:)`, and XML
+- Android `OptimizationClient.resolveOptimizedEntry(...)`, Compose `OptimizedEntry(entry = ...)`, and XML
   Views `OptimizedEntryView.setEntry(...)`.
 
 Do not pass all-locale CDA responses from `withAllLocales` or `locale=*`.

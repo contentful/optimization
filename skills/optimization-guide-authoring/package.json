@@ -1,7 +1,7 @@
 {
   "name": "@contentful/skill-optimization-guide-authoring",
   "version": "0.1.0",
-  "description": "Author or revise Optimization SDK documentation guides under documentation/guides/",
+  "description": "Author or revise Optimization SDK documentation and migration guides",
   "license": "MIT",
   "files": [
     "SKILL.md",

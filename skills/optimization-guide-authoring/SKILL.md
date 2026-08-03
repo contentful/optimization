@@ -2,16 +2,16 @@
 name: optimization-guide-authoring
 description: >-
   Author or revise a public documentation guide under documentation/guides/ for the Optimization SDK
-  Suite. Covers the guide archetypes (integration, decision, supplemental recipe), the teach-first
-  quick-start-then-deepen structure, the copy-vs-adapt example labels, the guides directory routing
-  index, and the self-review checklist that keeps guides consistent. Use when writing a new
-  integration guide, rewriting an existing one, adding a decision or recipe guide, editing the
-  guides README index, reviewing a guide for structure and voice, or editing any file under
-  documentation/guides/. Triggers on "write a guide", "integration guide", "getting started guide",
-  "documentation/guides", "choosing-the-right-sdk", "guide archetype", "quick start", "rewrite the
-  guide", "guide TOC", "Copy this / Adapt this". Not for concept docs under documentation/concepts
-  (those own deeper mechanics), not for package or implementation READMEs, and not for generated
-  TypeDoc under docs/.
+  Suite. Covers the guide archetypes (integration, decision, supplemental recipe, migration), the
+  teach-first quick-start-then-deepen structure, the copy-vs-adapt example labels, the guides
+  directory routing index, and the self-review checklist that keeps guides consistent. Use when
+  writing a new integration or migration guide, rewriting an existing one, adding a decision or
+  recipe guide, editing the guides README index, reviewing a guide for structure and voice, or
+  editing any file under documentation/guides/. Triggers on "write a guide", "integration guide",
+  "migration guide", "getting started guide", "documentation/guides", "choosing-the-right-sdk",
+  "guide archetype", "quick start", "rewrite the guide", "guide TOC", "Copy this / Adapt this".
+  Not for concept docs under documentation/concepts (those own deeper mechanics), not for package or
+  implementation READMEs, and not for generated TypeDoc under docs/.
 argument-hint: '[guide file or SDK to document]'
 paths: documentation/guides/**
 ---
@@ -24,10 +24,10 @@ consistent and teachable. It supersedes the former long-form rules in
 `documentation/guides/AGENTS.md`, which is now a thin pointer to this skill.
 
 **Authoring structure lives under `documentation/authoring/`, not here.** The recipe owns the
-archetype-wide spine and rules; the SDK blueprint owns the quick-start proof, section map, categories,
-and teaching priorities; shared-copy files hold small pieces of reusable wording. This skill owns voice and
-workflow. Do not infer a guide from siblings, and do not let SDK facts leak into recipes, blueprints,
-shared copy, or this skill.
+archetype-wide spine and rules; the SDK blueprint owns the quick-start proof, milestone framing,
+section map, categories, and teaching priorities; shared-copy files hold small pieces of reusable
+wording. This skill owns voice and workflow. Do not infer a guide from siblings, and do not let SDK
+facts leak into recipes, blueprints, shared copy, or this skill.
 
 ## Who the guides are for
 
@@ -54,8 +54,9 @@ go deeper. Two consequences drive everything below:
 
 ## Scope
 
-- Guides under `documentation/guides/`: `integrating-*.md`, `choosing-the-right-sdk.md`,
-  supplemental recipe guides, and the directory `README.md` routing index.
+- Guides under `documentation/guides/`: `integrating-*.md`, `migrating-*.md`,
+  `choosing-the-right-sdk.md`, supplemental recipe guides, and the directory `README.md` routing
+  index.
 - This skill owns teaching voice, the copy-vs-adapt honesty principle, and the authoring workflow.
   Archetype structure belongs to recipes, per-SDK arrangement to blueprints, and reusable wording to
   shared copy under [`documentation/authoring/`](../../documentation/authoring/).
@@ -63,8 +64,9 @@ go deeper. Two consequences drive everything below:
 ## Not in scope
 
 - **Guide structure** — the recipe owns the archetype spine and category values; the SDK blueprint
-  owns its `###` inventory/order/category and what each section must teach or show. Shared wording lives
-  in `documentation/authoring/fragments/`. Open both recipe and blueprint before drafting.
+  owns its Quick-start contract, Milestone contract, `###` inventory/order/category, and what each
+  section must teach or show. Shared wording lives in `documentation/authoring/fragments/`. Open both
+  recipe and blueprint before drafting.
 - Concept docs under `documentation/concepts/` — they own deeper mechanics; guides link to them.
 - Package READMEs, implementation READMEs, and product docs.
 - Generated TypeDoc under `docs/` — it owns exhaustive, method-by-method API reference.
@@ -76,16 +78,20 @@ Every guide has exactly one primary archetype. Pick it by the reader's primary g
 matching recipe under [`documentation/authoring/recipes/`](../../documentation/authoring/recipes/) —
 the recipe's `## Template` is the section spine and its `## Context` is the structural rationale.
 
-| Reader goal                                                   | Archetype           | Recipe                                                                                                                       |
-| ------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Integrate an SDK into a specific runtime (`integrating-*.md`) | Integration guide   | [../../documentation/authoring/recipes/integration.md](../../documentation/authoring/recipes/integration.md)                 |
-| Choose between SDKs, runtimes, or patterns                    | Decision guide      | [../../documentation/authoring/recipes/decision.md](../../documentation/authoring/recipes/decision.md)                       |
-| Supplement an integration without replacing it                | Supplemental recipe | [../../documentation/authoring/recipes/supplemental-recipe.md](../../documentation/authoring/recipes/supplemental-recipe.md) |
+| Reader goal                                                    | Archetype           | Recipe                                                                                                                       |
+| -------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Integrate an SDK into a specific runtime (`integrating-*.md`)  | Integration guide   | [../../documentation/authoring/recipes/integration.md](../../documentation/authoring/recipes/integration.md)                 |
+| Move from a legacy SDK to the Optimization SDK (`migrating-*`) | Migration guide     | [../../documentation/authoring/recipes/migration.md](../../documentation/authoring/recipes/migration.md)                     |
+| Choose between SDKs, runtimes, or patterns                     | Decision guide      | [../../documentation/authoring/recipes/decision.md](../../documentation/authoring/recipes/decision.md)                       |
+| Supplement an integration without replacing it                 | Supplemental recipe | [../../documentation/authoring/recipes/supplemental-recipe.md](../../documentation/authoring/recipes/supplemental-recipe.md) |
 
 The recipe owns the fixed `##` order, the `**Integration category:**` values, the
 `## Before you start` shape, labels, and shared-copy placement. For an integration guide, the SDK
-blueprint supplies the exact `###` map and completeness contract. Do not read sibling guides to infer
-either.
+blueprint supplies the Quick-start contract, Milestone contract, exact `###` map, and completeness
+contract. Do not read sibling guides to infer either.
+
+For migration guides, also use `migration-guide-authoring`; it owns migration-specific route,
+blueprint, and legacy-fact handling.
 
 ## Example labels: make copy-vs-adapt honest
 
@@ -108,17 +114,21 @@ Router, React Native, iOS SwiftUI, iOS UIKit, Android Compose, Android Views.
 ## Workflow
 
 1. **Identify the archetype and reader goal.** Open the matching recipe. For an integration guide,
-   also open `documentation/authoring/blueprints/<sdk>.md`. The recipe supplies the `##` spine; the
-   blueprint's Section map supplies every `###` in order and the teaching goal for each section.
+   also open `documentation/authoring/blueprints/<sdk>.md`; for a migration guide, also open the
+   matching `documentation/authoring/migration-blueprints/<migration>.md` and follow
+   `migration-guide-authoring`. The recipe supplies the `##` spine; the blueprint supplies every
+   planned `###` in order and the teaching goal for each section. If a required blueprint is missing,
+   report the missing plan instead of inventing one or copying a sibling guide.
 2. **Draft the intro and quick start first.** Instantiate the `personalization-explainer` using only
    the switches in the blueprint. Take the quick-start outcome, verification, reader shape, required
-   artifacts, and deliberate simplifications from the blueprint. Keep optional concerns out unless
-   the proof requires them.
+   artifacts, and deliberate simplifications from the blueprint's Quick-start contract. Use the
+   Milestone contract to frame the intro's milestones and to keep Milestone 2 out of the quick start
+   unless the proof requires it.
 3. **Write `## Before you start`** as an outside-the-guide prerequisites list, including the
    shared `authored-variant-gotcha` copy (mandatory) so the reader can tell personalization from a bug.
-4. **Fill feature sections in blueprint order**, each with its exact category and everything its
-   “Must teach or show” cell asks for. Use the linked KB sections for behavior and the package types
-   for exact interface shape.
+4. **Fill feature or migration sections in blueprint order**, each with everything its “Must teach
+   or show” / “Must route to” cell asks for. Use the linked KB sections for behavior and the package
+   types for exact interface shape.
 5. **Split every SDK claim into interface vs. behavior, and source each from the right place.** These
    are two different kinds of fact with two different costs, and the rule differs:
    - **Interface** — what you'd see in a `.d.ts` or an editor hover: a symbol's existence, its
@@ -134,15 +144,19 @@ Router, React Native, iOS SwiftUI, iOS UIKit, Android Compose, Android Views.
      verified, each with a pointer. Re-tracing is the expensive, error-prone work the base exists to
      memoize.
 
-   So: read interfaces directly; compose behavior from the base. Use the matching reference
-   implementation under `implementations/` for real-shaped patterns and "adapt" starting points. **If
-   the base is missing a fact you need, escalate ONLY when it is behavioral** — an interface gap you
-   just look up. Escalate with an inline `<!-- ESCALATE(sdk-knowledge-author): the behavioral fact you
-need -->` marker at the point of use; the `sdk-knowledge-authoring` role traces source and records
-   the behavior, then you compose the claim from it and remove the marker. No `ESCALATE` marker may
-   survive to a finished guide — `pnpm knowledge:check` fails on one. (When you author a guide for an
-   SDK whose KB file does not exist yet, that whole file is bootstrapped by `sdk-knowledge-authoring`
-   first — see the workflow command.)
+   So: read interfaces directly; compose behavior from the base. Blueprint Fact sources route you to
+   the relevant KB sections; they are not evidence by themselves. For migration guides, legacy
+   behavior comes from `documentation/internal/migration-knowledge/` and target Optimization behavior
+   comes from `documentation/internal/sdk-knowledge/`. Use the matching reference implementation under
+   `implementations/` for real-shaped patterns and "adapt" starting points. **If the base is missing
+   a fact you need, escalate ONLY when it is behavioral** — an interface gap you just look up.
+   Escalate target SDK gaps with an inline marker like
+   `<!-- ESCALATE(sdk-knowledge-author): missing behavior -->`; the `sdk-knowledge-authoring` role
+   traces source and records the behavior, then you compose the claim from it and remove the marker.
+   Legacy behavior gaps go to `migration-knowledge-authoring`. No `ESCALATE` marker may survive to a
+   finished guide — `pnpm knowledge:check` fails on one. (When you author a guide for an SDK whose KB
+   file does not exist yet, that whole file is bootstrapped by `sdk-knowledge-authoring` first — see
+   the workflow command.)
 
    The line matters: if you catch yourself wanting to check what a prop _does_, that is behavior —
    go to the base or escalate; do not quietly re-trace it under cover of an interface lookup.
@@ -156,9 +170,17 @@ need -->` marker at the point of use; the `sdk-knowledge-authoring` role traces 
    the target reader can perform and verify the guide. A technical-foundation reviewer checks
    interfaces against `packages/**/src` and behavior against the knowledge base. Resolve blocker and
    high-severity findings before acceptance; the writer does not sign off its own draft.
+10. **Report the result.** Return the edited guide path and a short summary of what changed and why.
 
-Normal maintenance builds on the existing guide: preserve correct, useful detail and change only
-what the recipe, blueprint, facts, or reader experience require. A clean-room draft is an occasional
+For a new guide, draft from the recipe and blueprint. Include every required quick-start artifact and
+satisfy every “Must teach or show” / “Must route to” item; matching headings alone is incomplete.
+
+For a refresh, first diff the existing guide against the current recipe. Treat these as stale-shape
+signs: no `## Quick start` or no `## Before you start`, a monolithic `## The integration flow` /
+`## Required steps` section, numbered headings, a required-setup inventory table instead of a
+prerequisites list, missing `**Copy this:**` / `**Adapt this to your use case:**` labels, or a
+hand-written intro explainer that should use the shared `personalization-explainer` copy. Restructure
+to the current archetype while preserving correct specifics. A clean-room draft is an occasional
 stress test for whether the inputs stand on their own, not the default way to refresh documentation.
 
 ## Self-review

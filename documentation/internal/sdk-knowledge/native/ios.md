@@ -108,7 +108,7 @@ signatures from the Swift types; below is a navigation index with behavioral fac
 - `OptimizedEntry` tap-enable resolution: `trackTaps == false` disables; an explicit `trackTaps` or a
   non-nil `onTap` enables; otherwise the root `TrackingConfig.trackTaps` default applies. View
   tracking uses per-entry `trackViews ?? trackingConfig.trackViews`. Both default enabled at the
-  root. source: extern:OptimizedEntry tapsEnabled/viewsEnabled resolution — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Views/OptimizedEntry.swift#OptimizedEntry; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Environment/TrackingEnvironment.swift#TrackingConfig
+  root. source: extern:OptimizedEntry tapsEnabled/viewsEnabled resolution — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Views/OptimizedEntry.swift#OptimizedEntry; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Environment/OptimizationEnvironment.swift#TrackingConfig
 - `OptimizationScrollView` publishes a `ScrollContext { scrollY, viewportHeight }` on the SwiftUI
   environment under the named coordinate space `"optimization-scroll"`; descendant `OptimizedEntry`
   view-tracking reads it. Without an enclosing scroll view, tracking uses

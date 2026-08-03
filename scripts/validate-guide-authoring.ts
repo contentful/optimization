@@ -8,7 +8,11 @@ import { headingsOf, isTableDivider, parseTableRow } from './sdk-knowledge/markd
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const blueprintDir = path.join(rootDir, 'documentation/authoring/blueprints')
 const templatePath = path.join(blueprintDir, '_template.md')
+const migrationBlueprintDir = path.join(rootDir, 'documentation/authoring/migration-blueprints')
+const migrationTemplatePath = path.join(migrationBlueprintDir, '_template.md')
+const migrationRecipePath = path.join(rootDir, 'documentation/authoring/recipes/migration.md')
 const requiredFrontmatter = ['sdk', 'archetype', 'kb', 'guide'] as const
+const migrationRequiredFrontmatter = ['migration', 'archetype', 'source', 'guide'] as const
 const sectionMapColumns = [
   'Section',
   'Category',
@@ -16,6 +20,8 @@ const sectionMapColumns = [
   'Must teach or show',
   'Fact sources',
 ] as const
+const migrationRouteColumns = ['Legacy surface', 'Target route', 'Detail owner'] as const
+const migrationSectionPlanColumns = ['Section', 'Purpose', 'Must route to', 'Fact sources'] as const
 const categories = new Set([
   'Required for first integration',
   'Common but policy-dependent',
@@ -109,7 +115,7 @@ function validateLinks(file: string, lines: string[]): void {
   })
 }
 
-function validateLinkRoles(file: string, lines: string[]): void {
+function validateLinkRoles(file: string, lines: string[], allowCodeReferences = false): void {
   const headings = headingsOf(lines)
   const rolesHeading = headings.find(
     (heading) => heading.level === 2 && heading.text === 'Link roles',
@@ -126,16 +132,19 @@ function validateLinkRoles(file: string, lines: string[]): void {
     return
   }
   roles.forEach((role, index) => {
-    if (!/\[[^\]]+\]\([^)]+\)/u.test(role)) {
+    if (!/\[[^\]]+\]\([^)]+\)/u.test(role) && !(allowCodeReferences && /`[^`]+`/u.test(role))) {
       addProblem(file, rolesHeading.line + index + 1, 'each Link role must contain a Markdown link')
     }
   })
 }
 
-function sectionMapTable(lines: string[]): { firstLine: number; lines: string[] } | undefined {
+function tableSection(
+  lines: string[],
+  headingText: string,
+): { firstLine: number; lines: string[] } | undefined {
   const headings = headingsOf(lines)
   const sectionHeading = headings.find(
-    (heading) => heading.level === 2 && heading.text === 'Section map',
+    (heading) => heading.level === 2 && heading.text === headingText,
   )
   if (sectionHeading === undefined) {
     return undefined
@@ -149,22 +158,24 @@ function sectionMapTable(lines: string[]): { firstLine: number; lines: string[] 
   }
 }
 
-function sectionMapHeader(
+function tableHeader(
   file: string,
   table: { firstLine: number; lines: string[] },
+  columns: readonly string[],
+  tableName: string,
 ): number | undefined {
   const { lines: tableLines } = table
   const headerOffset = tableLines.findIndex((line) => {
     const cells = parseTableRow(line)
-    return cells?.join('\0') === sectionMapColumns.join('\0')
+    return cells?.join('\0') === columns.join('\0')
   })
   if (headerOffset === -1) {
-    addProblem(file, table.firstLine, 'Section map table has the wrong columns')
+    addProblem(file, table.firstLine, `${tableName} table has the wrong columns`)
     return undefined
   }
   const divider = parseTableRow(tableLines[headerOffset + 1] ?? '')
   if (divider === undefined || !isTableDivider(divider)) {
-    addProblem(file, table.firstLine + headerOffset + 1, 'Section map table lacks a divider')
+    addProblem(file, table.firstLine + headerOffset + 1, `${tableName} table lacks a divider`)
     return undefined
   }
   return headerOffset
@@ -205,11 +216,11 @@ function sectionMapRow(file: string, line: number, cells: string[]): SectionRow 
 }
 
 function sectionRows(file: string, lines: string[]): SectionRow[] {
-  const table = sectionMapTable(lines)
+  const table = tableSection(lines, 'Section map')
   if (table === undefined) {
     return []
   }
-  const headerOffset = sectionMapHeader(file, table)
+  const headerOffset = tableHeader(file, table, sectionMapColumns, 'Section map')
   if (headerOffset === undefined) {
     return []
   }
@@ -284,11 +295,121 @@ function compareRows(blueprint: string, guide: string, expected: SectionRow[]): 
   }
 }
 
+function sectionsOf(lines: string[]): string[] {
+  return headingsOf(lines)
+    .filter((heading) => heading.level === 2)
+    .map((heading) => heading.text)
+}
+
+function validateSections(file: string, lines: string[], expected: string[], label: string): void {
+  const sections = sectionsOf(lines)
+  if (sections.join('\0') !== expected.join('\0')) {
+    addProblem(file, 1, `${label} headings do not match _template.md: ${sections.join(' -> ')}`)
+  }
+}
+
+function tableRows(
+  file: string,
+  lines: string[],
+  headingText: string,
+  columns: readonly string[],
+): Array<{ line: number; cells: string[] }> {
+  const table = tableSection(lines, headingText)
+  if (table === undefined) {
+    return []
+  }
+  const headerOffset = tableHeader(file, table, columns, headingText)
+  if (headerOffset === undefined) {
+    return []
+  }
+  return table.lines
+    .slice(headerOffset + tableHeaderRowCount)
+    .map((tableLine, index) => {
+      const cells = parseTableRow(tableLine)
+      const line = table.firstLine + headerOffset + tableHeaderRowCount + index + 1
+      if (cells === undefined) {
+        return undefined
+      }
+      if (cells.length !== columns.length) {
+        addProblem(
+          file,
+          line,
+          `${headingText} row has ${cells.length} cells; expected ${columns.length}`,
+        )
+        return undefined
+      }
+      if (cells.some((cell) => cell === '')) {
+        addProblem(file, line, `${headingText} cells must all be non-empty`)
+      }
+      return { line, cells }
+    })
+    .filter((row): row is { line: number; cells: string[] } => row !== undefined)
+}
+
+function validateMigrationTables(file: string, lines: string[]): number {
+  tableRows(file, lines, 'Migration route', migrationRouteColumns)
+  const rows = tableRows(file, lines, 'Section plan', migrationSectionPlanColumns)
+  rows.forEach(({ line, cells }) => {
+    const facts = cells[migrationSectionPlanColumns.indexOf('Fact sources')] ?? ''
+    if (!/\[[^\]]+\]\([^)]+\)/u.test(facts)) {
+      addProblem(file, line, 'Fact sources must contain at least one knowledge link')
+    }
+  })
+  return rows.length
+}
+
+function validateTarget(
+  file: string,
+  frontmatter: Map<string, string>,
+  key: string,
+  label: string,
+): string | undefined {
+  const target = frontmatter.get(key)
+  if (target === undefined) {
+    return undefined
+  }
+  const resolved = path.resolve(path.dirname(file), target)
+  if (!existsSync(resolved)) {
+    addProblem(file, 1, `${label} target does not exist: ${target}`)
+    return undefined
+  }
+  return resolved
+}
+
+function migrationGuideSections(): string[] {
+  const lines = readFileSync(migrationRecipePath, 'utf8').split(/\r?\n/u)
+  const headings = headingsOf(lines)
+  const templateHeading = headings.find(
+    (heading) => heading.level === 2 && heading.text === 'Template',
+  )
+  return headings
+    .filter(
+      (heading) =>
+        heading.level === 2 && templateHeading !== undefined && heading.line > templateHeading.line,
+    )
+    .map((heading) => heading.text)
+}
+
+function validateMigrationGuideSpine(file: string, lines: string[], expected: string[]): void {
+  const sections = sectionsOf(lines)
+  if (sections.join('\0') !== expected.join('\0')) {
+    addProblem(
+      file,
+      1,
+      `migration guide headings do not match migration recipe: ${sections.join(' -> ')}`,
+    )
+  }
+}
+
 const templateLines = readFileSync(templatePath, 'utf8').split(/\r?\n/u)
-const templateSections = headingsOf(templateLines)
-  .filter((heading) => heading.level === 2)
-  .map((heading) => heading.text)
+const templateSections = sectionsOf(templateLines)
+const migrationTemplateLines = readFileSync(migrationTemplatePath, 'utf8').split(/\r?\n/u)
+const migrationTemplateSections = sectionsOf(migrationTemplateLines)
+const expectedMigrationGuideSections = migrationGuideSections()
 const blueprintFiles = readdirSync(blueprintDir)
+  .filter((name) => name.endsWith('.md') && name !== '_template.md')
+  .sort()
+const migrationBlueprintFiles = readdirSync(migrationBlueprintDir)
   .filter((name) => name.endsWith('.md') && name !== '_template.md')
   .sort()
 
@@ -302,32 +423,44 @@ for (const name of blueprintFiles) {
       addProblem(file, 1, `missing frontmatter key: ${key}`)
     }
   })
-  const sections = headingsOf(lines)
-    .filter((heading) => heading.level === 2)
-    .map((heading) => heading.text)
-  if (sections.join('\0') !== templateSections.join('\0')) {
-    addProblem(file, 1, `blueprint headings do not match _template.md: ${sections.join(' -> ')}`)
-  }
+  validateSections(file, lines, templateSections, 'blueprint')
   validateLinks(file, lines)
   validateLinkRoles(file, lines)
   const rows = sectionRows(file, lines)
   sectionCount += rows.length
 
-  const guideTarget = frontmatter.get('guide')
-  const kbTarget = frontmatter.get('kb')
-  if (guideTarget !== undefined) {
-    const guide = path.resolve(path.dirname(file), guideTarget)
-    if (!existsSync(guide)) {
-      addProblem(file, 1, `guide target does not exist: ${guideTarget}`)
-    } else {
-      const guideLines = readFileSync(guide, 'utf8').split(/\r?\n/u)
-      validateLinks(guide, guideLines)
-      validateGuideMarkers(guide, guideLines)
-      compareRows(file, guide, rows)
-    }
+  const guide = validateTarget(file, frontmatter, 'guide', 'guide')
+  if (guide !== undefined) {
+    const guideLines = readFileSync(guide, 'utf8').split(/\r?\n/u)
+    validateLinks(guide, guideLines)
+    validateGuideMarkers(guide, guideLines)
+    compareRows(file, guide, rows)
   }
-  if (kbTarget !== undefined && !existsSync(path.resolve(path.dirname(file), kbTarget))) {
-    addProblem(file, 1, `KB target does not exist: ${kbTarget}`)
+  validateTarget(file, frontmatter, 'kb', 'KB')
+}
+
+let migrationSectionCount = 0
+for (const name of migrationBlueprintFiles) {
+  const file = path.join(migrationBlueprintDir, name)
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/u)
+  const frontmatter = parseFrontmatter(file, lines)
+  migrationRequiredFrontmatter.forEach((key) => {
+    if (!frontmatter.has(key)) {
+      addProblem(file, 1, `missing frontmatter key: ${key}`)
+    }
+  })
+  validateSections(file, lines, migrationTemplateSections, 'migration blueprint')
+  validateLinks(file, lines)
+  validateLinkRoles(file, lines, true)
+  migrationSectionCount += validateMigrationTables(file, lines)
+
+  validateTarget(file, frontmatter, 'source', 'source')
+  const guide = validateTarget(file, frontmatter, 'guide', 'guide')
+  if (guide !== undefined) {
+    const guideLines = readFileSync(guide, 'utf8').split(/\r?\n/u)
+    validateLinks(guide, guideLines)
+    validateGuideMarkers(guide, guideLines)
+    validateMigrationGuideSpine(guide, guideLines, expectedMigrationGuideSections)
   }
 }
 
@@ -342,6 +475,6 @@ if (problems.length > 0) {
   process.exitCode = 1
 } else {
   process.stdout.write(
-    `✓ Guide authoring: ${blueprintFiles.length} blueprint(s), ${sectionCount} planned section(s), links and rendered guide structure valid.\n`,
+    `✓ Guide authoring: ${blueprintFiles.length} integration blueprint(s), ${sectionCount} planned integration section(s), ${migrationBlueprintFiles.length} migration blueprint(s), ${migrationSectionCount} planned migration section(s), links and rendered guide structure valid.\n`,
   )
 }

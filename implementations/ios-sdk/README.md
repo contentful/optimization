@@ -183,9 +183,9 @@ as a local Swift Package, so app builds compile the package from workspace sourc
 published artifact.
 
 The app schemes include a pre-action that builds `@contentful/optimization-js-bridge` before Swift
-Package resource resolution when bridge source is newer than the copied UMD resource. The pre-action
-writes its output to `/tmp/optimization-ios-build-js-bridge.log`; check that file if Xcode appears
-to use a stale bridge bundle or cannot find `pnpm`.
+Package resource resolution when bridge source is newer than the copied UMD resource. If Xcode
+appears to use a stale bridge bundle or cannot find `pnpm`, check the
+`optimization-ios-build-js-bridge.log` temporary build log.
 
 The normal loop is:
 

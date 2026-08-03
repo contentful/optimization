@@ -1,7 +1,7 @@
 # Guide self-review checklist
 
 Run before finishing any guide edit. Assertions are written to be mechanically checkable so they can
-also back a future validation hook on `documentation/guides/**`. Group A applies to all guides; B–D
+also back a future validation hook on `documentation/guides/**`. Group A applies to all guides; B–F
 add per-archetype checks.
 
 ## A. All guides
@@ -64,14 +64,17 @@ add per-archetype checks.
       structural change (that is an adapt).
 - [ ] **Every API in a code example is real, sourced by kind — interface vs. behavior.** For
       _interface_ (a symbol's existence, signature, prop/config-key names & types, optionality, union
-      shape, return type, import path): confirm it directly against `packages/**/src` or the types — a
+      shape, return type, import path): confirm it directly against the relevant source/types — a
       cheap, self-verifying lookup; a plausible-looking field name such as `isEnabled` or `hasResults`
       is not proof it exists. For _behavior_ (what a call does: fallback contracts, dynamic-render
-      forcing, batching, defaults, identifier ownership, cross-SDK semantics): it must trace to a
-      verified fact in `documentation/internal/sdk-knowledge/`; do not re-trace it from source. If a
-      needed _behavioral_ fact is missing, escalate to `sdk-knowledge-authoring` (an interface gap you
-      just look up, no escalation). The reference impl shows one working path for shape and "adapt"
-      starting points, but the base, not the impl, is what makes a behavioral claim true.
+      forcing, batching, defaults, identifier ownership, cross-SDK semantics, legacy migration
+      boundaries): it must trace to a verified fact in `documentation/internal/sdk-knowledge/` for
+      target SDK behavior or `documentation/internal/migration-knowledge/` for legacy behavior; do not
+      re-trace it from source. If a needed _behavioral_ fact is missing, escalate to
+      `sdk-knowledge-authoring` or `migration-knowledge-authoring` as appropriate (an interface gap
+      you just look up, no escalation). The reference impl shows one working path for shape and
+      "adapt" starting points, but the fact store, not the impl, is what makes a behavioral claim
+      true.
 - [ ] Code comments explain only meaningful SDK-specific lines; no obvious-syntax narration.
 - [ ] **Every magic-value identifier states who owns it.** For each cookie name, env var, header,
       storage key, or config string in a snippet, the guide states whether the reader must match the
@@ -200,14 +203,29 @@ add per-archetype checks.
       external demos. Reference implementations are framed as maintained comparison and validation
       targets for SDK behavior, not as optional examples or lower-stakes sample code.
 
-## C. Decision guides (`choosing-the-right-sdk.md` and future)
+## C. Migration guides (`migrating-*.md`)
+
+- [ ] Structure and fixed headings match the migration recipe
+      (`documentation/authoring/recipes/migration.md`).
+- [ ] Route, guide order, section plan, and Fact sources match the migration blueprint under
+      `documentation/authoring/migration-blueprints/`; every linked SDK or migration fact source
+      resolves.
+- [ ] Legacy behavior claims trace to migration knowledge, target SDK behavior claims trace to SDK
+      knowledge, and interface shape is checked directly against the relevant source/types.
+- [ ] Ownership changes are introduced before code changes: Contentful authoring, runtime
+      configuration, consent records, cookies, first page events, analytics forwarding, preview
+      behavior, and cache boundaries.
+- [ ] Runtime migrations stay split; plugin/privacy/preview and content-model replacement work is
+      routed to shared migration guides instead of folded into every runtime guide.
+
+## D. Decision guides (`choosing-the-right-sdk.md` and future)
 
 - [ ] Structure: intro → TOC → `## Recommendation` → `## Decision table` → `## Alternatives` →
       `## Follow-up guides`.
 - [ ] The decision table uses columns `Reader need`, `Choose`, `Why`, `Next guide` (add
       `Do not choose when` only where a row needs a boundary).
 
-## D. Supplemental recipe guides
+## E. Supplemental recipe guides
 
 - [ ] Structure: intro → `## Do you need this?` → `## Quick start` → TOC → `## Default recipe` →
       `## Runtime or vendor variants` → `## Validate the integration` → `## Governance notes` →
@@ -221,7 +239,7 @@ add per-archetype checks.
 - [ ] `## Validate the integration` contains performable checks with an observable location or
       action; it is not an assertion-only checklist of things to "confirm".
 
-## E. Directory README (`documentation/guides/README.md`)
+## F. Directory README (`documentation/guides/README.md`)
 
 - [ ] It is a lightweight router: fields limited to `Guide`, `Runtime or app type`, `Package`.
 - [ ] No fastest-path column, setup summary, tradeoff matrix, or procedure preview.
