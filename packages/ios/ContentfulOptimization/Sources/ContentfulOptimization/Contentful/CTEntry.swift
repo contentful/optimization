@@ -3,7 +3,17 @@ import Foundation
 
 /// Reused across `CTEntry`/`CDA` rather than allocated per call.
 private let jsonEncoder = JSONEncoder()
+private let jsonDecoder = JSONDecoder()
 private let iso8601DateFormatter = ISO8601DateFormatter()
+
+private extension JSONValue {
+    /// Encodes any `Encodable` value into `JSONValue` via a real `JSONEncoder` -> `JSONDecoder`
+    /// round trip, rather than a hand-assembled dictionary literal.
+    static func encoded(_ value: some Encodable) throws -> JSONValue {
+        let data = try jsonEncoder.encode(value)
+        return try jsonDecoder.decode(JSONValue.self, from: data)
+    }
+}
 
 /// Bridges `Contentful.Entry` and the resolver's raw JSON (`{sys, fields, metadata}`).
 /// `init(_:Contentful.Entry)`/`toJSON()` encode; `init(any:)`/`init(json:)` decode.
@@ -33,7 +43,7 @@ public struct CTEntry {
         guard let data = json.data(using: .utf8) else {
             throw OptimizationError.configError("JSON string is not valid UTF-8")
         }
-        envelope = try JSONDecoder().decode(CDA.Entry.self, from: data)
+        envelope = try jsonDecoder.decode(CDA.Entry.self, from: data)
     }
 
     init(any: Any) throws {
@@ -41,7 +51,7 @@ public struct CTEntry {
             throw OptimizationError.configError("Unsupported value of type \(Swift.type(of: any)) in CTEntry(any:)")
         }
         let data = try JSONSerialization.data(withJSONObject: any)
-        envelope = try JSONDecoder().decode(CDA.Entry.self, from: data)
+        envelope = try jsonDecoder.decode(CDA.Entry.self, from: data)
     }
 
     /// `init(any:)` without a `throws` path — logs and returns `fallback` instead.
