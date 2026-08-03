@@ -28,7 +28,9 @@ dependencies {
     // preview-contentful interfaces consumed by MockPreviewContentfulClient.
     api(project(":ContentfulOptimization"))
 
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Aligned with the Optimization SDK's own okhttp declaration (okhttp-android 5.x). Declaring
+    // the 4.x jar and 5.x aar together triggers duplicate-class packaging.
+    implementation("com.squareup.okhttp3:okhttp-android:5.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("org.json:json:20240303")
 }

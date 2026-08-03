@@ -203,7 +203,16 @@ viewportHeight }` via `LocalScrollContext` that descendant `Modifier.trackViews`
   `CTEntry` and is unwrapped via `toMap()` before handing to the renderer, preserving the existing
   renderer signature). The dependency on `contentful.java` is declared `compileOnly` (with
   `okhttp-jvm` excluded to avoid a duplicate-class conflict against `okhttp-android`), so consumers
-  who only pass entry Maps are not forced onto it. source: extern:OptimizedEntry CDAEntry overload wraps the live entry in a CTEntry — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/OptimizedEntry.kt#OptimizedEntry; extern:OptimizedEntryView.setEntry(CDAEntry) wraps in CTEntry.from(entry).toMap() — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/OptimizedEntryView.kt#OptimizedEntryView; extern:contentful.java is compileOnly with okhttp-jvm exclusion — packages/android/ContentfulOptimization/build.gradle.kts
+  who only pass entry Maps are not forced onto it. Because that exclusion drops the concrete
+  okhttp variant contentful.java transitively brings, the SDK declares
+  `com.squareup.okhttp3:okhttp-android:5.1.0` as a direct `implementation` so consumers do not hit
+  `ClassNotFoundException: okhttp3.OkHttpClient` at runtime (the parent `okhttp:5.x` module is KMP
+  metadata only). source: extern:OptimizedEntry CDAEntry overload wraps the live entry in a CTEntry — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/OptimizedEntry.kt#OptimizedEntry; extern:OptimizedEntryView.setEntry(CDAEntry) wraps in CTEntry.from(entry).toMap() — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/OptimizedEntryView.kt#OptimizedEntryView; extern:contentful.java is compileOnly with okhttp-jvm exclusion + okhttp-android direct implementation — packages/android/ContentfulOptimization/build.gradle.kts
+- `CTEntry.imageURL: String?` is a top-level extension property that reads
+  `getField<Map<String, Any?>>("image")?["fields"]?["file"]?["url"]`, returns `null` when any layer
+  is missing, and rewrites protocol-relative Contentful Asset URLs (`//images.ctfassets.net/...`)
+  to `https:` — Android image loaders reject the scheme-less form. Absolute URLs pass through
+  unchanged. source: extern:CTEntry.imageURL extension property — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/contentful/CTEntry.kt#imageURL
 
 ## Identifier ownership
 

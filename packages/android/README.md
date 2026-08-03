@@ -72,6 +72,11 @@ dependencies {
 Use the version that matches the Optimization SDK Suite release you are adopting. The package is
 published to Maven Central as `com.contentful.java:optimization-android`.
 
+The SDK ships okhttp on the runtime classpath through `com.squareup.okhttp3:okhttp-android:5.x`. If
+your app also depends on okhttp directly, declare the same artifact (`okhttp-android`, not the
+plain `okhttp` module or `okhttp-jvm`) at the same 5.x version to avoid duplicate-class packaging
+failures. Nothing else is required.
+
 ### Compose quick start
 
 Compose apps usually initialize the SDK with `OptimizationRoot`, render Contentful entries with

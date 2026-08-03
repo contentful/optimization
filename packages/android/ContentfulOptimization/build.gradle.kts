@@ -280,7 +280,13 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // okhttp 5.x splits its classes across per-platform artifacts (okhttp-jvm vs okhttp-android)
+    // that carry the same class names. contentful.java below transitively bumps okhttp to 5.1.0
+    // with okhttp-jvm excluded to avoid duplicate-class conflicts against the Android variant, so
+    // we must declare okhttp-android directly here — the parent `okhttp:5.x` module carries KMP
+    // metadata only and consumers otherwise get ClassNotFoundException on okhttp3.OkHttpClient at
+    // runtime.
+    implementation("com.squareup.okhttp3:okhttp-android:5.1.0")
     implementation("org.json:json:20240303")
     // CTEntry serializes its entry model via Gson at runtime. contentful.java pulls Gson too, but
     // it's declared compileOnly below so consumers who never touch CDAEntry aren't forced onto it —
