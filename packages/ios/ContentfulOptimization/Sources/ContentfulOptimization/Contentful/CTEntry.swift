@@ -250,7 +250,7 @@ private enum CDA {
             self.init(
                 id: sys.id,
                 type: "Entry",
-                contentType: .init(sys: .init(id: sys.contentTypeId ?? "", type: "Link", linkType: "ContentType")),
+                contentType: sys.contentTypeId.map { .init(sys: .init(id: $0, type: "Link", linkType: "ContentType")) },
                 createdAt: sys.createdAt.map { iso8601DateFormatter.string(from: $0) },
                 updatedAt: sys.updatedAt.map { iso8601DateFormatter.string(from: $0) },
                 revision: sys.revision,
