@@ -2,6 +2,11 @@ package com.contentful.optimization.contentful
 
 import com.contentful.java.cda.CDAContentType
 import com.contentful.java.cda.CDAEntry
+import com.contentful.java.cda.CDAResource
+import com.contentful.java.cda.ResourceFactory
+import org.json.JSONArray
+import org.json.JSONObject
+import org.json.JSONTokener
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -70,10 +75,10 @@ class CTEntryTest {
     fun `getField returns the value cast to T, null on absent`() {
         val entry = CTEntry.from(minimalEntry)
         assertEquals("Hello", entry.getField<String>("title"))
-        assertEquals(42, entry.getField<Int>("count"))
+        // JSON round-trip converts every number to Double (Gson's default). Read `Double` for
+        // numeric fields that crossed a JSON boundary; `getField<Int>` won't match.
+        assertEquals(42.0, entry.getField<Double>("count")!!, 0.0)
         assertNull(entry.getField<String>("nope"))
-        // No wrong-type case: JVM generic erasure means `getField<Int>("title")` doesn't throw
-        // here — the String slips through and the ClassCastException fires at the caller.
     }
 
     @Test
@@ -170,22 +175,57 @@ class CTEntryTest {
     }
 
     @Test
-    fun `fabricated CDAEntry from a Map reads through the real CDAEntry accessors`() {
-        // Regression guard: `getField(...)` here goes through CDAEntry's Localizer, so the
-        // fabricated `defaultLocale` and nested `fields` shape must both be correct.
+    fun `from(Map) round-trips fields through the entry model`() {
         val ct = CTEntry.from(minimalEntry)
         assertEquals("Hello", ct.getField<String>("title"))
-        assertEquals(42, ct.getField<Int>("count"))
+        // Numeric fields cross the JSON boundary as Double (see the getField test above).
+        assertEquals(42.0, ct.getField<Double>("count")!!, 0.0)
+    }
+
+    // -- JSON identity round-trip (String -> CTEntry -> toJSON) -----------------------------
+    //
+    // Proves the full pipeline: parse a JSON string, wrap in a CTEntry, re-serialize to JSON,
+    // and assert the parsed tree equals the input tree (structural equality, not raw text).
+
+    @Test
+    fun `json identity - baseline sys plus contentType plus metadata`() {
+        assertJsonIdentity("""
+            {
+              "sys": {
+                "id": "e1", "type": "Entry", "locale": "en-US",
+                "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}}
+              },
+              "fields": {"title": "Hello"},
+              "metadata": {"tags": [], "concepts": []}
+            }
+        """)
     }
 
     @Test
-    fun `fabricated entry with a bad contentType Map falls back to null contentTypeId`() {
-        val ct = CTEntry.from(mapOf(
-            "sys" to mapOf("id" to "e1", "type" to "Entry", "contentType" to "not-a-map"),
-            "fields" to emptyMap<String, Any>(),
-        ))
-        assertEquals("e1", ct.id)
-        assertNull(ct.contentTypeId)
+    fun `json identity - sys timestamps and revision round-trip`() {
+        assertJsonIdentity("""
+            {
+              "sys": {
+                "id": "e1", "type": "Entry", "locale": "en-US", "revision": 3,
+                "createdAt": "2024-01-01T00:00:00Z", "updatedAt": "2024-06-15T12:30:00Z",
+                "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}}
+              },
+              "fields": {},
+              "metadata": {"tags": [], "concepts": []}
+            }
+        """)
+    }
+
+    @Test
+    fun `json identity - metadata tags round-trip as link stubs`() {
+        assertJsonIdentity("""
+            {
+              "sys": {"id": "e1", "type": "Entry", "locale": "en-US",
+                       "contentType": {"sys": {"id": "page", "type": "Link", "linkType": "ContentType"}}},
+              "fields": {},
+              "metadata": {"tags": [{"sys": {"id": "tag1", "type": "Link", "linkType": "Tag"}}], "concepts": []}
+            }
+        """)
     }
 }
 
@@ -208,4 +248,87 @@ private fun setPrivateField(target: Any, name: String, value: Any?) {
         }
     }
     throw NoSuchFieldException("$name on ${target::class.java}")
+}
+
+// -- Test-scope JSON -> CDAEntry helpers --------------------------------------
+//
+// Decodes the input JSON via contentful.java's real Gson (`ResourceFactory.createGson()`)
+// and then runs the localization + rawFields post-decode steps that `CDAClient` would run
+// after a fetch. Reflection here is confined to test scope to bridge the gap that
+// contentful.java's package-private `normalizeFields` / `setRawFields` leaves for us.
+
+private fun decodeEntryFromJson(json: String): CDAEntry {
+    val resource: CDAResource = ResourceFactory.createGson().fromJson(json, CDAResource::class.java)
+    val entry = resource as CDAEntry
+    val locale = entry.getAttribute<String?>("locale") ?: DEFAULT_TEST_LOCALE
+    hydrateForTests(entry, locale)
+    entry.attrs()["contentType"]
+        ?.let { it as? Map<*, *> }
+        ?.let { it["sys"] as? Map<*, *> }
+        ?.let { it["id"] as? String }
+        ?.let { setPrivateField(entry, "contentType", contentTypeFor(it)) }
+    return entry
+}
+
+// contentful.java stores `fields` as Map<name, Map<locale, value>> after `normalizeFields`, and
+// separately holds `rawFields` (the un-localized copy). Gson populates only the flat `fields`
+// (from the JSON key of the same name); we wrap here to match the post-decode shape that
+// `getField(name)` expects.
+@Suppress("UNCHECKED_CAST")
+private fun hydrateForTests(entry: CDAEntry, locale: String) {
+    val gsonFields = readPrivateField(entry, "fields") as? Map<String, Any?> ?: emptyMap()
+    val rawCopy = LinkedHashMap<String, Any?>(gsonFields)
+    val localized = LinkedHashMap<String, Any?>(gsonFields.size)
+    for ((key, value) in gsonFields) {
+        localized[key] = mutableMapOf<String, Any?>(locale to value)
+    }
+    setPrivateField(entry, "defaultLocale", locale)
+    setPrivateField(entry, "rawFields", rawCopy)
+    setPrivateField(entry, "fields", localized)
+}
+
+private fun readPrivateField(target: Any, name: String): Any? {
+    var clazz: Class<*>? = target::class.java
+    while (clazz != null) {
+        try {
+            val field = clazz.getDeclaredField(name)
+            field.isAccessible = true
+            return field.get(target)
+        } catch (_: NoSuchFieldException) {
+            clazz = clazz.superclass
+        }
+    }
+    throw NoSuchFieldException("$name on ${target::class.java}")
+}
+
+private const val DEFAULT_TEST_LOCALE = "en-US"
+
+private fun contentTypeFor(id: String): CDAContentType {
+    val ct = CDAContentType()
+    setPrivateField(ct, "attrs", mutableMapOf<String, Any>("id" to id, "type" to "ContentType"))
+    return ct
+}
+
+private fun assertJsonIdentity(inputJson: String) {
+    val entry = decodeEntryFromJson(inputJson)
+    val ct = CTEntry.from(entry)
+    val output = ct.toJSON()
+    assertJsonTreeEquals(inputJson, output)
+}
+
+private fun assertJsonTreeEquals(expectedJson: String, actualJson: String) {
+    assertEquals(normalize(JSONTokener(expectedJson).nextValue()), normalize(JSONTokener(actualJson).nextValue()))
+}
+
+private fun normalize(value: Any?): Any = when (value) {
+    null, JSONObject.NULL -> "__null__"
+    is JSONObject -> {
+        val keys = value.keys().asSequence().toList().sorted()
+        LinkedHashMap<String, Any>().also { out -> keys.forEach { out[it] = normalize(value.get(it)) } }
+    }
+    is JSONArray -> List(value.length()) { normalize(value.get(it)) }
+    // JSON round-trip converts every number to Double; compare numbers by value so `3` and
+    // `3.0` are equal on the parsed tree.
+    is Number -> value.toDouble()
+    else -> value
 }

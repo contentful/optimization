@@ -511,7 +511,7 @@ to a given entry.
    calls for you) is a `suspend`, fail-soft resolver. It returns a `ResolvedOptimizedEntry` — an
    SDK-owned result wrapper carrying `entry` (a `CTEntry` — the SDK-owned wrapper around a
    `CDAEntry` whose accessors delegate to it: `id`, `getField<T>`, `hasField`, plus
-   `toFoundation()` to reach the raw entry map when needed) and `selectedOptimization` (the
+   `toMap()` to reach the raw entry map when needed) and `selectedOptimization` (the
    applied selection, or null). Its `entry` is the resolved variant when
    one applies and the baseline entry unchanged otherwise — when the client is not initialized, when
    the entry is not optimized, when no selected optimization matches, when linked optimization data
@@ -529,8 +529,8 @@ instead of through the view.
 // Passing null uses the SDK's current selection state; pass an explicit snapshot to lock a screen.
 val result = OptimizationManager.client.resolveOptimizedEntry(baseline = entry)
 // result.entry is a CTEntry; use its accessors (getField, hasField, id) or unwrap the raw map
-// via toFoundation(). result.selectedOptimization is the applied selection, or null.
-render(result.entry.toFoundation())
+// via toMap(). result.selectedOptimization is the applied selection, or null.
+render(result.entry.toMap())
 ```
 
 If the app locale changes at runtime, call `client.setLocale(locale)` to update the SDK Experience

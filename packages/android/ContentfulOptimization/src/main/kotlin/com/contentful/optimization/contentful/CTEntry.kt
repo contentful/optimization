@@ -1,164 +1,135 @@
 package com.contentful.optimization.contentful
 
-import com.contentful.java.cda.CDAContentType
 import com.contentful.java.cda.CDAEntry
-import com.contentful.java.cda.CDAMetadata
 import com.contentful.optimization.core.DiagnosticLogger
-import org.json.JSONArray
-import org.json.JSONObject
-import org.json.JSONTokener
+import com.google.gson.Gson
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Wraps a `contentful.java` [CDAEntry] so a resolved variant reads through the same accessors
- * as a fetched entry. [from]`(any: Map)` and [from]`(json: String)` fabricate a [CDAEntry]
- * from the resolver's Map so downstream code always reads through the same surface.
+ * Bridges `contentful.java`'s [CDAEntry] and the resolver's raw JSON (`{sys, fields, metadata}`).
+ * Backed by an SDK-owned entry model Gson serializes natively — no reflection into `contentful.java`
+ * internals. Accessors mirror `CDAEntry` so a resolved variant reads through the same surface as
+ * a fetched entry.
  */
-public class CTEntry internal constructor(private val entry: CDAEntry) {
+public class CTEntry internal constructor(private val entry: Entry) {
 
-    public fun toFoundation(): Map<String, Any> = toOptimizedEntryMap(entry)
+    public fun toMap(): Map<String, Any> = gson.fromJson(gson.toJson(entry), Map::class.java) as Map<String, Any>
 
-    public fun toJSON(): String = JSONObject(toFoundation()).toString()
+    public fun toJSON(): String = gson.toJson(entry)
 
-    public val id: String? get() = entry.id()
+    public val id: String? get() = entry.sys?.id
 
-    public val contentTypeId: String? get() = entry.contentType()?.id()
+    public val contentTypeId: String? get() = entry.sys?.contentType?.sys?.id
 
-    public val localeCode: String? get() = entry.getAttribute<String?>("locale")
+    public val localeCode: String? get() = entry.sys?.locale
 
-    public val createdAt: Date?
-        get() = entry.getAttribute<String?>("createdAt")?.let(::parseIso8601)
+    public val createdAt: Date? get() = entry.sys?.createdAt?.let(::parseIso8601)
 
-    public val updatedAt: Date?
-        get() = entry.getAttribute<String?>("updatedAt")?.let(::parseIso8601)
+    public val updatedAt: Date? get() = entry.sys?.updatedAt?.let(::parseIso8601)
 
-    public fun <T> getField(name: String): T? = entry.getField(name)
+    @Suppress("UNCHECKED_CAST")
+    public fun <T> getField(name: String): T? = entry.fields[name] as? T
 
-    public fun hasField(name: String): Boolean = entry.rawFields().containsKey(name)
+    public fun hasField(name: String): Boolean = entry.fields.containsKey(name)
 
     public operator fun get(name: String): String? = getField(name)
 
     public companion object {
-        internal val EMPTY: CTEntry = CTEntry(fabricateEntry(emptyMap()))
+        internal val EMPTY: CTEntry = CTEntry(Entry(sys = null, fields = emptyMap(), metadata = null))
 
-        public fun from(entry: CDAEntry): CTEntry = CTEntry(entry)
+        public fun from(entry: CDAEntry): CTEntry = CTEntry(Entry.fromResolverMap(toOptimizedEntryMap(entry)))
 
-        /** Logs and returns [fallback] on parse failure — avoids throwing into the bridge. */
         public fun from(any: Map<String, Any>, fallback: CTEntry = EMPTY): CTEntry = try {
-            CTEntry(fabricateEntry(jsonObjectToMap(JSONObject(any))))
+            check(!hasCycle(any)) { "cyclic map" }
+            CTEntry(Entry.fromResolverMap(any))
         } catch (e: Exception) {
             DiagnosticLogger.warning { "[CTEntry] Failed to parse entry map: ${e.message}" }
             fallback
         }
 
-        public fun from(json: String, fallback: CTEntry = EMPTY): CTEntry {
-            val obj = try {
-                JSONTokener(json).nextValue() as? JSONObject
-            } catch (e: Exception) {
-                DiagnosticLogger.warning { "[CTEntry] Failed to parse entry JSON: ${e.message}" }
-                return fallback
-            }
-            if (obj == null) {
-                DiagnosticLogger.warning { "[CTEntry] Failed to parse entry JSON: root is not a JSON object" }
-                return fallback
-            }
-            return try {
-                CTEntry(fabricateEntry(jsonObjectToMap(obj)))
-            } catch (e: Exception) {
-                DiagnosticLogger.warning { "[CTEntry] Failed to build CDAEntry: ${e.message}" }
-                fallback
-            }
+        public fun from(json: String, fallback: CTEntry = EMPTY): CTEntry = try {
+            CTEntry(gson.fromJson(json, Entry::class.java) ?: error("root is not a JSON object"))
+        } catch (e: Exception) {
+            DiagnosticLogger.warning { "[CTEntry] Failed to parse entry JSON: ${e.message}" }
+            fallback
+        }
+    }
+
+    /** SDK-owned entry model. Gson serializes it natively without reflection. */
+    internal data class Entry(
+        val sys: Sys?,
+        val fields: Map<String, Any>,
+        val metadata: Metadata?,
+    ) {
+        data class Sys(
+            val id: String?,
+            val type: String?,
+            val locale: String?,
+            val createdAt: String?,
+            val updatedAt: String?,
+            val revision: Number?,
+            val contentType: ContentTypeLink?,
+            val space: LinkRef?,
+            val environment: LinkRef?,
+        )
+        data class ContentTypeLink(val sys: LinkStub)
+        data class LinkRef(val sys: LinkStub)
+        data class LinkStub(val id: String?, val type: String?, val linkType: String?)
+        data class Metadata(val tags: List<Any>?, val concepts: List<Any>?)
+
+        companion object {
+            fun fromResolverMap(map: Map<String, Any>): Entry =
+                gson.fromJson(gson.toJson(map), Entry::class.java)
         }
     }
 }
 
-// `LocalizedResource.getField(name)` expects fields shaped as `Map<name, Map<locale, value>>`
-// with a non-null `defaultLocale`. The resolver Map is single-locale, so we bucket every value
-// under a synthetic locale marker.
-private const val FABRICATED_LOCALE = "_"
+// Shared Gson instance — no custom configuration; the SDK-owned Entry has stable field names
+// that match the raw CDA response shape.
+private val gson: Gson = Gson()
 
-@Suppress("UNCHECKED_CAST")
-private fun fabricateEntry(map: Map<String, Any>): CDAEntry {
-    val entry = CDAEntry()
-    setPrivateField(entry, "attrs", (map["sys"] as? Map<String, Any>)?.toMutableMap() ?: mutableMapOf<String, Any>())
-    setPrivateField(entry, "defaultLocale", FABRICATED_LOCALE)
-    val rawFields = (map["fields"] as? Map<String, Any>) ?: emptyMap()
-    setPrivateField(entry, "rawFields", rawFields.toMutableMap())
-    setPrivateField(entry, "fields", localizeFields(rawFields))
-    val contentTypeId = ((map["sys"] as? Map<*, *>)
-        ?.get("contentType") as? Map<*, *>)
-        ?.let { it["sys"] as? Map<*, *> }
-        ?.let { it["id"] as? String }
-    setPrivateField(entry, "contentType", contentTypeId?.let(::fabricateContentType))
-    setPrivateField(entry, "metadata", (map["metadata"] as? Map<String, Any>)?.let(::fabricateMetadata))
-    return entry
-}
-
-private fun fabricateContentType(id: String): CDAContentType {
-    val ct = CDAContentType()
-    setPrivateField(ct, "attrs", mutableMapOf<String, Any>("id" to id, "type" to "ContentType"))
-    return ct
-}
-
-private fun fabricateMetadata(map: Map<String, Any>): CDAMetadata {
-    val metadata = CDAMetadata()
-    setPrivateField(metadata, "tags", (map["tags"] as? List<*>)?.toMutableList() ?: mutableListOf<Any>())
-    setPrivateField(metadata, "concepts", (map["concepts"] as? List<*>)?.toMutableList() ?: mutableListOf<Any>())
-    return metadata
-}
-
-private fun localizeFields(fields: Map<String, Any>): MutableMap<String, Any?> =
-    fields.mapValuesTo(mutableMapOf()) { (_, value) ->
-        mutableMapOf<String, Any?>(FABRICATED_LOCALE to value)
-    }
-
-// contentful.java's LocalizedResource/CDAResource/CDAMetadata declare the fields we need to
-// set as package-private with no public setters; a future rename here fails at runtime with
-// NoSuchFieldException. Pinned to 10.6.0 (see build.gradle.kts).
-private fun setPrivateField(target: Any, name: String, value: Any?) {
-    var clazz: Class<*>? = target::class.java
-    while (clazz != null) {
-        try {
-            val field = clazz.getDeclaredField(name)
-            field.isAccessible = true
-            field.set(target, value)
-            return
-        } catch (_: NoSuchFieldException) {
-            clazz = clazz.superclass
+// Reject self-referential input Maps up-front so Gson's serializer doesn't blow its stack on
+// them. Tracks the *ancestors on the current path* (identity-based) — not a global visited set,
+// because shared singletons like `emptyList()` legitimately appear in multiple sibling positions.
+private fun hasCycle(root: Map<*, *>): Boolean {
+    fun visit(value: Any?, path: java.util.IdentityHashMap<Any, Unit>): Boolean =
+        when (value) {
+            is Map<*, *> -> {
+                if (path.containsKey(value)) true
+                else {
+                    path[value] = Unit
+                    val cycle = value.values.any { visit(it, path) }
+                    path.remove(value)
+                    cycle
+                }
+            }
+            is List<*> -> {
+                if (path.containsKey(value)) true
+                else {
+                    path[value] = Unit
+                    val cycle = value.any { visit(it, path) }
+                    path.remove(value)
+                    cycle
+                }
+            }
+            else -> false
         }
-    }
-    throw NoSuchFieldException("$name on ${target::class.java}")
+    return visit(root, java.util.IdentityHashMap())
 }
 
-private fun jsonObjectToMap(obj: JSONObject): Map<String, Any> {
-    val out = LinkedHashMap<String, Any>(obj.length())
-    val keys = obj.keys()
-    while (keys.hasNext()) {
-        val key = keys.next()
-        val value = jsonValueToAny(obj.get(key)) ?: continue
-        out[key] = value
-    }
-    return out
-}
-
-private fun jsonArrayToList(arr: JSONArray): List<Any?> =
-    List(arr.length()) { jsonValueToAny(arr.get(it)) }
-
-private fun jsonValueToAny(value: Any?): Any? = when (value) {
-    null, JSONObject.NULL -> null
-    is JSONObject -> jsonObjectToMap(value)
-    is JSONArray -> jsonArrayToList(value)
-    else -> value
+// Locale.ROOT for the parser: CDA timestamps are ASCII digits + UTC, locale-invariant.
+private val iso8601Formatter: ThreadLocal<SimpleDateFormat> = object : ThreadLocal<SimpleDateFormat>() {
+    override fun initialValue(): SimpleDateFormat =
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
 }
 
 private fun parseIso8601(value: String): Date? = try {
-    val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-        timeZone = TimeZone.getTimeZone("UTC")
-    }
-    formatter.parse(value)
+    iso8601Formatter.get()!!.parse(value)
 } catch (_: Exception) {
     null
 }

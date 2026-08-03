@@ -17,9 +17,8 @@ import org.junit.Test
 /**
  * Whole-tree assertions: each test names the entire expected `{sys, fields, metadata}` map the
  * adapter must produce for its input. `Map.equals` is entry-set equal (key-order-insensitive),
- * `List.equals` is positional — same guarantees as iOS's `JSONValue` tree comparison in
- * `CTEntryTests.swift`. Field-by-field digs let an unexpected extra/missing key slip through
- * silently; asserting the whole tree does not.
+ * `List.equals` is positional. Field-by-field digs let an unexpected extra/missing key slip
+ * through silently; asserting the whole tree does not.
  */
 class CDAEntryAdapterTest {
 

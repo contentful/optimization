@@ -88,14 +88,20 @@ private fun convertValue(value: Any?, ancestors: Set<String>): Any? = when (valu
     is CDAEntry -> if (value.id() in ancestors) linkStub(value) else entryToMap(value, ancestors)
     is CDAAsset -> assetToMap(value)
     is CDARichNode -> richNodeToMap(value, ancestors)
-    is Date -> iso8601Formatter.format(value)
+    is Date -> iso8601Formatter.get()!!.format(value)
     is List<*> -> value.map { convertValue(it, ancestors) }
     is Map<*, *> -> value.entries.associate { (k, v) -> k.toString() to convertValue(v, ancestors) }
     else -> value
 }
 
-private val iso8601Formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-    timeZone = TimeZone.getTimeZone("UTC")
+// Locale.ROOT for the formatter: CDA timestamps are ASCII digits + UTC, locale-invariant.
+// ThreadLocal because SimpleDateFormat is not thread-safe and this file's callers can hit it
+// from multiple coroutine dispatchers.
+private val iso8601Formatter: ThreadLocal<SimpleDateFormat> = object : ThreadLocal<SimpleDateFormat>() {
+    override fun initialValue(): SimpleDateFormat =
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
 }
 
 private fun linkStub(entry: CDAEntry): Map<String, Any> = mapOf(

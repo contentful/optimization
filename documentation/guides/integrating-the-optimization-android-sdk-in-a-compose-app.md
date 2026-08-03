@@ -437,7 +437,7 @@ Resolution is fail-soft, and `client.resolveOptimizedEntry(baseline, selectedOpt
 `suspend` function on Android (the iOS SDK's is synchronous; Android must suspend because the bridge
 call hops to the QuickJS dispatcher). It returns a `ResolvedOptimizedEntry` — the SDK-owned result
 wrapper holding the resolved `entry` (a `CTEntry` — the SDK-owned wrapper around a `CDAEntry`
-whose accessors delegate to it: `id`, `getField<T>`, `hasField`, plus `toFoundation()` to reach
+whose accessors delegate to it: `id`, `getField<T>`, `hasField`, plus `toMap()` to reach
 the raw entry map when needed) and the `selectedOptimization`
 (singular) applied to it. If the client is not initialized, serialization fails, or the bridge result
 cannot be parsed, it returns the baseline entry unchanged (with `selectedOptimization` null) and
@@ -497,12 +497,12 @@ fun DirectResolution(entry: Map<String, Any>) {
         // Collect the flow so re-resolution follows every profile, preview, or consent change;
         // reading selectedOptimizations.value would capture only the current snapshot.
         client.selectedOptimizations.collect { selectedOptimizations ->
-            // .entry is a CTEntry; unwrap via toFoundation() to keep the same Map shape as
+            // .entry is a CTEntry; unwrap via toMap() to keep the same Map shape as
             // the baseline this composable was called with.
             resolvedEntry = client.resolveOptimizedEntry(
                 baseline = entry,
                 selectedOptimizations = selectedOptimizations,
-            ).entry.toFoundation()
+            ).entry.toMap()
         }
     }
 

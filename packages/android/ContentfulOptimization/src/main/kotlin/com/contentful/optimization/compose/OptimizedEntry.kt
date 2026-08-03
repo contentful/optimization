@@ -144,7 +144,7 @@ public fun OptimizedEntry(
         }
 
     Box(modifier = modifier) {
-        content(result.entry.toFoundation())
+        content(result.entry.toMap())
     }
 }
 
@@ -162,7 +162,7 @@ public fun OptimizedEntry(
     onTap: ((Map<String, Any>) -> Unit)? = null,
     content: @Composable (CTEntry) -> Unit,
 ) {
-    val entryMap = remember(entry) { CTEntry.from(entry).toFoundation() }
+    val entryMap = remember(entry) { CTEntry.from(entry).toMap() }
     OptimizedEntry(
         entry = entryMap,
         dwellTimeMs = dwellTimeMs,
