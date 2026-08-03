@@ -1,18 +1,20 @@
 import Contentful
 import Foundation
 
-/// Bridges `Contentful.Entry` and the resolver's raw JSON (`{sys, fields, metadata}`), backed by
-/// `CDA.Entry` rather than a hand-built `[String: Any]` read back with `as?` casts.
+/// Reused across `CTEntry`/`CDA` rather than allocated per call.
+private let jsonEncoder = JSONEncoder()
+private let iso8601DateFormatter = ISO8601DateFormatter()
+
+/// Bridges `Contentful.Entry` and the resolver's raw JSON (`{sys, fields, metadata}`).
 /// `init(_:Contentful.Entry)`/`toJSON()` encode; `init(any:)`/`init(json:)` decode.
 ///
-/// This shares the resolved *shape* with `Entry`, not the type: `Entry.init(from:)` needs a
-/// `LocalizationContext` only a live CDA decode carries. `type`, `currentlySelectedLocale`,
-/// `metadata`, and `setLocale(withCode:)` have no counterpart here — each needs a resource
+/// Shares the resolved *shape* with `Entry`, not the type: `type`, `currentlySelectedLocale`,
+/// `metadata`, and `setLocale(withCode:)` have no counterpart here, since each needs a resource
 /// (`ContentType`, `Locale`, `Metadata`) with no public initializer to fabricate from the resolved
 /// tree alone.
 ///
-/// `JSONValue.number` has no `Int` case, so an `Int` field (`sys.revision`, a file's `details.size`)
-/// round-trips as `Double`; `getField<Int>` won't match it — read `Double` instead.
+/// `JSONValue.number` has no `Int` case, so an `Int` field round-trips as `Double` —
+/// `getField<Int>` won't match it.
 public struct CTEntry {
     private let envelope: CDA.Entry
 
@@ -20,11 +22,7 @@ public struct CTEntry {
         self.envelope = envelope
     }
 
-    // Parsing
-
-    /// An entry with no `sys`/`fields`/`metadata` — the fallback for a baseline that fails to
-    /// parse (see `init(any:)`), since every reader below (`id`, `getField`, `hasField`, etc.)
-    /// already treats an empty envelope as "absent."
+    /// The `parseWithFallback` default — every reader below treats an empty envelope as "absent."
     static let empty = CTEntry(CDA.Entry(sys: nil, fields: [:], metadata: nil))
 
     public init(_ entry: Contentful.Entry) {
@@ -46,8 +44,7 @@ public struct CTEntry {
         envelope = try JSONDecoder().decode(CDA.Entry.self, from: data)
     }
 
-    /// `init(any:)`, but for a caller with a fallback rather than a `throws` path — logs and
-    /// returns `fallback` (`.empty` by default) instead of throwing.
+    /// `init(any:)` without a `throws` path — logs and returns `fallback` instead.
     static func parseWithFallback(_ any: Any, fallback: @autoclosure () -> CTEntry = .empty) -> CTEntry {
         do {
             return try CTEntry(any: any)
@@ -57,24 +54,18 @@ public struct CTEntry {
         }
     }
 
-    // Serializing
-
     func toJSON() throws -> String {
-        let data = try JSONEncoder().encode(envelope)
+        let data = try jsonEncoder.encode(envelope)
         return String(decoding: data, as: UTF8.self)
     }
 
     func toFoundation() -> Any {
-        guard let data = try? JSONEncoder().encode(envelope) else { return [String: Any]() }
+        guard let data = try? jsonEncoder.encode(envelope) else { return [String: Any]() }
         return (try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])) ?? [String: Any]()
     }
 
-    /// `toFoundation()`, narrowed to `[String: Any]` — an entry's top level is always
-    /// `{sys, fields, metadata}`, so this only fails to cast if `toFoundation()` itself already
-    /// degraded (e.g. encoding failed), in which case it returns `fallback` (`[:]` by default).
-    /// For call sites that still work with `[String: Any]` — e.g. the reference UIKit
-    /// implementation's dict-based render closures, or `OptimizedEntry`'s own `[String: Any]`
-    /// initializer.
+    /// `toFoundation()`, narrowed to `[String: Any]` for callers that still work in that shape
+    /// (e.g. the reference UIKit implementation, `OptimizedEntry`'s `[String: Any]` initializer).
     public func toDictionary(fallback: @autoclosure () -> [String: Any] = [:]) -> [String: Any] {
         toFoundation() as? [String: Any] ?? fallback()
     }
@@ -88,48 +79,34 @@ public struct CTEntry {
         envelope.fields[name]?.toFoundation() as? T
     }
 
-    /// Whether a field is present, regardless of its value's type.
     public func hasField(_ name: String) -> Bool {
         envelope.fields[name] != nil
     }
 
-    // Mirrors Contenful Entry
-
-    /// The entry `sys.id` — stable across a variant swap, so it's safe for navigation.
+    /// Stable across a variant swap, so it's safe for navigation.
     public var id: String? {
         envelope.sys?.id
     }
 
-    /// Mirrors `Entry.localeCode`. Absent on a raw CDA response fetched via `/sync` or wildcard
-    /// `locale=*`, same as on `Entry` itself.
     public var localeCode: String? {
         envelope.sys?.locale
     }
 
-    /// Mirrors `Entry.createdAt`/`updatedAt`. `nil` if the resolved tree never carried the
-    /// timestamp, same as `Entry` returning `nil` for a `select()`-queried resource without `sys`.
     public var createdAt: Date? {
-        envelope.sys?.createdAt.flatMap { ISO8601DateFormatter().date(from: $0) }
+        envelope.sys?.createdAt.flatMap { iso8601DateFormatter.date(from: $0) }
     }
 
     public var updatedAt: Date? {
-        envelope.sys?.updatedAt.flatMap { ISO8601DateFormatter().date(from: $0) }
+        envelope.sys?.updatedAt.flatMap { iso8601DateFormatter.date(from: $0) }
     }
 
-    /// Mirrors `Entry`'s `String` subscript.
     public subscript(field key: String) -> String? {
         getField(key)
     }
 }
 
-// MARK: - Codable envelopes for the raw CDA response shapes
-
-/// Small `Codable` structs mirroring the fixed parts of a raw CDA response — `sys`, a content-type
-/// link, `metadata`, an unresolved-link stub, an asset, a Structured Text node. Each has an
-/// `init(_:)` built from the corresponding `contentful.swift` type.
+/// Codable structs mirroring the fixed parts of a raw CDA response.
 private enum CDA {
-    /// The `{sys: {id, type: "Link", linkType}}` shape an unresolved link has in a raw CDA
-    /// response.
     struct LinkStub: Codable {
         let sys: Sys
         struct Sys: Codable {
@@ -143,7 +120,6 @@ private enum CDA {
         }
     }
 
-    /// A link field's resolved value, one step before it becomes `JSONValue`.
     enum LinkValue {
         case entry(Entry)
         case asset(AssetEnvelope)
@@ -175,18 +151,14 @@ private enum CDA {
         }
     }
 
-    /// One field value's resolved shape, one step before it becomes `JSONValue`.
     enum Field {
-        /// A leaf/container `JSONValue`, or `nil` for a value `init(_:ancestors:)` drops (no case
-        /// for it, or a non-finite `Double`/`Location` coordinate).
         case value(JSONValue?)
         case link(LinkValue)
         case richText(RichTextNodeEnvelope)
         case fileMetadata(FileMetadataEnvelope)
         case location(LocationEnvelope)
 
-        /// `nil` if this value can't become `JSONValue`. Every caller drops the field on `nil`
-        /// rather than losing the whole entry.
+        /// `nil` if unrepresentable — caller drops the field rather than losing the whole entry.
         func encoded() -> JSONValue? {
             switch self {
             case let .value(value): return value
@@ -197,17 +169,14 @@ private enum CDA {
             }
         }
 
-        /// One field value, reduced to something the bridge accepts. Anything not listed here is
-        /// dropped: losing an unused field beats losing personalization on the entry that holds it.
         init(_ value: Any, ancestors: Set<String>) {
             switch value {
             case let link as Contentful.Link:
                 self = .link(LinkValue(link, ancestors: ancestors))
             case let richText as Contentful.RichTextDocument:
                 self = .richText(RichTextNodeEnvelope(richText, ancestors: ancestors))
-            // A field of Contentful type "Object" shaped like a file metadata blob
-            // (`{fileName, contentType, url, details: {size, image: {width, height}}}`) decodes to
-            // this type before falling back to a plain dictionary.
+            // An "Object" field shaped like file metadata decodes to this type before falling
+            // back to a plain dictionary.
             case let file as Contentful.Asset.FileMetadata:
                 self = .fileMetadata(FileMetadataEnvelope(file))
             case let array as [Any]:
@@ -217,7 +186,7 @@ private enum CDA {
             case let location as Contentful.Location:
                 self = .location(LocationEnvelope(location))
             case let date as Date:
-                self = .value(.string(ISO8601DateFormatter().string(from: date)))
+                self = .value(.string(iso8601DateFormatter.string(from: date)))
             case let string as String:
                 self = .value(.string(string))
             case let int as Int:
@@ -232,10 +201,9 @@ private enum CDA {
         }
     }
 
-    /// Properties decode independently via `try?` rather than synthesized `Codable`: a
-    /// synthesized decoder throws — failing all of `Sys` — the moment one key is absent or the
-    /// wrong type. A caller-supplied baseline isn't guaranteed well-formed, so a per-field `try?`
-    /// degrades just the offending key to `nil`.
+    /// Properties decode independently via `try?`: a synthesized decoder would fail all of `Sys`
+    /// the moment one key is absent or the wrong type, but a caller-supplied baseline isn't
+    /// guaranteed well-formed.
     struct Sys: Codable {
         let id: String?
         let type: String?
@@ -279,16 +247,15 @@ private enum CDA {
                 id: sys.id,
                 type: "Entry",
                 contentType: .init(sys: .init(id: sys.contentTypeId ?? "", type: "Link", linkType: "ContentType")),
-                createdAt: sys.createdAt.map { ISO8601DateFormatter().string(from: $0) },
-                updatedAt: sys.updatedAt.map { ISO8601DateFormatter().string(from: $0) },
+                createdAt: sys.createdAt.map { iso8601DateFormatter.string(from: $0) },
+                updatedAt: sys.updatedAt.map { iso8601DateFormatter.string(from: $0) },
                 revision: sys.revision,
                 locale: sys.locale
             )
         }
     }
 
-    /// `sys`/`fields`/`metadata` decode independently via `try?` for the same reason `Sys`'s
-    /// properties do — a caller-supplied baseline can be missing any of them.
+    /// Same per-field `try?` reasoning as `Sys`.
     struct Entry: Codable {
         let sys: Sys?
         let fields: [String: JSONValue]
@@ -311,20 +278,17 @@ private enum CDA {
             self.metadata = metadata
         }
 
-        /// `ancestors` is the set of entry ids on the path from root to here. The Delivery SDK
-        /// resolves links into shared object references, so a variant linking back to its
-        /// baseline is a real cycle; recursing an entry already on the current path would loop
-        /// forever, so a re-linked ancestor emits an unresolved link stub instead. Scoping to the
-        /// current path (not a global visited set) still expands diamonds fully on both branches.
+        /// `ancestors` is the path from root to here — a variant linking back to its baseline is a
+        /// real cycle, so a re-linked ancestor emits an unresolved link stub instead of recursing
+        /// forever. Scoped to the current path (not a global visited set) so diamonds still expand
+        /// fully on both branches.
         init(_ entry: Contentful.Entry, ancestors: Set<String>) {
             let childAncestors = ancestors.union([entry.id])
 
             let sys = Sys(entry.sys)
             let fields = entry.fields.compactMapValues { Field($0, ancestors: childAncestors).encoded() }
 
-            // Required, not cosmetic: the resolver's entry guard rejects any entry without a
-            // `metadata` object. `concepts` is always empty — `contentful.swift`'s `Metadata`
-            // models only `tags`.
+            // The resolver's entry guard rejects any entry without a `metadata` object.
             let metadata = Metadata(
                 tags: (entry.metadata?.tags ?? []).compactMap { try? LinkValue($0, ancestors: childAncestors).encoded() },
                 concepts: []
@@ -366,8 +330,6 @@ private enum CDA {
         }
     }
 
-    /// An asset's `file` metadata, reduced to the raw CDA response shape. `details.image` is only
-    /// present for image files.
     struct FileMetadataEnvelope: Codable {
         let fileName: String?
         let contentType: String?
@@ -404,7 +366,6 @@ private enum CDA {
         }
     }
 
-    /// A `Location` field, reduced to the raw CDA response shape (`{lat, lon}`).
     struct LocationEnvelope: Codable {
         let lat: Double
         let lon: Double
@@ -415,8 +376,6 @@ private enum CDA {
         }
     }
 
-    /// One Structured Text node, reduced to the `{nodeType, data, content}` shape a raw CDA
-    /// response carries.
     struct RichTextNodeEnvelope: Codable {
         let nodeType: String
         var value: String?
@@ -473,9 +432,8 @@ private enum CDA {
                     value: text.value,
                     marks: text.marks.map { .init(type: $0.type.rawValue) }
                 )
-            // Table/TableRow/TableRowHeaderCell/TableRowCell/Paragraph/Heading/BlockQuote/
-            // HorizontalRule/OrderedList/UnorderedList/ListItem, and the top-level
-            // RichTextDocument itself — all plain containers with no data beyond their children.
+            // Every other container node (tables, lists, headings, the document root, etc.)
+            // conforms to RecursiveNode with no data beyond its children.
             case let recursive as Contentful.RecursiveNode:
                 self.init(
                     nodeType: recursive.nodeType.rawValue,
