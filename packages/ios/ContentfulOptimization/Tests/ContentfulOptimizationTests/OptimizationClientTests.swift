@@ -1003,6 +1003,50 @@ final class OptimizationClientTests: XCTestCase {
         client.setOnline(false)
     }
 
+    @MainActor
+    func testClientHasConsentReturnsFalseBeforeInitialize() {
+        let client = OptimizationClient()
+
+        XCTAssertFalse(client.hasConsent(method: "trackView"))
+        XCTAssertFalse(client.hasConsent(method: "trackClick"))
+        XCTAssertFalse(client.hasConsent(method: "track"))
+    }
+
+    @MainActor
+    func testClientHasConsentReflectsAcceptedConsent() throws {
+        let client = OptimizationClient()
+        try client.initialize(config: OptimizationConfig(
+            clientId: "test-client",
+            api: OptimizationApiConfig(
+                experienceBaseUrl: "http://localhost:8000/experience/",
+                insightsBaseUrl: "http://localhost:8000/insights/"
+            ),
+            defaults: StorageDefaults(consent: true)
+        ))
+
+        XCTAssertTrue(client.hasConsent(method: "trackView"))
+        XCTAssertTrue(client.hasConsent(method: "trackClick"))
+        XCTAssertTrue(client.hasConsent(method: "track"))
+    }
+
+    @MainActor
+    func testClientHasConsentGatesByAllowedEventTypesWhenConsentDenied() throws {
+        let client = OptimizationClient()
+        try client.initialize(config: OptimizationConfig(
+            clientId: "test-client",
+            api: OptimizationApiConfig(
+                experienceBaseUrl: "http://localhost:8000/experience/",
+                insightsBaseUrl: "http://localhost:8000/insights/"
+            ),
+            defaults: StorageDefaults(consent: false),
+            allowedEventTypes: ["component"]
+        ))
+
+        XCTAssertTrue(client.hasConsent(method: "trackView"))
+        XCTAssertFalse(client.hasConsent(method: "trackClick"))
+        XCTAssertFalse(client.hasConsent(method: "track"))
+    }
+
     // MARK: - Phase 2: resolveOptimizedEntry Tests
 
     @MainActor

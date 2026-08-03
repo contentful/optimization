@@ -127,6 +127,7 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
 - Android Maestro Compose:
   `pnpm implementation:run -- android-sdk test:e2e:compose -- --flow <suite>`
 - Android Maestro Views: `pnpm implementation:run -- android-sdk test:e2e:views -- --flow <suite>`
+- Android SDK unit tests: `pnpm android:test`
 - iOS Swift package: `pnpm ios:test`
 - iOS XCUITest build: `pnpm implementation:run -- ios-sdk test:e2e:ios:build:release`
 - iOS XCUITest run: `IOS_SCHEME=SwiftUI pnpm implementation:run -- ios-sdk test:e2e:ios:run:release`

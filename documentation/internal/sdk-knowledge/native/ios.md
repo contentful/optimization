@@ -123,9 +123,9 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   (`identify`/`page`/`screen`/`track`/`trackCurrentScreen`/`flush`/`trackView`/`trackClick`, each
   returning `EventEmissionResult` except the void ones), and **synchronous** for
   `consent`/`reset`/`setOnline`/`resolveOptimizedEntry`/`getMergeTagValue`/`getFlag`/`getProfile`/
-  `getState`/`setLocale` and the preview-override methods. Reactive surfaces are `@Published`
-  properties plus `eventStream`/`blockedEventStream`/`flagPublisher(_:)` Combine publishers.
-  source: extern:OptimizationClient async event methods vs sync reads + Combine publishers — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift#OptimizationClient
+  `getState`/`hasConsent`/`setLocale` and the preview-override methods. Reactive surfaces are
+  `@Published` properties plus `eventStream`/`blockedEventStream`/`flagPublisher(_:)` Combine
+  publishers. source: extern:OptimizationClient async event methods vs sync reads + Combine publishers — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift#OptimizationClient
 
 ## Render / entry resolution
 
@@ -330,7 +330,7 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
 - Before initialization: async event methods and `setLocale` throw `OptimizationError.notInitialized`
   (via `requireInitialized`); synchronous reads/consent/reset/setOnline no-op and
   `resolveOptimizedEntry` returns the baseline passthrough, `getFlag`/`getMergeTagValue`/`getProfile`
-  return `nil`. source: extern:pre-init async methods throw notInitialized while sync APIs no-op or return baseline — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift#OptimizationClient
+  return `nil`; `hasConsent` returns `false`. source: extern:pre-init async methods throw notInitialized while sync APIs no-op or return baseline — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift#OptimizationClient
 - JavaScriptCore exceptions are routed, not crashed: `callSync` captures the context exception,
   returns `nil`, and logs it; `callAsync` captures the exception and fails the continuation with
   `bridgeError`; the context `exceptionHandler` forwards uncaught exceptions to the diagnostic logger.
