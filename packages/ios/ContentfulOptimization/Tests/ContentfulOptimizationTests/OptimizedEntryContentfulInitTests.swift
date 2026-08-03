@@ -57,12 +57,12 @@ final class OptimizedEntryContentfulInitTests: XCTestCase {
         let sut = OptimizedEntry(entry: entry) { (_: CTEntry) in EmptyView() }
 
         XCTAssertEqual(
-            NSDictionary(dictionary: sut.entry.toFoundation() as? [String: Any] ?? [:]),
-            NSDictionary(dictionary: CTEntry(entry).toFoundation() as? [String: Any] ?? [:])
+            NSDictionary(dictionary: sut.entry.toDictionary()),
+            NSDictionary(dictionary: CTEntry(entry).toDictionary())
         )
         XCTAssertEqual(sut.entry.id, "e1")
-        let dict = sut.entry.toFoundation() as? [String: Any]
-        XCTAssertNotNil(dict?["metadata"], "the always-present metadata guarantee must hold through the initializer, not just the mapper")
+        let dict = sut.entry.toDictionary()
+        XCTAssertNotNil(dict["metadata"], "the always-present metadata guarantee must hold through the initializer, not just the mapper")
     }
 
     // MARK: - The stored `content` closure forwards its actual argument, not the captured baseline entry
@@ -122,7 +122,7 @@ final class OptimizedEntryContentfulInitTests: XCTestCase {
         // `nt_experiences` key, which is the input `isOptimized` reads.
         let sut = OptimizedEntry(entry: entry) { (_: CTEntry) in EmptyView() }
 
-        let fields = (sut.entry.toFoundation() as? [String: Any])?["fields"] as? [String: Any]
+        let fields = sut.entry.toDictionary()["fields"] as? [String: Any]
         XCTAssertNil(fields?["nt_experiences"])
     }
 
@@ -150,7 +150,7 @@ final class OptimizedEntryContentfulInitTests: XCTestCase {
 
         // Exercises the same call `TapTrackingModifier` makes: `onTap?(entry)`, with the view's
         // own stored baseline `entry` (`sut.entry`) — not a resolved variant.
-        sut.onTap?(sut.entry.toFoundation() as? [String: Any] ?? [:])
+        sut.onTap?(sut.entry.toDictionary())
 
         XCTAssertEqual((receivedOnTapArgument?["sys"] as? [String: Any])?["id"] as? String, "e1")
     }

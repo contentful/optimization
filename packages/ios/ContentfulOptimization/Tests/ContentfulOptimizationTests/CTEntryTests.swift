@@ -1169,8 +1169,8 @@ final class CTEntryTests: XCTestCase {
 
     // MARK: - Reading a resolved entry
 
-    func testGetFieldReturnsValueForMatchingType() throws {
-        let resolved = try CTEntry(any: [
+    func testGetFieldReturnsValueForMatchingType() {
+        let resolved = CTEntry(any: [
             "sys": ["id": "e1"],
             "fields": ["title": "Hello", "count": 3.0, "isFeatured": true],
         ])
@@ -1181,87 +1181,87 @@ final class CTEntryTests: XCTestCase {
         XCTAssertEqual(resolved.getField("isFeatured"), true)
     }
 
-    func testGetFieldReturnsNilForWrongRequestedType() throws {
+    func testGetFieldReturnsNilForWrongRequestedType() {
         // "count" is a Double in the raw map; requesting it as String must fail the `as?` cast
         // and return nil, not crash or coerce.
-        let resolved = try CTEntry(any: ["sys": [:], "fields": ["count": 3.0]])
+        let resolved = CTEntry(any: ["sys": [:], "fields": ["count": 3.0]])
 
         let asString: String? = resolved.getField("count")
         XCTAssertNil(asString)
     }
 
-    func testGetFieldReturnsNilForAbsentField() throws {
-        let resolved = try CTEntry(any: ["sys": [:], "fields": ["title": "Hello"]])
+    func testGetFieldReturnsNilForAbsentField() {
+        let resolved = CTEntry(any: ["sys": [:], "fields": ["title": "Hello"]])
 
         let missing: String? = resolved.getField("subtitle")
         XCTAssertNil(missing)
     }
 
-    func testGetFieldReturnsNilWhenFieldsKeyIsAbsent() throws {
+    func testGetFieldReturnsNilWhenFieldsKeyIsAbsent() {
         // No "fields" key at all — e.g. a malformed or partial resolver output.
-        let resolved = try CTEntry(any: ["sys": ["id": "e1"]])
+        let resolved = CTEntry(any: ["sys": ["id": "e1"]])
 
         let value: String? = resolved.getField("title")
         XCTAssertNil(value)
     }
 
-    func testHasFieldReturnsTrueForPresentFieldRegardlessOfValueType() throws {
-        let resolved = try CTEntry(any: ["sys": [:], "fields": ["nt_experiences": NSNull()]])
+    func testHasFieldReturnsTrueForPresentFieldRegardlessOfValueType() {
+        let resolved = CTEntry(any: ["sys": [:], "fields": ["nt_experiences": NSNull()]])
 
         XCTAssertTrue(resolved.hasField("nt_experiences"))
     }
 
-    func testHasFieldReturnsFalseForAbsentField() throws {
-        let resolved = try CTEntry(any: ["sys": [:], "fields": ["title": "Hello"]])
+    func testHasFieldReturnsFalseForAbsentField() {
+        let resolved = CTEntry(any: ["sys": [:], "fields": ["title": "Hello"]])
 
         XCTAssertFalse(resolved.hasField("nt_experiences"))
     }
 
-    func testHasFieldReturnsFalseWhenFieldsKeyIsAbsent() throws {
-        let resolved = try CTEntry(any: ["sys": ["id": "e1"]])
+    func testHasFieldReturnsFalseWhenFieldsKeyIsAbsent() {
+        let resolved = CTEntry(any: ["sys": ["id": "e1"]])
 
         XCTAssertFalse(resolved.hasField("nt_experiences"))
     }
 
-    func testIdReturnsSysId() throws {
-        let resolved = try CTEntry(any: ["sys": ["id": "e1"], "fields": [:]])
+    func testIdReturnsSysId() {
+        let resolved = CTEntry(any: ["sys": ["id": "e1"], "fields": [:]])
 
         XCTAssertEqual(resolved.id, "e1")
     }
 
-    func testIdReturnsNilWhenSysKeyIsAbsent() throws {
-        let resolved = try CTEntry(any: ["fields": ["title": "Hello"]])
+    func testIdReturnsNilWhenSysKeyIsAbsent() {
+        let resolved = CTEntry(any: ["fields": ["title": "Hello"]])
 
         XCTAssertNil(resolved.id)
     }
 
-    func testIdReturnsNilWhenSysIdIsWrongType() throws {
+    func testIdReturnsNilWhenSysIdIsWrongType() {
         // "id" present but not a String — e.g. accidentally passed a number.
-        let resolved = try CTEntry(any: ["sys": ["id": 123.0], "fields": [:]])
+        let resolved = CTEntry(any: ["sys": ["id": 123.0], "fields": [:]])
 
         XCTAssertNil(resolved.id)
     }
 
     // MARK: - localeCode mirrors Entry.localeCode
 
-    func testLocaleCodeReturnsSysLocale() throws {
-        let resolved = try CTEntry(any: ["sys": ["id": "e1", "locale": "en-US"], "fields": [:]])
+    func testLocaleCodeReturnsSysLocale() {
+        let resolved = CTEntry(any: ["sys": ["id": "e1", "locale": "en-US"], "fields": [:]])
 
         XCTAssertEqual(resolved.localeCode, "en-US")
     }
 
-    func testLocaleCodeReturnsNilWhenAbsent() throws {
+    func testLocaleCodeReturnsNilWhenAbsent() {
         // Absent on a raw CDA response fetched via /sync or the wildcard `locale=*` query —
         // same case where `Entry.localeCode` itself returns nil.
-        let resolved = try CTEntry(any: ["sys": ["id": "e1"], "fields": [:]])
+        let resolved = CTEntry(any: ["sys": ["id": "e1"], "fields": [:]])
 
         XCTAssertNil(resolved.localeCode)
     }
 
     // MARK: - createdAt/updatedAt mirror Entry.createdAt/updatedAt
 
-    func testCreatedAtAndUpdatedAtParseISO8601SysTimestamps() throws {
-        let resolved = try CTEntry(any: [
+    func testCreatedAtAndUpdatedAtParseISO8601SysTimestamps() {
+        let resolved = CTEntry(any: [
             "sys": ["id": "e1", "createdAt": "2024-01-01T00:00:00Z", "updatedAt": "2024-06-15T12:30:00Z"],
             "fields": [:],
         ])
@@ -1271,42 +1271,54 @@ final class CTEntryTests: XCTestCase {
         XCTAssertNotEqual(resolved.createdAt, resolved.updatedAt)
     }
 
-    func testCreatedAtAndUpdatedAtReturnNilWhenAbsent() throws {
+    func testCreatedAtAndUpdatedAtReturnNilWhenAbsent() {
         // A resolver-synthesized entry may carry no creation/update timestamps — same as
         // `Entry.createdAt`/`updatedAt` returning nil for a resource fetched without `sys` dates.
-        let resolved = try CTEntry(any: ["sys": ["id": "e1"], "fields": [:]])
+        let resolved = CTEntry(any: ["sys": ["id": "e1"], "fields": [:]])
 
         XCTAssertNil(resolved.createdAt)
         XCTAssertNil(resolved.updatedAt)
     }
 
-    func testCreatedAtReturnsNilForUnparseableTimestamp() throws {
-        let resolved = try CTEntry(any: ["sys": ["id": "e1", "createdAt": "not-a-date"], "fields": [:]])
+    func testCreatedAtReturnsNilForUnparseableTimestamp() {
+        let resolved = CTEntry(any: ["sys": ["id": "e1", "createdAt": "not-a-date"], "fields": [:]])
 
         XCTAssertNil(resolved.createdAt)
     }
 
     // MARK: - String field subscript mirrors Entry's convenience subscript
 
-    func testStringFieldSubscriptReadsFromFields() throws {
-        let resolved = try CTEntry(any: ["sys": [:], "fields": ["title": "Hello"]])
+    func testStringFieldSubscriptReadsFromFields() {
+        let resolved = CTEntry(any: ["sys": [:], "fields": ["title": "Hello"]])
 
         let title: String? = resolved[field: "title"]
         XCTAssertEqual(title, "Hello")
     }
 
-    func testStringFieldSubscriptReturnsNilForWrongType() throws {
-        let resolved = try CTEntry(any: ["sys": [:], "fields": ["count": 3.0]])
+    func testStringFieldSubscriptReturnsNilForWrongType() {
+        let resolved = CTEntry(any: ["sys": [:], "fields": ["count": 3.0]])
 
         let asString: String? = resolved[field: "count"]
         XCTAssertNil(asString)
     }
 
-    // MARK: - init(any:) rejects unsupported Foundation types
+    // MARK: - init(any:fallback:) falls back on unsupported Foundation types
 
-    /// `Date`/`Data`/other non-JSON-safe Foundation values have no case in `init(any:)` — a
-    /// caller passing one gets a thrown error, not a value that quietly reads back as absent.
-    func testInitAnyThrowsForUnsupportedType() {
-        XCTAssertThrowsError(try CTEntry(any: ["fields": ["publishedAt": Date()]]))
+    /// `Date`/`Data`/other non-JSON-safe Foundation values have no case `init(any:fallback:)`
+    /// handles — a caller passing one gets `fallback` (`.empty` by default), not a value that
+    /// quietly reads back as absent.
+    func testInitAnyFallsBackForUnsupportedType() {
+        let resolved = CTEntry(any: ["fields": ["publishedAt": Date()]])
+
+        XCTAssertNil(resolved.id)
+        let value: String? = resolved.getField("publishedAt")
+        XCTAssertNil(value)
+    }
+
+    func testInitAnyUsesProvidedFallbackForUnsupportedType() {
+        let fallback = CTEntry(any: ["sys": ["id": "fallback-id"], "fields": [:]])
+        let resolved = CTEntry(any: ["fields": ["publishedAt": Date()]], fallback: fallback)
+
+        XCTAssertEqual(resolved.id, "fallback-id")
     }
 }

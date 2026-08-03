@@ -6,13 +6,11 @@ private let jsonEncoder = JSONEncoder()
 private let jsonDecoder = JSONDecoder()
 private let iso8601DateFormatter = ISO8601DateFormatter()
 
-private extension JSONValue {
-    /// Encodes any `Encodable` value into `JSONValue` via a real `JSONEncoder` -> `JSONDecoder`
-    /// round trip, rather than a hand-assembled dictionary literal.
-    static func encoded(_ value: some Encodable) throws -> JSONValue {
-        let data = try jsonEncoder.encode(value)
-        return try jsonDecoder.decode(JSONValue.self, from: data)
-    }
+/// Encodes any `Encodable` value into `JSONValue` via a real `JSONEncoder` -> `JSONDecoder` round
+/// trip, rather than a hand-assembled dictionary literal.
+private func jsonValueEncoded(_ value: some Encodable) throws -> JSONValue {
+    let data = try jsonEncoder.encode(value)
+    return try jsonDecoder.decode(JSONValue.self, from: data)
 }
 
 /// Bridges `Contentful.Entry` and the resolver's raw JSON (`{sys, fields, metadata}`).
@@ -26,58 +24,54 @@ private extension JSONValue {
 /// `JSONValue.number` has no `Int` case, so an `Int` field round-trips as `Double` —
 /// `getField<Int>` won't match it.
 public struct CTEntry {
-    private let envelope: CDA.Entry
+    private let entry: CDA.Entry
 
-    private init(_ envelope: CDA.Entry) {
-        self.envelope = envelope
+    private init(_ entry: CDA.Entry) {
+        self.entry = entry
     }
 
-    /// The `parseWithFallback` default — every reader below treats an empty envelope as "absent."
+    /// The `init(any:fallback:)` default — every reader below treats an empty entry as "absent."
     static let empty = CTEntry(CDA.Entry(sys: nil, fields: [:], metadata: nil))
 
-    public init(_ entry: Contentful.Entry) {
-        envelope = CDA.Entry(entry, ancestors: [])
+    public init(_ contentfulEntry: Contentful.Entry) {
+        entry = CDA.Entry(contentfulEntry, ancestors: [])
     }
 
     init(json: String) throws {
         guard let data = json.data(using: .utf8) else {
             throw OptimizationError.configError("JSON string is not valid UTF-8")
         }
-        envelope = try jsonDecoder.decode(CDA.Entry.self, from: data)
+        entry = try jsonDecoder.decode(CDA.Entry.self, from: data)
     }
 
-    init(any: Any) throws {
-        guard JSONSerialization.isValidJSONObject(any) else {
-            throw OptimizationError.configError("Unsupported value of type \(Swift.type(of: any)) in CTEntry(any:)")
-        }
-        let data = try JSONSerialization.data(withJSONObject: any)
-        envelope = try jsonDecoder.decode(CDA.Entry.self, from: data)
-    }
-
-    /// `init(any:)` without a `throws` path — logs and returns `fallback` instead.
-    static func parseWithFallback(_ any: Any, fallback: @autoclosure () -> CTEntry = .empty) -> CTEntry {
+    /// `any` is caller-supplied and not guaranteed JSON-safe — logs and falls back to `fallback`
+    /// (`.empty` by default) instead of throwing.
+    init(any: Any, fallback: @autoclosure () -> CTEntry = .empty) {
         do {
-            return try CTEntry(any: any)
+            guard JSONSerialization.isValidJSONObject(any) else {
+                throw OptimizationError.configError("Unsupported value of type \(Swift.type(of: any)) in CTEntry(any:)")
+            }
+            let data = try JSONSerialization.data(withJSONObject: any)
+            entry = try jsonDecoder.decode(CDA.Entry.self, from: data)
         } catch {
             DiagnosticLogger.shared.warning("[CTEntry] Failed to parse entry: \(error.localizedDescription)")
-            return fallback()
+            self = fallback()
         }
     }
 
     func toJSON() throws -> String {
-        let data = try jsonEncoder.encode(envelope)
+        let data = try jsonEncoder.encode(entry)
         return String(decoding: data, as: UTF8.self)
     }
 
-    func toFoundation() -> Any {
-        guard let data = try? jsonEncoder.encode(envelope) else { return [String: Any]() }
-        return (try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])) ?? [String: Any]()
-    }
-
-    /// `toFoundation()`, narrowed to `[String: Any]` for callers that still work in that shape
-    /// (e.g. the reference UIKit implementation, `OptimizedEntry`'s `[String: Any]` initializer).
+    /// For callers that still work in `[String: Any]` shape (e.g. the reference UIKit
+    /// implementation, `OptimizedEntry`'s `[String: Any]` initializer).
     public func toDictionary(fallback: @autoclosure () -> [String: Any] = [:]) -> [String: Any] {
-        toFoundation() as? [String: Any] ?? fallback()
+        guard let data = try? jsonEncoder.encode(entry),
+              let object = try? JSONSerialization.jsonObject(with: data),
+              let dictionary = object as? [String: Any]
+        else { return fallback() }
+        return dictionary
     }
 
     /// A field's resolved value, or nil if absent.
@@ -86,28 +80,28 @@ public struct CTEntry {
     /// succeeds, so a missing field comes back `Optional(nil)`, not `nil`. Use `hasField` or a
     /// concrete `T` instead.
     public func getField<T>(_ name: String) -> T? {
-        envelope.fields[name]?.toFoundation() as? T
+        entry.fields[name]?.toFoundation() as? T
     }
 
     public func hasField(_ name: String) -> Bool {
-        envelope.fields[name] != nil
+        entry.fields[name] != nil
     }
 
     /// Stable across a variant swap, so it's safe for navigation.
     public var id: String? {
-        envelope.sys?.id
+        entry.sys?.id
     }
 
     public var localeCode: String? {
-        envelope.sys?.locale
+        entry.sys?.locale
     }
 
     public var createdAt: Date? {
-        envelope.sys?.createdAt.flatMap { iso8601DateFormatter.date(from: $0) }
+        entry.sys?.createdAt.flatMap { iso8601DateFormatter.date(from: $0) }
     }
 
     public var updatedAt: Date? {
-        envelope.sys?.updatedAt.flatMap { iso8601DateFormatter.date(from: $0) }
+        entry.sys?.updatedAt.flatMap { iso8601DateFormatter.date(from: $0) }
     }
 
     public subscript(field key: String) -> String? {
@@ -137,9 +131,9 @@ private enum CDA {
 
         func encoded() throws -> JSONValue {
             switch self {
-            case let .entry(envelope): return try JSONValue.encoded(envelope)
-            case let .asset(envelope): return try JSONValue.encoded(envelope)
-            case let .stub(envelope): return try JSONValue.encoded(envelope)
+            case let .entry(envelope): return try jsonValueEncoded(envelope)
+            case let .asset(envelope): return try jsonValueEncoded(envelope)
+            case let .stub(envelope): return try jsonValueEncoded(envelope)
             }
         }
 
@@ -173,9 +167,9 @@ private enum CDA {
             switch self {
             case let .value(value): return value
             case let .link(linkValue): return try? linkValue.encoded()
-            case let .richText(envelope): return try? JSONValue.encoded(envelope)
-            case let .fileMetadata(envelope): return try? JSONValue.encoded(envelope)
-            case let .location(envelope): return try? JSONValue.encoded(envelope)
+            case let .richText(envelope): return try? jsonValueEncoded(envelope)
+            case let .fileMetadata(envelope): return try? jsonValueEncoded(envelope)
+            case let .location(envelope): return try? jsonValueEncoded(envelope)
             }
         }
 

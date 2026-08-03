@@ -47,7 +47,7 @@ public struct OptimizedEntry<Content: View>: View {
         onTap: (([String: Any]) -> Void)? = nil,
         @ViewBuilder content: @escaping ([String: Any]) -> Content
     ) {
-        self.entry = .parseWithFallback(entry)
+        self.entry = CTEntry(any: entry)
         self.dwellTimeMs = dwellTimeMs
         self.minVisibleRatio = minVisibleRatio
         self.viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs
@@ -84,7 +84,7 @@ public struct OptimizedEntry<Content: View>: View {
         self.trackTaps = trackTaps
         self.accessibilityIdentifier = accessibilityIdentifier
         self.onTap = onTap
-        self.content = { raw in content(.parseWithFallback(raw, fallback: CTEntry(entry))) }
+        self.content = { raw in content(CTEntry(any: raw, fallback: CTEntry(entry))) }
     }
 
     private var isOptimized: Bool {
