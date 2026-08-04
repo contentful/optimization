@@ -72,10 +72,24 @@ dependencies {
 Use the version that matches the Optimization SDK Suite release you are adopting. The package is
 published to Maven Central as `com.contentful.java:optimization-android`.
 
-The SDK ships okhttp on the runtime classpath through `com.squareup.okhttp3:okhttp-android:5.x`. If
-your app also depends on okhttp directly, declare the same artifact (`okhttp-android`, not the
-plain `okhttp` module or `okhttp-jvm`) at the same 5.x version to avoid duplicate-class packaging
-failures. Nothing else is required.
+The SDK declares `com.squareup.okhttp3:okhttp-android:5.x` as a runtime dependency directly, because
+`contentful.java` 5.x pulls in okhttp 5.x's KMP metadata parent (`com.squareup.okhttp3:okhttp`)
+whose `okhttp-jvm` variant is excluded on Android; without an Android runtime variant, the app
+throws `ClassNotFoundException: okhttp3.OkHttpClient` at launch. If your app declares
+`com.contentful.java:java-sdk` directly (or any other dependency that pulls the same KMP parent),
+exclude `com.squareup.okhttp3:okhttp-jvm` from it and align all okhttp declarations on 5.x so the
+two variants do not coexist and cause duplicate-class packaging failures:
+
+```kotlin
+dependencies {
+    implementation("com.contentful.java:optimization-android:<version>")
+    implementation("com.contentful.java:java-sdk:<version>") {
+        exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
+    }
+}
+```
+
+Nothing else is required.
 
 ### Compose quick start
 
