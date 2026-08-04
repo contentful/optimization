@@ -1,5 +1,8 @@
 import SwiftUI
 
+// This package also targets macOS (see Package.swift), where UIKit doesn't
+// exist — guard the UIKit-only tap observer below and fall back to SwiftUI's
+// `.simultaneousGesture` there.
 #if canImport(UIKit)
 import UIKit
 
