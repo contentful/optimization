@@ -7,6 +7,7 @@ struct MainScreen: View {
     @State private var entries: [[String: Any]] = []
     @State private var showNavigationTest = false
     @State private var showLiveUpdatesTest = false
+    @State private var showNestedButtonTapTest = false
     @State private var flagSubscribed = false
     @State private var flagCancellable: AnyCancellable?
 
@@ -27,6 +28,8 @@ struct MainScreen: View {
             NavigationTestScreen(onClose: { showNavigationTest = false })
         } else if showLiveUpdatesTest {
             LiveUpdatesTestScreen(onClose: { showLiveUpdatesTest = false })
+        } else if showNestedButtonTapTest {
+            NestedButtonTapTestScreen(onClose: { showNestedButtonTapTest = false })
         } else {
             mainContent
         }
@@ -44,6 +47,8 @@ struct MainScreen: View {
                 }
                 Button("Navigation Test") { showNavigationTest = true }
                     .accessibilityIdentifier("navigation-test-button")
+                Button("Nested Button Tap Test") { showNestedButtonTapTest = true }
+                    .accessibilityIdentifier("nested-button-tap-test-button")
                 Button("Live Updates Test") { showLiveUpdatesTest = true }
                     .accessibilityIdentifier("live-updates-test-button")
             }

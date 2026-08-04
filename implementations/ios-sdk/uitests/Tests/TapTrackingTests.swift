@@ -38,4 +38,20 @@ final class TapTrackingTests: XCTestCase {
                         scrollViewId: "main-scroll-view", app: app)
         XCTAssertTrue(eventElement.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT))
     }
+
+    // [NT-3829] regression: a Button nested inside an OptimizedEntry with
+    // trackTaps: true must still receive its own tap.
+    func testTappingNestedButtonWithTrackTapsEnabled() {
+        let openButton = app.buttons["nested-button-tap-test-button"]
+        waitForElement(openButton)
+        openButton.tap()
+
+        let bookButton = app.buttons["book-button"]
+        waitForElement(bookButton)
+        bookButton.tap()
+
+        waitForTextEquals("book-tap-count", expected: "Book taps: 1", app: app)
+
+        app.buttons["close-nested-button-test-button"].tap()
+    }
 }
