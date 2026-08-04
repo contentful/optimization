@@ -72,9 +72,24 @@ before you ship; it explains the two axes and the split form that sets them sepa
    }
    ```
 
-   The SDK ships okhttp on the runtime classpath through `com.squareup.okhttp3:okhttp-android:5.x`.
-   If your app declares okhttp directly, use the same `okhttp-android` artifact at 5.x to avoid
-   duplicate-class packaging failures.
+   The SDK declares `com.squareup.okhttp3:okhttp-android:5.x` as a runtime dependency directly,
+   because `contentful.java` 5.x pulls in okhttp 5.x's KMP metadata parent (`com.squareup.okhttp3:okhttp`)
+   whose `okhttp-jvm` variant is excluded on Android; without an Android runtime variant, the app
+   throws `ClassNotFoundException: okhttp3.OkHttpClient` at launch. If your app declares
+   `com.contentful.java:java-sdk` directly (or any other dependency that pulls the same KMP parent),
+   exclude `com.squareup.okhttp3:okhttp-jvm` from it and align all okhttp declarations on 5.x so the
+   two variants do not coexist and cause duplicate-class packaging failures.
+
+   **Adapt this to your use case:**
+
+   ```kotlin
+   dependencies {
+       implementation("com.contentful.java:optimization-android:<version>")
+       implementation("com.contentful.java:java-sdk:<version>") {
+           exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
+       }
+   }
+   ```
 
 2. Initialize the SDK from your `Application` subclass. `OptimizationManager.initialize(...)` is a
    normal (non-suspend) call that constructs the process-wide client and starts it in the background;
@@ -245,8 +260,11 @@ outside this guide:
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
 - **Your Optimization project values** — client ID and environment, from your Optimization project
-  settings. Find them in the Contentful web app under **Apps → Installed apps → Contentful
-  Personalization → SDK keys**.
+  settings. In the Contentful web app, the path depends on which navigation your organization uses:
+  in **classic navigation**, go to **Apps → Installed apps → Contentful Personalization → SDK keys**;
+  in **new navigation** (the Contentful app with ExO navigation enabled), go to
+  **Platform/Apps → Installed apps → Contentful Personalization → SDK keys**. The Client ID and
+  environment are listed there.
 
   The `environment` defaults to `main`, so pass it only when your setup differs. The Experience API
   (which picks variants) and the Insights API (which receives event and interaction delivery) each
@@ -290,9 +308,24 @@ callers wait for readiness before making direct calls that depend on it.
    }
    ```
 
-   The SDK ships okhttp on the runtime classpath through `com.squareup.okhttp3:okhttp-android:5.x`.
-   If your app declares okhttp directly, use the same `okhttp-android` artifact at 5.x to avoid
-   duplicate-class packaging failures.
+   The SDK declares `com.squareup.okhttp3:okhttp-android:5.x` as a runtime dependency directly,
+   because `contentful.java` 5.x pulls in okhttp 5.x's KMP metadata parent (`com.squareup.okhttp3:okhttp`)
+   whose `okhttp-jvm` variant is excluded on Android; without an Android runtime variant, the app
+   throws `ClassNotFoundException: okhttp3.OkHttpClient` at launch. If your app declares
+   `com.contentful.java:java-sdk` directly (or any other dependency that pulls the same KMP parent),
+   exclude `com.squareup.okhttp3:okhttp-jvm` from it and align all okhttp declarations on 5.x so the
+   two variants do not coexist and cause duplicate-class packaging failures.
+
+   **Adapt this to your use case:**
+
+   ```kotlin
+   dependencies {
+       implementation("com.contentful.java:optimization-android:<version>")
+       implementation("com.contentful.java:java-sdk:<version>") {
+           exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
+       }
+   }
+   ```
 
 2. Build one `OptimizationConfig`. Only `clientId` is required; the rest have working defaults.
    1. Pass `clientId` from your configuration layer.
@@ -454,6 +487,12 @@ val strictConfig = OptimizationConfig(
 )
 ```
 
+Setting `allowedEventTypes = emptyList()` disables the default pre-consent allow-list the Quick
+Start relies on: the `ScreenTracker.trackScreen("Home")` call blocks until the visitor accepts
+consent, and the label stays on `"Waiting for Optimization"` until then. Use this config only after
+the app has wired the consent flow from step 2 above — otherwise the Quick Start looks broken with
+no signal in logcat beyond a `blockedEventStream` emission.
+
 For the consent responsibility model and blocked-event behavior, see
 [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md#event-allow-lists-and-blocked-events).
 
@@ -478,7 +517,11 @@ to a given entry.
 
 1. Keep Contentful fetching in the application layer, with one concrete locale and enough include
    depth for the linked optimization data. Do not pass all-locale CDA responses or `locale=*` payloads
-   to `OptimizedEntryView` — they fall back to baseline.
+   to `OptimizedEntryView` — they fall back to baseline. Every entry passed as a raw
+   `Map<String, Any>` must include a top-level `metadata` block (tags and concepts); if `metadata` is
+   missing, the resolver silently returns the baseline with no error, indistinguishable from an entry
+   that has no experience configured. The `setEntry(entry: CDAEntry)` overload below removes this
+   failure class by building `metadata` for you through the SDK-owned adapter.
 2. Add `OptimizedEntryView` from XML or create it in activity, fragment, or adapter code.
 
    **Copy this:**
@@ -491,7 +534,12 @@ to a given entry.
    ```
 
 3. Set a renderer that turns the resolved entry map into a child `View`, then call `setEntry(...)`
-   with the fetched baseline entry.
+   with the fetched baseline entry. The `setContentRenderer` lambda always receives a
+   `Map<String, Any>` — even when the entry was set through the `CDAEntry` overload, the view
+   converts the resolved `CTEntry` back to a map before invoking the renderer. Read fields directly
+   off that map; the `CTEntry` accessors (`getField<T>`, `hasField`, `id`) are available only when
+   your app calls `client.resolveOptimizedEntry(...)` itself, shown in the "Follow this pattern"
+   block below.
 
    **Adapt this to your use case:**
 
@@ -809,7 +857,9 @@ when it includes profile-driven text substitutions in Rich Text. Both read from 
 from entry-variant resolution, and they wait for initialization before returning real values.
 
 1. Read a flag once with `getFlag(name)` when a synchronous value is enough (returns `null` before
-   init or when unresolved).
+   init or when unresolved). Each `getFlag` call emits a `component` flag-view event when consent
+   and profile allow, so every flag read is a tracked analytics exposure — not only observed
+   subscriptions. Apply the same governance you use for other SDK events.
 
    **Adapt this to your use case:**
 

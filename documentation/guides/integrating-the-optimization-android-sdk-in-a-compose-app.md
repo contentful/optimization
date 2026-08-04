@@ -79,9 +79,24 @@ explains the two axes and the split form that sets them separately.
    }
    ```
 
-   The SDK ships okhttp on the runtime classpath through `com.squareup.okhttp3:okhttp-android:5.x`.
-   If your app declares okhttp directly, use the same `okhttp-android` artifact at 5.x to avoid
-   duplicate-class packaging failures.
+   The SDK declares `com.squareup.okhttp3:okhttp-android:5.x` as a runtime dependency directly,
+   because `contentful.java` 5.x pulls in okhttp 5.x's KMP metadata parent (`com.squareup.okhttp3:okhttp`)
+   whose `okhttp-jvm` variant is excluded on Android; without an Android runtime variant, the app
+   throws `ClassNotFoundException: okhttp3.OkHttpClient` at launch. If your app declares
+   `com.contentful.java:java-sdk` directly (or any other dependency that pulls the same KMP parent),
+   exclude `com.squareup.okhttp3:okhttp-jvm` from it and align all okhttp declarations on 5.x so the
+   two variants do not coexist and cause duplicate-class packaging failures.
+
+   **Adapt this to your use case:**
+
+   ```kotlin
+   dependencies {
+       implementation("com.contentful.java:optimization-android:<version>")
+       implementation("com.contentful.java:java-sdk:<version>") {
+           exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
+       }
+   }
+   ```
 
 2. Wrap your app UI in `OptimizationRoot`, pass your Optimization client ID, set
    `logLevel = OptimizationLogLevel.debug` so the SDK logs its activity, and add `ScreenTrackingEffect`
@@ -321,6 +336,11 @@ over the stored `SharedPreferences` value every launch, so a configured `consent
 choice. Apps that persist a user's own decision leave `StorageDefaults.consent` unset and call
 `client.consent(...)` from resolved app policy instead.
 
+`OptimizationConfig.defaults` is snapshotted when `initialize(config)` runs. It is a mutable
+property on the config object, so you can assemble it conditionally before passing the config in,
+but reassigning `config.defaults` after initialization has no effect — use `client.consent(...)` for
+runtime consent changes.
+
 1. Seed accepted consent with `StorageDefaults(consent = true)` only when policy permits default-on
    Optimization and no consent UI is shown.
 2. Otherwise leave consent unset and call `client.consent(true)` after the visitor accepts,
@@ -386,6 +406,15 @@ entries back in one payload — the reference implementation uses `include=10`. 
 CDA responses such as `locale=*`; the resolver expects direct single-locale field values and falls
 back to baseline on an all-locale payload.
 
+Every entry passed to `OptimizedEntry` or `client.resolveOptimizedEntry(...)` as a raw
+`Map<String, Any>` must include a top-level `metadata` block (tags and concepts) — the resolver
+reads it alongside `sys` and `fields`, and when it is missing the resolver silently returns the
+baseline entry with no error. The failure mode is indistinguishable from an entry that has no
+experience configured, so mapping bugs surface as "personalization isn't working" with nothing to
+trace. If you fetch with `contentful.java`, prefer the `CDAEntry` overload shown in
+[Entry resolution and fallback rendering](#entry-resolution-and-fallback-rendering) — its adapter
+builds `metadata` for you and removes this failure class entirely.
+
 The SDK Experience/event `locale` is distinct from the Contentful CDA locale: your app chooses the CDA
 locale for its own fetch, and `OptimizationConfig(locale = ...)` sets the locale the Experience API and
 events use. Keep them aligned when rendered content and Experience responses must match.
@@ -441,9 +470,16 @@ Resolution is fail-soft, and `client.resolveOptimizedEntry(baseline, selectedOpt
 `suspend` function on Android (the iOS SDK's is synchronous; Android must suspend because the bridge
 call hops to the QuickJS dispatcher). It returns a `ResolvedOptimizedEntry` — the SDK-owned result
 wrapper holding the resolved `entry` (a `CTEntry` — an SDK-owned view over the resolved entry
-with `id`, `getField<T>`, `hasField`, `contentTypeId`, `createdAt`, `updatedAt`, `localeCode`
-accessors, plus `toMap()` to reach the raw entry map when needed) and the `selectedOptimization`
-(singular) applied to it. If the client is not initialized, serialization fails, or the bridge result
+with `id`, `getField<T>`, string-bracket `entry["title"]` for string fields, `hasField`,
+`contentTypeId`, `createdAt`, `updatedAt`, `localeCode` accessors, plus `toMap()` and `toJSON()`
+to reach the raw entry map or serialized form when needed), the `selectedOptimization` (singular)
+applied to it, and an `optimizationContextId: String?` that keys any view or tap events your app
+emits to the resolved optimization when you drive tracking yourself instead of through
+`OptimizedEntry`. When you need a `CTEntry` outside a resolver result — cache warm-up, test
+fixtures, or a code path that already holds a parsed map or JSON string — use the
+`CTEntry.from(entry: CDAEntry)`, `CTEntry.from(any: Map<String, Any>, fallback: CTEntry = EMPTY)`,
+or `CTEntry.from(json: String, fallback: CTEntry = EMPTY)` factories; the map and JSON overloads
+return the `fallback` (an empty `CTEntry` by default) on parse failure rather than throwing. If the client is not initialized, serialization fails, or the bridge result
 cannot be parsed, it returns the baseline entry unchanged (with `selectedOptimization` null) and
 continues rather than throwing or breaking the UI. The `selectedOptimizations` argument (plural) is the visitor's current per-experience
 selections: pass `null` (the default) to omit the argument and resolve against the SDK's live selection
@@ -475,9 +511,8 @@ fun HeroSection(entry: Map<String, Any>) {
 ```
 
 If you fetch with `contentful.java`, pass the `CDAEntry` directly to the typed overload. The
-SDK-owned adapter builds the required `{sys, fields, metadata}` shape (the resolver rejects any
-entry without `metadata`), and the render lambda receives a `CTEntry` you read with `getField<T>`
-instead of walking a raw map:
+SDK-owned adapter builds the required `{sys, fields, metadata}` shape, and the render lambda
+receives a `CTEntry` you read with `getField<T>` instead of walking a raw map:
 
 ```kotlin
 @Composable
@@ -793,10 +828,11 @@ For cross-SDK forwarding patterns, see
 Custom Flags and merge tags read profile-backed values the Experience API returns, separately from
 entry variant selection. `client.getFlag(name)` is a one-time, non-reactive JSON read that returns
 `null` before initialization; `client.observeFlag(name)` returns a `StateFlow<JSONValue?>` (the Android
-idiom — the iOS SDK uses a Combine publisher) that updates as the flag value changes. Subscribing to a
-flag registers an observation that emits a `component` flag-view event through the event stream when
-consent and profile allow, so flag delivery is an analytics exposure — apply the same governance you
-use for other SDK events.
+idiom — the iOS SDK uses a Combine publisher) that updates as the flag value changes. Both entry
+points emit a `component` flag-view event through the event stream when consent and profile allow —
+`getFlag` fires once per call, `observeFlag` fires each time a delivered value changes — so every
+flag read is a tracked analytics exposure, not only subscriptions. Apply the same governance you use
+for other SDK events.
 
 `client.getMergeTagValue(mergeTagEntry)` is a suspend call that resolves an inline `nt_mergetag` entry
 — the SDK-owned merge-tag content-model identifier — against the current profile and returns the
