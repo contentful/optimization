@@ -8,5 +8,6 @@ pnpm-lock.yaml
 **/android/.gradle/**
 **/.bundle/**
 **/node_modules/**
+packages/**/CHANGELOG.md
 packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Resources/optimization-ios-bridge.umd.js
 packages/android/ContentfulOptimization/src/main/assets/optimization-android-bridge.umd.js
