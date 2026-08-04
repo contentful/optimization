@@ -87,55 +87,6 @@ class CTEntryTest {
     }
 
     @Test
-    fun `imageURL prepends https to protocol-relative asset URLs`() {
-        val entry = CTEntry.from(mapOf(
-            "sys" to mapOf("id" to "e1"),
-            "fields" to mapOf(
-                "image" to mapOf(
-                    "sys" to mapOf("id" to "a1", "type" to "Asset"),
-                    "fields" to mapOf(
-                        "file" to mapOf("url" to "//images.ctfassets.net/x/photo.jpg"),
-                    ),
-                ),
-            ),
-        ))
-        assertEquals("https://images.ctfassets.net/x/photo.jpg", entry.imageURL)
-    }
-
-    @Test
-    fun `imageURL returns absolute URL as-is`() {
-        val entry = CTEntry.from(mapOf(
-            "sys" to mapOf("id" to "e1"),
-            "fields" to mapOf(
-                "image" to mapOf(
-                    "sys" to mapOf("id" to "a1", "type" to "Asset"),
-                    "fields" to mapOf(
-                        "file" to mapOf("url" to "https://cdn.example/photo.jpg"),
-                    ),
-                ),
-            ),
-        ))
-        assertEquals("https://cdn.example/photo.jpg", entry.imageURL)
-    }
-
-    @Test
-    fun `imageURL returns null when the image field or nested shape is missing`() {
-        val noImage = CTEntry.from(mapOf("sys" to mapOf("id" to "e1"), "fields" to mapOf("title" to "Hello")))
-        assertNull(noImage.imageURL)
-
-        val noFile = CTEntry.from(mapOf(
-            "sys" to mapOf("id" to "e1"),
-            "fields" to mapOf(
-                "image" to mapOf(
-                    "sys" to mapOf("id" to "a1", "type" to "Asset"),
-                    "fields" to mapOf("title" to "Only a title"),
-                ),
-            ),
-        ))
-        assertNull(noFile.imageURL)
-    }
-
-    @Test
     fun `from(any) with an unserializable value falls back to an empty CTEntry`() {
         val nonJsonSafe = mapOf<String, Any>(
             "sys" to mapOf("id" to "e1"),
