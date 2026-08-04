@@ -12,6 +12,7 @@ final class MainViewController: UIViewController {
     private let identifyButton = UIButton(type: .system)
     private let resetButton = UIButton(type: .system)
     private let navigationTestButton = UIButton(type: .system)
+    private let nestedButtonTapTestButton = UIButton(type: .system)
     private let liveUpdatesTestButton = UIButton(type: .system)
     private let simulateOfflineButton = UIButton(type: .system)
     private let simulateOnlineButton = UIButton(type: .system)
@@ -96,6 +97,13 @@ final class MainViewController: UIViewController {
         navigationTestButton.accessibilityIdentifier = "navigation-test-button"
         navigationTestButton.addAction(UIAction { [weak self] _ in self?.openNavigationTest() }, for: .touchUpInside)
 
+        // Opens NestedButtonTapTestViewController — the [NT-3829] regression
+        // scenario. This button is only the entry point; the actual test
+        // setup lives in that view controller.
+        nestedButtonTapTestButton.setTitle("Nested Button Tap Test", for: .normal)
+        nestedButtonTapTestButton.accessibilityIdentifier = "nested-button-tap-test-button"
+        nestedButtonTapTestButton.addAction(UIAction { [weak self] _ in self?.openNestedButtonTapTest() }, for: .touchUpInside)
+
         liveUpdatesTestButton.setTitle("Live Updates Test", for: .normal)
         liveUpdatesTestButton.accessibilityIdentifier = "live-updates-test-button"
         liveUpdatesTestButton.addAction(UIAction { [weak self] _ in self?.openLiveUpdatesTest() }, for: .touchUpInside)
@@ -121,7 +129,7 @@ final class MainViewController: UIViewController {
     }
 
     private func layout() {
-        let buttonRow = UIStackView(arrangedSubviews: [identifyButton, resetButton, navigationTestButton, liveUpdatesTestButton])
+        let buttonRow = UIStackView(arrangedSubviews: [identifyButton, resetButton, navigationTestButton, nestedButtonTapTestButton, liveUpdatesTestButton])
         buttonRow.axis = .horizontal
         buttonRow.distribution = .fillEqually
         buttonRow.spacing = 8
@@ -224,6 +232,12 @@ final class MainViewController: UIViewController {
         let live = LiveUpdatesTestViewController(client: client)
         live.modalPresentationStyle = .fullScreen
         present(live, animated: false)
+    }
+
+    private func openNestedButtonTapTest() {
+        let test = NestedButtonTapTestViewController(client: client)
+        test.modalPresentationStyle = .fullScreen
+        present(test, animated: false)
     }
 
     // MARK: - Helpers
