@@ -68,8 +68,11 @@ OptimizationSdk`). `onStatesReady(states)` runs once after state init and before
   returning a function registers a teardown cleanup.
   source: react-native-sdk#components/OptimizationProvider.tsx#OptimizationProviderConfigProps; react-native-sdk#components/OptimizationProvider.tsx#OptimizationProviderSdkProps; react-native-sdk#components/OptimizationProvider.tsx#OnStatesReady
 - `ContentfulOptimization.initialize(config)` merges RN defaults over the caller config:
-  `eventBuilder` `channel: 'mobile'` + library name/version; AsyncStorage-backed `defaults` and
-  `getAnonymousId`; `logLevel` forced to `debug` when the stored debug flag is set; and
+  `eventBuilder` `channel: 'mobile'` + `library.name` set to
+  `` `${OPTIMIZATION_REACT_NATIVE_SDK_NAME}-${Platform.OS}` `` (e.g.
+  `@contentful/optimization-react-native-ios`, `@contentful/optimization-react-native-android`) so
+  RN-hosted iOS and Android events are distinguishable in analytics; AsyncStorage-backed `defaults`
+  and `getAnonymousId`; `logLevel` forced to `debug` when the stored debug flag is set; and
   `allowedEventTypes` defaulting to `['identify', 'screen']` when the caller omits it.
   source: react-native-sdk#ContentfulOptimization.ts#initialize; react-native-sdk#ContentfulOptimization.ts#mergeConfig
 - Single active instance: `ContentfulOptimization.initialize` throws `ContentfulOptimization React

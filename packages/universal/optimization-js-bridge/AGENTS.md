@@ -11,7 +11,9 @@ and Android QuickJS.
 - Polyfills under `src/polyfills/` are shared and prepended into both bundles. Platform-specific
   behavior should use build defines, not forked polyfill files.
 - The build emits `optimization-ios-bridge.umd.js` and `optimization-android-bridge.umd.js`; keep
-  platform names in `rslib.config.ts` so analytics `library.name` remains distinguishable.
+  the platform-specific `__OPTIMIZATION_PACKAGE_NAME__` defines in `rslib.config.ts`
+  (`@contentful/optimization-ios` / `@contentful/optimization-android`) so analytics `library.name`
+  attributes events to the native SDK, not the internal bridge package.
 - Keep method contracts, payload shapes, and preview override calls aligned with native model layers
   and `@contentful/optimization-core/preview-support`.
 - Do not hand-edit `dist/` or copied native bundle outputs. Build this package to refresh them.

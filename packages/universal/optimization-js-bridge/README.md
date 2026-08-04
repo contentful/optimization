@@ -27,8 +27,9 @@ the `postbuild` step copies each into its native SDK:
 | `optimization-ios-bridge.umd.js`     | iOS Swift Package resources        |
 | `optimization-android-bridge.umd.js` | Android library `src/main/assets/` |
 
-The two bundles are identical apart from the `library.name` analytics identifier, kept
-platform-specific so iOS and Android events remain distinguishable.
+The two bundles are identical apart from the `library.name` analytics identifier, stamped as
+`@contentful/optimization-ios` and `@contentful/optimization-android` so events are attributed to
+the native SDK rather than the internal bridge package.
 
 The JS polyfills required by JavaScriptCore and QuickJS — `console`, `timers`, `fetch`, `crypto`,
 `url`, `abort-controller`, `promise-utilities`, `text-encoding` — live in `src/polyfills/` and are

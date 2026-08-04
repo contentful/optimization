@@ -12,6 +12,7 @@ import {
 } from '@contentful/optimization-core'
 import type { PartialProfile } from '@contentful/optimization-core/api-schemas'
 import { merge } from 'es-toolkit'
+import { Platform } from 'react-native'
 import {
   OPTIMIZATION_REACT_NATIVE_SDK_NAME,
   OPTIMIZATION_REACT_NATIVE_SDK_VERSION,
@@ -60,7 +61,7 @@ async function mergeConfig({
       eventBuilder: {
         channel: 'mobile',
         library: {
-          name: OPTIMIZATION_REACT_NATIVE_SDK_NAME,
+          name: `${OPTIMIZATION_REACT_NATIVE_SDK_NAME}-${Platform.OS}`,
           version: OPTIMIZATION_REACT_NATIVE_SDK_VERSION,
         },
       },

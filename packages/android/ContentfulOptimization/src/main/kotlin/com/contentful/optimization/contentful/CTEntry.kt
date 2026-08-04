@@ -236,17 +236,6 @@ public class CTEntry internal constructor(private val entry: Entry) {
     }
 }
 
-// Protocol-relative Contentful Asset URLs (`//images.ctfassets.net/...`) resolve in browsers but
-// crash Android URL loaders that expect a scheme; prepend https so image loaders can consume it.
-public val CTEntry.imageURL: String?
-    get() {
-        val image = getField<Map<String, Any?>>("image") ?: return null
-        val fields = image["fields"] as? Map<*, *> ?: return null
-        val file = fields["file"] as? Map<*, *> ?: return null
-        val url = file["url"] as? String ?: return null
-        return if (url.startsWith("//")) "https:$url" else url
-    }
-
 private sealed class Field {
     abstract fun encoded(): JSONValue?
 
