@@ -381,7 +381,7 @@ describe('OptimizedEntryResolver', () => {
   })
 
   describe('resolve', () => {
-    it('returns the baseline entry and warns when no selected optimizations are provided', () => {
+    it('returns the baseline entry and logs at debug when no selected optimizations are provided', () => {
       const result = OptimizedEntryResolver.resolve(optimizedEntryFixture)
 
       expect(result.entry).toBe(optimizedEntryFixture)
@@ -391,13 +391,13 @@ describe('OptimizedEntryResolver', () => {
         'Optimization',
         `Resolving optimized entry for baseline entry ${optimizedEntryFixture.sys.id}`,
       )
-      expect(mockedLogger.warn).toHaveBeenCalledWith(
+      expect(mockedLogger.debug).toHaveBeenCalledWith(
         'Optimization',
         `${RESOLUTION_WARNING_BASE} no selectedOptimizations exist for the current profile`,
       )
     })
 
-    it('returns the baseline entry and warns when the entry is not optimized', () => {
+    it('returns the baseline entry and logs at debug when the entry is not optimized', () => {
       const nonOptimizedEntry: Entry = {
         ...optimizedEntryFixture,
         fields: {
@@ -411,13 +411,17 @@ describe('OptimizedEntryResolver', () => {
       expect(result.entry).toBe(nonOptimizedEntry)
       expect(result.selectedOptimization).toBeUndefined()
 
-      expect(mockedLogger.warn).toHaveBeenCalledWith(
+      expect(mockedLogger.debug).toHaveBeenCalledWith(
+        'Optimization',
+        `${RESOLUTION_WARNING_BASE} entry ${nonOptimizedEntry.sys.id} is not optimized`,
+      )
+      expect(mockedLogger.warn).not.toHaveBeenCalledWith(
         'Optimization',
         `${RESOLUTION_WARNING_BASE} entry ${nonOptimizedEntry.sys.id} is not optimized`,
       )
     })
 
-    it('returns the baseline entry and warns when no optimization entry is found', () => {
+    it('returns the baseline entry and logs at debug when no optimization entry is found', () => {
       const selectedOptimizations: SelectedOptimizationArray = getSelectedOptimizations().filter(
         (selection) =>
           selection.experienceId !== '2qVK4T5lnScbswoyBuGipd' &&
@@ -429,7 +433,11 @@ describe('OptimizedEntryResolver', () => {
       expect(result.entry).toBe(optimizedEntryFixture)
       expect(result.selectedOptimization).toBeUndefined()
 
-      expect(mockedLogger.warn).toHaveBeenCalledWith(
+      expect(mockedLogger.debug).toHaveBeenCalledWith(
+        'Optimization',
+        `${RESOLUTION_WARNING_BASE} could not find an optimization entry for ${optimizedEntryFixture.sys.id}`,
+      )
+      expect(mockedLogger.warn).not.toHaveBeenCalledWith(
         'Optimization',
         `${RESOLUTION_WARNING_BASE} could not find an optimization entry for ${optimizedEntryFixture.sys.id}`,
       )
@@ -485,7 +493,7 @@ describe('OptimizedEntryResolver', () => {
         }),
       )
 
-      expect(mockedLogger.warn).toHaveBeenCalledWith(
+      expect(mockedLogger.debug).toHaveBeenCalledWith(
         'Optimization',
         `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${optimizedEntryFixture.sys.id}`,
       )
@@ -510,7 +518,7 @@ describe('OptimizedEntryResolver', () => {
           }),
         )
 
-        expect(mockedLogger.warn).toHaveBeenCalledWith(
+        expect(mockedLogger.debug).toHaveBeenCalledWith(
           'Optimization',
           `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${optimizedEntry.sys.id}`,
         )
@@ -698,7 +706,7 @@ describe('OptimizedEntryResolver', () => {
           createSelectedOptimizationsForEmptyVariant(baselineEntry),
         )
 
-        expect(mockedLogger.warn).not.toHaveBeenCalledWith(
+        expect(mockedLogger.debug).not.toHaveBeenCalledWith(
           'Optimization',
           expect.stringContaining(RESOLUTION_WARNING_BASE),
         )
@@ -778,7 +786,7 @@ describe('OptimizedEntryResolver', () => {
 
         expect(result.isEmptyVariant).toBeUndefined()
         expect(result.entry).toBe(baselineEntry)
-        expect(mockedLogger.warn).toHaveBeenCalledWith(
+        expect(mockedLogger.debug).toHaveBeenCalledWith(
           'Optimization',
           expect.stringContaining(RESOLUTION_WARNING_BASE),
         )
