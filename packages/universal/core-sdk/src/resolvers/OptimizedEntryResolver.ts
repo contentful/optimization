@@ -81,11 +81,11 @@ export interface ResolvedDataWithOptimizationContext<
 }
 
 /**
- * Base string for resolver warning messages.
+ * Base string for resolver debug messages.
  *
  * @internal
  */
-const RESOLUTION_WARNING_BASE = 'Could not resolve optimized entry variant:'
+const RESOLUTION_DEBUG_LOG_BASE = 'Could not resolve optimized entry variant:'
 
 /** @internal */
 function isResolvedEntryForBaseline<
@@ -167,12 +167,14 @@ function resolveWithContext<
   logger.debug(`Resolving optimized entry for baseline entry ${entry.sys.id}`)
 
   if (!selectedOptimizations?.length) {
-    logger.warn(`${RESOLUTION_WARNING_BASE} no selectedOptimizations exist for the current profile`)
+    logger.debug(
+      `${RESOLUTION_DEBUG_LOG_BASE} no selectedOptimizations exist for the current profile`,
+    )
     return { resolvedData: { entry } }
   }
 
   if (!isResolvedOptimizedEntry(entry)) {
-    logger.warn(`${RESOLUTION_WARNING_BASE} entry ${entry.sys.id} is not optimized`)
+    logger.debug(`${RESOLUTION_DEBUG_LOG_BASE} entry ${entry.sys.id} is not optimized`)
     return { resolvedData: { entry } }
   }
 
@@ -182,8 +184,8 @@ function resolveWithContext<
   })
 
   if (!optimizationEntry) {
-    logger.warn(
-      `${RESOLUTION_WARNING_BASE} could not find an optimization entry for ${entry.sys.id}`,
+    logger.debug(
+      `${RESOLUTION_DEBUG_LOG_BASE} could not find an optimization entry for ${entry.sys.id}`,
     )
     return { resolvedData: { entry } }
   }
@@ -242,8 +244,8 @@ function resolveWithContext<
   })
 
   if (!selectedVariant) {
-    logger.warn(
-      `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${entry.sys.id}`,
+    logger.debug(
+      `${RESOLUTION_DEBUG_LOG_BASE} could not find a valid replacement variant entry for ${entry.sys.id}`,
     )
     return resolveTo(entry)
   }
@@ -267,8 +269,8 @@ function resolveWithContext<
   })
 
   if (!selectedVariantEntry) {
-    logger.warn(
-      `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${entry.sys.id}`,
+    logger.debug(
+      `${RESOLUTION_DEBUG_LOG_BASE} could not find a valid replacement variant entry for ${entry.sys.id}`,
     )
     return resolveTo(entry, selectedVariant)
   } else {
