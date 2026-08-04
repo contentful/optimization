@@ -97,6 +97,9 @@ final class MainViewController: UIViewController {
         navigationTestButton.accessibilityIdentifier = "navigation-test-button"
         navigationTestButton.addAction(UIAction { [weak self] _ in self?.openNavigationTest() }, for: .touchUpInside)
 
+        // Opens NestedButtonTapTestViewController — the [NT-3829] regression
+        // scenario. This button is only the entry point; the actual test
+        // setup lives in that view controller.
         nestedButtonTapTestButton.setTitle("Nested Button Tap Test", for: .normal)
         nestedButtonTapTestButton.accessibilityIdentifier = "nested-button-tap-test-button"
         nestedButtonTapTestButton.addAction(UIAction { [weak self] _ in self?.openNestedButtonTapTest() }, for: .touchUpInside)

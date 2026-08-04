@@ -47,6 +47,9 @@ struct MainScreen: View {
                 }
                 Button("Navigation Test") { showNavigationTest = true }
                     .accessibilityIdentifier("navigation-test-button")
+                // Opens NestedButtonTapTestScreen — the [NT-3829] regression
+                // scenario. This button is only the entry point; the actual
+                // test setup lives in that screen.
                 Button("Nested Button Tap Test") { showNestedButtonTapTest = true }
                     .accessibilityIdentifier("nested-button-tap-test-button")
                 Button("Live Updates Test") { showLiveUpdatesTest = true }

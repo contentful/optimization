@@ -1,10 +1,10 @@
 import ContentfulOptimization
 import SwiftUI
 
-/// Regression coverage for the SwiftUI `OptimizedEntry` tap-tracking fix
-/// ([NT-3829]): a `Button` nested inside an `OptimizedEntry` with
-/// `trackTaps: true` must still receive its own tap, and the entry's tap
-/// tracking must still fire alongside it.
+/// On-screen setup for the `[NT-3829]` regression test
+/// (`TapTrackingTests.testTappingNestedButtonWithTrackTapsEnabled`): renders
+/// a "Book" `Button` nested inside an `OptimizedEntry` with `trackTaps: true`
+/// — the exact shape that made the button untappable before the fix.
 struct NestedButtonTapTestScreen: View {
     let onClose: () -> Void
     @State private var bookTapCount = 0
@@ -27,6 +27,9 @@ struct NestedButtonTapTestScreen: View {
 
             OptimizedEntry(
                 entry: entry,
+                // This is the exact setting the bug report was about: with
+                // trackTaps enabled, the SDK's own tap-tracking gesture used
+                // to swallow the "Book" button's tap below before it fired.
                 trackTaps: true,
                 accessibilityIdentifier: "nested-button-test-entry"
             ) { resolvedEntry in

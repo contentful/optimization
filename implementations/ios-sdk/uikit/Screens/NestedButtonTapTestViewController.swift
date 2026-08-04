@@ -1,10 +1,11 @@
 import ContentfulOptimization
 import UIKit
 
-/// Regression coverage for the UIKit tap-tracking path ([NT-3829]'s SwiftUI
-/// fix does not cover `OptimizedEntryUIView`): a `UIButton` nested inside an
-/// `OptimizedEntryUIView` with `trackTaps: true` is expected to still receive
-/// its own tap.
+/// On-screen setup for the `[NT-3829]` regression test
+/// (`TapTrackingTests.testTappingNestedButtonWithTrackTapsEnabled`) on the
+/// UIKit shell: renders a "Book" `UIButton` nested inside an
+/// `OptimizedEntryUIView` with `trackTaps: true`, mirroring
+/// `NestedButtonTapTestScreen` on the SwiftUI shell.
 final class NestedButtonTapTestViewController: UIViewController {
 
     private let client: OptimizationClient
@@ -55,6 +56,8 @@ final class NestedButtonTapTestViewController: UIViewController {
             client: client,
             entry: entry,
             scrollView: nil,
+            // Same setting as the SwiftUI test screen: enabled tap tracking
+            // on an entry that wraps another interactive control.
             trackTaps: true,
             accessibilityIdentifier: "nested-button-test-entry"
         ) { _ in entryContent }
