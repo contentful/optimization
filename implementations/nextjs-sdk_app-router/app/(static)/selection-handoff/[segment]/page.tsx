@@ -2,7 +2,6 @@ import { EntryCardContent } from '@/components/EntryCardContent'
 import {
   loadRequiredPageEntries,
   staticPublicHandoffMissingRequiredEntryBehavior,
-  type ContentEntry,
 } from '@/lib/contentful'
 import { getCustomerSegment, getCustomerSegmentStaticParams } from '@/lib/customer-segments'
 import { createCustomerSegmentHandoff, OptimizedEntry } from '@/lib/optimization'
@@ -58,11 +57,9 @@ export default async function SelectionHandoffPage({
           >
             <OptimizedEntry baselineEntry={baselineEntry}>
               {(resolvedEntry, { resolvedData }) => {
-                const entry = resolvedEntry as ContentEntry
-
                 return resolvedData.isEmptyVariant ? null : (
                   <EntryCardContent
-                    entry={entry}
+                    entry={resolvedEntry}
                     labelEntryId={baselineEntry.sys.id}
                     testId={baselineEntry.sys.id}
                   />

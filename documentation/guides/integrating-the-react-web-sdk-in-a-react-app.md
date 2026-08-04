@@ -101,10 +101,13 @@ and add the [Consent and privacy handoff](#consent-and-privacy-handoff) step bef
    ```
 
 3. Fetch one Contentful entry and render it through `OptimizedEntry`. `OptimizedEntry` takes the
-   entry you fetched as `baselineEntry` and calls your render prop with the resolved entry — the
-   variant when one applies, or the baseline entry otherwise. While the SDK is still resolving,
-   `OptimizedEntry` shows the baseline as a hidden loading target and reveals the result once
-   resolution settles.
+   entry you fetched as `baselineEntry` and calls your **render prop** — the function child
+   `{(entry) => ...}` — with the resolved entry: the variant when one applies, or the baseline entry
+   otherwise. While the SDK is still resolving, `OptimizedEntry` shows the baseline as a hidden
+   loading target and reveals the result once resolution settles.
+
+   `HeroSkeleton` below is a Contentful entry skeleton: a TypeScript description of the `hero`
+   content type ID and its fields.
 
    **Adapt this to your use case:** this is your page component. Your fetch, your Contentful client,
    and your markup stay yours; the pattern to copy is the fetch-in-effect and the `OptimizedEntry`
@@ -113,8 +116,15 @@ and add the [Consent and privacy handoff](#consent-and-privacy-handoff) step bef
    ```tsx
    // src/HomePage.tsx
    import { OptimizedEntry, useOptimizationContext } from '@contentful/optimization-react-web'
-   import { createClient, type Entry } from 'contentful'
+   import {
+     createClient,
+     type Entry,
+     type EntryFieldTypes,
+     type EntrySkeletonType,
+   } from 'contentful'
    import { useEffect, useState } from 'react'
+
+   type HeroSkeleton = EntrySkeletonType<{ title: EntryFieldTypes.Symbol }, 'hero'>
 
    const contentfulClient = createClient({
      accessToken: import.meta.env.PUBLIC_CONTENTFUL_TOKEN,
@@ -125,34 +135,39 @@ and add the [Consent and privacy handoff](#consent-and-privacy-handoff) step bef
    export function HomePage() {
      // useOptimizationContext() surfaces `error` if SDK init fails — guard on it so a failure does not render broken UI.
      const { error } = useOptimizationContext()
-     const [entry, setEntry] = useState<Entry | undefined>()
+     const [entry, setEntry] = useState<Entry<HeroSkeleton> | undefined>()
+     const [entryError, setEntryError] = useState(false)
 
      useEffect(() => {
        void contentfulClient
-         .getEntry(import.meta.env.PUBLIC_HERO_ENTRY_ID, {
+         .getEntry<HeroSkeleton>(import.meta.env.PUBLIC_HERO_ENTRY_ID, {
            include: 10, // resolve linked experience and variant entries before rendering
            locale: 'en-US', // one concrete locale — never withAllLocales / locale=*
          })
          .then(setEntry)
+         .catch((fetchError: unknown) => {
+           console.error('Contentful entry fetch failed.', fetchError)
+           setEntryError(true)
+         })
      }, [])
 
      if (error) return <p>Personalization failed to load.</p>
+     if (entryError) return <p>Content failed to load.</p>
      if (!entry) return <p>Loading…</p>
 
      return (
        <OptimizedEntry baselineEntry={entry}>
-         {/* Render prop hands back a base contentful `Entry`; cast to your own type. Replace
-             `YourEntryType` with your own entry type, or drop the cast and use the base `Entry`. */}
-         {(resolved) => <h1>{String((resolved as YourEntryType).fields.title ?? '')}</h1>}
+         {(resolved) => <h1>{resolved.fields.title}</h1>}
        </OptimizedEntry>
      )
    }
    ```
 
-4. Check that it works. In Contentful, author a variant on the entry you fetch above and attach it
-   to an experience — for a first test, target **all visitors** so you match it automatically. Load
-   the app: you should see a brief loading state, then the variant's text render in place of the
-   baseline. If the baseline text stays on screen, work through [Troubleshooting](#troubleshooting).
+4. Check that it works. In Contentful, author a variant on the entry you fetch above using the same
+   `hero` content type and `title` field modeled by `HeroSkeleton`, then attach it to an experience.
+   For a first test, target **all visitors** so you match it automatically. Load the app: you should
+   see a brief loading state, then the variant's text render in place of the baseline. If the
+   baseline text stays on screen, work through [Troubleshooting](#troubleshooting).
 
 You now have personalization working. **The rest of this guide is not a re-run of the quick start**
 — it explains what each step did and covers what the quick start deliberately skipped: real,
@@ -348,7 +363,7 @@ function Hero({ baselineEntry }: { baselineEntry: Entry }) {
 
   return (
     <OptimizedEntry baselineEntry={baselineEntry} loadingFallback={() => <HeroSkeleton />}>
-      {(resolved) => <StaticHero entry={resolved as YourEntryType} />}
+      {(resolved) => <StaticHero entry={resolved} />}
     </OptimizedEntry>
   )
 }
@@ -449,39 +464,81 @@ you still re-emit page events yourself. For the full model, see
 
 **Integration category:** Required for first integration
 
-Step 3 showed the wrap. This explains the two things about it that matter everywhere. The rule never
-changes: **wherever a Contentful entry becomes a component, wrap it in `OptimizedEntry` and render
-whatever the render prop hands back.**
+Step 3 showed the wrap. Wherever a Contentful entry becomes a component, wrap it in
+`OptimizedEntry` and render what its render prop hands back. A selected variant can use any
+Contentful content type; selection depends on the selected variant ID and a resolved linked entry,
+not on matching the baseline content type.
 
-- **Type of the resolved entry.** The render prop's first argument is typed as a base `contentful`
-  `Entry`. If your component expects a narrower type, cast it — `resolved as YourEntryType` — which
-  mirrors the reference implementation. This direct cast works for the common cases, including
-  `.withoutUnresolvableLinks`-narrowed types. Only if TypeScript rejects a cast for a genuinely
-  disjoint type do you need `resolved as unknown as YourEntryType`.
-- **Fallback contract.** When consent is denied, no variant applies, links are unresolved, or the
-  payload was all-locale, the render prop simply receives the baseline entry. Your UI never breaks;
-  it falls back to default content — this is why the quick start renders correctly even before you
-  author a variant.
+A Contentful **entry skeleton** is a TypeScript type that names a content type ID and its fields.
+Use one skeleton union, `S`, containing every possible baseline or variant content type. Manual
+`OptimizedEntry` and `useOptimizedEntry()` calls use the generic order `<S, M, L>`, where `M` is the
+`contentful.js` response mode and `L` is the locale type. Managed `entryId` calls use `<S, L>`
+because `M` is fixed to `undefined`. When every variant shares the baseline content type, omit the
+generic and let TypeScript infer that skeleton from `baselineEntry`.
+
+**Follow this pattern:** declare the complete skeleton union and narrow inside the render prop,
+where the resolved entry becomes runtime-specific UI. The guard compares
+`sys.contentType.sys.id`; it does not validate the entry's fields.
+
+```tsx
+import { OptimizedEntry } from '@contentful/optimization-react-web'
+import { isEntryOfContentType } from '@contentful/optimization-react-web/api-schemas'
+import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
+
+type PageSkeleton = EntrySkeletonType<{ title: EntryFieldTypes.Symbol }, 'page'>
+type HeroSkeleton = EntrySkeletonType<{ headline: EntryFieldTypes.Symbol }, 'hero'>
+type CtaSkeleton = EntrySkeletonType<{ label: EntryFieldTypes.Symbol }, 'cta'>
+type AppEntrySkeleton = PageSkeleton | HeroSkeleton | CtaSkeleton
+type AppLocale = 'en-US'
+
+export function PersonalizedPage({ page }: { page: Entry<PageSkeleton, undefined, AppLocale> }) {
+  return (
+    <OptimizedEntry<AppEntrySkeleton, undefined, AppLocale> baselineEntry={page}>
+      {(entry) => {
+        if (isEntryOfContentType<HeroSkeleton, undefined, AppLocale>(entry, 'hero')) {
+          return <h1>{entry.fields.headline}</h1>
+        }
+        if (isEntryOfContentType<CtaSkeleton, undefined, AppLocale>(entry, 'cta')) {
+          return <button type="button">{entry.fields.label}</button>
+        }
+        return <h1>{entry.fields.title}</h1>
+      }}
+    </OptimizedEntry>
+  )
+}
+```
+
+The union is a compile-time model, not a runtime filter. The same `S` flows through hook results,
+render props, and resolution metadata. Narrow at the renderer boundary before reading
+content-type-specific fields. For lower-level resolution and open-ended models, see
+[TypeScript content-model choices](../concepts/entry-personalization-and-variant-resolution.md#typescript-content-model-choices).
+
+When consent is denied, no variant applies, links are unresolved, or the payload is all-locale, the
+render prop receives the baseline entry.
 
 The quick start wrapped an entry directly in a page. The other common shape is a renderer or
 registry that maps a content type to a component; wrapping it there personalizes every entry it
-renders. The wrap and the cast are identical.
+renders. Same-type entries keep their inferred fields.
 
 **Adapt this to your use case:** a content-type-to-component renderer (yours may be named
 differently). The `+` lines are the additions; keep your existing guards.
 
-```tsx
+```diff
 // e.g. your renderer that maps a content type to a component
 +import { OptimizedEntry } from '@contentful/optimization-react-web'
 
  export function ContentRenderer({ items }) {
    return items?.map((entry) => {
-     const Component = entry ? componentFor(entry.sys.contentType.sys.id) : undefined
-     if (!entry || !Component) return null // your existing guard stays
+-    const Component = entry ? componentFor(entry.sys.contentType.sys.id) : undefined
+-    if (!entry || !Component) return null // your existing guard stays
 -    return <Component key={entry.sys.id} entry={entry} />
++    if (!entry) return null // your existing guard stays
 +    return (
 +      <OptimizedEntry key={entry.sys.id} baselineEntry={entry}>
-+        {(resolved) => <Component entry={resolved as YourEntryType} />}
++        {(resolved) => {
++          const Component = componentFor(resolved.sys.contentType.sys.id)
++          return Component ? <Component entry={resolved} /> : null
++        }}
 +      </OptimizedEntry>
 +    )
    })
@@ -504,29 +561,9 @@ does. Two props exist only for the managed path, since only it can fail while fe
   `(error: Error) => ReactNode`; return `undefined` to render nothing.
 - `onEntryError` — a `(error: Error) => void` callback for logging or reporting the fetch failure.
 
-**Adapt this to your use case:** the managed variant of the same wrap. `entryQuery` is optional and
-overrides the merged managed query per call.
-
-```tsx
-import { OptimizedEntry } from '@contentful/optimization-react-web'
-
-export function HomeHero() {
-  return (
-    <OptimizedEntry
-      entryId={import.meta.env.PUBLIC_HERO_ENTRY_ID} // SDK fetches this id through your client
-      entryQuery={{ locale: 'en-US' }} // optional per-call override; merged with the managed query
-      loadingFallback={() => <HeroSkeleton />}
-      errorFallback={(error) => <StaticHero error={error} />} // managed-fetch failure only
-      onEntryError={(error) => diagnostics.logEntryFetchError(error)}
-    >
-      {(resolved) => <StaticHero entry={resolved as YourEntryType} />}
-    </OptimizedEntry>
-  )
-}
-```
-
-The render prop, the cast, and the baseline-fallback contract are identical to the manual path; only
-the entry source and the two managed-failure props differ.
+The render prop's modeled entry and the baseline-fallback contract are identical to the manual path;
+only the entry source and the two managed-failure props differ. If the managed entry has a known
+model, supply the same complete skeleton union with the managed `<S, L>` order.
 
 Two more facts hold everywhere:
 
@@ -541,7 +578,7 @@ Two more facts hold everywhere:
   resolved entry; the wrapper still resolves metadata and emits tracking attributes.
 
 For the resolver contract, see
-[Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
+[TypeScript content-model choices](../concepts/entry-personalization-and-variant-resolution.md#typescript-content-model-choices).
 
 ### Page events and route tracking
 
@@ -691,7 +728,7 @@ Tracking uses the _resolved_ entry id, not the baseline id.
 ```tsx
 <OptimizationRoot clientId={clientId} trackEntryInteraction={{ hovers: false }}>
   <OptimizedEntry baselineEntry={entry} clickable trackViews>
-    {(resolved) => <HeroCard entry={resolved as YourEntryType} />}
+    {(resolved) => <HeroCard entry={resolved} />}
   </OptimizedEntry>
 </OptimizationRoot>
 ```
@@ -789,15 +826,15 @@ root `liveUpdates` prop, then the default (locked to the first resolved state).
 // globalLiveUpdates is your own boolean (a state value or setting) — true turns live updates on app-wide.
 <OptimizationRoot clientId={clientId} liveUpdates={globalLiveUpdates}>
   <OptimizedEntry baselineEntry={entry}>
-    {(resolved) => <InheritsGlobalSetting entry={resolved as YourEntryType} />}
+    {(resolved) => <InheritsGlobalSetting entry={resolved} />}
   </OptimizedEntry>
 
   <OptimizedEntry baselineEntry={entry} liveUpdates>
-    {(resolved) => <AlwaysLive entry={resolved as YourEntryType} />}
+    {(resolved) => <AlwaysLive entry={resolved} />}
   </OptimizedEntry>
 
   <OptimizedEntry baselineEntry={entry} liveUpdates={false}>
-    {(resolved) => <LockedAfterFirstResolution entry={resolved as YourEntryType} />}
+    {(resolved) => <LockedAfterFirstResolution entry={resolved} />}
   </OptimizedEntry>
 </OptimizationRoot>
 ```
@@ -909,8 +946,14 @@ const forwardedMessageIds = new Set<string>()
 ```
 
 For diagnostics on events the SDK blocks by consent or `allowedEventTypes`, also subscribe to
-`states.blockedEventStream`. For vendor mappings, consent boundaries, and dedupe guidance, see
+`states.blockedEventStream`. The runtime event stream remains model-agnostic because it can carry
+interactions for entries of every content type. If you read
+`event.optimization?.resolvedEntry`, narrow that entry with `isEntryOfContentType` at the point of
+use; resolver-specific `S` types do not flow into later events. For vendor mappings,
+consent boundaries, and dedupe guidance, see
 [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+For a narrowing example, see
+[TypeScript content-model choices](../concepts/entry-personalization-and-variant-resolution.md#typescript-content-model-choices).
 
 ### Preview panel
 
@@ -1000,6 +1043,11 @@ function App() {
   )
 }
 ```
+
+Direct resolver calls on the injected SDK keep selections as the optional second positional
+argument: `resolveOptimizedEntry(entry, selectedOptimizations)`. Managed fetch calls use
+`fetchOptimizedEntry(entryId, options)`, with selections in `FetchOptimizedEntryOptions`; neither
+call receives a content-type argument.
 
 The provider always renders its children — they are never withheld or unmounted. With an injected
 `sdk` and no `handoff`, children render against the live injected SDK from the first render;
@@ -1101,7 +1149,8 @@ pnpm test:e2e:react-web-sdk
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
 | Entry stays on baseline                                           | No variant applies, denied consent, unresolved Contentful links, or an all-locale payload        | Author a variant that targets you, check consent, fetch one `locale` with enough `include`             |
 | The variant never appears even though it is authored              | Your test visitor does not match the experience's audience, or no page event was emitted         | Target all visitors for a first test, or force the variant with the preview panel; confirm the tracker |
-| `<Component entry={resolved} />` shows a type error               | The render prop returns a base `Entry`, wider than your component's type                         | Cast it: `resolved as YourEntryType` (add `as unknown` only if TS rejects a genuinely disjoint type)   |
+| `Content failed to load.` appears                                 | The app's Contentful entry request rejected                                                      | Inspect the logged fetch error, credentials, entry ID, environment, and network request                |
+| A heterogeneous render cannot read content-type-specific fields   | The skeleton union omits a possible content type, or the entry was not narrowed before rendering | Include every baseline and variant skeleton in `S`, then narrow with `isEntryOfContentType`            |
 | Entry is stuck showing loading UI                                 | Optimization state never settled; only entries with optimization references wait                 | It reveals baseline after 5s automatically; check the Experience request and `include: 10`             |
 | `<OptimizedEntry entryId>` renders the error fallback             | Managed fetch failed, or `contentful: { client }` is not configured on `OptimizationRoot`        | Confirm the root `contentful` client, the entry id, and the query; inspect the `onEntryError` error    |
 | `useOptimization must be used within an OptimizationProvider`     | A hook renders outside `OptimizationRoot` / `OptimizationProvider`                               | Move the provider above that component tree                                                            |

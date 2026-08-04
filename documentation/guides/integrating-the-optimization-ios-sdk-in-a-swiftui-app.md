@@ -363,9 +363,9 @@ cross-SDK consent model, see
 
 The iOS SDK does not fetch Contentful entries for your application UI — only the preview panel fetches
 its own audience and experience definitions. Your app fetches entries from the Contentful Delivery
-API and passes the resulting single-locale entry dictionaries to `OptimizedEntry` or
-`client.resolveOptimizedEntry(...)`. There is no fetch-by-ID path in the iOS SDK, so the Contentful
-client and its request options stay entirely yours.
+API and passes the resulting single-locale `Contentful.Entry` values or raw entry dictionaries to
+`OptimizedEntry` or `client.resolveOptimizedEntry(...)`. There is no fetch-by-ID path in the iOS SDK,
+so the Contentful client and its request options stay entirely yours.
 
 Fetch with one concrete locale and enough `include` depth to resolve the linked optimization data.
 `nt_experiences` is the SDK-owned link field the resolver reads on an optimized entry; it links that
@@ -404,9 +404,11 @@ let config = OptimizationConfig(
     locale: appLocale
 )
 
-// Your own CDA fetch: one concrete locale, include depth for linked experiences and variants.
-let hero = await myContentfulFetcher.fetchEntry(id: "<entry-id>", locale: appLocale, include: 10)
 ```
+
+Pass `appLocale` and `include: 10` to the app's existing `contentful.swift` fetch. The entry-resolution
+section below accepts the resulting `Contentful.Entry`; raw dictionaries remain supported through the
+separate dictionary initializer.
 
 For the full data shape and locale boundary, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
@@ -419,39 +421,42 @@ and
 
 `OptimizedEntry` renders a Contentful entry through the resolver. It detects an optimized entry by the
 presence of the `nt_experiences` field; a non-optimized entry passes through unchanged, and an
-optimized entry resolves against the visitor's selected variants. The render closure receives the
-resolved entry dictionary — the selected variant, or the baseline entry when no variant matches —
-with the same field shape as the baseline, so your renderer reads fields without branching on whether
-a variant was applied.
+optimized entry resolves against the visitor's selected variants. A selected linked variant can use
+any Contentful content type, so your app chooses the renderer before reading content-specific fields.
+When you pass a `Contentful.Entry`, the render closure receives the SDK-owned `CTEntry` wrapper. Its
+`contentTypeId` identifies the Contentful content type but does not validate the fields, so check
+`hasField(...)` before calling `getField(...)`. The content type IDs and renderers below belong to
+your app.
 
 Resolution is synchronous and fail-soft. `client.resolveOptimizedEntry(baseline:selectedOptimizations:)`
-returns a `ResolvedOptimizedEntry`; if the client is not initialized, serialization fails, or the
-bridge result cannot be parsed, it returns the baseline entry unchanged and logs a warning rather than
-throwing or breaking the UI. The `selectedOptimizations` argument is the SDK's current per-experience
-variant selections; pass `nil` (the default) to resolve against the SDK's live selection state, or
-pass an explicit snapshot to resolve against exactly that.
+returns the SDK-owned `ResolvedOptimizedEntry`, which contains the resolved `CTEntry`, the applied
+`selectedOptimization`, and an optional `optimizationContextId`. If resolution fails, it contains the
+baseline entry with `selectedOptimization` and `optimizationContextId` set to `nil` instead of
+breaking the UI. Pass `nil` for `selectedOptimizations` to use current client state, or pass an
+explicit snapshot.
 
-1. Pass the baseline Contentful entry dictionary to `OptimizedEntry` and read fields from the resolved
-   entry in the render closure.
-2. Cast the resolved fields to your own model type in the closure; the entry keeps the baseline field
-   shape.
-3. Provide your own loading treatment while the app-owned fetch is pending — `OptimizedEntry` needs an
+1. Pass the fetched `Contentful.Entry` to `OptimizedEntry`, branch on `CTEntry.contentTypeId`, and
+   read fields only inside the matching branch.
+2. Provide your own loading treatment while the app-owned fetch is pending — `OptimizedEntry` needs an
    entry to render, so gate it on your fetched state.
-4. Use `client.resolveOptimizedEntry(...)` directly only when a component must separate resolution
-   from rendering.
+3. Use `client.resolveOptimizedEntry(...)` directly only when a component must separate resolution
+   from rendering, and route its `CTEntry` through the same renderer.
 
 **Adapt this to your use case:**
 
 ```swift
-struct HeroSection: View {
+import Contentful
+import ContentfulOptimization
+import SwiftUI
+
+struct PersonalizedSection: View {
     // nil until your app-owned CDA fetch settles.
-    let entry: [String: Any]?
+    let entry: Contentful.Entry?
 
     var body: some View {
         if let entry {
             OptimizedEntry(entry: entry) { resolvedEntry in
-                // resolvedEntry is the selected variant, or the baseline entry when none matches.
-                HeroCard(entry: resolvedEntry)
+                ResolvedEntryContent(entry: resolvedEntry)
             }
         } else {
             // Your own loading treatment; OptimizedEntry needs a fetched entry to render.
@@ -459,25 +464,44 @@ struct HeroSection: View {
         }
     }
 }
+
+private struct ResolvedEntryContent: View {
+    let entry: CTEntry
+
+    @ViewBuilder
+    var body: some View {
+        switch entry.contentTypeId {
+        case "hero" where entry.hasField("headline"):
+            HeroCard(headline: entry.getField("headline") ?? "")
+        case "cta" where entry.hasField("label"):
+            CTAButton(label: entry.getField("label") ?? "")
+        case "page" where entry.hasField("title"):
+            PageSection(title: entry.getField("title") ?? "")
+        default:
+            UnsupportedEntryView()
+        }
+    }
+}
 ```
+
+The direct resolver keeps the same native call shape and uses current client state when
+`selectedOptimizations` is omitted.
 
 **Follow this pattern:**
 
 ```swift
 struct DirectResolutionView: View {
     @EnvironmentObject private var client: OptimizationClient
-    let entry: [String: Any]
+    let entry: Contentful.Entry
 
     var body: some View {
-        // Resolve separately from rendering; omitting selectedOptimizations uses the SDK's live selection.
         let result = client.resolveOptimizedEntry(baseline: entry)
-        CTAHeader(entry: result.entry)
+        ResolvedEntryContent(entry: result.entry)
     }
 }
 ```
 
-Entry resolution is local and synchronous once the app has both the Contentful entry and SDK
-optimization state. For the fallback rules, see
+For the shared resolution and fallback rules, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#fallback-behavior).
 
 ### Screen events and SwiftUI navigation
@@ -928,9 +952,10 @@ Before release, verify these checks against the target app build:
 - **Event delivery** — screen, entry view, entry tap, Custom Flag, and custom business events are
   accepted or blocked according to consent state, and offline replay plus background flush behave as
   expected on your supported platforms.
-- **Content fallback** — the Contentful client fetches single-locale entries with enough include depth
-  for optimized entries, and baseline rendering still works when no variant matches or data is
-  incomplete.
+- **Content fallback** — The Contentful client fetches single-locale entries with enough include depth
+  for optimized entries, baseline rendering still works when no variant matches or data is
+  incomplete, and every supported resolved content type maps to a renderer. A variant content type
+  that differs from the baseline is rendered as that variant, not treated as fallback.
 - **Duplicate-tracking prevention** — one `OptimizationRoot` owns the SwiftUI tree, each route uses
   one screen-tracking path, `.trackScreen(name:)` is attached once per logical screen, and the app
   does not wrap the same rendered entry more than once for one impression.

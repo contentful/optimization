@@ -1,4 +1,4 @@
-import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
+import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
 import type {
   ChangeArray,
   Profile,
@@ -6,7 +6,7 @@ import type {
   SelectedOptimizationArray,
 } from './api-schemas'
 import type { FetchOptimizedEntryResult, ManagedEntryHandoff } from './CoreBase'
-import OptimizedEntryResolver from './resolvers/OptimizedEntryResolver'
+import OptimizedEntryResolver, { type EntryFor } from './resolvers/OptimizedEntryResolver'
 
 const SELECTION_FINGERPRINT_PREFIX = 'ctfl-opt-selection:v1'
 const CACHE_KEY_PREFIX = 'ctfl-opt-cache:v1'
@@ -287,7 +287,7 @@ export function resolveEntriesForSelections<
   S extends EntrySkeletonType = EntrySkeletonType,
   L extends LocaleCode = LocaleCode,
 >(input: {
-  readonly entries: ReadonlyArray<Entry<S, undefined, L>>
+  readonly entries: ReadonlyArray<EntryFor<S, undefined, L>>
   readonly selectedOptimizations?: SelectedOptimizationArray
 }): ReadonlyArray<FetchOptimizedEntryResult<S, undefined, L>>
 export function resolveEntriesForSelections<
@@ -295,7 +295,7 @@ export function resolveEntriesForSelections<
   M extends ChainModifiers = ChainModifiers,
   L extends LocaleCode = LocaleCode,
 >(input: {
-  readonly entries: ReadonlyArray<Entry<S, M, L>>
+  readonly entries: ReadonlyArray<EntryFor<S, M, L>>
   readonly selectedOptimizations?: SelectedOptimizationArray
 }): ReadonlyArray<FetchOptimizedEntryResult<S, M, L>>
 export function resolveEntriesForSelections<
@@ -303,7 +303,7 @@ export function resolveEntriesForSelections<
   M extends ChainModifiers,
   L extends LocaleCode = LocaleCode,
 >(input: {
-  readonly entries: ReadonlyArray<Entry<S, M, L>>
+  readonly entries: ReadonlyArray<EntryFor<S, M, L>>
   readonly selectedOptimizations?: SelectedOptimizationArray
 }): ReadonlyArray<FetchOptimizedEntryResult<S, M, L>> {
   return input.entries.map((baselineEntry) => ({

@@ -19,7 +19,7 @@ import {
   type NextAppAutoPageContext,
   type NextAppAutoPageTrackerProps,
 } from '@contentful/optimization-react-web/router/next-app'
-import { cache, createElement, type ReactElement, type ReactNode } from 'react'
+import { cache, createElement, type ReactElement } from 'react'
 import {
   assertRequestHandoffCacheMetadata,
   readNextjsForwardedServerData,
@@ -30,6 +30,7 @@ import type {
   BoundNextjsOptimizationAnalyticsRootProps,
   BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
+  NextjsBoundOptimizedEntryComponent,
   NextjsBoundOptimizedEntryProps,
   NextjsBoundProviderConfig,
   NextjsOptimizationComponentsConfig,
@@ -57,7 +58,11 @@ import {
   type NextjsRequestLike,
   type OptimizationNodeConfig,
 } from './server'
-import { renderOptimizedEntryOnServer } from './server-entry-renderer'
+import {
+  renderOptimizedEntryOnServer,
+  resolveOptimizedEntryChildren,
+  toServerOptimizedEntryChildren,
+} from './server-entry-renderer'
 import {
   getServerTrackingAttributes,
   type ServerTrackingBaselineEntry,
@@ -122,7 +127,7 @@ export interface NextjsOptimizationComponents {
   readonly OptimizationAnalyticsRoot: (
     props: BoundNextjsOptimizationAnalyticsRootProps,
   ) => ReactElement
-  readonly OptimizedEntry: (props: NextjsBoundOptimizedEntryProps) => Promise<ReactElement>
+  readonly OptimizedEntry: NextjsBoundOptimizedEntryComponent<Promise<ReactElement>>
   readonly NextAppAutoPageTracker: typeof NextAppAutoPageTracker
   readonly createRequestHandoff: (
     options: AppRouterCreateRequestHandoffOptions,
@@ -364,12 +369,15 @@ export function bindNextjsAppRouterOptimization(
       dataTestId === undefined && testId === undefined
         ? {}
         : { 'data-testid': dataTestId ?? testId }
-
     return renderOptimizedEntryOnServer({
       ...serverEntryProps,
       ...testAttributes,
       baselineEntry,
-      children: resolveOptimizedEntryChildren(children, resolvedData.entry, renderContext),
+      children: resolveOptimizedEntryChildren(
+        toServerOptimizedEntryChildren(children),
+        resolvedData.entry,
+        renderContext,
+      ),
       resolvedData,
     })
   }
@@ -399,7 +407,7 @@ export function bindNextjsAppRouterOptimization(
     OptimizationAnalyticsRoot,
     OptimizationProvider,
     OptimizationRoot,
-    OptimizedEntry,
+    OptimizedEntry: OptimizedEntry as NextjsBoundOptimizedEntryComponent<Promise<ReactElement>>,
     createHandoffFromSelections: createBoundHandoffFromSelections,
     createOptimizationCacheKey,
     createPublicPermutationHandoff: createBoundPublicPermutationHandoff,
@@ -477,14 +485,6 @@ function toClientProviderConfig(
   const { liveUpdates: _liveUpdates, ...rootConfig } = toClientRootConfig(config)
 
   return rootConfig
-}
-
-function resolveOptimizedEntryChildren(
-  children: ReactWebOptimizedEntryProps['children'],
-  entry: ServerTrackingResolvedData['entry'],
-  context: OptimizedEntryRenderContext,
-): ReactNode {
-  return typeof children === 'function' ? children(entry, context) : children
 }
 
 function resolveServerConsent(

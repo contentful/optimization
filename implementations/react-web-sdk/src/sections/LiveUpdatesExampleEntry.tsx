@@ -16,8 +16,8 @@ export function LiveUpdatesExampleEntry({
   return (
     <OptimizedEntry baselineEntry={baselineEntry} liveUpdates={liveUpdates}>
       {(resolvedEntry) => {
-        const asCf = resolvedEntry as ContentEntry
-        const text = typeof asCf.fields.text === 'string' ? asCf.fields.text : 'No content'
+        const text =
+          typeof resolvedEntry.fields.text === 'string' ? resolvedEntry.fields.text : 'No content'
         const fullLabel = `${text} [Entry: ${resolvedEntry.sys.id}]`
 
         return (

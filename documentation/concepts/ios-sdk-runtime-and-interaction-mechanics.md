@@ -209,16 +209,11 @@ profile-continuity persistence consent. For cross-SDK consent guidance, see
 
 ## Entry optimization boundary
 
-Entry optimization is a local, synchronous decision once the app has both Contentful entry data and
-selected optimizations.
-
-The application provides:
-
-- A single-locale Contentful entry dictionary.
-- Linked optimization references and variant entries in the Contentful payload.
-- An explicit `selectedOptimizations` snapshot only when the caller needs one.
-
-The SDK returns either the baseline entry or the resolved variant entry:
+iOS entry resolution follows the cross-SDK data model, cross-content selection, empty-variant, and
+baseline-fallback behavior described in
+[Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md).
+The iOS direct method is synchronous. Its `Contentful.Entry` overload returns the baseline or
+selected variant as a `CTEntry`:
 
 ```swift
 let result = client.resolveOptimizedEntry(
@@ -228,18 +223,31 @@ let result = client.resolveOptimizedEntry(
 
 let resolvedEntry = result.entry
 let selectedOptimization = result.selectedOptimization
+
+switch resolvedEntry.contentTypeId {
+case "hero" where resolvedEntry.hasField("headline"):
+    let headline: String? = resolvedEntry.getField("headline")
+    renderHero(headline)
+case "cta" where resolvedEntry.hasField("label"):
+    let label: String? = resolvedEntry.getField("label")
+    renderCta(label)
+default:
+    let title: String? = resolvedEntry.getField("title")
+    renderPage(title)
+}
 ```
+
+`contentTypeId` reads Contentful's `sys.contentType.sys.id` discriminant. It identifies the entry
+shape but does not validate its fields. `hasField` checks field presence, and `getField<T>` reads a
+field as the requested Swift type. Dictionary-based callers receive `[String: Any]` instead and can
+read the same discriminant from the nested `sys` fields.
 
 Omit `selectedOptimizations` when you want direct resolution to use the current bridge and client
 state. Pass an explicit snapshot for locked UIKit screens or custom abstractions that must keep the
 same variant until the app deliberately redraws or reloads that view.
 
-`resolveOptimizedEntry` does not fetch Contentful entries, evaluate audiences, call the Experience
-API, or mutate state. SwiftUI `OptimizedEntry` wraps the same boundary and adds component-level
-behavior such as variant locking, live updates, and interaction tracking.
-
-For the full data model and fallback behavior, see
-[Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md).
+SwiftUI `OptimizedEntry` adds variant locking, live updates, and interaction tracking around the
+same resolver.
 
 ## Tracking mechanics
 

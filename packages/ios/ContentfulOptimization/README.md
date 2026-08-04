@@ -177,6 +177,7 @@ fetch Contentful entries for your app layer, so the CDA locale belongs in your C
   `AnyPublisher<JSONValue?, Never>` that updates as flag values change.
 - Use `client.eventStream` and `client.blockedEventStream` for analytics debugging, tests, and
   consent-gating diagnostics.
+- Use `CTEntry.contentTypeId` to select app-owned rendering for baseline and variant content types.
 - SwiftUI entry view and tap tracking default to enabled. Pass `trackViews: false` or
   `trackTaps: false` to `OptimizationRoot` or `OptimizedEntry` when a screen or entry must opt out.
 - Analytics events queue while the device is offline and flush when connectivity returns or the app

@@ -12,9 +12,15 @@ import {
   type SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { describe, expect, it, rs } from '@rstest/core'
-import type { Entry, EntrySkeletonType, UnresolvedLink } from 'contentful'
+import type { Entry, EntryFieldTypes, EntrySkeletonType, UnresolvedLink } from 'contentful'
 
 import { mockLogger } from 'mocks'
+import type CoreStateful from '../CoreStateful'
+import type { CoreStatelessRequest } from '../CoreStatelessRequest'
+import { resolveEntriesForSelections } from '../handoff'
+import type { OptimizedEntryMetadata } from '../OptimizedEntryMetadata'
+import type { OptimizationRuntime } from '../runtime/OptimizationRuntime'
+import type { SnapshotRuntime } from '../runtime/SnapshotRuntime'
 import { optimizedEntry as optimizedEntryFixture } from '../test/fixtures/optimizedEntry'
 import { selectedOptimizations as selectedOptimizationsFixture } from '../test/fixtures/selectedOptimizations'
 import OptimizedEntryResolver from './OptimizedEntryResolver'
@@ -24,6 +30,91 @@ const mockedLogger = rs.mocked(mockLogger)
 const RESOLUTION_WARNING_BASE = 'Could not resolve optimized entry variant:'
 
 type TestEntry = Entry<EntrySkeletonType, undefined>
+
+type PageSkeleton = EntrySkeletonType<{ title: EntryFieldTypes.Symbol }, 'page'>
+type HeroSkeleton = EntrySkeletonType<{ headline: EntryFieldTypes.Symbol }, 'hero'>
+type CtaSkeleton = EntrySkeletonType<{ label: EntryFieldTypes.Symbol }, 'cta'>
+type PossibleSkeleton = PageSkeleton | HeroSkeleton | CtaSkeleton
+type Modifier = 'WITHOUT_LINK_RESOLUTION'
+type Locale = 'en-US'
+type ExpectedEntry =
+  | Entry<PageSkeleton, Modifier, Locale>
+  | Entry<HeroSkeleton, Modifier, Locale>
+  | Entry<CtaSkeleton, Modifier, Locale>
+type ExpectedFixedEntry =
+  | Entry<PageSkeleton, undefined, Locale>
+  | Entry<HeroSkeleton, undefined, Locale>
+  | Entry<CtaSkeleton, undefined, Locale>
+
+function compileEntryTypes(input: {
+  core: CoreStateful
+  fixedEntry: Entry<PageSkeleton, undefined, Locale>
+  metadata: OptimizedEntryMetadata<PossibleSkeleton, Modifier, Locale>
+  modifiedEntry: Entry<PageSkeleton, Modifier, Locale>
+  request: CoreStatelessRequest
+  runtime: OptimizationRuntime
+  snapshot: SnapshotRuntime
+}): void {
+  const { core, fixedEntry, metadata, modifiedEntry, request, runtime, snapshot } = input
+  const sameType: Entry<PageSkeleton, Modifier, Locale> =
+    core.resolveOptimizedEntry(modifiedEntry).entry
+  const legacy: Entry<PageSkeleton, Modifier, Locale> = core.resolveOptimizedEntry<
+    PageSkeleton,
+    Modifier,
+    Locale
+  >(modifiedEntry).entry
+  const resolved: ExpectedEntry = core.resolveOptimizedEntry<PossibleSkeleton, Modifier, Locale>(
+    modifiedEntry,
+  ).entry
+  const direct: ExpectedEntry = OptimizedEntryResolver.resolve<PossibleSkeleton, Modifier, Locale>(
+    modifiedEntry,
+  ).entry
+  const runtimeEntry: ExpectedEntry = runtime.resolveOptimizedEntry<
+    PossibleSkeleton,
+    Modifier,
+    Locale
+  >(modifiedEntry).entry
+  const snapshotEntry: ExpectedEntry = snapshot.resolveOptimizedEntry<
+    PossibleSkeleton,
+    Modifier,
+    Locale
+  >(modifiedEntry).entry
+  const fixed: ExpectedFixedEntry = core.resolveOptimizedEntry<PossibleSkeleton, Locale>(
+    fixedEntry,
+  ).entry
+  const handoff = resolveEntriesForSelections<PossibleSkeleton, Modifier, Locale>({
+    entries: [modifiedEntry],
+  })
+  const inferredHandoff = resolveEntriesForSelections({
+    entries: [modifiedEntry],
+  })
+  const metadataBaseline: ExpectedEntry = metadata.baselineEntry
+  const metadataEntry: ExpectedEntry = metadata.entry
+
+  void core.fetchOptimizedEntry<PossibleSkeleton, Locale>('page')
+  void request.fetchOptimizedEntry<PossibleSkeleton, Locale>('page')
+  void sameType
+  void legacy
+  void resolved
+  void direct
+  void runtimeEntry
+  void snapshotEntry
+  void fixed
+  for (const result of handoff) {
+    const baseline: ExpectedEntry = result.baselineEntry
+    const entry: ExpectedEntry = result.entry
+    void baseline
+    void entry
+  }
+  for (const result of inferredHandoff) {
+    const entry: Entry<PageSkeleton, Modifier, Locale> = result.entry
+    void entry
+  }
+  void metadataBaseline
+  void metadataEntry
+}
+
+void compileEntryTypes
 
 const getOptimizedEntry = (): OptimizedEntry => {
   if (!isResolvedOptimizedEntry(optimizedEntryFixture)) {
@@ -325,12 +416,10 @@ describe('OptimizedEntryResolver', () => {
 
   describe('getSelectedVariantEntry', () => {
     it('returns the variant entry corresponding to the selected replacement variant', () => {
-      const optimizedEntry = getOptimizedEntry()
       const optimizationEntry = getEuropeOptimizationEntry()
       const selectedVariant = getEuropeVariantConfig()
 
       const result = OptimizedEntryResolver.getSelectedVariantEntry({
-        optimizedEntry,
         optimizationEntry,
         selectedVariant,
       })
@@ -340,7 +429,6 @@ describe('OptimizedEntryResolver', () => {
     })
 
     it('returns undefined when the variant entry cannot be found by id', () => {
-      const optimizedEntry = getOptimizedEntry()
       const optimizationEntry = getEuropeOptimizationEntry()
       const selectedVariant = getEuropeVariantConfig()
 
@@ -350,7 +438,6 @@ describe('OptimizedEntryResolver', () => {
       }
 
       const result = OptimizedEntryResolver.getSelectedVariantEntry({
-        optimizedEntry,
         optimizationEntry,
         selectedVariant: nonMatchingVariant,
       })
@@ -359,7 +446,6 @@ describe('OptimizedEntryResolver', () => {
     })
 
     it('returns undefined when the selected variant is still an unresolved link', () => {
-      const optimizedEntry = getOptimizedEntry()
       const optimizationEntry = getEuropeOptimizationEntry()
       const selectedVariant = getEuropeVariantConfig()
       const originalVariants = optimizationEntry.fields.nt_variants
@@ -368,7 +454,6 @@ describe('OptimizedEntryResolver', () => {
 
       try {
         const result = OptimizedEntryResolver.getSelectedVariantEntry({
-          optimizedEntry,
           optimizationEntry,
           selectedVariant,
         })
@@ -550,6 +635,20 @@ describe('OptimizedEntryResolver', () => {
         'Optimization',
         `Entry ${optimizedEntryFixture.sys.id} has been resolved to variant entry 4k6ZyFQnR2POY5IJLLlJRb`,
       )
+    })
+
+    it('resolves a linked variant with a different content type', () => {
+      const baselineFields: Record<string, unknown> = {}
+      const baselineEntry = createTestEntry('baseline', baselineFields, 'page')
+      const variantEntry = createTestEntry('variant', { headline: 'Hero' }, 'hero')
+      baselineFields.nt_experiences = [createOptimizationEntry({ baselineEntry, variantEntry })]
+
+      const result = OptimizedEntryResolver.resolve(
+        baselineEntry,
+        createSelectedOptimizations({ baselineEntry, variantEntry }),
+      )
+
+      expect(result.entry).toBe(variantEntry)
     })
 
     it('resolves the selected variant when an unrelated rich-text linked entry graph contains a cycle', () => {

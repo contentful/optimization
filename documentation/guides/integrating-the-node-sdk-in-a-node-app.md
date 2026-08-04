@@ -602,12 +602,15 @@ Two similarly named values appear from here on, and the one-letter difference is
 - **`selectedOptimization`** (singular) is the one selection the resolver returns _for a specific
   entry_: which experience and variant index applied to it. Use it for tracking and analytics.
 
+The result's `isEmptyVariant` field is `true` when the selected variant has an empty ID. In that
+case, `entry` retains the baseline for tracking context, but your app must render no content.
+
 1. Configure the SDK with `contentful: { client, defaultQuery?, cache? }` (done once in your
    `optimization.ts` module from [Install and initialize the Node SDK](#install-and-initialize-the-node-sdk)).
 2. Call `page()` or `identify()` before resolving entries for the response.
 3. Call `requestOptimization.fetchOptimizedEntry(entryId)` inside the request handler.
-4. Render the returned `entry`. If resolution cannot find a matching optimization or variant, the
-   resolver returns the baseline entry.
+4. Render the returned `entry`, or no content when `isEmptyVariant` is `true`. If resolution cannot
+   find a matching optimization or variant, the resolver returns the baseline entry.
 
 **Adapt this to your use case:** the SDK config below repeats the `optimization.ts` module from the
 install section so the `contentful.client` requirement is visible in one place — reuse your existing
@@ -646,13 +649,18 @@ app.get('/article/:entryId', async (req, res) => {
   const pageResult = await requestOptimization.page()
   const pageResponse = pageResult.accepted ? pageResult.data : undefined
   const {
-    baselineEntry: article,
     entry: optimizedArticle,
+    isEmptyVariant,
     selectedOptimization,
   } = await requestOptimization.fetchOptimizedEntry(req.params.entryId)
 
   if (requestOptimization.canPersistProfile) {
     persistProfile(res, pageResponse?.profile.id)
+  }
+
+  if (isEmptyVariant) {
+    res.status(204).end()
+    return
   }
 
   res.render('article', {
@@ -682,6 +690,64 @@ const { entry: optimizedArticle } = optimization.resolveOptimizedEntry(
   pageResponse?.selectedOptimizations,
 )
 ```
+
+The second resolver argument is always the request's `selectedOptimizations` array. Pass it
+positionally as shown above. A Contentful entry skeleton is the TypeScript type that declares an
+entry's content-type ID and fields. When the baseline and variants can use different known content
+types, put all of their skeletons in one union, pass it as the first type argument, and narrow the
+result before reading fields. The resolver names this skeleton set `S`.
+
+**Follow this pattern:** one skeleton union for the baseline and every possible variant.
+
+```ts
+import {
+  isEntryOfContentType,
+  type SelectedOptimizationArray,
+} from '@contentful/optimization-node/api-schemas'
+import type { ChainModifiers, Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
+
+type ArticleSkeleton = EntrySkeletonType<{ title: EntryFieldTypes.Symbol }, 'article'>
+type HeroSkeleton = EntrySkeletonType<{ headline: EntryFieldTypes.Symbol }, 'hero'>
+type CtaSkeleton = EntrySkeletonType<{ label: EntryFieldTypes.Symbol }, 'cta'>
+type PossibleArticleSkeleton = ArticleSkeleton | HeroSkeleton | CtaSkeleton
+type AppLocale = 'en-US'
+
+function renderArticle(
+  baselineEntry: Entry<ArticleSkeleton, ChainModifiers, AppLocale>,
+  selectedOptimizations?: SelectedOptimizationArray,
+): string {
+  const { entry } = optimization.resolveOptimizedEntry<
+    PossibleArticleSkeleton,
+    ChainModifiers,
+    AppLocale
+  >(baselineEntry, selectedOptimizations)
+
+  if (isEntryOfContentType<HeroSkeleton, ChainModifiers, AppLocale>(entry, 'hero')) {
+    return String(entry.fields.headline ?? '')
+  }
+  if (isEntryOfContentType<CtaSkeleton, ChainModifiers, AppLocale>(entry, 'cta')) {
+    return String(entry.fields.label ?? '')
+  }
+  return String(entry.fields.title ?? '')
+}
+```
+
+When every variant uses `ArticleSkeleton`, omit the generic arguments and TypeScript infers that
+single skeleton from the baseline entry. For an open-ended content model, use `EntrySkeletonType`
+for `S`; this avoids maintaining a closed union, but fields are unchecked and must be validated
+before rendering. See
+[TypeScript content-model choices](../concepts/entry-personalization-and-variant-resolution.md#typescript-content-model-choices)
+for the complete modeling trade-offs.
+
+A different content type does not by itself trigger baseline fallback. The returned `entry` also
+remains the baseline for a control selection (`variantIndex === 0`) and an empty variant
+(`id === ''`); `isEmptyVariant: true` distinguishes the empty variant, which renders no content.
+Resolution can also fall back to the baseline when no matching selection or usable variant exists,
+the required links are unresolved or invalid, or the payload uses all locales. The request-bound
+`fetchOptimizedEntry()` call can omit
+`options.selectedOptimizations` to use selections from the latest accepted request call; the
+process-level singleton has no request state, so pass selections in its options for personalized
+managed fetching.
 
 Do not configure SDK-managed fetches or manual fetches with `contentful.js` `withAllLocales` or raw
 CDA `locale=*` responses. The resolver expects direct single-locale field values such as

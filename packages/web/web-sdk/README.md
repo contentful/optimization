@@ -315,6 +315,9 @@ const resolvedEntry = optimization.resolveOptimizedEntry(
 )
 ```
 
+For heterogeneous content-model typing and narrowing, see
+[Entry optimization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#typescript-content-model-choices).
+
 Use one CDA locale in either path. For localized apps, configure your application locale and pass it
 directly before calling `getEntry()`, `getEntries()`, or SDK-managed entry fetches. Do not pass
 all-locale CDA responses from `withAllLocales` or `locale=*`; the resolver expects direct

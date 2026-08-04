@@ -72,6 +72,7 @@ These helpers identify and normalize Optimization-owned Contentful fields:
 | `OptimizationEntry`           | Contentful SDK entry type referenced by `fields.nt_experiences` |
 | `OptimizationConfig`          | Optimization configuration schema from `fields.nt_config`       |
 | `isRecord`                    | Structural guard for non-array object records                   |
+| `isEntryOfContentType`        | Narrows a resolved entry by its Contentful content type ID      |
 | `isRichTextDocument`          | Structural guard for Contentful Rich Text documents             |
 | `isRichTextNode`              | Structural guard for Contentful Rich Text nodes                 |
 | `isResolvedContentfulEntry`   | Structural guard for resolved Contentful Entry values           |

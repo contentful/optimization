@@ -1,3 +1,8 @@
+import type {
+  OptimizedEntryProps,
+  OptimizedEntryRenderContext,
+} from '@contentful/optimization-react-web'
+import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
 import { createElement, type JSX, type ReactElement, type ReactNode } from 'react'
 import {
   getServerTrackingAttributes,
@@ -7,24 +12,52 @@ import {
   type ServerTrackingResolvedData,
 } from './tracking-attributes'
 
-type ServerEntryRendererOwnProps<TElement extends keyof JSX.IntrinsicElements> =
-  ServerTrackingAttributeOptions & {
-    readonly as?: TElement
-    readonly baselineEntry: ServerTrackingBaselineEntry
-    readonly children?: ReactNode
-    readonly resolvedData: ServerTrackingResolvedData
-  }
+type ServerRenderProp = (
+  entry: ServerTrackingResolvedData['entry'],
+  context: OptimizedEntryRenderContext,
+) => ReactNode
+type ServerOptimizedEntryChildren = ReactNode | ServerRenderProp
+
+export function toServerOptimizedEntryChildren(
+  children: OptimizedEntryProps['children'],
+): ServerOptimizedEntryChildren
+export function toServerOptimizedEntryChildren(
+  children: OptimizedEntryProps['children'] | ServerOptimizedEntryChildren,
+): OptimizedEntryProps['children'] | ServerOptimizedEntryChildren {
+  return children
+}
+
+type ServerEntryRendererOwnProps<
+  TElement extends keyof JSX.IntrinsicElements,
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+> = ServerTrackingAttributeOptions & {
+  readonly as?: TElement
+  readonly baselineEntry: ServerTrackingBaselineEntry<S, M, L>
+  readonly children?: ReactNode
+  readonly resolvedData: ServerTrackingResolvedData<S, M, L>
+}
 
 type DataCtflAttributeName = `data-ctfl-${string}`
 
-type ServerEntryRendererProps<TElement extends keyof JSX.IntrinsicElements = 'div'> =
-  ServerEntryRendererOwnProps<TElement> &
-    Omit<
-      JSX.IntrinsicElements[TElement],
-      keyof ServerEntryRendererOwnProps<TElement> | DataCtflAttributeName
-    >
+type ServerEntryRendererProps<
+  TElement extends keyof JSX.IntrinsicElements = 'div',
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = ServerEntryRendererOwnProps<TElement, S, M, L> &
+  Omit<
+    JSX.IntrinsicElements[TElement],
+    keyof ServerEntryRendererOwnProps<TElement, S, M, L> | DataCtflAttributeName
+  >
 
-export function renderOptimizedEntryOnServer<TElement extends keyof JSX.IntrinsicElements = 'div'>({
+export function renderOptimizedEntryOnServer<
+  TElement extends keyof JSX.IntrinsicElements = 'div',
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+>({
   as,
   baselineEntry,
   children,
@@ -36,7 +69,7 @@ export function renderOptimizedEntryOnServer<TElement extends keyof JSX.Intrinsi
   trackViews,
   viewDurationUpdateIntervalMs,
   ...htmlProps
-}: ServerEntryRendererProps<TElement>): ReactElement {
+}: ServerEntryRendererProps<TElement, S, M, L>): ReactElement {
   const Element = as ?? 'div'
   const trackingAttributes: ServerTrackingAttributes = getServerTrackingAttributes(
     baselineEntry,
@@ -52,4 +85,12 @@ export function renderOptimizedEntryOnServer<TElement extends keyof JSX.Intrinsi
   )
 
   return createElement(Element, { ...htmlProps, ...trackingAttributes }, children)
+}
+
+export function resolveOptimizedEntryChildren(
+  children: ServerOptimizedEntryChildren,
+  entry: ServerTrackingResolvedData['entry'],
+  context: OptimizedEntryRenderContext,
+): ReactNode {
+  return typeof children === 'function' ? children(entry, context) : children
 }

@@ -38,13 +38,18 @@ export {
 } from './hooks/useOptimizationState'
 export { OptimizedEntry } from './optimized-entry/OptimizedEntry'
 export type {
+  OptimizedEntryBaselineProps,
   OptimizedEntryErrorFallback,
   OptimizedEntryLoadingFallback,
+  OptimizedEntryManagedProps,
   OptimizedEntryProps,
   OptimizedEntryRenderContext,
+  OptimizedEntryRenderProp,
 } from './optimized-entry/OptimizedEntry'
 export { useOptimizedEntry } from './optimized-entry/useOptimizedEntry'
 export type {
+  UseOptimizedEntryBaselineParams,
+  UseOptimizedEntryManagedParams,
   UseOptimizedEntryParams,
   UseOptimizedEntryResult,
 } from './optimized-entry/useOptimizedEntry'

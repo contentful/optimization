@@ -257,7 +257,7 @@ with `useEntryResolver()` or `useOptimizedEntry()`. For localized apps, derive t
 locale from your navigation, i18n, or app configuration layer and pass it to `entryQuery`,
 `contentful.defaultQuery`, or manual Contentful CDA requests. Do not pass all-locale CDA responses
 from `withAllLocales` or `locale=*`; these APIs expect direct single-locale field values. See
-[Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
+[Entry optimization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the broader locale model.
@@ -280,6 +280,9 @@ function HeroData() {
 Use `onEntryResolved`, the render prop metadata, or the hook's `metadata` and `isResolved` fields
 when application code needs the baseline ID, resolved entry ID, or optimization context after
 tracking is ready.
+
+To model baseline and variant entries with different content types, see
+[Entry optimization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md).
 
 Use `useEntryResolver()` when a component needs manual entry resolution without the `OptimizedEntry`
 wrapper:

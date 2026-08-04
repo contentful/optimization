@@ -1,4 +1,6 @@
 import type NodeContentfulOptimization from '@contentful/optimization-node'
+import type { ResolvedData } from '@contentful/optimization-node/core-sdk'
+import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import type {
   BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
@@ -6,9 +8,62 @@ import type {
   NextjsBoundOptimizedEntryProps,
 } from './app-router-client'
 import type { NextjsOptimizationComponents as NextjsAppServerComponents } from './app-router-server'
-import type { OptimizationSdk, OptimizationWebRuntime, OptimizedEntryProps } from './client'
+import type {
+  OptimizationSdk,
+  OptimizationWebRuntime,
+  OptimizedEntryProps,
+  OptimizedEntryRenderContext,
+} from './client'
 import type { NextjsPagesRouterOptimization } from './pages-router'
-import type { ContentfulOptimization as NextjsServerOptimization } from './server'
+import {
+  ServerOptimizedEntry,
+  type ContentfulOptimization as NextjsServerOptimization,
+  type ServerOptimizedEntryFetchResult,
+  type ServerOptimizedEntryProps,
+} from './server'
+import { getServerTrackingAttributes, type ServerTrackingResolvedData } from './tracking-attributes'
+
+type PageSkeleton = EntrySkeletonType<{ title: EntryFieldTypes.Symbol }, 'page'>
+type HeroSkeleton = EntrySkeletonType<{ headline: EntryFieldTypes.Symbol }, 'hero'>
+type ModeledSkeleton = PageSkeleton | HeroSkeleton
+type Modifier = 'WITHOUT_LINK_RESOLUTION'
+type Locale = 'en-US'
+
+export function acceptModeledNextjsEntries(
+  baselineEntry: Entry<PageSkeleton, Modifier, Locale>,
+  resolvedData: ResolvedData<ModeledSkeleton, Modifier, Locale>,
+  result: ServerOptimizedEntryFetchResult<ModeledSkeleton, Modifier, Locale>,
+  components: NextjsAppServerComponents,
+): void {
+  const props: ServerOptimizedEntryProps<'section', ModeledSkeleton, Modifier, Locale> = {
+    as: 'section',
+    baselineEntry,
+    resolvedData,
+  }
+
+  ServerOptimizedEntry<'section', ModeledSkeleton, Modifier, Locale>(props)
+  ServerOptimizedEntry<'section', ModeledSkeleton, Modifier, Locale>({ as: 'section', result })
+  getServerTrackingAttributes<ModeledSkeleton, Modifier, Locale>(baselineEntry, resolvedData)
+  void components.OptimizedEntry<ModeledSkeleton, Modifier, Locale>({
+    baselineEntry,
+    children: (entry, metadata) => `${entry.sys.id}:${metadata.entry.sys.id}`,
+  })
+  void components.OptimizedEntry<ModeledSkeleton, Locale>({
+    entryId: 'page',
+    children: (entry) => entry.sys.id,
+  })
+}
+
+export function assertAppRouterChildrenNeedVarianceBridge(
+  children: NextjsBoundOptimizedEntryProps['children'],
+  entry: ServerTrackingResolvedData['entry'],
+  context: OptimizedEntryRenderContext,
+): void {
+  if (typeof children === 'function') {
+    // @ts-expect-error Default props combine callbacks with incompatible modifier variance.
+    children(entry, context)
+  }
+}
 
 export function acceptNextjsClientSdk(runtime: OptimizationWebRuntime): OptimizationSdk {
   return runtime

@@ -20,7 +20,7 @@ import type {
   BoundNextjsOptimizationAnalyticsRootProps,
   BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
-  NextjsBoundOptimizedEntryProps,
+  NextjsBoundOptimizedEntryComponent,
   NextjsBoundProviderConfig,
   NextjsOptimizationComponentsConfig,
 } from './bound-component-types'
@@ -64,7 +64,7 @@ export interface NextjsOptimizationComponents {
   readonly OptimizationAnalyticsRoot: (
     props: BoundNextjsOptimizationAnalyticsRootProps,
   ) => ReactElement
-  readonly OptimizedEntry: (props: NextjsBoundOptimizedEntryProps) => ReactElement | null
+  readonly OptimizedEntry: NextjsBoundOptimizedEntryComponent<ReactElement | null>
   readonly NextAppAutoPageTracker: typeof NextAppAutoPageTracker
   readonly createHandoffFromSelections: typeof createHandoffFromSelections
   readonly createOptimizationCacheKey: typeof createOptimizationCacheKey

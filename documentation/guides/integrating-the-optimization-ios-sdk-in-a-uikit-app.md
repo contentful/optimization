@@ -413,7 +413,9 @@ one-letter difference: `selectedOptimizations` is the set you pass in (or the SD
 while `selectedOptimization` is the one selection returned on the result.
 
 1. Fetch entries with one concrete Contentful locale. Do not pass all-locale payloads (`locale=*` or
-   all-locale helpers) into entry resolution — they fall back to baseline.
+   all-locale helpers) into entry resolution — they fall back to baseline. The raw dictionary path
+   requires top-level `sys`, `fields`, and `metadata`; the `Contentful.Entry` overload builds that
+   shape for you.
 2. Include linked entries deeply enough to resolve the optimization links. `nt_experiences` (plural)
    is the SDK-fixed link field the SDK reads on an optimized entry; it links that entry's
    `nt_experience` (singular) experiences, and each experience links its `nt_variants` and
@@ -423,39 +425,47 @@ while `selectedOptimization` is the one selection returned on the result.
 3. Keep the app's Contentful locale aligned with SDK `locale` when rendered content and events must
    use the same language.
 4. Resolve entries during view, cell, or wrapper configuration.
-5. Render `result.entry`. Use `result.selectedOptimization` and `result.optimizationContextId` only
-   when building tracking payloads.
+5. Branch on `result.entry.contentTypeId`, check `hasField(...)`, and then read the matching field
+   with `getField(...)`.
+6. Use `result.selectedOptimization` and `result.optimizationContextId` only when building tracking
+   payloads.
+
+A selected linked variant can use any Contentful content type. `ResolvedOptimizedEntry.entry` is the
+SDK-owned `CTEntry` wrapper; its `contentTypeId` identifies that type but does not validate its fields.
+The content type IDs and `contentView` methods below belong to your app's content model.
 
 **Follow this pattern:**
 
 ```swift
-// contentfulEntryService is reader-owned: your app's CDA fetch and link resolution.
-let entry = try await contentfulEntryService.fetchEntry(
-    id: entryId,
-    include: 10,
-    // Resolve and pass one concrete CDA locale, not locale=* payloads.
-    locale: appLocale
-)
+func renderEntry(_ baselineEntry: [String: Any]) {
+    let result = client.resolveOptimizedEntry(
+        baseline: baselineEntry,
+        selectedOptimizations: client.selectedOptimizations
+    )
 
-let result = client.resolveOptimizedEntry(
-    baseline: entry,
-    selectedOptimizations: client.selectedOptimizations
-)
-
-// Always render result.entry; it is the variant when one applies, or the
-// baseline entry otherwise. contentView is reader-owned UI.
-contentView.configure(with: result.entry)
+    switch result.entry.contentTypeId {
+    case "hero" where result.entry.hasField("headline"):
+        let headline: String? = result.entry.getField("headline")
+        contentView.showHero(headline: headline)
+    case "cta" where result.entry.hasField("label"):
+        let label: String? = result.entry.getField("label")
+        contentView.showCTA(label: label)
+    case "page" where result.entry.hasField("title"):
+        let title: String? = result.entry.getField("title")
+        contentView.showPage(title: title)
+    default:
+        contentView.showUnsupportedContent()
+    }
+}
 ```
 
 `resolveOptimizedEntry` is synchronous and fail-soft: it never throws or breaks the UI. It returns
 the baseline entry unchanged (with `selectedOptimization` and `optimizationContextId` nil) when the
-client is not initialized, when the entry is not optimized, when no selected optimization matches,
-when linked optimization data is missing, or when the selected variant is not present in the
-payload. Passing `nil` for `selectedOptimizations` tells the resolver to use the SDK's current
-selection state; passing an explicit snapshot resolves against exactly that (used for locked screens
-in [Live updates and locked variants](#live-updates-and-locked-variants)). For deeper resolver
-mechanics, see
-[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
+client is not initialized or no usable selection exists in the fetched payload. Passing `nil` for
+`selectedOptimizations` uses current client state; an explicit snapshot locks resolution to that
+selection (see [Live updates and locked variants](#live-updates-and-locked-variants)). For the shared
+resolution and fallback rules, see
+[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#fallback-behavior).
 
 ### Screen and navigation tracking
 
@@ -954,7 +964,9 @@ Before release, verify the UIKit integration against these checks:
 - **Event delivery** — Screen, custom, tap, view, identify, and flag-view events appear when allowed
   and are blocked or omitted when policy denies them.
 - **Content fallback behavior** — Baseline entries render when selected optimizations are missing,
-  unresolved links are returned, variants are out of range, or the visitor is not qualified.
+  unresolved links are returned, variants are out of range, or the visitor is not qualified. Every
+  supported resolved content type maps to a renderer; a variant content type that differs from the
+  baseline is rendered as that variant, not treated as fallback.
 - **Duplicate tracking prevention** — UIKit lifecycle hooks, reusable cells, gesture recognizers,
   and visibility observers do not emit duplicate screen, tap, or view events for one intended
   interaction or visibility cycle.

@@ -7,7 +7,6 @@ import {
   OptimizationRoot as ReactWebOptimizationRoot,
   OptimizedEntry as ReactWebOptimizedEntry,
   type OptimizationRootProps,
-  type OptimizedEntryProps,
   type OptimizationAnalyticsRootProps as ReactWebOptimizationAnalyticsRootProps,
 } from '@contentful/optimization-react-web'
 import {
@@ -66,7 +65,7 @@ export interface NextjsPagesRouterOptimization {
   readonly OptimizationAnalyticsRoot: (
     props: BoundNextjsOptimizationAnalyticsRootProps,
   ) => ReactElement
-  readonly OptimizedEntry: (props: OptimizedEntryProps) => ReactElement | null
+  readonly OptimizedEntry: typeof ReactWebOptimizedEntry
   readonly NextPagesAutoPageTracker: typeof NextPagesAutoPageTracker
   readonly createHandoffFromSelections: typeof createHandoffFromSelections
   readonly createOptimizationCacheKey: typeof createOptimizationCacheKey

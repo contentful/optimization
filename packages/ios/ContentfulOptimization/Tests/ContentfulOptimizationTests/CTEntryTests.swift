@@ -1242,6 +1242,25 @@ final class CTEntryTests: XCTestCase {
         XCTAssertNil(resolved.id)
     }
 
+    func testContentTypeIdReturnsNestedContentTypeId() {
+        let resolved = CTEntry(any: [
+            "sys": [
+                "contentType": [
+                    "sys": ["id": "landingPage", "type": "Link", "linkType": "ContentType"],
+                ],
+            ],
+            "fields": [:],
+        ])
+
+        XCTAssertEqual(resolved.contentTypeId, "landingPage")
+    }
+
+    func testContentTypeIdReturnsNilWhenAbsent() {
+        let resolved = CTEntry(any: ["sys": ["id": "e1"], "fields": [:]])
+
+        XCTAssertNil(resolved.contentTypeId)
+    }
+
     // MARK: - localeCode mirrors Entry.localeCode
 
     func testLocaleCodeReturnsSysLocale() {

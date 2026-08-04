@@ -29,7 +29,7 @@ import type { OptimizationSelectionState } from './handoff'
 import { InterceptorManager } from './lib/interceptor'
 import { createManagedEntryHandoffs, normalizeManagedEntryDescriptor } from './managed-entry'
 import { ManagedEntryFetcher } from './managed-entry-fetcher'
-import type { ResolvedData } from './resolvers'
+import type { EntryFor, ResolvedData } from './resolvers'
 import { FlagsResolver, MergeTagValueResolver, OptimizedEntryResolver } from './resolvers'
 
 /**
@@ -135,7 +135,7 @@ export interface FetchOptimizedEntryResult<
   L extends LocaleCode = LocaleCode,
 > extends ResolvedData<S, M, L> {
   /** Baseline entry fetched from Contentful before optimization resolution. */
-  baselineEntry: Entry<S, M, L>
+  baselineEntry: EntryFor<S, M, L>
 }
 
 /**
@@ -382,7 +382,7 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
    * Resolve a Contentful entry to the appropriate optimized variant (or
    * return the baseline entry if no matching variant is selected).
    *
-   * @typeParam S - Entry skeleton type.
+   * @typeParam S - Possible baseline and variant entry skeleton types.
    * @typeParam M - Chain modifiers.
    * @typeParam L - Locale code.
    * @param entry - The baseline entry to resolve.

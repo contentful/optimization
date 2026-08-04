@@ -36,9 +36,9 @@ The guide uses these terms:
   entries.
 - **`nt_experience_id`** - The SDK-owned field on an `nt_experience` entry that matches
   `selectedOptimization.experienceId`.
-- **Variant entries** - The authored replacement entries linked from `nt_variants`. For entry
-  replacement, they must already be present in the GraphQL response and use the same content type as
-  the baseline entry.
+- **Variant entries** - The authored replacement entries linked from `nt_variants`. They must already
+  be present in the GraphQL response, but they can use any content type. Query a fragment for every
+  content type your app supports and preserve each node's content-type ID in the Entry-like object.
 - **Entry-like object** - A plain object shaped like the Contentful Entry fields the resolver checks:
   `sys.type: 'Entry'`, `sys.id`, `sys.contentType.sys.id`, `metadata`, and `fields`.
 
@@ -61,7 +61,10 @@ accepted Experience API call or published by your SDK state. The minimum item sh
 `experienceId`, `variantIndex`, and `variants`; `sticky` is optional. `variantIndex: 0` selects the
 baseline entry, and positive indexes are one-based into the matching EntryReplacement variants in
 `nt_config`. The `variants` object uses opaque Contentful entry IDs: each key is a baseline entry ID,
-and each value is the selected variant entry ID.
+and each value is the selected variant entry ID. Keep it consistent with the source selection; the
+resolver chooses the entry from `nt_config` and the linked `nt_variants`, while the selection map
+also contributes to cache identity. In the fixture below, the key matches `graphqlData.page.sys.id`,
+and the value matches the selected `ntVariantsCollection.items[].sys.id`.
 
 **Adapt this to your use case:**
 
@@ -119,6 +122,12 @@ query OptimizedPage(
                 slug
                 heroHeadline
               }
+              ... on Hero {
+                headline
+              }
+              ... on CallToAction {
+                label
+              }
             }
           }
         }
@@ -128,35 +137,82 @@ query OptimizedPage(
 }
 ```
 
-Map the camelCase GraphQL fields back to the SDK-owned field names before calling the resolver:
+Map the camelCase GraphQL fields back to the SDK-owned field names before calling the resolver. This
+mapping belongs to your app: GraphQL `__typename` values and Contentful content-type IDs are related
+but are not interchangeable strings. The example explicitly maps `Page` to `page`, `Hero` to `hero`,
+and `CallToAction` to `callToAction`; replace both sides with values that exactly match your content
+model.
+
+The next example also assumes `appLocale` is your app-owned concrete locale, `preview` is your
+app-owned preview-mode boolean, and `renderHero`, `renderCta`, and `renderPageFromEntry` are your
+existing render functions. `runContentfulGraphQlQuery`, `optimization`, and
+`selectedOptimizations` remain the app-owned values defined at the start of the quick start.
+
+The typed path below defines a Contentful entry skeleton for each supported content type. A skeleton
+declares an entry's content-type ID and fields. `PossibleSkeleton` contains the baseline and every
+possible variant and becomes the resolver's first type argument, `S`.
+
+The adapter imports types from `contentful`, so add it as a development dependency if the app does
+not already use it: `pnpm add -D contentful`. The example imports `isEntryOfContentType` from React
+Web. For Web, Next.js, Node, or React Native, use the same `/api-schemas` path from
+`@contentful/optimization-web`, `@contentful/optimization-nextjs`,
+`@contentful/optimization-node`, or `@contentful/optimization-react-native`, respectively.
 
 **Adapt this to your use case:**
 
 ```ts
-import type { Entry, EntrySkeletonType } from 'contentful'
+// Use the /api-schemas pass-through from the Optimization SDK package your app installed.
+import { isEntryOfContentType } from '@contentful/optimization-react-web/api-schemas'
+import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
+
+type PageSkeleton = EntrySkeletonType<
+  {
+    title: EntryFieldTypes.Symbol
+    slug: EntryFieldTypes.Symbol
+    heroHeadline: EntryFieldTypes.Symbol
+    nt_experiences: EntryFieldTypes.Array<EntryFieldTypes.EntryLink<EntrySkeletonType>>
+  },
+  'page'
+>
+type HeroSkeleton = EntrySkeletonType<{ headline: EntryFieldTypes.Symbol }, 'hero'>
+type CtaSkeleton = EntrySkeletonType<{ label: EntryFieldTypes.Symbol }, 'callToAction'>
+type PossibleSkeleton = PageSkeleton | HeroSkeleton | CtaSkeleton
 
 type GraphQlCollection<T> = {
   items?: Array<T | null> | null
 }
 
-type GraphQlNode = {
+type GraphQlNode<T extends string> = {
   sys: { id: string }
-  __typename: string
+  __typename: T
 }
 
-type GraphQlPage = GraphQlNode & {
+type GraphQlPageVariant = GraphQlNode<'Page'> & {
   title?: string | null
   slug?: string | null
   heroHeadline?: string | null
+}
+
+type GraphQlPage = GraphQlPageVariant & {
   ntExperiencesCollection?: GraphQlCollection<GraphQlExperience> | null
 }
 
-type GraphQlExperience = GraphQlNode & {
+type GraphQlHero = GraphQlNode<'Hero'> & {
+  headline?: string | null
+}
+
+type GraphQlCta = GraphQlNode<'CallToAction'> & {
+  label?: string | null
+}
+
+type GraphQlVariant = GraphQlPageVariant | GraphQlHero | GraphQlCta
+
+type GraphQlExperience = GraphQlNode<'NtExperience'> & {
   ntName?: string | null
   ntType?: 'nt_experiment' | 'nt_personalization' | null
   ntExperienceId?: string | null
   ntConfig?: unknown
-  ntVariantsCollection?: GraphQlCollection<GraphQlPage> | null
+  ntVariantsCollection?: GraphQlCollection<GraphQlVariant> | null
 }
 
 function present<T>(value: T | null | undefined): value is T {
@@ -164,7 +220,7 @@ function present<T>(value: T | null | undefined): value is T {
 }
 
 function entryLike(
-  node: GraphQlNode,
+  node: GraphQlNode<string>,
   contentTypeId: string,
   fields: Record<string, unknown>,
 ): Entry<EntrySkeletonType> {
@@ -185,14 +241,14 @@ function entryLike(
   } as Entry<EntrySkeletonType>
 }
 
-function toPageEntry(page: GraphQlPage): Entry<EntrySkeletonType> {
+function toPageEntry(page: GraphQlPage): Entry<PageSkeleton, undefined> {
   return entryLike(page, 'page', {
     title: page.title,
     slug: page.slug,
     heroHeadline: page.heroHeadline,
     nt_experiences:
       page.ntExperiencesCollection?.items?.filter(present).map(toExperienceEntry) ?? [],
-  })
+  }) as Entry<PageSkeleton, undefined>
 }
 
 function toExperienceEntry(experience: GraphQlExperience): Entry<EntrySkeletonType> {
@@ -201,17 +257,27 @@ function toExperienceEntry(experience: GraphQlExperience): Entry<EntrySkeletonTy
     nt_type: experience.ntType,
     nt_experience_id: experience.ntExperienceId,
     nt_config: experience.ntConfig,
-    nt_variants:
-      experience.ntVariantsCollection?.items?.filter(present).map(toPageVariantEntry) ?? [],
+    nt_variants: experience.ntVariantsCollection?.items?.filter(present).map(toVariantEntry) ?? [],
   })
 }
 
-function toPageVariantEntry(page: GraphQlPage): Entry<EntrySkeletonType> {
-  return entryLike(page, 'page', {
-    title: page.title,
-    slug: page.slug,
-    heroHeadline: page.heroHeadline,
-  })
+function toVariantEntry(variant: GraphQlVariant): Entry<EntrySkeletonType> {
+  switch (variant.__typename) {
+    case 'Hero':
+      return entryLike(variant, 'hero', {
+        headline: variant.headline,
+      })
+    case 'CallToAction':
+      return entryLike(variant, 'callToAction', {
+        label: variant.label,
+      })
+    case 'Page':
+      return entryLike(variant, 'page', {
+        title: variant.title,
+        slug: variant.slug,
+        heroHeadline: variant.heroHeadline,
+      })
+  }
 }
 
 const graphqlData = await runContentfulGraphQlQuery({
@@ -221,16 +287,40 @@ const graphqlData = await runContentfulGraphQlQuery({
 })
 
 const baselineEntry = toPageEntry(graphqlData.page)
-const resolved = optimization.resolveOptimizedEntry(baselineEntry, selectedOptimizations)
+const resolved = optimization.resolveOptimizedEntry<PossibleSkeleton>(
+  baselineEntry,
+  selectedOptimizations,
+)
 
-renderPageFromEntry(resolved.entry)
+if (!resolved.isEmptyVariant) {
+  if (isEntryOfContentType<HeroSkeleton, undefined>(resolved.entry, 'hero')) {
+    renderHero(resolved.entry.fields.headline)
+  } else if (isEntryOfContentType<CtaSkeleton, undefined>(resolved.entry, 'callToAction')) {
+    renderCta(resolved.entry.fields.label)
+  } else {
+    renderPageFromEntry(resolved.entry)
+  }
+}
 ```
 
-Verify with a fixture where `selectedOptimizations[0].experienceId` matches the GraphQL
-`ntExperienceId`, `variantIndex: 1` selects the first replacement variant in `ntConfig`, and
-`variants` maps the baseline entry ID to the expected variant entry ID. Confirm
-`resolved.entry.sys.id` is that linked variant entry ID. Then remove the variant entry from the test
-response and confirm the same call returns the baseline entry ID.
+The `isEmptyVariant` branch makes no render call. The skeleton names and fields belong to this
+example content model; replace them and the GraphQL fragments with the content types your app
+supports. `isEntryOfContentType` checks the preserved `sys.contentType.sys.id` and narrows the union;
+it does not validate fields. When the baseline and every variant use `PageSkeleton`, omit the generic
+and TypeScript infers that single skeleton. For an open-ended content model, use `EntrySkeletonType`
+for `S`; this avoids maintaining a closed union, but fields are unchecked and must be validated
+before rendering. See
+[TypeScript content-model choices](../concepts/entry-personalization-and-variant-resolution.md#typescript-content-model-choices)
+for the complete modeling trade-offs.
+
+The adapter input boundary is the GraphQL `page` object passed to `toPageEntry()`. To verify without
+calling Contentful, save one real `graphqlData.page` response as a JSON fixture with the shape shown
+above, type the loaded object with `satisfies GraphQlPage`, and pass it directly to
+`toPageEntry(fixturePage)`. For the variant case, keep one matching experience whose `ntExperienceId` matches
+`selectedOptimizations[0].experienceId`, set `variantIndex: 1`, keep the first configured variant in
+both `ntConfig` and `ntVariantsCollection.items`, and confirm the result ID matches that variant. For
+the fallback case, reuse the same fixture with the matching item removed from
+`ntVariantsCollection.items`; the same resolver call must return the baseline entry ID.
 
 <details>
   <summary>Table of Contents</summary>
@@ -279,7 +369,8 @@ For optimized entry replacement, the query must include:
 - Each linked `nt_experience` entry's `sys.id`, `ntName`, `ntType`, and `ntExperienceId`.
 - Each linked `nt_experience` entry's `ntConfig` and `ntVariantsCollection` so entry replacement can
   resolve to a variant.
-- Each linked variant entry's `sys.id`, `__typename`, and render fields.
+- Each linked variant entry's `sys.id`, `__typename`, and a fragment containing the render fields
+  for every content type your app supports.
 
 ### Adapt at the resolver boundary
 
@@ -300,40 +391,33 @@ The resolver checks `sys.type`, `sys.id`, `sys.contentType.sys.id`, `metadata`, 
 also validates linked `nt_experience` entries, so missing required fields such as `fields.nt_name` or
 `fields.nt_type` make the optimization entry unusable for resolution. After validation, the resolver
 matches `selectedOptimization.experienceId` to `fields.nt_experience_id`, reads `fields.nt_config`,
-and looks for the selected variant in `fields.nt_variants`.
+and looks for the selected variant in `fields.nt_variants`. Preserve each GraphQL node's
+`__typename` as the corresponding `sys.contentType.sys.id`; the selected linked variant does not
+have to match the baseline content type.
 
 ### Render from the resolved result
 
-Choose one render path after resolution.
-
-Render the reshaped Entry-like object directly when your renderer already accepts `fields`:
-
-**Follow this pattern:**
-
-```ts
-const resolved = optimization.resolveOptimizedEntry(baselineEntry, selectedOptimizations)
-
-renderEntryFields(resolved.entry.fields)
-```
-
-Use an ID map when your components expect the original GraphQL-native objects:
+The quick start renders the reshaped Entry-like object directly. When your components expect the
+original GraphQL-native objects, map the already-resolved entry ID back to those objects:
 
 **Follow this pattern:**
 
 ```ts
-const variantPages =
+const graphQlVariants =
   graphqlData.page.ntExperiencesCollection?.items
     ?.filter(present)
     .flatMap((experience) => experience.ntVariantsCollection?.items?.filter(present) ?? []) ?? []
 
 const graphQlEntriesById = new Map(
-  [graphqlData.page, ...variantPages].filter(present).map((entry) => [entry.sys.id, entry]),
+  [graphqlData.page, ...graphQlVariants]
+    .filter(present)
+    .map((entry) => [entry.sys.id, entry] as const),
 )
 
-const resolved = optimization.resolveOptimizedEntry(baselineEntry, selectedOptimizations)
-const pageToRender = graphQlEntriesById.get(resolved.entry.sys.id) ?? graphqlData.page
-
-renderGraphQlPage(pageToRender)
+if (!resolved.isEmptyVariant) {
+  const entryToRender = graphQlEntriesById.get(resolved.entry.sys.id) ?? graphqlData.page
+  renderGraphQlEntry(entryToRender)
+}
 ```
 
 When your runtime emits tracking metadata manually, derive it after resolution. Tracking metadata is
@@ -380,10 +464,13 @@ guide tells you to render shared output for a preselected variant permutation.
 ## Validate the integration
 
 - Confirm the GraphQL query includes `ntExperiencesCollection`, `ntName`, `ntType`,
-  `ntExperienceId`, `ntConfig`, `ntVariantsCollection`, and the variant entries' render fields.
+  `ntExperienceId`, `ntConfig`, `ntVariantsCollection`, and a fragment with render fields for every
+  supported variant content type.
 - Confirm the query receives one concrete locale string for the entry being resolved.
 - Confirm variant entries are present as objects in `ntVariantsCollection.items`, not only as IDs or
   unresolved links.
+- Resolve a variant whose content type differs from the baseline, and confirm the preserved
+  `sys.contentType.sys.id` selects the expected typed branch or GraphQL-native renderer.
 - Resolve with a known `selectedOptimizations` item whose `experienceId` matches
   `ntExperienceId`, and confirm `resolved.entry.sys.id` is the expected variant entry ID.
 - Remove `ntConfig`, `ntVariantsCollection`, or the matching variant entry in a test fixture, and
@@ -394,7 +481,8 @@ guide tells you to render shared output for a preselected variant permutation.
 ## Governance notes
 
 The app owns GraphQL documents, fragments, generated types, clients, preview credentials, cache
-policy, route loaders, and rendering. Keep those decisions in the app layer.
+policy, route loaders, supported content-type union, and rendering. Keep those decisions in the app
+layer.
 
 The SDK owns `nt_experiences`, `nt_experience`, `nt_name`, `nt_type`, `nt_config`, `nt_variants`,
 `nt_experience_id`, the `selectedOptimizations` shape, and the resolver contract. Do not rename
@@ -406,8 +494,8 @@ model changes, and it avoids turning your GraphQL schema into a second Contentfu
 
 ## Related guides and concepts
 
-- [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md) -
-  Resolver inputs, fallback behavior, and single-locale entry constraints.
+- [Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md) -
+  Resolver inputs, content-model typing, fallback behavior, and single-locale entry constraints.
 - [Contentful GraphQL Content API](https://www.contentful.com/developers/docs/references/graphql/) -
   Official Contentful GraphQL schema, locale, preview, and collection-field reference.
 - [Integrating the Optimization React Web SDK in a React app](./integrating-the-react-web-sdk-in-a-react-app.md) -

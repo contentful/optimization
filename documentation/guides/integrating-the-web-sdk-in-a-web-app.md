@@ -75,9 +75,11 @@ step before you ship.
    the quick start uses always-on consent to keep the path simple — production gates this on the
    visitor's real choice (see [Consent and privacy handoff](#consent-and-privacy-handoff)).
 
-   Before you resolve, call `page()` once: a page event asks the Experience API who this visitor is
-   and returns their current variant selections, so the SDK has optimization state to use when you
-   resolve the entry immediately after.
+   Before you resolve, call `page()` once: a page event asks the Experience API to evaluate the
+   visitor. Its `accepted` field only says whether the SDK allowed the event. Returned `data`, when
+   present, carries current selections. On this new instance, an accepted result without `data`
+   leaves selections empty, so resolution safely returns the baseline; `accepted: false` stops the
+   example before rendering.
 
    **Adapt this to your use case:** replace the placeholder values and the `#hero` selector with
    your own; the config keys are explained in
@@ -106,20 +108,22 @@ step before you ship.
      app: { name: 'my-web-app', version: '1.0.0' },
    })
 
-   // Emit the page event first so the SDK has current selections before you resolve.
-   await optimization.page()
+   // Emit the page event first; returned data, when present, supplies current selections.
+   const pageResult = await optimization.page()
+   if (!pageResult.accepted) {
+     throw new Error('Optimization page event was blocked; check consent policy')
+   }
 
    const baselineEntry = await contentfulClient.getEntry('4ib0hsHWoSOnCVdDkizE8d', {
      include: 10, // resolve linked experience and variant entries before rendering
      locale: APP_LOCALE, // one concrete locale — never withAllLocales / locale=*
    })
 
-   // Pass the baseline entry; the SDK uses the selections from the page() call above.
-   // On denied consent / no variant / unresolved links / all-locale payload this returns baselineEntry.
-   const { entry } = optimization.resolveOptimizedEntry(baselineEntry)
+   // Uses current selections; with no page data or usable variant, this returns baselineEntry.
+   const { entry, isEmptyVariant } = optimization.resolveOptimizedEntry(baselineEntry)
 
    const hero = document.querySelector<HTMLElement>('#hero')
-   if (hero) hero.textContent = String(entry.fields.headline ?? '')
+   if (hero) hero.textContent = isEmptyVariant ? '' : String(entry.fields.headline ?? '')
    ```
 
 3. Check that it works. In Contentful, author a variant on the entry you fetch above and attach it
@@ -404,7 +408,8 @@ one step — see the next section. For the resolver contract, see
 
 The quick start showed the resolve-and-render. This explains the return shape and the two things
 about it that matter everywhere. The rule never changes: **wherever a Contentful entry becomes
-rendered markup, resolve it first and render whatever the SDK hands back.**
+rendered markup, resolve it first. Render no content when `isEmptyVariant` is `true`; otherwise,
+render the returned `entry`.**
 
 `resolveOptimizedEntry(baselineEntry, selectedOptimizations?)` returns an object:
 
@@ -419,6 +424,8 @@ rendered markup, resolve it first and render whatever the SDK hands back.**
 - `optimizationContextId` — an opaque id you attach to the rendered element so interaction tracking
   can tie events back to this selection (see
   [Entry interaction tracking](#entry-interaction-tracking)).
+- `isEmptyVariant` — `true` when the selected variant has an empty ID. The returned `entry` retains
+  the baseline for tracking context, but your app must render no content.
 
 Omit the second argument to resolve against the SDK's current state (the selections from the most
 recent accepted `page()`/`identify()`); pass an explicit `SelectedOptimizationArray` only when you
@@ -434,21 +441,69 @@ entry yourself.
 **Follow this pattern:** managed fetch-and-resolve in one call.
 
 ```ts
-// options?: { query?, selectedOptimizations? } — omit to use current SDK state.
+// The optional second argument is FetchOptimizedEntryOptions: { query?, selectedOptimizations? }.
+// Omit selectedOptimizations to use current SDK state.
 const { entry, baselineEntry, selectedOptimization } =
   await optimization.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
 ```
 
-Two facts hold everywhere:
+The second resolver argument is always `selectedOptimizations`. Omit it to use the stateful SDK's
+current selections, or pass a captured array positionally. A Contentful entry skeleton is the
+TypeScript type that declares an entry's content-type ID and fields. When the baseline and variants
+can use different known content types, put all of their skeletons in one union, pass it as the first
+type argument, and narrow the result before reading fields. The resolver names this skeleton set
+`S`.
 
-- **The resolved entry is a base `contentful` `Entry`.** `entry.fields` is typed loosely, so if your
-  render code expects a narrower type, cast it — `entry as YourEntryType`. This direct cast works
-  for the common cases, including `.withoutUnresolvableLinks`-narrowed types. Only if TypeScript
-  rejects a cast for a genuinely disjoint type do you need `entry as unknown as YourEntryType`.
-- **Fallback contract.** When consent is denied, no variant applies, links are unresolved, or the
-  payload was all-locale, `resolveOptimizedEntry()` returns the baseline entry. Your UI never
-  breaks; it falls back to default content — this is why the quick start renders correctly even
-  before you author a variant.
+**Follow this pattern:** one skeleton union for the baseline and every possible variant.
+
+```ts
+import {
+  isEntryOfContentType,
+  type SelectedOptimizationArray,
+} from '@contentful/optimization-web/api-schemas'
+import type { ChainModifiers, Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
+
+type PageSkeleton = EntrySkeletonType<{ title: EntryFieldTypes.Symbol }, 'page'>
+type HeroSkeleton = EntrySkeletonType<{ headline: EntryFieldTypes.Symbol }, 'hero'>
+type CtaSkeleton = EntrySkeletonType<{ label: EntryFieldTypes.Symbol }, 'cta'>
+type PossiblePageSkeleton = PageSkeleton | HeroSkeleton | CtaSkeleton
+type AppLocale = 'en-US'
+
+function renderPage(
+  baselineEntry: Entry<PageSkeleton, ChainModifiers, AppLocale>,
+  selectedOptimizations?: SelectedOptimizationArray,
+): string {
+  const { entry, isEmptyVariant } = optimization.resolveOptimizedEntry<
+    PossiblePageSkeleton,
+    ChainModifiers,
+    AppLocale
+  >(baselineEntry, selectedOptimizations)
+
+  if (isEmptyVariant) return ''
+  if (isEntryOfContentType<HeroSkeleton, ChainModifiers, AppLocale>(entry, 'hero')) {
+    return String(entry.fields.headline ?? '')
+  }
+  if (isEntryOfContentType<CtaSkeleton, ChainModifiers, AppLocale>(entry, 'cta')) {
+    return String(entry.fields.label ?? '')
+  }
+  return String(entry.fields.title ?? '')
+}
+```
+
+When every variant uses `PageSkeleton`, omit the generic arguments and TypeScript infers that single
+skeleton from the baseline entry. For an open-ended content model, use `EntrySkeletonType` for `S`;
+this avoids maintaining a closed union, but fields are unchecked and must be validated before
+rendering. See
+[TypeScript content-model choices](../concepts/entry-personalization-and-variant-resolution.md#typescript-content-model-choices)
+for the complete modeling trade-offs.
+
+A different content type does not by itself trigger baseline fallback. The returned `entry` also
+remains the baseline for a control selection (`variantIndex === 0`) and an empty variant
+(`id === ''`); `isEmptyVariant: true` distinguishes the empty variant, which renders no content.
+Resolution can also fall back to the baseline when no matching selection or usable variant exists,
+the required links are unresolved or invalid, or the payload uses all locales. This is why the quick
+start renders default content before you author a variant or before an accepted event supplies
+selections.
 
 Keep the baseline entry id separate from the resolved entry id in the DOM. Later re-renders read the
 baseline id to resolve again, so overwriting it with the variant id would make the SDK treat a
@@ -462,10 +517,10 @@ async function renderEntry(entryId: string, element: HTMLElement): Promise<void>
   const baselineEntry = await fetchEntry(entryId) // your own fetcher from the section above
 
   // Omit selections to use current SDK state from the most recent accepted page()/identify().
-  const { entry, optimizationContextId, selectedOptimization } =
+  const { entry, isEmptyVariant, optimizationContextId, selectedOptimization } =
     optimization.resolveOptimizedEntry(baselineEntry)
 
-  element.textContent = String(entry.fields.headline ?? '')
+  element.textContent = isEmptyVariant ? '' : String(entry.fields.headline ?? '')
 
   // Keep the baseline id separate so re-renders resolve from the baseline, not the variant.
   element.dataset.ctflBaselineId = baselineEntry.sys.id
@@ -1119,7 +1174,7 @@ pnpm test:e2e:web-sdk
 | Entry stays on baseline                                          | No variant applies, denied consent, unresolved Contentful links, or an all-locale payload      | Author a variant that targets you, check consent, fetch one `locale` with enough `include`                       |
 | The variant never appears even though it is authored             | Your test visitor does not match the experience's audience, or no accepted `page()` ran first  | Target all visitors for a first test or force the variant with the preview panel; confirm `page()` was accepted  |
 | `resolveOptimizedEntry()` always returns the baseline            | No selected optimizations yet, the entry is not optimized, links are unresolved, or all-locale | Verify the preceding `page()`/`identify()` result, CDA `include`, `locale`, and `fields.nt_experiences`/variants |
-| `entry.fields.x` shows a type error                              | The resolved entry is a base `Entry`, wider than your component's type                         | Cast it: `entry as YourEntryType` (add `as unknown` only if TS rejects a genuinely disjoint type)                |
+| Variant fields show a type error                                 | The first generic does not include every possible baseline and variant skeleton                | Put all supported skeletons in one union as the first generic, then narrow with `isEntryOfContentType`           |
 | `ContentfulOptimization is already initialized`                  | More than one instance in the same browser runtime                                             | Reuse the module singleton, or call `destroy()` only in teardown paths                                           |
 | SPA page events duplicate                                        | Route changes call `page()` directly without route-key dedupe                                  | Use `trackCurrentPage()` with a stable `routeKey`                                                                |
 | `track()` or interaction events behave as blocked                | Consent is unset or false, or the event type is not allow-listed                               | Inspect `states.consent.current`, `allowedEventTypes`, `onEventBlocked`, and `states.blockedEventStream`         |

@@ -99,7 +99,7 @@ export default function SelectionHandoffPage({
             >
               {(resolvedEntry) => (
                 <EntryCardContent
-                  entry={resolvedEntry as ContentEntry}
+                  entry={resolvedEntry}
                   labelEntryId={entry.sys.id}
                   testId={`pages-selection-${entry.sys.id}`}
                 />

@@ -201,19 +201,11 @@ also passed. For cross-SDK consent guidance, see
 
 ## Entry optimization boundary
 
-Entry optimization is a local decision once the app has both Contentful entry data and selected
-optimizations.
-
-The application provides:
-
-- A single-locale Contentful entry map.
-- Linked optimization references and variant entries in the Contentful payload.
-- An optional selected-optimizations snapshot when a custom abstraction needs deterministic
-  resolution.
-
-The SDK returns either the baseline entry or the resolved variant entry, wrapped in a `CTEntry`
-(an SDK-owned view over the resolved entry — read with `getField<T>`, `hasField`, `id`, or
-unwrap the raw entry map via `toMap()`):
+Android entry resolution follows the cross-SDK data model, cross-content selection, empty-variant,
+and baseline-fallback behavior described in
+[Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md).
+The Android-specific direct method is a `suspend` function. It returns the baseline or selected
+variant as a `CTEntry`:
 
 ```kotlin
 val result = client.resolveOptimizedEntry(baseline = entry)
@@ -221,20 +213,26 @@ val result = client.resolveOptimizedEntry(baseline = entry)
 val resolvedEntry = result.entry // CTEntry
 val selectedOptimization = result.selectedOptimization
 val optimizationContextId = result.optimizationContextId
+
+when {
+    resolvedEntry.contentTypeId == "hero" && resolvedEntry.hasField("headline") ->
+        renderHero(resolvedEntry.getField<String>("headline"))
+    resolvedEntry.contentTypeId == "cta" && resolvedEntry.hasField("label") ->
+        renderCta(resolvedEntry.getField<String>("label"))
+    else -> renderPage(resolvedEntry.getField<String>("title"))
+}
 ```
+
+`contentTypeId` reads Contentful's `sys.contentType.sys.id` discriminant. It identifies the entry
+shape but does not validate its fields. `hasField` checks field presence, and `getField<T>` reads a
+field as the requested Kotlin type. XML Views render callbacks receive a raw entry map; convert it
+with `CTEntry.from(entryMap)` to use the same accessors.
 
 When resolving directly, omit `selectedOptimizations` to use current client state, or pass an
 explicit snapshot such as `client.selectedOptimizations.value` when a custom abstraction needs
-deterministic resolution. `resolveOptimizedEntry(...)` does not fetch Contentful entries, evaluate
-audiences, call the Experience API, or mutate public profile, consent, or selected-optimizations
-state. In a stateful client, matched resolution can register an opaque tracking context and return
-`optimizationContextId`. Pass that value to manual `TrackViewPayload` or `TrackClickPayload` calls
-when emitting interactions for the resolved entry yourself. Compose `OptimizedEntry` and XML Views
-`OptimizedEntryView` wrap the same boundary and add component-level behavior such as variant
-locking, live updates, and interaction tracking.
-
-For the full data model and fallback behavior, see
-[Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md).
+deterministic resolution. A matched resolution can return `optimizationContextId` for manual
+interaction tracking. Compose `OptimizedEntry` and XML Views `OptimizedEntryView` add variant
+locking, live updates, and interaction tracking around the same resolver.
 
 ## Adapter surfaces
 

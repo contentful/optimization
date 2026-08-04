@@ -113,9 +113,11 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   `{ entry, selectedOptimization?, optimizationContextId? }` (public `ResolvedData` shape). Omitting
   arg 2 defaults to `selectedOptimizationsSignal.value` (current SDK state).
   source: core-sdk#CoreBase.ts#resolveOptimizedEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#ResolvedData; core-sdk#CoreStateful.ts#resolveOptimizedEntry
-- `entry` is a base `contentful` `Entry` ⇒ cast `entry as YourType` (`as unknown as YourType` only
-  for genuinely disjoint). Baseline fallback: see
-  [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback).
+- Low-level presentation snapshots and tracking-attribute inputs carry one caller-supplied skeleton
+  set across baseline, resolved-entry, and metadata views without changing runtime variant choice.
+  Shared modeling and narrowing behavior: see
+  [`../shared/concepts.md`](../shared/concepts.md#entry-resolution).
+  source: web-sdk#presentation/OptimizedEntrySnapshot.ts#OptimizedEntrySnapshot; web-sdk#presentation/OptimizedEntryController.ts#OptimizedEntryController; web-sdk#presentation/OptimizedEntryTrackingAttributes.ts#resolveOptimizedEntryTrackingAttributes; core-sdk#OptimizedEntryMetadata.ts#OptimizedEntryMetadata
 - **Control-variant precision (subtle):** `selectedOptimization` is `undefined` ONLY when no
   experience matched — no selections, entry not optimized, no optimization entry, or no matching
   selection. When an experience matches but assigns the visitor to the CONTROL/baseline variant

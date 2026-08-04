@@ -15,11 +15,10 @@ export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Elemen
   return (
     <OptimizedEntry baselineEntry={entry} hoverDurationUpdateIntervalMs={1000}>
       {(resolvedEntry) => {
-        const asCf = resolvedEntry as ContentEntry
-        const nestedEntries = Array.isArray(asCf.fields.nested)
-          ? asCf.fields.nested.filter(isResolvedContentfulEntry<ContentEntrySkeleton>)
+        const nestedEntries = Array.isArray(resolvedEntry.fields.nested)
+          ? resolvedEntry.fields.nested.filter(isResolvedContentfulEntry<ContentEntrySkeleton>)
           : []
-        const text = renderText(asCf)
+        const text = renderText(resolvedEntry)
         const fullLabel = `${text} [Entry: ${resolvedEntry.sys.id}]`
 
         return (

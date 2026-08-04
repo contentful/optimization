@@ -1,6 +1,6 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-api-client/api-schemas'
-import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
-import type { ResolvedData } from './resolvers'
+import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
+import type { EntryFor, ResolvedData } from './resolvers'
 
 /**
  * Baseline and resolved-entry metadata for optimized-entry render surfaces.
@@ -13,11 +13,11 @@ export interface OptimizedEntryMetadata<
   L extends LocaleCode = LocaleCode,
 > {
   /** Entry supplied by the caller or fetched before optimization resolution. */
-  readonly baselineEntry: Entry<S, M, L>
+  readonly baselineEntry: EntryFor<S, M, L>
   /** ID of the baseline entry supplied by the caller or fetched before optimization resolution. */
   readonly baselineEntryId: string
   /** Baseline or resolved variant entry. */
-  readonly entry: Entry<S, M, L>
+  readonly entry: EntryFor<S, M, L>
   /** ID of the baseline or resolved variant entry. */
   readonly entryId: string
   /** Opaque runtime-owned optimization context ID for entry interaction tracking. */

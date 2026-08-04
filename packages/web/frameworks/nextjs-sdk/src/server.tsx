@@ -9,12 +9,14 @@ import type {
   CoreStatelessRequestConsent,
   CoreStatelessRequestOptions,
   EventEmissionResult,
+  FetchOptimizedEntryResult,
   ManagedEntryHandoff,
   PageViewBuilderArgs,
   PrivateRequestOptimizationCacheMetadata,
   UniversalEventBuilderArgs,
 } from '@contentful/optimization-node/core-sdk'
 import { createPageContextFromUrl } from '@contentful/optimization-node/core-sdk'
+import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
 import type { JSX, ReactElement, ReactNode } from 'react'
 import type { NextjsCookieReader } from './bound-component-types'
 import {
@@ -167,35 +169,45 @@ export type NextjsPageContextInput =
   | NonNullable<UniversalEventBuilderArgs['page']>
   | CreateNextjsPageContextOptions
 
-export type ServerOptimizedEntryFetchResult = ServerTrackingResolvedData & {
-  readonly baselineEntry: ServerTrackingBaselineEntry
-}
+export type ServerOptimizedEntryFetchResult<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = FetchOptimizedEntryResult<S, M, L>
 
-type ServerOptimizedEntryOwnProps<TElement extends keyof JSX.IntrinsicElements> =
-  ServerTrackingAttributeOptions & {
-    readonly as?: TElement
-    readonly children?: ReactNode
-  } & (
-      | {
-          readonly baselineEntry: ServerTrackingBaselineEntry
-          readonly resolvedData: ServerTrackingResolvedData
-          readonly result?: never
-        }
-      | {
-          readonly baselineEntry?: never
-          readonly resolvedData?: never
-          readonly result: ServerOptimizedEntryFetchResult
-        }
-    )
+type ServerOptimizedEntryOwnProps<
+  TElement extends keyof JSX.IntrinsicElements,
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+> = ServerTrackingAttributeOptions & {
+  readonly as?: TElement
+  readonly children?: ReactNode
+} & (
+    | {
+        readonly baselineEntry: ServerTrackingBaselineEntry<S, M, L>
+        readonly resolvedData: ServerTrackingResolvedData<S, M, L>
+        readonly result?: never
+      }
+    | {
+        readonly baselineEntry?: never
+        readonly resolvedData?: never
+        readonly result: ServerOptimizedEntryFetchResult<S, M, L>
+      }
+  )
 
 type DataCtflAttributeName = `data-ctfl-${string}`
 
-export type ServerOptimizedEntryProps<TElement extends keyof JSX.IntrinsicElements = 'div'> =
-  ServerOptimizedEntryOwnProps<TElement> &
-    Omit<
-      JSX.IntrinsicElements[TElement],
-      keyof ServerOptimizedEntryOwnProps<TElement> | DataCtflAttributeName
-    >
+export type ServerOptimizedEntryProps<
+  TElement extends keyof JSX.IntrinsicElements = 'div',
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = ServerOptimizedEntryOwnProps<TElement, S, M, L> &
+  Omit<
+    JSX.IntrinsicElements[TElement],
+    keyof ServerOptimizedEntryOwnProps<TElement, S, M, L> | DataCtflAttributeName
+  >
 
 export function configureNextjsServerOptimization(
   config: OptimizationNodeConfig,
@@ -420,11 +432,16 @@ export function persistNextjsAnonymousId(
   }
 }
 
-function getServerOptimizedEntryData<TElement extends keyof JSX.IntrinsicElements>(
-  props: ServerOptimizedEntryProps<TElement>,
+function getServerOptimizedEntryData<
+  TElement extends keyof JSX.IntrinsicElements,
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+>(
+  props: ServerOptimizedEntryProps<TElement, S, M, L>,
 ): {
-  readonly baselineEntry: ServerTrackingBaselineEntry
-  readonly resolvedData: ServerTrackingResolvedData
+  readonly baselineEntry: ServerTrackingBaselineEntry<S, M, L>
+  readonly resolvedData: ServerTrackingResolvedData<S, M, L>
 } {
   if (props.result !== undefined) {
     return { baselineEntry: props.result.baselineEntry, resolvedData: props.result }
@@ -433,9 +450,12 @@ function getServerOptimizedEntryData<TElement extends keyof JSX.IntrinsicElement
   return { baselineEntry: props.baselineEntry, resolvedData: props.resolvedData }
 }
 
-export function ServerOptimizedEntry<TElement extends keyof JSX.IntrinsicElements = 'div'>(
-  props: ServerOptimizedEntryProps<TElement>,
-): ReactElement {
+export function ServerOptimizedEntry<
+  TElement extends keyof JSX.IntrinsicElements = 'div',
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+>(props: ServerOptimizedEntryProps<TElement, S, M, L>): ReactElement {
   const {
     baselineEntry: _baselineEntry,
     resolvedData: _resolvedData,

@@ -111,11 +111,11 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
 
 ## Render / entry resolution
 
-- Render prop `(resolvedEntry: Entry, { getMergeTagValue }) => ReactNode`; `resolvedEntry` is a base
-  `contentful` `Entry` ⇒ cast `resolved as YourType` for narrower component types
-  (`as unknown as YourType` only for genuinely disjoint). Baseline-fallback contract: see
-  [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback).
-  source: `react-web-sdk#optimized-entry/optimizedEntryUtils.ts#RenderProp`; `react-web-sdk#optimized-entry/optimizedEntryUtils.ts#OptimizedEntryRenderContext`.
+- Bound browser and server `OptimizedEntry` surfaces carry one caller-supplied skeleton set through
+  render props, metadata, and callbacks; baseline and resolved metadata entries use that same set
+  without changing runtime variant choice. Shared modeling and narrowing behavior: see
+  [`../shared/concepts.md`](../shared/concepts.md#entry-resolution).
+  source: `nextjs-sdk#bound-component-types.ts#NextjsBoundOptimizedEntryComponent`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`; `core-sdk#OptimizedEntryMetadata.ts#OptimizedEntryMetadata`; `react-web-sdk#optimized-entry/optimizedEntryUtils.ts#RenderProp`
 - Merge tags: guard embedded nodes with `isMergeTagEntry`; pass node `target` to `getMergeTagValue`.
   source: `api-schemas#contentful/typeGuards.ts#isMergeTagEntry`; `core-sdk#CoreBase.ts#getMergeTagValue`.
 

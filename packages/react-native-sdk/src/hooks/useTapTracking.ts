@@ -21,11 +21,11 @@ const TAP_DISTANCE_THRESHOLD = 10
  *
  * @public
  */
-export interface UseTapTrackingOptions {
+export interface UseTapTrackingOptions<TEntry extends Entry = Entry> {
   /**
    * The resolved Contentful entry to track (baseline or variant).
    */
-  entry: Entry
+  entry: TEntry
 
   /**
    * Selected optimization data for variant tracking. Omit for baseline/non-optimized entries.
@@ -47,7 +47,7 @@ export interface UseTapTrackingOptions {
    *
    * @defaultValue `undefined`
    */
-  onTap?: (entry: Entry) => void
+  onTap?: (entry: TEntry) => void
 }
 
 /**
@@ -97,13 +97,13 @@ export interface UseTapTrackingReturn {
  *
  * @public
  */
-export function useTapTracking({
+export function useTapTracking<TEntry extends Entry = Entry>({
   entry,
   optimizationContextId,
   selectedOptimization,
   enabled,
   onTap,
-}: UseTapTrackingOptions): UseTapTrackingReturn {
+}: UseTapTrackingOptions<TEntry>): UseTapTrackingReturn {
   const contentfulOptimization = useOptimization()
   const optimizationRef = useRef(contentfulOptimization)
   optimizationRef.current = contentfulOptimization

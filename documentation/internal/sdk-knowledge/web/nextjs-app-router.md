@@ -165,11 +165,12 @@ source: `nextjs-sdk#app-router-server.tsx#renderBoundRootTree`; `nextjs-sdk#app-
 
 ## Render / entry resolution
 
-- Render prop hands back a base `contentful` `Entry`; cast `resolved as YourType`
-  (`as unknown as YourType` only for genuinely disjoint types). Baseline-fallback contract: see
-  [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback). Double-wrapping the same
-  baseline id renders `null` + dev warning.
-  source: `react-web-sdk#optimized-entry/optimizedEntryUtils.ts#OptimizedEntryRenderContext`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#useDuplicateBaselineGuard`
+- Bound and server `OptimizedEntry` surfaces carry one caller-supplied skeleton set through render
+  props, metadata, and callbacks; baseline and resolved metadata entries use that same set without
+  changing runtime variant choice. Shared modeling and narrowing behavior: see
+  [`../shared/concepts.md`](../shared/concepts.md#entry-resolution). Double-wrapping the same baseline
+  id renders `null` plus a development warning.
+  source: `nextjs-sdk#bound-component-types.ts#NextjsBoundOptimizedEntryComponent`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`; `core-sdk#OptimizedEntryMetadata.ts#OptimizedEntryMetadata`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#useDuplicateBaselineGuard`
 - `prefetchManagedEntries` without a supplied `handoff` creates a synthetic `static` +
   `preserve-server` handoff with `selectedOptimizations: []` and `initialPageEvent: 'emit'`.
   source: `nextjs-sdk#app-router-server.tsx#resolveHandoffEntries`
