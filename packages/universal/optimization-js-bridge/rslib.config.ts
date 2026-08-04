@@ -68,8 +68,9 @@ const prependPolyfillSource = (config: { plugins?: unknown }): void => {
 
 // One shared bridge source compiles to a UMD bundle per native platform. The two
 // bundles are identical apart from __OPTIMIZATION_PACKAGE_NAME__, which Core stamps
-// into the analytics `library.name` field — kept platform-specific so iOS and
-// Android events stay distinguishable downstream.
+// into the analytics `library.name` field — kept as the platform SDK identity
+// (`@contentful/optimization-ios` / `@contentful/optimization-android`) so events
+// are attributed to the native SDK rather than to the internal bridge package.
 const commonLib = {
   bundle: true,
   autoExtension: false,
@@ -113,7 +114,7 @@ export default defineConfig({
         },
         define: {
           __OPTIMIZATION_VERSION__: optimizationVersion,
-          __OPTIMIZATION_PACKAGE_NAME__: JSON.stringify('@contentful/optimization-ios-bridge'),
+          __OPTIMIZATION_PACKAGE_NAME__: JSON.stringify('@contentful/optimization-ios'),
         },
       },
       output: { ...commonOutput },
@@ -132,7 +133,7 @@ export default defineConfig({
         },
         define: {
           __OPTIMIZATION_VERSION__: optimizationVersion,
-          __OPTIMIZATION_PACKAGE_NAME__: JSON.stringify('@contentful/optimization-android-bridge'),
+          __OPTIMIZATION_PACKAGE_NAME__: JSON.stringify('@contentful/optimization-android'),
         },
       },
       output: { ...commonOutput },

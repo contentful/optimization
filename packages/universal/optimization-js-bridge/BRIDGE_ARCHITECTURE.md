@@ -32,8 +32,10 @@ Swift/Kotlin APIs:
 | `optimization-ios-bridge.umd.js`     | iOS Swift Package      | JavaScriptCore (`JSContext`) |
 | `optimization-android-bridge.umd.js` | Android library assets | QuickJS (`quickjs-kt`)       |
 
-The bundles differ only in the package name stamped into analytics `library.name`. Keep that
-platform-specific define intact so iOS and Android events remain distinguishable.
+The bundles differ only in the identifier stamped into analytics `library.name`
+(`@contentful/optimization-ios` and `@contentful/optimization-android`). Keep that
+platform-specific define intact so events are attributed to the native SDK rather than the
+internal bridge package.
 
 The package `postbuild` step copies the emitted UMD bundles into the native SDK resource locations.
 Do not hand-edit `dist/` output or copied native bundles. Update bridge source or polyfills, then
