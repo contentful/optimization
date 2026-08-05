@@ -210,10 +210,14 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   `shouldSendStickyEntryView` / `shouldRememberStickyEntryViewResult`. The Swift controller passes a
   per-controller `stickyTrackingKey` (a fresh UUID) so a single mounted entry dedupes its own sticky
   views. source: optimization-js-bridge#index.ts#Bridge; core-sdk#tracking/EntryViewTracking.ts#shouldSendStickyEntryView; core-sdk#tracking/EntryViewTracking.ts#shouldRememberStickyEntryViewResult
-- Entry tap tracking (SwiftUI `TapTrackingModifier`): a `simultaneousGesture(TapGesture())` on the
-  wrapper emits wire type `component_click` via `trackClick` when `hasConsent("trackClick")`, then
-  calls `onTap(entry)` if provided. (Unlike React Native, which uses raw touch start/end with a
-  distance threshold, iOS relies on SwiftUI's `TapGesture`.) source: extern:TapTrackingModifier uses simultaneous TapGesture, gated by hasConsent trackClick — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Tracking/TapTrackingModifier.swift#TapTrackingModifier; core-sdk#consent/ConsentPolicy.ts#hasEventConsent
+- Entry tap tracking (SwiftUI `TapTrackingModifier`): on platforms where UIKit is available, a plain
+  `UITapGestureRecognizer` attached to the wrapper's superview (`cancelsTouchesInView = false`,
+  delegate always allows simultaneous recognition) observes taps without competing for touches a
+  nested interactive child (e.g. a `Button`) needs; it falls back to `simultaneousGesture(TapGesture())`
+  on platforms without UIKit (e.g. macOS). Either path emits wire type `component_click` via
+  `trackClick` when `hasConsent("trackClick")`, then calls `onTap(entry)` if provided. (Unlike React
+  Native, which uses raw touch start/end with a distance threshold, iOS observes taps without SwiftUI's
+  own gesture-arena competition.) source: extern:TapTrackingModifier uses a UITapGestureRecognizer on the superview to avoid blocking nested Buttons, falls back to simultaneousGesture off UIKit — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Tracking/TapTrackingModifier.swift#TapTrackingModifier; core-sdk#consent/ConsentPolicy.ts#hasEventConsent
 - Flags: `getFlag(_:)` is a non-reactive JSON read; `flagPublisher(_:)` registers an `observeFlag`
   subscription in the bridge and returns a `CurrentValueSubject`-backed publisher. Subscribing to a
   flag observable emits a `component` flag-view event through the core stream when consent and
