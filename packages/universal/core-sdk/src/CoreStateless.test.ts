@@ -308,8 +308,13 @@ describe('CoreStateless', () => {
 
     await requestOptimization.page()
     const result = await requestOptimization.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const explicitBaseline = await requestOptimization.fetchOptimizedEntry(
+      '4ib0hsHWoSOnCVdDkizE8d',
+      { selectedOptimizations: [] },
+    )
 
     expect(result.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(explicitBaseline.entry).toBe(optimizedEntry)
     expect(result.selectedOptimization).toEqual(
       expect.objectContaining({
         experienceId: '2qVK4T5lnScbswoyBuGipd',

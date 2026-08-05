@@ -1,49 +1,71 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import type { ContentfulEntryQuery, ResolvedData } from '@contentful/optimization-web/core-sdk'
+import type {
+  ContentfulEntryQuery,
+  EntryFor,
+  ResolvedData,
+} from '@contentful/optimization-web/core-sdk'
 import {
   createOptimizedEntryLoadingEntry,
   getOptimizedEntrySourceKey,
   OptimizedEntryController,
   OptimizedEntrySourceController,
   type OptimizedEntryMetadata,
+  type OptimizedEntrySdk,
   type OptimizedEntrySnapshot,
   type OptimizedEntrySourceSnapshot,
 } from '@contentful/optimization-web/presentation'
-import type { Entry, EntrySkeletonType } from 'contentful'
+import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useOptimizationHydrationMode } from '../context/OptimizationHydrationContext'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimizationContext } from '../hooks/useOptimization'
 
-export type UseOptimizedEntryParams = {
+interface UseOptimizedEntrySharedParams {
   /** Per-entry live-update override. */
   liveUpdates?: boolean
   /** Callback invoked when SDK-managed entry fetching fails. */
   onEntryError?: (error: Error) => void
-} & (
-  | {
-      /** Baseline Contentful entry fetched by the application. */
-      baselineEntry: Entry
-      entryId?: never
-      entryQuery?: never
-    }
-  | {
-      baselineEntry?: never
-      /** Contentful entry ID fetched through the SDK-managed Contentful client. */
-      entryId: string
-      /** Per-call Contentful `getEntry()` query overrides. */
-      entryQuery?: ContentfulEntryQuery
-    }
-)
+}
 
-interface UseManagedBaselineEntryResult {
-  readonly entry: Entry | undefined
+export type UseOptimizedEntryBaselineParams<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = UseOptimizedEntrySharedParams & {
+  /** Baseline Contentful entry fetched by the application. */
+  baselineEntry: Entry<S, M, L>
+  entryId?: never
+  entryQuery?: never
+}
+
+export type UseOptimizedEntryManagedParams = UseOptimizedEntrySharedParams & {
+  baselineEntry?: never
+  /** Contentful entry ID fetched through the SDK-managed Contentful client. */
+  entryId: string
+  /** Per-call Contentful `getEntry()` query overrides. */
+  entryQuery?: ContentfulEntryQuery
+}
+
+export type UseOptimizedEntryParams =
+  | UseOptimizedEntryBaselineParams
+  | UseOptimizedEntryManagedParams
+
+interface UseManagedBaselineEntryResult<TEntry extends Entry = Entry> {
+  readonly entry: TEntry | undefined
   readonly error: Error | undefined
   readonly isLoading: boolean
 }
 
-type UseOptimizedEntryBaselineParams = Extract<UseOptimizedEntryParams, { baselineEntry: Entry }>
-type UseOptimizedEntryManagedParams = Extract<UseOptimizedEntryParams, { entryId: string }>
+type OptimizedEntryMetadataFor<TEntry extends Entry> = Omit<
+  OptimizedEntryMetadata,
+  'baselineEntry' | 'entry' | 'resolvedData'
+> & {
+  readonly baselineEntry: TEntry
+  readonly entry: TEntry
+  readonly resolvedData: Omit<ResolvedData<EntrySkeletonType>, 'entry'> & {
+    readonly entry: TEntry
+  }
+}
 
 export interface UseOptimizedEntryResult<TEntry extends Entry | undefined = Entry | undefined> {
   /** Whether SDK state says optimized content can be selected. */
@@ -61,17 +83,21 @@ export interface UseOptimizedEntryResult<TEntry extends Entry | undefined = Entr
   /** Whether the current entry has been resolved and metadata can be consumed. */
   isResolved: boolean
   /** Baseline, resolved-entry, and optimization metadata for render surfaces. */
-  metadata: OptimizedEntryMetadata | undefined
+  metadata: OptimizedEntryMetadataFor<Exclude<TEntry, undefined>> | undefined
   /** Full resolved entry data returned by the SDK resolver. */
-  resolvedData: ResolvedData<EntrySkeletonType>
+  resolvedData: OptimizedEntryMetadataFor<Exclude<TEntry, undefined>>['resolvedData']
   /** Selected optimization that resolved the current entry, when one applied. */
   selectedOptimization: ResolvedData<EntrySkeletonType>['selectedOptimization']
   /** Selected optimization array used for this hook state. */
   selectedOptimizations: SelectedOptimizationArray | undefined
 }
 
-export interface UseOptimizedEntrySnapshotParams {
-  baselineEntry: Entry
+export interface UseOptimizedEntrySnapshotParams<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> {
+  baselineEntry: EntryFor<S, M, L>
   clickable?: boolean
   hasCustomLoadingFallback?: boolean
   hoverDurationUpdateIntervalMs?: number
@@ -83,6 +109,18 @@ export interface UseOptimizedEntrySnapshotParams {
   viewDurationUpdateIntervalMs?: number
 }
 
+export function useManagedBaselineEntry<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+>(params: UseOptimizedEntryBaselineParams<S, M, L>): UseManagedBaselineEntryResult<Entry<S, M, L>>
+export function useManagedBaselineEntry<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  L extends LocaleCode = LocaleCode,
+>(params: UseOptimizedEntryManagedParams): UseManagedBaselineEntryResult<Entry<S, undefined, L>>
+export function useManagedBaselineEntry(
+  params: UseOptimizedEntryParams,
+): UseManagedBaselineEntryResult
 export function useManagedBaselineEntry({
   baselineEntry,
   entryId,
@@ -157,7 +195,11 @@ export function useManagedBaselineEntry({
  *
  * @public
  */
-export function useOptimizedEntrySnapshot({
+export function useOptimizedEntrySnapshot<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+>({
   baselineEntry,
   clickable,
   hasCustomLoadingFallback,
@@ -168,8 +210,10 @@ export function useOptimizedEntrySnapshot({
   trackHovers,
   trackViews,
   viewDurationUpdateIntervalMs,
-}: UseOptimizedEntrySnapshotParams): OptimizedEntrySnapshot {
-  const { sdk } = useOptimizationContext()
+}: UseOptimizedEntrySnapshotParams<S, M, L>): OptimizedEntrySnapshot<S, M, L> {
+  const { sdk } = useOptimizationContext() as {
+    readonly sdk?: OptimizedEntrySdk<S, M, L>
+  }
   const hydration = useOptimizationHydrationMode()
   const liveUpdatesContext = useLiveUpdates()
   const isSdkReady = sdk !== undefined
@@ -213,8 +257,10 @@ export function useOptimizedEntrySnapshot({
       viewDurationUpdateIntervalMs,
     ],
   )
-  const [controller] = useState(() => new OptimizedEntryController(controllerOptions))
-  const [snapshot, setSnapshot] = useState<OptimizedEntrySnapshot>(() => controller.getSnapshot())
+  const [controller] = useState(() => new OptimizedEntryController<S, M, L>(controllerOptions))
+  const [snapshot, setSnapshot] = useState<OptimizedEntrySnapshot<S, M, L>>(() =>
+    controller.getSnapshot(),
+  )
 
   useEffect(() => {
     setIsPresentationReady(isSdkReady)
@@ -244,10 +290,17 @@ export function useOptimizedEntrySnapshot({
  *
  * @public
  */
-export function useOptimizedEntry(
-  params: UseOptimizedEntryBaselineParams,
-): UseOptimizedEntryResult<Entry>
-export function useOptimizedEntry(params: UseOptimizedEntryManagedParams): UseOptimizedEntryResult
+export function useOptimizedEntry<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+>(params: UseOptimizedEntryBaselineParams<S, M, L>): UseOptimizedEntryResult<EntryFor<S, M, L>>
+export function useOptimizedEntry<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  L extends LocaleCode = LocaleCode,
+>(
+  params: UseOptimizedEntryManagedParams,
+): UseOptimizedEntryResult<EntryFor<S, undefined, L> | undefined>
 export function useOptimizedEntry(params: UseOptimizedEntryParams): UseOptimizedEntryResult {
   const managedEntry = useManagedBaselineEntry(params)
   const loadingEntryId = (params as { readonly entryId?: string }).entryId ?? 'contentful-entry'

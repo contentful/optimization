@@ -248,6 +248,9 @@ helper name does not by itself prove Edge runtime execution.
 `configureNextjsServerOptimization()`, `createNextjsRequestHandoff()`, `ServerOptimizedEntry`, and
 `getNextjsServerOptimizationData()` for applications that need direct Node request control.
 
+To model baseline and variant entries with different content types, see
+[Entry optimization and variant resolution](../../../../documentation/concepts/entry-personalization-and-variant-resolution.md).
+
 `@contentful/optimization-nextjs/tracking-attributes` exposes `getServerTrackingAttributes()`, a
 Next.js wrapper around the React Web/Web tracking-attribute pass-through. Use it for
 server/static/edge-rendered markup that should be observed by analytics-only browser roots.

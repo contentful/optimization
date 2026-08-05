@@ -15,14 +15,13 @@ export function LiveEntryCard({ entry, liveUpdates, testId }: LiveEntryCardProps
   return (
     <OptimizedEntry baselineEntry={entry} liveUpdates={liveUpdates}>
       {(resolvedEntry, { getMergeTagValue }) => {
-        const asCf = resolvedEntry as ContentEntry
-        const text = typeof asCf.fields.text === 'string' ? asCf.fields.text : ''
+        const text = typeof resolvedEntry.fields.text === 'string' ? resolvedEntry.fields.text : ''
         const fullLabel = `${text} [Entry: ${resolvedEntry.sys.id}]`
 
         return (
           <EntryCardContent
             className="entry-card"
-            entry={asCf}
+            entry={resolvedEntry}
             renderOptions={createRichTextRenderOptions(getMergeTagValue)}
             testId={testId}
             textAriaLabel={fullLabel}

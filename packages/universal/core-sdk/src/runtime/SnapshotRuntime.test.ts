@@ -25,8 +25,10 @@ describe('SnapshotRuntime', () => {
     const runtime = createSnapshotRuntime({ data: snapshotData })
     const resolved = runtime.resolveOptimizedEntry(optimizedEntry)
     const explicit = runtime.resolveOptimizedEntry(optimizedEntry, selectedOptimizations)
+    const explicitBaseline = runtime.resolveOptimizedEntry(optimizedEntry, [])
 
     expect(resolved.entry.sys.id).toBe(explicit.entry.sys.id)
+    expect(explicitBaseline.entry).toBe(optimizedEntry)
     expect(resolved.selectedOptimization).toEqual(explicit.selectedOptimization)
     expect(runtime.getMergeTagValue(mergeTagEntry)).toBe('EU')
     expect(runtime.getFlag('theme')).toBe('dark')

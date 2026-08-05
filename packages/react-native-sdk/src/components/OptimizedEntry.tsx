@@ -1,9 +1,10 @@
 import type {
   ContentfulEntryQuery,
+  EntryFor,
   OptimizedEntryMetadata,
   ResolvedData,
 } from '@contentful/optimization-core'
-import type { Entry, EntrySkeletonType } from 'contentful'
+import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import React, { type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
 import { useInteractionTracking } from '../context/InteractionTrackingContext'
@@ -11,20 +12,35 @@ import { useOptimizedEntry, type UseOptimizedEntryParams } from '../hooks/useOpt
 import { useTapTracking } from '../hooks/useTapTracking'
 import { useViewportTracking } from '../hooks/useViewportTracking'
 
+declare class BivariantCallbacks {
+  onEntryResolved(metadata: OptimizedEntryMetadata): void
+  onTap(entry: Entry): void
+  render(entry: Entry, metadata: OptimizedEntryMetadata): ReactNode
+}
+
 export type OptimizedEntryLoadingFallback = ReactNode | (() => ReactNode)
 export type OptimizedEntryErrorFallback = ReactNode | ((error: Error) => ReactNode)
-export type OptimizedEntryRenderProp = (
-  resolvedEntry: Entry,
-  metadata: OptimizedEntryMetadata,
-) => ReactNode
-export type OptimizedEntryChildren = ReactNode | OptimizedEntryRenderProp
+export type OptimizedEntryRenderProp<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = (resolvedEntry: EntryFor<S, M, L>, metadata: OptimizedEntryMetadata<S, M, L>) => ReactNode
+export type OptimizedEntryChildren<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = ReactNode | OptimizedEntryRenderProp<S, M, L>
 
 /**
  * Shared props for the {@link OptimizedEntry} component.
  *
  * @public
  */
-export interface OptimizedEntrySharedProps {
+export interface OptimizedEntrySharedProps<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> {
   /**
    * Content to render. Accepts either a render prop or static children.
    *
@@ -53,7 +69,7 @@ export interface OptimizedEntrySharedProps {
    * </OptimizedEntry>
    * ```
    */
-  children: OptimizedEntryChildren
+  children: OptimizedEntryChildren<S, M, L>
 
   /**
    * Optional fallback rendered while SDK-managed entry fetching is pending.
@@ -73,7 +89,7 @@ export interface OptimizedEntrySharedProps {
   /**
    * Callback invoked when a resolved entry is rendered with tracking ready.
    */
-  onEntryResolved?: (metadata: OptimizedEntryMetadata) => void
+  onEntryResolved?: (metadata: OptimizedEntryMetadata<S, M, L>) => void
 
   /**
    * Minimum time (in milliseconds) the component must be visible
@@ -151,17 +167,21 @@ export interface OptimizedEntrySharedProps {
    *
    * @defaultValue `undefined`
    */
-  onTap?: (resolvedEntry: Entry) => void
+  onTap?: (resolvedEntry: EntryFor<S, M, L>) => void
 }
 
-export type OptimizedEntrySourceProps =
+export type OptimizedEntrySourceProps<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> =
   | {
       /**
        * The baseline Contentful entry to optimize and track.
        * For optimized entries, the component resolves variants. For non-optimized entries,
        * the entry is passed through unchanged.
        */
-      baselineEntry: Entry
+      baselineEntry: Entry<S, M, L>
       entryId?: never
       entryQuery?: never
     }
@@ -173,12 +193,44 @@ export type OptimizedEntrySourceProps =
       entryQuery?: ContentfulEntryQuery
     }
 
+type OptimizedEntryBaselineProps<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+> = OptimizedEntrySharedProps<S, M, L> & {
+  baselineEntry: Entry<S, M, L>
+  entryId?: never
+  entryQuery?: never
+}
+
+type OptimizedEntryManagedProps<
+  S extends EntrySkeletonType,
+  L extends LocaleCode,
+> = OptimizedEntrySharedProps<S, undefined, L> & {
+  baselineEntry?: never
+  entryId: string
+  entryQuery?: ContentfulEntryQuery
+}
+
 /**
  * Props for the {@link OptimizedEntry} component.
  *
  * @public
  */
-export type OptimizedEntryProps = OptimizedEntrySharedProps & OptimizedEntrySourceProps
+export type OptimizedEntryProps<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = OptimizedEntryBaselineProps<S, M, L> | OptimizedEntryManagedProps<S, L>
+
+type OptimizedEntryImplementationProps = Omit<
+  OptimizedEntrySharedProps,
+  'children' | 'onEntryResolved' | 'onTap'
+> & {
+  children: ReactNode | BivariantCallbacks['render']
+  onEntryResolved?: BivariantCallbacks['onEntryResolved']
+  onTap?: BivariantCallbacks['onTap']
+} & OptimizedEntrySourceProps
 
 function resolveTapsEnabled(
   trackTaps: boolean | undefined,
@@ -230,16 +282,23 @@ function resolveUseOptimizedEntryParams(
   onEntryResolved: ((metadata: OptimizedEntryMetadata) => void) | undefined,
 ): UseOptimizedEntryParams {
   if (entryProps.baselineEntry !== undefined) {
-    return { baselineEntry: entryProps.baselineEntry, liveUpdates, onEntryError, onEntryResolved }
+    const params: UseOptimizedEntryParams = {
+      baselineEntry: entryProps.baselineEntry,
+      liveUpdates,
+      onEntryError,
+      onEntryResolved,
+    }
+    return params
   }
 
-  return {
+  const params: UseOptimizedEntryParams = {
     entryId: entryProps.entryId,
     entryQuery: entryProps.entryQuery,
     liveUpdates,
     onEntryError,
     onEntryResolved,
   }
+  return params
 }
 
 interface OptimizedEntryContentProps {
@@ -372,6 +431,16 @@ function OptimizedEntryContent({
  *
  * @public
  */
+export function OptimizedEntry<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+>(props: OptimizedEntryBaselineProps<S, M, L>): React.JSX.Element | null
+export function OptimizedEntry<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  L extends LocaleCode = LocaleCode,
+>(props: OptimizedEntryManagedProps<S, L>): React.JSX.Element | null
+export function OptimizedEntry(props: OptimizedEntryProps): React.JSX.Element | null
 export function OptimizedEntry({
   children,
   loadingFallback,
@@ -388,7 +457,7 @@ export function OptimizedEntry({
   trackTaps,
   onTap,
   ...entryProps
-}: OptimizedEntryProps): React.JSX.Element | null {
+}: OptimizedEntryImplementationProps): React.JSX.Element | null {
   const optimizedEntry = useOptimizedEntry(
     resolveUseOptimizedEntryParams(entryProps, liveUpdates, onEntryError, onEntryResolved),
   )

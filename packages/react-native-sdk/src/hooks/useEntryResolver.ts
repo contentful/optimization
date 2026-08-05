@@ -1,9 +1,24 @@
-import type { ResolvedData } from '@contentful/optimization-core'
+import type { EntryFor, ResolvedData } from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
-import type { Entry, EntrySkeletonType } from 'contentful'
+import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { useMemo } from 'react'
 import { useOptimization } from '../context/OptimizationContext'
 import type { OptimizationSdk } from '../OptimizationSdk'
+
+interface ResolveEntry {
+  <S extends EntrySkeletonType = EntrySkeletonType, L extends LocaleCode = LocaleCode>(
+    entry: Entry<S, undefined, L>,
+    selectedOptimizations?: SelectedOptimizationArray,
+  ): EntryFor<S, undefined, L>
+  <
+    S extends EntrySkeletonType,
+    M extends ChainModifiers = ChainModifiers,
+    L extends LocaleCode = LocaleCode,
+  >(
+    entry: Entry<S, M, L>,
+    selectedOptimizations?: SelectedOptimizationArray,
+  ): EntryFor<S, M, L>
+}
 
 /**
  * Helper methods for resolving Contentful entries against selected optimizations.
@@ -14,29 +29,15 @@ export interface UseEntryResolverResult {
   /**
    * Resolves an entry and returns the full SDK resolver payload.
    */
-  readonly resolveOptimizedEntry: (
-    entry: Entry,
-    selectedOptimizations?: SelectedOptimizationArray,
-  ) => ResolvedData<EntrySkeletonType>
+  readonly resolveOptimizedEntry: OptimizationSdk['resolveOptimizedEntry']
   /**
    * Resolves an entry and returns only the resolved entry.
    */
-  readonly resolveEntry: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) => Entry
+  readonly resolveEntry: ResolveEntry
   /**
    * Resolves an entry and returns the resolved entry plus selected optimization metadata.
    */
-  readonly resolveEntryData: (
-    entry: Entry,
-    selectedOptimizations?: SelectedOptimizationArray,
-  ) => ResolvedData<EntrySkeletonType>
-}
-
-function resolveEntryData(
-  sdk: OptimizationSdk,
-  entry: Entry,
-  selectedOptimizations = sdk.states.selectedOptimizations.current,
-): ResolvedData<EntrySkeletonType> {
-  return sdk.resolveOptimizedEntry(entry, selectedOptimizations)
+  readonly resolveEntryData: OptimizationSdk['resolveOptimizedEntry']
 }
 
 /**
@@ -57,17 +58,57 @@ function resolveEntryData(
 export function useEntryResolver(): UseEntryResolverResult {
   const sdk = useOptimization()
 
-  return useMemo(
-    () => ({
-      resolveOptimizedEntry: (
-        entry: Entry,
-        selectedOptimizations = sdk.states.selectedOptimizations.current,
-      ) => sdk.resolveOptimizedEntry(entry, selectedOptimizations),
-      resolveEntry: (entry, selectedOptimizations) =>
-        resolveEntryData(sdk, entry, selectedOptimizations).entry,
-      resolveEntryData: (entry, selectedOptimizations) =>
-        resolveEntryData(sdk, entry, selectedOptimizations),
-    }),
-    [sdk],
-  )
+  return useMemo(() => {
+    function resolveEntryData<
+      S extends EntrySkeletonType = EntrySkeletonType,
+      L extends LocaleCode = LocaleCode,
+    >(
+      entry: Entry<S, undefined, L>,
+      selectedOptimizations?: SelectedOptimizationArray,
+    ): ResolvedData<S, undefined, L>
+    function resolveEntryData<
+      S extends EntrySkeletonType,
+      M extends ChainModifiers = ChainModifiers,
+      L extends LocaleCode = LocaleCode,
+    >(
+      entry: Entry<S, M, L>,
+      selectedOptimizations?: SelectedOptimizationArray,
+    ): ResolvedData<S, M, L>
+    function resolveEntryData<
+      S extends EntrySkeletonType,
+      M extends ChainModifiers,
+      L extends LocaleCode,
+    >(
+      entry: Entry<S, M, L>,
+      selectedOptimizations = sdk.states.selectedOptimizations.current,
+    ): ResolvedData<S, M, L> {
+      return sdk.resolveOptimizedEntry<S, M, L>(entry, selectedOptimizations)
+    }
+
+    function resolveEntry<
+      S extends EntrySkeletonType = EntrySkeletonType,
+      L extends LocaleCode = LocaleCode,
+    >(
+      entry: Entry<S, undefined, L>,
+      selectedOptimizations?: SelectedOptimizationArray,
+    ): EntryFor<S, undefined, L>
+    function resolveEntry<
+      S extends EntrySkeletonType,
+      M extends ChainModifiers = ChainModifiers,
+      L extends LocaleCode = LocaleCode,
+    >(entry: Entry<S, M, L>, selectedOptimizations?: SelectedOptimizationArray): EntryFor<S, M, L>
+    function resolveEntry<
+      S extends EntrySkeletonType,
+      M extends ChainModifiers,
+      L extends LocaleCode,
+    >(entry: Entry<S, M, L>, selectedOptimizations?: SelectedOptimizationArray): EntryFor<S, M, L> {
+      return resolveEntryData<S, M, L>(entry, selectedOptimizations).entry
+    }
+
+    return {
+      resolveOptimizedEntry: resolveEntryData,
+      resolveEntry,
+      resolveEntryData,
+    }
+  }, [sdk])
 }

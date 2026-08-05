@@ -3,23 +3,23 @@ import type {
   SelectedOptimizationArray,
 } from '@contentful/optimization-web/api-schemas'
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
-import type { Entry, EntrySkeletonType } from 'contentful'
 import { useMemo } from 'react'
+import type { ContentEntrySkeleton, ContentfulEntry } from '../../types/contentful'
 import { useOptimization } from './useOptimization'
 import { useOptimizationState } from './useOptimizationState'
 
 export interface UseOptimizationResolverResult {
   resolveEntry: (
-    baselineEntry: Entry,
+    baselineEntry: ContentfulEntry,
     selectedOptimizations?: SelectedOptimizationArray,
-  ) => ResolvedData<EntrySkeletonType>
+  ) => ResolvedData<ContentEntrySkeleton>
   getMergeTagValue: (mergeTagEntry: MergeTagEntry) => string
 }
 
 function fallbackResolveEntry(
-  baselineEntry: Entry,
+  baselineEntry: ContentfulEntry,
   _selectedOptimizations?: SelectedOptimizationArray,
-): ResolvedData<EntrySkeletonType> {
+): ResolvedData<ContentEntrySkeleton> {
   return { entry: baselineEntry }
 }
 
@@ -60,9 +60,9 @@ export function useOptimizationResolver(): UseOptimizationResolverResult {
 
     return {
       resolveEntry: (
-        baselineEntry: Entry,
+        baselineEntry: ContentfulEntry,
         callerSelectedOptimizations?: SelectedOptimizationArray,
-      ): ResolvedData<EntrySkeletonType> =>
+      ): ResolvedData<ContentEntrySkeleton> =>
         sdk.resolveOptimizedEntry(
           baselineEntry,
           callerSelectedOptimizations ?? selectedOptimizations,

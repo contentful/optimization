@@ -39,7 +39,7 @@ guide: ../../guides/integrating-the-node-sdk-in-a-node-app.md
 | Evaluate route requests with `page()`                   | Required for first integration | Explain the main request evaluation and its result envelope. | Request example; result-field glossary; accepted-versus-blocked branch.               | [events](../../internal/sdk-knowledge/node/node.md#events--tracking)                                                                                              |
 | Identify known users                                    | Common but policy-dependent    | Place authentication identity in the request sequence.       | Identify-before-page sequence and app-owned traits example.                           | [events](../../internal/sdk-knowledge/node/node.md#events--tracking)                                                                                              |
 | Persist profile identity between requests               | Common but policy-dependent    | Make continuity explicit for a stateless SDK.                | Read/write lifecycle; consent gate; cookie ownership and hybrid note.                 | [identifiers](../../internal/sdk-knowledge/node/node.md#identifier-ownership), [consent](../../internal/sdk-knowledge/node/node.md#consent--persistence)          |
-| Fetch and resolve Contentful entries                    | Required for first integration | Turn request selections into rendered content.               | Managed and manual paths; result field distinction; fallback; mutation/cache warning. | [rendering](../../internal/sdk-knowledge/node/node.md#render--entry-resolution), [fallback](../../internal/sdk-knowledge/node/node.md#failure--fallback-behavior) |
+| Fetch and resolve Contentful entries                    | Required for first integration | Turn request selections into rendered content.               | Managed/manual paths; skeleton union and narrowing; fallback; mutation/cache warning. | [rendering](../../internal/sdk-knowledge/node/node.md#render--entry-resolution), [fallback](../../internal/sdk-knowledge/node/node.md#failure--fallback-behavior) |
 | Resolve merge tags                                      | Optional                       | Cover profile-backed Rich Text substitution.                 | Guard/resolver example and fallback behavior.                                         | [rendering](../../internal/sdk-knowledge/node/node.md#render--entry-resolution)                                                                                   |
 | Read Custom Flags                                       | Optional                       | Cover authored flag changes without implying event emission. | Flag read example and side-effect boundary.                                           | [rendering](../../internal/sdk-knowledge/node/node.md#render--entry-resolution)                                                                                   |
 | Track server-side interactions and business events      | Optional                       | Separate server-owned tracking from browser interactions.    | `track()` and `trackView()` examples; profile requirement.                            | [events](../../internal/sdk-knowledge/node/node.md#events--tracking)                                                                                              |
@@ -51,8 +51,8 @@ guide: ../../guides/integrating-the-node-sdk-in-a-node-app.md
 ## SDK-specific authoring overrides
 
 - Use a server `process.env` note rather than the recipe's browser-visible environment convention.
-- Do not force a React render-prop example into this guide; explain the generic returned-entry type
-  and mutation boundary instead. Facts:
+- Do not force a React render-prop example into this guide; explain the skeleton union, content-type
+  narrowing, and mutation boundary instead. Facts:
   [rendering](../../internal/sdk-knowledge/node/node.md#render--entry-resolution).
 
 ## Troubleshooting scope

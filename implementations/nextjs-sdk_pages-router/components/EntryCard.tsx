@@ -30,9 +30,7 @@ export function EntryCard({
         }
         trackViews={autoTrackViews ? undefined : false}
       >
-        {(entry, { getMergeTagValue }) => {
-          const resolvedEntry = entry as ContentEntry
-
+        {(resolvedEntry, { getMergeTagValue }) => {
           return (
             <EntryCardContent
               clickableAncestor={autoTrackViews && clickScenario === 'ancestor'}

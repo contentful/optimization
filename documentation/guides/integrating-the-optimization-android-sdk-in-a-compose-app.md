@@ -461,35 +461,28 @@ and
 
 `OptimizedEntry` renders a Contentful entry through the resolver. It detects an optimized entry by the
 presence of the `fields.nt_experiences` field; a non-optimized entry passes through unchanged and
-renders the baseline once, and an optimized entry resolves against the visitor's selected variants. The
-render lambda receives the resolved entry map — the selected variant, or the baseline entry when no
-variant matches — with the same field shape as the baseline, so your renderer reads fields without
-branching on whether a variant was applied.
+renders the baseline once, and an optimized entry resolves against the visitor's selected variants.
+Prefer the `CDAEntry` overload when the app uses `contentful.java`: its render lambda receives the
+SDK-owned `CTEntry` wrapper. The raw-map overload instead requires a standard single-locale entry with
+top-level `sys`, `fields`, and `metadata`, and its render lambda receives another raw map that you can
+convert with `CTEntry.from(...)`.
+
+A selected variant can use any Contentful content type. Branch on `contentTypeId`, check
+`hasField(...)`, and then read the matching field with `getField<T>(...)`. A different content type is
+a valid resolution, not a fallback condition. The content type IDs, field names, and renderer
+composables below belong to your app's content model.
 
 Resolution is fail-soft, and `client.resolveOptimizedEntry(baseline, selectedOptimizations)` is a
-`suspend` function on Android (the iOS SDK's is synchronous; Android must suspend because the bridge
-call hops to the QuickJS dispatcher). It returns a `ResolvedOptimizedEntry` — the SDK-owned result
-wrapper holding the resolved `entry` (a `CTEntry` — an SDK-owned view over the resolved entry
-with `id`, `getField<T>`, string-bracket `entry["title"]` for string fields, `hasField`,
-`contentTypeId`, `createdAt`, `updatedAt`, `localeCode` accessors, plus `toMap()` and `toJSON()`
-to reach the raw entry map or serialized form when needed), the `selectedOptimization` (singular)
-applied to it, and an `optimizationContextId: String?` that keys any view or tap events your app
-emits to the resolved optimization when you drive tracking yourself instead of through
-`OptimizedEntry`. When you need a `CTEntry` outside a resolver result — cache warm-up, test
-fixtures, or a code path that already holds a parsed map or JSON string — use the
-`CTEntry.from(entry: CDAEntry)`, `CTEntry.from(any: Map<String, Any>, fallback: CTEntry = EMPTY)`,
-or `CTEntry.from(json: String, fallback: CTEntry = EMPTY)` factories; the map and JSON overloads
-return the `fallback` (an empty `CTEntry` by default) on parse failure rather than throwing. If the client is not initialized, serialization fails, or the bridge result
-cannot be parsed, it returns the baseline entry unchanged (with `selectedOptimization` null) and
-continues rather than throwing or breaking the UI. The `selectedOptimizations` argument (plural) is the visitor's current per-experience
-selections: pass `null` (the default) to omit the argument and resolve against the SDK's live selection
-state, or pass an explicit snapshot to resolve against exactly that. `client.selectedOptimizations` is
-the `StateFlow` that publishes that plural set as it changes.
+`suspend` function. It returns the SDK-owned `ResolvedOptimizedEntry`, which contains the resolved
+`CTEntry`, the applied `selectedOptimization`, and an optional `optimizationContextId`. If the client
+is not initialized or the result cannot be serialized or parsed,
+it returns the baseline with `selectedOptimization` set to `null` instead of breaking the UI. Pass
+`null` for `selectedOptimizations` to use the SDK's current selections, or pass an explicit snapshot.
+`client.selectedOptimizations` publishes those selections as a `StateFlow`.
 
-1. Pass the baseline Contentful entry map to `OptimizedEntry` and read fields from the resolved entry
-   in the render lambda.
-2. Keep field parsing and view rendering in your own composables; the resolved entry keeps the baseline
-   field shape.
+1. Pass an already-fetched `CDAEntry`, or a raw map with the required `sys`, `fields`, and `metadata`
+   shape, to `OptimizedEntry`.
+2. Branch on the resolved `CTEntry` and render each supported content type in your own composables.
 3. Provide your own loading treatment while the app-owned fetch is pending — `OptimizedEntry` needs an
    entry to render, so gate it on your fetched state.
 4. Use `client.resolveOptimizedEntry(...)` directly only when a component must separate resolution from
@@ -498,28 +491,29 @@ the `StateFlow` that publishes that plural set as it changes.
 **Adapt this to your use case:**
 
 ```kotlin
+import com.contentful.java.cda.CDAEntry
+import com.contentful.optimization.contentful.CTEntry
+
 @Composable
-fun HeroSection(entry: Map<String, Any>) {
+fun ResolvedEntryContent(entry: CTEntry) {
+    when {
+        entry.contentTypeId == "hero" && entry.hasField("headline") ->
+            HeroCard(headline = entry.getField<String>("headline"))
+        entry.contentTypeId == "cta" && entry.hasField("label") ->
+            CtaCard(label = entry.getField<String>("label"))
+        entry.contentTypeId == "page" && entry.hasField("title") ->
+            PageCard(title = entry.getField<String>("title"))
+        else -> UnsupportedEntry(contentTypeId = entry.contentTypeId)
+    }
+}
+
+@Composable
+fun HeroSection(entry: CDAEntry) {
     OptimizedEntry(
         entry = entry,
         accessibilityIdentifier = "home-hero-optimization",
     ) { resolvedEntry ->
-        // resolvedEntry is the selected variant, or the baseline entry when none matches.
-        HeroCard(entry = resolvedEntry)
-    }
-}
-```
-
-If you fetch with `contentful.java`, pass the `CDAEntry` directly to the typed overload. The
-SDK-owned adapter builds the required `{sys, fields, metadata}` shape, and the render lambda
-receives a `CTEntry` you read with `getField<T>` instead of walking a raw map:
-
-```kotlin
-@Composable
-fun HeroSection(entry: CDAEntry) {
-    OptimizedEntry(entry = entry) { resolvedEntry ->
-        val title = resolvedEntry.getField<String>("title")
-        HeroCard(title = title)
+        ResolvedEntryContent(resolvedEntry)
     }
 }
 ```
@@ -528,30 +522,28 @@ fun HeroSection(entry: CDAEntry) {
 
 ```kotlin
 @Composable
-fun DirectResolution(entry: Map<String, Any>) {
+fun DirectResolution(entry: CDAEntry) {
     val client = LocalOptimizationClient.current
-    var resolvedEntry by remember(entry) { mutableStateOf(entry) }
+    val baselineEntry = remember(entry) { CTEntry.from(entry) }
+    var resolvedEntry by remember(baselineEntry) { mutableStateOf(baselineEntry) }
 
-    LaunchedEffect(entry) {
+    LaunchedEffect(baselineEntry) {
         // Collect the flow so re-resolution follows every profile, preview, or consent change;
         // reading selectedOptimizations.value would capture only the current snapshot.
         client.selectedOptimizations.collect { selectedOptimizations ->
-            // .entry is a CTEntry; unwrap via toMap() to keep the same Map shape as
-            // the baseline this composable was called with.
             resolvedEntry = client.resolveOptimizedEntry(
-                baseline = entry,
+                baseline = baselineEntry.toMap(),
                 selectedOptimizations = selectedOptimizations,
-            ).entry.toMap()
+            ).entry
         }
     }
 
-    CtaHeader(entry = resolvedEntry)
+    ResolvedEntryContent(resolvedEntry)
 }
 ```
 
-The resolver does not fetch Contentful entries, evaluate audiences, call the Experience API, or mutate
-state; it joins the current selected optimization metadata with linked entries already present in the
-Contentful payload. For the fallback rules, see
+The resolver uses the entries and selected optimizations already available in the app. For the shared
+resolution and fallback rules, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#fallback-behavior).
 
 ### Screen and navigation tracking

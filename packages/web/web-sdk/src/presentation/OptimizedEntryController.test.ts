@@ -1,17 +1,20 @@
 import type {
   ExperienceRequestState,
   Observable,
+  OptimizedEntryMetadata,
   ResolvedData,
   Subscription,
 } from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
-import type { Entry, EntrySkeletonType } from 'contentful'
+import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
+import { isEntryOfContentType } from '../api-schemas'
 import {
   OPTIMIZED_ENTRY_HOST_DISPLAY,
   OptimizedEntryController,
   resolveOptimizedEntryNestingState,
   type OptimizedEntrySdk,
 } from './OptimizedEntryController'
+import { resolveOptimizedEntryTrackingAttributes } from './OptimizedEntryTrackingAttributes'
 
 type Subscriber<T> = (value: T) => void
 
@@ -19,6 +22,46 @@ interface TestObservable<T> extends Observable<T> {
   emit: (value: T) => void
   subscriberCount: () => number
 }
+
+type PageSkeleton = EntrySkeletonType<{ title: EntryFieldTypes.Symbol }, 'page'>
+type HeroSkeleton = EntrySkeletonType<{ headline: EntryFieldTypes.Symbol }, 'hero'>
+type CtaSkeleton = EntrySkeletonType<{ label: EntryFieldTypes.Symbol }, 'cta'>
+type PossibleSkeleton = PageSkeleton | HeroSkeleton | CtaSkeleton
+type Modifier = 'WITHOUT_LINK_RESOLUTION'
+type Locale = 'en-US'
+
+function compilePresentationTypes(
+  baselineEntry: Entry<PageSkeleton, Modifier, Locale>,
+  sdk: OptimizedEntrySdk<PossibleSkeleton, Modifier, Locale>,
+): void {
+  const snapshot = new OptimizedEntryController<PossibleSkeleton, Modifier, Locale>({
+    baselineEntry,
+    sdk,
+  }).getSnapshot()
+  const entry:
+    | Entry<PageSkeleton, Modifier, Locale>
+    | Entry<HeroSkeleton, Modifier, Locale>
+    | Entry<CtaSkeleton, Modifier, Locale> = snapshot.entry
+  const resolvedData: ResolvedData<PossibleSkeleton, Modifier, Locale> = snapshot.resolvedData
+  const metadata: OptimizedEntryMetadata<PossibleSkeleton, Modifier, Locale> = snapshot.metadata
+
+  resolveOptimizedEntryTrackingAttributes(baselineEntry, resolvedData)
+
+  if (isEntryOfContentType<HeroSkeleton, Modifier, Locale>(entry, 'hero')) {
+    void entry.fields.headline
+  }
+
+  const sameTypeEntry: Entry<PageSkeleton, Modifier, Locale> = new OptimizedEntryController({
+    baselineEntry,
+    sdk: undefined,
+  }).getSnapshot().entry
+
+  void resolvedData
+  void metadata
+  void sameTypeEntry
+}
+
+void compilePresentationTypes
 
 function createObservable<T>(initialValue: T): TestObservable<T> {
   const subscribers = new Set<Subscriber<T>>()
@@ -152,6 +195,7 @@ describe('OptimizedEntryController', () => {
 
   it('exposes the optimized entry host display invariant', () => {
     expect(OPTIMIZED_ENTRY_HOST_DISPLAY).toBe('contents')
+    expect(isEntryOfContentType).toBeTypeOf('function')
   })
 
   it('resolves duplicate baseline nesting state', () => {

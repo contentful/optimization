@@ -1,4 +1,4 @@
-import type { OptimizedEntryMetadata, ResolvedData } from '@contentful/optimization-core'
+import type { EntryFor, OptimizedEntryMetadata, ResolvedData } from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
 import { isResolvedOptimizedEntry } from '@contentful/optimization-core/api-schemas'
 import {
@@ -8,20 +8,59 @@ import {
   type ContentfulEntryQuery,
   type OptimizedEntrySourceSnapshot,
 } from '@contentful/optimization-core/entry-source'
-import type { Entry, EntrySkeletonType } from 'contentful'
+import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveUpdates } from '../context/LiveUpdatesContext'
 import { useOptimization } from '../context/OptimizationContext'
+
+declare class BivariantCallbacks {
+  onEntryResolved(metadata: OptimizedEntryMetadata): void
+}
+
+interface UseOptimizedEntrySharedParams<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+> {
+  liveUpdates?: boolean
+  onEntryError?: (error: Error) => void
+  onEntryResolved?: (metadata: OptimizedEntryMetadata<S, M, L>) => void
+}
+
+type UseOptimizedEntryBaselineParams<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+> = UseOptimizedEntrySharedParams<S, M, L> & {
+  baselineEntry: Entry<S, M, L>
+  entryId?: never
+  entryQuery?: never
+}
+
+type UseOptimizedEntryManagedParams<
+  S extends EntrySkeletonType,
+  L extends LocaleCode,
+> = UseOptimizedEntrySharedParams<S, undefined, L> & {
+  baselineEntry?: never
+  entryId: string
+  entryQuery?: ContentfulEntryQuery
+}
 
 /**
  * Source and behavior options for {@link useOptimizedEntry}.
  *
  * @public
  */
-export type UseOptimizedEntryParams = {
+export type UseOptimizedEntryParams<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = UseOptimizedEntryBaselineParams<S, M, L> | UseOptimizedEntryManagedParams<S, L>
+
+type UseOptimizedEntryImplementationParams = {
   liveUpdates?: boolean
   onEntryError?: (error: Error) => void
-  onEntryResolved?: (metadata: OptimizedEntryMetadata) => void
+  onEntryResolved?: BivariantCallbacks['onEntryResolved']
 } & (
   | {
       baselineEntry: Entry
@@ -35,7 +74,21 @@ export type UseOptimizedEntryParams = {
     }
 )
 
-type UseOptimizedEntryBaselineParams = Extract<UseOptimizedEntryParams, { baselineEntry: Entry }>
+type ResolvedDataResult<TEntry extends Entry | undefined> = Omit<
+  ResolvedData<EntrySkeletonType>,
+  'entry'
+> & {
+  readonly entry: Exclude<TEntry, undefined>
+}
+
+type OptimizedEntryMetadataResult<TEntry extends Entry | undefined> = Omit<
+  OptimizedEntryMetadata,
+  'baselineEntry' | 'entry' | 'resolvedData'
+> & {
+  readonly baselineEntry: Exclude<TEntry, undefined>
+  readonly entry: Exclude<TEntry, undefined>
+  readonly resolvedData: ResolvedDataResult<TEntry>
+}
 
 interface UseManagedBaselineEntryResult {
   readonly entry: Entry | undefined
@@ -56,9 +109,9 @@ export interface UseOptimizedEntryResult<TEntry extends Entry | undefined = Entr
   /** Whether the presentation layer can render resolved entry content. */
   readonly isPresentationReady: boolean
   readonly isResolved: boolean
-  readonly metadata: OptimizedEntryMetadata | undefined
+  readonly metadata: OptimizedEntryMetadataResult<TEntry> | undefined
   readonly selectedOptimization: ResolvedData<EntrySkeletonType>['selectedOptimization']
-  readonly resolvedData: ResolvedData<EntrySkeletonType>
+  readonly resolvedData: ResolvedDataResult<TEntry>
   readonly selectedOptimizations: SelectedOptimizationArray | undefined
 }
 
@@ -67,7 +120,7 @@ function useManagedBaselineEntry({
   entryId,
   entryQuery,
   onEntryError,
-}: UseOptimizedEntryParams): UseManagedBaselineEntryResult {
+}: UseOptimizedEntryImplementationParams): UseManagedBaselineEntryResult {
   const sdk = useOptimization()
   const entrySourceKey =
     entryId === undefined ? undefined : getOptimizedEntrySourceKey(entryId, entryQuery)
@@ -194,11 +247,21 @@ function useResolvedEntryData(
  *
  * @public
  */
-export function useOptimizedEntry(
-  params: UseOptimizedEntryBaselineParams,
-): UseOptimizedEntryResult<Entry>
+export function useOptimizedEntry<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+>(params: UseOptimizedEntryBaselineParams<S, M, L>): UseOptimizedEntryResult<EntryFor<S, M, L>>
+export function useOptimizedEntry<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  L extends LocaleCode = LocaleCode,
+>(
+  params: UseOptimizedEntryManagedParams<S, L>,
+): UseOptimizedEntryResult<EntryFor<S, undefined, L> | undefined>
 export function useOptimizedEntry(params: UseOptimizedEntryParams): UseOptimizedEntryResult
-export function useOptimizedEntry(params: UseOptimizedEntryParams): UseOptimizedEntryResult {
+export function useOptimizedEntry(
+  params: UseOptimizedEntryImplementationParams,
+): UseOptimizedEntryResult {
   const managedEntry = useManagedBaselineEntry(params)
   const loadingEntryId = (params as { readonly entryId?: string }).entryId ?? 'contentful-entry'
   const loadingEntry = useMemo(

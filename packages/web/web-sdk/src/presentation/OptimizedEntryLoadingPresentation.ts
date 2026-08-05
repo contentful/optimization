@@ -1,8 +1,14 @@
 import type { ContentOptimizationHydrationMode } from '../handoff'
-import type {
-  OptimizedEntryLoadingTargetDisplay,
-  OptimizedEntrySnapshot,
-} from './OptimizedEntryController'
+
+/** Display mode used for the temporary loading layout target. @public */
+export type OptimizedEntryLoadingTargetDisplay = 'block' | 'inline'
+
+export interface OptimizedEntryLoadingPresentation {
+  readonly showLoadingFallback: boolean
+  readonly hideLoadingLayoutTarget: boolean
+  readonly shouldRenderBaselineWhileLoading: boolean
+  readonly targetDisplay: OptimizedEntryLoadingTargetDisplay
+}
 
 interface LoadingPresentationInput {
   readonly hasBaselineRevealTimedOut: boolean
@@ -22,7 +28,7 @@ export function resolveLoadingPresentation({
   isPresentationReady,
   isServerRender,
   targetDisplay,
-}: LoadingPresentationInput): OptimizedEntrySnapshot['loadingPresentation'] {
+}: LoadingPresentationInput): OptimizedEntryLoadingPresentation {
   const preservesServerContent = hydration === 'preserve-server'
   const showLoadingFallback =
     !preservesServerContent && (isLoading || (isServerRender && !isPresentationReady))

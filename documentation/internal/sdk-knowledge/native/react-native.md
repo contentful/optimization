@@ -121,12 +121,12 @@ consent changes. source: react-native-sdk#hooks/useOptimizationConsentState.ts#u
   `OptimizedEntrySourceController`; without `contentful.client` the managed path has no client. See
   [`../shared/concepts.md`](../shared/concepts.md#entry-source-boundary-managed-or-manual).
   source: react-native-sdk#components/OptimizedEntry.tsx#OptimizedEntryProps; react-native-sdk#hooks/useOptimizedEntry.ts#UseOptimizedEntryParams; core-sdk#OptimizedEntrySourceController.ts#OptimizedEntrySourceController
-- Render prop = `(resolvedEntry: Entry, metadata: OptimizedEntryMetadata) => ReactNode`;
-  `resolvedEntry` is a base `contentful` `Entry` (cast to a narrower type in app code). `metadata`
-  carries `baselineEntry`, `baselineEntryId`, `entry`, `entryId`, `optimizationContextId`,
-  `resolvedData`, `selectedOptimization`, `selectedOptimizations`. Static (non-function) children are
-  rendered as-is (tracking only, no variant data).
-  source: react-native-sdk#components/OptimizedEntry.tsx#OptimizedEntryProps; core-sdk#OptimizedEntryMetadata.ts#OptimizedEntryMetadata
+- `OptimizedEntry` and `useOptimizedEntry` carry one caller-supplied skeleton set through hook state,
+  metadata, render props, `onEntryResolved`, and `onTap`; baseline and resolved metadata entries use
+  that same set. The set does not affect runtime variant choice. Static children are rendered as-is
+  for tracking without exposing variant data. Shared modeling and narrowing behavior: see
+  [`../shared/concepts.md`](../shared/concepts.md#entry-resolution).
+  source: react-native-sdk#components/OptimizedEntry.tsx#OptimizedEntryRenderProp; react-native-sdk#hooks/useOptimizedEntry.ts#UseOptimizedEntryResult; core-sdk#OptimizedEntryMetadata.ts#OptimizedEntryMetadata; react-native-sdk#hooks/useTapTracking.ts#useTapTracking
 - Loading model (RN, no server first paint): while a managed `entryId` fetch is unresolved,
   `useOptimizedEntry` returns `entry === undefined` / `metadata === undefined`, so `OptimizedEntry`
   renders `loadingFallback`. On resolved data it wraps children in a `View` carrying `onLayout`

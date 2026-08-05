@@ -22,9 +22,28 @@ const logger = createScopedLogger('Optimization')
 export type PendingEventOptimizationContext = Omit<EventOptimizationContext, 'contextId'>
 
 /**
+ * A Contentful entry for each member of an entry-skeleton union.
+ *
+ * @public
+ */
+export type EntryFor<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = S extends EntrySkeletonType ? Entry<S, M, L> : never
+
+/** @internal */
+function asEntryFor<S extends EntrySkeletonType, M extends ChainModifiers, L extends LocaleCode>(
+  entry: Entry<S, M, L>,
+): EntryFor<S, M, L>
+function asEntryFor(entry: Entry): Entry {
+  return entry
+}
+
+/**
  * Result returned by {@link OptimizedEntryResolver.resolve}.
  *
- * @typeParam S - Entry skeleton type.
+ * @typeParam S - Possible baseline and variant entry skeleton types.
  * @typeParam M - Chain modifiers.
  * @typeParam L - Locale code.
  * @public
@@ -35,7 +54,7 @@ export interface ResolvedData<
   L extends LocaleCode = LocaleCode,
 > {
   /** The baseline or resolved variant entry. */
-  entry: Entry<S, M, L>
+  entry: EntryFor<S, M, L>
   /** The selected optimization metadata, if a matching optimization was selected. */
   selectedOptimization?: SelectedOptimization
   /** Opaque runtime-owned optimization context ID for entry interaction tracking. */
@@ -66,7 +85,7 @@ export interface ResolvedData<
 /**
  * Result returned by {@link OptimizedEntryResolver.resolveWithContext}.
  *
- * @typeParam S - Entry skeleton type.
+ * @typeParam S - Possible baseline and variant entry skeleton types.
  * @typeParam M - Chain modifiers.
  * @typeParam L - Locale code.
  * @internal
@@ -87,24 +106,12 @@ export interface ResolvedDataWithOptimizationContext<
  */
 const RESOLUTION_DEBUG_LOG_BASE = 'Could not resolve optimized entry variant:'
 
-/** @internal */
-function isResolvedEntryForBaseline<
-  S extends EntrySkeletonType,
-  M extends ChainModifiers,
-  L extends LocaleCode,
->(value: unknown, baselineEntry: Entry<S, M, L>): value is Entry<S, M, L> {
-  return (
-    isResolvedContentfulEntry(value) &&
-    value.sys.contentType.sys.id === baselineEntry.sys.contentType.sys.id
-  )
-}
-
 /**
  * Resolve the selected entry (baseline or variant) for an optimized entry
  * and optional selected optimizations, returning both the entry and the
  * optimization metadata.
  *
- * @typeParam S - Entry skeleton type.
+ * @typeParam S - Possible baseline and variant entry skeleton types.
  * @typeParam L - Locale code.
  * @typeParam M - Chain modifiers for advanced/non-default Contentful clients.
  * @param entry - The baseline optimized entry.
@@ -138,7 +145,7 @@ function resolve<
   M extends ChainModifiers,
   L extends LocaleCode = LocaleCode,
 >(entry: Entry<S, M, L>, selectedOptimizations?: SelectedOptimizationArray): ResolvedData<S, M, L> {
-  return resolveWithContext(entry, selectedOptimizations).resolvedData
+  return resolveWithContext<S, M, L>(entry, selectedOptimizations).resolvedData
 }
 
 function resolveWithContext<
@@ -165,17 +172,18 @@ function resolveWithContext<
   selectedOptimizations?: SelectedOptimizationArray,
 ): ResolvedDataWithOptimizationContext<S, M, L> {
   logger.debug(`Resolving optimized entry for baseline entry ${entry.sys.id}`)
+  const baselineEntry = asEntryFor(entry)
 
   if (!selectedOptimizations?.length) {
     logger.debug(
       `${RESOLUTION_DEBUG_LOG_BASE} no selectedOptimizations exist for the current profile`,
     )
-    return { resolvedData: { entry } }
+    return { resolvedData: { entry: baselineEntry } }
   }
 
   if (!isResolvedOptimizedEntry(entry)) {
     logger.debug(`${RESOLUTION_DEBUG_LOG_BASE} entry ${entry.sys.id} is not optimized`)
-    return { resolvedData: { entry } }
+    return { resolvedData: { entry: baselineEntry } }
   }
 
   const optimizationEntry = OptimizedEntryResolver.getOptimizationEntry({
@@ -187,7 +195,7 @@ function resolveWithContext<
     logger.debug(
       `${RESOLUTION_DEBUG_LOG_BASE} could not find an optimization entry for ${entry.sys.id}`,
     )
-    return { resolvedData: { entry } }
+    return { resolvedData: { entry: baselineEntry } }
   }
 
   const selectedOptimization = OptimizedEntryResolver.getSelectedOptimization({
@@ -196,7 +204,7 @@ function resolveWithContext<
   })
 
   if (!selectedOptimization) {
-    return { resolvedData: { entry } }
+    return { resolvedData: { entry: baselineEntry } }
   }
 
   const {
@@ -204,7 +212,7 @@ function resolveWithContext<
   } = optimizationEntry
 
   const resolveTo = (
-    resolvedEntry: Entry<S, M, L>,
+    resolvedEntry: EntryFor<S, M, L>,
     selectedVariant?: EntryReplacementVariant,
     isEmptyVariant?: true,
   ): ResolvedDataWithOptimizationContext<S, M, L> => {
@@ -234,7 +242,7 @@ function resolveWithContext<
   if (selectedVariantIndex === 0) {
     logger.debug(`Resolved optimization entry for entry ${entry.sys.id} is baseline`)
 
-    return resolveTo(entry)
+    return resolveTo(baselineEntry)
   }
 
   const selectedVariant = OptimizedEntryResolver.getSelectedVariant({
@@ -247,7 +255,7 @@ function resolveWithContext<
     logger.debug(
       `${RESOLUTION_DEBUG_LOG_BASE} could not find a valid replacement variant entry for ${entry.sys.id}`,
     )
-    return resolveTo(entry)
+    return resolveTo(baselineEntry)
   }
 
   // Detect an empty variant by id === ''. Two forms exist in CDA nt_config:
@@ -259,11 +267,10 @@ function resolveWithContext<
     logger.debug(
       `Entry ${entry.sys.id} resolved to empty variant at index ${selectedVariantIndex} — rendering nothing`,
     )
-    return resolveTo(entry, selectedVariant, true)
+    return resolveTo(baselineEntry, selectedVariant, true)
   }
 
   const selectedVariantEntry = OptimizedEntryResolver.getSelectedVariantEntry<S, M, L>({
-    optimizedEntry: entry,
     optimizationEntry,
     selectedVariant,
   })
@@ -272,7 +279,7 @@ function resolveWithContext<
     logger.debug(
       `${RESOLUTION_DEBUG_LOG_BASE} could not find a valid replacement variant entry for ${entry.sys.id}`,
     )
-    return resolveTo(entry, selectedVariant)
+    return resolveTo(baselineEntry, selectedVariant)
   } else {
     logger.debug(
       `Entry ${entry.sys.id} has been resolved to variant entry ${selectedVariantEntry.sys.id}`,
@@ -413,35 +420,30 @@ const OptimizedEntryResolver = {
   /**
    * Resolve the concrete Contentful entry that corresponds to a selected variant.
    *
-   * @typeParam S - Entry skeleton type.
+   * @typeParam S - Possible baseline and variant entry skeleton types.
    * @typeParam M - Chain modifiers.
    * @typeParam L - Locale code.
    * @param params - Optimization entry and selected variant.
    * @returns The resolved entry typed as {@link Entry} or `undefined`.
-   * @remarks
-   * An optimized entry will resolve either to the baseline (the entry
-   * supplied as `optimizedEntry`) or the selected variant.
    * @example
    * ```ts
-   * const selectedVariantEntry = OptimizedEntryResolver.getSelectedVariantEntry<{ fields: unknown }>({
+   * const selectedVariantEntry = OptimizedEntryResolver.getSelectedVariantEntry({
    *   optimizationEntry,
    *   selectedVariant
    * })
    * ```
    */
   getSelectedVariantEntry<
-    S extends EntrySkeletonType,
+    S extends EntrySkeletonType = EntrySkeletonType,
     M extends ChainModifiers = ChainModifiers,
     L extends LocaleCode = LocaleCode,
   >({
-    optimizedEntry,
     optimizationEntry,
     selectedVariant,
   }: {
-    optimizedEntry: Entry<S, M, L>
     optimizationEntry: OptimizationEntry
     selectedVariant: EntryReplacementVariant
-  }): Entry<S, M, L> | undefined {
+  }): EntryFor<S, M, L> | undefined {
     if (
       !isResolvedOptimizationEntry(optimizationEntry) ||
       !isEntryReplacementVariant(selectedVariant)
@@ -452,9 +454,9 @@ const OptimizedEntryResolver = {
       (variant) => variant.sys.id === selectedVariant.id,
     )
 
-    if (!isResolvedEntryForBaseline(selectedVariantReference, optimizedEntry)) return
+    if (!isResolvedContentfulEntry<S, M, L>(selectedVariantReference)) return
 
-    return selectedVariantReference
+    return asEntryFor(selectedVariantReference)
   },
 
   resolve,

@@ -1,6 +1,39 @@
 import type { CoreConfig } from '@contentful/optimization-core'
-import ContentfulOptimization, { type OptimizationNodeConfig } from './ContentfulOptimization'
+import type { ChainModifiers, Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
+import { isEntryOfContentType } from './api-schemas'
 import { OPTIMIZATION_NODE_SDK_NAME } from './constants'
+import ContentfulOptimization, { type OptimizationNodeConfig } from './ContentfulOptimization'
+import type { EntryFor, FetchOptimizedEntryResult } from './core-sdk'
+
+type PageSkeleton = EntrySkeletonType<{ title: EntryFieldTypes.Symbol }, 'page'>
+type HeroSkeleton = EntrySkeletonType<{ headline: EntryFieldTypes.Symbol }, 'hero'>
+type CtaSkeleton = EntrySkeletonType<{ label: EntryFieldTypes.Symbol }, 'cta'>
+type ContentSkeleton = PageSkeleton | HeroSkeleton | CtaSkeleton
+type Locale = 'en-US'
+
+function compileNodeResolvedEntryTypes(
+  node: ContentfulOptimization,
+  baseline: Entry<PageSkeleton, ChainModifiers, Locale>,
+): void {
+  const singleton: EntryFor<ContentSkeleton, ChainModifiers, Locale> = node.resolveOptimizedEntry<
+    ContentSkeleton,
+    ChainModifiers,
+    Locale
+  >(baseline, []).entry
+  const requestBound: Promise<FetchOptimizedEntryResult<ContentSkeleton, undefined, Locale>> = node
+    .forRequest({ consent: true })
+    .fetchOptimizedEntry<ContentSkeleton, Locale>('page', {
+      selectedOptimizations: [],
+    })
+
+  if (isEntryOfContentType<HeroSkeleton, ChainModifiers, Locale>(singleton, 'hero')) {
+    void singleton.fields.headline
+  }
+
+  void requestBound
+}
+
+void compileNodeResolvedEntryTypes
 
 const CLIENT_ID = 'key_123'
 const ENVIRONMENT = 'main'
@@ -39,6 +72,10 @@ const OPTIMIZATION_DATA = {
 }
 
 describe('ContentfulOptimization', () => {
+  it('passes through the content-type guard', () => {
+    expect(isEntryOfContentType).toBeTypeOf('function')
+  })
+
   it('gives itself a name', () => {
     const node = new ContentfulOptimization(config)
 

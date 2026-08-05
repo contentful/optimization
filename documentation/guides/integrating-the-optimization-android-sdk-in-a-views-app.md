@@ -513,7 +513,12 @@ Optimization content-model names, not names you choose, so your fetch must `incl
 pull them back in one payload. Each resolved result carries a single `selectedOptimization`
 (singular) — the one selection applied to that entry. Note the one-letter difference:
 `selectedOptimizations` is the set the view observes, while `selectedOptimization` is the one applied
-to a given entry.
+to a given entry. A selected variant can use any Contentful content type. The raw-map renderer must
+convert the resolved map to the SDK-owned `CTEntry` wrapper with `CTEntry.from(...)` from
+`com.contentful.optimization.contentful.CTEntry`, branch on `contentTypeId`, and check `hasField(...)`
+before reading a field with `getField<T>(...)`. A different content type is a valid resolution, not a
+fallback condition. The IDs, fields, and `ContentEntryBinder` methods below belong to your app's
+content model.
 
 1. Keep Contentful fetching in the application layer, with one concrete locale and enough include
    depth for the linked optimization data. Do not pass all-locale CDA responses or `locale=*` payloads
@@ -536,64 +541,75 @@ to a given entry.
 3. Set a renderer that turns the resolved entry map into a child `View`, then call `setEntry(...)`
    with the fetched baseline entry. The `setContentRenderer` lambda always receives a
    `Map<String, Any>` — even when the entry was set through the `CDAEntry` overload, the view
-   converts the resolved `CTEntry` back to a map before invoking the renderer. Read fields directly
-   off that map; the `CTEntry` accessors (`getField<T>`, `hasField`, `id`) are available only when
-   your app calls `client.resolveOptimizedEntry(...)` itself, shown in the "Follow this pattern"
-   block below.
+   converts the resolved `CTEntry` back to a map before invoking the renderer. Convert that map back
+   to `CTEntry` when your renderer needs its content-type and field accessors.
 
    **Adapt this to your use case:**
 
    ```kotlin
-   val heroSlot = findViewById<OptimizedEntryView>(R.id.hero_slot)
-   // Optional, reader-chosen: OptimizedEntryView.accessibilityIdentifier sets the view's
-   // contentDescription so tests and accessibility tooling can find the slot. Omit it if you don't need it.
-   heroSlot.accessibilityIdentifier = "content-entry-home-hero"
-   heroSlot.setContentRenderer { resolvedEntry ->
-       // ContentEntryBinder is reader-owned: your code that turns a resolved entry map into a View.
-       // resolvedEntry is the variant when one applies, or the baseline entry otherwise.
-       ContentEntryBinder.create(context = heroSlot.context, entry = resolvedEntry)
-   }
+   import com.contentful.java.cda.CDAEntry
+   import com.contentful.optimization.contentful.CTEntry
 
-   lifecycleScope.launch {
-       // contentfulFetcher is reader-owned: your CDA fetch and link resolution. One concrete
-       // locale, include depth deep enough to resolve nt_experiences and nt_variants in one payload.
-       val heroEntry = contentfulFetcher.fetchEntry(id = "4ib0hsHWoSOnCVdDkizE8d", include = 10, locale = "en-US")
-       // The view resolves the entry locally and re-resolves as profile state arrives.
+   // Call this from your Activity after your app-owned Contentful fetch returns a CDAEntry.
+   fun bindHeroSlot(heroEntry: CDAEntry) {
+       val heroSlot = findViewById<OptimizedEntryView>(R.id.hero_slot)
+       heroSlot.accessibilityIdentifier = "content-entry-home-hero"
+       heroSlot.setContentRenderer { resolvedEntryMap ->
+           val resolvedEntry = CTEntry.from(resolvedEntryMap)
+
+           when {
+               resolvedEntry.contentTypeId == "hero" && resolvedEntry.hasField("headline") ->
+                   ContentEntryBinder.createHero(
+                       context = heroSlot.context,
+                       headline = resolvedEntry.getField<String>("headline"),
+                   )
+               resolvedEntry.contentTypeId == "cta" && resolvedEntry.hasField("label") ->
+                   ContentEntryBinder.createCta(
+                       context = heroSlot.context,
+                       label = resolvedEntry.getField<String>("label"),
+                   )
+               resolvedEntry.contentTypeId == "page" && resolvedEntry.hasField("title") ->
+                   ContentEntryBinder.createPage(
+                       context = heroSlot.context,
+                       title = resolvedEntry.getField<String>("title"),
+                   )
+               else -> ContentEntryBinder.createUnsupported(
+                   context = heroSlot.context,
+                   contentTypeId = resolvedEntry.contentTypeId,
+               )
+           }
+       }
        heroSlot.setEntry(heroEntry)
    }
    ```
 
 4. Treat baseline fallback as expected behavior. `resolveOptimizedEntry` (which `OptimizedEntryView`
-   calls for you) is a `suspend`, fail-soft resolver. It returns a `ResolvedOptimizedEntry` — an
-   SDK-owned result wrapper carrying `entry` (a `CTEntry` — an SDK-owned view over the resolved
-   entry with `id`, `getField<T>`, `hasField`, `contentTypeId`, `createdAt`, `updatedAt`,
-   `localeCode` accessors, plus `toMap()` to reach the raw entry map when needed) and
-   `selectedOptimization` (the applied selection, or null). Its `entry` is the resolved variant when
-   one applies and the baseline entry unchanged otherwise — when the client is not initialized, when
-   the entry is not optimized, when no selected optimization matches, when linked optimization data
-   is missing, on all-locale payloads, or when the variant is not in the payload — so it never
-   throws or breaks the UI. If you fetch with `contentful.java`, pass the `CDAEntry` to the typed
+   calls for you) is a `suspend`, fail-soft resolver. Its SDK-owned `ResolvedOptimizedEntry` result
+   contains the resolved `CTEntry`, the applied `selectedOptimization`, and an optional
+   `optimizationContextId`. When resolution cannot select a usable variant, it returns the baseline
+   instead of breaking the UI. If you fetch with `contentful.java`, pass the `CDAEntry` to the typed
    `setEntry(entry: CDAEntry)` overload; the SDK-owned adapter builds the `{sys, fields, metadata}`
    shape the resolver requires.
 
-For custom rendering surfaces, call `resolveOptimizedEntry(baseline, selectedOptimizations)` directly
-instead of through the view.
+For custom rendering surfaces that already hold the standard raw entry map described in step 1, call
+`resolveOptimizedEntry(baseline, selectedOptimizations)` directly instead of through the view, then
+pass its result to your existing renderer.
 
 **Follow this pattern:**
 
 ```kotlin
-// Passing null uses the SDK's current selection state; pass an explicit snapshot to lock a screen.
-val result = OptimizationManager.client.resolveOptimizedEntry(baseline = entry)
-// result.entry is a CTEntry; use its accessors (getField, hasField, id) or unwrap the raw map
-// via toMap(). result.selectedOptimization is the applied selection, or null.
-render(result.entry.toMap())
+suspend fun renderResolvedEntry(baselineEntry: Map<String, Any>) {
+    // Omitting selectedOptimizations uses current SDK state.
+    val result = OptimizationManager.client.resolveOptimizedEntry(baseline = baselineEntry)
+    render(result.entry.toMap())
+}
 ```
 
 If the app locale changes at runtime, call `client.setLocale(locale)` to update the SDK Experience
 and event locale, then refetch Contentful entries in the new locale and re-render — `setLocale`
 updates the SDK locale only and does not refetch entries; it throws before initialization or on an
 invalid locale. For the entry contract and fallback rules, see
-[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract),
+[Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md),
 and for the locale boundary see
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
 

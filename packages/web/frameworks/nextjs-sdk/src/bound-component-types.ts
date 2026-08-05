@@ -2,8 +2,11 @@ import type {
   OptimizationAnalyticsRootProps,
   OptimizationProviderConfigProps,
   OptimizationRootProps,
+  OptimizedEntryBaselineProps,
+  OptimizedEntryManagedProps,
   OptimizedEntryProps,
 } from '@contentful/optimization-react-web'
+import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
 import type { ReactNode } from 'react'
 
 export type NextjsBoundProviderConfig = Omit<
@@ -61,12 +64,42 @@ export interface NextjsPagesRouterClientDefaults {
 
 type DistributiveOmit<T, K extends keyof T> = T extends unknown ? Omit<T, K> : never
 
-export type NextjsBoundOptimizedEntryProps = DistributiveOmit<
-  OptimizedEntryProps,
-  'liveUpdates' | 'loadingFallback'
->
+export type NextjsBoundOptimizedEntryBaselineProps<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = Omit<OptimizedEntryBaselineProps<S, M, L>, 'liveUpdates' | 'loadingFallback'>
 
-export type NextjsServerOptimizedEntryProps = NextjsBoundOptimizedEntryProps
+export type NextjsBoundOptimizedEntryManagedProps<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  L extends LocaleCode = LocaleCode,
+> = Omit<OptimizedEntryManagedProps<S, L>, 'liveUpdates' | 'loadingFallback'>
+
+export type NextjsBoundOptimizedEntryProps<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = DistributiveOmit<OptimizedEntryProps<S, M, L>, 'liveUpdates' | 'loadingFallback'>
+
+export type NextjsServerOptimizedEntryProps<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = NextjsBoundOptimizedEntryProps<S, M, L>
+
+export interface NextjsBoundOptimizedEntryComponent<TResult> {
+  <
+    S extends EntrySkeletonType = EntrySkeletonType,
+    M extends ChainModifiers = ChainModifiers,
+    L extends LocaleCode = LocaleCode,
+  >(
+    props: NextjsBoundOptimizedEntryBaselineProps<S, M, L>,
+  ): TResult
+  <S extends EntrySkeletonType = EntrySkeletonType, L extends LocaleCode = LocaleCode>(
+    props: NextjsBoundOptimizedEntryManagedProps<S, L>,
+  ): TResult
+  (props: NextjsBoundOptimizedEntryProps): TResult
+}
 
 export interface BoundNextjsOptimizationProviderProps extends Pick<
   OptimizationProviderConfigProps,

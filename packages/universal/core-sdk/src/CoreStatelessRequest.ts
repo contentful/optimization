@@ -367,9 +367,13 @@ export class CoreStatelessRequest {
     L extends LocaleCode = LocaleCode,
   >(
     entryId: string,
+    options?: FetchOptimizedEntryOptions,
+  ): Promise<FetchOptimizedEntryResult<S, undefined, L>>
+  async fetchOptimizedEntry(
+    entryId: string,
     options: FetchOptimizedEntryOptions = {},
-  ): Promise<FetchOptimizedEntryResult<S, undefined, L>> {
-    return await this.core.fetchOptimizedEntry<S, L>(entryId, {
+  ): Promise<FetchOptimizedEntryResult> {
+    return await this.core.fetchOptimizedEntry(entryId, {
       ...options,
       query: this.withRequestContentfulLocale(options.query),
       selectedOptimizations: options.selectedOptimizations ?? this.currentSelectedOptimizations,

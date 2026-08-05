@@ -1,5 +1,5 @@
-import type { ResolvedData } from '@contentful/optimization-core'
-import type { Entry, EntrySkeletonType } from 'contentful'
+import type { EntryFor, ResolvedData } from '@contentful/optimization-core'
+import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
 
 /**
  * Value type supported by optimized-entry host tracking attributes.
@@ -60,9 +60,13 @@ function resolveDuplicationScope(
  *
  * @public
  */
-export function resolveOptimizedEntryTrackingAttributes(
-  baselineEntry: Entry,
-  resolvedData: ResolvedData<EntrySkeletonType>,
+export function resolveOptimizedEntryTrackingAttributes<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+>(
+  baselineEntry: EntryFor<S, M, L>,
+  resolvedData: ResolvedData<S, M, L>,
   options: OptimizedEntryTrackingAttributeOptions = {},
 ): OptimizedEntryTrackingAttributes {
   const {

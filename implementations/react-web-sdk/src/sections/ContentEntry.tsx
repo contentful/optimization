@@ -70,28 +70,27 @@ export function ContentEntry({
         trackViews={autoTrackViews ? undefined : false}
       >
         {(resolvedEntry, { getMergeTagValue }) => {
-          const asCf = resolvedEntry as ContentEntryType
-          const richTextField = Object.values(asCf.fields).find(isRichTextDocument)
-          const fullLabel = `Entry: ${asCf.sys.id}`
+          const richTextField = Object.values(resolvedEntry.fields).find(isRichTextDocument)
+          const fullLabel = `Entry: ${resolvedEntry.sys.id}`
 
           const content = (
             <div
               ref={
                 viewTracking === 'manual'
                   ? (element) => {
-                      updateManualViewElement(element, asCf.sys.id)
+                      updateManualViewElement(element, resolvedEntry.sys.id)
                     }
                   : undefined
               }
               className="entry-card"
-              data-ctfl-entry-id={asCf.sys.id}
+              data-ctfl-entry-id={resolvedEntry.sys.id}
               data-testid={`content-${entry.sys.id}`}
             >
               <div data-testid={`entry-text-${entry.sys.id}`} aria-label={fullLabel}>
                 {richTextField ? (
                   <RichTextRenderer getMergeTagValue={getMergeTagValue} richText={richTextField} />
                 ) : (
-                  <p>{getEntryText(asCf)}</p>
+                  <p>{getEntryText(resolvedEntry)}</p>
                 )}
                 <p>{`[Entry: ${entry.sys.id}]`}</p>
               </div>

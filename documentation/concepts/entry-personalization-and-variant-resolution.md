@@ -23,6 +23,8 @@ Contentful and SDK Experience/event locale handling, see
 - [Runtime support](#runtime-support)
 - [Inputs and constraints](#inputs-and-constraints)
 - [Single-locale CDA entry contract](#single-locale-cda-entry-contract)
+- [TypeScript content-model choices](#typescript-content-model-choices)
+  - [Model-agnostic event streams](#model-agnostic-event-streams)
 - [Data model](#data-model)
   - [Baseline entry](#baseline-entry)
   - [Optimization entry](#optimization-entry)
@@ -204,6 +206,62 @@ await contentfulClient.withAllLocales.getEntry(entryId, { include: 10 })
 await fetch(`/spaces/${space}/environments/${environment}/entries/${entryId}?include=10&locale=*`)
 ```
 
+## TypeScript content-model choices
+
+The JavaScript SDKs preserve Contentful entry skeleton types through direct resolution, managed
+fetching, hooks, controllers, and render props. The skeleton parameter `S` represents every possible
+baseline or variant content type. TypeScript erases that model at runtime, so it does not restrict
+which structurally valid linked entry the resolver can select.
+
+When every variant uses the baseline content type, omit the generic. TypeScript infers that one
+skeleton from `baselineEntry`, so its fields remain directly accessible.
+
+When the possible content types are known, pass one union containing the baseline and every variant
+skeleton. The SDK returns a distributed entry union. Narrow it with `isEntryOfContentType` from the
+SDK's `/api-schemas` entrypoint before reading content-type-specific fields:
+
+JavaScript runtimes / TypeScript:
+
+```ts
+const { entry } = optimization.resolveOptimizedEntry<PageSkeleton | HeroSkeleton | CtaSkeleton>(
+  baselineEntry,
+  selectedOptimizations,
+)
+
+if (isEntryOfContentType<HeroSkeleton>(entry, 'hero')) {
+  renderHero(entry.fields.headline)
+} else if (isEntryOfContentType<CtaSkeleton>(entry, 'cta')) {
+  renderCta(entry.fields.label)
+} else {
+  renderPage(entry.fields.title)
+}
+```
+
+The helper compares `sys.contentType.sys.id`; it does not validate the entry's fields against the
+skeleton. Direct resolution, managed fetching, hooks, and rendering components use the same union
+model.
+
+The same skeleton union also types baseline values exposed in SDK results and metadata. This keeps
+the contract honest when any input can be a baseline, but it means an explicit union widens those
+baseline values too. Keep the original `baselineEntry` reference when code outside the resolution
+boundary needs its narrower baseline-only type.
+
+For an open-ended content model, use `EntrySkeletonType` and accept unchecked fields:
+
+```ts
+const { entry } = optimization.resolveOptimizedEntry<EntrySkeletonType>(
+  baselineEntry,
+  selectedOptimizations,
+)
+```
+
+### Model-agnostic event streams
+
+Runtime event streams stay model-agnostic because one long-lived stream can carry interactions for
+entries of many content types. Resolver-specific skeletons do not flow into a later
+`EventOptimizationContext`. Narrow `event.optimization?.resolvedEntry` with
+`isEntryOfContentType` at the point of use.
+
 ## Data model
 
 ### Baseline entry
@@ -230,9 +288,9 @@ contains the optimization metadata the resolver needs:
 | `nt_config`        | Defines entry-replacement components. Traffic, distribution, and stickiness are upstream allocation metadata. |
 | `nt_variants`      | Contains the resolved Contentful entries that can replace the baseline entry.                                 |
 
-Selected variant entries must use the same content type as the baseline entry. If a matched variant
-ID points to a resolved entry with a different content type, the resolver ignores that entry and
-falls back to the baseline entry.
+Selected variant entries can use any Contentful content type. The selected variant ID and a fully
+resolved linked entry with that ID govern replacement; content-type equality with the baseline does
+not. The application uses the resolved entry's content type to choose its rendering branch.
 
 Components with `type: "EntryReplacement"` participate in entry resolution. Components with omitted
 `type` are also treated as `EntryReplacement` components for backward-compatible Contentful
@@ -300,12 +358,13 @@ The shared Core resolver follows one path for every SDK package:
     entry field (for tracking context), and `selectedOptimization` metadata is preserved so a
     component view impression can still be emitted. No warning is logged. Renderers must suppress
     visible content when `isEmptyVariant` is `true`.
-11. Find the linked Contentful variant entry in `optimizationEntry.fields.nt_variants` by the
-    selected variant ID, and confirm that the variant entry uses the baseline entry content type.
+11. Find a fully resolved linked Contentful entry in `optimizationEntry.fields.nt_variants` whose
+    `sys.id` matches the selected variant ID.
 12. Return the variant entry and `selectedOptimization` metadata when all checks pass.
 
-If steps 8, 11, or 12 fail after a `SelectedOptimization` has matched (not caused by an empty
-variant), the resolver returns the baseline entry with the matched `selectedOptimization` metadata.
+If the component or linked-entry lookup fails after a `SelectedOptimization` has matched (not
+caused by an empty variant), the resolver returns the baseline entry with the matched
+`selectedOptimization` metadata.
 Resolution returns entry objects from the Contentful payload. Applications can cache raw Contentful
 payloads across requests, but profile-resolved entries are request-local or session-local decisions.
 
@@ -341,7 +400,8 @@ entries in `nt_variants`. If the Experience API returns this selection:
 
 resolution matches `experienceId` to `nt_experience_id`, finds the component whose `baseline.id` is
 `4ib0hsHWoSOnCVdDkizE8d`, reads the second configured variant because `variantIndex` is `2`, and
-returns the resolved Contentful entry whose `sys.id` is `2qVK4T5lnScbswoyBuGipd`.
+returns the resolved Contentful entry whose `sys.id` is `2qVK4T5lnScbswoyBuGipd`. That linked entry
+can use the baseline content type or another content type.
 
 ### Variant indexing
 
@@ -375,7 +435,6 @@ a resolution miss:
 | Selected variant has `id: ""` (empty variant)     | Baseline entry | `true`           | Matched selection             |
 | Variant ID exists in config but not `nt_variants` | Baseline entry | —                | Matched selection             |
 | Variant entry is still an unresolved link         | Baseline entry | —                | Matched selection             |
-| Variant entry content type differs from baseline  | Baseline entry | —                | Matched selection             |
 
 The "empty variant" row is distinct from data errors. When a content author selects the **Empty
 variant** option in the Personalization UI, the variant is stored in `nt_config` as

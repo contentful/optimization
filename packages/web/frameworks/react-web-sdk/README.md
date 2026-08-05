@@ -374,6 +374,9 @@ function HeroEntry({ baselineEntry }) {
 }
 ```
 
+To model baseline and variant entries with different content types, see
+[Entry optimization and variant resolution](../../../../documentation/concepts/entry-personalization-and-variant-resolution.md).
+
 When `OptimizationRoot` uses a Web SDK configured with `contentful: { client }`, React entry
 surfaces can fetch by entry ID:
 

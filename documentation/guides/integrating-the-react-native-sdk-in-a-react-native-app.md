@@ -422,57 +422,57 @@ The entry source is a discriminated union: pass either `entryId` (managed fetch)
    component.
 7. Use `useEntryResolver()` when a component needs manual-only resolution helpers.
 
-**Adapt this to your use case:**
+A Contentful entry skeleton is a TypeScript description of one content type and its fields. Use one
+skeleton union, `S`, containing every possible baseline or variant content type. Manual
+`OptimizedEntry` and `useOptimizedEntry()` calls, plus `useEntryResolver().resolveEntry()`, use
+`<S, M, L>`, where `M` is the `contentful.js` response mode and `L` is the locale. Managed
+`entryId` component and hook calls use `<S, L>` because `M` is fixed to `undefined`. When every
+variant shares the baseline content type, omit the generic and let TypeScript infer that skeleton
+from `baselineEntry`.
+
+**Adapt this to your use case:** declare the complete skeleton union and narrow inside the render prop,
+where the resolved entry becomes native UI. The guard compares `sys.contentType.sys.id`; it does
+not validate the entry's fields.
 
 ```tsx
-import {
-  OptimizedEntry,
-  useEntryResolver,
-  useOptimizedEntry,
-} from '@contentful/optimization-react-native'
-import type { Entry } from 'contentful'
+import { OptimizedEntry } from '@contentful/optimization-react-native'
+import { isEntryOfContentType } from '@contentful/optimization-react-native/api-schemas'
+import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
+import { Text } from 'react-native'
 
-function HeroSection() {
+type PageSkeleton = EntrySkeletonType<{ title: EntryFieldTypes.Symbol }, 'page'>
+type HeroSkeleton = EntrySkeletonType<{ headline: EntryFieldTypes.Symbol }, 'hero'>
+type CtaSkeleton = EntrySkeletonType<{ label: EntryFieldTypes.Symbol }, 'cta'>
+type AppEntrySkeleton = PageSkeleton | HeroSkeleton | CtaSkeleton
+type AppLocale = 'en-US'
+type PageEntry = Entry<PageSkeleton, undefined, AppLocale>
+
+function PersonalizedPage({ baselineEntry }: { baselineEntry: PageEntry }) {
   return (
-    <OptimizedEntry
-      entryId="4ib0hsHWoSOnCVdDkizE8d"
-      loadingFallback={null}
-      errorFallback={null}
-      onEntryError={(error) => diagnostics.report(error)}
-    >
-      {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
+    <OptimizedEntry<AppEntrySkeleton, undefined, AppLocale> baselineEntry={baselineEntry}>
+      {(entry) => {
+        if (isEntryOfContentType<HeroSkeleton, undefined, AppLocale>(entry, 'hero')) {
+          return <Text>{entry.fields.headline}</Text>
+        }
+        if (isEntryOfContentType<CtaSkeleton, undefined, AppLocale>(entry, 'cta')) {
+          return <Text>{entry.fields.label}</Text>
+        }
+        return <Text>{entry.fields.title}</Text>
+      }}
     </OptimizedEntry>
   )
 }
-
-function HeroData() {
-  // isPresentationReady is true once the entry is fetched and resolved and is safe to render.
-  const { entry, isPresentationReady } = useOptimizedEntry({ entryId: '4ib0hsHWoSOnCVdDkizE8d' })
-
-  if (!isPresentationReady || !entry) return null
-
-  return <HeroCard entry={entry} />
-}
-
-function HeroManualData({ baselineEntry }: { baselineEntry: Entry }) {
-  const { resolveEntry } = useEntryResolver()
-  // resolveEntry uses current selected optimizations and falls back to baseline content.
-  const resolvedEntry = resolveEntry(baselineEntry)
-
-  return <HeroCard entry={resolvedEntry} />
-}
 ```
 
-When you use the `useOptimizedEntry` hook directly, `isPresentationReady` is `true` once the entry
-has been fetched (for a managed `entryId`) and resolved, so the returned `entry` is safe to render;
-gate your render on it as the example does. `OptimizedEntry` handles this for you and only calls the
-render prop when the entry is ready.
+The same `S` flows through hook results, render props, metadata, `onEntryResolved`, and `onTap`.
+Narrow at each renderer or callback boundary before reading content-type-specific fields. For a
+managed hook, `isPresentationReady` means the entry has been fetched and resolved; check it before
+using the possibly undefined `entry`. `useEntryResolver()` uses the current selected optimizations
+when its second argument is omitted; pass a selection array only when you need an explicit override.
+The entry model is compile-time only and does not change runtime variant selection.
 
-The resolved entry has the same field shape as the baseline entry, handed to the render prop as a
-base `contentful` `Entry`. Cast it to your content-type interface in the child
-(`resolvedEntry as HeroFields`) when your renderer needs the narrower type; the plain direct cast
-works for common narrowed types. Downstream renderers can render the fields without branching on
-whether the SDK returned a variant.
+For lower-level resolution and open-ended models, see
+[TypeScript content-model choices](../concepts/entry-personalization-and-variant-resolution.md#typescript-content-model-choices).
 
 There are two distinct outcomes, and they use different props. The **baseline fallback** is a
 resolution outcome on an entry the SDK already has: on denied consent, no matching variant,
@@ -1014,16 +1014,16 @@ Before release, verify these checks in the app build and environment that will s
 
 ## Troubleshooting
 
-| Symptom                                 | Check                                                                                                                                                | Fix                                                                                                                                                                               |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Provider children do not render         | SDK initialization failed, or another active React Native SDK instance already exists                                                                | Check `logLevel` output, keep one active SDK instance, and call `destroy()` before replacement instances                                                                          |
-| Entry views do not appear               | Consent is unset or rejected, `trackViews` is false, visibility timing has not elapsed, or scrollable view-tracking content has no scroll context    | Accept consent, inspect `trackViews` overrides, wait for the dwell threshold, and wrap scrollable view-tracking content in `OptimizationScrollProvider`                           |
-| Entry taps do not appear                | Consent is unset or rejected, `trackTaps` is false, tap movement exceeds the tap threshold, or child touch handling prevents the tap from completing | Accept consent, inspect `trackTaps` and `onTap` overrides, keep touch movement within the tap threshold, and verify touch handling still lets `OptimizedEntry` receive tap events |
-| Entries always render baseline content  | The entry was fetched with all locales, unresolved links, insufficient include depth, or no selected optimization state                              | Fetch one CDA locale with linked optimization data and emit `screen()` or `identify()` before expecting profile-selected variants                                                 |
-| Screen events are missing or duplicated | The app mixes `OptimizationNavigationContainer`, `useScreenTracking`, and manual `screen()` for the same route                                       | Use one screen-tracking path per route and reserve manual `screen()` for custom lifecycle cases                                                                                   |
-| Preview panel fails to open             | Preview peer dependencies are missing, the panel is outside `OptimizationRoot`, or the build uses Expo Go                                            | Install preview peers, mount the panel under `OptimizationRoot`, and use a custom native dev build                                                                                |
-| Offline replay does not happen          | NetInfo is not installed, the in-memory queue is full, the JavaScript process restarted, or the app is testing against always-online mocks           | Install NetInfo, configure queue bounds, and test a real offline-to-online transition without restarting the app process                                                          |
-| Render prop type error on the entry     | The render prop hands back a base `contentful` `Entry`, wider than your content-type interface                                                       | Cast the resolved entry to your interface in the child (`resolvedEntry as HeroFields`); the plain direct cast works for common narrowed types                                     |
+| Symptom                                   | Check                                                                                                                                                | Fix                                                                                                                                                                               |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Provider children do not render           | SDK initialization failed, or another active React Native SDK instance already exists                                                                | Check `logLevel` output, keep one active SDK instance, and call `destroy()` before replacement instances                                                                          |
+| Entry views do not appear                 | Consent is unset or rejected, `trackViews` is false, visibility timing has not elapsed, or scrollable view-tracking content has no scroll context    | Accept consent, inspect `trackViews` overrides, wait for the dwell threshold, and wrap scrollable view-tracking content in `OptimizationScrollProvider`                           |
+| Entry taps do not appear                  | Consent is unset or rejected, `trackTaps` is false, tap movement exceeds the tap threshold, or child touch handling prevents the tap from completing | Accept consent, inspect `trackTaps` and `onTap` overrides, keep touch movement within the tap threshold, and verify touch handling still lets `OptimizedEntry` receive tap events |
+| Entries always render baseline content    | The entry was fetched with all locales, unresolved links, insufficient include depth, or no selected optimization state                              | Fetch one CDA locale with linked optimization data and emit `screen()` or `identify()` before expecting profile-selected variants                                                 |
+| Screen events are missing or duplicated   | The app mixes `OptimizationNavigationContainer`, `useScreenTracking`, and manual `screen()` for the same route                                       | Use one screen-tracking path per route and reserve manual `screen()` for custom lifecycle cases                                                                                   |
+| Preview panel fails to open               | Preview peer dependencies are missing, the panel is outside `OptimizationRoot`, or the build uses Expo Go                                            | Install preview peers, mount the panel under `OptimizationRoot`, and use a custom native dev build                                                                                |
+| Offline replay does not happen            | NetInfo is not installed, the in-memory queue is full, the JavaScript process restarted, or the app is testing against always-online mocks           | Install NetInfo, configure queue bounds, and test a real offline-to-online transition without restarting the app process                                                          |
+| Resolved entry has unexpected field types | The skeleton union omits a possible content type, or the entry was not narrowed before rendering                                                     | Include every baseline and variant skeleton in `S`, then narrow with `isEntryOfContentType`                                                                                       |
 
 ## Reference implementations to compare against
 

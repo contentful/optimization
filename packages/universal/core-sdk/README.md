@@ -207,6 +207,10 @@ omitted, request-bound stateless clients use the latest accepted Experience sele
 `locale` fallback for managed Contentful fetches, and root stateless callers pass explicit
 `selectedOptimizations`.
 
+Resolver types accept one skeleton or a union of every possible baseline and variant skeleton. See
+[Entry optimization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html)
+for heterogeneous entry typing and narrowing.
+
 Framework SDKs use Core selection handoff helpers when server, static, or edge rendering already
 knows the selected optimizations. `createHandoffFromSelections()` records that explicit selection
 state and cache metadata without choosing browser hydration behavior. Cacheable public permutations
@@ -218,7 +222,7 @@ order for server-rendered markup, and `createSelectionFingerprint()`,
 
 Do not pass all-locale CDA responses from `withAllLocales` or `locale=*`; optimization fields such
 as `fields.nt_experiences` and `fields.nt_variants` must be direct single-locale field values. See
-[Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
+[Entry optimization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the broader locale model.

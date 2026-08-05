@@ -140,6 +140,31 @@ export function isResolvedContentfulEntry<
 }
 
 /**
+ * Type guard that narrows a resolved Contentful entry by content type ID.
+ *
+ * @remarks
+ * This guard checks only the content type ID. It does not validate entry fields against the
+ * supplied skeleton.
+ *
+ * @typeParam S - Entry skeleton type.
+ * @typeParam M - Chain modifiers.
+ * @typeParam L - Locale code.
+ * @param entry - Resolved Contentful entry to test.
+ * @param contentTypeId - Content type ID declared by the entry skeleton.
+ * @returns `true` when the entry has the requested content type ID.
+ *
+ * @public
+ */
+export function isEntryOfContentType<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+>(entry: Entry, contentTypeId: S['contentTypeId']): entry is Entry<S, M, L>
+export function isEntryOfContentType(entry: Entry, contentTypeId: string): boolean {
+  return getContentTypeId(entry) === contentTypeId
+}
+
+/**
  * Type guard for a resolved {@link AudienceEntry}.
  *
  * @param entry - Value to test.

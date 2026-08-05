@@ -35,10 +35,8 @@ never fetches. source: core-sdk#CoreBase.ts#ContentfulConfig
 
 Fetch with ONE concrete locale and an `include` depth deep enough to cover the page, its sections,
 and linked variant entries. All-locale payloads (`withAllLocales` / CDA `locale=*`) use locale-keyed
-field maps the resolver cannot read ⇒ entries fall back to baseline. The entry wrapper's render prop
-hands back the resolved entry as a base `contentful` `Entry`; a narrower component type needs a
-cast.
-source: react-web-sdk#optimized-entry/optimizedEntryUtils.ts#RenderProp; concept:entry-personalization-and-variant-resolution
+field maps the resolver cannot read ⇒ entries fall back to baseline.
+source: core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext; api-schemas#contentful/typeGuards.ts#isResolvedOptimizedEntry; concept:entry-personalization-and-variant-resolution
 
 Contentful GraphQL Content API responses are schema-shaped, not `contentful.js` Entry-shaped: the
 generated schema exposes `sys`, `contentfulMetadata`, and typed content fields directly; Object
@@ -54,8 +52,21 @@ and `fields` must be objects. An optimized baseline must carry `fields.nt_experi
 optimization entry under it must validate as `nt_experience` with SDK-owned `nt_name`, `nt_type`, and
 `nt_experience_id` fields. Entry replacement can resolve to a variant only when `nt_config` describes
 a matching component and variant entries in `nt_variants` are already resolved entries for the
-baseline content type; otherwise the resolver returns baseline.
+selected variant ID. A resolved linked variant can use any content type; unresolved or structurally
+invalid links return the baseline.
 source: core-sdk#CoreBase.ts#resolveOptimizedEntry; api-schemas#contentful/typeGuards.ts#isResolvedContentfulEntry; api-schemas#contentful/typeGuards.ts#isResolvedOptimizedEntry; api-schemas#contentful/typeGuards.ts#isResolvedOptimizationEntry; api-schemas#contentful/OptimizedEntry.ts#OptimizedEntryFields; api-schemas#contentful/OptimizationEntry.ts#OptimizationEntryFields; core-sdk#resolvers/OptimizedEntryResolver.ts#getOptimizationEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry
+
+Entry resolution on Android and iOS uses this same contract. The native JavaScript bridge forwards the
+baseline entry and selections to `CoreStateful.resolveOptimizedEntry` and serializes the Core result
+without filtering it by content type.
+source: optimization-js-bridge#index.ts#bridge; core-sdk#CoreStateful.ts#resolveOptimizedEntry
+
+Entry-skeleton types are erased at runtime and do not affect variant choice. The resolver returns
+any structurally resolved selected link regardless of content type.
+source: core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry; extern:TypeScript type parameters are erased at runtime
+
+`isEntryOfContentType` compares only `sys.contentType.sys.id`; it does not validate entry fields.
+source: api-schemas#contentful/typeGuards.ts#isEntryOfContentType
 
 GraphQL integrations that keep app-owned fetching must query enough optimization-owned fields
 (`nt_experiences`, each linked `nt_experience` entry's `nt_name`, `nt_type`, `nt_config`,
@@ -78,8 +89,8 @@ that entry's `nt_config` to find a non-hidden EntryReplacement component whose b
 baseline entry id. `variantIndex === 0` returns the baseline with selected-optimization metadata;
 positive variant indexes are one-based into that component's `variants`. Missing config/components,
 a hidden baseline component, an out-of-range or invalid selected variant, or a linked variant in
-`nt_variants` that is unresolved or has a different content type returns the baseline. An empty
-variant (`id === ""`) returns the baseline with `isEmptyVariant: true`.
+`nt_variants` that is unresolved or structurally invalid returns the baseline. An empty variant
+(`id === ""`) returns the baseline with `isEmptyVariant: true`.
 source: core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedOptimization; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariant; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext; api-schemas#contentful/OptimizationConfig.ts#normalizeOptimizationConfig
 
 `SelectedOptimization.variants` is not read during entry resolution; public cache identity includes
@@ -176,6 +187,12 @@ Event-stream payloads carry each event's normal schema plus universal event fiel
 context only to the stream payload, not to the strict API payload. Flag-view stream events are not
 enriched with `optimization`.
 source: api-schemas#experience/event/UniversalEventProperties.ts#UniversalEventProperties; core-sdk#queues/ExperienceQueue.ts#send; core-sdk#queues/InsightsQueue.ts#send; core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent
+
+The runtime event stream is model-agnostic because one long-lived stream carries interactions for
+entries of every content type. Its optimization context retains baseline and resolved entries, but
+resolver-specific entry modeling cannot flow into a later event emission; consumers narrow each
+resolved entry with `isEntryOfContentType` at the point of use.
+source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#events/OptimizationEventStreamEvent.ts#EventOptimizationContext; core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent; api-schemas#contentful/typeGuards.ts#isEntryOfContentType
 
 Consent-blocked stateful events stop before API delivery or queueing: Experience methods return
 `{ accepted: false }`, Insights methods return without enqueueing, and Core writes only

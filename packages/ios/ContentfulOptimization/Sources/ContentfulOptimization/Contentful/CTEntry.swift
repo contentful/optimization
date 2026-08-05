@@ -92,6 +92,11 @@ public struct CTEntry {
         entry.sys?.id
     }
 
+    /// The Contentful content type ID used to distinguish baseline and variant entry shapes.
+    public var contentTypeId: String? {
+        entry.sys?.contentType?.sys.id
+    }
+
     public var localeCode: String? {
         entry.sys?.locale
     }

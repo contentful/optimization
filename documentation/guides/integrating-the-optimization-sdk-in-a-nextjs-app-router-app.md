@@ -156,6 +156,9 @@ in [Consent, identity, profile, and reset](#consent-identity-profile-and-reset).
 
 5. Wrap the entry where it becomes output. A **render prop** is the function child
    `{(entry) => ...}`; it lets you render the resolved entry with your existing component.
+   This shortcut assumes the baseline and every eligible variant use the `hero` content type. If a
+   variant can use another content type, follow the skeleton-union and narrowing path in
+   [Personalizing first paint on the server](#personalizing-first-paint-on-the-server).
 
    **Adapt this to your use case:**
 
@@ -325,6 +328,52 @@ Server Components render personalized first paint through the bound `OptimizedEn
 experience applies, consent is denied, the API has no variant, or a linked variant cannot be
 resolved, the render receives the baseline entry.
 
+A resolved selected variant can use any Contentful content type.
+
+A Contentful **entry skeleton** is a TypeScript type that names a content type ID and its fields.
+Use one skeleton union, `S`, containing every possible baseline or variant content type. A bound
+server `OptimizedEntry` with `baselineEntry` uses `<S, M, L>`, where `M` is the `contentful.js`
+response mode and `L` is the locale type. A managed `entryId` uses `<S, L>` because `M` is fixed to
+`undefined`. When every variant shares the baseline content type, omit the generic and let
+TypeScript infer that skeleton from `baselineEntry`.
+
+**Follow this pattern:** declare the complete skeleton union in the Server Component and narrow in
+the render prop, where the resolved entry becomes page markup. The guard compares the Contentful
+content type ID; it does not validate fields.
+
+```tsx
+import { OptimizedEntry } from '@/lib/optimization'
+import { isEntryOfContentType } from '@contentful/optimization-nextjs/api-schemas'
+import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
+
+type PageSkeleton = EntrySkeletonType<{ title: EntryFieldTypes.Symbol }, 'page'>
+type HeroSkeleton = EntrySkeletonType<{ headline: EntryFieldTypes.Symbol }, 'hero'>
+type CtaSkeleton = EntrySkeletonType<{ label: EntryFieldTypes.Symbol }, 'cta'>
+type AppEntrySkeleton = PageSkeleton | HeroSkeleton | CtaSkeleton
+type AppLocale = 'en-US'
+
+export function PersonalizedPage({ page }: { page: Entry<PageSkeleton, undefined, AppLocale> }) {
+  return (
+    <OptimizedEntry<AppEntrySkeleton, undefined, AppLocale> baselineEntry={page}>
+      {(entry) => {
+        if (isEntryOfContentType<HeroSkeleton, undefined, AppLocale>(entry, 'hero')) {
+          return <h1>{entry.fields.headline}</h1>
+        }
+        if (isEntryOfContentType<CtaSkeleton, undefined, AppLocale>(entry, 'cta')) {
+          return <button type="button">{entry.fields.label}</button>
+        }
+        return <h1>{entry.fields.title}</h1>
+      }}
+    </OptimizedEntry>
+  )
+}
+```
+
+The union is a compile-time model, not a runtime filter. Narrow at the renderer boundary before
+reading content-type-specific fields. For lower-level resolver, managed-fetch, open-ended model,
+and event-stream examples, see
+[TypeScript content-model choices](../concepts/entry-personalization-and-variant-resolution.md#typescript-content-model-choices).
+
 Routes that read request headers or cookies are request-specific. Request-derived profile handoffs
 must use `private-request` cache scope and stay out of public shared caches. Use public permutation
 handoff for routes that should be shared.
@@ -418,6 +467,11 @@ bindNextjsAppRouterOptimization({
 Forward accepted events from `states.eventStream` after `onStatesReady` runs. Deduplicate by
 `messageId`, keep vendor consent separate from Contentful event consent, and use
 `states.blockedEventStream` for diagnostics instead of replay.
+
+The runtime event stream remains model-agnostic because it can carry interactions for entries of
+every content type. If you read `event.optimization?.resolvedEntry`, narrow that entry with
+`isEntryOfContentType` at the point of use; resolver-specific `S` types do not flow into a
+later event.
 
 For the full pattern, use
 [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
@@ -586,6 +640,12 @@ escape hatches are:
 Manual flows still pass `handoff` to a React root. Do not invent a second state shape for browser
 hydration.
 
+Lower-level resolver calls keep selections as the optional second positional argument:
+`resolveOptimizedEntry(entry, selectedOptimizations)`. Managed fetch calls use
+`fetchOptimizedEntry(entryId, options)`, with selections in `FetchOptimizedEntryOptions`; neither
+call receives a content-type argument. `ServerOptimizedEntry<TElement, S, M, L>` places the element
+type first, followed by the complete skeleton union, response mode, and locale.
+
 ### Caching and request deduplication
 
 **Integration category:** Advanced or production-only
@@ -630,14 +690,15 @@ page event. Use blocked-event diagnostics to verify denied events are dropped at
 
 ## Troubleshooting
 
-| Symptom                                            | Likely cause                                                                                         | Check                                                                                                                                |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Entries stay on baseline                           | No matching variant, denied consent, unresolved variant links, or all-locale CDA payload             | Target all visitors for the first test, read accepted or blocked events, and fetch one locale with enough `include` depth            |
-| Variant appears in the browser but not View Source | The route is browser-owned rather than server-handoff-owned                                          | Verify the route calls `createRequestHandoff()` or uses a public permutation handoff before rendering                                |
-| Root layout sees no forwarded request context      | The handler filename or export name does not match the Next.js version, so Next.js silently skips it | Use `proxy.ts` with `proxy` on Next.js 16, or `middleware.ts` with `middleware` on Next.js 13 to 15                                  |
-| Duplicate first page events                        | Both the handoff root and route tracker emitted the initial route                                    | Use the handoff's `initialPageEvent` for the root and set the separate tracker to skip the initial event when the server accepted it |
-| Live entries do not change after identify or reset | The entry is locked to the handoff and live updates are off                                          | Enable live updates for the route or entry, or open the preview panel in an allowed environment                                      |
-| Personalized HTML is cached for the wrong visitor  | Request handoff output entered a public cache                                                        | Use `private-request` for request state and public permutation handoffs only for app-owned selected permutations                     |
+| Symptom                                                         | Likely cause                                                                                         | Check                                                                                                                                |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Entries stay on baseline                                        | No matching variant, denied consent, unresolved variant links, or all-locale CDA payload             | Target all visitors for the first test, read accepted or blocked events, and fetch one locale with enough `include` depth            |
+| A heterogeneous render cannot read content-type-specific fields | The skeleton union omits a possible content type, or the entry was not narrowed before rendering     | Include every baseline and variant skeleton in `S`, then narrow with `isEntryOfContentType`                                          |
+| Variant appears in the browser but not View Source              | The route is browser-owned rather than server-handoff-owned                                          | Verify the route calls `createRequestHandoff()` or uses a public permutation handoff before rendering                                |
+| Root layout sees no forwarded request context                   | The handler filename or export name does not match the Next.js version, so Next.js silently skips it | Use `proxy.ts` with `proxy` on Next.js 16, or `middleware.ts` with `middleware` on Next.js 13 to 15                                  |
+| Duplicate first page events                                     | Both the handoff root and route tracker emitted the initial route                                    | Use the handoff's `initialPageEvent` for the root and set the separate tracker to skip the initial event when the server accepted it |
+| Live entries do not change after identify or reset              | The entry is locked to the handoff and live updates are off                                          | Enable live updates for the route or entry, or open the preview panel in an allowed environment                                      |
+| Personalized HTML is cached for the wrong visitor               | Request handoff output entered a public cache                                                        | Use `private-request` for request state and public permutation handoffs only for app-owned selected permutations                     |
 
 ## Reference implementations to compare against
 

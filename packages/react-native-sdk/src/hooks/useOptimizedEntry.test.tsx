@@ -1,13 +1,69 @@
-import type { ResolvedData } from '@contentful/optimization-core'
+import type { EntryFor, OptimizedEntryMetadata, ResolvedData } from '@contentful/optimization-core'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
-import type { Entry, EntrySkeletonType } from 'contentful'
+import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import React, { act } from 'react'
+import type { OptimizedEntry as OptimizedEntryComponent } from '../components/OptimizedEntry'
 import { loadTestRenderer } from '../test/testRenderer'
+import type { UseEntryResolverResult } from './useEntryResolver'
 import {
   useOptimizedEntry,
   type UseOptimizedEntryParams,
   type UseOptimizedEntryResult,
 } from './useOptimizedEntry'
+import type { UseTapTrackingOptions } from './useTapTracking'
+
+type PageSkeleton = EntrySkeletonType<{ title: EntryFieldTypes.Symbol }, 'page'>
+type HeroSkeleton = EntrySkeletonType<{ headline: EntryFieldTypes.Symbol }, 'hero'>
+type PossibleSkeleton = PageSkeleton | HeroSkeleton
+type Modifier = 'WITHOUT_LINK_RESOLUTION'
+type Locale = 'en-US'
+
+function assertOptimizedEntryTypes(
+  OptimizedEntry: typeof OptimizedEntryComponent,
+  resolver: UseEntryResolverResult,
+  baselineEntry: Entry<PageSkeleton, Modifier, Locale>,
+): void {
+  const inferred: UseOptimizedEntryResult<Entry<PageSkeleton, Modifier, Locale>> =
+    useOptimizedEntry({ baselineEntry })
+  const result: UseOptimizedEntryResult<EntryFor<PossibleSkeleton, Modifier, Locale>> =
+    useOptimizedEntry<PossibleSkeleton, Modifier, Locale>({ baselineEntry })
+  const metadata: OptimizedEntryMetadata<PossibleSkeleton, Modifier, Locale> | undefined =
+    result.metadata
+  const helperEntry: EntryFor<PossibleSkeleton, Modifier, Locale> = resolver.resolveEntry<
+    PossibleSkeleton,
+    Modifier,
+    Locale
+  >(baselineEntry)
+  const helperData: ResolvedData<PossibleSkeleton, Modifier, Locale> = resolver.resolveEntryData<
+    PossibleSkeleton,
+    Modifier,
+    Locale
+  >(baselineEntry)
+  const managed: UseOptimizedEntryResult<
+    EntryFor<PossibleSkeleton, undefined, Locale> | undefined
+  > = useOptimizedEntry<PossibleSkeleton, Locale>({ entryId: 'page' })
+  const tapOptions: UseTapTrackingOptions<typeof result.entry> = {
+    enabled: true,
+    entry: result.entry,
+    onTap(entry) {
+      const resolved: EntryFor<PossibleSkeleton, Modifier, Locale> = entry
+      void resolved
+    },
+  }
+  OptimizedEntry<PossibleSkeleton, Modifier, Locale>({
+    baselineEntry,
+    children: (entry) => entry.sys.id,
+    onTap: (entry) => entry.sys.id,
+  })
+  void inferred
+  void metadata
+  void helperEntry
+  void helperData
+  void managed
+  void tapOptions
+}
+
+void assertOptimizedEntryTypes
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 

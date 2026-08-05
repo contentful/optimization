@@ -7,7 +7,7 @@ import {
   createOptimizedEntryLoadingEntry,
   resolveOptimizedEntryNestingState,
 } from '@contentful/optimization-web/presentation'
-import type { Entry } from 'contentful'
+import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import {
   createContext,
   useContext,
@@ -27,7 +27,7 @@ import {
   type ErrorFallback,
   type LoadingFallback,
   type OptimizedEntryChildren,
-  type OptimizedEntryRenderContext,
+  type OptimizedEntryRenderContext as OptimizedEntryRenderContextType,
   type RenderProp,
   type WrapperElement,
 } from './optimizedEntryUtils'
@@ -39,20 +39,32 @@ import {
 
 export type OptimizedEntryLoadingFallback = LoadingFallback
 export type OptimizedEntryErrorFallback = ErrorFallback
-export type { OptimizedEntryRenderContext }
+export type OptimizedEntryRenderContext<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = OptimizedEntryRenderContextType<S, M, L>
 export type OptimizedEntryWrapperElement = WrapperElement
-export type OptimizedEntryRenderProp = RenderProp
+export type OptimizedEntryRenderProp<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = RenderProp<S, M, L>
 
 /**
  * Props for the {@link OptimizedEntry} component.
  *
  * @public
  */
-interface OptimizedEntrySharedProps {
+interface OptimizedEntrySharedProps<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+> {
   /**
    * Render prop that receives the resolved variant entry and metadata when resolved.
    */
-  children: OptimizedEntryChildren
+  children: OptimizedEntryChildren<S, M, L>
   /**
    * Whether this component reacts to optimization state changes in real time.
    * When `undefined`, inherits from the `liveUpdates` prop on {@link OptimizationRoot}.
@@ -86,7 +98,7 @@ interface OptimizedEntrySharedProps {
   /**
    * Callback invoked when a resolved entry is rendered with tracking attributes ready.
    */
-  onEntryResolved?: (metadata: OptimizedEntryMetadata) => void
+  onEntryResolved?: (metadata: OptimizedEntryMetadata<S, M, L>) => void
   /**
    * Marks the optimized entry wrapper as a click target for entry click tracking.
    */
@@ -113,30 +125,67 @@ interface OptimizedEntrySharedProps {
   hoverDurationUpdateIntervalMs?: number
 }
 
-type OptimizedEntrySourceProps =
-  | {
-      /**
-       * The baseline Contentful entry fetched with `include: 10`.
-       * Must include `nt_experiences` field with linked optimization data.
-       */
-      baselineEntry: Entry
-      entryId?: never
-      entryQuery?: never
-    }
-  | {
-      baselineEntry?: never
-      /** Contentful entry ID fetched through the SDK-managed Contentful client. */
-      entryId: string
-      /** Per-call Contentful `getEntry()` query overrides. */
-      entryQuery?: ContentfulEntryQuery
-    }
+export type OptimizedEntryBaselineProps<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = OptimizedEntrySharedProps<S, M, L> & {
+  /**
+   * The baseline Contentful entry fetched with `include: 10`.
+   * Must include `nt_experiences` field with linked optimization data.
+   */
+  baselineEntry: Entry<S, M, L>
+  entryId?: never
+  entryQuery?: never
+}
+
+export type OptimizedEntryManagedProps<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  L extends LocaleCode = LocaleCode,
+> = OptimizedEntrySharedProps<S, undefined, L> & {
+  baselineEntry?: never
+  /** Contentful entry ID fetched through the SDK-managed Contentful client. */
+  entryId: string
+  /** Per-call Contentful `getEntry()` query overrides. */
+  entryQuery?: ContentfulEntryQuery
+}
 
 /**
  * Props for the {@link OptimizedEntry} component.
  *
  * @public
  */
-export type OptimizedEntryProps = OptimizedEntrySharedProps & OptimizedEntrySourceProps
+export type OptimizedEntryProps<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> = OptimizedEntryBaselineProps<S, M, L> | OptimizedEntryManagedProps<S, L>
+
+type OptimizedEntrySourceProps =
+  | {
+      readonly baselineEntry: Entry
+      readonly entryId?: never
+      readonly entryQuery?: never
+    }
+  | {
+      readonly baselineEntry?: never
+      readonly entryId: string
+      readonly entryQuery?: ContentfulEntryQuery
+    }
+
+type OptimizedEntryImplementationProps = OptimizedEntrySharedProps<
+  EntrySkeletonType,
+  ChainModifiers,
+  LocaleCode
+> &
+  OptimizedEntrySourceProps
+
+function toImplementationProps(props: OptimizedEntryProps): OptimizedEntryImplementationProps
+function toImplementationProps(
+  props: OptimizedEntryProps | OptimizedEntryImplementationProps,
+): OptimizedEntryProps | OptimizedEntryImplementationProps {
+  return props
+}
 
 const WRAPPER_STYLE = Object.freeze({ display: OPTIMIZED_ENTRY_HOST_DISPLAY })
 const OptimizedEntryNestingContext = createContext<ReadonlySet<string> | null>(null)
@@ -345,24 +394,35 @@ function useDuplicateBaselineGuard(baselineEntryId: string): {
   return { currentAndAncestorBaselineIds, hasDuplicateBaselineAncestor }
 }
 
-export function OptimizedEntry({
-  children,
-  liveUpdates,
-  as = 'div',
-  testId,
-  'data-testid': dataTestIdProp,
-  loadingFallback,
-  errorFallback,
-  onEntryError,
-  onEntryResolved,
-  clickable,
-  hoverDurationUpdateIntervalMs,
-  trackClicks,
-  trackHovers,
-  trackViews,
-  viewDurationUpdateIntervalMs,
-  ...entryProps
-}: OptimizedEntryProps): JSX.Element | null {
+export function OptimizedEntry<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+>(props: OptimizedEntryBaselineProps<S, M, L>): JSX.Element | null
+export function OptimizedEntry<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  L extends LocaleCode = LocaleCode,
+>(props: OptimizedEntryManagedProps<S, L>): JSX.Element | null
+export function OptimizedEntry(props: OptimizedEntryProps): JSX.Element | null
+export function OptimizedEntry(props: OptimizedEntryProps): JSX.Element | null {
+  const {
+    children,
+    liveUpdates,
+    as = 'div',
+    testId,
+    'data-testid': dataTestIdProp,
+    loadingFallback,
+    errorFallback,
+    onEntryError,
+    onEntryResolved,
+    clickable,
+    hoverDurationUpdateIntervalMs,
+    trackClicks,
+    trackHovers,
+    trackViews,
+    viewDurationUpdateIntervalMs,
+    ...entryProps
+  } = toImplementationProps(props)
   const sdk = useOptimization()
   const { entryId, managedEntryParams } = resolveEntrySource(entryProps, liveUpdates, onEntryError)
   const managedEntry = useManagedBaselineEntry(managedEntryParams)

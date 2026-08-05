@@ -2,7 +2,6 @@ import { EntryCardContent } from '@/components/EntryCardContent'
 import {
   loadRequiredPageEntries,
   staticPublicHandoffMissingRequiredEntryBehavior,
-  type ContentEntry,
 } from '@/lib/contentful'
 import { getCustomerSegment, getCustomerSegmentStaticParams } from '@/lib/customer-segments'
 import {
@@ -59,8 +58,6 @@ export default async function AnalyticsOnlyPage({
       </header>
       <div className="entry-grid">
         {pageData.resolvedEntries.map((resolvedData) => {
-          const entry = resolvedData.entry as ContentEntry
-
           return (
             <section
               className="entry-card"
@@ -70,7 +67,7 @@ export default async function AnalyticsOnlyPage({
             >
               {resolvedData.isEmptyVariant ? null : (
                 <EntryCardContent
-                  entry={entry}
+                  entry={resolvedData.entry}
                   labelEntryId={resolvedData.baselineEntry.sys.id}
                   testId={`analytics-${resolvedData.baselineEntry.sys.id}`}
                 />

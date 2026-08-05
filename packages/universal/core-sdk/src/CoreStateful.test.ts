@@ -551,8 +551,10 @@ describe('CoreStateful blocked event handling', () => {
     signals.selectedOptimizations.value = selectedOptimizationsFixture
 
     const result = core.resolveOptimizedEntry(optimizedEntry)
+    const explicitBaseline = core.resolveOptimizedEntry(optimizedEntry, [])
 
     expect(result.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(explicitBaseline.entry).toBe(optimizedEntry)
     expect(result.optimizationContextId).toEqual(expect.any(String))
     expect(result.selectedOptimization).toEqual(
       expect.objectContaining({

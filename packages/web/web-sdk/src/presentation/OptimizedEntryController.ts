@@ -1,27 +1,30 @@
 import type {
   ContentfulEntryQuery,
+  EntryFor,
   Observable,
   OptimizedEntryMetadata,
   ResolvedData,
   Subscription,
 } from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
-import type { Entry, EntrySkeletonType } from 'contentful'
+import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import type { ContentOptimizationHydrationMode } from '../handoff'
+import type { OptimizedEntryLoadingTargetDisplay } from './OptimizedEntryLoadingPresentation'
 import { resolveLoadingPresentation } from './OptimizedEntryLoadingPresentation'
 import {
-  resolveOptimizedEntryTrackingAttributes,
-  type OptimizedEntryTrackingAttributes,
-} from './OptimizedEntryTrackingAttributes'
+  areOptimizedEntrySnapshotsEqual,
+  type OptimizedEntrySnapshot,
+  type OptimizedEntrySnapshotListener,
+} from './OptimizedEntrySnapshot'
+import { resolveOptimizedEntryTrackingAttributes } from './OptimizedEntryTrackingAttributes'
+
+export type { OptimizedEntryLoadingTargetDisplay } from './OptimizedEntryLoadingPresentation'
+export type {
+  OptimizedEntrySnapshot,
+  OptimizedEntrySnapshotListener,
+} from './OptimizedEntrySnapshot'
 
 const BASELINE_REVEAL_TIMEOUT_MS = 5000
-
-/**
- * Display mode used for the temporary loading layout target.
- *
- * @public
- */
-export type OptimizedEntryLoadingTargetDisplay = 'block' | 'inline'
 
 /**
  * Layout-neutral display value used by optimized-entry host elements.
@@ -34,12 +37,12 @@ interface ExperienceRequestStateLike {
   readonly status: string
 }
 
-/**
- * Minimal SDK surface needed by optimized-entry presentation controllers.
- *
- * @public
- */
-export interface OptimizedEntrySdk {
+/** Minimal SDK surface needed by optimized-entry presentation controllers. @public */
+export interface OptimizedEntrySdk<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> {
   /** SDK state observables used to resolve and track optimized entry content. */
   readonly states: {
     readonly canOptimize: Observable<boolean>
@@ -49,112 +52,53 @@ export interface OptimizedEntrySdk {
   }
   /** Resolve a Contentful entry against the currently selected optimizations. */
   resolveOptimizedEntry: (
-    entry: Entry,
+    entry: EntryFor<S, M, L>,
     selectedOptimizations?: SelectedOptimizationArray,
-  ) => ResolvedData<EntrySkeletonType>
+  ) => ResolvedData<S, M, L>
   fetchContentfulEntry: (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
 }
 
-/**
- * Current presentation state for one optimized entry.
- *
- * @public
- */
-export interface OptimizedEntrySnapshot {
-  /** Whether SDK state says optimized content can be selected. */
-  readonly canOptimize: boolean
-  /** Entry that should be rendered for the current snapshot. */
-  readonly entry: Entry
-  /** Host attributes needed for automatic entry interaction tracking. */
-  readonly hostAttributes: OptimizedEntryTrackingAttributes
-  /**
-   * Whether the resolved variant is an empty variant — the content author deliberately
-   * chose to show nothing for this audience. Renderers must suppress visible content
-   * when this is `true`, but still mount the tracking host so a component view fires.
-   */
-  readonly isEmptyVariant: boolean
-  /** Whether the optimized entry is still waiting for optimization state. */
-  readonly isLoading: boolean
-  /** Whether the client presentation layer is ready to reveal rendered content. */
-  readonly isPresentationReady: boolean
-  /** Whether the current entry has been resolved and can be exposed to render callbacks. */
-  readonly isResolved: boolean
-  /** Loading and fallback rendering decisions for wrappers around the entry. */
-  readonly loadingPresentation: {
-    readonly showLoadingFallback: boolean
-    readonly hideLoadingLayoutTarget: boolean
-    readonly shouldRenderBaselineWhileLoading: boolean
-    readonly targetDisplay: OptimizedEntryLoadingTargetDisplay
-  }
-  /** Baseline, resolved-entry, and optimization metadata for render surfaces. */
-  readonly metadata: OptimizedEntryMetadata
-  /** Full resolved entry data returned by the SDK resolver. */
-  readonly resolvedData: ResolvedData<EntrySkeletonType>
-  /** Selected optimization that resolved the current entry, when one applied. */
-  readonly selectedOptimization: ResolvedData<EntrySkeletonType>['selectedOptimization']
-  /** Selected optimization array used for this snapshot. */
-  readonly selectedOptimizations: SelectedOptimizationArray | undefined
-}
-
-/**
- * Inputs used to configure an {@link OptimizedEntryController}.
- *
- * @public
- */
-export interface OptimizedEntryControllerOptions {
-  /** Initial browser hydration presentation mode. */
+/** Inputs used to configure an optimized-entry presentation controller. @public */
+export interface OptimizedEntryControllerOptions<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> {
   readonly hydration?: ContentOptimizationHydrationMode
-  /** Whether the client presentation layer is ready to reveal rendered content. */
   readonly isPresentationReady?: boolean
   /** Baseline Contentful entry fetched by the application. */
-  readonly baselineEntry: Entry
-  /** Per-entry live-update override. */
+  readonly baselineEntry: EntryFor<S, M, L>
   readonly entryLiveUpdatesEnabled?: boolean
-  /** Root-level live-update setting inherited by entries without an override. */
   readonly rootLiveUpdatesEnabled?: boolean
-  /** Whether the wrapper has its own loading fallback UI. */
   readonly hasCustomLoadingFallback?: boolean
-  /** Delay before baseline content is revealed while optimization remains unresolved. */
   readonly baselineRevealTimeoutMs?: number
-  /** Whether the preview panel is open and should force live updates. */
   readonly isPreviewPanelOpen?: boolean
   /** SDK instance used for optimized entry resolution. */
-  readonly sdk?: OptimizedEntrySdk
-  /** Whether SDK state observables are ready to read. */
+  readonly sdk?: OptimizedEntrySdk<S, M, L>
   readonly isSdkStateReady?: boolean
-  /** Display mode for the temporary loading layout target. */
   readonly targetDisplay?: OptimizedEntryLoadingTargetDisplay
-  /** Whether the wrapper should be marked as a click target. */
   readonly clickable?: boolean
-  /** Hover duration update interval in milliseconds. */
   readonly hoverDurationUpdateIntervalMs?: number
-  /** Per-entry click tracking override. */
   readonly trackClicks?: boolean
-  /** Per-entry hover tracking override. */
   readonly trackHovers?: boolean
-  /** Per-entry view tracking override. */
   readonly trackViews?: boolean
-  /** View duration update interval in milliseconds. */
   readonly viewDurationUpdateIntervalMs?: number
 }
 
-/**
- * Receives optimized-entry snapshot updates.
- *
- * @public
- */
-export type OptimizedEntrySnapshotListener = (snapshot: OptimizedEntrySnapshot) => void
-
-interface NormalizedOptimizedEntryControllerOptions {
+interface NormalizedOptimizedEntryControllerOptions<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+> {
   readonly hydration: ContentOptimizationHydrationMode
   readonly isPresentationReady: boolean
-  readonly baselineEntry: Entry
+  readonly baselineEntry: EntryFor<S, M, L>
   readonly entryLiveUpdatesEnabled?: boolean
   readonly rootLiveUpdatesEnabled: boolean
   readonly hasCustomLoadingFallback: boolean
   readonly baselineRevealTimeoutMs: number
   readonly isPreviewPanelOpen: boolean
-  readonly sdk?: OptimizedEntrySdk
+  readonly sdk?: OptimizedEntrySdk<S, M, L>
   readonly isSdkStateReady: boolean
   readonly targetDisplay: OptimizedEntryLoadingTargetDisplay
   readonly clickable?: boolean
@@ -177,9 +121,13 @@ export interface OptimizedEntryNestingState {
   readonly hasDuplicateBaselineAncestor: boolean
 }
 
-function normalizeOptions(
-  options: OptimizedEntryControllerOptions,
-): NormalizedOptimizedEntryControllerOptions {
+function normalizeOptions<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+>(
+  options: OptimizedEntryControllerOptions<S, M, L>,
+): NormalizedOptimizedEntryControllerOptions<S, M, L> {
   return {
     hydration: options.hydration ?? 'client-only-hidden-until-ready',
     isPresentationReady: options.isPresentationReady ?? false,
@@ -248,6 +196,12 @@ export function resolveShouldLiveUpdate(params: {
   return entryLiveUpdatesEnabled ?? rootLiveUpdatesEnabled
 }
 
+function createBaselineResolvedData<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers,
+  L extends LocaleCode,
+>(entry: EntryFor<S, M, L>): ResolvedData<S, M, L>
+function createBaselineResolvedData(entry: Entry): ResolvedData<EntrySkeletonType>
 function createBaselineResolvedData(entry: Entry): ResolvedData<EntrySkeletonType> {
   return { entry, selectedOptimization: undefined }
 }
@@ -256,94 +210,37 @@ function isExperienceRequestSettled(state: ExperienceRequestStateLike): boolean 
   return state.status === 'success' || state.status === 'failed'
 }
 
-function areHostAttributesEqual(
-  left: OptimizedEntryTrackingAttributes,
-  right: OptimizedEntryTrackingAttributes,
-): boolean {
-  const leftKeys = Object.keys(left)
-  const rightKeys = Object.keys(right)
-
-  if (leftKeys.length !== rightKeys.length) {
-    return false
-  }
-
-  return leftKeys.every((key) => left[key] === right[key])
-}
-
-function areLoadingPresentationsEqual(
-  left: OptimizedEntrySnapshot['loadingPresentation'],
-  right: OptimizedEntrySnapshot['loadingPresentation'],
-): boolean {
-  return (
-    left.showLoadingFallback === right.showLoadingFallback &&
-    left.hideLoadingLayoutTarget === right.hideLoadingLayoutTarget &&
-    left.shouldRenderBaselineWhileLoading === right.shouldRenderBaselineWhileLoading &&
-    left.targetDisplay === right.targetDisplay
-  )
-}
-
-function areSnapshotMetadataEqual(
-  left: OptimizedEntrySnapshot['metadata'],
-  right: OptimizedEntrySnapshot['metadata'],
-): boolean {
-  return (
-    left.baselineEntry === right.baselineEntry &&
-    left.optimizationContextId === right.optimizationContextId
-  )
-}
-
-function areSnapshotValuesEqual(
-  left: OptimizedEntrySnapshot,
-  right: OptimizedEntrySnapshot,
-): boolean {
-  return (
-    left.canOptimize === right.canOptimize &&
-    left.entry === right.entry &&
-    left.isEmptyVariant === right.isEmptyVariant &&
-    left.isLoading === right.isLoading &&
-    left.isPresentationReady === right.isPresentationReady &&
-    left.isResolved === right.isResolved &&
-    left.selectedOptimization === right.selectedOptimization &&
-    left.selectedOptimizations === right.selectedOptimizations
-  )
-}
-
-function areSnapshotsEqual(left: OptimizedEntrySnapshot, right: OptimizedEntrySnapshot): boolean {
-  return (
-    areSnapshotValuesEqual(left, right) &&
-    areSnapshotMetadataEqual(left.metadata, right.metadata) &&
-    areLoadingPresentationsEqual(left.loadingPresentation, right.loadingPresentation) &&
-    areHostAttributesEqual(left.hostAttributes, right.hostAttributes)
-  )
-}
-
 /**
  * Coordinates optimized-entry resolution, loading presentation, live updates, and tracking
  * attributes without depending on a specific UI framework.
  *
  * @public
  */
-export class OptimizedEntryController {
+export class OptimizedEntryController<
+  S extends EntrySkeletonType = EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> {
   private canOptimize = false
   private connected = false
   private hasExperienceRequestSettled = false
   private optimizationPossible = true
-  private listener: OptimizedEntrySnapshotListener | undefined
+  private listener: OptimizedEntrySnapshotListener<S, M, L> | undefined
   private baselineRevealTimeout: ReturnType<typeof setTimeout> | undefined
-  private options: NormalizedOptimizedEntryControllerOptions
+  private options: NormalizedOptimizedEntryControllerOptions<S, M, L>
   private hasBaselineRevealTimedOut = false
   private selectedOptimizations: SelectedOptimizationArray | undefined
-  private snapshot: OptimizedEntrySnapshot
+  private snapshot: OptimizedEntrySnapshot<S, M, L>
   private subscriptions: Subscription[] = []
 
-  constructor(options: OptimizedEntryControllerOptions) {
+  constructor(options: OptimizedEntryControllerOptions<S, M, L>) {
     this.options = normalizeOptions(options)
     this.primeStateFromSdk()
     this.snapshot = this.createSnapshot()
   }
 
   /** Register or clear the callback that receives snapshot updates. */
-  setSnapshotListener(listener: OptimizedEntrySnapshotListener | undefined): void {
+  setSnapshotListener(listener: OptimizedEntrySnapshotListener<S, M, L> | undefined): void {
     this.listener = listener
   }
 
@@ -366,7 +263,7 @@ export class OptimizedEntryController {
   }
 
   /** Apply new controller options and recompute the current snapshot. */
-  updateOptions(options: OptimizedEntryControllerOptions): void {
+  updateOptions(options: OptimizedEntryControllerOptions<S, M, L>): void {
     const { options: previousOptions } = this
     const previousShouldLiveUpdate = this.shouldLiveUpdate()
     const nextOptions = normalizeOptions(options)
@@ -398,7 +295,7 @@ export class OptimizedEntryController {
   }
 
   /** Return the latest optimized-entry snapshot. */
-  getSnapshot(): OptimizedEntrySnapshot {
+  getSnapshot(): OptimizedEntrySnapshot<S, M, L> {
     return this.snapshot
   }
 
@@ -502,7 +399,7 @@ export class OptimizedEntryController {
     return !isContentReady
   }
 
-  private createSnapshot(): OptimizedEntrySnapshot {
+  private createSnapshot(): OptimizedEntrySnapshot<S, M, L> {
     const isLoading = this.resolveIsLoading()
     const isServerRender = typeof window === 'undefined'
     const loadingPresentation = resolveLoadingPresentation({
@@ -522,7 +419,7 @@ export class OptimizedEntryController {
             this.selectedOptimizations,
           )
         : createBaselineResolvedData(this.options.baselineEntry)
-    const metadata: OptimizedEntryMetadata = {
+    const metadata: OptimizedEntryMetadata<S, M, L> = {
       baselineEntry: this.options.baselineEntry,
       baselineEntryId: this.options.baselineEntry.sys.id,
       entry: resolvedData.entry,
@@ -568,7 +465,7 @@ export class OptimizedEntryController {
     this.snapshot = nextSnapshot
     this.syncLoadingRevealTimer(isLoading)
 
-    if (!areSnapshotsEqual(previousSnapshot, nextSnapshot)) {
+    if (!areOptimizedEntrySnapshotsEqual(previousSnapshot, nextSnapshot)) {
       this.listener?.(nextSnapshot)
     }
   }

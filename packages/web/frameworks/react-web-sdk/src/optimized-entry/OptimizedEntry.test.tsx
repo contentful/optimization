@@ -3,10 +3,18 @@ import type {
   OptimizationData,
   SelectedOptimizationArray,
 } from '@contentful/optimization-web/api-schemas'
+import type {
+  EntryFor,
+  OptimizedEntryMetadata,
+  ResolvedData,
+} from '@contentful/optimization-web/core-sdk'
 import type { ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
+import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { act, createElement } from 'react'
 import { renderToString } from 'react-dom/server'
+import { isEntryOfContentType } from '../api-schemas'
 import { OptimizationHydrationContext } from '../context/OptimizationHydrationContext'
+import { useEntryResolver } from '../hooks/useEntryResolver'
 import { OptimizationRoot } from '../root/OptimizationRoot'
 import { OptimizedEntry, type OptimizedEntryProps } from './OptimizedEntry'
 import {
@@ -22,6 +30,67 @@ import {
   renderToStringWithoutWindow,
   type TestEntry,
 } from './OptimizedEntry.testUtils'
+import { useOptimizedEntry, type UseOptimizedEntryResult } from './useOptimizedEntry'
+
+type PageSkeleton = EntrySkeletonType<{ title: EntryFieldTypes.Symbol }, 'page'>
+type HeroSkeleton = EntrySkeletonType<{ headline: EntryFieldTypes.Symbol }, 'hero'>
+type CtaSkeleton = EntrySkeletonType<{ label: EntryFieldTypes.Symbol }, 'cta'>
+type PossibleSkeleton = PageSkeleton | HeroSkeleton | CtaSkeleton
+type Modifier = 'WITHOUT_LINK_RESOLUTION'
+type Locale = 'en-US'
+
+function compileOptimizedEntryTypes(baselineEntry: Entry<PageSkeleton, Modifier, Locale>): void {
+  const inferred = useOptimizedEntry({ baselineEntry })
+  const sameType: Entry<PageSkeleton, Modifier, Locale> = inferred.entry
+  const result = useOptimizedEntry<PossibleSkeleton, Modifier, Locale>({ baselineEntry })
+  const typedResult: UseOptimizedEntryResult<EntryFor<PossibleSkeleton, Modifier, Locale>> = result
+  const _distributed:
+    | Entry<PageSkeleton, Modifier, Locale>
+    | Entry<HeroSkeleton, Modifier, Locale>
+    | Entry<CtaSkeleton, Modifier, Locale> = result.entry
+  const _metadata: OptimizedEntryMetadata<PossibleSkeleton, Modifier, Locale> | undefined =
+    result.metadata
+  const _resolvedData: ResolvedData<PossibleSkeleton, Modifier, Locale> = result.resolvedData
+  const managedEntry: EntryFor<PossibleSkeleton, undefined, Locale> | undefined = useOptimizedEntry<
+    PossibleSkeleton,
+    Locale
+  >({ entryId: 'page' }).entry
+
+  OptimizedEntry<PossibleSkeleton, Modifier, Locale>({
+    baselineEntry,
+    children: (entry, context) => {
+      const renderedEntry: typeof _distributed = entry
+      const renderedMetadata: NonNullable<typeof _metadata> = context
+
+      return isEntryOfContentType<HeroSkeleton, Modifier, Locale>(entry, 'hero')
+        ? entry.fields.headline
+        : `${renderedMetadata.entryId}:${renderedEntry.sys.id}`
+    },
+  })
+  OptimizedEntry<PossibleSkeleton, Locale>({
+    entryId: 'page',
+    children: (entry) => entry.sys.id,
+  })
+  const resolver = useEntryResolver()
+  const resolverEntry: typeof _distributed = resolver.resolveEntry<
+    PossibleSkeleton,
+    Modifier,
+    Locale
+  >(baselineEntry)
+  const resolverData: typeof _resolvedData = resolver.resolveEntryData<
+    PossibleSkeleton,
+    Modifier,
+    Locale
+  >(baselineEntry)
+
+  void managedEntry
+  void resolverData
+  void resolverEntry
+  void sameType
+  void typedResult
+}
+
+void compileOptimizedEntryTypes
 
 function createDeferred<T>(): {
   readonly promise: Promise<T>
