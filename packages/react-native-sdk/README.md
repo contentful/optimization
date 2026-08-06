@@ -199,6 +199,11 @@ Do not use a component effect to grant default consent for an app that has no co
 Seeding `defaults.consent` during SDK initialization applies the persistence policy before child
 effects, screen tracking, or manual `identify()` calls can run.
 
+`defaults` (and every other `OptimizationRoot` config prop except `locale`) is captured on first
+render. Reassigning `defaults.consent` after mount has no effect; call `consent(true | false)` from
+the SDK instance for runtime consent changes, or change the provider's React `key` to force full
+re-initialization.
+
 AsyncStorage persists consent and, when persistence consent permits it, profile-continuity state
 across app launches. It is not consulted for every live state read after initialization. For
 cross-SDK consent guidance, see
@@ -256,7 +261,12 @@ Use one CDA locale for entries fetched through `entryId`, passed to `OptimizedEn
 with `useEntryResolver()` or `useOptimizedEntry()`. For localized apps, derive the application
 locale from your navigation, i18n, or app configuration layer and pass it to `entryQuery`,
 `contentful.defaultQuery`, or manual Contentful CDA requests. Do not pass all-locale CDA responses
-from `withAllLocales` or `locale=*`; these APIs expect direct single-locale field values. See
+from `withAllLocales` or `locale=*`; these APIs expect direct single-locale field values.
+
+Every entry the SDK resolves must include a top-level `metadata` object. Entries from
+`contentfulClient.getEntry(...)` carry it by default. Hand-built payloads (fixtures, cache
+snapshots, GraphQL responses) that omit `metadata` are silently returned as baseline with no error,
+which is indistinguishable from an entry that has no experience configured. See
 [Entry optimization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
