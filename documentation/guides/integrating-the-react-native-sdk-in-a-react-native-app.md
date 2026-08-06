@@ -258,6 +258,11 @@ Use `useOptimization()` under the provider when a component needs the SDK instan
 outside `OptimizationRoot` or `OptimizationProvider`, and the provider-owned path withholds children
 until the SDK is ready.
 
+Set `api.preflight = true` only for dry-run Experience API requests that aggregate a fresh profile
+state on the server without persisting it, for example when validating configuration or exercising
+targeting rules from a debug tool. It changes Experience delivery for the whole SDK instance, so
+leave it off in normal application builds.
+
 ### Consent and privacy-policy handoff
 
 **Integration category:** Common but policy-dependent
@@ -312,7 +317,13 @@ By default, React Native permits `identify` and `screen` before event consent is
 views, entry taps, and any other event type are blocked until consent is accepted or that type is
 allow-listed. Boolean consent calls control both event emission and durable profile continuity. Use
 `optimization.consent({ events: true, persistence: false })` when events can emit but the stored
-profile-continuity state must stay session-only. That state is the anonymous identity, the profile,
+profile-continuity state must stay session-only.
+
+`OptimizationRoot` snapshots its config (including `defaults`, `allowedEventTypes`, `contentful`,
+`api`, `queuePolicy`, `getAnonymousId`, `onStatesReady`, and `trackEntryInteraction`) on first
+render; only `locale` reacts live and calls `sdk.setLocale(...)` when the prop changes. Reassigning
+`defaults` after mount has no effect — use `optimization.consent(...)` from `useOptimization()` for
+runtime consent changes, and change the provider's React `key` to force full re-initialization. That state is the anonymous identity, the profile,
 the **selected optimizations** (which variant the Experience API picked for each experience), and the
 **changes** (the profile-backed values the Experience API returns for feature flags — named on/off or
 valued settings — and merge tags — profile-driven substitutions in Rich Text; both are covered in
@@ -381,6 +392,15 @@ const entry = await contentfulClient.getEntry('4ib0hsHWoSOnCVdDkizE8d', {
   locale: APP_LOCALE,
 })
 ```
+
+Every entry passed to `OptimizedEntry`, `useOptimizedEntry`, or `useEntryResolver().resolveEntry`
+must be a standard `contentful.js` CDA entry with a top-level `metadata` object (tags and
+concepts) — the resolver reads it alongside `sys` and `fields`. If your app hand-builds an entry
+payload (fixtures, cache snapshots, GraphQL responses), or fetches a shape that omits `metadata`,
+the resolver silently returns the baseline entry with no error. That is indistinguishable from an
+entry that has no experience configured, so mapping bugs surface as "personalization isn't working"
+with nothing to trace. Pass entries straight from `contentfulClient.getEntry(...)` when possible;
+if you must build the payload yourself, include `metadata: { tags: [], concepts: [] }` at minimum.
 
 Changing the provider `locale` prop after initialization calls `sdk.setLocale(nextLocale)`. After
 the locale update, Experience API requests and event context use the new locale, but the SDK does
@@ -476,12 +496,21 @@ For lower-level resolution and open-ended models, see
 
 There are two distinct outcomes, and they use different props. The **baseline fallback** is a
 resolution outcome on an entry the SDK already has: on denied consent, no matching variant,
-unresolved links, or an all-locale payload, the render prop receives the baseline (original) entry
-and the UI does not break. A **managed-fetch failure** is different: when `entryId` is used and the
-SDK's fetch rejects, there is no entry to resolve, so `onEntryError` fires once and `OptimizedEntry`
-renders `errorFallback` instead of the render prop. While a managed `entryId` fetch is unresolved,
-`OptimizedEntry` shows `loadingFallback` until the fetch settles; there is no time limit on that
-loading window, so provide a `loadingFallback` for any entry the reader waits on.
+unresolved links, an all-locale payload, or an entry missing top-level `metadata`, the render prop
+receives the baseline (original) entry and the UI does not break. A **managed-fetch failure** is
+different: when `entryId` is used and the SDK's fetch rejects, there is no entry to resolve, so
+`onEntryError` fires once and `OptimizedEntry` renders `errorFallback` instead of the render prop.
+While a managed `entryId` fetch is unresolved, `OptimizedEntry` shows `loadingFallback` until the
+fetch settles; there is no time limit on that loading window, so provide a `loadingFallback` for
+any entry the reader waits on.
+
+The render prop and `onEntryResolved` callback receive a second `metadata` argument
+(`OptimizedEntryMetadata`) alongside the resolved entry. It exposes `baselineEntry`,
+`baselineEntryId`, `entry`, `entryId`, `selectedOptimization`, `selectedOptimizations`,
+`resolvedData`, and `optimizationContextId` — an opaque runtime-owned identifier that keys any view
+or tap events your app emits itself to the resolved optimization. `useOptimizedEntry()` exposes the
+same shape through its `metadata` field. You only need `optimizationContextId` when driving
+interaction tracking manually instead of through `OptimizedEntry`'s built-in view and tap tracking.
 
 ### Screen and navigation tracking
 
@@ -667,6 +696,14 @@ Use merge tags and Custom Flags when your app renders profile-backed Rich Text v
 values returned in the Experience API `changes` data. Entry replacement and flag rendering are
 separate decisions: `OptimizedEntry` chooses an entry variant, while flags and merge tags read
 profile-backed values from SDK state.
+
+Every flag read is a tracked analytics exposure, not only subscriptions. `optimization.getFlag(name)`
+emits a `component` flag-view event on every call, and `optimization.states.flag(name)` emits one
+per delivered value — once on subscribe (or the first `.current` read) and again each time the
+delivered value changes. Deliveries are deduped by `(value, componentId, experienceId,
+variantIndex, profileId)` so the same value for the same context is not re-emitted, but the
+tracking attempt is unconditional. Apply the same governance to flag reads that you apply to other
+SDK events.
 
 1. Resolve merge tags inside your app-owned Rich Text renderer with the SDK instance returned by
    `useOptimization()`.
@@ -931,7 +968,12 @@ function App() {
 Use strict controls when privacy review, regulated deployments, or constrained mobile networks need
 behavior beyond the default React Native settings.
 
-1. Set `allowedEventTypes={[]}` when no event can emit before explicit event consent.
+1. Set `allowedEventTypes={[]}` when no event can emit before explicit event consent. This overrides
+   the default `['identify', 'screen']` allow-list, so the Quick Start's `useScreenTracking` screen
+   event is silently blocked until `consent(true)` runs; the block only surfaces through
+   `onEventBlocked` or `states.blockedEventStream`. Pair it with a consent flow that resolves
+   before any screen or identify path can run, or accept that pre-consent screen and identify
+   events will be dropped.
 2. Use `onEventBlocked` to surface consent or guard failures in diagnostics.
 3. Configure `queuePolicy.offlineMaxEvents` and `queuePolicy.onOfflineDrop` when the offline
    Experience buffer must have explicit bounds and observability.
