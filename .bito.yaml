@@ -7,6 +7,7 @@ linters_feedback: false
 post_as_request_changes: true
 repo_level_guidelines_enabled: false
 sequence_diagram_enabled: false
+labels_excluded: 'autorelease: pending'
 exclude_files: 'pnpm-lock.yaml,**/dist/**,**/.rslib/**,**/.rsdoctor/**,**/pkgs/**,**/docs/**,**/coverage/**,**/*.snap,**/*.d.ts,**/node_modules/**'
 custom_guidelines:
   general:
