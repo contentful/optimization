@@ -52,5 +52,7 @@ REFERENCE IMPLEMENTATION INTEGRITY
 DOCUMENTATION
 - If a PR changes a public SDK option, event, or initialization parameter, and the change is not
   reflected in the affected package README or TSDoc, flag the gap.
+- Apply documentation policy by artifact type: public guides, concepts, and product documents may
+  not link to source, while internal SDK knowledge files require source pointers as provenance.
 - knowledge-base pointer files under documentation/internal/sdk-knowledge/ must stay consistent
   with packages/**/src. If the diff renames or removes a symbol that a KB pointer names, flag it.

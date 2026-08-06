@@ -4,7 +4,8 @@ post_changelist: false
 exclude_draft_pr: true
 secret_scanner_feedback: true
 linters_feedback: false
-repo_level_guidelines_enabled: true
+post_as_request_changes: true
+repo_level_guidelines_enabled: false
 sequence_diagram_enabled: false
 exclude_files: 'pnpm-lock.yaml,**/dist/**,**/.rslib/**,**/.rsdoctor/**,**/pkgs/**,**/docs/**,**/coverage/**,**/*.snap,**/*.d.ts,**/node_modules/**'
 custom_guidelines:
