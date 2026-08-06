@@ -501,6 +501,23 @@ struct DirectResolutionView: View {
 }
 ```
 
+If you fetch with `contentful.swift`, pass the `Contentful.Entry` directly to the typed initializer
+instead of hand-mapping it to a dictionary first. The SDK-owned adapter builds the required
+`{sys, fields, metadata}` shape, and the render closure receives a `CTEntry` you read with
+`getField<T>` instead of casting a raw dictionary:
+
+```swift
+struct HeroSection: View {
+    let entry: Contentful.Entry
+
+    var body: some View {
+        OptimizedEntry(entry: entry) { resolvedEntry in
+            HeroCard(title: resolvedEntry.getField("title") ?? "")
+        }
+    }
+}
+```
+
 For the shared resolution and fallback rules, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#fallback-behavior).
 
@@ -578,13 +595,11 @@ default view threshold is 80% visibility (`minVisibleRatio` `0.8`) held for 2000
 after the first view event, duration updates emit every 5000 ms (`viewDurationUpdateIntervalMs`) while
 the entry stays visible.
 
-A tap uses a SwiftUI `TapGesture` on the `OptimizedEntry` wrapper: it emits the `component_click`
-event, then calls the optional `onTap` closure. That closure receives the **baseline** entry you
-passed in, not the resolved variant — only the render closure receives the resolved entry — so do not
-read variant-dependent fields from it. Because `onTap` runs through that same tap modifier, setting
-`trackTaps: false` disables both the tap event and `onTap`. For app-only navigation that must not
-depend on tap tracking, use a SwiftUI `Button` or your own gesture inside the render closure and read
-the resolved entry's fields there.
+A tap observer on the `OptimizedEntry` wrapper emits the `component_click` event, then calls the
+optional `onTap` closure. That closure receives the **baseline** entry you passed in, not the resolved
+variant — only the render closure receives the resolved entry — so do not read variant-dependent
+fields from it. Because `onTap` runs through that same tap observer, setting `trackTaps: false`
+disables both the tap event and `onTap`.
 
 1. Leave view and tap tracking enabled for entries that need exposure and interaction analytics.
 2. Set `trackViews: false` or `trackTaps: false` on `OptimizationRoot` for a tree-wide opt-out, or on

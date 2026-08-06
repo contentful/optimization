@@ -467,6 +467,21 @@ selection (see [Live updates and locked variants](#live-updates-and-locked-varia
 resolution and fallback rules, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#fallback-behavior).
 
+If you fetch with `contentful.swift`, pass the `Contentful.Entry` directly to the
+`resolveOptimizedEntry(baseline: Contentful.Entry, selectedOptimizations:)` overload instead of
+hand-mapping it to a dictionary first. The SDK-owned adapter builds the required
+`{sys, fields, metadata}` shape once, and `result.entry` is still a `CTEntry` you read with
+`getField<T>`:
+
+```swift
+// entry is a Contentful.Entry from your contentful.swift fetch.
+let result = client.resolveOptimizedEntry(
+    baseline: entry,
+    selectedOptimizations: client.selectedOptimizations
+)
+let title: String? = result.entry.getField("title")
+```
+
 ### Screen and navigation tracking
 
 **Integration category:** Required for first integration
@@ -474,10 +489,14 @@ resolution and fallback rules, see
 The quick start tracked one screen. Real UIKit navigation repeats lifecycle callbacks across modal,
 tab, and navigation-controller transitions, so choose the method that matches the event you want.
 
-Use `trackCurrentScreen(name:properties:routeKey:)` for UIKit lifecycle and navigation tracking: it
-deduplicates the current route in the SDK by `routeKey` (which defaults to `name`), so a repeat of
-the same current screen is skipped and a blocked attempt is retried once consent allows. Use
-`screen(name:properties:)` only for intentional one-off raw screen events, which carry no dedupe.
+`trackCurrentScreen(name:properties:routeKey:)` and `screen(name:properties:)` both emit the same
+underlying screen event and return the same result shape; the difference is dedupe.
+`trackCurrentScreen` deduplicates the current route in the SDK by `routeKey` (which defaults to
+`name`), so a repeat of the same current screen from a repeated `viewDidAppear(_:)` is skipped, and a
+blocked attempt is retried once consent allows. Plain `screen(name:properties:)` re-emits on every
+call with no dedupe — call it directly only when your app wants that: an intentional one-off event,
+or navigation tracking where every appearance should count as a fresh screen event rather than
+deduping repeats of the same route.
 
 1. Emit from `viewDidAppear(_:)` so UIKit has completed the visible transition.
 2. Use a stable screen name that maps to your analytics model.
