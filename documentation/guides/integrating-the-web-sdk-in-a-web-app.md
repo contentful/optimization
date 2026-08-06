@@ -831,7 +831,18 @@ side-effect-free until you register the elements.
    `live-updates` attributes either way.
 
 5. Listen for `ctfl-entry-loading`, `ctfl-entry-resolved`, and `ctfl-entry-error` on an entry
-   element to render app-owned UI; the root emits `ctfl-root-ready` and `ctfl-root-error`.
+   element to render app-owned UI; the root emits `ctfl-root-ready` and `ctfl-root-error`. The
+   `ctfl-entry-resolved` event still fires for an empty variant. Its `detail.resolvedData` is the
+   SDK's full resolution result; when `isEmptyVariant` is `true`, clear external app-owned UI instead
+   of rendering `detail.entry`.
+
+There are two separate rendering surfaces here. The `<ctfl-optimized-entry>` host and its light-DOM
+children are caller-owned: for an empty variant, the element keeps that host connected with its
+tracking attributes, applies the host's native `hidden` state, and leaves the child nodes in place
+so it can reveal the same nodes after a later non-empty result. UI created elsewhere by a
+`ctfl-entry-resolved` listener is app-owned external UI. In the example below, `clearHero()` clears
+only that external UI target; it must not remove the `<ctfl-optimized-entry>` host or its light-DOM
+children. An absent `isEmptyVariant` flag renders normally.
 
 The `data-entry-id` below is an example name you invent — the SDK does not read it. The SDK-owned
 attribute is `entry-id` (no `data-` prefix), shown in the managed example below. Keep the two
@@ -839,6 +850,7 @@ distinct.
 
 **Adapt this to your use case:** the manual path — you fetch and assign `baselineEntry`, then render
 on resolve. Here `data-entry-id` is your own lookup key, not the SDK's `entry-id` attribute.
+`renderHero()` and `clearHero()` are app-owned renderer functions.
 
 ```ts
 import {
@@ -871,7 +883,11 @@ if (entryElement?.dataset.entryId) {
   entryElement.baselineEntry = baselineEntry
   entryElement.addEventListener('ctfl-entry-resolved', (event) => {
     const { detail } = event as CustomEvent<ContentfulOptimizedEntryEventDetail>
-    renderHero(detail.entry) // detail also carries resolvedData, selectedOptimization, snapshot
+    if (detail.resolvedData.isEmptyVariant) {
+      clearHero()
+      return
+    }
+    renderHero(detail.entry) // detail also carries selectedOptimization and snapshot
   })
 }
 ```

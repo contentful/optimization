@@ -76,7 +76,16 @@ const selectedOptimizations: OptimizationData['selectedOptimizations'] = [
     variants: { [baselineEntry.sys.id]: variantEntry.sys.id },
   },
 ]
+const emptyVariantSelectedOptimizations: OptimizationData['selectedOptimizations'] = [
+  {
+    experienceId: '6IueRX1pS3iMJncbhUQTba',
+    sticky: false,
+    variantIndex: 1,
+    variants: { [baselineEntry.sys.id]: '' },
+  },
+]
 const optimizedEntry = createOptimizedEntry(baselineEntry, variantEntry)
+const emptyVariantOptimizedEntry = createOptimizedEntry(baselineEntry)
 const optimizationData: OptimizationData = {
   changes: [],
   selectedOptimizations,
@@ -164,7 +173,7 @@ function createEntry(
 
 function createOptimizedEntry(
   entry: ServerTrackingBaselineEntry,
-  selectedVariantEntry: ServerTrackingBaselineEntry,
+  selectedVariantEntry?: ServerTrackingBaselineEntry,
 ): ServerTrackingBaselineEntry {
   const optimizationEntry = createEntry(
     '6IueRX1pS3iMJncbhUQTba',
@@ -174,14 +183,14 @@ function createOptimizedEntry(
           {
             baseline: { id: entry.sys.id },
             type: 'EntryReplacement',
-            variants: [{ id: selectedVariantEntry.sys.id }],
+            variants: [{ id: selectedVariantEntry?.sys.id ?? '' }],
           },
         ],
       },
       nt_experience_id: '6IueRX1pS3iMJncbhUQTba',
       nt_name: 'Experience entry',
       nt_type: 'nt_personalization',
-      nt_variants: [selectedVariantEntry],
+      nt_variants: selectedVariantEntry === undefined ? [] : [selectedVariantEntry],
     },
     'nt_experience',
   )
@@ -752,6 +761,28 @@ describe('Next.js App Router v2 binding', () => {
     expect(html).toContain('data-ctfl-track-views="true"')
     expect(html).toContain('data-testid="entry"')
     expect(html).toContain('4ib0hsHWoSOnCVdDkizE8d')
+  })
+
+  it('keeps the server host without invoking the render prop for an empty variant', async () => {
+    const { OptimizedEntry, createHandoffFromSelections } =
+      bindNextjsAppRouterOptimization(sdkConfig)
+    const renderEntry = rs.fn(() => 'Rendered content')
+
+    createHandoffFromSelections({
+      cache: { scope: 'public-permutation', key: 'empty-variant' },
+      hydration: 'preserve-server',
+      initialPageEvent: 'emit',
+      selectedOptimizations: emptyVariantSelectedOptimizations,
+    })
+    const html = await renderToHtml(
+      await OptimizedEntry({ baselineEntry: emptyVariantOptimizedEntry, children: renderEntry }),
+    )
+
+    expect(renderEntry).not.toHaveBeenCalled()
+    expect(html).toContain(`data-ctfl-baseline-id="${baselineEntry.sys.id}"`)
+    expect(html).toContain('data-ctfl-empty-variant="true"')
+    expect(html).toContain('data-ctfl-optimization-id="6IueRX1pS3iMJncbhUQTba"')
+    expect(html).not.toContain('Rendered content')
   })
 
   it('passes explicit merge-tag profile helpers to server render props', async () => {

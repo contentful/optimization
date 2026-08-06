@@ -106,6 +106,10 @@ signatures from the Swift types; below is a navigation index with behavioral fac
   wraps the render closure's output with `ViewTrackingModifier` + `TapTrackingModifier` and exposes
   itself as an accessibility container (`children: .contain`) so nested identifiers stay queryable.
   source: extern:OptimizedEntry.isOptimized checks fields.nt_experiences and wraps with view/tap modifiers — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Views/OptimizedEntry.swift#OptimizedEntry
+- For an empty result, SwiftUI `OptimizedEntry` does not invoke its consumer closure. The current
+  result and tracking modifier chain stay outside the conditional content branch, with no synthetic
+  placeholder geometry; a later non-empty result renders current content normally.
+  source: extern:SwiftUI empty-result branch skips content while retaining modifiers — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Views/OptimizedEntry.swift#OptimizedEntry
 - `OptimizedEntry` tap-enable resolution: `trackTaps == false` disables; an explicit `trackTaps` or a
   non-nil `onTap` enables; otherwise the root `TrackingConfig.trackTaps` default applies. View
   tracking uses per-entry `trackViews ?? trackingConfig.trackViews`. Both default enabled at the
@@ -134,6 +138,9 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   the client is not initialized, a serialization error occurs, or the bridge result cannot be parsed,
   it returns the baseline entry unchanged (with `selectedOptimization`/`optimizationContextId` nil)
   and logs a warning — it never throws or breaks the UI. source: extern:resolveOptimizedEntry synchronous, returns baseline on any failure — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift#OptimizationClient; core-sdk#CoreBase.ts#resolveOptimizedEntry
+- Native bridge parsing treats only a JSON boolean `true` as an empty variant. An absent, false,
+  null, numeric, string, or otherwise invalid value produces normal non-empty presentation.
+  source: extern:ResolvedOptimizedEntry strict empty-variant bridge parsing — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/ResolvedOptimizedEntry.swift#ResolvedOptimizedEntry
 - `selectedOptimizations` argument semantics: passing `nil` **omits the arg to the bridge**, so the
   bridge resolves against the SDK's current selection state; passing an explicit `[[String: Any]]`
   snapshot resolves against exactly that (used for locked UIKit screens). source: extern:resolveOptimizedEntry omits selectedOptimizations arg when nil — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift#OptimizationClient; optimization-js-bridge#index.ts#Bridge

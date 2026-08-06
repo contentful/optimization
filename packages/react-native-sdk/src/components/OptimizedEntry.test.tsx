@@ -1,4 +1,5 @@
 import type { ResolvedData } from '@contentful/optimization-core'
+import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import React, { act } from 'react'
@@ -10,9 +11,17 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 const TEST_DWELL_TIME_MS = 1234
 const TEST_MIN_VISIBLE_RATIO = 0.4
 
+let selectedOptimizationsListener:
+  | ((selectedOptimizations: SelectedOptimizationArray | undefined) => void)
+  | undefined
 const selectedOptimizations = {
   current: undefined,
-  subscribe: rs.fn(() => ({ unsubscribe: rs.fn() })),
+  subscribe: rs.fn(
+    (listener: (selectedOptimizations: SelectedOptimizationArray | undefined) => void) => {
+      selectedOptimizationsListener = listener
+      return { unsubscribe: rs.fn() }
+    },
+  ),
 }
 const resolveOptimizedEntry = rs.fn((entry: Entry): ResolvedData<EntrySkeletonType> => ({ entry }))
 const fetchContentfulEntry = rs.fn(
@@ -51,6 +60,7 @@ rs.mock('../hooks/useTapTracking', () => ({
 }))
 
 interface TestRenderer {
+  toJSON: () => { readonly children: readonly unknown[] | null; readonly type: string } | null
   unmount: () => void
 }
 
@@ -116,6 +126,7 @@ describe('OptimizedEntry', () => {
 
   void beforeEach(() => {
     rs.clearAllMocks()
+    selectedOptimizationsListener = undefined
     selectedOptimizations.current = undefined
     fetchContentfulEntry.mockImplementation(
       async (entryId: string) => await Promise.resolve(createEntry(entryId)),
@@ -269,6 +280,71 @@ describe('OptimizedEntry', () => {
         entryId: 'baseline-entry',
       }),
     )
+  })
+
+  it('keeps tracking and resolution callbacks while live updates hide and restore content', async () => {
+    const emptySelection: SelectedOptimizationArray = [
+      {
+        experienceId: 'exp-1',
+        variantIndex: 1,
+        variants: { 'baseline-entry': 'empty-variant' },
+      },
+    ]
+    const contentSelection: SelectedOptimizationArray = [
+      {
+        experienceId: 'exp-1',
+        variantIndex: 2,
+        variants: { 'baseline-entry': 'content-variant' },
+      },
+    ]
+    resolveOptimizedEntry.mockImplementation(
+      (entry: Entry, selections?: SelectedOptimizationArray): ResolvedData<EntrySkeletonType> =>
+        selections?.[0]?.variantIndex === 1 ? { entry, isEmptyVariant: true } : { entry },
+    )
+    const { OptimizedEntry } = await import('./OptimizedEntry')
+    const testRenderer = await loadTestRenderer<TestRenderer>()
+    const baselineEntry = createEntry('baseline-entry')
+    baselineEntry.fields = { ...baselineEntry.fields, nt_experiences: [] }
+    const render = rs.fn(() => 'content')
+    const onEntryResolved = rs.fn()
+
+    act(() => {
+      renderer = testRenderer.create(
+        <OptimizedEntry baselineEntry={baselineEntry} liveUpdates onEntryResolved={onEntryResolved}>
+          {render}
+        </OptimizedEntry>,
+      )
+    })
+    if (renderer === undefined) throw new Error('Expected component to render')
+
+    expect(renderer.toJSON()).toMatchObject({ type: 'View', children: ['content'] })
+    const initialRenderCalls = render.mock.calls.length
+    const initialResolvedCalls = onEntryResolved.mock.calls.length
+
+    act(() => {
+      selectedOptimizationsListener?.(emptySelection)
+    })
+
+    expect(renderer.toJSON()).toMatchObject({ type: 'View', children: null })
+    expect(render).toHaveBeenCalledTimes(initialRenderCalls)
+    expect(useViewportTracking).toHaveBeenLastCalledWith(
+      expect.objectContaining({ entry: baselineEntry }),
+    )
+    expect(useTapTracking).toHaveBeenLastCalledWith(
+      expect.objectContaining({ entry: baselineEntry }),
+    )
+    expect(onEntryResolved).toHaveBeenLastCalledWith(
+      expect.objectContaining({ resolvedData: expect.objectContaining({ isEmptyVariant: true }) }),
+    )
+    expect(onEntryResolved).toHaveBeenCalledTimes(initialResolvedCalls + 1)
+
+    act(() => {
+      selectedOptimizationsListener?.(contentSelection)
+    })
+
+    expect(renderer.toJSON()).toMatchObject({ type: 'View', children: ['content'] })
+    expect(render.mock.calls.length).toBeGreaterThan(initialRenderCalls)
+    expect(onEntryResolved).toHaveBeenCalledTimes(initialResolvedCalls + 2)
   })
 
   it('renders loadingFallback and skips tracking while managed entryId is loading', async () => {

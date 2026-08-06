@@ -467,16 +467,23 @@ SDK-owned `CTEntry` wrapper. The raw-map overload instead requires a standard si
 top-level `sys`, `fields`, and `metadata`, and its render lambda receives another raw map that you can
 convert with `CTEntry.from(...)`.
 
+`client.resolveOptimizedEntry(baseline, selectedOptimizations)` returns the SDK-owned
+`ResolvedOptimizedEntry`. When `isEmptyVariant` is `true`, the SDK renderer uses its no-content
+state. That differs from a fallback, which returns the baseline entry for normal rendering.
+`OptimizedEntry` reads this field: in the no-content state it keeps its tracking `Box` but does not
+invoke its content lambda. A later non-empty result invokes the lambda with the current resolved
+entry. An absent or invalid empty-variant field renders normally.
+
 A selected variant can use any Contentful content type. Branch on `contentTypeId`, check
 `hasField(...)`, and then read the matching field with `getField<T>(...)`. A different content type is
 a valid resolution, not a fallback condition. The content type IDs, field names, and renderer
 composables below belong to your app's content model.
 
 Resolution is fail-soft, and `client.resolveOptimizedEntry(baseline, selectedOptimizations)` is a
-`suspend` function. It returns the SDK-owned `ResolvedOptimizedEntry`, which contains the resolved
-`CTEntry`, the applied `selectedOptimization`, and an optional `optimizationContextId`. If the client
-is not initialized or the result cannot be serialized or parsed,
-it returns the baseline with `selectedOptimization` set to `null` instead of breaking the UI. Pass
+`suspend` function. `ResolvedOptimizedEntry` also contains the resolved `CTEntry`, the applied
+`selectedOptimization`, and an optional `optimizationContextId`. If the client is not initialized
+or the result cannot be serialized or parsed, it returns the baseline with
+`selectedOptimization` set to `null` instead of breaking the UI. Pass
 `null` for `selectedOptimizations` to use the SDK's current selections, or pass an explicit snapshot.
 `client.selectedOptimizations` publishes those selections as a `StateFlow`.
 
@@ -493,6 +500,7 @@ it returns the baseline with `selectedOptimization` set to `null` instead of bre
 ```kotlin
 import com.contentful.java.cda.CDAEntry
 import com.contentful.optimization.contentful.CTEntry
+import com.contentful.optimization.core.ResolvedOptimizedEntry
 
 @Composable
 fun ResolvedEntryContent(entry: CTEntry) {
@@ -525,20 +533,26 @@ fun HeroSection(entry: CDAEntry) {
 fun DirectResolution(entry: CDAEntry) {
     val client = LocalOptimizationClient.current
     val baselineEntry = remember(entry) { CTEntry.from(entry) }
-    var resolvedEntry by remember(baselineEntry) { mutableStateOf(baselineEntry) }
+    var result by remember(baselineEntry) {
+        mutableStateOf(
+            ResolvedOptimizedEntry(entry = baselineEntry, selectedOptimization = null),
+        )
+    }
 
     LaunchedEffect(baselineEntry) {
         // Collect the flow so re-resolution follows every profile, preview, or consent change;
         // reading selectedOptimizations.value would capture only the current snapshot.
         client.selectedOptimizations.collect { selectedOptimizations ->
-            resolvedEntry = client.resolveOptimizedEntry(
+            result = client.resolveOptimizedEntry(
                 baseline = baselineEntry.toMap(),
                 selectedOptimizations = selectedOptimizations,
-            ).entry
+            )
         }
     }
 
-    ResolvedEntryContent(resolvedEntry)
+    if (!result.isEmptyVariant) {
+        ResolvedEntryContent(result.entry)
+    }
 }
 ```
 

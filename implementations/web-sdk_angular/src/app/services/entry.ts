@@ -19,6 +19,7 @@ export interface ResolvedEntry {
   entry: Entry
   baselineId: string
   entryId: string
+  isEmptyVariant: boolean
   optimizationId: string | undefined
   sticky: boolean | undefined
   variantIndex: number | undefined
@@ -91,6 +92,7 @@ export function injectContentfulEntry({
       entry: resolved.entry,
       baselineId: raw.sys.id,
       entryId: resolved.entry.sys.id,
+      isEmptyVariant: resolved.isEmptyVariant === true,
       optimizationId: resolved.selectedOptimization?.experienceId,
       sticky: resolved.selectedOptimization?.sticky,
       variantIndex: resolved.selectedOptimization?.variantIndex,

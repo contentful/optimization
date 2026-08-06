@@ -428,10 +428,17 @@ When you pass a `Contentful.Entry`, the render closure receives the SDK-owned `C
 `hasField(...)` before calling `getField(...)`. The content type IDs and renderers below belong to
 your app.
 
+For an empty variant, `OptimizedEntry` omits your app's content and does not call your content
+closure. The SDK still retains the resolved selection and tracking metadata. Because no visible
+content supplies geometry in that state, there may be nothing measurable or tappable, so a view or
+tap event is not guaranteed. A later non-empty result calls the closure with the current entry. An
+absent or invalid empty-variant field renders normally.
+
 Resolution is synchronous and fail-soft. `client.resolveOptimizedEntry(baseline:selectedOptimizations:)`
 returns the SDK-owned `ResolvedOptimizedEntry`, which contains the resolved `CTEntry`, the applied
-`selectedOptimization`, and an optional `optimizationContextId`. If resolution fails, it contains the
-baseline entry with `selectedOptimization` and `optimizationContextId` set to `nil` instead of
+`selectedOptimization`, an optional `optimizationContextId`, and `isEmptyVariant`. Only a
+boolean `true` marks an empty variant. If resolution fails, it contains the baseline entry with
+`selectedOptimization` and `optimizationContextId` set to `nil` instead of
 breaking the UI. Pass `nil` for `selectedOptimizations` to use current client state, or pass an
 explicit snapshot.
 
@@ -496,7 +503,9 @@ struct DirectResolutionView: View {
 
     var body: some View {
         let result = client.resolveOptimizedEntry(baseline: entry)
-        ResolvedEntryContent(entry: result.entry)
+        if !result.isEmptyVariant {
+            ResolvedEntryContent(entry: result.entry)
+        }
     }
 }
 ```

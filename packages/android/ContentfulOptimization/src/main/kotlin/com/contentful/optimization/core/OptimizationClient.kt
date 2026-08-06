@@ -298,18 +298,7 @@ public class OptimizationClient(private val applicationContext: Context) {
             val dict = parseJSONDict(resultStr)
                 ?: return ResolvedOptimizedEntry(entry = baselineEntry, selectedOptimization = null)
 
-            @Suppress("UNCHECKED_CAST")
-            val entry = (dict["entry"] as? Map<String, Any>)
-                ?.let { CTEntry.from(it, fallback = baselineEntry) }
-                ?: baselineEntry
-            @Suppress("UNCHECKED_CAST")
-            val selectedOptimization = dict["selectedOptimization"] as? Map<String, Any>
-            val optimizationContextId = dict["optimizationContextId"] as? String
-            ResolvedOptimizedEntry(
-                entry = entry,
-                selectedOptimization = selectedOptimization,
-                optimizationContextId = optimizationContextId,
-            )
+            ResolvedOptimizedEntry.fromBridgeResult(dict, baselineEntry)
         } catch (_: Exception) {
             ResolvedOptimizedEntry(entry = baselineEntry, selectedOptimization = null)
         }

@@ -466,28 +466,32 @@
 
       // Render optimized entries
       async function renderOptimizedEntry(rawEntry, element, autoObserve = true) {
-        const { entry, selectedOptimization } =
+        const { entry, isEmptyVariant, selectedOptimization } =
           contentfulOptimization.resolveOptimizedEntry(rawEntry)
 
-        if (isRichText(entry.fields?.text)) {
-          const div = document.createElement('div')
-          simpleRenderRichText(entry.fields.text, div)
-          element.replaceChildren(div)
+        if (isEmptyVariant === true) {
+          element.replaceChildren()
         } else {
-          const p = document.createElement('p')
-          p.innerText = entry.fields?.text
-          element.replaceChildren(p)
-        }
-
-        if (entry.fields?.nested) {
-          const div = document.createElement('div')
-          div.className = 'nested'
-
-          for (const nestedEntry of entry.fields.nested) {
-            await renderOptimizedEntry(nestedEntry, div, autoObserve)
+          if (isRichText(entry.fields?.text)) {
+            const div = document.createElement('div')
+            simpleRenderRichText(entry.fields.text, div)
+            element.replaceChildren(div)
+          } else {
+            const p = document.createElement('p')
+            p.innerText = entry.fields?.text
+            element.replaceChildren(p)
           }
 
-          element.appendChild(div)
+          if (entry.fields?.nested) {
+            const div = document.createElement('div')
+            div.className = 'nested'
+
+            for (const nestedEntry of entry.fields.nested) {
+              await renderOptimizedEntry(nestedEntry, div, autoObserve)
+            }
+
+            element.appendChild(div)
+          }
         }
 
         document

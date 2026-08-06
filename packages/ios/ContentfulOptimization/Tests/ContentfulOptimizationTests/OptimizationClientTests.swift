@@ -1057,6 +1057,30 @@ final class OptimizationClientTests: XCTestCase {
         let result = client.resolveOptimizedEntry(baseline: baseline)
         XCTAssertEqual(result.entry.getField("title"), "Hello")
         XCTAssertNil(result.selectedOptimization)
+        XCTAssertFalse(result.isEmptyVariant)
+    }
+
+    func testResolvedOptimizedEntryOnlyAcceptsJSONBooleanTrueAsEmptyVariant() throws {
+        let baseline = CTEntry(any: ["sys": ["id": "baseline"], "fields": [:]])
+        let cases: [(String, Bool)] = [
+            ("", false),
+            (", \"isEmptyVariant\": false", false),
+            (", \"isEmptyVariant\": true", true),
+            (", \"isEmptyVariant\": null", false),
+            (", \"isEmptyVariant\": 1", false),
+            (", \"isEmptyVariant\": \"true\"", false),
+            (", \"isEmptyVariant\": []", false),
+        ]
+
+        for (field, expected) in cases {
+            let data = Data("{\"entry\":{\"sys\":{\"id\":\"resolved\"},\"fields\":{}}\(field)}".utf8)
+            let payload = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+            XCTAssertEqual(
+                ResolvedOptimizedEntry.fromBridgeResult(payload, baselineEntry: baseline).isEmptyVariant,
+                expected
+            )
+        }
     }
 
     @MainActor

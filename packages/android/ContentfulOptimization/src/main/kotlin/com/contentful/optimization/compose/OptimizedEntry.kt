@@ -144,7 +144,9 @@ public fun OptimizedEntry(
         }
 
     Box(modifier = modifier) {
-        content(result.entry.toMap())
+        if (!result.isEmptyVariant) {
+            content(result.entry.toMap())
+        }
     }
 }
 

@@ -128,6 +128,7 @@ interface RenderContentContainerProps {
   clickScenario: EntryClickScenario | undefined
   containerRef: RefObject<HTMLDivElement | null>
   fullLabel: string
+  isEmptyVariant: boolean
   manualTrackingAttributes: ManualTrackingAttributes | undefined
   resolvedEntry: ContentfulEntry
   richTextField: RichTextDocument | undefined
@@ -139,6 +140,7 @@ function renderContentContainer({
   clickScenario,
   containerRef,
   fullLabel,
+  isEmptyVariant,
   manualTrackingAttributes,
   resolvedEntry,
   richTextField,
@@ -155,20 +157,24 @@ function renderContentContainer({
       className="entry-card"
       data-testid={`content-${baselineEntryId}`}
     >
-      <div data-testid={`entry-text-${baselineEntryId}`} aria-label={fullLabel}>
-        {richTextField ? (
-          <RichTextRenderer richText={richTextField} />
-        ) : (
-          <p>{getEntryText(resolvedEntry)}</p>
-        )}
-        <p>{`[Entry: ${baselineEntryId}]`}</p>
-      </div>
+      {isEmptyVariant ? null : (
+        <>
+          <div data-testid={`entry-text-${baselineEntryId}`} aria-label={fullLabel}>
+            {richTextField ? (
+              <RichTextRenderer richText={richTextField} />
+            ) : (
+              <p>{getEntryText(resolvedEntry)}</p>
+            )}
+            <p>{`[Entry: ${baselineEntryId}]`}</p>
+          </div>
 
-      {clickScenario === 'descendant' ? (
-        <button data-testid="entry-click-descendant-button" type="button">
-          Trigger entry click tracking from descendant button
-        </button>
-      ) : null}
+          {clickScenario === 'descendant' ? (
+            <button data-testid="entry-click-descendant-button" type="button">
+              Trigger entry click tracking from descendant button
+            </button>
+          ) : null}
+        </>
+      )}
     </div>
   )
 }
@@ -195,11 +201,11 @@ export function ContentEntry({
   observation,
 }: ContentEntryProps): JSX.Element {
   const { sdk } = useOptimization()
-  const { resolveEntry } = useOptimizationResolver()
+  const { resolveEntryData } = useOptimizationResolver()
   const containerRef = useRef<HTMLDivElement | null>(null)
 
-  const resolved = useMemo(() => resolveEntry(entry), [entry, resolveEntry])
-  const { entry: resolvedEntry, selectedOptimization } = resolved
+  const resolvedData = useMemo(() => resolveEntryData(entry), [entry, resolveEntryData])
+  const { entry: resolvedEntry, isEmptyVariant = false, selectedOptimization } = resolvedData
 
   const { experienceId, sticky, variantIndex } = useMemo(
     () => getSelectedOptimizationMeta(selectedOptimization),
@@ -250,6 +256,7 @@ export function ContentEntry({
     clickScenario,
     containerRef,
     fullLabel,
+    isEmptyVariant,
     manualTrackingAttributes,
     resolvedEntry,
     richTextField,

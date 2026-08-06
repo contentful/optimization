@@ -371,7 +371,12 @@ function Hero({ baselineEntry }: { baselineEntry: Entry }) {
 
 For components that need loading and readiness metadata directly — for example to disable a control
 until optimizations are available — use `useOptimizedEntry()`, which returns
-`{ entry, isLoading, canOptimize, selectedOptimization, … }` for one baseline entry.
+`{ entry, resolvedData, isLoading, isPresentationReady, canOptimize, selectedOptimization, … }` for
+one baseline entry. The public result always includes `resolvedData`, but during a managed fetch it
+can have an undefined top-level `entry`. Gate consumer rendering on `isPresentationReady`. Once ready,
+`resolvedData.isEmptyVariant === true` marks the SDK renderer's no-content state, so omit `entry`.
+That state is different from a fallback: denied consent, no matching selection, or an unresolved
+variant returns the baseline entry for normal rendering.
 
 ### Fetching Contentful entries
 
@@ -469,6 +474,12 @@ Step 3 showed the wrap. Wherever a Contentful entry becomes a component, wrap it
 Contentful content type; selection depends on the selected variant ID and a resolved linked entry,
 not on matching the baseline content type.
 
+`isEmptyVariant === true` marks the SDK renderer's no-content state; it is not an ordinary fallback
+to the baseline entry. In that state, `OptimizedEntry` keeps its SDK wrapper element and tracking
+attributes. The wrapper is layout-neutral because it uses `display: contents`, while the consumer
+children — your app's JSX or render-prop output — are not invoked or rendered. The render prop
+therefore needs no empty-result branch. An absent empty-variant flag renders normally.
+
 A Contentful **entry skeleton** is a TypeScript type that names a content type ID and its fields.
 Use one skeleton union, `S`, containing every possible baseline or variant content type. Manual
 `OptimizedEntry` and `useOptimizedEntry()` calls use the generic order `<S, M, L>`, where `M` is the
@@ -512,6 +523,27 @@ The union is a compile-time model, not a runtime filter. The same `S` flows thro
 render props, and resolution metadata. Narrow at the renderer boundary before reading
 content-type-specific fields. For lower-level resolution and open-ended models, see
 [TypeScript content-model choices](../concepts/entry-personalization-and-variant-resolution.md#typescript-content-model-choices).
+
+For manual rendering without `OptimizedEntry`, use `useEntryResolver().resolveEntryData()` or
+`resolveOptimizedEntry()` so the render decision has the full SDK result. Its optional
+`isEmptyVariant` field is `true` for the SDK renderer's no-content state; `entry` still contains the
+baseline for tracking context. The entry-only `resolveEntry()` convenience cannot distinguish that
+state.
+
+**Follow this pattern:** a manual render decision using the full result. `Page` is your existing
+app-owned renderer.
+
+```tsx
+import { useEntryResolver } from '@contentful/optimization-react-web'
+
+function ManuallyResolvedPage({ page }) {
+  const { resolveEntryData } = useEntryResolver()
+  const resolvedData = resolveEntryData(page)
+
+  if (resolvedData.isEmptyVariant) return null
+  return <Page entry={resolvedData.entry} />
+}
+```
 
 When consent is denied, no variant applies, links are unresolved, or the payload is all-locale, the
 render prop receives the baseline entry.

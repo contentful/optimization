@@ -131,7 +131,11 @@ public struct OptimizedEntry<Content: View>: View {
             }
         }()
 
-        content(result.entry.toDictionary())
+        Group {
+            if !result.isEmptyVariant {
+                content(result.entry.toDictionary())
+            }
+        }
             .modifier(ViewTrackingModifier(
                 entry: entryDict,
                 optimizationContextId: result.optimizationContextId,

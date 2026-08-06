@@ -25,6 +25,7 @@
     [attr.data-ctfl-clickable]="manualTracking() || scenario !== 'direct' ? null : 'true'"
     [attr.data-entry-id]="manualTracking() ? r.baselineId : null"
   >
+    @if (!r.isEmptyVariant) {
     <div class="entry-card__header">
       <div class="entry-card__ids">
         <p class="entry-card__id">
@@ -68,7 +69,7 @@
       <app-entry-card [entry]="child" />
       }
     </div>
-    }
+    } }
   </div>
   }
 </ng-template>

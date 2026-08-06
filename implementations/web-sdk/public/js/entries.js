@@ -174,13 +174,20 @@ function handleEntryResolved(event) {
   const rawEntry = element.baselineEntry
   if (!rawEntry) return
 
-  const { entry, selectedOptimization } = event.detail
+  const { entry, isEmptyVariant, selectedOptimization } = event.detail.resolvedData
   const baselineEntryId = element.dataset.entryId ?? rawEntry.sys.id
   const clickScenario = CLICK_SCENARIOS[baselineEntryId]
+  const observation = element.dataset.manualViewTracking === 'true' ? 'manual' : 'auto'
+
+  if (isEmptyVariant === true) {
+    if (observation === 'manual') {
+      enableManualViewTracking(element, entry, selectedOptimization)
+    }
+    return
+  }
 
   if (renderLiveUpdatesEntry(element, entry)) return
 
-  const observation = element.dataset.manualViewTracking === 'true' ? 'manual' : 'auto'
   const card = buildEntryCard(entry, baselineEntryId, observation, clickScenario)
 
   const section = document.createElement('section')

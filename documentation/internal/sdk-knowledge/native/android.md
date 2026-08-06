@@ -120,6 +120,10 @@ behavioral facts as sourced bullets.
   `resolveOptimizedEntry`, non-optimized entries render the baseline once with no live observation.
   Both wrap the rendered content with the same view-tracking + tap-tracking machinery so a Contentful
   entry behaves identically across the two adapters. source: extern:OptimizedEntry isOptimized checks fields.nt_experiences — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/OptimizedEntry.kt#OptimizedEntry; extern:OptimizedEntryView mirrors the same isOptimized/observation logic — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/OptimizedEntryView.kt#OptimizedEntryView
+- For an empty result, Compose keeps the tracking `Box` but does not invoke its content lambda;
+  `OptimizedEntryView` clears stale child views without invoking its renderer and keeps the resolved
+  result available for controller metadata. Later non-empty results render current content normally.
+  source: extern:Compose empty-result branch retains Box and skips content — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/OptimizedEntry.kt#OptimizedEntry; extern:Views empty-result branch clears children and retains controller result — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/OptimizedEntryView.kt#OptimizedEntryView
 - Interaction enablement: view tracking uses per-entry `trackViews ?? global trackViews`; tap tracking
   resolves as `trackTaps == false` disables, an explicit `trackTaps` or a non-null `onTap` enables,
   else the global `trackTaps` default. Both default enabled (Compose `TrackingConfig` and
@@ -149,6 +153,9 @@ viewportHeight }` via `LocalScrollContext` that descendant `Modifier.trackViews`
   null) — it never throws or breaks the UI. The resolver-output parse itself passes the baseline
   `CTEntry` as `CTEntry.from(..., fallback = baselineEntry)`, so an unparseable bridge result decays to
   the mapped baseline rather than an empty entry. source: extern:resolveOptimizedEntry wraps baseline via CTEntry.from, returns baseline CTEntry on any failure — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationClient.kt#OptimizationClient; extern:CTEntry.from(Map, fallback) fail-soft — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/contentful/CTEntry.kt#CTEntry; core-sdk#CoreBase.ts#resolveOptimizedEntry
+- Native bridge parsing treats only a JSON boolean `true` as an empty variant. An absent, false,
+  null, numeric, string, or otherwise invalid value produces normal non-empty presentation.
+  source: extern:ResolvedOptimizedEntry strict empty-variant bridge parsing — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/ResolvedOptimizedEntry.kt#ResolvedOptimizedEntry
 - `selectedOptimizations` argument semantics: passing `null` **omits the arg to the bridge**, so the
   bridge resolves against the SDK's current selection state; passing an explicit `List<Map>` snapshot
   resolves against exactly that (used by locked entries and by callers driving their own optimization

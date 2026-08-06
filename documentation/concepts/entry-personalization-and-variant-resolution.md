@@ -355,9 +355,9 @@ The shared Core resolver follows one path for every SDK package:
 9. Select the configured variant at `variantIndex - 1`.
 10. When the selected variant has `id: ""` (empty string), return an **empty variant** outcome: the
     `isEmptyVariant` flag is set to `true` in `ResolvedData`, the baseline entry is returned as the
-    entry field (for tracking context), and `selectedOptimization` metadata is preserved so a
-    component view impression can still be emitted. No warning is logged. Renderers must suppress
-    visible content when `isEmptyVariant` is `true`.
+    entry field (for tracking context), and `selectedOptimization` metadata is preserved. No warning
+    is logged. Renderers must suppress visible content when `isEmptyVariant` is `true` while
+    retaining their applicable tracking configuration and metadata.
 11. Find a fully resolved linked Contentful entry in `optimizationEntry.fields.nt_variants` whose
     `sys.id` matches the selected variant ID.
 12. Return the variant entry and `selectedOptimization` metadata when all checks pass.
@@ -447,9 +447,10 @@ a reliable signal because the Experience API strips it before runtime; it only s
 Contentful CDA `nt_config` payload that the resolver reads. Using `id === ""` is stable across both
 data sources.
 
-When `isEmptyVariant` is `true`, renderers must not display any content. They must still emit a
-component view impression so the empty variant is measurable in Insights. The baseline entry is
-returned in the `entry` field as tracking context only.
+When `isEmptyVariant` is `true`, renderers must not display consumer content. They retain their
+applicable tracking configuration and metadata, and the baseline entry remains in the `entry` field
+as tracking context. An empty presentation with no measurable or interactive geometry can emit no
+view or interaction event.
 
 Consumers must not rely on exceptions to detect personalization misses. Render the baseline entry
 when no variant resolves; baseline fallback is expected behavior, not an error state.

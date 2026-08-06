@@ -67,6 +67,7 @@ function hasResolvedDataChanged(
 
   return (
     previous.entry !== next.entry ||
+    previous.isEmptyVariant !== next.isEmptyVariant ||
     previous.selectedOptimization !== next.selectedOptimization ||
     previous.selectedOptimizations !== next.selectedOptimizations
   )
@@ -391,8 +392,10 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
   }
 
   private applySnapshot(snapshot: OptimizedEntrySnapshot): void {
+    const { isEmptyVariant } = snapshot
     const { previousSnapshot } = this
     this.applyHostAttributes(snapshot.hostAttributes)
+    this.hidden = isEmptyVariant
     this.applyLoadingVisibility(snapshot)
 
     if (snapshot.loadingPresentation.showLoadingFallback) {
@@ -435,6 +438,7 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
 
   private resetPresentationState(): void {
     this.applyHostAttributes({})
+    this.hidden = false
     this.style.removeProperty('visibility')
     this.previousSnapshot = undefined
   }

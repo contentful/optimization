@@ -116,6 +116,9 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
   without changing runtime variant choice. Shared modeling and narrowing behavior: see
   [`../shared/concepts.md`](../shared/concepts.md#entry-resolution).
   source: `nextjs-sdk#bound-component-types.ts#NextjsBoundOptimizedEntryComponent`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`; `core-sdk#OptimizedEntryMetadata.ts#OptimizedEntryMetadata`; `react-web-sdk#optimized-entry/optimizedEntryUtils.ts#RenderProp`
+- Standalone `ServerOptimizedEntry` retains its server-rendered host and tracking attributes for an
+  empty result while omitting consumer children. An absent empty-variant flag renders normally.
+  source: `nextjs-sdk#server-entry-renderer.tsx#renderOptimizedEntryOnServer`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`
 - Merge tags: guard embedded nodes with `isMergeTagEntry`; pass node `target` to `getMergeTagValue`.
   source: `api-schemas#contentful/typeGuards.ts#isMergeTagEntry`; `core-sdk#CoreBase.ts#getMergeTagValue`.
 

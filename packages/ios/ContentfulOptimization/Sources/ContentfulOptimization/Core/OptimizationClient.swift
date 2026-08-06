@@ -390,14 +390,7 @@ public final class OptimizationClient: ObservableObject {
                 )
             }
 
-            let entry = dict["entry"] as? [String: Any] ?? baseline
-            let selectedOptimization = dict["selectedOptimization"] as? [String: Any]
-            let optimizationContextId = dict["optimizationContextId"] as? String
-            return ResolvedOptimizedEntry(
-                entry: CTEntry(any: entry, fallback: baselineEntry),
-                selectedOptimization: selectedOptimization,
-                optimizationContextId: optimizationContextId
-            )
+            return ResolvedOptimizedEntry.fromBridgeResult(dict, baselineEntry: baselineEntry)
         } catch {
             let entryId = (baseline["sys"] as? [String: Any])?["id"] as? String ?? "unknown"
             log.error("[resolveOptimizedEntry] Serialization error for entry \(entryId): \(error.localizedDescription)")

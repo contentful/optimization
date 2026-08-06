@@ -135,6 +135,13 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   see
   [`../shared/concepts.md`](../shared/concepts.md#entry-resolution).
   source: react-web-sdk#optimized-entry/optimizedEntryUtils.ts#RenderProp; react-web-sdk#optimized-entry/useOptimizedEntry.ts#UseOptimizedEntryResult; core-sdk#OptimizedEntryMetadata.ts#OptimizedEntryMetadata; react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry
+- `OptimizedEntry` keeps its host and tracking attributes for an empty result but does not invoke or
+  render its consumer children. An absent empty-variant flag renders normally.
+  source: react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry
+- `useEntryResolver().resolveEntry()` returns only the entry, so an empty result is indistinguishable
+  from its retained baseline entry. Manual render decisions use `resolveEntryData()` or
+  `resolveOptimizedEntry()` and inspect the full result.
+  source: react-web-sdk#hooks/useEntryResolver.ts#useEntryResolver
 - **Loading model:** default `client-only-hidden-until-ready` hydration renders baseline as a HIDDEN
   layout target (no jump), reveals resolved content when resolution settles, and reveals baseline
   after a **5s** timeout (`BASELINE_REVEAL_TIMEOUT_MS = 5000`) if resolution never settles;

@@ -171,6 +171,10 @@ source: `nextjs-sdk#app-router-server.tsx#renderBoundRootTree`; `nextjs-sdk#app-
   [`../shared/concepts.md`](../shared/concepts.md#entry-resolution). Double-wrapping the same baseline
   id renders `null` plus a development warning.
   source: `nextjs-sdk#bound-component-types.ts#NextjsBoundOptimizedEntryComponent`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`; `core-sdk#OptimizedEntryMetadata.ts#OptimizedEntryMetadata`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#useDuplicateBaselineGuard`
+- Bound App Router `OptimizedEntry` and standalone `ServerOptimizedEntry` retain their server-rendered
+  host and tracking attributes for an empty result while omitting consumer content. The bound render
+  prop is not invoked; an absent empty-variant flag renders normally.
+  source: `nextjs-sdk#server-entry-renderer.tsx#renderOptimizedEntryOnServer`; `nextjs-sdk#server-entry-renderer.tsx#resolveOptimizedEntryChildren`; `nextjs-sdk#app-router-server.tsx#OptimizedEntry`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`
 - `prefetchManagedEntries` without a supplied `handoff` creates a synthetic `static` +
   `preserve-server` handoff with `selectedOptimizations: []` and `initialPageEvent: 'emit'`.
   source: `nextjs-sdk#app-router-server.tsx#resolveHandoffEntries`

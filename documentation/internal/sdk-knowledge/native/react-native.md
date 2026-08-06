@@ -127,6 +127,10 @@ consent changes. source: react-native-sdk#hooks/useOptimizationConsentState.ts#u
   for tracking without exposing variant data. Shared modeling and narrowing behavior: see
   [`../shared/concepts.md`](../shared/concepts.md#entry-resolution).
   source: react-native-sdk#components/OptimizedEntry.tsx#OptimizedEntryRenderProp; react-native-sdk#hooks/useOptimizedEntry.ts#UseOptimizedEntryResult; core-sdk#OptimizedEntryMetadata.ts#OptimizedEntryMetadata; react-native-sdk#hooks/useTapTracking.ts#useTapTracking
+- `OptimizedEntry` keeps its tracking `View`, tracking hooks, and `onEntryResolved` callback for an
+  empty result but does not invoke or render its consumer children. Live updates remove and restore
+  consumer content as empty-variant state changes; an absent flag renders normally.
+  source: react-native-sdk#components/OptimizedEntry.tsx#OptimizedEntry
 - Loading model (RN, no server first paint): while a managed `entryId` fetch is unresolved,
   `useOptimizedEntry` returns `entry === undefined` / `metadata === undefined`, so `OptimizedEntry`
   renders `loadingFallback`. On resolved data it wraps children in a `View` carrying `onLayout`
@@ -139,9 +143,11 @@ selectedOptimizations)`. Single-locale CDA contract and baseline fallback are sh
   [`../shared/concepts.md`](../shared/concepts.md#entry-resolution) and
   [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback).
   source: react-native-sdk#hooks/useOptimizedEntry.ts#useOptimizedEntry; core-sdk#CoreBase.ts#resolveOptimizedEntry; concept:entry-personalization-and-variant-resolution
-- `useEntryResolver` returns manual-only helpers (`resolveEntry` → resolved `Entry`;
-  `resolveEntryData`/`resolveOptimizedEntry` → full `ResolvedData`). When `selectedOptimizations` is
-  omitted, helpers use the current `sdk.states.selectedOptimizations.current`.
+- `useEntryResolver` returns manual-only helpers. `resolveEntry()` returns only the entry, so an empty
+  result is indistinguishable from its retained baseline entry; manual render decisions use
+  `resolveEntryData()` or `resolveOptimizedEntry()` and inspect the full result. When
+  `selectedOptimizations` is omitted, helpers use the current
+  `sdk.states.selectedOptimizations.current`.
   source: react-native-sdk#hooks/useEntryResolver.ts#useEntryResolver
 - Include-depth requirement (resolver-driven): the resolver reads SDK-fixed Optimization fields off
   the fetched entry, so the fetch (managed or manual) needs `include` deep enough to resolve them.
