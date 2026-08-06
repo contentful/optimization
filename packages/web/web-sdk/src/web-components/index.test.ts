@@ -794,6 +794,60 @@ describe('Contentful Optimization Web Components', () => {
     )
   })
 
+  it('suppresses and restores the same consumer nodes when only empty-variant state changes', () => {
+    ensureElementsDefined()
+    let isEmptyVariant = false
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry,
+      ...(isEmptyVariant ? { isEmptyVariant: true as const } : {}),
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const root = createRootElement(runtime.sdk)
+    const entry = createEntryElement(baseline)
+    const button = document.createElement('button')
+    const input = document.createElement('input')
+    const clicked = rs.fn()
+    const resolved = rs.fn((event: Event) => getEntryDetail(event))
+
+    button.addEventListener('click', clicked)
+    input.value = 'preserved'
+    entry.append(button, input)
+    entry.liveUpdates = true
+    entry.addEventListener('ctfl-entry-resolved', resolved)
+    root.append(entry)
+    document.body.append(root)
+    runtime.selectedOptimizations.emit(variantOneState)
+    resolved.mockClear()
+
+    isEmptyVariant = true
+    runtime.selectedOptimizations.emit(variantOneState)
+
+    expect(resolved).toHaveBeenCalledTimes(1)
+    expect(resolved).toHaveReturnedWith(
+      expect.objectContaining({ resolvedData: expect.objectContaining({ isEmptyVariant: true }) }),
+    )
+    expect(entry.hidden).toBe(true)
+    expect(entry.hasAttribute('hidden')).toBe(true)
+    expect(entry.dataset.ctflBaselineId).toBe('4ib0hsHWoSOnCVdDkizE8d')
+    expect(entry.dataset.ctflOptimizationId).toBe('6IueRX1pS3iMJncbhUQTba')
+    expect(entry.children[0]).toBe(button)
+    expect(entry.children[1]).toBe(input)
+    expect(input.value).toBe('preserved')
+
+    isEmptyVariant = false
+    runtime.selectedOptimizations.emit(variantOneState)
+
+    expect(resolved).toHaveBeenCalledTimes(2)
+    expect(entry.hidden).toBe(false)
+    expect(entry.hasAttribute('hidden')).toBe(false)
+    expect(entry.children[0]).toBe(button)
+    expect(entry.children[1]).toBe(input)
+    expect(input.value).toBe('preserved')
+
+    button.click()
+    expect(clicked).toHaveBeenCalledTimes(1)
+  })
+
   it('bubbles resolved entry events for delegated listeners', () => {
     ensureElementsDefined()
     const runtime = createSdk((entry) => ({ entry }))

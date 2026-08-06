@@ -17,7 +17,7 @@ export function LiveUpdatesExampleEntry({
   testIdPrefix,
 }: LiveUpdatesExampleEntryProps): JSX.Element {
   const { sdk } = useOptimization()
-  const { resolveEntry } = useOptimizationResolver()
+  const { resolveEntryData } = useOptimizationResolver()
   const liveUpdatesContext = useLiveUpdates()
   const [lockedSelectedOptimizations, setLockedSelectedOptimizations] = useState<
     SelectedOptimizationArray | undefined
@@ -53,10 +53,11 @@ export function LiveUpdatesExampleEntry({
     }
   }, [sdk, shouldLiveUpdate])
 
-  const { entry: resolvedEntry } = useMemo(
-    () => resolveEntry(baselineEntry, lockedSelectedOptimizations),
-    [baselineEntry, lockedSelectedOptimizations, resolveEntry],
+  const resolvedData = useMemo(
+    () => resolveEntryData(baselineEntry, lockedSelectedOptimizations),
+    [baselineEntry, lockedSelectedOptimizations, resolveEntryData],
   )
+  const { entry: resolvedEntry } = resolvedData
 
   const text =
     typeof resolvedEntry.fields.text === 'string' ? resolvedEntry.fields.text : 'No content'
@@ -68,9 +69,11 @@ export function LiveUpdatesExampleEntry({
       data-testid={`content-${testIdPrefix}`}
       data-test-entry-id={resolvedEntry.sys.id}
     >
-      <p data-testid={`entry-text-${testIdPrefix}`} aria-label={fullLabel}>
-        {text}
-      </p>
+      {resolvedData.isEmptyVariant ? null : (
+        <p data-testid={`entry-text-${testIdPrefix}`} aria-label={fullLabel}>
+          {text}
+        </p>
+      )}
     </div>
   )
 }

@@ -17,7 +17,9 @@ export interface UseEntryResolverResult {
    */
   readonly resolveOptimizedEntry: OptimizationSdk['resolveOptimizedEntry']
   /**
-   * Resolves an entry and returns only the resolved entry.
+   * Resolves an entry and returns only the resolved entry. Use `resolveEntryData` or
+   * `resolveOptimizedEntry` when the result decides whether to render content because an empty
+   * variant retains the baseline entry.
    */
   readonly resolveEntry: {
     <S extends EntrySkeletonType = EntrySkeletonType, L extends LocaleCode = LocaleCode>(
@@ -34,7 +36,7 @@ export interface UseEntryResolverResult {
     ): EntryFor<S, M, L>
   }
   /**
-   * Resolves an entry and returns the resolved entry plus selected optimization metadata.
+   * Resolves an entry and returns the full SDK resolver payload, including empty-variant state.
    */
   readonly resolveEntryData: OptimizationSdk['resolveOptimizedEntry']
 }
@@ -68,8 +70,11 @@ function createResolveEntry(sdk: OptimizationSdk): UseEntryResolverResult['resol
  *
  * @example
  * ```tsx
- * const { resolveEntry } = useEntryResolver()
- * const resolvedEntry = resolveEntry(baselineEntry)
+ * const { resolveEntryData } = useEntryResolver()
+ * const resolvedData = resolveEntryData(baselineEntry)
+ *
+ * if (resolvedData.isEmptyVariant) return null
+ * return <HeroCard entry={resolvedData.entry} />
  * ```
  *
  * @public

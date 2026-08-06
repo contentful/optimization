@@ -31,11 +31,12 @@ export interface UseEntryResolverResult {
    */
   readonly resolveOptimizedEntry: OptimizationSdk['resolveOptimizedEntry']
   /**
-   * Resolves an entry and returns only the resolved entry.
+   * Resolves an entry and returns only the resolved entry. Use {@link resolveEntryData} when the
+   * result controls rendering so empty variants can be omitted.
    */
   readonly resolveEntry: ResolveEntry
   /**
-   * Resolves an entry and returns the resolved entry plus selected optimization metadata.
+   * Resolves an entry and returns the full result needed to omit empty variants before rendering.
    */
   readonly resolveEntryData: OptimizationSdk['resolveOptimizedEntry']
 }
@@ -49,8 +50,10 @@ export interface UseEntryResolverResult {
  *
  * @example
  * ```tsx
- * const { resolveEntry } = useEntryResolver()
- * const resolvedEntry = resolveEntry(baselineEntry)
+ * const { resolveEntryData } = useEntryResolver()
+ * const resolvedData = resolveEntryData(baselineEntry)
+ *
+ * return resolvedData.isEmptyVariant ? null : <Hero entry={resolvedData.entry} />
  * ```
  *
  * @public

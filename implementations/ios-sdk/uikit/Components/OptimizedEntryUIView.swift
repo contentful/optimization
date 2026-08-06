@@ -18,6 +18,7 @@ final class OptimizedEntryUIView: UIView {
     private var hasLocked = false
     private var resolvedEntry: [String: Any]
     private var resolvedOptimization: [String: Any]?
+    private var resolvedOptimizationContextId: String?
     private var contentView: UIView?
     private var cancellables = Set<AnyCancellable>()
     private var contentOffsetObservation: NSKeyValueObservation?
@@ -101,7 +102,7 @@ final class OptimizedEntryUIView: UIView {
         shouldLiveUpdate ? client.selectedOptimizations : lockedOptimizations
     }
 
-    private func resolve() {
+    private func resolve() -> Bool {
         if isPersonalized {
             let result = client.resolveOptimizedEntry(
                 baseline: entry,
@@ -109,9 +110,13 @@ final class OptimizedEntryUIView: UIView {
             )
             resolvedEntry = result.entry.toDictionary(fallback: entry)
             resolvedOptimization = result.selectedOptimization
+            resolvedOptimizationContextId = result.optimizationContextId
+            return result.isEmptyVariant
         } else {
             resolvedEntry = entry
             resolvedOptimization = nil
+            resolvedOptimizationContextId = nil
+            return false
         }
     }
 
@@ -149,20 +154,22 @@ final class OptimizedEntryUIView: UIView {
     }
 
     private func rebuildContent() {
-        resolve()
-        let new = contentBuilder(resolvedEntry)
-        new.translatesAutoresizingMaskIntoConstraints = false
-        if let old = contentView {
-            old.removeFromSuperview()
+        let isEmptyVariant = resolve()
+        contentView?.removeFromSuperview()
+        contentView = nil
+
+        if !isEmptyVariant {
+            let new = contentBuilder(resolvedEntry)
+            new.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(new)
+            NSLayoutConstraint.activate([
+                new.topAnchor.constraint(equalTo: topAnchor),
+                new.leadingAnchor.constraint(equalTo: leadingAnchor),
+                new.trailingAnchor.constraint(equalTo: trailingAnchor),
+                new.bottomAnchor.constraint(equalTo: bottomAnchor),
+            ])
+            contentView = new
         }
-        addSubview(new)
-        NSLayoutConstraint.activate([
-            new.topAnchor.constraint(equalTo: topAnchor),
-            new.leadingAnchor.constraint(equalTo: leadingAnchor),
-            new.trailingAnchor.constraint(equalTo: trailingAnchor),
-            new.bottomAnchor.constraint(equalTo: bottomAnchor),
-        ])
-        contentView = new
 
         rebuildTrackingMetadata()
     }
@@ -175,6 +182,7 @@ final class OptimizedEntryUIView: UIView {
         trackingController = ViewTrackingController(
             client: client,
             entry: entry,
+            optimizationContextId: resolvedOptimizationContextId,
             selectedOptimization: resolvedOptimization
         )
         emitVisibility()
@@ -243,10 +251,15 @@ final class OptimizedEntryUIView: UIView {
     }
 
     @objc private func handleTap() {
-        let metadata = TrackingMetadata(entry: entry, selectedOptimization: resolvedOptimization)
+        let metadata = TrackingMetadata(
+            entry: entry,
+            optimizationContextId: resolvedOptimizationContextId,
+            selectedOptimization: resolvedOptimization
+        )
         let payload = TrackClickPayload(
             componentId: metadata.componentId,
             experienceId: metadata.experienceId,
+            optimizationContextId: metadata.optimizationContextId,
             variantIndex: metadata.variantIndex
         )
         Task { @MainActor in

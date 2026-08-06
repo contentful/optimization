@@ -424,6 +424,13 @@ For the broader locale model, see
 non-optimized entries through unchanged. Invalid, incomplete, or unmatched optimization data falls
 back to the baseline entry instead of throwing.
 
+`isEmptyVariant === true` marks the SDK renderer's no-content state. It differs from a fallback,
+which renders the baseline entry. In the no-content state, `OptimizedEntry` keeps its tracking
+`View`, tracking hooks, and `onEntryResolved` callback active but does not invoke or render your
+app's children. Live updates remove existing app content when a result becomes empty and restore it
+when a later result is not empty. An absent empty-variant flag renders normally. With no measurable
+or interactive child, the tracking `View` does not guarantee a view or tap event.
+
 The entry source is a discriminated union: pass either `entryId` (managed fetch) or `baselineEntry`
 (manual fetch), never both.
 
@@ -444,7 +451,7 @@ The entry source is a discriminated union: pass either `entryId` (managed fetch)
 
 A Contentful entry skeleton is a TypeScript description of one content type and its fields. Use one
 skeleton union, `S`, containing every possible baseline or variant content type. Manual
-`OptimizedEntry` and `useOptimizedEntry()` calls, plus `useEntryResolver().resolveEntry()`, use
+`OptimizedEntry` and `useOptimizedEntry()` calls, plus the manual `useEntryResolver()` helpers, use
 `<S, M, L>`, where `M` is the `contentful.js` response mode and `L` is the locale. Managed
 `entryId` component and hook calls use `<S, L>` because `M` is fixed to `undefined`. When every
 variant shares the baseline content type, omit the generic and let TypeScript infer that skeleton
@@ -485,11 +492,31 @@ function PersonalizedPage({ baselineEntry }: { baselineEntry: PageEntry }) {
 ```
 
 The same `S` flows through hook results, render props, metadata, `onEntryResolved`, and `onTap`.
-Narrow at each renderer or callback boundary before reading content-type-specific fields. For a
-managed hook, `isPresentationReady` means the entry has been fetched and resolved; check it before
-using the possibly undefined `entry`. `useEntryResolver()` uses the current selected optimizations
+Narrow at each renderer or callback boundary before reading content-type-specific fields. The hook
+result always includes `resolvedData`, while its top-level `entry` can be undefined during managed
+fetching. Gate consumer rendering on `isPresentationReady`; once ready, omit `entry` when
+`resolvedData.isEmptyVariant === true`. `useEntryResolver()` uses the current selected optimizations
 when its second argument is omitted; pass a selection array only when you need an explicit override.
 The entry model is compile-time only and does not change runtime variant selection.
+
+For a manual render decision, use `resolveEntryData()` or `resolveOptimizedEntry()` from
+`useEntryResolver()`. Both return the full result, whose `isEmptyVariant` field tells the app to
+omit content while retaining the baseline `entry` for tracking context. The entry-only
+`resolveEntry()` convenience cannot distinguish an empty variant.
+
+**Follow this pattern:** manual resolution with the full result. `ResolvedEntryContent` is your
+app-owned renderer.
+
+```tsx
+import { useEntryResolver } from '@contentful/optimization-react-native'
+
+function ManuallyResolvedPage({ baselineEntry }) {
+  const { resolveEntryData } = useEntryResolver()
+  const result = resolveEntryData(baselineEntry)
+
+  return result.isEmptyVariant ? null : <ResolvedEntryContent entry={result.entry} />
+}
+```
 
 For lower-level resolution and open-ended models, see
 [TypeScript content-model choices](../concepts/entry-personalization-and-variant-resolution.md#typescript-content-model-choices).

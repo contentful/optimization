@@ -227,6 +227,9 @@ function HeroEntry() {
 }
 ```
 
+When an empty variant is selected, `OptimizedEntry` keeps its tracking `View` and resolution
+callbacks active but does not render or invoke its children.
+
 Configure the SDK with `contentful: { client }` on `OptimizationRoot`, `OptimizationProvider`, or
 `ContentfulOptimization.initialize(...)`. SDK-managed fetching merges `contentful.defaultQuery`,
 per-entry `entryQuery`, the SDK `locale` fallback, and `include: 10`. Manual baseline entries remain
@@ -279,9 +282,11 @@ Use `useOptimizedEntry()` when a component needs the same managed `entryId` or m
 import { useOptimizedEntry } from '@contentful/optimization-react-native'
 
 function HeroData() {
-  const { entry, isLoading, error } = useOptimizedEntry({ entryId: '4ib0hsHWoSOnCVdDkizE8d' })
+  const { entry, isLoading, error, resolvedData } = useOptimizedEntry({
+    entryId: '4ib0hsHWoSOnCVdDkizE8d',
+  })
 
-  if (isLoading || error || !entry) return null
+  if (isLoading || error || !entry || resolvedData.isEmptyVariant) return null
 
   return <Hero data={entry.fields} />
 }
@@ -301,12 +306,15 @@ wrapper:
 import { useEntryResolver } from '@contentful/optimization-react-native'
 
 function HeroData({ entry }) {
-  const { resolveEntry } = useEntryResolver()
-  const resolvedEntry = resolveEntry(entry)
+  const { resolveEntryData } = useEntryResolver()
+  const resolvedData = resolveEntryData(entry)
 
-  return <Hero data={resolvedEntry.fields} />
+  return resolvedData.isEmptyVariant ? null : <Hero data={resolvedData.entry.fields} />
 }
 ```
+
+`resolveEntry()` remains available when only the selected entry is needed, but its entry-only return
+value cannot distinguish an empty variant and should not make the final rendering decision.
 
 ### Track entry interactions
 

@@ -18,6 +18,12 @@ Optimization SDK Suite does not already cover.
 
 ## Quick start
 
+The `renderLoading()`, `renderError()`, `renderResolvedEntry()`, `clearResolvedEntry()`, and
+`updateTrackingMetadata()` helpers below belong to your adapter. A resolver result's optional
+`isEmptyVariant` field is `true` for the SDK renderer's no-content state; `entry` still retains the
+baseline for tracking context. `clearResolvedEntry()` removes previous consumer output, while
+`updateTrackingMetadata()` stores the full result for the adapter's tracking layer.
+
 **Adapt this to your use case:**
 
 ```ts
@@ -50,6 +56,11 @@ source.setSnapshotListener((snapshot) => {
   if (!snapshot.baselineEntry) return
 
   const resolved = optimization.resolveOptimizedEntry(snapshot.baselineEntry)
+  updateTrackingMetadata(resolved)
+  if (resolved.isEmptyVariant) {
+    clearResolvedEntry()
+    return
+  }
   renderResolvedEntry(resolved.entry, resolved.selectedOptimization)
 })
 
@@ -130,12 +141,24 @@ browser provider under the same key your adapter uses for handoff state.
 ### Resolve and render
 
 The source controller only produces a baseline entry. After a snapshot contains `baselineEntry`,
-call `resolveOptimizedEntry()` and render the returned `entry`:
+call `resolveOptimizedEntry()` and inspect the full result before rendering. `isEmptyVariant` is
+`true` for the SDK renderer's no-content state; the result keeps the baseline `entry` and selection
+context for tracking, but the adapter must clear consumer output:
+
+**Follow this pattern:**
 
 ```ts
-const { entry, selectedOptimization, optimizationContextId } = optimization.resolveOptimizedEntry(
-  snapshot.baselineEntry,
-)
+const resolved = optimization.resolveOptimizedEntry(snapshot.baselineEntry)
+
+function presentResolvedEntry(result: typeof resolved) {
+  const { entry, isEmptyVariant, selectedOptimization } = result
+
+  updateTrackingMetadata(result)
+  if (isEmptyVariant) clearResolvedEntry()
+  else renderResolvedEntry(entry, selectedOptimization)
+}
+
+presentResolvedEntry(resolved)
 ```
 
 Render the baseline entry when no variant resolves. Missing selections, unmatched optimization
@@ -177,7 +200,9 @@ or screen behavior into the appropriate Core event calls, and pass the resolved 
 
 Use `fetchOptimizedEntry(entryId, options?)` instead of the source controller when there is no
 mounted adapter lifecycle. It fetches the baseline entry through the configured `contentful.js`
-client, resolves immediately, and returns `{ baselineEntry, entry, selectedOptimization }`.
+client, resolves immediately, and returns the full result, including `baselineEntry`, `entry`,
+`selectedOptimization`, and optional `isEmptyVariant`. Apply the same empty-result branch before
+rendering.
 
 ## Validate the integration
 
@@ -187,8 +212,36 @@ client, resolves immediately, and returns `{ baselineEntry, entry, selectedOptim
 - Confirm `entryId` changes or `entryQuery` changes do not render stale fetch results.
 - Confirm stateful adapters re-resolve when selected optimizations change, if live updates are part
   of the adapter contract.
+- Confirm an empty result clears consumer output without discarding the baseline entry or tracking
+  metadata, and a later non-empty result renders again.
 - Confirm custom Web adapters render valid `data-ctfl-*` attributes or call
   `tracking.enableElement(...)` after resolution.
+
+You can exercise the empty-to-non-empty transition locally without creating an Optimization
+fixture. Run this beside the presentation branch above while `snapshot.baselineEntry` is available.
+Resolve once with the adapter's current local state, then create two synthetic presentation cases:
+one with the literal `true` flag and one with the optional property omitted.
+
+**Adapt this to your use case:** temporarily call the real `presentResolvedEntry()` twice. Put
+breakpoints in your existing `updateTrackingMetadata()`, `clearResolvedEntry()`, and
+`renderResolvedEntry()` functions, or observe their existing local UI/log output.
+
+```ts
+const sourceResult = optimization.resolveOptimizedEntry(snapshot.baselineEntry)
+const { isEmptyVariant: _, ...nonEmptyResult } = sourceResult
+const emptyResult = { ...nonEmptyResult, isEmptyVariant: true as const }
+
+presentResolvedEntry(emptyResult)
+console.assert(emptyResult.entry === nonEmptyResult.entry)
+console.assert(emptyResult.selectedOptimization === nonEmptyResult.selectedOptimization)
+console.assert(emptyResult.optimizationContextId === nonEmptyResult.optimizationContextId)
+
+presentResolvedEntry(nonEmptyResult)
+```
+
+The first call must update metadata and clear output; the second must update metadata and render
+`sourceResult.entry` again. The assertions confirm that the synthetic empty result retained the same
+entry and selection metadata instead of replacing the full resolver result with `null`.
 
 ## Governance notes
 

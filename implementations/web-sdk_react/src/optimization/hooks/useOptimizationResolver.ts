@@ -9,14 +9,14 @@ import { useOptimization } from './useOptimization'
 import { useOptimizationState } from './useOptimizationState'
 
 export interface UseOptimizationResolverResult {
-  resolveEntry: (
+  resolveEntryData: (
     baselineEntry: ContentfulEntry,
     selectedOptimizations?: SelectedOptimizationArray,
   ) => ResolvedData<ContentEntrySkeleton>
   getMergeTagValue: (mergeTagEntry: MergeTagEntry) => string
 }
 
-function fallbackResolveEntry(
+function fallbackResolveEntryData(
   baselineEntry: ContentfulEntry,
   _selectedOptimizations?: SelectedOptimizationArray,
 ): ResolvedData<ContentEntrySkeleton> {
@@ -45,7 +45,7 @@ function toStringValue(value: unknown): string {
 
 export function useOptimizationResolver(): UseOptimizationResolverResult {
   const { sdk } = useOptimization()
-  // Subscribe to selectedOptimizations so resolveEntry gets a new identity when the
+  // Subscribe to selectedOptimizations so resolveEntryData gets a new identity when the
   // Experience API responds. Without this, ContentEntry's useMemo would lock in the
   // baseline on first render (signal still empty) and never re-resolve on slow browsers.
   const { selectedOptimizations } = useOptimizationState(sdk?.states)
@@ -53,13 +53,13 @@ export function useOptimizationResolver(): UseOptimizationResolverResult {
   return useMemo<UseOptimizationResolverResult>(() => {
     if (sdk === undefined) {
       return {
-        resolveEntry: fallbackResolveEntry,
+        resolveEntryData: fallbackResolveEntryData,
         getMergeTagValue: (_mergeTagEntry: MergeTagEntry): string => '',
       }
     }
 
     return {
-      resolveEntry: (
+      resolveEntryData: (
         baselineEntry: ContentfulEntry,
         callerSelectedOptimizations?: SelectedOptimizationArray,
       ): ResolvedData<ContentEntrySkeleton> =>

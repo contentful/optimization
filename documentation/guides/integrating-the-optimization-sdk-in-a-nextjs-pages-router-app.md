@@ -322,6 +322,14 @@ the SDK's configured Contentful client. Its render prop receives the resolved en
 experience applies, consent is denied, the API has no variant, or a linked variant cannot be
 resolved, the render receives the baseline entry.
 
+`isEmptyVariant === true` marks the SDK renderer's no-content state. It differs from the fallback
+cases above, which render the baseline entry. In the no-content state, `OptimizedEntry` keeps its
+host and tracking attributes but does not invoke or render app content. The standalone
+`ServerOptimizedEntry`, imported from `@contentful/optimization-nextjs/server`, is the lower-level
+renderer for server code that already has a full resolver result and static children; it keeps its
+server-rendered host and tracking attributes while omitting those children. An absent empty-variant
+flag renders normally.
+
 A resolved selected variant can use any Contentful content type.
 
 A Contentful **entry skeleton** is a TypeScript type that names a content type ID and its fields.
@@ -491,9 +499,24 @@ cookie, header, locale, or cache-key inputs. The maintained reference route uses
 `getStaticPaths()` registry with `fallback: false`; `fallback: 'blocking'` is a later option for
 larger registries after you define how uncached public permutations are approved.
 
-**Follow this pattern:**
+Each `resolveEntriesForSelections()` item includes optional `isEmptyVariant`. When it is `true`, the
+item retains the baseline `entry` for tracking context, but direct page output must omit consumer
+content.
 
-```ts
+**Follow this pattern:** return `null` for the empty result and branch on that value in the page.
+`Hero` is your app-owned renderer; the page never passes `null` to `OptimizedEntry` as a
+`baselineEntry`.
+
+```tsx
+import type { InferGetStaticPropsType } from 'next'
+
+type SegmentPageProps = InferGetStaticPropsType<typeof getStaticProps>
+
+export default function SegmentPage({ hero }: SegmentPageProps) {
+  if (hero === null) return null
+  return <Hero entry={hero} />
+}
+
 export async function getStaticPaths() {
   const segments = await getPublicSegments()
 
@@ -525,12 +548,15 @@ export async function getStaticProps({ params }) {
           initialPageEvent: 'emit',
         }),
       },
-      hero: resolvedHero.entry,
+      hero: resolvedHero.isEmptyVariant ? null : resolvedHero.entry,
     },
     revalidate: 60,
   }
 }
 ```
+
+The page treats a `null` `hero` prop as no consumer output. The handoff still carries the selected
+optimization state needed by the browser runtime.
 
 For complete static, ISR, edge rendering, and analytics-only recipes, use
 [Rendering personalized Next.js routes with static, ISR, and edge handoffs](./rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md).
@@ -553,6 +579,10 @@ Lower-level resolver calls keep selections as the optional second positional arg
 `fetchOptimizedEntry(entryId, options)`, with selections in `FetchOptimizedEntryOptions`; neither
 call receives a content-type argument. `ServerOptimizedEntry<TElement, S, M, L>` places the element
 type first, followed by the complete skeleton union, response mode, and locale.
+
+When lower-level code renders a resolver result directly, `isEmptyVariant === true` marks the SDK
+renderer's no-content state; check it before rendering `entry`. The result retains the baseline
+entry and selection context for tracking even when consumer output is empty.
 
 ### Caching and request policy
 

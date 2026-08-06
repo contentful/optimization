@@ -84,7 +84,11 @@ export function renderOptimizedEntryOnServer<
     },
   )
 
-  return createElement(Element, { ...htmlProps, ...trackingAttributes }, children)
+  return createElement(
+    Element,
+    { ...htmlProps, ...trackingAttributes },
+    resolvedData.isEmptyVariant === true ? null : children,
+  )
 }
 
 export function resolveOptimizedEntryChildren(
@@ -92,5 +96,7 @@ export function resolveOptimizedEntryChildren(
   entry: ServerTrackingResolvedData['entry'],
   context: OptimizedEntryRenderContext,
 ): ReactNode {
+  if (context.resolvedData.isEmptyVariant === true) return null
+
   return typeof children === 'function' ? children(entry, context) : children
 }

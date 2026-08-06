@@ -43,6 +43,7 @@ export interface OptimizedEntrySharedProps<
 > {
   /**
    * Content to render. Accepts either a render prop or static children.
+   * Empty variants omit this content while retaining the tracking View.
    *
    * - **Render prop** `(resolvedEntry: Entry, metadata: OptimizedEntryMetadata) => ReactNode`:
    *   receives the resolved entry plus baseline and optimization metadata.
@@ -87,7 +88,7 @@ export interface OptimizedEntrySharedProps<
   onEntryError?: (error: Error) => void
 
   /**
-   * Callback invoked when a resolved entry is rendered with tracking ready.
+   * Callback invoked when entry resolution completes with tracking ready, including empty variants.
    */
   onEntryResolved?: (metadata: OptimizedEntryMetadata<S, M, L>) => void
 
@@ -358,7 +359,9 @@ function OptimizedEntryContent({
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {resolveChildren(children, resolvedData.entry, metadata)}
+      {resolvedData.isEmptyVariant === true
+        ? null
+        : resolveChildren(children, resolvedData.entry, metadata)}
     </View>
   )
 }
@@ -382,6 +385,7 @@ function OptimizedEntryContent({
  * By default the component locks to the first variant it receives to prevent UI
  * flashing. Set `liveUpdates` to `true` or open the preview panel to enable
  * real-time variant switching.
+ * Empty variants retain the tracking View and resolution callbacks but omit consumer content.
  *
  * Configure `contentful.client` on {@link OptimizationRoot} or
  * {@link OptimizationProvider} to let `entryId` fetch the baseline entry through the SDK.

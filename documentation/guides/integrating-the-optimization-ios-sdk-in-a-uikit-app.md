@@ -412,6 +412,10 @@ the optimization context, the profile-and-selection state that produced the vari
 one-letter difference: `selectedOptimizations` is the set you pass in (or the SDK resolves against),
 while `selectedOptimization` is the one selection returned on the result.
 
+The result's `isEmptyVariant` field is `true` only for a boolean `true`. In that case, `entry`
+retains the baseline for tracking context, but UIKit code must skip rendering consumer content. An
+absent, false, or invalid field renders normally.
+
 1. Fetch entries with one concrete Contentful locale. Do not pass all-locale payloads (`locale=*` or
    all-locale helpers) into entry resolution — they fall back to baseline. The raw dictionary path
    requires top-level `sys`, `fields`, and `metadata`; the `Contentful.Entry` overload builds that
@@ -442,6 +446,9 @@ func renderEntry(_ baselineEntry: [String: Any]) {
         baseline: baselineEntry,
         selectedOptimizations: client.selectedOptimizations
     )
+
+    contentView.isHidden = result.isEmptyVariant
+    guard !result.isEmptyVariant else { return }
 
     switch result.entry.contentTypeId {
     case "hero" where result.entry.hasField("headline"):
@@ -561,6 +568,8 @@ func configure(with entry: [String: Any]) {
     )
     latestBaselineEntry = entry
     latestResolution = result
+    contentView.isHidden = result.isEmptyVariant
+    guard !result.isEmptyVariant else { return }
     contentView.configure(with: result.entry) // contentView is reader-owned UI.
 }
 
@@ -595,11 +604,16 @@ visible, and a final duration event when visibility ends once at least one event
 pauses on backgrounding and re-evaluates on foreground, and dedupes its own sticky views, so you only
 own the geometry and the call site.
 
+`contentHost` below is a reader-owned container. The class's omitted initializer and layout code
+must add it to the view hierarchy with `addSubview(contentHost)` and size or constrain it before
+`configure()` runs; the SDK does not create or mount that container.
+
 **Follow this pattern:**
 
 ```swift
 final class OptimizedEntryView: UIView {
     private let client: OptimizationClient
+    private let contentHost = UIView()
     private let entry: [String: Any]
     private weak var scrollView: UIScrollView?
     private var trackingController: ViewTrackingController?
@@ -610,7 +624,10 @@ final class OptimizedEntryView: UIView {
     func configure() {
         let result = client.resolveOptimizedEntry(baseline: entry)
         rebuildTracking(result: result)
-        // ...render result.entry with your own view code...
+        contentHost.isHidden = result.isEmptyVariant
+        if !result.isEmptyVariant {
+            // ...render result.entry inside contentHost with your own view code...
+        }
     }
 
     // Rebuild the controller whenever a newly resolved variant changes the
@@ -833,6 +850,8 @@ func render(entry: [String: Any]) {
         baseline: entry,
         selectedOptimizations: lockedOptimizations
     )
+    contentView.isHidden = result.isEmptyVariant
+    guard !result.isEmptyVariant else { return }
     contentView.configure(with: result.entry)
 }
 ```

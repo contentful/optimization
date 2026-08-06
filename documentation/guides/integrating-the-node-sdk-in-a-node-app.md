@@ -685,10 +685,13 @@ const baselineEntry = await contentfulClient.getEntry(req.params.entryId, {
   include: 10,
   locale: appLocale,
 })
-const { entry: optimizedArticle } = optimization.resolveOptimizedEntry(
+const { entry: optimizedArticle, isEmptyVariant } = optimization.resolveOptimizedEntry(
   baselineEntry,
   pageResponse?.selectedOptimizations,
 )
+
+if (isEmptyVariant) res.status(204).end()
+else res.render('article', { article: optimizedArticle })
 ```
 
 The second resolver argument is always the request's `selectedOptimizations` array. Pass it
@@ -716,12 +719,13 @@ function renderArticle(
   baselineEntry: Entry<ArticleSkeleton, ChainModifiers, AppLocale>,
   selectedOptimizations?: SelectedOptimizationArray,
 ): string {
-  const { entry } = optimization.resolveOptimizedEntry<
+  const { entry, isEmptyVariant } = optimization.resolveOptimizedEntry<
     PossibleArticleSkeleton,
     ChainModifiers,
     AppLocale
   >(baselineEntry, selectedOptimizations)
 
+  if (isEmptyVariant) return ''
   if (isEntryOfContentType<HeroSkeleton, ChainModifiers, AppLocale>(entry, 'hero')) {
     return String(entry.fields.headline ?? '')
   }

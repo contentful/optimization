@@ -109,6 +109,10 @@ Before adding the route, sanity-check one segment record:
 - Run `resolveEntriesForSelections()` for that baseline entry and compare `resolved.entry.sys.id`
   with the expected variant entry ID. Use a segment whose selected variant has visible text.
 
+Each resolved item also carries optional `isEmptyVariant`. When it is `true`, `entry` retains the
+baseline for tracking context, but direct route markup must omit consumer content. An absent flag
+renders normally.
+
 **Adapt this to your use case:**
 
 ```tsx
@@ -164,7 +168,7 @@ export default async function SegmentPage({ params }: { params: Promise<{ segmen
       handoff={handoff}
       routeKey={routeKey}
     >
-      <Hero entry={resolvedHero.entry} />
+      {resolvedHero.isEmptyVariant ? null : <Hero entry={resolvedHero.entry} />}
     </OptimizationRoot>
   )
 }
@@ -478,7 +482,7 @@ export default async function StaticSegmentPage() {
       handoff={handoff}
       routeKey="/static-segment"
     >
-      <Hero entry={resolvedHero.entry} />
+      {resolvedHero.isEmptyVariant ? null : <Hero entry={resolvedHero.entry} />}
     </OptimizationRoot>
   )
 }
@@ -733,7 +737,7 @@ export default async function AnalyticsOnlyPage() {
       routeKey="/campaign-a"
     >
       <article {...trackingAttributes}>
-        <Hero entry={resolvedHero.entry} />
+        {resolvedHero.isEmptyVariant ? null : <Hero entry={resolvedHero.entry} />}
       </article>
     </OptimizationAnalyticsRoot>
   )

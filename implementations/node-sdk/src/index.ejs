@@ -92,7 +92,9 @@
             data-ctfl-sticky="<%= entry1.selectedOptimization?.sticky ?? '' %>"
             data-ctfl-variant-index="<%= entry1.selectedOptimization?.variantIndex ?? '' %>"
           >
-            <%- entry1.entry.fields.text %>
+            <% if (entry1.isEmptyVariant !== true) { %>
+              <%- entry1.entry.fields.text %>
+            <% } %>
           </div>
 
           <% const entry2 = entries.get('4ib0hsHWoSOnCVdDkizE8d') %>
@@ -102,7 +104,9 @@
             data-ctfl-sticky="<%= entry2.selectedOptimization?.sticky ?? '' %>"
             data-ctfl-variant-index="<%= entry2.selectedOptimization?.variantIndex ?? '' %>"
           >
-            <p><%= entry2.entry.fields.text %></p>
+            <% if (entry2.isEmptyVariant !== true) { %>
+              <p><%= entry2.entry.fields.text %></p>
+            <% } %>
           </div>
 
           <% const entry3 = entries.get('xFwgG3oNaOcjzWiGe4vXo') %>
@@ -112,7 +116,9 @@
             data-ctfl-sticky="<%= entry3.selectedOptimization?.sticky ?? '' %>"
             data-ctfl-variant-index="<%= entry3.selectedOptimization?.variantIndex ?? '' %>"
           >
-            <p><%= entry3.entry.fields.text %></p>
+            <% if (entry3.isEmptyVariant !== true) { %>
+              <p><%= entry3.entry.fields.text %></p>
+            <% } %>
           </div>
 
           <% const entry4 = entries.get('2Z2WLOx07InSewC3LUB3eX') %>
@@ -122,7 +128,9 @@
             data-ctfl-sticky="<%= entry4.selectedOptimization?.sticky ?? '' %>"
             data-ctfl-variant-index="<%= entry4.selectedOptimization?.variantIndex ?? '' %>"
           >
-            <p><%= entry4.entry.fields.text %></p>
+            <% if (entry4.isEmptyVariant !== true) { %>
+              <p><%= entry4.entry.fields.text %></p>
+            <% } %>
           </div>
 
           <% const entry5 = entries.get('5XHssysWUDECHzKLzoIsg1') %>
@@ -132,7 +140,9 @@
             data-ctfl-sticky="<%= entry5.selectedOptimization?.sticky ?? '' %>"
             data-ctfl-variant-index="<%= entry5.selectedOptimization?.variantIndex ?? '' %>"
           >
-            <p><%= entry5.entry.fields.text %></p>
+            <% if (entry5.isEmptyVariant !== true) { %>
+              <p><%= entry5.entry.fields.text %></p>
+            <% } %>
           </div>
 
           <% const entry6 = entries.get('6zqoWXyiSrf0ja7I2WGtYj') %>
@@ -142,7 +152,9 @@
             data-ctfl-sticky="<%= entry6.selectedOptimization?.sticky ?? '' %>"
             data-ctfl-variant-index="<%= entry6.selectedOptimization?.variantIndex ?? '' %>"
           >
-            <p><%= entry6.entry.fields.text %></p>
+            <% if (entry6.isEmptyVariant !== true) { %>
+              <p><%= entry6.entry.fields.text %></p>
+            <% } %>
           </div>
 
           <% const entry7 = entries.get('7pa5bOx8Z9NmNcr7mISvD') %>
@@ -152,7 +164,9 @@
             data-ctfl-sticky="<%= entry7.selectedOptimization?.sticky ?? '' %>"
             data-ctfl-variant-index="<%= entry7.selectedOptimization?.variantIndex ?? '' %>"
           >
-            <p><%= entry7.entry.fields.text %></p>
+            <% if (entry7.isEmptyVariant !== true) { %>
+              <p><%= entry7.entry.fields.text %></p>
+            <% } %>
           </div>
         </div>
       </section>

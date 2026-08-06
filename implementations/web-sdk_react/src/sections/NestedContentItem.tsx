@@ -30,9 +30,9 @@ function renderText(contentEntry: ContentfulEntry): string {
 }
 
 export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Element {
-  const { resolveEntry } = useOptimizationResolver()
-  const resolved = useMemo(() => resolveEntry(entry), [entry, resolveEntry])
-  const { entry: resolvedEntry, selectedOptimization } = resolved
+  const { resolveEntryData } = useOptimizationResolver()
+  const resolvedData = useMemo(() => resolveEntryData(entry), [entry, resolveEntryData])
+  const { entry: resolvedEntry, selectedOptimization } = resolvedData
 
   const { experienceId, sticky, variantIndex } = useMemo(
     () => getSelectedOptimizationMeta(selectedOptimization),
@@ -55,18 +55,22 @@ export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Elemen
       data-ctfl-sticky={sticky === undefined ? undefined : String(sticky)}
       data-ctfl-variant-index={variantIndex === undefined ? undefined : String(variantIndex)}
     >
-      <div data-testid={`entry-text-${resolvedEntry.sys.id}`} aria-label={fullLabel}>
-        <p>{text}</p>
-        <p>{`[Entry: ${resolvedEntry.sys.id}]`}</p>
-      </div>
+      {resolvedData.isEmptyVariant ? null : (
+        <>
+          <div data-testid={`entry-text-${resolvedEntry.sys.id}`} aria-label={fullLabel}>
+            <p>{text}</p>
+            <p>{`[Entry: ${resolvedEntry.sys.id}]`}</p>
+          </div>
 
-      {nestedEntries.length > 0 ? (
-        <div className="entry-card__nested-children">
-          {nestedEntries.map((nestedEntry) => (
-            <NestedContentItem key={nestedEntry.sys.id} entry={nestedEntry} />
-          ))}
-        </div>
-      ) : null}
+          {nestedEntries.length > 0 ? (
+            <div className="entry-card__nested-children">
+              {nestedEntries.map((nestedEntry) => (
+                <NestedContentItem key={nestedEntry.sys.id} entry={nestedEntry} />
+              ))}
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   )
 }

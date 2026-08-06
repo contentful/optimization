@@ -595,14 +595,20 @@
 
         const element = event.currentTarget
         const rawEntry = element.baselineEntry
+        const { resolvedData } = event.detail
 
         if (!rawEntry) return
+
+        if (resolvedData.isEmptyVariant === true) {
+          enableManualViewTracking(element, resolvedData.entry, resolvedData.selectedOptimization)
+          return
+        }
 
         renderResolvedEntry(
           element,
           rawEntry,
-          event.detail.entry,
-          event.detail.selectedOptimization,
+          resolvedData.entry,
+          resolvedData.selectedOptimization,
         )
       }
 

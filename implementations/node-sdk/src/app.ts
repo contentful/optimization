@@ -218,7 +218,10 @@ app.get('/', limiter, async (req, res) => {
       selectedOptimizations,
     )
 
-    if (isRichTextDocument(optimizedEntry.entry.fields.text)) {
+    if (
+      optimizedEntry.isEmptyVariant !== true &&
+      isRichTextDocument(optimizedEntry.entry.fields.text)
+    ) {
       optimizedEntry.entry.fields.text = documentToHtmlString(optimizedEntry.entry.fields.text, {
         renderNode: {
           [INLINES.EMBEDDED_ENTRY]: (node) => {

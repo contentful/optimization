@@ -118,6 +118,11 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   Shared modeling and narrowing behavior: see
   [`../shared/concepts.md`](../shared/concepts.md#entry-resolution).
   source: web-sdk#presentation/OptimizedEntrySnapshot.ts#OptimizedEntrySnapshot; web-sdk#presentation/OptimizedEntryController.ts#OptimizedEntryController; web-sdk#presentation/OptimizedEntryTrackingAttributes.ts#resolveOptimizedEntryTrackingAttributes; core-sdk#OptimizedEntryMetadata.ts#OptimizedEntryMetadata
+- `<ctfl-optimized-entry>` maps an empty result to the host's native `hidden` state. The element stays
+  connected with its tracking attributes and emits `ctfl-entry-resolved` with the full result, while
+  caller-owned light-DOM nodes stay in place and become visible again when a later result is not
+  empty. A change to only the empty-variant state still emits the resolved event.
+  source: web-sdk#web-components/ContentfulOptimizedEntryElement.ts#ContentfulOptimizedEntryElement
 - **Control-variant precision (subtle):** `selectedOptimization` is `undefined` ONLY when no
   experience matched — no selections, entry not optimized, no optimization entry, or no matching
   selection. When an experience matches but assigns the visitor to the CONTROL/baseline variant

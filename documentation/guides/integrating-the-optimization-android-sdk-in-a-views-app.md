@@ -508,6 +508,12 @@ profile matched.
 `OptimizedEntryView` is the Views renderer: it detects an optimized entry by the SDK-fixed
 `fields.nt_experiences` link field, observes the client's `selectedOptimizations` (plural — the
 current set), resolves the entry, and renders the result through a renderer you supply.
+The SDK result type is `ResolvedOptimizedEntry`; when `isEmptyVariant` is `true`, the SDK renderer
+uses its no-content state. That differs from fallback resolution, which renders the baseline entry
+normally. In the no-content state, `OptimizedEntryView` removes any previously rendered child views
+without calling your renderer, while retaining the latest resolved entry and selection metadata used
+for tracking. A later non-empty result calls your renderer with the current entry. An absent or
+invalid empty-variant field renders normally.
 `nt_experiences` links each experience's `nt_variants` and audience entries; these are SDK-owned
 Optimization content-model names, not names you choose, so your fetch must `include` deeply enough to
 pull them back in one payload. Each resolved result carries a single `selectedOptimization`
@@ -585,23 +591,30 @@ content model.
 
 4. Treat baseline fallback as expected behavior. `resolveOptimizedEntry` (which `OptimizedEntryView`
    calls for you) is a `suspend`, fail-soft resolver. Its SDK-owned `ResolvedOptimizedEntry` result
-   contains the resolved `CTEntry`, the applied `selectedOptimization`, and an optional
-   `optimizationContextId`. When resolution cannot select a usable variant, it returns the baseline
-   instead of breaking the UI. If you fetch with `contentful.java`, pass the `CDAEntry` to the typed
+   contains the resolved `CTEntry`, the applied `selectedOptimization`, an optional
+   `optimizationContextId`, and `isEmptyVariant`. Only a boolean `true` marks an empty
+   variant. When resolution cannot select a usable variant, it returns the baseline instead of
+   breaking the UI. If you fetch with `contentful.java`, pass the `CDAEntry` to the typed
    `setEntry(entry: CDAEntry)` overload; the SDK-owned adapter builds the `{sys, fields, metadata}`
    shape the resolver requires.
 
 For custom rendering surfaces that already hold the standard raw entry map described in step 1, call
 `resolveOptimizedEntry(baseline, selectedOptimizations)` directly instead of through the view, then
-pass its result to your existing renderer.
+check the full result before calling your existing renderer. `renderEntryView()` below is your
+app-owned function that creates a child view from the resolved entry.
 
 **Follow this pattern:**
 
 ```kotlin
-suspend fun renderResolvedEntry(baselineEntry: Map<String, Any>) {
+import android.view.ViewGroup
+
+suspend fun renderResolvedEntry(baselineEntry: Map<String, Any>, container: ViewGroup) {
     // Omitting selectedOptimizations uses current SDK state.
     val result = OptimizationManager.client.resolveOptimizedEntry(baseline = baselineEntry)
-    render(result.entry.toMap())
+    container.removeAllViews()
+    if (!result.isEmptyVariant) {
+        container.addView(renderEntryView(result.entry.toMap()))
+    }
 }
 ```
 

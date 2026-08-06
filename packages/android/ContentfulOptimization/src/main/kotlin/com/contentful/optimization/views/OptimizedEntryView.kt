@@ -100,7 +100,7 @@ public class OptimizedEntryView @JvmOverloads constructor(
      */
     fun setContentRenderer(renderer: (Map<String, Any>) -> View) {
         this.contentRenderer = renderer
-        lastResult?.let { renderContent(it.entry.toMap()) }
+        lastResult?.let(::renderContent)
     }
 
     /**
@@ -238,14 +238,14 @@ public class OptimizedEntryView @JvmOverloads constructor(
 
     private fun publishResult(result: ResolvedOptimizedEntry) {
         lastResult = result
-        renderContent(result.entry.toMap())
+        renderContent(result)
         attachController(result)
     }
 
-    private fun renderContent(entry: Map<String, Any>) {
-        val renderer = contentRenderer ?: return
+    private fun renderContent(result: ResolvedOptimizedEntry) {
         removeAllViews()
-        addView(renderer(entry))
+        if (result.isEmptyVariant) return
+        contentRenderer?.let { addView(it(result.entry.toMap())) }
     }
 
     private fun attachController(result: ResolvedOptimizedEntry) {

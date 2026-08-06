@@ -500,4 +500,23 @@ describe('Next.js server helpers', () => {
       children: 'Rendered content',
     })
   })
+
+  it('keeps the server wrapper and tracking attributes while omitting empty-variant content', () => {
+    const element = ServerOptimizedEntry({
+      as: 'article',
+      baselineEntry,
+      children: 'Rendered content',
+      className: 'entry',
+      resolvedData: { ...resolvedData, isEmptyVariant: true },
+    })
+
+    expect(element.type).toBe('article')
+    expect(element.props).toMatchObject({
+      'data-ctfl-baseline-id': 'baseline-entry',
+      'data-ctfl-empty-variant': true,
+      'data-ctfl-optimization-id': 'experience-id',
+      children: null,
+      className: 'entry',
+    })
+  })
 })

@@ -254,12 +254,17 @@ const { track } = useOptimization()
 import { useEntryResolver } from '@contentful/optimization-react-web'
 
 function HeroEntry({ baselineEntry }) {
-  const { resolveEntry } = useEntryResolver()
-  const resolvedEntry = resolveEntry(baselineEntry)
+  const { resolveEntryData } = useEntryResolver()
+  const resolvedData = resolveEntryData(baselineEntry)
 
-  return <HeroCard entry={resolvedEntry} />
+  if (resolvedData.isEmptyVariant) return null
+  return <HeroCard entry={resolvedData.entry} />
 }
 ```
+
+`resolveEntry()` remains available when code needs only the resolved entry. It does not expose
+empty-variant state, so use `resolveEntryData()` or `resolveOptimizedEntry()` for rendering
+decisions.
 
 For manual entries, fetch Contentful entries in the app layer with one CDA locale before passing
 them to `baselineEntry` surfaces. For managed fetching, use `entryId` and `entryQuery`. Do not pass
