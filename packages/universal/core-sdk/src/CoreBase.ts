@@ -48,6 +48,16 @@ export type ManagedEntryDescriptor =
   | string
   | {
       readonly entryId: string
+      readonly contentType?: never
+      readonly slug?: never
+      readonly slugField?: never
+      readonly entryQuery?: ContentfulEntryQuery
+    }
+  | {
+      readonly entryId?: never
+      readonly contentType: string
+      readonly slug: string
+      readonly slugField?: string
       readonly entryQuery?: ContentfulEntryQuery
     }
 
@@ -58,6 +68,7 @@ export type ManagedEntryDescriptor =
  */
 export interface ManagedEntryHandoff {
   readonly entryId: string
+  readonly managedEntry?: Exclude<ManagedEntryDescriptor, string>
   readonly entryQuery?: ContentfulEntryQuery
   readonly baselineEntry: Entry
 }
@@ -288,8 +299,21 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
     S extends EntrySkeletonType = EntrySkeletonType,
     L extends LocaleCode = LocaleCode,
   >(entryId: string, query?: ContentfulEntryQuery): Promise<ManagedContentfulEntry<S, L>>
-  async fetchContentfulEntry(entryId: string, query?: ContentfulEntryQuery): Promise<Entry> {
-    return await this.managedEntryFetcher.fetchEntry(entryId, query)
+  async fetchContentfulEntry<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(descriptor: Exclude<ManagedEntryDescriptor, string>): Promise<ManagedContentfulEntry<S, L>>
+  async fetchContentfulEntry(
+    descriptor: ManagedEntryDescriptor,
+    query?: ContentfulEntryQuery,
+  ): Promise<Entry> {
+    return await this.managedEntryFetcher.fetchEntry(
+      normalizeManagedEntryDescriptor(
+        typeof descriptor === 'string' && query !== undefined
+          ? { entryId: descriptor, entryQuery: query }
+          : descriptor,
+      ),
+    )
   }
 
   /**
@@ -348,11 +372,21 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
     entryId: string,
     options?: FetchOptimizedEntryOptions,
   ): Promise<FetchOptimizedEntryResult<S, undefined, L>>
+  async fetchOptimizedEntry<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(
+    descriptor: Exclude<ManagedEntryDescriptor, string>,
+    options?: Omit<FetchOptimizedEntryOptions, 'query'>,
+  ): Promise<FetchOptimizedEntryResult<S, undefined, L>>
   async fetchOptimizedEntry(
-    entryId: string,
+    descriptor: ManagedEntryDescriptor,
     options: FetchOptimizedEntryOptions = {},
   ): Promise<FetchOptimizedEntryResult<EntrySkeletonType, ChainModifiers>> {
-    const baselineEntry = await this.fetchContentfulEntry(entryId, options.query)
+    const baselineEntry =
+      typeof descriptor === 'string'
+        ? await this.fetchContentfulEntry(descriptor, options.query)
+        : await this.fetchContentfulEntry(descriptor)
     const resolvedData = this.resolveOptimizedEntry(baselineEntry, options.selectedOptimizations)
 
     return {

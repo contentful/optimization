@@ -75,7 +75,16 @@ function hasResolvedDataChanged(
 
 export class ContentfulOptimizedEntryElement extends HTMLElement {
   static get observedAttributes(): string[] {
-    return ['entry-id', 'live-updates', 'track-clicks', 'track-hovers', 'track-views']
+    return [
+      'content-type',
+      'entry-id',
+      'live-updates',
+      'slug',
+      'slug-field',
+      'track-clicks',
+      'track-hovers',
+      'track-views',
+    ]
   }
 
   private explicitRoot: ContentfulOptimizationRootElement | undefined
@@ -104,12 +113,31 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
   }
 
   set entryId(value: string | undefined) {
-    if (value === undefined) {
-      this.removeAttribute('entry-id')
-      return
-    }
+    this.setOptionalStringAttribute('entry-id', value)
+  }
 
-    this.setAttribute('entry-id', value)
+  get contentType(): string | undefined {
+    return this.getAttribute('content-type') ?? undefined
+  }
+
+  set contentType(value: string | undefined) {
+    this.setOptionalStringAttribute('content-type', value)
+  }
+
+  get slug(): string | undefined {
+    return this.getAttribute('slug') ?? undefined
+  }
+
+  set slug(value: string | undefined) {
+    this.setOptionalStringAttribute('slug', value)
+  }
+
+  get slugField(): string | undefined {
+    return this.getAttribute('slug-field') ?? undefined
+  }
+
+  set slugField(value: string | undefined) {
+    this.setOptionalStringAttribute('slug-field', value)
   }
 
   get entryQuery(): ContentfulEntryQuery | undefined {
@@ -174,6 +202,7 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
 
   connectedCallback(): void {
     this.style.display ||= OPTIMIZED_ENTRY_HOST_DISPLAY
+    this.previousSourceSnapshot = undefined
 
     this.sourceController.setSnapshotListener((snapshot) => {
       this.applySourceSnapshot(snapshot)
@@ -210,6 +239,11 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
     }
 
     this.setAttribute(name, String(value))
+  }
+
+  private setOptionalStringAttribute(name: string, value: string | undefined): void {
+    if (value === undefined) this.removeAttribute(name)
+    else this.setAttribute(name, value)
   }
 
   private bindRoot(): void {
@@ -251,12 +285,22 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
   private syncEntryController(): void {
     const { sdk, isSdkStateReady } = this.resolveControllerSdk()
     const previousSourceSnapshot = this.sourceController.getSnapshot()
-    const { entryId } = this
+    const { contentType, entryId, slug, slugField } = this
+    const managedEntry =
+      contentType !== undefined && slug !== undefined
+        ? {
+            contentType,
+            slug,
+            slugField: slugField ?? 'slug',
+            entryQuery: this.assignedEntryQuery,
+          }
+        : undefined
 
     this.sourceController.updateOptions({
       baselineEntry: this.assignedBaselineEntry,
       entryId: entryId === '' ? undefined : entryId,
       entryQuery: this.assignedEntryQuery,
+      managedEntry,
       sdk,
       isSdkStateReady,
     })

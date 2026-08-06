@@ -342,8 +342,10 @@ describe('Next.js App Router v2 binding', () => {
   })
 
   it('passes browser defaults through consent.clientDefaults and server prefetched entries through handoff.entries', async () => {
-    const getEntry = rs.fn(async () => await Promise.resolve(baselineEntry))
-    const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
+    const getEntry = rs.fn(async () => await Promise.resolve(createEntry('unused')))
+    const getEntries = rs.fn(
+      async () => await Promise.resolve(createEntryCollection([baselineEntry])),
+    )
     const { OptimizationRoot, createHandoffFromSelections } = bindNextjsAppRouterOptimization({
       ...sdkConfig,
       consent: {
@@ -353,6 +355,7 @@ describe('Next.js App Router v2 binding', () => {
     })
     const handoff = createHandoffFromSelections({
       cache: { scope: 'static' },
+      entries: [{ baselineEntry: variantEntry, entryId: variantEntry.sys.id }],
       hydration: 'preserve-server',
       initialPageEvent: 'emit',
       selectedOptimizations: [],
@@ -362,12 +365,21 @@ describe('Next.js App Router v2 binding', () => {
       children: 'Server content',
       handoff,
       prefetchManagedEntries: [
-        { entryId: '4ib0hsHWoSOnCVdDkizE8d', entryQuery: { locale: 'de-DE' } },
+        {
+          entryQuery: { locale: 'de-DE' },
+          contentType: 'page',
+          slug: '/products',
+          slugField: 'path',
+        },
       ],
     })
 
-    expect(getEntry).toHaveBeenCalledWith('4ib0hsHWoSOnCVdDkizE8d', {
+    expect(getEntry).not.toHaveBeenCalled()
+    expect(getEntries).toHaveBeenCalledWith({
+      content_type: 'page',
+      'fields.path': '/products',
       include: 10,
+      limit: 2,
       locale: 'de-DE',
     })
     expect(element.props).toMatchObject({
@@ -375,7 +387,17 @@ describe('Next.js App Router v2 binding', () => {
       defaults: { consent: false, persistenceConsent: false },
       handoff: {
         entries: [
-          { baselineEntry, entryId: '4ib0hsHWoSOnCVdDkizE8d', entryQuery: { locale: 'de-DE' } },
+          { baselineEntry: variantEntry, entryId: variantEntry.sys.id },
+          {
+            baselineEntry,
+            entryId: baselineEntry.sys.id,
+            managedEntry: {
+              contentType: 'page',
+              entryQuery: { locale: 'de-DE' },
+              slug: '/products',
+              slugField: 'path',
+            },
+          },
         ],
       },
     })
@@ -921,6 +943,68 @@ describe('Next.js App Router v2 binding', () => {
     })
     expect(html).toContain(`data-ctfl-entry-id="${variantEntry.sys.id}"`)
     expect(html).toContain(variantEntry.sys.id)
+  })
+
+  it('resolves slug-managed server entries with request selections and tracking IDs', async () => {
+    mockRequestPage({ accepted: true, data: optimizationData })
+    const getEntry = rs.fn(async () => await Promise.resolve(createEntry('unused')))
+    const getEntries = rs.fn(
+      async () => await Promise.resolve(createEntryCollection([optimizedEntry])),
+    )
+    const { OptimizationRoot, OptimizedEntry, createRequestHandoff } =
+      bindNextjsAppRouterOptimization({
+        ...sdkConfig,
+        contentful: { cache: false, client: { getEntry, getEntries } },
+      })
+
+    const handoff = await createRequestHandoff({
+      cache: { scope: 'private-request' },
+      hydration: 'preserve-server',
+      pagePayload: { properties: { route: '/products' } },
+      request: createRequest(),
+    })
+    const element = await OptimizationRoot({
+      children: await OptimizedEntry({
+        children: (entry) => entry.sys.id,
+        managedEntry: {
+          contentType: 'page',
+          entryQuery: { locale: 'de-DE' },
+          slug: '/products',
+          slugField: 'path',
+        },
+      }),
+      handoff,
+    })
+    const html = await renderToHtml(element)
+
+    expect(getEntry).not.toHaveBeenCalled()
+    expect(getEntries).toHaveBeenCalledWith({
+      content_type: 'page',
+      'fields.path': '/products',
+      include: 10,
+      limit: 2,
+      locale: 'de-DE',
+    })
+    expect(html).toContain(`data-ctfl-baseline-id="${baselineEntry.sys.id}"`)
+    expect(html).toContain(`data-ctfl-entry-id="${variantEntry.sys.id}"`)
+    expect(html).toContain('data-ctfl-optimization-id="6IueRX1pS3iMJncbhUQTba"')
+    expect(html).toContain('data-ctfl-variant-index="1"')
+    expect(html).toContain(variantEntry.sys.id)
+  })
+
+  it('rejects ambiguous managed server entry sources when runtime props bypass types', async () => {
+    const { OptimizedEntry } = bindNextjsAppRouterOptimization(sdkConfig)
+
+    await expect(
+      // @ts-expect-error Exercise runtime validation for mutually exclusive managed sources.
+      OptimizedEntry({
+        children: () => baselineEntry.sys.id,
+        entryId: baselineEntry.sys.id,
+        managedEntry: { contentType: 'page', slug: '/products' },
+      }),
+    ).rejects.toThrow(
+      'Bound Next.js OptimizedEntry requires exactly one source: baselineEntry, entryId, or managedEntry.',
+    )
   })
 
   it('makes request handoff consent and selections available during server render', async () => {

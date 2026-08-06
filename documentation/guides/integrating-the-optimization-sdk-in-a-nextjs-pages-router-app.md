@@ -70,7 +70,8 @@ replace it in [Consent, identity, profile, and reset](#consent-identity-profile-
 
 3. Bind the server helper for `getServerSideProps`. The server entry point is separate from the
    browser-facing module and returns a browser `handoff`. This binding configures the server helper
-   set; it is not a per-request isolation context.
+   set; it is not a per-request isolation context. The quick start keeps entry fetching in
+   `getServerSideProps`; managed fetching is introduced later.
 
    **Adapt this to your use case:**
 
@@ -264,24 +265,133 @@ components.
 Manual entry source is the usual Pages Router path: `getServerSideProps` fetches a baseline entry and
 passes it through props, then the page renders it through `OptimizedEntry`.
 
-Managed entry source is also available when the route knows IDs. Pass `prefetchManagedEntries` to
-`createRequestHandoff()` in `getServerSideProps`; the helper puts the baseline snapshots in
-`handoff.entries` so the browser can preserve managed entries without a Contentful round trip.
+Managed entry source is also available when the route knows an entry ID or a content type and slug.
+Pass `prefetchManagedEntries` to `createRequestHandoff()` in `getServerSideProps`; the helper puts
+the baseline snapshots in `handoff.entries` so the browser can preserve managed entries without a
+Contentful Delivery API (CDA) round trip. Server prefetch accepts a direct descriptor shaped as
+`{ contentType, slug, slugField?, entryQuery? }`; `OptimizedEntry` receives that descriptor under
+`managedEntry`. `slugField` defaults to `slug`.
 
-**Follow this pattern:**
+Managed fetching needs the app-owned Contentful client in both bindings: the server binding uses it
+for prefetch, and the browser binding uses it if a managed source must fetch after hydration. It also
+extends the app-owned `getContentfulOptimization` wrapper with the descriptors for the current page.
+
+**Adapt this to your use case:** add managed fetching only if a page passes an ID or descriptor to
+`OptimizedEntry`. Keep `contentfulClient` in your existing Contentful module.
+
+```diff
+ // lib/optimization.ts
+ import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router'
++import { contentfulClient } from './contentful'
+
+ bindNextjsPagesRouterOptimization({
+   clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
++  contentful: { client: contentfulClient },
+   // your existing config
+ })
+
+ // lib/optimization-server.ts
+-import { bindNextjsPagesRouterServerOptimization } from '@contentful/optimization-nextjs/pages-router/server'
++import {
++  bindNextjsPagesRouterServerOptimization,
++  type ManagedEntryDescriptor,
++} from '@contentful/optimization-nextjs/pages-router/server'
++import { contentfulClient } from './contentful'
+
+ bindNextjsPagesRouterServerOptimization({
+   clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
++  contentful: { client: contentfulClient },
+   // your existing config
+ })
+
+-export async function getContentfulOptimization(context: GetServerSidePropsContext) {
++export async function getContentfulOptimization(
++  context: GetServerSidePropsContext,
++  prefetchManagedEntries: readonly ManagedEntryDescriptor[] = [],
++) {
+   const routeKey = context.resolvedUrl || context.req.url || '/'
+
+   return {
+     handoff: await createRequestHandoff(context, {
+       cache: { scope: 'private-request' },
+       hydration: 'preserve-server',
+       pagePayload: { properties: { path: routeKey } },
++      prefetchManagedEntries,
+     }),
+   }
+ }
+```
+
+For a dynamic route, define the source once from the route parameter. `contentType`, `slug`,
+`slugField`, and `entryQuery` are fixed SDK property names. Their values — including the content type
+ID, slug field ID, route slug, locale, and include depth — come from your app and content model.
+
+**Adapt this to your use case:**
 
 ```ts
-const contentfulOptimization = {
-  handoff: await createRequestHandoff(context, {
-    cache: { scope: 'private-request' },
-    hydration: 'preserve-server',
-    pagePayload: { properties: { path: context.resolvedUrl } },
-    prefetchManagedEntries: [
-      { entryId: '4ib0hsHWoSOnCVdDkizE8d', entryQuery: { locale: 'en-US' } },
-    ],
-  }),
+// lib/page-entry-source.ts
+export function getPageEntrySource(slug: string) {
+  return {
+    contentType: 'page',
+    slug,
+    slugField: 'slug',
+    entryQuery: { locale: 'en-US', include: 10 },
+  } as const
+}
+
+export type PageEntrySource = ReturnType<typeof getPageEntrySource>
+```
+
+Use that same object for server prefetch and browser rendering:
+
+**Adapt this to your use case:**
+
+```tsx
+// pages/[slug].tsx
+import { Hero } from '@/components/Hero'
+import { OptimizedEntry } from '@/lib/optimization'
+import { getContentfulOptimization } from '@/lib/optimization-server'
+import { getPageEntrySource, type PageEntrySource } from '@/lib/page-entry-source'
+import type { GetServerSidePropsContext } from 'next'
+
+type PageProps = {
+  entrySource: PageEntrySource
+}
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const routeSlug = context.params?.slug
+  if (typeof routeSlug !== 'string') return { notFound: true }
+
+  const entrySource = getPageEntrySource(routeSlug)
+
+  return {
+    props: {
+      contentfulOptimization: await getContentfulOptimization(context, [entrySource]),
+      entrySource,
+    },
+  }
+}
+
+export default function Page({ entrySource }: PageProps) {
+  return (
+    <OptimizedEntry managedEntry={entrySource}>{(entry) => <Hero entry={entry} />}</OptimizedEntry>
+  )
 }
 ```
+
+Slug lookup merges the normal managed query, then enforces `content_type`,
+`fields.<slugField>`, and `limit: 2`. These are the exact failure templates:
+
+- No match: `Contentful entry not found for content type "<contentType>" where "fields.<slugField>" equals "<slug>".`
+- More than one match: `Multiple Contentful entries found for content type "<contentType>" where "fields.<slugField>" equals "<slug>".`
+
+The angle-bracketed placeholders are replaced with the source's actual content type, effective slug
+field, and slug. The handoff nests the normalized descriptor under `managedEntry`, retains the
+fetched entry's real `sys.id` as `entryId`, and lets the browser render reuse it when `contentType`,
+`slug`, the effective `slugField`, and effective `entryQuery` values match. Changing the locale,
+include depth, custom slug field, or another query value creates a different source and therefore
+does not reuse this handoff entry. Resolution metadata and interaction tracking use the real ID, not
+the slug.
 
 ### The getServerSideProps request handoff and the profile cookie
 
@@ -317,8 +427,9 @@ when a handoff lets the root own that first route, then track later client navig
 
 **Integration category:** Required for first integration
 
-`OptimizedEntry` receives either a `baselineEntry` fetched by your page or an `entryId` managed by
-the SDK's configured Contentful client. Its render prop receives the resolved entry. If no
+`OptimizedEntry` receives a `baselineEntry` fetched by your page, a managed `entryId` plus optional
+`entryQuery`, or a content-type/slug descriptor under `managedEntry`. The descriptor can also set
+`slugField` and `entryQuery`. Its render prop receives the resolved entry. If no
 experience applies, consent is denied, the API has no variant, or a linked variant cannot be
 resolved, the render receives the baseline entry.
 
@@ -335,7 +446,7 @@ A resolved selected variant can use any Contentful content type.
 A Contentful **entry skeleton** is a TypeScript type that names a content type ID and its fields.
 Use one skeleton union, `S`, containing every possible baseline or variant content type. The bound
 `OptimizedEntry` with `baselineEntry` uses `<S, M, L>`, where `M` is the `contentful.js` response
-mode and `L` is the locale type. A managed `entryId` uses `<S, L>` because `M` is fixed to
+mode and `L` is the locale type. A managed ID or slug source uses `<S, L>` because `M` is fixed to
 `undefined`. When every variant shares the baseline content type, omit the generic and let
 TypeScript infer that skeleton from `baselineEntry`.
 
@@ -575,10 +686,11 @@ escape hatches are `/server` for direct Node request control with
 request-isolation context. Manual flows still pass `handoff` to a React root.
 
 Lower-level resolver calls keep selections as the optional second positional argument:
-`resolveOptimizedEntry(entry, selectedOptimizations)`. Managed fetch calls use
-`fetchOptimizedEntry(entryId, options)`, with selections in `FetchOptimizedEntryOptions`; neither
-call receives a content-type argument. `ServerOptimizedEntry<TElement, S, M, L>` places the element
-type first, followed by the complete skeleton union, response mode, and locale.
+`resolveOptimizedEntry(entry, selectedOptimizations)`. Managed fetch calls accept an ID or a
+source object shaped as `{ contentType, slug, slugField?, entryQuery? }`. The ID overload receives
+its query in `FetchOptimizedEntryOptions`; the slug source object carries `entryQuery` itself.
+`ServerOptimizedEntry<TElement, S, M, L>` places the element type first, followed by the complete
+skeleton union, response mode, and locale.
 
 When lower-level code renders a resolver result directly, `isEmptyVariant === true` marks the SDK
 renderer's no-content state; check it before rendering `entry`. The result retains the baseline

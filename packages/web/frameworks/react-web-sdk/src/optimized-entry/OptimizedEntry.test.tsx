@@ -55,6 +55,17 @@ function compileOptimizedEntryTypes(baselineEntry: Entry<PageSkeleton, Modifier,
     PossibleSkeleton,
     Locale
   >({ entryId: 'page' }).entry
+  const managedSlugEntry: EntryFor<PossibleSkeleton, undefined, Locale> | undefined =
+    useOptimizedEntry<PossibleSkeleton, Locale>({
+      managedEntry: { contentType: 'page', slug: 'home' },
+    }).entry
+
+  // @ts-expect-error -- baseline and managed sources are mutually exclusive.
+  useOptimizedEntry({ baselineEntry, managedEntry: { contentType: 'page', slug: 'home' } })
+  // @ts-expect-error -- ID and object-descriptor sources are mutually exclusive.
+  useOptimizedEntry({ entryId: 'page', managedEntry: { contentType: 'page', slug: 'home' } })
+  // @ts-expect-error -- flat slug source params are not supported.
+  useOptimizedEntry({ contentType: 'page' })
 
   OptimizedEntry<PossibleSkeleton, Modifier, Locale>({
     baselineEntry,
@@ -71,6 +82,22 @@ function compileOptimizedEntryTypes(baselineEntry: Entry<PageSkeleton, Modifier,
     entryId: 'page',
     children: (entry) => entry.sys.id,
   })
+  OptimizedEntry<PossibleSkeleton, Locale>({
+    managedEntry: { contentType: 'page', slug: 'home' },
+    children: (entry) => entry.sys.id,
+  })
+  // @ts-expect-error -- component ID and object-descriptor sources are mutually exclusive.
+  OptimizedEntry({
+    entryId: 'page',
+    managedEntry: { contentType: 'page', slug: 'home' },
+    children: null,
+  })
+  // @ts-expect-error -- component baseline and managed sources are mutually exclusive.
+  OptimizedEntry({
+    baselineEntry,
+    managedEntry: { contentType: 'page', slug: 'home' },
+    children: null,
+  })
   const resolver = useEntryResolver()
   const resolverEntry: typeof _distributed = resolver.resolveEntry<
     PossibleSkeleton,
@@ -84,6 +111,7 @@ function compileOptimizedEntryTypes(baselineEntry: Entry<PageSkeleton, Modifier,
   >(baselineEntry)
 
   void managedEntry
+  void managedSlugEntry
   void resolverData
   void resolverEntry
   void sameType
@@ -361,6 +389,46 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
+  it('fetches slug entries and keeps resolved metadata on the fetched entry ID', async () => {
+    const deferred = createDeferred<TestEntry>()
+    const resolvedEntry = makeEntry('resolved-entry-id')
+    const onEntryResolved = rs.fn()
+    const { optimization } = createRuntime((entry) => ({ entry }))
+    const fetchContentfulEntry = rs.fn(async () => await deferred.promise)
+    Reflect.set(optimization, 'fetchContentfulEntry', fetchContentfulEntry)
+    const managedEntry = { contentType: 'page', slug: 'home' } as const
+
+    const view = await renderComponent(
+      <OptimizedEntry
+        loadingFallback="loading"
+        managedEntry={managedEntry}
+        onEntryResolved={onEntryResolved}
+      >
+        {(resolved) => readTitle(resolved)}
+      </OptimizedEntry>,
+      optimization,
+    )
+
+    expect(view.container.textContent).toContain('loading')
+    expect(fetchContentfulEntry).toHaveBeenCalledWith(managedEntry)
+
+    await act(async () => {
+      deferred.resolve(resolvedEntry)
+      await deferred.promise
+    })
+
+    expect(view.container.textContent).toContain('resolved-entry-id')
+    expect(getWrapper(view.container).dataset.ctflEntryId).toBe('resolved-entry-id')
+    expect(onEntryResolved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baselineEntryId: 'resolved-entry-id',
+        entryId: 'resolved-entry-id',
+      }),
+    )
+
+    await view.unmount()
+  })
+
   it('renders entryId fetch error fallbacks', async () => {
     const deferred = createDeferred<TestEntry>()
     const error = new Error('CDA failed')
@@ -386,6 +454,34 @@ describe('OptimizedEntry', () => {
 
     expect(onEntryError).toHaveBeenCalledWith(error)
     expect(view.container.textContent).toContain('error: CDA failed')
+
+    await view.unmount()
+  })
+
+  it('renders slug fetch error fallbacks and invokes onEntryError', async () => {
+    const error = new Error('Slug CDA failed')
+    const onEntryError = rs.fn()
+    const { optimization } = createRuntime((entry) => ({ entry }))
+    Reflect.set(optimization, 'fetchContentfulEntry', async () => await Promise.reject(error))
+
+    const view = await renderComponent(
+      <OptimizedEntry
+        errorFallback={(entryError) => `error: ${entryError.message}`}
+        managedEntry={{ contentType: 'page', slug: 'missing' }}
+        onEntryError={onEntryError}
+      >
+        {(resolved) => readTitle(resolved)}
+      </OptimizedEntry>,
+      optimization,
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(onEntryError).toHaveBeenCalledWith(error)
+    expect(view.container.textContent).toContain('error: Slug CDA failed')
 
     await view.unmount()
   })
@@ -957,6 +1053,36 @@ describe('OptimizedEntry', () => {
 
     expect(markup).toContain('4ib0hsHWoSOnCVdDkizE8d')
     expect(markup).not.toContain('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(markup).not.toContain('loading')
+  })
+
+  it('renders managed slug content from server handoff during SSR', () => {
+    const markup = renderToStringWithoutWindow(() =>
+      renderToString(
+        <OptimizationRoot
+          clientId="test-client-id"
+          environment="main"
+          handoff={createContentHandoff({
+            entries: [
+              {
+                baselineEntry: baseline,
+                entryId: baseline.sys.id,
+                managedEntry: { contentType: 'page', slug: 'home', slugField: 'slug' },
+              },
+            ],
+          })}
+        >
+          <OptimizedEntry
+            managedEntry={{ contentType: 'page', slug: 'home', slugField: 'slug' }}
+            loadingFallback="loading"
+          >
+            {(resolved) => readTitle(resolved)}
+          </OptimizedEntry>
+        </OptimizationRoot>,
+      ),
+    )
+
+    expect(markup).toContain('4ib0hsHWoSOnCVdDkizE8d')
     expect(markup).not.toContain('loading')
   })
 

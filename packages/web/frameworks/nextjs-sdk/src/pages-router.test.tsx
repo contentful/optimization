@@ -175,7 +175,18 @@ describe('Next.js Pages Router client components', () => {
     const baselineEntry = createEntry('4ib0hsHWoSOnCVdDkizE8d')
     const handoff = components.createHandoffFromSelections({
       cache: { scope: 'static' },
-      entries: [{ baselineEntry, entryId: '4ib0hsHWoSOnCVdDkizE8d' }],
+      entries: [
+        {
+          baselineEntry,
+          entryId: baselineEntry.sys.id,
+          managedEntry: {
+            contentType: 'page',
+            entryQuery: { locale: 'de-DE' },
+            slug: '/products',
+            slugField: 'path',
+          },
+        },
+      ],
       hydration: 'preserve-server',
       initialPageEvent: 'emit',
       selectedOptimizations: [],
@@ -183,13 +194,22 @@ describe('Next.js Pages Router client components', () => {
 
     const markup = renderToString(
       <components.OptimizationRoot handoff={handoff}>
-        <components.OptimizedEntry entryId="4ib0hsHWoSOnCVdDkizE8d" loadingFallback="loading">
+        <components.OptimizedEntry
+          loadingFallback="loading"
+          managedEntry={{
+            contentType: 'page',
+            entryQuery: { locale: 'de-DE' },
+            slug: '/products',
+            slugField: 'path',
+          }}
+        >
           {(entry) => entry.sys.id}
         </components.OptimizedEntry>
       </components.OptimizationRoot>,
     )
 
-    expect(markup).toContain('4ib0hsHWoSOnCVdDkizE8d')
+    expect(markup).toContain('data-ctfl-baseline-id="4ib0hsHWoSOnCVdDkizE8d"')
+    expect(markup).toContain('data-ctfl-entry-id="4ib0hsHWoSOnCVdDkizE8d"')
     expect(markup).not.toContain('loading')
     expect(getEntry).not.toHaveBeenCalled()
     expect(getEntries).not.toHaveBeenCalled()

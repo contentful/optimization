@@ -1,4 +1,8 @@
-import type { ResolvedData } from '@contentful/optimization-core'
+import type {
+  ContentfulEntryQuery,
+  ManagedEntryDescriptor,
+  ResolvedData,
+} from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import type { Entry, EntrySkeletonType } from 'contentful'
@@ -25,7 +29,8 @@ const selectedOptimizations = {
 }
 const resolveOptimizedEntry = rs.fn((entry: Entry): ResolvedData<EntrySkeletonType> => ({ entry }))
 const fetchContentfulEntry = rs.fn(
-  async (entryId: string) => await Promise.resolve(createEntry(entryId)),
+  async (descriptor: ManagedEntryDescriptor, _query?: ContentfulEntryQuery) =>
+    await Promise.resolve(createEntry(resolveDescriptorId(descriptor))),
 )
 const optimization = {
   fetchContentfulEntry,
@@ -60,8 +65,13 @@ rs.mock('../hooks/useTapTracking', () => ({
 }))
 
 interface TestRenderer {
-  toJSON: () => { readonly children: readonly unknown[] | null; readonly type: string } | null
+  toJSON: () => unknown
   unmount: () => void
+}
+
+function resolveDescriptorId(descriptor: ManagedEntryDescriptor): string {
+  if (typeof descriptor === 'string') return descriptor
+  return descriptor.entryId ?? descriptor.slug
 }
 
 function createEntry(id: string): Entry {
@@ -129,7 +139,8 @@ describe('OptimizedEntry', () => {
     selectedOptimizationsListener = undefined
     selectedOptimizations.current = undefined
     fetchContentfulEntry.mockImplementation(
-      async (entryId: string) => await Promise.resolve(createEntry(entryId)),
+      async (descriptor: ManagedEntryDescriptor, _query?: ContentfulEntryQuery) =>
+        await Promise.resolve(createEntry(resolveDescriptorId(descriptor))),
     )
     resolveOptimizedEntry.mockImplementation(
       (entry: Entry): ResolvedData<EntrySkeletonType> => ({
@@ -402,6 +413,89 @@ describe('OptimizedEntry', () => {
 
     expect(onEntryError).toHaveBeenCalledTimes(1)
     expect(onEntryError).toHaveBeenCalledWith(error)
+    expect(useViewportTracking).not.toHaveBeenCalled()
+    expect(useTapTracking).not.toHaveBeenCalled()
+  })
+
+  it('renders loadingFallback, then tracks resolved slug entries with their real metadata IDs', async () => {
+    const { OptimizedEntry } = await import('./OptimizedEntry')
+    const testRenderer = await loadTestRenderer<TestRenderer>()
+    const deferred = createDeferred<Entry>()
+    fetchContentfulEntry.mockImplementation(async () => await deferred.promise)
+    const variantEntry = createEntry('variant-entry-id')
+    resolveOptimizedEntry.mockReturnValueOnce({ entry: variantEntry })
+    const renderedMetadata: string[] = []
+    const onEntryResolved = rs.fn()
+    const managedEntry = {
+      contentType: 'hero',
+      entryQuery: { locale: 'de-DE' },
+      slug: 'home',
+    } as const
+
+    act(() => {
+      renderer = testRenderer.create(
+        <OptimizedEntry
+          loadingFallback="loading"
+          managedEntry={managedEntry}
+          onEntryResolved={onEntryResolved}
+        >
+          {(resolvedEntry, metadata) => {
+            renderedMetadata.push(`${metadata.baselineEntryId}:${metadata.entryId}`)
+            return resolvedEntry.sys.id
+          }}
+        </OptimizedEntry>,
+      )
+    })
+
+    expect(fetchContentfulEntry).toHaveBeenCalledWith(managedEntry)
+    expect(renderer?.toJSON()).toBe('loading')
+    expect(useViewportTracking).not.toHaveBeenCalled()
+    expect(useTapTracking).not.toHaveBeenCalled()
+
+    const baselineEntry = createEntry('baseline-entry-id')
+    baselineEntry.fields = { ...baselineEntry.fields, nt_experiences: [] }
+    await act(async () => {
+      deferred.resolve(baselineEntry)
+      await deferred.promise
+    })
+
+    expect(getCallOptions(useViewportTracking).entry).toBe(variantEntry)
+    expect(getCallOptions(useTapTracking).entry).toBe(variantEntry)
+    expect(renderedMetadata).toContain('baseline-entry-id:variant-entry-id')
+    expect(onEntryResolved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baselineEntry,
+        baselineEntryId: 'baseline-entry-id',
+        entry: variantEntry,
+        entryId: 'variant-entry-id',
+      }),
+    )
+  })
+
+  it('renders managed slug fetch errors and reports each error once', async () => {
+    const { OptimizedEntry } = await import('./OptimizedEntry')
+    const testRenderer = await loadTestRenderer<TestRenderer>()
+    const error = new Error('CDA failed')
+    const onEntryError = rs.fn()
+    fetchContentfulEntry.mockImplementation(async () => await Promise.reject(error))
+
+    await act(async () => {
+      renderer = testRenderer.create(
+        <OptimizedEntry
+          errorFallback={(entryError) => `error: ${entryError.message}`}
+          managedEntry={{ contentType: 'hero', slug: 'home' }}
+          onEntryError={onEntryError}
+        >
+          {(resolvedEntry) => resolvedEntry.sys.id}
+        </OptimizedEntry>,
+      )
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(onEntryError).toHaveBeenCalledTimes(1)
+    expect(onEntryError).toHaveBeenCalledWith(error)
+    expect(renderer?.toJSON()).toBe('error: CDA failed')
     expect(useViewportTracking).not.toHaveBeenCalled()
     expect(useTapTracking).not.toHaveBeenCalled()
   })

@@ -1,4 +1,5 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import type { ManagedEntryDescriptor } from '@contentful/optimization-web/core-sdk'
 import { getOptimizedEntrySourceKey } from '@contentful/optimization-web/presentation'
 import { act, useState } from 'react'
 import type { LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
@@ -12,6 +13,18 @@ import {
   renderWithOptimizationProviders,
 } from '../test/sdkTestUtils'
 import { useOptimizedEntry, type UseOptimizedEntryResult } from './useOptimizedEntry'
+
+function createDeferred<T>(): {
+  readonly promise: Promise<T>
+  readonly resolve: (value: T) => void
+} {
+  let resolveDeferred: (value: T) => void = () => undefined
+  const promise = new Promise<T>((resolve) => {
+    resolveDeferred = resolve
+  })
+
+  return { promise, resolve: resolveDeferred }
+}
 
 async function renderHook(params: {
   baselineEntry: ReturnType<typeof makeEntry>
@@ -274,6 +287,97 @@ describe('useOptimizedEntry', () => {
     expect(getCaptured().entry).toBe(baselineEntry)
     expect(getCaptured().baselineEntry).toBe(baselineEntry)
     expect(getCaptured().error).toBeUndefined()
+
+    await view.unmount()
+  })
+
+  it('forwards managed entry descriptors', async () => {
+    const resolvedEntry = makeEntry('resolved-entry-id')
+    const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(resolvedEntry))
+    const optimization = createOptimizationSdk()
+    Reflect.set(optimization, 'fetchContentfulEntry', fetchContentfulEntry)
+
+    function Probe({
+      managedEntry,
+    }: {
+      readonly managedEntry: Exclude<ManagedEntryDescriptor, string>
+    }): null {
+      useOptimizedEntry({ managedEntry })
+      return null
+    }
+
+    const defaultDescriptor = {
+      contentType: 'page',
+      slug: 'home',
+      entryQuery: { locale: 'de-DE' },
+    } as const
+    const view = await renderWithOptimizationProviders(
+      <Probe managedEntry={defaultDescriptor} />,
+      optimization,
+    )
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(fetchContentfulEntry).toHaveBeenLastCalledWith(defaultDescriptor)
+
+    const customDescriptor = { ...defaultDescriptor, slugField: 'path' } as const
+    await view.rerender(<Probe managedEntry={customDescriptor} />)
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(fetchContentfulEntry).toHaveBeenLastCalledWith(customDescriptor)
+
+    await view.unmount()
+  })
+
+  it('ignores stale slug results after the source changes', async () => {
+    const firstFetch = createDeferred<ReturnType<typeof makeEntry>>()
+    const secondFetch = createDeferred<ReturnType<typeof makeEntry>>()
+    const firstEntry = makeEntry('first-entry-id')
+    const secondEntry = makeEntry('second-entry-id')
+    const optimization = createOptimizationSdk()
+    Reflect.set(
+      optimization,
+      'fetchContentfulEntry',
+      rs.fn(
+        async (descriptor: { readonly slug: string }) =>
+          await (descriptor.slug === 'first' ? firstFetch.promise : secondFetch.promise),
+      ),
+    )
+    let setSlug: ((slug: string) => void) | undefined = undefined
+    let captured: UseOptimizedEntryResult | undefined = undefined
+
+    function Probe(): null {
+      const [slug, setCurrentSlug] = useState('first')
+      setSlug = setCurrentSlug
+      captured = useOptimizedEntry({ managedEntry: { contentType: 'page', slug } })
+      return null
+    }
+
+    const getCaptured = (): UseOptimizedEntryResult => {
+      if (!captured) throw new Error('Expected hook result to be captured')
+      return captured
+    }
+
+    const view = await renderWithOptimizationProviders(<Probe />, optimization)
+
+    await act(async () => {
+      setSlug?.('second')
+      await Promise.resolve()
+      secondFetch.resolve(secondEntry)
+      await secondFetch.promise
+    })
+    expect(getCaptured().entry).toBe(secondEntry)
+
+    await act(async () => {
+      firstFetch.resolve(firstEntry)
+      await firstFetch.promise
+    })
+    expect(getCaptured().entry).toBe(secondEntry)
 
     await view.unmount()
   })

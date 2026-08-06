@@ -59,7 +59,7 @@ your app may personalize on startup; if personalization must wait for consent, k
 and add the [Consent and privacy handoff](#consent-and-privacy-handoff) step before you ship.
 
 1. Install the package. Add `contentful` too — a companion dependency you install alongside the SDK
-   — if your app does not already have a Contentful Delivery API client.
+   — if your app does not already have a Contentful Delivery API (CDA) client.
 
    **Copy this:**
 
@@ -389,15 +389,15 @@ the point where the SDK resolves it, and you can mix them per entry:
   result to `OptimizedEntry` as `baselineEntry`. Your fetching, caching, and response shaping stay
   entirely yours; the SDK only needs the entry to arrive in a shape it can resolve.
 - **Managed (opt-in).** You hand the SDK your Contentful client once via `contentful: { client }` on
-  `OptimizationRoot`, and then reference entries by id — `<OptimizedEntry entryId="…">`. The SDK
-  fetches through your client's `getEntry()` and `getEntries()` methods and resolves the result.
-  This trades a little control for less wiring per entry; see
+  `OptimizationRoot`, then identify an entry with `entryId` plus optional `entryQuery`, or put a
+  content-type/slug descriptor under `managedEntry`. Inside that descriptor, `slugField` defaults to
+  `slug` and optional `entryQuery` holds the CDA query. The SDK fetches through your client's
+  `getEntry()` and `getEntries()` methods and resolves the result. See
   [Resolving entries and rendering the result](#resolving-entries-and-rendering-the-result) for the
   managed component variant.
 
-If you are just starting or want full control over fetching, stay on the manual path; switch to
-managed when you would rather the SDK make the `getEntry()` call than write per-component fetch
-code.
+Use the manual path when the app needs full control over fetching. Use managed fetching when an
+entry ID or route slug is already the component's natural input.
 
 Both paths obey the same fetch rules, because the SDK resolves the same single-locale entry shape
 either way:
@@ -450,8 +450,8 @@ is the only addition; the rest is the root from the quick start.
    environment={import.meta.env.PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
    locale="en-US"
    defaults={{ consent: true }}
-+  // Hand the SDK your Contentful client so `<OptimizedEntry entryId>` can fetch by id.
-+  // `defaultQuery` is merged into every managed getEntry() call; cache is per-instance
++  // Hand the SDK your Contentful client for managed ID and content-type/slug sources.
++  // `defaultQuery` is merged into every managed request; cache is per-instance
 +  // ({ maxEntries: 100, ttlMs: 300_000 } by default, or `cache: false` to disable).
 +  contentful={{ client: contentfulClient, defaultQuery: { locale: 'en-US' } }}
  >
@@ -461,8 +461,9 @@ is the only addition; the rest is the root from the quick start.
 
 If your app changes locale at runtime, `OptimizationRoot` updates the SDK's Experience and event
 locale when its `locale` prop changes. On the manual path you still refetch Contentful entries and
-re-emit page events yourself; on the managed path a changed `entryId`/`entryQuery` refetches, but
-you still re-emit page events yourself. For the full model, see
+re-emit page events yourself; on the managed path a changed `entryId`, `entryQuery`, or
+`managedEntry` descriptor refetches, but you still re-emit page events yourself. For the full model,
+see
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
 
 ### Resolving entries and rendering the result
@@ -483,9 +484,9 @@ therefore needs no empty-result branch. An absent empty-variant flag renders nor
 A Contentful **entry skeleton** is a TypeScript type that names a content type ID and its fields.
 Use one skeleton union, `S`, containing every possible baseline or variant content type. Manual
 `OptimizedEntry` and `useOptimizedEntry()` calls use the generic order `<S, M, L>`, where `M` is the
-`contentful.js` response mode and `L` is the locale type. Managed `entryId` calls use `<S, L>`
-because `M` is fixed to `undefined`. When every variant shares the baseline content type, omit the
-generic and let TypeScript infer that skeleton from `baselineEntry`.
+`contentful.js` response mode and `L` is the locale type. Managed ID and descriptor calls use
+`<S, L>` because `M` is fixed to `undefined`. When every variant shares the baseline content type,
+omit the generic and let TypeScript infer that skeleton from `baselineEntry`.
 
 **Follow this pattern:** declare the complete skeleton union and narrow inside the render prop,
 where the resolved entry becomes runtime-specific UI. The guard compares
@@ -581,13 +582,12 @@ differently). The `+` lines are the additions; keep your existing guards.
 [readiness section](#sdk-readiness-loading-and-error-states) shows). On an SDK initialization
 failure it throws rather than rendering baseline, so an unguarded subtree crashes.
 
-**The managed alternative to `baselineEntry`.** If you enabled managed fetching with
-`contentful: { client }` (see [Fetching Contentful entries](#fetching-contentful-entries)), you can
-pass `entryId` instead of fetching yourself. The two entry sources are mutually exclusive: an
-`OptimizedEntry` takes **either** `baselineEntry` (manual — you fetched it) **or** `entryId`
-(managed — the SDK fetches it), never both. With `entryId`, the SDK fetches through your client
-while the component shows its loading state, then resolves and reveals exactly as the manual path
-does. Two props exist only for the managed path, since only it can fail while fetching:
+**The managed alternatives to `baselineEntry`.** If you enabled managed fetching with
+`contentful: { client }` (see [Fetching Contentful entries](#fetching-contentful-entries)), pass
+either `entryId` plus optional `entryQuery`, or `managedEntry={{ contentType, slug, slugField?,
+entryQuery? }}` instead of fetching yourself. `baselineEntry`, `entryId`, and `managedEntry` are
+mutually exclusive. The component shows its loading state while the SDK fetches, then resolves and
+reveals the result as it does for a manual baseline. Two props handle managed fetch failure:
 
 - `errorFallback` — what to render if the managed fetch fails. It is a node or
   `(error: Error) => ReactNode`; return `undefined` to render nothing.
@@ -596,6 +596,36 @@ does. Two props exist only for the managed path, since only it can fail while fe
 The render prop's modeled entry and the baseline-fallback contract are identical to the manual path;
 only the entry source and the two managed-failure props differ. If the managed entry has a known
 model, supply the same complete skeleton union with the managed `<S, L>` order.
+`useOptimizedEntry()` uses the same source keys: for example,
+`useOptimizedEntry({ managedEntry: { contentType: 'page', slug: routeSlug } })`.
+
+**Follow this pattern:** managed lookup by the route's app-owned content type and slug. `EntryError`,
+`Page`, and their props belong to your app.
+
+```tsx
+<OptimizedEntry<AppEntrySkeleton, AppLocale>
+  managedEntry={{
+    contentType: 'page',
+    slug: 'home',
+    entryQuery: { locale: 'en-US' },
+  }}
+  errorFallback={(error) => <EntryError message={error.message} />}
+>
+  {(entry) => <Page entry={entry} />}
+</OptimizedEntry>
+```
+
+The SDK merges its normal managed query, then enforces `content_type`,
+`fields.<slugField>`, and `limit: 2`. The placeholders below are replaced with the source's actual
+content type, effective slug field, and slug:
+
+- No match: `Contentful entry not found for content type "<contentType>" where
+"fields.<slugField>" equals "<slug>".`
+- More than one match: `Multiple Contentful entries found for content type "<contentType>" where
+"fields.<slugField>" equals "<slug>".`
+
+After lookup, resolution metadata and interaction tracking use the fetched entry's real `sys.id`,
+not the slug.
 
 Two more facts hold everywhere:
 
@@ -1077,9 +1107,9 @@ function App() {
 ```
 
 Direct resolver calls on the injected SDK keep selections as the optional second positional
-argument: `resolveOptimizedEntry(entry, selectedOptimizations)`. Managed fetch calls use
-`fetchOptimizedEntry(entryId, options)`, with selections in `FetchOptimizedEntryOptions`; neither
-call receives a content-type argument.
+argument: `resolveOptimizedEntry(entry, selectedOptimizations)`. Managed fetch calls accept an ID or
+a source object shaped as `{ contentType, slug, slugField?, entryQuery? }`. The ID overload receives
+its query in `FetchOptimizedEntryOptions`; the slug source object carries `entryQuery` itself.
 
 The provider always renders its children — they are never withheld or unmounted. With an injected
 `sdk` and no `handoff`, children render against the live injected SDK from the first render;
@@ -1095,16 +1125,22 @@ Put `hydration` on the component that owns the content SDK context: `Optimizatio
 root path or `OptimizationProvider` in explicit provider composition. It overrides the content
 presentation mode from `handoff.hydration`.
 
-**Managed entries in a handoff.** A managed (`entryId`) `OptimizedEntry` can receive baseline
-managed-entry snapshots through `handoff.entries` so the browser can preserve already-rendered
-content without a client Contentful round trip. The package root also exports
-`prefetchManagedEntries(runtime, descriptors)` for adapter authors; it returns a
-`ManagedEntryHandoff[]` that a framework adapter can place in `handoff.entries`. `descriptors` are
-`ManagedEntryDescriptor` values (`'entry-id'` or `{ entryId, entryQuery? }`); `runtime` is any
-`ManagedEntryPrefetchRuntime` — an object exposing `prefetchManagedEntries(descriptors)`. Core uses
-`getEntries()` for multiple uncached descriptors with the same normalized query, split into 100-ID
-chunks for large fetches. The React Web SDK does not include a server runtime, so applications that
-need full server-rendered request handoff usually use the
+**Managed entries in a handoff.** A managed ID or slug `OptimizedEntry` can receive baseline
+snapshots through `handoff.entries` so the browser can preserve already-rendered content without a
+client Contentful round trip. The package root also exports
+`prefetchManagedEntries(runtime, sources)` for adapter authors; it returns a
+`ManagedEntryHandoff[]` that a framework adapter can place in `handoff.entries`. Here, `sources`
+means `ManagedEntryDescriptor` values: an ID string, `{ entryId, entryQuery? }`, or
+`{ contentType, slug, slugField?, entryQuery? }`. A slug handoff nests the descriptor under
+`managedEntry` and retains the fetched entry's `sys.id` as `entryId`. A browser-managed entry can
+reuse it when it supplies the same
+`contentType`, `slug`, effective `slugField`, locale, include depth, and other effective query values.
+`runtime` is any
+`ManagedEntryPrefetchRuntime` — an object exposing `prefetchManagedEntries(sources)`. Core uses
+`getEntries()` to batch multiple uncached ID sources with the same effective CDA query values, split
+into 100-ID chunks for large fetches. Distinct slug sources use separate requests; equivalent slug
+descriptors can share in-flight or cached promises. The React Web SDK does not include a server
+runtime, so applications that need full server-rendered request handoff usually use the
 [Next.js App Router guide](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md) or
 [Next.js Pages Router guide](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md),
 which own that path end to end. The `prefetchManagedEntries` prop on `OptimizationRoot` or
@@ -1155,7 +1191,7 @@ Run these checks before release:
 - Confirm baseline fallback renders when the Experience API fails, variants are missing, links are
   unresolved, or a payload is all-locale — and that `OptimizedEntry` stops showing loading after
   resolution settles or the 5-second reveal.
-- If you use managed fetching (`contentful: { client }` with `<OptimizedEntry entryId>`), confirm a
+- If you use managed fetching (`contentful: { client }` with an ID or slug source), confirm a
   failed managed fetch renders your `errorFallback` and reaches `onEntryError`, and that the managed
   query still uses one concrete locale with a deep enough `include`.
 - Confirm `identifyUser()`, `setConsent()`, and `resetUser()` re-resolve only the entries configured
@@ -1184,7 +1220,7 @@ pnpm test:e2e:react-web-sdk
 | `Content failed to load.` appears                                 | The app's Contentful entry request rejected                                                      | Inspect the logged fetch error, credentials, entry ID, environment, and network request                |
 | A heterogeneous render cannot read content-type-specific fields   | The skeleton union omits a possible content type, or the entry was not narrowed before rendering | Include every baseline and variant skeleton in `S`, then narrow with `isEntryOfContentType`            |
 | Entry is stuck showing loading UI                                 | Optimization state never settled; only entries with optimization references wait                 | It reveals baseline after 5s automatically; check the Experience request and `include: 10`             |
-| `<OptimizedEntry entryId>` renders the error fallback             | Managed fetch failed, or `contentful: { client }` is not configured on `OptimizationRoot`        | Confirm the root `contentful` client, the entry id, and the query; inspect the `onEntryError` error    |
+| A managed `<OptimizedEntry>` renders the error fallback           | Managed fetch failed, or `contentful: { client }` is not configured on `OptimizationRoot`        | Confirm the root `contentful` client, source values, and query; inspect the `onEntryError` error       |
 | `useOptimization must be used within an OptimizationProvider`     | A hook renders outside `OptimizationRoot` / `OptimizationProvider`                               | Move the provider above that component tree                                                            |
 | `ContentfulOptimization is already initialized`                   | More than one owned SDK instance in the same browser runtime                                     | Keep one `OptimizationRoot`, or inject a single shared instance via `OptimizationProvider`             |
 | Route page events fire more than expected                         | More than one tracker per router tree, or manual `trackPageView()` duplicating the adapter       | Keep one adapter per router tree and centralize manual page emission                                   |

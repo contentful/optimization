@@ -43,6 +43,58 @@ function createContentfulEntryQuery(
   return mergedQuery
 }
 
+function createContentfulSlugQuery(
+  descriptor: Extract<NormalizedManagedEntryDescriptor, { slug: string }>,
+  entryQuery: ContentfulEntryQuery,
+): EntriesQueries<EntrySkeletonType, undefined> {
+  const query: EntriesQueries<EntrySkeletonType, undefined> = {
+    ...entryQuery,
+    content_type: descriptor.contentType,
+    limit: 2,
+  }
+  Reflect.set(query, `fields.${descriptor.slugField}`, descriptor.slug)
+  return query
+}
+
+function getSlugSource(
+  descriptor: Extract<NormalizedManagedEntryDescriptor, { slug: string }>,
+): string {
+  return `content type "${descriptor.contentType}" where "fields.${descriptor.slugField}" equals "${descriptor.slug}"`
+}
+
+function validateSlugDescriptor(
+  descriptor: Extract<NormalizedManagedEntryDescriptor, { slug: string }>,
+): void {
+  if (descriptor.contentType.length === 0) {
+    throw new TypeError('Managed Contentful entry contentType must not be empty.')
+  }
+  if (descriptor.slugField.length === 0) {
+    throw new TypeError('Managed Contentful entry slugField must not be empty.')
+  }
+  if (descriptor.slug.length === 0) {
+    throw new Error(`Contentful entry not found for ${getSlugSource(descriptor)}.`)
+  }
+}
+
+async function fetchContentfulEntryBySlug(
+  getEntries: ContentfulEntryClient['getEntries'],
+  query: EntriesQueries<EntrySkeletonType, undefined>,
+  descriptor: Extract<NormalizedManagedEntryDescriptor, { slug: string }>,
+): Promise<Entry> {
+  const { items, total } = await getEntries(query)
+
+  if (total > 1 || items.length > 1) {
+    throw new Error(`Multiple Contentful entries found for ${getSlugSource(descriptor)}.`)
+  }
+
+  const { 0: entry } = items
+  if (entry === undefined) {
+    throw new Error(`Contentful entry not found for ${getSlugSource(descriptor)}.`)
+  }
+
+  return entry
+}
+
 function evictEntryCache(cache: Map<string, ContentfulEntryCacheRecord>, maxEntries: number): void {
   while (cache.size > maxEntries) {
     const oldestKey = cache.keys().next()
@@ -97,6 +149,7 @@ export class ManagedEntryFetcher {
   private readonly entryCacheOptions: ResolvedContentfulEntryCacheOptions | undefined
   private readonly getContentfulConfig: () => ContentfulConfig | undefined
   private readonly getLocale: () => string | undefined
+  private readonly pendingSlugEntries = new Map<string, Promise<Entry>>()
   private readonly pendingSingleBatches = new Map<string, PendingSingleEntryBatch>()
 
   constructor(
@@ -119,19 +172,32 @@ export class ManagedEntryFetcher {
     this.entryCache.clear()
   }
 
-  async fetchEntry(entryId: string, query?: ContentfulEntryQuery): Promise<Entry> {
+  async fetchEntry(descriptor: NormalizedManagedEntryDescriptor): Promise<Entry> {
+    if ('slug' in descriptor) {
+      validateSlugDescriptor(descriptor)
+      return await this.fetchSlugEntry(descriptor)
+    }
+
     const contentful = this.getRequiredContentfulConfig()
-    const mergedQuery = createContentfulEntryQuery(contentful.defaultQuery, query, this.getLocale())
-    const cacheKey = getOptimizedEntrySourceKey(entryId, mergedQuery)
+    const mergedQuery = createContentfulEntryQuery(
+      contentful.defaultQuery,
+      descriptor.entryQuery,
+      this.getLocale(),
+    )
+    const cacheKey = getOptimizedEntrySourceKey(descriptor.entryId, mergedQuery)
     const now = Date.now()
     const cached = this.getCachedContentfulEntry(cacheKey, now)
 
     return await (cached ??
-      this.scheduleSingleEntryFetch(contentful.client, entryId, mergedQuery, now))
+      this.scheduleSingleEntryFetch(contentful.client, descriptor.entryId, mergedQuery, now))
   }
 
   async fetchEntries(entries: readonly NormalizedManagedEntryDescriptor[]): Promise<Entry[]> {
     if (entries.length === 0) return []
+
+    for (const descriptor of entries) {
+      if ('slug' in descriptor) validateSlugDescriptor(descriptor)
+    }
 
     const { client, defaultQuery } = this.getRequiredContentfulConfig()
     const now = Date.now()
@@ -139,6 +205,11 @@ export class ManagedEntryFetcher {
     const batches = new Map<string, ManagedEntryBatch>()
 
     entries.forEach((descriptor, index) => {
+      if ('slug' in descriptor) {
+        resultPromises[index] = this.fetchSlugEntry(descriptor)
+        return
+      }
+
       const query = createContentfulEntryQuery(
         defaultQuery,
         descriptor.entryQuery,
@@ -207,6 +278,37 @@ export class ManagedEntryFetcher {
     }
 
     return await Promise.all(resultPromises)
+  }
+
+  private async fetchSlugEntry(
+    descriptor: Extract<NormalizedManagedEntryDescriptor, { slug: string }>,
+  ): Promise<Entry> {
+    const { client, defaultQuery } = this.getRequiredContentfulConfig()
+    const entryQuery = createContentfulEntryQuery(
+      defaultQuery,
+      descriptor.entryQuery,
+      this.getLocale(),
+    )
+    const query = createContentfulSlugQuery(descriptor, entryQuery)
+    const cacheKey = getOptimizedEntrySourceKey({ ...descriptor, entryQuery })
+    const now = Date.now()
+    const cached = this.getCachedContentfulEntry(cacheKey, now)
+    if (cached !== undefined) return await cached
+
+    const pending = this.pendingSlugEntries.get(cacheKey)
+    if (pending !== undefined) return await pending
+
+    const promise = this.cacheContentfulEntryPromise(
+      cacheKey,
+      fetchContentfulEntryBySlug(client.getEntries, query, descriptor),
+      now,
+    ).finally(() => {
+      if (this.pendingSlugEntries.get(cacheKey) === promise) {
+        this.pendingSlugEntries.delete(cacheKey)
+      }
+    })
+    this.pendingSlugEntries.set(cacheKey, promise)
+    return await promise
   }
 
   private getRequiredContentfulConfig(): ContentfulConfig {

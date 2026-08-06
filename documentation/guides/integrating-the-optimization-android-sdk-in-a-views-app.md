@@ -253,8 +253,10 @@ outside this guide:
   build. The SDK requires `minSdk` 24 or later and Java 11 bytecode, and it publishes to Maven
   Central. Package requirements and the published coordinate are in the
   [Optimization Android SDK README](../../packages/android/README.md).
-- **Contentful delivery credentials** — space ID, delivery token, environment, and one concrete
-  locale — read from your app's configuration layer, used by your own Contentful fetching.
+- **A working app-owned Contentful Delivery API (CDA) client or fetch layer**, configured with your
+  space ID, delivery token, and environment. It must already be able to fetch one entry with a
+  concrete locale and enough link depth for referenced entries. The native SDK does not provide this
+  fetch layer.
 - **At least one entry with a variant attached to an experience**, authored in Contentful. Without
   an authored variant, the integration can still run correctly while returning the baseline, so you
   cannot yet distinguish working personalization from a content-authoring gap. For the first
@@ -500,10 +502,12 @@ For the consent responsibility model and blocked-event behavior, see
 
 **Integration category:** Required for first integration
 
-The Android SDK has no fetch-by-ID path, so your app always owns the Contentful Delivery API fetch.
-You fetch the entry, hand it to the SDK, and the SDK resolves it locally against the current
-visitor's selected optimizations — the SDK's current set of picked variants, one per experience the
-profile matched.
+The Android SDK has no native managed fetch path. Fetching remains in your app regardless of how
+navigation identifies an entry. If the app already has a Contentful entry ID, keep its existing
+single-entry ID request. If a route carries a public slug, the app can query CDA by content type and
+slug. In both cases, pass the fetched single-locale entry to the SDK; do not pass the ID or slug to
+native resolution. The SDK resolves the entry locally against the current visitor's selected
+optimizations, the SDK's current set of picked variants, one per experience the profile matched.
 
 `OptimizedEntryView` is the Views renderer: it detects an optimized entry by the SDK-fixed
 `fields.nt_experiences` link field, observes the client's `selectedOptimizations` (plural — the
@@ -526,13 +530,21 @@ before reading a field with `getField<T>(...)`. A different content type is a va
 fallback condition. The IDs, fields, and `ContentEntryBinder` methods below belong to your app's
 content model.
 
-1. Keep Contentful fetching in the application layer, with one concrete locale and enough include
-   depth for the linked optimization data. Do not pass all-locale CDA responses or `locale=*` payloads
-   to `OptimizedEntryView` — they fall back to baseline. Every entry passed as a raw
+1. Keep Contentful fetching in the application layer. Fetch by entry ID, or adapt the app's existing
+   Contentful query with the slug filters below when navigation supplies a slug. Pass the one fetched entry to native
+   resolution. Do not pass all-locale CDA responses or `locale=*` payloads to
+   `OptimizedEntryView` — they fall back to baseline. Every entry passed as a raw
    `Map<String, Any>` must include a top-level `metadata` block (tags and concepts); if `metadata` is
    missing, the resolver silently returns the baseline with no error, indistinguishable from an entry
    that has no experience configured. The `setEntry(entry: CDAEntry)` overload below removes this
    failure class by building `metadata` for you through the SDK-owned adapter.
+   For a slug route, reuse the Contentful client and fetcher your app already owns. Send
+   `content_type=page` and `fields.slug=<route slug>` as exact-equality filters, plus one concrete
+   `locale`, enough `include` depth, and `limit=2`. Return the entry only for exactly one CDA item;
+   surface zero items through the app's not-found path and more than one item as an authoring or
+   configuration error. Replace `page` and `slug` with your content type and slug-field IDs. The
+   native SDK never reads these lookup values or performs this request.
+
 2. Add `OptimizedEntryView` from XML or create it in activity, fragment, or adapter code.
 
    **Copy this:**
@@ -545,10 +557,10 @@ content model.
    ```
 
 3. Set a renderer that turns the resolved entry map into a child `View`, then call `setEntry(...)`
-   with the fetched baseline entry. The `setContentRenderer` lambda always receives a
-   `Map<String, Any>` — even when the entry was set through the `CDAEntry` overload, the view
-   converts the resolved `CTEntry` back to a map before invoking the renderer. Convert that map back
-   to `CTEntry` when your renderer needs its content-type and field accessors.
+   with the baseline entry returned by your app-owned fetch. The `setContentRenderer`
+   lambda always receives a `Map<String, Any>` — even when the entry was set through the `CDAEntry`
+   overload, the view converts the resolved `CTEntry` back to a map before invoking the renderer.
+   Convert that map back to `CTEntry` when your renderer needs its content-type and field accessors.
 
    **Adapt this to your use case:**
 

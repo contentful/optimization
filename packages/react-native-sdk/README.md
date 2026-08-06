@@ -143,7 +143,7 @@ Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalT
 responses.
 
 Choose the application Contentful locale in your navigation, i18n, or app configuration layer. Pass
-that value through `contentful.defaultQuery`, per-entry `entryQuery`, or manual Contentful CDA
+that value through `contentful.defaultQuery`, a managed source's `entryQuery`, or manual Contentful CDA
 requests, and pass the same value to SDK `locale` when Experience API responses and event context
 should use the same language. See
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
@@ -213,14 +213,17 @@ cross-SDK consent guidance, see
 
 `OptimizedEntry` resolves optimized Contentful entries and passes non-optimized entries through
 unchanged. Prefer SDK-managed fetching when the SDK is configured with your app-owned
-`contentful.js` client:
+`contentful.js` client. Use `entryId` with optional `entryQuery`, or pass a content-type/slug
+descriptor through `managedEntry`:
 
 ```tsx
 import { OptimizedEntry } from '@contentful/optimization-react-native'
 
 function HeroEntry() {
   return (
-    <OptimizedEntry entryId="4ib0hsHWoSOnCVdDkizE8d" entryQuery={{ locale: 'en-US' }}>
+    <OptimizedEntry
+      managedEntry={{ contentType: 'page', slug: 'home', entryQuery: { locale: 'en-US' } }}
+    >
       {(resolvedEntry) => <Hero data={resolvedEntry.fields} />}
     </OptimizedEntry>
   )
@@ -232,8 +235,15 @@ callbacks active but does not render or invoke its children.
 
 Configure the SDK with `contentful: { client }` on `OptimizationRoot`, `OptimizationProvider`, or
 `ContentfulOptimization.initialize(...)`. SDK-managed fetching merges `contentful.defaultQuery`,
-per-entry `entryQuery`, the SDK `locale` fallback, and `include: 10`. Manual baseline entries remain
-supported and unchanged:
+source `entryQuery`, the SDK `locale` fallback, and `include: 10`. `slugField` defaults to `slug` and
+can select a different field. Successful metadata, callbacks, and interaction tracking use the
+fetched entry's `sys.id`, not the slug. Manual baseline entries remain supported and unchanged:
+
+```tsx
+<OptimizedEntry baselineEntry={entry}>
+  {(resolvedEntry) => <Hero data={resolvedEntry.fields} />}
+</OptimizedEntry>
+```
 
 Use `prefetchManagedEntries` on `OptimizationRoot` or `OptimizationProvider` to warm the SDK-managed
 entry cache after the React Native SDK is ready:
@@ -244,7 +254,7 @@ entry cache after the React Native SDK is ready:
   contentful={{ client }}
   prefetchManagedEntries={[
     '4ib0hsHWoSOnCVdDkizE8d',
-    { entryId: '4k6ZyFQnR2POY5IJLLlJRb', entryQuery: { locale: 'en-US' } },
+    { contentType: 'page', slug: 'home', entryQuery: { locale: 'en-US' } },
   ]}
 >
   <YourApp />
@@ -254,15 +264,9 @@ entry cache after the React Native SDK is ready:
 React Native has no SSR handoff path for provider/root cache warming. Use `prefetchManagedEntries`
 only for post-ready cache warmup.
 
-```tsx
-<OptimizedEntry baselineEntry={entry}>
-  {(resolvedEntry) => <Hero data={resolvedEntry.fields} />}
-</OptimizedEntry>
-```
-
-Use one CDA locale for entries fetched through `entryId`, passed to `OptimizedEntry`, or resolved
-with `useEntryResolver()` or `useOptimizedEntry()`. For localized apps, derive the application
-locale from your navigation, i18n, or app configuration layer and pass it to `entryQuery`,
+Use one CDA locale for entries fetched through a managed source, passed to `OptimizedEntry`, or
+resolved with `useEntryResolver()` or `useOptimizedEntry()`. For localized apps, derive the
+application locale from your navigation, i18n, or app configuration layer and pass it to `entryQuery`,
 `contentful.defaultQuery`, or manual Contentful CDA requests. Do not pass all-locale CDA responses
 from `withAllLocales` or `locale=*`; these APIs expect direct single-locale field values.
 
@@ -275,7 +279,7 @@ for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the broader locale model.
 
-Use `useOptimizedEntry()` when a component needs the same managed `entryId` or manual
+Use `useOptimizedEntry()` when a component needs the same `entryId`, `managedEntry`, or
 `baselineEntry` source model without the `OptimizedEntry` wrapper:
 
 ```tsx
@@ -283,7 +287,7 @@ import { useOptimizedEntry } from '@contentful/optimization-react-native'
 
 function HeroData() {
   const { entry, isLoading, error, resolvedData } = useOptimizedEntry({
-    entryId: '4ib0hsHWoSOnCVdDkizE8d',
+    managedEntry: { contentType: 'page', slug: 'home' },
   })
 
   if (isLoading || error || !entry || resolvedData.isEmptyVariant) return null

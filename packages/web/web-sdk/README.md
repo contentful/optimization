@@ -128,7 +128,7 @@ root.defaults = { consent: true }
 root.api = { preflight: false }
 root.contentful = { client: contentfulClient }
 root.trackEntryInteraction = { hovers: false }
-root.prefetchManagedEntries = ['4ib0hsHWoSOnCVdDkizE8d']
+root.prefetchManagedEntries = [{ contentType: 'page', slug: 'home' }]
 root.onStatesReady = (states) => {
   const subscription = states.profile.subscribe((profile) => {
     console.log(profile?.id)
@@ -147,8 +147,9 @@ entry.addEventListener('ctfl-entry-resolved', (event) => {
 
 `baselineEntry` and root `contentful` are property-only because Contentful entries and clients are
 structured objects. When the Web SDK is configured with `contentful: { client }`,
-`ctfl-optimized-entry` can also fetch by `entry-id`/`entryId`; `baselineEntry` takes precedence when
-both are set. Set the `entryQuery` property for per-entry CDA query overrides. Set the root
+`ctfl-optimized-entry` can also fetch by `entry-id`/`entryId` or by `content-type` and `slug`. The
+optional `slug-field` attribute defaults to `slug`, and the `entryQuery` property supplies per-entry
+CDA query values. `baselineEntry` takes precedence over either managed source. Set the root
 `prefetchManagedEntries` property to warm the configured SDK cache after the root SDK is ready. For
 framework wrappers, assign `baselineEntry`, `entryQuery`, `sdk`, `defaults`, `api`, and callback
 properties after client hydration, then listen for `ctfl-entry-loading`, `ctfl-entry-resolved`, and
@@ -159,6 +160,11 @@ still use Web presentation helpers can import `OptimizedEntrySourceController` a
 same managed entry-source lifecycle. Core-only or non-Web custom runtime adapters can import those
 entry-source primitives directly from `@contentful/optimization-core/entry-source` without depending
 on the Web SDK.
+
+Changing a managed source attribute refetches the entry and ignores stale results. A successful slug
+lookup uses the fetched entry's `sys.id` in resolution events and `data-ctfl-*` interaction tracking,
+not the slug. Configure only one managed source; combining a non-empty entry ID with a complete slug
+source emits `Cannot use entryId and slug sources together.` and fetches neither.
 
 For script-tag usage, load the main Web SDK UMD bundle and the separate Web Components UMD bundle:
 
@@ -284,7 +290,8 @@ not have data yet. Router integrations that need current-route deduplication can
 
 ### Content resolution
 
-When a `contentful.js` client is available, prefer SDK-managed fetching by entry ID:
+When a `contentful.js` client is available, prefer SDK-managed fetching by entry ID or content type
+and slug:
 
 ```ts
 const optimization = new ContentfulOptimization({
@@ -294,14 +301,19 @@ const optimization = new ContentfulOptimization({
   locale: appLocale,
 })
 
-const { baselineEntry, entry } = await optimization.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
+const { baselineEntry, entry } = await optimization.fetchOptimizedEntry({
+  contentType: 'page',
+  slug: 'home',
+  entryQuery: { locale: appLocale },
+})
 ```
 
-`fetchOptimizedEntry(entryId)` fetches the baseline entry and resolves it with the Web SDK's current
+`fetchOptimizedEntry(source)` fetches the baseline entry and resolves it with the Web SDK's current
 `selectedOptimizations` when omitted. `fetchContentfulEntry()` only performs the managed CDA fetch.
-Use `fetchContentfulEntries()` or `prefetchManagedEntries()` when a page knows several managed entry
-IDs. Entries with the same normalized query share one `getEntries()` call; same-tick single-entry
-calls can join that batch. Large `getEntries()` fetches are split into 100-ID chunks.
+Use `fetchContentfulEntries()` or `prefetchManagedEntries()` when a page knows several managed
+sources. `slugField` defaults to `slug`; successful slug lookups and handoffs use the fetched
+entry's `sys.id`. Slug handoffs nest the normalized descriptor under `managedEntry` and retain that
+ID in `entryId`. Equivalent ID sources retain same-query batching and 100-ID chunking.
 
 If your application already fetched the baseline entry, keep using the manual resolver:
 

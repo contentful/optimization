@@ -1,5 +1,6 @@
 import type {
   ContentfulEntryQuery,
+  ManagedEntryDescriptor,
   OptimizedEntryMetadata,
 } from '@contentful/optimization-web/core-sdk'
 import {
@@ -137,18 +138,30 @@ export type OptimizedEntryBaselineProps<
   baselineEntry: Entry<S, M, L>
   entryId?: never
   entryQuery?: never
+  managedEntry?: never
 }
 
 export type OptimizedEntryManagedProps<
   S extends EntrySkeletonType = EntrySkeletonType,
   L extends LocaleCode = LocaleCode,
-> = OptimizedEntrySharedProps<S, undefined, L> & {
-  baselineEntry?: never
-  /** Contentful entry ID fetched through the SDK-managed Contentful client. */
-  entryId: string
-  /** Per-call Contentful `getEntry()` query overrides. */
-  entryQuery?: ContentfulEntryQuery
-}
+> = OptimizedEntrySharedProps<S, undefined, L> &
+  (
+    | {
+        baselineEntry?: never
+        /** Contentful entry ID fetched through the SDK-managed Contentful client. */
+        entryId: string
+        /** Per-call Contentful `getEntry()` query overrides. */
+        entryQuery?: ContentfulEntryQuery
+        managedEntry?: never
+      }
+    | {
+        baselineEntry?: never
+        entryId?: never
+        entryQuery?: never
+        /** Managed Contentful entry descriptor fetched through the SDK-managed client. */
+        managedEntry: Exclude<ManagedEntryDescriptor, string>
+      }
+  )
 
 /**
  * Props for the {@link OptimizedEntry} component.
@@ -166,11 +179,19 @@ type OptimizedEntrySourceProps =
       readonly baselineEntry: Entry
       readonly entryId?: never
       readonly entryQuery?: never
+      readonly managedEntry?: never
     }
   | {
       readonly baselineEntry?: never
       readonly entryId: string
       readonly entryQuery?: ContentfulEntryQuery
+      readonly managedEntry?: never
+    }
+  | {
+      readonly baselineEntry?: never
+      readonly entryId?: never
+      readonly entryQuery?: never
+      readonly managedEntry: Exclude<ManagedEntryDescriptor, string>
     }
 
 type OptimizedEntryImplementationProps = OptimizedEntrySharedProps<
@@ -234,10 +255,9 @@ function resolveEntrySource(
   }
 
   return {
-    entryId: entryProps.entryId,
+    entryId: entryProps.entryId ?? entryProps.managedEntry.entryId,
     managedEntryParams: {
-      entryId: entryProps.entryId,
-      entryQuery: entryProps.entryQuery,
+      ...entryProps,
       liveUpdates,
       onEntryError,
     },

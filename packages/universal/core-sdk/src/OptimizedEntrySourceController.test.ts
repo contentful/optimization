@@ -1,5 +1,5 @@
 import type { Entry } from 'contentful'
-import type { ContentfulEntryQuery } from './CoreBase'
+import type { ContentfulEntryQuery, ManagedEntryDescriptor } from './CoreBase'
 import {
   getOptimizedEntrySourceKey,
   OptimizedEntrySourceController,
@@ -45,9 +45,15 @@ async function flushMicrotasks(): Promise<void> {
 }
 
 function createSdk(
-  fetchContentfulEntry: (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>,
+  fetchContentfulEntry: (
+    descriptor: ManagedEntryDescriptor,
+    query?: ContentfulEntryQuery,
+  ) => Promise<Entry>,
 ): {
-  readonly fetchContentfulEntry: (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
+  readonly fetchContentfulEntry: (
+    descriptor: ManagedEntryDescriptor,
+    query?: ContentfulEntryQuery,
+  ) => Promise<Entry>
 } {
   return { fetchContentfulEntry: rs.fn(fetchContentfulEntry) }
 }
@@ -63,6 +69,7 @@ describe('OptimizedEntrySourceController', () => {
     controller.updateOptions({
       baselineEntry,
       entryId: '5mN8rY2pL6qT9vW3xA4bCd',
+      managedEntry: { contentType: 'page', slug: 'ignored' },
       sdk,
       isSdkStateReady: true,
     })
@@ -106,6 +113,73 @@ describe('OptimizedEntrySourceController', () => {
     expect(
       getOptimizedEntrySourceKey('4ib0hsHWoSOnCVdDkizE8d', { locale: 'de-DE', include: 2 }),
     ).toBe(getOptimizedEntrySourceKey('4ib0hsHWoSOnCVdDkizE8d', { include: 2, locale: 'de-DE' }))
+    expect(
+      getOptimizedEntrySourceKey({ contentType: 'page', slug: 'home', entryQuery: { include: 2 } }),
+    ).toBe(
+      getOptimizedEntrySourceKey({
+        contentType: 'page',
+        slug: 'home',
+        slugField: 'slug',
+        entryQuery: { include: 2 },
+      }),
+    )
+    expect(getOptimizedEntrySourceKey({ contentType: 'page', slug: 'home' })).not.toBe(
+      getOptimizedEntrySourceKey('home', undefined),
+    )
+  })
+
+  it('fetches managed entry descriptors through the descriptor overload', async () => {
+    const baselineEntry = createTestEntry('resolved-entry-id')
+    const sdk = createSdk(async () => await Promise.resolve(baselineEntry))
+    const controller = new OptimizedEntrySourceController()
+
+    controller.updateOptions({
+      managedEntry: {
+        contentType: 'page',
+        slug: 'home',
+        entryQuery: { locale: 'de-DE' },
+      },
+      sdk,
+      isSdkStateReady: true,
+    })
+
+    expect(controller.getSnapshot()).toEqual({ isLoading: true })
+    await flushMicrotasks()
+    expect(sdk.fetchContentfulEntry).toHaveBeenCalledWith({
+      contentType: 'page',
+      slug: 'home',
+      entryQuery: { locale: 'de-DE' },
+    })
+    expect(controller.getSnapshot()).toEqual({
+      baselineEntry,
+      entryId: 'resolved-entry-id',
+      isLoading: false,
+    })
+  })
+
+  it('surfaces one shared Error snapshot when entryId and managedEntry are both set', () => {
+    const sdk = createSdk(async () => await Promise.resolve(createTestEntry('resolved-entry-id')))
+    const controller = new OptimizedEntrySourceController()
+    const listener = rs.fn()
+    controller.setSnapshotListener(listener)
+    const options = {
+      entryId: '4ib0hsHWoSOnCVdDkizE8d',
+      managedEntry: { contentType: 'page', slug: 'home' },
+      sdk,
+      isSdkStateReady: true,
+    } as const
+
+    controller.updateOptions(options)
+    const snapshot = controller.getSnapshot()
+    controller.updateOptions(options)
+
+    expect(controller.getSnapshot()).toBe(snapshot)
+    expect(snapshot).toEqual({
+      error: new Error('Optimized entry source cannot include both entryId and managedEntry.'),
+      isLoading: false,
+    })
+    expect(listener).toHaveBeenCalledTimes(1)
+    expect(sdk.fetchContentfulEntry).not.toHaveBeenCalled()
   })
 
   it('stays loading without fetching until the SDK is ready', () => {

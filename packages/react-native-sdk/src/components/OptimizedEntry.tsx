@@ -1,6 +1,7 @@
 import type {
   ContentfulEntryQuery,
   EntryFor,
+  ManagedEntryDescriptor,
   OptimizedEntryMetadata,
   ResolvedData,
 } from '@contentful/optimization-core'
@@ -185,6 +186,7 @@ export type OptimizedEntrySourceProps<
       baselineEntry: Entry<S, M, L>
       entryId?: never
       entryQuery?: never
+      managedEntry?: never
     }
   | {
       baselineEntry?: never
@@ -192,6 +194,14 @@ export type OptimizedEntrySourceProps<
       entryId: string
       /** Per-call Contentful `getEntry()` query overrides. */
       entryQuery?: ContentfulEntryQuery
+      managedEntry?: never
+    }
+  | {
+      baselineEntry?: never
+      entryId?: never
+      entryQuery?: never
+      /** Managed Contentful entry descriptor fetched through the SDK-managed client. */
+      managedEntry: Exclude<ManagedEntryDescriptor, string>
     }
 
 type OptimizedEntryBaselineProps<
@@ -202,16 +212,27 @@ type OptimizedEntryBaselineProps<
   baselineEntry: Entry<S, M, L>
   entryId?: never
   entryQuery?: never
+  managedEntry?: never
 }
 
 type OptimizedEntryManagedProps<
   S extends EntrySkeletonType,
   L extends LocaleCode,
-> = OptimizedEntrySharedProps<S, undefined, L> & {
-  baselineEntry?: never
-  entryId: string
-  entryQuery?: ContentfulEntryQuery
-}
+> = OptimizedEntrySharedProps<S, undefined, L> &
+  (
+    | {
+        baselineEntry?: never
+        entryId: string
+        entryQuery?: ContentfulEntryQuery
+        managedEntry?: never
+      }
+    | {
+        baselineEntry?: never
+        entryId?: never
+        entryQuery?: never
+        managedEntry: Exclude<ManagedEntryDescriptor, string>
+      }
+  )
 
 /**
  * Props for the {@link OptimizedEntry} component.
@@ -274,32 +295,6 @@ function resolveChildren(
   metadata: OptimizedEntryMetadata,
 ): ReactNode {
   return typeof children === 'function' ? children(entry, metadata) : children
-}
-
-function resolveUseOptimizedEntryParams(
-  entryProps: OptimizedEntrySourceProps,
-  liveUpdates: boolean | undefined,
-  onEntryError: ((error: Error) => void) | undefined,
-  onEntryResolved: ((metadata: OptimizedEntryMetadata) => void) | undefined,
-): UseOptimizedEntryParams {
-  if (entryProps.baselineEntry !== undefined) {
-    const params: UseOptimizedEntryParams = {
-      baselineEntry: entryProps.baselineEntry,
-      liveUpdates,
-      onEntryError,
-      onEntryResolved,
-    }
-    return params
-  }
-
-  const params: UseOptimizedEntryParams = {
-    entryId: entryProps.entryId,
-    entryQuery: entryProps.entryQuery,
-    liveUpdates,
-    onEntryError,
-    onEntryResolved,
-  }
-  return params
 }
 
 interface OptimizedEntryContentProps {
@@ -388,7 +383,8 @@ function OptimizedEntryContent({
  * Empty variants retain the tracking View and resolution callbacks but omit consumer content.
  *
  * Configure `contentful.client` on {@link OptimizationRoot} or
- * {@link OptimizationProvider} to let `entryId` fetch the baseline entry through the SDK.
+ * {@link OptimizationProvider} to let `entryId` or `managedEntry` fetch the baseline entry through
+ * the SDK.
  * Passing `baselineEntry` keeps manual application-owned fetching behavior unchanged.
  *
  * @example SDK-managed entry fetching
@@ -462,9 +458,13 @@ export function OptimizedEntry({
   onTap,
   ...entryProps
 }: OptimizedEntryImplementationProps): React.JSX.Element | null {
-  const optimizedEntry = useOptimizedEntry(
-    resolveUseOptimizedEntryParams(entryProps, liveUpdates, onEntryError, onEntryResolved),
-  )
+  const optimizedEntryParams: UseOptimizedEntryParams = {
+    ...entryProps,
+    liveUpdates,
+    onEntryError,
+    onEntryResolved,
+  }
+  const optimizedEntry = useOptimizedEntry(optimizedEntryParams)
 
   if (optimizedEntry.error !== undefined) {
     return renderFallback(resolveErrorFallback(errorFallback, optimizedEntry.error))

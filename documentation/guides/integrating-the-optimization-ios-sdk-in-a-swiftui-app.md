@@ -361,11 +361,13 @@ cross-SDK consent model, see
 
 **Integration category:** Required for first integration
 
-The iOS SDK does not fetch Contentful entries for your application UI — only the preview panel fetches
-its own audience and experience definitions. Your app fetches entries from the Contentful Delivery
-API and passes the resulting single-locale `Contentful.Entry` values or raw entry dictionaries to
-`OptimizedEntry` or `client.resolveOptimizedEntry(...)`. There is no fetch-by-ID path in the iOS SDK,
-so the Contentful client and its request options stay entirely yours.
+The iOS SDK does not fetch managed Contentful entries for your application UI. Fetching remains in
+your app regardless of how the route identifies an entry. If the app already has a Contentful entry
+ID, keep its existing single-entry ID request. If a route carries a public slug, the app can query
+the Contentful Delivery API (CDA) by content type and slug. In both cases, pass the fetched
+single-locale `Contentful.Entry` value or raw entry dictionary to `OptimizedEntry` or
+`client.resolveOptimizedEntry(...)`; do not pass the ID or slug to the native SDK. Only the preview
+panel fetches its own audience and experience definitions.
 
 Fetch with one concrete locale and enough `include` depth to resolve the linked optimization data.
 `nt_experiences` is the SDK-owned link field the resolver reads on an optimized entry; it links that
@@ -383,8 +385,8 @@ events use. Keep them aligned when rendered content and Experience responses mus
 1. Choose the application Contentful locale in your app's navigation, i18n, or account layer.
 2. Pass the same locale to `OptimizationConfig(locale:)` when Experience responses and event context
    must align with rendered content.
-3. Fetch entries with a concrete locale and enough include depth for `nt_experiences` →
-   `nt_experience` → `nt_variants`/`nt_audience`.
+3. Fetch by entry ID, or adapt the app's existing Contentful query with the slug filters below when
+   the route supplies a slug. Pass the one fetched entry to native resolution.
 4. When the app locale changes, call `client.setLocale(...)`, refetch entries with the new locale, and
    re-render. `setLocale(...)` updates only the SDK Experience/event locale; it does not refetch
    Contentful or refresh profile state, and it throws before initialization or on an invalid locale.
@@ -393,10 +395,25 @@ events use. Keep them aligned when rendered content and Experience responses mus
    data, selected optimizations, flags, or MergeTags that must reflect the new locale. Without a new
    event, those stay on the previous locale's response.
 
+For an optional route-slug lookup, reuse the Contentful client and fetcher your app already owns:
+
+- Send `content_type=<contentTypeId>` and `fields.<slugField>=<slug>` as exact-equality filters, plus
+  one concrete `locale`, enough `include` depth, and `limit=2`.
+- Return the entry only when the CDA response contains exactly one item.
+- Surface zero items through the app's not-found path and more than one item as an authoring or
+  configuration error.
+
+For example, a page route sends `content_type=page` and `fields.slug=<route slug>`. Replace `page`
+and `slug` with your content type and slug-field IDs. These values belong to your app and content
+model; the native SDK never reads them or performs this request. Pass the returned entry to the
+`OptimizedEntry` or direct-resolution path in
+[Entry resolution and fallback rendering](#entry-resolution-and-fallback-rendering).
+
 **Adapt this to your use case:**
 
 ```swift
-let appLocale = selectedAppLocale()
+// App-owned locale; replace this with the value from your locale policy.
+let appLocale = "en-US"
 
 let config = OptimizationConfig(
     clientId: "<your-client-id>",

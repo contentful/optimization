@@ -162,9 +162,10 @@ let config = OptimizationConfig(
 )
 ```
 
-Use the same `appLocale` when your app-owned Contentful Delivery API client fetches entries that
-will be passed to `OptimizedEntry` or `client.resolveOptimizedEntry(...)`. The native SDK does not
-fetch Contentful entries for your app layer, so the CDA locale belongs in your CDA request code.
+Use the same `appLocale` when your app-owned Contentful Delivery API client queries an entry by
+content type and slug. Pass that fetched single-locale entry to `OptimizedEntry` or
+`client.resolveOptimizedEntry(...)`. The native iOS SDK does not provide managed entry fetching, so
+the lookup values and CDA request remain in your app.
 
 ## Runtime notes
 

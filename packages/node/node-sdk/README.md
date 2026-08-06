@@ -222,10 +222,10 @@ to `forRequest()`.
 
 ### Content resolution
 
-When a `contentful.js` client is available, prefer SDK-managed fetching by entry ID. Configure the
-client once, then call `fetchOptimizedEntry()` on a request-bound client after an accepted
-Experience API call. `forRequest()` clients use the latest selected optimizations when omitted;
-singleton calls require explicit `selectedOptimizations`.
+When a `contentful.js` client is available, prefer SDK-managed fetching by entry ID or content type
+and slug. Configure the client once, then call `fetchOptimizedEntry()` on a request-bound client
+after an accepted Experience API call. `forRequest()` clients use the latest selected optimizations
+when omitted; singleton calls require explicit `selectedOptimizations`.
 
 ```ts
 const optimization = new ContentfulOptimization({
@@ -237,13 +237,19 @@ const optimization = new ContentfulOptimization({
 
 const requestOptimization = optimization.forRequest({ consent: true, profile })
 await requestOptimization.page()
-const { baselineEntry, entry } =
-  await requestOptimization.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
+const { baselineEntry, entry } = await requestOptimization.fetchOptimizedEntry({
+  contentType: 'productPage',
+  slug: req.params.slug,
+  entryQuery: { locale: appLocale },
+})
 ```
 
 Use `fetchContentfulEntries()` or `prefetchManagedEntries()` when a route knows several managed
-entry IDs. Entries with the same normalized query share one `getEntries()` call; same-tick
-single-entry calls can join that batch. Large `getEntries()` fetches are split into 100-ID chunks.
+entry sources. A slug source accepts `slugField` when the content model does not use the default
+`slug` field. Slug lookup enforces its content-type, field selector, and two-result uniqueness limit
+after merging `entryQuery`; successful resolution uses the fetched entry's `sys.id`. Slug handoffs
+nest the normalized descriptor under `managedEntry` and retain that ID in `entryId`. Equivalent ID
+sources retain same-query batching and 100-ID chunking.
 
 If your application already fetched the baseline entry, keep using the manual resolver:
 

@@ -66,19 +66,33 @@ async function loadAllEntries(): Promise<Array<Record<string, unknown>>> {
 
 const CORS_HEADERS = { 'Access-Control-Allow-Origin': '*' }
 
-async function handleContentTypeQuery(contentType: string, cursor = false): Promise<Response> {
+async function handleContentTypeQuery(
+  contentType: string,
+  searchParams: URLSearchParams,
+): Promise<Response> {
   try {
     const allEntries = await loadAllEntries()
-    const filtered = allEntries.filter((e) => getContentTypeId(e) === contentType)
+    const fieldFilters = [...searchParams].filter(([name]) => name.startsWith('fields.'))
+    const filtered = allEntries.filter((entry) => {
+      if (getContentTypeId(entry) !== contentType) return false
 
-    if (cursor) {
+      const { fields } = entry
+      return fieldFilters.every(
+        ([name, value]) => isRecord(fields) && fields[name.slice('fields.'.length)] === value,
+      )
+    })
+    const requestedLimit = Number(searchParams.get('limit') ?? 100)
+    const limit = Number.isInteger(requestedLimit) && requestedLimit >= 0 ? requestedLimit : 100
+    const items = filtered.slice(0, limit)
+
+    if (searchParams.get('cursor') === 'true') {
       return HttpResponse.json(
-        { sys: { type: 'Array' }, limit: 100, pages: {}, items: filtered },
+        { sys: { type: 'Array' }, limit, pages: {}, items },
         { headers: CORS_HEADERS, status: 200 },
       )
     } else {
       return HttpResponse.json(
-        { sys: { type: 'Array' }, total: filtered.length, skip: 0, limit: 100, items: filtered },
+        { sys: { type: 'Array' }, total: filtered.length, skip: 0, limit, items },
         { headers: CORS_HEADERS, status: 200 },
       )
     }
@@ -161,10 +175,9 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
         const url = new URL(request.url)
         const entryId = url.searchParams.get('sys.id')
         const contentType = url.searchParams.get('content_type')
-        const cursor = url.searchParams.get('cursor')
 
         if (contentType) {
-          return await handleContentTypeQuery(contentType, cursor === 'true')
+          return await handleContentTypeQuery(contentType, url.searchParams)
         }
 
         if (entryId) {

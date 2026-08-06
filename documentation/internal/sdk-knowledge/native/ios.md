@@ -153,8 +153,9 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
 - Single-locale CDA contract and include-depth requirement are shared and app-owned: fetch with one
   concrete locale and `include` deep enough to resolve `nt_experiences` → `nt_experience` →
   `nt_variants`/`nt_audience` (`nt_config` is a JSON field, not a link). All-locale payloads fall
-  back to baseline. The iOS SDK does not fetch CDA entries itself (except the preview panel's own
-  definition fetch); the app passes fetched entries to `OptimizedEntry`/`resolveOptimizedEntry`.
+  back to baseline. The iOS SDK does not fetch managed app CDA entries itself (except the preview
+  panel's own definition fetch); entry-ID and slug lookup remain app-owned, and the app passes the
+  fetched entry to `OptimizedEntry`/`resolveOptimizedEntry`.
   source: core-sdk#resolvers/OptimizedEntryResolver.ts#OptimizedEntryResolver; api-schemas#contentful/OptimizedEntry.ts#OptimizedEntryFields; concept:entry-personalization-and-variant-resolution; kb:shared/concepts.md
 - Merge tags resolve separately from variant swap: `getMergeTagValue(mergeTagEntry:)` passes the
   expanded inline `nt_mergetag` entry to the bridge, which reads the selector against the current

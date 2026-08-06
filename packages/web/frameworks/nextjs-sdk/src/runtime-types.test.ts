@@ -52,6 +52,15 @@ export function acceptModeledNextjsEntries(
     entryId: 'page',
     children: (entry) => entry.sys.id,
   })
+  void components.OptimizedEntry<ModeledSkeleton, Locale>({
+    children: (entry) => entry.sys.id,
+    managedEntry: {
+      contentType: 'page',
+      entryQuery: { locale: 'de-DE' },
+      slug: '/products',
+      slugField: 'path',
+    },
+  })
 }
 
 export function assertAppRouterChildrenNeedVarianceBridge(
@@ -194,6 +203,10 @@ export function acceptPagesRouterEntryProps(
   props: OptimizedEntryProps,
 ): void {
   components.OptimizedEntry(props)
+  components.OptimizedEntry({
+    children: (entry) => entry.sys.id,
+    managedEntry: { contentType: 'page', slug: '/products' },
+  })
 }
 
 export function acceptPagesRouterProviderProps(

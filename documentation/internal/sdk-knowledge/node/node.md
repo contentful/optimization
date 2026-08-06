@@ -81,16 +81,16 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   baseline comes from a shared application cache, clone before mutating the returned entry (the
   reference implementation clones the input defensively for this reason).
   source: core-sdk#CoreBase.ts#resolveOptimizedEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext
-- Request-bound `fetchOptimizedEntry(entryId, options?)` → `FetchOptimizedEntryResult`
-  `{ baselineEntry, entry, selectedOptimization?, optimizationContextId?, isEmptyVariant? }`. When
+- Request-bound optimized fetching accepts the flat string-ID path or an ID/slug object
+  descriptor and returns the fetched baseline plus its resolution result. When
   `options.selectedOptimizations` is omitted it defaults to the latest selections returned by an
   accepted request-bound Experience call (`page()`/`identify()`); when neither
-  `contentful.defaultQuery.locale` nor the per-call `query.locale` is set, the request's `locale`
-  becomes the managed Contentful query locale.
+  `contentful.defaultQuery.locale` nor the source query's `locale` is set, the request's `locale`
+  becomes the managed Contentful query locale for either lookup mode.
   source: core-sdk#CoreStatelessRequest.ts#fetchOptimizedEntry; core-sdk#CoreStatelessRequest.ts#withRequestContentfulLocale; core-sdk#CoreBase.ts#FetchOptimizedEntryResult
-- Request-bound `fetchContentfulEntry(entryId, query?)` fetches the baseline only (same locale
-  injection); throws if `contentful.client` is not configured. Managed-cache mechanics and the
-  `defaultQuery`+per-call+locale+`include: 10` merge are shared.
+- Request-bound baseline fetching supports the same flat ID and object-descriptor sources,
+  injects the request locale without replacing a configured default or source locale, and throws
+  if `contentful.client` is absent. Slug query, error, cache, and handoff behavior is shared.
   source: core-sdk#CoreStatelessRequest.ts#fetchContentfulEntry; core-sdk#CoreBase.ts#fetchContentfulEntry
 - `selectedOptimization` fields: `experienceId`, `variantIndex`, `variants` (baseline-entry-id →
   variant-entry-id map), `sticky`. `variants[baselineEntryId]` equal to the baseline id means baseline.

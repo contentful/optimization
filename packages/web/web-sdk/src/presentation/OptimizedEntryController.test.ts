@@ -1,5 +1,7 @@
 import type {
+  ContentfulEntryQuery,
   ExperienceRequestState,
+  ManagedEntryDescriptor,
   Observable,
   OptimizedEntryMetadata,
   ResolvedData,
@@ -151,8 +153,15 @@ function createSdk(
     experienceRequestState,
     optimizationPossible,
     sdk: {
-      fetchContentfulEntry: async (entryId: string) =>
-        await Promise.resolve(createTestEntry(entryId)),
+      fetchContentfulEntry: async (
+        descriptor: ManagedEntryDescriptor,
+        _query?: ContentfulEntryQuery,
+      ) =>
+        await Promise.resolve(
+          createTestEntry(
+            typeof descriptor === 'string' ? descriptor : (descriptor.entryId ?? descriptor.slug),
+          ),
+        ),
       resolveOptimizedEntry,
       states: {
         canOptimize,

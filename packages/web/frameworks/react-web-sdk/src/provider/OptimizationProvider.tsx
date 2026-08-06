@@ -220,8 +220,11 @@ function createPrefetchedManagedEntries(
   if (entries === undefined) return undefined
 
   const map = new Map<string, ManagedEntryHandoff['baselineEntry']>()
-  for (const { baselineEntry, entryId, entryQuery } of entries) {
+  for (const { baselineEntry, entryId, entryQuery, managedEntry } of entries) {
     map.set(getOptimizedEntrySourceKey(entryId, entryQuery), baselineEntry)
+    if (managedEntry !== undefined) {
+      map.set(getOptimizedEntrySourceKey(managedEntry), baselineEntry)
+    }
   }
 
   return map

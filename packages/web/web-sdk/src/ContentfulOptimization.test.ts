@@ -21,6 +21,17 @@ const config: CoreConfig = {
   environment: ENVIRONMENT,
 }
 
+function compileManagedEntryDescriptorApis(web: ContentfulOptimization): void {
+  const descriptor = { contentType: 'page', slug: 'home' } as const
+
+  void web.fetchContentfulEntry(descriptor)
+  void web.fetchContentfulEntries([descriptor])
+  void web.fetchOptimizedEntry(descriptor)
+  void web.prefetchManagedEntries([descriptor])
+}
+
+void compileManagedEntryDescriptorApis
+
 const DEFAULT_PROFILE: Profile = {
   id: 'profile-id',
   stableId: 'profile-id',

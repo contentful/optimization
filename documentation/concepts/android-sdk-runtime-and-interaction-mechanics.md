@@ -117,9 +117,10 @@ Only `clientId` is required. `environment` defaults to `"main"`. Base URL overri
 integrations that need non-default Experience API or Insights API endpoints.
 
 Use top-level `locale` for the SDK Experience/event locale. When the application renders localized
-Contentful entries, choose an app-owned Contentful locale and pass it to the app's Contentful
-Delivery API request before entries are passed to `OptimizedEntry`, `OptimizedEntryView`, or
-`resolveOptimizedEntry(...)`. For the full locale model, see
+Contentful entries, query the Contentful Delivery API by content type and slug with one app-owned
+locale, then pass that fetched entry to `OptimizedEntry`, `OptimizedEntryView`, or
+`resolveOptimizedEntry(...)`. The native Android SDK does not provide managed entry fetching. For
+the full locale model, see
 [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
 ## State and persistence

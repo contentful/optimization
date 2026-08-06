@@ -2,6 +2,7 @@ import type { SelectedOptimizationArray } from '@contentful/optimization-web/api
 import type {
   ContentfulEntryQuery,
   EntryFor,
+  ManagedEntryDescriptor,
   ResolvedData,
 } from '@contentful/optimization-web/core-sdk'
 import {
@@ -36,15 +37,27 @@ export type UseOptimizedEntryBaselineParams<
   baselineEntry: Entry<S, M, L>
   entryId?: never
   entryQuery?: never
+  managedEntry?: never
 }
 
-export type UseOptimizedEntryManagedParams = UseOptimizedEntrySharedParams & {
-  baselineEntry?: never
-  /** Contentful entry ID fetched through the SDK-managed Contentful client. */
-  entryId: string
-  /** Per-call Contentful `getEntry()` query overrides. */
-  entryQuery?: ContentfulEntryQuery
-}
+export type UseOptimizedEntryManagedParams = UseOptimizedEntrySharedParams &
+  (
+    | {
+        baselineEntry?: never
+        /** Contentful entry ID fetched through the SDK-managed Contentful client. */
+        entryId: string
+        /** Per-call Contentful `getEntry()` query overrides. */
+        entryQuery?: ContentfulEntryQuery
+        managedEntry?: never
+      }
+    | {
+        baselineEntry?: never
+        entryId?: never
+        entryQuery?: never
+        /** Managed Contentful entry descriptor fetched through the SDK-managed client. */
+        managedEntry: Exclude<ManagedEntryDescriptor, string>
+      }
+  )
 
 export type UseOptimizedEntryParams =
   | UseOptimizedEntryBaselineParams
@@ -125,13 +138,18 @@ export function useManagedBaselineEntry({
   baselineEntry,
   entryId,
   entryQuery,
+  managedEntry,
   onEntryError,
 }: UseOptimizedEntryParams): UseManagedBaselineEntryResult {
   const optimizationContext = useOptimizationContext()
   const { sdk, prefetchedManagedEntries } = optimizationContext
   const isSdkLive = optimizationContext.isLive ?? sdk !== undefined
   const entrySourceKey =
-    entryId === undefined ? undefined : getOptimizedEntrySourceKey(entryId, entryQuery)
+    entryId !== undefined
+      ? getOptimizedEntrySourceKey(entryId, entryQuery)
+      : managedEntry !== undefined
+        ? getOptimizedEntrySourceKey(managedEntry)
+        : undefined
   const handoffEntry =
     entrySourceKey === undefined ? undefined : prefetchedManagedEntries?.get(entrySourceKey)
   const effectiveBaselineEntry = baselineEntry ?? handoffEntry
@@ -159,10 +177,20 @@ export function useManagedBaselineEntry({
       baselineEntry: effectiveBaselineEntry,
       entryId,
       entryQuery,
+      managedEntry,
       sdk,
       isSdkStateReady: isSdkLive,
     })
-  }, [controller, effectiveBaselineEntry, entryId, entryQuery, entrySourceKey, isSdkLive, sdk])
+  }, [
+    controller,
+    effectiveBaselineEntry,
+    entryId,
+    entryQuery,
+    entrySourceKey,
+    isSdkLive,
+    managedEntry,
+    sdk,
+  ])
 
   useEffect(() => {
     const { error } = snapshot

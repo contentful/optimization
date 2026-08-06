@@ -12,20 +12,53 @@ resolution hand-off:
 
 - **Manual:** the app fetches the entry itself and passes it in (`baselineEntry` /
   `resolveOptimizedEntry(entry)`). The app keeps its client, fetchers, caching, and rendering.
-- **Managed (opt-in):** the app hands the SDK its `contentful.js` client via `contentful` config
-  (`contentful: { client, defaultQuery?, cache? }`); the SDK then fetches explicit entry IDs through
-  that client (`fetchContentfulEntry(id)`, `fetchContentfulEntries(descriptors)`,
-  `prefetchManagedEntries(descriptors)`, `fetchOptimizedEntry(id)`, `<OptimizedEntry entryId>`,
-  `useOptimizedEntry({ entryId })`). The client is still app-owned; one uncached normalized entry
-  uses `getEntry()`, multiple uncached entries with the same normalized query use `getEntries()`,
-  and same-tick uncached single-entry calls with the same normalized query can share a
-  `getEntries()` call. Large `getEntries()` fetches split into 100-ID chunks. The SDK merges
-  `contentful.defaultQuery`, the per-entry query, an SDK or request locale fallback, and
-  `include: 10`; it preserves descriptor order and duplicates. Per-instance cache defaults to
-  `{ maxEntries: 100, ttlMs: 300_000 }`; `cache: false` disables it; `clearContentfulEntryCache()`
-  clears it. Managed prefetch takes explicit descriptors only; already included nested entries
-  remain part of the fetched `baselineEntry`.
-  source: core-sdk#CoreBase.ts#ContentfulConfig; core-sdk#CoreBase.ts#ContentfulEntryClient; core-sdk#CoreBase.ts#fetchContentfulEntry; core-sdk#CoreBase.ts#fetchContentfulEntries; core-sdk#CoreBase.ts#prefetchManagedEntries; core-sdk#CoreBase.ts#clearContentfulEntryCache; core-sdk#managed-entry-fetcher.ts#ManagedEntryFetcher; core-sdk#CoreStatelessRequest.ts#prefetchManagedEntries
+- **Managed (opt-in):** the app hands the SDK its `contentful.js` client via `contentful` config;
+  managed sources can identify an entry by ID or by content type plus slug. Slug lookup defaults the
+  field to `slug`, always calls `getEntries()`, and merges the normal managed query before enforcing
+  `content_type`, `fields.<slugField>`, and `limit: 2`; descriptor selectors therefore win over
+  conflicting defaults or per-entry query values. ID lookup keeps the existing `getEntry()` path for
+  one uncached entry, same-tick same-query ID batching through `getEntries()`, and 100-ID chunks. Both
+  paths merge `contentful.defaultQuery`, the per-entry query, an SDK or request locale fallback, and
+  `include: 10`, and use the per-instance cache (default `{ maxEntries: 100, ttlMs: 300_000 }`;
+  `cache: false` disables it). Multi-entry calls preserve descriptor order and duplicates.
+  Equivalent normalized slug descriptors share in-flight and cached promises; slug and ID keys
+  cannot alias; rejected promises are evicted. Distinct slug descriptors each issue their own
+  `getEntries()` request rather than joining ID batches or 100-ID chunks.
+  `clearContentfulEntryCache()` clears cache records but does not cancel in-flight managed requests.
+  Managed prefetch fetches only its explicit descriptors; linked entries already included in a
+  fetched baseline remain part of that baseline.
+  source: core-sdk#CoreBase.ts#ContentfulConfig; core-sdk#CoreBase.ts#ManagedEntryDescriptor; core-sdk#CoreBase.ts#fetchContentfulEntry; core-sdk#CoreBase.ts#fetchContentfulEntries; core-sdk#CoreBase.ts#clearContentfulEntryCache; core-sdk#managed-entry.ts#normalizeManagedEntryDescriptor; core-sdk#managed-entry-fetcher.ts#ManagedEntryFetcher; core-sdk#managed-entry-key.ts#getOptimizedEntrySourceKey
+
+The imperative ID path accepts its query separately; the descriptor path carries `entryQuery` with
+the managed source. `fetchOptimizedEntry` applies the separately supplied query only to the ID path,
+while both paths fetch the baseline and resolve it with the supplied/current selections.
+source: core-sdk#CoreBase.ts#fetchContentfulEntry; core-sdk#CoreBase.ts#fetchOptimizedEntry; core-sdk#CoreStatelessRequest.ts#fetchOptimizedEntry
+
+Framework component and hook surfaces accept the manual `baselineEntry` source and the flat managed
+`entryId` + `entryQuery` source. Object descriptors, whether ID-based or slug-based, travel under
+`managedEntry`; flat content-type/slug props are not a component or hook source. Their shared source
+controller gives a supplied baseline precedence over managed sources. Without a baseline, combining
+`entryId` and `managedEntry` fetches neither and exposes one stable
+`Optimized entry source cannot include both entryId and managedEntry.` error snapshot until the
+conflict clears. Source-key changes invalidate the prior request so late results are ignored.
+source: core-sdk#OptimizedEntrySourceController.ts#OptimizedEntrySourceController; react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntrySourceProps; react-web-sdk#optimized-entry/useOptimizedEntry.ts#UseOptimizedEntryParams; react-native-sdk#components/OptimizedEntry.tsx#OptimizedEntrySourceProps; react-native-sdk#hooks/useOptimizedEntry.ts#UseOptimizedEntryParams
+
+Slug lookup rejects an empty `contentType` with
+`TypeError: Managed Contentful entry contentType must not be empty.` and an empty `slugField` with
+`TypeError: Managed Contentful entry slugField must not be empty.` before a CDA request. An empty or
+unmatched slug throws `Contentful entry not found for content type "<contentType>" where
+"fields.<slugField>" equals "<slug>".`; a response whose `total` or item count exceeds one throws
+`Multiple Contentful entries found for content type "<contentType>" where "fields.<slugField>"
+equals "<slug>".` A slug handoff nests its normalized lookup descriptor under `managedEntry` and
+retains `entryId` as the fetched baseline's `sys.id`; browser handoff lookup indexes that baseline by
+both the resolved ID and slug-source key. Framework source controllers likewise replace the
+provisional slug source with the fetched `sys.id` and ignore stale results after a source change.
+source: core-sdk#managed-entry-fetcher.ts#validateSlugDescriptor; core-sdk#managed-entry-fetcher.ts#fetchContentfulEntryBySlug; core-sdk#managed-entry.ts#createManagedEntryHandoffs; core-sdk#OptimizedEntrySourceController.ts#OptimizedEntrySourceController; react-web-sdk#provider/OptimizationProvider.tsx#createPrefetchedManagedEntries
+
+The app owns the content type, slug, and slug-field lookup values. After CDA resolution, the SDK uses
+the fetched entry's `sys.id` for handoff identity, optimization metadata, and interaction tracking;
+it does not treat the slug as an entry ID.
+source: core-sdk#managed-entry.ts#createManagedEntryHandoffs; core-sdk#OptimizedEntrySourceController.ts#OptimizedEntrySourceController; react-web-sdk#optimized-entry/useOptimizedEntry.ts#useOptimizedEntry; react-native-sdk#hooks/useOptimizedEntry.ts#useOptimizedEntry
 
 Either way, the SDK sits at the hand-off where a fetched entry becomes a component and returns the
 resolved variant (or the baseline entry). Both paths are supported; a guide must not assert the SDK
