@@ -1,0 +1,43 @@
+Apply these rules to TypeScript, TSX, and TypeScript examples in documentation. A finding must survive
+the relevant evidence check below. If the evidence is unavailable or ambiguous, do not post it.
+
+UNUSED DECLARATIONS
+- Search the whole repository and the complete containing file before calling a declaration unused.
+- Count type-only references, indexed access such as `Callbacks['handler']`, overload support, and
+  declaration-only variance helpers as real uses. Type-only code emitting no JavaScript is not dead
+  merely because it has no runtime reference.
+
+PUBLIC EXPORTS
+- Do not infer that a type needs a package-level export merely because its source declaration uses
+  `export`. First verify the package's configured entrypoints and show a consumer-facing API that
+  requires callers to name the type.
+- Internal helper types used to construct an exported declaration do not need separate public
+  exports. Do not recommend expanding the public API for convenience or symmetry alone.
+
+GENERICS AND OVERLOADS
+- Read every generic default before claiming omitted arguments become `unknown`, lose inference, or
+  break compatibility.
+- Distinguish public overloads from their implementation signature. The implementation signature is
+  not caller-visible; an overload matching it can intentionally expose a catch-all union contract.
+- Do not add generics to sibling APIs for consistency when the type is only consumed internally and
+  does not appear in a return value or callback.
+
+TYPE NARROWING AND VALIDATION
+- A switch covering every member of a closed discriminated union does not need a default branch.
+  Flag it only when a declared union member is unhandled.
+- Runtime validation for external data belongs at the response boundary. Do not suggest a default
+  throw inside an otherwise fail-soft resolution or rendering path as a substitute for validation.
+- A type assertion scoped to one destructured property does not discard runtime data or weaken
+  unused sibling properties. Flag an assertion only when it can let an invalid value cross a real
+  runtime or public API boundary.
+
+TEST AND API INTENT
+- Before replacing `toBe` with `toEqual`, determine whether the test intentionally asserts reference
+  preservation. Do not weaken an identity contract into value equality.
+- Two methods returning the same type are not duplicates when one is a documented compatibility
+  alias or convenience name. Verify history and callers before recommending removal or renaming.
+
+PIPELINE OWNERSHIP
+- Do not report a type error that the repository's TypeScript typecheck would necessarily catch. If
+  the PR's typecheck passes and no unsound boundary or missing compile-time contract is demonstrated,
+  skip the finding.
