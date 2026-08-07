@@ -135,3 +135,55 @@ describe('EventBuilder entry interactions', () => {
     expect(click).not.toHaveProperty('optimizationContextId')
   })
 })
+
+describe('EventBuilder.buildNodeView', () => {
+  const baseArgs = {
+    anonymousId: 'anon-1',
+    entityId: 'entity-1',
+    entityKind: 'Experience' as const,
+    variantId: 'variant-a',
+    variantIndex: 1,
+    optimizationId: 'opt-1',
+    viewId: 'view-1',
+    viewDurationMs: 1_000,
+  }
+
+  it('builds an exo_node_view event carrying all node-view fields', () => {
+    const event = builder.buildNodeView(baseArgs)
+
+    expect(event.type).toBe('exo_node_view')
+    expect(event.anonymousId).toBe('anon-1')
+    expect(event.entityId).toBe('entity-1')
+    expect(event.entityKind).toBe('Experience')
+    expect(event.variantId).toBe('variant-a')
+    expect(event.variantIndex).toBe(1)
+    expect(event.optimizationId).toBe('opt-1')
+    expect(event.viewId).toBe('view-1')
+    expect(event.viewDurationMs).toBe(1_000)
+  })
+
+  it('includes parentExperienceId when supplied', () => {
+    const event = builder.buildNodeView({
+      ...baseArgs,
+      parentExperienceId: 'parent-exp-1',
+    })
+
+    expect(event.parentExperienceId).toBe('parent-exp-1')
+  })
+
+  it('accepts entityKind = Fragment', () => {
+    const event = builder.buildNodeView({ ...baseArgs, entityKind: 'Fragment' })
+
+    expect(event.entityKind).toBe('Fragment')
+  })
+
+  it('rejects unknown entityKind values at parse time', () => {
+    expect(() =>
+      builder.buildNodeView({
+        ...baseArgs,
+        // @ts-expect-error — validate schema rejects unsupported kinds
+        entityKind: 'Component',
+      }),
+    ).toThrow()
+  })
+})

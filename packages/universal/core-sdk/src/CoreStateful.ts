@@ -3,7 +3,9 @@ import type {
   InsightsApiClientRequestOptions,
 } from '@contentful/optimization-api-client'
 import type {
+  ExperienceEventArray,
   Json,
+  OptimizationData,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
@@ -53,6 +55,7 @@ import {
   signalFns,
   toObservable,
 } from './signals'
+import { applyOptimizationDataToSignals } from './state/applyOptimizationDataToSignals'
 import { resolveStatefulDefaults, type StatefulDefaults } from './StatefulDefaults'
 
 const coreLogger = createScopedLogger('CoreStateful')
@@ -125,6 +128,25 @@ const resolveQueuePolicy = (policy: QueuePolicy | undefined): ResolvedQueuePolic
   offlineMaxEvents: toPositiveInt(policy?.offlineMaxEvents, OFFLINE_QUEUE_MAX_EVENTS),
   onOfflineDrop: policy?.onOfflineDrop,
 })
+
+/**
+ * Payload assembled for a personalized XDA view-synthesis request.
+ *
+ * @remarks
+ * Produced by {@link CoreStateful.getPersonalizationRequest}. Callers pass this
+ * as `extensions.personalization` on a delivery-client
+ * `view.getExperienceWithOverrides(...)` call. `events` is Segment-style —
+ * `page` / `track` / `identify` / `screen` / `alias` / `group` / `view` — and
+ * is empty when nothing has queued.
+ *
+ * @public
+ */
+export interface PersonalizationRequest {
+  /** Anonymous profile id the SDK is holding, if any. */
+  profileId?: string
+  /** Queued personalization events drained from the Experience queue. */
+  events: ExperienceEventArray
+}
 
 /**
  * Combined observable state exposed by the stateful core.
@@ -430,6 +452,64 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
         this.optimizationContexts.delete(contextId)
       }
     }
+  }
+
+  /**
+   * Assemble the payload for a personalized XDA view-synthesis request.
+   *
+   * @remarks
+   * Reads the current anonymous profile id and drains any queued Experience
+   * events through the shared consent gate. Events blocked by consent remain
+   * queued so they can be sent once consent is granted. Returns
+   * `{ events: [] }` when nothing is queued and no profile is held.
+   *
+   * @returns The `profileId` and event batch to pass as
+   * `extensions.personalization`.
+   *
+   * @example
+   * ```ts
+   * const personalization = optimization.getPersonalizationRequest()
+   * const view = await deliveryClient.view.getExperienceWithOverrides(
+   *   spaceId, envId, experienceId,
+   *   { extensions: { personalization, sourceMap: {} } },
+   *   { headers: { 'x-contentful-extensions-sourcemap': 'true' } },
+   * )
+   * optimization.ingestPersonalizationResponse(view.extensions?.personalization)
+   * ```
+   *
+   * @public
+   */
+  getPersonalizationRequest(): PersonalizationRequest {
+    const events = this.drainQueuedExperienceEvents('getPersonalizationRequest')
+    const profileId = profileSignal.value?.id
+
+    return profileId === undefined ? { events } : { profileId, events }
+  }
+
+  /**
+   * Apply a personalization response back into SDK state.
+   *
+   * @remarks
+   * Same terminal write path already used inside
+   * `sendExperienceEventWithResult`: updates {@link CoreStates.profile},
+   * {@link CoreStates.selectedOptimizations}, and
+   * {@link CoreStates.experienceRequestState}. Safe to call repeatedly with
+   * the same payload — signal writes are equality-gated.
+   *
+   * @param personalization - The `data` payload from XDA's
+   * `extensions.personalization`. `undefined` is a no-op (used when the
+   * response carries no personalization).
+   *
+   * @public
+   */
+  ingestPersonalizationResponse(personalization?: OptimizationData): void {
+    if (personalization === undefined) return
+
+    void applyOptimizationDataToSignals(personalization, this.interceptors.state).catch(
+      (error: unknown) => {
+        logger.warn('Failed to ingest personalization response', String(error))
+      },
+    )
   }
 
   destroy(): void {
