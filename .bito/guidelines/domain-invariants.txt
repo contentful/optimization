@@ -18,6 +18,14 @@ TEST COVERAGE
 - Do not flag test-style preferences (naming conventions, describe/it structure) — the linter owns
   those.
 
+END-TO-END IDENTITY AND PROPAGATION
+- Cache, batching, and handoff identities must include every effective input that can change the
+  fetched or resolved result. Aliases created after resolution must preserve the effective inputs of
+  the original source.
+- When a public descriptor, option, or source variant changes, verify that its behavior-affecting
+  fields survive every boundary between producers and consumers, including server-to-client and
+  prefetch-to-runtime handoffs.
+
 BUNDLE SIZE AND IMPORTS
 - Importing from a package root when a subpath import would exclude a heavy chunk is a
   tree-shaking hazard. Flag it for published packages.
@@ -52,6 +60,9 @@ REFERENCE IMPLEMENTATION INTEGRITY
 DOCUMENTATION
 - If a PR changes a public SDK option, event, or initialization parameter, and the change is not
   reflected in the affected package README or TSDoc, flag the gap.
+- When accepted public inputs or capabilities expand, audit overload documentation, parameter
+  descriptions, remarks, package summaries, and decision or routing guides for language that still
+  restricts consumers to the previous behavior.
 - Apply documentation policy by artifact type: public guides, concepts, and product documents may
   not link to source, while internal SDK knowledge files require source pointers as provenance.
 - knowledge-base pointer files under documentation/internal/sdk-knowledge/ must stay consistent

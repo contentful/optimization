@@ -15,6 +15,9 @@ LAYER BOUNDARIES
 - Shared cross-platform behavior belongs in packages/universal/core-sdk unless clearly
   platform-specific.
 - Reusable helpers added to an implementation that belong in a package are a layering violation.
+- Internal SDK knowledge-base symbol tables are navigation indexes, not exhaustive signatures.
+  Exact props, parameters, optionality, and return shapes belong in package types; flag an omitted
+  member only when the summary becomes materially false or a behavioral contract is missing.
 
 BLAST-RADIUS TIERS
 Flag these explicitly when they appear in a PR without corresponding downstream updates:
