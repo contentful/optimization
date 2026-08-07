@@ -303,7 +303,10 @@ describe('OptimizationProvider onStatesReady', () => {
   })
 
   it('accepts prefetchManagedEntries on provider and root props', () => {
-    const descriptors = ['hero-entry'] as const
+    const descriptors = [
+      { contentType: 'hero', slug: 'home' },
+      { contentType: 'landingPage', slug: 'startseite', slugField: 'path' },
+    ] as const
     const { sdk } = createSdk()
     const providerConfigProps: OptimizationProviderProps = {
       children: <></>,
@@ -376,7 +379,7 @@ describe('OptimizationProvider onStatesReady', () => {
   it('strips managed-entry prefetch descriptors from owned initialization and warms after readiness', async () => {
     const { OptimizationProvider } = await import('./OptimizationProvider')
     const { sdk } = createSdk()
-    const descriptors = ['hero-entry'] as const
+    const descriptors = [{ contentType: 'hero', slug: 'home' }] as const
     initializeOptimization.mockResolvedValue(sdk)
 
     renderer = await renderWithAct(

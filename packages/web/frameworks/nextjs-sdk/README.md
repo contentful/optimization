@@ -86,6 +86,12 @@ export const {
 The App Router binding uses `contentful` on server-capable paths and omits that client from
 serialized client props. Keep any browser-only Contentful fetching explicitly app-owned.
 
+The bound server `OptimizedEntry` accepts exactly one source: manual `baselineEntry`, managed
+`entryId` with optional `entryQuery`, or a `managedEntry` object with `contentType`, `slug`, optional
+`slugField`, and optional `entryQuery`. `slugField` defaults to `slug`. A successful slug lookup
+renders and tracks with the fetched entry's `sys.id`. Invalid source combinations reject with
+`Bound Next.js OptimizedEntry requires exactly one source: baselineEntry, entryId, or managedEntry.`
+
 Use `createRequestHandoff()` when a route should call `page()` on the server and pass canonical
 browser handoff state into the React Web root:
 
@@ -109,6 +115,9 @@ export default async function Page() {
   return (
     <OptimizationRoot
       handoff={handoff}
+      prefetchManagedEntries={[
+        { contentType: 'productPage', slug: 'featured', entryQuery: { locale: 'en-US' } },
+      ]}
       routeKey="/products"
       buildPagePayload={() => ({ properties: { route: '/products' } })}
     >
@@ -117,6 +126,11 @@ export default async function Page() {
   )
 }
 ```
+
+`prefetchManagedEntries` fetches descriptors on the server and merges their baselines into
+`handoff.entries`; slug handoffs nest the normalized descriptor under `managedEntry` and store the
+fetched `sys.id` in `entryId`. A server `OptimizedEntry` fetches for that render only, so use root
+prefetch when a matching browser managed source must hydrate without another fetch.
 
 Use `createPublicPermutationHandoff()` for app-owned public permutations rendered by App Router
 Cache Components, Pages Router ISR, CDN-cached routes, or Edge runtime route handlers. The
@@ -181,9 +195,11 @@ export default function App({ Component, pageProps }: AppProps) {
 
 ```tsx
 import { bindNextjsPagesRouterServerOptimization } from '@contentful/optimization-nextjs/pages-router/server'
+import { contentfulClient } from './contentful'
 
 const { createRequestHandoff } = bindNextjsPagesRouterServerOptimization({
   clientId: 'client-id',
+  contentful: { client: contentfulClient },
   environment: 'main',
   consent: {
     server: { events: true, persistence: true },
@@ -195,11 +211,19 @@ export async function getServerSideProps(context) {
     cache: { scope: 'private-request' },
     hydration: 'preserve-server',
     pagePayload: { properties: { route: context.resolvedUrl } },
+    prefetchManagedEntries: [
+      { contentType: 'productPage', slug: context.params.slug, entryQuery: { locale: 'en-US' } },
+    ],
   })
 
   return { props: { contentfulOptimization: { handoff } } }
 }
 ```
+
+Pages Router server prefetch accepts ID or content-type/slug descriptors and appends their baselines
+to the browser handoff. The bound client `OptimizedEntry` and `/client` `useOptimizedEntry` accept
+`baselineEntry`, `entryId` with optional `entryQuery`, or a content-type/slug descriptor under
+`managedEntry`. Matching slug sources use the handed-off baseline and its real `sys.id`.
 
 ## Edge runtime
 

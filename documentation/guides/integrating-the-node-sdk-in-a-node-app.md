@@ -195,8 +195,8 @@ outside this guide:
 
 - **A Node server** you can add a route handler to, and its own Contentful fetching already working.
   Install `express` only if you are following the quick start verbatim; any Node request framework
-  works. Install `contentful` if you want the SDK to fetch entries by ID and you do not already have
-  a Delivery API client.
+  works. Install `contentful` if you want the SDK to fetch entries by ID or by content type and slug,
+  and you do not already have a Contentful Delivery API (CDA) client.
 - **Contentful delivery credentials** — space ID, delivery token, and environment — read from your
   server's runtime configuration, never shipped to the browser.
 - **At least one entry with a variant attached to an experience**, authored in Contentful. Without
@@ -216,7 +216,7 @@ tracking, caching — is introduced by the section that needs it. The Node SDK h
 state between requests: it does not manage cookies, sessions, consent, long-lived profiles, or
 rendering. Your app owns those and passes request inputs in; the SDK evaluates the request, resolves
 entries, and returns request-local data. When you give it your delivery client, it can fetch entries
-for you (managed fetching) via `client.getEntry()` for one entry or `client.getEntries()` for several.
+for you (managed fetching) by entry ID or by content type and slug.
 
 > [!NOTE]
 >
@@ -242,7 +242,7 @@ start. The quick start inlined the SDK inside `server.mjs`; the sections below f
 into a small shared module (call it `optimization.ts`) that each route handler imports, so there is
 still exactly one SDK instance per process.
 
-1. Install `@contentful/optimization-node` and `contentful` when the SDK will fetch entries by ID.
+1. Install `@contentful/optimization-node` and `contentful` when the SDK will fetch entries.
 2. Read the Optimization client ID and environment from your runtime configuration.
 3. Configure default locale and API endpoint overrides only when your app needs them.
 4. Export the singleton so route handlers can create request-bound SDK clients.
@@ -585,15 +585,32 @@ For the lower-level mechanics, see
 
 Your app owns the Contentful delivery client, credentials, and delivery policy. The preferred
 Contentful path passes an app-owned `contentful.js` client to the SDK, then calls the request-bound
-`requestOptimization.fetchOptimizedEntry(entryId)` helper after `page()` or `identify()`.
+`requestOptimization.fetchOptimizedEntry(...)` helper after `page()` or `identify()`. Identify the
+entry by its ID, or use `{ contentType, slug, slugField?, entryQuery? }` when the route owns a slug.
+`slugField` defaults to `slug`; `entryQuery` carries the per-entry CDA query for that source.
 
 This is Milestone 2: the quick start proved an accepted event and a profile; here you turn that into
-a rendered variant. The one genuinely new call is `requestOptimization.fetchOptimizedEntry(entryId)`,
+a rendered variant. The one genuinely new call is `requestOptimization.fetchOptimizedEntry(...)`,
 which fetches the baseline entry, resolves the selected variant, and uses the latest accepted
-Experience response selections when you omit `selectedOptimizations`. For several known entry IDs at
-once, `requestOptimization.fetchContentfulEntries()` and `requestOptimization.prefetchManagedEntries()`
-batch the fetch — entries sharing a normalized query go through one `getEntries()` call, split into
-100-ID chunks when large.
+Experience response selections when you omit `selectedOptimizations`. For several managed sources,
+`requestOptimization.fetchContentfulEntries()` and
+`requestOptimization.prefetchManagedEntries()` accept IDs or slug-source objects. ID sources whose
+locale, include depth, and other query values match can be batched; each distinct slug source uses
+its own `getEntries()` request. Prefetch returns handoff records in input order. For a slug source,
+the record nests the normalized descriptor under `managedEntry` and retains the fetched entry's
+`sys.id` as `entryId`.
+
+For a slug source, the SDK merges `contentful.defaultQuery`, `entryQuery`, the request locale
+fallback, and `include: 10`, then enforces `content_type`, `fields.<slugField>`, and `limit: 2`.
+Those enforced selectors win over conflicting query values. The error placeholders below are
+replaced with the source's actual content type, effective slug field, and slug:
+
+- No match: `Contentful entry not found for content type "<contentType>" where
+"fields.<slugField>" equals "<slug>".`
+- More than one match: `Multiple Contentful entries found for content type "<contentType>" where
+"fields.<slugField>" equals "<slug>".`
+
+After the fetch, resolution metadata and tracking also use the entry's real `sys.id`, not the slug.
 
 Two similarly named values appear from here on, and the one-letter difference is intentional:
 
@@ -608,7 +625,8 @@ case, `entry` retains the baseline for tracking context, but your app must rende
 1. Configure the SDK with `contentful: { client, defaultQuery?, cache? }` (done once in your
    `optimization.ts` module from [Install and initialize the Node SDK](#install-and-initialize-the-node-sdk)).
 2. Call `page()` or `identify()` before resolving entries for the response.
-3. Call `requestOptimization.fetchOptimizedEntry(entryId)` inside the request handler.
+3. Call `requestOptimization.fetchOptimizedEntry(entryId)` or pass a content-type/slug source
+   inside the request handler.
 4. Render the returned `entry`, or no content when `isEmptyVariant` is `true`. If resolution cannot
    find a matching optimization or variant, the resolver returns the baseline entry.
 
@@ -637,7 +655,7 @@ const optimization = new ContentfulOptimization({
   locale: 'en-US',
 })
 
-app.get('/article/:entryId', async (req, res) => {
+app.get('/article/:slug', async (req, res) => {
   const appLocale = getAppLocale(req)
   const requestOptimization = optimization.forRequest({
     consent: { events: true, persistence: true },
@@ -652,7 +670,12 @@ app.get('/article/:entryId', async (req, res) => {
     entry: optimizedArticle,
     isEmptyVariant,
     selectedOptimization,
-  } = await requestOptimization.fetchOptimizedEntry(req.params.entryId)
+  } = await requestOptimization.fetchOptimizedEntry({
+    contentType: 'article', // Your Contentful content type ID.
+    slug: req.params.slug, // Your route value.
+    // slugField defaults to 'slug'; entryQuery holds the per-entry CDA query.
+    entryQuery: { include: 10, locale: appLocale },
+  })
 
   if (requestOptimization.canPersistProfile) {
     persistProfile(res, pageResponse?.profile.id)
@@ -675,10 +698,15 @@ Use `requestOptimization.fetchOptimizedEntry()` in request handlers. If you call
 `optimization.fetchOptimizedEntry()` on the singleton for personalized content, pass
 `selectedOptimizations` explicitly.
 
-Use manual baseline-entry fetching plus `resolveOptimizedEntry()` when the app needs custom delivery
-behavior, GraphQL, REST without `contentful.js`, or an already-fetched baseline entry:
+The SDK prop names `contentType`, `slug`, `slugField`, and `entryQuery` are fixed. Their values belong
+to your app and content model: `article` is the Contentful content type ID, and `req.params.slug`
+comes from the route. If your route already carries an entry ID, keep the ID overload instead.
 
-**Adapt this to your use case:**
+Use manual baseline-entry fetching plus `resolveOptimizedEntry()` when the app needs custom delivery
+behavior, GraphQL, REST without `contentful.js`, or an already-fetched baseline entry.
+
+**Adapt this to your use case:** this separate pattern assumes an ID-based route whose params include
+`entryId`.
 
 ```ts
 const baselineEntry = await contentfulClient.getEntry(req.params.entryId, {

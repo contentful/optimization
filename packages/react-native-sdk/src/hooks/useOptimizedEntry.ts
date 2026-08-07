@@ -6,6 +6,7 @@ import {
   getOptimizedEntrySourceKey,
   OptimizedEntrySourceController,
   type ContentfulEntryQuery,
+  type ManagedEntryDescriptor,
   type OptimizedEntrySourceSnapshot,
 } from '@contentful/optimization-core/entry-source'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
@@ -35,16 +36,27 @@ type UseOptimizedEntryBaselineParams<
   baselineEntry: Entry<S, M, L>
   entryId?: never
   entryQuery?: never
+  managedEntry?: never
 }
 
 type UseOptimizedEntryManagedParams<
   S extends EntrySkeletonType,
   L extends LocaleCode,
-> = UseOptimizedEntrySharedParams<S, undefined, L> & {
-  baselineEntry?: never
-  entryId: string
-  entryQuery?: ContentfulEntryQuery
-}
+> = UseOptimizedEntrySharedParams<S, undefined, L> &
+  (
+    | {
+        baselineEntry?: never
+        entryId: string
+        entryQuery?: ContentfulEntryQuery
+        managedEntry?: never
+      }
+    | {
+        baselineEntry?: never
+        entryId?: never
+        entryQuery?: never
+        managedEntry: Exclude<ManagedEntryDescriptor, string>
+      }
+  )
 
 /**
  * Source and behavior options for {@link useOptimizedEntry}.
@@ -66,11 +78,19 @@ type UseOptimizedEntryImplementationParams = {
       baselineEntry: Entry
       entryId?: never
       entryQuery?: never
+      managedEntry?: never
     }
   | {
       baselineEntry?: never
       entryId: string
       entryQuery?: ContentfulEntryQuery
+      managedEntry?: never
+    }
+  | {
+      baselineEntry?: never
+      entryId?: never
+      entryQuery?: never
+      managedEntry: Exclude<ManagedEntryDescriptor, string>
     }
 )
 
@@ -119,11 +139,16 @@ function useManagedBaselineEntry({
   baselineEntry,
   entryId,
   entryQuery,
+  managedEntry,
   onEntryError,
 }: UseOptimizedEntryImplementationParams): UseManagedBaselineEntryResult {
   const sdk = useOptimization()
   const entrySourceKey =
-    entryId === undefined ? undefined : getOptimizedEntrySourceKey(entryId, entryQuery)
+    entryId !== undefined
+      ? getOptimizedEntrySourceKey(entryId, entryQuery)
+      : managedEntry !== undefined
+        ? getOptimizedEntrySourceKey(managedEntry)
+        : undefined
   const [controller] = useState(() => new OptimizedEntrySourceController())
   const [snapshot, setSnapshot] = useState<OptimizedEntrySourceSnapshot>(() => {
     if (baselineEntry !== undefined) {
@@ -148,10 +173,11 @@ function useManagedBaselineEntry({
       baselineEntry,
       entryId,
       entryQuery,
+      managedEntry,
       sdk,
       isSdkStateReady: true,
     })
-  }, [baselineEntry, controller, entryId, entrySourceKey, sdk])
+  }, [baselineEntry, controller, entryId, entryQuery, entrySourceKey, managedEntry, sdk])
 
   useEffect(() => {
     const { error } = snapshot
@@ -242,8 +268,8 @@ function useResolvedEntryData(
  * render-ready entry state for React Native components.
  *
  * @remarks
- * Pass `entryId` when the SDK is configured with `contentful.client`. Pass `baselineEntry` to keep
- * manual application-owned Contentful fetching unchanged.
+ * Pass `entryId` or `managedEntry` when the SDK is configured with `contentful.client`. Pass
+ * `baselineEntry` to keep manual application-owned Contentful fetching unchanged.
  *
  * @public
  */
@@ -263,7 +289,7 @@ export function useOptimizedEntry(
   params: UseOptimizedEntryImplementationParams,
 ): UseOptimizedEntryResult {
   const managedEntry = useManagedBaselineEntry(params)
-  const loadingEntryId = (params as { readonly entryId?: string }).entryId ?? 'contentful-entry'
+  const loadingEntryId = params.entryId ?? params.managedEntry?.entryId ?? 'contentful-entry'
   const loadingEntry = useMemo(
     () => createOptimizedEntryLoadingEntry(loadingEntryId),
     [loadingEntryId],

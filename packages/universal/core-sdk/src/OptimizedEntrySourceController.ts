@@ -5,22 +5,27 @@ import { getOptimizedEntrySourceKey } from './managed-entry-key'
 export { getOptimizedEntrySourceKey } from './managed-entry-key'
 
 export interface OptimizedEntrySourceControllerOptions {
-  /** Baseline entry supplied by the application. Takes precedence over `entryId`. */
+  /** Baseline entry supplied by the application. Takes precedence over managed sources. */
   readonly baselineEntry?: Entry
   /** Contentful entry ID fetched through the SDK-managed Contentful client. */
   readonly entryId?: string
+  /** Managed Contentful entry descriptor fetched through the SDK-managed Contentful client. */
+  readonly managedEntry?: Exclude<ManagedEntryDescriptor, string>
   /** Per-entry Contentful `getEntry()` query overrides. */
   readonly entryQuery?: ContentfulEntryQuery
   /** SDK surface required for managed entry fetching. */
   readonly sdk?: {
-    fetchContentfulEntry: (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
+    fetchContentfulEntry: {
+      (entryId: string, query?: ContentfulEntryQuery): Promise<Entry>
+      (descriptor: Exclude<ManagedEntryDescriptor, string>): Promise<Entry>
+    }
   }
   /** Whether SDK state is ready for managed entry fetching. */
   readonly isSdkStateReady?: boolean
 }
 
 export interface OptimizedEntrySourceSnapshot {
-  /** Current baseline entry, either supplied directly or fetched by `entryId`. */
+  /** Current baseline entry, either supplied directly or fetched from a managed source. */
   readonly baselineEntry?: Entry
   /** Managed entry ID currently being fetched or resolved. */
   readonly entryId?: string
@@ -46,6 +51,9 @@ const REQUEST_IDLE = 0
 const REQUEST_LOADING = 1
 const REQUEST_SUCCESS = 2
 const REQUEST_ERROR = REQUEST_SUCCESS + REQUEST_LOADING
+const MANAGED_ENTRY_SOURCE_CONFLICT_ERROR = new Error(
+  'Optimized entry source cannot include both entryId and managedEntry.',
+)
 
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error))
@@ -91,7 +99,7 @@ export async function prefetchManagedEntries(
   return await runtime.prefetchManagedEntries(descriptors)
 }
 
-/** Coordinates direct baseline entries and SDK-managed `entryId` fetching for framework wrappers. */
+/** Coordinates direct baseline entries and SDK-managed entry fetching for framework wrappers. */
 export class OptimizedEntrySourceController {
   private key: string | undefined
   private sdk: OptimizedEntrySourceSdk | undefined
@@ -106,13 +114,29 @@ export class OptimizedEntrySourceController {
       return
     }
 
-    const { entryId } = options
-    if (entryId === undefined) {
+    if (options.entryId !== undefined && options.managedEntry !== undefined) {
+      this.resetSource({ error: MANAGED_ENTRY_SOURCE_CONFLICT_ERROR, isLoading: false })
+      return
+    }
+
+    const descriptor = options.managedEntry ?? options.entryId
+    if (descriptor === undefined) {
       this.resetSource({ isLoading: false })
       return
     }
 
-    const key = getOptimizedEntrySourceKey(entryId, options.entryQuery)
+    this.updateManagedSource(options, descriptor)
+  }
+
+  private updateManagedSource(
+    options: OptimizedEntrySourceControllerOptions,
+    descriptor: ManagedEntryDescriptor,
+  ): void {
+    const entryId = typeof descriptor === 'string' ? descriptor : descriptor.entryId
+    const key =
+      typeof descriptor === 'string'
+        ? getOptimizedEntrySourceKey(descriptor, options.entryQuery)
+        : getOptimizedEntrySourceKey(descriptor)
     const { sdk } = options
     const sourceChanged = this.key !== key || this.sdk !== sdk
 
@@ -140,12 +164,20 @@ export class OptimizedEntrySourceController {
     this.status = REQUEST_LOADING
     this.setSnapshot({ entryId, isLoading: true }, true)
 
-    void sdk.fetchContentfulEntry(entryId, options.entryQuery).then(
+    const fetchPromise =
+      typeof descriptor === 'string'
+        ? sdk.fetchContentfulEntry(descriptor, options.entryQuery)
+        : sdk.fetchContentfulEntry(descriptor)
+    void fetchPromise.then(
       (entry) => {
         if (!this.isCurrent(version, key, sdk)) return
 
         this.status = REQUEST_SUCCESS
-        this.setSnapshot({ baselineEntry: entry, entryId, isLoading: false })
+        this.setSnapshot({
+          baselineEntry: entry,
+          entryId: entryId ?? entry.sys.id,
+          isLoading: false,
+        })
       },
       (error: unknown) => {
         if (!this.isCurrent(version, key, sdk)) return

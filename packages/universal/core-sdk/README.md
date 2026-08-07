@@ -193,19 +193,36 @@ Core exposes reusable primitives for SDK layers:
 | Signal and observable utilities | Lightweight reactive primitives used internally by stateful SDK layers                                                                                        |
 
 When a `contentful.js` client is available, prefer SDK-managed fetching. Configure
-`contentful: { client, defaultQuery?, cache? }`, then call `fetchContentfulEntry(entryId, query?)`,
-`fetchContentfulEntries(entries)`, `prefetchManagedEntries(entries)`, or
-`fetchOptimizedEntry(entryId, options?)`. Managed calls merge `defaultQuery`, per-entry query
-overrides, SDK `locale` fallback, and `include: 10`, then cache entries per SDK instance by default.
-For multiple uncached entries with the same normalized query, Core calls
-`client.getEntries({ 'sys.id[in]': ids, limit: ids.length })`, splitting large batches into 100-ID
-chunks. Same-tick uncached single-entry calls can join the same batch. Results preserve descriptor
-order and duplicates. Set `contentful.cache: false` to disable the cache or call
-`clearContentfulEntryCache()` to clear it. `resolveOptimizedEntry()` remains the manual path for
-entries the app already fetched. Stateful Core uses the current `selectedOptimizations` when
-omitted, request-bound stateless clients use the latest accepted Experience selections and request
-`locale` fallback for managed Contentful fetches, and root stateless callers pass explicit
-`selectedOptimizations`.
+`contentful: { client, defaultQuery?, cache? }`, then identify each entry by ID or by content type
+and slug:
+
+```ts
+await sdk.fetchOptimizedEntry({
+  contentType: 'page',
+  slug: 'home',
+  slugField: 'slug',
+  entryQuery: { locale: 'en-US' },
+})
+```
+
+`slugField` defaults to `slug`. Managed calls merge `defaultQuery`, `entryQuery`, an SDK or request
+`locale` fallback, and `include: 10`. Slug lookup then enforces `content_type`,
+`fields.<slugField>`, and `limit: 2`, so those selectors override conflicting query values. It
+throws these errors when the result isn't unique:
+
+```text
+Contentful entry not found for content type "<contentType>" where "fields.<slugField>" equals "<slug>".
+Multiple Contentful entries found for content type "<contentType>" where "fields.<slugField>" equals "<slug>".
+```
+
+ID lookups retain batching for same-query uncached entries and split large batches into 100-ID
+chunks. Results preserve descriptor order and duplicates. Managed fetching caches entries per SDK
+instance by default; set `contentful.cache: false` to disable the cache or call
+`clearContentfulEntryCache()` to clear it. Slug prefetch handoffs nest the normalized descriptor
+under `managedEntry` and retain the fetched entry's `sys.id` in `entryId`.
+`resolveOptimizedEntry()` remains the manual path for entries the app already fetched. Stateful Core
+uses current selections when omitted, request-bound stateless clients use the latest accepted
+selections and request locale fallback, and root stateless callers pass explicit selections.
 
 Resolver types accept one skeleton or a union of every possible baseline and variant skeleton. See
 [Entry optimization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html)
@@ -234,12 +251,12 @@ framework adapters that cannot use an official Web, React Web, React Native, Nod
 surface. It is not part of the root Core API posture and is not the preferred path for application
 integrations.
 
-Import `OptimizedEntrySourceController` when an adapter accepts either a direct `baselineEntry` or
-an `entryId` that must be fetched through an SDK-managed `contentful.js` client. The controller owns
-the `baselineEntry` versus `entryId` source lifecycle, `entryId + entryQuery` fetch keying, SDK
-readiness/loading/error snapshots, stale request protection, and `disconnect()` cleanup.
-`createOptimizedEntryLoadingEntry(entryId)` creates a stable placeholder Contentful entry for
-adapter loading states.
+Import `OptimizedEntrySourceController` when an adapter accepts a direct `baselineEntry`, a managed
+entry ID, or a managed content-type/slug source. The controller owns source lifecycle and query
+keying, SDK readiness/loading/error snapshots, stale request protection, and `disconnect()` cleanup.
+After a slug fetch, snapshots and downstream tracking use the fetched entry's `sys.id`.
+`createOptimizedEntryLoadingEntry(entryId)` creates a stable placeholder Contentful entry for ID
+loading states.
 
 The entry-source controller does not own rendering, variant resolution, tracking, consent,
 Experience API calls, or Contentful client creation. After a snapshot contains `baselineEntry`, the

@@ -19,7 +19,12 @@ import {
   useOptimization,
   useOptimizationContext,
 } from '../index'
-import { createOptimizationSdk, requireOptimizationSdk } from '../test/sdkTestUtils'
+import { useManagedBaselineEntry } from '../optimized-entry/useOptimizedEntry'
+import {
+  createOptimizationSdk,
+  createTestEntry,
+  requireOptimizationSdk,
+} from '../test/sdkTestUtils'
 
 const testConfig = {
   clientId: 'test-client-id',
@@ -268,6 +273,48 @@ describe('OptimizationProvider onStatesReady', () => {
     )
 
     expect(prefetchManagedEntries).toHaveBeenCalledWith(['hero-entry'])
+
+    rendered.unmount()
+  })
+
+  it('hydrates resolved IDs and nested managed entry descriptors with their query', async () => {
+    const baselineEntry = createTestEntry('resolved-entry-id')
+    const entryQuery = { locale: 'de-DE' } as const
+    const managedEntry = {
+      contentType: 'page',
+      slug: 'home',
+      slugField: 'slug',
+      entryQuery,
+    } as const
+    const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(baselineEntry))
+    const sdk = createOptimizationSdk()
+    Reflect.set(sdk, 'fetchContentfulEntry', fetchContentfulEntry)
+    const handoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b', {
+      entries: [
+        {
+          baselineEntry,
+          entryId: baselineEntry.sys.id,
+          managedEntry,
+        },
+      ],
+    })
+    let resolvedIds: Array<string | undefined> = []
+
+    function Probe(): null {
+      const resolvedId = useManagedBaselineEntry({ entryId: baselineEntry.sys.id, entryQuery })
+      const descriptor = useManagedBaselineEntry({ managedEntry })
+      resolvedIds = [resolvedId.entry?.sys.id, descriptor.entry?.sys.id]
+      return null
+    }
+
+    const rendered = await renderClientAsync(
+      <OptimizationProvider sdk={sdk} handoff={handoff}>
+        <Probe />
+      </OptimizationProvider>,
+    )
+
+    expect(resolvedIds).toEqual(['resolved-entry-id', 'resolved-entry-id'])
+    expect(fetchContentfulEntry).not.toHaveBeenCalled()
 
     rendered.unmount()
   })

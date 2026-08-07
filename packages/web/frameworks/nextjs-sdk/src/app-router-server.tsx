@@ -63,11 +63,8 @@ import {
   resolveOptimizedEntryChildren,
   toServerOptimizedEntryChildren,
 } from './server-entry-renderer'
-import {
-  getServerTrackingAttributes,
-  type ServerTrackingBaselineEntry,
-  type ServerTrackingResolvedData,
-} from './tracking-attributes'
+import type { ServerTrackingBaselineEntry, ServerTrackingResolvedData } from './tracking-attributes'
+import { getServerTrackingAttributes } from './tracking-attributes'
 
 export type { OptimizedEntryRenderContext } from '@contentful/optimization-react-web'
 export type {
@@ -104,10 +101,6 @@ type IgnoredReactWebOptimizedEntryProps = Pick<
   ReactWebOptimizedEntryProps,
   'liveUpdates' | 'loadingFallback'
 >
-type NextjsBoundManagedEntryQuery = Extract<
-  NextjsBoundOptimizedEntryProps,
-  { entryId: string }
->['entryQuery']
 type AppRouterCreateRequestHandoffOptions = Omit<
   NextjsRequestHandoffOptions,
   'cache' | 'consent' | 'cookies' | 'headers' | 'hydration' | 'locale' | 'request'
@@ -329,13 +322,14 @@ export function bindNextjsAppRouterOptimization(
 
   async function OptimizedEntry(props: NextjsBoundOptimizedEntryProps): Promise<ReactElement> {
     const {
-      baselineEntry: suppliedBaselineEntry,
+      baselineEntry: _baselineEntry,
       children,
-      entryId,
-      entryQuery,
+      entryId: _entryId,
+      entryQuery: _entryQuery,
       errorFallback: _errorFallback,
       liveUpdates: _liveUpdates,
       loadingFallback: _loadingFallback,
+      managedEntry: _managedEntry,
       onEntryError: _onEntryError,
       onEntryResolved: _onEntryResolved,
       testId,
@@ -343,16 +337,7 @@ export function bindNextjsAppRouterOptimization(
       ...serverEntryProps
     } = props as NextjsBoundOptimizedEntryProps & Partial<IgnoredReactWebOptimizedEntryProps>
     const { state: handoffState } = getRequestHandoffStore()
-    const { baselineEntry, resolvedData } =
-      suppliedBaselineEntry === undefined
-        ? await resolveManagedServerOptimizedEntry(entryId, entryQuery, handoffState)
-        : {
-            baselineEntry: suppliedBaselineEntry,
-            resolvedData: sdk.resolveOptimizedEntry(
-              suppliedBaselineEntry,
-              handoffState?.selectedOptimizations,
-            ),
-          }
+    const [baselineEntry, resolvedData] = await resolveAppRouterOptimizedEntry(props, handoffState)
     const renderContext: OptimizedEntryRenderContext = {
       baselineEntry,
       baselineEntryId: baselineEntry.sys.id,
@@ -382,24 +367,39 @@ export function bindNextjsAppRouterOptimization(
     })
   }
 
-  async function resolveManagedServerOptimizedEntry(
-    entryId: string | undefined,
-    entryQuery: NextjsBoundManagedEntryQuery,
+  async function resolveAppRouterOptimizedEntry(
+    { baselineEntry, entryId, entryQuery, managedEntry }: NextjsBoundOptimizedEntryProps,
     handoffState: BrowserOptimizationHandoff['state'] | undefined,
-  ): Promise<{
-    readonly baselineEntry: ServerTrackingBaselineEntry
-    readonly resolvedData: ServerTrackingResolvedData
-  }> {
-    if (entryId === undefined) {
-      throw new Error('Bound Next.js OptimizedEntry requires either baselineEntry or entryId.')
+  ): Promise<readonly [ServerTrackingBaselineEntry, ServerTrackingResolvedData]> {
+    const { length: sourceCount } = [baselineEntry, entryId, managedEntry].filter(
+      (source) => source !== undefined,
+    )
+
+    if (sourceCount !== 1) {
+      throw new Error(
+        'Bound Next.js OptimizedEntry requires exactly one source: baselineEntry, entryId, or managedEntry.',
+      )
     }
 
-    const result = await sdk.fetchOptimizedEntry(entryId, {
-      query: entryQuery,
-      selectedOptimizations: handoffState?.selectedOptimizations,
-    })
+    if (baselineEntry !== undefined) {
+      return [
+        baselineEntry,
+        sdk.resolveOptimizedEntry(baselineEntry, handoffState?.selectedOptimizations),
+      ]
+    }
 
-    return { baselineEntry: result.baselineEntry, resolvedData: result }
+    const result =
+      managedEntry !== undefined
+        ? await sdk.fetchOptimizedEntry(managedEntry, {
+            selectedOptimizations: handoffState?.selectedOptimizations,
+          })
+        : await sdk.fetchOptimizedEntry(entryId, {
+            query: entryQuery,
+            selectedOptimizations: handoffState?.selectedOptimizations,
+          })
+    const { baselineEntry: fetchedBaselineEntry } = result
+
+    return [fetchedBaselineEntry, result]
   }
 
   return {

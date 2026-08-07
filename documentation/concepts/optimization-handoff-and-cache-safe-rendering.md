@@ -51,8 +51,10 @@ It can contain:
   resolution.
 - `state.changes` - Custom Flag changes derived from the selected optimizations.
 - `state.profile` - profile state from a request-backed Experience API response.
-- `entries` - managed-entry baseline snapshots that let browser-managed entries hydrate from the
-  same baseline entry the server or static render used.
+- `entries` - managed-entry baseline snapshots that let browser-managed ID or content-type/slug
+  sources hydrate from the same baseline entry the server or static render used. A slug handoff
+  nests its normalized lookup descriptor under `managedEntry` and retains the fetched entry's
+  `sys.id` in `entryId`.
 - `cache` - metadata that describes where the rendered output is allowed to be cached.
 
 Browser handoffs add two fields:
@@ -92,6 +94,8 @@ handoff state, and the cache scope.
 In App Router, managed-entry prefetch without a supplied handoff creates a baseline `static` handoff
 with `hydration: 'preserve-server'`, `selectedOptimizations: []`, and
 `initialPageEvent: 'emit'`. Treat it as baseline entry warming, not request-personalized state.
+Prefetch accepts ID and content-type/slug descriptors. A matching browser source uses the handed-off
+baseline through either the source key or resolved `sys.id`, so it does not repeat the CDA request.
 
 ## Cache scopes
 

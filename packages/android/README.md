@@ -243,10 +243,10 @@ val config = OptimizationConfig(
 )
 ```
 
-Use the same `appLocale` when your app-owned Contentful Delivery API client fetches entries that
-will be passed to `OptimizedEntry`, `OptimizedEntryView`, or `client.resolveOptimizedEntry(...)`.
-The native SDK does not fetch Contentful entries for your app layer, so the CDA locale belongs in
-your CDA request code.
+Use the same `appLocale` when your app-owned Contentful Delivery API client queries an entry by
+content type and slug. Pass that fetched single-locale entry to `OptimizedEntry`,
+`OptimizedEntryView`, or `client.resolveOptimizedEntry(...)`. The native Android SDK does not
+provide managed entry fetching, so the lookup values and CDA request remain in your app.
 
 For the full locale model, see
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md).

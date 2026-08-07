@@ -267,9 +267,10 @@ empty-variant state, so use `resolveEntryData()` or `resolveOptimizedEntry()` fo
 decisions.
 
 For manual entries, fetch Contentful entries in the app layer with one CDA locale before passing
-them to `baselineEntry` surfaces. For managed fetching, use `entryId` and `entryQuery`. Do not pass
-all-locale CDA responses from `withAllLocales` or `locale=*`; these APIs expect direct single-locale
-field values. See
+them to `baselineEntry` surfaces. For managed fetching, use `entryId` with optional `entryQuery`, or
+pass a `managedEntry` object with `contentType`, `slug`, optional `slugField`, and optional
+`entryQuery`. `slugField` defaults to `slug`. Do not pass all-locale CDA responses from
+`withAllLocales` or `locale=*`; these APIs expect direct single-locale field values. See
 [Entry optimization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
@@ -361,9 +362,9 @@ payload fields beyond the default route identity.
 
 ### OptimizedEntry
 
-`OptimizedEntry` fetches a Contentful entry by ID when the root SDK is configured with
-`contentful: { client }`, then renders the selected variant or baseline. `baselineEntry` remains
-supported for the manual path:
+`OptimizedEntry` fetches a Contentful entry by ID or by a `managedEntry` descriptor when the root
+SDK is configured with `contentful: { client }`, then renders the selected variant or baseline.
+`baselineEntry` remains supported for the manual path:
 
 ```tsx
 import { OptimizedEntry } from '@contentful/optimization-react-web'
@@ -383,14 +384,18 @@ To model baseline and variant entries with different content types, see
 [Entry optimization and variant resolution](../../../../documentation/concepts/entry-personalization-and-variant-resolution.md).
 
 When `OptimizationRoot` uses a Web SDK configured with `contentful: { client }`, React entry
-surfaces can fetch by entry ID:
+surfaces can fetch by content type and slug through `managedEntry`. `slugField` is optional when the
+field is named `slug`:
 
 ```tsx
 function HeroEntry() {
   return (
     <OptimizedEntry
-      entryId="4ib0hsHWoSOnCVdDkizE8d"
-      entryQuery={{ locale: 'en-US' }}
+      managedEntry={{
+        contentType: 'page',
+        slug: 'home',
+        entryQuery: { locale: 'en-US' },
+      }}
       loadingFallback={() => <HeroSkeleton />}
       errorFallback={() => <HeroFallback />}
     >
@@ -403,7 +408,9 @@ function HeroEntry() {
 Use `prefetchManagedEntries` on `OptimizationRoot` or `OptimizationProvider` to warm the client-side
 managed entry cache after the live SDK is ready. For SSR handoff, put `ManagedEntryHandoff[]` values
 in `handoff.entries`; `prefetchManagedEntries(runtime, descriptors)` returns that shape when the
-runtime is available on the server.
+runtime is available on the server. Slug handoffs nest the normalized descriptor under
+`managedEntry` and retain the fetched entry's `sys.id` in `entryId`, so matching browser slug
+sources hydrate without another fetch.
 
 Hooks use the same managed entry source:
 
@@ -412,8 +419,11 @@ import { useOptimizedEntry } from '@contentful/optimization-react-web'
 
 function HeroEntry() {
   const { entry, error, isLoading } = useOptimizedEntry({
-    entryId: '4ib0hsHWoSOnCVdDkizE8d',
-    entryQuery: { locale: 'en-US' },
+    managedEntry: {
+      contentType: 'page',
+      slug: 'home',
+      entryQuery: { locale: 'en-US' },
+    },
   })
 
   if (isLoading) return <HeroSkeleton />
@@ -426,7 +436,8 @@ function HeroEntry() {
 code needs to log or report managed CDA failures. Use `errorFallback` on `OptimizedEntry` to render
 fallback UI for managed CDA failures. Use `onEntryResolved`, the render prop metadata, or the hook's
 `metadata` and `isResolved` fields when application code needs the baseline ID, resolved entry ID,
-or optimization context after tracking attributes are ready.
+or optimization context after tracking attributes are ready. Successful slug lookups report and
+track the fetched entry's `sys.id`, not the slug.
 
 Use `loadingFallback`, direct children, wrapper props, and nested composition patterns when needed.
 For optimized entries, the loading phase begins immediately while optimization is unresolved. If the

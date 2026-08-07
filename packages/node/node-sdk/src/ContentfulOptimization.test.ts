@@ -25,12 +25,23 @@ function compileNodeResolvedEntryTypes(
     .fetchOptimizedEntry<ContentSkeleton, Locale>('page', {
       selectedOptimizations: [],
     })
+  const slugEntry: Promise<Entry<PageSkeleton, undefined, Locale>> = node.fetchContentfulEntry<
+    PageSkeleton,
+    Locale
+  >({ contentType: 'page', slug: '/home', slugField: 'path' })
+  const optimizedSlugEntry: Promise<FetchOptimizedEntryResult<ContentSkeleton, undefined, Locale>> =
+    node.fetchOptimizedEntry<ContentSkeleton, Locale>(
+      { contentType: 'page', slug: '/home', slugField: 'path' },
+      { selectedOptimizations: [] },
+    )
 
   if (isEntryOfContentType<HeroSkeleton, ChainModifiers, Locale>(singleton, 'hero')) {
     void singleton.fields.headline
   }
 
   void requestBound
+  void slugEntry
+  void optimizedSlugEntry
 }
 
 void compileNodeResolvedEntryTypes

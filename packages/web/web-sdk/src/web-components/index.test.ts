@@ -72,6 +72,8 @@ async function resolveVoid(): Promise<void> {
 async function flushMicrotasks(): Promise<void> {
   await Promise.resolve()
   await Promise.resolve()
+  await Promise.resolve()
+  await Promise.resolve()
 }
 
 function createDeferred<T>(): {
@@ -335,6 +337,39 @@ describe('Contentful Optimization Web Components', () => {
     }).not.toThrow()
   })
 
+  it('reflects managed slug source properties', () => {
+    ensureElementsDefined()
+    const entry = document.createElement('ctfl-optimized-entry')
+
+    if (!(entry instanceof ContentfulOptimizedEntryElement)) {
+      throw new Error('ctfl-optimized-entry is not registered.')
+    }
+
+    entry.contentType = 'page'
+    entry.slug = 'home'
+    entry.slugField = 'path'
+
+    expect(entry.getAttribute('content-type')).toBe('page')
+    expect(entry.getAttribute('slug')).toBe('home')
+    expect(entry.getAttribute('slug-field')).toBe('path')
+
+    entry.setAttribute('content-type', 'landingPage')
+    entry.setAttribute('slug', '/de/home')
+    entry.setAttribute('slug-field', 'url')
+
+    expect(entry.contentType).toBe('landingPage')
+    expect(entry.slug).toBe('/de/home')
+    expect(entry.slugField).toBe('url')
+
+    entry.contentType = undefined
+    entry.slug = undefined
+    entry.slugField = undefined
+
+    expect(entry.contentType).toBeUndefined()
+    expect(entry.slug).toBeUndefined()
+    expect(entry.slugField).toBeUndefined()
+  })
+
   it('auto-binds entries under custom registered element tags', () => {
     const rootTagName = 'ctfl-test-optimization-root'
     const optimizedEntryTagName = 'ctfl-test-optimized-entry'
@@ -508,6 +543,189 @@ describe('Contentful Optimization Web Components', () => {
     expect(entry.dataset.ctflEntryId).toBe('4ib0hsHWoSOnCVdDkizE8d')
   })
 
+  it('fetches slug entries with the default field and tracks the fetched entry ID', async () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const fetchedEntry = variantB
+    const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(fetchedEntry))
+    Reflect.set(runtime.sdk, 'fetchContentfulEntry', fetchContentfulEntry)
+    const root = createRootElement(runtime.sdk)
+    const entry = document.createElement('ctfl-optimized-entry')
+
+    if (!(entry instanceof ContentfulOptimizedEntryElement)) {
+      throw new Error('ctfl-optimized-entry is not registered.')
+    }
+
+    const loading = rs.fn()
+    const resolved = rs.fn((event: Event) => getEntryDetail(event))
+
+    entry.contentType = 'page'
+    entry.slug = 'home'
+    entry.entryQuery = { locale: 'de-DE' }
+    entry.addEventListener('ctfl-entry-loading', loading)
+    entry.addEventListener('ctfl-entry-resolved', resolved)
+    root.append(entry)
+    document.body.append(root)
+    await flushMicrotasks()
+
+    expect(fetchContentfulEntry).toHaveBeenCalledWith({
+      contentType: 'page',
+      slug: 'home',
+      slugField: 'slug',
+      entryQuery: { locale: 'de-DE' },
+    })
+    expect(loading).toHaveBeenCalledTimes(1)
+    expect(resolved).toHaveReturnedWith(
+      expect.objectContaining({
+        entry: fetchedEntry,
+        metadata: expect.objectContaining({ entryId: '2qVK4T5lnScbswoyBuGipd' }),
+      }),
+    )
+    expect(entry.dataset.ctflEntryId).toBe('2qVK4T5lnScbswoyBuGipd')
+  })
+
+  it('refetches stale-safely when slug source attributes change', async () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const fetches: Array<ReturnType<typeof createDeferred<Entry>>> = []
+    const fetchContentfulEntry = rs.fn(async (_descriptor: unknown) => {
+      const deferred = createDeferred<Entry>()
+      fetches.push(deferred)
+      return await deferred.promise
+    })
+    Reflect.set(runtime.sdk, 'fetchContentfulEntry', fetchContentfulEntry)
+    const root = createRootElement(runtime.sdk)
+    const entry = document.createElement('ctfl-optimized-entry')
+
+    if (!(entry instanceof ContentfulOptimizedEntryElement)) {
+      throw new Error('ctfl-optimized-entry is not registered.')
+    }
+
+    const loading = rs.fn()
+    const resolved = rs.fn((event: Event) => getEntryDetail(event).entry.sys.id)
+
+    entry.contentType = 'page'
+    entry.slug = 'home'
+    entry.addEventListener('ctfl-entry-loading', loading)
+    entry.addEventListener('ctfl-entry-resolved', resolved)
+    root.append(entry)
+    document.body.append(root)
+
+    entry.slugField = 'path'
+    entry.contentType = 'landingPage'
+    entry.slug = '/de/home'
+
+    expect(fetchContentfulEntry).toHaveBeenNthCalledWith(1, {
+      contentType: 'page',
+      slug: 'home',
+      slugField: 'slug',
+      entryQuery: undefined,
+    })
+    expect(fetchContentfulEntry).toHaveBeenNthCalledWith(2, {
+      contentType: 'page',
+      slug: 'home',
+      slugField: 'path',
+      entryQuery: undefined,
+    })
+    expect(fetchContentfulEntry).toHaveBeenNthCalledWith(3, {
+      contentType: 'landingPage',
+      slug: 'home',
+      slugField: 'path',
+      entryQuery: undefined,
+    })
+    expect(fetchContentfulEntry).toHaveBeenNthCalledWith(4, {
+      contentType: 'landingPage',
+      slug: '/de/home',
+      slugField: 'path',
+      entryQuery: undefined,
+    })
+    expect(loading).toHaveBeenCalledTimes(4)
+
+    fetches[3]?.resolve(variantB)
+    await flushMicrotasks()
+    fetches[0]?.resolve(baseline)
+    fetches[1]?.resolve(variantA)
+    fetches[2]?.resolve(optimizedBaseline)
+    await flushMicrotasks()
+
+    expect(resolved).toHaveBeenCalledTimes(1)
+    expect(resolved).toHaveReturnedWith('2qVK4T5lnScbswoyBuGipd')
+    expect(entry.dataset.ctflEntryId).toBe('2qVK4T5lnScbswoyBuGipd')
+  })
+
+  it('waits for a complete slug source and forwards empty slugs and custom fields', async () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const error = new Error(
+      'Contentful entry not found for content type "page" where "fields.path" equals "".',
+    )
+    const fetchContentfulEntry = rs.fn(async () => await Promise.reject(error))
+    Reflect.set(runtime.sdk, 'fetchContentfulEntry', fetchContentfulEntry)
+    const root = createRootElement(runtime.sdk)
+    const entry = document.createElement('ctfl-optimized-entry')
+
+    if (!(entry instanceof ContentfulOptimizedEntryElement)) {
+      throw new Error('ctfl-optimized-entry is not registered.')
+    }
+
+    const errored = rs.fn((event: Event) => getEntryError(event))
+
+    entry.addEventListener('ctfl-entry-error', errored)
+    root.append(entry)
+    document.body.append(root)
+
+    entry.contentType = 'page'
+    entry.slugField = 'path'
+
+    expect(fetchContentfulEntry).not.toHaveBeenCalled()
+    expect(errored).not.toHaveBeenCalled()
+
+    entry.slug = ''
+    await flushMicrotasks()
+
+    expect(fetchContentfulEntry).toHaveBeenCalledWith({
+      contentType: 'page',
+      slug: '',
+      slugField: 'path',
+      entryQuery: undefined,
+    })
+    expect(errored).toHaveReturnedWith(error)
+  })
+
+  it('reports the controller conflict error once without fetching either source', () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(baseline))
+    Reflect.set(runtime.sdk, 'fetchContentfulEntry', fetchContentfulEntry)
+    const root = createRootElement(runtime.sdk)
+    const entry = document.createElement('ctfl-optimized-entry')
+
+    if (!(entry instanceof ContentfulOptimizedEntryElement)) {
+      throw new Error('ctfl-optimized-entry is not registered.')
+    }
+
+    const errored = rs.fn((event: Event) => getEntryError(event))
+
+    entry.entryId = '4ib0hsHWoSOnCVdDkizE8d'
+    entry.contentType = 'page'
+    entry.slug = 'home'
+    entry.addEventListener('ctfl-entry-error', errored)
+    root.append(entry)
+    document.body.append(root)
+
+    expect(fetchContentfulEntry).not.toHaveBeenCalled()
+    expect(errored).toHaveBeenCalledTimes(1)
+    expect(errored).toHaveReturnedWith(
+      expect.objectContaining({
+        message: 'Optimized entry source cannot include both entryId and managedEntry.',
+      }),
+    )
+
+    entry.slugField = 'path'
+
+    expect(errored).toHaveBeenCalledTimes(1)
+  })
+
   it('prefetches managed entries after the root SDK is ready', async () => {
     ensureElementsDefined()
     const runtime = createSdk((entry) => ({ entry }))
@@ -572,19 +790,24 @@ describe('Contentful Optimization Web Components', () => {
     )
   })
 
-  it('lets baselineEntry take precedence over entryId', () => {
+  it('lets baselineEntry take precedence over conflicting managed sources', () => {
     ensureElementsDefined()
     const runtime = createSdk((entry) => ({ entry }))
     const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(variantA))
     Reflect.set(runtime.sdk, 'fetchContentfulEntry', fetchContentfulEntry)
     const root = createRootElement(runtime.sdk)
     const entry = createEntryElement(baseline)
+    const errored = rs.fn()
 
     entry.entryId = '4k6ZyFQnR2POY5IJLLlJRb'
+    entry.contentType = 'page'
+    entry.slug = 'home'
+    entry.addEventListener('ctfl-entry-error', errored)
     root.append(entry)
     document.body.append(root)
 
     expect(fetchContentfulEntry).not.toHaveBeenCalled()
+    expect(errored).not.toHaveBeenCalled()
     expect(entry.dataset.ctflEntryId).toBe('4ib0hsHWoSOnCVdDkizE8d')
   })
 

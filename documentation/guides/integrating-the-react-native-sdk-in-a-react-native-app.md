@@ -37,8 +37,8 @@ You will get there in two milestones:
 
 This guide uses `@contentful/optimization-react-native`. You mount one `OptimizationRoot` around your
 app; it creates the SDK instance, restores state from AsyncStorage, and provides it to the hooks and
-components below it. Your app still owns its Contentful Delivery API client, locale policy, consent
-policy, identity policy, navigation, and final rendering.
+components below it. Your app still owns its Contentful Delivery API (CDA) client, locale policy,
+consent policy, identity policy, navigation, and final rendering.
 
 ## Quick start
 
@@ -382,6 +382,38 @@ const APP_LOCALE = 'en-US'
 </OptimizationRoot>
 ```
 
+For a content-type/slug source, put the descriptor under `managedEntry`. Inside it, `slugField`
+defaults to `slug` and `entryQuery` is optional. Use this form when navigation provides an app-owned
+slug instead of a Contentful entry ID:
+
+**Follow this pattern:** `EntryLoading`, `EntryError`, `HeroCard`, and their props belong to your app.
+
+```tsx
+<OptimizedEntry
+  managedEntry={{
+    contentType: 'page',
+    slug: 'home',
+    entryQuery: { locale: APP_LOCALE },
+  }}
+  loadingFallback={<EntryLoading />}
+  errorFallback={(error) => <EntryError message={error.message} />}
+>
+  {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
+</OptimizedEntry>
+```
+
+The SDK merges the managed query, then enforces `content_type`, `fields.<slugField>`, and `limit: 2`.
+The placeholders below are replaced with the source's actual content type, effective slug field, and
+slug:
+
+- No match: `Contentful entry not found for content type "<contentType>" where
+"fields.<slugField>" equals "<slug>".`
+- More than one match: `Multiple Contentful entries found for content type "<contentType>" where
+"fields.<slugField>" equals "<slug>".`
+
+Resolution callbacks, metadata, view tracking, and tap tracking use the fetched entry's real
+`sys.id`, not the slug.
+
 Manual fetching remains supported when your app needs request ownership around one entry:
 
 **Adapt this to your use case:**
@@ -407,9 +439,12 @@ the locale update, Experience API requests and event context use the new locale,
 not refetch Contentful entries or refresh profile state. Refetch entries and run your normal
 `screen()`, `identify()`, or profile refresh path when localized data must update.
 
-`prefetchManagedEntries` accepts entry ID strings or `{ entryId, entryQuery }` descriptors. The
-provider keeps rendering children while the cache warms. React Native does not expose
-server-to-client managed-entry snapshots because it has no server-to-client hydration handoff path.
+`prefetchManagedEntries` accepts entry ID strings, `{ entryId, entryQuery? }`, or
+`{ contentType, slug, slugField?, entryQuery? }` source objects. Slug sources with the same content
+type, slug, effective slug field, locale, include depth, and other effective query values share the
+managed cache; each different source uses its own `getEntries()` request. The provider keeps
+rendering children while the cache warms. React Native does not expose server-to-client managed-entry
+snapshots because it has no server-to-client hydration handoff path.
 
 For the entry contract, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
@@ -431,29 +466,33 @@ app's children. Live updates remove existing app content when a result becomes e
 when a later result is not empty. An absent empty-variant flag renders normally. With no measurable
 or interactive child, the tracking `View` does not guarantee a view or tap event.
 
-The entry source is a discriminated union: pass either `entryId` (managed fetch) or `baselineEntry`
-(manual fetch), never both.
+The entry source is a discriminated union: pass `baselineEntry` (manual fetch), `entryId` plus
+optional `entryQuery` (managed ID fetch), or a content-type/slug descriptor under `managedEntry`,
+never more than one source.
 
 1. Pass `entryId` to let the SDK fetch the baseline entry through the configured Contentful client
    (managed fetching, from the [Contentful entry fetching and locale shape](#contentful-entry-fetching-and-locale-shape)
    section).
-2. Pass `baselineEntry` when your application already fetched the entry and must keep manual request
+2. Pass `managedEntry={{ contentType, slug, slugField?, entryQuery? }}` when the SDK must look up the
+   entry by a route slug; add `slugField` only when the Contentful field is not `slug`.
+3. Pass `baselineEntry` when your application already fetched the entry and must keep manual request
    ownership.
-3. Use `loadingFallback`, `errorFallback`, and `onEntryError` when the managed fetch needs visible
+4. Use `loadingFallback`, `errorFallback`, and `onEntryError` when the managed fetch needs visible
    loading or error handling.
-4. Use a render prop — a function passed as the child, which receives the resolved entry and returns
+5. Use a render prop — a function passed as the child, which receives the resolved entry and returns
    your UI — when the child needs the resolved baseline or variant entry. This is the
    `{(resolvedEntry) => ...}` form the quick start used.
-5. Use static children only when you need entry tracking but not variant data in the child.
-6. Use `useOptimizedEntry()` for the same managed or manual source model without the wrapper
-   component.
-7. Use `useEntryResolver()` when a component needs manual-only resolution helpers.
+6. Use static children only when you need entry tracking but not variant data in the child.
+7. Use `useOptimizedEntry()` for the same managed or manual source model without the wrapper
+   component. For example, use
+   `useOptimizedEntry({ managedEntry: { contentType: 'page', slug: routeSlug } })` for a slug source.
+8. Use `useEntryResolver()` when a component needs manual-only resolution helpers.
 
 A Contentful entry skeleton is a TypeScript description of one content type and its fields. Use one
 skeleton union, `S`, containing every possible baseline or variant content type. Manual
 `OptimizedEntry` and `useOptimizedEntry()` calls, plus the manual `useEntryResolver()` helpers, use
 `<S, M, L>`, where `M` is the `contentful.js` response mode and `L` is the locale. Managed
-`entryId` component and hook calls use `<S, L>` because `M` is fixed to `undefined`. When every
+ID and slug component and hook calls use `<S, L>` because `M` is fixed to `undefined`. When every
 variant shares the baseline content type, omit the generic and let TypeScript infer that skeleton
 from `baselineEntry`.
 
@@ -525,9 +564,9 @@ There are two distinct outcomes, and they use different props. The **baseline fa
 resolution outcome on an entry the SDK already has: on denied consent, no matching variant,
 unresolved links, an all-locale payload, or an entry missing top-level `metadata`, the render prop
 receives the baseline (original) entry and the UI does not break. A **managed-fetch failure** is
-different: when `entryId` is used and the SDK's fetch rejects, there is no entry to resolve, so
+different: when an ID or slug fetch rejects, there is no entry to resolve, so
 `onEntryError` fires once and `OptimizedEntry` renders `errorFallback` instead of the render prop.
-While a managed `entryId` fetch is unresolved, `OptimizedEntry` shows `loadingFallback` until the
+While a managed fetch is unresolved, `OptimizedEntry` shows `loadingFallback` until the
 fetch settles; there is no time limit on that loading window, so provide a `loadingFallback` for
 any entry the reader waits on.
 

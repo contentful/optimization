@@ -309,6 +309,192 @@ describe('CoreBase', () => {
     })
   })
 
+  it('fetches entries by default and custom slug fields with enforced source selectors', async () => {
+    const slugEntry = createEntry('resolved-entry-id')
+    const client = createContentfulClient(
+      undefined,
+      async () => await Promise.resolve(createEntryCollection([slugEntry])),
+    )
+    const core = new TestCore({
+      ...config,
+      contentful: { client, defaultQuery: { include: 2, locale: 'en-US' }, cache: false },
+    })
+
+    await expect(core.fetchContentfulEntry({ contentType: 'page', slug: 'home' })).resolves.toBe(
+      slugEntry,
+    )
+    const entryQuery: ContentfulEntryQuery = { include: 1, locale: 'de-DE' }
+    Reflect.set(entryQuery, 'content_type', 'ignored')
+    Reflect.set(entryQuery, 'limit', 99)
+    Reflect.set(entryQuery, 'fields.path', 'ignored')
+    await core.fetchContentfulEntry({
+      contentType: 'landingPage',
+      slug: '/de/home',
+      slugField: 'path',
+      entryQuery,
+    })
+
+    expect(client.getEntries).toHaveBeenNthCalledWith(1, {
+      include: 2,
+      locale: 'en-US',
+      content_type: 'page',
+      'fields.slug': 'home',
+      limit: 2,
+    })
+    expect(client.getEntries).toHaveBeenNthCalledWith(2, {
+      include: 1,
+      locale: 'de-DE',
+      content_type: 'landingPage',
+      'fields.path': '/de/home',
+      limit: 2,
+    })
+    expect(client.getEntry).not.toHaveBeenCalled()
+  })
+
+  it('reports missing, duplicate, empty, and invalid slug descriptors without extra requests', async () => {
+    const entry = createEntry('resolved-entry-id')
+    const client = createContentfulClient()
+    client.getEntries
+      .mockResolvedValueOnce(createEntryCollection([]))
+      .mockResolvedValueOnce({ ...createEntryCollection([entry]), total: 2 })
+    const core = new TestCore({ ...config, contentful: { client, cache: false } })
+
+    await expect(
+      core.fetchContentfulEntry({ contentType: 'page', slug: 'missing' }),
+    ).rejects.toThrow(
+      'Contentful entry not found for content type "page" where "fields.slug" equals "missing".',
+    )
+    await expect(
+      core.fetchContentfulEntry({ contentType: 'page', slug: 'duplicate' }),
+    ).rejects.toThrow(
+      'Multiple Contentful entries found for content type "page" where "fields.slug" equals "duplicate".',
+    )
+    await expect(core.fetchContentfulEntry({ contentType: 'page', slug: '' })).rejects.toThrow(
+      'Contentful entry not found for content type "page" where "fields.slug" equals "".',
+    )
+    await expect(
+      core.fetchContentfulEntry({ contentType: '', slug: 'home' }),
+    ).rejects.toBeInstanceOf(TypeError)
+    await expect(
+      core.fetchContentfulEntry({ contentType: 'page', slug: 'home', slugField: '' }),
+    ).rejects.toBeInstanceOf(TypeError)
+
+    expect(client.getEntries).toHaveBeenCalledTimes(2)
+  })
+
+  it('deduplicates and caches normalized slug descriptors without aliasing entry IDs', async () => {
+    const deferred = createDeferred<Awaited<ReturnType<ContentfulEntryClient['getEntries']>>>()
+    const resolvedEntry = createEntry('resolved-entry-id')
+    const client = createContentfulClient(
+      async (entryId) => await Promise.resolve(createEntry(entryId)),
+      async () => await deferred.promise,
+    )
+    const core = new TestCore({ ...config, contentful: { client } })
+
+    const first = core.fetchContentfulEntry({ contentType: 'page', slug: 'home' })
+    const second = core.fetchContentfulEntry({
+      contentType: 'page',
+      slug: 'home',
+      slugField: 'slug',
+    })
+    expect(client.getEntries).toHaveBeenCalledTimes(1)
+
+    deferred.resolve(createEntryCollection([resolvedEntry]))
+    await expect(Promise.all([first, second])).resolves.toEqual([resolvedEntry, resolvedEntry])
+    await expect(core.fetchContentfulEntry({ contentType: 'page', slug: 'home' })).resolves.toBe(
+      resolvedEntry,
+    )
+    await core.fetchContentfulEntry('home')
+
+    expect(client.getEntries).toHaveBeenCalledTimes(1)
+    expect(client.getEntry).toHaveBeenCalledWith('home', { include: 10 })
+  })
+
+  it('evicts failed slug fetches and includes normalized slug data in handoffs', async () => {
+    const resolvedEntry = createEntry('resolved-entry-id')
+    const client = createContentfulClient(
+      undefined,
+      async () => await Promise.resolve(createEntryCollection([resolvedEntry])),
+    )
+    client.getEntries.mockRejectedValueOnce(new Error('CDA failed'))
+    const core = new TestCore({ ...config, contentful: { client } })
+    const descriptor = {
+      contentType: 'page',
+      slug: 'home',
+      entryQuery: { locale: 'de-DE' },
+    } as const
+
+    await expect(core.fetchContentfulEntry(descriptor)).rejects.toThrow('CDA failed')
+    await expect(core.prefetchManagedEntries([descriptor, descriptor])).resolves.toEqual([
+      {
+        baselineEntry: resolvedEntry,
+        entryId: 'resolved-entry-id',
+        managedEntry: { ...descriptor, slugField: 'slug' },
+      },
+      {
+        baselineEntry: resolvedEntry,
+        entryId: 'resolved-entry-id',
+        managedEntry: { ...descriptor, slugField: 'slug' },
+      },
+    ])
+    expect(client.getEntries).toHaveBeenCalledTimes(2)
+  })
+
+  it('deduplicates duplicate slug fetches in flight when caching is disabled', async () => {
+    const deferred = createDeferred<Awaited<ReturnType<ContentfulEntryClient['getEntries']>>>()
+    const resolvedEntry = createEntry('resolved-entry-id')
+    const client = createContentfulClient(undefined, async () => await deferred.promise)
+    const core = new TestCore({ ...config, contentful: { client, cache: false } })
+    const descriptor = { contentType: 'page', slug: 'home' } as const
+
+    const entriesPromise = core.fetchContentfulEntries([descriptor, descriptor])
+    expect(client.getEntries).toHaveBeenCalledTimes(1)
+
+    deferred.resolve(createEntryCollection([resolvedEntry]))
+    await expect(entriesPromise).resolves.toEqual([resolvedEntry, resolvedEntry])
+
+    await core.fetchContentfulEntry(descriptor)
+    expect(client.getEntries).toHaveBeenCalledTimes(2)
+  })
+
+  it('preserves mixed ID and slug order while batching IDs unchanged', async () => {
+    const slugEntry = createEntry('resolved-slug-id')
+    const client = createContentfulClient(
+      undefined,
+      async (query) =>
+        await Promise.resolve(
+          Reflect.has(query ?? {}, 'fields.slug')
+            ? createEntryCollection([slugEntry])
+            : createEntryCollection(getRequestedEntryIds(query).map(createEntry)),
+        ),
+    )
+    const core = new TestCore({ ...config, contentful: { client, cache: false } })
+
+    const entries = await core.fetchContentfulEntries([
+      '4ib0hsHWoSOnCVdDkizE8d',
+      { contentType: 'page', slug: 'home' },
+      { entryId: '4k6ZyFQnR2POY5IJLLlJRb' },
+    ])
+
+    expect(entries.map((entry) => entry.sys.id)).toEqual([
+      '4ib0hsHWoSOnCVdDkizE8d',
+      'resolved-slug-id',
+      '4k6ZyFQnR2POY5IJLLlJRb',
+    ])
+    expect(client.getEntries).toHaveBeenNthCalledWith(1, {
+      include: 10,
+      content_type: 'page',
+      'fields.slug': 'home',
+      limit: 2,
+    })
+    expect(client.getEntries).toHaveBeenNthCalledWith(2, {
+      include: 10,
+      'sys.id[in]': ['4ib0hsHWoSOnCVdDkizE8d', '4k6ZyFQnR2POY5IJLLlJRb'],
+      limit: 2,
+    })
+    expect(client.getEntry).not.toHaveBeenCalled()
+  })
+
   it('caches equivalent Contentful entry queries regardless of key insertion order', async () => {
     const client = createContentfulClient()
     const core = new TestCore({

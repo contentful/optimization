@@ -202,8 +202,10 @@ outside this guide:
   Contentful entries for your application UI (only the preview panel fetches its own definitions):
   your app fetches entries in its own layer and passes the resulting single-locale entry maps to
   `OptimizedEntry` or `client.resolveOptimizedEntry(...)`.
-- **Contentful delivery credentials** — space ID, delivery token, and environment — read from your
-  app's runtime configuration and used by your own Contentful fetching layer.
+- **A working app-owned Contentful Delivery API (CDA) client or fetch layer**, configured with your
+  space ID, delivery token, and environment. It must already be able to fetch one entry with a
+  concrete locale and enough link depth for referenced entries. The native SDK does not provide this
+  fetch layer.
 - **At least one entry with a variant attached to an experience**, authored in Contentful. Without
   an authored variant, the integration can still run correctly while returning the baseline, so you
   cannot yet distinguish working personalization from a content-authoring gap. For the first
@@ -391,11 +393,14 @@ consent model, see
 
 **Integration category:** Required for first integration
 
-The Android SDK does not fetch Contentful entries for your application UI — only the preview panel
-fetches its own audience and experience definitions. Your app fetches entries from the Contentful
-Delivery API and passes the resulting single-locale entry maps (`Map<String, Any>`) to `OptimizedEntry`
-or `client.resolveOptimizedEntry(...)`. There is no fetch-by-ID path in the Android SDK, so the
-Contentful client and its request options stay entirely yours.
+The Android SDK does not fetch managed Contentful entries for your application UI. Fetching remains
+in your app regardless of how navigation identifies an entry. If the app already has a Contentful
+entry ID, keep its existing single-entry ID request. If a route carries a public slug, the app can
+query CDA by content type and slug. In both cases, pass the fetched single-locale `CDAEntry` or entry
+map (`Map<String, Any>`) to `OptimizedEntry`; do not pass the ID or slug to the native SDK. The
+imperative `client.resolveOptimizedEntry(...)` method accepts only a raw entry map. Convert a
+`CDAEntry` with `CTEntry.from(entry).toMap()` before calling it. Only the preview panel fetches its
+own audience and experience definitions.
 
 Fetch with one concrete locale and enough `include` depth to resolve the linked optimization data.
 `nt_experiences` is the SDK-owned link field the resolver reads on an optimized entry; it links that
@@ -422,33 +427,21 @@ events use. Keep them aligned when rendered content and Experience responses mus
 1. Choose the application Contentful locale in your app's navigation, i18n, or account layer.
 2. Pass the same locale to `OptimizationConfig(locale = ...)` when Experience responses and event
    context must align with rendered content.
-3. Fetch entries with a concrete locale and enough include depth for `nt_experiences` →
-   `nt_experience` → `nt_variants`/`nt_audience`.
+3. Fetch by entry ID, or adapt the app's existing Contentful query with the slug filters below when
+   navigation supplies a slug. Pass the one fetched entry to native resolution.
 4. When the app locale changes, call `client.setLocale(...)`, refetch entries with the new locale, and
    re-render. `setLocale(...)` updates only the SDK Experience/event locale; it does not refetch
    Contentful or refresh profile state, and it throws before initialization or on an invalid locale.
 
-**Adapt this to your use case:**
+For an optional route-slug lookup, reuse the Contentful client and fetcher your app already owns.
+Send `content_type=page` and `fields.slug=<route slug>` as exact-equality filters, plus one concrete
+`locale`, enough `include` depth, and `limit=2`. Return the entry only for exactly one CDA item;
+surface zero items through the app's not-found path and more than one item as an authoring or
+configuration error. Replace `page` and `slug` with your content type and slug-field IDs. The native
+SDK never reads these lookup values or performs this request.
 
-```kotlin
-@Composable
-fun HomeScreen(contentfulClient: ContentfulDeliveryClient) {
-    // selectedAppLocale() and contentfulClient are your app's own locale source and fetching layer.
-    val appLocale = selectedAppLocale()
-    var heroEntry by remember { mutableStateOf<Map<String, Any>?>(null) }
-
-    LaunchedEffect(appLocale) {
-        // Your own CDA fetch: one concrete locale, include depth for linked experiences and variants.
-        heroEntry = contentfulClient.fetchEntry(
-            id = "<entry-id>",
-            locale = appLocale,
-            include = 10,
-        )
-    }
-
-    HomeContent(heroEntry = heroEntry)
-}
-```
+While that app-owned fetch is pending, show your existing loading or not-found UI. When it returns,
+pass the `CDAEntry` to the native resolution path below.
 
 For the full data shape and locale boundary, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
@@ -492,8 +485,8 @@ or the result cannot be serialized or parsed, it returns the baseline with
 2. Branch on the resolved `CTEntry` and render each supported content type in your own composables.
 3. Provide your own loading treatment while the app-owned fetch is pending — `OptimizedEntry` needs an
    entry to render, so gate it on your fetched state.
-4. Use `client.resolveOptimizedEntry(...)` directly only when a component must separate resolution from
-   rendering.
+4. Use `client.resolveOptimizedEntry(...)` directly only when a component must separate resolution
+   from rendering. Pass an existing raw map unchanged, or convert a `CDAEntry` to a map first.
 
 **Adapt this to your use case:**
 
@@ -533,18 +526,19 @@ fun HeroSection(entry: CDAEntry) {
 fun DirectResolution(entry: CDAEntry) {
     val client = LocalOptimizationClient.current
     val baselineEntry = remember(entry) { CTEntry.from(entry) }
+    val baselineEntryMap = remember(baselineEntry) { baselineEntry.toMap() }
     var result by remember(baselineEntry) {
         mutableStateOf(
             ResolvedOptimizedEntry(entry = baselineEntry, selectedOptimization = null),
         )
     }
 
-    LaunchedEffect(baselineEntry) {
+    LaunchedEffect(baselineEntryMap) {
         // Collect the flow so re-resolution follows every profile, preview, or consent change;
         // reading selectedOptimizations.value would capture only the current snapshot.
         client.selectedOptimizations.collect { selectedOptimizations ->
             result = client.resolveOptimizedEntry(
-                baseline = baselineEntry.toMap(),
+                baseline = baselineEntryMap,
                 selectedOptimizations = selectedOptimizations,
             )
         }

@@ -460,6 +460,49 @@ describe('CoreStateless', () => {
     ])
   })
 
+  it('preserves slug descriptors while applying request-local Contentful locale', async () => {
+    const client = createOptimizedEntryClient()
+    const core = new CoreStateless({
+      clientId: 'key_123',
+      environment: 'main',
+      contentful: { client, cache: false },
+    })
+    const requestOptimization = core.forRequest({ consent: true, locale: 'de-DE' })
+    const descriptor = {
+      contentType: 'page',
+      slug: '/home',
+      slugField: 'path',
+      entryQuery: { include: 2 },
+    } as const
+
+    await requestOptimization.fetchContentfulEntry(descriptor)
+    await requestOptimization.fetchOptimizedEntry(
+      { ...descriptor, slug: '/about' },
+      { selectedOptimizations: [] },
+    )
+    const [handoff] = await requestOptimization.prefetchManagedEntries([descriptor])
+
+    expect(client.getEntries).toHaveBeenNthCalledWith(1, {
+      include: 2,
+      locale: 'de-DE',
+      content_type: 'page',
+      'fields.path': '/home',
+      limit: 2,
+    })
+    expect(client.getEntries).toHaveBeenNthCalledWith(2, {
+      include: 2,
+      locale: 'de-DE',
+      content_type: 'page',
+      'fields.path': '/about',
+      limit: 2,
+    })
+    expect(handoff).toEqual({
+      baselineEntry: optimizedEntry,
+      entryId: optimizedEntry.sys.id,
+      managedEntry: descriptor,
+    })
+  })
+
   it('defaults allowedEventTypes to empty for stateless core requests', async () => {
     const blockedEvents: BlockedEvent[] = []
     const core = new CoreStateless({

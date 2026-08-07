@@ -47,9 +47,10 @@ persistence, networking, lifecycle handling, SwiftUI views, and preview-panel UI
   and preview-panel behavior against the shared mock API.
 - `OptimizationConfig.locale` is the SDK Experience API and default event locale. Runtime locale
   changes use `OptimizationClient.setLocale(_:)`. Explicit invalid locale values throw.
-- Applications own Contentful CDA locale selection. Pass the application locale directly to CDA
-  fetches that feed SDK entry resolution. Do not pass all-locale CDA responses from `withAllLocales`
-  or `locale=*`; see
+- Applications query the Contentful Delivery API by content type and slug, using one concrete
+  application locale, then pass the fetched entry to `OptimizedEntry` or
+  `resolveOptimizedEntry(...)`. The native iOS SDK does not provide managed entry fetching. Do not
+  pass all-locale CDA responses from `withAllLocales` or `locale=*`; see
   [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
   For the broader locale model, see
   [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md).

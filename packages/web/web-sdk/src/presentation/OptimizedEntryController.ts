@@ -1,6 +1,7 @@
 import type {
   ContentfulEntryQuery,
   EntryFor,
+  ManagedEntryDescriptor,
   Observable,
   OptimizedEntryMetadata,
   ResolvedData,
@@ -37,6 +38,11 @@ interface ExperienceRequestStateLike {
   readonly status: string
 }
 
+interface FetchContentfulEntry {
+  (entryId: string, query?: ContentfulEntryQuery): Promise<Entry>
+  (descriptor: Exclude<ManagedEntryDescriptor, string>): Promise<Entry>
+}
+
 /** Minimal SDK surface needed by optimized-entry presentation controllers. @public */
 export interface OptimizedEntrySdk<
   S extends EntrySkeletonType = EntrySkeletonType,
@@ -55,7 +61,7 @@ export interface OptimizedEntrySdk<
     entry: EntryFor<S, M, L>,
     selectedOptimizations?: SelectedOptimizationArray,
   ) => ResolvedData<S, M, L>
-  fetchContentfulEntry: (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
+  fetchContentfulEntry: FetchContentfulEntry
 }
 
 /** Inputs used to configure an optimized-entry presentation controller. @public */

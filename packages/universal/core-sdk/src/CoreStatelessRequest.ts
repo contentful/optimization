@@ -296,21 +296,32 @@ export class CoreStatelessRequest {
   }
 
   /**
-   * Fetch a Contentful entry through the parent SDK's configured `contentful.js` client.
+   * Fetch a Contentful entry by ID or by content type and slug through the parent SDK's configured
+   * `contentful.js` client.
    *
    * @remarks
-   * If `contentful.defaultQuery` and the per-call query omit `locale`, this request's `locale`
-   * becomes the managed Contentful query locale.
+   * Set `entryQuery` on an object descriptor to customize its query. If `contentful.defaultQuery`
+   * and the descriptor's `entryQuery` or per-call query omit `locale`, this request's `locale`
+   * becomes the managed Contentful query locale. Entry IDs use `getEntry()` or a coalesced
+   * `getEntries()` call; descriptors that identify entries by content type and slug use
+   * `getEntries()`.
    *
    * @public
    */
   async fetchContentfulEntry<
     S extends EntrySkeletonType = EntrySkeletonType,
     L extends LocaleCode = LocaleCode,
-  >(entryId: string, query?: ContentfulEntryQuery): Promise<Entry<S, undefined, L>> {
+  >(entryId: string, query?: ContentfulEntryQuery): Promise<Entry<S, undefined, L>>
+  async fetchContentfulEntry<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(descriptor: Exclude<ManagedEntryDescriptor, string>): Promise<Entry<S, undefined, L>>
+  async fetchContentfulEntry<S extends EntrySkeletonType, L extends LocaleCode = LocaleCode>(
+    descriptor: ManagedEntryDescriptor,
+    query?: ContentfulEntryQuery,
+  ): Promise<Entry<S, undefined, L>> {
     return await this.core.fetchContentfulEntry<S, L>(
-      entryId,
-      this.withRequestContentfulLocale(query),
+      this.withRequestManagedEntryDescriptor(descriptor, query),
     )
   }
 
@@ -328,14 +339,7 @@ export class CoreStatelessRequest {
     L extends LocaleCode = LocaleCode,
   >(entries: readonly ManagedEntryDescriptor[]): Promise<Array<Entry<S, undefined, L>>> {
     return await this.core.fetchContentfulEntries<S, L>(
-      entries.map((entry) => {
-        const descriptor = normalizeManagedEntryDescriptor(entry)
-        const entryQuery = this.withRequestContentfulLocale(descriptor.entryQuery)
-
-        return entryQuery === undefined
-          ? descriptor.entryId
-          : { entryId: descriptor.entryId, entryQuery }
-      }),
+      entries.map((entry) => this.withRequestManagedEntryDescriptor(entry)),
     )
   }
 
@@ -352,13 +356,16 @@ export class CoreStatelessRequest {
   }
 
   /**
-   * Fetch a Contentful entry and resolve it with request-local selected optimizations.
+   * Fetch a Contentful entry by ID or by content type and slug, then resolve it with request-local
+   * selected optimizations.
    *
    * @remarks
    * If `options.selectedOptimizations` is omitted, this uses the latest selected optimizations
-   * returned by an accepted request-bound Experience API call. If `contentful.defaultQuery` and the
-   * per-call query omit `locale`, this request's `locale` becomes the managed Contentful query
-   * locale.
+   * returned by an accepted request-bound Experience API call. Set `entryQuery` on an object
+   * descriptor to customize its query. If `contentful.defaultQuery` and the descriptor's
+   * `entryQuery` or per-call query omit `locale`, this request's `locale` becomes the managed
+   * Contentful query locale. Fetching follows the same `getEntry()` and `getEntries()` behavior as
+   * {@link CoreStatelessRequest.fetchContentfulEntry}.
    *
    * @public
    */
@@ -369,15 +376,34 @@ export class CoreStatelessRequest {
     entryId: string,
     options?: FetchOptimizedEntryOptions,
   ): Promise<FetchOptimizedEntryResult<S, undefined, L>>
+  async fetchOptimizedEntry<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(
+    descriptor: Exclude<ManagedEntryDescriptor, string>,
+    options?: Omit<FetchOptimizedEntryOptions, 'query'>,
+  ): Promise<FetchOptimizedEntryResult<S, undefined, L>>
   async fetchOptimizedEntry(
-    entryId: string,
+    descriptor: ManagedEntryDescriptor,
     options: FetchOptimizedEntryOptions = {},
   ): Promise<FetchOptimizedEntryResult> {
-    return await this.core.fetchOptimizedEntry(entryId, {
-      ...options,
-      query: this.withRequestContentfulLocale(options.query),
-      selectedOptimizations: options.selectedOptimizations ?? this.currentSelectedOptimizations,
-    })
+    const selectedOptimizations = options.selectedOptimizations ?? this.currentSelectedOptimizations
+    const requestDescriptor = this.withRequestManagedEntryDescriptor(descriptor, options.query)
+    return await this.core.fetchOptimizedEntry(requestDescriptor, { selectedOptimizations })
+  }
+
+  private withRequestManagedEntryDescriptor(
+    entry: ManagedEntryDescriptor,
+    query?: ContentfulEntryQuery,
+  ): Exclude<ManagedEntryDescriptor, string> {
+    const descriptor = normalizeManagedEntryDescriptor(
+      typeof entry === 'string' && query !== undefined
+        ? { entryId: entry, entryQuery: query }
+        : entry,
+    )
+    const entryQuery = this.withRequestContentfulLocale(descriptor.entryQuery)
+
+    return entryQuery === undefined ? descriptor : { ...descriptor, entryQuery }
   }
 
   private withRequestContentfulLocale(

@@ -270,7 +270,7 @@ setup. Only `clientId` is required by the initializer.
 1. Pass `clientId` from your configuration layer.
 2. Pass `environment` only when it is not the default `main`.
 3. Pass `locale` when Experience API requests and event context must use the same language as the
-   Contentful entries you render.
+   Contentful Delivery API (CDA) entries you render.
 4. Set `api` base URLs (`experienceBaseUrl`/`insightsBaseUrl`) only for mock, staging, or other
    non-default endpoints — both default correctly otherwise.
 5. Keep `logLevel` at its default `.error` in production unless your operational policy allows more
@@ -399,9 +399,12 @@ For the full consent responsibility model, see
 
 **Integration category:** Required for first integration
 
-The iOS SDK has no fetch-by-ID path, so your app always owns the Contentful Delivery API fetch. You
-fetch the entry, hand it to the SDK, and the SDK resolves it locally against the selected
-optimizations for the current visitor.
+The iOS SDK has no native managed fetch path. Fetching remains in your app regardless of how a route
+identifies an entry. If the app already has a Contentful entry ID, keep its existing single-entry ID
+request. If a route carries a public slug, the app can query CDA by content type and slug. In both
+cases, pass the fetched single-locale entry to the SDK; do not pass the ID or slug to native
+resolution. The SDK resolves the entry locally against the selected optimizations for the current
+visitor.
 
 `client.selectedOptimizations` (plural) is the SDK's current set of selected optimizations — one
 selection per experience the visitor's profile matched, published on the client and updated from
@@ -416,7 +419,9 @@ The result's `isEmptyVariant` field is `true` only for a boolean `true`. In that
 retains the baseline for tracking context, but UIKit code must skip rendering consumer content. An
 absent, false, or invalid field renders normally.
 
-1. Fetch entries with one concrete Contentful locale. Do not pass all-locale payloads (`locale=*` or
+1. Fetch by entry ID, or adapt the app's existing Contentful query with the slug filters below when
+   the route supplies a slug. Pass the one fetched entry to native resolution. Do not pass
+   all-locale payloads (`locale=*` or
    all-locale helpers) into entry resolution — they fall back to baseline. The raw dictionary path
    requires top-level `sys`, `fields`, and `metadata`; the `Contentful.Entry` overload builds that
    shape for you.
@@ -433,6 +438,14 @@ absent, false, or invalid field renders normally.
    with `getField(...)`.
 6. Use `result.selectedOptimization` and `result.optimizationContextId` only when building tracking
    payloads.
+
+For an optional route-slug lookup, reuse the Contentful client and fetcher your app already owns.
+Send `content_type=page` and `fields.slug=<route slug>` as exact-equality filters, plus one concrete
+`locale`, enough `include` depth, and `limit=2`. Return the entry only for exactly one CDA item;
+surface zero items through the app's not-found path and more than one item as an authoring or
+configuration error. Replace `page` and `slug` with your content type and slug-field IDs. The native
+SDK never reads these lookup values or performs this request. Pass the returned entry to the typed
+`Contentful.Entry` resolution overload described below.
 
 A selected linked variant can use any Contentful content type. `ResolvedOptimizedEntry.entry` is the
 SDK-owned `CTEntry` wrapper; its `contentTypeId` identifies that type but does not validate its fields.
@@ -480,12 +493,16 @@ hand-mapping it to a dictionary first. The SDK-owned adapter builds the required
 `{sys, fields, metadata}` shape once, and `result.entry` is still a `CTEntry` you read with
 `getField<T>`:
 
+**Follow this pattern:**
+
 ```swift
 // entry is a Contentful.Entry from your contentful.swift fetch.
 let result = client.resolveOptimizedEntry(
     baseline: entry,
     selectedOptimizations: client.selectedOptimizations
 )
+contentView.isHidden = result.isEmptyVariant
+guard !result.isEmptyVariant else { return }
 let title: String? = result.entry.getField("title")
 ```
 

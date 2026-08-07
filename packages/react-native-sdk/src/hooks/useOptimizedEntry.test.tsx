@@ -1,8 +1,17 @@
-import type { EntryFor, OptimizedEntryMetadata, ResolvedData } from '@contentful/optimization-core'
+import type {
+  ContentfulEntryQuery,
+  EntryFor,
+  ManagedEntryDescriptor,
+  OptimizedEntryMetadata,
+  ResolvedData,
+} from '@contentful/optimization-core'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import React, { act } from 'react'
-import type { OptimizedEntry as OptimizedEntryComponent } from '../components/OptimizedEntry'
+import type {
+  OptimizedEntry as OptimizedEntryComponent,
+  OptimizedEntrySourceProps,
+} from '../components/OptimizedEntry'
 import { loadTestRenderer } from '../test/testRenderer'
 import type { UseEntryResolverResult } from './useEntryResolver'
 import {
@@ -42,6 +51,21 @@ function assertOptimizedEntryTypes(
   const managed: UseOptimizedEntryResult<
     EntryFor<PossibleSkeleton, undefined, Locale> | undefined
   > = useOptimizedEntry<PossibleSkeleton, Locale>({ entryId: 'page' })
+  const managedBySlug: UseOptimizedEntryResult<
+    EntryFor<PossibleSkeleton, undefined, Locale> | undefined
+  > = useOptimizedEntry<PossibleSkeleton, Locale>({
+    managedEntry: { contentType: 'page', slug: 'home' },
+  })
+  const slugSource: OptimizedEntrySourceProps<PossibleSkeleton, Modifier, Locale> = {
+    managedEntry: { contentType: 'page', slug: 'home' },
+  }
+  // @ts-expect-error Managed sources cannot combine an entry ID with an object descriptor.
+  const invalidCombinedSource: UseOptimizedEntryParams = {
+    entryId: 'page',
+    managedEntry: { contentType: 'page', slug: 'home' },
+  }
+  // @ts-expect-error Flat slug source props are not supported.
+  const invalidSlugSource: OptimizedEntrySourceProps = { slug: 'home' }
   const tapOptions: UseTapTrackingOptions<typeof result.entry> = {
     enabled: true,
     entry: result.entry,
@@ -55,11 +79,32 @@ function assertOptimizedEntryTypes(
     children: (entry) => entry.sys.id,
     onTap: (entry) => entry.sys.id,
   })
+  OptimizedEntry<PossibleSkeleton, Locale>({
+    children: (entry) => entry.sys.id,
+    entryId: 'page',
+  })
+  OptimizedEntry<PossibleSkeleton, Locale>({
+    children: (entry) => {
+      const managedEntry: EntryFor<PossibleSkeleton, undefined, Locale> = entry
+      return managedEntry.sys.id
+    },
+    managedEntry: { contentType: 'page', slug: 'home' },
+  })
+  // @ts-expect-error Component baseline and managed sources are mutually exclusive.
+  OptimizedEntry({
+    baselineEntry,
+    children: null,
+    managedEntry: { contentType: 'page', slug: 'home' },
+  })
   void inferred
   void metadata
   void helperEntry
   void helperData
   void managed
+  void managedBySlug
+  void slugSource
+  void invalidCombinedSource
+  void invalidSlugSource
   void tapOptions
 }
 
@@ -72,7 +117,8 @@ const selectedOptimizations = {
   subscribe: rs.fn(() => ({ unsubscribe: rs.fn() })),
 }
 const fetchContentfulEntry = rs.fn(
-  async (entryId: string) => await Promise.resolve(createEntry(entryId)),
+  async (descriptor: ManagedEntryDescriptor, _query?: ContentfulEntryQuery) =>
+    await Promise.resolve(createEntry(resolveDescriptorId(descriptor))),
 )
 const resolveOptimizedEntry = rs.fn((entry: Entry): ResolvedData<EntrySkeletonType> => ({ entry }))
 const optimization = {
@@ -89,6 +135,12 @@ rs.mock('../context/OptimizationContext', () => ({
 
 interface TestRenderer {
   unmount: () => void
+  update: (element: React.ReactElement) => void
+}
+
+function resolveDescriptorId(descriptor: ManagedEntryDescriptor): string {
+  if (typeof descriptor === 'string') return descriptor
+  return descriptor.entryId ?? descriptor.slug
 }
 
 function createEntry(id: string): Entry {
@@ -125,20 +177,22 @@ function createDeferred<T>(): {
   return { promise, reject: rejectDeferred, resolve: resolveDeferred }
 }
 
-async function renderHook(
-  params: UseOptimizedEntryParams,
-): Promise<{ getResult: () => UseOptimizedEntryResult; unmount: () => void }> {
+async function renderHook(params: UseOptimizedEntryParams): Promise<{
+  getResult: () => UseOptimizedEntryResult
+  unmount: () => void
+  update: (nextParams: UseOptimizedEntryParams) => void
+}> {
   const testRenderer = await loadTestRenderer<TestRenderer>()
   let captured: UseOptimizedEntryResult | undefined = undefined
   let renderer: TestRenderer | undefined = undefined
 
-  function Probe(): null {
-    captured = useOptimizedEntry(params)
+  function Probe({ value }: { readonly value: UseOptimizedEntryParams }): null {
+    captured = useOptimizedEntry(value)
     return null
   }
 
   act(() => {
-    renderer = testRenderer.create(<Probe />)
+    renderer = testRenderer.create(<Probe value={params} />)
   })
 
   return {
@@ -152,6 +206,9 @@ async function renderHook(
     unmount() {
       renderer?.unmount()
     },
+    update(nextParams) {
+      renderer?.update(<Probe value={nextParams} />)
+    },
   }
 }
 
@@ -162,7 +219,8 @@ describe('useOptimizedEntry', () => {
     rs.clearAllMocks()
     selectedOptimizations.current = undefined
     fetchContentfulEntry.mockImplementation(
-      async (entryId: string) => await Promise.resolve(createEntry(entryId)),
+      async (descriptor: ManagedEntryDescriptor, _query?: ContentfulEntryQuery) =>
+        await Promise.resolve(createEntry(resolveDescriptorId(descriptor))),
     )
     resolveOptimizedEntry.mockImplementation(
       (entry: Entry): ResolvedData<EntrySkeletonType> => ({
@@ -263,5 +321,80 @@ describe('useOptimizedEntry', () => {
       isLoading: false,
       isPresentationReady: false,
     })
+  })
+
+  it('forwards default and custom slug descriptors and refetches when the source changes', async () => {
+    const firstManagedEntry = { contentType: 'page', slug: 'home' } as const
+    const rendered = await renderHook({ managedEntry: firstManagedEntry })
+    unmount = rendered.unmount
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(fetchContentfulEntry).toHaveBeenCalledWith(firstManagedEntry)
+    expect(rendered.getResult().metadata).toMatchObject({
+      baselineEntryId: 'home',
+      entryId: 'home',
+    })
+
+    act(() => {
+      rendered.update({
+        managedEntry: {
+          contentType: 'landingPage',
+          entryQuery: { locale: 'de-DE' },
+          slug: 'startseite',
+          slugField: 'path',
+        },
+      })
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(fetchContentfulEntry).toHaveBeenLastCalledWith({
+      contentType: 'landingPage',
+      entryQuery: { locale: 'de-DE' },
+      slug: 'startseite',
+      slugField: 'path',
+    })
+    expect(rendered.getResult().entry?.sys.id).toBe('startseite')
+  })
+
+  it('ignores stale slug fetch failures after the source changes', async () => {
+    const firstFetch = createDeferred<Entry>()
+    const secondFetch = createDeferred<Entry>()
+    const onEntryError = rs.fn()
+    fetchContentfulEntry.mockImplementation(
+      async (descriptor: ManagedEntryDescriptor) =>
+        await (resolveDescriptorId(descriptor) === 'first'
+          ? firstFetch.promise
+          : secondFetch.promise),
+    )
+    const rendered = await renderHook({
+      managedEntry: { contentType: 'page', slug: 'first' },
+      onEntryError,
+    })
+    unmount = rendered.unmount
+
+    act(() => {
+      rendered.update({
+        managedEntry: { contentType: 'page', slug: 'second' },
+        onEntryError,
+      })
+    })
+    const secondEntry = createEntry('second-entry-id')
+    await act(async () => {
+      secondFetch.resolve(secondEntry)
+      await secondFetch.promise
+    })
+    await act(async () => {
+      firstFetch.reject(new Error('stale failure'))
+      await firstFetch.promise.catch(() => undefined)
+    })
+
+    expect(onEntryError).not.toHaveBeenCalled()
+    expect(rendered.getResult().entry).toBe(secondEntry)
+    expect(rendered.getResult().error).toBeUndefined()
   })
 })

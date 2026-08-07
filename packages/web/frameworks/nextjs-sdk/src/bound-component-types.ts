@@ -73,7 +73,7 @@ export type NextjsBoundOptimizedEntryBaselineProps<
 export type NextjsBoundOptimizedEntryManagedProps<
   S extends EntrySkeletonType = EntrySkeletonType,
   L extends LocaleCode = LocaleCode,
-> = Omit<OptimizedEntryManagedProps<S, L>, 'liveUpdates' | 'loadingFallback'>
+> = DistributiveOmit<OptimizedEntryManagedProps<S, L>, 'liveUpdates' | 'loadingFallback'>
 
 export type NextjsBoundOptimizedEntryProps<
   S extends EntrySkeletonType = EntrySkeletonType,

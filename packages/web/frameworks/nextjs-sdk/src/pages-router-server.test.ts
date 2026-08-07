@@ -311,11 +311,12 @@ describe('Next.js Pages Router server handoff helpers', () => {
   it('prefetches declared managed entries into handoff entries after request data loads', async () => {
     const calls: string[] = []
     const baselineEntry = createEntry('4ib0hsHWoSOnCVdDkizE8d')
-    const getEntry = rs.fn(async () => {
+    const existingEntry = createEntry('4k6ZyFQnR2POY5IJLLlJRb')
+    const getEntry = rs.fn(async () => await Promise.resolve(createEntry('unused')))
+    const getEntries = rs.fn(async () => {
       calls.push('fetch')
-      return await Promise.resolve(baselineEntry)
+      return await Promise.resolve(createEntryCollection([baselineEntry]))
     })
-    const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
     const page = rs.fn<CoreStatelessRequest['page']>(async () => {
       calls.push('page')
       return await Promise.resolve({ accepted: true, data: OPTIMIZATION_DATA })
@@ -327,25 +328,59 @@ describe('Next.js Pages Router server handoff helpers', () => {
 
     const result = await createNextjsPagesRouterRequestHandoff(sdk, createContext(), {
       consent: true,
+      entries: [{ baselineEntry: existingEntry, entryId: existingEntry.sys.id }],
       hydration: 'preserve-server',
       pagePayload: {},
       prefetchManagedEntries: [
-        { entryId: '4ib0hsHWoSOnCVdDkizE8d', entryQuery: { locale: 'de-DE' } },
-        { entryId: '4ib0hsHWoSOnCVdDkizE8d', entryQuery: { locale: 'de-DE' } },
+        {
+          contentType: 'page',
+          entryQuery: { locale: 'de-DE' },
+          slug: '/products',
+          slugField: 'path',
+        },
+        {
+          contentType: 'page',
+          entryQuery: { locale: 'de-DE' },
+          slug: '/products',
+          slugField: 'path',
+        },
       ],
     })
 
     expect(calls).toEqual(['page', 'fetch'])
+    expect(getEntry).not.toHaveBeenCalled()
+    expect(getEntries).toHaveBeenCalledTimes(1)
+    expect(getEntries).toHaveBeenCalledWith({
+      content_type: 'page',
+      'fields.path': '/products',
+      include: 10,
+      limit: 2,
+      locale: 'de-DE',
+    })
     expect(result.handoff.entries).toEqual([
       {
-        baselineEntry,
-        entryId: '4ib0hsHWoSOnCVdDkizE8d',
-        entryQuery: { locale: 'de-DE' },
+        baselineEntry: existingEntry,
+        entryId: existingEntry.sys.id,
       },
       {
         baselineEntry,
-        entryId: '4ib0hsHWoSOnCVdDkizE8d',
-        entryQuery: { locale: 'de-DE' },
+        entryId: baselineEntry.sys.id,
+        managedEntry: {
+          contentType: 'page',
+          entryQuery: { locale: 'de-DE' },
+          slug: '/products',
+          slugField: 'path',
+        },
+      },
+      {
+        baselineEntry,
+        entryId: baselineEntry.sys.id,
+        managedEntry: {
+          contentType: 'page',
+          entryQuery: { locale: 'de-DE' },
+          slug: '/products',
+          slugField: 'path',
+        },
       },
     ])
   })

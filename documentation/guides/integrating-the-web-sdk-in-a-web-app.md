@@ -58,7 +58,7 @@ consent, keep this structure and add the [Consent and privacy handoff](#consent-
 step before you ship.
 
 1. Install the browser SDK and a Contentful delivery client. Add `contentful` only if your app does
-   not already have a Contentful Delivery API client.
+   not already have a Contentful Delivery API (CDA) client.
 
    **Copy this:**
 
@@ -317,16 +317,18 @@ if (accepted) renderVisibleEntries()
 **Integration category:** Required for first integration
 
 The Contentful client is yours. This is the boundary, and it has two supported shapes: **you fetch,
-the SDK resolves**, or **you hand the SDK your client and it fetches by ID for you.** Both end at
-the same resolution step, and you can use different paths for different entries in the same app.
+the SDK resolves**, or **you hand the SDK your client and it fetches by ID or content type and slug
+for you.** Both end at the same resolution step, and you can use different paths for different
+entries in the same app.
 
 - **Manual** — you fetch the entry with your own client and pass it in. The quick start uses this
   path. Keep your existing client, fetchers, and caching; the SDK only needs entries to arrive in a
   shape it can resolve.
 - **Managed** — you give the SDK your Contentful client once through the `contentful` config key,
-  and it fetches by entry ID through that client whenever you call `fetchContentfulEntry(id)` or
-  `fetchOptimizedEntry(id)`. The client stays yours; the SDK uses its `getEntry()` and
-  `getEntries()` methods.
+  then identify an entry by ID or `{ contentType, slug, slugField?, entryQuery? }`.
+  `slugField` defaults to `slug`; `entryQuery` carries that source object's CDA query. The client stays
+  yours. The SDK uses `getEntry()` for a single ID and `getEntries()` for slug lookup and eligible ID
+  batches.
 
 Either way, the same fetch requirements hold:
 
@@ -364,18 +366,33 @@ export async function fetchEntry(entryId: string) {
 }
 ```
 
-For the managed path, pass your client to the SDK as `contentful: { client }`. The SDK then merges
-your `contentful.defaultQuery`, any per-call query, the SDK locale as a fallback, and `include: 10`
-into each `getEntry()` call, and caches results per instance (default
+For the managed path, pass your client to the SDK as `contentful: { client }`. The SDK merges your
+`contentful.defaultQuery`, `entryQuery` (or the separate query argument on the ID overload), the SDK
+locale as a fallback, and `include: 10`, and caches results per instance (default
 `{ maxEntries: 100, ttlMs: 300_000 }`; pass `cache: false` to disable, or
 `clearContentfulEntryCache()` to clear it). `fetchContentfulEntry(id)` returns the fetched entry;
-`fetchContentfulEntries(entries)` preserves descriptor order and uses `getEntries()` for multiple
-uncached entries with the same normalized query, split into 100-ID chunks for large fetches.
-`prefetchManagedEntries(entries)` returns server handoff objects for framework adapters.
-`fetchOptimizedEntry(id)` fetches and resolves in one call (see
+the same method accepts a slug-source object. `fetchContentfulEntries(entries)` preserves input order
+and duplicates. ID sources can batch when their effective locale, include depth, and other query
+values match; each distinct slug source uses its own `getEntries()` request.
+`prefetchManagedEntries(entries)` returns server handoff objects for framework adapters. A slug
+handoff nests the normalized descriptor under `managedEntry` and retains the fetched entry's
+`sys.id` as `entryId`. `fetchOptimizedEntry(...)` fetches and resolves in one call (see
 [Resolving entries and rendering the result](#resolving-entries-and-rendering-the-result)).
 
-**Adapt this to your use case:** the managed path — configure the client once, then fetch by ID.
+Slug lookup enforces `content_type`, `fields.<slugField>`, and `limit: 2` after merging the normal
+managed query, so those selectors win over conflicting query values. The placeholders below are
+replaced with the source's actual content type, effective slug field, and slug:
+
+- No match: `Contentful entry not found for content type "<contentType>" where
+"fields.<slugField>" equals "<slug>".`
+- More than one match: `Multiple Contentful entries found for content type "<contentType>" where
+"fields.<slugField>" equals "<slug>".`
+
+The SDK uses the fetched entry's real `sys.id` for handoff identity, resolution metadata, and
+interaction tracking; it does not treat the slug as an entry ID.
+
+**Adapt this to your use case:** the managed path — configure the client once, then fetch by your
+app-owned content type and slug.
 
 ```ts
 import * as contentful from 'contentful'
@@ -390,12 +407,16 @@ const contentfulClient = contentful.createClient({
 const optimization = new ContentfulOptimization({
   clientId: 'your-optimization-client-id',
   locale: 'en-US',
-  // Hand the SDK your client; it calls getEntry() through it. The client stays yours.
+  // Hand the SDK your client; slug lookup calls getEntries() through it. The client stays yours.
   contentful: { client: contentfulClient },
 })
 
-// getEntry() through your client, with include: 10 and the SDK locale merged in.
-const baselineEntry = await optimization.fetchContentfulEntry('4ib0hsHWoSOnCVdDkizE8d')
+const baselineEntry = await optimization.fetchContentfulEntry({
+  contentType: 'page',
+  slug: 'home',
+  // slugField defaults to 'slug'; set it only when your content model uses another field.
+  entryQuery: { locale: 'en-US' },
+})
 ```
 
 For the combined fetch-and-resolve call — `fetchOptimizedEntry(id)`, which fetches and resolves in
@@ -434,9 +455,11 @@ server-rendered response (see
 [Hybrid Node SSR and browser continuity](#hybrid-node-ssr-and-browser-continuity)).
 
 If you configured the managed path (`contentful: { client }`), `fetchOptimizedEntry(id, options?)`
-fetches and resolves in one call and returns the same fields plus the `baselineEntry` it fetched.
-Use it when you want the SDK to own the fetch; use `resolveOptimizedEntry(entry)` when you fetch the
-entry yourself.
+or `fetchOptimizedEntry({ contentType, slug, slugField?, entryQuery? }, options?)` fetches and
+resolves in one call and returns the same fields plus the `baselineEntry` it fetched. The slug source
+object puts the query inside `entryQuery`; its options contain only `selectedOptimizations`. Use a
+managed call when you want the SDK to own the fetch; use `resolveOptimizedEntry(entry)` when you
+fetch the entry yourself.
 
 **Follow this pattern:** managed fetch-and-resolve in one call.
 
@@ -817,12 +840,15 @@ side-effect-free until you register the elements.
 3. Pass simple config as **attributes** (`client-id`, `environment`, `locale`, `live-updates`), and
    structured config as **DOM properties** (`defaults`, `api`, `trackEntryInteraction`, `sdk`,
    `onStatesReady`) — attributes are strings, so objects must be assigned as properties.
-4. Give each `<ctfl-optimized-entry>` its entry one of two ways:
+4. Give each `<ctfl-optimized-entry>` its entry one of three ways:
    - **Manual:** assign the fetched entry to the `baselineEntry` **property** (an object, so not an
      attribute). You fetch the entry yourself and the element resolves it.
-   - **Managed:** set the SDK-owned `entry-id` **attribute** (or the `entryId` property, plus an
-     optional `entryQuery` property) and the element fetches and resolves by ID for you — no manual
-     fetch. This works only when the shared SDK instance carries a Contentful client
+   - **Managed by ID:** set the SDK-owned `entry-id` **attribute** (or the `entryId` property, plus an
+     optional `entryQuery` property).
+   - **Managed by slug:** set the SDK-owned `content-type` and `slug` **attributes**, optionally set
+     `slug-field` when the field is not `slug`, and assign `entryQuery` as a property when needed.
+     Both managed forms fetch and resolve for you. They work only when the shared SDK instance carries
+     a Contentful client
      (`contentful: { client }`), so use a reused `window.contentfulOptimization` or an assigned
      `sdk` that was configured that way; a root that builds its SDK from
      `client-id`/`environment`/`locale` alone has no client to fetch through.
@@ -845,8 +871,7 @@ only that external UI target; it must not remove the `<ctfl-optimized-entry>` ho
 children. An absent `isEmptyVariant` flag renders normally.
 
 The `data-entry-id` below is an example name you invent — the SDK does not read it. The SDK-owned
-attribute is `entry-id` (no `data-` prefix), shown in the managed example below. Keep the two
-distinct.
+ID attribute is `entry-id` (no `data-` prefix). Keep the two distinct.
 
 **Adapt this to your use case:** the manual path — you fetch and assign `baselineEntry`, then render
 on resolve. Here `data-entry-id` is your own lookup key, not the SDK's `entry-id` attribute.
@@ -901,22 +926,30 @@ attribute; the script reads it to decide what to fetch.
 </ctfl-optimization-root>
 ```
 
-For the managed path, the SDK instance must carry a Contentful client, and the element takes the
-SDK-owned `entry-id` attribute (no `data-` prefix). Setting `entry-id` makes the element fetch and
-resolve by ID on its own — you write no fetch and assign no `baselineEntry`.
+For the managed path, the SDK instance must carry a Contentful client. Use the SDK-owned `entry-id`
+attribute (no `data-` prefix), or use `content-type` and `slug`; `slug-field` defaults to `slug`.
+Source-attribute changes refetch. A slug result uses the fetched entry's `sys.id` for resolution and
+tracking.
 
-**Follow this pattern:** managed markup — the SDK's own `entry-id` attribute drives the fetch.
+**Follow this pattern:** managed markup where the SDK's `content-type` and `slug` attributes drive
+the fetch.
 
 ```html
-<!-- The shared SDK was constructed with contentful: { client }, so the element can fetch by ID. -->
+<!-- The shared SDK was constructed with contentful: { client }, so the element can fetch by slug. -->
 <ctfl-optimization-root>
-  <ctfl-optimized-entry entry-id="4ib0hsHWoSOnCVdDkizE8d"></ctfl-optimized-entry>
+  <ctfl-optimized-entry content-type="page" slug="home"></ctfl-optimized-entry>
 </ctfl-optimization-root>
 ```
 
-The `entry-id` attribute is SDK-owned: match the exact name and the element fetches through the
-configured client. The `data-entry-id` in the manual example is a reader-invented lookup key — the
-app names it and reads it to drive its own fetch. Do not treat one as the other.
+The managed attributes are SDK-owned: match their exact names. The `data-entry-id` in the manual
+example is a reader-invented lookup key; the app names it and reads it to drive its own fetch. Do not
+treat one as the other. When no `baselineEntry` property is assigned, a complete slug source and a
+non-empty `entry-id` cannot be combined. The element fetches neither and emits this exact message:
+
+- `Optimized entry source cannot include both entryId and managedEntry.`
+
+An assigned `baselineEntry` takes precedence over both managed sources. Slug not-found and duplicate
+results use the exact errors described in [Fetching Contentful entries](#fetching-contentful-entries).
 
 When the root owns the SDK instance, `trackEntryInteraction` defaults view, click, and hover
 tracking to enabled — the same defaults as the `ContentfulOptimization` constructor. Set the

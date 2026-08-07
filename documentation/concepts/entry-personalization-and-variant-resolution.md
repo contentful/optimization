@@ -67,7 +67,7 @@ those inputs exist, entry resolution provides the content decision for the curre
 request.
 
 ```text
-Application provides a Contentful baseline entry or SDK fetches one by entry ID
+Application provides a Contentful baseline entry or a JavaScript SDK fetches one by ID or slug
   -> Application or SDK emits an Experience event
   -> SDK event result exposes data.selectedOptimizations
   -> SDK resolver matches selectedOptimizations to entry.fields.nt_experiences
@@ -92,6 +92,11 @@ the runtime:
 | Node         | `resolveOptimizedEntry()` and managed `fetchOptimizedEntry()`                           | None                                                         |
 | iOS          | `OptimizationClient.resolveOptimizedEntry(baseline:selectedOptimizations:)`             | SwiftUI `OptimizedEntry`; UIKit can call the client directly |
 | Android      | `suspend OptimizationClient.resolveOptimizedEntry(...)`                                 | Compose `OptimizedEntry`; XML Views `OptimizedEntryView`     |
+
+Managed fetching is available in the JavaScript runtimes in this table. Native iOS and Android apps
+query the Contentful Delivery API by content type and slug, then pass the fetched single-locale entry
+to their native resolution API or rendering adapter. The native SDKs do not provide managed entry
+fetching.
 
 For Next.js App Router integrations, prefer the app-local bound `OptimizedEntry` returned by
 `bindNextjsAppRouterOptimization()` from `@contentful/optimization-nextjs/app-router`. In Server
@@ -159,12 +164,19 @@ const optimization = new ContentfulOptimization({
   locale: appLocale,
 })
 
-const { baselineEntry, entry } = await optimization.fetchOptimizedEntry(entryId, {
-  selectedOptimizations,
-  query: {
-    locale: appLocale,
+const { baselineEntry, entry } = await optimization.fetchOptimizedEntry(
+  {
+    contentType: 'page',
+    slug: 'home',
+    slugField: 'slug',
+    entryQuery: {
+      locale: appLocale,
+    },
   },
-})
+  {
+    selectedOptimizations,
+  },
+)
 ```
 
 Manual `baselineEntry` fetching remains supported and unchanged. Fetch the entry with a single CDA
@@ -183,11 +195,39 @@ const baselineEntry = await contentfulClient.getEntry(entryId, {
 })
 ```
 
-Managed fetching merges `contentful.defaultQuery`, per-call query overrides, the SDK `locale`
-fallback, and `include: 10`. Request-bound Node clients use `forRequest({ locale })` as the locale
-fallback for managed Contentful entry fetching. Managed fetching also keeps a small per-SDK-instance
-entry cache by default. Set `contentful.cache: false` when the host application must own all
-Contentful entry caching.
+Managed sources identify an entry by ID or by `contentType` and `slug`. The optional `slugField`
+defaults to `slug`; use it when the content model uses another field. An ID call can accept its query
+separately, while a descriptor carries `entryQuery` with its source. Managed fetching merges
+`contentful.defaultQuery`, source query values, the SDK `locale` fallback, and `include: 10`.
+Request-bound Node clients use `forRequest({ locale })` as the locale fallback.
+
+Slug lookup calls `getEntries()` and then enforces these selectors after the query merge:
+
+```ts
+{
+  content_type: contentType,
+  [`fields.${slugField}`]: slug,
+  limit: 2,
+}
+```
+
+The enforced values win over conflicting `defaultQuery` or `entryQuery` selectors. The two-result
+limit lets the SDK distinguish no match, one match, and a non-unique slug. It reports the latter two
+cases with these exact messages:
+
+```text
+Contentful entry not found for content type "<contentType>" where "fields.<slugField>" equals "<slug>".
+Multiple Contentful entries found for content type "<contentType>" where "fields.<slugField>" equals "<slug>".
+```
+
+Equivalent normalized slug descriptors share in-flight and cached work. Distinct slug descriptors
+remain separate requests rather than joining ID batches. Managed fetching keeps a small
+per-SDK-instance entry cache by default; set `contentful.cache: false` when the host application must
+own all Contentful entry caching.
+
+After lookup, resolution metadata and interaction tracking use the fetched entry's `sys.id`, not the
+slug. Prefetch handoffs nest the normalized slug descriptor under `managedEntry` and retain that
+real entry ID in `entryId` so the browser can match either identity without fetching again.
 
 Use an application-owned Contentful locale for manual CDA entry fetches that feed entry resolution.
 The SDK top-level `locale` or Node `forRequest({ locale })` configures the SDK Experience/event
@@ -528,6 +568,9 @@ The iOS SDK exposes the same local boundary through
 metadata and `optimizationContextId`, and returns the baseline unchanged when no selected
 optimization matches the entry.
 
+iOS apps query the CDA by content type and slug with one concrete locale, then pass that fetched
+entry into direct or SwiftUI resolution. The native SDK does not fetch managed entries.
+
 The Android SDK exposes the same local, non-networked boundary through
 `suspend OptimizationClient.resolveOptimizedEntry(baseline = ..., selectedOptimizations = ...)`.
 Call it from a coroutine when resolving directly, or use Compose `OptimizedEntry` or XML Views
@@ -536,17 +579,21 @@ Call it from a coroutine when resolving directly, or use Compose `OptimizedEntry
 resolved `entry` and optional `selectedOptimization` metadata and `optimizationContextId`, and
 returns the baseline unchanged when no selected optimization matches the entry.
 
+Android apps query the CDA by content type and slug with one concrete locale, then pass that fetched
+entry into direct, Compose, or XML Views resolution. The native SDK does not fetch managed entries.
+
 ### Manage entry sources in custom adapters
 
-`fetchOptimizedEntry(entryId)` is the one-shot JavaScript path for callers that can await a managed
-Contentful fetch and immediate variant resolution. It returns the fetched `baselineEntry` plus the
-resolved entry and optimization metadata.
+`fetchOptimizedEntry(source)` is the one-shot JavaScript path for callers that can await a managed
+Contentful fetch and immediate variant resolution. The source can be an ID or content-type/slug
+descriptor. It returns the fetched `baselineEntry` plus the resolved entry and optimization metadata.
 
 `OptimizedEntrySourceController` from `@contentful/optimization-core/entry-source` is the adapter
-primitive for mounted components, hooks, custom elements, or other runtime wrappers that accept
-either `baselineEntry` or `entryId`. It manages source changes, SDK readiness, loading and error
-snapshots, stale fetch protection, and disconnect cleanup before resolution. It does not resolve or
-render entries. After a snapshot contains `baselineEntry`, the adapter still calls
+primitive for mounted components, hooks, custom elements, or other runtime wrappers that accept a
+manual `baselineEntry`, managed ID, or managed content-type/slug source. It manages source changes,
+SDK readiness, loading and error snapshots, stale fetch protection, and disconnect cleanup before
+resolution. It replaces a provisional slug identity with the fetched `sys.id`. It does not resolve
+or render entries. After a snapshot contains `baselineEntry`, the adapter still calls
 `resolveOptimizedEntry()`, renders the result, and attaches any tracking metadata for its runtime.
 
 ### Render with framework components
@@ -558,7 +605,8 @@ resolver, and pass the resolved entry to your rendering code.
 The Web SDK `ctfl-optimized-entry` custom element uses the same `OptimizedEntryController` as the
 framework adapters. Assign the structured Contentful entry through the `baselineEntry` property, or
 configure the SDK with `contentful: { client }` and set `entry-id`/`entryId` plus optional
-`entryQuery`. `baselineEntry` takes precedence when both are set. Provide an SDK through either an
+`entryQuery`, or set `content-type`, `slug`, and optional `slug-field`. `baselineEntry` takes
+precedence over managed sources. Provide an SDK through either an
 ancestor or explicit `ctfl-optimization-root` binding or the element's `sdk` property. The element
 honors `live-updates`, `track-clicks`, `track-hovers`, and `track-views` attributes, applies
 `data-ctfl-*` tracking attributes to the host, and emits `ctfl-entry-loading`,
@@ -569,7 +617,8 @@ values.
 React Web wraps resolution in `useOptimizedEntry()` and `OptimizedEntry`. `OptimizedEntry`:
 
 - Subscribes to `sdk.states.selectedOptimizations`.
-- Accepts either `baselineEntry` or managed `entryId` with optional `entryQuery`.
+- Accepts `baselineEntry`, `entryId` with optional `entryQuery`, or a content-type/slug descriptor
+  under `managedEntry`.
 - Locks to the first non-`undefined` selected optimization set by default.
 - Re-resolves when `liveUpdates` is enabled globally, per component, or by the preview panel.
 - Shows a loading fallback for optimized entries until optimization state is available.
@@ -584,7 +633,8 @@ React Web also exposes `useEntryResolver()` for components that need manual reso
 React Native wraps resolution in `useOptimizedEntry()` and `OptimizedEntry`. `OptimizedEntry`:
 
 - Passes non-optimized entries through unchanged.
-- Accepts either `baselineEntry` or managed `entryId` with optional `entryQuery`.
+- Accepts `baselineEntry`, `entryId` with optional `entryQuery`, or a content-type/slug descriptor
+  under `managedEntry`.
 - Renders `loadingFallback` or `null` while a managed entry is fetching.
 - Renders `errorFallback` or `null` and calls `onEntryError` when managed entry fetching fails.
 - Subscribes to `states.selectedOptimizations` only for optimized entries.

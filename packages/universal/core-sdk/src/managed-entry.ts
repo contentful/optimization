@@ -1,15 +1,24 @@
 import type { Entry } from 'contentful'
 import type { ContentfulEntryQuery, ManagedEntryDescriptor, ManagedEntryHandoff } from './CoreBase'
 
-export interface NormalizedManagedEntryDescriptor {
-  readonly entryId: string
-  readonly entryQuery?: ContentfulEntryQuery
-}
+export type NormalizedManagedEntryDescriptor =
+  | {
+      readonly entryId: string
+      readonly entryQuery?: ContentfulEntryQuery
+    }
+  | {
+      readonly contentType: string
+      readonly slug: string
+      readonly slugField: string
+      readonly entryQuery?: ContentfulEntryQuery
+    }
 
 export function normalizeManagedEntryDescriptor(
   descriptor: ManagedEntryDescriptor,
 ): NormalizedManagedEntryDescriptor {
-  return typeof descriptor === 'string' ? { entryId: descriptor } : descriptor
+  if (typeof descriptor === 'string') return { entryId: descriptor }
+  if (descriptor.entryId !== undefined) return descriptor
+  return { ...descriptor, slugField: descriptor.slugField ?? 'slug' }
 }
 
 export function createManagedEntryHandoffs(
@@ -17,17 +26,22 @@ export function createManagedEntryHandoffs(
   baselineEntries: ReadonlyArray<Entry | undefined>,
 ): ManagedEntryHandoff[] {
   return entries.map((entry, index) => {
-    const { entryId, entryQuery } = normalizeManagedEntryDescriptor(entry)
+    const descriptor = normalizeManagedEntryDescriptor(entry)
     const { [index]: baselineEntry } = baselineEntries
 
     if (baselineEntry === undefined) {
-      throw new Error(`Contentful entry "${entryId}" was not returned.`)
+      const source = 'entryId' in descriptor ? descriptor.entryId : descriptor.slug
+      throw new Error(`Contentful entry "${source}" was not returned.`)
     }
 
-    return {
-      ...(entryQuery === undefined ? {} : { entryQuery }),
-      baselineEntry,
-      entryId,
+    if ('entryId' in descriptor) {
+      return {
+        ...(descriptor.entryQuery === undefined ? {} : { entryQuery: descriptor.entryQuery }),
+        baselineEntry,
+        entryId: descriptor.entryId,
+      }
     }
+
+    return { baselineEntry, entryId: baselineEntry.sys.id, managedEntry: descriptor }
   })
 }
