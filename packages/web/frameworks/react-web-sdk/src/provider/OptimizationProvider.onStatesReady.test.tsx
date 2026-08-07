@@ -277,9 +277,15 @@ describe('OptimizationProvider onStatesReady', () => {
     rendered.unmount()
   })
 
-  it('hydrates resolved IDs and nested managed entry descriptors without refetching', async () => {
+  it('hydrates resolved IDs and nested managed entry descriptors with their query', async () => {
     const baselineEntry = createTestEntry('resolved-entry-id')
-    const managedEntry = { contentType: 'page', slug: 'home', slugField: 'slug' } as const
+    const entryQuery = { locale: 'de-DE' } as const
+    const managedEntry = {
+      contentType: 'page',
+      slug: 'home',
+      slugField: 'slug',
+      entryQuery,
+    } as const
     const fetchContentfulEntry = rs.fn(async () => await Promise.resolve(baselineEntry))
     const sdk = createOptimizationSdk()
     Reflect.set(sdk, 'fetchContentfulEntry', fetchContentfulEntry)
@@ -295,7 +301,7 @@ describe('OptimizationProvider onStatesReady', () => {
     let resolvedIds: Array<string | undefined> = []
 
     function Probe(): null {
-      const resolvedId = useManagedBaselineEntry({ entryId: baselineEntry.sys.id })
+      const resolvedId = useManagedBaselineEntry({ entryId: baselineEntry.sys.id, entryQuery })
       const descriptor = useManagedBaselineEntry({ managedEntry })
       resolvedIds = [resolvedId.entry?.sys.id, descriptor.entry?.sys.id]
       return null

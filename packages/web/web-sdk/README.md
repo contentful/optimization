@@ -164,7 +164,8 @@ on the Web SDK.
 Changing a managed source attribute refetches the entry and ignores stale results. A successful slug
 lookup uses the fetched entry's `sys.id` in resolution events and `data-ctfl-*` interaction tracking,
 not the slug. Configure only one managed source; combining a non-empty entry ID with a complete slug
-source emits `Cannot use entryId and slug sources together.` and fetches neither.
+source emits `Optimized entry source cannot include both entryId and managedEntry.` and fetches
+neither.
 
 For script-tag usage, load the main Web SDK UMD bundle and the separate Web Components UMD bundle:
 

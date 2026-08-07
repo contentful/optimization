@@ -296,11 +296,15 @@ export class CoreStatelessRequest {
   }
 
   /**
-   * Fetch a Contentful entry through the parent SDK's configured `contentful.js` client.
+   * Fetch a Contentful entry by ID or by content type and slug through the parent SDK's configured
+   * `contentful.js` client.
    *
    * @remarks
-   * If `contentful.defaultQuery` and the per-call query omit `locale`, this request's `locale`
-   * becomes the managed Contentful query locale.
+   * Set `entryQuery` on an object descriptor to customize its query. If `contentful.defaultQuery`
+   * and the descriptor's `entryQuery` or per-call query omit `locale`, this request's `locale`
+   * becomes the managed Contentful query locale. Entry IDs use `getEntry()` or a coalesced
+   * `getEntries()` call; descriptors that identify entries by content type and slug use
+   * `getEntries()`.
    *
    * @public
    */
@@ -352,13 +356,16 @@ export class CoreStatelessRequest {
   }
 
   /**
-   * Fetch a Contentful entry and resolve it with request-local selected optimizations.
+   * Fetch a Contentful entry by ID or by content type and slug, then resolve it with request-local
+   * selected optimizations.
    *
    * @remarks
    * If `options.selectedOptimizations` is omitted, this uses the latest selected optimizations
-   * returned by an accepted request-bound Experience API call. If `contentful.defaultQuery` and the
-   * per-call query omit `locale`, this request's `locale` becomes the managed Contentful query
-   * locale.
+   * returned by an accepted request-bound Experience API call. Set `entryQuery` on an object
+   * descriptor to customize its query. If `contentful.defaultQuery` and the descriptor's
+   * `entryQuery` or per-call query omit `locale`, this request's `locale` becomes the managed
+   * Contentful query locale. Fetching follows the same `getEntry()` and `getEntries()` behavior as
+   * {@link CoreStatelessRequest.fetchContentfulEntry}.
    *
    * @public
    */

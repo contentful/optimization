@@ -33,14 +33,19 @@ import type { EntryFor, ResolvedData } from './resolvers'
 import { FlagsResolver, MergeTagValueResolver, OptimizedEntryResolver } from './resolvers'
 
 /**
- * Query shape used for SDK-managed `contentful.js` `getEntry()` calls.
+ * Query shape used for SDK-managed `contentful.js` entry fetches.
  *
  * @public
  */
 export type ContentfulEntryQuery = EntryQueries<undefined>
 
 /**
- * Descriptor accepted by SDK-managed multi-entry prefetch helpers.
+ * Source descriptor for SDK-managed Contentful entry fetching.
+ *
+ * @remarks
+ * Use an entry ID string or an `entryId` descriptor to fetch by ID. Use a `contentType` and `slug`
+ * descriptor to fetch by slug; `slugField` defaults to `slug`. Set `entryQuery` on an object
+ * descriptor to customize its query.
  *
  * @public
  */
@@ -129,7 +134,7 @@ export interface ContentfulConfig {
  * @public
  */
 export interface FetchOptimizedEntryOptions {
-  /** Per-call Contentful `getEntry()` query overrides. */
+  /** Per-call Contentful query overrides when fetching an entry ID string. */
   query?: ContentfulEntryQuery
   /** Selected optimizations used for personalized entry resolution. */
   selectedOptimizations?: SelectedOptimizationArray
@@ -181,8 +186,8 @@ export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigPropert
    * Optional SDK-managed Contentful Delivery API entry fetching.
    *
    * @remarks
-   * Existing manual `resolveOptimizedEntry()` usage remains supported. Configure this only when
-   * callers want the SDK to fetch explicit entry IDs through `contentful.js`.
+   * Existing manual `resolveOptimizedEntry()` usage remains supported. Configure this when callers
+   * want the SDK to fetch entries by ID or by content type and slug through `contentful.js`.
    */
   contentful?: ContentfulConfig
 
@@ -284,16 +289,18 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
   }
 
   /**
-   * Fetch a Contentful entry through the configured `contentful.js` client.
+   * Fetch a Contentful entry by ID or by content type and slug through the configured
+   * `contentful.js` client.
    *
-   * @param entryId - Contentful entry ID to fetch.
-   * @param query - Per-call `getEntry()` query overrides.
+   * @param entryId - Contentful entry ID for the string source form.
+   * @param query - Per-call query overrides for the string source form.
    * @returns The Contentful entry returned by the configured client.
    *
    * @remarks
-   * The SDK merges `contentful.defaultQuery`, the per-call query, SDK locale fallback, and
-   * `include: 10` before fetching. By default, results are cached per SDK instance, and same-tick
-   * uncached single-entry calls with the same normalized query can share one `getEntries()` call.
+   * The SDK merges `contentful.defaultQuery`, the descriptor's `entryQuery` or per-call query, SDK
+   * locale fallback, and `include: 10` before fetching. Entry IDs use `getEntry()` or a coalesced
+   * `getEntries()` call. Descriptors that identify entries by content type and slug use
+   * `getEntries()`.
    */
   async fetchContentfulEntry<
     S extends EntrySkeletonType = EntrySkeletonType,
@@ -324,9 +331,9 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
    *
    * @remarks
    * The SDK merges `contentful.defaultQuery`, each descriptor's `entryQuery`, SDK locale fallback,
-   * and `include: 10` before fetching. One uncached entry uses `getEntry()`. Multiple uncached
-   * entries with the same normalized query use `getEntries()`, splitting large batches into 100-ID
-   * chunks.
+   * and `include: 10` before fetching. Each descriptor that identifies an entry by content type and
+   * slug uses `getEntries()`. One uncached entry ID uses `getEntry()`. Multiple uncached entry IDs
+   * with the same normalized query use `getEntries()`, splitting large batches into 100-ID chunks.
    *
    * @public
    */
@@ -356,14 +363,16 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
   }
 
   /**
-   * Fetch a Contentful entry and resolve its optimized variant.
+   * Fetch a Contentful entry by ID or by content type and slug, then resolve its optimized variant.
    *
-   * @param entryId - Contentful entry ID to fetch.
-   * @param options - Per-call Contentful query and selected optimizations.
+   * @param entryId - Contentful entry ID for the string source form.
+   * @param options - Per-call Contentful query for an entry ID string and selected optimizations.
    * @returns Baseline entry, resolved entry, and optimization metadata.
    *
    * @remarks
-   * This is additive to the synchronous `resolveOptimizedEntry()` API.
+   * Set `entryQuery` on an object descriptor to customize its query. Fetching follows the same
+   * `getEntry()` and `getEntries()` behavior as {@link CoreBase.fetchContentfulEntry}. This is
+   * additive to the synchronous `resolveOptimizedEntry()` API.
    */
   async fetchOptimizedEntry<
     S extends EntrySkeletonType = EntrySkeletonType,
