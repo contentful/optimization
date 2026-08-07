@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.1](https://github.com/contentful/optimization/compare/optimization-web-preview-panel-v1.1.0...optimization-web-preview-panel-v1.1.1) (2026-08-07)
+
+### Bug Fixes
+
+- **repo:** align empty variant presentation ([#418](https://github.com/contentful/optimization/issues/418)) ([a8acb8f](https://github.com/contentful/optimization/commit/a8acb8fda7c04503356176eff942388659410744))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 1.2.0
+    - @contentful/optimization-web bumped to 1.2.0
+
 ## [1.1.0](https://github.com/contentful/optimization/compare/optimization-web-preview-panel-v1.0.1...optimization-web-preview-panel-v1.1.0) (2026-07-29)
 
 ### Features
