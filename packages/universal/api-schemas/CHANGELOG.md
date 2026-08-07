@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.0](https://github.com/contentful/optimization/compare/optimization-api-schemas-v1.1.0...optimization-api-schemas-v1.2.0) (2026-08-07)
+
+### Features
+
+- **core:** support heterogeneous optimized entry types ([#413](https://github.com/contentful/optimization/issues/413)) ([2a3a9c8](https://github.com/contentful/optimization/commit/2a3a9c8d002975ebd1508e6344eb3bcccbc1a46f))
+
 ## [1.1.0](https://github.com/contentful/optimization/compare/optimization-api-schemas-v1.0.1...optimization-api-schemas-v1.1.0) (2026-07-29)
 
 ### Features

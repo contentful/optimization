@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.0](https://github.com/contentful/optimization/compare/optimization-web-v1.1.0...optimization-web-v1.2.0) (2026-08-07)
+
+### Features
+
+- **core:** fetch managed Contentful entries by slug ([#420](https://github.com/contentful/optimization/issues/420)) ([4ce8cd5](https://github.com/contentful/optimization/commit/4ce8cd57268fefca913acf602fc21c47c3d06eee))
+- **core:** support heterogeneous optimized entry types ([#413](https://github.com/contentful/optimization/issues/413)) ([2a3a9c8](https://github.com/contentful/optimization/commit/2a3a9c8d002975ebd1508e6344eb3bcccbc1a46f))
+
+### Bug Fixes
+
+- **repo:** align empty variant presentation ([#418](https://github.com/contentful/optimization/issues/418)) ([a8acb8f](https://github.com/contentful/optimization/commit/a8acb8fda7c04503356176eff942388659410744))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 1.2.0
+
 ## [1.1.0](https://github.com/contentful/optimization/compare/optimization-web-v1.0.1...optimization-web-v1.1.0) (2026-07-29)
 
 ### Features
