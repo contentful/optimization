@@ -22,6 +22,13 @@ the PR does, do not list files reviewed.
 EVIDENCE GATES
 - Trace a value through every directly reachable return path before claiming null or undefined can
   cause a runtime failure. Distinguish a missing optional property from a missing containing object.
+- Trace a path to its terminal behavior before calling it a crash. Distinguish thrown exceptions
+  from returned error values, state snapshots, callbacks, and events, and check whether tests define
+  that error delivery as intentional behavior.
+- Before calling similar inputs redundant or ineffective, trace each mutually exclusive source or
+  mode to its consumer. The same value may be placed differently for distinct branches.
+- Read the surrounding documentation before reporting an example mismatch. Distinguish literal
+  output from explicitly labeled templates, placeholders, and values replaced at runtime.
 - Compare the base and head public surfaces before describing an API as added, removed, renamed,
   deprecated, or breaking. Changing a caller between two existing APIs is not an API change.
 - Apply repository policy only to the paths and artifact types it explicitly names. If policy scope

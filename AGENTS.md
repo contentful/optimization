@@ -230,6 +230,16 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
   npm package README rendering.
 - Preserve `<!-- mtoc-start -->` and `<!-- mtoc-end -->` markers and keep TOCs synchronized.
 
+## Bito PR reviews
+
+- Inspect each Bito finding against the source and tests. Fix valid issues; explain false positives
+  with evidence. In direct replies to Bito-started inline comments, mention `@bitoagent` or
+  `@askbito`, ask Bito to resolve the thread, and never use `@bito-code-review`.
+- Bito chat recognizes replies only in threads Bito started. A standalone PR comment may summarize
+  the overall review, but do not rely on a Bito chat tag there.
+- After posting, inspect the live PR state to confirm replies and resolutions instead of assuming
+  they succeeded.
+
 ## Safety and resume
 
 - Never overwrite or delete ignored local files just to get a clean run.

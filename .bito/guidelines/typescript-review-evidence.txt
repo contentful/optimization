@@ -31,6 +31,14 @@ TYPE NARROWING AND VALIDATION
   unused sibling properties. Flag an assertion only when it can let an invalid value cross a real
   runtime or public API boundary.
 
+BRANCH-SPECIFIC DATA FLOW
+- Trace each branch of a discriminated union independently before declaring nested and top-level
+  fields duplicates. Verify which representation each branch consumes.
+- When a descriptor, option, or source variant changes, follow every behavior-affecting field
+  through normalization, batching, cache or in-flight keys, serialization, handoff, hydration,
+  aliases, and downstream consumption. Flag any stage that drops a field or derives identity from
+  different effective inputs than the operation it represents.
+
 TEST AND API INTENT
 - Before replacing `toBe` with `toEqual`, determine whether the test intentionally asserts reference
   preservation. Do not weaken an identity contract into value equality.
