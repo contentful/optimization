@@ -1,8 +1,7 @@
 import { AppShell } from '@/components/AppShell'
 import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
 import { PreviewPanel } from '@/components/PreviewPanel'
-import { NextAppAutoPageTracker, OptimizationRoot } from '@/lib/optimization'
-import { createCurrentRequestHandoff } from '@/lib/request-handoff'
+import { RequestNextAppAutoPageTracker, RequestOptimizationRoot } from '@/lib/optimization'
 import { connection } from 'next/server'
 import { Suspense, type ReactNode } from 'react'
 
@@ -13,18 +12,14 @@ async function RequestRuntime({
 }>) {
   await connection()
 
-  const { handoff, pagePayload, routeKey } = await createCurrentRequestHandoff()
-
   return (
-    <OptimizationRoot buildPagePayload={() => pagePayload} handoff={handoff} routeKey={routeKey}>
+    <RequestOptimizationRoot>
       <GlobalLiveUpdatesProvider>
         <PreviewPanel />
-        <Suspense>
-          <NextAppAutoPageTracker initialPageEvent={handoff.initialPageEvent} />
-        </Suspense>
+        <RequestNextAppAutoPageTracker />
         <AppShell>{children}</AppShell>
       </GlobalLiveUpdatesProvider>
-    </OptimizationRoot>
+    </RequestOptimizationRoot>
   )
 }
 

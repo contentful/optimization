@@ -127,7 +127,7 @@ async function expectRawSelectedHandoffHtml({
   expect(html).toContain(`data-testid="${routeTestId}"`)
   expect(html).toContain(`data-testid="${cacheKeyTestId}"`)
   expect(html).toContain(segment.resolvedEntryText)
-  expectPublicPermutationMarkup(html, segment)
+  expectSelectedEntryMarkup(html, segment)
   expectComputedPublicCacheMetadata(cacheMetadata, segment)
 
   return { cacheMetadata, html }
@@ -139,7 +139,7 @@ function findSelectedOptimization(segment: CustomerSegment): CustomerSegmentSele
   )
 }
 
-function expectPublicPermutationMarkup(html: string, segment: CustomerSegment): void {
+function expectSelectedEntryMarkup(html: string, segment: CustomerSegment): void {
   const selectedOptimization = findSelectedOptimization(segment)
 
   expect(html).toContain(`data-ctfl-baseline-id="${segment.baselineEntryId}"`)
@@ -225,7 +225,18 @@ test.describe('Next.js handoff routes', () => {
   runIf('SSR')
   runIfImplementation('nextjs-sdk_app-router')
 
-  test('renders request handoff variants on a page-two hard load', async ({ page }) => {
+  test('renders personalized initial SSR and preserves it through hydration', async ({
+    page,
+    request,
+  }) => {
+    const rawResponse = await request.get(PAGES.pageTwo.path)
+    const rawHtml = await rawResponse.text()
+
+    expect(rawResponse.ok()).toBe(true)
+    expect(rawHtml).toContain('data-testid="page-two-view"')
+    expect(rawHtml).toContain(newVisitorSegment.resolvedEntryText)
+    expectSelectedEntryMarkup(rawHtml, newVisitorSegment)
+
     await page.goto(PAGES.pageTwo.path)
     await page.waitForLoadState('domcontentloaded')
 
@@ -233,7 +244,9 @@ test.describe('Next.js handoff routes', () => {
     await expectPageTwoSelectedVariant(page)
   })
 
-  test('renders request handoff variants after client navigation to page two', async ({ page }) => {
+  test('renders the page-only request entry after preserved-layout navigation', async ({
+    page,
+  }) => {
     await page.goto(PAGES.home.path)
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
@@ -242,6 +255,16 @@ test.describe('Next.js handoff routes', () => {
     await expect(page).toHaveURL(/\/page-two$/)
     await expect(page.getByTestId('page-two-view')).toBeVisible()
     await expectPageTwoSelectedVariant(page)
+  })
+
+  test('uses trusted request handoff without duplicating the initial browser page event', async ({
+    page,
+  }) => {
+    await page.goto(PAGES.home.path)
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
+
+    await expect(page.locator('[data-testid^="event-page-"]')).toHaveCount(0)
   })
 
   for (const segment of publicPermutationSegments) {
@@ -329,10 +352,6 @@ test.describe('Next.js handoff routes', () => {
 
     await expect(page.getByTestId('static-shell-private-slot-shell')).toBeVisible()
     await expect(page.getByTestId('private-request-slot')).toBeVisible()
-    await expect(page.getByTestId('private-request-slot')).toHaveAttribute(
-      'data-cache-scope',
-      'private-request',
-    )
     await expect(page.getByTestId('analytics-events-container')).toBeVisible()
     await expect(page.getByTestId('consent-button')).toBeVisible()
 
@@ -445,7 +464,7 @@ test.describe('Next.js Pages Router public permutation handoff routes', () => {
       expect(html).toContain(`permutation=${segment.slug}`)
       expect(html).toContain(`version=${segment.cacheVersion}`)
       expect(html).toContain(segment.resolvedEntryText)
-      expectPublicPermutationMarkup(html, segment)
+      expectSelectedEntryMarkup(html, segment)
 
       const rawCacheKey = readHtmlTestIdText(html, 'pages-selection-cache-key')
 

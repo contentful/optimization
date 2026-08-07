@@ -52,8 +52,9 @@ Use this guide when a route uses one of these strategies:
 - analytics-only server, static, ISR-style, or Edge runtime markup that needs Optimization tracking
   attributes.
 
-Skip this guide for the default App Router or Pages Router request-handoff path. Those flows are
-covered in the integration guides and use `private-request` cache scope.
+Skip this guide for the App Router nested request-component path or the Pages Router
+`getServerSideProps` request-handoff path. Those flows are covered in the integration guides and use
+`private-request` cache scope.
 Request-derived profile handoffs are private-request only; public and static handoffs use
 app-owned selections.
 
@@ -62,8 +63,10 @@ app-owned selections.
 Start with one App Router Cache Components route whose permutation is owned by your application.
 The example expects these app-owned helpers:
 
-- `@/lib/optimization` is the bound App Router module from the integration guide. It exports
-  `OptimizationRoot`, `createPublicPermutationHandoff()`, and `resolveEntriesForSelections()`.
+- `@/lib/optimization` exports the `optimization` server binding from
+  `@contentful/optimization-nextjs/app-router/server`. The examples alias its top-level root as
+  `ExplicitOptimizationRoot`. These explicit-input exports are separate from the nested private
+  request family.
 - `getHeroEntry()` fetches the baseline Contentful entry for the route.
 - `getPublicSegments()` returns the public segment slugs that Next.js can pre-render.
 - `getPublicSegment(slug)` returns
@@ -100,14 +103,8 @@ type PublicSegment = {
 ```
 
 The SDK hydrates the selected state your app supplies; it does not discover the segment or choose the
-selected optimizations.
-
-Before adding the route, sanity-check one segment record:
-
-- Confirm `selectedOptimizations` is an array from your approved segment, CMS, or static source.
-- Fetch the baseline entry with the same `locale` and `include` depth that the route uses.
-- Run `resolveEntriesForSelections()` for that baseline entry and compare `resolved.entry.sys.id`
-  with the expected variant entry ID. Use a segment whose selected variant has visible text.
+selected optimizations. Start with one approved segment whose selected variant has distinctive text;
+the route below fetches the baseline and calls `resolveEntriesForSelections()` with that segment.
 
 Each resolved item also carries optional `isEmptyVariant`. When it is `true`, `entry` retains the
 baseline for tracking context, but direct route markup must omit consumer content. An absent flag
@@ -118,13 +115,12 @@ renders normally.
 ```tsx
 // app/segments/[segment]/page.tsx
 import { Hero } from '@/components/Hero'
-import {
-  OptimizationRoot,
-  createPublicPermutationHandoff,
-  resolveEntriesForSelections,
-} from '@/lib/optimization'
+import { optimization } from '@/lib/optimization'
 import { getHeroEntry, getPublicSegment, getPublicSegments } from '@/lib/segments'
+import { createPublicPermutationHandoff } from '@contentful/optimization-nextjs/app-router/server'
 import { cacheLife, cacheTag } from 'next/cache'
+
+const { OptimizationRoot: ExplicitOptimizationRoot, resolveEntriesForSelections } = optimization
 
 async function getSegmentData(segmentSlug: string) {
   'use cache'
@@ -163,18 +159,18 @@ export default async function SegmentPage({ params }: { params: Promise<{ segmen
   })
 
   return (
-    <OptimizationRoot
+    <ExplicitOptimizationRoot
       buildPagePayload={() => ({ properties: { locale: segment.locale, segment: segment.slug } })}
       handoff={handoff}
       routeKey={routeKey}
     >
       {resolvedHero.isEmptyVariant ? null : <Hero entry={resolvedHero.entry} />}
-    </OptimizationRoot>
+    </ExplicitOptimizationRoot>
   )
 }
 ```
 
-Verify the segment you sanity-checked before adding more:
+Verify that first segment before adding more:
 
 1. Request `/segments/<slug>` with your normal Next.js dev or preview command running.
 2. Open View Source and find the distinctive variant text in the raw HTML.
@@ -400,6 +396,11 @@ Define `useOptimizationConsent()` as an app-owned client hook that reads your co
 returns `{ events, persistence }` booleans for Optimization event delivery and profile-cookie
 persistence.
 
+This example intentionally combines two client entrypoints from the same installed package.
+`/app-router/client` owns the App Router navigation tracker; router-neutral `/client` owns the root
+and entry because this component supplies browser configuration and consent directly. Both consume
+the nearest Optimization React provider.
+
 **Adapt this to your use case:**
 
 ```tsx
@@ -408,7 +409,7 @@ persistence.
 
 import { Hero } from '@/components/Hero'
 import { useOptimizationConsent } from '@/lib/consent-client'
-import { NextAppAutoPageTracker } from '@contentful/optimization-nextjs/app-router'
+import { NextAppAutoPageTracker } from '@contentful/optimization-nextjs/app-router/client'
 import { OptimizationRoot, OptimizedEntry } from '@contentful/optimization-nextjs/client'
 import { Suspense } from 'react'
 
@@ -454,12 +455,14 @@ uses `static` because there is no request profile and no ISR or CDN permutation 
 ```tsx
 // app/static-segment/page.tsx
 import { Hero } from '@/components/Hero'
-import {
-  OptimizationRoot,
+import { optimization } from '@/lib/optimization'
+import { getBuildSelection, getHeroEntry } from '@/lib/static-segment'
+
+const {
+  OptimizationRoot: ExplicitOptimizationRoot,
   createHandoffFromSelections,
   resolveEntriesForSelections,
-} from '@/lib/optimization'
-import { getBuildSelection, getHeroEntry } from '@/lib/static-segment'
+} = optimization
 
 export default async function StaticSegmentPage() {
   const selection = await getBuildSelection()
@@ -477,13 +480,13 @@ export default async function StaticSegmentPage() {
   })
 
   return (
-    <OptimizationRoot
+    <ExplicitOptimizationRoot
       buildPagePayload={() => ({ properties: { path: '/static-segment' } })}
       handoff={handoff}
       routeKey="/static-segment"
     >
       {resolvedHero.isEmptyVariant ? null : <Hero entry={resolvedHero.entry} />}
-    </OptimizationRoot>
+    </ExplicitOptimizationRoot>
   )
 }
 ```
@@ -590,10 +593,12 @@ Use this when an Edge runtime route handler chooses a public permutation without
 profile. The route must export `runtime = 'edge'` and avoid Node-only APIs.
 The route can return an application-owned `Response` and still use public-permutation cache metadata
 because the selected optimizations are supplied by application code. This is the `/edge` helper
-boundary; an App Router page that imports the bound React `OptimizationRoot` and returns React markup from
-`runtime = 'edge'` is outside this guide. `NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID` and
-`CONTENTFUL_ENVIRONMENT` are reader-owned environment variable names in this excerpt. Keep
-visitor-profile, cookie, header, and other request-derived selections out of this public path.
+boundary; an App Router page that imports the top-level bound React `OptimizationRoot` and returns
+React markup from `runtime = 'edge'` is outside this guide. `NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID` and
+`CONTENTFUL_ENVIRONMENT` are reader-owned environment variable names in this excerpt. The latter is
+server-only; give it the same environment value as the browser binding's
+`NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT`. Keep visitor-profile, cookie, header, and other
+request-derived selections out of this public path.
 `configureNextjsEdgeOptimization(...)` configures stateless Edge helpers for the route module; it is
 not a per-request isolation context.
 
@@ -703,13 +708,12 @@ resolve content in the browser.
 
 ```tsx
 import { Hero } from '@/components/Hero'
-import {
-  OptimizationAnalyticsRoot,
-  createPublicPermutationHandoff,
-  getServerTrackingAttributes,
-  resolveEntriesForSelections,
-} from '@/lib/optimization'
+import { optimization } from '@/lib/optimization'
 import { getAnalyticsSegment, getHeroEntry } from '@/lib/analytics-segments'
+import { createPublicPermutationHandoff } from '@contentful/optimization-nextjs/app-router/server'
+import { getServerTrackingAttributes } from '@contentful/optimization-nextjs/tracking-attributes'
+
+const { OptimizationAnalyticsRoot, resolveEntriesForSelections } = optimization
 
 export default async function AnalyticsOnlyPage() {
   const segment = await getAnalyticsSegment('campaign-a')
@@ -760,8 +764,9 @@ the helper's `isCurrent` option so stale hydration stops before state or page tr
 - At the handoff creation point, log `handoff.cache` during first validation and verify public
   routes use `public-permutation` or `static`, while request-personalized routes use
   `private-request`.
-- For customer-owned permutations, inspect the logged handoff and verify `handoff.state?.profile` is
-  absent.
+- For customer-owned permutations, inspect the logged handoff and verify `handoff.state?.profile`
+  is absent. That property is the optional per-visitor profile snapshot; a public or static handoff
+  cannot carry it safely.
 - For every `public-permutation` handoff, inspect the logged `handoff.cache.key` and verify it
   starts with encoded fields such as `permutation=...:version=...:` and changes when the segment,
   locale, selected optimization set, entry set, or app-owned cache version changes. If rendered
@@ -781,8 +786,10 @@ the helper's `isCurrent` option so stale hydration stops before state or page tr
   remains after hydration.
 - For browser-owned routes, skip View Source for the variant proof; verify the variant in the
   rendered page or browser devtools after hydration.
-- Verify one first page event is emitted by checking your Contentful event diagnostics or the
-  browser `states.eventStream` subscription from the integration guide.
+- For a bound App Router path, mount the integration guide's
+  [event observer](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md#the-bound-root-and-page-events)
+  inside that route's root. Trigger the first page load and inspect the accepted or blocked record
+  in the browser console.
 - For analytics-only markup, inspect the rendered DOM and verify the resolved entry element has
   `data-ctfl-entry-id` and the related `data-ctfl-*` attributes.
 

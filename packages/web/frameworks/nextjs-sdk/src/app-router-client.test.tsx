@@ -53,7 +53,7 @@ describe('Next.js App Router client components', () => {
         getEntries: async () => await Promise.resolve(createEntryCollection([])),
       },
     }
-    const components = appRouter.bindNextjsAppRouterOptimization({
+    const components = appRouter.bindNextjsAppRouterClientOptimization({
       ...testConfig,
       consent: { clientDefaults: { consent: false, persistenceConsent: false } },
       contentful,
@@ -89,6 +89,8 @@ describe('Next.js App Router client components', () => {
     expect(components).not.toHaveProperty('proxy')
     expect(components).not.toHaveProperty('config')
     expect(components).not.toHaveProperty('NextPagesAutoPageTracker')
+    expect(components).not.toHaveProperty('createRequestHandoff')
+    expect(components).not.toHaveProperty('request')
     expect(element.props).toMatchObject({
       api: testConfig.api,
       children: 'Bound content',
@@ -127,7 +129,7 @@ describe('Next.js App Router client components', () => {
   it('renders client entryId content from handoff entries during SSR', () => {
     const getEntry = rs.fn(async () => await Promise.resolve(createEntry('client-fetch')))
     const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
-    const components = appRouter.bindNextjsAppRouterOptimization({
+    const components = appRouter.bindNextjsAppRouterClientOptimization({
       ...testConfig,
       contentful: { client: { getEntry, getEntries } },
     })
@@ -163,12 +165,21 @@ describe('Next.js App Router client components', () => {
   it('keeps the App Router client entry scoped to client-safe binding helpers', () => {
     expect(Object.keys(appRouter).sort()).toEqual([
       'NextAppAutoPageTracker',
-      'bindNextjsAppRouterOptimization',
+      'bindNextjsAppRouterClientOptimization',
       'createHandoffFromSelections',
       'createOptimizationCacheKey',
       'createPublicPermutationCacheMetadata',
       'createPublicPermutationHandoff',
       'resolveEntriesForSelections',
     ])
+    expect(appRouter).not.toHaveProperty('getServerTrackingAttributes')
+  })
+
+  it('rejects server-only request configuration', () => {
+    appRouter.bindNextjsAppRouterClientOptimization({
+      ...testConfig,
+      // @ts-expect-error Request initialization is available only from the server entrypoint.
+      request: {},
+    })
   })
 })

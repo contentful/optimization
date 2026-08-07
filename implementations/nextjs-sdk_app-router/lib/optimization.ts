@@ -1,7 +1,7 @@
 import {
-  bindNextjsAppRouterOptimization,
+  bindNextjsAppRouterServerOptimization,
   createPublicPermutationCacheMetadata,
-} from '@contentful/optimization-nextjs/app-router'
+} from '@contentful/optimization-nextjs/app-router/server'
 import {
   createNextjsPublicPermutationCacheMiddleware,
   type NextjsPublicPermutationCacheMiddleware,
@@ -12,40 +12,18 @@ import {
   type NextjsOptimizationServerConsentResolver,
 } from '@contentful/optimization-nextjs/server'
 import { getServerTrackingAttributes } from '@contentful/optimization-nextjs/tracking-attributes'
-import { NextResponse, type NextRequest } from 'next/server'
+import type { NextRequest, NextResponse } from 'next/server'
 import { appConfig } from './config'
 import { getCustomerSegment, type CustomerSegment } from './customer-segments'
 import { getAppConsent } from './util'
 
-const REQUEST_URL_HEADER = 'x-ctfl-opt-request-url'
+const HIDDEN_UNTIL_READY_ROUTE = '/hidden-until-ready'
 const PUBLIC_HANDOFF_PREFIXES = ['/selection-handoff/', '/analytics-only/'] as const
 
-type AppRouterOptimization = ReturnType<typeof bindNextjsAppRouterOptimization>
+type AppRouterOptimization = ReturnType<typeof bindNextjsAppRouterServerOptimization>
 export type ContentHandoff = NonNullable<
   Parameters<AppRouterOptimization['OptimizationRoot']>[0]['handoff']
 >
-
-interface AppRouterRequestHandoffOptions {
-  readonly cache: {
-    readonly scope: 'private-request'
-  }
-  readonly hydration: 'preserve-server' | 'client-only-hidden-until-ready'
-  readonly pagePayload: ReturnType<typeof createRoutePagePayload>
-  readonly request: {
-    readonly cookies?: {
-      get: (name: string) => { readonly value: string } | undefined
-    }
-    readonly headers: Headers
-    readonly url: string
-  }
-  readonly trustedRequestHandoff?: true
-}
-
-type ServerAppRouterOptimization = AppRouterOptimization & {
-  readonly createRequestHandoff: (
-    options: AppRouterRequestHandoffOptions,
-  ) => Promise<ContentHandoff>
-}
 
 const serverOptimizationConfig = {
   clientId: appConfig.clientId,
@@ -62,26 +40,34 @@ const serverOptimizationConfig = {
 const serverConsent: NextjsOptimizationServerConsentResolver = ({ cookies }) =>
   getAppConsent(cookies) ? { events: true, persistence: true } : false
 
-const optimization = bindNextjsAppRouterOptimization({
+const optimization = bindNextjsAppRouterServerOptimization({
   ...serverOptimizationConfig,
   trackEntryInteraction: { views: true, clicks: true, hovers: true },
   consent: {
     server: serverConsent,
     clientDefaults: { consent: false, persistenceConsent: false },
   },
-}) as ServerAppRouterOptimization
+  request: {
+    hydration: ({ routeKey }) =>
+      routeKey === HIDDEN_UNTIL_READY_ROUTE ? 'client-only-hidden-until-ready' : 'preserve-server',
+    trustedRequestHandoff: true,
+  },
+})
 
 export const {
-  NextAppAutoPageTracker,
   OptimizationAnalyticsRoot,
-  OptimizationRoot,
-  OptimizedEntry,
+  OptimizationRoot: ExplicitOptimizationRoot,
+  OptimizedEntry: ExplicitOptimizedEntry,
   createHandoffFromSelections,
   createOptimizationCacheKey,
   createPublicPermutationHandoff,
-  createRequestHandoff,
   resolveEntriesForSelections,
 } = optimization
+export const {
+  NextAppAutoPageTracker: RequestNextAppAutoPageTracker,
+  OptimizationRoot: RequestOptimizationRoot,
+  OptimizedEntry: RequestOptimizedEntry,
+} = optimization.request
 export { getServerTrackingAttributes }
 
 const cacheMiddleware: NextjsPublicPermutationCacheMiddleware =
@@ -148,30 +134,15 @@ function getPublicHandoffSegmentSlug(pathname: string): string | undefined {
 }
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
-  const response = createRequestUrlResponse(request)
-
   if (isPublicHandoffPath(request.nextUrl.pathname)) {
-    return cacheMiddleware(request, response)
+    return cacheMiddleware(request)
   }
 
-  return forwardOptimizationContext(request, response)
-}
-
-function createRequestUrlResponse(request: NextRequest): NextResponse {
-  const requestHeaders = new Headers(request.headers)
-  requestHeaders.set(REQUEST_URL_HEADER, request.url)
-
-  return NextResponse.next({
-    request: { headers: requestHeaders },
-  })
+  return forwardOptimizationContext(request)
 }
 
 function isPublicHandoffPath(pathname: string): boolean {
   return PUBLIC_HANDOFF_PREFIXES.some((prefix) => pathname.startsWith(prefix))
-}
-
-export function getForwardedRequestUrl(headers: Headers): string {
-  return headers.get(REQUEST_URL_HEADER) ?? 'http://localhost:3002/'
 }
 
 export function createRoutePagePayload(
@@ -192,14 +163,5 @@ export function createRoutePagePayload(
       search: search ? `?${search}` : '',
       url,
     },
-  }
-}
-
-export function toRouteKey(url: string): string {
-  try {
-    const parsed = new URL(url)
-    return `${parsed.pathname}${parsed.search}`
-  } catch {
-    return url || '/'
   }
 }

@@ -1,18 +1,24 @@
 # AGENTS.md
 
 Next.js SDK App Router reference implementation for `@contentful/optimization-nextjs`. The adapter
-owns server/client SDK composition; app code imports bound components from `@/lib/optimization`
-unless a client-only entry island needs `/client` props such as per-entry `liveUpdates` or
-`loadingFallback`.
+owns server/client SDK composition. Request routes use app-local `Request*` aliases, static/public
+routes use app-local `Explicit*` aliases, and client-only entry islands use `/client` props such as
+per-entry `liveUpdates` or `loadingFallback`.
 
 ## Rules
 
 - App Router only; no Pages Router.
-- `lib/optimization.ts` is the only place that imports `bindNextjsAppRouterOptimization()` from
-  `@contentful/optimization-nextjs/app-router`.
-- Routes and shared components import `OptimizationRoot`, the bound `OptimizedEntry`, and
-  `NextAppAutoPageTracker` from `@/lib/optimization`; do not import those components from
-  `@contentful/optimization-nextjs/server`.
+- `lib/optimization.ts` is the only place that imports
+  `bindNextjsAppRouterServerOptimization()` from
+  `@contentful/optimization-nextjs/app-router/server`.
+- Configure request hydration and trusted handoff once in `lib/optimization.ts`.
+- The app-local request family exports `RequestOptimizationRoot`, `RequestOptimizedEntry`, and
+  `RequestNextAppAutoPageTracker` from `@/lib/optimization`.
+- Request routes, private request slots, and `EntryCard` use the applicable request aliases.
+- Static selection-handoff routes use `ExplicitOptimizationRoot` and `ExplicitOptimizedEntry` from
+  `@/lib/optimization`. Analytics-only routes use the top-level `OptimizationAnalyticsRoot`.
+- Do not add app-owned request caches, request shells, `headers()` or `cookies()` plumbing, URL
+  parsing, route-key construction, page payloads, or duplicate handoff awaits to request routes.
 - Client-only entry islands import `OptimizedEntry` from `@contentful/optimization-nextjs/client`
   only when they need per-entry `liveUpdates` or `loadingFallback`.
 - Browser hooks and providers import from `@contentful/optimization-nextjs/client`.
@@ -20,12 +26,10 @@ unless a client-only entry island needs `/client` props such as per-entry `liveU
   required by Next.js static analysis.
 - Do not import lower-level SDK packages directly from this implementation.
 - Landing/SEO pages should be Server Components; interactive/reactive surfaces should be Client
-  Components using browser hooks and either the app-local `<OptimizedEntry>` or the `/client`
-  `<OptimizedEntry>` when per-entry live-update control is required.
-- Configure app-local `<OptimizedEntry>` live updates through the binding or `LiveUpdatesProvider`;
-  use `/client` `<OptimizedEntry liveUpdates>` for per-entry overrides.
-- Use the app-local bound `OptimizationRoot` directly; do not add custom provider wrappers around
-  it.
+  Components using browser hooks and the `/client` `<OptimizedEntry>` when per-entry live-update
+  control is required.
+- Configure app-local request entry live updates through the binding or `LiveUpdatesProvider`; use
+  `/client` `<OptimizedEntry liveUpdates>` for per-entry overrides.
 - Entry IDs and click scenarios come from the shared `e2e-web` fixtures (`PAGES`, `CLICK_SCENARIOS`
   from `e2e-web`). Do not duplicate these constants locally.
 - If consumed packages changed, run `pnpm build:pkgs` and reinstall before trusting results.

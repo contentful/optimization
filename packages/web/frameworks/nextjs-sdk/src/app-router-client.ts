@@ -56,7 +56,7 @@ export {
   type NextAppAutoPageTrackerProps,
 }
 
-export interface NextjsOptimizationComponents {
+export interface NextjsAppRouterClientOptimization {
   readonly OptimizationRoot: (props: BoundNextjsOptimizationRootProps) => ReactElement
   readonly OptimizationProvider: (
     props: BoundNextjsOptimizationProviderProps,
@@ -72,9 +72,9 @@ export interface NextjsOptimizationComponents {
   readonly resolveEntriesForSelections: typeof resolveEntriesForSelections
 }
 
-export function bindNextjsAppRouterOptimization(
+export function bindNextjsAppRouterClientOptimization(
   config: NextjsOptimizationComponentsConfig,
-): NextjsOptimizationComponents {
+): NextjsAppRouterClientOptimization {
   const rootConfig = toClientRootConfig(config)
   const providerConfig = toClientProviderConfig(config)
   const analyticsRootConfig = toAnalyticsRootConfig(config)

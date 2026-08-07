@@ -4,7 +4,7 @@ import {
   staticPublicHandoffMissingRequiredEntryBehavior,
 } from '@/lib/contentful'
 import { getCustomerSegment, getCustomerSegmentStaticParams } from '@/lib/customer-segments'
-import { createCustomerSegmentHandoff, OptimizedEntry } from '@/lib/optimization'
+import { createCustomerSegmentHandoff, ExplicitOptimizedEntry } from '@/lib/optimization'
 import { cacheLife, cacheTag } from 'next/cache'
 import { notFound } from 'next/navigation'
 
@@ -55,7 +55,7 @@ export default async function SelectionHandoffPage({
             data-testid={`content-entry-${baselineEntry.sys.id}`}
             key={baselineEntry.sys.id}
           >
-            <OptimizedEntry baselineEntry={baselineEntry}>
+            <ExplicitOptimizedEntry baselineEntry={baselineEntry}>
               {(resolvedEntry, { resolvedData }) => {
                 return resolvedData.isEmptyVariant ? null : (
                   <EntryCardContent
@@ -65,7 +65,7 @@ export default async function SelectionHandoffPage({
                   />
                 )
               }}
-            </OptimizedEntry>
+            </ExplicitOptimizedEntry>
           </section>
         ))}
       </div>

@@ -17,16 +17,15 @@
 </div>
 
 Reference implementation for `@contentful/optimization-nextjs` in a Next.js App Router
-application with bound server/client components, explicit Optimization handoff, analytics-only
-handoff, public permutation handoff, and Cache Components routes. The implementation binds `OptimizationRoot`,
-`OptimizationAnalyticsRoot`, `OptimizedEntry`, `NextAppAutoPageTracker`, request handoff helpers, and
-public permutation handoff helpers once in `@/lib/optimization` with `bindNextjsAppRouterOptimization()`.
-Routes and shared components import those app-local exports for Server Component first paint,
-Client Component live-update surfaces, Cache Components public permutation handoff, and analytics-only routes.
+application with explicit server/client entrypoints, request-bound components, analytics-only
+handoff, public permutation handoff, and Cache Components routes. The implementation binds the
+server SDK once in `@/lib/optimization` with `bindNextjsAppRouterServerOptimization()`. Request
+routes use app-local `Request*` aliases from `optimization.request`; static public routes use
+app-local `Explicit*` aliases from the top-level binding.
 Other SDK runtime imports use Next.js SDK package subpaths. The package root is not imported:
 
-- `@contentful/optimization-nextjs/app-router` in `@/lib/optimization` for the bound component
-  binding, route tracker, request handoff, public permutation handoff, cache middleware, and tracking helpers
+- `@contentful/optimization-nextjs/app-router/server` in `@/lib/optimization` for the server binding,
+  request component family, route tracker, public permutation handoff, and selection helpers
 - `@contentful/optimization-nextjs/client` for browser hooks and providers
 - `@contentful/optimization-nextjs/api-schemas` in components that need SDK schema guards
 
@@ -41,15 +40,16 @@ Use this implementation when you need a Next.js example where Server Components 
 entries, the bound server root prepares Optimization state for handoff, and the browser SDK resolves
 live surfaces after startup. It covers:
 
-- App-local bound components from `bindNextjsAppRouterOptimization()`
-- Request handoff from `createRequestHandoff()` through the bound `OptimizationRoot`
+- App-local bound components from `bindNextjsAppRouterServerOptimization()`
+- Request initialization through `optimization.request` without app-owned request plumbing
 - Customer-owned public permutation handoff with helper-created public cache metadata
 - Cache Components SSG and ISR-style revalidation with `use cache`, `cacheLife()`, and `cacheTag()`
 - Analytics-only tracking over server-rendered markup through `OptimizationAnalyticsRoot`
 - Client-only hidden-until-ready hydration for static or browser-owned routes
-- Server-resolved first paint and static content with bound `OptimizedEntry`
-- Browser-side entry resolution with the same app-local `OptimizedEntry` in Client Components
-- Rich Text merge tags passed from the `OptimizedEntry` render-prop `getMergeTagValue` into shared
+- Server-resolved first paint with `RequestOptimizedEntry` and static public content with
+  `ExplicitOptimizedEntry`
+- Browser-side entry resolution with the router-neutral `/client` `OptimizedEntry`
+- Rich Text merge tags passed from the request entry render-prop `getMergeTagValue` into shared
   render options
 - Live re-resolution after consent, identify, reset, and client-side route changes
 - `initialPageEvent` ownership from the handoff so the browser skips only when the server or edge
@@ -70,24 +70,18 @@ First request
       keeps public permutation routes on the cache middleware rewrite path
 
   lib/optimization.ts
-    bindNextjsAppRouterOptimization()
-      exports OptimizationRoot, OptimizationAnalyticsRoot, OptimizedEntry, NextAppAutoPageTracker,
-      createRequestHandoff, createPublicPermutationHandoff, createOptimizationCacheKey, tracking
-      helpers, and selection resolution helpers
+    bindNextjsAppRouterServerOptimization()
+      configures request hydration and trusted request handoff once
+      exports Request* aliases from optimization.request
+      exports Explicit* aliases and public/analytics helpers from the top-level binding
 
   app/(request)/layout.tsx
-    renders the persistent bound OptimizationRoot, preview panel, route tracker, and request route
-    shell from the cached current request handoff
-
-  lib/request-handoff.ts
-    creates the cached current request handoff from explicit headers/cookies/url request input
-
-  app/(request)/RequestRouteShell.tsx
-    creates the current request handoff before returning the route subtree with server entries
+    calls connection() inside RequestRuntime so the request subtree renders at request time
+    wraps that runtime in Suspense for Cache Components and the search-parameter route tracker
 
   app/(request)/page.tsx and app/(request)/page-two/page.tsx
     fetch CDA entries server-side
-    render RequestRouteShell before server first-paint entries through the bound OptimizedEntry
+    render server first-paint entries through RequestOptimizedEntry
 
   app/(static)/selection-handoff/[segment]/layout.tsx and page.tsx
     render the customer-owned public permutation selected by the static layout handoff with
@@ -98,18 +92,25 @@ First request
     public cache metadata
 
   app/(static)/static-shell-private-slot/page.tsx and PrivateRequestSlot.tsx
-    render a static shell with request-personalized content isolated in a private slot
+    keep the static shell outside Suspense
+    call connection() inside the suspended private slot before rendering request-personalized content
 
   app/layout.tsx
     stays request-neutral so Cache Components route groups can pre-render
 
 Browser runtime
-  Bound OptimizationRoot hydrates explicit handoff state
+  RequestOptimizationRoot hydrates SDK-owned request handoff state
+  ExplicitOptimizationRoot hydrates public permutation handoff state
   OptimizationAnalyticsRoot hydrates analytics-only handoff without content re-resolution
-  NextAppAutoPageTracker emits route page events
-  The same app-local OptimizedEntry resolves entries from current selectedOptimizations
+  RequestNextAppAutoPageTracker preserves initial page-event ownership and tracks navigation
+  RequestOptimizedEntry resolves request entries from current selectedOptimizations
   LiveUpdatesProvider controls reactive re-resolution
 ```
+
+`optimization.request` owns one shared SDK initialization for the root, entry, and tracker. The
+implementation therefore has no app-owned request cache, request shell, duplicate awaits, or manual
+request handoff plumbing. The `connection()` calls and `Suspense` wrappers above are Next.js Cache
+Components boundaries, not SDK synchronization workarounds.
 
 ## CDA locale handling
 
@@ -126,10 +127,10 @@ and
 
 ## Route strategy
 
-Use Server Components for routes that fetch Contentful entries and render first-paint/static content
-through the bound `OptimizedEntry`. Use Client Components for entry surfaces that resolve and react
-after browser startup. Pass request, selection, or analytics-only handoff to the bound root instead
-of sharing package-internal state objects. This implementation covers:
+Use request Server Components for routes that fetch Contentful entries and render personalized first
+paint through `RequestOptimizedEntry`. Use the explicit top-level family for static public handoff,
+and use Client Components for entry surfaces that resolve and react after browser startup. This
+implementation covers:
 
 - The home route fetches entries server-side, renders static first-paint entries on the server, and
   keeps merge-tag and live-update examples on the client
@@ -141,8 +142,8 @@ of sharing package-internal state objects. This implementation covers:
 - The hidden-until-ready route covers client-only hidden-until-ready hydration
 - The static-shell-private-slot route keeps the shell static and isolates request-personalized
   content under `connection()` in a private slot
-- The same app-local bound `OptimizedEntry` chooses the server or client implementation from the
-  component boundary
+- Request routes and static public routes use distinct app-local aliases so static consumers don't
+  opt into private request APIs
 
 ## Prerequisites
 
@@ -201,10 +202,11 @@ pnpm test:e2e:nextjs-sdk_app-router
 
 The E2E suite reuses the shared `lib/e2e-web` browser scenarios for CSR and hydration behavior under
 the App Router Cache Components configuration. It covers shared variant resolution, tracking,
-navigation, live updates, offline queue recovery, and the hydration check that a consented server
-handoff does not issue a duplicate client Experience request. JavaScript-disabled SSR checks are
-skipped because Cache Components reveal streamed request-personalized content with Next.js runtime
-scripts.
+navigation with a preserved request layout, page-only request entries, a private request slot, live
+updates, offline queue recovery, and trusted handoff without duplicate initial browser work. The
+public permutation and analytics-only routes remain explicit top-level flows. JavaScript-disabled
+SSR checks are skipped because Cache Components reveal streamed request-personalized content with
+Next.js runtime scripts.
 
 Use Playwright UI or codegen when needed:
 

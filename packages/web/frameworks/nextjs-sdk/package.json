@@ -10,11 +10,17 @@
   },
   "type": "module",
   "exports": {
-    "./app-router": {
-      "react-server": {
+    "./app-router/server": {
+      "import": {
         "types": "./dist/app-router-server.d.mts",
         "default": "./dist/app-router-server.mjs"
       },
+      "require": {
+        "types": "./dist/app-router-server.d.cts",
+        "default": "./dist/app-router-server.cjs"
+      }
+    },
+    "./app-router/client": {
       "import": {
         "types": "./dist/app-router.d.mts",
         "default": "./dist/app-router.mjs"
@@ -125,8 +131,8 @@
       "gzipBudgets": {
         "app-router.cjs": 1700,
         "app-router.mjs": 1600,
-        "app-router-server.cjs": 4400,
-        "app-router-server.mjs": 6100,
+        "app-router-server.cjs": 4900,
+        "app-router-server.mjs": 6700,
         "cache-middleware.cjs": 1900,
         "cache-middleware.mjs": 1700,
         "client.cjs": 1100,

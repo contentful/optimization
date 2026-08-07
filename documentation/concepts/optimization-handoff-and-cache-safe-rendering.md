@@ -34,11 +34,13 @@ from live updates, and how analytics-only markup can still carry Optimization tr
 
 | Runtime surface                                                           | Handoff role                                                                                                                                                    |
 | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@contentful/optimization-nextjs/app-router`                              | Binds request handoff helpers, public permutation handoff helpers, roots, analytics roots, and server tracking attributes for App Router routes.                |
+| `@contentful/optimization-nextjs/app-router/server`                       | Binds explicit-input App Router server components and helpers plus the nested request component family.                                                         |
+| `@contentful/optimization-nextjs/app-router/client`                       | Binds App Router browser roots, entries, trackers, and explicit handoff helpers.                                                                                |
 | `@contentful/optimization-nextjs/pages-router` and `/pages-router/server` | Binds Pages Router roots, `getServerSideProps` request handoff helpers, and public permutation handoff helpers.                                                 |
 | `@contentful/optimization-nextjs/edge`                                    | Configures Edge runtime request handoff and public permutation handoff helpers.                                                                                 |
 | `@contentful/optimization-nextjs/request-handler`                         | Forwards sanitized request context through pass-through responses and can perform response-capable server page work before App Router Server Components render. |
 | `@contentful/optimization-nextjs/cache-middleware`                        | Rewrites pass-through Next.js proxy or middleware requests to the public permutation cache key produced by the same metadata helper used by handoffs.           |
+| `@contentful/optimization-nextjs/tracking-attributes`                     | Produces server, static, and edge `data-ctfl-*` tracking attributes for manual rendering paths.                                                                 |
 | `@contentful/optimization-react-web`                                      | Consumes content handoffs in `OptimizationRoot` and analytics-only handoffs in `OptimizationAnalyticsRoot`.                                                     |
 | `@contentful/optimization-web`                                            | Hydrates content handoffs into a live browser SDK and analytics-only handoffs into a narrow analytics runtime.                                                  |
 
@@ -96,6 +98,13 @@ with `hydration: 'preserve-server'`, `selectedOptimizations: []`, and
 `initialPageEvent: 'emit'`. Treat it as baseline entry warming, not request-personalized state.
 Prefetch accepts ID and content-type/slug descriptors. A matching browser source uses the handed-off
 baseline through either the source key or resolved `sys.id`, so it does not repeat the CDA request.
+
+For private App Router rendering, the server binding's nested `request` family owns the handoff
+boundary. Its components share one request initializer that reads the active request, derives the
+render inputs, creates a `private-request` handoff, and supplies that handoff to the bound root or
+provider. Application code does not need a request cache, route shell, duplicate awaits, or manual
+header, cookie, URL, route-key, or page-payload plumbing. Top-level server components remain
+explicit-input surfaces for static, public-permutation, analytics-only, and advanced manual flows.
 
 ## Cache scopes
 
@@ -193,14 +202,15 @@ The first page event must have one owner.
 - Use `initialPageEvent: 'emit'` when the browser owns the first page event for a static,
   public-permutation, or browser-owned route.
 
-Next.js request helpers set this value from the accepted page event result. App Router routes that
-use a response-capable request handler can forward `pageAccepted` to `createRequestHandoff()` so the
-Server Component path does not call `page()` a second time. That forwarded context is compact:
-`consent`, `pageAccepted`, and optional `profileId`. A trusted App Router request handoff refetches
-profile and selection state server-side when `profileId` is present instead of forwarding full
-`OptimizationData`. Selection handoff helpers require application code to supply the initial
-page-event owner because customer-owned static and public permutations do not emit a server request
-event by themselves.
+Next.js request helpers set this value from the accepted page event result. The App Router request
+family passes its handoff-owned value to the nested route tracker. When the binding opts into trusted
+request handoff, a response-capable request handler can forward `pageAccepted` so the Server
+Component path does not call `page()` a second time. That forwarded context is compact: `consent`,
+`pageAccepted`, and optional `profileId`. The request family refetches profile and selection state
+server-side when `profileId` is present instead of forwarding full `OptimizationData`. Manual
+`createRequestHandoff()` remains available for advanced orchestration. Selection handoff helpers
+require application code to supply the initial page-event owner because customer-owned static and
+public permutations do not emit a server request event by themselves.
 
 React Web roots can emit the handoff-owned initial page event when they receive `routeKey` and
 either `buildPagePayload` or `initialPagePayload`. A skip can mark the initial route accepted with

@@ -6,8 +6,10 @@ import type {
   OptimizedEntryManagedProps,
   OptimizedEntryProps,
 } from '@contentful/optimization-react-web'
+import type { NextAppAutoPageTrackerProps } from '@contentful/optimization-react-web/router/next-app'
 import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
-import type { ReactNode } from 'react'
+import type { ReactElement, ReactNode } from 'react'
+import type { ContentOptimizationHydrationMode } from './handoff'
 
 export type NextjsBoundProviderConfig = Omit<
   OptimizationProviderConfigProps,
@@ -54,6 +56,24 @@ export type NextjsBoundRootConfig = Omit<NextjsBoundProviderConfig, 'defaults'> 
 } & Pick<OptimizationRootProps, 'liveUpdates'>
 
 export type NextjsOptimizationComponentsConfig = NextjsBoundRootConfig
+
+export interface NextjsAppRouterRequestContext {
+  readonly requestUrl: string
+  readonly routeKey: string
+}
+
+export type NextjsAppRouterRequestHydration =
+  | ContentOptimizationHydrationMode
+  | ((context: NextjsAppRouterRequestContext) => ContentOptimizationHydrationMode)
+
+export interface NextjsAppRouterRequestConfig {
+  readonly hydration?: NextjsAppRouterRequestHydration
+  readonly trustedRequestHandoff?: true
+}
+
+export interface NextjsAppRouterServerOptimizationConfig extends NextjsOptimizationComponentsConfig {
+  readonly request?: NextjsAppRouterRequestConfig
+}
 
 export type NextjsPagesRouterOptimizationComponentsConfig = NextjsBoundRootConfig
 
@@ -112,6 +132,34 @@ export interface BoundNextjsOptimizationRootProps
   extends
     BoundNextjsOptimizationProviderProps,
     Pick<OptimizationRootProps, 'buildPagePayload' | 'initialPagePayload' | 'routeKey'> {}
+
+export type NextjsAppRouterRequestOptimizationRootProps = Omit<
+  BoundNextjsOptimizationRootProps,
+  'buildPagePayload' | 'handoff' | 'hydration' | 'initialPagePayload' | 'routeKey'
+>
+
+export type NextjsAppRouterRequestOptimizationProviderProps = Omit<
+  BoundNextjsOptimizationProviderProps,
+  'handoff' | 'hydration'
+>
+
+export type NextjsAppRouterRequestAutoPageTrackerProps = Omit<
+  NextAppAutoPageTrackerProps,
+  'initialPageEvent'
+>
+
+export interface NextjsAppRouterRequestOptimization {
+  readonly OptimizationRoot: (
+    props: NextjsAppRouterRequestOptimizationRootProps,
+  ) => Promise<ReactElement>
+  readonly OptimizationProvider: (
+    props: NextjsAppRouterRequestOptimizationProviderProps,
+  ) => Promise<ReactElement | null>
+  readonly OptimizedEntry: NextjsBoundOptimizedEntryComponent<Promise<ReactElement>>
+  readonly NextAppAutoPageTracker: (
+    props: NextjsAppRouterRequestAutoPageTrackerProps,
+  ) => Promise<ReactElement>
+}
 
 export type BoundNextjsOptimizationAnalyticsRootProps = Omit<
   OptimizationAnalyticsRootProps,

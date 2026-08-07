@@ -32,13 +32,24 @@ other destinations.
 
 ## Quick start
 
-Start with one app-level subscription in a stateful JavaScript runtime. Register it near SDK
-initialization, gate it with your destination consent policy, keep the message-ID cache outside the
+Start with one app-level subscription in a plain browser Web SDK integration. This example assumes
+`./optimization` exports the initialized SDK singleton from that integration, `./analytics` exports
+your destination client, and `./analytics-consent` exports your app-owned destination-consent
+decision. Register the subscription near SDK initialization, keep the message-ID cache outside the
 subscriber lifecycle, and forward only primitive fields.
+
+Every emitted event has an SDK-generated `messageId`; use it to deduplicate that one event across
+subscriber remounts. `states.eventStream.current` is the latest accepted event value, not a history.
+`hoverId` is required for hover events. `viewId` is required for entry-view events and optional only
+for flag-view events. Forward both according to the event schema.
 
 **Adapt this to your use case:**
 
 ```ts
+import { analytics } from './analytics'
+import { appPolicyAllowsThirdPartyAnalytics } from './analytics-consent'
+import { optimization } from './optimization'
+
 // Keep this cache in module or app-singleton scope so remounts do not reset it.
 const forwardedMessageIds = new Set<string>()
 
@@ -78,14 +89,14 @@ function pickQuickStartContentfulProperties(event: { type: string; messageId: st
   }
 }
 
-// Skip the synchronous current snapshot when this handoff forwards only later SDK events.
+// Skip the synchronous current accepted value when this handoff forwards only later SDK events.
 const initialMessageId = optimization.states.eventStream.current?.messageId
 
 // Subscribe once near SDK initialization so child or router events can be observed.
 const subscription = optimization.states.eventStream.subscribe((event) => {
   if (!event) return
 
-  // The observable can emit the current snapshot when a subscriber registers.
+  // The observable can emit its current value when a subscriber registers.
   if (forwardedMessageIds.has(event.messageId)) return
   if (event.messageId === initialMessageId) {
     forwardedMessageIds.add(event.messageId)
@@ -104,12 +115,14 @@ const subscription = optimization.states.eventStream.subscribe((event) => {
 
 Keep the returned `subscription` for teardown in tests, hot reloads, or route-level provider
 unmounts. The message-ID cache, not the subscription object, prevents re-forwarding across
-subscriber or provider remounts. The helper narrows before reading component-specific fields, so
+subscriber or provider remounts. `analytics.track()` and
+`appPolicyAllowsThirdPartyAnalytics()` remain app-owned integration points. The property helper
+narrows before reading component-specific fields, so
 page, screen, identify, and custom track events forward only event-level properties. Remove the
-initial snapshot guard when forwarding the current accepted SDK event at subscription time is
-intentional. Verify one SDK activity creates one intended destination event before adding more
+initial-value guard when forwarding the current accepted SDK event at subscription time is
+intentional. Verify that an SDK activity creates the intended destination event before adding more
 vendors or fields. Use the helper in the default recipe when the destination rejects `undefined`
-values or when exposure reports need view and hover deduplication.
+values.
 
 <details>
   <summary>Table of Contents</summary>
@@ -138,21 +151,18 @@ Use the same pattern for every destination:
 2. Gate forwarding with the same application or CMP decision that controls the destination. SDK
    consent controls SDK event emission, not vendor consent modes.
 3. Deduplicate event-stream forwarding by `messageId`. Keep the cache outside the subscriber or
-   provider lifecycle so remounts can recognize the same current snapshot. When a subscriber must
+   provider lifecycle so remounts can recognize the same current value. When a subscriber must
    forward only events emitted after it registers, record `states.eventStream.current?.messageId`
    before subscribing and skip that first message ID.
-4. Collapse view and hover duration records before sending exposure or funnel events to a
-   third-party destination. SDK view and hover tracking can emit multiple records with the same
-   `viewId` or `hoverId`. Sticky `trackView()` also emits an Experience event and a paired Insights
-   event for the same view.
-5. Map only stable, primitive values. Prefer `contentful_*` property names unless your tracking plan
+4. Map only stable, primitive values. Prefer `contentful_*` property names unless your tracking plan
    already defines destination-specific names.
-6. Attach Contentful context to existing business events only when the report needs attribution by
+5. Attach Contentful context to existing business events only when the report needs attribution by
    experience, variant, entry, or flag.
 
-`states.selectedOptimizations` is useful for readiness checks and coarse segmentation, but it is not
-an exposure event by itself. It tells you which experiences are active for the current profile, not
-which entry rendered or which user interaction occurred.
+`states.selectedOptimizations` is the plural set of current experience and variant selections. It
+is useful for readiness checks and coarse segmentation, but it is not an exposure event by itself.
+It tells you which experiences are active for the current profile, not which entry rendered or
+which user interaction occurred.
 
 The SDK event stream is a live handoff, not a durable third-party delivery queue. Stateful
 JavaScript observables emit the current value when a subscriber registers, then later updates. They
@@ -205,31 +215,6 @@ type OptimizationAnalyticsEvent = {
   }
 }
 
-const forwardedSemanticInteractions = new Set<string>()
-
-function shouldForwardContentfulEvent(event: OptimizationAnalyticsEvent): boolean {
-  const semanticId = event.viewId ?? event.hoverId
-
-  if ((event.type !== 'component' && event.type !== 'component_hover') || !semanticId) {
-    return true
-  }
-
-  // Collapse repeated duration updates for the same view or hover interaction.
-  const key = [
-    event.type,
-    event.componentType,
-    event.componentId,
-    event.experienceId,
-    event.variantIndex,
-    semanticId,
-  ].join(':')
-
-  if (forwardedSemanticInteractions.has(key)) return false
-
-  forwardedSemanticInteractions.add(key)
-  return true
-}
-
 function pickContentfulEventProperties(
   event: OptimizationAnalyticsEvent,
 ): Record<string, string | number | undefined> {
@@ -258,9 +243,6 @@ function dropUndefined<TValue>(values: Record<string, TValue | undefined>): Reco
 }
 ```
 
-If a destination can store engagement duration, aggregate by `viewId` or `hoverId` and send the
-maximum or final duration value instead of dropping later duration records.
-
 For Custom Flags, forward analytics from the same code path that reads or renders the flag. In Web,
 React Web, Next.js-bound, and React Native integrations, `getFlag()` and reactive flag state can
 emit Contentful flag-view tracking. On iOS and Android, flag observers can emit the same Contentful
@@ -279,11 +261,13 @@ Native integrations, prefer `onStatesReady` on the provider root so the subscrip
 child effects can emit SDK events.
 
 For Next.js App Router integrations, configure `onStatesReady` once in
-`bindNextjsAppRouterOptimization(...)` from `@contentful/optimization-nextjs/app-router`. The bound
-`OptimizationRoot` uses that binding config and renders without per-render `clientId`,
-`environment`, or `onStatesReady` props. The binding call is not an isolation context; call it once
-for the app-local helper set. Use lower-level `/client` root props only for manual server/client
-escape hatches.
+`bindNextjsAppRouterServerOptimization(...)` from
+`@contentful/optimization-nextjs/app-router/server`. The nested request root and top-level
+explicit-input root use that binding config and render without per-render `clientId`, `environment`,
+or `onStatesReady` props. The binding call is not an isolation context; call it once for the
+app-local helper set. Bound Client Components use a separate
+`bindNextjsAppRouterClientOptimization(...)` binding from `/app-router/client`; router-neutral hooks
+and per-entry controls use `/client`.
 
 For Pages Router integrations, configure `onStatesReady` once in
 `bindNextjsPagesRouterOptimization(...)` from `@contentful/optimization-nextjs/pages-router`, then
@@ -292,53 +276,57 @@ pass `pageProps.contentfulOptimization.handoff` to the bound root in `pages/_app
 **Adapt this to your use case:**
 
 ```tsx
-import { bindNextjsAppRouterOptimization } from '@contentful/optimization-nextjs/app-router'
+import { bindNextjsAppRouterServerOptimization } from '@contentful/optimization-nextjs/app-router/server'
 
 const forwardedMessageIds = new Set<string>()
 
-export const { NextAppAutoPageTracker, OptimizationRoot, OptimizedEntry } =
-  bindNextjsAppRouterOptimization({
-    // ...clientId, environment, locale, consent
-    onStatesReady: (states) => {
-      const initialMessageId = states.eventStream.current?.messageId
+export const optimization = bindNextjsAppRouterServerOptimization({
+  // ...clientId, environment, locale, consent
+  onStatesReady: (states) => {
+    const initialMessageId = states.eventStream.current?.messageId
 
-      // Attach before child route trackers and interaction observers emit.
-      const eventSubscription = states.eventStream.subscribe((event) => {
-        if (!event) return
+    // Attach before child route trackers and interaction observers emit.
+    const eventSubscription = states.eventStream.subscribe((event) => {
+      if (!event) return
 
-        // Guard against the current snapshot and provider remounts.
-        if (forwardedMessageIds.has(event.messageId)) return
-        if (event.messageId === initialMessageId) {
-          forwardedMessageIds.add(event.messageId)
-          return
-        }
-
-        // Keep vendor consent separate from the SDK's Contentful event consent gate.
-        if (!appPolicyAllowsThirdPartyAnalytics()) return
-        if (!shouldForwardContentfulEvent(event)) return
-
+      // Guard against the current value and provider remounts.
+      if (forwardedMessageIds.has(event.messageId)) return
+      if (event.messageId === initialMessageId) {
         forwardedMessageIds.add(event.messageId)
-
-        // The analytics layer owns destination naming and property registration.
-        analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
-      })
-
-      const blockedSubscription = states.blockedEventStream.subscribe((blocked) => {
-        if (!blocked) return
-
-        // Blocked events are diagnostic only and are not replayed after consent changes.
-        console.debug('Contentful event blocked', {
-          method: blocked.method,
-          reason: blocked.reason,
-        })
-      })
-
-      return () => {
-        eventSubscription.unsubscribe()
-        blockedSubscription.unsubscribe()
+        return
       }
-    },
-  })
+
+      // Keep vendor consent separate from the SDK's Contentful event consent gate.
+      if (!appPolicyAllowsThirdPartyAnalytics()) return
+
+      forwardedMessageIds.add(event.messageId)
+
+      // The analytics layer owns destination naming and property registration.
+      analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
+    })
+
+    const blockedSubscription = states.blockedEventStream.subscribe((blocked) => {
+      if (!blocked) return
+
+      // Blocked events are diagnostic only and are not replayed after consent changes.
+      console.debug('Contentful event blocked', {
+        method: blocked.method,
+        reason: blocked.reason,
+      })
+    })
+
+    return () => {
+      eventSubscription.unsubscribe()
+      blockedSubscription.unsubscribe()
+    }
+  },
+})
+
+export const {
+  NextAppAutoPageTracker: RequestNextAppAutoPageTracker,
+  OptimizationRoot: RequestOptimizationRoot,
+  OptimizedEntry: RequestOptimizedEntry,
+} = optimization.request
 ```
 
 Use `states.blockedEventStream` or `onEventBlocked` for diagnostics. Blocked events are dropped at
@@ -350,8 +338,10 @@ Applies when a Node route, server action, middleware/proxy flow, or lower-level/
 server flow already called a request-bound SDK method and owns the analytics event for that request.
 
 Use the `data` from the same accepted SDK call that rendered the response or handled the server
-event. App Router integrations use `createRequestHandoff()` from the app-local bound helper set when a
-route should pass request state to the browser. Pages Router integrations use the config-bound
+event. App Router private-request routes normally use the nested `optimization.request` family,
+which creates and shares its browser handoff internally. The top-level bound
+`createRequestHandoff()` is an advanced path for routes that already own explicit request and
+handoff orchestration. Pages Router integrations use the config-bound
 `createRequestHandoff()` helper from `@contentful/optimization-nextjs/pages-router/server` inside
 `getServerSideProps` and return `props.contentfulOptimization.handoff`. Use
 `configureNextjsServerOptimization(...)` only when you intentionally configure a lower-level/manual
@@ -362,37 +352,63 @@ entry helper so the entry decision and analytics context share the same request 
 streams cannot explain a server-rendered first paint unless you intentionally hydrate the browser
 with the same handoff.
 
+The example below uses the Node SDK. `optimization` is the process-level singleton exported by your
+Node integration; `optimization.forRequest()` creates `requestOptimization`, the request-bound
+client for one incoming request. `readOptimizationConsent()`, `readOptimizationProfile()`, the
+destination policy, the profile-ID forwarding policy, and `analytics.track()` are app-owned helpers.
+
+An event result separates `accepted` from `data`. `accepted` means the SDK policy admitted the call;
+it does not prove receipt by a remote service. `data`, when present, is the Experience response with
+the request profile, plural `selectedOptimizations`, and Custom Flag `changes`. A singular
+`selectedOptimization` returned while resolving one entry is the selection applied to that entry.
+
 **Adapt this to your use case:**
 
 ```ts
-const pageResult = await requestOptimization.page({
-  properties: { path: req.path },
-})
+import { analytics } from './analytics'
+import {
+  appPolicyAllowsThirdPartyAnalytics,
+  canForwardOptimizationProfileId,
+} from './analytics-consent'
+import { optimization } from './optimization'
+import { readOptimizationConsent, readOptimizationProfile } from './optimization-request'
 
-const optimizationData = pageResult.accepted ? pageResult.data : undefined
+export async function forwardQuoteRequested(req: { url: string }) {
+  const url = new URL(req.url)
+  const requestOptimization = optimization.forRequest({
+    consent: readOptimizationConsent(req),
+    locale: 'en-US',
+    profile: readOptimizationProfile(req),
+  })
+  const pageResult = await requestOptimization.page({
+    properties: { path: url.pathname },
+  })
 
-// Fetch and resolve the entry with the same request-local Optimization data.
-const {
-  baselineEntry,
-  entry: resolvedHeroEntry,
-  selectedOptimization,
-} = await requestOptimization.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
+  const optimizationData = pageResult.accepted ? pageResult.data : undefined
 
-if (appPolicyAllowsThirdPartyAnalytics()) {
-  // The server event owner decides which Contentful fields belong on this business event.
-  analytics.track(
-    'Quote Requested',
-    dropUndefined({
-      plan: 'enterprise',
-      contentful_profile_id: canForwardOptimizationProfileId
-        ? optimizationData?.profile.id
-        : undefined,
-      contentful_experience_id: selectedOptimization?.experienceId,
-      contentful_variant_index: selectedOptimization?.variantIndex,
-      contentful_variant_entry_id: selectedOptimization ? resolvedHeroEntry.sys.id : undefined,
-      contentful_baseline_entry_id: baselineEntry.sys.id,
-    }),
-  )
+  // Fetch and resolve the entry with the same request-local Optimization data.
+  const {
+    baselineEntry,
+    entry: resolvedHeroEntry,
+    selectedOptimization,
+  } = await requestOptimization.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
+
+  if (appPolicyAllowsThirdPartyAnalytics()) {
+    // The server event owner decides which Contentful fields belong on this business event.
+    analytics.track(
+      'Quote Requested',
+      dropUndefined({
+        plan: 'enterprise',
+        contentful_profile_id: canForwardOptimizationProfileId()
+          ? optimizationData?.profile.id
+          : undefined,
+        contentful_experience_id: selectedOptimization?.experienceId,
+        contentful_variant_index: selectedOptimization?.variantIndex,
+        contentful_variant_entry_id: selectedOptimization ? resolvedHeroEntry.sys.id : undefined,
+        contentful_baseline_entry_id: baselineEntry.sys.id,
+      }),
+    )
+  }
 }
 ```
 
@@ -539,16 +555,28 @@ click, tap, hover, or exposure events unless your tracking plan intentionally co
 
 Verify the recipe before release:
 
-- The SDK integration still sends expected events to Contentful when consent allows it.
+1. Enable both Optimization event consent and destination consent, then trigger a tracked
+   optimized-entry click or a route page event. Observe an accepted SDK event with a `messageId` in
+   the subscriber. Separately inspect the browser network panel for the expected SDK request; do not
+   assume a one-to-one relationship between stream records and network requests, or treat either as
+   proof that a remote service processed the event.
+2. Add a temporary log immediately before `analytics.track()`, repeat the action, and observe the
+   forwarding log and event in the destination's live debugger.
+3. Keep Optimization event consent enabled but deny destination consent. Repeat the same action.
+   Observe the accepted SDK event and Contentful network request, but no `analytics.track()` log and
+   no destination event.
+4. For a strict opt-in test, configure the test SDK with `allowedEventTypes: []`, deny Optimization
+   event consent, and repeat the action. Observe the attempted method in
+   `states.blockedEventStream`, native `blockedEventStream`, or `onEventBlocked`, with no accepted
+   event and no third-party forwarding. The default Web allow-list includes `page` and `identify`,
+   so denied consent alone does not block those methods.
+5. Re-enable consent, trigger an event, then remount the subscriber or provider. Confirm the same
+   current `messageId` does not produce a second destination event because the cache outlives the
+   subscriber or the initial current value is intentionally skipped.
+
+Then confirm the broader tracking contract:
+
 - The third-party destination receives only the intended `contentful_*` fields.
-- Denied or withdrawn consent blocks both SDK-gated events and third-party forwarding according to
-  your application policy.
-- `states.blockedEventStream`, native `blockedEventStream`, or `onEventBlocked` shows expected
-  blocked methods during consent tests.
-- Subscriber or provider remounts do not resend the same current `messageId`; either the cache
-  outlives the subscriber or the initial snapshot is intentionally skipped.
-- View and hover records are collapsed, summarized, or intentionally mirrored before reaching
-  third-party exposure and funnel reports.
 - Sticky view tracking produces one intended downstream exposure, not one Experience exposure plus
   one Insights exposure.
 - Server-rendered first paint and browser follow-up tracking have one owner for each event in the
