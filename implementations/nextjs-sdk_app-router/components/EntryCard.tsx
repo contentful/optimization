@@ -1,4 +1,4 @@
-import type { ContentEntry } from '@/lib/contentful'
+import type { ContentEntry, ContentEntrySkeleton } from '@/lib/contentful'
 import { RequestOptimizedEntry } from '@/lib/optimization'
 import type { EntryClickScenario } from 'e2e-web'
 import type { JSX } from 'react'
@@ -49,6 +49,18 @@ export function EntryCard({
             />
           )
         }}
+      </RequestOptimizedEntry>
+    </section>
+  )
+}
+
+export function ManagedEntryCard({ entryId }: Readonly<{ entryId: string }>): JSX.Element {
+  return (
+    <section className="entry-card" data-testid={`content-entry-${entryId}`}>
+      <RequestOptimizedEntry<ContentEntrySkeleton> entryId={entryId}>
+        {(resolvedEntry) => (
+          <EntryCardContent entry={resolvedEntry} labelEntryId={entryId} testId={entryId} />
+        )}
       </RequestOptimizedEntry>
     </section>
   )

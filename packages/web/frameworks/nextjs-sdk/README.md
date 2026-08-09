@@ -89,7 +89,9 @@ export const {
 } = optimization.request
 ```
 
-Configure the request handler in `proxy.ts` so Server Components receive sanitized request context:
+Configure the request handler so Server Components receive sanitized request context. Next.js 16
+uses `proxy.ts` with a `proxy` export. Next.js 13 to 15 uses `middleware.ts` with a `middleware`
+export; the handler body is the same:
 
 ```ts
 import { createNextjsOptimizationContextHandler } from '@contentful/optimization-nextjs/request-handler'
@@ -97,49 +99,73 @@ import { createNextjsOptimizationContextHandler } from '@contentful/optimization
 export const proxy = createNextjsOptimizationContextHandler()
 ```
 
-Use the request root in a request-personalized layout. Keep the request runtime and tracker inside
-`Suspense`; the tracker reads Next.js search parameters:
+Keep public shell content outside the request boundary. Put the request runtime, tracker, and
+personalized island inside `Suspense`; the tracker reads Next.js search parameters. Root prefetch
+also supplies the managed baseline to the browser handoff:
 
 ```tsx
-import { RequestNextAppAutoPageTracker, RequestOptimizationRoot } from '@/lib/optimization'
+import { AppShell } from '@/components/AppShell'
+import { Hero } from '@/components/Hero'
+import {
+  RequestNextAppAutoPageTracker,
+  RequestOptimizationRoot,
+  RequestOptimizedEntry,
+} from '@/lib/optimization'
 import { Suspense } from 'react'
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return (
-    <Suspense fallback={null}>
-      <RequestOptimizationRoot>
-        <RequestNextAppAutoPageTracker />
-        {children}
-      </RequestOptimizationRoot>
-    </Suspense>
-  )
+const heroEntryId = 'hero-entry-id'
+
+function PersonalizedContentFallback() {
+  return <section aria-busy="true">Loading featured content…</section>
 }
-```
 
-Render a fetched baseline through the request entry so the current request's selected variant
-becomes page output:
-
-```tsx
-import { Hero } from '@/components/Hero'
-import { getHeroEntry } from '@/lib/contentful'
-import { RequestOptimizedEntry } from '@/lib/optimization'
-
-export default async function Page() {
-  const hero = await getHeroEntry({ locale: 'en-US', include: 10 })
-
+export default function Page() {
   return (
-    <RequestOptimizedEntry baselineEntry={hero}>
-      {(resolvedHero) => <Hero entry={resolvedHero} />}
-    </RequestOptimizedEntry>
+    <AppShell>
+      <Suspense fallback={<PersonalizedContentFallback />}>
+        <RequestOptimizationRoot prefetchManagedEntries={[heroEntryId]}>
+          <RequestNextAppAutoPageTracker />
+          <RequestOptimizedEntry entryId={heroEntryId}>
+            {(resolvedHero) => <Hero entry={resolvedHero} />}
+          </RequestOptimizedEntry>
+        </RequestOptimizationRoot>
+      </Suspense>
+    </AppShell>
   )
 }
 ```
 
 The request family creates a `private-request` handoff, uses `preserve-server` hydration by default,
-and makes all four request components await the same request initialization. It derives the URL,
-route key, initial page payload, headers, and cookies from the forwarded request context. The app
-does not need its own React cache, request shell, duplicate awaits, URL parsing, or page-payload
-builder.
+and makes all four request components share the same request initialization. For SDK-managed
+entries, it starts request initialization and Contentful baseline fetching together, then resolves
+the selected variant after both complete. It derives the URL, route key, initial page payload,
+headers, and cookies from the forwarded request context. The app does not need its own React cache,
+request shell, duplicate awaits, URL parsing, or page-payload builder.
+
+### Choose who owns entry fetching
+
+Both fetching workflows resolve request-selected content:
+
+| Ownership       | Entry source                | Use when                                                                                   |
+| --------------- | --------------------------- | ------------------------------------------------------------------------------------------ |
+| **App-owned**   | `baselineEntry`             | Your app owns the Contentful client, query, cache, or data layer.                          |
+| **SDK-managed** | `entryId` or `managedEntry` | The server binding configures `contentful: { client }` and the SDK owns the baseline read. |
+
+For app-owned fetching, load the entry and pass it directly:
+
+```tsx
+const hero = await getHeroEntry({ locale: 'en-US', include: 10 })
+
+return (
+  <RequestOptimizedEntry baselineEntry={hero}>
+    {(resolvedHero) => <Hero entry={resolvedHero} />}
+  </RequestOptimizedEntry>
+)
+```
+
+Only SDK-managed fetching receives direct overlap between request initialization and the Contentful
+read. App-owned fetching still uses the same request-selected resolution after the app supplies the
+baseline.
 
 The proxy or middleware boundary remains required because it forwards the sanitized request URL.
 Keep any `Suspense` or `connection()` boundary required by your Next.js rendering and Cache

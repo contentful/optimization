@@ -49,7 +49,7 @@ dependencies; each carries a symbol-anchored source pointer.
   The bound `OptimizationRoot` / `OptimizationProvider` accept `hydration` plus
   `prefetchManagedEntries` descriptors; descriptors are fetched server-side through
   `sdk.prefetchManagedEntries()` and merged into `handoff.entries`.
-  source: `nextjs-sdk#app-router-server.tsx#resolveAppRouterOptimizedEntry`; `nextjs-sdk#app-router-server.tsx#resolveHandoffEntries`; `nextjs-sdk#app-router-server.tsx#toClientProviderConfig`; `core-sdk#CoreBase.ts#ContentfulConfig`; `core-sdk#CoreBase.ts#prefetchManagedEntries`; `core-sdk#CoreBase.ts#fetchOptimizedEntry`
+  source: `nextjs-sdk#app-router-server.tsx#OptimizedEntry`; `nextjs-sdk#app-router-server.tsx#getAppRouterBaselineEntry`; `nextjs-sdk#app-router-server.tsx#resolveHandoffEntries`; `nextjs-sdk#app-router-server.tsx#toClientProviderConfig`; `core-sdk#CoreBase.ts#ContentfulConfig`; `core-sdk#CoreBase.ts#fetchContentfulEntry`; `core-sdk#CoreBase.ts#prefetchManagedEntries`; `core-sdk#CoreBase.ts#resolveOptimizedEntry`
 - A bound server managed `OptimizedEntry` fetches and resolves that one server render but does not
   add its baseline entry to the browser handoff. A browser managed entry is seeded only when a
   matching `ManagedEntryHandoff` reaches the root through `handoff.entries` or is produced from the
@@ -71,22 +71,20 @@ dependencies; each carries a symbol-anchored source pointer.
   `initialPageEvent` to `'skip'` exactly when `pageResult.accepted` is true; response data presence
   is not the page-event ownership signal.
   source: `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#app-router-request-handoff.ts#NextjsForwardedServerData`; `nextjs-sdk#app-router-request-handoff.ts#readNextjsForwardedServerData`; `nextjs-sdk#app-router-request-handoff.ts#toForwardedProfileOptions`; `nextjs-sdk#app-router-request-handoff.ts#toHandoffDefaults`; `nextjs-sdk#request-context.ts#NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER`; `nextjs-sdk#request-context.ts#parseNextjsOptimizationRequestContext`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`
-- The server binder's nested `request` components all await one no-argument React-cached
-  initializer. It reads Next.js headers and cookies, derives the request URL, route key, initial page
-  payload, and hydration once, creates one request handoff, and shares those render inputs among the
-  four wrappers for that RSC request. A request `OptimizedEntry` waits for initialization before it
-  delegates to the top-level entry resolver, so it observes the same stored selections even when it
-  starts before the request root. Separate RSC requests receive separate cached resources and
-  handoff state.
-  source: `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
+- The server binder's nested `request` components share one no-argument React-cached initializer. It
+  reads Next.js headers and cookies, derives the request URL, route key, initial page payload, and
+  hydration once, creates one request handoff, and shares those render inputs among the four wrappers
+  for that RSC request. A managed request `OptimizedEntry` starts its baseline fetch concurrently
+  with initialization, then waits for both before reading the handoff store and resolving with its
+  selected state. Request roots and providers likewise start managed prefetch concurrently with
+  initialization, wait for both, merge the fetched entries once into the request handoff, and do not
+  delegate the prefetch descriptors for a second fetch. This coordination is binder-owned and
+  automatic; it uses the existing request cache and handoff merge without an additional performance
+  setting or cache. Separate RSC requests receive separate cached resources and handoff state.
+  source: `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#app-router-server.tsx#OptimizedEntry`; `nextjs-sdk#app-router-server.tsx#getAppRouterBaselineEntry`; `nextjs-sdk#app-router-server.tsx#resolveHandoffEntries`
 - Request hydration defaults to `preserve-server`. A configured resolver runs once during cached
   initialization with the SDK-derived request URL and route key.
   source: `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#bound-component-types.ts#NextjsAppRouterRequestHydration`
-- The request root delegates with the resource-owned handoff, hydration, route key, and initial page
-  payload; the request provider delegates with the handoff and hydration; the request entry waits
-  before delegating its own props unchanged; and the request tracker delegates with
-  `handoff.initialPageEvent`.
-  source: `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`
 - Selection handoff: the bound `createHandoffFromSelections(input)` adds browser hydration metadata to
   the Core selection handoff. It is the lower-level App Router helper for explicit selection
   handoffs; applications supply the selected optimizations, cache metadata, hydration mode, and
@@ -186,7 +184,7 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
   source: `nextjs-sdk#app-router-server.tsx#resolveHandoffEntries`
 - Runtime props that provide zero or multiple `baselineEntry`, `entryId`, and `managedEntry` sources
   reject before any managed fetch; the error names those three allowed sources.
-  source: `nextjs-sdk#app-router-server.tsx#resolveAppRouterOptimizedEntry`
+  source: `nextjs-sdk#app-router-server.tsx#getAppRouterBaselineEntry`
 
 ## Identifier ownership
 
@@ -281,7 +279,7 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
   entries, and rendered personalized HTML are therefore not safe to share across visitors unless a
   cache key covers the complete personalization context. Raw Contentful baseline-entry caching is a
   separate application policy.
-  source: `nextjs-sdk#app-router-server.tsx#OptimizedEntry`; `nextjs-sdk#app-router-server.tsx#resolveAppRouterOptimizedEntry`; `core-sdk#CoreBase.ts#resolveOptimizedEntry`
+  source: `nextjs-sdk#app-router-server.tsx#OptimizedEntry`; `nextjs-sdk#app-router-server.tsx#getAppRouterBaselineEntry`; `core-sdk#CoreBase.ts#resolveOptimizedEntry`
 - **The bound root provides a handoff-to-live transition:** React Web builds the initial browser
   render from `handoff.state` and `handoff.entries`, then hydrates the owned live SDK before
   switching the context runtime. Children remain mounted through the transition.

@@ -123,15 +123,63 @@ function handleEntryIdError(err: unknown, entryId: string): Response {
   )
 }
 
-async function handleEntryIdQuery(entryId: string): Promise<Response> {
+async function loadEntryFixture(entryId: string): Promise<Record<string, unknown>> {
   const filePath = path.join(BASE_DIR, `${entryId}.json`)
+  const text = await readFile(filePath, 'utf8')
+  const json: unknown = JSON.parse(text)
+  if (!isRecord(json)) throw new Error()
+  return json
+}
+
+async function handleEntryIdQuery(entryId: string): Promise<Response> {
   try {
-    const text = await readFile(filePath, 'utf8')
-    const json: unknown = JSON.parse(text)
-    if (!isRecord(json)) throw new Error()
-    return HttpResponse.json(json, { headers: CORS_HEADERS, status: 200 })
+    return HttpResponse.json(await loadEntryFixture(entryId), {
+      headers: CORS_HEADERS,
+      status: 200,
+    })
   } catch (err) {
     return handleEntryIdError(err, entryId)
+  }
+}
+
+async function handleEntryIdsQuery(entryIds: string): Promise<Response> {
+  try {
+    const fixtures = (
+      await Promise.all(
+        entryIds.split(',').map(async (entryId) => {
+          try {
+            return await loadEntryFixture(entryId)
+          } catch (error) {
+            if (isRecord(error) && error.code === 'ENOENT') return undefined
+            throw error
+          }
+        }),
+      )
+    ).filter((fixture) => fixture !== undefined)
+    const items = fixtures.flatMap(({ items }) =>
+      Array.isArray(items) ? items.filter(isRecord) : [],
+    )
+    const Entry = fixtures.flatMap(({ includes }) => {
+      if (!isRecord(includes) || !Array.isArray(includes.Entry)) return []
+      return includes.Entry.filter(isRecord)
+    })
+
+    return HttpResponse.json(
+      {
+        sys: { type: 'Array' },
+        total: items.length,
+        skip: 0,
+        limit: 100,
+        items,
+        includes: { Entry },
+      },
+      { headers: CORS_HEADERS, status: 200 },
+    )
+  } catch {
+    return HttpResponse.json(
+      { error: 'Failed to load entries.' },
+      { headers: CORS_HEADERS, status: 500 },
+    )
   }
 }
 
@@ -174,6 +222,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
       async ({ request }) => {
         const url = new URL(request.url)
         const entryId = url.searchParams.get('sys.id')
+        const entryIds = url.searchParams.get('sys.id[in]')
         const contentType = url.searchParams.get('content_type')
 
         if (contentType) {
@@ -182,6 +231,10 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
 
         if (entryId) {
           return await handleEntryIdQuery(entryId)
+        }
+
+        if (entryIds) {
+          return await handleEntryIdsQuery(entryIds)
         }
 
         return HttpResponse.json(

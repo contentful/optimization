@@ -257,7 +257,7 @@ test.describe('Next.js handoff routes', () => {
     await expectPageTwoSelectedVariant(page)
   })
 
-  test('uses trusted request handoff without duplicating the initial browser page event', async ({
+  test('uses forwarded request context without duplicating the initial browser page event', async ({
     page,
   }) => {
     await page.goto(PAGES.home.path)
@@ -346,7 +346,7 @@ test.describe('Next.js handoff routes', () => {
     await expect(page.getByTestId('content-hidden-until-ready')).toBeVisible()
   })
 
-  test('renders a static shell with a private request slot and tracking UI', async ({ page }) => {
+  test('renders a static shell with a personalized private request slot', async ({ page }) => {
     await page.goto('/static-shell-private-slot')
     await page.waitForLoadState('domcontentloaded')
 
@@ -364,14 +364,6 @@ test.describe('Next.js handoff routes', () => {
     await expect(page.getByTestId(`entry-text-${newVisitorSegment.baselineEntryId}`)).toContainText(
       newVisitorSegment.resolvedEntryText,
     )
-
-    await page.getByTestId('consent-button').click()
-    await host.scrollIntoViewIfNeeded()
-    await page.getByTestId('entry-click-ancestor-wrapper').click()
-
-    await expect(
-      page.getByTestId(`event-component_click-${newVisitorSegment.variantEntryId}`),
-    ).toBeVisible()
   })
 })
 

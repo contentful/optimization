@@ -49,7 +49,7 @@ import {
   resolveOptimizedEntryChildren,
   toServerOptimizedEntryChildren,
 } from './server-entry-renderer'
-import type { ServerTrackingBaselineEntry, ServerTrackingResolvedData } from './tracking-attributes'
+import type { ServerTrackingBaselineEntry } from './tracking-attributes'
 
 export type { OptimizedEntryRenderContext } from '@contentful/optimization-react-web'
 export type {
@@ -233,14 +233,19 @@ export function bindNextjsAppRouterServerOptimization(
   }
 
   async function resolveHandoffEntries(
-    handoff: BoundNextjsOptimizationProviderProps['handoff'],
+    handoff:
+      | BoundNextjsOptimizationProviderProps['handoff']
+      | Promise<BoundNextjsOptimizationProviderProps['handoff']>,
     prefetchManagedEntries: BoundNextjsOptimizationProviderProps['prefetchManagedEntries'],
   ): Promise<BoundNextjsOptimizationProviderProps['handoff']> {
-    if (prefetchManagedEntries === undefined) return handoff
+    if (prefetchManagedEntries === undefined) return await handoff
 
-    const entries = await sdk.prefetchManagedEntries(prefetchManagedEntries)
+    const entriesPromise = sdk.prefetchManagedEntries(prefetchManagedEntries)
+    void entriesPromise.catch(() => undefined)
+    const resolvedHandoff = await handoff
+    const entries = await entriesPromise
 
-    if (handoff === undefined) {
+    if (resolvedHandoff === undefined) {
       return createHandoffFromSelections({
         cache: { scope: 'static' },
         entries,
@@ -251,14 +256,17 @@ export function bindNextjsAppRouterServerOptimization(
     }
 
     const mergedHandoff: BoundNextjsOptimizationProviderProps['handoff'] = {
-      ...handoff,
-      entries: [...(handoff.entries ?? []), ...entries],
+      ...resolvedHandoff,
+      entries: [...(resolvedHandoff.entries ?? []), ...entries],
     }
 
     return mergedHandoff
   }
 
-  async function OptimizedEntry(props: NextjsBoundOptimizedEntryProps): Promise<ReactElement> {
+  async function OptimizedEntry(
+    props: NextjsBoundOptimizedEntryProps,
+    requestBarrier?: Promise<unknown>,
+  ): Promise<ReactElement> {
     const {
       baselineEntry: _baselineEntry,
       children,
@@ -274,8 +282,18 @@ export function bindNextjsAppRouterServerOptimization(
       'data-testid': dataTestId,
       ...serverEntryProps
     } = props as NextjsBoundOptimizedEntryProps & Partial<IgnoredReactWebOptimizedEntryProps>
-    const { state: handoffState } = getRequestHandoffStore()
-    const [baselineEntry, resolvedData] = await resolveAppRouterOptimizedEntry(props, handoffState)
+    const topLevelHandoffState =
+      requestBarrier === undefined ? getRequestHandoffStore().state : undefined
+    const baselineEntryPromise = Promise.resolve(getAppRouterBaselineEntry(props))
+    void baselineEntryPromise.catch(() => undefined)
+    await requestBarrier
+    const baselineEntry = await baselineEntryPromise
+    const handoffState =
+      requestBarrier === undefined ? topLevelHandoffState : getRequestHandoffStore().state
+    const resolvedData = sdk.resolveOptimizedEntry(
+      baselineEntry,
+      handoffState?.selectedOptimizations,
+    )
     const renderContext: OptimizedEntryRenderContext = {
       baselineEntry,
       baselineEntryId: baselineEntry.sys.id,
@@ -305,10 +323,14 @@ export function bindNextjsAppRouterServerOptimization(
     })
   }
 
-  async function resolveAppRouterOptimizedEntry(
-    { baselineEntry, entryId, entryQuery, managedEntry }: NextjsBoundOptimizedEntryProps,
-    handoffState: BrowserOptimizationHandoff['state'] | undefined,
-  ): Promise<readonly [ServerTrackingBaselineEntry, ServerTrackingResolvedData]> {
+  function getAppRouterBaselineEntry({
+    baselineEntry,
+    entryId,
+    entryQuery,
+    managedEntry,
+  }: NextjsBoundOptimizedEntryProps):
+    | ServerTrackingBaselineEntry
+    | Promise<ServerTrackingBaselineEntry> {
     const { length: sourceCount } = [baselineEntry, entryId, managedEntry].filter(
       (source) => source !== undefined,
     )
@@ -320,24 +342,12 @@ export function bindNextjsAppRouterServerOptimization(
     }
 
     if (baselineEntry !== undefined) {
-      return [
-        baselineEntry,
-        sdk.resolveOptimizedEntry(baselineEntry, handoffState?.selectedOptimizations),
-      ]
+      return baselineEntry
     }
 
-    const result =
-      managedEntry !== undefined
-        ? await sdk.fetchOptimizedEntry(managedEntry, {
-            selectedOptimizations: handoffState?.selectedOptimizations,
-          })
-        : await sdk.fetchOptimizedEntry(entryId, {
-            query: entryQuery,
-            selectedOptimizations: handoffState?.selectedOptimizations,
-          })
-    const { baselineEntry: fetchedBaselineEntry } = result
-
-    return [fetchedBaselineEntry, result]
+    return managedEntry !== undefined
+      ? sdk.fetchContentfulEntry(managedEntry)
+      : sdk.fetchContentfulEntry(entryId, entryQuery)
   }
 
   const { createRequestHandoff, request } = bindNextjsAppRouterRequestRuntime({
@@ -346,6 +356,7 @@ export function bindNextjsAppRouterServerOptimization(
     OptimizationRoot,
     OptimizedEntry,
     rememberRequestHandoff,
+    resolveHandoffEntries,
     sdk,
   })
 

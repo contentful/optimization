@@ -1,4 +1,4 @@
-import { AppShell } from '@/components/AppShell'
+import { AppShellBody, AppShellChrome, PersonalizedContentFallback } from '@/components/AppShell'
 import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { RequestNextAppAutoPageTracker, RequestOptimizationRoot } from '@/lib/optimization'
@@ -17,7 +17,7 @@ async function RequestRuntime({
       <GlobalLiveUpdatesProvider>
         <PreviewPanel />
         <RequestNextAppAutoPageTracker />
-        <AppShell>{children}</AppShell>
+        <AppShellBody>{children}</AppShellBody>
       </GlobalLiveUpdatesProvider>
     </RequestOptimizationRoot>
   )
@@ -29,8 +29,10 @@ export default function RequestLayout({
   children: ReactNode
 }>) {
   return (
-    <Suspense fallback={null}>
-      <RequestRuntime>{children}</RequestRuntime>
-    </Suspense>
+    <AppShellChrome>
+      <Suspense fallback={<PersonalizedContentFallback />}>
+        <RequestRuntime>{children}</RequestRuntime>
+      </Suspense>
+    </AppShellChrome>
   )
 }

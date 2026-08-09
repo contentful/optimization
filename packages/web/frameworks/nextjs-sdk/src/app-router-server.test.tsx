@@ -400,6 +400,188 @@ describe('Next.js App Router v2 binding', () => {
     expect(html).toContain(variantEntry.sys.id)
   })
 
+  it('keeps selected content behind request initialization after managed fetching finishes', async () => {
+    setCurrentNextRequest()
+    const experienceStarted = Promise.withResolvers<undefined>()
+    const cdaStarted = Promise.withResolvers<undefined>()
+    const cdaFinished = Promise.withResolvers<undefined>()
+    const experienceRelease = Promise.withResolvers<{
+      accepted: true
+      data: OptimizationData
+    }>()
+    const cdaRelease = Promise.withResolvers<ServerTrackingBaselineEntry>()
+    const { page } = mockRequestPage({ accepted: true, data: optimizationData })
+    page.mockImplementationOnce(async () => {
+      experienceStarted.resolve(undefined)
+      return await experienceRelease.promise
+    })
+    const getEntry = rs.fn(async () => {
+      cdaStarted.resolve(undefined)
+      const entry = await cdaRelease.promise
+      cdaFinished.resolve(undefined)
+      return entry
+    })
+    const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
+    const resolveOptimizedEntry = rs.spyOn(
+      ContentfulOptimizationRuntime.prototype,
+      'resolveOptimizedEntry',
+    )
+    const { request } = bindNextjsAppRouterServerOptimization({
+      ...sdkConfig,
+      contentful: { cache: false, client: { getEntry, getEntries } },
+    })
+    const settled = rs.fn()
+
+    const entryPromise = request.OptimizedEntry({
+      children: (entry) => entry.sys.id,
+      entryId: optimizedEntry.sys.id,
+    })
+    void entryPromise.then(settled)
+
+    await Promise.all([experienceStarted.promise, cdaStarted.promise])
+    expect(page).toHaveBeenCalledTimes(1)
+    expect(getEntry).toHaveBeenCalledTimes(1)
+
+    cdaRelease.resolve(optimizedEntry)
+    await cdaFinished.promise
+
+    expect(resolveOptimizedEntry).not.toHaveBeenCalled()
+    expect(settled).not.toHaveBeenCalled()
+
+    experienceRelease.resolve({ accepted: true, data: optimizationData })
+    const html = await renderToHtml(await entryPromise)
+
+    expect(resolveOptimizedEntry).toHaveBeenCalledTimes(1)
+    expect(html).toContain(`data-ctfl-entry-id="${variantEntry.sys.id}"`)
+  })
+
+  it.each(['OptimizationRoot', 'OptimizationProvider'] as const)(
+    'keeps request %s pending until managed prefetch joins its handoff',
+    async (component) => {
+      setCurrentNextRequest()
+      const experienceStarted = Promise.withResolvers<undefined>()
+      const experienceFinished = Promise.withResolvers<undefined>()
+      const cdaStarted = Promise.withResolvers<undefined>()
+      const experienceRelease = Promise.withResolvers<{
+        accepted: true
+        data: OptimizationData
+      }>()
+      const cdaRelease = Promise.withResolvers<ServerTrackingBaselineEntry>()
+      const { page } = mockRequestPage({ accepted: true, data: optimizationData })
+      page.mockImplementationOnce(async () => {
+        experienceStarted.resolve(undefined)
+        const result = await experienceRelease.promise
+        experienceFinished.resolve(undefined)
+        return result
+      })
+      const getEntry = rs.fn(async () => {
+        cdaStarted.resolve(undefined)
+        return await cdaRelease.promise
+      })
+      const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
+      const { request } = bindNextjsAppRouterServerOptimization({
+        ...sdkConfig,
+        contentful: { cache: false, client: { getEntry, getEntries } },
+        request: { hydration: 'client-only-hidden-until-ready' },
+      })
+      const settled = rs.fn()
+
+      const componentPromise = request[component]({
+        children: 'Root content',
+        prefetchManagedEntries: [baselineEntry.sys.id],
+      })
+      void componentPromise.then(settled)
+
+      await Promise.all([experienceStarted.promise, cdaStarted.promise])
+      expect(page).toHaveBeenCalledTimes(1)
+      expect(getEntry).toHaveBeenCalledTimes(1)
+
+      experienceRelease.resolve({ accepted: true, data: optimizationData })
+      await experienceFinished.promise
+      expect(settled).not.toHaveBeenCalled()
+
+      cdaRelease.resolve(baselineEntry)
+      const element = await componentPromise
+      if (element === null) throw new Error(`Expected request ${component} element.`)
+      const props = getElementProps(element)
+
+      expect(props).toMatchObject({
+        handoff: {
+          entries: [{ baselineEntry, entryId: baselineEntry.sys.id }],
+          state: { selectedOptimizations },
+        },
+        hydration: 'client-only-hidden-until-ready',
+      })
+      expect(props).not.toHaveProperty('prefetchManagedEntries')
+    },
+  )
+
+  it.each(['managed prefetch', 'OptimizedEntry'] as const)(
+    'surfaces request initialization failure before %s CDA failure',
+    async (component) => {
+      setCurrentNextRequest()
+      const requestError = new Error('Request initialization failed')
+      const cdaStarted = Promise.withResolvers<undefined>()
+      const requestRelease = Promise.withResolvers<{
+        accepted: true
+        data: OptimizationData
+      }>()
+      const { page } = mockRequestPage({ accepted: true, data: optimizationData })
+      page.mockImplementationOnce(async () => await requestRelease.promise)
+      const getEntry = rs.fn(async () => {
+        cdaStarted.resolve(undefined)
+        return await Promise.reject(new Error('CDA failed'))
+      })
+      const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
+      const { request } = bindNextjsAppRouterServerOptimization({
+        ...sdkConfig,
+        contentful: { cache: false, client: { getEntry, getEntries } },
+      })
+      const settled = rs.fn()
+      const result = (
+        component === 'managed prefetch'
+          ? request.OptimizationRoot({
+              children: null,
+              prefetchManagedEntries: [baselineEntry.sys.id],
+            })
+          : request.OptimizedEntry({ children: null, entryId: baselineEntry.sys.id })
+      ).catch((error: unknown) => error)
+      void result.then(settled)
+
+      await cdaStarted.promise
+      await Promise.resolve()
+      expect(settled).not.toHaveBeenCalled()
+
+      requestRelease.reject(requestError)
+      expect(await result).toBe(requestError)
+    },
+  )
+
+  it.each(['managed prefetch', 'OptimizedEntry'] as const)(
+    'surfaces %s CDA failure after successful request initialization',
+    async (component) => {
+      setCurrentNextRequest()
+      const cdaError = new Error('CDA failed')
+      mockRequestPage({ accepted: true, data: optimizationData })
+      const getEntry = rs.fn(async () => await Promise.reject(cdaError))
+      const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
+      const { request } = bindNextjsAppRouterServerOptimization({
+        ...sdkConfig,
+        contentful: { cache: false, client: { getEntry, getEntries } },
+      })
+
+      const result =
+        component === 'managed prefetch'
+          ? request.OptimizationRoot({
+              children: null,
+              prefetchManagedEntries: [baselineEntry.sys.id],
+            })
+          : request.OptimizedEntry({ children: null, entryId: baselineEntry.sys.id })
+
+      await expect(result).rejects.toBe(cdaError)
+    },
+  )
+
   it('initializes all request wrappers from one cached resource', async () => {
     setCurrentNextRequest()
     const { forRequest, page } = mockRequestPage({ accepted: true, data: optimizationData })
@@ -1143,6 +1325,39 @@ describe('Next.js App Router v2 binding', () => {
 
     expect(html).toContain(`data-ctfl-entry-id="${variantEntry.sys.id}"`)
     expect(html).toContain(variantEntry.sys.id)
+  })
+
+  it('snapshots top-level handoff state before managed entry loading', async () => {
+    const cdaStarted = Promise.withResolvers<undefined>()
+    const cdaRelease = Promise.withResolvers<ServerTrackingBaselineEntry>()
+    const getEntry = rs.fn(async () => {
+      cdaStarted.resolve(undefined)
+      return await cdaRelease.promise
+    })
+    const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
+    const { OptimizedEntry, createHandoffFromSelections } = bindNextjsAppRouterServerOptimization({
+      ...sdkConfig,
+      contentful: { cache: false, client: { getEntry, getEntries } },
+    })
+
+    const entryPromise = OptimizedEntry({
+      children: (entry) => entry.sys.id,
+      entryId: optimizedEntry.sys.id,
+    })
+    await cdaStarted.promise
+    createHandoffFromSelections({
+      cache: { scope: 'public-permutation', key: 'segment-a' },
+      hydration: 'preserve-server',
+      initialPageEvent: 'emit',
+      selectedOptimizations,
+    })
+    cdaRelease.resolve(optimizedEntry)
+
+    const html = await renderToHtml(await entryPromise)
+
+    expect(getEntry).toHaveBeenCalledTimes(1)
+    expect(html).toContain(`data-ctfl-entry-id="${baselineEntry.sys.id}"`)
+    expect(html).not.toContain(`data-ctfl-entry-id="${variantEntry.sys.id}"`)
   })
 
   it('uses request handoff selections when resolving managed server entries', async () => {

@@ -7,13 +7,11 @@ import {
   type NextjsPublicPermutationCacheMiddleware,
 } from '@contentful/optimization-nextjs/cache-middleware'
 import { createNextjsOptimizationContextHandler } from '@contentful/optimization-nextjs/request-handler'
-import {
-  configureNextjsServerOptimization,
-  type NextjsOptimizationServerConsentResolver,
-} from '@contentful/optimization-nextjs/server'
+import { type NextjsOptimizationServerConsentResolver } from '@contentful/optimization-nextjs/server'
 import { getServerTrackingAttributes } from '@contentful/optimization-nextjs/tracking-attributes'
 import type { NextRequest, NextResponse } from 'next/server'
 import { appConfig } from './config'
+import { client } from './contentful'
 import { getCustomerSegment, type CustomerSegment } from './customer-segments'
 import { getAppConsent } from './util'
 
@@ -42,6 +40,7 @@ const serverConsent: NextjsOptimizationServerConsentResolver = ({ cookies }) =>
 
 const optimization = bindNextjsAppRouterServerOptimization({
   ...serverOptimizationConfig,
+  contentful: { client },
   trackEntryInteraction: { views: true, clicks: true, hovers: true },
   consent: {
     server: serverConsent,
@@ -50,7 +49,6 @@ const optimization = bindNextjsAppRouterServerOptimization({
   request: {
     hydration: ({ routeKey }) =>
       routeKey === HIDDEN_UNTIL_READY_ROUTE ? 'client-only-hidden-until-ready' : 'preserve-server',
-    trustedRequestHandoff: true,
   },
 })
 
@@ -89,11 +87,7 @@ const cacheMiddleware: NextjsPublicPermutationCacheMiddleware =
     },
   })
 
-const forwardOptimizationContext = createNextjsOptimizationContextHandler({
-  consent: serverConsent,
-  locale: appConfig.locale,
-  sdk: configureNextjsServerOptimization(serverOptimizationConfig),
-})
+const forwardOptimizationContext = createNextjsOptimizationContextHandler()
 
 export function createCustomerSegmentHandoff(segment: CustomerSegment): ContentHandoff {
   return createPublicPermutationHandoff({

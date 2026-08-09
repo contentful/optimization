@@ -58,11 +58,20 @@ interface BindNextjsAppRouterRequestRuntimeOptions {
     props: BoundNextjsOptimizationProviderProps,
   ) => Promise<ReactElement | null>
   readonly OptimizationRoot: (props: BoundNextjsOptimizationRootProps) => Promise<ReactElement>
-  readonly OptimizedEntry: NextjsBoundOptimizedEntryComponent<Promise<ReactElement>>
+  readonly OptimizedEntry: (
+    props: NextjsBoundOptimizedEntryProps,
+    requestBarrier?: Promise<unknown>,
+  ) => Promise<ReactElement>
   readonly rememberRequestHandoff: (
     handoff: BrowserOptimizationHandoff | undefined,
     defaults?: ReturnType<typeof toHandoffDefaults>,
   ) => void
+  readonly resolveHandoffEntries: (
+    handoff:
+      | BoundNextjsOptimizationProviderProps['handoff']
+      | Promise<BoundNextjsOptimizationProviderProps['handoff']>,
+    prefetchManagedEntries: BoundNextjsOptimizationProviderProps['prefetchManagedEntries'],
+  ) => Promise<BoundNextjsOptimizationProviderProps['handoff']>
   readonly sdk: ContentfulOptimization
 }
 
@@ -72,6 +81,7 @@ export function bindNextjsAppRouterRequestRuntime({
   OptimizationRoot,
   OptimizedEntry,
   rememberRequestHandoff,
+  resolveHandoffEntries,
   sdk,
 }: BindNextjsAppRouterRequestRuntimeOptions): {
   readonly createRequestHandoff: (
@@ -165,10 +175,18 @@ export function bindNextjsAppRouterRequestRuntime({
   async function RequestOptimizationRoot(
     props: NextjsAppRouterRequestOptimizationRootProps,
   ): Promise<ReactElement> {
-    const { handoff, hydration, pagePayload, routeKey } = await getRequestRenderInputs()
+    const { prefetchManagedEntries, ...rootProps } = props
+    const requestInputs = getRequestRenderInputs()
+    const [{ hydration, pagePayload, routeKey }, handoff] = await Promise.all([
+      requestInputs,
+      resolveHandoffEntries(
+        requestInputs.then((inputs) => inputs.handoff),
+        prefetchManagedEntries,
+      ),
+    ])
 
     return await OptimizationRoot({
-      ...props,
+      ...rootProps,
       handoff,
       hydration,
       initialPagePayload: pagePayload,
@@ -179,17 +197,22 @@ export function bindNextjsAppRouterRequestRuntime({
   async function RequestOptimizationProvider(
     props: NextjsAppRouterRequestOptimizationProviderProps,
   ): Promise<ReactElement | null> {
-    const { handoff, hydration } = await getRequestRenderInputs()
+    const { prefetchManagedEntries, ...providerProps } = props
+    const requestInputs = getRequestRenderInputs()
+    const [{ hydration }, handoff] = await Promise.all([
+      requestInputs,
+      resolveHandoffEntries(
+        requestInputs.then((inputs) => inputs.handoff),
+        prefetchManagedEntries,
+      ),
+    ])
 
-    return await OptimizationProvider({ ...props, handoff, hydration })
+    return await OptimizationProvider({ ...providerProps, handoff, hydration })
   }
 
   const RequestOptimizedEntry: NextjsBoundOptimizedEntryComponent<Promise<ReactElement>> = async (
     props: NextjsBoundOptimizedEntryProps,
-  ) => {
-    await getRequestRenderInputs()
-    return await OptimizedEntry(props)
-  }
+  ) => await OptimizedEntry(props, getRequestRenderInputs())
 
   async function RequestNextAppAutoPageTracker(
     props: Parameters<NextjsAppRouterRequestOptimization['NextAppAutoPageTracker']>[0],

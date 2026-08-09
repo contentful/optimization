@@ -52,24 +52,22 @@ export const client = createClient({
   ...(basePath ? { basePath } : {}),
 })
 
-async function fetchEntry(entryId: string): Promise<ContentEntry | undefined> {
+async function fetchPageEntries(entryIds: readonly string[]): Promise<PageEntryResult[]> {
+  if (entryIds.length === 0) return []
+
   try {
-    return await client.getEntry<ContentEntrySkeleton>(entryId, {
+    const uniqueEntryIds = [...new Set(entryIds)]
+    const collection = await client.getEntries<ContentEntrySkeleton>({
+      'sys.id[in]': uniqueEntryIds,
       include: ENTRY_INCLUDE_DEPTH,
       locale: appConfig.locale,
     })
-  } catch {
-    return undefined
-  }
-}
+    const entriesById = new Map(collection.items.map((entry) => [entry.sys.id, entry]))
 
-async function fetchPageEntries(entryIds: readonly string[]): Promise<PageEntryResult[]> {
-  return Promise.all(
-    entryIds.map(async (entryId) => ({
-      entry: await fetchEntry(entryId),
-      entryId,
-    })),
-  )
+    return entryIds.map((entryId) => ({ entry: entriesById.get(entryId), entryId }))
+  } catch {
+    return entryIds.map((entryId) => ({ entry: undefined, entryId }))
+  }
 }
 
 export async function loadPageEntries(entryIds: readonly string[]): Promise<ContentEntry[]> {
