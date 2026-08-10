@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.2.0](https://github.com/contentful/optimization/compare/optimization-nextjs-v1.1.0...optimization-nextjs-v1.2.0) (2026-08-10)
+
+### Features
+
+- **core:** fetch managed Contentful entries by slug ([#420](https://github.com/contentful/optimization/issues/420)) ([4ce8cd5](https://github.com/contentful/optimization/commit/4ce8cd57268fefca913acf602fc21c47c3d06eee))
+- **core:** support heterogeneous optimized entry types ([#413](https://github.com/contentful/optimization/issues/413)) ([2a3a9c8](https://github.com/contentful/optimization/commit/2a3a9c8d002975ebd1508e6344eb3bcccbc1a46f))
+
+### Bug Fixes
+
+- **nextjs:** modernize App Router request handling and managed content loading ([#422](https://github.com/contentful/optimization/issues/422)) ([0b4c314](https://github.com/contentful/optimization/commit/0b4c3141f9ae3b59e172c6697cef758e9f1fcea0))
+- **repo:** align empty variant presentation ([#418](https://github.com/contentful/optimization/issues/418)) ([a8acb8f](https://github.com/contentful/optimization/commit/a8acb8fda7c04503356176eff942388659410744))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-node bumped to 1.2.0
+    - @contentful/optimization-react-web bumped to 1.2.0
+
 ## [1.1.0](https://github.com/contentful/optimization/compare/optimization-nextjs-v1.0.1...optimization-nextjs-v1.1.0) (2026-07-29)
 
 ### Features
