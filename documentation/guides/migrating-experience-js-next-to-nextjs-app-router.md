@@ -1,14 +1,17 @@
 # Migrating experience.js Next.js to the App Router SDK
 
 Use this guide when a Next.js App Router app carries legacy Next.js, ESR, SSR plugin, or React
-experience.js wiring and you want to move to `@contentful/optimization-nextjs/app-router`.
+experience.js wiring and you want to move server rendering to
+`@contentful/optimization-nextjs/app-router/server`, with
+`@contentful/optimization-nextjs/app-router/client` only for bound Client Components.
 
 ## What changes
 
-The App Router SDK provides bound server and client components for request context, server first
-paint, browser takeover, route tracking, and entry resolution. Legacy Next provider, tracker, SSR
-plugin, ESR helper, React component, and plugin behavior should be replaced by the App Router SDK
-plus the shared migration guides.
+The App Router server binding provides a nested `optimization.request` component family for request
+context, server first paint, route tracking, entry resolution, and browser handoff. A separate client
+binding supports bound Client Components. Legacy Next provider, tracker, SSR plugin, ESR helper,
+React component, and plugin behavior should be replaced by these App Router surfaces plus the shared
+migration guides.
 
 Start with the
 [Next.js App Router integration guide](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md).
@@ -30,10 +33,10 @@ Gather these inputs:
    [Choosing a Next.js migration path from experience.js](./choosing-a-nextjs-migration-path-from-experience-js.md).
    Then open the
    [App Router integration quick start](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md#quick-start)
-   and make the request handler run before replacing render components.
+   and make the forwarding-only request handler run before replacing render components.
 2. Migrate authored Contentful entries when legacy mapper output is still required. See
    [Migrating an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md).
-3. Install and bind the App Router SDK.
+3. Install the App Router SDK and bind its server entry point.
 4. Replace SSR/ESR profile continuity with target request context and cookie behavior.
 5. Replace server-rendered personalization with bound `OptimizedEntry`.
 6. Replace browser takeover features and plugins through target client surfaces.
@@ -44,25 +47,30 @@ Gather these inputs:
 ### Remove legacy Next.js package assumptions
 
 Do not carry forward package-root or ESR helper assumptions. The target App Router import path is
-`@contentful/optimization-nextjs/app-router`, with browser hooks from
-`@contentful/optimization-nextjs/client`. Legacy ESR middleware and selector files are not supported
-public import surfaces.
+`@contentful/optimization-nextjs/app-router/server` for Server Components. Use
+`@contentful/optimization-nextjs/app-router/client` only for bound Client Components and
+`@contentful/optimization-nextjs/client` for browser hooks and per-entry controls. Legacy ESR
+middleware and selector files are not supported public import surfaces.
 
-Remove legacy tracker and provider wiring before adding the bound target root, so one route owner is
-responsible for server data and browser tracking.
+Remove legacy tracker and provider wiring before adding `optimization.request.OptimizationRoot` and
+`optimization.request.NextAppAutoPageTracker`, so the request family owns server state handoff and
+browser tracking once.
 
 ### Install and bind the App Router SDK
 
-Create bound App Router components once using the target integration guide. Configure the request
-handler file and export in
+Create one server binding with `bindNextjsAppRouterServerOptimization` from
+`@contentful/optimization-nextjs/app-router/server`, then use its nested `optimization.request`
+components for ordinary per-visitor routes. Configure the no-argument
+`createNextjsOptimizationContextHandler()` from `@contentful/optimization-nextjs/request-handler` as
+shown in
 [Request context and the profile cookie](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md#request-context-and-the-profile-cookie):
-Next.js 16 uses `proxy.ts` with a `proxy` export, while Next.js 15 uses `middleware.ts` with a
-`middleware` export.
+Next.js 16 uses `proxy.ts` with a `proxy` export, while Next.js 13 to 15 use `middleware.ts` with a
+`middleware` export. The default handler only forwards sanitized request context and the original
+request URL; the request family performs request evaluation.
 
-With `server.enabled: true`, a missing or misnamed handler is not a baseline fallback path; the
-bound root expects server data and throws when the handler did not run. Verify the handler runs by
-loading a matched route and confirming the root no longer reports missing server optimization data
-before replacing many render surfaces.
+If the handler is missing or misnamed, the request family reports a missing forwarded request URL.
+Verify the handler by loading a matched route and confirming that error is absent before replacing
+many render surfaces.
 
 ### Replace SSR/ESR profile continuity
 
@@ -70,29 +78,31 @@ Move profile continuity to the App Router request context and target SDK cookie 
 profile cookie is `ctfl-opt-aid`; it must be browser-readable so browser takeover can continue the
 same visitor. The app still owns the consent record and the server consent resolver.
 
-The request handoff records whether server evaluation accepted the initial page event in
-`handoff.initialPageEvent`. Pass the handoff to `OptimizationRoot`, which consumes that instruction.
-Keep the separate `NextAppAutoPageTracker` mounted with
-`initialPageEvent={handoff ? 'skip' : 'emit'}` so it skips whenever the root has a handoff and emits
-the first route only when no handoff exists.
+Every `optimization.request` wrapper shares one SDK-owned initializer for the active request. It
+derives the request URL, route key, page payload, hydration mode, and handoff once. Mount
+`optimization.request.NextAppAutoPageTracker` inside `optimization.request.OptimizationRoot`; the
+tracker receives first-page-event ownership from that shared handoff automatically. Do not create or
+pass app-owned handoff, route-key, page-payload, or `initialPageEvent` plumbing for the ordinary
+request-family path.
 
 ### Replace server-rendered personalization
 
-Replace legacy mapped experiences and React wrappers with the bound App Router `OptimizedEntry`.
-Use `baselineEntry` when your app fetched the entry manually. Use `entryId` only when the binding
-config includes `contentful` for managed server fetching. If the browser must continue that managed
-entry, pass matching descriptors through the bound root's `prefetchManagedEntries` prop so it adds
-the fetched baselines to `handoff.entries`, or supply a handoff that already contains those entries.
-The server component resolves against the current request's selected optimizations and returns the
-variant or baseline.
+Replace legacy mapped experiences and React wrappers with
+`optimization.request.OptimizedEntry`. Use `baselineEntry` when your app fetched the entry manually.
+Use `entryId` only when the binding config includes `contentful` for managed server fetching. If the
+browser must continue that managed entry, pass matching descriptors through
+`optimization.request.OptimizationRoot`'s `prefetchManagedEntries` prop. The request family fetches
+and merges those entries into its handoff. The server component resolves against the current
+request's selected optimizations and returns the variant or baseline.
 
 Server personalization reads request data and makes the route dynamic. Do not keep ISR or static
 assumptions on routes that render request-specific personalized output.
 
 ### Replace browser takeover features
 
-Client-side flags, analytics forwarding, preview, and live updates use the React Web runtime behind
-the App Router SDK:
+Bound Client Components use a separate binding from
+`@contentful/optimization-nextjs/app-router/client`. Client-side flags, analytics forwarding,
+preview, and live updates use the React Web runtime behind the App Router SDK:
 
 - Flag reads auto-attempt flag-view tracking when consent and profile state allow it.
 - Accepted and blocked event streams are available on the live client SDK.
@@ -105,10 +115,10 @@ the App Router SDK:
 Verify server HTML, hydration, and browser takeover together:
 
 - The request handler runs for the personalized route.
+- Server rendering uses the nested `optimization.request` root, entry, and tracker components.
 - Server-rendered content uses the expected variant or baseline.
 - Browser hydration does not briefly revert to empty optimization state.
-- The root follows the handoff's first-page instruction, and the separate browser tracker skips
-  whenever that handoff is present.
+- The request tracker receives first-page-event ownership without app-owned handoff or tracker props.
 - Personalized HTML and resolved outputs are not shared across visitors through caching.
 
 ## Validate the migration
@@ -121,12 +131,12 @@ Verify server HTML, hydration, and browser takeover together:
 
 ## Troubleshooting
 
-| Symptom                                           | Check                                                                                                           |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| The bound root throws instead of showing baseline | Confirm the App Router request handler file and export match your Next.js version and route matcher.            |
-| The route conflicts with static generation        | Server personalization is request-specific; use a dynamic route or move personalization to a browser-only path. |
-| Hydration changes the entry                       | Pass the same baseline entry path or matching managed-entry handoff to the browser.                             |
-| Duplicate page events appear                      | Pass the handoff to the root; set the separate tracker to `initialPageEvent={handoff ? 'skip' : 'emit'}`.       |
+| Symptom                                               | Check                                                                                                              |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Request components report a missing request URL       | Confirm the request handler file, export, and route matcher for your Next.js version.                              |
+| The route conflicts with static generation            | Request-family personalization is dynamic; use a public-permutation, static, or browser-only path when required.   |
+| Hydration changes a managed entry                     | Prefetch the matching descriptor through the request root and keep the browser on the same component path.         |
+| Duplicate page events appear on a request-family path | Mount the request-family root and tracker together; remove app-owned handoff and `initialPageEvent` tracker props. |
 
 ## Related guides
 

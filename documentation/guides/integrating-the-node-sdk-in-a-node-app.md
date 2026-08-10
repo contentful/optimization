@@ -958,6 +958,9 @@ your application decides which approved Contentful context, if any, can also be 
 4. Prevent duplicate forwarding when the browser also sends a later client-side event for the same
    interaction.
 
+`canForwardOptimizationProfileId()` is an app-owned policy helper that returns whether the profile
+ID can be sent to your analytics destination.
+
 **Adapt this to your use case:**
 
 ```ts
@@ -974,7 +977,7 @@ const selectedVariantEntryId =
 
 analytics.track('Quote Requested', {
   plan: 'enterprise',
-  contentful_profile_id: canForwardOptimizationProfileId ? pageResponse?.profile.id : undefined,
+  contentful_profile_id: canForwardOptimizationProfileId() ? pageResponse?.profile.id : undefined,
   contentful_experience_id: selectedOptimization?.experienceId,
   contentful_variant_index: selectedOptimization?.variantIndex,
   contentful_baseline_entry_id: baselineHeroEntry.sys.id,

@@ -9,7 +9,8 @@ Pages Router, or a manual Node/Web hybrid target before changing code.
 Legacy Next.js surfaces mix React provider behavior, route tracking, SSR profile continuity, and ESR
 helpers. The Optimization SDK Suite splits the target by actual runtime:
 
-- App Router apps use `@contentful/optimization-nextjs/app-router`.
+- App Router Server Components use `@contentful/optimization-nextjs/app-router/server`; bound
+  Client Components use `@contentful/optimization-nextjs/app-router/client` when needed.
 - Pages Router apps use `@contentful/optimization-nextjs/pages-router` and
   `@contentful/optimization-nextjs/pages-router/server`.
 - Non-Next or unsupported server-rendering shapes use `@contentful/optimization-node` on the server
@@ -76,25 +77,29 @@ never share personalized output across visitors.
 | Pages Router and `getServerSideProps` own the personalized route | [Pages Router migration](./migrating-experience-js-next-to-nextjs-pages-router.md)                                     |
 | Custom SSR outside the Next.js adapters                          | [Node, SSR, and ESR migration](./migrating-experience-js-node-ssr-and-esr.md), then Web or React Web browser migration |
 
-Use the highest-level adapter that matches the app. The adapter owns the framework request,
-provider, tracker, state handoff, and cookie mechanics that a manual hybrid would otherwise need to
-rebuild.
+Use the highest-level adapter that matches the app. In an App Router request path, the server
+binding's nested `optimization.request` family owns request initialization, provider state handoff,
+and first-page tracking that a manual hybrid would otherwise need to rebuild.
 
 ### Route SSR and first page event ownership
 
 Avoid duplicate page evaluation. Legacy Next tracking emits page events on the first route and on
 route changes, while SSR helpers can also evaluate the first request.
 
-In the target App Router path, the configured request handler can own the first page event for
-matching requests. In the target Pages Router path, bind the server SDK with
-`bindNextjsPagesRouterServerOptimization(config)` and call its returned
-`createRequestHandoff(context, options)` inside `getServerSideProps`. The returned handoff records accepted server evaluation as
-`handoff.initialPageEvent === 'skip'` and a server path that did not report the view as `'emit'`.
+In the target App Router path, the no-argument request handler only forwards the original request
+URL and sanitized request context. The server binding's nested `optimization.request` family
+evaluates the request, creates the handoff, and gives its `NextAppAutoPageTracker` first-page-event
+ownership automatically. Mount that tracker inside `optimization.request.OptimizationRoot`; do not
+create or pass a handoff or `initialPageEvent` prop for this ordinary request-family path.
 
-Pass that handoff to `OptimizationRoot`, which consumes the instruction. The separate browser
-tracker uses `initialPageEvent={handoff ? 'skip' : 'emit'}`: it skips when the root has a handoff and
-owns the first route only when no handoff exists. The tracker continues to track later browser
-navigations.
+In the target Pages Router path, bind the server SDK with
+`bindNextjsPagesRouterServerOptimization(config)` and call its returned
+`createRequestHandoff(context, options)` inside `getServerSideProps`. The returned handoff records
+accepted server evaluation as `handoff.initialPageEvent === 'skip'` and a server path that did not
+report the view as `'emit'`.
+
+Pass that Pages Router handoff to `OptimizationRoot`, which consumes the instruction. Its browser
+tracker uses the handoff's `initialPageEvent` value and continues to track later browser navigations.
 
 ### Route cookie and profile continuity
 
@@ -112,16 +117,17 @@ contract.
 
 - The selected guide matches the route that renders personalized content.
 - Exactly one layer owns the first page event for the first route.
-- The browser tracker skips or emits the first route intentionally.
+- The App Router request tracker receives first-page-event ownership automatically; explicit paths
+  set it intentionally.
 - Cookie and consent ownership are documented in app code before deleting legacy packages.
 
 ## Troubleshooting
 
-| Symptom                                           | Check                                                                                                                                        |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Both server and browser emit the first page event | Use the target guide's initial-page-event skip path when server evaluation succeeded.                                                        |
-| App Router route no longer behaves statically     | Server personalization reads request data and makes the route dynamic; use Pages Router or a browser-only path if static output is required. |
-| ESR migration has no matching import              | The legacy ESR package did not export every helper present in source; use App Router or a manual Node/Web hybrid.                            |
+| Symptom                                           | Check                                                                                                                                             |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Both server and browser emit the first page event | Use the App Router nested request root and tracker together; reserve explicit `initialPageEvent` plumbing for manual or Pages Router paths.       |
+| App Router route no longer behaves statically     | Request-family personalization reads request data; use a public-permutation, static, or browser-only path if static output is required.           |
+| ESR migration has no matching import              | The legacy ESR package did not export every helper present in source; use the explicit App Router server entry point or a manual Node/Web hybrid. |
 
 ## Related guides
 

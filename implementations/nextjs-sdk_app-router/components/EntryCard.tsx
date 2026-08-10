@@ -1,5 +1,5 @@
-import type { ContentEntry } from '@/lib/contentful'
-import { OptimizedEntry } from '@/lib/optimization'
+import type { ContentEntry, ContentEntrySkeleton } from '@/lib/contentful'
+import { RequestOptimizedEntry } from '@/lib/optimization'
 import type { EntryClickScenario } from 'e2e-web'
 import type { JSX } from 'react'
 import { createRichTextRenderOptions, EntryCardContent } from './EntryCardContent'
@@ -21,7 +21,7 @@ export function EntryCard({
 
   return (
     <section className="entry-card" data-testid={`content-entry-${baselineEntry.sys.id}`}>
-      <OptimizedEntry
+      <RequestOptimizedEntry
         as="div"
         baselineEntry={baselineEntry}
         clickable={autoTrackViews && clickScenario === 'direct'}
@@ -49,7 +49,19 @@ export function EntryCard({
             />
           )
         }}
-      </OptimizedEntry>
+      </RequestOptimizedEntry>
+    </section>
+  )
+}
+
+export function ManagedEntryCard({ entryId }: Readonly<{ entryId: string }>): JSX.Element {
+  return (
+    <section className="entry-card" data-testid={`content-entry-${entryId}`}>
+      <RequestOptimizedEntry<ContentEntrySkeleton> entryId={entryId}>
+        {(resolvedEntry) => (
+          <EntryCardContent entry={resolvedEntry} labelEntryId={entryId} testId={entryId} />
+        )}
+      </RequestOptimizedEntry>
     </section>
   )
 }

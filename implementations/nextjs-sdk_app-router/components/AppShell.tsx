@@ -10,6 +10,14 @@ export function AppShell({
   children: ReactNode
 }>): JSX.Element {
   return (
+    <AppShellChrome>
+      <AppShellBody analyticsOnly={analyticsOnly}>{children}</AppShellBody>
+    </AppShellChrome>
+  )
+}
+
+export function AppShellChrome({ children }: Readonly<{ children: ReactNode }>): JSX.Element {
+  return (
     <div className="app-shell">
       <nav>
         <Link data-testid="link-home" href="/">
@@ -31,23 +39,51 @@ export function AppShell({
           Static Private Slot
         </Link>
       </nav>
-      <div className="app-body">
-        <aside className="app-sidebar">
-          {analyticsOnly ? (
-            <section className="tracking-log" data-testid="analytics-only-sidebar">
-              <div className="tracking-log__header">
-                <h2>Tracking</h2>
-              </div>
-              <p className="tracking-log__empty">
-                Analytics-only runtime is mounted for this route.
-              </p>
-            </section>
-          ) : (
-            <TrackingLog />
-          )}
-        </aside>
-        <main>{children}</main>
-      </div>
+      {children}
+    </div>
+  )
+}
+
+export function AppShellBody({
+  analyticsOnly = false,
+  children,
+}: Readonly<{
+  analyticsOnly?: boolean
+  children: ReactNode
+}>): JSX.Element {
+  return (
+    <div className="app-body">
+      <aside className="app-sidebar">
+        {analyticsOnly ? (
+          <section className="tracking-log" data-testid="analytics-only-sidebar">
+            <div className="tracking-log__header">
+              <h2>Tracking</h2>
+            </div>
+            <p className="tracking-log__empty">Analytics-only runtime is mounted for this route.</p>
+          </section>
+        ) : (
+          <TrackingLog />
+        )}
+      </aside>
+      <main>{children}</main>
+    </div>
+  )
+}
+
+export function PersonalizedContentFallback(): JSX.Element {
+  return (
+    <div className="app-body">
+      <main>
+        <section
+          aria-live="polite"
+          className="page-section"
+          data-testid="personalized-content-fallback"
+          role="status"
+        >
+          <h1>Loading personalized content</h1>
+          <p>The public navigation is ready while this content loads.</p>
+        </section>
+      </main>
     </div>
   )
 }

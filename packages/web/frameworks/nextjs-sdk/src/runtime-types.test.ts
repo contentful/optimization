@@ -4,16 +4,21 @@ import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import type {
   BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
-  NextjsOptimizationComponents as NextjsAppClientComponents,
+  NextjsAppRouterClientOptimization as NextjsAppClientComponents,
   NextjsBoundOptimizedEntryProps,
 } from './app-router-client'
-import type { NextjsOptimizationComponents as NextjsAppServerComponents } from './app-router-server'
+import type {
+  NextjsAppRouterServerOptimizationConfig,
+  NextjsAppRouterServerOptimization as NextjsAppServerComponents,
+} from './app-router-server'
+import type { NextjsOptimizationComponentsConfig } from './bound-component-types'
 import type {
   OptimizationSdk,
   OptimizationWebRuntime,
   OptimizedEntryProps,
   OptimizedEntryRenderContext,
 } from './client'
+import type { ContentOptimizationHandoff } from './handoff'
 import type { NextjsPagesRouterOptimization } from './pages-router'
 import {
   ServerOptimizedEntry,
@@ -150,6 +155,95 @@ export function acceptAppRouterServerProviderProps(
     ...props,
     hydration: 'preserve-server',
     prefetchManagedEntries: ['hero'],
+  })
+}
+
+export function acceptAppRouterRequestComponents(
+  components: NextjsAppServerComponents,
+  props: NextjsBoundOptimizedEntryProps,
+): void {
+  void components.request.OptimizationRoot({ children: null, prefetchManagedEntries: ['hero'] })
+  void components.request.OptimizationProvider({
+    children: null,
+    prefetchManagedEntries: ['hero'],
+  })
+  void components.request.OptimizedEntry(props)
+  void components.request.NextAppAutoPageTracker({})
+}
+
+export function acceptAppRouterRequestConfig(
+  config: NextjsAppRouterServerOptimizationConfig,
+): void {
+  const resolvedConfig: NextjsAppRouterServerOptimizationConfig = {
+    ...config,
+    request: {
+      hydration: ({ requestUrl, routeKey }) =>
+        requestUrl.includes(routeKey) ? 'preserve-server' : 'client-only-hidden-until-ready',
+      trustedRequestHandoff: true,
+    },
+  }
+  void resolvedConfig
+}
+
+export function acceptBoundPublicPermutationHandoffOverload(
+  components: NextjsAppServerComponents,
+): ContentOptimizationHandoff {
+  return components.createPublicPermutationHandoff({
+    hydration: 'preserve-server',
+    initialPageEvent: 'emit',
+    permutationKey: 'new-visitor',
+    selectedOptimizations: [],
+  })
+}
+
+export function rejectClientAppRouterRequestConfig(
+  config: NextjsOptimizationComponentsConfig,
+): void {
+  const clientConfig: NextjsOptimizationComponentsConfig = {
+    ...config,
+    // @ts-expect-error Request configuration belongs only to the App Router server binder.
+    request: {},
+  }
+  void clientConfig
+}
+
+export function rejectAppRouterRequestOwnedProps(
+  components: NextjsAppServerComponents,
+  handoff: BoundNextjsOptimizationProviderProps['handoff'],
+): void {
+  void components.request.OptimizationRoot({
+    children: null,
+    // @ts-expect-error Request roots own their handoff.
+    handoff,
+  })
+  void components.request.OptimizationRoot({
+    // @ts-expect-error Request roots own their hydration.
+    hydration: 'preserve-server',
+  })
+  void components.request.OptimizationRoot({
+    // @ts-expect-error Request roots derive the initial page payload.
+    initialPagePayload: {},
+  })
+  void components.request.OptimizationRoot({
+    // @ts-expect-error Request roots derive the page payload builder input.
+    buildPagePayload: () => ({}),
+  })
+  void components.request.OptimizationRoot({
+    // @ts-expect-error Request roots derive the route key.
+    routeKey: '/products',
+  })
+  void components.request.OptimizationProvider({
+    // @ts-expect-error Request providers own their handoff.
+    handoff,
+  })
+  void components.request.OptimizationProvider({
+    children: null,
+    // @ts-expect-error Request providers own hydration.
+    hydration: 'preserve-server',
+  })
+  void components.request.NextAppAutoPageTracker({
+    // @ts-expect-error Request page trackers own the initial page event.
+    initialPageEvent: 'emit',
   })
 }
 

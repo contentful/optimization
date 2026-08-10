@@ -106,9 +106,21 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
 - After public exports, entry graphs, shared types, or bundled runtime paths change in an Rslib
   package, run its `clean` script before trusting output. Rslib `clean` scripts must remove
   package-local `./node_modules/.cache/rspack`.
-- Broaden checks for exported APIs, shared runtime behavior, generated artifacts, mocks, or behavior
-  used by multiple SDKs or implementations.
+- Broaden checks for exported APIs, shared runtime behavior, generated artifacts, or behavior used
+  by multiple SDKs or implementations.
 - If you skip a relevant check, state exactly what was skipped and why.
+
+### Mocks validation exception
+
+This exception overrides every general validation instruction in this repository:
+
+- Mocks are unpublished internal test infrastructure, not independent validation targets.
+- Never add, run, require, or cite tests whose subject is mock behavior as validation evidence. This
+  includes mock-owned unit tests and mock-specific E2E tests.
+- Validate a mock change only incidentally through the narrowest consuming package or reference
+  implementation test that specifically relies on it. Successful consumer use is sufficient.
+- A mock change alone never justifies broader validation. If no consumer needs the behavior, do not
+  add it.
 
 High-signal commands:
 
@@ -265,6 +277,6 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
 1. Read the applicable `AGENTS.md` chain.
 2. Make the narrowest source-of-truth change in the correct layer.
 3. Run the smallest meaningful validation.
-4. Broaden validation only when shared behavior, exports, generated artifacts, mocks, or downstream
-   consumers are affected.
+4. Broaden validation only when shared behavior, exports, generated artifacts, or downstream
+   consumers are affected. Mock changes do not independently trigger broader validation.
 5. Summarize changes, validation, skipped checks, and residual risk.

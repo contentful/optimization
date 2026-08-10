@@ -47,7 +47,7 @@ Server and web SDK guides are listed before native and mobile SDK guides.
 | [Node SDK](./integrating-the-node-sdk-in-a-node-app.md)                                           | Node server, custom SSR server, or server-side function                                | `@contentful/optimization-node`      |
 | [Web SDK](./integrating-the-web-sdk-in-a-web-app.md)                                              | Browser app, static site, multi-page app, SPA, Angular app, or custom frontend runtime | `@contentful/optimization-web`       |
 | [React Web SDK](./integrating-the-react-web-sdk-in-a-react-app.md)                                | React browser app                                                                      | `@contentful/optimization-react-web` |
-| [Next.js SDK in App Router](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)     | Next.js App Router app with request, selection, edge, and analytics-only handoff paths | `@contentful/optimization-nextjs`    |
+| [Next.js SDK in App Router](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)     | Next.js App Router app                                                                 | `@contentful/optimization-nextjs`    |
 | [Next.js SDK in Pages Router](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md) | Next.js Pages Router app with `getServerSideProps` request handoff                     | `@contentful/optimization-nextjs`    |
 
 ### Native and mobile SDKs
@@ -68,16 +68,16 @@ Use these guides when an app already uses `@ninetailed/experience.js` packages a
 that integration with the Optimization SDK Suite. Start with the Contentful model guide when legacy
 `nt_*` fields or mapper utilities feed personalized rendering.
 
-| Guide                                                                                       | Legacy integration type                                                | Target path                                                   |
-| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------- |
-| [Contentful model migration](./migrating-experience-js-contentful-model-to-optimization.md) | Legacy Ninetailed-authored entries, `nt_*` fields, mapper utilities    | Optimization-authored experiences and target entry resolution |
-| [Web SDK migration](./migrating-experience-js-to-the-web-sdk.md)                            | Plain browser, static site, SPA, Angular, or custom JavaScript runtime | `@contentful/optimization-web`                                |
-| [React Web migration](./migrating-experience-js-react-to-react-web.md)                      | React provider, hook, component, or flag surfaces                      | `@contentful/optimization-react-web`                          |
-| [Next.js migration path choice](./choosing-a-nextjs-migration-path-from-experience-js.md)   | Legacy Next.js, SSR plugin, ESR, or manual hybrid wiring               | App Router, Pages Router, or manual Node/Web path             |
-| [Next.js App Router migration](./migrating-experience-js-next-to-nextjs-app-router.md)      | Next.js app moving to App Router                                       | `@contentful/optimization-nextjs/app-router`                  |
-| [Next.js Pages Router migration](./migrating-experience-js-next-to-nextjs-pages-router.md)  | Pages Router app with legacy SSR/plugin wiring                         | `@contentful/optimization-nextjs/pages-router`                |
-| [Node, SSR, and ESR migration](./migrating-experience-js-node-ssr-and-esr.md)               | Server API-client, SSR, ESR, or manual handoff code                    | Node SDK, framework SDK, or manual Node/Web hybrid            |
-| [Plugins and preview migration](./migrating-experience-js-plugins-and-preview.md)           | Legacy privacy, analytics, insights, or preview plugins                | Target consent, event streams, forwarding, and preview panel  |
+| Guide                                                                                       | Legacy integration type                                                | Target path                                                                                              |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [Contentful model migration](./migrating-experience-js-contentful-model-to-optimization.md) | Legacy Ninetailed-authored entries, `nt_*` fields, mapper utilities    | Optimization-authored experiences and target entry resolution                                            |
+| [Web SDK migration](./migrating-experience-js-to-the-web-sdk.md)                            | Plain browser, static site, SPA, Angular, or custom JavaScript runtime | `@contentful/optimization-web`                                                                           |
+| [React Web migration](./migrating-experience-js-react-to-react-web.md)                      | React provider, hook, component, or flag surfaces                      | `@contentful/optimization-react-web`                                                                     |
+| [Next.js migration path choice](./choosing-a-nextjs-migration-path-from-experience-js.md)   | Legacy Next.js, SSR plugin, ESR, or manual hybrid wiring               | App Router, Pages Router, or manual Node/Web path                                                        |
+| [Next.js App Router migration](./migrating-experience-js-next-to-nextjs-app-router.md)      | Next.js app moving to App Router                                       | `@contentful/optimization-nextjs/app-router/server`, `@contentful/optimization-nextjs/app-router/client` |
+| [Next.js Pages Router migration](./migrating-experience-js-next-to-nextjs-pages-router.md)  | Pages Router app with legacy SSR/plugin wiring                         | `@contentful/optimization-nextjs/pages-router`                                                           |
+| [Node, SSR, and ESR migration](./migrating-experience-js-node-ssr-and-esr.md)               | Server API-client, SSR, ESR, or manual handoff code                    | Node SDK, framework SDK, or manual Node/Web hybrid                                                       |
+| [Plugins and preview migration](./migrating-experience-js-plugins-and-preview.md)           | Legacy privacy, analytics, insights, or preview plugins                | Target consent, event streams, forwarding, and preview panel                                             |
 
 ## Supplemental guides
 

@@ -23,18 +23,19 @@ subpaths so server, client, router, and edge boundaries stay explicit.
 
 ## What this package provides
 
-| Runtime          | Import path                                           | Responsibility                                              |
-| ---------------- | ----------------------------------------------------- | ----------------------------------------------------------- |
-| App Router       | `@contentful/optimization-nextjs/app-router`          | App Router binding, request, and public permutation handoff |
-| Cache middleware | `@contentful/optimization-nextjs/cache-middleware`    | Next proxy or middleware public permutation cache rewrites  |
-| Pages Router     | `@contentful/optimization-nextjs/pages-router`        | Pages Router client binding and React roots                 |
-| Pages server     | `@contentful/optimization-nextjs/pages-router/server` | Pages Router `getServerSideProps` request handoff           |
-| Edge             | `@contentful/optimization-nextjs/edge`                | Edge runtime request and public permutation handoff helpers |
-| Client           | `@contentful/optimization-nextjs/client`              | Router-neutral React SDK providers, hooks, roots            |
-| Schemas          | `@contentful/optimization-nextjs/api-schemas`         | Shared API types, schemas, and structural guards            |
-| Server           | `@contentful/optimization-nextjs/server`              | Node SDK configuration, request binding, wrappers           |
-| Request handler  | `@contentful/optimization-nextjs/request-handler`     | Next middleware/proxy request context forwarding            |
-| Shared           | `@contentful/optimization-nextjs/tracking-attributes` | SSR `data-ctfl-*` tracking attributes                       |
+| Runtime           | Import path                                           | Responsibility                                              |
+| ----------------- | ----------------------------------------------------- | ----------------------------------------------------------- |
+| App Router server | `@contentful/optimization-nextjs/app-router/server`   | Server binding, request mode, and explicit handoff helpers  |
+| App Router client | `@contentful/optimization-nextjs/app-router/client`   | Client binding for App Router Client Components             |
+| Cache middleware  | `@contentful/optimization-nextjs/cache-middleware`    | Next proxy or middleware public permutation cache rewrites  |
+| Pages Router      | `@contentful/optimization-nextjs/pages-router`        | Pages Router client binding and React roots                 |
+| Pages server      | `@contentful/optimization-nextjs/pages-router/server` | Pages Router `getServerSideProps` request handoff           |
+| Edge              | `@contentful/optimization-nextjs/edge`                | Edge runtime request and public permutation handoff helpers |
+| Client            | `@contentful/optimization-nextjs/client`              | Router-neutral React SDK providers, hooks, roots            |
+| Schemas           | `@contentful/optimization-nextjs/api-schemas`         | Shared API types, schemas, and structural guards            |
+| Server            | `@contentful/optimization-nextjs/server`              | Node SDK configuration, request binding, wrappers           |
+| Request handler   | `@contentful/optimization-nextjs/request-handler`     | Next middleware/proxy request context forwarding            |
+| Tracking          | `@contentful/optimization-nextjs/tracking-attributes` | SSR `data-ctfl-*` tracking attributes                       |
 
 ## Install
 
@@ -53,25 +54,23 @@ roots because it adds initial page-event wiring through `routeKey`, `buildPagePa
 
 ## App Router setup
 
-Start App Router integrations from `/app-router` and define app-local bound exports once. Next.js
-resolves that import to the server implementation for Server Components and to the client
-implementation for Client Components.
+Use the explicit `/app-router/server` and `/app-router/client` entrypoints so each module has one
+runtime and type surface. `bindNextjsAppRouterServerOptimization()` returns
+`NextjsAppRouterServerOptimization`; `bindNextjsAppRouterClientOptimization()` returns
+`NextjsAppRouterClientOptimization`.
+
+### Request-personalized quick start
+
+Bind the server SDK once in a server-only module. The nested `optimization.request` family is the
+default surface for private request personalization:
 
 ```tsx
-import { bindNextjsAppRouterOptimization } from '@contentful/optimization-nextjs/app-router'
+import 'server-only'
+import { bindNextjsAppRouterServerOptimization } from '@contentful/optimization-nextjs/app-router/server'
 import { contentfulClient } from './contentful'
 import { getAppConsent } from './consent'
 
-export const {
-  OptimizationRoot,
-  OptimizationAnalyticsRoot,
-  OptimizedEntry,
-  createRequestHandoff,
-  createHandoffFromSelections,
-  createPublicPermutationHandoff,
-  getServerTrackingAttributes,
-  resolveEntriesForSelections,
-} = bindNextjsAppRouterOptimization({
+export const optimization = bindNextjsAppRouterServerOptimization({
   clientId: 'client-id',
   environment: 'main',
   locale: 'en-US',
@@ -81,10 +80,124 @@ export const {
     clientDefaults: { consent: false, persistenceConsent: false },
   },
 })
+
+export const {
+  NextAppAutoPageTracker: RequestNextAppAutoPageTracker,
+  OptimizationProvider: RequestOptimizationProvider,
+  OptimizationRoot: RequestOptimizationRoot,
+  OptimizedEntry: RequestOptimizedEntry,
+} = optimization.request
 ```
 
-The App Router binding uses `contentful` on server-capable paths and omits that client from
-serialized client props. Keep any browser-only Contentful fetching explicitly app-owned.
+Configure the request handler so Server Components receive sanitized request context. Next.js 16
+uses `proxy.ts` with a `proxy` export. Next.js 13 to 15 uses `middleware.ts` with a `middleware`
+export; the handler body is the same:
+
+```ts
+import { createNextjsOptimizationContextHandler } from '@contentful/optimization-nextjs/request-handler'
+
+export const proxy = createNextjsOptimizationContextHandler()
+```
+
+Keep public shell content outside the request boundary. Put the request runtime, tracker, and
+personalized island inside `Suspense`; the tracker reads Next.js search parameters. Root prefetch
+also supplies the managed baseline to the browser handoff:
+
+```tsx
+import { AppShell } from '@/components/AppShell'
+import { Hero } from '@/components/Hero'
+import {
+  RequestNextAppAutoPageTracker,
+  RequestOptimizationRoot,
+  RequestOptimizedEntry,
+} from '@/lib/optimization'
+import { Suspense } from 'react'
+
+const heroEntryId = 'hero-entry-id'
+
+function PersonalizedContentFallback() {
+  return <section aria-busy="true">Loading featured content…</section>
+}
+
+export default function Page() {
+  return (
+    <AppShell>
+      <Suspense fallback={<PersonalizedContentFallback />}>
+        <RequestOptimizationRoot prefetchManagedEntries={[heroEntryId]}>
+          <RequestNextAppAutoPageTracker />
+          <RequestOptimizedEntry entryId={heroEntryId}>
+            {(resolvedHero) => <Hero entry={resolvedHero} />}
+          </RequestOptimizedEntry>
+        </RequestOptimizationRoot>
+      </Suspense>
+    </AppShell>
+  )
+}
+```
+
+The request family creates a `private-request` handoff, uses `preserve-server` hydration by default,
+and makes all four request components share the same request initialization. For SDK-managed
+entries, it starts request initialization and Contentful baseline fetching together, then resolves
+the selected variant after both complete. It derives the URL, route key, initial page payload,
+headers, and cookies from the forwarded request context. The app does not need its own React cache,
+request shell, duplicate awaits, URL parsing, or page-payload builder.
+
+### Choose who owns entry fetching
+
+Both fetching workflows resolve request-selected content:
+
+| Ownership       | Entry source                | Use when                                                                                   |
+| --------------- | --------------------------- | ------------------------------------------------------------------------------------------ |
+| **App-owned**   | `baselineEntry`             | Your app owns the Contentful client, query, cache, or data layer.                          |
+| **SDK-managed** | `entryId` or `managedEntry` | The server binding configures `contentful: { client }` and the SDK owns the baseline read. |
+
+For app-owned fetching, load the entry and pass it directly:
+
+```tsx
+const hero = await getHeroEntry({ locale: 'en-US', include: 10 })
+
+return (
+  <RequestOptimizedEntry baselineEntry={hero}>
+    {(resolvedHero) => <Hero entry={resolvedHero} />}
+  </RequestOptimizedEntry>
+)
+```
+
+Only SDK-managed fetching receives direct overlap between request initialization and the Contentful
+read. App-owned fetching still uses the same request-selected resolution after the app supplies the
+baseline.
+
+The proxy or middleware boundary remains required because it forwards the sanitized request URL.
+Keep any `Suspense` or `connection()` boundary required by your Next.js rendering and Cache
+Components setup; request mode removes SDK request plumbing, not Next.js rendering requirements.
+
+Set `request.hydration` on the server binder only when a route needs another fixed hydration mode or
+a synchronous resolver based on `requestUrl` and `routeKey`. Set `request.trustedRequestHandoff` to
+`true` only when the request handler is configured with the server SDK and consent so it can forward
+trusted page and profile context.
+
+### Client Components
+
+Bind the App Router client surface in a `"use client"` module. It has no private request family or
+manual server handoff API:
+
+```tsx
+'use client'
+
+import { bindNextjsAppRouterClientOptimization } from '@contentful/optimization-nextjs/app-router/client'
+
+export const clientOptimization = bindNextjsAppRouterClientOptimization({
+  clientId: 'client-id',
+  environment: 'main',
+  locale: 'en-US',
+  consent: {
+    clientDefaults: { consent: false, persistenceConsent: false },
+  },
+})
+```
+
+The server binder uses `contentful` on server-capable paths and omits that client from serialized
+client props. Keep any browser-only Contentful fetching explicitly app-owned.
 
 The bound server `OptimizedEntry` accepts exactly one source: manual `baselineEntry`, managed
 `entryId` with optional `entryQuery`, or a `managedEntry` object with `contentType`, `slug`, optional
@@ -92,22 +205,53 @@ The bound server `OptimizedEntry` accepts exactly one source: manual `baselineEn
 renders and tracks with the fetched entry's `sys.id`. Invalid source combinations reject with
 `Bound Next.js OptimizedEntry requires exactly one source: baselineEntry, entryId, or managedEntry.`
 
-Use `createRequestHandoff()` when a route should call `page()` on the server and pass canonical
-browser handoff state into the React Web root:
+### Static, public, and analytics surfaces
+
+Use the top-level server members, not `optimization.request`, for cacheable static routes,
+app-owned public permutations, and analytics-only routes. These members use explicit inputs and do
+not read `next/headers` or call `cookies()`.
+
+Use `createPublicPermutationHandoff()` for app-owned public permutations rendered by App Router
+Cache Components, Pages Router ISR, CDN-cached routes, or Edge runtime route handlers. The
+application supplies the selected optimizations and public permutation dimensions. Request-derived
+profile handoffs must use `private-request` cache scope.
+
+```tsx
+const handoff = optimization.createPublicPermutationHandoff({
+  permutationKey: permutation.slug,
+  cacheVersion: permutation.cacheVersion,
+  locale: permutation.locale,
+  entryIds: permutation.entryIds,
+  selectedOptimizations: permutation.selectedOptimizations,
+  hydration: 'preserve-server',
+  initialPageEvent: 'emit',
+})
+```
+
+Use the top-level `OptimizationAnalyticsRoot` for analytics-only routes. Render personalized content
+on the server, attach tracking attributes from
+`@contentful/optimization-nextjs/tracking-attributes`, and pass an `analytics-only` handoff to the
+root.
+
+### Manual request orchestration
+
+Use the top-level `createRequestHandoff()` only when advanced orchestration needs explicit control
+of the request, page payload, or handoff. Pass that handoff to the top-level root:
 
 ```tsx
 import { cookies, headers } from 'next/headers'
-import { OptimizationRoot, createRequestHandoff } from '@/lib/optimization'
+import { optimization } from '@/lib/optimization'
+
+const { OptimizationRoot } = optimization
 
 export default async function Page() {
-  const requestHeaders = new Headers(await headers())
-  const handoff = await createRequestHandoff({
+  const handoff = await optimization.createRequestHandoff({
     cache: { scope: 'private-request' },
     hydration: 'preserve-server',
     pagePayload: { properties: { route: '/products' } },
     request: {
       cookies: await cookies(),
-      headers: requestHeaders,
+      headers: new Headers(await headers()),
       url: 'https://example.com/products',
     },
   })
@@ -131,27 +275,6 @@ export default async function Page() {
 `handoff.entries`; slug handoffs nest the normalized descriptor under `managedEntry` and store the
 fetched `sys.id` in `entryId`. A server `OptimizedEntry` fetches for that render only, so use root
 prefetch when a matching browser managed source must hydrate without another fetch.
-
-Use `createPublicPermutationHandoff()` for app-owned public permutations rendered by App Router
-Cache Components, Pages Router ISR, CDN-cached routes, or Edge runtime route handlers. The
-application supplies the selected optimizations and public permutation dimensions. Request-derived
-profile handoffs must use `private-request` cache scope.
-
-```tsx
-const handoff = createPublicPermutationHandoff({
-  permutationKey: permutation.slug,
-  cacheVersion: permutation.cacheVersion,
-  locale: permutation.locale,
-  entryIds: permutation.entryIds,
-  selectedOptimizations: permutation.selectedOptimizations,
-  hydration: 'preserve-server',
-  initialPageEvent: 'emit',
-})
-```
-
-Use `OptimizationAnalyticsRoot` for analytics-only routes. Render personalized content on the
-server, attach tracking attributes with `getServerTrackingAttributes()`, and pass an
-`analytics-only` handoff to the root.
 
 ## Pages Router setup
 
@@ -294,12 +417,13 @@ The request-context handler always forwards sanitized request context headers. C
 options, it only forwards request context. When configured with `sdk` and `consent`, it resolves
 consent, performs the server page request once, forwards compact `x-ctfl-opt-server-data` context as
 `encodeURIComponent(JSON.stringify({ consent, pageAccepted, profileId }))`, and persists
-`ctfl-opt-aid` on the `NextResponse` when persistence is allowed. App Router Server Components can
-pass the forwarded headers to `createRequestHandoff()` with `trustedRequestHandoff: true`, which
-uses the forwarded `profileId` to fetch profile and selection data without a second `page()` call
-and uses `pageAccepted` to avoid duplicate first page events. Only set `trustedRequestHandoff: true`
-for routes covered by this request handler; raw client-supplied `x-ctfl-opt-server-data` is ignored
-unless the route opts in.
+`ctfl-opt-aid` on the `NextResponse` when persistence is allowed. Set
+`request.trustedRequestHandoff` to `true` on the App Router server binding so the request family uses
+the forwarded `profileId` without a second `page()` call and uses `pageAccepted` to avoid duplicate
+first page events. For manual orchestration, pass `trustedRequestHandoff: true` to the top-level
+`createRequestHandoff()` instead. Only opt in on routes covered by this configured request handler;
+raw client-supplied `x-ctfl-opt-server-data` is ignored unless the route opts in.
+
 Use `createNextjsPublicPermutationCacheMiddleware()` from
 `@contentful/optimization-nextjs/cache-middleware` when proxy code needs public permutation
 cache-key rewrites. The cache middleware is chainable with an existing `NextResponse`; it preserves

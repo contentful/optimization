@@ -474,6 +474,7 @@ pushes to `main`.
 This is intentional CI policy:
 
 - E2E execution is path-filtered to reduce CI runtime and cost.
+- Pipeline changes do not independently match product or test filters.
 - CI E2E uses local mock services and checked-in `.env.example` values.
 - Production or live-server E2E is manual verification when needed.
 - E2E setup does not depend on repository secrets, so fork pull requests follow the same checked-in
@@ -481,21 +482,24 @@ This is intentional CI policy:
 
 ### E2E jobs
 
-The path filters also watch shared package and root files that can affect the implementation:
+The path filters also watch shared package and root files that can affect the implementation.
+Universal runtime below means `api-client`, `api-schemas`, and `core-sdk`; the native-only
+`optimization-js-bridge` does not trigger non-native E2E.
 
-| Workflow filter               | Job family                              | Also watches shared surfaces                                 |
-| ----------------------------- | --------------------------------------- | ------------------------------------------------------------ |
-| `e2e_node_sdk`                | `e2e-node-sdk`                          | `lib/**`, `packages/node/**`, `packages/universal/**`        |
-| `e2e_node_sdk_web_sdk`        | `e2e-node-sdk-web-sdk`                  | Node, Web, Universal, and shared root files                  |
-| `e2e_web_sdk`                 | `e2e-web-sdk`                           | `lib/**`, `packages/web/**`, `packages/universal/**`         |
-| `e2e_web_sdk_react`           | `e2e-web-sdk_react`                     | `lib/**`, `packages/web/**`, `packages/universal/**`         |
-| `e2e_web_sdk_angular`         | `e2e-web-sdk_angular`                   | `lib/**`, Node, Web, Universal, and shared root files        |
-| `e2e_react_web_sdk`           | `e2e-react-web-sdk`                     | `lib/**`, `packages/web/**`, `packages/universal/**`         |
-| `e2e_nextjs_sdk_app_router`   | `e2e-nextjs-sdk-app-router`             | Node, Web, Universal, and shared root files                  |
-| `e2e_nextjs_sdk_pages_router` | `e2e-nextjs-sdk-pages-router`           | Node, Web, Universal, and shared root files                  |
-| `e2e_react_native_android`    | React Native Android build and E2E jobs | `packages/react-native-sdk/**`, Universal, and shared files  |
-| `e2e_android`                 | Android SDK build and Maestro jobs      | `lib/mocks/**`, `packages/android/**`, Universal, root files |
-| `e2e_ios`                     | iOS SDK build and XCUITest jobs         | `lib/mocks/**`, `packages/ios/**`, Universal, root files     |
+| Workflow filter                          | Job family                               | Also watches shared surfaces                                         |
+| ---------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------- |
+| `e2e_node_sdk`                           | `e2e-node-sdk`                           | Node SDK, Universal runtime, and shared root files                   |
+| `e2e_node_sdk_web_sdk`                   | `e2e-node-sdk-web-sdk`                   | Node SDK, Web SDK, preview panel, Universal runtime, and root        |
+| `e2e_web_sdk`                            | `e2e-web-sdk`                            | Web SDK, preview panel, CSR Web E2E, Universal runtime, and root     |
+| `e2e_web_sdk_react`                      | `e2e-web-sdk_react`                      | Web SDK, preview panel, CSR Web E2E, Universal runtime, and root     |
+| `e2e_web_sdk_angular`                    | `e2e-web-sdk_angular`                    | Node, Web, preview, Web E2E, Universal runtime, and root             |
+| `e2e_react_web_sdk`                      | `e2e-react-web-sdk`                      | Web, React Web, preview, CSR E2E, Universal runtime, and root        |
+| `e2e_nextjs_sdk_app_router`              | `e2e-nextjs-sdk-app-router`              | Node, Web, React Web, Next.js, preview, E2E, Universal runtime, root |
+| `e2e_nextjs_sdk_app_router_edge_runtime` | `e2e-nextjs-sdk-app-router-edge-runtime` | Node, Web, React Web, Next.js, Edge E2E, Universal runtime, root     |
+| `e2e_nextjs_sdk_pages_router`            | `e2e-nextjs-sdk-pages-router`            | Node, Web, React Web, Next.js, preview, E2E, Universal runtime, root |
+| `e2e_react_native_android`               | React Native Android build and E2E jobs  | React Native, Universal runtime, and shared root files               |
+| `e2e_android`                            | Android SDK build and Maestro jobs       | Android, all Universal packages, and shared root files               |
+| `e2e_ios`                                | iOS SDK build and XCUITest jobs          | iOS, all Universal packages, and shared root files                   |
 
 See [`.github/workflows/main-pipeline.yaml`](./.github/workflows/main-pipeline.yaml) for the exact
 authoritative filter list.

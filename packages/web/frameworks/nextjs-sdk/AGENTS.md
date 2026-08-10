@@ -9,13 +9,22 @@ runtime ergonomics.
   SDK layer that owns the behavior. Import lower-layer helpers directly only when this package's
   public dependency contract declares that dependency; otherwise use the direct SDK dependency's
   public pass-through entrypoints.
-- Keep router-specific bound-component binding helpers explicit. App Router components live under
-  `@contentful/optimization-nextjs/app-router`; Pages Router components live under
-  `@contentful/optimization-nextjs/pages-router`; low-level server, edge, or client capabilities
-  should be exposed from the canonical entrypoint for the capability instead of adding overlapping
-  aliases.
+- Keep router-specific bound-component binding helpers explicit.
+  `bindNextjsAppRouterServerOptimization()` and `NextjsAppRouterServerOptimization` live under
+  `@contentful/optimization-nextjs/app-router/server`;
+  `bindNextjsAppRouterClientOptimization()` and `NextjsAppRouterClientOptimization` live under
+  `@contentful/optimization-nextjs/app-router/client`; Pages Router components live under
+  `@contentful/optimization-nextjs/pages-router`.
+- Use the server binding's `request` family for private request personalization. Keep its
+  configuration server-only and make every request component await the same binder-owned request
+  resource. Keep top-level server components and helpers explicit-input surfaces for static,
+  public-permutation, analytics-only, and manual request flows; they must not read Next.js request
+  APIs through the request family.
 - The package root is intentionally unexported; do not add a bound component helper or client alias
   there.
+- Export `getServerTrackingAttributes()` only from
+  `@contentful/optimization-nextjs/tracking-attributes`, not from an App Router binding or bound
+  result.
 - Do not import `@contentful/optimization-core` directly.
 - Keep server entries free of client directives and browser-only assumptions.
 - Keep client entries marked with `"use client"` and free of Node-only imports.

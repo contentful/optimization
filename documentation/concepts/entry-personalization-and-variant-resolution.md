@@ -98,13 +98,20 @@ query the Contentful Delivery API by content type and slug, then pass the fetche
 to their native resolution API or rendering adapter. The native SDKs do not provide managed entry
 fetching.
 
-For Next.js App Router integrations, prefer the app-local bound `OptimizedEntry` returned by
-`bindNextjsAppRouterOptimization()` from `@contentful/optimization-nextjs/app-router`. In Server
-Components it resolves through the Node SDK and current request handoff state; in Client Components
-the same app-local name resolves through React Web. Pages Router integrations use
-`bindNextjsPagesRouterOptimization()` from `@contentful/optimization-nextjs/pages-router` for
-client rendering, and routes that resolve entries manually can call `getServerTrackingAttributes()`
-or `ServerOptimizedEntry` when they need SSR tracking attributes. `ServerOptimizedEntry` accepts
+For request-personalized Next.js App Router Server Components, prefer
+`optimization.request.OptimizedEntry` from the app-local binding returned by
+`bindNextjsAppRouterServerOptimization()` from
+`@contentful/optimization-nextjs/app-router/server`. It waits for the SDK-owned request initializer
+before resolving through the Node SDK and the current request handoff state. Use the server binding's
+top-level `OptimizedEntry` for explicit static, public-permutation, or advanced manual flows.
+Analytics-only routes use `OptimizationAnalyticsRoot` plus tracking attributes rather than entry
+resolution. Bound Client Components use a separate app-local binding from
+`bindNextjsAppRouterClientOptimization()` in
+`@contentful/optimization-nextjs/app-router/client`, backed by React Web. Pages Router integrations
+use `bindNextjsPagesRouterOptimization()` from
+`@contentful/optimization-nextjs/pages-router` for client rendering, and routes that resolve entries
+manually can call `getServerTrackingAttributes()` from the dedicated `/tracking-attributes` path or
+use `ServerOptimizedEntry` when they need SSR tracking attributes. `ServerOptimizedEntry` accepts
 either manual `baselineEntry` and `resolvedData` props or the result returned by managed
 `fetchOptimizedEntry()`.
 

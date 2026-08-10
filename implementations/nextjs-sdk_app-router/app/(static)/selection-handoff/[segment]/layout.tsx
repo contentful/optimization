@@ -3,7 +3,7 @@ import { getCustomerSegment } from '@/lib/customer-segments'
 import {
   createCustomerSegmentHandoff,
   createRoutePagePayload,
-  OptimizationRoot,
+  ExplicitOptimizationRoot,
 } from '@/lib/optimization'
 import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
@@ -25,8 +25,12 @@ export default async function SelectionHandoffLayout({
   const handoff = createCustomerSegmentHandoff(segment)
 
   return (
-    <OptimizationRoot buildPagePayload={() => pagePayload} handoff={handoff} routeKey={routeKey}>
+    <ExplicitOptimizationRoot
+      buildPagePayload={() => pagePayload}
+      handoff={handoff}
+      routeKey={routeKey}
+    >
       <AppShell>{children}</AppShell>
-    </OptimizationRoot>
+    </ExplicitOptimizationRoot>
   )
 }
