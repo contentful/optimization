@@ -332,14 +332,18 @@ test.describe('Next.js handoff routes', () => {
     expect(clientExperienceRequests.every((url) => url.includes('/profiles'))).toBe(true)
   })
 
-  test('renders the client-only hidden-until-ready route', async ({ page, request }) => {
-    const rawResponse = await request.get('/hidden-until-ready')
+  test('renders the client-only hidden-until-ready route with a query string', async ({
+    page,
+    request,
+  }) => {
+    const path = '/hidden-until-ready?source=e2e'
+    const rawResponse = await request.get(path)
     const rawHtml = await rawResponse.text()
 
     expect(rawResponse.ok()).toBe(true)
     await expectRawHiddenUntilReadyHtml(page, rawHtml)
 
-    await page.goto('/hidden-until-ready')
+    await page.goto(path)
     await page.waitForLoadState('domcontentloaded')
 
     await expect(page.getByTestId('hidden-until-ready-route')).toBeVisible()

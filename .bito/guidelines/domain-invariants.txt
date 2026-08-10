@@ -10,13 +10,35 @@ PUBLIC API CONTRACTS
   the gap if it would mislead a consumer.
 
 TEST COVERAGE
-- New behavior — a new function, branch, configuration path, or error case — must have a unit test.
-  If the PR adds behavior and no test file is touched, flag it unless the behavior is exclusively
-  exercised by existing E2E coverage and that is stated explicitly.
-- Tests that only assert the happy path for a function that has meaningful error or edge-case
-  branches are incomplete. Flag the specific missing branch.
+- Absence or removal of a dedicated test is not independently a defect.
+- Report a coverage gap only when the PR changes a non-trivial supported behavioral contract, a
+  concrete regression can be described, repository-wide search finds no unit, integration, E2E,
+  build, type-resolution, or consumer validation covering it, and the proposed test would fail for
+  that identified regression.
+- Trivial declarative configuration, direct wiring, platform primitives, and behavior logically
+  implied by types or module resolution do not automatically require dedicated tests.
+- Do not report removal or absence of a test whose only subject is declarative `package.json`
+  structure, including assertions that `main`, `module`, `types`, a root `.` export, or named subpath
+  exports are present or absent. Report it only when the PR also makes the manifest demonstrably
+  invalid and a concrete consumer import, build, or type-resolution path fails.
+- A removed assertion is not a coverage gap when it covered removed markup, an obsolete
+  implementation detail, or behavior exercised by another suite. Test location does not determine
+  coverage ownership.
+- Never recommend tests whose subject is mock behavior. Validate mock changes only through the
+  narrowest consuming SDK or reference-implementation behavior.
+- The existence of the `lib/mocks/package.json` script `test:unit` does not make it an approved or
+  documentable validation command. Do not report its omission from `lib/mocks/AGENTS.md`.
 - Do not flag test-style preferences (naming conventions, describe/it structure) — the linter owns
   those.
+
+SHARED SCHEMAS VERSUS OPERATION-SPECIFIC INPUTS
+- A shared wire or output schema may be permissive because it represents several event variants.
+  Do not infer an operation-specific input requirement from that shared schema.
+- `ViewEvent` is the shared entry-view and flag-view wire shape. `ViewBuilderArgs` establishes
+  entry-view input requirements and requires `viewId`; `FlagViewBuilderArgs` establishes flag-view
+  input requirements and makes `viewId` optional.
+- When shared-schema optionality and operation-specific builder types differ, documentation may
+  correctly describe the stricter operation-specific contract.
 
 END-TO-END IDENTITY AND PROPAGATION
 - Cache, batching, and handoff identities must include every effective input that can change the
@@ -53,9 +75,10 @@ REFERENCE IMPLEMENTATION INTEGRITY
 - Reference implementations must consume the SDK via its public API, the same way a customer would.
   Implementation-local patches, direct imports from packages/*/src, or workarounds for SDK gaps are
   violations unless accompanied by a tracked SDK issue.
-- Removing a scenario or E2E flow from a reference implementation without a corresponding AGENTS.md
-  or PREVIEW_PANEL_SCENARIOS.md update is incomplete. The scenario may still be in the cross-platform
-  E2E contract.
+- Removing an E2E assertion or route is incomplete only when the supported user-visible scenario
+  still exists, repository-wide search finds no equivalent coverage, and the applicable
+  cross-platform scenario contract requires it. Do not preserve obsolete test-only attributes or
+  duplicate interaction coverage merely because they appeared in the base revision.
 
 DOCUMENTATION
 - If a PR changes a public SDK option, event, or initialization parameter, and the change is not
@@ -67,3 +90,18 @@ DOCUMENTATION
   not link to source, while internal SDK knowledge files require source pointers as provenance.
 - knowledge-base pointer files under documentation/internal/sdk-knowledge/ must stay consistent
   with packages/**/src. If the diff renames or removes a symbol that a KB pointer names, flag it.
+- Before claiming documentation is missing, inconsistent, or uses an undefined API, read the
+  complete containing section and immediately adjacent prose, inspect binding or alias declarations,
+  follow canonical guide or API-reference links, and search the relevant public types.
+- Do not report documentation findings based only on Prettier line wrapping, Markdown source
+  newlines, a canonical SDK member and an explicitly declared app-local alias using different names,
+  valid namespace access versus destructuring, an option named by adjacent prose, detail delegated
+  to a linked canonical guide, or removal of duplicated or stale material.
+- Do not report an architectural README excerpt merely because it omits imports or app-owned
+  placeholder definitions. An abbreviated snippet is defective only when it is represented as
+  directly runnable or copyable and the omission prevents that promised action. “Potentially
+  confusing” is not a concrete failure.
+- Do not claim a function or field is absent until repository search confirms it is missing from the
+  public containing type as well as the cited file.
+- A documentation finding is actionable only when a reader would copy invalid code, misunderstand a
+  public contract, be unable to perform a required step, or receive a materially false description.

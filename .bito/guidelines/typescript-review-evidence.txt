@@ -22,6 +22,15 @@ GENERICS AND OVERLOADS
 - Do not add generics to sibling APIs for consistency when the type is only consumed internally and
   does not appear in a return value or callback.
 
+CONTENTFUL ENTRY GENERICS
+- For `OptimizedEntry` and bound Next.js `OptimizedEntry` components, generic `S` is an
+  `EntrySkeletonType`, not an `Entry<S>`. The render prop receives the resolved Contentful
+  `Entry<S, ...>`.
+- `<OptimizedEntry<MyEntrySkeleton>>` is the expected form. Replacing the skeleton argument with
+  `Entry<MyEntrySkeleton>` is incorrect.
+- A successful implementation TypeScript typecheck disproves a claimed generic mismatch unless the
+  finding identifies a specific unsound cast or untyped boundary.
+
 TYPE NARROWING AND VALIDATION
 - A switch covering every member of a closed discriminated union does not need a default branch.
   Flag it only when a declared union member is unhandled.
@@ -49,3 +58,16 @@ PIPELINE OWNERSHIP
 - Do not report a type error that the repository's TypeScript typecheck would necessarily catch. If
   the PR's typecheck passes and no unsound boundary or missing compile-time contract is demonstrated,
   skip the finding.
+
+ASYNC ERROR OWNERSHIP
+- An awaited promise is not an unhandled rejection. Report an unhandled rejection only when the
+  promise is floating, detached, or crosses a terminal boundary without a caller or framework owning
+  error propagation.
+- Do not require local catch-and-fallback behavior unless an existing contract defines that fallback.
+  Propagating a rejection can be the intended error behavior.
+
+TRUST BOUNDARIES
+- Before requesting runtime validation, trace the value to its producer and identify the external or
+  attacker-controlled path.
+- Do not request duplicate validation for values produced and sanitized internally or when the
+  consuming platform primitive already enforces the invariant.

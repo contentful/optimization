@@ -915,7 +915,8 @@ also calls `resetUser()`. Resetting alone preserves consent and does not erase y
 surface before child auto-page effects run. `states.eventStream` exposes the most recent locally accepted
 event and later accepted events; it is not a durable history. Each event's `messageId` is its unique
 delivery identifier. The optional `event.optimization` field is stream-only attribution, and its
-`resolvedEntry` is the Contentful entry selected for that interaction.
+`resolvedEntry` is the Contentful entry selected for that interaction. Its `sys.id` is that selected
+entry's ID, which the example passes downstream as `resolvedEntryId`.
 
 The runtime event stream remains model-agnostic because it can carry interactions for entries of
 every content type. If you read `event.optimization?.resolvedEntry`, narrow that entry with

@@ -48,7 +48,9 @@ const optimization = bindNextjsAppRouterServerOptimization({
   },
   request: {
     hydration: ({ routeKey }) =>
-      routeKey === HIDDEN_UNTIL_READY_ROUTE ? 'client-only-hidden-until-ready' : 'preserve-server',
+      routeKey.split('?')[0] === HIDDEN_UNTIL_READY_ROUTE
+        ? 'client-only-hidden-until-ready'
+        : 'preserve-server',
   },
 })
 
