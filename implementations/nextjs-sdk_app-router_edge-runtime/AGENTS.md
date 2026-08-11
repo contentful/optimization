@@ -19,8 +19,10 @@ Next.js SDK App Router Edge runtime reference implementation for `@contentful/op
 - `pnpm implementation:run -- nextjs-sdk_app-router_edge-runtime <script>` with
   `implementation:install`, `typecheck`, `lint`, `build`, `dev`, `serve`, `serve:stop`, or
   `test:e2e`.
-- Root wrappers: `pnpm setup:e2e:nextjs-sdk_app-router_edge-runtime` and
-  `pnpm test:e2e:nextjs-sdk_app-router_edge-runtime`.
+- Run `pnpm test:e2e:nextjs-sdk_app-router_edge-runtime <file-or-filter>`,
+  omitting the file/filter only when the full suite is warranted. Refresh package tarballs and the
+  implementation install first only when consumed SDK packages changed or installed artifacts are
+  stale.
 
 ## E2E
 

@@ -5,6 +5,7 @@ import {
   hydrateOptimizationHandoff,
   type ContentOptimizationHandoff,
   type ContentOptimizationHydrationMode,
+  type OptimizationHandoffHydrationTarget,
 } from '@contentful/optimization-web/handoff'
 import {
   createOptimizationRootSdkBinding,
@@ -16,6 +17,7 @@ import {
   type TrackEntryInteractionOptions as SharedTrackEntryInteractionOptions,
 } from '@contentful/optimization-web/presentation'
 import {
+  useCallback,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -30,6 +32,13 @@ import {
 } from '@contentful/optimization-web/runtime'
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
 import { OptimizationHydrationContext } from '../context/OptimizationHydrationContext'
+import {
+  hasAuthoritativeLiveRuntime,
+  isHydratedHandoff,
+  OptimizationRouteTransitionContext,
+  type RoutePresentation,
+  type RouteSettlement,
+} from '../context/OptimizationRouteTransitionContext'
 import type { ManagedEntryDescriptor, ManagedEntryHandoff } from '../server-optimized-entries'
 
 /**
@@ -52,6 +61,7 @@ interface ProviderState {
 interface OptimizationHandoffProps {
   /**
    * Server/static/edge Optimization handoff to apply before provider children mount.
+   * Supply a fresh object for each route occurrence; object reuse does not identify a new handoff.
    */
   readonly handoff?: ContentOptimizationHandoff
   /**
@@ -75,7 +85,8 @@ export type OptimizationProviderConfigProps = PropsWithChildren<
       readonly trackEntryInteraction?: TrackEntryInteractionOptions
       /**
        * Called once the live SDK state surface is initialized.
-       * Return a cleanup function to unsubscribe app-level state observers on teardown.
+       * Return a synchronous cleanup function to unsubscribe app-level state observers on
+       * teardown. Cleanup functions must not throw or re-enter provider teardown.
        */
       readonly onStatesReady?: OnStatesReady
       readonly sdk?: never
@@ -87,7 +98,8 @@ export type OptimizationProviderSdkProps = PropsWithChildren<
     /**
      * Called with the injected SDK state surface before provider children mount unless a server
      * snapshot is provided for the initial render.
-     * Return a cleanup function to unsubscribe app-level state observers on teardown.
+     * Return a synchronous cleanup function to unsubscribe app-level state observers on
+     * teardown. Cleanup functions must not throw or re-enter provider teardown.
      */
     readonly onStatesReady?: OnStatesReady
     readonly sdk: OptimizationSdk
@@ -131,61 +143,38 @@ function disposeSdkBinding(sdkBinding: ProviderSdkBinding | undefined): void {
   disposeOptimizationRootSdkBinding(sdkBinding)
 }
 
-function bindOnStatesReady(
+function getOnStatesReadyCleanup(
   sdkBinding: ProviderSdkBinding,
   onStatesReady: OnStatesReady | undefined,
-): ProviderSdkBinding {
+): ProviderSdkBinding['cleanup'] {
   const cleanup = onStatesReady?.(sdkBinding.sdk.states)
 
-  if (typeof cleanup !== 'function') {
-    return sdkBinding
-  }
-
-  return { ...sdkBinding, cleanup }
+  return typeof cleanup === 'function' ? cleanup : undefined
 }
 
-async function initializeServerOptimizationState(
-  sdkBinding: ProviderSdkBinding,
+function isHandoffHydrationTarget(
+  runtime: WebOptimizationRuntime,
+): runtime is WebOptimizationRuntime & OptimizationHandoffHydrationTarget {
+  if (!('interceptors' in runtime)) return false
+
+  const { interceptors } = runtime
+  return typeof interceptors === 'object' && interceptors !== null && 'state' in interceptors
+}
+
+async function hydrateProviderHandoff(
+  runtime: WebOptimizationRuntime,
   handoff: ContentOptimizationHandoff,
-  onStatesReady: OnStatesReady | undefined,
-): Promise<ProviderSdkBinding> {
-  try {
-    const hydrationResult: unknown = Reflect.apply(hydrateOptimizationHandoff, undefined, [
-      sdkBinding.sdk,
-      handoff,
-    ])
-
-    if (isPromiseLike(hydrationResult)) {
-      await hydrationResult
-    }
-
-    return bindOnStatesReady(sdkBinding, onStatesReady)
-  } catch (error: unknown) {
-    disposeSdkBinding(sdkBinding)
-    throw error
-  }
-}
-
-function initializeProviderSdk(
-  props: OptimizationProviderProps,
-): ProviderSdkBinding | Promise<ProviderSdkBinding> {
-  const sdkBinding =
-    props.sdk === undefined ? createOwnedSdkBinding(props) : createInjectedSdkBinding(props)
-
-  if (props.handoff === undefined) {
-    try {
-      return bindOnStatesReady(sdkBinding, props.onStatesReady)
-    } catch (error: unknown) {
-      disposeSdkBinding(sdkBinding)
-      throw error
-    }
+  isCurrent: () => boolean,
+): Promise<void> {
+  if (!isHandoffHydrationTarget(runtime)) {
+    throw new TypeError('Optimization handoff hydration requires a live Web SDK.')
   }
 
-  return initializeServerOptimizationState(sdkBinding, props.handoff, props.onStatesReady)
+  await hydrateOptimizationHandoff(runtime, handoff, { isCurrent })
 }
 
-function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
-  return value instanceof Promise
+function createProviderSdkBinding(props: OptimizationProviderProps): ProviderSdkBinding {
+  return props.sdk === undefined ? createOwnedSdkBinding(props) : createInjectedSdkBinding(props)
 }
 
 function canUseInjectedSdkDuringInitialRender(props: OptimizationProviderProps): boolean {
@@ -233,20 +222,134 @@ function createPrefetchedManagedEntries(
   return map
 }
 
+function preservesRoutePresentation(
+  handoff: ContentOptimizationHandoff | undefined,
+): handoff is ContentOptimizationHandoff {
+  return handoff?.cache.scope === 'public-permutation' || handoff?.cache.scope === 'static'
+}
+
+function claimRouteHandoff(
+  handoff: ContentOptimizationHandoff | undefined,
+  claimedHandoffs: WeakSet<ContentOptimizationHandoff>,
+): ContentOptimizationHandoff | undefined {
+  if (handoff === undefined || claimedHandoffs.has(handoff)) return undefined
+
+  claimedHandoffs.add(handoff)
+  return handoff
+}
+
 export function OptimizationProvider(props: OptimizationProviderProps): ReactElement {
-  const { children } = props
+  const { children, handoff: currentHandoff } = props
   const initialPropsRef = useRef(props)
-  const hydratedHandoffRef = useRef(props.handoff)
   const liveLocale = props.sdk === undefined ? props.locale : undefined
   const [state, setState] = useState<ProviderState>(() => ({
     error: undefined,
     isLive: injectedSdkBacksInitialRender(props),
     runtime: createInitialRuntime(props),
   }))
+  const [settledHandoff, setSettledHandoff] = useState(currentHandoff)
+  const [routePresentation, setRoutePresentation] = useState<RoutePresentation | undefined>(() =>
+    currentHandoff === undefined
+      ? undefined
+      : {
+          handoff: currentHandoff,
+          isLiveRuntimeAuthoritative: true,
+          isPending: false,
+          routeKey: undefined,
+          useSnapshot: preservesRoutePresentation(currentHandoff),
+        },
+  )
+  const hasPendingHandoff = settledHandoff !== currentHandoff
+  const activePresentation = hasPendingHandoff
+    ? {
+        handoff: currentHandoff,
+        isLiveRuntimeAuthoritative: false,
+        isPending: true,
+        routeKey: routePresentation?.routeKey,
+        useSnapshot: true,
+      }
+    : routePresentation
+  const presentationHandoff = activePresentation?.handoff
+  const usePresentationSnapshot = activePresentation?.useSnapshot === true
+  const claimedHandoffsRef = useRef(new WeakSet<ContentOptimizationHandoff>())
+  const hydratedHandoffRef = useRef(currentHandoff)
+  const startedRouteOccurrenceRef = useRef<object | undefined>(undefined)
+  const presentationSdk = useMemo(() => {
+    if (!usePresentationSnapshot) return undefined
+    if (presentationHandoff !== undefined) assertOptimizationCacheSafety(presentationHandoff)
+
+    return createWebSnapshotRuntime({ data: presentationHandoff?.state })
+  }, [presentationHandoff, usePresentationSnapshot])
+  const startRoute = useMemo(() => {
+    let previousRouteKey: string | undefined = undefined
+    let occurrence: object = {}
+
+    return (routeKey: string): void => {
+      if (previousRouteKey !== routeKey) {
+        previousRouteKey = routeKey
+        occurrence = {}
+      }
+
+      const currentOccurrence = occurrence
+      if (startedRouteOccurrenceRef.current === currentOccurrence) return
+      startedRouteOccurrenceRef.current = currentOccurrence
+
+      const handoff = claimRouteHandoff(currentHandoff, claimedHandoffsRef.current)
+
+      setRoutePresentation((current) => ({
+        handoff,
+        isLiveRuntimeAuthoritative: isHydratedHandoff(handoff, hydratedHandoffRef.current),
+        isPending: current?.routeKey === routeKey ? current.isPending : true,
+        routeKey,
+        useSnapshot: true,
+      }))
+    }
+  }, [currentHandoff])
+  const settleRoute = useCallback((routeKey: string, settlement: RouteSettlement): void => {
+    setRoutePresentation((current) => {
+      if (
+        current?.routeKey !== routeKey ||
+        settlement === 'superseded' ||
+        (settlement === 'failed' && !current.isPending)
+      ) {
+        return current
+      }
+
+      const isLiveRuntimeAuthoritative =
+        settlement === 'satisfied-with-response' || current.isLiveRuntimeAuthoritative
+
+      return {
+        ...current,
+        isLiveRuntimeAuthoritative,
+        isPending: false,
+        useSnapshot:
+          settlement === 'failed' ||
+          !isLiveRuntimeAuthoritative ||
+          preservesRoutePresentation(current.handoff),
+      }
+    })
+  }, [])
   const prefetchedManagedEntries = useMemo(
     () => createPrefetchedManagedEntries(props.handoff?.entries),
     [props.handoff?.entries],
   )
+
+  useLayoutEffect(() => {
+    if (currentHandoff === undefined) {
+      setRoutePresentation((current) =>
+        current?.handoff === undefined
+          ? current
+          : {
+              ...current,
+              handoff: undefined,
+              isLiveRuntimeAuthoritative: false,
+              isPending: false,
+              useSnapshot: true,
+            },
+      )
+      setSettledHandoff(undefined)
+    }
+  }, [currentHandoff])
 
   useLayoutEffect(() => {
     const { current: initialProps } = initialPropsRef
@@ -255,54 +358,64 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       return
     }
 
-    const setupState = { disposed: false }
+    let cancelled = false
     let sdkBinding: ProviderSdkBinding | undefined = undefined
-    let disposedBinding: ProviderSdkBinding | undefined = undefined
+    let onStatesReadyCleanup: ProviderSdkBinding['cleanup'] = undefined
 
-    function disposeOnce(binding: ProviderSdkBinding | undefined): void {
-      if (binding === undefined || binding === disposedBinding) return
-
-      disposeSdkBinding(binding)
-      disposedBinding = binding
+    function isCurrentSetup(): boolean {
+      return !cancelled
     }
 
-    function setInitializedState(initializedBinding: ProviderSdkBinding): void {
-      if (setupState.disposed) {
-        disposeOnce(initializedBinding)
-        return
-      }
+    function disposeOnce(): void {
+      const cleanup = onStatesReadyCleanup
+      onStatesReadyCleanup = undefined
+      cleanup?.()
 
-      sdkBinding = initializedBinding
-      setState({ error: undefined, isLive: true, runtime: initializedBinding.sdk })
+      const binding = sdkBinding
+      sdkBinding = undefined
+      disposeSdkBinding(binding)
+    }
+
+    function setInitializedState(): void {
+      if (!isCurrentSetup() || sdkBinding === undefined) return
+
+      try {
+        onStatesReadyCleanup = getOnStatesReadyCleanup(sdkBinding, initialProps.onStatesReady)
+        if (!isCurrentSetup()) {
+          disposeOnce()
+          return
+        }
+
+        setState({ error: undefined, isLive: true, runtime: sdkBinding.sdk })
+      } catch (error: unknown) {
+        setInitializationError(error)
+      }
     }
 
     function setInitializationError(error: unknown): void {
-      if (!setupState.disposed) {
-        setState({ error: toError(error), isLive: false, runtime: undefined })
-      }
+      disposeOnce()
+      if (cancelled) return
+
+      setState({ error: toError(error), isLive: false, runtime: undefined })
     }
 
     try {
-      const initializedBinding = initializeProviderSdk(initialProps)
-
-      if (!isPromiseLike(initializedBinding)) {
-        setInitializedState(initializedBinding)
-
-        return () => {
-          setupState.disposed = true
-          disposeOnce(sdkBinding)
-        }
+      sdkBinding = createProviderSdkBinding(initialProps)
+      if (initialProps.handoff === undefined) {
+        setInitializedState()
+      } else {
+        void hydrateProviderHandoff(sdkBinding.sdk, initialProps.handoff, isCurrentSetup).then(
+          setInitializedState,
+          setInitializationError,
+        )
       }
-
-      void initializedBinding.then(setInitializedState, setInitializationError)
     } catch (error: unknown) {
       setInitializationError(error)
-      return
     }
 
     return () => {
-      setupState.disposed = true
-      disposeOnce(sdkBinding)
+      cancelled = true
+      disposeOnce()
     }
   }, [])
 
@@ -310,40 +423,49 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     const { handoff } = props
     const { runtime } = state
 
-    if (!state.isLive || runtime === undefined || handoff === undefined) {
+    if (!state.isLive || runtime === undefined || handoff === undefined || !hasPendingHandoff) {
       return
     }
 
-    if (hydratedHandoffRef.current === handoff) {
-      return
-    }
-
+    const nextHandoff = handoff
     let disposed = false
-    hydratedHandoffRef.current = handoff
 
-    function setHydrationError(error: unknown): void {
-      if (!disposed) {
+    function finishHandoff(outcome: 'failed' | 'hydrated', error?: unknown): void {
+      if (disposed) return
+
+      if (outcome === 'failed') {
         setState({ error: toError(error), isLive: true, runtime })
       }
+
+      setSettledHandoff(nextHandoff)
+      if (outcome === 'hydrated') hydratedHandoffRef.current = nextHandoff
+      setRoutePresentation((current) => {
+        const useSnapshot = outcome === 'failed' || preservesRoutePresentation(nextHandoff)
+        if (current === undefined && !useSnapshot) return current
+
+        return {
+          handoff: nextHandoff,
+          isLiveRuntimeAuthoritative: outcome === 'hydrated',
+          isPending: current?.isPending ?? false,
+          routeKey: current?.routeKey,
+          useSnapshot,
+        }
+      })
     }
 
-    try {
-      const hydrationResult: unknown = Reflect.apply(hydrateOptimizationHandoff, undefined, [
-        runtime,
-        handoff,
-      ])
-
-      if (isPromiseLike(hydrationResult)) {
-        void hydrationResult.catch(setHydrationError)
-      }
-    } catch (error: unknown) {
-      setHydrationError(error)
-    }
+    void hydrateProviderHandoff(runtime, nextHandoff, () => !disposed).then(
+      () => {
+        finishHandoff('hydrated')
+      },
+      (error: unknown) => {
+        finishHandoff('failed', error)
+      },
+    )
 
     return () => {
       disposed = true
     }
-  }, [props.handoff, state.isLive, state.runtime])
+  }, [hasPendingHandoff, props.handoff, state.isLive, state.runtime])
 
   useLayoutEffect(() => {
     if (!state.isLive || state.runtime === undefined || props.sdk !== undefined) {
@@ -392,14 +514,36 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       isLive: state.isLive,
       prefetchedManagedEntries,
     }),
-    [state.runtime, state.error, state.isLive, prefetchedManagedEntries],
+    [prefetchedManagedEntries, state.error, state.isLive, state.runtime],
+  )
+  const isLiveRuntimeAuthoritative = hasAuthoritativeLiveRuntime(state.isLive, activePresentation)
+  const routeTransitionContextValue = useMemo(
+    () => ({
+      isHandoffPending: hasPendingHandoff,
+      isLiveRuntimeAuthoritative,
+      isPresentationLive: state.isLive && activePresentation?.isPending !== true,
+      presentationSdk,
+      settleRoute,
+      startRoute,
+    }),
+    [
+      activePresentation?.isPending,
+      hasPendingHandoff,
+      isLiveRuntimeAuthoritative,
+      presentationSdk,
+      settleRoute,
+      startRoute,
+      state.isLive,
+    ],
   )
 
   return (
     <OptimizationContext.Provider value={contextValue}>
-      <OptimizationHydrationContext.Provider value={props.hydration ?? props.handoff?.hydration}>
-        {children}
-      </OptimizationHydrationContext.Provider>
+      <OptimizationRouteTransitionContext.Provider value={routeTransitionContextValue}>
+        <OptimizationHydrationContext.Provider value={props.hydration ?? props.handoff?.hydration}>
+          {children}
+        </OptimizationHydrationContext.Provider>
+      </OptimizationRouteTransitionContext.Provider>
     </OptimizationContext.Provider>
   )
 }

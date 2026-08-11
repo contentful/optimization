@@ -1,6 +1,8 @@
-import { OptimizationRoot } from '@contentful/optimization-react-web'
 import { createScopedLogger } from '@contentful/optimization-react-web/logger'
-import { ReactRouterAutoPageTracker } from '@contentful/optimization-react-web/router/react-router'
+import {
+  OptimizationRoot,
+  ReactRouterAutoPageTracker,
+} from '@contentful/optimization-react-web/react-router'
 import { PAGES } from 'e2e-web'
 import 'e2e-web/theme.css'
 import { type ReactElement, StrictMode, useState } from 'react'

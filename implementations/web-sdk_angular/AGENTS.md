@@ -32,7 +32,6 @@ pnpm implementation:run -- web-sdk_angular dev
 pnpm implementation:run -- web-sdk_angular build
 pnpm implementation:run -- web-sdk_angular typecheck
 pnpm implementation:lint
-pnpm implementation:run -- web-sdk_angular implementation:test:e2e:run
 pnpm test:e2e:web-sdk_angular
 ```
 

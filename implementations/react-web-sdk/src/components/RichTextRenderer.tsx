@@ -1,9 +1,9 @@
-import type { OptimizedEntryRenderContext } from '@contentful/optimization-react-web'
 import {
   isMergeTagEntry,
   isRecord,
   isUnresolvedEntryLink,
 } from '@contentful/optimization-react-web/api-schemas'
+import type { OptimizedEntryRenderContext } from '@contentful/optimization-react-web/react-router'
 import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
 import { INLINES } from '@contentful/rich-text-types'
 import type { JSX } from 'react'

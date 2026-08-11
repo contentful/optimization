@@ -12,15 +12,19 @@ import {
 import { beforeEach, describe, expect, it, rs } from '@rstest/core'
 
 let appStateChangeHandler: ((nextAppState: string) => void) | undefined = undefined
+const removeAppStateChangeListener = rs.fn()
+const addAppStateChangeListener = rs.fn(
+  (_event: string, handler: (nextAppState: string) => void) => {
+    appStateChangeHandler = handler
+    return {
+      remove: removeAppStateChangeListener,
+    }
+  },
+)
 
 rs.mock('react-native', () => ({
   AppState: {
-    addEventListener: rs.fn((_event: string, handler: (nextAppState: string) => void) => {
-      appStateChangeHandler = handler
-      return {
-        remove: rs.fn(),
-      }
-    }),
+    addEventListener: addAppStateChangeListener,
   },
   Dimensions: { get: rs.fn(() => ({ width: 375, height: 667 })) },
   NativeModules: {},
@@ -43,9 +47,12 @@ rs.mock('@react-native-async-storage/async-storage', () => ({
   },
 }))
 
+const removeOnlineChangeListener = rs.fn()
+const addOnlineChangeListener = rs.fn(() => removeOnlineChangeListener)
+
 rs.mock('@react-native-community/netinfo', () => ({
   default: {
-    addEventListener: rs.fn(() => () => undefined),
+    addEventListener: addOnlineChangeListener,
   },
 }))
 
@@ -86,20 +93,21 @@ const IDENTIFIED_OPTIMIZATION_DATA: OptimizationData = {
   selectedOptimizations: [],
 }
 
-interface AnonymousIdProvider {
-  getAnonymousId: () => string | undefined
+const LATEST_PROFILE: Profile = {
+  ...DEFAULT_PROFILE,
+  id: 'latest-profile-id',
+  stableId: 'latest-profile-id',
+  traits: { latest: true },
+}
+
+const LATEST_OPTIMIZATION_DATA: OptimizationData = {
+  changes: [],
+  profile: LATEST_PROFILE,
+  selectedOptimizations: [],
 }
 
 interface AsyncStorageStoreForTest {
   drainPersistence: () => Promise<void>
-}
-
-function hasAnonymousIdProvider(value: unknown): value is AnonymousIdProvider {
-  if (typeof value !== 'object' || value === null) return false
-
-  const getAnonymousId = Reflect.get(value, 'getAnonymousId') as unknown
-
-  return typeof getAnonymousId === 'function'
 }
 
 async function resetAsyncStorageStore(): Promise<void> {
@@ -134,6 +142,23 @@ function createDeferred(): { promise: Promise<void>; resolve: () => void } {
     promise,
     resolve: () => {
       deferredResolve?.()
+    },
+  }
+}
+
+function createValueDeferred<T>(): {
+  promise: Promise<T>
+  resolve: (value: T) => void
+} {
+  let deferredResolve: ((value: T) => void) | undefined
+  const promise = new Promise<T>((resolve) => {
+    deferredResolve = resolve
+  })
+
+  return {
+    promise,
+    resolve: (value) => {
+      deferredResolve?.(value)
     },
   }
 }
@@ -380,10 +405,12 @@ describe('ContentfulOptimization locale resolution', () => {
     asyncStorageMock.multiRemove.mockClear()
     asyncStorageMock.multiSet.mockClear()
 
+    signals.experienceRequestState.value = { status: 'pending' }
     await created.interceptors.state.run({
       changes: [],
       selectedOptimizations: [],
     })
+    signals.experienceRequestState.value = { status: 'success' }
     await drainAsyncStorageStore()
 
     expect(hasProfileRemoveCall()).toBe(false)
@@ -415,11 +442,13 @@ describe('ContentfulOptimization locale resolution', () => {
     asyncStorageMock.multiRemove.mockClear()
     asyncStorageMock.multiSet.mockClear()
 
+    signals.experienceRequestState.value = { status: 'pending' }
     await created.interceptors.state.run({
       changes: undefined,
       profile: undefined,
       selectedOptimizations: undefined,
     })
+    signals.experienceRequestState.value = { status: 'success' }
     await drainAsyncStorageStore()
 
     expect(asyncStorageMock.multiRemove).toHaveBeenCalledWith([
@@ -451,22 +480,24 @@ describe('ContentfulOptimization locale resolution', () => {
       environment: 'main',
     })
     optimization = created
+    const upsertProfile = rs
+      .spyOn(created.api.experience, 'upsertProfile')
+      .mockResolvedValue(IDENTIFIED_OPTIMIZATION_DATA)
 
-    const experienceQueue = Reflect.get(created, 'experienceQueue') as unknown
-
-    expect(hasAnonymousIdProvider(experienceQueue)).toBe(true)
-    if (!hasAnonymousIdProvider(experienceQueue)) throw new Error('Missing anonymous ID provider')
-
-    const { getAnonymousId } = experienceQueue
-
-    expect(getAnonymousId()).toBe('stored-anonymous-id')
+    await created.identify({ userId: 'known-user' })
+    expect(upsertProfile).toHaveBeenLastCalledWith(
+      expect.objectContaining({ profileId: 'stored-anonymous-id' }),
+    )
 
     created.consent({ persistence: false })
+    await created.identify({ userId: 'known-user' })
 
-    expect(getAnonymousId()).toBeUndefined()
+    expect(upsertProfile).toHaveBeenLastCalledWith(
+      expect.objectContaining({ profileId: IDENTIFIED_PROFILE.id }),
+    )
   })
 
-  it('waits for profile-continuity persistence before publishing identified state', async () => {
+  it('publishes intercepted state and resolves before raw-state persistence settles', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
@@ -478,38 +509,40 @@ describe('ContentfulOptimization locale resolution', () => {
 
     asyncStorageMock.multiSet.mockClear()
     const profileWrite = createDeferred()
+    const profileWriteStarted = createDeferred()
     asyncStorageMock.multiSet.mockImplementation(
       async (entries: ReadonlyArray<[string, string]>) => {
-        if (hasProfileCacheEntry(entries)) await profileWrite.promise
+        if (hasProfileCacheEntry(entries)) {
+          profileWriteStarted.resolve()
+          await profileWrite.promise
+        }
       },
     )
     rs.spyOn(created.api.experience, 'upsertProfile').mockResolvedValue(
       IDENTIFIED_OPTIMIZATION_DATA,
     )
+    created.interceptors.state.add((data) => ({ ...data, profile: DEFAULT_PROFILE }))
 
-    let identifyResolved = false
-    const identify = created.identify({ userId: 'known-user' }).then(() => {
-      identifyResolved = true
+    const identify = created.identify({ userId: 'known-user' })
+    await profileWriteStarted.promise
+
+    expect(created.states.profile.current).toEqual(DEFAULT_PROFILE)
+    await expect(identify).resolves.toEqual({
+      accepted: true,
+      data: IDENTIFIED_OPTIMIZATION_DATA,
     })
-
-    await flushPromises()
-
-    expect(created.states.profile.current).toBeUndefined()
-    expect(identifyResolved).toBe(false)
-
-    profileWrite.resolve()
-    await identify
-
-    expect(created.states.profile.current).toEqual(IDENTIFIED_PROFILE)
     expect(getProfileWriteCalls()).toEqual([
       expect.arrayContaining([
         [ANONYMOUS_ID_KEY, IDENTIFIED_PROFILE.id],
         [PROFILE_CACHE_KEY, JSON.stringify(IDENTIFIED_PROFILE)],
       ]),
     ])
+
+    profileWrite.resolve()
+    await drainAsyncStorageStore()
   })
 
-  it('publishes identified state after failed profile-continuity persistence is handled', async () => {
+  it('keeps identified state when profile-continuity persistence fails', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
@@ -538,6 +571,53 @@ describe('ContentfulOptimization locale resolution', () => {
     expect(created.states.profile.current).toEqual(IDENTIFIED_PROFILE)
   })
 
+  it('does not persist a response superseded during a later state interceptor', async () => {
+    const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
+
+    const created = await ContentfulOptimization.initialize({
+      clientId: 'test-client-id',
+      environment: 'main',
+      defaults: { consent: true },
+    })
+    optimization = created
+
+    asyncStorageMock.multiSet.mockClear()
+    const staleInterception = createDeferred()
+    const staleInterceptionStarted = createDeferred()
+    rs.spyOn(created.api.experience, 'upsertProfile')
+      .mockResolvedValueOnce(IDENTIFIED_OPTIMIZATION_DATA)
+      .mockResolvedValueOnce(LATEST_OPTIMIZATION_DATA)
+    created.interceptors.state.add(async (data) => {
+      if (data.profile?.id === IDENTIFIED_PROFILE.id) {
+        staleInterceptionStarted.resolve()
+        await staleInterception.promise
+      }
+
+      return data
+    })
+
+    const staleRequest = created.trackCurrentScreen({ name: 'Home', properties: {} })
+    await staleInterceptionStarted.promise
+
+    const latestRequest = created.trackCurrentScreen({ name: 'Details', properties: {} })
+    await expect(latestRequest).resolves.toEqual({
+      accepted: true,
+      data: LATEST_OPTIMIZATION_DATA,
+    })
+    await drainAsyncStorageStore()
+
+    staleInterception.resolve()
+    await expect(staleRequest).resolves.toEqual({ accepted: false })
+    await drainAsyncStorageStore()
+
+    expect(getProfileWriteCalls()).toEqual([
+      expect.arrayContaining([
+        [ANONYMOUS_ID_KEY, LATEST_PROFILE.id],
+        [PROFILE_CACHE_KEY, JSON.stringify(LATEST_PROFILE)],
+      ]),
+    ])
+  })
+
   it('drains pending AsyncStorage persistence when the app backgrounds', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
     const store = await getAsyncStorageStore()
@@ -556,5 +636,146 @@ describe('ContentfulOptimization locale resolution', () => {
 
     expect(flush).toHaveBeenCalled()
     expect(drainPersistence).toHaveBeenCalled()
+  })
+
+  it('rolls back earlier React Native resources when listener setup fails', async () => {
+    const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
+    const store = await getAsyncStorageStore()
+    const drainPersistence = rs.spyOn(store, 'drainPersistence')
+    addAppStateChangeListener.mockImplementationOnce(() => {
+      throw new Error('AppState listener setup failed')
+    })
+
+    await expect(
+      ContentfulOptimization.initialize({
+        clientId: 'test-client-id',
+        environment: 'main',
+      }),
+    ).rejects.toThrowError('AppState listener setup failed')
+    await flushPromises()
+
+    expect(addOnlineChangeListener).not.toHaveBeenCalled()
+    expect(drainPersistence).toHaveBeenCalled()
+
+    const replacement = await ContentfulOptimization.initialize({
+      clientId: 'test-client-id',
+      environment: 'main',
+    })
+    optimization = replacement
+
+    expect(replacement.states.experienceRequestState.current).toEqual({ status: 'idle' })
+  })
+
+  it('disposes React Native resources exactly once and allows replacement', async () => {
+    const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
+    const store = await getAsyncStorageStore()
+    const drainPersistence = rs.spyOn(store, 'drainPersistence')
+    const created = await ContentfulOptimization.initialize({
+      clientId: 'test-client-id',
+      environment: 'main',
+    })
+    optimization = created
+    await flushPromises()
+    const drainsBeforeDestroy = drainPersistence.mock.calls.length
+
+    created.destroy()
+    created.destroy()
+
+    expect(removeAppStateChangeListener).toHaveBeenCalledTimes(1)
+    expect(removeOnlineChangeListener).toHaveBeenCalledTimes(1)
+    expect(drainPersistence).toHaveBeenCalledTimes(drainsBeforeDestroy + 1)
+
+    const replacement = await ContentfulOptimization.initialize({
+      clientId: 'test-client-id',
+      environment: 'main',
+    })
+    optimization = replacement
+  })
+
+  it('keeps the public current-screen result shape for accepted and deduplicated calls', async () => {
+    const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
+
+    const created = await ContentfulOptimization.initialize({
+      clientId: 'test-client-id',
+      environment: 'main',
+      defaults: { consent: true },
+    })
+    optimization = created
+    const upsertProfile = rs
+      .spyOn(created.api.experience, 'upsertProfile')
+      .mockResolvedValue(IDENTIFIED_OPTIMIZATION_DATA)
+
+    await expect(created.trackCurrentScreen({ name: 'Home', properties: {} })).resolves.toEqual({
+      accepted: true,
+      data: IDENTIFIED_OPTIMIZATION_DATA,
+    })
+    await expect(created.trackCurrentScreen({ name: 'Home', properties: {} })).resolves.toEqual({
+      accepted: false,
+    })
+
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+  })
+
+  it('requires an explicit current-screen retry after reconnecting', async () => {
+    const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
+
+    const created = await ContentfulOptimization.initialize({
+      clientId: 'test-client-id',
+      environment: 'main',
+      defaults: { consent: true },
+    })
+    optimization = created
+    const upsertProfile = rs
+      .spyOn(created.api.experience, 'upsertProfile')
+      .mockResolvedValue(IDENTIFIED_OPTIMIZATION_DATA)
+
+    signals.online.value = false
+    await expect(created.trackCurrentScreen({ name: 'Home', properties: {} })).resolves.toEqual({
+      accepted: false,
+    })
+    expect(upsertProfile).not.toHaveBeenCalled()
+
+    signals.online.value = true
+    await flushPromises()
+    expect(upsertProfile).not.toHaveBeenCalled()
+
+    await expect(created.trackCurrentScreen({ name: 'Home', properties: {} })).resolves.toEqual({
+      accepted: true,
+      data: IDENTIFIED_OPTIMIZATION_DATA,
+    })
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+  })
+
+  it('collapses joined and superseded tracker outcomes to the public result shape', async () => {
+    const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
+
+    const created = await ContentfulOptimization.initialize({
+      clientId: 'test-client-id',
+      environment: 'main',
+      defaults: { consent: true },
+    })
+    optimization = created
+    const homeResult = createValueDeferred<OptimizationData>()
+    const detailsResult = createValueDeferred<OptimizationData>()
+    const upsertProfile = rs
+      .spyOn(created.api.experience, 'upsertProfile')
+      .mockReturnValueOnce(homeResult.promise)
+      .mockReturnValueOnce(detailsResult.promise)
+
+    const firstHome = created.trackCurrentScreen({ name: 'Home', properties: {} })
+    const joinedHome = created.trackCurrentScreen({ name: 'Home', properties: {} })
+    await flushPromises()
+    const details = created.trackCurrentScreen({ name: 'Details', properties: {} })
+
+    homeResult.resolve(IDENTIFIED_OPTIMIZATION_DATA)
+    detailsResult.resolve(IDENTIFIED_OPTIMIZATION_DATA)
+
+    await expect(firstHome).resolves.toEqual({ accepted: false })
+    await expect(joinedHome).resolves.toEqual({ accepted: false })
+    await expect(details).resolves.toEqual({
+      accepted: true,
+      data: IDENTIFIED_OPTIMIZATION_DATA,
+    })
+    expect(upsertProfile).toHaveBeenCalledTimes(2)
   })
 })

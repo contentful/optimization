@@ -827,6 +827,11 @@ entry language line up. For SDK-managed entry fetching on a request-bound client
 `forRequest({ locale })` supplies the managed Contentful query locale when neither
 `contentful.defaultQuery` nor the per-call query sets `locale`.
 
+When a response deliberately renders baseline-only Rich Text, call
+`optimization.getMergeTagFallbackValue(node.data.target)` after the same guard instead of reading
+`nt_fallback` yourself or resolving against the request profile. It validates the MergeTag entry and
+returns its configured fallback without a profile lookup or missing-profile warning.
+
 ### Read Custom Flags
 
 **Integration category:** Optional

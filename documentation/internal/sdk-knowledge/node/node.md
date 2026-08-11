@@ -99,6 +99,10 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   `getMergeTagValue(mergeTagEntry, profile?)` → resolves a MergeTag value against the request profile,
   falling back to the entry's configured fallback.
   source: core-sdk#CoreBase.ts#getFlag; core-sdk#CoreBase.ts#getMergeTagValue; core-sdk#resolvers/MergeTagValueResolver.ts#MergeTagValueResolver
+- `getMergeTagFallbackValue` validates the Merge Tag entry and returns its configured fallback
+  without reading the request profile or emitting the missing-profile warning. See
+  [`../shared/concepts.md`](../shared/concepts.md#entry-resolution).
+  source: core-sdk#CoreBase.ts#getMergeTagFallbackValue; core-sdk#resolvers/MergeTagValueResolver.ts#MergeTagValueResolver
 - `createRequestHandoffFromData({ data, entries?, cache? })` serializes
   already-returned request data into a framework-neutral handoff. It does not emit page or analytics
   events; the caller owns when the request-bound Experience call happens and which browser framework

@@ -26,12 +26,12 @@ subpaths so server, client, router, and edge boundaries stay explicit.
 | Runtime           | Import path                                           | Responsibility                                              |
 | ----------------- | ----------------------------------------------------- | ----------------------------------------------------------- |
 | App Router server | `@contentful/optimization-nextjs/app-router/server`   | Server binding, request mode, and explicit handoff helpers  |
-| App Router client | `@contentful/optimization-nextjs/app-router/client`   | Client binding for App Router Client Components             |
+| App Router client | `@contentful/optimization-nextjs/app-router/client`   | App Router binding and context-bound browser runtime        |
 | Cache middleware  | `@contentful/optimization-nextjs/cache-middleware`    | Next proxy or middleware public permutation cache rewrites  |
-| Pages Router      | `@contentful/optimization-nextjs/pages-router`        | Pages Router client binding and React roots                 |
+| Pages Router      | `@contentful/optimization-nextjs/pages-router`        | Pages Router binding and context-bound browser runtime      |
 | Pages server      | `@contentful/optimization-nextjs/pages-router/server` | Pages Router `getServerSideProps` request handoff           |
 | Edge              | `@contentful/optimization-nextjs/edge`                | Edge runtime request and public permutation handoff helpers |
-| Client            | `@contentful/optimization-nextjs/client`              | Router-neutral React SDK providers, hooks, roots            |
+| Client            | `@contentful/optimization-nextjs/client`              | Router-neutral React runtime for trees without a binding    |
 | Schemas           | `@contentful/optimization-nextjs/api-schemas`         | Shared API types, schemas, and structural guards            |
 | Server            | `@contentful/optimization-nextjs/server`              | Node SDK configuration, request binding, wrappers           |
 | Request handler   | `@contentful/optimization-nextjs/request-handler`     | Next middleware/proxy request context forwarding            |
@@ -196,6 +196,11 @@ export const clientOptimization = bindNextjsAppRouterClientOptimization({
 })
 ```
 
+Import hooks, providers, entries, and other context-bound browser APIs beneath the bound root from
+`@contentful/optimization-nextjs/app-router/client`. Use
+`@contentful/optimization-nextjs/client` only for a separate router-neutral tree that does not use
+the App Router binding.
+
 The server binder uses `contentful` on server-capable paths and omits that client from serialized
 client props. Keep any browser-only Contentful fetching explicitly app-owned.
 
@@ -278,9 +283,10 @@ prefetch when a matching browser managed source must hydrate without another fet
 
 ## Pages Router setup
 
-Use `/pages-router` for client roots in `_app.tsx` and `/pages-router/server` for
-`getServerSideProps`. The server helper is separate because the client binding is a `"use client"`
-entry.
+Use `/pages-router` for client roots in `_app.tsx` and for every context-bound browser API beneath
+the bound tree. Use `/pages-router/server` for `getServerSideProps`. The server helper is separate
+because the client binding is a `"use client"` entry. Use `/client` only for a separate
+router-neutral tree that does not use the Pages Router binding.
 
 ```tsx
 import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router'
@@ -344,9 +350,9 @@ export async function getServerSideProps(context) {
 ```
 
 Pages Router server prefetch accepts ID or content-type/slug descriptors and appends their baselines
-to the browser handoff. The bound client `OptimizedEntry` and `/client` `useOptimizedEntry` accept
-`baselineEntry`, `entryId` with optional `entryQuery`, or a content-type/slug descriptor under
-`managedEntry`. Matching slug sources use the handed-off baseline and its real `sys.id`.
+to the browser handoff. The bound client `OptimizedEntry` and `/pages-router` `useOptimizedEntry`
+accept `baselineEntry`, `entryId` with optional `entryQuery`, or a content-type/slug descriptor
+under `managedEntry`. Matching slug sources use the handed-off baseline and its real `sys.id`.
 
 ## Edge runtime
 

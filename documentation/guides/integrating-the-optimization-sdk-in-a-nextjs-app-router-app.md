@@ -325,20 +325,28 @@ the nested `optimization.request` family keeps each visitor request's work and s
 The quick start uses only the server binding and request handler. The remaining paths support the
 advanced route strategies taught later:
 
-| Import path                                           | Use                                                                                                                                                                                                                                                     |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@contentful/optimization-nextjs/app-router/server`   | Server binding; its nested `request` components personalize per visitor. Top-level roots accept app-supplied handoffs; the entry consumes its documented props and stored handoff state, while the tracker consumes its documented event-ownership prop |
-| `@contentful/optimization-nextjs/app-router/client`   | A configured component family for Client Components                                                                                                                                                                                                     |
-| `@contentful/optimization-nextjs/cache-middleware`    | Rewrites routes for app-defined personalization choices that are safe to share publicly                                                                                                                                                                 |
-| `@contentful/optimization-nextjs/client`              | Browser hooks, providers, and entry controls                                                                                                                                                                                                            |
-| `@contentful/optimization-nextjs/edge`                | Request and handoff helpers for the Edge runtime                                                                                                                                                                                                        |
-| `@contentful/optimization-nextjs/request-handler`     | Forwards the request URL and, in advanced trusted flows, compact server context                                                                                                                                                                         |
-| `@contentful/optimization-nextjs/tracking-attributes` | Adds tracking attributes when the browser tracks server-rendered markup without re-resolving it                                                                                                                                                         |
+| Import path                                           | Use                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-nextjs/app-router/server`   | Server binding; its nested `request` components personalize per visitor. Top-level roots accept app-supplied handoffs; the entry consumes its documented props and stored handoff state, while the tracker consumes its documented event-ownership prop                                                                                                                                                         |
+| `@contentful/optimization-nextjs/app-router/client`   | `bindNextjsAppRouterClientOptimization`, its returned roots and components, plus direct `NextAppAutoPageTracker`, `OptimizedEntry`, and hooks used under `RequestOptimizationRoot`, `optimization.OptimizationRoot`, `optimization.OptimizationProvider`, or a root or provider returned by the client binding                                                                                                  |
+| `@contentful/optimization-nextjs/cache-middleware`    | Rewrites routes for app-defined personalization choices that are safe to share publicly                                                                                                                                                                                                                                                                                                                         |
+| `@contentful/optimization-nextjs/client`              | Generic React browser entry. Use it only when the tree imports none of `NextAppAutoPageTracker`, `OptimizedEntry`, or the hooks from `/app-router/client`, is not nested under a root or provider returned by either App Router binding, and mounts the loaded page's sole root or provider that creates the live Optimization SDK from configuration. A separate React tree or route is not a separate runtime |
+| `@contentful/optimization-nextjs/edge`                | Request and handoff helpers for the Edge runtime                                                                                                                                                                                                                                                                                                                                                                |
+| `@contentful/optimization-nextjs/request-handler`     | Forwards the request URL and, in advanced trusted flows, compact server context                                                                                                                                                                                                                                                                                                                                 |
+| `@contentful/optimization-nextjs/tracking-attributes` | Adds tracking attributes when the browser tracks server-rendered markup without re-resolving it                                                                                                                                                                                                                                                                                                                 |
 
-The package root is not an import path. Server Components use the server binding. A **bound Client
-Component** uses components created by the client binding rather than importing a router-neutral
-component directly. Create that separate binding only when a bound Client Component needs one;
-router-neutral hooks and per-entry browser controls continue to use `/client`.
+The package root is not an import path. Server Components use the server binding. In Client
+Components, import `NextAppAutoPageTracker`, direct `OptimizedEntry`, and hooks such as
+`useOptimizationActions` from `/app-router/client` when they render under `RequestOptimizationRoot`
+or another root or provider returned by an App Router binding.
+
+On one loaded browser page, which is one browser JavaScript runtime, mount only one
+`OptimizationRoot` or `OptimizationProvider` that creates the live SDK from configuration. This is
+the page's configuration-created Optimization root. The limit is one per page runtime, not one per
+React tree or route. To check the topology, reload the page and then navigate with a Next.js `Link`.
+The browser console must not report `ContentfulOptimization is already initialized`. If it does,
+inspect every mounted `OptimizationRoot` and `OptimizationProvider` and keep only one that receives
+SDK configuration.
 
 **Adapt this to your use case:** keep browser-only binding code in a Client Component module, and
 match the server binding's public configuration values.
@@ -645,7 +653,7 @@ history. The blocked stream reports events rejected by consent or event policy.
 // components/OptimizationEventDiagnostics.tsx
 'use client'
 
-import { useOptimizationContext } from '@contentful/optimization-nextjs/client'
+import { useOptimizationContext } from '@contentful/optimization-nextjs/app-router/client'
 import { useEffect } from 'react'
 
 export function OptimizationEventDiagnostics() {
@@ -709,17 +717,20 @@ The handoff controls the first browser render over already-rendered content. `li
 whether entries may re-resolve after startup when consent, identity, profile, or preview state
 changes.
 
-Use the default locked behavior for stable first paint. Turn on `liveUpdates` in the binding config
-only when the participating tree must react after hydration. For per-entry browser control, use the
-router-neutral `/client` `OptimizedEntry`; the bound App Router entry does not accept per-entry
-`liveUpdates` or `loadingFallback`. The preview panel can force live re-resolution for authoring even
-when the normal route keeps live updates off.
+Use the default locked behavior for stable first paint. To make live updates the root default for
+entries under `RequestOptimizationRoot`, add `liveUpdates: true` to the existing
+`bindNextjsAppRouterServerOptimization({...})` call in `lib/optimization.ts`. For per-entry browser
+control, use the direct `OptimizedEntry` export from `/app-router/client`, which accepts per-entry
+`liveUpdates` and `loadingFallback`; `liveUpdates={false}` overrides the root default for that entry.
+The `OptimizedEntry` returned by `bindNextjsAppRouterClientOptimization(...)` omits those two props.
+The preview panel can force live re-resolution for authoring even when the normal route keeps live
+updates off.
 
 For one observable live-update check, author an experience whose audience requires the trait
 `plan = "pro"`. Give its variant distinctive **Pro** text and leave the baseline with distinctive
 **Control** text. `HeroEntry` below is your app's existing single-locale Contentful entry type. The
-request root owns the live browser SDK; this Client Component consumes that provider and opts this
-entry into re-resolution.
+`RequestOptimizationRoot` provides the live browser SDK to this Client Component, which renders
+beneath that root and opts this entry into re-resolution.
 
 **Adapt this to your use case:**
 
@@ -728,7 +739,10 @@ entry into re-resolution.
 'use client'
 
 import type { HeroEntry } from '@/lib/contentful'
-import { OptimizedEntry, useOptimizationActions } from '@contentful/optimization-nextjs/client'
+import {
+  OptimizedEntry,
+  useOptimizationActions,
+} from '@contentful/optimization-nextjs/app-router/client'
 
 export function LiveHero({ baselineEntry }: { baselineEntry: HeroEntry }) {
   const { identifyUser, resetUser } = useOptimizationActions()
@@ -761,8 +775,14 @@ snapshot.
 For a top-level explicit-input route, pass `hydration="client-only-hidden-until-ready"` to
 `optimization.OptimizationRoot` or `optimization.OptimizationProvider`, or build that mode into the
 handoff. For a nested private-request route, set this mode in the server binding's `request`
-configuration. A fully browser-owned route instead uses the router-neutral `/client`
-`OptimizationRoot` or `OptimizationProvider`.
+configuration. For a browser-owned route, use `/app-router/client` when the route renders
+`NextAppAutoPageTracker`, direct `OptimizedEntry`, or any hook imported from that path, or when those
+components render under `RequestOptimizationRoot`, `optimization.OptimizationRoot`,
+`optimization.OptimizationProvider`, or a root or provider returned by
+`bindNextjsAppRouterClientOptimization(...)`. Use the generic `/client` only for a tree that imports
+none of those App Router components or hooks and mounts the loaded page's sole
+configuration-created Optimization root. Moving that tree to a separate React root or route does
+not create another browser JavaScript runtime.
 
 Hidden-until-ready hydration is independent of the private-slot composition. Use it only when the
 content itself must remain hidden until the browser runtime is ready; it is not needed to keep public
@@ -815,7 +835,8 @@ Replace the quick-start consent shortcut with your app policy:
    `false`.
 2. Seed conservative browser defaults through `consent.clientDefaults`.
 3. Mirror browser choices to the app-owned consent record before the next request.
-4. Use `setConsent`, `identifyUser`, and `resetUser` from `/client` hooks for browser actions.
+4. Use `setConsent`, `identifyUser`, and `resetUser` from `/app-router/client` hooks for browser
+   actions beneath `RequestOptimizationRoot`.
 
 `setConsent(true)` or `setConsent(false)` sets both event consent and persistence consent to the same
 value. Use the object form, `setConsent({ events, persistence })`, when those two decisions differ.
@@ -853,7 +874,7 @@ import {
   useConsentState,
   useOptimizationActions,
   useProfileState,
-} from '@contentful/optimization-nextjs/client'
+} from '@contentful/optimization-nextjs/app-router/client'
 
 function writeAppConsent(value: 'accepted' | 'denied') {
   const secure = window.location.protocol === 'https:' ? '; Secure' : ''
@@ -931,7 +952,7 @@ Replace the cookie and endpoint with your analytics platform's policy and transp
 
 ```ts
 // lib/optimization-event-forwarding.ts
-import type { OnStatesReady } from '@contentful/optimization-nextjs/client'
+import type { OnStatesReady } from '@contentful/optimization-nextjs/app-router/client'
 
 function hasAnalyticsConsent() {
   return document.cookie.split('; ').includes('analytics-consent=accepted')
@@ -1059,7 +1080,7 @@ In a Client Component that already sits under an Optimization provider,
 ```tsx
 'use client'
 
-import { useMergeTagResolver } from '@contentful/optimization-nextjs/client'
+import { useMergeTagResolver } from '@contentful/optimization-nextjs/app-router/client'
 import type { Document } from '@contentful/rich-text-types'
 import { RichText } from '@/components/RichText'
 
@@ -1079,7 +1100,7 @@ its current value immediately and later values after accepted profile or preview
 // components/CheckoutFlag.tsx
 'use client'
 
-import { useOptimizationContext } from '@contentful/optimization-nextjs/client'
+import { useOptimizationContext } from '@contentful/optimization-nextjs/app-router/client'
 import { useEffect, useState } from 'react'
 
 export function CheckoutFlag() {
@@ -1128,7 +1149,7 @@ the live SDK that the panel uses by default.
 'use client'
 
 import { contentfulClient } from '@/lib/contentful-client'
-import { useOptimizationContext } from '@contentful/optimization-nextjs/client'
+import { useOptimizationContext } from '@contentful/optimization-nextjs/app-router/client'
 import { useEffect } from 'react'
 
 export function OptimizationPreviewPanel() {
@@ -1289,15 +1310,20 @@ For the mechanics behind handoff state and cache scopes, use
 
 **Integration category:** Advanced or production-only
 
-Use lower-level subpaths only when the bound App Router module cannot express the route. The main
-escape hatches are:
+Use lower-level subpaths only when `bindNextjsAppRouterServerOptimization(...)` or
+`bindNextjsAppRouterClientOptimization(...)` cannot express the route. The main escape hatches are:
 
 - `/server` for direct Node request control with `configureNextjsServerOptimization(...)`. That
   helper configures a stateless server runtime; it is not a request-isolation context.
 - The top-level `optimization.createRequestHandoff(...)` from the `/app-router/server` binding when
   advanced orchestration already owns explicit request, hydration, page payload, and handoff inputs.
-- `/app-router/client` for a bound App Router Client Component family.
-- `/client` for router-neutral React roots, providers, and hooks.
+- `/app-router/client` for `bindNextjsAppRouterClientOptimization`, the components it returns, and
+  direct `NextAppAutoPageTracker`, `OptimizedEntry`, or hook imports rendered under
+  `RequestOptimizationRoot`, `optimization.OptimizationRoot`, `optimization.OptimizationProvider`,
+  or a root or provider returned by the client binding.
+- `/client` only for a tree that imports none of those App Router components or hooks and mounts the
+  loaded page's sole configuration-created Optimization root. A separate React tree or route remains
+  in the same browser JavaScript runtime.
 - `/tracking-attributes` for manually rendered analytics-only markup.
 - `/edge` for Edge runtime route handlers that export `runtime = 'edge'` and avoid Node-only APIs.
 
@@ -1421,27 +1447,30 @@ account record.
   [local run instructions](../../implementations/nextjs-sdk_app-router/README.md#running-locally) and
   [E2E instructions](../../implementations/nextjs-sdk_app-router/README.md#running-e2e-tests).
 
-The following commands run the reference implementation from this monorepo; they are not commands
-to copy into an unrelated application.
+The following run-only root command performs routine validation for the reference implementation
+from this monorepo; it is not a command to copy into an unrelated application. Replace
+`<file-or-filter>` with the test target, or omit it only when the full suite is warranted. If
+consumed SDK packages changed or installed artifacts are stale, first run `pnpm build:pkgs` and
+`pnpm implementation:run -- nextjs-sdk_app-router implementation:install`. Run
+`pnpm setup:e2e:nextjs-sdk_app-router` only when the Playwright browser executable is missing.
 
 **Reference excerpt:**
 
 ```sh
-pnpm setup:e2e:nextjs-sdk_app_router
-pnpm test:e2e:nextjs-sdk_app_router
+pnpm test:e2e:nextjs-sdk_app-router <file-or-filter>
 ```
 
 ## Troubleshooting
 
-| Symptom                                                         | Likely cause                                                                                                             | Check                                                                                                                                                                                                                                                          |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Entries stay on baseline                                        | No matching variant, no selections after a blocked Experience event, unresolved variant links, or all-locale CDA payload | Target all visitors for the first test, read accepted or blocked events, and fetch one locale with enough `include` depth                                                                                                                                      |
-| A heterogeneous render cannot read content-type-specific fields | The skeleton union omits a possible content type, or the entry was not narrowed before rendering                         | Include every baseline and variant skeleton in `S`, then narrow with `isEntryOfContentType`                                                                                                                                                                    |
-| Variant appears in the browser but not View Source              | The route is browser-owned rather than request-family or public-permutation rendered                                     | Use `optimization.request` for private request rendering, or use a top-level public permutation handoff before rendering                                                                                                                                       |
-| Request components report a missing forwarded request URL       | The handler filename or export name does not match the Next.js version, or the handler is absent                         | Configure the SDK request handler; use `proxy.ts` with `proxy` on Next.js 16, or `middleware.ts` with `middleware` on Next.js 13 to 15                                                                                                                         |
-| Duplicate first page events                                     | A top-level explicit root and route tracker both emitted the initial route                                               | Give the top-level tracker the handoff's `initialPageEvent`; the request-family tracker receives it automatically                                                                                                                                              |
-| Live entries do not change after identify or reset              | The entry is locked to the handoff and live updates are off                                                              | Set `liveUpdates: true` on the App Router binding or use `/client` `LiveUpdatesProvider` for a browser subtree; for one entry, use router-neutral `/client` `OptimizedEntry liveUpdates` because bound App Router entries have no per-entry `liveUpdates` prop |
-| Personalized HTML is cached for the wrong visitor               | Request handoff output entered a public cache                                                                            | Use `private-request` for request state and public permutation handoffs only for app-owned selected permutations                                                                                                                                               |
+| Symptom                                                         | Likely cause                                                                                                             | Check                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entries stay on baseline                                        | No matching variant, no selections after a blocked Experience event, unresolved variant links, or all-locale CDA payload | Target all visitors for the first test, read accepted or blocked events, and fetch one locale with enough `include` depth                                                                                                                                                                                                                                                                                                                                                             |
+| A heterogeneous render cannot read content-type-specific fields | The skeleton union omits a possible content type, or the entry was not narrowed before rendering                         | Include every baseline and variant skeleton in `S`, then narrow with `isEntryOfContentType`                                                                                                                                                                                                                                                                                                                                                                                           |
+| Variant appears in the browser but not View Source              | The route is browser-owned rather than request-family or public-permutation rendered                                     | Use `optimization.request` for private request rendering, or use a top-level public permutation handoff before rendering                                                                                                                                                                                                                                                                                                                                                              |
+| Request components report a missing forwarded request URL       | The handler filename or export name does not match the Next.js version, or the handler is absent                         | Configure the SDK request handler; use `proxy.ts` with `proxy` on Next.js 16, or `middleware.ts` with `middleware` on Next.js 13 to 15                                                                                                                                                                                                                                                                                                                                                |
+| Duplicate first page events                                     | A top-level explicit root and route tracker both emitted the initial route                                               | Give the top-level tracker the handoff's `initialPageEvent`; the request-family tracker receives it automatically                                                                                                                                                                                                                                                                                                                                                                     |
+| Live entries do not change after identify or reset              | The entry is locked to the handoff and live updates are off                                                              | To make live updates the root default for entries under the existing `RequestOptimizationRoot`, add `liveUpdates: true` to the `bindNextjsAppRouterServerOptimization({...})` call in `lib/optimization.ts`. A direct `/app-router/client` `OptimizedEntry` can override that default with `liveUpdates={false}`. For one entry, use the `LiveHero` pattern above: render direct `OptimizedEntry liveUpdates` under that same root. Do not mount another configured Optimization root |
+| Personalized HTML is cached for the wrong visitor               | Request handoff output entered a public cache                                                                            | Use `private-request` for request state and public permutation handoffs only for app-owned selected permutations                                                                                                                                                                                                                                                                                                                                                                      |
 
 ## Reference implementations to compare against
 

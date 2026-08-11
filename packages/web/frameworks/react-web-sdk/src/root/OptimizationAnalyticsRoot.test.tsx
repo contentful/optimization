@@ -25,7 +25,6 @@ const analyticsHandoff: AnalyticsOptimizationHandoff = {
 }
 
 type AnalyticsProfile = NonNullable<NonNullable<AnalyticsOptimizationHandoff['state']>['profile']>
-
 function createProfile(id: string): AnalyticsProfile {
   return {
     id,
@@ -192,50 +191,79 @@ describe('OptimizationAnalyticsRoot', () => {
   })
 
   it('keeps a skipped initial analytics route skipped through StrictMode replay', async () => {
-    const page = rs.spyOn(ContentfulOptimization.prototype, 'page').mockResolvedValue({
-      accepted: true,
+    const requests: unknown[] = []
+    const fetchMethod = rs.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      await Promise.resolve()
+      if (typeof init?.body !== 'string') throw new Error('Expected a JSON request body.')
+      requests.push(JSON.parse(init.body))
+
+      return new Response(
+        JSON.stringify({
+          data: {
+            changes: [],
+            experiences: [],
+            profile: createProfile('strict-mode-profile'),
+          },
+          error: false,
+          message: 'ok',
+        }),
+        { status: 200 },
+      )
     })
     const buildPagePayload = rs.fn(() => ({ properties: { route: 'client' } }))
     const handoff: AnalyticsOptimizationHandoff = {
       ...analyticsHandoff,
       initialPageEvent: 'skip',
     }
+    let rendered: Awaited<ReturnType<typeof renderClientAsync>> | undefined
 
-    const rendered = await renderClientAsync(
-      <StrictMode>
-        <OptimizationAnalyticsRoot
-          {...testConfig}
-          defaults={{ consent: true }}
-          handoff={handoff}
-          routeKey="/"
-          buildPagePayload={buildPagePayload}
-        >
-          <div />
-        </OptimizationAnalyticsRoot>
-      </StrictMode>,
-    )
+    try {
+      rendered = await renderClientAsync(
+        <StrictMode>
+          <OptimizationAnalyticsRoot
+            {...testConfig}
+            defaults={{ consent: true }}
+            fetchOptions={{ fetchMethod }}
+            handoff={handoff}
+            routeKey="/"
+            buildPagePayload={buildPagePayload}
+          >
+            <div />
+          </OptimizationAnalyticsRoot>
+        </StrictMode>,
+      )
 
-    expect(page).not.toHaveBeenCalled()
+      expect(fetchMethod).not.toHaveBeenCalled()
 
-    await rendered.rerender(
-      <StrictMode>
-        <OptimizationAnalyticsRoot
-          {...testConfig}
-          defaults={{ consent: true }}
-          handoff={handoff}
-          routeKey="/products"
-          buildPagePayload={buildPagePayload}
-        >
-          <div />
-        </OptimizationAnalyticsRoot>
-      </StrictMode>,
-    )
+      await rendered.rerender(
+        <StrictMode>
+          <OptimizationAnalyticsRoot
+            {...testConfig}
+            defaults={{ consent: true }}
+            fetchOptions={{ fetchMethod }}
+            handoff={handoff}
+            routeKey="/products"
+            buildPagePayload={buildPagePayload}
+          >
+            <div />
+          </OptimizationAnalyticsRoot>
+        </StrictMode>,
+      )
 
-    expect(page).toHaveBeenCalledTimes(1)
-    expect(page).toHaveBeenCalledWith({ properties: { route: 'client' } })
-
-    rendered.unmount()
-    page.mockRestore()
+      expect(fetchMethod).toHaveBeenCalledTimes(1)
+      expect(requests[0]).toEqual(
+        expect.objectContaining({
+          events: [
+            expect.objectContaining({
+              properties: expect.objectContaining({ route: 'client' }),
+              type: 'page',
+            }),
+          ],
+        }),
+      )
+    } finally {
+      rendered?.unmount()
+    }
   })
 
   it('hydrates analytics handoff with a serializable initial payload', async () => {

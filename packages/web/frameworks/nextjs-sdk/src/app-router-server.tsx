@@ -1,21 +1,19 @@
 import {
-  LiveUpdatesProvider as ReactWebLiveUpdatesProvider,
-  OptimizationAnalyticsRoot as ReactWebOptimizationAnalyticsRoot,
-  OptimizationProvider as ReactWebOptimizationProvider,
-  OptimizationRoot as ReactWebOptimizationRoot,
-  type OptimizedEntryRenderContext,
-  type OptimizationRootProps as ReactWebOptimizationRootProps,
-  type OptimizedEntryProps as ReactWebOptimizedEntryProps,
-} from '@contentful/optimization-react-web'
-import {
   resolveEntriesForSelections,
   type StatefulDefaults,
 } from '@contentful/optimization-react-web/core-sdk'
 import {
   NextAppAutoPageTracker,
+  LiveUpdatesProvider as ReactWebLiveUpdatesProvider,
+  OptimizationAnalyticsRoot as ReactWebOptimizationAnalyticsRoot,
+  OptimizationProvider as ReactWebOptimizationProvider,
+  OptimizationRoot as ReactWebOptimizationRoot,
   type NextAppAutoPageContext,
   type NextAppAutoPageTrackerProps,
-} from '@contentful/optimization-react-web/router/next-app'
+  type OptimizedEntryRenderContext,
+  type OptimizationRootProps as ReactWebOptimizationRootProps,
+  type OptimizedEntryProps as ReactWebOptimizedEntryProps,
+} from '@contentful/optimization-react-web/next-app'
 import { cache, createElement, type ReactElement } from 'react'
 import {
   bindNextjsAppRouterRequestRuntime,
@@ -51,7 +49,7 @@ import {
 } from './server-entry-renderer'
 import type { ServerTrackingBaselineEntry } from './tracking-attributes'
 
-export type { OptimizedEntryRenderContext } from '@contentful/optimization-react-web'
+export type { OptimizedEntryRenderContext } from '@contentful/optimization-react-web/next-app'
 export type {
   BoundNextjsOptimizationAnalyticsRootProps,
   BoundNextjsOptimizationProviderProps,

@@ -28,15 +28,20 @@ Shared Playwright E2E package for web SDK reference implementations.
 
 ## Commands
 
-- `pnpm --dir lib/e2e-web setup:e2e`
-- `pnpm --dir lib/e2e-web test`
-- `IMPLEMENTATION=nextjs-sdk_app-router pnpm --dir lib/e2e-web test`
-- `IMPLEMENTATION=nextjs-sdk_pages-router pnpm --dir lib/e2e-web test`
-- `IMPLEMENTATION=react-web-sdk pnpm --dir lib/e2e-web test`
+- Preferred implementation-aware run: `pnpm test:e2e:<implementation> <file-or-filter>`; omit the
+  file/filter only when the full suite is warranted. These specific root scripts are run-only.
+  Refresh package tarballs and the implementation install first only when consumed SDK packages
+  changed or installed artifacts are stale.
+- Direct shared-suite invocation for debugging:
+  `IMPLEMENTATION=<implementation> pnpm --dir lib/e2e-web test`
 - `pnpm --dir lib/e2e-web test:codegen`
 - `pnpm --dir lib/e2e-web test:ui`
 - `pnpm --dir lib/e2e-web test:report`
 - `pnpm --dir lib/e2e-web test:unit`
+
+`pnpm --dir lib/e2e-web setup:e2e` installs Playwright browsers. Do not use it for routine local
+validation when Playwright is already installed; run it only to resolve a confirmed missing browser
+executable or when the user explicitly requests installation.
 
 ## Validate
 

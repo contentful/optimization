@@ -296,6 +296,10 @@ function HeroEntry({ baselineEntry }) {
 Use `useMergeTagResolver()` for components that resolve merge tags outside an `OptimizedEntry`
 render prop.
 
+The `OptimizedEntry` render context exposes `getMergeTagValue()` only. Use the SDK instance returned
+by `useOptimization()` to call `getMergeTagFallbackValue()`, which returns a merge tag's configured
+fallback without using the current profile.
+
 If a merge tag references localized profile fields such as `location.city` or `location.country`,
 its resolved value follows the localized profile values returned by the Experience API.
 
@@ -480,18 +484,35 @@ Use `sdk.tracking.enableElement(...)` from `useOptimization()` for manual elemen
 
 Router adapters emit `page()` events for supported client-side routers:
 
-| Router             | Import path                                                 | Mounting rule                                                        |
-| ------------------ | ----------------------------------------------------------- | -------------------------------------------------------------------- |
-| React Router       | `@contentful/optimization-react-web/router/react-router`    | Mount under a React Router data router and inside `OptimizationRoot` |
-| Next.js Pages      | `@contentful/optimization-react-web/router/next-pages`      | Mount once in `pages/_app.tsx` inside `OptimizationRoot`             |
-| Next.js App Router | `@contentful/optimization-react-web/router/next-app`        | Mount in `app/layout.tsx` inside `OptimizationRoot`                  |
-| TanStack Router    | `@contentful/optimization-react-web/router/tanstack-router` | Mount under the TanStack router tree and inside `OptimizationRoot`   |
+| Router             | Runtime import path                                  | Mounting rule                                                        |
+| ------------------ | ---------------------------------------------------- | -------------------------------------------------------------------- |
+| React Router       | `@contentful/optimization-react-web/react-router`    | Mount under a React Router data router and inside `OptimizationRoot` |
+| Next.js Pages      | `@contentful/optimization-react-web/next-pages`      | Mount once in `pages/_app.tsx` inside `OptimizationRoot`             |
+| Next.js App Router | `@contentful/optimization-react-web/next-app`        | Mount in `app/layout.tsx` inside `OptimizationRoot`                  |
+| TanStack Router    | `@contentful/optimization-react-web/tanstack-router` | Mount under the TanStack router tree and inside `OptimizationRoot`   |
 
-The `next-pages` tracker remains available for low-level Pages Router wiring. For full Next.js Pages
-Router SSR setup with `getServerSideProps`, request handoff, and anonymous ID cookie writes,
-prefer the
-[`@contentful/optimization-nextjs/pages-router`](../nextjs-sdk/README.md#pages-router-setup) adapter
-path.
+For React Router or TanStack Router, import `OptimizationRoot`, `OptimizationProvider`, hooks,
+components, and the tracker from the same router-integrated facade. Each facade contains the generic
+React Web runtime plus its router tracker, which keeps all context-bound values on one runtime
+entrypoint.
+
+```tsx
+import {
+  OptimizationRoot,
+  OptimizedEntry,
+  ReactRouterAutoPageTracker,
+  useOptimization,
+} from '@contentful/optimization-react-web/react-router'
+```
+
+Do not mix context-bound runtime imports from `@contentful/optimization-react-web` with imports from
+a router facade. Type-only imports do not affect runtime context identity.
+
+The React Web Next.js facades support low-level framework composition. For full Next.js
+applications, use the
+[`@contentful/optimization-nextjs/app-router/client`](../nextjs-sdk/README.md#app-router-setup) or
+[`@contentful/optimization-nextjs/pages-router`](../nextjs-sdk/README.md#pages-router-setup) entrypoint
+to include Next.js request handoff and server integration.
 
 All adapters support static and dynamic page payload enrichment. See the
 [React Web integration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html#5-emit-page-events-with-supported-router-adapters)

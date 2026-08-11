@@ -48,8 +48,15 @@ Applies to reference implementations and shared implementation contracts under `
 - Missing SDK APIs or stale SDK types in an implementation are artifact or install-state failures
   until proven otherwise; compare built package declarations with installed declarations before
   adding implementation-local shims.
-- Prefer root `pnpm setup:e2e:<implementation>` and `pnpm test:e2e:<implementation>` wrappers when
-  they exist.
+- For routine local Web Playwright validation, use the run-only specific root script
+  `pnpm test:e2e:<implementation> <file-or-filter>`; omit the file/filter only when the full suite
+  is warranted. If consumed SDK packages changed, first run `pnpm build:pkgs` once and
+  `pnpm implementation:<implementation> implementation:install`; skip that refresh when
+  installed dependencies are already current. Do not use root `pnpm setup:e2e`,
+  `pnpm setup:e2e:<implementation>`, or aggregate `pnpm test:e2e` for routine local validation:
+  those setup paths reinstall Playwright browsers and can hang when the browsers are already
+  installed. Run a Playwright install command only when the browser executable is actually missing
+  or the user explicitly requests installation.
 - For native and React Native E2E, prefer the child implementation's runner script over raw tool
   invocations. The runners start mocks, build/install apps, configure ports, and clean up their own
   child processes.

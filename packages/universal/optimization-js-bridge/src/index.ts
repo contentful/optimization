@@ -1,15 +1,15 @@
 import type { Traits } from '@contentful/optimization-api-client/api-schemas'
 import {
-  AcceptedCurrentStateTracker,
   type ConsentInput,
   CoreStateful,
   type CoreStatefulConfig,
-  effect,
+  type CurrentStateTrackingResult,
   type EventEmissionResult,
   type ExperienceRequestState,
   resolveStatefulDefaults,
   shouldRememberStickyEntryViewResult,
   shouldSendStickyEntryView,
+  signalFns,
   signals,
 } from '@contentful/optimization-core'
 import { isRecord } from '@contentful/optimization-core/api-schemas'
@@ -28,6 +28,7 @@ type ResolveOptimizedEntryArgs = Parameters<CoreStateful['resolveOptimizedEntry'
 type ResolveOptimizedEntryEntry = ResolveOptimizedEntryArgs[0]
 type ResolveOptimizedEntrySelections = ResolveOptimizedEntryArgs[1]
 type GetMergeTagValueEntry = Parameters<CoreStateful['getMergeTagValue']>[0]
+type CoreScreenPayload = Parameters<CoreStateful['screen']>[0]
 type ScreenProperties = Parameters<CoreStateful['screen']>[0]['properties']
 type TrackPayload = Parameters<CoreStateful['track']>[0]
 type BridgeScreenPayload = { name: string; properties?: ScreenProperties; routeKey?: string }
@@ -196,26 +197,67 @@ interface Bridge {
   getPreviewState: () => string
 }
 
-let instance: CoreStateful | null = null
-let disposeEffect: (() => void) | null = null
-let disposeEventEffect: (() => void) | null = null
-let flagSubscriptions = new Map<string, { unsubscribe: () => void }>()
-let overrideManager: PreviewOverrideManager | null = null
+class BridgeCoreStateful extends CoreStateful {
+  /** Track online-only current-screen state; native consumers explicitly retry after reconnect. */
+  async trackCurrentScreen(
+    routeKey: string,
+    payload: CoreScreenPayload,
+  ): Promise<CurrentStateTrackingResult> {
+    return await this.emitCurrentScreen(routeKey, () => payload)
+  }
+}
+
+interface BridgeRuntimeResources {
+  disposers: Array<() => void>
+  flagSubscriptions: Map<string, { unsubscribe: () => void }>
+  instance: BridgeCoreStateful | null
+  overrideManager: PreviewOverrideManager | null
+}
+
+let runtime: BridgeRuntimeResources | null = null
 let audienceDefinitions: AudienceDefinition[] | null = null
 let experienceDefinitions: ExperienceDefinition[] | null = null
 let audienceNameMap: Record<string, string> = {}
 let experienceNameMap: Record<string, string> = {}
 let anonymousId: string | undefined = undefined
-const currentScreenTracker = new AcceptedCurrentStateTracker<string>()
 const acceptedStickyViewKeys = new Set<string>()
 const SDK_NOT_INITIALIZED_ERROR = 'SDK not initialized. Call initialize() first.'
 const NULL_JSON = JSON.stringify(null)
+
+const clearBridgeModuleState = (): void => {
+  audienceDefinitions = null
+  experienceDefinitions = null
+  audienceNameMap = {}
+  experienceNameMap = {}
+  acceptedStickyViewKeys.clear()
+  anonymousId = undefined
+}
+
+const disposeBridgeRuntime = (resources: BridgeRuntimeResources): void => {
+  const subscriptions = [...resources.flagSubscriptions.values()]
+  resources.flagSubscriptions.clear()
+  for (const subscription of subscriptions) subscription.unsubscribe()
+
+  const disposers = resources.disposers.splice(0).reverse()
+  resources.instance = null
+  resources.overrideManager = null
+  for (const dispose of disposers) dispose()
+}
 
 const serializeEventEmissionResult = (result: EventEmissionResult): string => {
   if (!result.accepted) return JSON.stringify({ accepted: false })
   if (result.data === undefined) return JSON.stringify({ accepted: true })
 
   return JSON.stringify({ accepted: true, data: result.data })
+}
+
+const collapseCurrentScreenEmissionResult = <TData>(
+  result: CurrentStateTrackingResult<TData>,
+): EventEmissionResult<TData> => {
+  if (!result.accepted) return { accepted: false }
+  if (result.data === undefined) return { accepted: true }
+
+  return { accepted: true, data: result.data }
 }
 
 type PayloadFieldType = 'boolean' | 'number' | 'object' | 'string'
@@ -293,8 +335,9 @@ const rejectInvalidPayload = (
   return true
 }
 
-const getCurrentInstance = (onError: (error: string) => void): CoreStateful | null => {
-  if (instance) return instance
+const getCurrentInstance = (onError: (error: string) => void): BridgeCoreStateful | null => {
+  const currentInstance = runtime?.instance
+  if (currentInstance) return currentInstance
   onError(SDK_NOT_INITIALIZED_ERROR)
   return null
 }
@@ -320,7 +363,7 @@ const reportBridgeTask = <T>(
 const runBridgeTask = <T>(
   onSuccess: (json: string) => void,
   onError: (error: string) => void,
-  run: (currentInstance: CoreStateful) => Promise<T>,
+  run: (currentInstance: BridgeCoreStateful) => Promise<T>,
   serialize: (result: T) => string,
 ): void => {
   const currentInstance = getCurrentInstance(onError)
@@ -335,7 +378,7 @@ const runValidatedBridgeTask = <T>(
   fields: readonly PayloadFieldRule[],
   onSuccess: (json: string) => void,
   onError: (error: string) => void,
-  run: (currentInstance: CoreStateful) => Promise<T>,
+  run: (currentInstance: BridgeCoreStateful) => Promise<T>,
   serialize: (result: T) => string,
 ): void => {
   const currentInstance = getCurrentInstance(onError)
@@ -345,31 +388,92 @@ const runValidatedBridgeTask = <T>(
   reportBridgeTask(run(currentInstance), onSuccess, onError, serialize)
 }
 
-const readBridgeState = (): BridgeState => ({
+const readBridgeState = (
+  currentInstance: BridgeCoreStateful | null = runtime?.instance ?? null,
+): BridgeState => ({
   profile: signals.profile.value ?? null,
   consent: signals.consent.value,
   persistenceConsent: signals.persistenceConsent.value,
   canOptimize: signals.canOptimize.value,
-  optimizationPossible: instance?.states.optimizationPossible.current ?? false,
+  optimizationPossible: currentInstance?.states.optimizationPossible.current ?? false,
   experienceRequestState: signals.experienceRequestState.value,
   changes: signals.changes.value ?? null,
   locale: signals.locale.value ?? null,
   selectedOptimizations: signals.selectedOptimizations.value ?? null,
 })
 
+const createBridgeRuntime = (
+  coreConfig: CoreStatefulConfig,
+  getPreviewState: () => string,
+): BridgeRuntimeResources => {
+  let nextRuntime: BridgeRuntimeResources | null = null
+
+  try {
+    const nextInstance = new BridgeCoreStateful(coreConfig)
+    nextRuntime = {
+      disposers: [() => nextInstance.destroy()],
+      flagSubscriptions: new Map(),
+      instance: nextInstance,
+      overrideManager: null,
+    }
+
+    // Create the override manager — registers a state interceptor that
+    // preserves overrides across API refreshes and correctly appends
+    // new experience entries when overriding audiences the user was never in.
+    const nextOverrideManager = new PreviewOverrideManager({
+      selectedOptimizations: signals.selectedOptimizations,
+      profile: signals.profile,
+      stateInterceptors: nextInstance.interceptors.state,
+      onOverridesChanged: () => {
+        nativeGlobal.__nativeOnOverridesChanged?.(getPreviewState())
+      },
+    })
+    nextRuntime.overrideManager = nextOverrideManager
+    nextRuntime.disposers.push(() => nextOverrideManager.destroy())
+
+    nextRuntime.disposers.push(
+      signalFns.effect(() => {
+        const { value: profile } = signals.profile
+        const { value: persistenceConsent } = signals.persistenceConsent
+
+        if (persistenceConsent === false) {
+          anonymousId = undefined
+        } else if (persistenceConsent === true && profile?.id) {
+          const { id } = profile
+          anonymousId = id
+        }
+
+        nativeGlobal.__nativeOnStateChange?.(JSON.stringify(readBridgeState(nextInstance)))
+      }),
+    )
+
+    nextRuntime.disposers.push(
+      signalFns.effect(() => {
+        const {
+          event: { value },
+        } = signals
+        if (value) {
+          nativeGlobal.__nativeOnEventEmitted?.(JSON.stringify(value))
+        }
+      }),
+    )
+
+    return nextRuntime
+  } catch (error) {
+    if (nextRuntime) disposeBridgeRuntime(nextRuntime)
+    clearBridgeModuleState()
+    throw error
+  }
+}
+
 const bridge: Bridge = {
   initialize(config: BridgeConfig) {
-    if (instance) {
+    if (runtime) {
       bridge.destroy()
     }
 
-    audienceDefinitions = null
-    experienceDefinitions = null
-    audienceNameMap = {}
-    experienceNameMap = {}
+    clearBridgeModuleState()
     anonymousId = config.defaults?.anonymousId
-    currentScreenTracker.reset()
-    acceptedStickyViewKeys.clear()
     const { defaults } = resolveStatefulDefaults(config.defaults)
 
     const coreConfig: CoreStatefulConfig = {
@@ -409,41 +513,7 @@ const bridge: Bridge = {
       defaults,
     }
 
-    instance = new CoreStateful(coreConfig)
-
-    // Create the override manager — registers a state interceptor that
-    // preserves overrides across API refreshes and correctly appends
-    // new experience entries when overriding audiences the user was never in.
-    overrideManager = new PreviewOverrideManager({
-      selectedOptimizations: signals.selectedOptimizations,
-      profile: signals.profile,
-      stateInterceptors: instance.interceptors.state,
-      onOverridesChanged: () => {
-        nativeGlobal.__nativeOnOverridesChanged?.(bridge.getPreviewState())
-      },
-    })
-
-    disposeEffect = effect(() => {
-      const profile = signals.profile.value
-      const persistenceConsent = signals.persistenceConsent.value
-
-      if (persistenceConsent === false) {
-        anonymousId = undefined
-      } else if (persistenceConsent === true && profile?.id) {
-        anonymousId = profile.id
-      }
-
-      nativeGlobal.__nativeOnStateChange?.(JSON.stringify(readBridgeState()))
-    })
-
-    disposeEventEffect = effect(() => {
-      const {
-        event: { value },
-      } = signals
-      if (value) {
-        nativeGlobal.__nativeOnEventEmitted?.(JSON.stringify(value))
-      }
-    })
+    runtime = createBridgeRuntime(coreConfig, () => bridge.getPreviewState())
   },
 
   identify(payload, onSuccess, onError) {
@@ -494,16 +564,11 @@ const bridge: Bridge = {
       onSuccess,
       onError,
       (currentInstance) =>
-        currentScreenTracker.emitIfNeeded({
-          key: payload.routeKey ?? payload.name,
-          isAllowed: currentInstance.hasConsent('screen'),
-          emit: () =>
-            currentInstance.screen({
-              name: payload.name,
-              properties: payload.properties ?? {},
-            }),
+        currentInstance.trackCurrentScreen(payload.routeKey ?? payload.name, {
+          name: payload.name,
+          properties: payload.properties ?? {},
         }),
-      serializeEventEmissionResult,
+      (result) => serializeEventEmissionResult(collapseCurrentScreenEmissionResult(result)),
     )
   },
 
@@ -577,22 +642,24 @@ const bridge: Bridge = {
   },
 
   consent(accept) {
-    if (!instance) return
-    instance.consent(accept)
+    const currentInstance = runtime?.instance
+    if (!currentInstance) return
+    currentInstance.consent(accept)
   },
 
   setLocale(locale: string): string | null {
-    if (!instance) return null
-    return instance.setLocale(locale) ?? null
+    const currentInstance = runtime?.instance
+    if (!currentInstance) return null
+    return currentInstance.setLocale(locale) ?? null
   },
 
   reset() {
-    if (!instance) return
-    overrideManager?.resetAll()
+    const currentInstance = runtime?.instance
+    if (!currentInstance) return
+    runtime?.overrideManager?.resetAll()
     anonymousId = undefined
-    currentScreenTracker.reset()
     acceptedStickyViewKeys.clear()
-    instance.reset()
+    currentInstance.reset()
   },
 
   setOnline(isOnline: boolean) {
@@ -600,67 +667,73 @@ const bridge: Bridge = {
   },
 
   getFlag(name: string): string {
-    if (!instance) return NULL_JSON
-    return JSON.stringify(instance.getFlag(name) ?? null)
+    const currentInstance = runtime?.instance
+    if (!currentInstance) return NULL_JSON
+    return JSON.stringify(currentInstance.getFlag(name) ?? null)
   },
 
   observeFlag(subscriptionId: string, name: string) {
-    if (!instance) return
-    flagSubscriptions.get(subscriptionId)?.unsubscribe()
+    const currentRuntime = runtime
+    const currentInstance = currentRuntime?.instance
+    if (!currentRuntime || !currentInstance) return
+    currentRuntime.flagSubscriptions.get(subscriptionId)?.unsubscribe()
     // Subscribing to the flag observable emits a `component` flag-view event
     // through the core event stream; one-off flag reads are not marked tracked
     // until their flag-view event is actually accepted.
-    const subscription = instance.states.flag(name).subscribe((value) => {
+    const subscription = currentInstance.states.flag(name).subscribe((value) => {
       nativeGlobal.__nativeOnFlagValueChanged?.(subscriptionId, JSON.stringify(value ?? null))
     })
-    flagSubscriptions.set(subscriptionId, subscription)
+    currentRuntime.flagSubscriptions.set(subscriptionId, subscription)
   },
 
   unobserveFlag(subscriptionId: string) {
-    flagSubscriptions.get(subscriptionId)?.unsubscribe()
-    flagSubscriptions.delete(subscriptionId)
+    runtime?.flagSubscriptions.get(subscriptionId)?.unsubscribe()
+    runtime?.flagSubscriptions.delete(subscriptionId)
   },
 
   resolveOptimizedEntry(baseline, selectedOptimizations): string {
-    if (!instance) return JSON.stringify({ entry: baseline })
-    const result = instance.resolveOptimizedEntry(baseline, selectedOptimizations)
+    const currentInstance = runtime?.instance
+    if (!currentInstance) return JSON.stringify({ entry: baseline })
+    const result = currentInstance.resolveOptimizedEntry(baseline, selectedOptimizations)
     return JSON.stringify(result)
   },
 
   getMergeTagValue(mergeTagEntry): string | null {
-    if (!instance) return null
-    const value = instance.getMergeTagValue(mergeTagEntry)
+    const currentInstance = runtime?.instance
+    if (!currentInstance) return null
+    const value = currentInstance.getMergeTagValue(mergeTagEntry)
     return value ?? null
   },
 
   setPreviewPanelOpen(open: boolean) {
-    if (!instance) return
+    if (!runtime?.instance) return
     signals.previewPanelOpen.value = open
   },
 
   overrideAudience(audienceId: string, qualified: boolean, experienceIds: string[]) {
-    if (!overrideManager) return
+    const currentOverrideManager = runtime?.overrideManager
+    if (!currentOverrideManager) return
     if (qualified) {
-      overrideManager.activateAudience(audienceId, experienceIds)
+      currentOverrideManager.activateAudience(audienceId, experienceIds)
     } else {
-      overrideManager.deactivateAudience(audienceId, experienceIds)
+      currentOverrideManager.deactivateAudience(audienceId, experienceIds)
     }
   },
 
   overrideVariant(experienceId: string, variantIndex: number) {
-    overrideManager?.setVariantOverride(experienceId, variantIndex)
+    runtime?.overrideManager?.setVariantOverride(experienceId, variantIndex)
   },
 
   resetAudienceOverride(audienceId: string) {
-    overrideManager?.resetAudienceOverride(audienceId)
+    runtime?.overrideManager?.resetAudienceOverride(audienceId)
   },
 
   resetVariantOverride(experienceId: string) {
-    overrideManager?.resetOptimizationOverride(experienceId)
+    runtime?.overrideManager?.resetOptimizationOverride(experienceId)
   },
 
   resetAllOverrides() {
-    overrideManager?.resetAll()
+    runtime?.overrideManager?.resetAll()
   },
 
   loadDefinitions(audienceEntries, experienceEntries): string {
@@ -686,11 +759,12 @@ const bridge: Bridge = {
   },
 
   getPreviewState(): string {
-    const overrides = overrideManager?.getOverrides() ?? {
+    const currentOverrideManager = runtime?.overrideManager
+    const overrides = currentOverrideManager?.getOverrides() ?? {
       audiences: {},
       selectedOptimizations: {},
     }
-    const baselineOptimizations = overrideManager?.getBaselineSelectedOptimizations() ?? null
+    const baselineOptimizations = currentOverrideManager?.getBaselineSelectedOptimizations() ?? null
 
     const { audienceOverrides, variantOverrides, defaultVariantIndices } = transformOverrides(
       overrides,
@@ -708,7 +782,8 @@ const bridge: Bridge = {
       previewPanelOpen: signals.previewPanelOpen.value,
       audienceOverrides,
       variantOverrides,
-      defaultAudienceQualifications: overrideManager?.getBaselineAudienceQualifications() ?? {},
+      defaultAudienceQualifications:
+        currentOverrideManager?.getBaselineAudienceQualifications() ?? {},
       defaultVariantIndices,
       previewModel,
     })
@@ -726,35 +801,17 @@ const bridge: Bridge = {
   },
 
   hasConsent(method: string): boolean {
-    return instance?.hasConsent(method) ?? false
+    return runtime?.instance?.hasConsent(method) ?? false
   },
 
   destroy() {
-    overrideManager?.destroy()
-    overrideManager = null
-    audienceDefinitions = null
-    experienceDefinitions = null
-    audienceNameMap = {}
-    experienceNameMap = {}
-    for (const subscription of flagSubscriptions.values()) {
-      subscription.unsubscribe()
+    const currentRuntime = runtime
+    runtime = null
+    try {
+      if (currentRuntime) disposeBridgeRuntime(currentRuntime)
+    } finally {
+      clearBridgeModuleState()
     }
-    flagSubscriptions = new Map()
-    if (disposeEventEffect) {
-      disposeEventEffect()
-      disposeEventEffect = null
-    }
-    if (disposeEffect) {
-      disposeEffect()
-      disposeEffect = null
-    }
-    if (instance) {
-      instance.destroy()
-      instance = null
-    }
-    currentScreenTracker.reset()
-    acceptedStickyViewKeys.clear()
-    anonymousId = undefined
   },
 }
 

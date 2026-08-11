@@ -1,20 +1,18 @@
 'use client'
 
+import { resolveEntriesForSelections } from '@contentful/optimization-react-web/core-sdk'
 import {
+  NextAppAutoPageTracker,
   LiveUpdatesProvider as ReactWebLiveUpdatesProvider,
   OptimizationAnalyticsRoot as ReactWebOptimizationAnalyticsRoot,
   OptimizationProvider as ReactWebOptimizationProvider,
   OptimizationRoot as ReactWebOptimizationRoot,
   OptimizedEntry as ReactWebOptimizedEntry,
-  type OptimizationRootProps,
-  type OptimizationAnalyticsRootProps as ReactWebOptimizationAnalyticsRootProps,
-} from '@contentful/optimization-react-web'
-import { resolveEntriesForSelections } from '@contentful/optimization-react-web/core-sdk'
-import {
-  NextAppAutoPageTracker,
   type NextAppAutoPageContext,
   type NextAppAutoPageTrackerProps,
-} from '@contentful/optimization-react-web/router/next-app'
+  type OptimizationRootProps,
+  type OptimizationAnalyticsRootProps as ReactWebOptimizationAnalyticsRootProps,
+} from '@contentful/optimization-react-web/next-app'
 import { createElement, type ReactElement } from 'react'
 import type {
   BoundNextjsOptimizationAnalyticsRootProps,
@@ -31,6 +29,28 @@ import {
   createPublicPermutationHandoff,
 } from './handoff'
 
+export {
+  LiveUpdatesContext,
+  LiveUpdatesProvider,
+  OptimizationAnalyticsRoot,
+  OptimizationContext,
+  OptimizationProvider,
+  OptimizationRoot,
+  OptimizedEntry,
+  prefetchManagedEntries,
+  useCanOptimizeState,
+  useConsentState,
+  useEntryResolver,
+  useEventStreamState,
+  useLiveUpdates,
+  useMergeTagResolver,
+  useOptimization,
+  useOptimizationActions,
+  useOptimizationContext,
+  useOptimizedEntry,
+  useProfileState,
+  useSelectedOptimizationsState,
+} from '@contentful/optimization-react-web/next-app'
 export type {
   BoundNextjsOptimizationAnalyticsRootProps,
   BoundNextjsOptimizationProviderProps,
@@ -45,6 +65,7 @@ export type {
   NextjsOptimizationServerConsentContext,
   NextjsOptimizationServerConsentResolver,
 } from './bound-component-types'
+export type * from './client'
 export {
   createHandoffFromSelections,
   createOptimizationCacheKey,

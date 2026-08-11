@@ -34,6 +34,7 @@ export {
   OPTIMIZED_ENTRY_HOST_DISPLAY,
   OptimizedEntryController,
   resolveOptimizedEntryNestingState,
+  resolveShouldLiveUpdate,
   type OptimizedEntryControllerOptions,
   type OptimizedEntryLoadingTargetDisplay,
   type OptimizedEntryNestingState,

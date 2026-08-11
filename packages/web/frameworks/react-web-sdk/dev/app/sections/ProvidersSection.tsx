@@ -1,6 +1,10 @@
 import type { ReactElement } from 'react'
-import { LiveUpdatesProvider, OptimizationProvider, type OptimizationSdk } from '../../../src'
-import { useOptimizationContext } from '../../../src/hooks/useOptimization'
+import {
+  LiveUpdatesProvider,
+  OptimizationProvider,
+  useOptimizationContext,
+  type OptimizationSdk,
+} from '../../../src/react-router-facade'
 
 function DecoupledConsumer({ label }: { label: string }): ReactElement {
   const { sdk, error } = useOptimizationContext()

@@ -5,6 +5,7 @@ type RuntimeMembers =
   | 'destroy'
   | 'flush'
   | 'getFlag'
+  | 'getMergeTagFallbackValue'
   | 'getMergeTagValue'
   | 'hasConsent'
   | 'identify'

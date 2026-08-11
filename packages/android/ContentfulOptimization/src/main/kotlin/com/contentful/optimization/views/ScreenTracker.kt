@@ -1,10 +1,15 @@
 package com.contentful.optimization.views
 
 import com.contentful.optimization.core.OptimizationClient
+import com.contentful.optimization.core.OptimizationState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
@@ -20,8 +25,9 @@ import kotlinx.coroutines.launch
  * }
  * ```
  *
- * Failures (including the client not yet being initialized) are swallowed — same contract as
- * the Compose `ScreenTrackingEffect`.
+ * Calls made before the client is initialized and operational failures are ignored — same
+ * fail-soft contract as the Compose `ScreenTrackingEffect`. Call again from the next visible
+ * lifecycle callback after initialization; pre-initialization calls are not deferred.
  */
 public object ScreenTracker {
 
@@ -33,10 +39,14 @@ public object ScreenTracker {
     fun trackScreen(name: String) {
         scope.launch {
             try {
-                currentScreenName = name
                 val client = OptimizationManager.client
-                observeConsent(client)
-                trackCurrentScreenIfAllowed(client)
+                if (!installScreenTrackingObserverIfReady(client.isInitialized.value) {
+                    currentScreenName = name
+                    observeConsent(client)
+                }) return@launch
+                trackCurrentScreen(client)
+            } catch (error: CancellationException) {
+                throw error
             } catch (_: Exception) {
             }
         }
@@ -55,14 +65,39 @@ public object ScreenTracker {
         stateJob?.cancel()
         observedClient = client
         stateJob = scope.launch {
-            client.state.collect {
-                trackCurrentScreenIfAllowed(client)
+            observeScreenTrackingConsent(client.state) {
+                trackCurrentScreen(client)
             }
         }
     }
 
-    private suspend fun trackCurrentScreenIfAllowed(client: OptimizationClient) {
+    private suspend fun trackCurrentScreen(client: OptimizationClient) {
         val screenName = currentScreenName ?: return
         client.trackCurrentScreen(name = screenName)
     }
+}
+
+internal inline fun installScreenTrackingObserverIfReady(
+    isInitialized: Boolean,
+    installObserver: () -> Unit,
+): Boolean {
+    if (!isInitialized) return false
+    installObserver()
+    return true
+}
+
+internal suspend fun observeScreenTrackingConsent(
+    state: Flow<OptimizationState>,
+    trackCurrentScreen: suspend () -> Unit,
+) {
+    state.map { it.consent }
+        .distinctUntilChanged()
+        .collect {
+            try {
+                trackCurrentScreen()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+            }
+        }
 }

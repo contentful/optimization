@@ -1,5 +1,5 @@
-import { OptimizedEntry, useOptimization } from '@contentful/optimization-react-web'
 import { isRichTextDocument } from '@contentful/optimization-react-web/api-schemas'
+import { OptimizedEntry, useOptimization } from '@contentful/optimization-react-web/react-router'
 import type { EntryClickScenario } from 'e2e-web'
 import type { JSX } from 'react'
 import { useEffect, useRef } from 'react'

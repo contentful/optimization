@@ -21,6 +21,11 @@ navigation, but must not copy detailed type shapes as facts.
 Concrete symbols may anchor behavioral facts. A signature, prop list, or return type is looked up in
 the types instead of copied here.
 
+In this base, **public API** means accessible through a published package contract. It does not imply
+that ordinary application code is the primary audience. When behavior depends on audience, facts
+distinguish application-facing consumer APIs from public integration APIs intended mainly for
+downstream SDKs, exceptional custom integrations, or unsupported frameworks.
+
 **Behavior here, editorial mapping in the blueprint.** This base records _what is true_ about an SDK. It
 does not decide _which_ of those facts become guide sections, in what order, or under which
 integration category — that per-SDK editorial judgment lives in the SDK's **blueprint**

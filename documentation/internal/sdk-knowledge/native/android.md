@@ -64,6 +64,9 @@ imperative `.core` client.
   `LaunchedEffect`; `OptimizationManager.initialize` launches it fire-and-forget on an internal
   `SupervisorJob + Dispatchers.Main` scope, so Views callers making direct suspend calls must first
   await `OptimizationManager.client.isInitialized.first { it }`. source: extern:initialize is suspend and runs bridge init on the QuickJS dispatcher — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationClient.kt#OptimizationClient; extern:OptimizationManager.initialize launches initialize on an internal scope — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/OptimizationManager.kt#OptimizationManager
+- Successful initialization logs `[init] SDK initialized successfully` with tag
+  `ContentfulOptimization` at Android INFO priority. The SDK `debug` threshold includes it; the
+  default `error` threshold suppresses it. source: extern:initialization success diagnostic — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationClient.kt#OptimizationClient; extern:Android tag, priority, and thresholds — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/DiagnosticLogger.kt#DiagnosticLogger
 - `OptimizationManager` is an **application-scoped object singleton**: `initialize(...)` is idempotent
   — the first call constructs and initializes the client, later calls only update the global
   `trackViews`/`trackTaps`/`liveUpdates` defaults and the retained preview `contentfulClient`, and do
@@ -240,11 +243,19 @@ viewportHeight }` via `LocalScrollContext` that descendant `Modifier.trackViews`
   source: extern:EventEmissionResult + which methods return it — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationClient.kt#EventEmissionResult
 - Screen events: Compose `ScreenTrackingEffect(screenName)` fires from a `LaunchedEffect` keyed on
   `screenName` and `state.consent` — so on first composition, screen-name change, and consent change —
-  calling `trackCurrentScreen(name)`. Views `ScreenTracker.trackScreen(name)` sets the current name,
-  observes `client.state`, and re-calls `trackCurrentScreen` on each state emission. `trackCurrentScreen`
-  dedupes in the bridge by `routeKey` (defaulting to `name`) through an `AcceptedCurrentStateTracker`,
-  so a repeat of the same current screen is skipped and a blocked attempt is retried once consent
-  allows. Plain `screen(name)` calls core `screen()` with no dedupe. source: extern:ScreenTrackingEffect keyed on screenName+consent → trackCurrentScreen — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/ScreenTrackingEffect.kt#ScreenTrackingEffect; extern:ScreenTracker re-tracks on state change — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/ScreenTracker.kt#ScreenTracker; optimization-js-bridge#index.ts#Bridge; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker
+  calling `trackCurrentScreen(name)`. Views `ScreenTracker.trackScreen(name)` ignores a
+  pre-initialization call before retaining the name, observing state, or attempting tracking. Once
+  initialized, it stores the name, attempts immediately, and observes distinct consent values only;
+  request-state changes do not retry. Operational failures are isolated per attempt and coroutine
+  cancellation propagates. `trackCurrentScreen`
+  dedupes in the bridge by `routeKey` (defaulting to `name`) through Core's internal current-state
+  coordinator, so same-key in-flight calls share the owner outcome, only consecutive acceptance is
+  deduped, and returning after another screen can emit again. A blocked attempt retries once consent
+  allows. The bridge preserves the native `{ accepted, data? }` result, collapsing settled
+  duplicates, policy denial, and superseded attempts to `accepted: false`; a current operational
+  failure throws. Automatic current-screen tracking is online-only: an offline attempt is neither
+  published nor enqueued, and the app must call `trackCurrentScreen` explicitly after reconnecting.
+  Plain `screen(name)` calls core `screen()` with no dedupe and still queues offline. source: extern:ScreenTrackingEffect keyed on screenName+consent → trackCurrentScreen — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/ScreenTrackingEffect.kt#ScreenTrackingEffect; extern:ScreenTracker pre-init skip and consent-only observation — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/ScreenTracker.kt#ScreenTracker; extern:trackCurrentScreen and screen bridge calls — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationClient.kt#OptimizationClient; optimization-js-bridge#index.ts#Bridge; optimization-js-bridge#index.ts#collapseCurrentScreenEmissionResult; core-sdk#tracking/CurrentStateCoordinator.ts#CurrentStateCoordinator; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue
 - Entry view tracking timing (`ViewTrackingController`, shared by both adapters): defaults
   `minVisibleRatio = 0.8`, `dwellTimeMs = 2000`, `viewDurationUpdateIntervalMs = 5000` (tunable per
   entry). Three-phase cycle: initial `trackView` after accumulated visible time ≥ dwell, periodic
@@ -277,10 +288,10 @@ viewportHeight }` via `LocalScrollContext` that descendant `Modifier.trackViews`
   `onEventBlocked` config callback. source: extern:eventStream/blockedEventStream are replay-64 SharedFlows — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationClient.kt#OptimizationClient; concept:android-sdk-runtime-and-interaction-mechanics
 - Consent/allow-list-blocked Android events are diagnostics only: shared Core rejects the call before
   queue/API delivery, then the bridge emits `onEventBlocked` into `blockedEventStream` and the config
-  callback. Later `consent(true)` does not re-send the blocked call. Compose and Views screen
-  tracking retry by making a fresh `trackCurrentScreen` call on consent/state changes, and the bridge
-  tracker marks only accepted screen keys.
-  source: optimization-js-bridge#index.ts#Bridge; core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult; core-sdk#CoreStatefulEventEmitter.ts#sendInsightsEvent; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker; extern:ScreenTrackingEffect reruns on screenName and consent - packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/ScreenTrackingEffect.kt; extern:ScreenTracker collects state and calls trackCurrentScreen - packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/ScreenTracker.kt
+  callback. Later `consent(true)` does not re-send the blocked call; automatic trackers may make a
+  fresh call under the screen-tracking rules above. The bridge tracker marks only accepted screen
+  keys.
+  source: optimization-js-bridge#index.ts#Bridge; core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult; core-sdk#CoreStatefulEventEmitter.ts#sendInsightsEvent; core-sdk#tracking/CurrentStateCoordinator.ts#CurrentStateCoordinator; extern:ScreenTrackingEffect reruns on screenName and consent - packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/ScreenTrackingEffect.kt; extern:ScreenTracker observes distinct consent - packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/ScreenTracker.kt
 - `eventStream` elements are JSON-decoded `OptimizationEventStreamEvent` maps keyed by a `type` string
   discriminator (the accepted `InsightsEvent | ExperienceEvent` the bridge forwards via
   `__nativeOnEventEmitted`). Screen events carry exactly `type == "screen"` — the single value
@@ -290,12 +301,12 @@ viewportHeight }` via `LocalScrollContext` that descendant `Modifier.trackViews`
   only through `"screen"`; the `screenViewEvent` arm is dead/defensive (no SDK event uses it). Other
   emitted discriminators are the wire types documented above (`identify`/`page`/`track`, `component`
   entry views, `component_click`). source: core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent; core-sdk#events/EventBuilder.ts#buildScreenView; api-schemas#experience/event/ScreenViewEvent.ts#ScreenViewEvent; optimization-js-bridge#index.ts#initialize; impl:android-sdk#views/src/main/kotlin/com/contentful/optimization/app/views/NavigationTestActivity.kt
-- Experience-response payload → published state: an accepted Experience call returns
-  `{ profile, selectedOptimizations, changes }`; the bridge applies it to core signals and pushes
-  `readBridgeState()` through `__nativeOnStateChange`, which `OptimizationClient.handleStateUpdate`
-  decodes into the `state`/`selectedOptimizations`/`optimizationPossible`/`experienceRequestState`
-  StateFlows (and writes continuity to `SharedPreferences` when `persistenceConsent == true`).
-  source: optimization-js-bridge#index.ts#initialize; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals; extern:handleStateUpdate decodes pushed bridge state into StateFlows — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationClient.kt#OptimizationClient; kb:shared/concepts.md
+- Experience-response payload → published state: Core signal publication follows the shared
+  concurrent stateful-response contract. The bridge pushes `readBridgeState()` through
+  `__nativeOnStateChange`, which `OptimizationClient.handleStateUpdate` decodes into the
+  `state`/`selectedOptimizations`/`optimizationPossible`/`experienceRequestState` StateFlows (and
+  writes continuity to `SharedPreferences` when `persistenceConsent == true`).
+  source: optimization-js-bridge#index.ts#initialize; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals; extern:handleStateUpdate decodes pushed bridge state into StateFlows — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationClient.kt#OptimizationClient; kb:shared/concepts.md
 
 ## Consent & persistence
 
@@ -362,11 +373,12 @@ viewportHeight }` via `LocalScrollContext` that descendant `Modifier.trackViews`
   and `OptimizedEntryView` (overriding an explicit `liveUpdates = false`); otherwise per-entry
   `liveUpdates` > global default > locked. source: extern:OptimizedEntry preview-open forces live — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/OptimizedEntry.kt#OptimizedEntry; concept:android-sdk-runtime-and-interaction-mechanics
 - Offline / lifecycle delivery: `NetworkMonitor` (`ConnectivityManager.registerNetworkCallback`) calls
-  `setOnline(...)` on connectivity change and `flush()` on reconnect; `AppLifecycleHandler`
+  `setOnline(...)` on connectivity change and `flush()` on reconnect; that flush drains ordinary
+  queued events but does not retry an offline current-screen attempt. `AppLifecycleHandler`
   (`ProcessLifecycleOwner` observer) calls `flush()` on `onStop` (app moving to background) for a
-  best-effort drain. Both are created after bridge init. Queues are in-memory only (no durable outbox),
-  capped at 100 offline Experience events by default (`OFFLINE_QUEUE_MAX_EVENTS`, tunable via
-  `QueuePolicy.offlineMaxEvents`); they do not survive process death. source: extern:NetworkMonitor + AppLifecycleHandler background flush — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/handlers/NetworkMonitor.kt#NetworkMonitor; extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/handlers/AppLifecycleHandler.kt#AppLifecycleHandler; core-sdk#CoreStateful.ts#QueuePolicy
+  best-effort drain. Both are created after bridge init. Ordinary-event queues are in-memory only (no
+  durable outbox), capped at 100 offline Experience events by default (`OFFLINE_QUEUE_MAX_EVENTS`,
+  tunable via `QueuePolicy.offlineMaxEvents`); they do not survive process death. source: extern:NetworkMonitor + AppLifecycleHandler background flush — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/handlers/NetworkMonitor.kt#NetworkMonitor; extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/handlers/AppLifecycleHandler.kt#AppLifecycleHandler; core-sdk#CoreStateful.ts#QueuePolicy; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue
 - Android emulator localhost: the SDK has **no** localhost rewrite (contrast the React Native SDK,
   whose reference app rewrites `localhost`→`10.0.2.2` at runtime). The Android reference app instead
   hardcodes the emulator's stable host-loopback alias `http://10.0.2.2:8000` as its base host, avoiding

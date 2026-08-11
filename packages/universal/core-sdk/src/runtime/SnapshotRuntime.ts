@@ -78,6 +78,7 @@ class SnapshotRuntime implements OptimizationRuntime {
           UNLOCKING_EVENT_TYPES.some((type) => this.allowedEventTypes.includes(type)),
       ),
       experienceRequestState: staticObservable({ status: 'success' }),
+      currentStateTracking: staticObservable({ generation: 0, status: 'idle' }),
       selectedOptimizations: staticObservable(this.currentSelectedOptimizations),
       previewPanelAttached: staticObservable(false),
       previewPanelOpen: staticObservable(false),
@@ -117,6 +118,17 @@ class SnapshotRuntime implements OptimizationRuntime {
     profile: Profile | undefined = this.currentProfile,
   ): string | undefined {
     return MergeTagValueResolver.resolve(embeddedEntryNodeTarget, profile)
+  }
+
+  /**
+   * Resolve the configured fallback value for a merge-tag entry without profile lookup.
+   *
+   * @param embeddedEntryNodeTarget - The merge-tag entry node whose fallback to resolve.
+   * @returns The configured fallback value, or `undefined` if the entry is invalid or has no
+   * fallback.
+   */
+  getMergeTagFallbackValue(embeddedEntryNodeTarget: MergeTagEntry): string | undefined {
+    return MergeTagValueResolver.resolveFallback(embeddedEntryNodeTarget)
   }
 
   getFlag(name: string, changes: ChangeArray | undefined = this.changes): Json {

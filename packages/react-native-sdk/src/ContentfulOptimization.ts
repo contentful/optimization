@@ -1,13 +1,14 @@
 import {
-  AcceptedCurrentStateTracker,
   type ConsentInput,
   CoreStateful,
   type CoreStatefulConfig,
+  type CurrentStateTrackingResult,
   type EventEmissionResult,
   hasOptimizationSelectionStateField,
   type OptimizationSelectionState,
   resolveStatefulDefaults,
   type ScreenViewBuilderArgs,
+  signalFns,
   signals,
 } from '@contentful/optimization-core'
 import type { PartialProfile } from '@contentful/optimization-core/api-schemas'
@@ -19,6 +20,15 @@ import {
 } from './constants'
 import { createAppStateChangeListener, createOnlineChangeListener } from './handlers'
 import AsyncStorageStore from './storage/AsyncStorageStore'
+
+function collapseCurrentScreenEmissionResult<TData>(
+  result: CurrentStateTrackingResult<TData>,
+): EventEmissionResult<TData> {
+  if (!result.accepted) return { accepted: false }
+  if (result.data === undefined) return { accepted: true }
+
+  return { accepted: true, data: result.data }
+}
 
 function resolveStorageDefaults(
   defaults: CoreStatefulConfig['defaults'] | undefined,
@@ -188,30 +198,55 @@ export type TrackCurrentScreenPayload = ScreenViewBuilderArgs & {
  * @public
  */
 class ContentfulOptimization extends CoreStateful {
-  private readonly currentScreenTracker = new AcceptedCurrentStateTracker<string>()
-
-  private readonly cleanupOnlineListener: () => void
-
-  private readonly cleanupAppStateListener: () => void
-
-  private readonly statePersistenceInterceptorId: number
+  private stagedOptimizationState: OptimizationSelectionState | undefined
 
   private constructor(config: CoreStatefulConfig) {
     super(config)
 
-    this.statePersistenceInterceptorId = this.interceptors.state.add(async (data) => {
-      await persistOptimizationState(data)
-      return data
-    })
+    try {
+      this.registerDisposer(() => {
+        if (activeOptimizationInstance === this) activeOptimizationInstance = undefined
+        void AsyncStorageStore.drainPersistence()
+      })
 
-    this.cleanupOnlineListener = createOnlineChangeListener((isOnline) => {
-      this.online = isOnline
-    })
+      const statePersistenceInterceptorId = this.interceptors.state.add((data) => {
+        this.stagedOptimizationState = data
+        return data
+      })
+      this.registerDisposer(() => {
+        this.interceptors.state.remove(statePersistenceInterceptorId)
+      })
+      this.registerEffect(() => {
+        if (signals.experienceRequestState.value.status !== 'success') {
+          this.stagedOptimizationState = undefined
+          return
+        }
 
-    this.cleanupAppStateListener = createAppStateChangeListener(async () => {
-      await this.flush()
-      await AsyncStorageStore.drainPersistence()
-    })
+        const { stagedOptimizationState } = this
+        this.stagedOptimizationState = undefined
+        if (!stagedOptimizationState) return
+
+        signalFns.untracked(() => {
+          void persistOptimizationState(stagedOptimizationState)
+        })
+      })
+
+      this.registerDisposer(
+        createOnlineChangeListener((isOnline) => {
+          this.online = isOnline
+        }),
+      )
+
+      this.registerDisposer(
+        createAppStateChangeListener(async () => {
+          await this.flush()
+          await AsyncStorageStore.drainPersistence()
+        }),
+      )
+    } catch (error) {
+      super.destroy()
+      throw error
+    }
   }
 
   /**
@@ -245,7 +280,6 @@ class ContentfulOptimization extends CoreStateful {
     try {
       await persistCurrentStateForPolicy()
     } catch (error: unknown) {
-      activeOptimizationInstance = undefined
       instance.destroy()
       throw error
     }
@@ -260,7 +294,6 @@ class ContentfulOptimization extends CoreStateful {
   }
 
   override reset(): void {
-    this.currentScreenTracker.reset()
     void AsyncStorageStore.clearProfileContinuity()
     super.reset()
   }
@@ -270,7 +303,12 @@ class ContentfulOptimization extends CoreStateful {
    *
    * @remarks
    * Automatic screen tracking should use this helper. Manual `screen()` calls
-   * remain direct emits and are not deduplicated.
+   * remain direct emits and are not deduplicated. Same-key calls join the
+   * owning in-flight screen emission. The public result remains
+   * {@link EventEmissionResult}: an internally accepted attempt preserves its
+   * data, while deduplicated, blocked, non-accepted, or superseded attempts
+   * collapse to `{ accepted: false }`. Current-screen tracking is online-only
+   * and is never enqueued; call this method again after reconnecting to retry.
    *
    * @public
    */
@@ -279,16 +317,9 @@ class ContentfulOptimization extends CoreStateful {
     ...payload
   }: TrackCurrentScreenPayload): Promise<EventEmissionResult> {
     const key = routeKey ?? payload.screen?.name ?? payload.name
-    const result = await this.currentScreenTracker.emitIfNeeded({
-      key,
-      isAllowed: this.hasConsent('screen'),
-      emit: async () => await this.screen(payload),
-    })
+    const result = await this.emitCurrentScreen(key, () => payload)
 
-    if (!result.accepted) return { accepted: false }
-    if (result.data === undefined) return { accepted: true }
-
-    return { accepted: true, data: result.data }
+    return collapseCurrentScreenEmissionResult(result)
   }
 
   /**
@@ -305,16 +336,7 @@ class ContentfulOptimization extends CoreStateful {
    * @public
    */
   destroy(): void {
-    this.cleanupOnlineListener()
-    this.cleanupAppStateListener()
-    this.interceptors.state.remove(this.statePersistenceInterceptorId)
-
-    if (activeOptimizationInstance === this) {
-      activeOptimizationInstance = undefined
-    }
-
     super.destroy()
-    void AsyncStorageStore.drainPersistence()
   }
 }
 

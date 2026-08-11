@@ -4,6 +4,12 @@ Owns browser-specific SDK behavior, Web runtime concerns, and entry interaction 
 
 ## Rules
 
+- The live Web SDK is the browser runtime's one active `CoreStateful` singleton. The full content
+  runtime and analytics-only runtime are mutually exclusive owners of that same lock; `destroy()`
+  must release the current owner before another can initialize.
+- Keep singleton enforcement in Core. Do not infer ownership from the optional
+  `window.contentfulOptimization` discovery property, and do not introduce per-target state for
+  interfaces that structurally describe the singleton.
 - Keep the package-local `dev` flow current for browser SDK, developer-facing setup, runtime
   integration, and preview-related behavior.
 

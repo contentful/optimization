@@ -33,6 +33,12 @@ Edge runtime routes live in the
 - App-owned and SDK-managed Contentful entry fetching.
 - Preview panel attachment behind `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`.
 
+Client Components beneath an App Router binding import context-bound hooks, providers,
+`OptimizedEntry`, and related runtime types from
+`@contentful/optimization-nextjs/app-router/client`. Do not use the generic
+`@contentful/optimization-nextjs/client` entrypoint in that bound tree because the router-specific
+facade keeps every consumer on the App Router runtime context.
+
 ## Forward requests
 
 `proxy.ts` re-exports the app's forwarding handler and declares the routes that need Optimization
@@ -142,12 +148,16 @@ pnpm implementation:run -- nextjs-sdk_app-router build
 
 ## Running E2E tests
 
-Run the shared Playwright setup and suite:
+Run the run-only Playwright wrapper from the monorepo root. Pass a test file or filter for routine
+validation; omit it only when the full suite is warranted:
 
 ```sh
-pnpm setup:e2e:nextjs-sdk_app-router
-pnpm test:e2e:nextjs-sdk_app-router
+pnpm test:e2e:nextjs-sdk_app-router <file-or-filter>
 ```
+
+If consumed SDK packages changed or installed artifacts are stale, first run `pnpm build:pkgs` and
+`pnpm implementation:run -- nextjs-sdk_app-router implementation:install`. Run
+`pnpm setup:e2e:nextjs-sdk_app-router` only when the Playwright browser executable is missing.
 
 ## Related
 

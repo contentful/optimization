@@ -176,6 +176,10 @@ function createSdk(
       createObservable<WebRuntimeStates['blockedEventStream']['current']>(undefined),
     canOptimize,
     consent: createObservable<WebRuntimeStates['consent']['current']>(undefined),
+    currentStateTracking: createObservable<WebRuntimeStates['currentStateTracking']['current']>({
+      generation: 0,
+      status: 'idle',
+    }),
     eventStream: createObservable<WebRuntimeStates['eventStream']['current']>(undefined),
     experienceRequestState,
     flag: () => createObservable<ReturnType<WebRuntimeStates['flag']>['current']>(undefined),
@@ -202,6 +206,7 @@ function createSdk(
         entries.map((entry) => createTestEntry(getManagedEntryDescriptorId(entry))),
       ),
     getFlag: () => undefined,
+    getMergeTagFallbackValue: () => undefined,
     getMergeTagValue: () => undefined,
     hasConsent: () => true,
     identify: resolveAccepted,
@@ -541,6 +546,81 @@ describe('Contentful Optimization Web Components', () => {
       }),
     )
     expect(entry.dataset.ctflEntryId).toBe('4ib0hsHWoSOnCVdDkizE8d')
+  })
+
+  it('hides pre-rendered managed entries until fetched unless preserving server content', async () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const deferredEntry = createDeferred<Entry>()
+    Reflect.set(
+      runtime.sdk,
+      'fetchContentfulEntry',
+      rs.fn(async () => await deferredEntry.promise),
+    )
+    const root = createRootElement(runtime.sdk)
+    const preservedRoot = createRootElement(runtime.sdk)
+    const entry = document.createElement('ctfl-optimized-entry')
+    const preservedEntry = document.createElement('ctfl-optimized-entry')
+
+    if (
+      !(entry instanceof ContentfulOptimizedEntryElement) ||
+      !(preservedEntry instanceof ContentfulOptimizedEntryElement)
+    ) {
+      throw new Error('ctfl-optimized-entry is not registered.')
+    }
+
+    entry.entryId = baseline.sys.id
+    entry.textContent = 'pre-rendered entry'
+    preservedRoot.hydration = 'preserve-server'
+    preservedEntry.entryId = baseline.sys.id
+    preservedEntry.textContent = 'pre-rendered entry'
+    root.append(entry)
+    preservedRoot.append(preservedEntry)
+    document.body.append(root, preservedRoot)
+
+    expect(entry.style.visibility).toBe('hidden')
+    expect(entry.textContent).toBe('pre-rendered entry')
+    expect(preservedEntry.style.visibility).toBe('')
+    expect(preservedEntry.textContent).toBe('pre-rendered entry')
+
+    deferredEntry.resolve(baseline)
+    await flushMicrotasks()
+
+    expect(entry.style.visibility).toBe('')
+    expect(preservedEntry.style.visibility).toBe('')
+  })
+
+  it('reveals managed content whenever the root SDK is unavailable', () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const deferredEntry = createDeferred<Entry>()
+    Reflect.set(
+      runtime.sdk,
+      'fetchContentfulEntry',
+      rs.fn(async () => await deferredEntry.promise),
+    )
+    const root = document.createElement('ctfl-optimization-root')
+    const entry = document.createElement('ctfl-optimized-entry')
+
+    if (
+      !(root instanceof ContentfulOptimizationRootElement) ||
+      !(entry instanceof ContentfulOptimizedEntryElement)
+    ) {
+      throw new Error('Contentful Optimization elements are not registered.')
+    }
+
+    entry.entryId = baseline.sys.id
+    entry.textContent = 'pre-rendered entry'
+    root.append(entry)
+    document.body.append(root)
+
+    expect(entry.style.visibility).toBe('')
+
+    root.sdk = runtime.sdk
+    expect(entry.style.visibility).toBe('hidden')
+
+    root.sdk = undefined
+    expect(entry.style.visibility).toBe('')
   })
 
   it('fetches slug entries with the default field and tracks the fetched entry ID', async () => {

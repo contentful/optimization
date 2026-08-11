@@ -200,9 +200,14 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
 
 - Screen events: `.trackScreen(name:)` (SwiftUI) fires on appear, on consent change, and on
   screen-name change, calling `trackCurrentScreen(name:)`. `trackCurrentScreen` dedupes in the bridge
-  by `routeKey` (defaulting to `name`) through an `AcceptedCurrentStateTracker`, so a repeat of the
-  same current screen is skipped; a blocked attempt is retried once consent allows. Plain
-  `screen(name:)` calls the core `screen()` with no dedupe. source: extern:.trackScreen fires onAppear/consent/name change → trackCurrentScreen — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Views/ScreenTrackingModifier.swift#ScreenTrackingModifier; optimization-js-bridge#index.ts#Bridge; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker
+  by `routeKey` (defaulting to `name`) through Core's internal current-state coordinator, so same-key
+  in-flight calls share the owner outcome, only consecutive acceptance is deduped, and returning
+  after another screen can emit again. A blocked attempt retries once consent allows. The bridge
+  preserves the native `{ accepted, data? }` result, collapsing settled duplicates, policy denial,
+  and superseded attempts to `accepted: false`; a current operational failure throws. Automatic
+  current-screen tracking is online-only: an offline attempt is neither published nor enqueued, and
+  the app must call `trackCurrentScreen` explicitly after reconnecting. Plain `screen(name:)` calls
+  the core `screen()` with no dedupe and still queues offline. source: extern:.trackScreen fires onAppear/consent/name change → trackCurrentScreen — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Views/ScreenTrackingModifier.swift#ScreenTrackingModifier; extern:trackCurrentScreen and screen bridge calls — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift#OptimizationClient; optimization-js-bridge#index.ts#Bridge; optimization-js-bridge#index.ts#collapseCurrentScreenEmissionResult; core-sdk#tracking/CurrentStateCoordinator.ts#CurrentStateCoordinator; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue
 - Entry view tracking timing (SwiftUI `OptimizedEntry` and UIKit `ViewTrackingController`): defaults
   `minVisibleRatio = 0.8`, `dwellTimeMs = 2000`, `viewDurationUpdateIntervalMs = 5000`. Three-phase
   cycle: initial `trackView` after accumulated visible time ≥ dwell, periodic duration updates every
@@ -234,11 +239,13 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   does **not** replay prior events to late subscribers; `blockedEventStream` (plus the
   `onEventBlocked` config callback) surfaces consent/allow-list-blocked events. Subscribe before init
   or accept missing earlier events. source: extern:eventStream/blockedEventStream are passthrough subjects, no replay — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift#OptimizationClient; concept:ios-sdk-runtime-and-interaction-mechanics
-- Experience-response payload → published state: an accepted Experience call returns
-  `{ profile, selectedOptimizations, changes }`; the bridge applies it to core signals and pushes
-  `readBridgeState()` through `__nativeOnStateChange`, which `OptimizationClient.handleStateUpdate`
-  decodes into `@Published state`/`selectedOptimizations`/`optimizationPossible`/
-  `experienceRequestState` (and writes continuity to `UserDefaults` when permitted). source: optimization-js-bridge#index.ts#initialize; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals; extern:handleStateUpdate decodes pushed bridge state into @Published props — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift#OptimizationClient; kb:shared/concepts.md
+- Experience-response payload → published state: Core signal publication follows the shared
+  concurrent stateful-response contract. The bridge pushes `readBridgeState()` through
+  `__nativeOnStateChange`, which
+  `OptimizationClient.handleStateUpdate` decodes into `@Published state`/`selectedOptimizations`/
+  `optimizationPossible`/`experienceRequestState` (and writes continuity to `UserDefaults` when
+  permitted).
+  source: optimization-js-bridge#index.ts#initialize; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals; extern:handleStateUpdate decodes pushed bridge state into @Published props — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift#OptimizationClient; kb:shared/concepts.md
 - On a bridge state push, `OptimizationClient.handleStateUpdate` writes consent and permitted
   profile continuity through `UserDefaultsStore` before assigning `@Published`
   `selectedOptimizations`, `optimizationPossible`, `experienceRequestState`, and `state`.
@@ -297,10 +304,12 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   root default > locked. UIKit apps pick their own policy by subscribing to
   `$selectedOptimizations`/`$isPreviewPanelOpen`/`$previewState` and redrawing. source: extern:OptimizedEntry preview-open forces live — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Views/OptimizedEntry.swift#OptimizedEntry; concept:ios-sdk-runtime-and-interaction-mechanics
 - Offline / lifecycle delivery: `NetworkMonitor` (`NWPathMonitor`) calls `setOnline(_:)` on
-  connectivity change and `flush()` on reconnect; `AppStateHandler` calls `flush()` on
-  `willResignActive` (UIKit-only) for a best-effort background drain. Queues are in-memory only (no
-  durable outbox), capped at 100 offline Experience events by default (`OFFLINE_QUEUE_MAX_EVENTS`,
-  tunable via `QueuePolicy.offlineMaxEvents`); they do not survive process death. source: extern:NetworkMonitor NWPathMonitor + AppStateHandler background flush — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Handlers/NetworkMonitor.swift#NetworkMonitor; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Handlers/AppStateHandler.swift#AppStateHandler; core-sdk#CoreStateful.ts#CoreStatefulConfig
+  connectivity change and `flush()` on reconnect; that flush drains ordinary queued events but does
+  not retry an offline current-screen attempt. `AppStateHandler` calls `flush()` on
+  `willResignActive` (UIKit-only) for a best-effort background drain. Ordinary-event queues are
+  in-memory only (no durable outbox), capped at 100 offline Experience events by default
+  (`OFFLINE_QUEUE_MAX_EVENTS`, tunable via `QueuePolicy.offlineMaxEvents`); they do not survive
+  process death. source: extern:NetworkMonitor NWPathMonitor + AppStateHandler background flush — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Handlers/NetworkMonitor.swift#NetworkMonitor; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Handlers/AppStateHandler.swift#AppStateHandler; core-sdk#CoreStateful.ts#CoreStatefulConfig; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue
 - iOS Simulator reaches host `localhost` directly — there is no localhost rewrite in the SDK, and the
   reference app points base URLs straight at `http://localhost:8000` (contrast React Native, which
   rewrites `localhost` to `10.0.2.2` on the Android emulator). source: impl:ios-sdk#shared/Config.swift; extern:the iOS Simulator shares the host network so host localhost resolves without a rewrite — packages/ios/README.md

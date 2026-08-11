@@ -5,8 +5,11 @@ import type {
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import { useMemo } from 'react'
 import type { ContentEntrySkeleton, ContentfulEntry } from '../../types/contentful'
+import { useBaselinePresentation } from '../BaselinePresentationProvider'
 import { useOptimization } from './useOptimization'
 import { useOptimizationState } from './useOptimizationState'
+
+const BASELINE_SELECTED_OPTIMIZATIONS: SelectedOptimizationArray = []
 
 export interface UseOptimizationResolverResult {
   resolveEntryData: (
@@ -45,6 +48,7 @@ function toStringValue(value: unknown): string {
 
 export function useOptimizationResolver(): UseOptimizationResolverResult {
   const { sdk } = useOptimization()
+  const baselinePresentation = useBaselinePresentation()
   // Subscribe to selectedOptimizations so resolveEntryData gets a new identity when the
   // Experience API responds. Without this, ContentEntry's useMemo would lock in the
   // baseline on first render (signal still empty) and never re-resolve on slow browsers.
@@ -65,11 +69,17 @@ export function useOptimizationResolver(): UseOptimizationResolverResult {
       ): ResolvedData<ContentEntrySkeleton> =>
         sdk.resolveOptimizedEntry(
           baselineEntry,
-          callerSelectedOptimizations ?? selectedOptimizations,
+          baselinePresentation
+            ? BASELINE_SELECTED_OPTIMIZATIONS
+            : (callerSelectedOptimizations ?? selectedOptimizations),
         ),
 
       getMergeTagValue: (mergeTagEntry: MergeTagEntry): string =>
-        toStringValue(sdk.getMergeTagValue(mergeTagEntry)),
+        toStringValue(
+          baselinePresentation
+            ? sdk.getMergeTagFallbackValue(mergeTagEntry)
+            : sdk.getMergeTagValue(mergeTagEntry),
+        ),
     }
-  }, [sdk, selectedOptimizations])
+  }, [baselinePresentation, sdk, selectedOptimizations])
 }

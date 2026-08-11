@@ -46,6 +46,37 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
   behavior for convenience. When public SDK behavior changes, identify affected reference
   implementations before concluding validation.
 
+## Pull request planning
+
+- Define a pull request boundary as one independently mergeable, repository-consistent state that
+  passes every CI job triggered by its changed paths. An architecture phase, package boundary, or
+  ownership boundary is not automatically a valid pull request boundary.
+- Before proposing or delegating a multi-PR plan, inspect [`.github/workflows/main-pipeline.yaml`](./.github/workflows/main-pipeline.yaml),
+  especially its path filters and job prerequisites. Produce a CI-impact matrix that maps each
+  proposed PR's changed paths to triggered jobs, affected downstream packages and implementations,
+  required source/docs/test updates, and validation commands.
+- Every intermediate PR in an ordered series must be green on its own. A later prerequisite may
+  build on an earlier PR, but it cannot be used to repair an earlier PR's broken exports, types,
+  implementations, documentation checks, unit tests, builds, size checks, or E2E behavior.
+- When a package API, export graph, shared runtime contract, or user-visible behavior changes, include
+  every required downstream update in the same PR: adapters and pass-throughs, maintained reference
+  implementations, package and implementation READMEs, SDK knowledge or guides, shared fixtures,
+  unit tests, and relevant E2E specifications. This remains true when the change is intentionally
+  breaking; do not use a compatibility shim merely to make an otherwise incomplete PR pass.
+- A valid PR may span multiple packages, platforms, documentation areas, and implementations when
+  they form the smallest vertical slice that leaves the repository consistent and CI-green.
+- Split work into separate PRs only when the earlier PR remains complete and green without the later
+  PR. Do not create downstream-only documentation or reference-implementation PRs when the upstream
+  API/behavior PR requires those changes to compile, validate, or accurately describe the product.
+- Repository CI builds all packages, enforces bundle sizes, packs local SDK tarballs, installs them
+  into maintained implementations, and lints those implementations for package/source changes.
+  Package source also triggers SDK knowledge and guide validation; path-filtered E2E and native jobs
+  run for every affected implementation family. Plan local validation and PR scope accordingly.
+- For every plan file intended to represent one PR, state: prerequisites, complete cross-repository
+  scope, changed public contracts, affected maintained implementations, documentation/knowledge
+  updates, triggered CI jobs, local validation in dependency order, and an explicit exit criterion
+  that the PR can merge without relying on an unmerged follow-up.
+
 ## Code discipline
 
 - Treat [`eslint.config.ts`](./eslint.config.ts) as an upfront design constraint.
@@ -100,9 +131,12 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
   failure and try the documented E2E command instead.
 - When an upstream package changes, run bundle-size validation for every downstream published
   package that can bundle or re-export it, not only the package edited directly. If the affected
-  downstream set is uncertain, run the aggregate `pnpm size:check`.
-- Stop downstream validation when an upstream package build fails; stale downstream artifacts are
-  not evidence.
+  downstream set is uncertain, run a full aggregate `pnpm build` followed by aggregate
+  `pnpm size:report`. Aggregate `pnpm size:check` exits on the first budget failure, so it is an
+  enforcement command, not evidence that later package budgets were evaluated.
+- Stop downstream validation only when an upstream package build fails; stale downstream artifacts
+  are not evidence. A bundle-budget failure after a successful build is not a build failure and must
+  not stop `size:report` for the remaining packages.
 - After public exports, entry graphs, shared types, or bundled runtime paths change in an Rslib
   package, run its `clean` script before trusting output. Rslib `clean` scripts must remove
   package-local `./node_modules/.cache/rspack`.
@@ -137,6 +171,11 @@ High-signal commands:
 
 Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments when possible:
 
+- Web Playwright: `pnpm test:e2e:<implementation> <file-or-filter>`; omit the file/filter only when
+  the full suite is warranted. These specific root scripts are run-only. If consumed SDK packages
+  changed, first run `pnpm build:pkgs` once and
+  `pnpm implementation:<implementation> implementation:install`; skip that refresh when the
+  installed implementation dependencies are already current.
 - React Native Android Detox:
   `pnpm implementation:run -- react-native-sdk test:e2e:android:full -- --test-file <file>`
 - Android Maestro Compose:
@@ -146,6 +185,13 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
 - iOS Swift package: `pnpm ios:test`
 - iOS XCUITest build: `pnpm implementation:run -- ios-sdk test:e2e:ios:build:release`
 - iOS XCUITest run: `IOS_SCHEME=SwiftUI pnpm implementation:run -- ios-sdk test:e2e:ios:run:release`
+
+For routine local Web Playwright validation, do not run the root `pnpm setup:e2e`,
+`pnpm setup:e2e:<implementation>`, or aggregate `pnpm test:e2e` scripts: those setup paths install
+Playwright browsers and can hang when the browsers are already installed. Prefer the run-only
+`pnpm test:e2e:<implementation>` script; it already owns the correct implementation name, flags,
+and port. Run a Playwright install command only when the local browser executable is actually
+missing or the user explicitly asks to install it.
 
 ## Failure handling
 
@@ -179,8 +225,11 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
 
 ## Bundle size
 
-- Before bundle-size investigation or changes, inspect `git status --short` and run the relevant
-  `size:check` or `size:report` against the actual worktree.
+- Before bundle-size investigation or changes, inspect `git status --short`. Build the complete
+  affected graph first, then run aggregate `pnpm size:report` when an upstream/shared change can
+  affect multiple published packages. Use `size:check` after classification and remediation or an
+  approved budget change to enforce the resulting budgets; never use its first failure as the full
+  downstream size inventory.
 - Treat bundle-size checks as validation evidence. A budget failure is not approval to rewrite
   source code, remove behavior, or change budget policy.
 - Classify a budget failure before editing as a current-change regression, pre-existing budget
@@ -241,6 +290,17 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
 - Account for every README render target before changing links: GitHub, TypeDoc project docs, and
   npm package README rendering.
 - Preserve `<!-- mtoc-start -->` and `<!-- mtoc-end -->` markers and keep TOCs synchronized.
+
+## Review triage
+
+- Before elevating an async, callback-reentrancy, or lifecycle-interleaving candidate, identify the
+  documented or supported consumer pattern or maintained integration that reaches it and the
+  concrete contract it violates. Mechanical composability of public callbacks alone is not evidence
+  that reentrant mutation is supported.
+- For coordinated runtime paths, name and trace the authority layer whose invariant allegedly
+  fails—method or event acceptance, shared-state publication authority, or framework presentation
+  settlement. Do not use success or acceptance in one layer as proof that another layer has settled,
+  and scope a finding to the lifecycle interval where the contract is violated.
 
 ## Bito PR reviews
 

@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
-import { useOptimization } from '../hooks/useOptimization'
-import { useConsentState } from '../hooks/useOptimizationState'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useOptimizationRouteTransition } from '../context/OptimizationRouteTransitionContext'
+import { useConsentState } from '../hooks/useConsentState'
+import { useOptimization, useOptimizationContext } from '../hooks/useOptimization'
 import type { AutoPagePayload } from './types'
 
 export interface AutoPageEmissionMetadata {
@@ -39,9 +40,10 @@ export interface UseAutoPageEmitterArgs {
 /**
  * Emit a page event when the route changes.
  *
- * The hook is intentionally narrow: it owns dedup and emission only. Each
- * router adapter is responsible for building the finished payload and passing
- * it through `buildPayload`.
+ * The hook is intentionally narrow: it triggers emission through the active Web SDK singleton,
+ * which owns current-page deduplication. Each router adapter is responsible for building the
+ * finished payload and passing it through `buildPayload`. It does not subscribe to connectivity;
+ * consumers retry current-page tracking explicitly after reconnecting.
  *
  * @internal
  */
@@ -52,13 +54,34 @@ export function useAutoPageEmitter({
   buildPayload,
 }: UseAutoPageEmitterArgs): void {
   const sdk = useOptimization()
+  const {
+    states: { currentStateTracking, experienceRequestState },
+  } = sdk
+  const { isLive } = useOptimizationContext()
+  const routeTransition = useOptimizationRouteTransition()
+  const isHandoffPending = routeTransition?.isHandoffPending ?? false
+  const settleRoute = routeTransition?.settleRoute
+  const startRoute = routeTransition?.startRoute
   const consent = useConsentState()
   const skippedInitialRouteKey = useRef<string | null | undefined>(undefined)
+  const routeOccurrence = useRef({ hasResponse: false, routeKey, startRoute })
+  const canEmit = enabled && !isHandoffPending && isLive !== false
+
+  useLayoutEffect(() => {
+    const { current } = routeOccurrence
+    if (current.routeKey !== routeKey || current.startRoute !== startRoute) {
+      routeOccurrence.current = { hasResponse: false, routeKey, startRoute }
+    }
+
+    if (enabled) startRoute?.(routeKey)
+  }, [enabled, routeKey, startRoute])
 
   useEffect(() => {
-    if (!enabled) {
+    if (!canEmit) {
       return
     }
+
+    const { current: occurrence } = routeOccurrence
 
     if (skippedInitialRouteKey.current === undefined) {
       skippedInitialRouteKey.current = initialPageEvent === 'skip' ? routeKey : null
@@ -70,23 +93,111 @@ export function useAutoPageEmitter({
       skippedInitialRouteKey.current = null
     }
 
-    if (currentInitialPageEvent === 'skip') {
-      void sdk.trackCurrentPage({ initialPageEvent: 'skip', routeKey }).catch(() => undefined)
-      return
+    let active = true
+    let currentStateTrackingSubscription:
+      | ReturnType<typeof currentStateTracking.subscribe>
+      | undefined = undefined
+    let experienceRequestSubscription:
+      | ReturnType<typeof experienceRequestState.subscribe>
+      | undefined = undefined
+
+    function settleAcceptedRoute(hasResponse: boolean): void {
+      if (!active || settleRoute === undefined) return
+      if (!hasResponse) {
+        settleRoute(routeKey, 'satisfied')
+        return
+      }
+
+      const {
+        current: { status },
+      } = experienceRequestState
+      if (status !== 'pending') {
+        settleRoute(routeKey, status === 'success' ? 'satisfied-with-response' : 'failed')
+        return
+      }
+
+      experienceRequestSubscription = experienceRequestState.subscribe((state) => {
+        const { status: terminalStatus } = state
+        if (!active || terminalStatus === 'pending') return
+
+        experienceRequestSubscription?.unsubscribe()
+        settleRoute(routeKey, terminalStatus === 'success' ? 'satisfied-with-response' : 'failed')
+      })
     }
 
-    if (buildPayload === undefined) return
+    const request =
+      currentInitialPageEvent === 'skip'
+        ? sdk.trackCurrentPage({ initialPageEvent: 'skip', routeKey })
+        : buildPayload === undefined
+          ? undefined
+          : sdk.trackCurrentPage({ buildPayload, initialPageEvent: 'emit', routeKey })
 
-    void sdk
-      .trackCurrentPage({
-        buildPayload,
-        initialPageEvent: 'emit',
-        routeKey,
-      })
-      .catch(() => undefined)
-  }, [buildPayload, consent, enabled, initialPageEvent, routeKey, sdk])
-}
+    if (request === undefined) return
 
-export function resetAutoPageEmitterState(): void {
-  // Current-page state is owned by each Web SDK instance.
+    if (currentInitialPageEvent === 'emit') {
+      void request.then(
+        (result) => {
+          if (result.accepted && routeOccurrence.current === occurrence) {
+            occurrence.hasResponse = true
+          }
+        },
+        () => undefined,
+      )
+    }
+
+    void request.then(
+      (result) => {
+        if (!active) return
+
+        if (!result.accepted) {
+          if (result.reason === 'already-accepted') {
+            settleAcceptedRoute(routeOccurrence.current === occurrence && occurrence.hasResponse)
+          } else {
+            settleRoute?.(routeKey, result.reason === 'superseded' ? 'superseded' : 'failed')
+          }
+
+          if (result.reason === 'not-allowed' && settleRoute !== undefined) {
+            const {
+              current: { generation: failedGeneration },
+            } = currentStateTracking
+            currentStateTrackingSubscription = currentStateTracking.subscribe((currentState) => {
+              if (
+                currentState.status !== 'accepted' ||
+                currentState.key !== routeKey ||
+                currentState.generation !== failedGeneration
+              ) {
+                return
+              }
+
+              currentStateTrackingSubscription?.unsubscribe()
+              settleAcceptedRoute(true)
+            })
+          }
+          return
+        }
+
+        settleAcceptedRoute(currentInitialPageEvent === 'emit')
+      },
+      () => {
+        if (active) settleRoute?.(routeKey, 'failed')
+      },
+    )
+
+    return () => {
+      active = false
+      currentStateTrackingSubscription?.unsubscribe()
+      experienceRequestSubscription?.unsubscribe()
+    }
+  }, [
+    buildPayload,
+    canEmit,
+    consent,
+    currentStateTracking,
+    experienceRequestState,
+    initialPageEvent,
+    routeKey,
+    sdk,
+    settleRoute,
+    startRoute,
+  ])
 }

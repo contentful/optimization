@@ -173,8 +173,9 @@ export class EntryCard {
     const { entry } = this.resolved()
     const doc = Object.values(entry.fields).find(isRichTextDocument)
     if (!doc) return undefined
-    const profile = this.optimization.profile()
-    const runtime = this.optimization.runtime()
+    const live = this.isLive()
+    const runtime = live ? this.optimization.runtime() : this.optimization.presentationRuntime()
+    const profile = live ? this.optimization.profile() : runtime.states.profile.current
     const getMergeTagValue = profile
       ? (target: MergeTagEntry): string | undefined => runtime.getMergeTagValue(target, profile)
       : undefined

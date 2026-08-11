@@ -200,11 +200,29 @@ describe('OptimizedEntryController', () => {
 
   afterEach(() => {
     rs.useRealTimers()
+    rs.unstubAllGlobals()
   })
 
   it('exposes the optimized entry host display invariant', () => {
     expect(OPTIMIZED_ENTRY_HOST_DISPLAY).toBe('contents')
     expect(isEntryOfContentType).toBeTypeOf('function')
+  })
+
+  it('batches synchronous SDK state emissions when connecting', () => {
+    const resolveOptimizedEntry = rs.fn((entry: Entry) => ({ entry }))
+    const { sdk } = createSdk(resolveOptimizedEntry)
+    const controller = new OptimizedEntryController({
+      baselineEntry: optimizedBaseline,
+      sdk,
+      isSdkStateReady: true,
+    })
+
+    expect(resolveOptimizedEntry).toHaveBeenCalledTimes(1)
+
+    controller.connect()
+
+    expect(resolveOptimizedEntry).toHaveBeenCalledTimes(2)
+    controller.disconnect()
   })
 
   it('resolves duplicate baseline nesting state', () => {
@@ -325,7 +343,119 @@ describe('OptimizedEntryController', () => {
     controller.disconnect()
   })
 
+  it('reveals settled client content after the presentation-ready timeout', async () => {
+    rs.useFakeTimers()
+    const runtime = createSdk((entry) => ({ entry }))
+    runtime.experienceRequestState.emit({ status: 'success' })
+    const initialOptions = {
+      isPresentationReady: false,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    }
+    const controller = new OptimizedEntryController(initialOptions)
+
+    controller.connect()
+
+    expect(controller.getSnapshot()).toMatchObject({
+      isLoading: false,
+      isPresentationReady: false,
+      loadingPresentation: {
+        hideLoadingLayoutTarget: true,
+        showLoadingFallback: true,
+      },
+    })
+
+    await rs.advanceTimersByTimeAsync(5000)
+
+    expect(controller.getSnapshot()).toMatchObject({
+      isLoading: false,
+      isPresentationReady: false,
+      loadingPresentation: {
+        hideLoadingLayoutTarget: false,
+        shouldRenderBaselineWhileLoading: true,
+        showLoadingFallback: true,
+      },
+    })
+
+    controller.updateOptions({ ...initialOptions, isPresentationReady: true })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      isPresentationReady: true,
+      isResolved: true,
+      loadingPresentation: {
+        showLoadingFallback: false,
+      },
+    })
+
+    controller.disconnect()
+  })
+
+  it('treats omitted browser presentation readiness as ready', () => {
+    const runtime = createSdk((entry) => ({ entry }))
+    runtime.experienceRequestState.emit({ status: 'success' })
+    const controller = new OptimizedEntryController({
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+
+    expect(controller.getSnapshot()).toMatchObject({
+      isPresentationReady: true,
+      isResolved: true,
+      loadingPresentation: { showLoadingFallback: false },
+    })
+
+    controller.disconnect()
+  })
+
+  it('treats omitted server presentation readiness as pending', () => {
+    rs.stubGlobal('window', undefined)
+    const runtime = createSdk((entry) => ({ entry }))
+    runtime.experienceRequestState.emit({ status: 'success' })
+    const controller = new OptimizedEntryController({
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      isPresentationReady: false,
+      isResolved: false,
+      loadingPresentation: {
+        hideLoadingLayoutTarget: true,
+        showLoadingFallback: true,
+      },
+    })
+  })
+
+  it('keeps non-optimized client content immediately presentation-ready', () => {
+    const runtime = createSdk((entry) => ({ entry }))
+    const controller = new OptimizedEntryController({
+      isPresentationReady: false,
+      baselineEntry: baseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+
+    expect(controller.getSnapshot()).toMatchObject({
+      isLoading: false,
+      isPresentationReady: true,
+      isResolved: true,
+      loadingPresentation: {
+        showLoadingFallback: false,
+      },
+    })
+
+    controller.disconnect()
+  })
+
   it('keeps server-rendered content visible in preserve-server hydration while state is unresolved', () => {
+    rs.useFakeTimers()
     const runtime = createSdk((entry) => ({ entry }))
     const controller = new OptimizedEntryController({
       hydration: 'preserve-server',
@@ -346,6 +476,7 @@ describe('OptimizedEntryController', () => {
         showLoadingFallback: false,
       },
     })
+    expect(rs.getTimerCount()).toBe(0)
 
     runtime.experienceRequestState.emit({ status: 'success' })
 

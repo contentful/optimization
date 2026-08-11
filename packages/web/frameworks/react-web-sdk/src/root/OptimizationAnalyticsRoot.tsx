@@ -48,7 +48,6 @@ function initializeAnalyticsRuntime(
 
 export function OptimizationAnalyticsRoot(props: OptimizationAnalyticsRootProps): ReactElement {
   const { buildPagePayload, children, handoff, initialPagePayload, routeKey } = props
-  const hydrationGeneration = useRef(0)
   const initialPropsRef = useRef(props)
   const runtimeRef = useRef<OptimizationAnalyticsRuntime | undefined>(undefined)
   const skippedInitialRouteKey = useRef<string | null | undefined>(undefined)
@@ -72,8 +71,7 @@ export function OptimizationAnalyticsRoot(props: OptimizationAnalyticsRootProps)
     if (runtime === undefined) return
 
     let disposed = false
-    const generation = (hydrationGeneration.current += 1)
-    const isCurrent = (): boolean => !disposed && hydrationGeneration.current === generation
+    const isCurrent = (): boolean => !disposed
 
     if (skippedInitialRouteKey.current === undefined) {
       skippedInitialRouteKey.current = handoff.initialPageEvent === 'skip' ? routeKey : null

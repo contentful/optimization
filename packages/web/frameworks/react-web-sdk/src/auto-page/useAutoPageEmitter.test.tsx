@@ -1,16 +1,18 @@
+import type { ExperienceRequestState } from '@contentful/optimization-web/core-sdk'
 import { rs } from '@rstest/core'
-import { StrictMode } from 'react'
+import { act, StrictMode } from 'react'
+import { OptimizationContext } from '../context/OptimizationContext'
+import {
+  OptimizationRouteTransitionContext,
+  type RouteSettlement,
+} from '../context/OptimizationRouteTransitionContext'
 import {
   createMutableCloningObservable,
   createOptimizationSdk,
   renderWithOptimizationProviders,
 } from '../test/sdkTestUtils'
 import type { AutoPagePayload } from './types'
-import {
-  resetAutoPageEmitterState,
-  useAutoPageEmitter,
-  type InitialAutoPageEvent,
-} from './useAutoPageEmitter'
+import { useAutoPageEmitter, type InitialAutoPageEvent } from './useAutoPageEmitter'
 
 function TestAutoPageEmitter({
   enabled = true,
@@ -46,10 +48,6 @@ function TestSkipOnlyAutoPageEmitter({ routeKey }: { routeKey: string }): null {
 }
 
 describe('useAutoPageEmitter', () => {
-  void beforeEach(() => {
-    resetAutoPageEmitterState()
-  })
-
   it('emits on first eligible render', async () => {
     const page = rs.fn(async (_payload?: AutoPagePayload) => {
       await Promise.resolve()
@@ -99,35 +97,6 @@ describe('useAutoPageEmitter', () => {
     const second = await renderWithOptimizationProviders(<TestAutoPageEmitter routeKey="/" />, sdk)
 
     expect(page).toHaveBeenCalledTimes(1)
-
-    await second.unmount()
-  })
-
-  it('tracks identical route keys independently for different SDK instances', async () => {
-    const firstPage = rs.fn(async () => {
-      await Promise.resolve()
-      return undefined
-    })
-    const secondPage = rs.fn(async () => {
-      await Promise.resolve()
-      return undefined
-    })
-    const firstSdk = createOptimizationSdk({ page: firstPage })
-    const secondSdk = createOptimizationSdk({ page: secondPage })
-    const first = await renderWithOptimizationProviders(
-      <TestAutoPageEmitter routeKey="/" />,
-      firstSdk,
-    )
-
-    await first.unmount()
-
-    const second = await renderWithOptimizationProviders(
-      <TestAutoPageEmitter routeKey="/" />,
-      secondSdk,
-    )
-
-    expect(firstPage).toHaveBeenCalledTimes(1)
-    expect(secondPage).toHaveBeenCalledTimes(1)
 
     await second.unmount()
   })
@@ -265,13 +234,25 @@ describe('useAutoPageEmitter', () => {
   })
 
   it('marks a skipped initial route without a payload builder', async () => {
+    const settleRoute = rs.fn((_routeKey: string, _settlement: RouteSettlement): void => undefined)
     const trackCurrentPage = rs.fn(async () => {
       await Promise.resolve()
       return { accepted: true as const }
     })
     const sdk = createOptimizationSdk({ trackCurrentPage })
     const rendered = await renderWithOptimizationProviders(
-      <TestSkipOnlyAutoPageEmitter routeKey="/" />,
+      <OptimizationRouteTransitionContext.Provider
+        value={{
+          isHandoffPending: false,
+          isLiveRuntimeAuthoritative: false,
+          isPresentationLive: false,
+          presentationSdk: undefined,
+          settleRoute,
+          startRoute: () => undefined,
+        }}
+      >
+        <TestSkipOnlyAutoPageEmitter routeKey="/" />
+      </OptimizationRouteTransitionContext.Provider>,
       sdk,
     )
 
@@ -279,6 +260,35 @@ describe('useAutoPageEmitter', () => {
       initialPageEvent: 'skip',
       routeKey: '/',
     })
+    expect(settleRoute).toHaveBeenCalledWith('/', 'satisfied')
+
+    await rendered.unmount()
+  })
+
+  it('settles an already-accepted route without claiming a new response', async () => {
+    const settleRoute = rs.fn((_routeKey: string, _settlement: RouteSettlement): void => undefined)
+    const trackCurrentPage = rs.fn(
+      async () =>
+        await Promise.resolve({ accepted: false as const, reason: 'already-accepted' as const }),
+    )
+    const sdk = createOptimizationSdk({ trackCurrentPage })
+    const rendered = await renderWithOptimizationProviders(
+      <OptimizationRouteTransitionContext.Provider
+        value={{
+          isHandoffPending: false,
+          isLiveRuntimeAuthoritative: false,
+          isPresentationLive: false,
+          presentationSdk: undefined,
+          settleRoute,
+          startRoute: () => undefined,
+        }}
+      >
+        <TestAutoPageEmitter routeKey="/accepted" />
+      </OptimizationRouteTransitionContext.Provider>,
+      sdk,
+    )
+
+    expect(settleRoute).toHaveBeenCalledWith('/accepted', 'satisfied')
 
     await rendered.unmount()
   })
@@ -295,6 +305,142 @@ describe('useAutoPageEmitter', () => {
     )
 
     expect(page).not.toHaveBeenCalled()
+
+    await rendered.unmount()
+  })
+
+  it('keeps an emitted handoff route pending until the provider SDK becomes live and responds', async () => {
+    const startRoute = rs.fn((_routeKey: string): void => undefined)
+    const settleRoute = rs.fn((_routeKey: string, _settlement: RouteSettlement): void => undefined)
+    const routeTransition = {
+      isHandoffPending: false,
+      isLiveRuntimeAuthoritative: false,
+      isPresentationLive: false,
+      presentationSdk: undefined,
+      settleRoute,
+      startRoute,
+    }
+    const snapshotTrackCurrentPage = rs.fn(
+      async () =>
+        await Promise.resolve({ accepted: false as const, reason: 'not-allowed' as const }),
+    )
+    const snapshotSdk = createOptimizationSdk({ trackCurrentPage: snapshotTrackCurrentPage })
+    const livePageRequest = Promise.withResolvers<{ readonly accepted: true }>()
+    const liveRequestState = createMutableCloningObservable<ExperienceRequestState>({
+      status: 'pending',
+    })
+    const buildPayload = rs.fn((): AutoPagePayload => ({}))
+    const liveTrackCurrentPage = rs.fn(async () => await livePageRequest.promise)
+    const liveSdk = createOptimizationSdk({
+      states: { experienceRequestState: liveRequestState.observable },
+      trackCurrentPage: liveTrackCurrentPage,
+    })
+    const rendered = await renderWithOptimizationProviders(
+      <OptimizationContext.Provider value={{ error: undefined, isLive: false, sdk: snapshotSdk }}>
+        <OptimizationRouteTransitionContext.Provider value={routeTransition}>
+          <TestAutoPageEmitter
+            buildPayload={buildPayload}
+            initialPageEvent="emit"
+            routeKey="/handoff"
+          />
+        </OptimizationRouteTransitionContext.Provider>
+      </OptimizationContext.Provider>,
+      snapshotSdk,
+    )
+
+    expect(startRoute).toHaveBeenCalledWith('/handoff')
+    expect(snapshotTrackCurrentPage).not.toHaveBeenCalled()
+    expect(settleRoute).not.toHaveBeenCalled()
+
+    await rendered.rerender(
+      <OptimizationContext.Provider value={{ error: undefined, isLive: true, sdk: liveSdk }}>
+        <OptimizationRouteTransitionContext.Provider value={routeTransition}>
+          <TestAutoPageEmitter
+            buildPayload={buildPayload}
+            initialPageEvent="emit"
+            routeKey="/handoff"
+          />
+        </OptimizationRouteTransitionContext.Provider>
+      </OptimizationContext.Provider>,
+    )
+
+    expect(liveTrackCurrentPage).toHaveBeenCalledTimes(1)
+    expect(settleRoute).not.toHaveBeenCalled()
+
+    await liveRequestState.emit({ status: 'success' })
+    await act(async () => {
+      livePageRequest.resolve({ accepted: true })
+      await livePageRequest.promise
+      await Promise.resolve()
+    })
+
+    expect(settleRoute).toHaveBeenCalledWith('/handoff', 'satisfied-with-response')
+
+    await rendered.unmount()
+  })
+
+  it('waits for a newer ordinary Experience request after the page request is accepted', async () => {
+    const requestState = createMutableCloningObservable<ExperienceRequestState>({
+      status: 'pending',
+    })
+    const pageRequest = Promise.withResolvers<undefined>()
+    const pageStarted = Promise.withResolvers<undefined>()
+    const ordinaryRequest = Promise.withResolvers<undefined>()
+    const ordinaryStarted = Promise.withResolvers<undefined>()
+    const settleRoute = rs.fn((_routeKey: string, _settlement: RouteSettlement): void => undefined)
+    const buildPayload = rs.fn((): AutoPagePayload => ({}))
+    const trackCurrentPage = rs.fn(async () => {
+      pageStarted.resolve(undefined)
+      await pageRequest.promise
+      return { accepted: true as const }
+    })
+    const sdk = createOptimizationSdk({
+      identify: async () => {
+        ordinaryStarted.resolve(undefined)
+        await ordinaryRequest.promise
+        await requestState.emit({ status: 'success' })
+        return { accepted: true }
+      },
+      states: { experienceRequestState: requestState.observable },
+      trackCurrentPage,
+    })
+    const rendered = await renderWithOptimizationProviders(
+      <OptimizationRouteTransitionContext.Provider
+        value={{
+          isHandoffPending: false,
+          isLiveRuntimeAuthoritative: false,
+          isPresentationLive: false,
+          presentationSdk: undefined,
+          settleRoute,
+          startRoute: () => undefined,
+        }}
+      >
+        <TestAutoPageEmitter buildPayload={buildPayload} routeKey="/products" />
+      </OptimizationRouteTransitionContext.Provider>,
+      sdk,
+    )
+
+    await pageStarted.promise
+    const identifyRequest = sdk.identify({ userId: 'later-user' })
+    await ordinaryStarted.promise
+
+    await act(async () => {
+      pageRequest.resolve(undefined)
+      await pageRequest.promise
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(settleRoute).not.toHaveBeenCalled()
+
+    ordinaryRequest.resolve(undefined)
+    await identifyRequest
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(settleRoute).toHaveBeenCalledWith('/products', 'satisfied-with-response')
+    expect(trackCurrentPage).toHaveBeenCalledTimes(1)
 
     await rendered.unmount()
   })
@@ -327,30 +473,5 @@ describe('useAutoPageEmitter', () => {
     expect(page).toHaveBeenCalledWith({})
 
     await rendered.unmount()
-  })
-
-  it('treats offline queued page events as accepted for route deduplication', async () => {
-    const page = rs.fn(async (_payload?: AutoPagePayload) => {
-      await Promise.resolve()
-      return undefined
-    })
-    const sdk = createOptimizationSdk({
-      page,
-    })
-    const first = await renderWithOptimizationProviders(
-      <TestAutoPageEmitter routeKey="/offline" />,
-      sdk,
-    )
-
-    await first.unmount()
-
-    const second = await renderWithOptimizationProviders(
-      <TestAutoPageEmitter routeKey="/offline" />,
-      sdk,
-    )
-
-    expect(page).toHaveBeenCalledTimes(1)
-
-    await second.unmount()
   })
 })

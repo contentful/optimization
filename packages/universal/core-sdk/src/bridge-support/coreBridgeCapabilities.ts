@@ -1,6 +1,5 @@
 import type {
   ChangeArray,
-  OptimizationData,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
@@ -12,7 +11,12 @@ export const CORE_BRIDGE_CAPABILITIES_SYMBOL = Symbol.for(
 )
 
 /**
- * Mutable state bridge exposed to preview-panel integrations.
+ * Mutable state bridge exposed only to first-party preview-panel integrations.
+ *
+ * @remarks
+ * Preview needs controlled writable-signal access to synthesize immediate local overrides. This is
+ * public so separately published first-party preview packages can compose it, but it is not a
+ * supported general-purpose downstream SDK integration surface.
  *
  * @public
  */
@@ -27,13 +31,17 @@ export interface PreviewPanelBridge {
 }
 
 /**
- * Internal bridge capabilities exposed by compatible SDK instances.
+ * Preview-only bridge capabilities exposed by compatible SDK instances.
+ *
+ * @remarks
+ * General inter-SDK coordination belongs in purpose-specific public APIs that preserve Core
+ * invariants without exposing writable signal handles. This public type exists for separately
+ * published first-party preview packages, not as a custom-integration contract.
  *
  * @public
  */
 export interface CoreBridgeCapabilities {
   readonly getPreviewPanelBridge: () => PreviewPanelBridge
-  readonly hydrateOptimizationData: (data: OptimizationData) => Promise<void>
 }
 
 /**

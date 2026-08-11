@@ -1,7 +1,6 @@
 import { rs } from '@rstest/core'
 import { act, StrictMode, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { resetAutoPageEmitterState } from '../auto-page/useAutoPageEmitter'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import { OptimizationContext } from '../context/OptimizationContext'
 import { createOptimizationSdk, defaultLiveUpdatesContext } from '../test/sdkTestUtils'
@@ -63,16 +62,11 @@ describe('NextPagesAutoPageTracker', () => {
   })
 
   void beforeEach(() => {
-    resetAutoPageEmitterState()
     routerState.asPath = '/'
     routerState.isReady = true
     routerState.pathname = '/'
     routerState.query = {}
     currentRouterState = routerState
-  })
-
-  it('is exported from the router subpath module', () => {
-    expect(NextPagesAutoPageTracker).toBeTypeOf('function')
   })
 
   it('emits once on initial ready render', async () => {

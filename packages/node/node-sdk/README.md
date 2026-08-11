@@ -273,10 +273,11 @@ for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for request locale behavior.
 
-Use `getMergeTagValue()` for Contentful Rich Text merge tags and `getFlag()` for Custom Flags. If a
-merge tag references localized profile fields such as `location.city` or `location.country`, its
-resolved value follows the localized profile data returned by the Experience API. The Node SDK is
-stateless, so `getFlag()` does not automatically emit flag-view tracking.
+Use `getMergeTagValue()` for Contentful Rich Text merge tags and `getFlag()` for Custom Flags. Use
+`getMergeTagFallbackValue()` to return a merge tag's configured fallback without using the request
+profile. If a merge tag references localized profile fields such as `location.city` or
+`location.country`, its resolved value follows the localized profile data returned by the Experience
+API. The Node SDK is stateless, so `getFlag()` does not automatically emit flag-view tracking.
 
 ### Caching guidance
 

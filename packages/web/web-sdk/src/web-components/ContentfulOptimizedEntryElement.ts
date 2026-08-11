@@ -365,6 +365,7 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
     const { previousSourceSnapshot } = this
     const sourceSnapshotChanged = previousSourceSnapshot !== snapshot
     this.previousSourceSnapshot = snapshot
+    if (!sourceSnapshotChanged && !forcePresentationUpdate) return
 
     if (snapshot.baselineEntry !== undefined) {
       if (sourceSnapshotChanged || forcePresentationUpdate) {
@@ -374,7 +375,7 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
     }
 
     this.clearController()
-    this.resetPresentationState()
+    this.resetPresentationState(snapshot)
     this.applyManagedSourceSnapshot(snapshot, sourceSnapshotChanged, forcePresentationUpdate)
   }
 
@@ -480,10 +481,14 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
     this.appliedHostAttributes = nextAttributes
   }
 
-  private resetPresentationState(): void {
+  private resetPresentationState(snapshot?: OptimizedEntrySourceSnapshot): void {
     this.applyHostAttributes({})
     this.hidden = false
-    this.style.removeProperty('visibility')
+    const shouldHide =
+      snapshot?.isLoading &&
+      this.resolveControllerSdk().isSdkStateReady &&
+      this.optimizationRootContext?.hydration !== 'preserve-server'
+    this.style.visibility = shouldHide ? 'hidden' : ''
     this.previousSnapshot = undefined
   }
 

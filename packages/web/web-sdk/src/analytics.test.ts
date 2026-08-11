@@ -1,4 +1,9 @@
-import { batch, InterceptorManager, signals } from '@contentful/optimization-core'
+import {
+  batch,
+  InterceptorManager,
+  signals,
+  type OptimizationSelectionState,
+} from '@contentful/optimization-core'
 import type {
   ChangeArray,
   Profile,
@@ -11,6 +16,7 @@ import {
   type OptimizationAnalyticsRuntime,
 } from './analytics'
 import ContentfulOptimization from './ContentfulOptimization'
+import { hydrateOptimizationHandoffState } from './handoff'
 import LocalStore from './storage/LocalStore'
 
 const config = {
@@ -194,6 +200,38 @@ describe('Optimization analytics handoff runtime', () => {
     rs.restoreAllMocks()
   })
 
+  it('retains the stateful singleton lock while the internal SDK is hidden from window', () => {
+    runtime = initializeOptimizationAnalyticsRuntime(config)
+
+    expect(window.contentfulOptimization).toBeUndefined()
+    expect(() => new ContentfulOptimization(config)).toThrow(
+      /Only one stateful instance is supported per runtime/,
+    )
+
+    runtime.destroy()
+    runtime = undefined
+
+    const replacement = new ContentfulOptimization(config)
+    replacement.destroy()
+  })
+
+  it('exposes read-only current-page coordination state', async () => {
+    runtime = initializeOptimizationAnalyticsRuntime(config)
+    const readableStates: Pick<ContentfulOptimization['states'], 'currentStateTracking'> =
+      runtime.states
+
+    expect(Object.keys(readableStates)).toEqual(['currentStateTracking'])
+    expect(readableStates.currentStateTracking.current).toEqual(
+      expect.objectContaining({ status: 'idle' }),
+    )
+
+    await runtime.trackCurrentPage({ initialPageEvent: 'skip', routeKey: '/server-emitted' })
+
+    expect(readableStates.currentStateTracking.current).toEqual(
+      expect.objectContaining({ key: '/server-emitted', status: 'accepted' }),
+    )
+  })
+
   it('emits the initial page event and entry clicks from existing data attributes', async () => {
     const entry = document.createElement('button')
     entry.dataset.ctflBaselineId = 'baseline'
@@ -313,6 +351,56 @@ describe('Optimization analytics handoff runtime', () => {
     await first
 
     expect(trackCurrentPage).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not track an analytics route superseded by content hydration', async () => {
+    const analyticsProfile = createProfile('analytics-profile')
+    const contentProfile = createProfile('content-profile')
+    const analyticsHydration = createDeferred()
+    const buildPagePayload = rs.fn(() => ({}))
+    const trackCurrentPage = rs
+      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+      .mockResolvedValue({ accepted: true })
+    const runInterceptors = InterceptorManager.prototype.run
+    rs.spyOn(InterceptorManager.prototype, 'run').mockImplementation(async function run(
+      this: InterceptorManager<unknown>,
+      input: unknown,
+    ): Promise<unknown> {
+      if (readProfileId(input) === analyticsProfile.id) await analyticsHydration.promise
+
+      return await runInterceptors.call(this, input)
+    })
+    runtime = initializeOptimizationAnalyticsRuntime(config)
+    const contentStateInterceptors = new InterceptorManager<OptimizationSelectionState>()
+    const contentTarget = {
+      interceptors: { state: contentStateInterceptors },
+    }
+
+    const staleAnalytics = hydrateOptimizationAnalyticsHandoff(
+      runtime,
+      createAnalyticsHandoff({
+        state: {
+          profile: analyticsProfile,
+          selectedOptimizations,
+        },
+      }),
+      {
+        routeKey: '/analytics',
+        buildPagePayload,
+      },
+    )
+
+    await hydrateOptimizationHandoffState(contentTarget, {
+      profile: contentProfile,
+      selectedOptimizations,
+    })
+
+    analyticsHydration.resolve()
+    await staleAnalytics
+
+    expect(trackCurrentPage).not.toHaveBeenCalled()
+    expect(buildPagePayload).not.toHaveBeenCalled()
+    expect(signals.profile.value).toEqual(contentProfile)
   })
 
   it('hydrates static profileless analytics state without overwriting durable continuity', async () => {

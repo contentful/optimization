@@ -7,7 +7,11 @@ import {
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { LifecycleInterceptors } from '../CoreBase'
-import type { EventOptimizationContext, OptimizationEventStreamEvent } from '../events'
+import type {
+  EventEmissionResult,
+  EventOptimizationContext,
+  OptimizationEventStreamEvent,
+} from '../events'
 import { QueueFlushRuntime, type ResolvedQueueFlushPolicy } from '../lib/queue'
 import {
   event as eventSignal,
@@ -51,6 +55,7 @@ interface ExperienceQueueOptions {
   eventInterceptors: LifecycleInterceptors['event']
   flushPolicy: ResolvedQueueFlushPolicy
   getAnonymousId: () => string | undefined
+  getCurrentStateGeneration: () => number
   offlineMaxEvents: number
   onOfflineDrop?: (context: ExperienceQueueDropContext) => void
   stateInterceptors: LifecycleInterceptors['state']
@@ -66,10 +71,13 @@ export class ExperienceQueue {
   private readonly eventInterceptors: ExperienceQueueOptions['eventInterceptors']
   private readonly flushRuntime: QueueFlushRuntime
   private readonly getAnonymousId: ExperienceQueueOptions['getAnonymousId']
+  private readonly getCurrentStateGeneration: ExperienceQueueOptions['getCurrentStateGeneration']
   private readonly offlineMaxEvents: number
   private readonly onOfflineDrop?: ExperienceQueueOptions['onOfflineDrop']
   private readonly queuedExperienceEvents = new Set<ExperienceEventPayload>()
   private readonly stateInterceptors: ExperienceQueueOptions['stateInterceptors']
+  private latestRequestId = 0
+  private nextRequestId = 0
 
   constructor(options: ExperienceQueueOptions) {
     const {
@@ -77,6 +85,7 @@ export class ExperienceQueue {
       eventInterceptors,
       flushPolicy,
       getAnonymousId,
+      getCurrentStateGeneration,
       offlineMaxEvents,
       onOfflineDrop,
       stateInterceptors,
@@ -85,6 +94,7 @@ export class ExperienceQueue {
     this.experienceApi = experienceApi
     this.eventInterceptors = eventInterceptors
     this.getAnonymousId = getAnonymousId
+    this.getCurrentStateGeneration = getCurrentStateGeneration
     this.offlineMaxEvents = offlineMaxEvents
     this.onOfflineDrop = onOfflineDrop
     this.stateInterceptors = stateInterceptors
@@ -103,6 +113,11 @@ export class ExperienceQueue {
     this.flushRuntime.clearScheduledRetry()
   }
 
+  invalidateRequests(): void {
+    this.latestRequestId = ++this.nextRequestId
+    experienceRequestStateSignal.value = { status: 'idle' }
+  }
+
   clearQueuedEvents(): void {
     this.queuedExperienceEvents.clear()
     this.flushRuntime.reset()
@@ -112,23 +127,17 @@ export class ExperienceQueue {
     event: ExperienceEventPayload,
     optimizationContext?: EventOptimizationContext,
   ): Promise<OptimizationData | undefined> {
-    const intercepted = await this.eventInterceptors.run(event)
-    const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)
+    const result = await this.sendEvent(event, optimizationContext)
+    return result.accepted ? result.data : undefined
+  }
 
-    eventSignal.value =
-      optimizationContext === undefined
-        ? validEvent
-        : ({
-            ...validEvent,
-            optimization: optimizationContext,
-          } satisfies OptimizationEventStreamEvent)
+  async sendCurrentState(
+    event: ExperienceEventPayload,
+    currentStateGeneration: number,
+  ): Promise<EventEmissionResult> {
+    if (!this.isCurrentStateAllowed(currentStateGeneration)) return { accepted: false }
 
-    if (onlineSignal.value) return await this.upsertProfile([validEvent])
-
-    coreLogger.debug(`Queueing ${validEvent.type} event`, validEvent)
-    this.enqueueEvent(validEvent)
-
-    return undefined
+    return await this.sendEvent(event, undefined, currentStateGeneration)
   }
 
   async flush(options: { force?: boolean } = {}): Promise<void> {
@@ -150,8 +159,8 @@ export class ExperienceQueue {
       const sendSuccess = await this.tryUpsertQueuedEvents(queuedEvents)
 
       if (sendSuccess) {
-        queuedEvents.forEach((queuedEvent) => {
-          this.queuedExperienceEvents.delete(queuedEvent)
+        queuedEvents.forEach((event) => {
+          this.queuedExperienceEvents.delete(event)
         })
         this.flushRuntime.handleFlushSuccess()
       } else {
@@ -163,6 +172,42 @@ export class ExperienceQueue {
     } finally {
       this.flushRuntime.markFlushFinished()
     }
+  }
+
+  private async sendEvent(
+    event: ExperienceEventPayload,
+    optimizationContext?: EventOptimizationContext,
+    currentStateGeneration?: number,
+  ): Promise<EventEmissionResult> {
+    const requestId = ++this.nextRequestId
+    const intercepted = await this.eventInterceptors.run(event)
+
+    if (
+      currentStateGeneration !== undefined &&
+      !this.isCurrentStateAllowed(currentStateGeneration)
+    ) {
+      return { accepted: false }
+    }
+
+    const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)
+
+    eventSignal.value =
+      optimizationContext === undefined
+        ? validEvent
+        : ({
+            ...validEvent,
+            optimization: optimizationContext,
+          } satisfies OptimizationEventStreamEvent)
+
+    if (onlineSignal.value) {
+      const data = await this.upsertProfile([validEvent], requestId, currentStateGeneration)
+      return { accepted: true, data }
+    }
+
+    coreLogger.debug(`Queueing ${validEvent.type} event`, validEvent)
+    this.enqueueEvent(validEvent)
+
+    return { accepted: true }
   }
 
   private enqueueEvent(event: ExperienceEventPayload): void {
@@ -223,11 +268,22 @@ export class ExperienceQueue {
     }
   }
 
-  protected async upsertProfile(events: ExperienceEventArray): Promise<OptimizationData> {
+  protected async upsertProfile(
+    events: ExperienceEventArray,
+    requestId = ++this.nextRequestId,
+    currentStateGeneration?: number,
+  ): Promise<OptimizationData> {
+    const isLatestRequest = (): boolean =>
+      requestId === this.latestRequestId &&
+      this.isCurrent(currentStateGeneration) &&
+      experienceRequestStateSignal.value.status === 'pending'
     const anonymousId = this.getAnonymousId()
     if (anonymousId) coreLogger.debug(`Anonymous ID found: ${anonymousId}`)
 
-    experienceRequestStateSignal.value = { status: 'pending' }
+    if (requestId > this.latestRequestId) {
+      this.latestRequestId = requestId
+      experienceRequestStateSignal.value = { status: 'pending' }
+    }
 
     try {
       const data = await this.experienceApi.upsertProfile({
@@ -235,15 +291,27 @@ export class ExperienceQueue {
         events,
       })
 
-      await applyOptimizationDataToSignals(data, this.stateInterceptors)
+      if (isLatestRequest()) {
+        await applyOptimizationDataToSignals(data, this.stateInterceptors, isLatestRequest)
+      }
 
       return data
     } catch (error) {
-      experienceRequestStateSignal.value = {
-        status: 'failed',
-        reason: classifyExperienceRequestFailure(error),
+      if (isLatestRequest()) {
+        experienceRequestStateSignal.value = {
+          status: 'failed',
+          reason: classifyExperienceRequestFailure(error),
+        }
       }
       throw error
     }
+  }
+
+  private isCurrent(generation: number | undefined): boolean {
+    return generation === undefined || generation === this.getCurrentStateGeneration()
+  }
+
+  private isCurrentStateAllowed(generation: number): boolean {
+    return !!onlineSignal.value && this.isCurrent(generation)
   }
 }

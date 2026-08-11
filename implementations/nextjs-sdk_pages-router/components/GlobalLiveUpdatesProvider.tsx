@@ -1,6 +1,6 @@
 'use client'
 
-import { LiveUpdatesProvider } from '@contentful/optimization-nextjs/client'
+import { LiveUpdatesProvider } from '@contentful/optimization-nextjs/pages-router'
 import { createContext, useContext, useMemo, useState, type JSX, type ReactNode } from 'react'
 
 interface GlobalLiveUpdatesContextValue {

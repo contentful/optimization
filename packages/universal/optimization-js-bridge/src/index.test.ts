@@ -1,3 +1,5 @@
+import { CoreStateful, signalFns } from '@contentful/optimization-core'
+import { PreviewOverrideManager } from '@contentful/optimization-core/preview-support'
 import { afterEach, describe, expect, it, rs } from '@rstest/core'
 import bridge from './index'
 
@@ -15,6 +17,39 @@ const createCallbacks = (): {
   onError: rs.fn(),
   onSuccess: rs.fn(),
 })
+
+function createDeferred<T>(): {
+  promise: Promise<T>
+  resolve: (value: T) => void
+} {
+  let deferredResolve: ((value: T) => void) | undefined
+  const promise = new Promise<T>((resolve) => {
+    deferredResolve = resolve
+  })
+
+  return {
+    promise,
+    resolve: (value) => {
+      deferredResolve?.(value)
+    },
+  }
+}
+
+const trackCurrentScreen = async (
+  payload: Parameters<typeof bridge.trackCurrentScreen>[0],
+): Promise<unknown> =>
+  await new Promise<unknown>((resolve, reject) => {
+    bridge.trackCurrentScreen(
+      payload,
+      (json) => {
+        const result: unknown = JSON.parse(json)
+        resolve(result)
+      },
+      (error) => {
+        reject(new Error(error))
+      },
+    )
+  })
 
 const PROFILE_RESPONSE = {
   data: {
@@ -237,5 +272,112 @@ describe('bridge contract', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/profiles$/)
+  })
+
+  it('rolls back acquired resources when bridge effect construction fails', () => {
+    const originalEffect = signalFns.effect
+    const onStateChange = rs.fn()
+    const disposeStateEffect = rs.fn()
+    const destroyCore = rs.spyOn(CoreStateful.prototype, 'destroy')
+    const destroyOverrideManager = rs.spyOn(PreviewOverrideManager.prototype, 'destroy')
+    let stateEffectCreated = false
+    rs.stubGlobal('__nativeOnStateChange', onStateChange)
+    const effectSpy = rs.spyOn(signalFns, 'effect').mockImplementation((callback) => {
+      if (stateEffectCreated) throw new Error('Bridge effect initialization failed')
+
+      const dispose = originalEffect(callback)
+      if (onStateChange.mock.calls.length === 0) return dispose
+
+      stateEffectCreated = true
+
+      return () => {
+        disposeStateEffect()
+        dispose()
+      }
+    })
+
+    expect(() => {
+      initializeBridge()
+    }).toThrowError('Bridge effect initialization failed')
+    expect(onStateChange).toHaveBeenCalledTimes(1)
+    expect(destroyOverrideManager).toHaveBeenCalledTimes(1)
+    expect(disposeStateEffect).toHaveBeenCalledTimes(1)
+    expect(destroyCore).toHaveBeenCalledTimes(1)
+    expect(bridge.hasConsent('screen')).toBe(false)
+
+    bridge.destroy()
+    expect(destroyOverrideManager).toHaveBeenCalledTimes(1)
+    expect(disposeStateEffect).toHaveBeenCalledTimes(1)
+    expect(destroyCore).toHaveBeenCalledTimes(1)
+
+    effectSpy.mockRestore()
+    expect(() => {
+      initializeBridge()
+    }).not.toThrow()
+  })
+
+  it('disposes a successful bridge runtime exactly once', () => {
+    const destroyCore = rs.spyOn(CoreStateful.prototype, 'destroy')
+    const destroyOverrideManager = rs.spyOn(PreviewOverrideManager.prototype, 'destroy')
+
+    initializeBridge()
+    bridge.destroy()
+    bridge.destroy()
+
+    expect(destroyOverrideManager).toHaveBeenCalledTimes(1)
+    expect(destroyCore).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps joined and deduplicated current-screen callback payloads compatible', async () => {
+    const response = createDeferred<void>()
+    const fetchMock = rs.fn<typeof fetch>(async () => {
+      await response.promise
+      return new Response(JSON.stringify(PROFILE_RESPONSE))
+    })
+    rs.stubGlobal('fetch', fetchMock)
+    bridge.initialize({
+      clientId: 'test-client',
+      environment: 'main',
+      defaults: { consent: true },
+    })
+
+    const first = trackCurrentScreen({ name: 'Home' })
+    const joined = trackCurrentScreen({ name: 'Home' })
+    response.resolve(undefined)
+
+    const firstResult = await first
+    const joinedResult = await joined
+    const deduplicatedResult = await trackCurrentScreen({ name: 'Home' })
+
+    expect(firstResult).toEqual(expect.objectContaining({ accepted: true }))
+    expect(joinedResult).toEqual(firstResult)
+    expect(firstResult).not.toHaveProperty('status')
+    expect(deduplicatedResult).toEqual({ accepted: false })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('requires native callers to retry the current screen explicitly after reconnecting', async () => {
+    const fetchMock = rs.fn<typeof fetch>(
+      async () => new Response(JSON.stringify(PROFILE_RESPONSE)),
+    )
+    rs.stubGlobal('fetch', fetchMock)
+    bridge.initialize({
+      clientId: 'test-client',
+      environment: 'main',
+      defaults: { consent: true },
+    })
+
+    bridge.setOnline(false)
+    await expect(trackCurrentScreen({ name: 'Home' })).resolves.toEqual({ accepted: false })
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    bridge.setOnline(true)
+    await Promise.resolve()
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    await expect(trackCurrentScreen({ name: 'Home' })).resolves.toEqual(
+      expect.objectContaining({ accepted: true }),
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

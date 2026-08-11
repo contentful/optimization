@@ -221,6 +221,26 @@ Resolving entries means applying selected optimizations to those baseline entrie
 | Edge request-personalized handoff              | Request-bound edge helper      | Edge runtime route                               | `private-request`                          |
 | Analytics-only markup                          | The markup owner               | Server, static, ISR-style, or Edge runtime route | Same scope as the markup                   |
 
+A browser runtime can have one live stateful Web owner. Choose the content-capable
+`OptimizationRoot` or `OptimizationProvider` when the browser must resolve content, or choose
+`OptimizationAnalyticsRoot` or `initializeOptimizationAnalyticsRuntime()` when the markup is final
+and the browser only tracks it. These are alternative owner surfaces for a route strategy, not
+independent SDK instances that can stay live at the same time.
+
+At the content-capable client boundary, one **route occurrence** is one mounted route lifecycle in
+which `OptimizationRoot` or `OptimizationProvider` receives a handoff prop. If that handoff is
+removed or replaced, or the root or provider unmounts, and a content-capable route later supplies a
+handoff again, pass a freshly created in-memory object. Reusing the earlier live object for the later
+occurrence is outside the supported lifecycle.
+
+This content-root freshness rule applies to live JavaScript object identity, not to cache
+regeneration. Static, ISR, and CDN caches can safely serve the same serialized handoff payload
+repeatedly. When another browser document or client navigation request consumes that payload,
+framework deserialization produces a fresh in-memory object; it does not require regenerating the
+static or cached output for each visit. During client-side routing within one browser runtime, let
+the later content route data create its handoff object instead of retaining and re-passing an object
+that already left the root or provider.
+
 ### Build app-owned public permutations
 
 An app-owned public permutation starts in a finite registry your application owns. The registry can
@@ -396,10 +416,9 @@ Define `useOptimizationConsent()` as an app-owned client hook that reads your co
 returns `{ events, persistence }` booleans for Optimization event delivery and profile-cookie
 persistence.
 
-This example intentionally combines two client entrypoints from the same installed package.
-`/app-router/client` owns the App Router navigation tracker; router-neutral `/client` owns the root
-and entry because this component supplies browser configuration and consent directly. Both consume
-the nearest Optimization React provider.
+This App Router browser-owned component imports its root, entry, and navigation tracker from
+`/app-router/client`. Keep every context-bound value on that path so they consume the same
+Optimization React provider.
 
 **Adapt this to your use case:**
 
@@ -409,8 +428,11 @@ the nearest Optimization React provider.
 
 import { Hero } from '@/components/Hero'
 import { useOptimizationConsent } from '@/lib/consent-client'
-import { NextAppAutoPageTracker } from '@contentful/optimization-nextjs/app-router/client'
-import { OptimizationRoot, OptimizedEntry } from '@contentful/optimization-nextjs/client'
+import {
+  NextAppAutoPageTracker,
+  OptimizationRoot,
+  OptimizedEntry,
+} from '@contentful/optimization-nextjs/app-router/client'
 import { Suspense } from 'react'
 
 export function BrowserOwnedHero({ hero }) {
@@ -756,8 +778,9 @@ If you build the analytics-only browser owner without React, import
 `initializeOptimizationAnalyticsRuntime(...)` and `hydrateOptimizationAnalyticsHandoff(...)` from
 `@contentful/optimization-web/analytics`. Initialize one analytics-only runtime for the page and
 hydrate each analytics-only handoff into it; the runtime does not expose content-resolution APIs and
-is not an isolation context. When route changes can replace a handoff before hydration finishes, pass
-the helper's `isCurrent` option so stale hydration stops before state or page tracking applies.
+is not an isolation context. Use it as the browser runtime's owner instead of initializing it beside
+a content-capable root. When route changes can replace a handoff before hydration finishes, pass the
+helper's `isCurrent` option so stale hydration stops before state or page tracking applies.
 
 ## Validate the integration
 

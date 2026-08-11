@@ -3,7 +3,8 @@
 Use this guide when a Next.js App Router app carries legacy Next.js, ESR, SSR plugin, or React
 experience.js wiring and you want to move server rendering to
 `@contentful/optimization-nextjs/app-router/server`, with
-`@contentful/optimization-nextjs/app-router/client` only for bound Client Components.
+`@contentful/optimization-nextjs/app-router/client` for bound Client Components and their
+context-bound browser hooks, providers, and entry controls.
 
 ## What changes
 
@@ -48,9 +49,10 @@ Gather these inputs:
 
 Do not carry forward package-root or ESR helper assumptions. The target App Router import path is
 `@contentful/optimization-nextjs/app-router/server` for Server Components. Use
-`@contentful/optimization-nextjs/app-router/client` only for bound Client Components and
-`@contentful/optimization-nextjs/client` for browser hooks and per-entry controls. Legacy ESR
-middleware and selector files are not supported public import surfaces.
+`@contentful/optimization-nextjs/app-router/client` for bound Client Components and every
+context-bound hook, provider, or per-entry control beneath their roots. The generic `/client` path
+is for router-neutral trees, not an App Router-bound tree. Legacy ESR middleware and selector files
+are not supported public import surfaces.
 
 Remove legacy tracker and provider wiring before adding `optimization.request.OptimizationRoot` and
 `optimization.request.NextAppAutoPageTracker`, so the request family owns server state handoff and
@@ -102,7 +104,8 @@ assumptions on routes that render request-specific personalized output.
 
 Bound Client Components use a separate binding from
 `@contentful/optimization-nextjs/app-router/client`. Client-side flags, analytics forwarding,
-preview, and live updates use the React Web runtime behind the App Router SDK:
+preview, and live updates use context-bound imports from that same path and the React Web runtime
+behind the App Router SDK:
 
 - Flag reads auto-attempt flag-view tracking when consent and profile state allow it.
 - Accepted and blocked event streams are available on the live client SDK.

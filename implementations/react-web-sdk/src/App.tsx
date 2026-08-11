@@ -1,4 +1,4 @@
-import { useOptimizationContext } from '@contentful/optimization-react-web'
+import { useOptimizationContext } from '@contentful/optimization-react-web/react-router'
 import { PAGES } from 'e2e-web'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useOutletContext } from 'react-router-dom'

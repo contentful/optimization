@@ -1,6 +1,6 @@
 import type { Entry } from 'contentful'
-import type { ChangeArray } from './api-schemas'
-import { getPreviewPanelBridge, hydrateOptimizationData } from './bridge-support'
+import type { ChangeArray, OptimizationData } from './api-schemas'
+import { getPreviewPanelBridge } from './bridge-support'
 import type { ContentfulEntryClient, ContentfulEntryQuery } from './CoreBase'
 import CoreStateful, { type CoreStatefulConfig } from './CoreStateful'
 import type {
@@ -12,11 +12,12 @@ import type {
 } from './events'
 import type { QueueFlushFailureContext } from './lib/queue'
 import { createSnapshotRuntime } from './runtime/SnapshotRuntime'
-import { batch, signals } from './signals'
+import { batch, signalFns, signals } from './signals'
 import { mergeTagEntry } from './test/fixtures/mergeTagEntry'
 import { optimizedEntry } from './test/fixtures/optimizedEntry'
 import { profile as profileFixture } from './test/fixtures/profile'
 import { selectedOptimizations as selectedOptimizationsFixture } from './test/fixtures/selectedOptimizations'
+import type { CurrentStateTrackingResult } from './tracking'
 
 const config: CoreStatefulConfig = {
   clientId: 'key_123',
@@ -63,6 +64,14 @@ function createDeferred(): { promise: Promise<void>; resolve: () => void } {
 }
 
 class CoreStatefulTestHarness extends CoreStateful {
+  async trackCurrentPage(routeKey: string): Promise<CurrentStateTrackingResult> {
+    return await this.emitCurrentPage(routeKey, () => ({}))
+  }
+
+  markCurrentPageAccepted(routeKey: string): CurrentStateTrackingResult {
+    return this.markCurrentStateAccepted(routeKey)
+  }
+
   getOptimizationContextById(
     optimizationContextId: string | undefined,
   ): EventOptimizationContext | undefined {
@@ -71,6 +80,10 @@ class CoreStatefulTestHarness extends CoreStateful {
 
   getOnlineState(): boolean {
     return this.online
+  }
+
+  registerTestDisposer(disposer: () => void): void {
+    this.registerDisposer(disposer)
   }
 
   setOnlineState(isOnline: boolean): void {
@@ -375,6 +388,7 @@ describe('CoreStateful blocked event handling', () => {
       expect(onDrop).toHaveBeenCalledWith(
         expect.objectContaining({
           droppedCount: 1,
+          droppedEvents: [expect.objectContaining({ type: 'track' })],
           maxEvents: 2,
           queuedEvents: 2,
         }),
@@ -398,6 +412,74 @@ describe('CoreStateful blocked event handling', () => {
     }
   })
 
+  it('reserves reconnect Experience replay before an Insights flush can block a current-page retry', async () => {
+    const insightsResponse = Promise.withResolvers<boolean>()
+    const insightsStarted = Promise.withResolvers<undefined>()
+    const queuedExperienceResponse = Promise.withResolvers<OptimizationData>()
+    const queuedExperienceStarted = Promise.withResolvers<undefined>()
+    const currentPageResponse = Promise.withResolvers<OptimizationData>()
+    const currentPageStarted = Promise.withResolvers<undefined>()
+    const queuedProfile = { ...profileFixture, traits: { route: 'queued' } }
+    const currentPageProfile = { ...profileFixture, traits: { route: 'current' } }
+    const core = createCoreStatefulHarness({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    rs.spyOn(core.api.insights, 'sendBatchEvents').mockImplementation(async () => {
+      insightsStarted.resolve(undefined)
+      return await insightsResponse.promise
+    })
+    rs.spyOn(core.api.experience, 'upsertProfile').mockImplementation(async ({ events }) => {
+      const [event] = events
+
+      if (event?.type === 'track') {
+        queuedExperienceStarted.resolve(undefined)
+        return await queuedExperienceResponse.promise
+      }
+
+      if (event?.type === 'page') {
+        currentPageStarted.resolve(undefined)
+        return await currentPageResponse.promise
+      }
+
+      throw new Error('Expected a queued track or current-page event.')
+    })
+
+    core.setOnlineState(false)
+    await core.trackClick({ componentId: 'hero-banner' })
+    await core.track({ event: 'queued-experience-event' })
+    await expect(core.trackCurrentPage('current-route')).resolves.toEqual({
+      accepted: false,
+      reason: 'not-allowed',
+    })
+
+    core.setOnlineState(true)
+    await insightsStarted.promise
+
+    const currentPage = core.trackCurrentPage('current-route')
+    await currentPageStarted.promise
+    currentPageResponse.resolve({
+      changes: [],
+      profile: currentPageProfile,
+      selectedOptimizations: [],
+    })
+    await expect(currentPage).resolves.toMatchObject({ accepted: true })
+
+    queuedExperienceResponse.resolve({
+      changes: [],
+      profile: queuedProfile,
+      selectedOptimizations: [],
+    })
+    insightsResponse.resolve(true)
+    await queuedExperienceStarted.promise
+    await flushMicrotasks()
+
+    expect(signals.profile.value).toEqual(currentPageProfile)
+    expect(signals.experienceRequestState.value).toEqual({ status: 'success' })
+  })
+
   it('supports only one stateful instance per runtime until destroy is called', () => {
     const first = createCoreStateful()
     const createSecondCore = (): CoreStateful => new CoreStateful(config)
@@ -409,6 +491,39 @@ describe('CoreStateful blocked event handling', () => {
     expect(() => {
       createCoreStateful()
     }).not.toThrow()
+  })
+
+  it('disposes registered effects and releases the singleton when construction fails', () => {
+    const originalEffect = signalFns.effect
+    const disposedEffect = rs.fn()
+    let effectRegistrations = 0
+    const effectSpy = rs.spyOn(signalFns, 'effect').mockImplementation((callback) => {
+      effectRegistrations += 1
+      if (effectRegistrations === 2) throw new Error('effect initialization failed')
+
+      const dispose = originalEffect(callback)
+      return () => {
+        disposedEffect()
+        dispose()
+      }
+    })
+
+    expect(() => new CoreStateful(config)).toThrowError('effect initialization failed')
+    expect(disposedEffect).toHaveBeenCalledTimes(1)
+
+    effectSpy.mockRestore()
+    expect(() => createCoreStateful()).not.toThrow()
+  })
+
+  it('disposes registered resources in LIFO order', () => {
+    const core = createCoreStatefulHarness()
+    const disposalOrder: string[] = []
+
+    core.registerTestDisposer(() => disposalOrder.push('first'))
+    core.registerTestDisposer(() => disposalOrder.push('second'))
+    core.destroy()
+
+    expect(disposalOrder).toEqual(['second', 'first'])
   })
 
   it('flushes Insights API and Experience API queues with force on destroy', async () => {
@@ -435,6 +550,127 @@ describe('CoreStateful blocked event handling', () => {
 
     expect(sendBatchEvents).toHaveBeenCalledTimes(1)
     expect(upsertProfile).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['reset', 'destroy'] as const)(
+    'does not apply an in-flight Experience response after %s',
+    async (lifecycle) => {
+      const response = Promise.withResolvers<OptimizationData>()
+      const core = createCoreStateful({ defaults: { consent: true } })
+      const upsertProfile = rs
+        .spyOn(core.api.experience, 'upsertProfile')
+        .mockImplementation(async () => await response.promise)
+
+      const request = core.page({})
+      await flushMicrotasks()
+      expect(upsertProfile).toHaveBeenCalledTimes(1)
+
+      core[lifecycle]()
+      response.resolve({
+        changes: FLAG_CHANGES,
+        selectedOptimizations: selectedOptimizationsFixture,
+        profile: profileFixture,
+      })
+      await request
+
+      expect(signals.changes.value).toBeUndefined()
+      expect(signals.profile.value).toBeUndefined()
+      expect(signals.selectedOptimizations.value).toBeUndefined()
+    },
+  )
+
+  it.each(['not-allowed', 'mark-accepted'] as const)(
+    'does not apply an in-flight guarded page after %s supersession',
+    async (supersession) => {
+      const response = Promise.withResolvers<OptimizationData>()
+      const core = createCoreStatefulHarness({ defaults: { consent: true } })
+      const upsertProfile = rs
+        .spyOn(core.api.experience, 'upsertProfile')
+        .mockImplementation(async () => await response.promise)
+      signals.experienceRequestState.value = { status: 'idle' }
+
+      const routeA = core.trackCurrentPage('A')
+      await flushMicrotasks()
+
+      expect(upsertProfile).toHaveBeenCalledTimes(1)
+      expect(signals.experienceRequestState.value).toEqual({ status: 'pending' })
+
+      if (supersession === 'not-allowed') {
+        core.consent(false)
+        await expect(core.trackCurrentPage('B')).resolves.toEqual({
+          accepted: false,
+          reason: 'not-allowed',
+        })
+      } else {
+        core.markCurrentPageAccepted('B')
+      }
+      expect(signals.experienceRequestState.value).toEqual({ status: 'idle' })
+
+      response.resolve({
+        changes: FLAG_CHANGES,
+        selectedOptimizations: selectedOptimizationsFixture,
+        profile: profileFixture,
+      })
+      await expect(routeA).resolves.toEqual({ accepted: false, reason: 'superseded' })
+
+      expect(signals.changes.value).toBeUndefined()
+      expect(signals.profile.value).toBeUndefined()
+      expect(signals.selectedOptimizations.value).toBeUndefined()
+      expect(signals.experienceRequestState.value).toEqual({ status: 'idle' })
+    },
+  )
+
+  it('invalidates an older ordinary Experience response on route advance', async () => {
+    const response = Promise.withResolvers<OptimizationData>()
+    const core = createCoreStatefulHarness({ defaults: { consent: true } })
+    rs.spyOn(core.api.experience, 'upsertProfile').mockImplementation(
+      async () => await response.promise,
+    )
+
+    const identify = core.identify({ userId: 'user-1' })
+    await flushMicrotasks()
+
+    expect(core.markCurrentPageAccepted('home')).toEqual({ accepted: true })
+    expect(signals.experienceRequestState.value).toEqual({ status: 'idle' })
+
+    response.resolve({
+      changes: FLAG_CHANGES,
+      selectedOptimizations: selectedOptimizationsFixture,
+      profile: profileFixture,
+    })
+    await expect(identify).resolves.toEqual({
+      accepted: true,
+      data: {
+        changes: FLAG_CHANGES,
+        selectedOptimizations: selectedOptimizationsFixture,
+        profile: profileFixture,
+      },
+    })
+
+    expect(signals.changes.value).toBeUndefined()
+    expect(signals.profile.value).toBeUndefined()
+    expect(signals.selectedOptimizations.value).toBeUndefined()
+    expect(signals.experienceRequestState.value).toEqual({ status: 'idle' })
+  })
+
+  it('rejects an offline current page without sending or reconnect retry', async () => {
+    const core = createCoreStatefulHarness({ defaults: { consent: true } })
+    const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile')
+    core.setOnlineState(false)
+
+    await expect(core.trackCurrentPage('A')).resolves.toEqual({
+      accepted: false,
+      reason: 'not-allowed',
+    })
+
+    core.setOnlineState(true)
+    await core.flush()
+
+    expect(upsertProfile).not.toHaveBeenCalled()
+    expect(core.states.currentStateTracking.current).toMatchObject({
+      key: 'A',
+      status: 'observed',
+    })
   })
 
   it('exposes online state through protected accessor pair', () => {
@@ -473,6 +709,18 @@ describe('CoreStateful blocked event handling', () => {
     expect(secondStates.previewPanelAttached).toBe(firstStates.previewPanelAttached)
     expect(secondStates.previewPanelOpen).toBe(firstStates.previewPanelOpen)
     expect(secondStates.profile).toBe(firstStates.profile)
+  })
+
+  it('exposes current-state lifecycle as read-only observable state', async () => {
+    const core = createCoreStatefulHarness({ defaults: { consent: true } })
+
+    expect(core.states.currentStateTracking.current).toMatchObject({ status: 'idle' })
+    await expect(core.trackCurrentPage('home')).resolves.toMatchObject({ accepted: true })
+    expect(core.states.currentStateTracking.current).toMatchObject({
+      key: 'home',
+      status: 'accepted',
+    })
+    expect(core.states.currentStateTracking).not.toHaveProperty('value')
   })
 
   it('exposes canOptimize as a derived observable from selected optimizations', () => {
@@ -747,12 +995,13 @@ describe('CoreStateful blocked event handling', () => {
     subscription.unsubscribe()
   })
 
-  it('defaults getMergeTagValue to the profile signal', () => {
+  it('defaults getMergeTagValue to the profile signal and exposes merge-tag fallbacks', () => {
     const core = createCoreStateful()
 
     signals.profile.value = profileFixture
 
     expect(core.getMergeTagValue(mergeTagEntry)).toBe('EU')
+    expect(core.getMergeTagFallbackValue(mergeTagEntry)).toBe('Nowhere')
   })
 
   it('auto-tracks getFlag retrievals in stateful environments', () => {
@@ -1185,34 +1434,5 @@ describe('CoreStateful blocked event handling', () => {
     expect(bridge.previewPanelOpen).toBe(signals.previewPanelOpen)
     expect(bridge.stateInterceptors).toBe(core.interceptors.state)
     expect('registerPreviewPanel' in core).toBe(false)
-  })
-
-  it('hydrates optimization data through bridge support and applies state interceptors', async () => {
-    const core = createCoreStateful()
-    const data = {
-      changes: FLAG_CHANGES,
-      selectedOptimizations: selectedOptimizationsFixture,
-      profile: profileFixture,
-    }
-    core.interceptors.state.add((incoming) => ({
-      ...incoming,
-      profile:
-        incoming.profile === undefined
-          ? undefined
-          : {
-              ...incoming.profile,
-              traits: { ...incoming.profile.traits, bridged: true },
-            },
-    }))
-
-    await hydrateOptimizationData(core, data)
-
-    expect(signals.changes.value).toEqual(FLAG_CHANGES)
-    expect(signals.selectedOptimizations.value).toEqual(selectedOptimizationsFixture)
-    expect(signals.profile.value).toEqual({
-      ...profileFixture,
-      traits: { ...profileFixture.traits, bridged: true },
-    })
-    expect(signals.experienceRequestState.value).toEqual({ status: 'success' })
   })
 })

@@ -2,11 +2,15 @@ import type {
   ExperienceEventArray,
   OptimizationData,
 } from '@contentful/optimization-api-client/api-schemas'
+import type { LifecycleInterceptors } from '../CoreBase'
+import EventBuilder from '../events/EventBuilder'
 import { InterceptorManager } from '../lib/interceptor'
 import { resolveQueueFlushPolicy } from '../lib/queue'
 import {
+  event as eventSignal,
   experienceRequestState,
   online as onlineSignal,
+  profile as profileSignal,
   selectedOptimizations as selectedOptimizationsSignal,
   type ExperienceRequestState,
 } from '../signals'
@@ -19,6 +23,17 @@ const SAMPLE_DATA: OptimizationData = {
   profile: profileFixture,
 }
 
+function createRouteData(route: string, experienceId?: string): OptimizationData {
+  return {
+    ...SAMPLE_DATA,
+    profile: { ...profileFixture, traits: { route } },
+    selectedOptimizations:
+      experienceId === undefined
+        ? []
+        : [{ experienceId, sticky: false, variantIndex: 0, variants: {} }],
+  }
+}
+
 class ExperienceQueueTestHarness extends ExperienceQueue {
   async invokeUpsert(events: ExperienceEventArray): Promise<OptimizationData> {
     return await this.upsertProfile(events)
@@ -26,13 +41,21 @@ class ExperienceQueueTestHarness extends ExperienceQueue {
 }
 
 interface BuildQueueOptions {
+  eventInterceptors?: LifecycleInterceptors['event']
+  stateInterceptors?: LifecycleInterceptors['state']
   upsertProfile?: (payload: {
     profileId?: string
     events: ExperienceEventArray
   }) => Promise<OptimizationData>
 }
 
-const buildQueue = ({ upsertProfile }: BuildQueueOptions = {}): {
+const buildQueue = ({
+  eventInterceptors = new InterceptorManager(),
+  stateInterceptors = new InterceptorManager(),
+  upsertProfile,
+}: BuildQueueOptions = {}): {
+  advanceCurrentStateGeneration: () => void
+  currentStateGeneration: number
   queue: ExperienceQueueTestHarness
   upsertProfile: ReturnType<typeof rs.fn>
 } => {
@@ -40,17 +63,26 @@ const buildQueue = ({ upsertProfile }: BuildQueueOptions = {}): {
     upsertProfile !== undefined
       ? rs.fn(upsertProfile)
       : rs.fn(async () => await Promise.resolve(SAMPLE_DATA))
-
+  let currentStateGeneration = 1
   const queue = new ExperienceQueueTestHarness({
     experienceApi: { upsertProfile: upsertProfileMock },
-    eventInterceptors: new InterceptorManager(),
+    eventInterceptors,
     flushPolicy: resolveQueueFlushPolicy(undefined),
     getAnonymousId: () => undefined,
+    getCurrentStateGeneration: () => currentStateGeneration,
     offlineMaxEvents: 100,
-    stateInterceptors: new InterceptorManager(),
+    stateInterceptors,
   })
 
-  return { queue, upsertProfile: upsertProfileMock }
+  return {
+    advanceCurrentStateGeneration: () => {
+      currentStateGeneration += 1
+      queue.invalidateRequests()
+    },
+    currentStateGeneration,
+    queue,
+    upsertProfile: upsertProfileMock,
+  }
 }
 
 const observeRequestState = (): {
@@ -67,12 +99,17 @@ const observeRequestState = (): {
 describe('ExperienceQueue.experienceRequestState transitions', () => {
   beforeEach(() => {
     experienceRequestState.value = { status: 'idle' }
+    eventSignal.value = undefined
     onlineSignal.value = true
+    profileSignal.value = undefined
     selectedOptimizationsSignal.value = undefined
   })
 
   afterEach(() => {
     experienceRequestState.value = { status: 'idle' }
+    eventSignal.value = undefined
+    onlineSignal.value = true
+    profileSignal.value = undefined
     selectedOptimizationsSignal.value = undefined
   })
 
@@ -156,5 +193,122 @@ describe('ExperienceQueue.experienceRequestState transitions', () => {
     ])
 
     unsubscribe()
+  })
+
+  it('keeps the latest page response when requests resolve out of order', async () => {
+    const routeB = Promise.withResolvers<OptimizationData>()
+    const routeC = Promise.withResolvers<OptimizationData>()
+    const routeBData = createRouteData('B', 'route-b')
+    const routeCData = createRouteData('C', 'route-c')
+    let requestCount = 0
+    const { queue } = buildQueue({
+      upsertProfile: async () => await (requestCount++ === 0 ? routeB.promise : routeC.promise),
+    })
+
+    const requestB = queue.invokeUpsert([])
+    const requestC = queue.invokeUpsert([])
+
+    routeC.resolve(routeCData)
+    await expect(requestC).resolves.toBe(routeCData)
+    routeB.resolve(routeBData)
+    await expect(requestB).resolves.toBe(routeBData)
+
+    expect(profileSignal.value).toEqual(routeCData.profile)
+    expect(selectedOptimizationsSignal.value).toEqual(routeCData.selectedOptimizations)
+    expect(experienceRequestState.value).toEqual({ status: 'success' })
+  })
+
+  it('does not apply a response after requests are invalidated', async () => {
+    const response = Promise.withResolvers<OptimizationData>()
+    const { queue } = buildQueue({
+      upsertProfile: async () => await response.promise,
+    })
+
+    const request = queue.invokeUpsert([])
+    queue.invalidateRequests()
+
+    response.resolve(SAMPLE_DATA)
+    await request
+
+    expect(profileSignal.value).toBeUndefined()
+    expect(selectedOptimizationsSignal.value).toBeUndefined()
+    expect(experienceRequestState.value).toEqual({ status: 'idle' })
+  })
+
+  it('rejects an offline current-state event without publishing or enqueueing it', async () => {
+    const { currentStateGeneration, queue, upsertProfile } = buildQueue()
+    const eventBuilder = new EventBuilder({
+      channel: 'web',
+      library: { name: 'test', version: '0.0.0' },
+    })
+    onlineSignal.value = false
+
+    await expect(
+      queue.sendCurrentState(eventBuilder.buildPageView({}), currentStateGeneration),
+    ).resolves.toEqual({ accepted: false })
+
+    expect(eventSignal.value).toBeUndefined()
+    onlineSignal.value = true
+    await queue.flush()
+    expect(upsertProfile).not.toHaveBeenCalled()
+  })
+
+  it('does not publish or send a current-state event superseded during interception', async () => {
+    const interception = Promise.withResolvers<undefined>()
+    const interceptionStarted = Promise.withResolvers<undefined>()
+    const eventInterceptors = new InterceptorManager<
+      Parameters<LifecycleInterceptors['event']['run']>[0]
+    >()
+    eventInterceptors.add(async (event) => {
+      interceptionStarted.resolve(undefined)
+      await interception.promise
+      return event
+    })
+    const { advanceCurrentStateGeneration, currentStateGeneration, queue, upsertProfile } =
+      buildQueue({ eventInterceptors })
+    const eventBuilder = new EventBuilder({
+      channel: 'web',
+      library: { name: 'test', version: '0.0.0' },
+    })
+    const request = queue.sendCurrentState(eventBuilder.buildPageView({}), currentStateGeneration)
+    await interceptionStarted.promise
+
+    advanceCurrentStateGeneration()
+    interception.resolve(undefined)
+
+    await expect(request).resolves.toEqual({ accepted: false })
+    expect(eventSignal.value).toBeUndefined()
+    expect(upsertProfile).not.toHaveBeenCalled()
+    expect(experienceRequestState.value).toEqual({ status: 'idle' })
+  })
+
+  it('does not apply a current-state response superseded during state interception', async () => {
+    const interception = Promise.withResolvers<undefined>()
+    const interceptionStarted = Promise.withResolvers<undefined>()
+    const stateInterceptors = new InterceptorManager<
+      Parameters<LifecycleInterceptors['state']['run']>[0]
+    >()
+    stateInterceptors.add(async (data) => {
+      interceptionStarted.resolve(undefined)
+      await interception.promise
+      return data
+    })
+    const { advanceCurrentStateGeneration, currentStateGeneration, queue } = buildQueue({
+      stateInterceptors,
+    })
+    const eventBuilder = new EventBuilder({
+      channel: 'web',
+      library: { name: 'test', version: '0.0.0' },
+    })
+    const request = queue.sendCurrentState(eventBuilder.buildPageView({}), currentStateGeneration)
+    await interceptionStarted.promise
+
+    advanceCurrentStateGeneration()
+    interception.resolve(undefined)
+
+    await expect(request).resolves.toEqual({ accepted: true, data: SAMPLE_DATA })
+    expect(profileSignal.value).toBeUndefined()
+    expect(selectedOptimizationsSignal.value).toBeUndefined()
+    expect(experienceRequestState.value).toEqual({ status: 'idle' })
   })
 })

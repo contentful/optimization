@@ -1,7 +1,11 @@
 import ContentfulOptimizationRuntime from '@contentful/optimization-node'
 import type { MergeTagEntry } from '@contentful/optimization-node/api-schemas'
 import type { CoreStatelessRequest } from '@contentful/optimization-node/core-sdk'
-import { useConsentState, useSelectedOptimizationsState } from '@contentful/optimization-react-web'
+import {
+  NextAppAutoPageTracker as ReactWebNextAppAutoPageTracker,
+  useConsentState,
+  useSelectedOptimizationsState,
+} from '@contentful/optimization-react-web/next-app'
 import { PassThrough } from 'node:stream'
 import type { ReactElement } from 'react'
 import * as React from 'react'
@@ -26,6 +30,7 @@ let bindNextjsAppRouterServerOptimization: typeof bindNextjsAppRouterServerOptim
 let createStandaloneHandoffFromSelections: typeof createHandoffFromSelectionsFactory
 let createStandalonePublicPermutationHandoff: typeof createPublicPermutationHandoffFactory
 let appRouterServerExports: {
+  readonly NextAppAutoPageTracker: typeof ReactWebNextAppAutoPageTracker
   readonly bindNextjsAppRouterServerOptimization: typeof bindNextjsAppRouterServerOptimizationFactory
   readonly createHandoffFromSelections: typeof createHandoffFromSelectionsFactory
   readonly createPublicPermutationCacheMetadata: typeof createPublicPermutationCacheMetadataFactory
@@ -351,7 +356,9 @@ describe('Next.js App Router v2 binding', () => {
     const optimization = bindNextjsAppRouterServerOptimization(sdkConfig)
 
     expect(appRouterServerExports.bindNextjsAppRouterServerOptimization).toBeTypeOf('function')
+    expect(appRouterServerExports.NextAppAutoPageTracker).toBe(ReactWebNextAppAutoPageTracker)
     expect(appRouterServerExports).not.toHaveProperty('createNextjsAppRouterOptimization')
+    expect(optimization.NextAppAutoPageTracker).toBe(ReactWebNextAppAutoPageTracker)
     expect(optimization.OptimizationRoot).toBeTypeOf('function')
     expect(optimization.OptimizationAnalyticsRoot).toBeTypeOf('function')
     expect(optimization.OptimizedEntry).toBeTypeOf('function')
@@ -603,6 +610,7 @@ describe('Next.js App Router v2 binding', () => {
       provider === null ? undefined : getElementProps(provider).handoff,
     )
     expect(getElementProps(tracker).initialPageEvent).toBe('skip')
+    expect(tracker.type).toBe(ReactWebNextAppAutoPageTracker)
     expect(await renderToHtml(entry)).toContain(variantEntry.sys.id)
     expect(readNextCookies).toHaveBeenCalledTimes(1)
     expect(readNextHeaders).toHaveBeenCalledTimes(1)

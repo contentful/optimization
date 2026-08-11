@@ -58,7 +58,11 @@ internal class QuickJsContextManager {
                     qjs.evaluate<Any?>(script, "native-callback.js")
                     Unit
                 },
-                logger = { level, msg -> onLog?.invoke(level, msg) },
+                logger = { level, msg ->
+                    if (!callbackManager.invokeLogCallback(level, msg)) {
+                        onLog?.invoke(level, msg)
+                    }
+                },
             )
 
             qjs.define("__native") {
@@ -194,22 +198,6 @@ internal class QuickJsContextManager {
                 "callback-setup.js"
             )
 
-            val originalOnLog = onLog
-            val callbackOnLog: (String, String) -> Unit = { level, msg ->
-                when (level) {
-                    "__callback__${names.success}" -> {
-                        callbackManager.invokeCallback(names.success, msg)
-                        onLog = originalOnLog
-                    }
-                    "__callback__${names.error}" -> {
-                        callbackManager.invokeCallback(names.error, msg)
-                        onLog = originalOnLog
-                    }
-                    else -> originalOnLog?.invoke(level, msg)
-                }
-            }
-            onLog = callbackOnLog
-
             val args = if (payload.isEmpty()) {
                 "${names.success}, ${names.error}"
             } else {
@@ -220,7 +208,6 @@ internal class QuickJsContextManager {
                 qjs.evaluate<Any?>("__bridge.$method($args)", "bridge-call-$method.js")
             } catch (e: Exception) {
                 callbackManager.removeCallback(names.success, names.error)
-                onLog = originalOnLog
                 CoroutineScope(Dispatchers.Main).launch {
                     completeOnce(Result.failure(OptimizationError.BridgeError(e.message ?: "Unknown JS error")))
                 }

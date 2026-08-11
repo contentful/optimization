@@ -49,6 +49,10 @@ type ManagedEntryFetchMembers =
  * correctly on the server, and effect-only members are no-ops there (the server never
  * runs effects, so this only matters defensively).
  *
+ * A browser runtime has exactly one live `ContentfulOptimization` singleton. Snapshot runtimes can
+ * satisfy this presentation interface before that singleton is available, but they are read-only
+ * presentation values rather than additional live stateful SDK instances.
+ *
  * @public
  */
 export interface WebOptimizationRuntime
@@ -95,6 +99,7 @@ export function createWebSnapshotRuntime(snapshot?: OptimizationSnapshot): WebOp
     fetchOptimizedEntry: rejectSnapshotManagedEntryFetch,
     prefetchManagedEntries: rejectSnapshotManagedEntryFetch,
     tracking: NOOP_TRACKING,
-    trackCurrentPage: async () => await Promise.resolve({ accepted: false as const }),
+    trackCurrentPage: async () =>
+      await Promise.resolve({ accepted: false as const, reason: 'not-allowed' as const }),
   })
 }

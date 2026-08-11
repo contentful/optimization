@@ -168,6 +168,18 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(window.contentfulOptimization).toBeUndefined()
   })
 
+  it('renders OptimizedEntry with OptimizationProvider directly', () => {
+    const baselineEntry = createTestEntry('baseline-entry')
+
+    const markup = renderToString(
+      <OptimizationProvider sdk={createOptimizationSdk()}>
+        <OptimizedEntry baselineEntry={baselineEntry}>{(entry) => entry.sys.id}</OptimizedEntry>
+      </OptimizationProvider>,
+    )
+
+    expect(markup).toContain('baseline-entry')
+  })
+
   it('provides optimization and live updates from OptimizationRoot', () => {
     let capturedOptimization: OptimizationSdk | undefined = undefined
     let capturedGlobalLiveUpdates: boolean | null = null

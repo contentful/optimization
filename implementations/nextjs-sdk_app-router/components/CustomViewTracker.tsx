@@ -1,6 +1,6 @@
 'use client'
 
-import { useOptimization } from '@contentful/optimization-nextjs/client'
+import { useOptimization } from '@contentful/optimization-nextjs/app-router/client'
 import { useEffect } from 'react'
 
 export function CustomViewTracker({ componentId }: { readonly componentId: string }): null {

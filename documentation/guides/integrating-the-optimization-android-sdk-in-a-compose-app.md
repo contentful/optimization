@@ -565,6 +565,16 @@ when the screen name changes, and when a consent change allows a previously bloc
 same current screen is skipped and a blocked attempt is retried once consent allows. Plain
 `client.screen(name)` emits with no dedupe.
 
+`ScreenTrackingEffect` and direct `trackCurrentScreen` calls are current-screen operations. They are
+online-only: an offline attempt is neither published nor enqueued, and the SDK does not retry it when
+connectivity returns. Explicitly call `trackCurrentScreen` after reconnecting when that current-screen
+event is required. Plain `client.screen(name)` is an ordinary event call and still queues offline.
+
+Advancing to a new current screen also removes every earlier in-flight Experience call's authority to
+update SDK state, including ordinary calls. If a transition depends on the state returned by an
+earlier call, await that call before advancing the screen; if it finishes later, it cannot apply its
+response or failure to SDK state.
+
 Place `ScreenTrackingEffect` once at the root composable of each route or destination. For a dynamic
 screen name or an app-defined route key — for example a detail screen whose name depends on loaded data
 — call `client.trackCurrentScreen(name, properties, routeKey)` from a `LaunchedEffect` instead. Track a
@@ -1021,9 +1031,11 @@ forwarding behavior aligned with your consent policy.
 After initialization the SDK monitors network reachability and app lifecycle. A `NetworkMonitor`
 (`ConnectivityManager`) calls `setOnline(...)` on connectivity changes and `flush()` on reconnect; an
 `AppLifecycleHandler` (a `ProcessLifecycleOwner` observer) calls `flush()` when the app moves to the
-background for a best-effort drain. Queues are in-memory only — there is no durable outbox — and the
-offline Experience buffer is capped at 100 events by default (tunable via `QueuePolicy.offlineMaxEvents`);
-nothing survives process death.
+background for a best-effort drain. These flushes drain ordinary queued events, not an offline
+current-screen attempt; retry a required current-screen event explicitly after reconnecting.
+Ordinary-event queues are in-memory only — there is no durable outbox — and the offline Experience
+buffer is capped at 100 events by default (tunable via `QueuePolicy.offlineMaxEvents`); nothing
+survives process death.
 
 1. Let the SDK manage normal network and lifecycle handling after `OptimizationRoot` initializes the
    client.
@@ -1080,8 +1092,9 @@ Before releasing a Compose integration, verify these points against the target a
   flows call `consent(true | false)`; split event/persistence consent matches your persistence policy;
   and rejected consent blocks non-allowed event types, consistently across app relaunches.
 - **Event delivery** — screen, entry view, entry tap, Custom Flag, and custom business events are
-  accepted or blocked according to consent state, blocked calls appear in diagnostics, queued events
-  flush on reconnection or backgrounding, and forwarded events honor downstream consent policy.
+  accepted or blocked according to consent state, blocked calls appear in diagnostics, ordinary
+  queued events flush on reconnection or backgrounding, required current-screen events are retried
+  explicitly after reconnecting, and forwarded events honor downstream consent policy.
 - **Content fallback behavior** — entries are fetched with one CDA locale and enough include depth for
   optimized entries, and unresolved links, all-locale payloads, missing selected optimizations, and
   out-of-range variants render baseline content instead of crashing.

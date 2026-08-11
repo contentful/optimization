@@ -1,3 +1,4 @@
+import * as nextPagesRuntime from '@contentful/optimization-react-web/next-pages'
 import type { Entry } from 'contentful'
 import { renderToString } from 'react-dom/server'
 import * as pagesRouter from './pages-router'
@@ -80,6 +81,8 @@ describe('Next.js Pages Router client components', () => {
       prefetchManagedEntries: ['4ib0hsHWoSOnCVdDkizE8d'],
     })
 
+    expect(root.type).toBe(nextPagesRuntime.OptimizationRoot)
+    expect(provider?.type).toBe(nextPagesRuntime.OptimizationProvider)
     expect(root.props).toMatchObject({
       api: testConfig.api,
       children: 'Root content',
@@ -218,6 +221,8 @@ describe('Next.js Pages Router client components', () => {
   it('returns Pages Router v2 helpers only', () => {
     const components = pagesRouter.bindNextjsPagesRouterOptimization(testConfig)
 
+    expect(components.OptimizedEntry).toBe(nextPagesRuntime.OptimizedEntry)
+    expect(components.NextPagesAutoPageTracker).toBe(nextPagesRuntime.NextPagesAutoPageTracker)
     expect(components.NextPagesAutoPageTracker).toBe(pagesRouter.NextPagesAutoPageTracker)
     expect(components.OptimizationAnalyticsRoot).toBeTypeOf('function')
     expect(components.createHandoffFromSelections).toBeTypeOf('function')
@@ -227,15 +232,21 @@ describe('Next.js Pages Router client components', () => {
     expect(components).not.toHaveProperty('NextAppAutoPageTracker')
   })
 
-  it('keeps the Pages Router entry scoped to the client binding and pass-through helpers', () => {
-    expect(Object.keys(pagesRouter).sort()).toEqual([
-      'NextPagesAutoPageTracker',
-      'bindNextjsPagesRouterOptimization',
-      'createHandoffFromSelections',
-      'createOptimizationCacheKey',
-      'createPublicPermutationCacheMetadata',
-      'createPublicPermutationHandoff',
-      'resolveEntriesForSelections',
-    ])
+  it('exposes the complete Pages Router runtime with client binding helpers', () => {
+    for (const [exportName, facadeExport] of Object.entries(nextPagesRuntime)) {
+      expect(Reflect.get(pagesRouter, exportName)).toBe(facadeExport)
+    }
+
+    expect(Object.keys(pagesRouter).sort()).toEqual(
+      [
+        ...Object.keys(nextPagesRuntime),
+        'bindNextjsPagesRouterOptimization',
+        'createHandoffFromSelections',
+        'createOptimizationCacheKey',
+        'createPublicPermutationCacheMetadata',
+        'createPublicPermutationHandoff',
+        'resolveEntriesForSelections',
+      ].sort(),
+    )
   })
 })

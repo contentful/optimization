@@ -1,7 +1,7 @@
 'use client'
 
 import type { ContentEntry } from '@/lib/contentful'
-import { OptimizedEntry } from '@contentful/optimization-nextjs/client'
+import { OptimizedEntry } from '@contentful/optimization-nextjs/app-router/client'
 import type { JSX } from 'react'
 import { createRichTextRenderOptions, EntryCardContent } from './EntryCardContent'
 

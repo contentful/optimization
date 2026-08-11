@@ -557,6 +557,17 @@ screen name changes. `trackCurrentScreen` dedupes in the bridge by route key (de
 so a repeat of the same current screen is skipped and a blocked attempt is retried once consent
 allows. Plain `client.screen(name:)` emits with no dedupe.
 
+The `.trackScreen(name:)` modifier and direct `trackCurrentScreen` calls are current-screen
+operations. They are online-only: an offline attempt is neither published nor enqueued, and the SDK
+does not retry it when connectivity returns. Explicitly call `trackCurrentScreen` after reconnecting
+when that current-screen event is required. Plain `screen(name:)` is an ordinary event call and still
+queues offline.
+
+Advancing to a new current screen also removes every earlier in-flight Experience call's authority to
+update SDK state, including ordinary calls. If a transition depends on the state returned by an
+earlier call, await that call before advancing the screen; if it finishes later, it cannot apply its
+response or failure to SDK state.
+
 Attach `.trackScreen(name:)` once to a screen's stable root. For a dynamic screen name or an
 app-defined route key — for example a detail screen whose name depends on loaded data — call
 `client.trackCurrentScreen(name:properties:routeKey:)` from a task after the data is available
@@ -956,8 +967,10 @@ let config = OptimizationConfig(
 After initialization the SDK monitors network reachability and app lifecycle. A `NetworkMonitor`
 (`NWPathMonitor`) calls `setOnline(_:)` on connectivity changes and `flush()` on reconnect; on UIKit
 an `AppStateHandler` calls `flush()` when the app resigns active for a best-effort background drain.
-Queues are in-memory only — there is no durable outbox — and the offline Experience buffer is capped
-at 100 events by default (tunable via `QueuePolicy.offlineMaxEvents`); nothing survives process death.
+That flush drains ordinary queued events, not an offline current-screen attempt; retry a required
+current-screen event explicitly after reconnecting. Ordinary-event queues are in-memory only — there
+is no durable outbox — and the offline Experience buffer is capped at 100 events by default (tunable
+via `QueuePolicy.offlineMaxEvents`); nothing survives process death.
 
 1. Keep one `OptimizationClient` alive for the app or scene lifetime so the in-memory queue can
    survive transient network changes.
@@ -991,8 +1004,8 @@ Before release, verify these checks against the target app build:
   call `consent(true | false)`; split event/persistence consent matches your persistence policy; and
   rejected consent blocks non-allowed event types.
 - **Event delivery** — screen, entry view, entry tap, Custom Flag, and custom business events are
-  accepted or blocked according to consent state, and offline replay plus background flush behave as
-  expected on your supported platforms.
+  accepted or blocked according to consent state, ordinary queued events replay and flush in the
+  background as expected, and required current-screen events are retried explicitly after reconnecting.
 - **Content fallback** — The Contentful client fetches single-locale entries with enough include depth
   for optimized entries, baseline rendering still works when no variant matches or data is
   incomplete, and every supported resolved content type maps to a renderer. A variant content type

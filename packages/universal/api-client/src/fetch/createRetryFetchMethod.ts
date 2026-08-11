@@ -187,11 +187,10 @@ async function delayRetry(intervalTimeout: number): Promise<void> {
     return
   }
 
-  const { promise, resolve } = Promise.withResolvers<undefined>()
-  setTimeout(() => {
-    resolve(undefined)
-  }, intervalTimeout)
-  await promise
+  const NativePromise = Promise
+  await new NativePromise<void>((resolve) => {
+    setTimeout(resolve, intervalTimeout)
+  })
 }
 
 /**

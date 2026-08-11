@@ -6,17 +6,10 @@
 
 import {
   assertOptimizationCacheSafety,
-  batch,
-  hasOptimizationSelectionStateField,
-  mergeOptimizationSelectionState,
-  signals,
   type OptimizationHandoff,
   type OptimizationSelectionState,
 } from '@contentful/optimization-core'
-import {
-  preserveProfilelessHandoffDurableContinuity,
-  suppressDurableContinuityPersistence,
-} from './storage/durableContinuityPersistence'
+import { hydrateOptimizationHandoffStateInternal } from './handoff-internal'
 
 /**
  * Browser content hydration policy for already-rendered optimized content.
@@ -34,6 +27,10 @@ export type OptimizationHydrationMode = ContentOptimizationHydrationMode | 'anal
 
 /**
  * Content-capable browser handoff.
+ *
+ * @remarks
+ * Framework route integrations use object identity as the handoff occurrence. Supply a fresh
+ * handoff object for each new route occurrence.
  *
  * @public
  */
@@ -63,42 +60,34 @@ export interface AnalyticsOptimizationHandoff extends OptimizationHandoff {
  */
 export type BrowserOptimizationHandoff = ContentOptimizationHandoff | AnalyticsOptimizationHandoff
 
-type BrowserOptimizationHandoffState = NonNullable<BrowserOptimizationHandoff['state']>
-
-interface BrowserHandoffStateInterceptorRunner {
-  readonly run: (
-    state: BrowserOptimizationHandoffState,
-    merge?: typeof mergeOptimizationSelectionState,
-  ) => Promise<BrowserOptimizationHandoffState>
-}
-
 /**
- * @internal
+ * Controls whether browser handoff hydration may still update the active runtime.
+ *
+ * @public
  */
-export interface HandoffStateHydrationOptions {
+export interface OptimizationHandoffHydrationOptions {
+  /**
+   * Returns whether the calling adapter still owns this hydration operation.
+   */
   readonly isCurrent?: () => boolean
-  readonly suppressDurableContinuityPersistence?: boolean
-}
-
-interface HydratedSignalUpdate {
-  readonly hasChanges: boolean
-  readonly hasProfile: boolean
-  readonly hasSelectedOptimizations: boolean
-  readonly options: HandoffStateHydrationOptions
-  readonly state: BrowserOptimizationHandoffState
-}
-
-const CONTENT_STATE_RESET: OptimizationSelectionState = {
-  changes: undefined,
-  selectedOptimizations: undefined,
 }
 
 /**
- * Minimal Web SDK shape required for browser handoff hydration.
+ * Minimal structural view required for browser handoff hydration.
+ *
+ * @remarks
+ * This public integration contract primarily serves downstream SDKs and exceptional custom
+ * integrations, including frameworks without a first-party adapter. Normal application code should
+ * prefer its platform or framework handoff helper.
  *
  * @public
  */
 export interface OptimizationHandoffHydrationTarget {
+  /**
+   * Purpose-specific Core operation used after browser interception and currentness checks settle.
+   * It preserves Core request authority without exposing writable signal handles.
+   */
+  readonly applyOptimizationHandoffState?: (state: OptimizationSelectionState) => void
   readonly interceptors: {
     readonly state: unknown
   }
@@ -108,8 +97,6 @@ const CONTENT_HYDRATION_MODES: readonly ContentOptimizationHydrationMode[] = [
   'preserve-server',
   'client-only-hidden-until-ready',
 ]
-
-let latestHandoffStateHydration = 0
 
 function assertInitialPageEvent(
   initialPageEvent: unknown,
@@ -127,19 +114,6 @@ function assertContentHandoff(
   throw new TypeError('hydrateOptimizationHandoff only accepts content optimization handoffs.')
 }
 
-function hasBrowserHandoffStateInterceptorRunner(
-  value: unknown,
-): value is BrowserHandoffStateInterceptorRunner {
-  if (value === null || typeof value !== 'object') return false
-  if (!('run' in value)) return false
-
-  return typeof value.run === 'function'
-}
-
-function shouldContinueHydration(options: HandoffStateHydrationOptions): boolean {
-  return options.isCurrent?.() !== false
-}
-
 /**
  * @internal
  */
@@ -150,139 +124,46 @@ export function shouldPreserveDurableContinuity(handoff: BrowserOptimizationHand
   )
 }
 
-function applyHydratedSignals({
-  hasChanges,
-  hasProfile,
-  hasSelectedOptimizations,
-  options,
-  state,
-}: HydratedSignalUpdate): void {
-  const { changes, profile, selectedOptimizations } = state
-  const {
-    changes: changesSignal,
-    experienceRequestState,
-    profile: profileSignal,
-    selectedOptimizations: selectedOptimizationsSignal,
-  } = signals
-
-  const updateSignals = (): void => {
-    batch(() => {
-      if (hasChanges) changesSignal.value = changes
-      if (hasProfile) profileSignal.value = profile
-      if (hasSelectedOptimizations) selectedOptimizationsSignal.value = selectedOptimizations
-
-      experienceRequestState.value = { status: 'success' }
-    })
-  }
-
-  if (options.suppressDurableContinuityPersistence === true) {
-    preserveProfilelessHandoffDurableContinuity()
-    suppressDurableContinuityPersistence(updateSignals)
-    return
-  }
-
-  updateSignals()
-}
-
-function applySuccessfulEmptyHandoffHydration(options: HandoffStateHydrationOptions): void {
-  if (!shouldContinueHydration(options)) return
-
-  applyHydratedSignals({
-    hasChanges: true,
-    hasProfile: false,
-    hasSelectedOptimizations: true,
-    options,
-    state: CONTENT_STATE_RESET,
-  })
-}
-
-async function hydrateOptimizationHandoffStateInternal(
-  sdk: OptimizationHandoffHydrationTarget,
-  state: BrowserOptimizationHandoff['state'],
-  options: HandoffStateHydrationOptions = {},
-): Promise<void> {
-  latestHandoffStateHydration += 1
-  const hydration = latestHandoffStateHydration
-
-  if (!state) {
-    applySuccessfulEmptyHandoffHydration(options)
-    return
-  }
-
-  const hasChanges = hasOptimizationSelectionStateField(state, 'changes')
-  const hasProfile = hasOptimizationSelectionStateField(state, 'profile')
-  const hasSelectedOptimizations = hasOptimizationSelectionStateField(
-    state,
-    'selectedOptimizations',
-  )
-  if (!hasChanges && !hasProfile && !hasSelectedOptimizations) {
-    applySuccessfulEmptyHandoffHydration(options)
-    return
-  }
-
-  const inputState = mergeOptimizationSelectionState(CONTENT_STATE_RESET, state)
-
-  const stateInterceptors: unknown = sdk.interceptors.state
-  if (!hasBrowserHandoffStateInterceptorRunner(stateInterceptors)) {
-    throw new Error('Contentful Optimization SDK instance does not expose state hydration support.')
-  }
-
-  const hydratedState = await stateInterceptors
-    .run(inputState, mergeOptimizationSelectionState)
-    .catch((error: unknown) => {
-      if (hydration === latestHandoffStateHydration) throw error
-      return undefined
-    })
-
-  if (hydratedState === undefined || hydration !== latestHandoffStateHydration) return
-  if (!shouldContinueHydration(options)) return
-
-  const mergedState = mergeOptimizationSelectionState(inputState, hydratedState)
-
-  applyHydratedSignals({
-    hasChanges: hasOptimizationSelectionStateField(mergedState, 'changes'),
-    hasProfile: hasOptimizationSelectionStateField(mergedState, 'profile'),
-    hasSelectedOptimizations: hasOptimizationSelectionStateField(
-      mergedState,
-      'selectedOptimizations',
-    ),
-    options,
-    state: mergedState,
-  })
-}
-
 /**
  * Hydrate a live Web SDK from public browser handoff state.
  *
- * @param sdk - Live Web SDK instance to hydrate.
+ * @param sdk - Compatible Web hydration target exposing state interception.
  * @param state - Public browser handoff state.
+ * @param options - Lifecycle currentness guard for adapter-owned hydration work.
  *
  * @public
  */
 export async function hydrateOptimizationHandoffState(
   sdk: OptimizationHandoffHydrationTarget,
   state: BrowserOptimizationHandoff['state'],
-  options: HandoffStateHydrationOptions = {},
+  options: OptimizationHandoffHydrationOptions = {},
 ): Promise<void> {
-  await hydrateOptimizationHandoffStateInternal(sdk, state, options)
+  await hydrateOptimizationHandoffStateInternal(sdk, state, {
+    ...options,
+    authoritativeStateHydration: true,
+  })
 }
 
 /**
  * Hydrate a live Web SDK from a content-capable browser handoff.
  *
- * @param sdk - Live Web SDK instance to hydrate.
+ * @param sdk - Compatible Web hydration target exposing state interception.
  * @param handoff - Content handoff produced by server, static, or edge rendering.
+ * @param options - Lifecycle currentness guard for adapter-owned hydration work.
  *
  * @public
  */
 export async function hydrateOptimizationHandoff(
   sdk: OptimizationHandoffHydrationTarget,
   handoff: ContentOptimizationHandoff,
+  options: OptimizationHandoffHydrationOptions = {},
 ): Promise<void> {
   assertContentHandoff(handoff)
   assertInitialPageEvent(handoff.initialPageEvent)
   assertOptimizationCacheSafety(handoff)
   await hydrateOptimizationHandoffStateInternal(sdk, handoff.state, {
+    ...options,
+    authoritativeStateHydration: true,
     suppressDurableContinuityPersistence: shouldPreserveDurableContinuity(handoff),
   })
 }

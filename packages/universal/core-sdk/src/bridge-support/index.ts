@@ -4,7 +4,6 @@
  * @packageDocumentation
  */
 
-import type { OptimizationData } from '@contentful/optimization-api-client/api-schemas'
 import {
   CORE_BRIDGE_CAPABILITIES_SYMBOL,
   getCoreBridgeCapabilities,
@@ -24,15 +23,6 @@ function getRequiredBridge(sdk: unknown): CoreBridgeCapabilities {
   }
 
   return bridge
-}
-
-export async function hydrateOptimizationData(
-  sdk: unknown,
-  data: OptimizationData | undefined,
-): Promise<void> {
-  if (!data) return
-
-  await getRequiredBridge(sdk).hydrateOptimizationData(data)
 }
 
 export function getPreviewPanelBridge(sdk: unknown): PreviewPanelBridge {

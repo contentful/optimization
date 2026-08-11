@@ -190,6 +190,12 @@ it does not turn in-memory Core state into durable storage. Preview state is rep
 signal access. Application code uses documented preview SDK surfaces instead of mutating preview
 signals directly.
 
+Ordinary Experience calls retain the in-memory offline queue behavior described in
+[How the Experience API drives state](#how-the-experience-api-drives-state). Current page and screen
+tracking calls are the exception: they are online-only and never enter the ordinary offline
+Experience queue. Reconnecting does not retry them. The router or navigation integration must call
+`trackCurrentPage()` or `trackCurrentScreen()` again after reconnecting.
+
 ## How Core stores state
 
 ### State groups
@@ -202,6 +208,7 @@ layers. Application integrators usually need to understand these groups:
 | **Consent and persistence**            | Event consent and durable profile-continuity consent                                                            | Controls whether events can leave the runtime and whether profile-continuity data can be stored across sessions.                                                                                       |
 | **Locale and request context**         | The SDK locale used by future Experience API requests and event context                                         | Keeps SDK requests aligned with the application locale without changing your Contentful client, router, or native localization state.                                                                  |
 | **Experience response state**          | The active profile, selected optimizations, optimization changes, and the most recent Experience request status | Drives optimized entry resolution, Custom Flag values, readiness checks, and fail-open rendering decisions.                                                                                            |
+| **Current page or screen lifecycle**   | A monotonic generation plus the active route or screen key and its tracking status                              | Lets advanced integrations observe SDK-owned current-state work without receiving access to the internal coordinator or its mutation operations.                                                       |
 | **Diagnostics streams**                | The most recent accepted SDK event and, in stateful Core, the most recent blocked event                         | Gives tests, debug panels, and integration diagnostics a way to observe what the SDK attempted to send.                                                                                                |
 | **Preview and internal runtime state** | Preview-panel attachment and open state, online state, and registered entry-resolution context                  | Coordinates first-party preview tooling, queue behavior, and optimized-entry interaction metadata. Application code uses documented SDK and preview surfaces instead of writing these values directly. |
 | **Derived readiness state**            | Computed values such as `canOptimize` and instance-level `optimizationPossible`                                 | Separates "variant data is available" from "current consent or allow-list settings can produce optimization data."                                                                                     |
@@ -219,6 +226,7 @@ Every entry on `sdk.states` is an `Observable<T>` with `current`, `subscribe(nex
 - **Experience response and readiness** - `states.profile`, `states.selectedOptimizations`,
   `states.canOptimize`, `states.optimizationPossible`, `states.experienceRequestState`, and
   `states.flag(name)`.
+- **Current page or screen lifecycle** - `states.currentStateTracking`.
 - **Diagnostics** - `states.eventStream` and, in stateful runtimes, `states.blockedEventStream`.
 - **Preview visibility** - `states.previewPanelAttached` and `states.previewPanelOpen`.
 
@@ -270,6 +278,24 @@ state directly for several reasons:
 Use `states.*` observables in application code. Reserve `signals` and `signalFns` for SDK layers
 building on top of `CoreStateful`, such as framework integrations, native bridges, and first-party
 preview tooling.
+
+For an advanced router or navigation integration, `states.currentStateTracking` exposes the
+read-only lifecycle of the SDK-owned current page or screen operation. The value contains a
+monotonic `generation` and either an `idle` status or an active key with an `observed`, `pending`,
+or `accepted` status. Compare generations to discard stale application work; use the platform's
+`trackCurrentPage()` or `trackCurrentScreen()` method to advance the lifecycle. The mutable
+coordinator is internal and is not a consumer extension point.
+
+At the shared current-state lifecycle surface, an unaccepted call reports `already-accepted`,
+`not-allowed`, or `superseded`. Operational failures reject the call instead of returning another
+unaccepted reason. Runtime adapters can expose a narrower result shape; React Native collapses these
+reasons to `{ accepted: false }`.
+
+Advancing the current-state generation invalidates response authority for every older Experience
+request and restores `experienceRequestState` to `{ status: 'idle' }`. This boundary applies to
+ordinary Experience work as well as an older current page or screen operation. If response state
+from `identify()`, `page()`, `screen()`, or `track()` matters to the application, await that call
+before starting the current-route or current-screen transition.
 
 ## How state changes
 
@@ -331,6 +357,11 @@ Consumer calls sdk.page()
   -> Exposed observables emit snapshots; flag observables re-resolve from changes
 ```
 
+While offline, ordinary Experience events are buffered in memory instead of starting a request.
+The queue replays them after reconnecting according to the configured flush policy. This ordinary
+queue behavior does not apply to the current page and screen operations described in
+[Defaults, storage, offline, and preview state](#defaults-storage-offline-and-preview-state).
+
 If the request fails, `experienceRequestState` becomes `{ status: 'failed', reason: 'timeout' }` for
 request aborts or `{ status: 'failed', reason: 'api-error' }` for API and parsing failures.
 
@@ -344,13 +375,13 @@ Core state is memory-backed. Platform storage is read during initialization to s
 live state reads use in-memory signals or native bridge snapshots. Persistence behavior differs by
 runtime:
 
-| Runtime                | Persistence path                                                                                                                                                                                                  | Publication consequence                                                                                                                                           |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stateful Core          | `interceptors.state` runs before Optimization selection state is written to `profile`, `selectedOptimizations`, `changes`, and `experienceRequestState`.                                                          | SDK layers can await storage or transform `OptimizationSelectionState` before Core publishes response state. Core itself does not write platform storage.         |
-| React Native           | The SDK registers a state interceptor that writes profile-continuity selection state to AsyncStorage when persistence consent is `true`, or clears continuity when false.                                         | Profile-optional state preserves stored continuity for omitted fields. Experience response state is published after the interceptor completes.                    |
-| Web                    | The SDK uses signal `effect()` handlers to mirror consent, persistence consent, profile, changes, selected optimizations, and anonymous ID to `localStorage` and cookies.                                         | Web persistence runs from signal effects after state changes. Browser storage failures are swallowed, so live state can continue as session-only.                 |
-| iOS and Android native | The JS bridge uses signal effects to push Core snapshots to Swift or Kotlin. Native handlers write consent and profile-continuity values to `UserDefaults` or SharedPreferences according to persistence consent. | Native public state is republished from bridge snapshots. Native storage is platform-owned, and the JS bridge remains the source for live Core state transitions. |
-| Node/stateless         | The SDK has no shared state store. `forRequest()` binds consent, locale, and profile for one request.                                                                                                             | The host application decides whether and where to persist returned profile continuity.                                                                            |
+| Runtime                | Persistence path                                                                                                                                                                                                         | Publication consequence                                                                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stateful Core          | `interceptors.state` runs before Optimization selection state is written to `profile`, `selectedOptimizations`, `changes`, and `experienceRequestState`.                                                                 | SDK layers can await storage or transform `OptimizationSelectionState` before Core publishes response state. Core itself does not write platform storage.         |
+| React Native           | The SDK stages the raw response in its first state interceptor, then queues profile-continuity persistence from the successful request-state effect when persistence consent is `true`, or clears continuity when false. | Profile-optional state preserves stored continuity for omitted fields. Accepted response state and its initiating event promise do not wait for AsyncStorage.     |
+| Web                    | The SDK uses signal `effect()` handlers to mirror consent, persistence consent, profile, changes, selected optimizations, and anonymous ID to `localStorage` and cookies.                                                | Web persistence runs from signal effects after state changes. Browser storage failures are swallowed, so live state can continue as session-only.                 |
+| iOS and Android native | The JS bridge uses signal effects to push Core snapshots to Swift or Kotlin. Native handlers write consent and profile-continuity values to `UserDefaults` or SharedPreferences according to persistence consent.        | Native public state is republished from bridge snapshots. Native storage is platform-owned, and the JS bridge remains the source for live Core state transitions. |
+| Node/stateless         | The SDK has no shared state store. `forRequest()` binds consent, locale, and profile for one request.                                                                                                                    | The host application decides whether and where to persist returned profile continuity.                                                                            |
 
 Profileless static and public content or analytics handoff hydration applies selection state to live
 Web memory without overwriting durable continuity. `private-request` handoffs, and profile-backed
@@ -390,6 +421,11 @@ periodic timer, and releases the singleton lock. `destroy()` returns `void`; it 
 flush completion. Web, React Native, iOS, and Android adapters also remove listeners, bridge
 subscriptions, or native resources that they own. Destroying an SDK instance does not clear durable
 user state by itself.
+
+SDK layers that subclass the stateful runtime can register owned cleanup callbacks. Those callbacks
+run synchronously in last-in, first-out order and must be non-throwing and non-reentrant. A callback
+that violates this contract can interrupt the remaining cleanup sequence; Core does not isolate or
+aggregate cleanup failures.
 
 Calling `consent(false)` with a boolean sets both event consent and persistence consent to `false`.
 Core clears queued Experience and Insights events when event consent becomes `false`. Platform

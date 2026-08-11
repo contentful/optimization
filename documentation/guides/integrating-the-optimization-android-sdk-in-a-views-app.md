@@ -142,8 +142,8 @@ before you ship; it explains the two axes and the split form that sets them sepa
    ```
 
 3. Track the current screen from an activity and reflect the outcome in a label. `HomeActivity` below
-   is illustrative app shape — adapt it to a screen you already render, keeping the two stream
-   subscriptions and the `ScreenTracker.trackScreen` call in `onResume`.
+   is illustrative app shape — adapt it to a screen you already render, keeping the stream
+   subscriptions and screen tracking scoped to the visible lifecycle.
 
    **Adapt this to your use case:**
 
@@ -153,6 +153,7 @@ before you ship; it explains the two axes and the split form that sets them sepa
    +import androidx.lifecycle.repeatOnLifecycle
    +import com.contentful.optimization.views.OptimizationManager
    +import com.contentful.optimization.views.ScreenTracker
+   +import kotlinx.coroutines.flow.first
    +import kotlinx.coroutines.launch
     import android.os.Bundle
     import android.widget.TextView
@@ -186,14 +187,15 @@ before you ship; it explains the two axes and the split form that sets them sepa
    +                }
    +            }
    +        }
+   +        // Keep the initialization wait inside RESUMED ownership so a departed activity cannot
+   +        // emit its screen later.
+   +        lifecycleScope.launch {
+   +            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+   +                OptimizationManager.client.isInitialized.first { it }
+   +                ScreenTracker.trackScreen("Home")
+   +            }
+   +        }
         }
-
-   +    override fun onResume() {
-   +        super.onResume()
-   +        // ScreenTracker tracks the current screen and retries once the SDK is ready and consent
-   +        // allows, so it is safe to call here without awaiting initialization yourself.
-   +        ScreenTracker.trackScreen("Home")
-   +    }
     }
    ```
 
@@ -204,8 +206,9 @@ before you ship; it explains the two axes and the split form that sets them sepa
 4. Verify the first run. Build and run the application module on a device or emulator. The status
    label reads `Optimization screen event accepted`. It flips when the `screen` event reaches
    `eventStream`, which carries events that passed the SDK's local consent and allow-list gate. Here,
-   "accepted" means the SDK let the event through and queued it for delivery — it does not confirm
-   that Contentful received the event, only that the local gate let it through. Because
+   "accepted" means the SDK let the current-screen event through and published it for online
+   delivery — it does not confirm that Contentful received the event, only that the local gate let it
+   through. An offline current-screen attempt is not queued. Because
    `StorageDefaults(consent = true)` grants consent and `screen` is on the SDK's default pre-consent
    allow-list, the event is accepted.
 
@@ -376,9 +379,9 @@ callers wait for readiness before making direct calls that depend on it.
 4. Await readiness for direct suspend calls. `OptimizationManager.client` is available immediately,
    but the underlying `OptimizationClient.initialize(config)` is a `suspend` function that
    `OptimizationManager` launches in the background, so suspend APIs that touch the bridge require
-   `client.isInitialized` to become `true` first. (Screen tracking through `ScreenTracker` and entry
-   rendering through `OptimizedEntryView` handle this readiness for you; the await matters when you
-   call the client directly.)
+   `client.isInitialized` to become `true` first. `ScreenTracker` ignores calls made before
+   initialization, so await readiness when the first screen event is required; entry rendering
+   through `OptimizedEntryView` handles readiness for you.
 
    **Copy this:**
 
@@ -490,10 +493,9 @@ val strictConfig = OptimizationConfig(
 ```
 
 Setting `allowedEventTypes = emptyList()` disables the default pre-consent allow-list the Quick
-Start relies on: the `ScreenTracker.trackScreen("Home")` call blocks until the visitor accepts
-consent, and the label stays on `"Waiting for Optimization"` until then. Use this config only after
-the app has wired the consent flow from step 2 above — otherwise the Quick Start looks broken with
-no signal in logcat beyond a `blockedEventStream` emission.
+Start relies on. The initial screen call is rejected into `blockedEventStream`; when consent changes,
+`ScreenTracker` makes a fresh attempt for the still-current screen. Use this config only after the
+app has wired the consent flow from step 2 above.
 
 For the consent responsibility model and blocked-event behavior, see
 [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md#event-allow-lists-and-blocked-events).
@@ -642,32 +644,35 @@ and for the locale boundary see
 
 **Integration category:** Required for first integration
 
-The quick start tracked one screen from `onResume`. Real Android navigation repeats lifecycle
-callbacks across activity, fragment, and in-activity transitions, so choose the call that matches the
-event you want.
+The quick start tracked one screen while its activity was resumed. Real Android navigation repeats
+lifecycle callbacks across activity, fragment, and in-activity transitions, so choose the call that
+matches the event you want.
 
-`ScreenTracker.trackScreen(name)` is the idiomatic Views API. It sets the current screen name,
-observes the client's state, and calls `trackCurrentScreen` on each state emission — so it retries
-once the SDK is ready and consent allows, and it swallows early-lifecycle failures. `trackCurrentScreen`
-deduplicates the current route in the bridge by `routeKey` (which defaults to `name`), so a repeat of
-the same current screen is skipped. Use plain `client.screen(name, properties)` only for intentional
-one-off raw screen events, which carry no dedupe, or when a screen event needs properties. The suspend
-emitters `screen` and `trackCurrentScreen` return an `EventEmissionResult` — an SDK result type with
-an `accepted` flag (and optional `data`) that is `true` when the event passed the local consent and
+`ScreenTracker.trackScreen(name)` is the idiomatic Views API. Before initialization it ignores the
+call without retaining the name or deferring an attempt. Once initialized, it attempts the current
+screen immediately and retries only when consent changes; request-state changes do not retry it.
+Operational failures do not stop later consent retries. `trackCurrentScreen` deduplicates the
+current route in the bridge by `routeKey` (which defaults to `name`), so a repeat of the same current
+screen is skipped. Use plain `client.screen(name, properties)` only for intentional one-off raw
+screen events, which carry no dedupe, or when a screen event needs properties. The suspend emitters
+`screen` and `trackCurrentScreen` return an `EventEmissionResult` — an SDK result type with an
+`accepted` flag (and optional `data`) that is `true` when the event passed the local consent and
 allow-list gate.
 
-1. Call `ScreenTracker.trackScreen(name)` from `Activity.onResume` (or `Fragment.onResume`) so it
-   fires once per visible screen lifecycle.
+`ScreenTracker.trackScreen` and direct `trackCurrentScreen` calls are current-screen operations. They
+are online-only: an offline attempt is neither published nor enqueued, and the SDK does not retry it
+when connectivity returns. Explicitly call `trackCurrentScreen` after reconnecting when that
+current-screen event is required. Plain `client.screen(name, properties)` is an ordinary event call
+and still queues offline.
 
-   **Copy this:**
+Advancing to a new current screen also removes every earlier in-flight Experience call's authority to
+update SDK state, including ordinary calls. If a transition depends on the state returned by an
+earlier call, await that call before advancing the screen; if it finishes later, it cannot apply its
+response or failure to SDK state.
 
-   ```kotlin
-   override fun onResume() {
-       super.onResume()
-       // Track once per visible screen lifecycle, not from repeated child-view binding.
-       ScreenTracker.trackScreen("Home")
-   }
-   ```
+1. Reuse the quick start's `repeatOnLifecycle(Lifecycle.State.RESUMED)` readiness pattern for each
+   activity or fragment, changing the screen name. This keeps the initialization wait owned by the
+   visible lifecycle and avoids retaining a departed screen.
 
 2. Emit a new screen event after an in-activity navigation state change when several logical screens
    share one activity.
@@ -1008,8 +1013,9 @@ cannot open local overrides.
 
 1. Pass a `PreviewPanelConfig` to `initialize` under a debug gate. Supply a `PreviewContentfulClient`
    (the built-in `ContentfulHTTPPreviewClient` fetches `nt_audience` and `nt_experience` definitions)
-   so the panel shows audience and experience names; without it the panel still opens but falls back
-   to raw identifiers.
+   so the panel can show audience and experience rows and their controls. Without it, those rows and
+   controls are absent; Profile, Debug, and reset remain available, and only summaries for existing
+   overrides can fall back to raw identifiers.
 
    **Adapt this to your use case:**
 
@@ -1058,9 +1064,10 @@ internal-access policy.
 
 **Integration category:** Advanced or production-only
 
-The Android SDK monitors network reachability, queues events while offline, flushes when connectivity
-returns, and flushes as the app moves to the background. No setup is required for the default offline
-path.
+The Android SDK monitors network reachability, queues ordinary events while offline, flushes those
+events when connectivity returns, and flushes as the app moves to the background. No setup is
+required for the default offline path. An offline current-screen attempt is not queued or retried;
+explicitly call `trackCurrentScreen` after reconnecting when that event is required.
 
 1. Add a `QueuePolicy` only when production telemetry needs queue bounds or delivery callbacks. The
    offline Experience queue holds up to 100 events by default (tunable via
@@ -1101,7 +1108,8 @@ Before releasing an Android Views integration, verify these checks:
   `consent(...)` for every choice, withdrawal blocks later gated events, split event and persistence
   consent behaves as intended, and `reset()` behavior matches legal and privacy requirements.
 - **Event delivery** — Screen, custom, tap, view, identify, and flag-view events appear when allowed
-  and are blocked or omitted when policy denies them; offline delivery flushes after reconnect.
+  and are blocked or omitted when policy denies them; ordinary queued events flush after reconnect,
+  and required current-screen events are retried explicitly.
 - **Content fallback behavior** — Baseline entries render when selected optimizations are missing,
   Contentful links are unresolved, variants are out of range, all-locale payloads are fetched, or the
   visitor does not qualify.
@@ -1137,8 +1145,8 @@ Before releasing an Android Views integration, verify these checks:
 - **Screen events appear more than once** — Review `onResume` calls across activity, fragment, and
   in-activity transitions, and prefer `ScreenTracker.trackScreen` (which dedupes the current route by
   `routeKey`) over raw `screen` for lifecycle tracking.
-- **Preview panel opens but shows identifiers** — Pass a `PreviewContentfulClient` that can fetch
-  `nt_audience` and `nt_experience` entries from the correct space and environment.
+- **Preview panel has no audience or experience controls** — Pass a `PreviewContentfulClient` that
+  can fetch `nt_audience` and `nt_experience` entries from the correct space and environment.
 
 ## Reference implementations to compare against
 

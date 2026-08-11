@@ -16,10 +16,11 @@ import {
   type OptimizedEntrySourceSnapshot,
 } from '@contentful/optimization-web/presentation'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useOptimizationHydrationMode } from '../context/OptimizationHydrationContext'
-import { useLiveUpdates } from '../hooks/useLiveUpdates'
+import { useOptionalLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimizationContext } from '../hooks/useOptimization'
+import { useOptimizationRuntime } from '../hooks/useOptimizationRuntime'
 
 interface UseOptimizedEntrySharedParams {
   /** Per-entry live-update override. */
@@ -239,25 +240,22 @@ export function useOptimizedEntrySnapshot<
   trackViews,
   viewDurationUpdateIntervalMs,
 }: UseOptimizedEntrySnapshotParams<S, M, L>): OptimizedEntrySnapshot<S, M, L> {
-  const { sdk } = useOptimizationContext() as {
-    readonly sdk?: OptimizedEntrySdk<S, M, L>
-  }
+  const { isLive: isRuntimeLive, sdk: optimizationRuntime } = useOptimizationRuntime(liveUpdates)
+  const sdk = optimizationRuntime as typeof optimizationRuntime & OptimizedEntrySdk<S, M, L>
+  const liveUpdatesContext = useOptionalLiveUpdates()
   const hydration = useOptimizationHydrationMode()
-  const liveUpdatesContext = useLiveUpdates()
-  const isSdkReady = sdk !== undefined
-  const [isPresentationReady, setIsPresentationReady] = useState(isSdkReady)
 
   const controllerOptions = useMemo(
     () => ({
       hydration,
-      isPresentationReady,
+      isPresentationReady: isRuntimeLive,
       baselineEntry,
       entryLiveUpdatesEnabled: liveUpdates,
-      rootLiveUpdatesEnabled: liveUpdatesContext.globalLiveUpdates,
+      rootLiveUpdatesEnabled: liveUpdatesContext?.globalLiveUpdates ?? false,
       hasCustomLoadingFallback,
-      isPreviewPanelOpen: liveUpdatesContext.previewPanelVisible,
+      isPreviewPanelOpen: liveUpdatesContext?.previewPanelVisible ?? false,
       sdk,
-      isSdkStateReady: isSdkReady,
+      isSdkStateReady: true,
       targetDisplay,
       clickable,
       hoverDurationUpdateIntervalMs,
@@ -267,16 +265,15 @@ export function useOptimizedEntrySnapshot<
       viewDurationUpdateIntervalMs,
     }),
     [
-      isPresentationReady,
       baselineEntry,
       clickable,
       hasCustomLoadingFallback,
       hoverDurationUpdateIntervalMs,
       hydration,
-      isSdkReady,
+      isRuntimeLive,
       liveUpdates,
-      liveUpdatesContext.globalLiveUpdates,
-      liveUpdatesContext.previewPanelVisible,
+      liveUpdatesContext?.globalLiveUpdates,
+      liveUpdatesContext?.previewPanelVisible,
       sdk,
       targetDisplay,
       trackClicks,
@@ -289,28 +286,37 @@ export function useOptimizedEntrySnapshot<
   const [snapshot, setSnapshot] = useState<OptimizedEntrySnapshot<S, M, L>>(() =>
     controller.getSnapshot(),
   )
-
-  useEffect(() => {
-    setIsPresentationReady(isSdkReady)
-  }, [isSdkReady])
+  const synchronizedControllerOptionsRef = useRef(controllerOptions)
+  const { current: synchronizedControllerOptions } = synchronizedControllerOptionsRef
+  // Resolve a pure pending baseline while the retained controller still describes the prior
+  // presentation. Omitting the SDK prevents render-phase subscriptions and entry resolution.
+  const hasUnsynchronizedPresentation =
+    synchronizedControllerOptions.baselineEntry !== controllerOptions.baselineEntry ||
+    synchronizedControllerOptions.isPresentationReady !== controllerOptions.isPresentationReady ||
+    synchronizedControllerOptions.sdk !== controllerOptions.sdk
+  const renderSnapshot = hasUnsynchronizedPresentation
+    ? new OptimizedEntryController<S, M, L>({
+        ...controllerOptions,
+        sdk: undefined,
+      }).getSnapshot()
+    : snapshot
 
   useEffect(() => {
     controller.setSnapshotListener(setSnapshot)
-    return () => {
-      controller.setSnapshotListener(undefined)
-    }
-  }, [controller])
-
-  useEffect(() => {
-    controller.updateOptions(controllerOptions)
     controller.connect()
 
     return () => {
+      controller.setSnapshotListener(undefined)
       controller.disconnect()
     }
+  }, [controller])
+
+  useLayoutEffect(() => {
+    controller.updateOptions(controllerOptions)
+    synchronizedControllerOptionsRef.current = controllerOptions
   }, [controller, controllerOptions])
 
-  return snapshot
+  return renderSnapshot
 }
 
 /**

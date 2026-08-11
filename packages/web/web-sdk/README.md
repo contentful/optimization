@@ -180,8 +180,9 @@ For script-tag usage, load the main Web SDK UMD bundle and the separate Web Comp
 SSR output can include inert custom-element markup. On the client, call
 `defineContentfulOptimizationElements()` and assign object properties before expecting entries to
 resolve. A root shares SDK readiness and preview-panel live-update state with descendant entries;
-entries diff `data-ctfl-*` host attributes and clean up subscriptions on disconnect. Prefer one root
-per SDK instance unless a page genuinely needs separate SDK ownership.
+entries diff `data-ctfl-*` host attributes and clean up subscriptions on disconnect. Use one root
+for the browser runtime; descendant entries share the singleton-owned SDK instead of creating
+separate ownership.
 
 ## When to use this package
 
@@ -285,9 +286,16 @@ persistence consent is granted.
 
 `page()`, `identify()`, `screen()`, `track()`, and sticky `trackView()` calls return an event
 result. `{ accepted: false }` means consent or SDK guards blocked the event.
-`{ accepted: true, data }` means the SDK accepted the event; accepted queued or offline events might
-not have data yet. Router integrations that need current-route deduplication can call
-`trackCurrentPage()`. Direct manual `page()` calls remain non-deduping event emits.
+`{ accepted: true, data }` means the SDK accepted the event. Router integrations that need
+current-route deduplication can call `trackCurrentPage()`. It returns
+`{ accepted: true, data? }` after an accepted emission, or `{ accepted: false, reason }` with an
+`already-accepted`, `not-allowed`, or `superseded` reason. Emitted routes are online-only: an
+offline call returns `not-allowed` without publishing or enqueueing an event, and the integration
+must call `trackCurrentPage()` again after reconnecting. `initialPageEvent: 'skip'` remains accepted
+without emitting. Same-route calls made while an attempt is pending share one result, and only
+consecutive accepted routes are deduped. Current emission failures reject. Advanced integrations
+can observe `states.currentStateTracking` for its read-only generation and lifecycle status. Direct
+manual `page()` calls remain non-deduping event emits.
 
 ### Content resolution
 
@@ -340,11 +348,12 @@ for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the broader locale model.
 
-Use `getMergeTagValue()` for Contentful Rich Text merge tags and `getFlag()` for Custom Flags. If a
-merge tag references localized profile fields such as `location.city` or `location.country`, its
-resolved value follows the localized profile data returned by the Experience API. The Web SDK is
-stateful, so reading a flag can emit deduplicated flag-view tracking when consent or the allow-list
-permits it and profile state is available.
+Use `getMergeTagValue()` for Contentful Rich Text merge tags and `getFlag()` for Custom Flags. Use
+`getMergeTagFallbackValue()` to return a merge tag's configured fallback without using the current
+profile. If a merge tag references localized profile fields such as `location.city` or
+`location.country`, its resolved value follows the localized profile data returned by the Experience
+API. The Web SDK is stateful, so reading a flag can emit deduplicated flag-view tracking when consent
+or the allow-list permits it and profile state is available.
 
 ### Entry interaction tracking
 

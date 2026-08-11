@@ -41,7 +41,6 @@ export type {
 export * from './locale'
 export type * from './OptimizedEntryMetadata'
 export * from './page-context'
-export type { ExperienceQueue } from './queues/ExperienceQueue'
 export type { InsightsQueue, InsightsQueueFlushOptions } from './queues/InsightsQueue'
 export * from './resolvers'
 export * from './StatefulDefaults'

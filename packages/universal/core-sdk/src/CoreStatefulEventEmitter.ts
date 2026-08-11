@@ -27,7 +27,6 @@ import type {
   TrackBuilderArgs,
   ViewBuilderArgs,
 } from './events'
-import type { ExperienceQueue } from './queues/ExperienceQueue'
 import type { InsightsQueue } from './queues/InsightsQueue'
 import {
   blockedEvent as blockedEventSignal,
@@ -77,9 +76,14 @@ abstract class CoreStatefulEventEmitter
   private nextFlagViewTrackingAttemptId = 0
 
   protected abstract readonly allowedEventTypes: readonly AllowedEventType[]
-  protected abstract readonly experienceQueue: ExperienceQueue
   protected abstract readonly insightsQueue: InsightsQueue
   protected abstract readonly onEventBlocked?: CoreStatefulConfig['onEventBlocked']
+  protected abstract sendExperienceEventWithResult(
+    method: string,
+    args: readonly unknown[],
+    event: ExperienceEventPayload,
+    optimizationContext?: EventOptimizationContext,
+  ): Promise<EventEmissionResult>
   protected abstract getEventOptimizationContext(
     optimizationContextId: string | undefined,
   ): EventOptimizationContext | undefined
@@ -124,6 +128,9 @@ abstract class CoreStatefulEventEmitter
   /**
    * Convenience wrapper for sending a `page` event through the Experience path.
    *
+   * @remarks
+   * This ordinary event method is not deduplicated by current-route tracking.
+   *
    * @param payload - Page view builder arguments.
    * @returns Whether the event was accepted and any resulting {@link OptimizationData}.
    * @example
@@ -143,6 +150,9 @@ abstract class CoreStatefulEventEmitter
 
   /**
    * Convenience wrapper for sending a `screen` event through the Experience path.
+   *
+   * @remarks
+   * This ordinary event method is not deduplicated by current-screen tracking.
    *
    * @param payload - Screen view builder arguments.
    * @returns Whether the event was accepted and any resulting {@link OptimizationData}.
@@ -292,28 +302,11 @@ abstract class CoreStatefulEventEmitter
     return hasEventConsent(name, consentSignal.value, this.allowedEventTypes)
   }
 
-  private onBlockedByConsent(name: string, args: readonly unknown[]): void {
+  protected onBlockedByConsent(name: string, args: readonly unknown[]): void {
     coreLogger.warn(
       `Event "${name}" was blocked due to lack of consent; payload: ${JSON.stringify(args)}`,
     )
     this.reportBlockedEvent(name, args)
-  }
-
-  protected async sendExperienceEventWithResult(
-    method: string,
-    args: readonly unknown[],
-    event: ExperienceEventPayload,
-    optimizationContext?: EventOptimizationContext,
-  ): Promise<EventEmissionResult> {
-    if (!this.hasConsent(method)) {
-      this.onBlockedByConsent(method, args)
-      return { accepted: false }
-    }
-
-    const data = await this.experienceQueue.send(event, optimizationContext)
-    if (data === undefined) return { accepted: true }
-
-    return { accepted: true, data }
   }
 
   protected async sendInsightsEvent(
@@ -351,11 +344,11 @@ abstract class CoreStatefulEventEmitter
     return [value, payload.componentId, payload.experienceId, payload.variantIndex, profileId]
   }
 
-  protected initializeFlagViewConsentEffect(): void {
+  protected initializeFlagViewConsentEffect(): () => void {
     let wasReadyToTrack = this.hasConsent('trackFlagView') && profileSignal.value?.id !== undefined
     let previousProfileId = profileSignal.value?.id
 
-    signalFns.effect(() => {
+    return signalFns.effect(() => {
       const profileId = profileSignal.value?.id
       const isReadyToTrack = this.hasConsent('trackFlagView') && profileId !== undefined
 

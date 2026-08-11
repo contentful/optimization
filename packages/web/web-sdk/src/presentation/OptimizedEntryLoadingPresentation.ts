@@ -30,8 +30,7 @@ export function resolveLoadingPresentation({
   targetDisplay,
 }: LoadingPresentationInput): OptimizedEntryLoadingPresentation {
   const preservesServerContent = hydration === 'preserve-server'
-  const showLoadingFallback =
-    !preservesServerContent && (isLoading || (isServerRender && !isPresentationReady))
+  const showLoadingFallback = !preservesServerContent && (isLoading || !isPresentationReady)
   const shouldRenderBaselineWhileLoading =
     !preservesServerContent && (!hasCustomLoadingFallback || hasBaselineRevealTimedOut)
   const hideLoadingLayoutTarget =

@@ -1,3 +1,5 @@
+import { optimizedEntry as serverOptimizedEntry } from '@contentful/optimization-core/test/fixtures/optimizedEntry'
+import { selectedOptimizations as serverSelectedOptimizations } from '@contentful/optimization-core/test/fixtures/selectedOptimizations'
 import type {
   MergeTagEntry,
   OptimizationData,
@@ -10,10 +12,11 @@ import type {
 } from '@contentful/optimization-web/core-sdk'
 import type { ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
 import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
-import { act, createElement } from 'react'
+import { act, createElement, type ReactElement, useLayoutEffect, useRef } from 'react'
 import { renderToString } from 'react-dom/server'
 import { isEntryOfContentType } from '../api-schemas'
 import { OptimizationHydrationContext } from '../context/OptimizationHydrationContext'
+import { OptimizationRouteTransitionContext } from '../context/OptimizationRouteTransitionContext'
 import { useEntryResolver } from '../hooks/useEntryResolver'
 import { OptimizationRoot } from '../root/OptimizationRoot'
 import { OptimizedEntry, type OptimizedEntryProps } from './OptimizedEntry'
@@ -253,6 +256,23 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
+  it('keeps its controller connected when presentation options change', async () => {
+    const resolveOptimizedEntry = rs.fn((entry: TestEntry) => ({ entry }))
+    const optimization = createOptimizationSdk({ resolveOptimizedEntry })
+    const renderEntry = (trackViews: boolean): ReactElement => (
+      <OptimizedEntry baselineEntry={optimizedBaseline} trackViews={trackViews}>
+        {(entry) => entry.sys.id}
+      </OptimizedEntry>
+    )
+    const view = await renderComponent(renderEntry(true), optimization)
+    const initialResolutionCount = resolveOptimizedEntry.mock.calls.length
+
+    await view.rerender(renderEntry(false))
+
+    expect(resolveOptimizedEntry).toHaveBeenCalledTimes(initialResolutionCount + 1)
+    await view.unmount()
+  })
+
   it('passes merge-tag helpers to render props', async () => {
     const optimization = createOptimizationSdk()
     const getMergeTagValueCalls: unknown[] = []
@@ -271,6 +291,324 @@ describe('OptimizedEntry', () => {
 
     expect(view.container.textContent).toContain('EU')
     expect(getMergeTagValueCalls).toContainEqual([true, mergeTagEntry])
+
+    await view.unmount()
+  })
+
+  it('uses the presentation runtime for entries and merge tags during preserve-server hydration', async () => {
+    const resolveLiveEntry = rs.fn(
+      (_entry: TestEntry, selectedOptimizations: SelectedOptimizationArray | undefined) => ({
+        entry: variantA,
+        selectedOptimization: selectedOptimizations?.[0],
+      }),
+    )
+    const resolvePresentationEntry = rs.fn(
+      (_entry: TestEntry, selectedOptimizations: SelectedOptimizationArray | undefined) => ({
+        entry: variantB,
+        selectedOptimization: selectedOptimizations?.[0],
+      }),
+    )
+    const liveRuntime = createRuntime(resolveLiveEntry)
+    const presentationRuntime = createRuntime(resolvePresentationEntry)
+    const liveGetMergeTagValue = rs.fn(() => 'live-A')
+    const presentationGetMergeTagValue = rs.fn(() => 'presentation-B')
+    liveRuntime.optimization.getMergeTagValue = liveGetMergeTagValue
+    presentationRuntime.optimization.getMergeTagValue = presentationGetMergeTagValue
+    await liveRuntime.emit(variantOneState)
+    await presentationRuntime.emit(variantTwoState)
+    const mergeTagEntry = makeMergeTagEntry('merge-tag')
+
+    const view = await renderComponent(
+      <OptimizationRouteTransitionContext.Provider
+        value={{
+          isHandoffPending: false,
+          isLiveRuntimeAuthoritative: false,
+          isPresentationLive: false,
+          presentationSdk: presentationRuntime.optimization,
+          settleRoute: () => undefined,
+          startRoute: () => undefined,
+        }}
+      >
+        <OptimizationHydrationContext.Provider value="preserve-server">
+          <OptimizedEntry baselineEntry={optimizedBaseline}>
+            {(entry, { getMergeTagValue }) => `${entry.sys.id}:${getMergeTagValue(mergeTagEntry)}`}
+          </OptimizedEntry>
+        </OptimizationHydrationContext.Provider>
+      </OptimizationRouteTransitionContext.Provider>,
+      liveRuntime.optimization,
+      undefined,
+      { isLive: true },
+    )
+
+    expect(resolveLiveEntry).not.toHaveBeenCalled()
+    expect(resolvePresentationEntry).toHaveBeenCalled()
+    expect(view.container.textContent).toContain('2qVK4T5lnScbswoyBuGipd:presentation-B')
+    expect(presentationGetMergeTagValue).toHaveBeenCalledWith(mergeTagEntry, undefined)
+    expect(liveGetMergeTagValue).not.toHaveBeenCalled()
+
+    await view.unmount()
+  })
+
+  it('does not commit a prior-route selection from a retained entry during a route transition', async () => {
+    const priorRouteRuntime = createRuntime((_entry, selectedOptimizations) => ({
+      entry: selectedOptimizations?.length ? variantA : optimizedBaseline,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const resolveNextRouteEntry = rs.fn((entry: TestEntry) => ({ entry }))
+    const nextRouteRuntime = createRuntime(resolveNextRouteEntry)
+    await priorRouteRuntime.emit(variantOneState)
+    const transitionLayoutContent: string[] = []
+    const transitionLayoutEntryIds: Array<string | undefined> = []
+    const transitionRenderResolutionCounts: number[] = []
+
+    function TransitionRenderProbe({ phase }: { readonly phase: 'prior' | 'transition' }): null {
+      if (phase === 'transition' && transitionRenderResolutionCounts.length === 0) {
+        transitionRenderResolutionCounts.push(resolveNextRouteEntry.mock.calls.length)
+      }
+
+      return null
+    }
+
+    function RoutePresentation({
+      isPresentationLive,
+      phase,
+    }: {
+      readonly isPresentationLive: boolean
+      readonly phase: 'prior' | 'transition'
+    }): ReactElement {
+      const contentRef = useRef<HTMLDivElement>(null)
+
+      useLayoutEffect(() => {
+        if (phase === 'transition') {
+          transitionLayoutContent.push(contentRef.current?.textContent ?? '')
+          transitionLayoutEntryIds.push(
+            contentRef.current?.querySelector<HTMLElement>('[data-ctfl-entry-id]')?.dataset
+              .ctflEntryId,
+          )
+        }
+      }, [phase])
+
+      return (
+        <OptimizationRouteTransitionContext.Provider
+          value={{
+            isHandoffPending: !isPresentationLive,
+            isLiveRuntimeAuthoritative: isPresentationLive,
+            isPresentationLive,
+            presentationSdk: isPresentationLive ? undefined : nextRouteRuntime.optimization,
+            settleRoute: () => undefined,
+            startRoute: () => undefined,
+          }}
+        >
+          <div ref={contentRef}>
+            <OptimizedEntry baselineEntry={optimizedBaseline} loadingFallback="loading">
+              {(entry) => entry.sys.id}
+            </OptimizedEntry>
+            <TransitionRenderProbe phase={phase} />
+          </div>
+        </OptimizationRouteTransitionContext.Provider>
+      )
+    }
+
+    const view = await renderComponent(
+      <RoutePresentation isPresentationLive phase="prior" />,
+      priorRouteRuntime.optimization,
+      undefined,
+      { isLive: true },
+    )
+
+    expect(view.container.textContent).toContain(variantA.sys.id)
+
+    await view.rerender(<RoutePresentation isPresentationLive={false} phase="transition" />)
+
+    expect(transitionRenderResolutionCounts).toEqual([0])
+    expect(transitionLayoutContent).toEqual(['loading'])
+    expect(transitionLayoutEntryIds).toEqual([undefined])
+    expect(view.container.textContent).toContain('loading')
+    expect(view.container.textContent).not.toContain(variantA.sys.id)
+    expect(getWrapper(view.container).dataset.ctflEntryId).toBeUndefined()
+
+    await view.unmount()
+  })
+
+  it('preserves a retained entry selection lock through a baseline-only change', async () => {
+    const firstBaseline = makeOptimizableEntry('first-baseline')
+    const secondBaseline = makeOptimizableEntry('second-baseline')
+    const resolveOptimizedEntry = rs.fn(
+      (entry: TestEntry, selectedOptimizations: SelectedOptimizationArray | undefined) => {
+        const selectedOptimization = selectedOptimizations?.[0]
+
+        return {
+          entry:
+            selectedOptimization?.variantIndex === 1
+              ? variantA
+              : selectedOptimization?.variantIndex === 2
+                ? variantB
+                : entry,
+          selectedOptimization,
+        }
+      },
+    )
+    const runtime = createRuntime(resolveOptimizedEntry)
+    await runtime.emit(variantOneState)
+    const transitionLayoutContent: string[] = []
+    const transitionLayoutEntryIds: Array<string | undefined> = []
+    const transitionRenderResolutionCounts: number[] = []
+
+    function TransitionRenderProbe({
+      phase,
+      resolutionCountBeforeTransition,
+    }: {
+      readonly phase: 'prior' | 'transition'
+      readonly resolutionCountBeforeTransition: number
+    }): null {
+      if (phase === 'transition' && transitionRenderResolutionCounts.length === 0) {
+        transitionRenderResolutionCounts.push(
+          resolveOptimizedEntry.mock.calls.length - resolutionCountBeforeTransition,
+        )
+      }
+
+      return null
+    }
+
+    function BaselinePresentation({
+      baselineEntry,
+      phase,
+      resolutionCountBeforeTransition,
+    }: {
+      readonly baselineEntry: TestEntry
+      readonly phase: 'prior' | 'transition'
+      readonly resolutionCountBeforeTransition: number
+    }): ReactElement {
+      const contentRef = useRef<HTMLDivElement>(null)
+
+      useLayoutEffect(() => {
+        if (phase !== 'transition') return
+
+        transitionLayoutContent.push(contentRef.current?.textContent ?? '')
+        transitionLayoutEntryIds.push(
+          contentRef.current?.querySelector<HTMLElement>('[data-ctfl-entry-id]')?.dataset
+            .ctflEntryId,
+        )
+      }, [phase])
+
+      return (
+        <div ref={contentRef}>
+          <OptimizedEntry baselineEntry={baselineEntry}>{(entry) => entry.sys.id}</OptimizedEntry>
+          <TransitionRenderProbe
+            phase={phase}
+            resolutionCountBeforeTransition={resolutionCountBeforeTransition}
+          />
+        </div>
+      )
+    }
+
+    const view = await renderComponent(
+      <BaselinePresentation
+        baselineEntry={firstBaseline}
+        phase="prior"
+        resolutionCountBeforeTransition={0}
+      />,
+      runtime.optimization,
+    )
+
+    expect(view.container.textContent).toContain(variantA.sys.id)
+    await runtime.emit(variantTwoState)
+    const resolutionCountBeforeTransition = resolveOptimizedEntry.mock.calls.length
+
+    await view.rerender(
+      <BaselinePresentation
+        baselineEntry={secondBaseline}
+        phase="transition"
+        resolutionCountBeforeTransition={resolutionCountBeforeTransition}
+      />,
+    )
+
+    expect(transitionRenderResolutionCounts).toEqual([0])
+    expect(transitionLayoutContent).toEqual([secondBaseline.sys.id])
+    expect(transitionLayoutEntryIds).toEqual([undefined])
+    expect(view.container.textContent).toContain(variantA.sys.id)
+    expect(view.container.textContent).not.toContain(variantB.sys.id)
+    expect(
+      view.container.querySelector<HTMLElement>('[data-ctfl-baseline-id]')?.dataset.ctflBaselineId,
+    ).toBe(secondBaseline.sys.id)
+
+    await view.unmount()
+  })
+
+  it('commits an incoming baseline immediately when no variant is selected', async () => {
+    const firstBaseline = makeOptimizableEntry('first-baseline')
+    const secondBaseline = makeOptimizableEntry('second-baseline')
+    const resolveOptimizedEntry = rs.fn((entry: TestEntry) => ({ entry }))
+    const runtime = createRuntime(resolveOptimizedEntry)
+    const transitionLayoutContent: string[] = []
+    const transitionRenderResolutionCounts: number[] = []
+
+    function TransitionRenderProbe({
+      phase,
+      resolutionCountBeforeTransition,
+    }: {
+      readonly phase: 'prior' | 'transition'
+      readonly resolutionCountBeforeTransition: number
+    }): null {
+      if (phase === 'transition' && transitionRenderResolutionCounts.length === 0) {
+        transitionRenderResolutionCounts.push(
+          resolveOptimizedEntry.mock.calls.length - resolutionCountBeforeTransition,
+        )
+      }
+
+      return null
+    }
+
+    function BaselinePresentation({
+      baselineEntry,
+      phase,
+      resolutionCountBeforeTransition,
+    }: {
+      readonly baselineEntry: TestEntry
+      readonly phase: 'prior' | 'transition'
+      readonly resolutionCountBeforeTransition: number
+    }): ReactElement {
+      const contentRef = useRef<HTMLDivElement>(null)
+
+      useLayoutEffect(() => {
+        if (phase === 'transition') {
+          transitionLayoutContent.push(contentRef.current?.textContent ?? '')
+        }
+      }, [phase])
+
+      return (
+        <div ref={contentRef}>
+          <OptimizedEntry baselineEntry={baselineEntry}>{(entry) => entry.sys.id}</OptimizedEntry>
+          <TransitionRenderProbe
+            phase={phase}
+            resolutionCountBeforeTransition={resolutionCountBeforeTransition}
+          />
+        </div>
+      )
+    }
+
+    const view = await renderComponent(
+      <BaselinePresentation
+        baselineEntry={firstBaseline}
+        phase="prior"
+        resolutionCountBeforeTransition={0}
+      />,
+      runtime.optimization,
+    )
+    const resolutionCountBeforeTransition = resolveOptimizedEntry.mock.calls.length
+
+    await view.rerender(
+      <BaselinePresentation
+        baselineEntry={secondBaseline}
+        phase="transition"
+        resolutionCountBeforeTransition={resolutionCountBeforeTransition}
+      />,
+    )
+
+    expect(transitionRenderResolutionCounts).toEqual([0])
+    expect(transitionLayoutContent).toEqual([secondBaseline.sys.id])
+    expect(view.container.textContent).toContain(secondBaseline.sys.id)
+    expect(view.container.textContent).not.toContain(firstBaseline.sys.id)
 
     await view.unmount()
   })
@@ -1019,6 +1357,72 @@ describe('OptimizedEntry', () => {
     expect(markup).not.toContain('visibility:hidden')
   })
 
+  it('hides snapshot-backed optimized content during SSR until the owned runtime is live', () => {
+    const markup = renderToStringWithoutWindow(() =>
+      renderToString(
+        <OptimizationRoot clientId="test-client-id" environment="main">
+          <OptimizedEntry baselineEntry={optimizedBaseline}>
+            {(resolved) => readTitle(resolved)}
+          </OptimizedEntry>
+        </OptimizationRoot>,
+      ),
+    )
+
+    expect(markup).toContain('6KfLDCdA75BGwr5HfSeXac')
+    expect(markup).toContain('visibility:hidden')
+  })
+
+  it('keeps non-optimized content visible during owned-runtime SSR startup', () => {
+    const markup = renderToStringWithoutWindow(() =>
+      renderToString(
+        <OptimizationRoot clientId="test-client-id" environment="main">
+          <OptimizedEntry baselineEntry={baseline}>
+            {(resolved) => readTitle(resolved)}
+          </OptimizedEntry>
+        </OptimizationRoot>,
+      ),
+    )
+
+    expect(markup).toContain('4ib0hsHWoSOnCVdDkizE8d')
+    expect(markup).not.toContain('visibility:hidden')
+  })
+
+  it('hides the first client presentation while its runtime is snapshot-backed', async () => {
+    const { optimization } = createRuntime((entry) => ({ entry }), true, { status: 'success' })
+
+    const view = await renderComponent(
+      <OptimizedEntry baselineEntry={optimizedBaseline}>
+        {(resolved) => readTitle(resolved)}
+      </OptimizedEntry>,
+      optimization,
+      undefined,
+      { isLive: false },
+    )
+
+    expect(view.container.textContent).toContain('6KfLDCdA75BGwr5HfSeXac')
+    expect(
+      getRequiredElement(view.container, '[data-ctfl-loading-layout-target]').style.visibility,
+    ).toBe('hidden')
+
+    await view.unmount()
+  })
+
+  it('keeps non-optimized first client content visible while its runtime is snapshot-backed', async () => {
+    const { optimization } = createRuntime((entry) => ({ entry }), true, { status: 'success' })
+
+    const view = await renderComponent(
+      <OptimizedEntry baselineEntry={baseline}>{(resolved) => readTitle(resolved)}</OptimizedEntry>,
+      optimization,
+      undefined,
+      { isLive: false },
+    )
+
+    expect(view.container.textContent).toContain('4ib0hsHWoSOnCVdDkizE8d')
+    expect(view.container.querySelector('[data-ctfl-loading-layout-target]')).toBeNull()
+
+    await view.unmount()
+  })
+
   it('renders managed entryId content from server handoff during SSR', () => {
     const markup = renderToStringWithoutWindow(() =>
       renderToString(
@@ -1054,6 +1458,66 @@ describe('OptimizedEntry', () => {
     expect(markup).toContain('4ib0hsHWoSOnCVdDkizE8d')
     expect(markup).not.toContain('4k6ZyFQnR2POY5IJLLlJRb')
     expect(markup).not.toContain('loading')
+    expect(markup).not.toContain('visibility:hidden')
+  })
+
+  it('keeps preserve-server handoff selection authoritative during SSR', () => {
+    const markup = renderToStringWithoutWindow(() =>
+      renderToString(
+        <OptimizationRoot
+          clientId="test-client-id"
+          environment="main"
+          handoff={createContentHandoff({
+            state: {
+              ...createServerOptimizationState(),
+              selectedOptimizations: serverSelectedOptimizations,
+            },
+          })}
+        >
+          <OptimizedEntry baselineEntry={serverOptimizedEntry}>
+            {(resolved) => resolved.sys.id}
+          </OptimizedEntry>
+        </OptimizationRoot>,
+      ),
+    )
+
+    expect(markup).toContain('>4k6ZyFQnR2POY5IJLLlJRb<')
+    expect(markup).not.toContain('visibility:hidden')
+  })
+
+  it('keeps client-only handoff selection resolved but hidden during SSR', () => {
+    let resolvedEntryId: string | undefined = undefined
+
+    function Probe(): ReactElement {
+      resolvedEntryId = useOptimizedEntry({ baselineEntry: serverOptimizedEntry }).entry.sys.id
+
+      return (
+        <OptimizedEntry baselineEntry={serverOptimizedEntry}>
+          {(resolved) => resolved.sys.id}
+        </OptimizedEntry>
+      )
+    }
+
+    const markup = renderToStringWithoutWindow(() =>
+      renderToString(
+        <OptimizationRoot
+          clientId="test-client-id"
+          environment="main"
+          handoff={createContentHandoff({
+            hydration: 'client-only-hidden-until-ready',
+            state: {
+              ...createServerOptimizationState(),
+              selectedOptimizations: serverSelectedOptimizations,
+            },
+          })}
+        >
+          <Probe />
+        </OptimizationRoot>,
+      ),
+    )
+
+    expect(resolvedEntryId).toBe('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(markup).toContain('visibility:hidden')
   })
 
   it('renders managed slug content from server handoff during SSR', () => {

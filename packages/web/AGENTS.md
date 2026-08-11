@@ -6,6 +6,13 @@ Web-family packages under `packages/web/`.
 
 - Keep Web packages browser-oriented; server-only assumptions belong in Node packages or
   implementations.
+- `ContentfulOptimization`, the analytics-only runtime's internal SDK, React-owned roots, and Web
+  Component-owned roots all participate in the one `CoreStateful` singleton for the browser runtime.
+  The `window.contentfulOptimization` property is a discovery surface, not the singleton lock; the
+  `globalThis` Core lock remains authoritative even when a wrapper intentionally hides that property.
+- Snapshot runtimes and structural SDK-shaped test doubles are not additional live SDK instances.
+  Non-owning integration surfaces reuse the injected singleton; they must not create independent
+  stateful instances or partition singleton-owned state by provider, facade, or hydration target.
 - `web-sdk` owns browser runtime behavior, entry interaction tracking, and Web preview bridge
   integration points.
 - `preview-panel` is coupled to Web SDK preview internals; preview bridge changes usually affect

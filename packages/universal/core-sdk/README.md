@@ -179,18 +179,42 @@ For every option, callback payload, and exported type, use the generated
 
 Core exposes reusable primitives for SDK layers:
 
-| Surface                         | Purpose                                                                                                                                                       |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CoreStateful`                  | Stateful optimization runtime for browser, mobile, and bridge SDKs                                                                                            |
-| `CoreStateless`                 | Stateless optimization runtime for server SDKs                                                                                                                |
-| Event methods                   | `identify`, `page`, `screen`, `track`, `trackView`, `trackClick`, etc.                                                                                        |
-| Resolution and fetch helpers    | `resolveOptimizedEntry`, `fetchContentfulEntry`, `fetchContentfulEntries`, `fetchOptimizedEntry`, `prefetchManagedEntries`, `getMergeTagValue`, and `getFlag` |
-| Selection handoff helpers       | Framework-neutral selection state, cache keys, cache-safety warnings, bulk entry resolution, and `createHandoffFromSelections`                                |
-| Current-state tracking          | `AcceptedCurrentStateTracker` for SDK-owned page or screen adapters                                                                                           |
-| `states`                        | Stateful observable state streams                                                                                                                             |
-| Interceptors                    | First-party hooks for event and state lifecycle customization                                                                                                 |
-| Queue policy and fetch helpers  | Shared retry, flush, timeout, and offline buffering behavior                                                                                                  |
-| Signal and observable utilities | Lightweight reactive primitives used internally by stateful SDK layers                                                                                        |
+| Surface                         | Purpose                                                                                                                                                                                   |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CoreStateful`                  | Stateful optimization runtime for browser, mobile, and bridge SDKs                                                                                                                        |
+| `CoreStateless`                 | Stateless optimization runtime for server SDKs                                                                                                                                            |
+| Event methods                   | `identify`, `page`, `screen`, `track`, `trackView`, `trackClick`, etc.                                                                                                                    |
+| Resolution and fetch helpers    | `resolveOptimizedEntry`, `fetchContentfulEntry`, `fetchContentfulEntries`, `fetchOptimizedEntry`, `prefetchManagedEntries`, `getMergeTagValue`, `getMergeTagFallbackValue`, and `getFlag` |
+| Selection handoff helpers       | Framework-neutral selection state, cache keys, cache-safety warnings, bulk entry resolution, and `createHandoffFromSelections`                                                            |
+| Current-state tracking          | Core-owned page or screen coordination with read-only lifecycle state for advanced adapters                                                                                               |
+| `states`                        | Stateful observable state streams, including `currentStateTracking` generation and status                                                                                                 |
+| Interceptors                    | First-party hooks for event and state lifecycle customization                                                                                                                             |
+| Queue policy and fetch helpers  | Shared retry, flush, timeout, and offline buffering behavior                                                                                                                              |
+| Signal and observable utilities | Lightweight reactive primitives used internally by stateful SDK layers                                                                                                                    |
+
+Use `getMergeTagFallbackValue()` to return a merge tag's configured fallback without using the
+current or request profile.
+
+Platform SDKs own current-page and current-screen mutation. Advanced integrations can observe the
+active operation without constructing or mutating Core's coordinator:
+
+```ts
+const subscription = sdk.states.currentStateTracking.subscribe((state) => {
+  if (state.status === 'observed') {
+    console.log('Current page or screen is eligible for tracking', state.generation)
+  }
+})
+
+subscription.unsubscribe()
+```
+
+Current-page and current-screen operations are online-only. An offline attempt remains eligible for
+an explicit retry, but it does not publish or enqueue an Experience event and reconnecting does not
+retry it automatically. The call returns `not-allowed`; the observable status remains `observed`
+until a retry. The observable status is `idle`, `observed`, `pending`, or `accepted`.
+Advancing the current route or screen invalidates older Experience responses. Await an ordinary
+`identify`, `page`, `screen`, or `track` call when its response state is required before starting a
+current route or screen transition.
 
 When a `contentful.js` client is available, prefer SDK-managed fetching. Configure
 `contentful: { client, defaultQuery?, cache? }`, then identify each entry by ID or by content type

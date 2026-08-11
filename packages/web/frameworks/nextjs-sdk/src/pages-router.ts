@@ -1,23 +1,21 @@
 'use client'
 
 import {
-  LiveUpdatesProvider as ReactWebLiveUpdatesProvider,
-  OptimizationAnalyticsRoot as ReactWebOptimizationAnalyticsRoot,
-  OptimizationProvider as ReactWebOptimizationProvider,
-  OptimizationRoot as ReactWebOptimizationRoot,
-  OptimizedEntry as ReactWebOptimizedEntry,
-  type OptimizationRootProps,
-  type OptimizationAnalyticsRootProps as ReactWebOptimizationAnalyticsRootProps,
-} from '@contentful/optimization-react-web'
-import {
   resolveEntriesForSelections,
   type StatefulDefaults,
 } from '@contentful/optimization-react-web/core-sdk'
 import {
   NextPagesAutoPageTracker,
+  LiveUpdatesProvider as ReactWebLiveUpdatesProvider,
+  OptimizationAnalyticsRoot as ReactWebOptimizationAnalyticsRoot,
+  OptimizationProvider as ReactWebOptimizationProvider,
+  OptimizationRoot as ReactWebOptimizationRoot,
+  OptimizedEntry as ReactWebOptimizedEntry,
   type NextPagesAutoPageContext,
   type NextPagesAutoPageTrackerProps,
-} from '@contentful/optimization-react-web/router/next-pages'
+  type OptimizationRootProps,
+  type OptimizationAnalyticsRootProps as ReactWebOptimizationAnalyticsRootProps,
+} from '@contentful/optimization-react-web/next-pages'
 import { createElement, type ReactElement } from 'react'
 import type {
   BoundNextjsOptimizationAnalyticsRootProps,
@@ -38,6 +36,28 @@ type PagesRouterRequestDefaultsHandoff = BrowserOptimizationHandoff & {
   readonly defaults?: StatefulDefaults
 }
 
+export {
+  LiveUpdatesContext,
+  LiveUpdatesProvider,
+  OptimizationAnalyticsRoot,
+  OptimizationContext,
+  OptimizationProvider,
+  OptimizationRoot,
+  OptimizedEntry,
+  prefetchManagedEntries,
+  useCanOptimizeState,
+  useConsentState,
+  useEntryResolver,
+  useEventStreamState,
+  useLiveUpdates,
+  useMergeTagResolver,
+  useOptimization,
+  useOptimizationActions,
+  useOptimizationContext,
+  useOptimizedEntry,
+  useProfileState,
+  useSelectedOptimizationsState,
+} from '@contentful/optimization-react-web/next-pages'
 export type {
   BoundNextjsOptimizationAnalyticsRootProps,
   BoundNextjsOptimizationProviderProps,
@@ -46,6 +66,7 @@ export type {
   NextjsOptimizationConsentConfig,
   NextjsOptimizationCookieConfig,
 } from './bound-component-types'
+export type * from './client'
 export {
   createHandoffFromSelections,
   createOptimizationCacheKey,

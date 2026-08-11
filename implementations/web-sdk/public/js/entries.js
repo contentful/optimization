@@ -25,19 +25,24 @@ function isRichText(field) {
   return field && typeof field === 'object' && field.content !== undefined
 }
 
-function simpleRenderRichText(node, parent) {
+function simpleRenderRichText(node, parent, baselineOnly) {
   if (!node || typeof node !== 'object') return
   if (node.nodeType === 'document') {
-    node.content.forEach((n) => simpleRenderRichText(n, parent))
+    node.content.forEach((n) => simpleRenderRichText(n, parent, baselineOnly))
   } else if (node.nodeType === 'paragraph') {
     const p = document.createElement('p')
-    node.content.forEach((n) => simpleRenderRichText(n, p))
+    node.content.forEach((n) => simpleRenderRichText(n, p, baselineOnly))
     parent.appendChild(p)
   } else if (node.nodeType === 'text') {
     parent.appendChild(document.createTextNode(node.value))
   } else if (node.nodeType === 'embedded-entry-inline') {
+    const mergeTagEntry = node.data.target
     parent.appendChild(
-      document.createTextNode(window.contentfulOptimization.getMergeTagValue(node.data.target)),
+      document.createTextNode(
+        baselineOnly
+          ? (window.contentfulOptimization.getMergeTagFallbackValue(mergeTagEntry) ?? '')
+          : window.contentfulOptimization.getMergeTagValue(mergeTagEntry),
+      ),
     )
   }
 }
@@ -48,7 +53,7 @@ function getEntryText(entry) {
 
 /* ── Entry card builder ──────────────────────────────────────────────── */
 
-function buildEntryCard(resolvedEntry, baselineEntryId, observation, clickScenario) {
+function buildEntryCard(resolvedEntry, baselineEntryId, observation, clickScenario, baselineOnly) {
   const card = document.createElement('div')
   card.className = 'entry-card'
   card.dataset.testid = `content-${baselineEntryId}`
@@ -87,7 +92,7 @@ function buildEntryCard(resolvedEntry, baselineEntryId, observation, clickScenar
   if (isRichText(resolvedEntry.fields?.text)) {
     const richDiv = document.createElement('div')
     richDiv.className = 'rich-text'
-    simpleRenderRichText(resolvedEntry.fields.text, richDiv)
+    simpleRenderRichText(resolvedEntry.fields.text, richDiv, baselineOnly)
     textDiv.appendChild(richDiv)
   } else {
     const p = document.createElement('p')
@@ -116,7 +121,11 @@ function buildEntryCard(resolvedEntry, baselineEntryId, observation, clickScenar
         const childEl = document.createElement('ctfl-optimized-entry')
         childEl.dataset.entryId = child.sys.id
         nestedDiv.appendChild(childEl)
-        configureOptimizedEntry(childEl, child)
+        if (baselineOnly) {
+          renderBaselineEntry(childEl, child)
+        } else {
+          configureOptimizedEntry(childEl, child)
+        }
       }
     }
     card.appendChild(nestedDiv)
@@ -174,7 +183,11 @@ function handleEntryResolved(event) {
   const rawEntry = element.baselineEntry
   if (!rawEntry) return
 
-  const { entry, isEmptyVariant, selectedOptimization } = event.detail.resolvedData
+  renderResolvedEntry(element, rawEntry, event.detail.resolvedData, false)
+}
+
+function renderResolvedEntry(element, rawEntry, resolvedData, baselineOnly) {
+  const { entry, isEmptyVariant, selectedOptimization } = resolvedData
   const baselineEntryId = element.dataset.entryId ?? rawEntry.sys.id
   const clickScenario = CLICK_SCENARIOS[baselineEntryId]
   const observation = element.dataset.manualViewTracking === 'true' ? 'manual' : 'auto'
@@ -188,7 +201,7 @@ function handleEntryResolved(event) {
 
   if (renderLiveUpdatesEntry(element, entry)) return
 
-  const card = buildEntryCard(entry, baselineEntryId, observation, clickScenario)
+  const card = buildEntryCard(entry, baselineEntryId, observation, clickScenario, baselineOnly)
 
   const section = document.createElement('section')
   section.dataset.testid = `content-entry-${baselineEntryId}`
@@ -210,6 +223,10 @@ function handleEntryResolved(event) {
   }
 }
 
+function renderBaselineEntry(element, baselineEntry) {
+  renderResolvedEntry(element, baselineEntry, { entry: baselineEntry }, true)
+}
+
 function configureOptimizedEntry(element, baselineEntry) {
   if (!configuredEntryElements.has(element)) {
     element.addEventListener('ctfl-entry-resolved', handleEntryResolved)
@@ -218,7 +235,7 @@ function configureOptimizedEntry(element, baselineEntry) {
   element.baselineEntry = baselineEntry
 }
 
-export async function initializeAllOptimizedEntries() {
+export async function initializeAllOptimizedEntries({ baselineOnly = false } = {}) {
   const elements = Array.from(document.querySelectorAll('ctfl-optimized-entry[data-entry-id]'))
   await Promise.all(
     elements.map(async (el) => {
@@ -227,7 +244,11 @@ export async function initializeAllOptimizedEntries() {
       if (!entryId) return
       const entry = await fetchEntry(entryId)
       if (!entry) return
-      configureOptimizedEntry(el, entry)
+      if (baselineOnly) {
+        renderBaselineEntry(el, entry)
+      } else {
+        configureOptimizedEntry(el, entry)
+      }
     }),
   )
 }

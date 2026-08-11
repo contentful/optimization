@@ -9,7 +9,7 @@ import {
   useOptimizationActions,
   useProfileState,
   useSelectedOptimizationsState,
-} from '@contentful/optimization-nextjs/client'
+} from '@contentful/optimization-nextjs/app-router/client'
 import { type JSX } from 'react'
 
 export function ControlPanel({

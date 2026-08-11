@@ -13,6 +13,21 @@ function getMissingProviderError(): Error {
   )
 }
 
+export function requireOptimizationSdk(
+  sdk: OptimizationSdk | undefined,
+  error: Error | undefined,
+): OptimizationSdk {
+  if (sdk) return sdk
+
+  if (error) {
+    throw new Error(`ContentfulOptimization SDK failed to initialize: ${error.message}`, {
+      cause: error,
+    })
+  }
+
+  throw new Error('ContentfulOptimization SDK is unavailable.')
+}
+
 export function useOptimizationContext(): OptimizationContextValue {
   const context = useContext(OptimizationContext)
 
@@ -31,15 +46,5 @@ export function useOptimizationContext(): OptimizationContextValue {
 export function useOptimization(): OptimizationSdk {
   const { sdk, error } = useOptimizationContext()
 
-  if (!sdk) {
-    if (error) {
-      throw new Error(`ContentfulOptimization SDK failed to initialize: ${error.message}`, {
-        cause: error,
-      })
-    }
-
-    throw new Error('ContentfulOptimization SDK is unavailable.')
-  }
-
-  return sdk
+  return requireOptimizationSdk(sdk, error)
 }

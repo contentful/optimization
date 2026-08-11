@@ -6,7 +6,7 @@ import type {
   OptimizedEntryManagedProps,
   OptimizedEntryProps,
 } from '@contentful/optimization-react-web'
-import type { NextAppAutoPageTrackerProps } from '@contentful/optimization-react-web/router/next-app'
+import type { NextAppAutoPageTrackerProps } from '@contentful/optimization-react-web/next-app'
 import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
 import type { ReactElement, ReactNode } from 'react'
 import type { ContentOptimizationHydrationMode } from './handoff'

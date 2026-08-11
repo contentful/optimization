@@ -21,6 +21,7 @@ export { LiveUpdatesContext } from './context/LiveUpdatesContext'
 export type { LiveUpdatesContextValue } from './context/LiveUpdatesContext'
 export { OptimizationContext } from './context/OptimizationContext'
 export type { OptimizationContextValue, OptimizationSdk } from './context/OptimizationContext'
+export { useConsentState } from './hooks/useConsentState'
 export { useEntryResolver } from './hooks/useEntryResolver'
 export type { UseEntryResolverResult } from './hooks/useEntryResolver'
 export { useLiveUpdates } from './hooks/useLiveUpdates'
@@ -31,7 +32,6 @@ export { useOptimizationActions } from './hooks/useOptimizationActions'
 export type { UseOptimizationActionsResult } from './hooks/useOptimizationActions'
 export {
   useCanOptimizeState,
-  useConsentState,
   useEventStreamState,
   useProfileState,
   useSelectedOptimizationsState,

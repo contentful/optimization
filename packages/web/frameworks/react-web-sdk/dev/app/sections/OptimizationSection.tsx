@@ -1,7 +1,7 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-api-schemas'
 import type { Entry } from 'contentful'
 import { useEffect, useState, type ReactElement } from 'react'
-import { OptimizedEntry } from '../../../src'
+import { OptimizedEntry } from '../../../src/react-router-facade'
 import { EntryPanel } from '../components/EntryPanel'
 import type { DatasetSnapshot } from '../types'
 import { readTrackingDataset, toJsonPreview } from '../utils'

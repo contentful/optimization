@@ -13,9 +13,10 @@ uses Next.js SDK subpaths only for non-component runtime surfaces.
   `bindNextjsPagesRouterServerOptimization()` from
   `@contentful/optimization-nextjs/pages-router/server`.
 - Routes and shared components import `OptimizationRoot`, `OptimizedEntry`, and
-  `NextPagesAutoPageTracker` from `@/lib/optimization`; do not import those components from
-  `@contentful/optimization-nextjs/server` or `@contentful/optimization-nextjs/client`.
-- Browser hooks and providers import from `@contentful/optimization-nextjs/client`.
+  `NextPagesAutoPageTracker` from `@/lib/optimization`; do not import those components directly from
+  `@contentful/optimization-nextjs/pages-router` or another SDK subpath.
+- Browser hooks, providers, and related runtime types import from
+  `@contentful/optimization-nextjs/pages-router`, not the generic `/client` subpath.
 - Do not import lower-level SDK packages directly from this implementation.
 - Personalized pages should load request handoff in `getServerSideProps`; interactive/reactive surfaces
   use the app-local `<OptimizedEntry>` and browser hooks.
@@ -31,8 +32,9 @@ uses Next.js SDK subpaths only for non-component runtime surfaces.
 
 - `pnpm implementation:run -- nextjs-sdk_pages-router <script>` with `implementation:install`,
   `typecheck`, `lint`, `build`, `dev`, `serve`, `serve:stop`, or `test:e2e`.
-- Root wrappers: `pnpm setup:e2e:nextjs-sdk_pages-router` and
-  `pnpm test:e2e:nextjs-sdk_pages-router`.
+- Run `pnpm test:e2e:nextjs-sdk_pages-router <file-or-filter>`, omitting the
+  file/filter only when the full suite is warranted. Refresh package tarballs and the implementation
+  install first only when consumed SDK packages changed or installed artifacts are stale.
 
 ## E2E
 

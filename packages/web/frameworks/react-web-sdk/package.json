@@ -23,6 +23,46 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./next-app": {
+      "import": {
+        "types": "./dist/next-app.d.mts",
+        "default": "./dist/next-app.mjs"
+      },
+      "require": {
+        "types": "./dist/next-app.d.cts",
+        "default": "./dist/next-app.cjs"
+      }
+    },
+    "./next-pages": {
+      "import": {
+        "types": "./dist/next-pages.d.mts",
+        "default": "./dist/next-pages.mjs"
+      },
+      "require": {
+        "types": "./dist/next-pages.d.cts",
+        "default": "./dist/next-pages.cjs"
+      }
+    },
+    "./react-router": {
+      "import": {
+        "types": "./dist/react-router.d.mts",
+        "default": "./dist/react-router.mjs"
+      },
+      "require": {
+        "types": "./dist/react-router.d.cts",
+        "default": "./dist/react-router.cjs"
+      }
+    },
+    "./tanstack-router": {
+      "import": {
+        "types": "./dist/tanstack-router.d.mts",
+        "default": "./dist/tanstack-router.mjs"
+      },
+      "require": {
+        "types": "./dist/tanstack-router.d.cts",
+        "default": "./dist/tanstack-router.cjs"
+      }
+    },
     "./logger": {
       "import": {
         "types": "./dist/logger.d.mts",
@@ -103,46 +143,6 @@
         "default": "./dist/api-schemas.cjs"
       }
     },
-    "./router/next-pages": {
-      "import": {
-        "types": "./dist/router/next-pages.d.mts",
-        "default": "./dist/router/next-pages.mjs"
-      },
-      "require": {
-        "types": "./dist/router/next-pages.d.cts",
-        "default": "./dist/router/next-pages.cjs"
-      }
-    },
-    "./router/next-app": {
-      "import": {
-        "types": "./dist/router/next-app.d.mts",
-        "default": "./dist/router/next-app.mjs"
-      },
-      "require": {
-        "types": "./dist/router/next-app.d.cts",
-        "default": "./dist/router/next-app.cjs"
-      }
-    },
-    "./router/react-router": {
-      "import": {
-        "types": "./dist/router/react-router.d.mts",
-        "default": "./dist/router/react-router.mjs"
-      },
-      "require": {
-        "types": "./dist/router/react-router.d.cts",
-        "default": "./dist/router/react-router.cjs"
-      }
-    },
-    "./router/tanstack-router": {
-      "import": {
-        "types": "./dist/router/tanstack-router.d.mts",
-        "default": "./dist/router/tanstack-router.mjs"
-      },
-      "require": {
-        "types": "./dist/router/tanstack-router.d.cts",
-        "default": "./dist/router/tanstack-router.cjs"
-      }
-    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -152,16 +152,16 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 6000,
-        "index.mjs": 5300,
-        "router/next-app.cjs": 1900,
-        "router/next-app.mjs": 1800,
-        "router/next-pages.cjs": 1900,
-        "router/next-pages.mjs": 1900,
-        "router/react-router.cjs": 1900,
-        "router/react-router.mjs": 1800,
-        "router/tanstack-router.cjs": 1900,
-        "router/tanstack-router.mjs": 1900,
+        "index.cjs": 7200,
+        "index.mjs": 6300,
+        "next-app.cjs": 7700,
+        "next-app.mjs": 7100,
+        "next-pages.cjs": 7800,
+        "next-pages.mjs": 7100,
+        "react-router.cjs": 7700,
+        "react-router.mjs": 7100,
+        "tanstack-router.cjs": 7800,
+        "tanstack-router.mjs": 7100,
         "handoff.cjs": 800,
         "handoff.mjs": 200,
         "analytics.cjs": 800,
@@ -174,8 +174,8 @@
   "scripts": {
     "build": "pnpm clean && pnpm build:dist",
     "build:ci": "pnpm build:dist",
-    "build:dist": "rslib build && build-tools check-client-boundary-exports ./src ./dist && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/router",
-    "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/router",
+    "build:dist": "rslib build && build-tools check-client-boundary-exports ./src ./dist && build-tools emit-dual-dts ./dist",
+    "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo ./node_modules/.cache/rspack",
     "dev": "rsbuild dev --host 0.0.0.0 -c dev/rsbuild.config.ts",
     "dev:launch": "./scripts/launch-dev-harness.sh",

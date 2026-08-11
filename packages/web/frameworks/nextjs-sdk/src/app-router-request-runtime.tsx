@@ -3,7 +3,7 @@ import type {
   OptimizationCacheMetadata,
   PrivateRequestOptimizationCacheMetadata,
 } from '@contentful/optimization-react-web/core-sdk'
-import { NextAppAutoPageTracker } from '@contentful/optimization-react-web/router/next-app'
+import { NextAppAutoPageTracker } from '@contentful/optimization-react-web/next-app'
 import { cookies, headers } from 'next/headers'
 import { cache, createElement, type ReactElement } from 'react'
 import {

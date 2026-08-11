@@ -37,8 +37,17 @@ internal class BridgeCallbackManager {
         return true
     }
 
+    fun invokeLogCallback(level: String, value: String): Boolean {
+        if (!level.startsWith(CALLBACK_LOG_PREFIX)) return false
+        return invokeCallback(level.removePrefix(CALLBACK_LOG_PREFIX), value)
+    }
+
     fun removeCallback(successName: String, errorName: String) {
         callbacks.remove(successName)
         callbacks.remove(errorName)
+    }
+
+    private companion object {
+        const val CALLBACK_LOG_PREFIX = "__callback__"
     }
 }

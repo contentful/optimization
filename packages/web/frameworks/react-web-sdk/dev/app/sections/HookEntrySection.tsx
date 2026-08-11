@@ -1,6 +1,6 @@
 import type { Entry } from 'contentful'
 import type { ReactElement } from 'react'
-import { useOptimizedEntry } from '../../../src'
+import { useOptimizedEntry } from '../../../src/react-router-facade'
 import { getFieldText, toJsonPreview } from '../utils'
 
 interface HookEntrySectionProps {

@@ -6,7 +6,6 @@ import {
   ElementRef,
   inject,
   signal,
-  untracked,
   type Signal,
 } from '@angular/core'
 
@@ -71,21 +70,13 @@ export function injectContentfulEntry({
 }): Signal<ResolvedEntry> {
   const optimization = inject(NgContentfulOptimization)
 
-  function liveRead<T>(sig: Signal<T>): T {
-    if (isLive()) return sig()
-    // untracked(sig) would snapshot undefined before the SDK responds, permanently
-    // freezing the computed. The tracked fallback keeps reactivity alive only until
-    // the first real value arrives; after that untracked(sig) is non-null and the
-    // reactive dependency is never taken.
-    return untracked(sig) ?? sig()
-  }
-
   const result = computed<ResolvedEntry>(() => {
-    const runtime = optimization.runtime()
+    const live = isLive()
+    const runtime = live ? optimization.runtime() : optimization.presentationRuntime()
     const raw = entry()
     const resolved = runtime.resolveOptimizedEntry(
       raw,
-      liveRead(optimization.selectedOptimizations),
+      live ? optimization.selectedOptimizations() : runtime.states.selectedOptimizations.current,
     )
 
     return {

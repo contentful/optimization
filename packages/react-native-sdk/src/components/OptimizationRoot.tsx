@@ -58,7 +58,8 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
 
   /**
    * Called once SDK state initialization completes and before provider children mount.
-   * Return a cleanup function to unsubscribe app-level state observers on teardown.
+   * Return a synchronous cleanup function to unsubscribe app-level state observers on teardown.
+   * The cleanup must not throw or re-enter root teardown.
    */
   onStatesReady?: OnStatesReady
 

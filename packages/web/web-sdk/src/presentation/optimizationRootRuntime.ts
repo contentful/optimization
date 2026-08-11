@@ -49,6 +49,7 @@ export interface OptimizationRootSdk
 
 /**
  * Callback invoked after a presentation root has SDK states available.
+ * A returned cleanup must run synchronously without throwing or re-entering root teardown.
  *
  * @public
  */
@@ -64,7 +65,7 @@ export type OnStatesReady<TSdk extends OptimizationRootSdk = OptimizationRootSdk
 export interface OptimizationRootSdkBinding<
   TSdk extends OptimizationRootSdk = OptimizationRootSdk,
 > {
-  /** Optional cleanup returned by `onStatesReady`. */
+  /** Optional synchronous, non-throwing, non-reentrant cleanup returned by `onStatesReady`. */
   readonly cleanup?: Cleanup
   /** Whether the binding created and must destroy the SDK instance. */
   readonly ownsInstance: boolean
@@ -78,7 +79,7 @@ export interface OptimizationRootSdkBinding<
  * @public
  */
 export interface CreateInjectedOptimizationRootSdkBindingOptions<TSdk extends OptimizationRootSdk> {
-  /** Callback invoked once SDK states are available. */
+  /** Callback invoked once SDK states are available; returned cleanup follows the root contract. */
   readonly onStatesReady?: OnStatesReady<TSdk>
   /** Existing SDK instance to bind. */
   readonly sdk: TSdk
@@ -96,7 +97,7 @@ export interface CreateOwnedOptimizationRootSdkBindingOptions<
   readonly config: OptimizationRootSdkConfig
   /** Factory used to create the owned SDK instance. */
   readonly createSdk: (config: OptimizationWebConfig) => TSdk
-  /** Callback invoked once SDK states are available. */
+  /** Callback invoked once SDK states are available; returned cleanup follows the root contract. */
   readonly onStatesReady?: OnStatesReady<TSdk>
   /** Automatic entry interaction tracking options for the owned SDK. */
   readonly trackEntryInteraction?: TrackEntryInteractionOptions

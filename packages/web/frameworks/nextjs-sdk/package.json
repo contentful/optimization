@@ -129,7 +129,7 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "app-router.cjs": 1700,
+        "app-router.cjs": 2100,
         "app-router.mjs": 1600,
         "app-router-server.cjs": 4900,
         "app-router-server.mjs": 6700,
@@ -139,7 +139,7 @@
         "client.mjs": 600,
         "edge.cjs": 3100,
         "edge.mjs": 3100,
-        "pages-router.cjs": 1800,
+        "pages-router.cjs": 2100,
         "pages-router.mjs": 1600,
         "pages-router/server.cjs": 3900,
         "pages-router/server.mjs": 5600,

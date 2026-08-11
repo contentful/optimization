@@ -484,6 +484,17 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
   getMergeTagValue(embeddedEntryNodeTarget: MergeTagEntry, profile?: Profile): string | undefined {
     return this.mergeTagValueResolver.resolve(embeddedEntryNodeTarget, profile)
   }
+
+  /**
+   * Resolve the configured fallback value for a merge-tag entry without profile lookup.
+   *
+   * @param embeddedEntryNodeTarget - The merge-tag entry node whose fallback to resolve.
+   * @returns The configured fallback value, or `undefined` if the entry is invalid or has no
+   * fallback.
+   */
+  getMergeTagFallbackValue(embeddedEntryNodeTarget: MergeTagEntry): string | undefined {
+    return this.mergeTagValueResolver.resolveFallback(embeddedEntryNodeTarget)
+  }
 }
 
 export default CoreBase

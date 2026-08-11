@@ -474,8 +474,13 @@ Keep personalization server-owned by enforcing these boundaries:
   `getServerTrackingAttributes()` when the app needs manual request control.
 - Server-rendered entry wrappers include adapter/server-generated `data-ctfl-*` tracking attributes,
   so the browser tracking runtime can observe them after hydration.
-- Client-only modules use a separate app-local binding from `/app-router/client`. Use router-neutral
-  `/client` imports for hooks, per-entry browser controls, or manual browser-only setup.
+- Client-only modules that need configured bound components use a separate app-local binding from
+  `/app-router/client`. Roots and providers from that path establish App Router facade boundaries;
+  hooks, the tracker, and per-entry browser controls beneath a boundary use direct imports from the
+  same path so they consume its context. A separate router-neutral React tree is not runtime
+  isolation. Use `/client` only when that tree has no App Router tracker or context consumer and
+  either its root is the browser runtime's sole config-owned Optimization root or its provider
+  receives the existing live singleton through `sdk`.
 - Server request roots delegate the browser-owned provider and tracker state through their handoff.
   The route tracker remains inside the `Suspense` boundary required by its use of Next.js search
   parameters; this boundary is not application-owned request initialization.

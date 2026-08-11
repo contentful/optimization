@@ -1,5 +1,5 @@
-import { OptimizedEntry } from '@contentful/optimization-react-web'
 import { isResolvedContentfulEntry } from '@contentful/optimization-react-web/api-schemas'
+import { OptimizedEntry } from '@contentful/optimization-react-web/react-router'
 import type { JSX } from 'react'
 import type { ContentEntry, ContentEntrySkeleton } from '../types/contentful'
 

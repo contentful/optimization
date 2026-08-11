@@ -266,8 +266,21 @@ For Next.js App Router integrations, configure `onStatesReady` once in
 explicit-input root use that binding config and render without per-render `clientId`, `environment`,
 or `onStatesReady` props. The binding call is not an isolation context; call it once for the
 app-local helper set. Bound Client Components use a separate
-`bindNextjsAppRouterClientOptimization(...)` binding from `/app-router/client`; router-neutral hooks
-and per-entry controls use `/client`.
+`bindNextjsAppRouterClientOptimization(...)` binding from
+`@contentful/optimization-nextjs/app-router/client`. Roots and providers returned by either App
+Router binding or imported from `@contentful/optimization-nextjs/app-router/client` create and
+provide the React context used by components rendered beneath them. For components rendered inside
+`optimization.request.OptimizationRoot`, a top-level `optimization.OptimizationRoot` or
+`optimization.OptimizationProvider`, or a root or provider returned by the client binding, import
+direct hooks, `NextAppAutoPageTracker`, and `OptimizedEntry` from
+`@contentful/optimization-nextjs/app-router/client`. Those hooks and components consume the React
+context from the nearest listed root or provider. A separate browser-only React tree does not create
+a separate SDK runtime. Use
+`@contentful/optimization-nextjs/client` only when that tree does not mount
+`NextAppAutoPageTracker` or contain a hook or component that consumes React context from any of those
+App Router roots or providers, and either its `OptimizationRoot` is the only root in the browser
+runtime that creates an SDK from configuration or its `OptimizationProvider` receives the existing
+live SDK through the `sdk` prop.
 
 For Pages Router integrations, configure `onStatesReady` once in
 `bindNextjsPagesRouterOptimization(...)` from `@contentful/optimization-nextjs/pages-router`, then

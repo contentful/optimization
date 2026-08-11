@@ -9,7 +9,6 @@ import {
 } from '@tanstack/react-router'
 import { act, StrictMode, type ReactElement, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { resetAutoPageEmitterState } from '../auto-page/useAutoPageEmitter'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import { OptimizationContext } from '../context/OptimizationContext'
 import { createOptimizationSdk, defaultLiveUpdatesContext } from '../test/sdkTestUtils'
@@ -102,14 +101,6 @@ async function navigateTo(router: TestRouter, path: string): Promise<void> {
 }
 
 describe('TanStackRouterAutoPageTracker', () => {
-  void beforeEach(() => {
-    resetAutoPageEmitterState()
-  })
-
-  it('is exported from the router subpath module', () => {
-    expect(TanStackRouterAutoPageTracker).toBeTypeOf('function')
-  })
-
   it('emits router-derived URL data on initial render and route changes', async () => {
     const page = rs.fn(async () => {
       await Promise.resolve()

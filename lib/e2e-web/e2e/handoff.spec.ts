@@ -5,6 +5,7 @@ import { runIf, runIfImplementation } from './utils'
 const newVisitorSegment = CUSTOMER_SEGMENTS['new-visitor']
 const baselineSegment = CUSTOMER_SEGMENTS.baseline
 const publicPermutationSegments = [newVisitorSegment, baselineSegment] as const
+const PUBLIC_PERMUTATION_MISMATCH_ATTRIBUTE = 'data-ctfl-public-permutation-mismatch'
 
 type CustomerSegment = (typeof CUSTOMER_SEGMENTS)[keyof typeof CUSTOMER_SEGMENTS]
 type CustomerSegmentSelection = CustomerSegment['selectedOptimizations'][number]
@@ -174,6 +175,41 @@ async function expectPublicPermutationHost(host: Locator, segment: CustomerSegme
   )
 }
 
+async function observePublicPermutationHydration(
+  page: Page,
+  segment: CustomerSegment,
+): Promise<void> {
+  await page.addInitScript(
+    ({ baselineEntryId, expectedEntryId, mismatchAttribute }) => {
+      const mismatchSelector = `[data-ctfl-baseline-id="${CSS.escape(baselineEntryId)}"]:not([data-ctfl-entry-id="${CSS.escape(expectedEntryId)}"])`
+
+      const recordMismatch = (): void => {
+        if (document.querySelector(mismatchSelector) !== null) {
+          document.documentElement.setAttribute(mismatchAttribute, '')
+        }
+      }
+
+      new MutationObserver(recordMismatch).observe(document, {
+        attributeFilter: ['data-ctfl-baseline-id', 'data-ctfl-entry-id'],
+        attributes: true,
+        childList: true,
+        subtree: true,
+      })
+      recordMismatch()
+    },
+    {
+      baselineEntryId: segment.baselineEntryId,
+      expectedEntryId: segment.variantEntryId,
+      mismatchAttribute: PUBLIC_PERMUTATION_MISMATCH_ATTRIBUTE,
+    },
+  )
+}
+
+async function expectStablePublicPermutationHydration(page: Page): Promise<void> {
+  await page.waitForLoadState('networkidle')
+  await expect(page.locator('html')).not.toHaveAttribute(PUBLIC_PERMUTATION_MISMATCH_ATTRIBUTE, '')
+}
+
 function expectComputedPublicCacheMetadata(
   cacheMetadata: PublicCacheMetadata,
   segment: CustomerSegment = newVisitorSegment,
@@ -281,6 +317,7 @@ test.describe('Next.js handoff routes', () => {
         segment,
       })
 
+      await observePublicPermutationHydration(page, segment)
       const response = await page.goto(`/selection-handoff/${segment.slug}`)
       await page.waitForLoadState('domcontentloaded')
 
@@ -290,6 +327,7 @@ test.describe('Next.js handoff routes', () => {
 
       const host = page.locator(`[data-ctfl-baseline-id="${segment.baselineEntryId}"]`).first()
       await expectPublicPermutationHost(host, segment)
+      await expectStablePublicPermutationHydration(page)
     })
   }
 
@@ -464,6 +502,7 @@ test.describe('Next.js Pages Router public permutation handoff routes', () => {
 
       const rawCacheKey = readHtmlTestIdText(html, 'pages-selection-cache-key')
 
+      await observePublicPermutationHydration(page, segment)
       const hydrationResponse = await page.goto(path)
       await page.waitForLoadState('domcontentloaded')
 
@@ -476,6 +515,7 @@ test.describe('Next.js Pages Router public permutation handoff routes', () => {
 
       const host = page.getByTestId(`pages-selection-entry-${segment.baselineEntryId}`)
       await expectPublicPermutationHost(host, segment)
+      await expectStablePublicPermutationHydration(page)
     })
   }
 })

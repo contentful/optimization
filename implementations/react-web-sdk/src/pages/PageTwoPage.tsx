@@ -1,4 +1,4 @@
-import { useOptimization } from '@contentful/optimization-react-web'
+import { useOptimization } from '@contentful/optimization-react-web/react-router'
 import { PAGES } from 'e2e-web'
 import type { JSX } from 'react'
 import { useEffect } from 'react'

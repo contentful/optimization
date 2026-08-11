@@ -1,4 +1,4 @@
-import ContentfulOptimization from '@contentful/optimization-web'
+import ContentfulOptimization, { type TrackCurrentPageResult } from '@contentful/optimization-web'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type {
   ContentfulEntryQuery,
@@ -70,7 +70,10 @@ export type OptimizationSdkOverrides = Omit<
 export function createObservable<T>(current: T): ObservableLike<T> {
   return {
     current,
-    subscribe: () => ({ unsubscribe: () => undefined }),
+    subscribe: (next) => {
+      next(current)
+      return { unsubscribe: () => undefined }
+    },
     subscribeOnce: () => ({ unsubscribe: () => undefined }),
   }
 }
@@ -193,6 +196,13 @@ function getManagedEntryDescriptorId(entry: unknown): string {
   return String(undefined)
 }
 
+/**
+ * Create a structural runtime test double.
+ *
+ * This helper does not construct another live stateful SDK instance. Production browser code has
+ * exactly one active `CoreStateful`-backed singleton; snapshot runtimes and test doubles only model
+ * the interface consumed by React presentation code.
+ */
 export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}): OptimizationSdk {
   const { states: stateOverrides, tracking: trackingOverrides, ...sdkOverrides } = overrides
   const hasConsent = sdkOverrides.hasConsent ?? (() => true)
@@ -202,38 +212,77 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
       await Promise.resolve()
       return { accepted: true }
     })
-  let acceptedRouteKey: string | undefined = undefined
-  let inFlightRouteKey: string | undefined = undefined
+  let currentPageGeneration = 0
+  let currentPageKey: string | undefined = undefined
+  let currentPageAccepted = false
+  const currentStateTracking = createObservable<
+    OptimizationSdk['states']['currentStateTracking']['current']
+  >({ generation: 0, status: 'idle' })
+  let hasAcceptedCurrentPage = false
+  let pendingCurrentPage:
+    | { readonly key: string; readonly promise: Promise<TrackCurrentPageResult> }
+    | undefined = undefined
   const trackCurrentPage =
     sdkOverrides.trackCurrentPage ??
     (async (options) => {
       const { routeKey } = options
 
       if (options.initialPageEvent === 'skip') {
-        acceptedRouteKey = routeKey
-        return { accepted: true }
+        currentPageGeneration += 1
+        currentPageKey = routeKey
+        currentPageAccepted = true
+        hasAcceptedCurrentPage = true
+        pendingCurrentPage = undefined
+        return { accepted: true as const }
       }
 
-      if (!hasConsent('page') || acceptedRouteKey === routeKey || inFlightRouteKey === routeKey) {
-        return { accepted: false }
-      }
-
-      const isInitialEmission = acceptedRouteKey === undefined
-      inFlightRouteKey = routeKey
-
-      try {
-        const { buildPayload } = options
-        const result = toEventEmissionResult(await page(buildPayload({ isInitialEmission })))
-        if (result.accepted) {
-          acceptedRouteKey = routeKey
-        }
-
-        return result
-      } finally {
-        if (inFlightRouteKey === routeKey) {
-          inFlightRouteKey = undefined
+      if (currentPageKey === routeKey) {
+        if (pendingCurrentPage?.key === routeKey) return await pendingCurrentPage.promise
+        if (currentPageAccepted) {
+          return { accepted: false as const, reason: 'already-accepted' as const }
         }
       }
+
+      currentPageGeneration += 1
+      const generation = currentPageGeneration
+      currentPageKey = routeKey
+      currentPageAccepted = false
+
+      if (!hasConsent('page')) {
+        return { accepted: false as const, reason: 'not-allowed' as const }
+      }
+
+      const isInitialEmission = !hasAcceptedCurrentPage
+      const { buildPayload } = options
+      const request: Promise<TrackCurrentPageResult> = (async () => {
+        try {
+          const emission = toEventEmissionResult(await page(buildPayload({ isInitialEmission })))
+          if (generation !== currentPageGeneration) {
+            return { accepted: false, reason: 'superseded' }
+          }
+          if (!emission.accepted) {
+            return { accepted: false, reason: 'not-allowed' }
+          }
+
+          currentPageAccepted = true
+          hasAcceptedCurrentPage = true
+          return emission.data === undefined
+            ? { accepted: true }
+            : { accepted: true, data: emission.data }
+        } catch (error: unknown) {
+          if (generation !== currentPageGeneration) {
+            return { accepted: false, reason: 'superseded' }
+          }
+
+          throw error
+        } finally {
+          if (generation === currentPageGeneration && pendingCurrentPage?.key === routeKey) {
+            pendingCurrentPage = undefined
+          }
+        }
+      })()
+      pendingCurrentPage = { key: routeKey, promise: request }
+      return await request
     })
 
   const sdk = {
@@ -249,6 +298,7 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
         entries.map((entry) => createTestEntry(getManagedEntryDescriptorId(entry))),
       ),
     getFlag: () => undefined,
+    getMergeTagFallbackValue: () => undefined,
     getMergeTagValue: () => undefined,
     hasConsent,
     identify: async () => {
@@ -269,6 +319,7 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
       locale: createObservable(undefined),
       blockedEventStream: createObservable(undefined),
       canOptimize: createObservable(false),
+      currentStateTracking,
       optimizationPossible: createObservable(true),
       experienceRequestState: createObservable<ExperienceRequestState>({ status: 'idle' }),
       consent: createObservable(undefined),

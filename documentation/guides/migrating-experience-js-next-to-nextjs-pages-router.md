@@ -47,7 +47,8 @@ because target profile continuity uses the SDK-owned `ctfl-opt-aid` cookie.
 
 Use the target guide to create both bindings:
 
-- Client binding helper from `@contentful/optimization-nextjs/pages-router`.
+- Client binding helper, browser hooks, providers, and per-entry controls for the bound tree from
+  `@contentful/optimization-nextjs/pages-router`.
 - Server binding helper from `@contentful/optimization-nextjs/pages-router/server`.
 
 Mount the target `OptimizationRoot` and `NextPagesAutoPageTracker` in `_app.tsx`, passing
@@ -135,7 +136,7 @@ Verify the server and browser handoff:
 | First page events duplicate                       | Pass the handoff to `OptimizationRoot`; set `NextPagesAutoPageTracker` to `initialPageEvent={handoff ? 'skip' : 'emit'}`. |
 | `getServerSideProps` returns a 500 on API failure | Wrap the server helper and render baseline on failure when your app needs graceful fallback.                              |
 | Browser render cannot find managed entries        | Pass `prefetchManagedEntries` descriptors in the `options` argument to `createRequestHandoff(context, options)`.          |
-| Hooks import fails                                | Import React Web hooks from `@contentful/optimization-nextjs/client`, not `/pages-router`.                                |
+| Hooks cannot read the bound provider              | Import context-bound hooks from `@contentful/optimization-nextjs/pages-router`, not the generic `/client` runtime.        |
 
 ## Related guides
 

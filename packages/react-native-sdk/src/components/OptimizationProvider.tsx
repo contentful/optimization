@@ -19,6 +19,7 @@ export type OnStatesReadyResult = ReturnType<() => void> | (() => void)
 
 /**
  * Callback invoked after SDK state initialization and before provider children mount.
+ * A returned cleanup must run synchronously without throwing or re-entering provider teardown.
  *
  * @public
  */
@@ -50,7 +51,8 @@ export interface OptimizationProviderConfigProps extends OptimizationConfig {
   prefetchManagedEntries?: readonly ManagedEntryDescriptor[]
   /**
    * Called once SDK state initialization completes and before provider children mount.
-   * Return a cleanup function to unsubscribe app-level state observers on teardown.
+   * Return a synchronous cleanup function to unsubscribe app-level state observers on teardown.
+   * The cleanup must not throw or re-enter provider teardown.
    */
   onStatesReady?: OnStatesReady
   sdk?: never
@@ -72,7 +74,8 @@ export interface OptimizationProviderSdkProps {
   prefetchManagedEntries?: readonly ManagedEntryDescriptor[]
   /**
    * Called with the injected SDK state surface before provider children mount.
-   * Return a cleanup function to unsubscribe app-level state observers on teardown.
+   * Return a synchronous cleanup function to unsubscribe app-level state observers on teardown.
+   * The cleanup must not throw or re-enter provider teardown.
    */
   onStatesReady?: OnStatesReady
   sdk: OptimizationSdk

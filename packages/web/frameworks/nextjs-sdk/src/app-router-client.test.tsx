@@ -1,4 +1,4 @@
-import * as reactWeb from '@contentful/optimization-react-web'
+import * as nextAppRuntime from '@contentful/optimization-react-web/next-app'
 import type { Entry } from 'contentful'
 import { renderToString } from 'react-dom/server'
 import * as appRouter from './app-router-client'
@@ -82,7 +82,11 @@ describe('Next.js App Router client components', () => {
       prefetchManagedEntries: ['4ib0hsHWoSOnCVdDkizE8d'],
     })
 
+    expect(element.type).toBe(nextAppRuntime.OptimizationRoot)
+    expect(provider?.type).toBe(nextAppRuntime.OptimizationProvider)
+    expect(components.OptimizedEntry).toBe(nextAppRuntime.OptimizedEntry)
     expect(components.OptimizedEntry).toBe(client.OptimizedEntry)
+    expect(components.NextAppAutoPageTracker).toBe(nextAppRuntime.NextAppAutoPageTracker)
     expect(components.NextAppAutoPageTracker).toBe(appRouter.NextAppAutoPageTracker)
     expect(components.createPublicPermutationHandoff).toBeTypeOf('function')
     expect(components).not.toHaveProperty('createCacheMiddleware')
@@ -156,22 +160,32 @@ describe('Next.js App Router client components', () => {
   })
 
   it('keeps the low-level client entry free of router-specific exports', () => {
-    expect(Object.keys(client).sort()).toEqual(Object.keys(reactWeb).sort())
+    const routerNeutralFacadeExports = Object.keys(nextAppRuntime)
+      .filter((exportName) => exportName !== 'NextAppAutoPageTracker')
+      .sort()
+
+    expect(Object.keys(client).sort()).toEqual(routerNeutralFacadeExports)
     expect(client).not.toHaveProperty('NextAppAutoPageTracker')
     expect(client).not.toHaveProperty('NextPagesAutoPageTracker')
     expect(client).not.toHaveProperty('createNextjsOptimizationComponents')
   })
 
-  it('keeps the App Router client entry scoped to client-safe binding helpers', () => {
-    expect(Object.keys(appRouter).sort()).toEqual([
-      'NextAppAutoPageTracker',
-      'bindNextjsAppRouterClientOptimization',
-      'createHandoffFromSelections',
-      'createOptimizationCacheKey',
-      'createPublicPermutationCacheMetadata',
-      'createPublicPermutationHandoff',
-      'resolveEntriesForSelections',
-    ])
+  it('exposes the complete App Router runtime with client-safe binding helpers', () => {
+    for (const [exportName, facadeExport] of Object.entries(nextAppRuntime)) {
+      expect(Reflect.get(appRouter, exportName)).toBe(facadeExport)
+    }
+
+    expect(Object.keys(appRouter).sort()).toEqual(
+      [
+        ...Object.keys(nextAppRuntime),
+        'bindNextjsAppRouterClientOptimization',
+        'createHandoffFromSelections',
+        'createOptimizationCacheKey',
+        'createPublicPermutationCacheMetadata',
+        'createPublicPermutationHandoff',
+        'resolveEntriesForSelections',
+      ].sort(),
+    )
     expect(appRouter).not.toHaveProperty('getServerTrackingAttributes')
   })
 

@@ -641,8 +641,17 @@ function NavigationShell() {
 }
 ```
 
-The automatic navigation path uses `trackCurrentScreen()` for current-screen deduplication. Direct
-manual `screen()` calls are still direct event emits.
+The automatic navigation path and mount-time `useScreenTracking()` path use `trackCurrentScreen()`
+for current-screen deduplication. These current-screen operations are online-only: an offline attempt
+is neither published nor enqueued, and connectivity changes do not retry it. Explicitly call
+`trackCurrentScreen()` after reconnecting when the current-screen event is required. The returned
+`trackScreen()` callback, `useScreenTrackingCallback()`, and direct `screen()` calls emit ordinary
+screen events, which still queue offline.
+
+Advancing to a new current screen also removes every earlier in-flight Experience call's authority to
+update SDK state, including ordinary calls. If a transition depends on the state returned by an
+earlier call, await that call before advancing the screen; if it finishes later, it cannot apply its
+response or failure to SDK state.
 
 To verify screen tracking, open one tracked screen and confirm one accepted `screen` event through
 SDK logs, `states.eventStream`, or your approved event inspection path.
@@ -746,6 +755,11 @@ AsyncStorage persists consent state and, when persistence consent permits it, pr
 optimizations, changes, and anonymous identity across app launches. It does not persist SDK event
 queues. Live SDK state after startup comes from in-memory SDK state, not repeated AsyncStorage
 reads.
+
+When the SDK accepts an Experience response, it publishes the in-memory result before queuing the
+raw response snapshot for AsyncStorage. The initiating event promise, such as the promise returned by
+`identify(...)`, can resolve before that write finishes. Superseded response snapshots are not
+queued.
 
 For advanced anonymous ID ownership, pass `getAnonymousId` to `OptimizationRoot` or
 `ContentfulOptimization.initialize(...)` only when your app owns an approved anonymous ID that
@@ -905,9 +919,11 @@ custom dev build, such as `expo run:ios` or `expo run:android`; Expo Go is not e
 **Integration category:** Optional
 
 When `@react-native-community/netinfo` is installed, the SDK listens for connectivity changes.
-NetInfo gates flushing while the app is offline and resumes flushing when the device is reachable.
-Offline replay is in memory while the JavaScript process remains alive; NetInfo does not create a
-durable event outbox. When NetInfo is absent, the SDK logs a warning and runs without offline
+NetInfo gates flushing while the app is offline and resumes flushing ordinary queued events when the
+device is reachable. Offline replay is in memory while the JavaScript process remains alive; NetInfo
+does not create a durable event outbox. Current-screen attempts from automatic tracking are not
+queued, and NetInfo does not retry them. Explicitly call `trackCurrentScreen()` after reconnecting
+when that event is required. When NetInfo is absent, the SDK logs a warning and runs without offline
 detection.
 
 1. Install NetInfo when the app must replay in-memory SDK events after offline periods.
@@ -1105,8 +1121,9 @@ Before release, verify these checks in the app build and environment that will s
   flows call `consent(true | false)`, object-form consent matches the persistence policy, and
   rejected consent blocks non-allowed event types.
 - **Event delivery** - Screen, identify, entry view, entry tap, Custom Flag, and forwarded Analytics
-  events appear in the expected destinations. In-memory offline replay and background flushing are
-  verified when NetInfo is installed.
+  events appear in the expected destinations. In-memory replay of ordinary queued events and
+  background flushing are verified when NetInfo is installed; required current-screen events are
+  retried explicitly after reconnecting.
 - **Content fallback behavior** - Optimized entries are fetched with one CDA locale and enough link
   depth. Non-optimized, unmatched, or incomplete entries render baseline content instead of blank
   UI.

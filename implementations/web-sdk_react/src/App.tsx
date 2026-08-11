@@ -2,6 +2,7 @@ import { PAGES } from 'e2e-web'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
+import { BaselinePresentationProvider } from './optimization/BaselinePresentationProvider'
 import { useOptimization } from './optimization/hooks/useOptimization'
 import { HomePage } from './pages/HomePage'
 import { PageTwoPage } from './pages/PageTwoPage'
@@ -10,6 +11,11 @@ import type { ContentfulEntry } from './types/contentful'
 
 interface AppProps {
   onToggleGlobalLiveUpdates: () => void
+}
+
+interface RoutePresentation {
+  baselineOnly: boolean
+  pathname: string
 }
 
 function toEntryMap(entries: ContentfulEntry[]): Map<string, ContentfulEntry> {
@@ -22,13 +28,37 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
 
   const [entries, setEntries] = useState<ContentfulEntry[]>([])
   const [entriesError, setEntriesError] = useState<string | null>(null)
+  const [routePresentation, setRoutePresentation] = useState<RoutePresentation>()
 
   useEffect(() => {
     if (sdk === undefined) {
       return
     }
 
-    void sdk.page({ properties: { url: location.pathname } })
+    const { pathname } = location
+    let isCurrent = true
+    void sdk
+      .trackCurrentPage({
+        routeKey: pathname,
+        buildPayload: () => ({ properties: { url: pathname } }),
+      })
+      .then(
+        (result) => {
+          if (!isCurrent || (!result.accepted && result.reason === 'superseded')) return
+
+          setRoutePresentation({
+            baselineOnly: !result.accepted && result.reason !== 'already-accepted',
+            pathname,
+          })
+        },
+        () => {
+          if (isCurrent) setRoutePresentation({ baselineOnly: true, pathname })
+        },
+      )
+
+    return () => {
+      isCurrent = false
+    }
   }, [location.pathname, sdk])
 
   useEffect(() => {
@@ -103,28 +133,34 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
           <AnalyticsEventDisplay />
         </aside>
         <main className="app-main">
-          <Routes>
-            <Route
-              path={PAGES.home.path}
-              element={
-                <HomePage
-                  entriesById={entriesById}
-                  liveUpdatesBaselineEntry={liveUpdatesBaselineEntry}
-                  onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
+          {routePresentation?.pathname === location.pathname ? (
+            <BaselinePresentationProvider enabled={routePresentation.baselineOnly}>
+              <Routes>
+                <Route
+                  path={PAGES.home.path}
+                  element={
+                    <HomePage
+                      entriesById={entriesById}
+                      liveUpdatesBaselineEntry={liveUpdatesBaselineEntry}
+                      onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
+                    />
+                  }
                 />
-              }
-            />
-            <Route
-              path={PAGES.pageTwo.path}
-              element={
-                <PageTwoPage
-                  entriesById={entriesById}
-                  onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
+                <Route
+                  path={PAGES.pageTwo.path}
+                  element={
+                    <PageTwoPage
+                      entriesById={entriesById}
+                      onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
+                    />
+                  }
                 />
-              }
-            />
-            <Route path="*" element={<Navigate replace to={PAGES.home.path} />} />
-          </Routes>
+                <Route path="*" element={<Navigate replace to={PAGES.home.path} />} />
+              </Routes>
+            </BaselinePresentationProvider>
+          ) : (
+            <p>Loading experience...</p>
+          )}
         </main>
       </div>
     </div>

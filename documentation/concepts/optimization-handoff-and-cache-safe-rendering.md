@@ -187,6 +187,12 @@ content for stable first paint and still keep live updates off. Turn live update
 content must react to consent, identity, profile, or preview changes after hydration. Preview state
 can force live re-resolution for authoring flows.
 
+The browser runtime supports exactly one live Web SDK singleton. Content handoff object identity
+represents one route occurrence, so create and pass a fresh content handoff object whenever a route
+occurs again. Removing a content handoff and later passing the same object is outside the supported
+lifecycle. Calls through a destroyed SDK reference are also outside the supported lifecycle.
+Application code must not make further calls through that reference after destruction.
+
 When Web or React Web hydrates a profileless `static` or `public-permutation` content or analytics
 handoff, the handoff state can affect live browser memory for that page, but the SDK preserves
 existing durable browser profile continuity by suppressing durable continuity persistence for that

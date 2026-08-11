@@ -1,6 +1,6 @@
 # Next.js App Router (`@contentful/optimization-nextjs`) — SDK knowledge
 
-<!-- feeds-guides: documentation/guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md, documentation/guides/rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md -->
+<!-- feeds-guides: documentation/guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md, documentation/guides/rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md, documentation/guides/migrating-experience-js-next-to-nextjs-app-router.md -->
 
 > Internal, verified reference. Not a guide. Facts only, each with a source pointer verified against
 > packages/\*\*/src.
@@ -16,8 +16,8 @@ dependencies; each carries a symbol-anchored source pointer.
 | Import path                                           | Purpose                                                                                        | source                                                                                                                                                                                                                   |
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `@contentful/optimization-nextjs/app-router/server`   | Server binder for explicit-input roots and helpers plus the SDK-owned request component family | `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`; `nextjs-sdk#app-router-server.tsx#NextjsAppRouterServerOptimization`; `nextjs-sdk#bound-component-types.ts#NextjsAppRouterRequestOptimization` |
-| `@contentful/optimization-nextjs/app-router/client`   | Client binder for bound browser roots, entries, and handoff helpers (`'use client'`)           | `nextjs-sdk#app-router-client.ts#bindNextjsAppRouterClientOptimization`; `nextjs-sdk#app-router-client.ts#NextjsAppRouterClientOptimization`                                                                             |
-| `@contentful/optimization-nextjs/client`              | Browser-only hooks + per-entry live-update controls (`'use client'`)                           | `nextjs-sdk#client.ts`                                                                                                                                                                                                   |
+| `@contentful/optimization-nextjs/app-router/client`   | Complete App Router client runtime plus binder and handoff helpers (`'use client'`)            | `nextjs-sdk#app-router-client.ts#bindNextjsAppRouterClientOptimization`; `nextjs-sdk#app-router-client.ts#NextjsAppRouterClientOptimization`                                                                             |
+| `@contentful/optimization-nextjs/client`              | Generic browser runtime entry; do not mix its context-bound values with App Router-bound roots | `nextjs-sdk#client.ts`                                                                                                                                                                                                   |
 | `@contentful/optimization-nextjs/server`              | Manual server SDK control (advanced routes)                                                    | `nextjs-sdk#server.tsx#configureNextjsServerOptimization`                                                                                                                                                                |
 | `@contentful/optimization-nextjs/edge`                | Edge runtime request and public permutation handoff helpers                                    | `nextjs-sdk#edge.ts#configureNextjsEdgeOptimization`; `nextjs-sdk#edge.ts#NextjsEdgeOptimization`                                                                                                                        |
 | `@contentful/optimization-nextjs/cache-middleware`    | Public permutation proxy/middleware rewrite helper                                             | `nextjs-sdk#cache-middleware.ts#createNextjsPublicPermutationCacheMiddleware`                                                                                                                                            |
@@ -27,11 +27,16 @@ dependencies; each carries a symbol-anchored source pointer.
 
 ## Setup / initialization and binding
 
-- The server and client binders create app-level component/helper sets. The server binder owns both
-  the React-cached handoff store used by top-level components and the cached initializer used by its
+- The server and client binders expose app-level component/helper sets backed by the canonical React
+  Web `/next-app` facade. The Next `/app-router/client` entry re-exports that complete context-bound
+  runtime, so consumer hooks or per-entry components beneath a bound root use `/app-router/client`,
+  not the router-neutral Next `/client` entry. Dedicated support paths and type-only imports do not
+  create a competing context identity. Direct runtime exports are unbound React Web values; the
+  binder return supplies the config-bound wrappers and helper set. The server binder owns both the
+  React-cached handoff store used by top-level components and the cached initializer used by its
   nested request family. Browser defaults are supplied through `consent.clientDefaults`;
   server/request consent is supplied through `consent.server`.
-  source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`; `nextjs-sdk#app-router-server.tsx#getRequestHandoffStore`; `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#app-router-client.ts#bindNextjsAppRouterClientOptimization`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationConsentConfig`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationServerConsentResolver`
+  source: `react-web-sdk#next-app.ts`; `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`; `nextjs-sdk#app-router-server.tsx#getRequestHandoffStore`; `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#app-router-client.ts#bindNextjsAppRouterClientOptimization`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationConsentConfig`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationServerConsentResolver`
 - `api.experienceBaseUrl` and `api.insightsBaseUrl` override the API clients' built-in production
   endpoints; omit them for the default hosts. `app: { name, version }` is attached to outgoing event
   context as application attribution metadata.
@@ -145,27 +150,28 @@ dependencies; each carries a symbol-anchored source pointer.
 
 ## Components & hooks
 
-| Name                                                                                     | Kind             | Import path                                  | source                                                                                                                                                                                                                                                          |
-| ---------------------------------------------------------------------------------------- | ---------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Top-level bound roots, `OptimizedEntry`, and `NextAppAutoPageTracker`                    | component family | `/app-router/server`                         | `nextjs-sdk#app-router-server.tsx#NextjsAppRouterServerOptimization`                                                                                                                                                                                            |
-| Request-bound roots, `OptimizedEntry`, and `NextAppAutoPageTracker`                      | component family | `/app-router/server`                         | `nextjs-sdk#bound-component-types.ts#NextjsAppRouterRequestOptimization`; `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`                                                                                                         |
-| Bound browser roots, `OptimizedEntry`, and `NextAppAutoPageTracker`                      | component family | `/app-router/client`                         | `nextjs-sdk#app-router-client.ts#NextjsAppRouterClientOptimization`                                                                                                                                                                                             |
-| `OptimizedEntry`                                                                         | component        | `/client`                                    | `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry`                                                                                                                                                                                               |
-| `NextAppAutoPageTracker`                                                                 | component        | `/app-router/server` or `/app-router/client` | `react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker`                                                                                                                                                                                                      |
-| `useOptimizationActions`                                                                 | hook             | `/client`                                    | `react-web-sdk#hooks/useOptimizationActions.ts#useOptimizationActions`                                                                                                                                                                                          |
-| `useConsentState` / `useProfileState` / `useOptimizationContext` / `useMergeTagResolver` | hook family      | `/client`                                    | `react-web-sdk#hooks/useOptimizationState.ts#useConsentState`; `react-web-sdk#hooks/useOptimizationState.ts#useProfileState`; `react-web-sdk#hooks/useOptimization.ts#useOptimizationContext`; `react-web-sdk#hooks/useMergeTagResolver.ts#useMergeTagResolver` |
+| Name                                                                                     | Kind             | Import path                                  | source                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------------------------------------------------------------------- | ---------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Top-level bound roots, `OptimizedEntry`, and `NextAppAutoPageTracker`                    | component family | `/app-router/server`                         | `nextjs-sdk#app-router-server.tsx#NextjsAppRouterServerOptimization`                                                                                                                                                                                                                                                       |
+| Request-bound roots, `OptimizedEntry`, and `NextAppAutoPageTracker`                      | component family | `/app-router/server`                         | `nextjs-sdk#bound-component-types.ts#NextjsAppRouterRequestOptimization`; `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`                                                                                                                                                                    |
+| Bound browser roots, `OptimizedEntry`, and `NextAppAutoPageTracker`                      | component family | `/app-router/client`                         | `nextjs-sdk#app-router-client.ts#NextjsAppRouterClientOptimization`                                                                                                                                                                                                                                                        |
+| `OptimizedEntry`                                                                         | component        | `/app-router/client`                         | `react-web-sdk#next-app.ts`; `nextjs-sdk#app-router-client.ts`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry`                                                                                                                                                                                          |
+| `NextAppAutoPageTracker`                                                                 | component        | `/app-router/server` or `/app-router/client` | `react-web-sdk#next-app.ts`; `react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker`                                                                                                                                                                                                                                    |
+| `useOptimizationActions`                                                                 | hook             | `/app-router/client`                         | `react-web-sdk#next-app.ts`; `nextjs-sdk#app-router-client.ts`; `react-web-sdk#hooks/useOptimizationActions.ts#useOptimizationActions`                                                                                                                                                                                     |
+| `useConsentState` / `useProfileState` / `useOptimizationContext` / `useMergeTagResolver` | hook family      | `/app-router/client`                         | `react-web-sdk#next-app.ts`; `nextjs-sdk#app-router-client.ts`; `react-web-sdk#hooks/useConsentState.ts#useConsentState`; `react-web-sdk#hooks/useOptimizationState.ts#useProfileState`; `react-web-sdk#hooks/useOptimization.ts#useOptimizationContext`; `react-web-sdk#hooks/useMergeTagResolver.ts#useMergeTagResolver` |
 
 Note: bound App Router `OptimizedEntry` omits per-entry `liveUpdates`/`loadingFallback`; use
-`/client` `OptimizedEntry` for per-entry control.
-source: `nextjs-sdk#bound-component-types.ts#NextjsBoundOptimizedEntryProps`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntryProps`
+`/app-router/client` `OptimizedEntry` for per-entry control without changing context identity.
+source: `react-web-sdk#next-app.ts`; `nextjs-sdk#app-router-client.ts`; `nextjs-sdk#bound-component-types.ts#NextjsBoundOptimizedEntryProps`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntryProps`
 
 The bound `OptimizationRoot` and bound `OptimizationProvider` each create a React Web provider from
 the supplied `handoff`, `hydration`, and any managed-entry descriptors fetched into
 `handoff.entries`. `OptimizationRoot` additionally forwards route/page-event inputs to React Web;
 `OptimizationProvider` owns only the content SDK context plus the live-updates wrapper. Descendants
-consume the nearest React context. A second config-owned browser provider attempts to create another
-SDK singleton; normally keep one bound provider around the participating tree.
-source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`; `nextjs-sdk#app-router-client.ts#bindNextjsAppRouterClientOptimization`; `nextjs-sdk#app-router-server.tsx#renderBoundRootTree`; `nextjs-sdk#app-router-server.tsx#OptimizationProvider`; `nextjs-sdk#app-router-client.ts#OptimizationRoot`; `nextjs-sdk#app-router-client.ts#OptimizationProvider`; `nextjs-sdk#app-router-server.tsx#resolveHandoffEntries`; `react-web-sdk#provider/OptimizationProvider.tsx#createInitialRuntime`; `react-web-sdk#provider/OptimizationProvider.tsx#createPrefetchedManagedEntries`; `react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider`; `react-web-sdk#context/OptimizationContext.tsx#OptimizationContext`; `web-sdk#ContentfulOptimization.ts#ContentfulOptimization`
+consume the nearest React context from the `/next-app` runtime re-exported by
+`/app-router/client`. A second config-owned browser provider attempts to create another SDK
+singleton; normally keep one bound provider around the participating tree.
+source: `react-web-sdk#next-app.ts`; `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`; `nextjs-sdk#app-router-client.ts#bindNextjsAppRouterClientOptimization`; `nextjs-sdk#app-router-server.tsx#renderBoundRootTree`; `nextjs-sdk#app-router-server.tsx#OptimizationProvider`; `nextjs-sdk#app-router-client.ts#OptimizationRoot`; `nextjs-sdk#app-router-client.ts#OptimizationProvider`; `nextjs-sdk#app-router-server.tsx#resolveHandoffEntries`; `react-web-sdk#provider/OptimizationProvider.tsx#createInitialRuntime`; `react-web-sdk#provider/OptimizationProvider.tsx#createPrefetchedManagedEntries`; `react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider`; `react-web-sdk#context/OptimizationContext.tsx#OptimizationContext`; `web-sdk#ContentfulOptimization.ts#ContentfulOptimization`
 
 ## Render / entry resolution
 
@@ -185,6 +191,11 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
 - Runtime props that provide zero or multiple `baselineEntry`, `entryId`, and `managedEntry` sources
   reject before any managed fetch; the error names those three allowed sources.
   source: `nextjs-sdk#app-router-server.tsx#getAppRouterBaselineEntry`
+- The bound roots/providers delegate browser presentation and settlement to React Web.
+  `NextAppAutoPageTracker` keys transitions by pathname plus search; handoff occurrence, replay,
+  fallback, hydration-failure, reconnect, and live-authority behavior follows the shared React Web
+  contract.
+  source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`; `nextjs-sdk#app-router-client.ts#bindNextjsAppRouterClientOptimization`; `react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker`; kb:shared/concepts.md; kb:web/react-web.md
 
 ## Identifier ownership
 
@@ -202,10 +213,12 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
   caller to provide it. The nested request tracker receives this value from its shared handoff, so
   page-event ownership does not depend on which request wrapper starts first.
   source: `nextjs-sdk#server.tsx#createNextjsRequestHandoff`; `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#app-router-request-handoff.ts#readNextjsForwardedServerData`; `nextjs-sdk#handoff.ts#createHandoffFromSelections`
-- `NextAppAutoPageTracker` must stay inside `Suspense` (reads `useSearchParams`).
+- The binder-exposed `NextAppAutoPageTracker` comes from the same `/next-app` runtime facade that
+  `/app-router/client` re-exports for the bound tree, and must stay inside `Suspense` because it reads
+  `useSearchParams`.
   Duplicate-page-event control: `initialPageEvent="skip"` when the server already reported the view,
   `"emit"` for browser-owned routes.
-  source: `react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker`; `react-web-sdk#auto-page/useAutoPageEmitter.ts#InitialAutoPageEvent`
+  source: `react-web-sdk#next-app.ts`; `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`; `nextjs-sdk#app-router-client.ts#bindNextjsAppRouterClientOptimization`; `react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker`; `react-web-sdk#auto-page/useAutoPageEmitter.ts#InitialAutoPageEvent`
 - Interaction tracking on by default with `OptimizedEntry`; opt out via binding config
   `trackEntryInteraction`; uses resolved entry id.
   source: `react-web-sdk#provider/OptimizationProvider.tsx#TrackEntryInteractionOptions`; concept:interaction-tracking-in-web-sdks
@@ -283,7 +296,7 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
 - **The bound root provides a handoff-to-live transition:** React Web builds the initial browser
   render from `handoff.state` and `handoff.entries`, then hydrates the owned live SDK before
   switching the context runtime. Children remain mounted through the transition.
-  source: `nextjs-sdk#app-router-server.tsx#toClientRootConfig`; `react-web-sdk#provider/OptimizationProvider.tsx#createInitialRuntime`; `react-web-sdk#provider/OptimizationProvider.tsx#initializeServerOptimizationState`; `react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider`
+  source: `nextjs-sdk#app-router-server.tsx#toClientRootConfig`; `react-web-sdk#provider/OptimizationProvider.tsx#createInitialRuntime`; `react-web-sdk#provider/OptimizationProvider.tsx#hydrateProviderHandoff`; `react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider`
   A handoff without matching baseline entries cannot guarantee no visual change for managed-entry
   client rendering; stable takeover also requires the browser to render the same baseline entry
   through the same component path or to receive a matching managed-entry handoff in `handoff.entries`.

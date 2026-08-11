@@ -65,7 +65,8 @@ taps: true }`), `onStatesReady?`, and `children`. `OptimizationRoot` composes
 - `OptimizationProvider` props are a union: config form (`OptimizationProviderConfigProps extends
 OptimizationConfig`, `sdk?: never`) or injected form (`OptimizationProviderSdkProps`, `sdk:
 OptimizationSdk`). `onStatesReady(states)` runs once after state init and before children mount;
-  returning a function registers a teardown cleanup.
+  returning a function registers a synchronous teardown cleanup that runs before owned-SDK
+  destruction. The provider does not isolate cleanup errors.
   source: react-native-sdk#components/OptimizationProvider.tsx#OptimizationProviderConfigProps; react-native-sdk#components/OptimizationProvider.tsx#OptimizationProviderSdkProps; react-native-sdk#components/OptimizationProvider.tsx#OnStatesReady
 - `ContentfulOptimization.initialize(config)` merges RN defaults over the caller config:
   `eventBuilder` `channel: 'mobile'` + `library.name` set to
@@ -77,8 +78,15 @@ OptimizationSdk`). `onStatesReady(states)` runs once after state init and before
   source: react-native-sdk#ContentfulOptimization.ts#initialize; react-native-sdk#ContentfulOptimization.ts#mergeConfig
 - Single active instance: `ContentfulOptimization.initialize` throws `ContentfulOptimization React
 Native SDK is already initialized. Reuse the existing instance.` if a live instance already exists.
-  `destroy()` (or a failed post-init persistence) clears the singleton so a new instance can be
-  created. source: react-native-sdk#ContentfulOptimization.ts#initialize; react-native-sdk#ContentfulOptimization.ts#destroy
+  Each acquired persistence interceptor, online/AppState listener, active-instance cleanup, and
+  AsyncStorage drain is registered immediately with the inherited disposer lifecycle. `destroy()`
+  delegates to that lifecycle exactly once. SDK-owned cleanup callbacks run synchronously in LIFO
+  order and are required to be non-throwing and non-reentrant; there is no per-callback exception
+  isolation. A partially constructed instance and failed post-init persistence both unwind every
+  registered resource under that contract, release the Core singleton, and allow a replacement
+  instance. The inherited Core request state starts at `idle` for the new lifetime and returns to
+  `idle` after request invalidation but before ownership is released on destroy.
+  source: react-native-sdk#ContentfulOptimization.ts#ContentfulOptimization; react-native-sdk#ContentfulOptimization.ts#initialize; react-native-sdk#ContentfulOptimization.ts#destroy; core-sdk#CoreStateful.ts#CoreStateful; core-sdk#CoreStateful.ts#registerDisposer; core-sdk#CoreStateful.ts#destroy
 - Managed entry fetching through the app-owned `contentful.js` client supports the flat
   `entryId` + `entryQuery` source and ID/slug object descriptors under `managedEntry` on
   `OptimizedEntry` and `useOptimizedEntry`. See
@@ -178,13 +186,23 @@ source: core-sdk#constants.ts#ANONYMOUS_ID_KEY; core-sdk#constants.ts#ANONYMOUS_
 
 - Screen events: `useScreenTracking({ name })` auto-tracks on mount (unless `trackOnMount: false`)
   via `trackCurrentScreen`, which dedupes by `routeKey` (defaults to `screen.name`/`name`) through
-  an `AcceptedCurrentStateTracker` — a repeat of the same current screen is skipped. The returned
-  `trackScreen()` and `useScreenTrackingCallback()` call `screen()` directly (no dedupe).
-  source: react-native-sdk#hooks/useScreenTracking.ts#useScreenTracking; react-native-sdk#ContentfulOptimization.ts#TrackCurrentScreenPayload; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker
+  Core's internal current-state coordinator. Same-key in-flight calls join the owner attempt; only
+  consecutive acceptance is deduped, so returning after a different screen can emit again. The
+  public result remains `{ accepted, data? }`: an accepted joined owner exposes the same success,
+  while a settled duplicate, policy denial, or superseded attempt reports `{ accepted: false }`.
+  Current operational failures reject the direct `trackCurrentScreen` call; the automatic hook logs
+  them. Automatic current-screen tracking is online-only: an offline attempt is neither published
+  nor enqueued, and there is no automatic reconnect retry. Call `trackCurrentScreen` explicitly
+  after reconnecting. The returned `trackScreen()` and `useScreenTrackingCallback()` call `screen()`
+  directly (no dedupe), so those ordinary screen events still queue offline.
+  source: react-native-sdk#hooks/useScreenTracking.ts#useScreenTracking; react-native-sdk#ContentfulOptimization.ts#TrackCurrentScreenPayload; react-native-sdk#ContentfulOptimization.ts#collapseCurrentScreenEmissionResult; core-sdk#tracking/CurrentStateCoordinator.ts#CurrentStateCoordinator
 - `OptimizationNavigationContainer` calls `trackCurrentScreen` on ready and on route-key change; it
   builds `routeKey` from the screen name, appending JSON-validated params only when
   `includeParams` is true. It skips tracking when `hasConsent('screen')` is false and re-tracks the
-  current route when consent changes. source: react-native-sdk#components/OptimizationNavigationContainer.tsx#OptimizationNavigationContainer; react-native-sdk#components/OptimizationNavigationContainer.tsx#createScreenTrackingDescriptor
+  current route when consent changes. Connectivity changes do not re-run this tracking path. The
+  public `states.currentStateTracking` observable is read-only; its coordinator and mutations stay
+  in Core.
+  source: react-native-sdk#components/OptimizationNavigationContainer.tsx#OptimizationNavigationContainer; react-native-sdk#components/OptimizationNavigationContainer.tsx#createScreenTrackingDescriptor; react-native-sdk#hooks/useOptimizationConsentState.ts#useOptimizationConsentState; react-native-sdk#hooks/useScreenTracking.ts#useScreenTracking; core-sdk#CoreStateful.ts#CoreStates; core-sdk#tracking/CurrentStateCoordinator.ts#CurrentStateCoordinator
 - Entry view tracking (`useViewportTracking`): defaults `minVisibleRatio = 0.8`, `dwellTimeMs =
 2000`, `viewDurationUpdateIntervalMs = 5000`. Lifecycle per visibility cycle: initial `trackView`
   after accumulated visible time ≥ `dwellTimeMs`, periodic duration updates every
@@ -214,12 +232,10 @@ source: core-sdk#constants.ts#ANONYMOUS_ID_KEY; core-sdk#constants.ts#ANONYMOUS_
   `states.eventStream` for accepted events (dedupe by `messageId`) and `states.blockedEventStream`
   for consent/allow-list diagnostics. Flags: `states.flag(name)` is a reactive observable;
   `getFlag(name)` a non-reactive read. source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#CoreStatefulEventEmitter.ts#getFlag
-- Experience-response payload: an accepted Experience call returns the `{ profile,
-selectedOptimizations, changes }` payload, and this stateful SDK applies it to its Core signals
-  (`signals.profile`, `signals.selectedOptimizations`, `signals.changes`) — the origin of the profile
-  and the changes the SDK surfaces. See
+- Experience responses return to their initiating calls; Core personalization and request-state
+  publication follow the shared concurrent stateful-response contract. See
   [`../shared/concepts.md`](../shared/concepts.md#experience-response-payload).
-  source: core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals; core-sdk#CoreStateful.ts#CoreStates
+  source: core-sdk#queues/ExperienceQueue.ts#ExperienceQueue; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals; core-sdk#CoreStateful.ts#CoreStates
 
 ## Consent & persistence
 
@@ -239,9 +255,11 @@ selectedOptimizations, changes }` payload, and this stateful SDK applies it to i
   profile-continuity (anonymous id, profile, changes, selected optimizations) only when
   `persistenceConsent === true`, and clears it when `false`. Profileless state updates write missing
   fields from the in-memory AsyncStorage cache instead of clearing stored profile continuity; own
-  present `undefined` fields clear that continuity field. It does NOT persist event queues (queues
-  are in-memory). `consent(...)` and `reset()`/`destroy()` enqueue the appropriate persistence writes;
-  `reset()` also clears profile continuity and the current-screen dedupe tracker.
+  present `undefined` fields clear that continuity field. Accepted Experience state publishes before
+  the raw response snapshot is queued for persistence; neither the initiating event promise nor live
+  state waits for that write. Superseded response snapshots are not queued. It does NOT persist event
+  queues (queues are in-memory). `consent(...)` and `reset()`/`destroy()` enqueue the appropriate
+  persistence writes; `reset()` also clears profile continuity and the current-screen dedupe tracker.
   source: react-native-sdk#storage/AsyncStorageStore.ts#AsyncStorageStore; react-native-sdk#ContentfulOptimization.ts#enqueueContinuityWriteForPolicy; react-native-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#handoff.ts#hasOptimizationSelectionStateField
 - Persisted consent is decoded via `decodeConsentStorageValue`; persisted persistence-consent falls
   back to the persisted event consent through `resolvePersistedPersistenceConsent`.
@@ -282,14 +300,20 @@ selectedOptimizations, changes }` payload, and this stateful SDK applies it to i
 - Offline detection is opt-in via NetInfo: `createOnlineChangeListener` dynamically imports
   `@react-native-community/netinfo`; when present it gates flushing on connectivity
   (`isInternetReachable ?? isConnected ?? true`); when absent it logs
-  `@react-native-community/netinfo not installed. Offline detection disabled.` and no-ops. Offline
-  replay is in-memory only (no durable outbox). source: react-native-sdk#handlers/createOnlineChangeListener.ts#createOnlineChangeListener
+  `@react-native-community/netinfo not installed. Offline detection disabled.` and no-ops. Ordinary
+  events queue in memory while offline and flush after NetInfo reports reconnection. Current-screen
+  attempts are not queued and require an explicit retry after reconnecting; NetInfo does not retry
+  them. There is no durable outbox.
+  source: react-native-sdk#handlers/createOnlineChangeListener.ts#createOnlineChangeListener; react-native-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue
 - Background flush: `createAppStateChangeListener` calls the SDK's `flush()` then drains pending
   AsyncStorage writes on `AppState` `background`/`inactive`, before the OS can suspend the process.
   source: react-native-sdk#handlers/createAppStateChangeListener.ts#createAppStateChangeListener; react-native-sdk#ContentfulOptimization.ts#ContentfulOptimization
-- Polyfills: importing the package entry runs side-effect imports for `crypto.randomUUID`
+- Polyfills: importing the package entry ensures `crypto.randomUUID`
   (`react-native-get-random-values` + `react-native-uuid`) and ES2025 iterator helpers, plus a
-  `*.png` module declaration. source: react-native-sdk#index.ts#OptimizationConfig; react-native-sdk#polyfills/crypto.ts
+  `*.png` module declaration. The package does not patch `Promise` and supports runtimes without
+  `Promise.withResolvers`; API retry delays and current-state coordination use the standard Promise
+  constructor.
+  source: react-native-sdk#index.ts; react-native-sdk#polyfills/crypto.ts; react-native-sdk#images.ts; api-client#fetch/createRetryFetchMethod.ts#delayRetry; core-sdk#tracking/CurrentStateCoordinator.ts#CurrentStateCoordinator
 - Preview panel: `PreviewPanelOverlay`/`PreviewPanel` are on the `/preview` subpath, need the
   optional clipboard + safe-area peers, and fetch `nt_audience`/`nt_experience` entries through the
   supplied `contentfulClient`. Expo apps require a custom dev build (`expo run:ios`/`expo

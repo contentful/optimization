@@ -18,36 +18,42 @@
 
 Reference implementation demonstrating `@contentful/optimization-react-web` usage in a React SPA.
 This is the primary React Web reference implementation for customer-style usage of the official
-React framework package.
+React framework package through its React Router integration entrypoint.
 
 > [!NOTE]
 >
 > This implementation is the React Web SDK counterpart to
 > [`web-sdk_react`](../web-sdk_react/README.md). Where `web-sdk_react` builds its own React adapter
 > layer over `@contentful/optimization-web`, this implementation uses the official
-> `@contentful/optimization-react-web` framework package directly to match customer integration
+> `@contentful/optimization-react-web/react-router` facade directly to match customer integration
 > code. There is no `src/optimization/` adapter directory.
+
+All React context-bound APIs in this implementation, including `OptimizationRoot`, `OptimizedEntry`,
+and the SDK hooks, come from `@contentful/optimization-react-web/react-router`. The same facade
+provides `ReactRouterAutoPageTracker`, keeping the provider, consumers, and router integration on one
+React context graph. Framework-neutral utilities continue to use support entrypoints such as
+`@contentful/optimization-react-web/api-schemas` and `@contentful/optimization-react-web/logger`.
 
 ## What this demonstrates
 
-| Feature                      | SDK surface used                                                                           |
-| ---------------------------- | ------------------------------------------------------------------------------------------ |
-| Provider + initialization    | `OptimizationRoot`                                                                         |
-| SPA page tracking            | `ReactRouterAutoPageTracker` from `@contentful/optimization-react-web/router/react-router` |
-| Entry resolution + rendering | `OptimizedEntry` render prop                                                               |
-| Live updates (global)        | `OptimizationRoot liveUpdates` prop                                                        |
-| Live updates (per-component) | `OptimizedEntry liveUpdates` prop                                                          |
-| Live updates (locked)        | `<OptimizedEntry liveUpdates={false}>`                                                     |
-| Merge tag rendering          | `OptimizedEntry` render context `getMergeTagValue`                                         |
-| Nested personalization       | Nested `<OptimizedEntry>` composition                                                      |
-| Consent gating               | `sdk.consent()` via `useOptimizationContext()`                                             |
-| Identify / reset             | `sdk.identify()` / `sdk.reset()` via `useOptimizationContext()`                            |
-| Auto view/click/hover        | Default `OptimizationRoot` observers + `OptimizedEntry` tracking props                     |
-| Manual view tracking         | `<OptimizedEntry trackViews={false}>` + `sdk.tracking.enableElement()`                     |
-| Flag view tracking           | `sdk.states.flag('boolean').subscribe()`                                                   |
-| Analytics event stream       | `sdk.states.eventStream.subscribe()`                                                       |
-| Preview panel attachment     | Env-gated `attachOptimizationPreviewPanel()` call                                          |
-| Offline queue / recovery     | Inherited from `@contentful/optimization-web` runtime                                      |
+| Feature                      | SDK surface used                                                          |
+| ---------------------------- | ------------------------------------------------------------------------- |
+| Provider + initialization    | `OptimizationRoot` from `@contentful/optimization-react-web/react-router` |
+| SPA page tracking            | `ReactRouterAutoPageTracker` from the React Router facade                 |
+| Entry resolution + rendering | `OptimizedEntry` render prop from the React Router facade                 |
+| Live updates (global)        | `OptimizationRoot liveUpdates` prop                                       |
+| Live updates (per-component) | `OptimizedEntry liveUpdates` prop                                         |
+| Live updates (locked)        | `<OptimizedEntry liveUpdates={false}>`                                    |
+| Merge tag rendering          | `OptimizedEntry` render context `getMergeTagValue`                        |
+| Nested personalization       | Nested `<OptimizedEntry>` composition                                     |
+| Consent gating               | `sdk.consent()` via `useOptimizationContext()`                            |
+| Identify / reset             | `sdk.identify()` / `sdk.reset()` via `useOptimizationContext()`           |
+| Auto view/click/hover        | Default `OptimizationRoot` observers + `OptimizedEntry` tracking props    |
+| Manual view tracking         | `<OptimizedEntry trackViews={false}>` + `sdk.tracking.enableElement()`    |
+| Flag view tracking           | `sdk.states.flag('boolean').subscribe()`                                  |
+| Analytics event stream       | `sdk.states.eventStream.subscribe()`                                      |
+| Preview panel attachment     | Env-gated `attachOptimizationPreviewPanel()` call                         |
+| Offline queue / recovery     | Inherited from `@contentful/optimization-web` runtime                     |
 
 ## CDA locale handling
 
@@ -121,35 +127,23 @@ pnpm typecheck
 
 ## Running E2E tests
 
-1. Install the shared Playwright browsers/system dependencies, then run this implementation's E2E
-   wrapper from the repository root:
+Run the implementation-aware Playwright wrapper from the **repository root**. Pass a test file or
+filter for routine validation:
 
 ```sh
-pnpm --dir lib/e2e-web setup:e2e
+pnpm test:e2e:react-web-sdk <file-or-filter>
+```
+
+Omit the file or filter only when the full suite is warranted:
+
+```sh
 pnpm test:e2e:react-web-sdk
-```
-
-2. Or run the shared Playwright flow step by step:
-
-```sh
-pnpm implementation:run -- react-web-sdk serve
-```
-
-In another terminal:
-
-```sh
-IMPLEMENTATION=react-web-sdk pnpm --dir lib/e2e-web test
-```
-
-When finished:
-
-```sh
-pnpm implementation:run -- react-web-sdk serve:stop
 ```
 
 This implementation uses the shared Playwright suite from
 [`lib/e2e-web`](../../lib/e2e-web/README.md). The implementation sets `IMPLEMENTATION=react-web-sdk`
-when invoking that suite.
+when invoking that suite. The root wrapper is run-only and assumes that the repository setup is
+complete and the Playwright browser executable is available.
 
 Use Playwright UI or codegen when needed:
 
@@ -208,8 +202,8 @@ react-web-sdk/
 
 ## Integration touchpoints
 
-This implementation uses the official React Web SDK package directly. Keep API-level usage details
-in the
+This implementation uses the official React Web SDK's React Router facade directly. Keep API-level
+usage details in the
 [@contentful/optimization-react-web package README](../../packages/web/frameworks/react-web-sdk/README.md).
 
 Implementation-specific touchpoints:

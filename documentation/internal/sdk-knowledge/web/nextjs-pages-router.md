@@ -1,6 +1,6 @@
 # Next.js Pages Router (`@contentful/optimization-nextjs`) — SDK knowledge
 
-<!-- feeds-guides: documentation/guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md, documentation/guides/rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md -->
+<!-- feeds-guides: documentation/guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md, documentation/guides/rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md, documentation/guides/migrating-experience-js-next-to-nextjs-pages-router.md -->
 
 > Internal, verified reference. Not a guide. Facts only, each with a source pointer verified against
 > packages/\*\*/src.
@@ -11,33 +11,37 @@ App Router surface: see [`nextjs-app-router.md`](./nextjs-app-router.md).
 
 ## Package & entry points
 
-| Import path                                           | Purpose                                                                                                                                                                                                      | source                                                                                                                                                                                                                                                                                                                        |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@contentful/optimization-nextjs/pages-router`        | **Client** binding helper for bound `OptimizationRoot`, `OptimizationProvider`, `OptimizedEntry`, `NextPagesAutoPageTracker`, and public permutation handoff helpers. React Web hooks import from `/client`. | `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#pages-router.ts#NextPagesAutoPageTracker`; `nextjs-sdk#pages-router.ts#createPublicPermutationHandoff`                                                                                                                                            |
-| `@contentful/optimization-nextjs/pages-router/server` | **Server** binding helper for `createRequestHandoff`; also exports public permutation handoff helpers, selection resolution, `prefetchManagedEntries`, `ManagedEntryDescriptor`, `ManagedEntryHandoff`       | `nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization`; `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterOptimization`; `nextjs-sdk#pages-router-server.ts`; `core-sdk#CoreBase.ts#prefetchManagedEntries`; `core-sdk#CoreBase.ts#ManagedEntryDescriptor`; `core-sdk#CoreBase.ts#ManagedEntryHandoff` |
-| `@contentful/optimization-nextjs/client`              | Browser-only hooks + per-entry controls                                                                                                                                                                      | `nextjs-sdk#client.ts`; `nextjs-sdk#../package.json`                                                                                                                                                                                                                                                                          |
-| `@contentful/optimization-nextjs/server`              | Manual server SDK control (escape hatches)                                                                                                                                                                   | `nextjs-sdk#server.tsx`; `nextjs-sdk#../package.json`                                                                                                                                                                                                                                                                         |
-| `@contentful/optimization-nextjs/api-schemas`         | Type guards `isMergeTagEntry`, `isResolvedContentfulEntry`                                                                                                                                                   | `nextjs-sdk#api-schemas.ts`; `api-schemas#contentful/typeGuards.ts#isMergeTagEntry`; `api-schemas#contentful/typeGuards.ts#isResolvedContentfulEntry`                                                                                                                                                                         |
+| Import path                                           | Purpose                                                                                                                                                                                                | source                                                                                                                                                                                                                                                                                                                        |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-nextjs/pages-router`        | **Client** complete Pages Router runtime plus binding and public permutation handoff helpers                                                                                                           | `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#pages-router.ts#NextPagesAutoPageTracker`; `nextjs-sdk#pages-router.ts#createPublicPermutationHandoff`                                                                                                                                            |
+| `@contentful/optimization-nextjs/pages-router/server` | **Server** binding helper for `createRequestHandoff`; also exports public permutation handoff helpers, selection resolution, `prefetchManagedEntries`, `ManagedEntryDescriptor`, `ManagedEntryHandoff` | `nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization`; `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterOptimization`; `nextjs-sdk#pages-router-server.ts`; `core-sdk#CoreBase.ts#prefetchManagedEntries`; `core-sdk#CoreBase.ts#ManagedEntryDescriptor`; `core-sdk#CoreBase.ts#ManagedEntryHandoff` |
+| `@contentful/optimization-nextjs/client`              | Generic browser runtime entry; do not mix its context-bound values with Pages Router-bound roots                                                                                                       | `nextjs-sdk#client.ts`; `nextjs-sdk#../package.json`                                                                                                                                                                                                                                                                          |
+| `@contentful/optimization-nextjs/server`              | Manual server SDK control (escape hatches)                                                                                                                                                             | `nextjs-sdk#server.tsx`; `nextjs-sdk#../package.json`                                                                                                                                                                                                                                                                         |
+| `@contentful/optimization-nextjs/api-schemas`         | Type guards `isMergeTagEntry`, `isResolvedContentfulEntry`                                                                                                                                             | `nextjs-sdk#api-schemas.ts`; `api-schemas#contentful/typeGuards.ts#isMergeTagEntry`; `api-schemas#contentful/typeGuards.ts#isResolvedContentfulEntry`                                                                                                                                                                         |
 
 Note: `/pages-router` and `/pages-router/server` export separate binding helpers:
 `bindNextjsPagesRouterOptimization` for the browser component set and
 `bindNextjsPagesRouterServerOptimization` for request handoff.
 
 The package root (`@contentful/optimization-nextjs`) is not an import path — the `package.json`
-exports map starts at `./app-router`, with no `.` entry. `/pages-router` exports the binding helper,
-tracker, and bound types only; import React Web hooks/providers from `/client`. (A `'use client'`
-module cannot wildcard-re-export React Web without breaking Next.js 15 builds.)
-source: `nextjs-sdk#../package.json`; `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`.
+exports map starts at `./app-router`, with no `.` entry. `/pages-router` re-exports the complete
+context-bound React Web `/next-pages` runtime alongside the binding helper and bound types. Use that
+entry for hooks/providers beneath bound roots; dedicated support paths and type-only imports do not
+create context identity.
+source: `react-web-sdk#next-pages.ts`; `nextjs-sdk#../package.json`; `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`.
 
 ## Setup / initialization and binding
 
-- **Client:** `bindNextjsPagesRouterOptimization(config)` →
-  `{ OptimizationRoot, OptimizationProvider, OptimizedEntry, NextPagesAutoPageTracker }`. Config
-  passes through to react-web providers; binding calls are not isolated browser SDK runtimes. Browser
-  defaults are supplied through `consent.clientDefaults`; when a request handoff carries defaults
-  from resolved server consent, the handoff defaults override those static browser defaults for the
-  same axes.
-  source: `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#pages-router.ts#toClientRootConfig`; `nextjs-sdk#pages-router.ts#toClientProviderConfig`; `nextjs-sdk#pages-router.ts#withRequestDefaults`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationConsentConfig`; `web-sdk#ContentfulOptimization.ts#ContentfulOptimization`.
+- **Client:** `bindNextjsPagesRouterOptimization(config)` exposes the public bound component/helper
+  set while consuming the canonical React Web `/next-pages` facade for every context-bound root,
+  provider, entry, and tracker. The Next `/pages-router` entry re-exports that complete runtime, so
+  consumer hooks or per-entry components beneath a bound root use `/pages-router`, not the
+  router-neutral Next `/client` entry. Direct runtime exports are unbound React Web values; the
+  binder return supplies the config-bound wrappers and helper set. Binding calls are not isolated
+  browser SDK runtimes. Browser defaults are supplied through `consent.clientDefaults`; when a
+  request handoff carries defaults from resolved server consent, the handoff defaults override those
+  static browser defaults for the same axes.
+  source: `react-web-sdk#next-pages.ts`; `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#pages-router.ts#toClientRootConfig`; `nextjs-sdk#pages-router.ts#toClientProviderConfig`; `nextjs-sdk#pages-router.ts#withRequestDefaults`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationConsentConfig`; `web-sdk#ContentfulOptimization.ts#ContentfulOptimization`.
 - **Server:** `bindNextjsPagesRouterServerOptimization(config)` → `{ createRequestHandoff }`. Server
   consent is supplied through `consent.server`, which receives `{ cookies, headers }`.
   source: `nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization`; `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterOptimization`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationServerConsentResolver`.
@@ -81,31 +85,30 @@ source: `nextjs-sdk#../package.json`; `nextjs-sdk#pages-router.ts#bindNextjsPage
 
 ## Components & hooks
 
-| Name                        | Kind      | Import path                      | Key props/args                                                                                                                | Returns                                   | source                                                                                                                                    |
-| --------------------------- | --------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `OptimizationRoot`          | component | `/pages-router`                  | `handoff?`, `hydration?`, `prefetchManagedEntries?`, `routeKey?`, `buildPagePayload?`, `initialPagePayload?`, `children`      | `ReactElement`                            | `nextjs-sdk#pages-router.ts#OptimizationRoot`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationRootProps`                     |
-| `OptimizationProvider`      | component | `/pages-router`                  | `children`; `handoff?`; `hydration?`; `prefetchManagedEntries?`; internally wraps `LiveUpdatesProvider` (`globalLiveUpdates`) | `ReactElement` / `null`                   | `nextjs-sdk#pages-router.ts#OptimizationProvider`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationProviderProps`             |
-| `OptimizationAnalyticsRoot` | component | `/pages-router`                  | analytics handoff, route key, page payload builder, children                                                                  | `ReactElement`                            | `nextjs-sdk#pages-router.ts#OptimizationAnalyticsRoot`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationAnalyticsRootProps`   |
-| `OptimizedEntry`            | component | `/pages-router` (binding return) | React Web component with `baselineEntry`, flat `entryId` + `entryQuery`, or object descriptor under `managedEntry`            | `ReactElement` / `null`                   | `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry`                            |
-| `NextPagesAutoPageTracker`  | component | `/pages-router`                  | `initialPageEvent?: 'emit' / 'skip'`, `getPagePayload?`                                                                       | `null`                                    | `nextjs-sdk#pages-router.ts#NextPagesAutoPageTracker`; `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker`                     |
-| `useConsentState`           | hook      | `/client`                        | —                                                                                                                             | consent state                             | `react-web-sdk#hooks/useOptimizationState.ts#useConsentState`                                                                             |
-| `useProfileState`           | hook      | `/client`                        | —                                                                                                                             | profile (`traits`)                        | `react-web-sdk#hooks/useOptimizationState.ts#useProfileState`                                                                             |
-| `useOptimizationActions`    | hook      | `/client`                        | —                                                                                                                             | `{ setConsent, identifyUser, resetUser }` | `react-web-sdk#hooks/useOptimizationActions.ts#useOptimizationActions`                                                                    |
-| `useOptimizationContext`    | hook      | `/client`                        | —                                                                                                                             | `{ sdk }` (undefined until ready)         | `react-web-sdk#hooks/useOptimization.ts#useOptimizationContext`; `react-web-sdk#context/OptimizationContext.tsx#OptimizationContextValue` |
-| `useMergeTagResolver`       | hook      | `/client`                        | —                                                                                                                             | merge-tag resolver                        | `react-web-sdk#hooks/useMergeTagResolver.ts#useMergeTagResolver`                                                                          |
-| `useOptimizedEntry`         | hook      | `/client`                        | React Web manual/managed entry source                                                                                         | resolved entry state                      | `react-web-sdk#optimized-entry/useOptimizedEntry.ts#useOptimizedEntry`                                                                    |
+| Name                              | Kind      | Import path                             | Key props/args                                                                                                                | Returns                                   | source                                                                                                                                                                                                 |
+| --------------------------------- | --------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Bound `OptimizationRoot`          | component | `/pages-router` binder return           | `handoff?`, `hydration?`, `prefetchManagedEntries?`, `routeKey?`, `buildPagePayload?`, `initialPagePayload?`, `children`      | `ReactElement`                            | `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationRootProps`                                                                 |
+| Bound `OptimizationProvider`      | component | `/pages-router` binder return           | `children`; `handoff?`; `hydration?`; `prefetchManagedEntries?`; internally wraps `LiveUpdatesProvider` (`globalLiveUpdates`) | `ReactElement` / `null`                   | `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationProviderProps`                                                             |
+| Bound `OptimizationAnalyticsRoot` | component | `/pages-router` binder return           | analytics handoff, route key, page payload builder, children                                                                  | `ReactElement`                            | `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationAnalyticsRootProps`                                                        |
+| `OptimizedEntry`                  | component | `/pages-router` direct / binding return | React Web component with `baselineEntry`, flat `entryId` + `entryQuery`, or object descriptor under `managedEntry`            | `ReactElement` / `null`                   | `react-web-sdk#next-pages.ts`; `nextjs-sdk#pages-router.ts`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry`                                                                         |
+| `NextPagesAutoPageTracker`        | component | `/pages-router`                         | `initialPageEvent?: 'emit' / 'skip'`, `getPagePayload?`                                                                       | `null`                                    | `react-web-sdk#next-pages.ts`; `nextjs-sdk#pages-router.ts#NextPagesAutoPageTracker`; `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker`                                                   |
+| `useConsentState`                 | hook      | `/pages-router`                         | —                                                                                                                             | consent state                             | `react-web-sdk#next-pages.ts`; `nextjs-sdk#pages-router.ts`; `react-web-sdk#hooks/useConsentState.ts#useConsentState`                                                                                  |
+| `useProfileState`                 | hook      | `/pages-router`                         | —                                                                                                                             | profile (`traits`)                        | `react-web-sdk#next-pages.ts`; `nextjs-sdk#pages-router.ts`; `react-web-sdk#hooks/useOptimizationState.ts#useProfileState`                                                                             |
+| `useOptimizationActions`          | hook      | `/pages-router`                         | —                                                                                                                             | `{ setConsent, identifyUser, resetUser }` | `react-web-sdk#next-pages.ts`; `nextjs-sdk#pages-router.ts`; `react-web-sdk#hooks/useOptimizationActions.ts#useOptimizationActions`                                                                    |
+| `useOptimizationContext`          | hook      | `/pages-router`                         | —                                                                                                                             | `{ sdk }` (undefined until ready)         | `react-web-sdk#next-pages.ts`; `nextjs-sdk#pages-router.ts`; `react-web-sdk#hooks/useOptimization.ts#useOptimizationContext`; `react-web-sdk#context/OptimizationContext.tsx#OptimizationContextValue` |
+| `useMergeTagResolver`             | hook      | `/pages-router`                         | —                                                                                                                             | merge-tag resolver                        | `react-web-sdk#next-pages.ts`; `nextjs-sdk#pages-router.ts`; `react-web-sdk#hooks/useMergeTagResolver.ts#useMergeTagResolver`                                                                          |
+| `useOptimizedEntry`               | hook      | `/pages-router`                         | React Web manual/managed entry source                                                                                         | resolved entry state                      | `react-web-sdk#next-pages.ts`; `nextjs-sdk#pages-router.ts`; `react-web-sdk#optimized-entry/useOptimizedEntry.ts#useOptimizedEntry`                                                                    |
 
-Note: the hooks
-(`useConsentState`/`useProfileState`/`useOptimizationActions`/`useOptimizationContext`/
-`useMergeTagResolver`/`useOptimizedEntry`) import from `/client`, not `/pages-router` (which exports
-the binding helper + tracker + types only).
-source: `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#client.ts`.
+The hooks and per-entry controls import from `/pages-router`, not the router-neutral Next.js
+`/client` runtime. `/pages-router` re-exports the matching React Web runtime alongside its binding
+helper, tracker, and bound types.
+source: `react-web-sdk#next-pages.ts`; `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#client.ts`.
 
-Note: unlike App Router's bound `OptimizedEntry`, the Pages Router `OptimizedEntry` IS the react-web
-component directly, so it accepts per-entry `liveUpdates`, `loadingFallback`, the flat managed ID
-source, object descriptors under `managedEntry`, and managed-source error props. Double-wrapping the
-same baseline id returns null + a dev warning.
-source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntrySourceProps`.
+Unlike App Router's bound `OptimizedEntry`, the Pages Router `OptimizedEntry` is the facade component
+directly, so it accepts per-entry `liveUpdates`, `loadingFallback`, the flat managed ID source, object
+descriptors under `managedEntry`, and managed-source error props. Double-wrapping the same baseline
+id returns null + a dev warning.
+source: `react-web-sdk#next-pages.ts`; `nextjs-sdk#pages-router.ts`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntrySourceProps`.
 
 ## Render / entry resolution
 
@@ -119,6 +122,11 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
   source: `nextjs-sdk#server-entry-renderer.tsx#renderOptimizedEntryOnServer`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`
 - Merge tags: guard embedded nodes with `isMergeTagEntry`; pass node `target` to `getMergeTagValue`.
   source: `api-schemas#contentful/typeGuards.ts#isMergeTagEntry`; `core-sdk#CoreBase.ts#getMergeTagValue`.
+- The bound roots/providers delegate browser presentation and settlement to React Web.
+  `NextPagesAutoPageTracker` waits for router readiness and keys transitions by `asPath`; handoff
+  occurrence, replay, fallback, hydration-failure, reconnect, and live-authority behavior follows
+  the shared React Web contract.
+  source: `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker`; kb:shared/concepts.md; kb:web/react-web.md
 
 ## Identifier ownership
 
@@ -131,9 +139,11 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
 
 ## Events & tracking
 
-- Page events: `NextPagesAutoPageTracker` emits on navigation; reads route via `useRouter` (NOT
-  `useSearchParams`) ⇒ **no `Suspense` boundary needed** (App Router's tracker does need it).
-  source: `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker`.
+- Page events: the binder-exposed `NextPagesAutoPageTracker` comes from the same `/next-pages`
+  runtime facade that `/pages-router` re-exports for the bound tree. It emits on navigation, reads
+  route state through `useRouter`, and does not need the `Suspense` boundary required by the App
+  Router tracker.
+  source: `react-web-sdk#next-pages.ts`; `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker`.
 - `getPagePayload` callback receives `AutoPageEmissionContext<NextPagesAutoPageContext>` =
   `{ context, routeKey, isInitialEmission }`. Route fields (`pathname`, `asPath`, `query`, `router`,
   `routeKey`) are nested under `.context`, NOT top-level ⇒ destructure

@@ -26,10 +26,10 @@ const CLIENT_DIRECTIVE = "'use client';"
 
 const reactClientEntries = {
   index: './src/index.ts',
-  'router/next-app': './src/router/next-app.tsx',
-  'router/next-pages': './src/router/next-pages.tsx',
-  'router/react-router': './src/router/react-router.tsx',
-  'router/tanstack-router': './src/router/tanstack-router.tsx',
+  'next-app': './src/next-app.ts',
+  'next-pages': './src/next-pages.ts',
+  'react-router': './src/react-router-facade.ts',
+  'tanstack-router': './src/tanstack-router.ts',
 } as const
 
 const supportEntries = {

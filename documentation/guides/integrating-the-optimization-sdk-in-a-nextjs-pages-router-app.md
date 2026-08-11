@@ -250,13 +250,14 @@ Pages Router integrations have an explicit client/server split:
 
 | Import path                                           | Use                                                                                                          |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `@contentful/optimization-nextjs/pages-router`        | Browser-facing binding for `_app.tsx`, route tracker, roots, `OptimizedEntry`, and selection helpers         |
+| `@contentful/optimization-nextjs/pages-router`        | Browser binding plus hooks, providers, entries, route tracker, and selection helpers for the bound tree      |
 | `@contentful/optimization-nextjs/pages-router/server` | Server helper for `getServerSideProps` request handoff, public permutation handoff, and selection resolution |
-| `@contentful/optimization-nextjs/client`              | Browser-only hooks and lower-level React roots                                                               |
+| `@contentful/optimization-nextjs/client`              | Router-neutral browser runtime; do not use its context-bound values beneath a Pages Router-bound root        |
 | `@contentful/optimization-nextjs/tracking-attributes` | Low-level `data-ctfl-*` attributes for analytics-only markup                                                 |
 
 Use the server entrypoint only from server files. Use the browser-facing module for `_app.tsx` and
-components.
+every context-bound hook, provider, or entry beneath its bound root. Use `/client` only for a
+router-neutral tree that does not use the Pages Router binding.
 
 ### Fetching Contentful entries
 
@@ -519,7 +520,8 @@ Replace the quick-start consent shortcut with your app policy:
 2. Seed conservative browser defaults through `consent.clientDefaults` for routes without a request
    handoff.
 3. Mirror browser choices to the app-owned consent record before the next request.
-4. Use `setConsent`, `identifyUser`, and `resetUser` from `/client` hooks for browser actions.
+4. Use `setConsent`, `identifyUser`, and `resetUser` from `/pages-router` hooks for browser actions
+   beneath the bound root.
 
 For request-handoff routes, defaults derived from the resolved `consent.server` decision travel in
 the handoff and take precedence over matching `consent.clientDefaults` axes. Keep the two policies
@@ -565,8 +567,8 @@ For the full pattern, use
 **Integration category:** Optional
 
 The `OptimizedEntry` render prop also receives `getMergeTagValue`. Pass it to your Rich Text
-renderer when entries contain SDK-owned merge-tag entries. Use `/client` hooks for browser-only
-Custom Flags when a page needs reactive flag reads after hydration.
+renderer when entries contain SDK-owned merge-tag entries. Use `/pages-router` hooks beneath the
+bound root for browser-only Custom Flags when a page needs reactive flag reads after hydration.
 
 **Follow this pattern:**
 

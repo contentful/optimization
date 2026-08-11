@@ -11,16 +11,12 @@ import ContentfulOptimization, {
   type OptimizationWebConfig,
   type TrackCurrentPageOptions,
 } from './ContentfulOptimization'
-import {
-  hydrateOptimizationHandoffState,
-  shouldPreserveDurableContinuity,
-  type AnalyticsOptimizationHandoff,
-} from './handoff'
+import { shouldPreserveDurableContinuity, type AnalyticsOptimizationHandoff } from './handoff'
+import { hydrateOptimizationHandoffStateInternal } from './handoff-internal'
 
 const logger = createScopedLogger('Web:AnalyticsHandoff')
 
 const runtimeSdks = new WeakMap<OptimizationAnalyticsRuntime, ContentfulOptimization>()
-let latestAnalyticsHandoffHydration = 0
 
 /**
  * Options used when hydrating an analytics-only handoff.
@@ -44,6 +40,8 @@ export interface HydrateOptimizationAnalyticsHandoffOptions {
 export interface OptimizationAnalyticsRuntime {
   /** Entry interaction tracking controls backed by existing `data-ctfl-*` attributes. */
   readonly tracking: OptimizationTrackingApi
+  /** Read-only current-page coordination state for advanced integrations. */
+  readonly states: Pick<ContentfulOptimization['states'], 'currentStateTracking'>
   /** Flush queued analytics work. */
   flush: () => Promise<void>
   /** Track the current route with the same semantics as the full Web SDK. */
@@ -118,6 +116,7 @@ export function initializeOptimizationAnalyticsRuntime(
     flush: async () => {
       await sdk.flush()
     },
+    states: { currentStateTracking: sdk.states.currentStateTracking },
     trackCurrentPage: async (options) => await sdk.trackCurrentPage(options),
     tracking: sdk.tracking,
   }
@@ -145,16 +144,13 @@ export async function hydrateOptimizationAnalyticsHandoff(
   assertInitialPageEvent(handoff.initialPageEvent)
   assertOptimizationCacheSafety(handoff)
   const sdk = getRuntimeSdk(runtime)
-  latestAnalyticsHandoffHydration += 1
-  const hydration = latestAnalyticsHandoffHydration
-  const isCurrent = (): boolean =>
-    hydration === latestAnalyticsHandoffHydration && options.isCurrent?.() !== false
+  const isCurrent = (): boolean => options.isCurrent?.() !== false
 
-  await hydrateOptimizationHandoffState(sdk, handoff.state, {
+  const hydrated = await hydrateOptimizationHandoffStateInternal(sdk, handoff.state, {
     isCurrent,
     suppressDurableContinuityPersistence: shouldPreserveDurableContinuity(handoff),
   })
-  if (!isCurrent()) return
+  if (!hydrated || !isCurrent()) return
 
   warnSkippedInitialPageWithoutProfileContinuity(sdk, handoff)
 

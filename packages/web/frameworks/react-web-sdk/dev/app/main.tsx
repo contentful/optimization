@@ -1,8 +1,7 @@
 import { StrictMode, type ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
-import { OptimizationRoot } from '../../src'
-import { ReactRouterAutoPageTracker } from '../../src/router/react-router'
+import { OptimizationRoot, ReactRouterAutoPageTracker } from '../../src/react-router-facade'
 
 import { App } from './App'
 import { CLIENT_ID, ENVIRONMENT, EXPERIENCE_BASE_URL, INSIGHTS_BASE_URL } from './constants'

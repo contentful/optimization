@@ -1,4 +1,4 @@
-import { OptimizedEntry } from '@contentful/optimization-react-web'
+import { OptimizedEntry } from '@contentful/optimization-react-web/react-router'
 import type { JSX } from 'react'
 import type { ContentEntry } from '../types/contentful'
 

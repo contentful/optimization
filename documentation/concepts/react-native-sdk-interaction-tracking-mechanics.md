@@ -30,17 +30,17 @@ the shared Core event pipeline.
 Decide these policies before initialization because they control which events can leave the device
 and which state can survive a process restart:
 
-| Constraint           | React Native behavior                                                                                                                                                                                                                                                                                      |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Consent              | Consent starts as unset unless `defaults.consent` or persisted SDK consent provides a value. Until event consent is `true`, the React Native default allow-list permits `identify` and `screen`; entry views, taps, `page`, and custom `track` events do not emit unless `allowedEventTypes` permits them. |
-| Persistence consent  | Boolean `consent(true)` and `consent(false)` update event consent and durable profile-continuity persistence consent together. Use object-form consent when event emission and durable profile continuity follow separate policy decisions.                                                                |
-| Allowed event types  | `allowedEventTypes` replaces the React Native default pre-consent allow-list. Keep it narrow and align it with the application's privacy review. For interaction tracking, use `component` for entry views, `component_click` for taps, and `flag` or `component` for Custom Flag views.                   |
-| Active profile       | Insights events need a current Optimization profile. Hydrate a persisted or default profile, or bootstrap one through an Experience path such as `identify`, `screen`, `page`, `track`, or a sticky entry view before relying on entry views, taps, or flag views.                                         |
-| Scroll context       | View tracking needs both entry layout and viewport position. Wrap scrollable screens in `OptimizationScrollProvider`; otherwise the hook assumes `scrollY = 0` and only screen-height visibility is considered.                                                                                            |
-| Storage availability | AsyncStorage persists SDK consent and, when persistence consent is `true`, profile-continuity values such as profile, anonymous ID, selected optimizations, and pending changes. Live state reads use in-memory SDK state after startup.                                                                   |
-| Preview mode         | The preview panel is an application opt-in surface. Mount it only in authoring or development flows; opening it forces live entry updates so audience and variant overrides are visible immediately.                                                                                                       |
-| Offline behavior     | Insights queueing and offline Experience buffering are in memory. NetInfo lets the SDK pause flushing while offline and resume on reconnect. Background or inactive app transitions trigger a `flush()` and AsyncStorage drain, but the SDK does not provide a durable outbox across process death.        |
-| Configured defaults  | Startup defaults apply before provider children mount. Use `defaults={{ consent: true }}` only for default-on application policies; do not set default consent later from a child effect because child tracking effects can run before that policy is applied.                                             |
+| Constraint           | React Native behavior                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Consent              | Consent starts as unset unless `defaults.consent` or persisted SDK consent provides a value. Until event consent is `true`, the React Native default allow-list permits `identify` and `screen`; entry views, taps, `page`, and custom `track` events do not emit unless `allowedEventTypes` permits them.                                                                                                                                                         |
+| Persistence consent  | Boolean `consent(true)` and `consent(false)` update event consent and durable profile-continuity persistence consent together. Use object-form consent when event emission and durable profile continuity follow separate policy decisions.                                                                                                                                                                                                                        |
+| Allowed event types  | `allowedEventTypes` replaces the React Native default pre-consent allow-list. Keep it narrow and align it with the application's privacy review. For interaction tracking, use `component` for entry views, `component_click` for taps, and `flag` or `component` for Custom Flag views.                                                                                                                                                                           |
+| Active profile       | Insights events need a current Optimization profile. Hydrate a persisted or default profile, or bootstrap one through an Experience path such as `identify`, `screen`, `page`, `track`, or a sticky entry view before relying on entry views, taps, or flag views.                                                                                                                                                                                                 |
+| Scroll context       | View tracking needs both entry layout and viewport position. Wrap scrollable screens in `OptimizationScrollProvider`; otherwise the hook assumes `scrollY = 0` and only screen-height visibility is considered.                                                                                                                                                                                                                                                    |
+| Storage availability | AsyncStorage persists SDK consent and, when persistence consent is `true`, profile-continuity values such as profile, anonymous ID, selected optimizations, and pending changes. Live state reads use in-memory SDK state after startup.                                                                                                                                                                                                                           |
+| Preview mode         | The preview panel is an application opt-in surface. Mount it only in authoring or development flows; opening it forces live entry updates so audience and variant overrides are visible immediately.                                                                                                                                                                                                                                                               |
+| Offline behavior     | Insights queueing and ordinary offline Experience buffering are in memory. NetInfo lets the SDK pause flushing while offline and resume on reconnect. `trackCurrentScreen` calls, including automatic screen tracking, are online-only, are not enqueued, and require an explicit retry after reconnecting. Background or inactive app transitions trigger a `flush()` and AsyncStorage drain, but the SDK does not provide a durable outbox across process death. |
+| Configured defaults  | Startup defaults apply before provider children mount. Use `defaults={{ consent: true }}` only for default-on application policies; do not set default consent later from a child effect because child tracking effects can run before that policy is applied.                                                                                                                                                                                                     |
 
 ## Mental model
 
@@ -56,8 +56,9 @@ wrap Contentful entries in `<OptimizedEntry />`, the SDK gives you these trackin
 - **Profile-gated Insights events** - Entry views, taps, and flag views are Insights events. They
   need a current profile from an Experience path before the Insights queue accepts them.
 - **Offline queueing and background flushing** - When `@react-native-community/netinfo` is
-  installed, Insights events and offline Experience events flush after connectivity returns and when
-  the app moves toward the background.
+  installed, Insights events and ordinary offline Experience events flush after connectivity
+  returns and when the app moves toward the background. Automatic current-screen calls are not
+  enqueued and require an explicit retry after reconnecting.
 - **Persistence across launches** - AsyncStorage restores consent state and, when persistence
   consent permits it, profile-continuity values such as profile, anonymous ID, and selected
   optimizations.
@@ -184,16 +185,22 @@ Insights and Experience use different delivery shapes:
 
 - **Insights events** are queued by profile in memory and batched for the Insights API. Consent,
   active profile state, online state, and flush policy all affect whether they leave the device.
-- **Experience events** call `upsertProfile` immediately while online. When offline, the SDK buffers
-  them in memory and replays them through `upsertProfile` after reconnect. Retry and backoff are
-  configurable via `queuePolicy.flush`.
+- **Ordinary Experience events** from calls such as `identify`, `screen`, `page`, and `track` call
+  `upsertProfile` immediately while online. When offline, the SDK buffers them in memory and replays
+  them through `upsertProfile` after reconnect. Retry and backoff are configurable via
+  `queuePolicy.flush`.
+- **Current-screen events** from `trackCurrentScreen`, including automatic screen tracking, are
+  online-only. The SDK does not add them to the ordinary offline Experience queue, and reconnecting
+  does not retry them. The consumer or navigation integration must call `trackCurrentScreen` again
+  after reconnecting.
 
 The React Native SDK layers React Native-specific behavior on top:
 
 1. **Online/offline detection** via `@react-native-community/netinfo`. When offline, the SDK buffers
-   eligible in-memory events; when `isInternetReachable` (preferred) or `isConnected` flips back to
-   `true`, the SDK resumes flushing. If NetInfo is not installed, the SDK logs a warning and stays
-   always online. Tracking continues, but offline durability is reduced.
+   eligible ordinary events; when `isInternetReachable` (preferred) or `isConnected` flips back to
+   `true`, the SDK resumes flushing. It does not retry current-screen calls. If NetInfo is not
+   installed, the SDK logs a warning and stays always online. Tracking continues, but offline
+   durability is reduced.
 2. **Background flushing.** On `AppState` transition to `background` or `inactive`, the SDK calls
    `flush()` and drains pending AsyncStorage persistence before the OS might suspend the process.
 3. **Final view event on background.** If an entry is mid-visibility-cycle when the app backgrounds,
@@ -471,9 +478,14 @@ is set, it JSON-validates route params, attaches them to event `properties`, and
 the route key. `onStateChange` compares the previous route key with the current route key, so two
 routes with the same name can still emit separate screen events when params are included. The
 container calls `trackCurrentScreen`, which deduplicates accepted current-route emissions. When
-`screen` is not allowed, the underlying current-state tracker treats the emission as
-`attempted: false` before Core is called, so that skip does not produce an `onEventBlocked` or
-blocked-stream diagnostic.
+`screen` is not allowed, the Core-owned current-state coordinator returns `not-allowed` before an
+event is sent. The React Native API exposes that as `{ accepted: false }`, so that skip does not
+produce an `onEventBlocked` or blocked-stream diagnostic. Operational failures reject the call.
+
+The automatic current-screen call is online-only and is not added to the ordinary offline
+Experience queue. Reconnecting does not retry it. If the active route must be recorded after
+connectivity returns, the consumer or navigation integration must explicitly call
+`trackCurrentScreen` again for that route.
 
 ### useScreenTracking
 
@@ -495,15 +507,23 @@ function DetailsScreen() {
 
 With `trackOnMount: true` (the default), the hook calls `trackCurrentScreen` with the screen name as
 the route key when the descriptor is ready. Changing the name changes the key and can emit again. If
-automatic tracking is not allowed, the underlying current-state tracker treats the emission as
-`attempted: false` without a Core blocked-event diagnostic. The returned `trackScreen` function
-calls `screen` directly for manual retracking and is not current-route deduplicated.
+automatic tracking is not allowed, the Core-owned current-state coordinator returns `not-allowed`
+without a Core blocked-event diagnostic. Operational failures reject the call. The returned
+`trackScreen` function calls `screen` directly for manual retracking and is not current-route
+deduplicated.
+
+The automatic `trackCurrentScreen` call is online-only and is not enqueued. Reconnecting does not
+rerun the hook effect, so the consumer or navigation integration must explicitly retry current-screen
+tracking after reconnecting. This restriction does not apply to the returned `trackScreen` function:
+because it calls the ordinary `screen` method directly, it uses ordinary offline Experience queue
+behavior.
 
 ### useScreenTrackingCallback
 
 Returns a stable `(name, properties?) => void` callback for imperative screen tracking with names
 that aren't known at render time (deep links, dynamic titles, navigation state transforms). It calls
-`screen` directly and does not apply route-key deduplication.
+`screen` directly, does not apply route-key deduplication, and uses ordinary offline Experience
+queue behavior.
 
 ```tsx
 const trackScreen = useScreenTrackingCallback()
@@ -526,7 +546,8 @@ for exhaustive prop and type details.
   even when `trackClick` is not allowed.
 - The preview panel forces live entry updates while it is open so authoring overrides can render
   immediately.
-- `queuePolicy.flush` controls shared retry, backoff, and circuit behavior. `offlineMaxEvents` and
+- `queuePolicy.flush` controls retry, backoff, and circuit behavior for Insights and ordinary
+  Experience queues. It does not enqueue or retry current-screen calls. `offlineMaxEvents` and
   `onOfflineDrop` apply to the offline Experience buffer.
 
 Use `onStatesReady` when diagnostics or app-level observers must attach as soon as SDK state exists
@@ -534,9 +555,8 @@ and before provider children can emit `screen`, `eventStream`, or `blockedEventS
 
 ## Manual tracking guidance
 
-Manual tracking uses the same consent gates, profile requirements, and delivery paths as automatic
-tracking. Reach for it when the event is meaningful but no `<OptimizedEntry>` lifecycle matches the
-surface:
+Manual tracking uses the consent gates and profile requirements for each method's delivery path.
+Reach for it when the event is meaningful but no `<OptimizedEntry>` lifecycle matches the surface:
 
 - Use `trackView` for a screen-wide or manually timed entry view. Provide a stable `viewId` and
   measured `viewDurationMs`; automatic entry tracking generates those values for each visibility
@@ -568,8 +588,9 @@ For a scrollable list screen with navigation and entry cards, tracking flows in 
   when `trackClick` is allowed and calls the application `onTap` handler when provided, even when
   the Analytics event is skipped.
 - **Background or offline** - Backgrounding triggers a final view for active cycles and asks queues
-  to flush. Offline Insights events and offline Experience events remain in memory and replay on
-  reconnect if the process survives.
+  to flush. Offline Insights events and ordinary offline Experience events remain in memory and
+  replay on reconnect if the process survives. Current-screen calls are not enqueued; the consumer
+  or navigation integration must explicitly retry them after reconnecting.
 
 ## Related documentation
 

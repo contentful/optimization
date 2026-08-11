@@ -187,7 +187,12 @@ Router uses explicit runtime paths. Bind Server Components with
 `bindNextjsAppRouterServerOptimization({ locale })` from `/app-router/server`; use the nested
 `request` components for private request rendering. Bind Client Components separately with
 `bindNextjsAppRouterClientOptimization({ locale })` from `/app-router/client` when they need the
-bound browser surface. Router-neutral browser hooks and per-entry controls remain under `/client`.
+configured bound browser surface. Roots and providers from `/app-router/client` establish App Router
+facade boundaries. Beneath one of those boundaries, descendants import direct hooks, the tracker,
+and `OptimizedEntry` from the same path so they consume its context. A separate router-neutral React
+tree is not runtime isolation. Use `/client` only when that tree has no App Router tracker or context
+consumer and either its root is the browser runtime's sole config-owned Optimization root or its
+provider receives the existing live singleton through `sdk`.
 
 Next.js App Router binding module (TypeScript):
 

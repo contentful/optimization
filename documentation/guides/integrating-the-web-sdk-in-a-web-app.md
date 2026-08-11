@@ -77,9 +77,10 @@ step before you ship.
 
    Before you resolve, call `page()` once: a page event asks the Experience API to evaluate the
    visitor. Its `accepted` field only says whether the SDK allowed the event. Returned `data`, when
-   present, carries current selections. On this new instance, an accepted result without `data`
-   leaves selections empty, so resolution safely returns the baseline; `accepted: false` stops the
-   example before rendering.
+   present, carries selections for that call. This quick start has no overlapping Experience calls
+   or route transitions, so the response can populate the new instance's shared state. An accepted
+   result without `data` leaves selections empty, so resolution safely returns the baseline;
+   `accepted: false` stops the example before rendering.
 
    **Adapt this to your use case:** replace the placeholder values and the `#hero` selector with
    your own; the config keys are explained in
@@ -108,7 +109,7 @@ step before you ship.
      app: { name: 'my-web-app', version: '1.0.0' },
    })
 
-   // Emit the page event first; returned data, when present, supplies current selections.
+   // Await the page event before resolving; this startup sequence has no overlapping calls.
    const pageResult = await optimization.page()
    if (!pageResult.accepted) {
      throw new Error('Optimization page event was blocked; check consent policy')
@@ -284,18 +285,20 @@ plainly. The Web SDK is imperative and stateful, and its state fills in a specif
   `states.*` observables (explained in
   [State subscriptions, locale changes, and re-rendering](#state-subscriptions-locale-changes-and-re-rendering))
   work the moment you call `new ContentfulOptimization(...)`.
-- **But optimization state is empty until an accepted event returns it.** The SDK only has current
-  `selectedOptimizations` after an accepted `page()` or `identify()` call resolves (`identify()`
-  works the same way — see [Identity, profile, and reset](#identity-profile-and-reset)). Resolve an
-  entry before that and you get the baseline — which is correct, just not personalized yet.
+- **Optimization state begins empty and only the applicable response updates it.** In a sequential
+  startup, await `page()` or `identify()` before resolving (`identify()` works the same way — see
+  [Identity, profile, and reset](#identity-profile-and-reset)). If calls overlap, each call still
+  receives its own result, but an older result might not update shared SDK state. Resolve before any
+  response populates that state and you get the baseline — which is correct, just not personalized
+  yet.
 
 So the order that matters is: construct → emit `page()` (or `identify()`) → resolve entries. That is
 why the quick start awaits `page()` before calling `resolveOptimizedEntry()`.
 
 1. Construct the instance once and reuse it (see
    [How the SDK fits your app](#how-the-sdk-fits-your-app)).
-2. Emit an accepted `page()` or `identify()` before rendering optimized content so SDK state carries
-   current `selectedOptimizations`.
+2. Await `page()` or `identify()` before rendering optimized content. In this non-overlapping
+   startup sequence, returned response data can populate the shared `selectedOptimizations` state.
 3. Resolve and render entries. When you omit the second argument, `resolveOptimizedEntry()` uses the
    SDK's current state, so later re-renders pick up the latest selections automatically.
 
@@ -305,7 +308,7 @@ why the quick start awaits `page()` before calling `resolveOptimizedEntry()`.
 // 1. The instance is usable immediately after construction.
 const optimization = new ContentfulOptimization({ clientId, environment, locale })
 
-// 2. Emit an accepted event so SDK state has selections. `{ accepted: false }` means a guard blocked it.
+// 2. Await the event before resolving. `{ accepted: false }` means a guard blocked it.
 const { accepted } = await optimization.page()
 
 // 3. Now resolve against current state. Before step 2, this would return the baseline.
@@ -448,10 +451,10 @@ render the returned `entry`.**
 - `isEmptyVariant` — `true` when the selected variant has an empty ID. The returned `entry` retains
   the baseline for tracking context, but your app must render no content.
 
-Omit the second argument to resolve against the SDK's current state (the selections from the most
-recent accepted `page()`/`identify()`); pass an explicit `SelectedOptimizationArray` only when you
-resolve against selections you captured yourself — for example selections handed over from a
-server-rendered response (see
+Omit the second argument to resolve against the SDK's current state (the selections from the latest
+response that was allowed to update that state); pass an explicit `SelectedOptimizationArray` only
+when you resolve against selections you captured yourself — for example selections handed over from
+a server-rendered response (see
 [Hybrid Node SSR and browser continuity](#hybrid-node-ssr-and-browser-continuity)).
 
 If you configured the managed path (`contentful: { client }`), `fetchOptimizedEntry(id, options?)`
@@ -528,26 +531,47 @@ the required links are unresolved or invalid, or the payload uses all locales. T
 start renders default content before you author a variant or before an accepted event supplies
 selections.
 
-Keep the baseline entry id separate from the resolved entry id in the DOM. Later re-renders read the
-baseline id to resolve again, so overwriting it with the variant id would make the SDK treat a
-variant as the baseline.
+Keep the baseline entry id separate from the resolved entry id in the DOM. `data-ctfl-baseline-id`
+is an SDK-defined tracking attribute; the app code below writes it because this imperative renderer
+owns the DOM update. A later route render receives that route's baseline id from app-owned route
+data, so never replace it with the resolved variant id.
+
+The app-owned `EntryPresentation` type below has two modes. `current-selections` omits explicit
+selections so resolution uses the SDK's current shared selections. `baseline` passes an empty
+selection set so resolution returns baseline content. The optional `isCurrent` callback lets a
+router prevent the helper from writing after its asynchronous fetch when a newer route owns the
+screen.
 
 **Adapt this to your use case:** a render function that resolves one manually fetched entry and
 writes it plus its tracking metadata into an element.
 
 ```ts
-async function renderEntry(entryId: string, element: HTMLElement): Promise<void> {
-  const baselineEntry = await fetchEntry(entryId) // your own fetcher from the section above
+type EntryPresentation = 'current-selections' | 'baseline'
 
-  // Omit selections to use current SDK state from the most recent accepted page()/identify().
+async function renderEntry(
+  entryId: string,
+  element: HTMLElement,
+  presentation: EntryPresentation = 'current-selections',
+  isCurrent: () => boolean = () => true,
+): Promise<void> {
+  const baselineEntry = await fetchEntry(entryId) // your own fetcher from the section above
+  if (!isCurrent()) return // do not commit async work after a newer route takes ownership
+
+  // An empty selection set explicitly presents baseline after a current route failure.
+  const selectedOptimizations = presentation === 'baseline' ? [] : undefined
   const { entry, isEmptyVariant, optimizationContextId, selectedOptimization } =
-    optimization.resolveOptimizedEntry(baselineEntry)
+    optimization.resolveOptimizedEntry(baselineEntry, selectedOptimizations)
 
   element.textContent = isEmptyVariant ? '' : String(entry.fields.headline ?? '')
 
   // Keep the baseline id separate so re-renders resolve from the baseline, not the variant.
   element.dataset.ctflBaselineId = baselineEntry.sys.id
   element.dataset.ctflEntryId = entry.sys.id // the resolved id — used for interaction tracking
+
+  // Remove metadata from the previous presentation before adding the current selection.
+  delete element.dataset.ctflOptimizationContextId
+  delete element.dataset.ctflOptimizationId
+  delete element.dataset.ctflVariantIndex
   if (optimizationContextId) element.dataset.ctflOptimizationContextId = optimizationContextId
   if (selectedOptimization) {
     element.dataset.ctflOptimizationId = selectedOptimization.experienceId
@@ -567,7 +591,9 @@ first load and on every route change.
 1. Call `page()` after SDK initialization for a multi-page app or the first SPA route. It returns
    `{ accepted, data }`; `{ accepted: false }` means consent or an SDK guard blocked the event.
 2. In SPAs, use `trackCurrentPage({ routeKey, buildPayload })` on route changes. It deduplicates
-   consecutive identical route keys (a manual `page()` always emits when consent permits it).
+   consecutive identical route keys and returns the SDK-provided `TrackCurrentPageResult` that
+   identifies why an attempt was not accepted (a manual `page()` always emits when consent permits
+   it).
 3. Include stable page properties — url, path, search, referrer, title — when your router or
    analytics taxonomy needs them.
 4. In hybrid apps where the server already emitted the first page event, pass
@@ -581,34 +607,239 @@ first load and on every route change.
 const result = await optimization.page()
 ```
 
+`trackCurrentPage()` returns a result discriminated by `accepted`:
+
+- **`accepted: true`** - The SDK counts the route as accepted for consecutive-route deduplication.
+  With `initialPageEvent: 'skip'`, it marks the route accepted without emitting a browser page event.
+- **`data`** - When present on an accepted result, this is the Optimization response returned to
+  that call, including the visitor profile and selected optimizations. Returned data belongs to the
+  call; shared personalization state follows the concurrency rule below. When `data` is absent, the
+  result has no response payload to read. A rejected result also has no `data`; absence never means
+  the current page was queued offline.
+- **`accepted: false`** - The route was not accepted by this attempt. Use `reason` to decide what
+  happened:
+  - **`already-accepted`** - The same consecutive route key was already accepted, so the SDK did not
+    emit it again.
+  - **`not-allowed`** - Consent policy or connectivity prevented the page attempt from being
+    accepted. This reason does not distinguish between those causes, so check consent and browser
+    connectivity separately. An offline attempt does not emit an event or enter the offline queue;
+    going offline during asynchronous event processing also returns this reason. The route remains
+    observed and can be attempted again.
+  - **`superseded`** - A different route became current before this attempt settled, so its outcome
+    cannot become the current route state.
+
+In this guide, an **operational failure** means that `trackCurrentPage()` rejects instead of returning
+a result. The example below reports that error at the router boundary so your app can handle it
+according to the error and its policy.
+
+Route tracking and route presentation are separate app responsibilities. For an accepted or
+`already-accepted` route, present the route through your normal resolve-and-render path. For a
+current `not-allowed` result or operational rejection, explicitly present baseline by resolving with
+an empty selection set, as `renderEntry(..., 'baseline')` does above, or by bypassing optimized
+rendering. For `superseded`, present nothing from that stale completion because a newer route owns
+the screen.
+
+Give the tracker the incoming route's content after your router mounts it. In this example,
+`getCurrentRouteEntry()` returns the baseline entry ID from the app's route data and the newly
+mounted target. Both `current-selections` and `baseline` decisions use that captured pair; do not
+recover either value from the prior route's DOM. A route without an optimized entry can return
+`undefined` and still emit its page event.
+
+When that explicit baseline presentation renders Rich Text, resolve its guarded MergeTag entries with
+`optimization.getMergeTagFallbackValue(target)`. Do not read `target.fields.nt_fallback` yourself or
+call `getMergeTagValue()` against live profile state: the fallback helper validates the entry and
+returns its configured fallback without a profile lookup or missing-profile warning. Keep
+`getMergeTagValue()` for the `current-selections` presentation described in
+[Merge tags and Custom Flags](#merge-tags-and-custom-flags).
+
 **Adapt this to your use case:** an SPA route tracker with stable route keys, wired to your router.
+The exhaustive switch makes a future result reason a TypeScript error until the integration handles
+it. The `heroEntryId` property and `#hero` selector stand for the incoming route's app-owned content
+data and mounted target; replace both with your router's equivalents. Register the route callback
+after that target mounts.
 
 ```ts
+import type { TrackCurrentPageResult } from '@contentful/optimization-web'
+import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+
+type RouteDecision = {
+  routeKey: string
+  outcome: 'accepted' | 'already-accepted' | 'not-allowed' | 'superseded' | 'operational-rejection'
+  presentation: EntryPresentation | undefined
+  callLocalSelections?: SelectedOptimizationArray
+}
+
+type CurrentRouteEntry = {
+  entryId: string
+  element: HTMLElement
+}
+
+const ROUTE_DECISION_PROBE = false // enable only in a local or staging build
+
+function getCurrentRouteEntry(): CurrentRouteEntry | undefined {
+  // `heroEntryId` is app-owned route data used to fetch this route's baseline entry.
+  const entryId = router.currentRoute.heroEntryId
+  // Read the newly mounted route target, never data written by a prior presentation.
+  const element = document.querySelector<HTMLElement>('#hero')
+  return entryId && element ? { entryId, element } : undefined
+}
+
+function reportRouteDecision(
+  decision: RouteDecision,
+  generation: number,
+  presentationApplied: boolean,
+  element?: HTMLElement,
+): void {
+  if (!ROUTE_DECISION_PROBE) return
+  console.debug('Optimization route decision', {
+    generation,
+    routeKey: decision.routeKey,
+    outcome: decision.outcome,
+    presentation: decision.presentation ?? 'none',
+    presentationApplied,
+    callLocalSelections: decision.callLocalSelections,
+    currentSharedSelections: optimization.states.selectedOptimizations.current,
+    renderedText: element?.textContent,
+  })
+}
+
 function getRouteKey(): string {
   return `${window.location.pathname}${window.location.search}`
 }
 
-async function trackRoute(): Promise<void> {
-  await optimization.trackCurrentPage({
-    routeKey: getRouteKey(), // stable route keys prevent duplicate SPA page events
-    buildPayload: () => {
-      const url = new URL(window.location.href)
-      return {
-        properties: {
-          path: url.pathname,
-          referrer: document.referrer,
-          search: url.search,
-          title: document.title,
-          url: url.toString(),
-        },
+function assertNever(value: never): never {
+  throw new Error(`Unhandled trackCurrentPage reason: ${String(value)}`)
+}
+
+async function trackRoute(routeKey: string): Promise<RouteDecision> {
+  let result: TrackCurrentPageResult
+  try {
+    result = await optimization.trackCurrentPage({
+      routeKey, // stable route keys prevent duplicate SPA page events
+      buildPayload: () => {
+        const url = new URL(window.location.href)
+        return {
+          properties: {
+            path: url.pathname,
+            referrer: document.referrer,
+            search: url.search,
+            title: document.title,
+            url: url.toString(),
+          },
+        }
+      },
+    })
+  } catch (error: unknown) {
+    console.error('Optimization current-page tracking failed', error)
+    return { routeKey, outcome: 'operational-rejection', presentation: 'baseline' }
+  }
+
+  if (result.accepted) {
+    return {
+      routeKey,
+      outcome: 'accepted',
+      presentation: 'current-selections',
+      callLocalSelections: result.data?.selectedOptimizations,
+    }
+  }
+
+  const reason = result.reason
+  switch (reason) {
+    case 'already-accepted':
+      return { routeKey, outcome: reason, presentation: 'current-selections' }
+    case 'not-allowed':
+      console.info('Optimization page tracking is not allowed; check consent and connectivity')
+      return { routeKey, outcome: reason, presentation: 'baseline' }
+    case 'superseded':
+      return { routeKey, outcome: reason, presentation: undefined }
+    default:
+      return assertNever(reason)
+  }
+}
+
+let activeRouteTracking: Promise<void> | undefined
+let currentRouteRetry = Promise.resolve()
+let routeGeneration = 0
+
+function startRouteTracking(): Promise<void> {
+  const generation = ++routeGeneration
+  const routeKey = getRouteKey()
+  const routeEntry = getCurrentRouteEntry()
+  const isCurrent = () => generation === routeGeneration
+  const attempt = trackRoute(routeKey)
+    .then(async (decision) => {
+      if (!decision.presentation || !routeEntry || !isCurrent()) {
+        reportRouteDecision(decision, generation, false)
+        return
       }
-    },
+
+      await renderEntry(routeEntry.entryId, routeEntry.element, decision.presentation, isCurrent)
+      reportRouteDecision(decision, generation, isCurrent(), routeEntry.element)
+    })
+    .catch((error: unknown) => {
+      console.error('Optimization current-route presentation failed', error)
+    })
+  activeRouteTracking = attempt
+  void attempt.then(() => {
+    if (activeRouteTracking === attempt) activeRouteTracking = undefined
+  })
+  return attempt
+}
+
+function retryCurrentRoute(): void {
+  currentRouteRetry = currentRouteRetry.then(async () => {
+    // Do not join the same pending attempt that saw blocked policy or offline state.
+    while (activeRouteTracking) await activeRouteTracking
+    await startRouteTracking()
   })
 }
 
-void trackRoute()
-router.onRouteChange(() => void trackRoute()) // replace with your framework/router hook
+void startRouteTracking()
+router.onRouteChange(() => void startRouteTracking()) // register after each route mounts its target
+window.addEventListener('online', () => retryCurrentRoute()) // register once in your app root
 ```
+
+`routeGeneration` is app-owned lifecycle state. Each route attempt captures its generation, checks
+it before choosing a render target, and passes the same check into `renderEntry()` so an entry fetch
+cannot commit after a newer attempt starts. A stale `superseded` result returns no presentation
+decision. The same guard also drops a baseline decision from an operational rejection if a newer
+route starts before the router consumes it.
+
+The `not-allowed` reason does not identify its cause. The `online` listener above independently
+retries the current route when browser connectivity returns. `retryCurrentRoute()` waits for any
+active attempt to settle before it starts the retry, so it does not join the same pending attempt
+and receive its earlier outcome. Normal router callbacks still start immediately so a new route can
+supersede older work. A consent-blocked call remains unaccepted until your app changes consent and
+explicitly calls `retryCurrentRoute()`.
+
+If the router calls `trackCurrentPage()` again with the same key while the first attempt is pending,
+both calls share that attempt: the SDK builds and emits the page event once, and both callers receive
+the same outcome. A different key supersedes the older attempt, so the older call resolves with
+`reason: 'superseded'` if it finishes later.
+
+A route-key change also prevents every earlier in-flight Experience call from changing the SDK's
+shared personalization state. This applies to all ordinary Experience calls, including the
+`page()` and `identify()` calls introduced above, not only earlier `trackCurrentPage()` calls. Those
+ordinary calls can still settle with their own returned results. If the app needs an ordinary call's
+response to become the SDK's shared state, await that call before starting the route transition.
+
+Current-page emissions are online-only. An offline emission attempt remains observed and retryable,
+but coming back online does not retry it automatically. Call `trackCurrentPage()` again after
+reconnecting. An ordinary `page()` call remains separate from current-route tracking and can still
+use the SDK's offline queue.
+
+For advanced router adapters and diagnostics, `states.currentStateTracking` is a read-only observable
+of this lifecycle. A typical route moves through `idle` (no current key), `observed` (a current key
+that can be attempted or retried), `pending` (its page attempt is in progress), and `accepted` (the
+current key was accepted, including a deliberate skip). A policy- or connectivity-blocked route
+remains `observed` and can be attempted again. A different route key advances the numeric generation
+so stale work can be ignored.
+
+Read `.current` or subscribe as shown in
+[State subscriptions, locale changes, and re-rendering](#state-subscriptions-locale-changes-and-re-rendering).
+Continue to use `trackCurrentPage()` to advance the lifecycle because the observable exposes no
+mutation operations. For the full observable contract and current-state mechanics, see
+[Core state management](../concepts/core-state-management.md#public-observation-surface).
 
 ### Consent and privacy handoff
 
@@ -630,6 +861,8 @@ event consent is `undefined` or `false`, the SDK's default allow-list permits on
 5. Persist the visitor's choice in your own store (a cookie, `localStorage`, or account preference)
    so your UI can restore it next visit. That consent record is **yours** — you name, write, and
    read it. The SDK does not manage it; it only reflects what you pass to `consent()`.
+6. If an SPA current-route attempt was blocked, explicitly retry it after calling `consent(true)`.
+   Changing consent does not replay the blocked `trackCurrentPage()` call.
 
 **Follow this pattern:** default-on, when policy permits.
 
@@ -652,6 +885,8 @@ const optimization = new ContentfulOptimization({
 ```
 
 **Adapt this to your use case:** a consent control wired to the SDK and to your own consent record.
+For an SPA, `retryCurrentRoute()` is the serialized helper from
+[Page and route events](#page-and-route-events); omit that line when the app does not track routes.
 
 ```ts
 // This cookie is YOURS: your app writes and reads it. It is not an SDK cookie.
@@ -664,6 +899,7 @@ function persistConsent(consented: boolean): void {
 document.querySelector('#consent-accept')?.addEventListener('click', () => {
   optimization.consent(true) // boolean consent updates both event and persistence consent
   persistConsent(true)
+  retryCurrentRoute() // consent changes future policy; retry the blocked current route explicitly
 })
 
 document.querySelector('#consent-reject')?.addEventListener('click', () => {
@@ -1165,7 +1401,9 @@ Configure these only after your privacy, analytics, and platform owners agree on
    default allows `identify` and `page`.)
 2. Use `cookie` (`domain`, `expires` in days — default 365) when the profile-id cookie needs a
    specific domain or lifetime.
-3. Use `queuePolicy` when the default retry and offline-queue behavior does not match your limits.
+3. Use `queuePolicy` when the default retry and offline-queue behavior for ordinary Experience
+   events does not match your limits. It does not add `trackCurrentPage()` attempts to that queue;
+   retry the current route explicitly after reconnecting.
 4. Use `onEventBlocked` (and `states.blockedEventStream`) for diagnostics when consent or
    `allowedEventTypes` block events.
 
@@ -1176,13 +1414,13 @@ const optimization = new ContentfulOptimization({
   clientId: 'your-optimization-client-id',
   allowedEventTypes: [], // block all Optimization events until consent is accepted
   cookie: { domain: '.example.com', expires: 180 },
-  queuePolicy: { offlineMaxEvents: 100 },
+  queuePolicy: { offlineMaxEvents: 100 }, // ordinary offline Experience events only
   onEventBlocked: (event) => diagnostics.logBlockedOptimizationEvent(event),
 })
 ```
 
-Blocked events are not replayed when consent later changes. If the current route, flag, or entry
-state still qualifies after consent, the SDK can emit a fresh current-state event.
+Blocked events are not replayed when consent later changes. After allowing consent, call
+`retryCurrentRoute()` to attempt the current SPA route again.
 
 ## Production checks
 
@@ -1197,23 +1435,128 @@ Before release, verify these behaviors in the target deployment:
   profile continuity on withdrawal.
 - **Event delivery** — `page()`, `identify()`, `track()`, entry views/clicks/hovers, and flag views
   are accepted or blocked exactly as policy expects, and `states.blockedEventStream` stays empty for
-  events that should be allowed.
-- **Content fallback** — missing selections, unresolved links, all-locale CDA responses, or a failed
-  Experience API call render baseline content instead of breaking the page.
+  events that should be allowed. If the app uses the SPA route tracker from
+  [Page and route events](#page-and-route-events), enable and run the development-only
+  route-decision probe below to exercise every SPA result. Static and multi-page integrations skip
+  this probe and verify their ordinary `page()` result and event streams instead.
+- **Content fallback** — missing selections, unresolved links, and all-locale CDA responses resolve
+  to baseline content. Route presentation explicitly uses baseline after a current `not-allowed`
+  result or operational rejection instead of leaving stale personalized content on screen.
 - **Duplicate-tracking prevention** — SPA routes use stable route keys via `trackCurrentPage`,
   subscriptions register once per app root, `messageId` dedupe is applied before forwarding, the
   resolved (not baseline) entry id is used for tracking, and element tracking is not enabled twice
   for the same node.
 - **Privacy and governance** — profile identifiers, traits, forwarded fields, `localStorage` usage,
   the `ctfl-opt-aid` cookie, and retention match the app's approved policy.
-- **Local validation path** — compare the app against the Web SDK reference implementation and run
-  its checks locally.
+- **Local validation path** — compare the app against the Web SDK reference implementation. The
+  following maintainer commands run from the Optimization SDK Suite monorepo root.
 
-**Copy this:**
+**Reference excerpt:**
 
 ```sh
 pnpm implementation:run -- web-sdk typecheck
 pnpm test:e2e:web-sdk
+```
+
+The following route-result probe applies only to an SPA that uses the `trackCurrentPage()` route
+tracker from [Page and route events](#page-and-route-events). Static and multi-page integrations
+skip it. For an SPA route-result check, set `ROUTE_DECISION_PROBE` to `true` in the route tracker and
+filter the browser console for `Optimization route decision`. Each record separates
+`callLocalSelections` from `currentSharedSelections` and shows `generation`, `routeKey`,
+`presentation`, `presentationApplied`, and `renderedText`:
+
+- Start tracking online with consent allowed to observe `accepted` with `current-selections`.
+- From temporary development code in the same module, call `startRouteTracking()` again without
+  changing the route key to observe `already-accepted` with `current-selections`.
+- In browser developer tools, switch the network offline. From temporary development code, call
+  `history.pushState({}, '', '/optimization-probe-not-allowed')` before `startRouteTracking()` so the
+  attempt uses a fresh, unaccepted route key. Observe `not-allowed` with `baseline`. Restore
+  connectivity and invoke `retryCurrentRoute()` without changing the URL; it retries that same
+  current key. The probe reports an accepted retry and `states.currentStateTracking.current` reaches
+  `status: 'accepted'`. Repeat with a different fresh key, strict opt-in, and `consent(false)` when
+  consent denial also needs coverage.
+- Run `runControlledRouteDecisionProbe()` below. It first observes `operational-rejection` with
+  `baseline`, then pauses route A, starts route B, and releases A. The probe reports route B as
+  applied and route A as `superseded` with `presentation: 'none'` and
+  `presentationApplied: false`.
+
+For this SPA-only setup, the helper restores the original URL, removes its temporary event
+interceptors, and retracks the original route in a `finally` block. Run it only in development after
+configuring each probe path to mount the earlier `#hero` renderer and supply `heroEntryId` to
+`getCurrentRouteEntry()`. If raw `history.pushState()` does not mount routes in your app, replace
+those calls with your router's development navigation helper. Its interceptors ignore every event
+except the page event whose path matches the relevant probe route. Replace the probe paths if they
+conflict with your app.
+
+Invoke the module-scoped helper from temporary development code at the bottom of the same module,
+then remove that call and set `ROUTE_DECISION_PROBE` back to `false` after the check.
+
+**Follow this pattern:** temporary in-module invocation.
+
+```ts
+if (ROUTE_DECISION_PROBE) void runControlledRouteDecisionProbe()
+```
+
+**Adapt this to your use case:** one deterministic operational-rejection and supersession trigger
+for the route-decision probe.
+
+```ts
+async function runControlledRouteDecisionProbe(
+  rejectionPath = '/optimization-probe-rejection',
+  routeAPath = '/optimization-probe-a',
+  routeBPath = '/optimization-probe-b',
+): Promise<void> {
+  const originalUrl = window.location.href
+  let rejectionInterceptorId: number | undefined
+  let pauseInterceptorId: number | undefined
+  let releaseRouteA: (() => void) | undefined
+
+  try {
+    rejectionInterceptorId = optimization.interceptors.event.add((event) => {
+      if (event.type !== 'page' || event.properties.path !== rejectionPath) return event
+      throw new Error('Development-only route rejection')
+    })
+    history.pushState({}, '', rejectionPath)
+    await startRouteTracking()
+    optimization.interceptors.event.remove(rejectionInterceptorId)
+    rejectionInterceptorId = undefined
+
+    let markRouteAPaused!: () => void
+    const routeAPaused = new Promise<void>((resolve) => {
+      markRouteAPaused = resolve
+    })
+    const routeARelease = new Promise<void>((resolve) => {
+      releaseRouteA = resolve
+    })
+    let pauseNextRoute = true
+    pauseInterceptorId = optimization.interceptors.event.add(async (event) => {
+      if (event.type === 'page' && event.properties.path === routeAPath && pauseNextRoute) {
+        pauseNextRoute = false
+        markRouteAPaused()
+        await routeARelease
+      }
+      return event
+    })
+    history.pushState({}, '', routeAPath)
+    const routeA = startRouteTracking()
+    await routeAPaused
+
+    history.pushState({}, '', routeBPath)
+    const routeB = startRouteTracking()
+    releaseRouteA?.()
+    await Promise.all([routeA, routeB])
+  } finally {
+    releaseRouteA?.()
+    if (rejectionInterceptorId !== undefined) {
+      optimization.interceptors.event.remove(rejectionInterceptorId)
+    }
+    if (pauseInterceptorId !== undefined) {
+      optimization.interceptors.event.remove(pauseInterceptorId)
+    }
+    history.replaceState({}, '', originalUrl)
+    await startRouteTracking()
+  }
+}
 ```
 
 ## Troubleshooting
@@ -1226,6 +1569,7 @@ pnpm test:e2e:web-sdk
 | Variant fields show a type error                                 | The first generic does not include every possible baseline and variant skeleton                | Put all supported skeletons in one union as the first generic, then narrow with `isEntryOfContentType`           |
 | `ContentfulOptimization is already initialized`                  | More than one instance in the same browser runtime                                             | Reuse the module singleton, or call `destroy()` only in teardown paths                                           |
 | SPA page events duplicate                                        | Route changes call `page()` directly without route-key dedupe                                  | Use `trackCurrentPage()` with a stable `routeKey`                                                                |
+| The current SPA route remains untracked after reconnecting       | The offline attempt was not queued, or the reconnect retry joined the same pending attempt     | Register one browser `online` handler and serialize its retry after the active route attempt settles             |
 | `track()` or interaction events behave as blocked                | Consent is unset or false, or the event type is not allow-listed                               | Inspect `states.consent.current`, `allowedEventTypes`, `onEventBlocked`, and `states.blockedEventStream`         |
 | Automatic click tracking does not emit                           | The event target is not on a clickable path                                                    | Use native clickable elements or add `data-ctfl-clickable="true"` to the clickable path                          |
 | Custom Flag reads do not emit flag-view events                   | Consent or profile state is missing, or the same value was already tracked                     | Verify event consent, profile state, and that the flag value actually changed                                    |

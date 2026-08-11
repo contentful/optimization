@@ -1,6 +1,5 @@
 import type { LifecycleInterceptors } from '../CoreBase'
 import { signals } from '../signals'
-import { applyOptimizationDataToSignals } from '../state/applyOptimizationDataToSignals'
 import {
   CORE_BRIDGE_CAPABILITIES_SYMBOL,
   type CoreBridgeCapabilities,
@@ -28,9 +27,6 @@ export function installCoreBridgeCapabilities(
       selectedOptimizations: signals.selectedOptimizations,
       stateInterceptors,
     }),
-    hydrateOptimizationData: async (data) => {
-      await applyOptimizationDataToSignals(data, stateInterceptors)
-    },
   }
 
   Object.defineProperty(host, CORE_BRIDGE_CAPABILITIES_SYMBOL, {

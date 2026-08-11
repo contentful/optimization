@@ -2,8 +2,8 @@
 
 Next.js SDK App Router reference implementation for `@contentful/optimization-nextjs`. The adapter
 owns server/client SDK composition. Request routes use app-local `Request*` aliases, static/public
-routes use app-local `Explicit*` aliases, and client-only entry islands use `/client` props such as
-per-entry `liveUpdates` or `loadingFallback`.
+routes use app-local `Explicit*` aliases, and client-only entry islands use `/app-router/client`
+props such as per-entry `liveUpdates` or `loadingFallback`.
 
 ## Rules
 
@@ -19,17 +19,20 @@ per-entry `liveUpdates` or `loadingFallback`.
   `@/lib/optimization`. Analytics-only routes use the top-level `OptimizationAnalyticsRoot`.
 - Do not add app-owned request caches, request shells, `headers()` or `cookies()` plumbing, URL
   parsing, route-key construction, page payloads, or duplicate handoff awaits to request routes.
-- Client-only entry islands import `OptimizedEntry` from `@contentful/optimization-nextjs/client`
-  only when they need per-entry `liveUpdates` or `loadingFallback`.
-- Browser hooks and providers import from `@contentful/optimization-nextjs/client`.
+- Client-only entry islands import `OptimizedEntry` from
+  `@contentful/optimization-nextjs/app-router/client` only when they need per-entry `liveUpdates` or
+  `loadingFallback`.
+- Browser hooks, providers, runtime components, and their related runtime types import from
+  `@contentful/optimization-nextjs/app-router/client`. Do not use the generic
+  `@contentful/optimization-nextjs/client` entrypoint beneath a bound App Router root.
 - Proxy re-exports `proxy` from `@/lib/optimization` and declares the literal Next.js matcher config
   required by Next.js static analysis.
 - Do not import lower-level SDK packages directly from this implementation.
 - Landing/SEO pages should be Server Components; interactive/reactive surfaces should be Client
-  Components using browser hooks and the `/client` `<OptimizedEntry>` when per-entry live-update
-  control is required.
+  Components using browser hooks and the `/app-router/client` `<OptimizedEntry>` when per-entry
+  live-update control is required.
 - Configure app-local request entry live updates through the binding or `LiveUpdatesProvider`; use
-  `/client` `<OptimizedEntry liveUpdates>` for per-entry overrides.
+  `/app-router/client` `<OptimizedEntry liveUpdates>` for per-entry overrides.
 - Entry IDs and click scenarios come from the shared `e2e-web` fixtures (`PAGES`, `CLICK_SCENARIOS`
   from `e2e-web`). Do not duplicate these constants locally.
 - If consumed packages changed, run `pnpm build:pkgs` and reinstall before trusting results.
@@ -38,7 +41,9 @@ per-entry `liveUpdates` or `loadingFallback`.
 
 - `pnpm implementation:run -- nextjs-sdk_app-router <script>` with `implementation:install`,
   `typecheck`, `lint`, `build`, `dev`, `serve`, `serve:stop`, or `test:e2e`.
-- Root wrappers: `pnpm setup:e2e:nextjs-sdk_app-router` and `pnpm test:e2e:nextjs-sdk_app-router`.
+- Run `pnpm test:e2e:nextjs-sdk_app-router <file-or-filter>`, omitting the
+  file/filter only when the full suite is warranted. Refresh package tarballs and the implementation
+  install first only when consumed SDK packages changed or installed artifacts are stale.
 
 ## E2E
 

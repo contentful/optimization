@@ -13,8 +13,9 @@ React SPA reference implementation for the official `@contentful/optimization-re
 
 ## Commands
 
-- `pnpm implementation:run -- react-web-sdk <script>` with `implementation:install`, `typecheck`,
-  `build`, `dev`, `serve`, `serve:stop`, or `implementation:test:e2e:run`.
+- `pnpm implementation:react-web-sdk <script>` with `implementation:install`, `typecheck`,
+  `build`, `dev`, `serve`, or `serve:stop`.
+- Run Playwright with `pnpm test:e2e:react-web-sdk <file-or-filter>`.
 
 ## Validate
 

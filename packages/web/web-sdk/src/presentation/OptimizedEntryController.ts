@@ -136,7 +136,7 @@ function normalizeOptions<
 ): NormalizedOptimizedEntryControllerOptions<S, M, L> {
   return {
     hydration: options.hydration ?? 'client-only-hidden-until-ready',
-    isPresentationReady: options.isPresentationReady ?? false,
+    isPresentationReady: options.isPresentationReady ?? typeof window !== 'undefined',
     baselineEntry: options.baselineEntry,
     entryLiveUpdatesEnabled: options.entryLiveUpdatesEnabled,
     rootLiveUpdatesEnabled: options.rootLiveUpdatesEnabled ?? false,
@@ -350,31 +350,38 @@ export class OptimizedEntryController<
       return
     }
 
-    this.primeStateFromSdk()
-
     const { states } = sdk
     const { canOptimize, experienceRequestState, optimizationPossible, selectedOptimizations } =
       states
+    let isSubscribing = true
+    const updateSnapshot = (): void => {
+      if (!isSubscribing) this.updateSnapshot()
+    }
 
     this.subscriptions = [
       selectedOptimizations.subscribe((nextSelectedOptimizations) => {
         if (this.acceptSelectedOptimizations(nextSelectedOptimizations)) {
-          this.updateSnapshot()
+          updateSnapshot()
         }
       }),
       canOptimize.subscribe((nextCanOptimize) => {
+        if (this.canOptimize === nextCanOptimize) return
         this.canOptimize = nextCanOptimize
-        this.updateSnapshot()
+        updateSnapshot()
       }),
       experienceRequestState.subscribe((state) => {
-        this.hasExperienceRequestSettled = isExperienceRequestSettled(state)
-        this.updateSnapshot()
+        const hasExperienceRequestSettled = isExperienceRequestSettled(state)
+        if (this.hasExperienceRequestSettled === hasExperienceRequestSettled) return
+        this.hasExperienceRequestSettled = hasExperienceRequestSettled
+        updateSnapshot()
       }),
       optimizationPossible.subscribe((nextOptimizationPossible) => {
+        if (this.optimizationPossible === nextOptimizationPossible) return
         this.optimizationPossible = nextOptimizationPossible
-        this.updateSnapshot()
+        updateSnapshot()
       }),
     ]
+    isSubscribing = false
   }
 
   private acceptSelectedOptimizations(
@@ -393,27 +400,21 @@ export class OptimizedEntryController<
     return false
   }
 
-  private resolveIsLoading(): boolean {
-    const requiresOptimization = hasOptimizationReferences(this.options.baselineEntry)
-    const hasResolvedOptimizations = this.selectedOptimizations !== undefined
-    const isContentReady =
-      !requiresOptimization ||
-      !this.optimizationPossible ||
-      this.hasExperienceRequestSettled ||
-      hasResolvedOptimizations
-
-    return !isContentReady
-  }
-
   private createSnapshot(): OptimizedEntrySnapshot<S, M, L> {
-    const isLoading = this.resolveIsLoading()
+    const requiresOptimization = hasOptimizationReferences(this.options.baselineEntry)
+    const isLoading =
+      requiresOptimization &&
+      this.optimizationPossible &&
+      !this.hasExperienceRequestSettled &&
+      this.selectedOptimizations === undefined
     const isServerRender = typeof window === 'undefined'
+    const isPresentationReady = this.options.isPresentationReady || !requiresOptimization
     const loadingPresentation = resolveLoadingPresentation({
       hasBaselineRevealTimedOut: this.hasBaselineRevealTimedOut,
       hasCustomLoadingFallback: this.options.hasCustomLoadingFallback,
       hydration: this.options.hydration,
       isLoading,
-      isPresentationReady: this.options.isPresentationReady,
+      isPresentationReady,
       isServerRender,
       targetDisplay: this.options.targetDisplay,
     })
@@ -449,7 +450,7 @@ export class OptimizedEntryController<
         : {},
       isEmptyVariant: resolvedData.isEmptyVariant === true,
       isLoading,
-      isPresentationReady: this.options.isPresentationReady,
+      isPresentationReady,
       isResolved,
       loadingPresentation,
       metadata,
@@ -460,25 +461,27 @@ export class OptimizedEntryController<
   }
 
   private updateSnapshot(): void {
-    const isLoading = this.resolveIsLoading()
+    const nextSnapshot = this.createSnapshot()
+    const {
+      loadingPresentation: { showLoadingFallback: isPresentationPending },
+    } = nextSnapshot
 
-    if (!isLoading) {
+    if (!isPresentationPending) {
       this.hasBaselineRevealTimedOut = false
     }
 
-    const nextSnapshot = this.createSnapshot()
     const { snapshot: previousSnapshot } = this
     this.snapshot = nextSnapshot
-    this.syncLoadingRevealTimer(isLoading)
+    this.syncLoadingRevealTimer(isPresentationPending)
 
     if (!areOptimizedEntrySnapshotsEqual(previousSnapshot, nextSnapshot)) {
       this.listener?.(nextSnapshot)
     }
   }
 
-  private syncLoadingRevealTimer(isLoading: boolean): void {
-    if (!this.connected || !isLoading || this.hasBaselineRevealTimedOut) {
-      if (!isLoading || this.hasBaselineRevealTimedOut) {
+  private syncLoadingRevealTimer(isPresentationPending: boolean): void {
+    if (!this.connected || !isPresentationPending || this.hasBaselineRevealTimedOut) {
+      if (!isPresentationPending || this.hasBaselineRevealTimedOut) {
         this.clearLoadingRevealTimer()
       }
       return

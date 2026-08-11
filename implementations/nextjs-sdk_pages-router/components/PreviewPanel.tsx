@@ -1,7 +1,7 @@
 'use client'
 
 import { appConfig } from '@/lib/config'
-import { useOptimizationContext } from '@contentful/optimization-nextjs/client'
+import { useOptimizationContext } from '@contentful/optimization-nextjs/pages-router'
 import { useEffect, type JSX } from 'react'
 
 export function PreviewPanel(): JSX.Element | null {

@@ -1,9 +1,8 @@
+import type { InsightsApiClientRequestOptions } from '@contentful/optimization-api-client'
 import type {
-  ApiClientConfig,
-  InsightsApiClientRequestOptions,
-} from '@contentful/optimization-api-client'
-import type {
+  ExperienceEvent as ExperienceEventPayload,
   Json,
+  PartialProfile,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
@@ -19,9 +18,13 @@ import {
   type AllowedEventType,
   type BlockedEvent,
   DEFAULT_ALLOWED_EVENT_TYPES,
+  type EventEmissionResult,
   type EventOptimizationContext,
   type OptimizationEventStreamEvent,
+  type PageViewBuilderArgs,
+  type ScreenViewBuilderArgs,
 } from './events'
+import { hasOptimizationSelectionStateField, type OptimizationSelectionState } from './handoff'
 import { toPositiveInt } from './lib/number'
 import { type QueueFlushPolicy, resolveQueueFlushPolicy } from './lib/queue'
 import {
@@ -38,7 +41,6 @@ import {
   canOptimize as canOptimizeSignal,
   changes as changesSignal,
   consent as consentSignal,
-  effect,
   event as eventSignal,
   type ExperienceRequestState,
   experienceRequestState as experienceRequestStateSignal,
@@ -53,7 +55,16 @@ import {
   signalFns,
   toObservable,
 } from './signals'
+import {
+  createStatefulExperienceApiConfig,
+  createStatefulInsightsApiConfig,
+} from './statefulApiConfig'
 import { resolveStatefulDefaults, type StatefulDefaults } from './StatefulDefaults'
+import { CurrentStateCoordinator } from './tracking/CurrentStateCoordinator'
+import type {
+  CurrentStateTrackingResult,
+  CurrentStateTrackingState,
+} from './tracking/CurrentStateTracking'
 
 const coreLogger = createScopedLogger('CoreStateful')
 
@@ -66,39 +77,6 @@ export type { ExperienceQueueDropContext } from './queues/ExperienceQueue'
 type PendingEventOptimizationContext = Omit<EventOptimizationContext, 'contextId'>
 
 type RegisteredOptimizationContext = [context: EventOptimizationContext, lastAccessedAt: number]
-
-const hasDefinedValues = (record: Record<string, unknown>): boolean =>
-  Object.values(record).some((value) => value !== undefined)
-
-const createStatefulExperienceApiConfig = (
-  api: CoreStatefulApiConfig | undefined,
-  locale: string | undefined,
-): ApiClientConfig['experience'] => {
-  if (api === undefined && locale === undefined) return undefined
-
-  const experienceConfig = {
-    baseUrl: api?.experienceBaseUrl,
-    enabledFeatures: api?.enabledFeatures,
-    ip: api?.ip,
-    locale,
-    plainText: api?.plainText,
-    preflight: api?.preflight,
-  }
-
-  return hasDefinedValues(experienceConfig) ? experienceConfig : undefined
-}
-
-const createStatefulInsightsApiConfig = (
-  api: CoreStatefulApiConfig | undefined,
-): ApiClientConfig['insights'] => {
-  if (api === undefined) return undefined
-
-  const insightsConfig = {
-    baseUrl: api.insightsBaseUrl,
-  }
-
-  return hasDefinedValues(insightsConfig) ? insightsConfig : undefined
-}
 
 /**
  * Unified queue policy for stateful Core.
@@ -158,6 +136,8 @@ export interface CoreStates {
   optimizationPossible: Observable<boolean>
   /** Outcome of the most recent Experience API request. */
   experienceRequestState: Observable<ExperienceRequestState>
+  /** Read-only lifecycle state for the current page or screen emission. */
+  currentStateTracking: Observable<CurrentStateTrackingState>
 }
 
 /**
@@ -208,8 +188,10 @@ let statefulInstanceCounter = 0
 class CoreStateful extends CoreStatefulEventEmitter implements ConsentController, ConsentGuard {
   private readonly singletonOwner: string
   private destroyed = false
+  private readonly disposers: Array<() => void> = []
+  readonly #currentStateCoordinator: CurrentStateCoordinator
+  readonly #experienceQueue: ExperienceQueue
   protected readonly allowedEventTypes: AllowedEventType[]
-  protected readonly experienceQueue: ExperienceQueue
   protected readonly insightsQueue: InsightsQueue
   protected readonly onEventBlocked?: CoreStatefulConfig['onEventBlocked']
   private readonly optimizationContexts = new Map<string, RegisteredOptimizationContext>()
@@ -223,21 +205,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   /**
    * Expose merged observable state for consumers.
    */
-  readonly states: CoreStates = {
-    blockedEventStream: toObservable(blockedEventSignal),
-    flag: (name: string): Observable<Json> => this.getFlagObservable(name),
-    consent: toObservable(consentSignal),
-    persistenceConsent: toObservable(persistenceConsentSignal),
-    eventStream: toObservable(eventSignal, (event) => event),
-    locale: toObservable(localeSignal),
-    canOptimize: toObservable(canOptimizeSignal),
-    optimizationPossible: toObservable(this.optimizationPossibleSignal),
-    experienceRequestState: toObservable(experienceRequestStateSignal),
-    selectedOptimizations: toObservable(selectedOptimizationsSignal),
-    previewPanelAttached: toObservable(previewPanelAttachedSignal),
-    previewPanelOpen: toObservable(previewPanelOpenSignal),
-    profile: toObservable(profileSignal),
-  }
+  readonly states: CoreStates
 
   constructor(config: CoreStatefulConfig) {
     const locale = normalizeExplicitLocale(config.locale)
@@ -276,15 +244,38 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
         flushPolicy: resolvedQueuePolicy.flush,
         insightsApi: this.api.insights,
       })
-      this.experienceQueue = new ExperienceQueue({
+      this.#experienceQueue = new ExperienceQueue({
         experienceApi: this.api.experience,
         eventInterceptors: this.interceptors.event,
         flushPolicy: resolvedQueuePolicy.flush,
         getAnonymousId: getAnonymousId ?? (() => undefined),
+        getCurrentStateGeneration: () => this.#currentStateCoordinator.signal.value.generation,
         offlineMaxEvents: resolvedQueuePolicy.offlineMaxEvents,
         onOfflineDrop: resolvedQueuePolicy.onOfflineDrop,
         stateInterceptors: this.interceptors.state,
       })
+      this.#currentStateCoordinator = new CurrentStateCoordinator({
+        invalidateExperienceRequests: () => {
+          this.#experienceQueue.invalidateRequests()
+        },
+      })
+      this.#currentStateCoordinator.reset()
+      this.states = {
+        blockedEventStream: toObservable(blockedEventSignal),
+        flag: (name: string): Observable<Json> => this.getFlagObservable(name),
+        consent: toObservable(consentSignal),
+        persistenceConsent: toObservable(persistenceConsentSignal),
+        eventStream: toObservable(eventSignal, (event) => event),
+        locale: toObservable(localeSignal),
+        canOptimize: toObservable(canOptimizeSignal),
+        optimizationPossible: toObservable(this.optimizationPossibleSignal),
+        experienceRequestState: toObservable(experienceRequestStateSignal),
+        currentStateTracking: toObservable(this.#currentStateCoordinator.signal),
+        selectedOptimizations: toObservable(selectedOptimizationsSignal),
+        previewPanelAttached: toObservable(previewPanelAttachedSignal),
+        previewPanelOpen: toObservable(previewPanelOpenSignal),
+        profile: toObservable(profileSignal),
+      }
       installCoreBridgeCapabilities(this, this.interceptors.state)
       batch(() => {
         consentSignal.value = defaultConsent
@@ -296,57 +287,154 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
 
       this.initializeEffects()
     } catch (error) {
-      releaseStatefulRuntimeSingleton(this.singletonOwner)
+      this.destroyed = true
+      try {
+        this.disposeRegisteredResources()
+      } finally {
+        releaseStatefulRuntimeSingleton(this.singletonOwner)
+      }
       throw error
     }
   }
 
   private initializeEffects(): void {
-    this.initializeFlagViewConsentEffect()
+    this.registerDisposer(this.initializeFlagViewConsentEffect())
 
-    effect(() => {
+    this.registerEffect(() => {
       coreLogger.debug(
         `Profile ${profileSignal.value && `with ID ${profileSignal.value.id}`} has been ${profileSignal.value ? 'set' : 'cleared'}`,
       )
     })
 
-    effect(() => {
+    this.registerEffect(() => {
       coreLogger.debug(
         `Variants have been ${selectedOptimizationsSignal.value?.length ? 'populated' : 'cleared'}`,
       )
     })
 
-    effect(() => {
+    this.registerEffect(() => {
       coreLogger.info(
         `Core ${consentSignal.value ? 'will' : 'will not'} emit gated events due to consent (${consentSignal.value})`,
       )
     })
 
-    effect(() => {
+    this.registerEffect(() => {
       coreLogger.info(
         `Core ${persistenceConsentSignal.value ? 'will' : 'will not'} persist profile continuity due to persistence consent (${persistenceConsentSignal.value})`,
       )
     })
 
-    effect(() => {
+    this.registerEffect(() => {
       if (!onlineSignal.value) return
 
       this.insightsQueue.clearScheduledRetry()
-      this.experienceQueue.clearScheduledRetry()
+      this.#experienceQueue.clearScheduledRetry()
       void this.flushQueues({ force: true })
     })
+  }
+
+  protected registerEffect(callback: () => void): void {
+    this.registerDisposer(signalFns.effect(callback))
+  }
+
+  /** Register an SDK-owned synchronous, non-throwing, non-reentrant cleanup. */
+  protected registerDisposer(disposer: () => void): void {
+    this.disposers.push(disposer)
+  }
+
+  /** Track the current page when online and allowed by consent. */
+  protected async emitCurrentPage(
+    routeKey: string,
+    buildPayload: () => (PageViewBuilderArgs & { profile?: PartialProfile }) | undefined,
+  ): Promise<CurrentStateTrackingResult> {
+    return await this.#currentStateCoordinator.emitIfNeeded({
+      key: routeKey,
+      isAllowed: this.online && this.hasConsent('page'),
+      emit: async (generation) => {
+        const payload = buildPayload() ?? {}
+        return await this.#experienceQueue.sendCurrentState(
+          this.eventBuilder.buildPageView(payload),
+          generation,
+        )
+      },
+    })
+  }
+
+  /** Track the current screen when online and allowed by consent. */
+  protected async emitCurrentScreen(
+    routeKey: string,
+    buildPayload: () => ScreenViewBuilderArgs & { profile?: PartialProfile },
+  ): Promise<CurrentStateTrackingResult> {
+    return await this.#currentStateCoordinator.emitIfNeeded({
+      key: routeKey,
+      isAllowed: this.online && this.hasConsent('screen'),
+      emit: async (generation) =>
+        await this.#experienceQueue.sendCurrentState(
+          this.eventBuilder.buildScreenView(buildPayload()),
+          generation,
+        ),
+    })
+  }
+
+  /** Mark a route as accepted without emitting an event. */
+  protected markCurrentStateAccepted(routeKey: string): CurrentStateTrackingResult {
+    return this.#currentStateCoordinator.markAccepted(routeKey)
+  }
+
+  /**
+   * Publish authoritative handoff state and prevent older Experience responses from replacing it.
+   *
+   * @remarks
+   * This public integration primitive primarily serves downstream SDKs and exceptional custom
+   * integrations. Application code should prefer its platform handoff helper, which also runs state
+   * interceptors and lifecycle-currentness checks. The purpose-specific operation preserves Core
+   * request authority without exposing writable signal handles.
+   *
+   * @public
+   */
+  applyOptimizationHandoffState(state: OptimizationSelectionState): void {
+    const { changes, profile, selectedOptimizations } = state
+    batch(() => {
+      this.#experienceQueue.invalidateRequests()
+      if (hasOptimizationSelectionStateField(state, 'changes')) changesSignal.value = changes
+      if (hasOptimizationSelectionStateField(state, 'profile')) profileSignal.value = profile
+      if (hasOptimizationSelectionStateField(state, 'selectedOptimizations')) {
+        selectedOptimizationsSignal.value = selectedOptimizations
+      }
+      experienceRequestStateSignal.value = { status: 'success' }
+    })
+  }
+
+  protected async sendExperienceEventWithResult(
+    method: string,
+    args: readonly unknown[],
+    event: ExperienceEventPayload,
+    optimizationContext?: EventOptimizationContext,
+  ): Promise<EventEmissionResult> {
+    if (!this.hasConsent(method)) {
+      this.onBlockedByConsent(method, args)
+      return { accepted: false }
+    }
+
+    const data = await this.#experienceQueue.send(event, optimizationContext)
+    return data === undefined ? { accepted: true } : { accepted: true, data }
+  }
+
+  private disposeRegisteredResources(): void {
+    const disposers = this.disposers.splice(0).reverse()
+
+    for (const dispose of disposers) dispose()
   }
 
   protected async flushQueues(
     options: { force?: boolean } & InsightsApiClientRequestOptions = {},
   ): Promise<void> {
-    await this.insightsQueue.flush(options)
-    await this.experienceQueue.flush(options)
+    await Promise.all([this.#experienceQueue.flush(options), this.insightsQueue.flush(options)])
   }
 
   private clearQueuedEvents(): void {
     this.insightsQueue.clearQueuedEvents()
-    this.experienceQueue.clearQueuedEvents()
+    this.#experienceQueue.clearQueuedEvents()
   }
 
   override resolveOptimizedEntry<
@@ -436,27 +524,32 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     if (this.destroyed) return
 
     this.destroyed = true
-    this.optimizationContexts.clear()
-    void this.insightsQueue.flush({ force: true }).catch((error: unknown) => {
-      logger.warn('Failed to flush insights queue during destroy()', String(error))
-    })
-    void this.experienceQueue.flush({ force: true }).catch((error: unknown) => {
-      logger.warn('Failed to flush Experience queue during destroy()', String(error))
-    })
-    this.insightsQueue.clearPeriodicFlushTimer()
 
-    releaseStatefulRuntimeSingleton(this.singletonOwner)
+    try {
+      this.disposeRegisteredResources()
+      this.optimizationContexts.clear()
+      void this.insightsQueue.flush({ force: true }).catch((error: unknown) => {
+        logger.warn('Failed to flush insights queue during destroy()', String(error))
+      })
+      void this.#experienceQueue.flush({ force: true }).catch((error: unknown) => {
+        logger.warn('Failed to flush Experience queue during destroy()', String(error))
+      })
+      this.#currentStateCoordinator.reset()
+      this.insightsQueue.clearPeriodicFlushTimer()
+    } finally {
+      releaseStatefulRuntimeSingleton(this.singletonOwner)
+    }
   }
 
   reset(): void {
     this.optimizationContexts.clear()
+    this.#currentStateCoordinator.reset()
     batch(() => {
       blockedEventSignal.value = undefined
       eventSignal.value = undefined
       changesSignal.value = undefined
       profileSignal.value = undefined
       selectedOptimizationsSignal.value = undefined
-      experienceRequestStateSignal.value = { status: 'idle' }
     })
   }
 

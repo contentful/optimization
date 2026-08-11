@@ -71,6 +71,7 @@ const optimizationRoot = document.getElementById('optimization-root')
 
 let currentConsent = undefined
 let currentIsIdentified = false
+let currentOptimizationCount = 0
 
 /* ── State subscriptions ─────────────────────────────────────────────── */
 
@@ -88,6 +89,7 @@ sdk.states.profile.subscribe((profile) => {
 
 sdk.states.selectedOptimizations.subscribe((opts) => {
   const count = Array.isArray(opts) ? opts.length : 0
+  currentOptimizationCount = count
   updateOptimizationCount(count, '')
   updateOptimizationCount(count, 'p2')
 })
@@ -149,20 +151,34 @@ window.addEventListener('popstate', () => void renderRoute(location.pathname))
 
 async function renderRoute(path) {
   renderNav(path)
-  void sdk.page({ properties: { url: path } })
+  let result
+  try {
+    result = await sdk.trackCurrentPage({
+      routeKey: path,
+      buildPayload: () => ({ properties: { url: path } }),
+    })
+  } catch {
+    result = undefined
+  }
+
+  if (result?.accepted === false && result.reason === 'superseded') return
+
+  const baselineOnly =
+    result === undefined || (result.accepted === false && result.reason !== 'already-accepted')
   if (path === '/page-two') {
-    await renderPageTwo()
+    await renderPageTwo(baselineOnly)
   } else {
-    await renderHome()
+    await renderHome(baselineOnly)
   }
 }
 
 /* ── Home page ───────────────────────────────────────────────────────── */
 
-async function renderHome() {
+async function renderHome(baselineOnly) {
   const tpl = document.getElementById('tpl-home')
   appMain.replaceChildren(tpl.content.cloneNode(true))
   wireControlPanel(sdk, optimizationRoot, currentConsent, currentIsIdentified, '')
+  updateOptimizationCount(currentOptimizationCount, '')
 
   const autoGrid = document.getElementById('auto-observed')
   const manualGrid = document.getElementById('manually-observed')
@@ -184,15 +200,16 @@ async function renderHome() {
     }
   }
 
-  await initializeAllOptimizedEntries()
+  await initializeAllOptimizedEntries({ baselineOnly })
 }
 
 /* ── Page Two ────────────────────────────────────────────────────────── */
 
-async function renderPageTwo() {
+async function renderPageTwo(baselineOnly) {
   const tpl = document.getElementById('tpl-page-two')
   appMain.replaceChildren(tpl.content.cloneNode(true))
   wireControlPanel(sdk, optimizationRoot, currentConsent, currentIsIdentified, 'p2')
+  updateOptimizationCount(currentOptimizationCount, 'p2')
 
   const trackConvBtn = document.getElementById('track-conversion-button')
   if (trackConvBtn) {
@@ -227,7 +244,7 @@ async function renderPageTwo() {
     manualGrid.appendChild(el)
   }
 
-  await initializeAllOptimizedEntries()
+  await initializeAllOptimizedEntries({ baselineOnly })
 }
 
 /* ── Boot ────────────────────────────────────────────────────────────── */

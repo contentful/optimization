@@ -18,7 +18,7 @@ import {
   type JSX,
   type ReactNode,
 } from 'react'
-import { useOptimization } from '../hooks/useOptimization'
+import { useOptimizationRuntime } from '../hooks/useOptimizationRuntime'
 import { createScopedLogger } from '../logger'
 import {
   resolveChildren,
@@ -236,18 +236,12 @@ function OptimizedEntryFrame({
   )
 }
 
-function hasBaselineEntry(
-  entryProps: OptimizedEntrySourceProps,
-): entryProps is Extract<OptimizedEntrySourceProps, { baselineEntry: Entry }> {
-  return entryProps.baselineEntry !== undefined
-}
-
 function resolveEntrySource(
   entryProps: OptimizedEntrySourceProps,
   liveUpdates: boolean | undefined,
   onEntryError: ((error: Error) => void) | undefined,
 ): { readonly entryId: string | undefined; readonly managedEntryParams: UseOptimizedEntryParams } {
-  if (hasBaselineEntry(entryProps)) {
+  if (entryProps.baselineEntry !== undefined) {
     return {
       entryId: undefined,
       managedEntryParams: { baselineEntry: entryProps.baselineEntry, liveUpdates, onEntryError },
@@ -443,7 +437,7 @@ export function OptimizedEntry(props: OptimizedEntryProps): JSX.Element | null {
     viewDurationUpdateIntervalMs,
     ...entryProps
   } = toImplementationProps(props)
-  const sdk = useOptimization()
+  const { sdk } = useOptimizationRuntime(liveUpdates)
   const { entryId, managedEntryParams } = resolveEntrySource(entryProps, liveUpdates, onEntryError)
   const managedEntry = useManagedBaselineEntry(managedEntryParams)
   const loadingEntry = useMemo(

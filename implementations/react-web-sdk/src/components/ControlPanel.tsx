@@ -1,5 +1,8 @@
-import { useLiveUpdates, useOptimizationContext } from '@contentful/optimization-react-web'
 import type { Profile } from '@contentful/optimization-react-web/api-schemas'
+import {
+  useLiveUpdates,
+  useOptimizationContext,
+} from '@contentful/optimization-react-web/react-router'
 import type { JSX } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'

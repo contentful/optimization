@@ -4,7 +4,7 @@ import {
   useConsentState,
   useOptimizationActions,
   useOptimizationContext,
-} from '@contentful/optimization-nextjs/client'
+} from '@contentful/optimization-nextjs/pages-router'
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { getBrowserAppConsent, setAppConsent } from './util'
 

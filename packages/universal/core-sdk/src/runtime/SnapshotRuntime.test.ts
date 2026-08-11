@@ -31,6 +31,7 @@ describe('SnapshotRuntime', () => {
     expect(explicitBaseline.entry).toBe(optimizedEntry)
     expect(resolved.selectedOptimization).toEqual(explicit.selectedOptimization)
     expect(runtime.getMergeTagValue(mergeTagEntry)).toBe('EU')
+    expect(runtime.getMergeTagFallbackValue(mergeTagEntry)).toBe('Nowhere')
     expect(runtime.getFlag('theme')).toBe('dark')
   })
 
@@ -53,6 +54,7 @@ describe('SnapshotRuntime', () => {
     expect(runtime.states.selectedOptimizations.current).toEqual(selectedOptimizations)
     expect(runtime.states.canOptimize.current).toBe(true)
     expect(runtime.states.experienceRequestState.current).toEqual({ status: 'success' })
+    expect(runtime.states.currentStateTracking.current).toEqual({ generation: 0, status: 'idle' })
     expect(runtime.states.optimizationPossible.current).toBe(true)
     expect(runtime.hasConsent('page')).toBe(true)
     expect(runtime.hasConsent('track')).toBe(false)

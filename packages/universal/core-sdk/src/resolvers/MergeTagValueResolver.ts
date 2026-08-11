@@ -11,6 +11,15 @@ const logger = createScopedLogger('Optimization')
  */
 const RESOLUTION_WARNING_BASE = 'Could not resolve Merge Tag value:'
 
+const getValidMergeTagEntry = (
+  mergeTagEntry: MergeTagEntry | undefined,
+): MergeTagEntry | undefined => {
+  if (isMergeTagEntry(mergeTagEntry)) return mergeTagEntry
+
+  logger.warn(`${RESOLUTION_WARNING_BASE} supplied entry is not a Merge Tag entry`)
+  return undefined
+}
+
 const getAtPath = (value: unknown, path: string): unknown => {
   if (!value || typeof value !== 'object') return undefined
   if (!path) return value
@@ -59,6 +68,17 @@ const MergeTagValueResolver = {
 
       return [dotPath, underScorePath].filter((path) => path !== '').join('.')
     })
+  },
+
+  /**
+   * Resolve the configured fallback value without attempting profile lookup.
+   *
+   * @param mergeTagEntry - The merge-tag entry whose fallback to resolve.
+   * @returns The configured fallback value, or `undefined` if the entry is invalid or has no
+   * fallback.
+   */
+  resolveFallback(mergeTagEntry: MergeTagEntry | undefined): string | undefined {
+    return getValidMergeTagEntry(mergeTagEntry)?.fields.nt_fallback
   },
 
   /**
@@ -111,14 +131,12 @@ const MergeTagValueResolver = {
    * ```
    */
   resolve(mergeTagEntry: MergeTagEntry | undefined, profile?: Profile): string | undefined {
-    if (!isMergeTagEntry(mergeTagEntry)) {
-      logger.warn(`${RESOLUTION_WARNING_BASE} supplied entry is not a Merge Tag entry`)
-      return
-    }
+    const entry = getValidMergeTagEntry(mergeTagEntry)
+    if (!entry) return undefined
 
     const {
       fields: { nt_fallback: fallback },
-    } = mergeTagEntry
+    } = entry
 
     if (!Profile.safeParse(profile).success) {
       logger.warn(`${RESOLUTION_WARNING_BASE} no valid profile`)
@@ -126,8 +144,7 @@ const MergeTagValueResolver = {
     }
 
     return (
-      MergeTagValueResolver.getValueFromProfile(mergeTagEntry.fields.nt_mergetag_id, profile) ??
-      fallback
+      MergeTagValueResolver.getValueFromProfile(entry.fields.nt_mergetag_id, profile) ?? fallback
     )
   },
 }

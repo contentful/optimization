@@ -1,9 +1,10 @@
 # Shared concepts (SDK-neutral)
 
 SDK-neutral concepts that live in the shared `core-sdk` and so apply across the SDK families that
-consume them — currently Web, React Web, both Next.js routers, Node, and React Native. Per-SDK files
-reference these instead of restating them. A few entries are described with a web-oriented example
-(e.g. a render prop); the underlying contract is the same across runtimes. Terse; not a guide.
+consume them — currently Web, React Web, both Next.js routers, Node, React Native, and the
+bridge-backed iOS and Android SDKs where noted. Per-SDK files reference these instead of restating
+them. A few entries are described with a web-oriented example (e.g. a render prop); the underlying
+contract is the same across runtimes. Terse; not a guide.
 
 ## Entry-source boundary (managed or manual)
 
@@ -132,14 +133,17 @@ keys can change when the variant map changes even though the resolver chooses fr
 `nt_variants`.
 source: core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariant; core-sdk#handoff.ts#formatVariants; core-sdk#handoff.ts#createSelectionFingerprint; api-schemas#experience/optimization/SelectedOptimization.ts#SelectedOptimization
 
-Merge tags are a separate, profile-backed mechanism rather than entry replacement. Pass only a
-value accepted by `isMergeTagEntry` to `getMergeTagValue`; the resolver reads the merge-tag selector
-from `fields.nt_mergetag_id`, looks it up in the supplied/current profile, and falls back to
-`fields.nt_fallback`. In a Contentful Rich Text renderer, the application owns extracting the
-embedded entry target before applying the guard. Import `documentToReactComponents` from
-`@contentful/rich-text-react-renderer`; import `INLINES` and Rich Text document types from
-`@contentful/rich-text-types`.
-source: api-schemas#contentful/typeGuards.ts#isMergeTagEntry; api-schemas#contentful/MergeTagEntry.ts#MergeTagEntryFields; core-sdk#resolvers/MergeTagValueResolver.ts#resolve; react-web-sdk#optimized-entry/optimizedEntryUtils.ts#OptimizedEntryRenderContext; impl:nextjs-sdk_app-router#components/EntryCardContent.tsx
+The JavaScript core's merge tags are a separate, profile-backed mechanism rather than entry
+replacement.
+`getMergeTagValue` validates the entry, reads the merge-tag selector from `fields.nt_mergetag_id`
+against the supplied/current profile, and falls back to `fields.nt_fallback`; an invalid entry or
+missing/invalid profile emits its corresponding resolution warning. `getMergeTagFallbackValue`
+validates the same entry and returns its configured `fields.nt_fallback` without consulting a
+supplied/current profile or emitting the missing-profile warning. In a Contentful Rich Text
+renderer, the application owns extracting the embedded entry target before applying the guard.
+Import `documentToReactComponents` from `@contentful/rich-text-react-renderer`; import `INLINES`
+and Rich Text document types from `@contentful/rich-text-types`.
+source: api-schemas#contentful/typeGuards.ts#isMergeTagEntry; api-schemas#contentful/MergeTagEntry.ts#MergeTagEntryFields; core-sdk#CoreBase.ts#getMergeTagValue; core-sdk#CoreBase.ts#getMergeTagFallbackValue; core-sdk#CoreStatefulEventEmitter.ts#getMergeTagValue; core-sdk#runtime/SnapshotRuntime.ts#getMergeTagValue; core-sdk#runtime/SnapshotRuntime.ts#getMergeTagFallbackValue; core-sdk#resolvers/MergeTagValueResolver.ts#MergeTagValueResolver; react-web-sdk#optimized-entry/optimizedEntryUtils.ts#OptimizedEntryRenderContext; impl:nextjs-sdk_app-router#components/EntryCardContent.tsx
 
 Resolution itself does NOT read consent. The resolver takes only `(entry, selectedOptimizations)` and
 returns variant-or-baseline purely from whether a selection matches; consent gates event _emission_
@@ -181,15 +185,82 @@ Turned on app-wide through root or binding `liveUpdates` configuration, or per-e
 value overrides the app-wide default. Triggers: consent/identity/profile changes in the browser.
 source: react-web-sdk#provider/LiveUpdatesProvider.tsx#LiveUpdatesProvider; react-web-sdk#hooks/useLiveUpdates.ts#useLiveUpdates
 
+## Stateful runtime lifecycle
+
+Every `CoreStateful`-backed JavaScript SDK participates in one `globalThis` lock. One runtime can
+therefore have only one live stateful owner across Web, React Native, and bridge-backed native
+adapters; construction fails while another owner holds the lock. `destroy()` disposes every
+registered Core effect and platform resource in LIFO order before releasing ownership. SDK-owned
+cleanup callbacks are synchronous, non-throwing, and non-reentrant; cleanup does not isolate a
+callback that violates that contract, although singleton release remains protected by `finally`.
+Web registers its entry-interaction runtime, online/visibility listeners, persistence effects, and
+browser-global cleanup with that Core lifecycle. React Native registers its persistence interceptor,
+online/AppState listeners, active-instance cleanup, and AsyncStorage drain with the same lifecycle.
+A Core, Web, or React Native constructor failure after acquisition runs the same rollback for every
+resource registered before the failure and releases ownership. Structural adapter targets and
+snapshot or stateless runtimes do not create a second live stateful owner or weaken this constraint.
+source: core-sdk#CoreStateful.ts#CoreStateful; core-sdk#CoreStateful.ts#registerEffect; core-sdk#CoreStateful.ts#registerDisposer; core-sdk#CoreStateful.ts#disposeRegisteredResources; core-sdk#CoreStateful.ts#destroy; web-sdk#ContentfulOptimization.ts#ContentfulOptimization; web-sdk#ContentfulOptimization.ts#destroy; react-native-sdk#ContentfulOptimization.ts#ContentfulOptimization; react-native-sdk#ContentfulOptimization.ts#destroy; core-sdk#lib/singleton/StatefulRuntimeSingleton.ts#acquireStatefulRuntimeSingleton; core-sdk#lib/singleton/StatefulRuntimeSingleton.ts#releaseStatefulRuntimeSingleton; core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; web-sdk#handoff.ts#OptimizationHandoffHydrationTarget
+
+The bridge-backed iOS and Android runtime is transactional around the same Core lifetime. It does
+not publish a new active bridge runtime until the Core instance, preview override manager, state and
+event effects, and subscription registry have all been created. Under the same synchronous,
+non-throwing cleanup contract, construction failure rolls back acquired resources in LIFO order and
+clears bridge module state. Destroy detaches the active runtime first, unsubscribes flag observers,
+runs resource cleanup in LIFO order, and clears module state; reinitialization destroys the prior
+runtime before constructing its replacement. There is no per-cleanup exception isolation.
+source: optimization-js-bridge#index.ts#createBridgeRuntime; optimization-js-bridge#index.ts#disposeBridgeRuntime; optimization-js-bridge#index.ts#clearBridgeModuleState; optimization-js-bridge#index.ts#initialize; optimization-js-bridge#index.ts#destroy
+
+## API audiences and bridge boundary
+
+Published SDK surfaces include application-facing consumer APIs and public integration APIs whose
+primary audience is downstream SDKs. The latter remain available for exceptional custom
+integrations and unsupported frameworks. Handoff hydration uses purpose-specific public operations
+that preserve lifecycle currentness, state interception, and Core request-publication authority
+without exposing raw writable signal handles.
+source: core-sdk#CoreStateful.ts#CoreStateful; web-sdk#handoff.ts#OptimizationHandoffHydrationTarget; web-sdk#handoff.ts#hydrateOptimizationHandoffState; web-sdk#handoff-internal.ts#applyHydratedSignals
+
+Core bridge support is preview-only. Preview tooling receives controlled writable signals and state
+interceptor access because it must synthesize immediate local override state. The bridge is not a
+general private channel for downstream SDK coordination; non-preview integration uses public,
+purpose-specific operations instead.
+source: core-sdk#bridge-support/coreBridgeCapabilities.ts#PreviewPanelBridge; core-sdk#bridge-support/coreBridgeCapabilities.ts#CoreBridgeCapabilities; core-sdk#bridge-support/capabilities.ts#installCoreBridgeCapabilities; preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanelToSdk; core-sdk#preview-support/PreviewOverrideManager.ts#PreviewOverrideManager
+
 ## Page events
 
 A page event signals a page/route view. Auto-page trackers emit them on navigation and dedupe
-consecutive route keys. When the server already reported a consented page view, the browser must
-skip the duplicate (per-SDK `initialPageEvent` / tracker prop). Interaction events
-(view/click/hover) are consent-gated browser activity and use the resolved entry id.
-source: react-web-sdk#auto-page/useAutoPageEmitter.ts; react-web-sdk#router/next-app.tsx
+consecutive accepted route keys. The Web current-page API returns accepted results or a rejected
+result whose reason distinguishes an already accepted key, policy denial, and supersession; React
+Native and bridge-backed native screen APIs project those outcomes to their existing event-result
+shape. A same-key call joins the current pending attempt and observes its owner outcome. A different
+key advances one scalar generation even when policy denies the new call, so an A1 → B → A2 sequence
+can accept A2 regardless of completion order. Only the current attempt can become accepted or
+propagate an operational rejection; a stale success or rejection resolves as superseded. Going
+offline during asynchronous event interception resolves as policy denial. Consent- or
+connectivity-blocked attempts remain observed and retryable. When the server
+already reported a consented page view, the browser marks that route accepted without emitting (the
+per-SDK `initialPageEvent` / tracker prop). Ordinary `page()` and `screen()` calls remain outside
+current-route deduplication and still queue while offline. Current-page and current-screen emissions
+are online-only: an offline attempt is neither published nor enqueued, and the caller must retry it
+explicitly after reconnecting. Interaction events (view/click/hover) are consent-gated browser
+activity and use the resolved entry id.
+source: core-sdk#tracking/CurrentStateCoordinator.ts#CurrentStateCoordinator; core-sdk#tracking/CurrentStateTracking.ts#CurrentStateTrackingResult; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue; core-sdk#CoreStatefulEventEmitter.ts#CoreStatefulEventEmitter; web-sdk#ContentfulOptimization.ts#trackCurrentPage; react-native-sdk#ContentfulOptimization.ts#ContentfulOptimization; optimization-js-bridge#index.ts#BridgeCoreStateful; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
+
+Current-route ownership is internal to Core. The coordinator publishes only a read-only
+`states.currentStateTracking` observable whose scalar generation and lifecycle status let advanced
+integrations observe idle, observed, pending, or accepted state. It exposes no public mutation,
+invalidation listener, or lease. Advancing the current route or screen generation synchronously
+invalidates all older Experience response authority, including ordinary requests, and resets the
+shared Experience request state to `idle`. Snapshot runtimes expose the same current-state surface
+fixed at idle.
+source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#CoreStateful.ts#CoreStateful; core-sdk#tracking/CurrentStateTracking.ts#CurrentStateTrackingState; core-sdk#tracking/CurrentStateCoordinator.ts#CurrentStateCoordinator; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue; core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime
 
 ## Custom flag views
+
+Custom Flag names are application/content-config identifiers, not SDK-fixed names. `getFlag(name)`
+and `states.flag(name)` match `name` exactly against the current `Variable` change keys; preview
+changes copy the configured inline-variable component key. Application lookups must therefore use
+the configured Custom Flag key exactly.
+source: core-sdk#CoreBase.ts#getFlag; core-sdk#resolvers/FlagsResolver.ts#FlagsResolver; api-schemas#contentful/OptimizationConfig.ts#InlineVariableComponent; core-sdk#preview-support/applyChangeOverrides.ts#applyChangeOverrides
 
 Stateful flag reads auto-attempt flag-view tracking: `getFlag(name)` tracks the read immediately,
 and `states.flag(name)` tracks `.current`, `subscribe()`, and `subscribeOnce()` reads. The explicit
@@ -212,7 +283,9 @@ interceptors and schema validation; `states.blockedEventStream` emits only conse
 subscribe and then later signal updates; the exposed streams keep only the latest accepted or
 blocked event value while Experience/Insights delivery queues remain internal. A late subscriber
 must dedupe from the events it observes; the SDK does not replay a full event history through these
-observables. Blocked callback failures are logged rather than thrown.
+observables. Concurrent Experience sends publish in post-interceptor admission order, so a delayed
+earlier call can appear after a later call; this stream order does not transfer response ownership
+to that delayed call. Blocked callback failures are logged rather than thrown.
 source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#CoreStateful.ts#CoreStateful; core-sdk#signals/Observable.ts#toObservable; core-sdk#signals/signals.ts#event; core-sdk#signals/signals.ts#blockedEvent; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue; core-sdk#queues/InsightsQueue.ts#InsightsQueue; core-sdk#events/BlockedEvent.ts#BlockedEvent; core-sdk#CoreStatefulEventEmitter.ts#reportBlockedEvent
 
 Event-stream payloads carry each event's normal schema plus universal event fields such as
@@ -233,7 +306,7 @@ Consent-blocked stateful events stop before API delivery or queueing: Experience
 not replay blocked diagnostics or rebuild the blocked call. Current-page/screen trackers do not mark
 blocked attempts as accepted, so a later caller/effect can retry the same current key and build a
 fresh payload under the current consent state.
-source: core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult; core-sdk#CoreStatefulEventEmitter.ts#sendInsightsEvent; core-sdk#CoreStatefulEventEmitter.ts#reportBlockedEvent; core-sdk#CoreStateful.ts#consent; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker; web-sdk#ContentfulOptimization.ts#trackCurrentPage; optimization-js-bridge#index.ts#Bridge
+source: core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult; core-sdk#CoreStatefulEventEmitter.ts#sendInsightsEvent; core-sdk#CoreStatefulEventEmitter.ts#reportBlockedEvent; core-sdk#CoreStateful.ts#consent; core-sdk#tracking/CurrentStateCoordinator.ts#CurrentStateCoordinator; web-sdk#ContentfulOptimization.ts#trackCurrentPage; optimization-js-bridge#index.ts#Bridge
 
 ## Experience response payload
 
@@ -243,11 +316,34 @@ selected optimizations, and the computed flag `changes` the rest of the SDK cons
 mirrors the wire `ExperienceData` but renames its `experiences` field to `selectedOptimizations`. A
 stateful SDK applies the payload to its personalization signals (`profile`, `selectedOptimizations`,
 `changes`) in one batch, transitioning the Experience-request state to `success` atomically with the
-selections so consumers never see `!pending` while optimization is still unavailable. Stateful Core
-state interceptors are field-presence aware: omitted interceptor fields keep the original payload
-field, while an own present `undefined` field is applied intentionally. A stateless SDK returns the
-same payload per request instead of holding it.
-source: api-schemas#experience/ExperienceResponse.ts#OptimizationData; api-schemas#experience/ExperienceResponse.ts#ExperienceData; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals
+selections so consumers never see `!pending` while optimization is still unavailable. Concurrent
+stateful response ownership uses invocation-ordered request ids. Sends reserve an id before
+asynchronous event interception, while event-stream publication and API delivery occur after
+interception and can therefore start out of invocation order. When API delivery starts, a higher id
+becomes the latest response authority and publishes `pending`; a lower id cannot displace it. Only a
+response that still owns authority and whose shared Experience-request state remains `pending` runs
+state interceptors; both conditions are checked again after asynchronous state interception before
+personalization plus `success` is applied. Authoritative browser handoff state hydration also
+publishes `success`, so older in-flight Experience responses cannot overwrite the hydrated state.
+Only the current request's failure publishes `failed`. Older dispatched calls still resolve or
+reject with their own outcome without overwriting signals.
+Current-route requests additionally require their scalar generation to remain current. A current
+send that becomes stale during event interception stops before event-stream publication or API
+delivery; an online request that already started can finish but cannot apply its response or
+failure. Advancing the route or screen generation advances the shared request order and resets the
+Experience request state to `idle`, so no earlier ordinary or current response can apply afterward.
+A later Experience call acquires response authority through the normal invocation order and can
+publish `pending` and apply its result.
+Manual and reconnect flushes start the Experience replay before awaiting the Insights drain, so a
+later current-route send can acquire newer authority without being overwritten by queued replay.
+`reset()` and `destroy()` invalidate already-started Experience requests, so their later responses
+or failures cannot mutate personalization or request-state signals. Each acquired owner initializes
+the shared Experience request state to `idle`; destroy restores `idle` after invalidation before
+releasing ownership, so a replacement never inherits the prior owner's `pending` state. Stateful
+Core state interceptors are field-presence aware: omitted interceptor fields keep the original
+payload field, while an own present `undefined` field is applied intentionally. A stateless SDK
+returns the same payload per request instead of holding it.
+source: api-schemas#experience/ExperienceResponse.ts#OptimizationData; api-schemas#experience/ExperienceResponse.ts#ExperienceData; core-sdk#queues/ExperienceQueue.ts#ExperienceQueue; core-sdk#CoreStateful.ts#CoreStateful; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals; web-sdk#handoff-internal.ts#applyHydratedSignals
 
 Event-method acceptance and response data are separate: `EventEmissionResult` is
 `{ accepted: false } | { accepted: true, data?: OptimizationData }`. An accepted queued/offline
@@ -298,14 +394,34 @@ Browser handoffs extend the core handoff with `hydration` and `initialPageEvent`
 are accepted by `hydrateOptimizationHandoff`; analytics-only handoffs are accepted by the analytics
 runtime. Both hydration paths validate `initialPageEvent` and enforce cache safety before state is
 published. Browser SDK state hydration is Web handoff-owned: `@contentful/optimization-web/handoff`
-exports `hydrateOptimizationHandoffState` for customer adapters; that helper awaits the Web SDK
-state interceptor only when handoff state contains present `selectedOptimizations`, `changes`, or
-`profile` own fields, keeps input handoff fields when an interceptor omits them, applies own present
-`undefined` fields intentionally, and marks the Experience request state successful even for
-undefined or empty handoff state. Content handoff state hydration starts from a content reset for
-`selectedOptimizations` and `changes`, so a new content-capable handoff that omits those fields
-clears stale browser content state while preserving `profile` unless `profile` is an own field.
-source: web-sdk#handoff.ts#BrowserOptimizationHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoffState; web-sdk#handoff.ts#applyHydratedSignals; web-sdk#handoff.ts#applySuccessfulEmptyHandoffHydration; core-sdk#handoff.ts#assertOptimizationCacheSafety
+exports `hydrateOptimizationHandoffState` as a public integration API for downstream SDKs and
+exceptional custom adapters; that helper awaits the Web SDK state interceptor only when handoff
+state contains present `selectedOptimizations`, `changes`, or `profile` own fields, keeps input
+handoff fields when an interceptor omits them, applies own present `undefined` fields intentionally,
+and marks the Experience request state successful even for undefined or empty handoff state. Content
+handoff state hydration starts from a content reset for `selectedOptimizations` and `changes`, so a
+new content-capable handoff that omits those fields clears stale browser content state while
+preserving `profile` unless `profile` is an own field. On a Core-backed target, the public raw-state
+and content helpers use a purpose-specific Core operation to invalidate older Experience request
+authority in the same batch as signal publication; structural targets have no queue to invalidate.
+source: web-sdk#handoff.ts#BrowserOptimizationHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoffState; web-sdk#handoff-internal.ts#applyHydratedSignals; web-sdk#handoff-internal.ts#applySuccessfulEmptyHandoffHydration; core-sdk#CoreStateful.ts#CoreStateful; core-sdk#handoff.ts#assertOptimizationCacheSafety
+
+One `globalThis` hydration generation is authoritative across duplicated CommonJS module graphs and
+both content and analytics hydration entry points. An already-cancelled adapter operation returns
+before claiming hydration authority. Every other hydration advances the generation and remains
+current only while it is newest and the optional adapter `isCurrent` guard passes. A newer content
+or analytics hydration supersedes older work. Successful interceptor output is checked for
+currentness again before it can mutate browser state; an interceptor rejection from the current
+hydration rejects the hydration call. Analytics proceeds to its warning and page-tracking phase only
+when shared hydration reports that it applied while still current, so superseded analytics work
+cannot build or emit a page event.
+source: web-sdk#handoff.ts#OptimizationHandoffHydrationOptions; web-sdk#handoff.ts#OptimizationHandoffHydrationTarget; web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoffState; web-sdk#handoff-internal.ts#getHandoffRuntimeState; web-sdk#handoff-internal.ts#hydrateOptimizationHandoffStateInternal; web-sdk#handoff-internal.ts#isCurrentHydration; web-sdk#handoff-internal.ts#applyHydratedSignals; web-sdk#handoff-internal.ts#applySuccessfulEmptyHandoffHydration; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff
+
+React Web's `OptimizationProvider`, including framework adapters that delegate to it, lets a handoff
+object seed only its first route occurrence. Reusing that object after another route gets no
+snapshot, while a fresh object is claimable even when the route key is unchanged; claimed objects
+are held weakly for the provider mount.
+source: web-sdk#handoff.ts#ContentOptimizationHandoff; react-web-sdk#provider/OptimizationProvider.tsx#OptimizationHandoffProps; react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider
 
 Snapshot and preview-override paths consume selection state, not necessarily a full Experience
 response: snapshot runtimes resolve from whichever `selectedOptimizations`, `changes`, and `profile`

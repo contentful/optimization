@@ -160,8 +160,13 @@ For every prop, callback payload, and exported type, use the generated
 ## Core workflows
 
 Automatic navigation integrations use `trackCurrentScreen()` for current-screen deduplication.
-Direct manual `screen()` calls remain non-deduping event emits and return accepted/data event
-results.
+Same-screen calls made while tracking is pending share one attempt and result. Only consecutive
+accepted screens are deduped, so returning after a different screen can emit again. The public
+result remains `{ accepted, data? }`; settled duplicates, superseded attempts, and other
+non-acceptance report `{ accepted: false }`. Direct manual `screen()` calls remain non-deduping
+event emits. Current-screen attempts are online-only and are never enqueued. Automatic navigation
+integrations do not retry on reconnect, so call `trackCurrentScreen()` again explicitly after the
+app reconnects.
 
 ### Provider lifecycle
 
@@ -170,13 +175,13 @@ state setup is pending, runs any `onStatesReady` callback, and only then renders
 This matches the React Web provider contract, but React Native uses async effect scheduling because
 storage and platform setup cannot be completed before paint.
 
-When persistence consent permits durable profile continuity, SDK state from an Experience response
-is published only after the corresponding AsyncStorage write for that same response snapshot has
-settled or failed gracefully. AsyncStorage hydrates continuity during initialization and mirrors
-changes for the next launch; after startup, `sdk.states`, entry rendering, and tracking metadata
-read from in-memory SDK state. Application code can wait for `sdk.states.profile`,
-`sdk.states.selectedOptimizations`, or rendered SDK-derived UI instead of adding storage-timing
-delays before a relaunch-sensitive action.
+When persistence consent permits durable profile continuity, accepted SDK state from an Experience
+response is published before the raw response snapshot is queued for AsyncStorage persistence.
+Neither the initiating event promise nor `sdk.states` waits for that write to settle. AsyncStorage
+hydrates continuity during initialization and mirrors accepted changes for the next launch; after
+startup, `sdk.states`, entry rendering, and tracking metadata read from in-memory SDK state. Treat
+those live reads as confirmation of the current in-memory state, not proof that durable persistence
+has completed.
 
 ### Consent and persistence
 

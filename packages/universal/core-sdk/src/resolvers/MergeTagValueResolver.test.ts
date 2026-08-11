@@ -75,4 +75,15 @@ describe('MergeTagValueResolver', () => {
       expect(MergeTagValueResolver.resolve(mergeTagEntry, profile)).toEqual('EU')
     })
   })
+
+  describe('resolveFallback', () => {
+    it('resolves the configured fallback value without profile lookup', () => {
+      expect(MergeTagValueResolver.resolveFallback(mergeTagEntry)).toEqual('Nowhere')
+    })
+
+    it('returns undefined when the entry is invalid', () => {
+      // @ts-expect-error-next-line
+      expect(MergeTagValueResolver.resolveFallback({})).toBeUndefined()
+    })
+  })
 })

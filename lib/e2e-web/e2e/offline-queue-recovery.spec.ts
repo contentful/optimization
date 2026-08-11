@@ -37,6 +37,8 @@ test.describe('Offline Queue Recovery', () => {
 
   test('continues tracking Insights API events while offline', async ({ context, page }) => {
     skipIf('SSR', 'HYDRATION')
+    await page.getByTestId('consent-button').click()
+    await expect(page.getByTestId('unconsent-button')).toBeVisible()
     const baselineCount = await getRawEventsCount(page)
 
     await setOffline(context, page, true)

@@ -30,7 +30,8 @@ Next.js SDK package subpaths. The package root is not imported:
   binding and route tracker
 - `@contentful/optimization-nextjs/pages-router/server` in `@/lib/optimization-server` for
   `getServerSideProps` request handoff
-- `@contentful/optimization-nextjs/client` for browser hooks and providers
+- `@contentful/optimization-nextjs/pages-router` for browser hooks, providers, and related runtime
+  types beneath the bound Pages Router root; do not use the generic `/client` subpath
 - `@contentful/optimization-nextjs/api-schemas` in components that need SDK schema guards
 
 ## What this covers
@@ -112,12 +113,16 @@ pnpm implementation:run -- nextjs-sdk_pages-router serve:stop
 
 ## Running E2E tests
 
-Run the full E2E setup and test suite from the monorepo root:
+Run the run-only Playwright wrapper from the monorepo root. Pass a test file or filter for routine
+validation; omit it only when the full suite is warranted:
 
 ```sh
-pnpm setup:e2e:nextjs-sdk_pages-router
-pnpm test:e2e:nextjs-sdk_pages-router
+pnpm test:e2e:nextjs-sdk_pages-router <file-or-filter>
 ```
+
+If consumed SDK packages changed or installed artifacts are stale, first run `pnpm build:pkgs` and
+`pnpm implementation:run -- nextjs-sdk_pages-router implementation:install`. Run
+`pnpm setup:e2e:nextjs-sdk_pages-router` only when the Playwright browser executable is missing.
 
 The E2E suite reuses the shared `lib/e2e-web` browser scenarios for CSR, hydration, and SSR
 first-paint behavior under the Pages Router configuration.

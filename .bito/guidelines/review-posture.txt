@@ -30,6 +30,16 @@ candidates under Additional Suggestions, Filtered Suggestions, summaries, impact
 recommendations, or informational sections. A true observation is not a finding unless it proves a
 concrete defect. Zero findings means post nothing.
 
+REVIEW TRIAGE
+- Before elevating an async, callback-reentrancy, or lifecycle-interleaving candidate, identify the
+  documented or supported consumer pattern or maintained integration that reaches it and the
+  concrete contract it violates. Mechanical composability of public callbacks alone is not evidence
+  that reentrant mutation is supported.
+- For coordinated runtime paths, name and trace the authority layer whose invariant allegedly
+  fails—method or event acceptance, shared-state publication authority, or framework presentation
+  settlement. Do not use success or acceptance in one layer as proof that another layer has settled,
+  and scope a finding to the lifecycle interval where the contract is violated.
+
 EVIDENCE GATES
 - Trace a value through every directly reachable return path before claiming null or undefined can
   cause a runtime failure. Distinguish a missing optional property from a missing containing object.

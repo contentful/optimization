@@ -162,9 +162,10 @@ before you ship, which explains the two axes and the split form that sets them s
 
 4. Verify the first run. Launch the app; the label reads `Optimization screen event accepted`.
    `trackCurrentScreen` returns an `EventEmissionResult` — an SDK result type whose `accepted` flag is
-   `true` when the event passed the SDK's local consent and allow-list gate and was emitted or queued
-   for delivery. `accepted` does not confirm that Contentful received the event, only that the local
-   gate let it through. Because `StorageDefaults(consent: true)` grants consent and `screen` is on the
+   `true` when the event passed the SDK's local consent and allow-list gate and was published for
+   online delivery. `accepted` does not confirm that Contentful received the event, only that the
+   local gate let it through. An offline current-screen attempt is not queued and returns
+   `accepted: false`. Because `StorageDefaults(consent: true)` grants consent and `screen` is on the
    SDK's default pre-consent allow-list, the event is accepted. If the label reads
    `Optimization screen event blocked` instead, there are two causes to tell apart. If the consent
    gate rejected the event, the `onEventBlocked` callback prints a line prefixed `Optimization blocked`
@@ -521,6 +522,16 @@ blocked attempt is retried once consent allows. Plain `screen(name:properties:)`
 call with no dedupe — call it directly only when your app wants that: an intentional one-off event,
 or navigation tracking where every appearance should count as a fresh screen event rather than
 deduping repeats of the same route.
+
+`trackCurrentScreen` is online-only: an offline attempt is neither published nor enqueued, and the
+SDK does not retry it when connectivity returns. Explicitly call `trackCurrentScreen` after
+reconnecting when that current-screen event is required. Plain `screen(name:properties:)` is an
+ordinary event call and still queues offline.
+
+Advancing to a new current screen also removes every earlier in-flight Experience call's authority to
+update SDK state, including ordinary calls. If a transition depends on the state returned by an
+earlier call, await that call before advancing the screen; if it finishes later, it cannot apply its
+response or failure to SDK state.
 
 1. Emit from `viewDidAppear(_:)` so UIKit has completed the visible transition.
 2. Use a stable screen name that maps to your analytics model.
@@ -972,10 +983,12 @@ For the full locale model, see
 
 **Integration category:** Advanced or production-only
 
-The iOS SDK monitors network reachability, queues events while offline, flushes when connectivity
-returns, and flushes as the app moves toward the background. No setup is required for the default
-offline path: `NWPathMonitor` drives the SDK online state and flushes on reconnect, and the app
-lifecycle handler flushes on `willResignActive`.
+The iOS SDK monitors network reachability, queues ordinary events while offline, flushes those events
+when connectivity returns, and flushes as the app moves toward the background. No setup is required
+for the default offline path: `NWPathMonitor` drives the SDK online state and flushes ordinary queued
+events on reconnect, and the app lifecycle handler flushes on `willResignActive`. An offline
+current-screen attempt is not queued or retried; explicitly call `trackCurrentScreen` after
+reconnecting when that event is required.
 
 1. Add `QueuePolicy` only when production telemetry needs queue limits or lifecycle callbacks. The
    offline Experience queue holds up to 100 events by default (tunable via

@@ -3,7 +3,7 @@ import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { type ReactElement, useMemo, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { useEntryResolver, useLiveUpdates, useOptimization } from '../../src'
+import { useEntryResolver, useLiveUpdates, useOptimization } from '../../src/react-router-facade'
 import {
   BASELINE_IDS,
   CLIENT_ID,

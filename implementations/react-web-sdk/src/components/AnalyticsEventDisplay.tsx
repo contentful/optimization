@@ -1,5 +1,5 @@
-import { useOptimizationContext } from '@contentful/optimization-react-web'
 import { isRecord } from '@contentful/optimization-react-web/api-schemas'
+import { useOptimizationContext } from '@contentful/optimization-react-web/react-router'
 import { type JSX, useEffect, useReducer, useRef, useState } from 'react'
 
 const MS_PER_SECOND = 1000
