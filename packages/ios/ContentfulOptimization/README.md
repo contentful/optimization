@@ -31,7 +31,7 @@
 optimization behavior through a local JavaScriptCore bridge while Swift code owns native app
 concerns such as persistence, networking, lifecycle handling, SwiftUI views, and preview-panel UI.
 
-Requires iOS 15 / macOS 12 or later.
+Requires iOS 15 or later.
 
 ## Installation
 

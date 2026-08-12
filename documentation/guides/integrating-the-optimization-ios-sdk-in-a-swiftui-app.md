@@ -176,7 +176,7 @@ outside this guide:
 - **A native SwiftUI app you can build in Xcode**, with its own Contentful entry fetching already
   working. The iOS SDK does not fetch Contentful entries for your application UI — you fetch them in
   the app layer and pass the resulting single-locale dictionaries to `OptimizedEntry` or
-  `resolveOptimizedEntry(...)`. The SDK targets iOS 15+ / macOS 12+; it ships as a Swift Package with
+  `resolveOptimizedEntry(...)`. The SDK targets iOS 15+; it ships as a Swift Package with
   no `pod install` step, so you add it in Xcode (or `Package.swift`) and run a normal build on a
   simulator.
 - **Contentful delivery credentials** — space ID, delivery token, and environment — read from your

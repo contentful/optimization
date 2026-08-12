@@ -40,7 +40,11 @@ apps mostly use the view surface, UIKit apps mostly use the imperative `Optimiza
 | Preview panel                          | `PreviewPanelOverlay` (SwiftUI), `PreviewPanelViewController` (UIKit), `PreviewPanelConfig`, `PreviewContentfulClient` / `ContentfulHTTPPreviewClient`, `PreviewPanelContent` | extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Preview/PreviewPanelViewController.swift#PreviewPanelViewController; extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Preview/PreviewContentfulClient.swift#ContentfulHTTPPreviewClient                                                                                                                                      |
 
 - SPM target links `JavaScriptCore` for consuming apps and copies `optimization-ios-bridge.umd.js`
-  as a package resource; platforms are iOS 15+ / macOS 12+. source: extern:Package.swift links JavaScriptCore and copies the UMD bundle resource, iOS 15/macOS 12 — packages/ios/ContentfulOptimization/Package.swift
+  as a package resource; the SDK's supported platform is iOS 15+. `Package.swift` also declares a
+  `.macOS(.v12)` platform entry, and a few source files carry `#if canImport(AppKit)` branches for
+  it, but macOS is not a supported target for the Optimization product — those branches only let the
+  package compile in macOS-hosted tooling (e.g. SwiftUI previews, Simulator-adjacent tooling) and are
+  not exercised by any shipped feature. source: extern:Package.swift links JavaScriptCore and copies the UMD bundle resource, iOS 15/macOS 12 — packages/ios/ContentfulOptimization/Package.swift
 - Distribution: the Swift Package is published to a separate repo,
   `https://github.com/contentful/optimization.swift` (consumers add by URL `from: "x.y.z"`); the UMD
   bundle is built on demand (gitignored in the monorepo) from `optimization-js-bridge`, not
@@ -117,8 +121,9 @@ signatures from the Swift types; below is a navigation index with behavioral fac
 - `OptimizationScrollView` publishes a `ScrollContext { scrollY, viewportHeight }` on the SwiftUI
   environment under the named coordinate space `"optimization-scroll"`; descendant `OptimizedEntry`
   view-tracking reads it. Without an enclosing scroll view, tracking uses
-  `ViewTrackingController.fallbackViewportHeight` (`UIScreen.main.bounds.height`, or the main
-  `NSScreen` on macOS) and assumes `scrollY = 0`. source: extern:OptimizationScrollView provides ScrollContext via environment — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Views/OptimizationScrollView.swift#OptimizationScrollView; extern:fallbackViewportHeight = UIScreen.main.bounds.height — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Tracking/ViewTrackingController.swift#ViewTrackingController
+  `ViewTrackingController.fallbackViewportHeight` (`UIScreen.main.bounds.height`; a `#elseif
+canImport(AppKit)` branch reads `NSScreen.main` when UIKit isn't available at compile time, but
+  macOS is not a supported target) and assumes `scrollY = 0`. source: extern:OptimizationScrollView provides ScrollContext via environment — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Views/OptimizationScrollView.swift#OptimizationScrollView; extern:fallbackViewportHeight = UIScreen.main.bounds.height — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Tracking/ViewTrackingController.swift#ViewTrackingController
 - `ViewTrackingController` is the imperative equivalent for UIKit (there is no automatic component
   visibility tracking in UIKit): the app feeds `updateVisibility(elementY:elementHeight:scrollY:
 viewportHeight:)` from its own scroll/layout callbacks and the controller applies the same timing
@@ -221,8 +226,9 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
 - Entry tap tracking (SwiftUI `TapTrackingModifier`): on platforms where UIKit is available, a plain
   `UITapGestureRecognizer` attached to the wrapper's superview (`cancelsTouchesInView = false`,
   delegate always allows simultaneous recognition) observes taps without competing for touches a
-  nested interactive child (e.g. a `Button`) needs; it falls back to `simultaneousGesture(TapGesture())`
-  on platforms without UIKit (e.g. macOS). Either path emits wire type `component_click` via
+  nested interactive child (e.g. a `Button`) needs; a `#else` branch falls back to
+  `simultaneousGesture(TapGesture())` when UIKit isn't available at compile time (macOS is not a
+  supported target). Either path emits wire type `component_click` via
   `trackClick` when `hasConsent("trackClick")`, then calls `onTap(entry)` if provided. (Unlike React
   Native, which uses raw touch start/end with a distance threshold, iOS observes taps without SwiftUI's
   own gesture-arena competition.) source: extern:TapTrackingModifier uses a UITapGestureRecognizer on the superview to avoid blocking nested Buttons, falls back to simultaneousGesture off UIKit — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Tracking/TapTrackingModifier.swift#TapTrackingModifier; core-sdk#consent/ConsentPolicy.ts#hasEventConsent
@@ -305,8 +311,9 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   reference app points base URLs straight at `http://localhost:8000` (contrast React Native, which
   rewrites `localhost` to `10.0.2.2` on the Android emulator). source: impl:ios-sdk#shared/Config.swift; extern:the iOS Simulator shares the host network so host localhost resolves without a rewrite — packages/ios/README.md
 - Remote JS inspection (`JSContext.isInspectable`) is enabled only when `logLevel` is `.debug` or
-  `.log` (iOS 16.4+/macOS 13.3+), keeping it out of release builds. AppKit is a supported fallback
-  (macOS 12+), but the `AppStateHandler` background-flush path is UIKit-only. source: extern:isInspectable gated on debug/log logLevel — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Bridge/JSContextManager.swift#JSContextManager
+  `.log` and `#available(iOS 16.4, macOS 13.3, *)`, keeping it out of release builds; the `macOS`
+  clause is a compiler availability check only, not a supported deployment target. The
+  `AppStateHandler` background-flush path is UIKit-only. source: extern:isInspectable gated on debug/log logLevel — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Bridge/JSContextManager.swift#JSContextManager
 - Preview panel: `PreviewPanelOverlay` (SwiftUI FAB + sheet) and `PreviewPanelViewController`
   (`.addFloatingButton(to:)` for UIKit) fetch `nt_audience`/`nt_experience` definitions through an
   app-supplied `PreviewContentfulClient` (100-entry paginated `ContentfulHTTPPreviewClient`), then
