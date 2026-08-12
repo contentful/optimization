@@ -62,7 +62,7 @@ before you ship, which explains the two axes and the split form that sets them s
 1. Add the `ContentfulOptimization` Swift Package to your app target from
    `https://github.com/contentful/optimization.swift` (in Xcode: **File > Add Package
    Dependencies**), then build and run the app target once so Swift Package Manager resolves and
-   compiles the package. The package supports iOS 15+ and macOS 12+.
+   compiles the package. The package supports iOS 15+.
 
 2. Own one client in your existing `SceneDelegate`, initialize it, and inject it into your first view
    controller. `initialize(config:)` is synchronous and `throws` (it runs bridge setup inline on the
@@ -209,7 +209,7 @@ outside this guide:
 
 - **A UIKit app and Xcode**, with your own Contentful fetching already working and the ability to add
   a Swift package and run an Xcode build. The SDK is added through Swift Package Manager and supports
-  iOS 15+ and macOS 12+.
+  iOS 15+.
 - **Contentful delivery credentials** — space ID, delivery token, environment, and one concrete
   locale — read from your app's configuration layer.
 - **At least one entry with a variant attached to an experience**, authored in Contentful. Without

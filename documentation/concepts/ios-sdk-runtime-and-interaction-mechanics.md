@@ -8,7 +8,7 @@ Use this concept document to understand how the Optimization iOS SDK runs shared
 behavior in a native app, how SwiftUI and UIKit integrations share the same client, and how consent,
 state, entry resolution, tracking, preview overrides, and offline delivery work.
 
-This document applies to native apps on iOS 15 or later and macOS 12 or later. SwiftUI and UIKit
+This document applies to native apps on iOS 15 or later. SwiftUI and UIKit
 sections name runtime-specific APIs where behavior differs.
 
 For step-by-step setup, see
