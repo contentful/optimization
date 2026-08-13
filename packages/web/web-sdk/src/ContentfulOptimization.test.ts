@@ -704,6 +704,37 @@ describe('ContentfulOptimization', () => {
     expect(invocations).toEqual(['flushActiveInteractions', 'sendBatchEvents'])
   })
 
+  it('includes lifecycle-flushed entry interactions in the beacon payload', async () => {
+    const web = new ContentfulOptimization({
+      ...config,
+      defaults: { consent: true, profile: DEFAULT_PROFILE },
+    })
+
+    const runtime: unknown = Reflect.get(web, 'entryInteractionRuntime')
+    if (!(runtime instanceof EntryInteractionRuntime)) {
+      throw new Error('entryInteractionRuntime is unavailable')
+    }
+
+    rs.spyOn(runtime, 'flushActiveInteractions').mockImplementation(() => {
+      void web.trackView({
+        componentId: 'lifecycle-final-view',
+        viewDurationMs: 1750,
+        viewId: 'lifecycle-view-id',
+      })
+    })
+    const sendBeacon = rs.spyOn(window.navigator, 'sendBeacon').mockReturnValue(true)
+
+    await web.trackClick({ componentId: 'already-queued-click' })
+    window.dispatchEvent(new Event('pagehide'))
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(sendBeacon).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.stringContaining('"componentId":"lifecycle-final-view"'),
+    )
+  })
+
   it('allows creating a new instance after destroy', () => {
     const first = new ContentfulOptimization(config)
     const createSecondOptimization = (): ContentfulOptimization =>
