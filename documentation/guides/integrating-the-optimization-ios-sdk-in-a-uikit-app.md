@@ -487,6 +487,38 @@ selection (see [Live updates and locked variants](#live-updates-and-locked-varia
 resolution and fallback rules, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#fallback-behavior).
 
+If your app does not already have a `contentful.swift` client, construct one from your space ID,
+environment, and Delivery API token, then fetch the entry with one concrete locale and the same
+`include` depth:
+
+**Adapt this to your use case:**
+
+```swift
+import Contentful
+
+let contentfulClient = Client(
+    spaceId: "<your-space-id>",
+    environmentId: "<your-environment-id>",
+    accessToken: "<your-delivery-api-token>"
+)
+
+let query = Query()
+    .where(valueAtKeyPath: "sys.id", .equals(entryId))
+    .localizeResults(withLocaleCode: appLocale) // one concrete locale, never "*"
+    .include(10)
+
+contentfulClient.fetchArray(matching: query) { result in
+    switch result {
+    case let .success(response):
+        guard let entry = response.items.first else { return }
+        // Pass `entry` to the `Contentful.Entry` resolution overload below.
+    case let .failure(error):
+        // Handle the fetch error.
+        break
+    }
+}
+```
+
 If you fetch with `contentful.swift`, pass the `Contentful.Entry` directly to the
 `resolveOptimizedEntry(baseline: Contentful.Entry, selectedOptimizations:)` overload instead of
 hand-mapping it to a dictionary first. The SDK-owned adapter builds the required
@@ -1027,6 +1059,11 @@ Before release, verify the UIKit integration against these checks:
   interaction or visibility cycle.
 - **Privacy and governance** — Preview-panel access, event forwarding, profile IDs, user traits,
   app-owned caches, and diagnostics follow the app's data-minimization and retention policy.
+- **Confirm in Live Events** — in addition to local log and status checks, open the target Contentful
+  space and environment's Live Events view in the Contentful web app, trigger a real flow from the app
+  (a screen view, an entry view or tap, an `identify()` call, or a custom `track()` call), and confirm
+  the corresponding event arrives with the expected wire type (`identify`, `screen`, `component`,
+  `component_click`, or `track`) and payload fields.
 - **Local validation path** — Compare your integration against the iOS reference implementation. The
   repository's maintainers validate UIKit behavior with an XCUITest suite driven from
   `implementations/ios-sdk/`; that runner is a maintainer command, not an app command.
