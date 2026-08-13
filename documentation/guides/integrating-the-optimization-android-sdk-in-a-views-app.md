@@ -545,6 +545,32 @@ content model.
    configuration error. Replace `page` and `slug` with your content type and slug-field IDs. The
    native SDK never reads these lookup values or performs this request.
 
+   If your app does not already have a `contentful.java` client, build one from your space ID,
+   delivery token, and environment, then fetch with the same single-locale, `include`-depth contract
+   described above. `CDAClient.fetch(...).one(...)` is a blocking call, so run it off the main thread.
+
+   **Adapt this to your use case:**
+
+   ```kotlin
+   import com.contentful.java.cda.CDAClient
+   import com.contentful.java.cda.CDAEntry
+   import kotlinx.coroutines.Dispatchers
+   import kotlinx.coroutines.withContext
+
+   val cdaClient: CDAClient = CDAClient.builder()
+       .setSpace(spaceId)
+       .setToken(deliveryToken)
+       .setEnvironment(environment)
+       .build()
+
+   suspend fun fetchEntry(entryId: String, locale: String): CDAEntry = withContext(Dispatchers.IO) {
+       cdaClient.fetch(CDAEntry::class.java)
+           .withLocale(locale) // one concrete locale, never "*"
+           .include(10)
+           .one(entryId)
+   }
+   ```
+
 2. Add `OptimizedEntryView` from XML or create it in activity, fragment, or adapter code.
 
    **Copy this:**
@@ -1114,6 +1140,12 @@ Before releasing an Android Views integration, verify these checks:
 - **Local validation path** — Compare your integration against the Android reference implementation.
   The repository's maintainers validate Views behavior with Maestro flows driven from
   `implementations/android-sdk/`; those runners are maintainer commands, not app commands.
+- **Confirm in Live Events** — In addition to local log and status checks, open the target Contentful
+  space and environment's Live Events view in the Contentful web app, trigger a real flow from the app
+  (a screen view, an entry view or tap, an `identify()` call, or a custom `track()` call), and confirm
+  the corresponding event arrives with the expected wire type (`identify`, `screen`, `component`,
+  `component_click`, or `track`) and payload fields (for example `userId`/`traits` for `identify`,
+  `name`/`routeKey` for `screen`, `event`/`properties` for `track`).
 
   **Reference excerpt:**
 
