@@ -184,6 +184,15 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   so typed native renderers can distinguish baseline and variant shapes after resolution. It does
   not validate fields or choose content-type-specific UI.
   source: extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Contentful/CTEntry.swift
+- `CTEntry` is constructible by consumers from all three entry shapes, matching
+  `CTEntry.from(...)` on Android: `init(_: Contentful.Entry)`, `init(dictionary:fallback:)`, and
+  `init(json:)`. The dictionary initializer is fail-soft — a value with no JSON representation logs
+  and yields `fallback`, defaulting to the public `CTEntry.empty` (no `sys`, no fields, every read
+  absent) — while `init(json:)` throws instead, since a malformed JSON string carries a decoding
+  error worth surfacing. SDK APIs still accept entries as dictionaries, not `CTEntry`, so these
+  initializers are for reading an entry through `getField`/`hasField` rather than for passing one
+  back into resolution.
+  source: extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Contentful/CTEntry.swift; extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/contentful/CTEntry.kt
 
 ## Identifier ownership
 
