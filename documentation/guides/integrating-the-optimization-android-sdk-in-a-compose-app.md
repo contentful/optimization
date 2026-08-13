@@ -411,6 +411,32 @@ entries back in one payload — the reference implementation uses `include=10`. 
 CDA responses such as `locale=*`; the resolver expects direct single-locale field values and falls
 back to baseline on an all-locale payload.
 
+If your app does not already have a `contentful.java` client, build one from your space ID, delivery
+token, and environment, then fetch with the same single-locale, `include`-depth contract described
+above. `CDAClient.fetch(...).one(...)` is a blocking call, so run it off the main thread.
+
+**Adapt this to your use case:**
+
+```kotlin
+import com.contentful.java.cda.CDAClient
+import com.contentful.java.cda.CDAEntry
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+val cdaClient: CDAClient = CDAClient.builder()
+    .setSpace(spaceId)
+    .setToken(deliveryToken)
+    .setEnvironment(environment)
+    .build()
+
+suspend fun fetchEntry(entryId: String, locale: String): CDAEntry = withContext(Dispatchers.IO) {
+    cdaClient.fetch(CDAEntry::class.java)
+        .withLocale(locale) // one concrete locale, never "*"
+        .include(10)
+        .one(entryId)
+}
+```
+
 Every entry passed to `OptimizedEntry` or `client.resolveOptimizedEntry(...)` as a raw
 `Map<String, Any>` must include a top-level `metadata` block (tags and concepts) — the resolver
 reads it alongside `sys` and `fields`, and when it is missing the resolver silently returns the
@@ -1094,6 +1120,12 @@ Before releasing a Compose integration, verify these points against the target a
   app-owned identifiers that policy requires.
 - **Local validation path** — validate against the Android reference implementation or your app's own
   targeted Compose instrumentation flow before relying on production telemetry.
+- **Confirm in Live Events** — in addition to local log and status checks, open the target Contentful
+  space and environment's Live Events view in the Contentful web app, trigger a real flow from the app
+  (a screen view, an entry view or tap, an `identify()` call, or a custom `track()` call), and confirm
+  the corresponding event arrives with the expected wire type (`identify`, `screen`, `component`,
+  `component_click`, or `track`) and payload fields (for example `userId`/`traits` for `identify`,
+  `name`/`routeKey` for `screen`, `event`/`properties` for `track`).
 
 **Reference excerpt:**
 
