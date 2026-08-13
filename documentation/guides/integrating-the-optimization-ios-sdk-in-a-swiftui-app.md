@@ -427,6 +427,38 @@ Pass `appLocale` and `include: 10` to the app's existing `contentful.swift` fetc
 section below accepts the resulting `Contentful.Entry`; raw dictionaries remain supported through the
 separate dictionary initializer.
 
+If your app does not already have a `contentful.swift` client, construct one from your space ID,
+environment, and Delivery API token, then fetch the entry with one concrete locale and the same
+`include` depth:
+
+**Adapt this to your use case:**
+
+```swift
+import Contentful
+
+let contentfulClient = Client(
+    spaceId: "<your-space-id>",
+    environmentId: "<your-environment-id>",
+    accessToken: "<your-delivery-api-token>"
+)
+
+let query = Query()
+    .where(valueAtKeyPath: "sys.id", .equals(entryId))
+    .localizeResults(withLocaleCode: appLocale) // one concrete locale, never "*"
+    .include(10)
+
+contentfulClient.fetchArray(matching: query) { result in
+    switch result {
+    case let .success(response):
+        guard let entry = response.items.first else { return }
+        // Pass `entry` to `OptimizedEntry` or `client.resolveOptimizedEntry(...)`.
+    case let .failure(error):
+        // Handle the fetch error.
+        break
+    }
+}
+```
+
 For the full data shape and locale boundary, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
 and
@@ -1006,6 +1038,11 @@ Before release, verify these checks against the target app build:
   records.
 - **Local validation path** — validate against the iOS reference implementation or the app's own
   targeted XCUITest flow before relying on production telemetry.
+- **Confirm in Live Events** — in addition to local log and status checks, open the target Contentful
+  space and environment's Live Events view in the Contentful web app, trigger a real flow from the app
+  (a screen view, an entry view or tap, an `identify()` call, or a custom `track()` call), and confirm
+  the corresponding event arrives with the expected wire type (`identify`, `screen`, `component`,
+  `component_click`, or `track`) and payload fields.
 
 ## Troubleshooting
 
