@@ -530,6 +530,24 @@ function PersonalizedPage({ baselineEntry }: { baselineEntry: PageEntry }) {
 }
 ```
 
+**Adapt this to your use case:** the same managed or manual source model as `OptimizedEntry`, without
+the wrapper component, for a component that needs the resolved entry alongside other hook-driven UI.
+
+```tsx
+import { useOptimizedEntry } from '@contentful/optimization-react-native'
+import { Text } from 'react-native'
+
+function PersonalizedPage({ routeSlug }: { routeSlug: string }) {
+  const { entry, isPresentationReady } = useOptimizedEntry<AppEntrySkeleton, undefined, AppLocale>({
+    managedEntry: { contentType: 'page', slug: routeSlug },
+  })
+
+  if (!isPresentationReady || !entry) return null
+
+  return <Text>{entry.fields.title}</Text>
+}
+```
+
 The same `S` flows through hook results, render props, metadata, `onEntryResolved`, and `onTap`.
 Narrow at each renderer or callback boundary before reading content-type-specific fields. The hook
 result always includes `resolvedData`, while its top-level `entry` can be undefined during managed
@@ -1119,6 +1137,12 @@ Before release, verify these checks in the app build and environment that will s
 - **Local validation path** - Compare behavior against the React Native reference implementation and
   run the smallest meaningful app validation for the changed flow, such as typecheck, lint, or a
   targeted Detox file through the repository runner.
+- **Confirm in Live Events** - in addition to local log and status checks, open the target Contentful
+  space and environment's Live Events view in the Contentful web app, trigger a real flow from the
+  app (a screen view, an entry view or tap, an `identify()` call, or a custom `track()` call), and
+  confirm the corresponding event arrives with the expected wire type (`identify`, `screen`,
+  `component`, `component_click`, or `track`) and payload fields. The [preview panel](#preview-panel)
+  is an acceptable alternative when Live Events access is unavailable.
 
 ## Troubleshooting
 
