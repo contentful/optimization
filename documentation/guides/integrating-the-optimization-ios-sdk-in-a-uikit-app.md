@@ -43,7 +43,10 @@ replace your app's Contentful client — your UIKit app still owns Contentful fe
 resolution, consent UX, identity policy, navigation, caching, and rendering. If your app renders
 through SwiftUI views instead, use the
 [Integrating the Optimization iOS SDK in a SwiftUI app](./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
-guide.
+guide. A UIKit app that hosts some screens in SwiftUI through `UIHostingController` can use that
+guide's SwiftUI view surface on those screens with this same client: those views read the client from
+the SwiftUI environment, so inject it with `.environmentObject(client)` on the hosted view rather
+than wrapping the screen in `OptimizationRoot`, which creates and initializes a client of its own.
 
 ## Quick start
 
@@ -54,19 +57,26 @@ visible label flips to confirm it.** It owns one `OptimizationClient` in the sce
 injects it into the first view controller, and tracks the current screen from `viewDidAppear(_:)`.
 
 This quick start assumes your application policy permits Optimization to start with accepted consent
-and renders no end-user consent UI, so it seeds `StorageDefaults(consent: true)` — the shorthand that
-accepts both consent axes at once. If personalization must wait for a consent decision, keep this
-structure and add the [Consent and privacy-policy handoff](#consent-and-privacy-policy-handoff) step
-before you ship, which explains the two axes and the split form that sets them separately.
+and renders no end-user consent UI, so it configures `StorageDefaults(consent: true)` — the shorthand
+that accepts both consent axes at once. Read that as a startup default, not a one-time seed: a
+configured value takes precedence over whatever is stored in `UserDefaults` on every launch, so a
+shipped `consent: true` re-grants consent on each launch even after a user revoked it. If
+personalization must wait for a consent decision, keep this structure and add the
+[Consent and privacy-policy handoff](#consent-and-privacy-policy-handoff) step before you ship, which
+explains the two axes, the split form that sets them separately, and why an app that collects a
+choice leaves `defaults` unset.
 
 1. Add the `ContentfulOptimization` Swift Package to your app target from
    `https://github.com/contentful/optimization.swift` (in Xcode: **File > Add Package
-   Dependencies**), then build and run the app target once so Swift Package Manager resolves and
-   compiles the package. The package supports iOS 15+.
+   Dependencies**), then build and run the app target once on a simulator or a device so Swift
+   Package Manager resolves and compiles the package. The package supports iOS 15+.
 
 2. Own one client in your existing `SceneDelegate`, initialize it, and inject it into your first view
-   controller. `initialize(config:)` is synchronous and `throws` (it runs bridge setup inline on the
-   main actor), so call it with `try`/`try?` and no `await`.
+   controller. `initialize(config:)` is synchronous and `throws` — it loads the SDK's bridge and runs
+   bridge setup inline on the main actor — so call it with `try` and no `await`. **The bridge** is the
+   SDK's embedded JavaScript runtime: the iOS SDK runs the same Optimization core as the other SDKs in
+   the suite inside a JavaScriptCore context, one per client. `clientId` is your Optimization client
+   ID; [Before you start](#before-you-start) says where to find it in the Contentful web app.
 
    **Adapt this to your use case:**
 
@@ -88,17 +98,22 @@ before you ship, which explains the two axes and the split form that sets them s
         ) {
             guard let windowScene = scene as? UIWindowScene else { return }
 
-   +        // Synchronous throws, not async: call with try/try? and no await.
-   +        // StorageDefaults seeds accepted consent at startup for this proof.
-   +        try? client.initialize(config: OptimizationConfig(
-   +            clientId: "your-optimization-client-id",
-   +            defaults: StorageDefaults(consent: true),
-   +            logLevel: .debug,
-   +            onEventBlocked: { blocked in
-   +                // If the label reads "blocked", this prints why.
-   +                print("Optimization blocked \(blocked.method): \(blocked.reason)")
-   +            }
-   +        ))
+   +        // Synchronous throws, not async: call with try and no await. Catching
+   +        // and printing keeps a failed startup visible instead of silent.
+   +        do {
+   +            try client.initialize(config: OptimizationConfig(
+   +                clientId: "your-optimization-client-id",
+   +                // Startup default, not a one-time seed: this wins over a stored choice.
+   +                defaults: StorageDefaults(consent: true),
+   +                logLevel: .debug,
+   +                onEventBlocked: { blocked in
+   +                    // If the label reads "blocked", this prints why.
+   +                    print("Optimization blocked \(blocked.method): \(blocked.reason)")
+   +                }
+   +            ))
+   +        } catch {
+   +            print("Optimization initialize failed: \(error)")
+   +        }
 
    -        let home = HomeViewController()
    +        let home = HomeViewController(client: client)
@@ -110,8 +125,9 @@ before you ship, which explains the two axes and the split form that sets them s
    ```
 
    The unchanged lines above are illustrative context to match against your own `SceneDelegate`, not
-   a block to paste over it. `StorageDefaults` is an SDK config type; `StorageDefaults(consent: true)`
-   grants both consent axes at startup.
+   a block to paste over it. `StorageDefaults` is the SDK config type that holds the SDK's startup
+   state, consent included; `StorageDefaults(consent: true)` sets both consent axes — event consent
+   and persistence consent — as the startup default the SDK resolves before it reads a stored choice.
 
 3. Track the current screen from a view controller and reflect the outcome in a label. `HomeViewController`
    below is illustrative app shape — adapt it to a screen you already render, keeping the
@@ -160,19 +176,45 @@ before you ship, which explains the two axes and the split form that sets them s
    }
    ```
 
-4. Verify the first run. Launch the app; the label reads `Optimization screen event accepted`.
-   `trackCurrentScreen` returns an `EventEmissionResult` — an SDK result type whose `accepted` flag is
-   `true` when the event passed the SDK's local consent and allow-list gate and was emitted or queued
-   for delivery. `accepted` does not confirm that Contentful received the event, only that the local
-   gate let it through. Because `StorageDefaults(consent: true)` grants consent and `screen` is on the
-   SDK's default pre-consent allow-list, the event is accepted. If the label reads
-   `Optimization screen event blocked` instead, there are two causes to tell apart. If the consent
-   gate rejected the event, the `onEventBlocked` callback prints a line prefixed `Optimization blocked`
-   naming the reason and method — search the Xcode console for that prefix. If instead the client
-   never initialized (for example a wrong `clientId`), `try?` in step 2 swallowed the thrown error, so
-   `onEventBlocked` never fires; the SDK's `logLevel: .debug` output under the
-   `com.contentful.optimization` subsystem shows the failed init. To see the init error directly,
-   temporarily replace `try?` with a `do { try client.initialize(...) } catch { print(error) }` block.
+   **If your first screen comes from a storyboard**, do not paste the `init(coder:)` above: UIKit
+   instantiates storyboard controllers through exactly that initializer, so the `fatalError` crashes
+   the app on launch. Keep UIKit's initializer and take the client through a settable property that
+   the scene delegate fills in after the storyboard has built the controller — or read it from an
+   app-level dependency container the controller can reach on its own.
+
+   **Adapt this to your use case:**
+
+   ```swift
+   final class HomeViewController: UIViewController {
+       // Reader-owned injection point instead of an initializer parameter, so
+       // UIKit's init(coder:) stays intact. viewDidAppear is the first read.
+       var client: OptimizationClient!
+
+       // ...viewDidLoad and viewDidAppear exactly as above...
+   }
+
+   // In SceneDelegate.scene(_:willConnectTo:), after the storyboard built the window:
+   if let home = (window?.rootViewController as? UINavigationController)?
+       .viewControllers.first as? HomeViewController
+   {
+       // Inject the one scene-owned client, not a new one.
+       home.client = client
+   }
+   ```
+
+4. Verify the first run. Launch the app on a simulator or a device; the label reads
+   `Optimization screen event accepted`. `trackCurrentScreen` returns an `EventEmissionResult` — an
+   SDK result type whose `accepted` flag is `true` when the event passed the SDK's local consent and
+   allow-list gate and was emitted or queued for delivery. `accepted` does not confirm that Contentful
+   received the event, only that the local gate let it through. Because
+   `StorageDefaults(consent: true)` sets consent and `screen` is on the SDK's default pre-consent
+   allow-list, the event is accepted.
+
+**If the label reads `Optimization screen event blocked`,** the two `print` calls from step 2 name the
+cause in the Xcode console. A line prefixed `Optimization blocked` means the consent gate rejected the
+event and names the reason and method. A line prefixed `Optimization initialize failed` means the
+client never initialized, so nothing reached the gate at all.
+[Troubleshooting](#troubleshooting) covers what each branch usually is.
 
 <details>
   <summary>Table of Contents</summary>
@@ -212,6 +254,9 @@ outside this guide:
   iOS 15+.
 - **Contentful delivery credentials** — space ID, delivery token, environment, and one concrete
   locale — read from your app's configuration layer.
+- **A configured `contentful.swift` client** — Contentful's Swift delivery SDK, added to your app
+  target and able to fetch one entry with a concrete locale. Every entry example below starts from a
+  `Contentful.Entry` this client returned.
 - **At least one entry with a variant attached to an experience**, authored in Contentful. Without
   an authored variant, the integration can still run correctly while returning the baseline, so you
   cannot yet distinguish working personalization from a content-authoring gap. For the first
@@ -220,7 +265,10 @@ outside this guide:
   settings. Find them in the Contentful web app under **Apps → Installed apps → Contentful
   Personalization → SDK keys**.
 
-  The `environment` defaults to `main`, so pass it only when your setup differs. The Experience API
+  `OptimizationConfig.environment` defaults to `main`, so pass it only when your setup differs. That
+  default belongs to `OptimizationConfig` alone: the preview panel's own Contentful client
+  (`ContentfulHTTPPreviewClient`, in [Preview panel](#preview-panel)) defaults its `environment` to
+  `master`, so pass yours explicitly there. The Experience API
   (which picks variants) and the Insights API (which receives event and interaction delivery) each
   have a base URL that defaults correctly; you only set them for mocks or non-default hosts (see
   [Package installation and SDK configuration](#package-installation-and-sdk-configuration)).
@@ -243,10 +291,9 @@ delivery — is introduced by the section that needs it.
 
 **Integration category:** Required for first integration
 
-Add the package from `https://github.com/contentful/optimization.swift`, then build and run the app
-target once in Xcode so Swift Package Manager resolves and compiles it before you wire the client.
-Most apps add it through Xcode's **File > Add Package Dependencies**; SwiftPM-manifest targets add it
-in `Package.swift`.
+The quick start added the package through Xcode. What is new here is the SwiftPM-manifest form of the
+same dependency, and the full `OptimizationConfig` surface behind the handful of keys the quick start
+passed.
 
 **Adapt this to your use case:**
 
@@ -265,7 +312,9 @@ targets: [
 ```
 
 Configure the SDK with your Optimization client ID and the environment that matches your Contentful
-setup. Only `clientId` is required by the initializer.
+setup. Only `clientId` is required by the initializer. An app builds one `OptimizationConfig` and
+calls `initialize(config:)` once, in the scene or app startup the quick start edited; the config
+snippets in later sections add keys to that same config rather than introducing a second one.
 
 1. Pass `clientId` from your configuration layer.
 2. Pass `environment` only when it is not the default `main`.
@@ -303,17 +352,32 @@ tracks events.
 1. Create the client in `SceneDelegate`, `AppDelegate`, or an app-level dependency container, and
    call `initialize(config:)` before presenting content that uses Optimization.
 2. Pass the initialized client through initializers instead of creating separate clients in child
-   controllers.
+   controllers. For controllers UIKit instantiates itself — storyboard or nib scenes — use a settable
+   property or an app-level dependency container the controller reads from, and keep UIKit's
+   `init(coder:)` intact.
 3. Return to the main actor before calling the client from asynchronous callbacks; `OptimizationClient`
    is `@MainActor`.
 4. Gate UI on readiness when needed: the client publishes `isInitialized`, so observe
    `client.$isInitialized` when a screen must wait for setup before it reads SDK state.
 
+`OptimizationClient` is an `ObservableObject`, and its reactive values are Combine publishers reached
+through the `$` prefix: `client.isInitialized` is the current `Bool`, while `client.$isInitialized` is
+the publisher that emits when it changes. Subscribing needs `import Combine` and somewhere to keep the
+subscription alive — a `Set<AnyCancellable>` property, conventionally called `cancellables`, that lives
+as long as the object doing the subscribing. Every Combine snippet later in this guide assumes a bag
+like the one below on whichever object subscribes.
+
 **Adapt this to your use case:**
 
 ```swift
+import Combine
+import ContentfulOptimization
+import UIKit
+
 final class ProductViewController: UIViewController {
     private let client: OptimizationClient
+    // Keeps every Combine subscription in this controller alive.
+    private var cancellables = Set<AnyCancellable>()
 
     // Inject the app-owned client instead of creating a new one here.
     init(client: OptimizationClient) {
@@ -324,6 +388,14 @@ final class ProductViewController: UIViewController {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Readiness gate: $isInitialized is the publisher behind isInitialized.
+        client.$isInitialized
+            .sink { [weak self] isReady in self?.setContentHidden(!isReady) }
+            .store(in: &cancellables)
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         Task { @MainActor in
@@ -333,6 +405,9 @@ final class ProductViewController: UIViewController {
     }
 }
 ```
+
+`setContentHidden(_:)` is reader-owned: your own method for showing a placeholder until the SDK is
+ready.
 
 Use `destroy()` only for test teardown or a deliberate SDK teardown flow, not for normal navigation
 between UIKit screens. For lifecycle and main-actor mechanics, see
@@ -348,13 +423,20 @@ independent axes: event consent (may the SDK personalize and emit events) and pe
 (may the SDK store profile continuity in `UserDefaults`).
 
 1. Use `StorageDefaults(consent: true)` at startup only when application policy permits SDK activity
-   at launch.
+   at launch, and only when no stored user choice can contradict it.
 2. Leave `defaults` unset when the app must collect a choice before gated events can emit, and call
    `consent(...)` from the app-owned banner, CMP callback, or settings flow.
 3. Use `consent(_:)` for the boolean shorthand that sets both axes, or `consent(events:persistence:)`
    to set them independently.
 4. Pass `allowedEventTypes: []` for strict opt-in, so no SDK event emits before event consent.
 5. Observe `client.$state` when the UI must reflect event consent or persistence consent.
+
+`StorageDefaults` values are startup defaults, not one-time seeds. At every launch, `initialize`
+resolves the configured values over what is persisted in `UserDefaults`, so a configured `consent` or
+`persistenceConsent` replaces a stored user choice on that launch and every launch after it. An app
+that ships `StorageDefaults(consent: true)` therefore re-grants consent a user revoked, silently. That
+is the reason step 2 above matters: when your app collects a choice, leave `defaults` unset so the
+stored decision is what the SDK starts from, and let `consent(...)` carry your resolved policy.
 
 **Adapt this to your use case:**
 
@@ -376,14 +458,16 @@ independent axes: event consent (may the SDK personalize and emit events) and pe
 
 When `allowedEventTypes` is unset, the SDK's default pre-consent allow-list lets `identify` and
 `screen` emit before event consent, so a mobile journey can establish profile context and anonymous
-screen analytics. Entry views, entry taps, and custom `track` events are blocked until
-consent is accepted. A custom `allowedEventTypes` replaces that default, and `allowedEventTypes: []`
-blocks every SDK event until consent is accepted. `consent(false)` clears both axes, purges queues,
-and clears durable continuity while in-memory state stays usable until reset or teardown.
+screen analytics. Entry views, entry taps, custom `track` events, and `page` events (the page-view
+event the SDK shares with the web SDKs; UIKit apps track screens instead) are blocked until consent is
+accepted. A custom `allowedEventTypes` replaces that default, and `allowedEventTypes: []` blocks every
+SDK event until consent is accepted. `consent(false)` clears both axes, purges queues, and clears
+durable continuity while in-memory state stays usable until reset or teardown.
 
 **Adapt this to your use case:**
 
 ```swift
+// The same config the scene initializes with, plus one key.
 let config = OptimizationConfig(
     clientId: "your-optimization-client-id",
     // Replaces the default pre-consent allow-list of identify and screen with
@@ -392,6 +476,34 @@ let config = OptimizationConfig(
 )
 ```
 
+`client.state` is a snapshot value of type `OptimizationState`, and `client.$state` is the publisher
+behind it. Consent lives on that snapshot rather than on the client itself: read `state.consent` and
+`state.persistenceConsent` (each an optional `Bool`, where `nil` means the visitor has not decided
+yet), plus `state.profile` and `state.changes` — the flag and inline field values the Experience API
+returned for this visitor — when the UI reflects profile-driven values. The client's
+own published properties are a different set — `isInitialized`, `selectedOptimizations`, `locale`,
+`isPreviewPanelOpen`, `previewState` — so subscribe to `client.$state` for consent and to
+`client.$selectedOptimizations` for selections, not to one for both.
+
+**Adapt this to your use case:**
+
+```swift
+client.$state
+    // Consent is a field on the state snapshot, so this is the subscription a
+    // consent banner or privacy screen observes.
+    .sink { [weak self] state in
+        self?.updateConsentUI(
+            eventConsent: state.consent,
+            persistenceConsent: state.persistenceConsent
+        )
+    }
+    .store(in: &cancellables)
+```
+
+`updateConsentUI(eventConsent:persistenceConsent:)` is reader-owned, and `cancellables` is the
+subscription bag from
+[Client lifetime and UIKit injection](#client-lifetime-and-uikit-injection).
+
 For the full consent responsibility model, see
 [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
 
@@ -399,32 +511,60 @@ For the full consent responsibility model, see
 
 **Integration category:** Required for first integration
 
-The iOS SDK has no native managed fetch path. Fetching remains in your app regardless of how a route
-identifies an entry. If the app already has a Contentful entry ID, keep its existing single-entry ID
-request. If a route carries a public slug, the app can query CDA by content type and slug. In both
-cases, pass the fetched single-locale entry to the SDK; do not pass the ID or slug to native
-resolution. The SDK resolves the entry locally against the selected optimizations for the current
-visitor.
+This is where personalization happens. The iOS SDK has no native managed fetch path: your app fetches
+the entry as it already does and hands the fetched entry to `resolveOptimizedEntry`, which swaps in the
+selected variant locally, synchronously, for the current visitor. Start from the call itself, then read
+what it returns.
 
-`client.selectedOptimizations` (plural) is the SDK's current set of selected optimizations — one
-selection per experience the visitor's profile matched, published on the client and updated from
-Experience API responses. `resolveOptimizedEntry(baseline:selectedOptimizations:)` returns a
-`ResolvedOptimizedEntry` — an SDK result type that wraps the resolved `entry`, the single
-`selectedOptimization` (singular) that was applied to it, and an `optimizationContextId` identifying
-the optimization context, the profile-and-selection state that produced the variant. Note the
-one-letter difference: `selectedOptimizations` is the set you pass in (or the SDK resolves against),
-while `selectedOptimization` is the one selection returned on the result.
+The client is `@MainActor`, so resolution belongs on a main-actor type — a `UIView`, a
+`UIViewController`, or a cell. Resolve where you configure content, so a re-configured view resolves
+again. One returned field the call site branches on right away: `isEmptyVariant`, which is `true` when
+the visitor's selection is an **empty variant** — an authored variant with no content, meaning "show
+nothing here". The paragraphs after the snippet cover the rest of the result.
 
-The result's `isEmptyVariant` field is `true` only for a boolean `true`. In that case, `entry`
-retains the baseline for tracking context, but UIKit code must skip rendering consumer content. An
-absent, false, or invalid field renders normally.
+**Adapt this to your use case:**
 
-1. Fetch by entry ID, or adapt the app's existing Contentful query with the slug filters below when
-   the route supplies a slug. Pass the one fetched entry to native resolution. Do not pass
-   all-locale payloads (`locale=*` or
-   all-locale helpers) into entry resolution — they fall back to baseline. The raw dictionary path
-   requires top-level `sys`, `fields`, and `metadata`; the `Contentful.Entry` overload builds that
-   shape for you.
+```swift
+import Contentful
+import ContentfulOptimization
+import UIKit
+
+@MainActor
+final class ArticleCardView: UIView {
+    // Injected app-owned client; see Client lifetime and UIKit injection.
+    private let client: OptimizationClient
+    private let contentView = CardContentView() // Reader-owned UI.
+
+    // entry is the Contentful.Entry your app fetched for this card.
+    func configure(with entry: Contentful.Entry) {
+        let result = client.resolveOptimizedEntry(
+            baseline: entry,
+            selectedOptimizations: client.selectedOptimizations
+        )
+
+        // An empty variant means "show nothing here for this visitor".
+        contentView.isHidden = result.isEmptyVariant
+        guard !result.isEmptyVariant else { return }
+
+        // Content type IDs and field names below are your content model's.
+        switch result.entry.contentTypeId {
+        case "hero" where result.entry.hasField("headline"):
+            let headline: String? = result.entry.getField("headline")
+            contentView.showHero(headline: headline)
+        case "cta" where result.entry.hasField("label"):
+            let label: String? = result.entry.getField("label")
+            contentView.showCTA(label: label)
+        default:
+            contentView.showUnsupportedContent()
+        }
+    }
+}
+```
+
+1. Fetch one entry with one concrete locale, either by its entry ID or by a route slug. Pass that
+   fetched entry to resolution — never the ID or the slug. Do not pass all-locale payloads (`locale=*`
+   or all-locale helpers): the resolver cannot read locale-keyed field maps, so those fall back to
+   baseline.
 2. Include linked entries deeply enough to resolve the optimization links. `nt_experiences` (plural)
    is the SDK-fixed link field the SDK reads on an optimized entry; it links that entry's
    `nt_experience` (singular) experiences, and each experience links its `nt_variants` and
@@ -439,57 +579,94 @@ absent, false, or invalid field renders normally.
 6. Use `result.selectedOptimization` and `result.optimizationContextId` only when building tracking
    payloads.
 
-For an optional route-slug lookup, reuse the Contentful client and fetcher your app already owns.
-Send `content_type=page` and `fields.slug=<route slug>` as exact-equality filters, plus one concrete
-`locale`, enough `include` depth, and `limit=2`. Return the entry only for exactly one CDA item;
-surface zero items through the app's not-found path and more than one item as an authoring or
-configuration error. Replace `page` and `slug` with your content type and slug-field IDs. The native
-SDK never reads these lookup values or performs this request. Pass the returned entry to the typed
-`Contentful.Entry` resolution overload described below.
+Both lookups are ordinary `contentful.swift` queries through the Contentful client your app already
+owns. The slug form filters on content type and the slug field as exact equalities and asks for two
+items, so a duplicate slug is something you can detect rather than silently resolve: return the entry
+only for exactly one item, send zero items through your not-found path, and treat more than one as an
+authoring or configuration error. Replace `page` and `slug` with your content type and slug-field IDs.
+The SDK never performs this request or reads these lookup values.
 
-A selected linked variant can use any Contentful content type. `ResolvedOptimizedEntry.entry` is the
-SDK-owned `CTEntry` wrapper; its `contentTypeId` identifies that type but does not validate its fields.
-The content type IDs and `contentView` methods below belong to your app's content model.
-
-**Follow this pattern:**
+**Adapt this to your use case:**
 
 ```swift
-func renderEntry(_ baselineEntry: [String: Any]) {
-    let result = client.resolveOptimizedEntry(
-        baseline: baselineEntry,
-        selectedOptimizations: client.selectedOptimizations
-    )
+import Contentful
 
-    contentView.isHidden = result.isEmptyVariant
-    guard !result.isEmptyVariant else { return }
+// One entry by its Contentful entry ID.
+let byId = Query.where(sys: .id, .equals(entryId))
+    .include(10)
+    // One concrete locale; an all-locale response falls back to baseline.
+    .localizeResults(withLocaleCode: appLocale)
 
-    switch result.entry.contentTypeId {
-    case "hero" where result.entry.hasField("headline"):
-        let headline: String? = result.entry.getField("headline")
-        contentView.showHero(headline: headline)
-    case "cta" where result.entry.hasField("label"):
-        let label: String? = result.entry.getField("label")
-        contentView.showCTA(label: label)
-    case "page" where result.entry.hasField("title"):
-        let title: String? = result.entry.getField("title")
-        contentView.showPage(title: title)
+// Or one entry by route slug, for routes that carry a public slug.
+let bySlug = Query.where(contentTypeId: "page")
+    .where(field: "slug", .equals(routeSlug))
+    .include(10)
+    .localizeResults(withLocaleCode: appLocale)
+    // Two, so a duplicate slug is detectable instead of silently resolved.
+    .limit(to: 2)
+
+// contentfulClient is your app's existing Contentful.Client.
+contentfulClient.fetchArray(of: Contentful.Entry.self, matching: bySlug) { result in
+    guard case let .success(response) = result else { return }
+    switch response.items.count {
+    case 1:
+        // Hand the fetched entry to resolution on the main actor. cardView is the
+        // reader-owned view from the snippet above.
+        Task { @MainActor in cardView.configure(with: response.items[0]) }
+    case 0:
+        showNotFound() // Reader-owned not-found path.
     default:
-        contentView.showUnsupportedContent()
+        // More than one match is an authoring or configuration error.
+        reportAmbiguousSlug(routeSlug)
     }
 }
 ```
 
-`resolveOptimizedEntry` is synchronous and fail-soft: it never throws or breaks the UI. It returns
-the baseline entry unchanged (with `selectedOptimization` and `optimizationContextId` nil) when the
-client is not initialized or no usable selection exists in the fetched payload. Passing `nil` for
+If your app fetches raw CDA JSON instead of `contentful.swift` values, the same method takes a plain
+`[String: Any]` entry dictionary with top-level `sys`, `fields`, and `metadata` — the
+`Contentful.Entry` overload builds that shape for you.
+
+Now the values the call returns. `client.selectedOptimizations` (plural) is the SDK's current set of
+selected optimizations — one selection per experience the visitor's profile matched, published on the
+client and updated from Experience API responses. `resolveOptimizedEntry(baseline:selectedOptimizations:)`
+returns a `ResolvedOptimizedEntry` — an SDK result type that wraps the resolved `entry`, the single
+`selectedOptimization` (singular) that was applied to it, and an `optimizationContextId` identifying
+the optimization context, the profile-and-selection state that produced the variant. Note the
+one-letter difference: `selectedOptimizations` is the set you pass in (or the SDK resolves against),
+while `selectedOptimization` is the one selection returned on the result. Passing `nil` for
 `selectedOptimizations` uses current client state; an explicit snapshot locks resolution to that
-selection (see [Live updates and locked variants](#live-updates-and-locked-variants)). For the shared
-resolution and fallback rules, see
+selection (see [Live updates and locked variants](#live-updates-and-locked-variants)).
+
+On an empty variant the result still hands back the baseline `entry`. That is there so interaction
+tracking keeps its context, not for you to render — UIKit does no hiding for you, which is why the
+snippet checks `result.isEmptyVariant` before touching its content. The SDK sets the flag only for a
+literal boolean `true`; an absent, false, or otherwise invalid value renders normally.
+
+`ResolvedOptimizedEntry.entry` is the SDK-owned `CTEntry` wrapper around the resolved entry. A selected
+linked variant can use any Contentful content type, and `contentTypeId` identifies that type without
+validating its fields — which is why the pattern is branch on `contentTypeId`, confirm the field with
+`hasField(...)`, then read it with `getField(...)`.
+
+`resolveOptimizedEntry` is synchronous and fail-soft: it never throws or breaks the UI. Two different
+situations hand back the baseline, and they differ in what metadata comes with it:
+
+- **A client-side failure** — the client is not initialized, the baseline cannot be serialized, or the
+  bridge result cannot be parsed — returns the baseline entry unchanged with `selectedOptimization` and
+  `optimizationContextId` nil, and logs a warning.
+- **A resolver-side fallback** — no matching selection, unresolved `nt_experiences` or `nt_variants`
+  links, an all-locale payload, or a selection that points at the baseline instead of a variant — also
+  returns the baseline, but it can arrive **with** selected-optimization metadata attached. Treat
+  non-nil metadata as "the resolver had a selection for this entry", not as proof that a variant
+  replaced it.
+
+That distinction is what [Entry interaction tracking](#entry-interaction-tracking) builds on when it
+derives a `TrackingMetadata` from `result.selectedOptimization`. For the shared resolution and fallback
+rules, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#fallback-behavior).
 
-If your app does not already have a `contentful.swift` client, construct one from your space ID,
-environment, and Delivery API token, then fetch the entry with one concrete locale and the same
-`include` depth:
+[Before you start](#before-you-start) assumes you already have a `contentful.swift` client. If you do
+not, construct one from your space ID, environment, and Delivery API token — the queries above run
+through it:
 
 **Adapt this to your use case:**
 
@@ -501,41 +678,6 @@ let contentfulClient = Client(
     environmentId: "<your-environment-id>",
     accessToken: "<your-delivery-api-token>"
 )
-
-let query = Query()
-    .where(valueAtKeyPath: "sys.id", .equals(entryId))
-    .localizeResults(withLocaleCode: appLocale) // one concrete locale, never "*"
-    .include(10)
-
-contentfulClient.fetchArray(matching: query) { result in
-    switch result {
-    case let .success(response):
-        guard let entry = response.items.first else { return }
-        // Pass `entry` to the `Contentful.Entry` resolution overload below.
-    case let .failure(error):
-        // Handle the fetch error.
-        break
-    }
-}
-```
-
-If you fetch with `contentful.swift`, pass the `Contentful.Entry` directly to the
-`resolveOptimizedEntry(baseline: Contentful.Entry, selectedOptimizations:)` overload instead of
-hand-mapping it to a dictionary first. The SDK-owned adapter builds the required
-`{sys, fields, metadata}` shape once, and `result.entry` is still a `CTEntry` you read with
-`getField<T>`:
-
-**Follow this pattern:**
-
-```swift
-// entry is a Contentful.Entry from your contentful.swift fetch.
-let result = client.resolveOptimizedEntry(
-    baseline: entry,
-    selectedOptimizations: client.selectedOptimizations
-)
-contentView.isHidden = result.isEmptyVariant
-guard !result.isEmptyVariant else { return }
-let title: String? = result.entry.getField("title")
 ```
 
 ### Screen and navigation tracking
@@ -596,21 +738,25 @@ resolution you already rendered, then pass its fields to a `TrackClickPayload` (
 Building the metadata from the stored resolution — not by re-resolving at tap time — makes the tap
 carry the same optimization context that produced the rendered variant.
 
-1. Resolve and render the entry, and store the `ResolvedOptimizedEntry` you rendered from.
-2. On tap, build `TrackingMetadata` from the stored baseline entry and its `selectedOptimization`.
+1. Resolve and render the entry, and store both it and the `ResolvedOptimizedEntry` you rendered from.
+2. On tap, build `TrackingMetadata` from the stored entry and the resolution's `selectedOptimization`.
 3. Call `client.trackClick(TrackClickPayload(...))` from a `UIControl` action or gesture recognizer.
    For gesture recognizers, gate the dispatch to the completed gesture state instead of suppressing
    later taps for the view's lifetime.
 
+Keep the fetched `Contentful.Entry` and the resolution it produced side by side. `TrackingMetadata`
+itself takes the baseline as a dictionary, so the typed entry is encoded at that call. Both stored
+properties and both methods below belong to the same view, cell, or view controller that resolved the
+entry.
+
 **Adapt this to your use case:**
 
 ```swift
-// Reader-owned: your view or cell stores the resolution it rendered from.
-private var latestBaselineEntry: [String: Any]?
+// Reader-owned: your view or cell stores the entry and resolution it rendered.
+private var latestBaselineEntry: Contentful.Entry?
 private var latestResolution: ResolvedOptimizedEntry?
 
-func configure(with entry: [String: Any]) {
-    // entry is a reader-owned Contentful entry your app fetched.
+func configure(with entry: Contentful.Entry) {
     let result = client.resolveOptimizedEntry(
         baseline: entry,
         selectedOptimizations: client.selectedOptimizations
@@ -626,9 +772,10 @@ func configure(with entry: [String: Any]) {
     guard let entry = latestBaselineEntry, let result = latestResolution else { return }
 
     // TrackingMetadata carries the optimization context that produced the
-    // rendered variant, so the tap matches what the visitor actually saw.
+    // rendered variant, so the tap matches what the visitor actually saw. It
+    // reads the baseline in dictionary form, which is what CTEntry encodes.
     let metadata = TrackingMetadata(
-        entry: entry,
+        entry: CTEntry(entry).toDictionary(),
         optimizationContextId: result.optimizationContextId,
         selectedOptimization: result.selectedOptimization
     )
@@ -647,15 +794,22 @@ func configure(with entry: [String: Any]) {
 **Entry views.** Feed app-owned scroll or layout geometry to a `ViewTrackingController` — the SDK's
 imperative view-timing engine for UIKit — and it applies the same timing model and emits a
 `TrackViewPayload` (an SDK payload type) through the client for you. The controller uses the default
-model: an initial view event once the entry accumulates 2 seconds (`dwellTimeMs`) at 80% visibility
-(`minVisibleRatio`), periodic duration updates every 5 seconds (`viewDurationUpdateIntervalMs`) while
-visible, and a final duration event when visibility ends once at least one event has fired. It also
-pauses on backgrounding and re-evaluates on foreground, and dedupes its own sticky views, so you only
-own the geometry and the call site.
+model: an initial view event once the entry has accumulated a cumulative 2 seconds (`dwellTimeMs`) at
+or above 80% visibility (`minVisibleRatio`) — visible time adds up, so scrolling away and back does not
+restart the count — periodic duration updates every 5 seconds (`viewDurationUpdateIntervalMs`) while
+visible, and a final duration event when visibility ends, once at least one event has fired. It also
+pauses on backgrounding and re-evaluates on foreground, and dedupes its own sticky views, so you own
+the geometry and the call sites.
 
-`contentHost` below is a reader-owned container. The class's omitted initializer and layout code
-must add it to the view hierarchy with `addSubview(contentHost)` and size or constrain it before
-`configure()` runs; the SDK does not create or mount that container.
+Those call sites are the part a UIKit app is responsible for, and there are three: geometry updates
+while the entry is on screen, a rebuild when a new resolution changes the tracking metadata, and
+`onDisappear()` when the entry leaves the screen. Skip the last one and the visibility cycle never
+closes, so the final duration event never fires — and a reused cell keeps reporting the previous
+entry's cycle. `contentHost` is a reader-owned container: the class's omitted initializer and layout
+code must add it with `addSubview(contentHost)` and size or constrain it before `configure()` runs; the
+SDK does not create or mount that container. `ViewTrackingController` and `TrackingMetadata` read the
+baseline entry in dictionary form — they have no typed-entry initializer — so a typed `Contentful.Entry`
+is encoded once with `CTEntry` and that one dictionary is reused for every rebuild.
 
 **Follow this pattern:**
 
@@ -663,12 +817,15 @@ must add it to the view hierarchy with `addSubview(contentHost)` and size or con
 final class OptimizedEntryView: UIView {
     private let client: OptimizationClient
     private let contentHost = UIView()
-    private let entry: [String: Any]
+    private let entry: Contentful.Entry
+    // ViewTrackingController takes the baseline as a dictionary, so the typed
+    // entry is encoded once here and reused for every rebuild.
+    private lazy var entryDictionary: [String: Any] = CTEntry(entry).toDictionary()
     private weak var scrollView: UIScrollView?
     private var trackingController: ViewTrackingController?
     private var offsetObservation: NSKeyValueObservation?
 
-    // Call site: resolve the entry when the view is configured, then (re)build
+    // Call site 1: resolve the entry when the view is configured, then (re)build
     // the controller for that resolution — the same place you render the entry.
     func configure() {
         let result = client.resolveOptimizedEntry(baseline: entry)
@@ -685,16 +842,44 @@ final class OptimizedEntryView: UIView {
         trackingController?.onDisappear()
         trackingController = ViewTrackingController(
             client: client,
-            entry: entry,
+            entry: entryDictionary,
             optimizationContextId: result.optimizationContextId,
             selectedOptimization: result.selectedOptimization
         )
+        observeScrollOffset()
         emitVisibility()
-        // Call site: feed geometry on every scroll change so the controller can
-        // run its timing model. Also call emitVisibility() on layout changes.
+    }
+
+    // Call site 2: feed geometry on every scroll change and every layout pass so
+    // the controller can run its timing model.
+    private func observeScrollOffset() {
+        offsetObservation?.invalidate()
         offsetObservation = scrollView?.observe(\.contentOffset, options: [.new]) { [weak self] _, _ in
             Task { @MainActor in self?.emitVisibility() }
         }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        emitVisibility()
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        guard window != nil else { return }
+        observeScrollOffset()
+        emitVisibility()
+    }
+
+    // Call site 3: end the cycle when the entry leaves the screen, and stop
+    // observing with it. A reusable cell runs the same teardown from
+    // prepareForReuse().
+    override func willMove(toWindow newWindow: UIWindow?) {
+        super.willMove(toWindow: newWindow)
+        guard newWindow == nil else { return }
+        trackingController?.onDisappear()
+        offsetObservation?.invalidate()
+        offsetObservation = nil
     }
 
     // Reader-owned geometry: your app computes the element's position and feeds
@@ -760,8 +945,8 @@ client.reset()
 ```
 
 `reset()` clears profile continuity (profile, changes, selected optimizations, the anonymous ID, the
-current-screen dedupe tracker, and sticky-view keys) but **preserves consent state**, and it no-ops
-before initialization. When persistence consent is allowed, the SDK writes continuity to
+current-screen dedupe tracker, and sticky-view keys) and any preview-panel overrides currently applied,
+but **preserves consent state**, and it no-ops before initialization. When persistence consent is allowed, the SDK writes continuity to
 `UserDefaults` before publishing SDK state from an Experience response. In tests and relaunch flows,
 wait for SDK-derived UI or state instead of adding arbitrary storage delays. The SDK persists to
 `UserDefaults` under the `com.contentful.optimization.` prefix, not to cookies, and provides no
@@ -793,12 +978,17 @@ Task { @MainActor in
 }
 ```
 
+Both streams are Combine publishers, so they need `import Combine` and the `cancellables` bag from
+[Client lifetime and UIKit injection](#client-lifetime-and-uikit-injection) on whichever object
+subscribes.
+
 **Adapt this to your use case:**
 
 ```swift
 // eventStream is a passthrough publisher with no replay: subscribe before the
 // events you want to observe fire, or you miss the earlier ones.
 client.eventStream
+    // analyticsDebugStore is reader-owned: your own diagnostic sink.
     .sink { event in analyticsDebugStore.append(event) }
     .store(in: &cancellables)
 
@@ -818,9 +1008,12 @@ consent, identity, dedupe, and governance guidance, see
 
 **Integration category:** Optional
 
-Use Custom Flags when your Optimization data includes profile-backed feature values, and merge tags
-when it includes profile-driven text substitutions in Rich Text. Both read from SDK state
-separately from entry-variant resolution.
+A **Custom Flag** is a named value an experience personalizes instead of swapping a whole entry — a
+badge label, a discount percentage, a boolean that turns a section on. The Experience API returns the
+visitor's values as the `changes` on SDK state, and `getFlag(_:)` reads one of them by name. That name
+is not one you invent: it must match the flag authored in your Optimization data, the way
+`"show-promo"` does below. Merge tags are the Rich Text counterpart: profile-driven text substitutions
+inside a Rich Text field. Both read from SDK state separately from entry-variant resolution.
 
 1. Read a flag once with `getFlag(_:)` when a synchronous value is enough.
 2. Subscribe with `flagPublisher(_:)` when the UI must update as flag values change.
@@ -842,6 +1035,7 @@ let flagValue = client.getFlag("show-promo")
 // any other event.
 client.flagPublisher("show-promo")
     .receive(on: RunLoop.main)
+    // applyPromoFlag(_:) is reader-owned: your own UI update for the value.
     .sink { [weak self] value in self?.applyPromoFlag(value) }
     .store(in: &cancellables)
 ```
@@ -857,8 +1051,13 @@ selector against the current profile and returns the resolved string or `nil`.
 // mergeTagEntry is reader-owned: the expanded embedded-entry-inline node's
 // data.target you extracted from Rich Text.
 let resolved = client.getMergeTagValue(mergeTagEntry: mergeTagEntry)
-// resolved is String?; fall back to the merge tag's configured value on nil.
+// resolved is String?; nil means neither the profile value nor the merge tag's
+// own configured fallback field resolved.
 ```
+
+The resolver already falls back to the merge tag's configured fallback field, so `nil` means neither
+the profile value nor that fallback resolved. Substituting your own placeholder text on `nil` is
+defensive rendering, not a required step.
 
 For the deeper data model, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#merge-tags-and-localized-profile-values).
@@ -867,34 +1066,37 @@ For the deeper data model, see
 
 **Integration category:** Optional
 
-UIKit apps choose whether optimized content updates live or locks to the first selected variant for
-the screen. There is no automatic locking in UIKit; you pick the policy by how you pass
-`selectedOptimizations` and whether you redraw on state changes.
+Live updates in UIKit exist, and they are entirely app-driven. There is no view wrapper and no
+automatic mechanism: when the SDK publishes new selections, nothing on screen changes until your code
+resolves again and redraws. Both options in this section are therefore policies you implement — lock a
+screen to the selections its first render used, or subscribe and redraw — and you choose between them
+by what you pass for `selectedOptimizations` and whether you subscribe at all.
 
-1. To lock a screen, capture `client.selectedOptimizations ?? []` once after the first resolution and
+1. To lock a screen, capture `client.selectedOptimizations ?? []` at the screen's first resolution and
    pass that explicit snapshot to every `resolveOptimizedEntry` call on the screen. Do not pass `nil`
    for locked screens, because `nil` tells the resolver to use current SDK state.
 2. To update live, pass `nil` (or the current `client.selectedOptimizations`) and subscribe to
    `client.$selectedOptimizations` to redraw affected views when selections change.
-3. Treat `client.isPreviewPanelOpen` as a reason to redraw live: an open preview panel forces live
-   updates so applied overrides appear immediately.
+3. Decide what an open preview panel means for your screens. Nothing forces live updates in UIKit, so
+   overrides applied in the panel appear only if you redraw: subscribe to `client.$isPreviewPanelOpen`
+   and `client.$previewState` alongside `$selectedOptimizations`, and treat an open panel as a reason to
+   re-resolve even on an otherwise locked screen.
 
 **Adapt this to your use case:**
 
 ```swift
-private var lockedOptimizations: [[String: Any]] = []
-private var hasLockedOptimizations = false
+// nil until this screen has resolved once; an explicit snapshot afterwards.
+private var lockedOptimizations: [[String: Any]]?
 
-func lockVariantsForScreen() {
-    guard !hasLockedOptimizations else { return }
-    // Capture an explicit snapshot after the screen's first resolution.
-    // Empty array locks to no selections; nil would ask for current SDK state.
-    lockedOptimizations = client.selectedOptimizations ?? []
-    hasLockedOptimizations = true
-}
+// Call site: every render on this screen goes through here — the first one from
+// viewDidLoad or cell configuration, and every later redraw.
+func render(entry: Contentful.Entry) {
+    // The first render is what locks. Empty array locks to no selections; nil
+    // would keep asking for current SDK state on every later render.
+    if lockedOptimizations == nil {
+        lockedOptimizations = client.selectedOptimizations ?? []
+    }
 
-func render(entry: [String: Any]) {
-    guard hasLockedOptimizations else { return }
     let result = client.resolveOptimizedEntry(
         baseline: entry,
         selectedOptimizations: lockedOptimizations
@@ -905,6 +1107,12 @@ func render(entry: [String: Any]) {
 }
 ```
 
+Locking on the first render keeps the screen from waiting on a separate locking step. Selections come
+from an Experience API response, though, so the first render can happen before any selection exists —
+which locks the screen to none. The SwiftUI view surface handles this by locking on the first non-nil
+value instead; in UIKit that decision is yours: to match it, set `lockedOptimizations` back to `nil` and
+render again when a `$selectedOptimizations` subscription delivers the first non-nil value.
+
 **Adapt this to your use case:**
 
 ```swift
@@ -913,11 +1121,17 @@ client.$selectedOptimizations
     // committed selections before re-resolving.
     .receive(on: RunLoop.main)
     .sink { [weak self] _ in
+        // liveUpdates and reloadVisibleContent() are reader-owned: your screen's
+        // own policy flag and its redraw.
         guard self?.client.isPreviewPanelOpen == true || self?.liveUpdates == true else { return }
         self?.reloadVisibleContent()
     }
     .store(in: &cancellables)
 ```
+
+`cancellables` is again the subscription bag from
+[Client lifetime and UIKit injection](#client-lifetime-and-uikit-injection), so this subscription needs
+`import Combine` on the file that holds it.
 
 For the precedence between live updates, locked variants, and preview-panel state, see
 [iOS SDK runtime and interaction mechanics](../concepts/ios-sdk-runtime-and-interaction-mechanics.md#live-updates-and-preview-behavior).
@@ -939,23 +1153,36 @@ overrides.
 3. Keep the preview panel out of public production builds unless your release policy explicitly
    allows it for an internal audience.
 
+The button attaches to a view controller that already exists, so the natural place for this is where
+the scene builds its root controller — the same `SceneDelegate` method the quick start edited, where
+both the client and the host controller are in scope.
+
 **Adapt this to your use case:**
 
 ```swift
-#if DEBUG
-let previewContentfulClient = ContentfulHTTPPreviewClient(
-    spaceId: "your-space-id",
-    accessToken: "your-cda-token",
-    environment: "main"
-)
+func scene(
+    _ scene: UIScene,
+    willConnectTo _: UISceneSession,
+    options _: UIScene.ConnectionOptions
+) {
+    // ...window and root controller setup from the quick start...
 
-PreviewPanelViewController.addFloatingButton(
-    to: homeViewController,
-    // Pass the app-owned client so overrides affect the same resolver and state.
-    client: client,
-    contentfulClient: previewContentfulClient
-)
-#endif
+    #if DEBUG
+    let previewContentfulClient = ContentfulHTTPPreviewClient(
+        spaceId: "your-space-id",
+        accessToken: "your-cda-token",
+        // Defaults to "master" on this client, so pass yours explicitly.
+        environment: "main"
+    )
+
+    PreviewPanelViewController.addFloatingButton(
+        to: home,
+        // Pass the app-owned client so overrides affect the same resolver and state.
+        client: client,
+        contentfulClient: previewContentfulClient
+    )
+    #endif
+}
 ```
 
 Passing `contentfulClient` is what loads audience and experience definitions by name. Without it the
@@ -981,18 +1208,26 @@ Contentful CDA locale are separate inputs, even when they usually carry the same
 **Adapt this to your use case:**
 
 ```swift
-let nextLocale = "de-DE"
+// Called from your language picker or settings screen. The refetch is async, so
+// the whole sequence lives in one async method (or a Task) on that controller.
+@MainActor
+func applyLocale(_ nextLocale: String) async {
+    do {
+        // Updates the SDK Experience/event locale only; throws on an invalid locale.
+        try client.setLocale(nextLocale)
 
-// Updates the SDK Experience/event locale only; throws on an invalid locale.
-try client.setLocale(nextLocale)
-
-// Reader-owned refetch in the same locale, then re-resolve and redraw.
-entries = try await contentfulEntryService.fetchEntries(
-    ids: entryIds,
-    include: 10,
-    locale: nextLocale
-)
-reloadVisibleContent()
+        // Reader-owned refetch in the same locale, then re-resolve and redraw.
+        entries = try await contentfulEntryService.fetchEntries(
+            ids: entryIds,
+            include: 10,
+            locale: nextLocale
+        )
+        reloadVisibleContent()
+    } catch {
+        // Reader-owned: keep the previous locale's content on screen.
+        reportLocaleChangeFailure(error)
+    }
+}
 ```
 
 For the full locale model, see
@@ -1021,12 +1256,14 @@ lifecycle handler flushes on `willResignActive`.
 **Adapt this to your use case:**
 
 ```swift
+// Again the one config the scene initializes with, plus one key.
 let config = OptimizationConfig(
     clientId: "your-optimization-client-id",
     queuePolicy: QueuePolicy(
         offlineMaxEvents: 500,
         onOfflineDrop: { event in
-            // event is a QueueEvent with a type and a context dictionary.
+            // event is a QueueEvent with a type and a context dictionary;
+            // diagnostics is reader-owned: your own operational logging.
             diagnostics.record("optimization-offline-drop", context: event.context)
         },
         onFlushFailure: { event in
@@ -1078,6 +1315,22 @@ Before release, verify the UIKit integration against these checks:
 
 ## Troubleshooting
 
+- **The build fails with `No such module 'ContentfulOptimization'`** — Confirm the package is added to
+  the app target's dependencies (the product is named `ContentfulOptimization`), build the app target
+  once so Swift Package Manager resolves and compiles it, and confirm the target's minimum deployment
+  version is iOS 15 or later. If `import Contentful` is what fails to resolve, add `contentful.swift` to
+  the app target as well.
+- **The app crashes on launch with `init(coder:) is not supported`** — A storyboard or nib is
+  instantiating a view controller whose `init(coder:)` was replaced by the constructor-injection form.
+  Keep UIKit's `init(coder:)`, take the client through a settable property or an app-level dependency
+  container, and set it before the view appears.
+- **The quick-start label reads `Optimization screen event blocked`** — Two causes. If the consent gate
+  rejected the event, `onEventBlocked` prints a line prefixed `Optimization blocked` naming the reason
+  and method, so search the Xcode console for that prefix, then check consent and `allowedEventTypes`.
+  If the client never initialized, the caught error prints instead, and the SDK's `logLevel: .debug`
+  output under the `com.contentful.optimization` subsystem shows the failed init. `initialize` throws a
+  `configError` for an invalid `locale` and a `resourceLoadError` when the packaged bridge resource
+  cannot be loaded, so the printed error names which of the two you hit.
 - **Optimized entries always render the baseline** — Confirm the app fetched a single-locale entry,
   requested enough `include` depth for `nt_experiences` and `nt_variants`, initialized the client,
   and has non-empty `client.selectedOptimizations` for the visitor.
