@@ -36,13 +36,32 @@ Both apps share `shared/` for configuration, Contentful fetching, and analytics 
 run the same UI test source tree from `uitests/` against their respective host apps so SDK behavior
 can be compared across UI frameworks.
 
+## Contentful entry fetching
+
+Entries are fetched with Contentful's official Swift SDK,
+[`contentful.swift`](https://github.com/contentful/contentful.swift), which is the integration path
+recommended to customers. `shared/ContentfulFetcher.swift` queries by entry ID with `include(10)`,
+and the fetched `Contentful.Entry` values are handed to the Optimization SDK's typed entry APIs:
+`OptimizedEntry(entry:)` in SwiftUI and `resolveOptimizedEntry(baseline:)` in UIKit. The SDK encodes
+them through `CTEntry`, so the app does no CDA JSON parsing or link resolution of its own.
+
+Entry-ID lookup stays app-owned; the Optimization SDK resolves personalization against entries the
+app supplies rather than fetching them itself.
+
+`shared/MockContentfulTransport.swift` exists only to reach this repo's mock server and is not part
+of the recommended integration. The mock multiplexes the Contentful, Experience, and Insights APIs
+onto one port and namespaces the CDA under `/contentful/`, which `Contentful.Client` cannot express,
+and it serves no `/locales` route, which the SDK requires before its first entry fetch. A production
+app builds `Contentful.Client(spaceId:accessToken:)` against `cdn.contentful.com` and needs none of
+it.
+
 ## CDA locale handling
 
 The app defines one locale in shared config, passes it to the native SDK as top-level `locale`, and
-passes it directly to the shared raw CDA fetch helper. Entries passed to SDK resolution use the
-standard single-locale CDA entry shape. Do not use all-locale CDA responses or `locale=*`, because
-entry resolution expects direct single-locale fields such as `fields.nt_experiences` and
-`fields.nt_variants`. See
+passes it to CDA requests through `localizeResults(withLocaleCode:)`. Entries passed to SDK
+resolution use the standard single-locale CDA entry shape. Do not use all-locale CDA responses or
+`locale=*`, because entry resolution expects direct single-locale fields such as
+`fields.nt_experiences` and `fields.nt_variants`. See
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
 for the broader locale model and
 [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)

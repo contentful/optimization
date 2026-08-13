@@ -15,8 +15,22 @@ struct AppConfig {
     static let experienceBaseUrl = "http://localhost:8000/experience/"
     static let insightsBaseUrl = "http://localhost:8000/insights/"
 
-    static let contentfulBaseUrl = "http://localhost:8000/contentful/"
+    /// Host (with port) for the mock Contentful CDA, in the `host[:port]` form
+    /// `Contentful.Client` expects. A production app omits this entirely and
+    /// gets the default `cdn.contentful.com`.
+    static let contentfulHost = "localhost:8000"
+
+    /// Path prefix the mock server namespaces the CDA under, so one process can
+    /// also serve the Experience and Insights APIs. Consumed only by
+    /// `MockContentfulTransport` — `Contentful.Client` builds paths from the
+    /// host root and has nowhere to put a prefix.
+    static let contentfulMockPathPrefix = "/contentful"
+
     static let contentfulSpaceId = "mock-space-id"
+
+    /// The mock CDA ignores authorization, but `Contentful.Client` requires a
+    /// token to build its `Authorization` header.
+    static let contentfulAccessToken = "mock-access-token"
 
     static let entryIds = [
         "1MwiFl4z7gkwqGYdvCmr8c",

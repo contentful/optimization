@@ -1,13 +1,14 @@
+import Contentful
 import ContentfulOptimization
 import UIKit
 
 final class ContentEntryUIView: UIView {
 
-    init(client: OptimizationClient, entry: [String: Any], scrollView: UIScrollView?) {
+    init(client: OptimizationClient, entry: Contentful.Entry, scrollView: UIScrollView?) {
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
 
-        let entryId = entryId(for: entry)
+        let entryId = entry.sys.id
         let optimized = OptimizedEntryUIView(
             client: client,
             entry: entry,
@@ -74,9 +75,4 @@ private final class EntryContentView: UIView {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
-}
-
-private func entryId(for entry: [String: Any]) -> String {
-    let sys = entry["sys"] as? [String: Any]
-    return (sys?["id"] as? String) ?? ""
 }

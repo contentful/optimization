@@ -1,4 +1,5 @@
 import Combine
+import Contentful
 import ContentfulOptimization
 import UIKit
 
@@ -6,7 +7,7 @@ final class LiveUpdatesTestViewController: UIViewController {
 
     private let client: OptimizationClient
     private let personalizedEntryId = "2Z2WLOx07InSewC3LUB3eX"
-    private var entry: [String: Any]?
+    private var entry: Contentful.Entry?
     private var isIdentified = false
     private var globalLiveUpdates = false
     private var isPreviewPanelSimulated = false
@@ -235,7 +236,7 @@ final class LiveUpdatesTestViewController: UIViewController {
     }
 
     private func makeSection(
-        entry: [String: Any],
+        entry: Contentful.Entry,
         title: String,
         subtitle: String,
         liveUpdates: Bool?,

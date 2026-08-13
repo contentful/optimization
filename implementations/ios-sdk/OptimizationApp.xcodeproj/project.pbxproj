@@ -12,6 +12,7 @@
 		137A73B22636AC4E7B2E0EF0 /* AnalyticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 102D5A209AF6AC8B69E4BD24 /* AnalyticsTests.swift */; };
 		19E3767A1A9F73198E5BD235 /* XCTestExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9711C5717754C40619B585EE /* XCTestExtensions.swift */; };
 		1A3EC2767577C51E53AB19D2 /* AnalyticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 102D5A209AF6AC8B69E4BD24 /* AnalyticsTests.swift */; };
+		1FC8A89C845F30ACAD88586B /* Contentful in Frameworks */ = {isa = PBXBuildFile; productRef = E897BA8CDB1DDBF1C164A4E4 /* Contentful */; };
 		244AA9A414B83F37FAE72F42 /* ContentEntryUIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E433A2784433D5F7632A8098 /* ContentEntryUIView.swift */; };
 		24EF9DE5BDCB8CF94011F6E4 /* UnidentifiedVariantsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E8E4E3EC9B5BB52E93ECC8 /* UnidentifiedVariantsTests.swift */; };
 		27E21567FB96A9E2EC57EE81 /* XCTestExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9711C5717754C40619B585EE /* XCTestExtensions.swift */; };
@@ -28,10 +29,13 @@
 		471F733790E71327EAA41CA8 /* LiveUpdatesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B85C1A5AF835283004FFE76D /* LiveUpdatesTests.swift */; };
 		4FEBB65BC56EFBD45D81C803 /* PreviewPanelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBCEDAABD36DADC093A8FD78 /* PreviewPanelTests.swift */; };
 		53F94866D0BA3E09271D73F7 /* ContentfulOptimization in Frameworks */ = {isa = PBXBuildFile; productRef = B622890DF93C3F71C32F81AB /* ContentfulOptimization */; };
+		55EBF3F91D016BC49C2C077E /* MockContentfulTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26C4493D66695EEA5637A015 /* MockContentfulTransport.swift */; };
 		58116AD3ED6029892390DFCE /* ScreenTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A09744E23C92FDCD9F5439 /* ScreenTrackingTests.swift */; };
+		58EF6936C43184E5E5BB149B /* Contentful in Frameworks */ = {isa = PBXBuildFile; productRef = 223614F3D65269BC06E8BC2A /* Contentful */; };
 		5C1226FB8DC19DE4D3783F11 /* UnidentifiedVariantsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E8E4E3EC9B5BB52E93ECC8 /* UnidentifiedVariantsTests.swift */; };
 		5F679B3B001F53CD0A6BBC98 /* IdentifiedVariantsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44D0B58FB5CDE1A33ADEC3E /* IdentifiedVariantsTests.swift */; };
 		61D00339E0A84FBA44A0AF62 /* FlagViewTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79C1C23CB5619203CAD28A3 /* FlagViewTrackingTests.swift */; };
+		63D62559B4584A3C778A232C /* MockContentfulTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26C4493D66695EEA5637A015 /* MockContentfulTransport.swift */; };
 		68EBA430F06D7974D323C432 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F03F8B039B4ED4A7E7A32D5 /* SceneDelegate.swift */; };
 		68FDF01398E5C12FD8A37277 /* AnalyticsEventDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC9CA7E33164E91046FF6DF /* AnalyticsEventDisplay.swift */; };
 		6BEDE4E72E002CF5C3A8A9E1 /* ExtendedViewTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1324154A5A5CE58F32970813 /* ExtendedViewTrackingTests.swift */; };
@@ -51,6 +55,7 @@
 		9F3986444C6D6D3BCB8ECEA3 /* RichText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 820BE574DFF5E022220890CD /* RichText.swift */; };
 		A375768DD5B98ECEC51B04C9 /* FlagViewTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79C1C23CB5619203CAD28A3 /* FlagViewTrackingTests.swift */; };
 		B1A5A931BBDFC3438E935012 /* OfflineBehaviorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 682E3BF881B8093C2D5EF2CE /* OfflineBehaviorTests.swift */; };
+		B4EF5067C86627BF93949985 /* MockContentfulClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC271C5DD5F3CFBBFF9A24A /* MockContentfulClient.swift */; };
 		C04EF55982CA837E62CC0669 /* ContentfulFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = F383552F49942336F9725020 /* ContentfulFetcher.swift */; };
 		C23B6242DA30D283D76C1B3E /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5DDE184BA14D36BAC6A5936 /* Config.swift */; };
 		C4757AF18FE122AC807B27E7 /* NestedButtonTapTestScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B353BE52F9AEFA1D6213FB4 /* NestedButtonTapTestScreen.swift */; };
@@ -61,6 +66,7 @@
 		E3C31DA281B4A6D1DF55CE29 /* TapTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DE746138D269D770FA86FA /* TapTrackingTests.swift */; };
 		ECBF1C0DC16E4532F4EEE49A /* ExtendedViewTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1324154A5A5CE58F32970813 /* ExtendedViewTrackingTests.swift */; };
 		EFEFDCD73D2FE1854045F5DB /* PreviewPanelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBCEDAABD36DADC093A8FD78 /* PreviewPanelTests.swift */; };
+		F00EF0DEE25152C62840DF82 /* MockContentfulClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC271C5DD5F3CFBBFF9A24A /* MockContentfulClient.swift */; };
 		F510376F8D6D3EFE7BB197E1 /* NestedContentEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 354A498C8D7BC1CB974D2454 /* NestedContentEntryView.swift */; };
 		FE0F74AA3E04EB42454F14D1 /* TestHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A38EFCB367C35AF0AEB0A4AE /* TestHelpers.swift */; };
 /* End PBXBuildFile section */
@@ -90,6 +96,7 @@
 		102D5A209AF6AC8B69E4BD24 /* AnalyticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsTests.swift; sourceTree = "<group>"; };
 		1324154A5A5CE58F32970813 /* ExtendedViewTrackingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtendedViewTrackingTests.swift; sourceTree = "<group>"; };
 		1B353BE52F9AEFA1D6213FB4 /* NestedButtonTapTestScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestedButtonTapTestScreen.swift; sourceTree = "<group>"; };
+		26C4493D66695EEA5637A015 /* MockContentfulTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockContentfulTransport.swift; sourceTree = "<group>"; };
 		29032ACE1D4AEB3E5D1BB51A /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		2E855C4FA2D4C37DB188398F /* OptimizationAppSwiftUI.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OptimizationAppSwiftUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		354A498C8D7BC1CB974D2454 /* NestedContentEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestedContentEntryView.swift; sourceTree = "<group>"; };
@@ -99,6 +106,7 @@
 		5F03F8B039B4ED4A7E7A32D5 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		682E3BF881B8093C2D5EF2CE /* OfflineBehaviorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineBehaviorTests.swift; sourceTree = "<group>"; };
 		6B60B2B8362A57886F415EE4 /* LiveUpdatesTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveUpdatesTestViewController.swift; sourceTree = "<group>"; };
+		6FC271C5DD5F3CFBBFF9A24A /* MockContentfulClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockContentfulClient.swift; sourceTree = "<group>"; };
 		72BC55BDAE08B0B386CCFA65 /* ContentfulOptimization */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ContentfulOptimization; path = ../../packages/ios/ContentfulOptimization; sourceTree = SOURCE_ROOT; };
 		7A41CEBEA796C5A3179D691E /* LiveUpdatesTestScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveUpdatesTestScreen.swift; sourceTree = "<group>"; };
 		7FDD088B0ACEC1271B3C5509 /* OptimizedEntryUIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimizedEntryUIView.swift; sourceTree = "<group>"; };
@@ -132,6 +140,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				42933080441B12904731C661 /* ContentfulOptimization in Frameworks */,
+				1FC8A89C845F30ACAD88586B /* Contentful in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -140,6 +149,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				53F94866D0BA3E09271D73F7 /* ContentfulOptimization in Frameworks */,
+				58EF6936C43184E5E5BB149B /* Contentful in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -213,6 +223,8 @@
 				D5DDE184BA14D36BAC6A5936 /* Config.swift */,
 				F383552F49942336F9725020 /* ContentfulFetcher.swift */,
 				89CE81FC20185EE7C2FF7BEF /* EventStore.swift */,
+				6FC271C5DD5F3CFBBFF9A24A /* MockContentfulClient.swift */,
+				26C4493D66695EEA5637A015 /* MockContentfulTransport.swift */,
 				A72A25C095AB9AA5B35E3F57 /* MockPreviewContentfulClient.swift */,
 				820BE574DFF5E022220890CD /* RichText.swift */,
 			);
@@ -306,6 +318,7 @@
 			name = OptimizationAppSwiftUI;
 			packageProductDependencies = (
 				B622890DF93C3F71C32F81AB /* ContentfulOptimization */,
+				223614F3D65269BC06E8BC2A /* Contentful */,
 			);
 			productName = OptimizationAppSwiftUI;
 			productReference = 2E855C4FA2D4C37DB188398F /* OptimizationAppSwiftUI.app */;
@@ -343,6 +356,7 @@
 			name = OptimizationAppUIKit;
 			packageProductDependencies = (
 				244F9A9729F24EEBFDC1862F /* ContentfulOptimization */,
+				E897BA8CDB1DDBF1C164A4E4 /* Contentful */,
 			);
 			productName = OptimizationAppUIKit;
 			productReference = BB9EE54CEA502AA570FA0154 /* OptimizationAppUIKit.app */;
@@ -393,6 +407,7 @@
 			mainGroup = 603D5CDC672E61359F8B4927;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				D519C5C4AF908F3FD0450A60 /* XCRemoteSwiftPackageReference "contentful.swift" */,
 				435335CDD6AD4D4978CBCABF /* XCLocalSwiftPackageReference "../../packages/ios/ContentfulOptimization" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -441,6 +456,8 @@
 				4447121F6CD440EAC27713E7 /* EventStore.swift in Sources */,
 				93DDB4FCE61B74F35663301D /* LiveUpdatesTestScreen.swift in Sources */,
 				8BE046C5FD5539712A40551C /* MainScreen.swift in Sources */,
+				B4EF5067C86627BF93949985 /* MockContentfulClient.swift in Sources */,
+				63D62559B4584A3C778A232C /* MockContentfulTransport.swift in Sources */,
 				7E0AE3A92E2EB13F275145C5 /* MockPreviewContentfulClient.swift in Sources */,
 				71EE02D789A2D2D922B4DC0A /* NavigationTestScreen.swift in Sources */,
 				C4757AF18FE122AC807B27E7 /* NestedButtonTapTestScreen.swift in Sources */,
@@ -481,6 +498,8 @@
 				73A7EECB26977730B7241077 /* EventStore.swift in Sources */,
 				D28A6D01EBA9877DD9174BCB /* LiveUpdatesTestViewController.swift in Sources */,
 				91A5DFA622284D666F20D46E /* MainViewController.swift in Sources */,
+				F00EF0DEE25152C62840DF82 /* MockContentfulClient.swift in Sources */,
+				55EBF3F91D016BC49C2C077E /* MockContentfulTransport.swift in Sources */,
 				3EC1F3129468B71C9DE3C486 /* MockPreviewContentfulClient.swift in Sources */,
 				7CE0E6C067281C01D8F0A85F /* NavigationTestViewController.swift in Sources */,
 				9550770C73B171616E3E23C4 /* NestedButtonTapTestViewController.swift in Sources */,
@@ -821,7 +840,23 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		D519C5C4AF908F3FD0450A60 /* XCRemoteSwiftPackageReference "contentful.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/contentful/contentful.swift";
+			requirement = {
+				kind = exactVersion;
+				version = 5.5.15;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		223614F3D65269BC06E8BC2A /* Contentful */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D519C5C4AF908F3FD0450A60 /* XCRemoteSwiftPackageReference "contentful.swift" */;
+			productName = Contentful;
+		};
 		244F9A9729F24EEBFDC1862F /* ContentfulOptimization */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ContentfulOptimization;
@@ -829,6 +864,11 @@
 		B622890DF93C3F71C32F81AB /* ContentfulOptimization */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ContentfulOptimization;
+		};
+		E897BA8CDB1DDBF1C164A4E4 /* Contentful */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D519C5C4AF908F3FD0450A60 /* XCRemoteSwiftPackageReference "contentful.swift" */;
+			productName = Contentful;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
