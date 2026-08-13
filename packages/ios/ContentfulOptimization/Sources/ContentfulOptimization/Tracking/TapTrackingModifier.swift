@@ -21,12 +21,21 @@ private struct TapObserver: UIViewRepresentable {
     }
 }
 
-/// Attaches its recognizer to its *superview*, not itself: SwiftUI's
-/// `.background()` makes this a sibling of `content`, and a sibling's
-/// recognizer never sees touches that hit-test into `content`.
+/// Attaches its recognizer to the *window*, then scopes each tap back to its own
+/// frame.
+///
+/// A nearer ancestor is not usable. SwiftUI draws `Text` and friends into a
+/// shared display list rather than one `UIView` per view, and `.background()`
+/// puts this observer in a container of its own — so the container SwiftUI
+/// happens to place it in is not reliably an ancestor of the region the user
+/// taps, and a recognizer there never sees the touch. The window always is an
+/// ancestor. `cancelsTouchesInView`/`delaysTouchesEnded` are both off, so
+/// observing from up there still never competes for touches a nested
+/// interactive child needs.
 private final class TapObserverView: UIView, UIGestureRecognizerDelegate {
     var onTap: (() -> Void)?
     private weak var attachedView: UIView?
+    private var recognizer: UITapGestureRecognizer?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -36,17 +45,49 @@ private final class TapObserverView: UIView, UIGestureRecognizerDelegate {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    override func didMoveToSuperview() {
-        super.didMoveToSuperview()
-        guard let superview, attachedView !== superview else { return }
-        attachedView = superview
-        let recognizer = UITapGestureRecognizer(target: self, action: #selector(handleTap))
-        recognizer.cancelsTouchesInView = false
-        recognizer.delegate = self
-        superview.addGestureRecognizer(recognizer)
+    deinit {
+        detach()
     }
 
-    @objc private func handleTap() {
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        guard let window else {
+            detach()
+            return
+        }
+        attach(to: window)
+    }
+
+    private func attach(to view: UIView) {
+        guard attachedView !== view else { return }
+        detach()
+
+        let recognizer = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+        recognizer.cancelsTouchesInView = false
+        recognizer.delaysTouchesBegan = false
+        recognizer.delaysTouchesEnded = false
+        recognizer.delegate = self
+        view.addGestureRecognizer(recognizer)
+
+        self.recognizer = recognizer
+        attachedView = view
+    }
+
+    private func detach() {
+        if let recognizer, let attachedView {
+            attachedView.removeGestureRecognizer(recognizer)
+        }
+        recognizer = nil
+        attachedView = nil
+    }
+
+    /// The window-level recognizer sees every tap in the app, so a tap counts for
+    /// this entry only when it lands inside this observer's frame — which
+    /// `.background()` sizes to the tracked content. Matches the UIKit path,
+    /// where the entry's own recognizer also fires for taps on nested controls.
+    @objc private func handleTap(_ recognizer: UITapGestureRecognizer) {
+        guard window != nil, !bounds.isEmpty else { return }
+        guard bounds.contains(recognizer.location(in: self)) else { return }
         onTap?()
     }
 
