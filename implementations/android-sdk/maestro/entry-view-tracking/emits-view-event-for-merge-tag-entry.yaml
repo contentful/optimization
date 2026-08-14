@@ -18,19 +18,27 @@ appId: ${APP_ID}
       reset: true
 - assertVisible: 'Analytics Events'
 # The merge tag entry is first in the list and visible on launch, so it starts dwelling
-# immediately. The app also fires an automatic `client.page(...)` call on launch (see
-# MainActivity's initial page-context event), which alone satisfies a generic "events >= 1"
-# check well before this entry's 2s dwell threshold elapses. `component`-typed events (view/
-# duration events) are excluded from the events list itself and only populate componentStats
-# (see AnalyticsEventDisplay/AnalyticsEventDisplayBinder's `events.filter { it.type !=
-# "component" }`), so there is no per-entry row to wait on there either. `events-count` still
-# counts every event including `component`-typed ones, so gate on >= 2 (the launch `page()`
-# call, plus this entry's view event) instead of >= 1. Scrolling before that count is reached
-# risks dropping the entry below the 80% minVisibleRatio and resetting its dwell timer (see
-# MainActivity's `component-stats-1MwiFl4z…` comment), so the view event would never fire.
-- assertVisible:
-    id: 'events-count'
-    text: 'Events: [2-9][0-9]*'
+# immediately. `component`-typed events (view/duration events, and also the boolean flag's own
+# resolution event from `client.observeFlag("boolean")` in MainActivity) are excluded from the
+# events list itself and only populate componentStats (see AnalyticsEventDisplay/
+# AnalyticsEventDisplayBinder's `events.filter { it.type != "component" }`), so there is no
+# per-entry row to observe here, and `events-count` can't distinguish the merge tag entry's own
+# view event from the flag's unrelated component event — both count equally, and the flag's
+# fires on its own schedule with no dwell/visibility gate. Gating the first scroll on an
+# events-count threshold is therefore a race: on a slower renderer (Views) the flag event can
+# satisfy the threshold before this entry's 2s dwell finishes, so scrolling starts too early,
+# drops the entry below the 80% minVisibleRatio, and resets its dwell timer (see MainActivity's
+# `component-stats-1MwiFl4z…` comment) — confirmed locally via a genuine repro (fresh
+# `assembleDebug` install, not a stale cached APK): every *other* entry's `component-stats-*`
+# block existed in the failing hierarchy dump except this one's. So wait out the dwell threshold
+# directly instead of inferring it from event counts. Maestro has no plain fixed-delay command;
+# `extendedWaitUntil` against a selector that never matches, with `optional: true`, is the
+# documented way to get one.
+- extendedWaitUntil:
+    visible:
+      id: 'never-matches-used-as-fixed-delay'
+    timeout: 3000
+    optional: true
 # The component-stats block only renders once the SDK has emitted a view event for this
 # entry, so its presence is the observable signal that personalization resolution and
 # analytics emission both happened for the same entry. The Views binder fully rebuilds the
