@@ -34,10 +34,18 @@ appId: ${APP_ID}
 # directly instead of inferring it from event counts. Maestro has no plain fixed-delay command;
 # `extendedWaitUntil` against a selector that never matches, with `optional: true`, is the
 # documented way to get one.
+#
+# ViewTrackingController's dwell timer only starts once `attachController` runs, which itself
+# waits on an async `client.resolveOptimizedEntry` round-trip through the JS bridge — so the
+# 2000ms dwell doesn't start counting at launch, it starts once that resolution completes. A
+# 3000ms floor was enough on a local hardware-accelerated emulator but not enough in CI's
+# shared, software-rendered (`swiftshader_indirect`) runner, where that bridge round-trip itself
+# takes longer. Budget generously above dwellTimeMs (2000ms) for that variance instead of tuning
+# to the fastest environment observed.
 - extendedWaitUntil:
     visible:
       id: 'never-matches-used-as-fixed-delay'
-    timeout: 3000
+    timeout: 6000
     optional: true
 # The component-stats block only renders once the SDK has emitted a view event for this
 # entry, so its presence is the observable signal that personalization resolution and
