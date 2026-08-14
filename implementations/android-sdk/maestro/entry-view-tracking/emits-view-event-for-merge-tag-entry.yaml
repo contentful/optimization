@@ -1,0 +1,34 @@
+# NT-3955: unified personalization + analytics happy path. Mirrors the RN Detox
+# `analytics.test.js` ("should track entry view events for visible entries") and the iOS
+# `AnalyticsTests.testTracksEntryViewEventsForVisibleEntries` — the same merge tag entry
+# (1MwiFl4z7gkwqGYdvCmr8c) that resolves a personalized variant (the visitor's continent) is
+# also the entry the SDK's analytics layer auto-tracks, proving one SDK instance drives both
+# personalization and analytics for the same rendered entry.
+#
+# This intentionally stays a presence check, not a precise-timing one: exact dwell/duration/
+# viewId assertions are the `ExtendedViewTrackingTests` contract, which stays out of Android
+# E2E (see ../OFFLINE_TESTING.md's sibling rationale in ExtendedViewTrackingTests — reading
+# stats below the fold disturbs the visibility cycle under measurement). Here we only scroll
+# once, after the dwell threshold has already elapsed, to observe that the stats block exists.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible: 'Analytics Events'
+# The merge tag entry is first in the list and visible on launch, so it starts dwelling
+# immediately. Poll the events counter until it reports at least one tracked event, mirroring
+# `waitForEventsCountAtLeast(1)` in the RN/iOS tests, before scrolling to read the entry's stats.
+- assertVisible:
+    id: 'events-count'
+    text: 'Events: [1-9][0-9]*'
+# The component-stats block only renders once the SDK has emitted a view event for this
+# entry, so its presence is the observable signal that personalization resolution and
+# analytics emission both happened for the same entry.
+- scrollUntilVisible:
+    element:
+      id: 'component-stats-1MwiFl4z7gkwqGYdvCmr8c'
+    direction: DOWN
+- assertVisible:
+    id: 'event-count-1MwiFl4z7gkwqGYdvCmr8c'
