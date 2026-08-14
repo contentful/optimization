@@ -18,17 +18,19 @@ appId: ${APP_ID}
       reset: true
 - assertVisible: 'Analytics Events'
 # The merge tag entry is first in the list and visible on launch, so it starts dwelling
-# immediately. Wait for this entry's own tracked event row specifically, not the generic
-# events counter: the app also fires an automatic `client.page(...)` call on launch (see
-# MainActivity's initial page-context event), which would satisfy a generic "events >= 1"
-# check well before this entry's 2s dwell threshold elapses. Scrolling that early — before
-# the dwell/visibility cycle completes — can drop the entry below the 80% minVisibleRatio
-# and reset its dwell timer (see MainActivity's `component-stats-1MwiFl4z…` comment), so the
-# view event never fires at all.
-- extendedWaitUntil:
-    visible:
-      id: 'event-component-1MwiFl4z7gkwqGYdvCmr8c'
-    timeout: 15000
+# immediately. The app also fires an automatic `client.page(...)` call on launch (see
+# MainActivity's initial page-context event), which alone satisfies a generic "events >= 1"
+# check well before this entry's 2s dwell threshold elapses. `component`-typed events (view/
+# duration events) are excluded from the events list itself and only populate componentStats
+# (see AnalyticsEventDisplay/AnalyticsEventDisplayBinder's `events.filter { it.type !=
+# "component" }`), so there is no per-entry row to wait on there either. `events-count` still
+# counts every event including `component`-typed ones, so gate on >= 2 (the launch `page()`
+# call, plus this entry's view event) instead of >= 1. Scrolling before that count is reached
+# risks dropping the entry below the 80% minVisibleRatio and resetting its dwell timer (see
+# MainActivity's `component-stats-1MwiFl4z…` comment), so the view event would never fire.
+- assertVisible:
+    id: 'events-count'
+    text: 'Events: [2-9][0-9]*'
 # The component-stats block only renders once the SDK has emitted a view event for this
 # entry, so its presence is the observable signal that personalization resolution and
 # analytics emission both happened for the same entry.
