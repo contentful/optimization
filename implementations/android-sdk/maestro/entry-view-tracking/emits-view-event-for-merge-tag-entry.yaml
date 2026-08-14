@@ -33,10 +33,16 @@ appId: ${APP_ID}
     text: 'Events: [2-9][0-9]*'
 # The component-stats block only renders once the SDK has emitted a view event for this
 # entry, so its presence is the observable signal that personalization resolution and
-# analytics emission both happened for the same entry.
+# analytics emission both happened for the same entry. The Views binder fully rebuilds the
+# stats list (`removeAllViews` + re-add) on every event, including the periodic 5s duration
+# updates the entry keeps emitting while visible, so the element can be torn down and
+# recreated mid-scroll. `waitToSettleTimeoutMs` lets Maestro re-check after such a rebuild
+# instead of failing on a transient gap.
 - scrollUntilVisible:
     element:
       id: 'component-stats-1MwiFl4z7gkwqGYdvCmr8c'
     direction: DOWN
+    waitToSettleTimeoutMs: 500
+    timeout: 20000
 - assertVisible:
     id: 'event-count-1MwiFl4z7gkwqGYdvCmr8c'
