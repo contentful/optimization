@@ -79,15 +79,12 @@ explains the two axes and the split form that sets them separately.
    }
    ```
 
-   The SDK declares `com.squareup.okhttp3:okhttp-android:5.x` as a runtime dependency directly,
-   because `contentful.java` 5.x pulls in okhttp 5.x's KMP metadata parent (`com.squareup.okhttp3:okhttp`)
-   whose `okhttp-jvm` variant is excluded on Android; without an Android runtime variant, the app
-   throws `ClassNotFoundException: okhttp3.OkHttpClient` at launch. If your app declares
-   `com.contentful.java:java-sdk` directly (or any other dependency that pulls the same KMP parent),
-   exclude `com.squareup.okhttp3:okhttp-jvm` from it and align all okhttp declarations on 5.x so the
-   two variants do not coexist and cause duplicate-class packaging failures.
+   If you see `ClassNotFoundException: okhttp3.OkHttpClient` at launch, see
+   [Troubleshooting](#troubleshooting).
 
-   **Adapt this to your use case:**
+   **Only if your app also depends on `com.contentful.java:java-sdk`:** exclude
+   `com.squareup.okhttp3:okhttp-jvm` from it so its transitive okhttp variant does not conflict with
+   the SDK's own okhttp dependency.
 
    ```kotlin
    dependencies {
@@ -100,7 +97,14 @@ explains the two axes and the split form that sets them separately.
 
 2. Wrap your app UI in `OptimizationRoot`, pass your Optimization client ID, set
    `logLevel = OptimizationLogLevel.debug` so the SDK logs its activity, and add `ScreenTrackingEffect`
-   to one screen you already render.
+   to one screen you already render. `debug` is verbose and not the SDK's default — dial it back
+   before shipping to production; see the default `logLevel` in
+   [Install and initialize `OptimizationRoot`](#install-and-initialize-optimizationroot).
+
+   The `MainActivity` and `HomeScreen` scaffolding below is illustrative context to match against your
+   own app, not a file to paste over yours. Wrap your existing `setContent { }` tree in
+   `OptimizationRoot` and add `ScreenTrackingEffect` to a screen you already render — keep the rest of
+   your composables as they are.
 
    **Adapt this to your use case:**
 
@@ -143,11 +147,6 @@ explains the two axes and the split form that sets them separately.
         HomeContent()
     }
    ```
-
-   The `MainActivity` and `HomeScreen` scaffolding above is illustrative context to match against your
-   own app, not a file to paste over yours. Wrap your existing `setContent { }` tree in
-   `OptimizationRoot` and add `ScreenTrackingEffect` to a screen you already render — keep the rest of
-   your composables as they are.
 
 3. Verify the first run. Launch the app on a device or emulator. Because
    `logLevel = OptimizationLogLevel.debug` is set, the SDK logs its activity to logcat under the
@@ -326,29 +325,20 @@ For package status and installation details, see
 
 **Integration category:** Common but policy-dependent
 
-Consent policy stays application-owned. Consent has two independent axes: **event consent** (may the
-SDK personalize and emit events) and **persistence consent** (may the SDK store profile continuity in
-`SharedPreferences`). The boolean call `client.consent(accept)` sets both at once; the split call
-`client.consent(events, persistence)` sets them independently. `StorageDefaults(consent = true)` seeds
-accepted event and persistence consent at startup — use it only when application policy permits
-Optimization by default and you render no consent UI.
+Consent policy stays application-owned. Make one decision first, then wire the SDK call for it:
 
-`StorageDefaults` values are startup defaults, not one-time seeds: a configured value takes precedence
-over the stored `SharedPreferences` value every launch, so a configured `consent` can replace a stored
-choice. Apps that persist a user's own decision leave `StorageDefaults.consent` unset and call
-`client.consent(...)` from resolved app policy instead.
+1. **Does your application policy permit Optimization to start with accepted consent, with no
+   consent UI shown?** If yes, seed `StorageDefaults(consent = true)` and skip to
+   [Contentful entry fetching and locale shape](#contentful-entry-fetching-and-locale-shape) — this is
+   the quick start's default.
+2. **Otherwise, wait for the visitor's consent choice.** Leave `StorageDefaults.consent` unset and
+   call `client.consent(true)` after the visitor accepts, `client.consent(false)` after they reject.
 
-`OptimizationConfig.defaults` is snapshotted when `initialize(config)` runs. It is a mutable
-property on the config object, so you can assemble it conditionally before passing the config in,
-but reassigning `config.defaults` after initialization has no effect — use `client.consent(...)` for
-runtime consent changes.
+Once you know which path applies, two more choices refine it:
 
-1. Seed accepted consent with `StorageDefaults(consent = true)` only when policy permits default-on
-   Optimization and no consent UI is shown.
-2. Otherwise leave consent unset and call `client.consent(true)` after the visitor accepts,
-   `client.consent(false)` after they reject.
-3. Use the split form when events are allowed but durable profile continuity must stay session-only.
-4. Read `client.state` when consent UI must reflect SDK state across app launches.
+3. Use the split call `client.consent(events, persistence)` instead of the boolean `client.consent(accept)`
+   when events are allowed but durable profile continuity must stay session-only.
+4. Read `client.state` from Compose when consent UI must reflect SDK state across app launches.
 
 **Adapt this to your use case:**
 
@@ -379,7 +369,28 @@ client.consent(events = true, persistence = false)
 
 The split form above keeps the profile, its selected optimizations — the per-experience variant
 selections the Experience API returned for this visitor — and `changes` — the inline field and flag
-values it returned — in memory only, so nothing is written to `SharedPreferences`. Before event consent is accepted, the native default allow-list lets `identify`
+values it returned — in memory only, so nothing is written to `SharedPreferences`.
+
+**Reference: consent axes, defaults, and the allow-list**
+
+Consent has two independent axes: **event consent** (may the SDK personalize and emit events) and
+**persistence consent** (may the SDK store profile continuity in `SharedPreferences`). The boolean
+call `client.consent(accept)` sets both at once; the split call `client.consent(events, persistence)`
+sets them independently.
+
+`StorageDefaults` values are startup defaults, not one-time seeds: a configured value takes precedence
+over the stored `SharedPreferences` value every launch, so a configured `consent` can replace a stored
+choice. Apps that persist a user's own decision leave `StorageDefaults.consent` unset and call
+`client.consent(...)` from resolved app policy instead.
+
+`OptimizationConfig.defaults` is snapshotted when `initialize(config)` runs. It is a mutable
+property on the config object, so you can assemble it conditionally before passing the config in,
+but reassigning `config.defaults` after initialization has no effect — use `client.consent(...)` for
+runtime consent changes.
+
+Before event consent is accepted, the native **default allow-list** — the set of event types the SDK
+lets through even without consent, listed in full in
+[Strict event policy and queue controls](#strict-event-policy-and-queue-controls) — lets `identify`
 and `screen` events emit; entry-view events (wire type `component`), tap events (`component_click`),
 and custom `track` events are blocked until consent is accepted or you allow-list them.
 `client.consent(false)` clears event and persistence consent, purges queued events, and clears durable
@@ -437,14 +448,18 @@ suspend fun fetchEntry(entryId: String, locale: String): CDAEntry = withContext(
 }
 ```
 
-Every entry passed to `OptimizedEntry` or `client.resolveOptimizedEntry(...)` as a raw
-`Map<String, Any>` must include a top-level `metadata` block (tags and concepts) — the resolver
-reads it alongside `sys` and `fields`, and when it is missing the resolver silently returns the
-baseline entry with no error. The failure mode is indistinguishable from an entry that has no
-experience configured, so mapping bugs surface as "personalization isn't working" with nothing to
-trace. If you fetch with `contentful.java`, prefer the `CDAEntry` overload shown in
-[Entry resolution and fallback rendering](#entry-resolution-and-fallback-rendering) — its adapter
-builds `metadata` for you and removes this failure class entirely.
+> [!WARNING]
+>
+> Every entry passed to `OptimizedEntry` or `client.resolveOptimizedEntry(...)` as a raw
+> `Map<String, Any>` must include a top-level `metadata` key that is present and is an object
+> (its `tags`/`concepts` contents are not checked). Kotlin itself does not enforce this — the raw map
+> is forwarded unmodified to the shared JS-core type guard that requires it; when that check fails,
+> resolution silently returns the baseline entry with no thrown error. The failure mode is
+> indistinguishable from an entry that has no experience configured, so mapping bugs surface as
+> "personalization isn't working" with nothing to trace. If you fetch with `contentful.java`, prefer
+> the `CDAEntry` overload shown in
+> [Entry resolution and fallback rendering](#entry-resolution-and-fallback-rendering) — its adapter
+> builds `metadata` for you and removes this failure class entirely.
 
 The SDK Experience/event `locale` is distinct from the Contentful CDA locale: your app chooses the CDA
 locale for its own fetch, and `OptimizationConfig(locale = ...)` sets the locale the Experience API and
@@ -487,11 +502,19 @@ top-level `sys`, `fields`, and `metadata`, and its render lambda receives anothe
 convert with `CTEntry.from(...)`.
 
 `client.resolveOptimizedEntry(baseline, selectedOptimizations)` returns the SDK-owned
-`ResolvedOptimizedEntry`. When `isEmptyVariant` is `true`, the SDK renderer uses its no-content
-state. That differs from a fallback, which returns the baseline entry for normal rendering.
-`OptimizedEntry` reads this field: in the no-content state it keeps its tracking `Box` but does not
-invoke its content lambda. A later non-empty result invokes the lambda with the current resolved
-entry. An absent or invalid empty-variant field renders normally.
+`ResolvedOptimizedEntry`. `isEmptyVariant` and fallback are different outcomes with different UI
+effects, not two names for the same thing:
+
+- **`isEmptyVariant` is `true`** — an experience selected a deliberately empty variant (content
+  authored to render nothing). `OptimizedEntry` keeps its tracking `Box` in place, holding the
+  tracking surface open, but does not invoke its content lambda — so nothing renders where the entry
+  would have been.
+- **Fallback** — no variant applies, and `resolveOptimizedEntry` returns the baseline entry.
+  `OptimizedEntry` invokes its content lambda with that baseline entry, so your app renders the
+  original content normally.
+
+A later non-empty result invokes the content lambda with the current resolved entry. An absent or
+invalid empty-variant field renders normally (as a fallback would).
 
 A selected variant can use any Contentful content type. Branch on `contentTypeId`, check
 `hasField(...)`, and then read the matching field with `getField<T>(...)`. A different content type is
@@ -653,10 +676,18 @@ blocked until event consent (or an allow-list entry) permits them.
 View tracking is viewport-based. Wrap scrollable content in `OptimizationLazyColumn` so view timing
 uses the real scroll position; without an enclosing scroll context, tracking assumes `scrollY` is `0`
 and uses the system display height as the viewport, which suits only non-scrolling or already-visible
-layouts. The default view threshold is 80% visibility (`minVisibleRatio` `0.8`) held for 2000 ms
-(`dwellTimeMs`); after the first view event, duration updates emit every 5000 ms
-(`viewDurationUpdateIntervalMs`) while the entry stays visible, and a final duration update emits when
-the entry leaves the viewport once at least one view event has fired.
+layouts.
+
+Default viewport-tracking parameters:
+
+| Parameter                      | Default | Meaning                                                                                     |
+| ------------------------------ | ------- | ------------------------------------------------------------------------------------------- |
+| `minVisibleRatio`              | `0.8`   | Fraction of the entry that must be visible to count as viewed.                              |
+| `dwellTimeMs`                  | `2000`  | How long that visibility must hold before the first view event fires.                       |
+| `viewDurationUpdateIntervalMs` | `5000`  | How often a duration update emits while the entry stays visible after the first view event. |
+
+A final duration update emits when the entry leaves the viewport, once at least one view event has
+fired.
 
 A tap uses Compose's `clickable {}` on the `OptimizedEntry` wrapper: it emits the `component_click`
 event, then calls the optional `onTap` lambda. That lambda receives the **baseline** entry you passed
@@ -854,11 +885,14 @@ For cross-SDK forwarding patterns, see
 Custom Flags and merge tags read profile-backed values the Experience API returns, separately from
 entry variant selection. `client.getFlag(name)` is a one-time, non-reactive JSON read that returns
 `null` before initialization; `client.observeFlag(name)` returns a `StateFlow<JSONValue?>` (the Android
-idiom — the iOS SDK uses a Combine publisher) that updates as the flag value changes. Both entry
-points emit a `component` flag-view event through the event stream when consent and profile allow —
-`getFlag` fires once per call, `observeFlag` fires each time a delivered value changes — so every
-flag read is a tracked analytics exposure, not only subscriptions. Apply the same governance you use
-for other SDK events.
+idiom — the iOS SDK uses a Combine publisher) that updates as the flag value changes.
+
+> [!WARNING]
+>
+> Both entry points emit a `component` flag-view event through the event stream when consent and
+> profile allow — `getFlag` fires once per call, `observeFlag` fires each time a delivered value
+> changes — so every flag read is a tracked analytics exposure, not only subscriptions. Apply the
+> same governance you use for other SDK events.
 
 `client.getMergeTagValue(mergeTagEntry)` is a suspend call that resolves an inline `nt_mergetag` entry
 — the SDK-owned merge-tag content-model identifier — against the current profile and returns the
@@ -910,6 +944,10 @@ By default, `OptimizedEntry` locks to the first variant it resolves so content d
 visitor is reading it. Enable live updates when a screen needs mounted entries to react to profile
 changes or preview overrides without a reload.
 
+The settings below apply in this precedence order: an open preview panel forces live updates
+(overriding an explicit `liveUpdates = false`), then a per-entry `liveUpdates` value, then the
+`OptimizationRoot` `liveUpdates` default, then the locked default.
+
 1. Set `liveUpdates = true` on `OptimizationRoot` when most mounted entries in the tree must update as
    SDK state changes.
 2. Set `liveUpdates = true` on an individual `OptimizedEntry` for a localized live section.
@@ -938,10 +976,8 @@ OptimizedEntry(
 }
 ```
 
-The resolution order is: an open preview panel forces live updates (overriding an explicit
-`liveUpdates = false`), then a per-entry `liveUpdates` value, then the `OptimizationRoot` `liveUpdates`
-default, then the locked default. When the preview panel closes, a locked `OptimizedEntry` snapshots
-the current selections so applied overrides persist. For the precedence rules, see
+When the preview panel closes, a locked `OptimizedEntry` snapshots the current selections so applied
+overrides persist. For the full precedence rules, see
 [Android SDK runtime and interaction mechanics](../concepts/android-sdk-runtime-and-interaction-mechanics.md#live-updates-and-preview-behavior).
 
 ### Preview panel
@@ -1139,13 +1175,14 @@ pnpm implementation:run -- android-sdk test:e2e:compose -- --flow <suite>
 
 ## Troubleshooting
 
-| Symptom                                | Likely cause                                                                                                            | Check                                                                                                              |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `No OptimizationClient provided`       | A composable called SDK helpers outside `OptimizationRoot`.                                                             | Move the composable under the `OptimizationRoot` that owns the SDK client.                                         |
-| Entries always render baseline content | The entry is not optimized, selected optimizations are missing, links are unresolved, or the CDA payload is all-locale. | Verify consent, a `screen` or `identify` event, `include` depth, a concrete `locale`, and `fields.nt_experiences`. |
-| Entry view or tap events are missing   | Tracking was opted out, consent does not permit `trackView`/`trackClick`, or the list lacks a scroll context.           | Confirm `trackViews`/`trackTaps`, consent, the dwell threshold, and `OptimizationLazyColumn` for lists.            |
-| Screen events duplicate or go missing  | `ScreenTrackingEffect` is placed in repeated child composables, or more than one path tracks the route.                 | Place the effect at the route or destination root, keep names stable, and use one screen-tracking path.            |
-| Preview panel shows identifiers only   | No `PreviewContentfulClient` was passed, so the panel cannot fetch definitions.                                         | Pass a `PreviewContentfulClient` so the panel fetches `nt_audience`/`nt_experience` and shows names.               |
+| Symptom                                                  | Likely cause                                                                                                                                                                            | Check                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ClassNotFoundException: okhttp3.OkHttpClient` at launch | `contentful.java` 5.x pulls in okhttp 5.x's KMP metadata parent (`com.squareup.okhttp3:okhttp`), whose `okhttp-jvm` variant is excluded on Android, leaving no Android runtime variant. | Confirm the SDK's direct `com.squareup.okhttp3:okhttp-android:5.x` dependency is present, and that any other dependency pulling the same KMP parent (for example `com.contentful.java:java-sdk`) excludes `com.squareup.okhttp3:okhttp-jvm` and aligns on okhttp 5.x so the two variants do not coexist and cause duplicate-class packaging failures. |
+| `No OptimizationClient provided`                         | A composable called SDK helpers outside `OptimizationRoot`.                                                                                                                             | Move the composable under the `OptimizationRoot` that owns the SDK client.                                                                                                                                                                                                                                                                            |
+| Entries always render baseline content                   | The entry is not optimized, selected optimizations are missing, links are unresolved, or the CDA payload is all-locale.                                                                 | Verify consent, a `screen` or `identify` event, `include` depth, a concrete `locale`, and `fields.nt_experiences`.                                                                                                                                                                                                                                    |
+| Entry view or tap events are missing                     | Tracking was opted out, consent does not permit `trackView`/`trackClick`, or the list lacks a scroll context.                                                                           | Confirm `trackViews`/`trackTaps`, consent, the dwell threshold, and `OptimizationLazyColumn` for lists.                                                                                                                                                                                                                                               |
+| Screen events duplicate or go missing                    | `ScreenTrackingEffect` is placed in repeated child composables, or more than one path tracks the route.                                                                                 | Place the effect at the route or destination root, keep names stable, and use one screen-tracking path.                                                                                                                                                                                                                                               |
+| Preview panel shows identifiers only                     | No `PreviewContentfulClient` was passed, so the panel cannot fetch definitions.                                                                                                         | Pass a `PreviewContentfulClient` so the panel fetches `nt_audience`/`nt_experience` and shows names.                                                                                                                                                                                                                                                  |
 
 ## Reference implementations to compare against
 

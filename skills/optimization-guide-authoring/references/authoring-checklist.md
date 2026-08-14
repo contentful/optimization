@@ -102,6 +102,20 @@ add per-archetype checks.
       TypeScript body snippets) without a prose note stating the switch and how to run the new form.
       The run command shown for a `**Copy this:**` block must actually work for that block's
       language.
+- [ ] **A silent-degradation behavior gets a callout, not inline prose.** When the SDK fails soft on
+      misuse (returns baseline, returns `null`, no-ops) instead of throwing or logging, the guide
+      calls it out with a `[!WARNING]`/`[!NOTE]`-style block, not a sentence buried mid-paragraph — a
+      reader cannot self-diagnose a failure mode that produces no error to search for, so the trap
+      must be visually distinct from surrounding reference prose.
+- [ ] **Multi-axis boolean or enum semantics are tabulated, not only described in prose.** When a
+      behavior crosses two or more independent flags/call-forms (e.g. a consent call's `events` vs.
+      `persistence` axes, or a per-entry override interacting with a global default), a short table
+      (axis × form × effect) replaces a paragraph that would otherwise ask the reader to derive the
+      truth table themselves.
+- [ ] **A warning about a code block precedes the block, not follows it.** Any note that changes how
+      the reader should treat the snippet below it (illustrative-only context, paste-over risk, a
+      compliance-relevant default) appears before the fenced block, not after — a reader acts on the
+      code top-to-bottom and will not see a warning placed below it until too late.
 - [ ] `pnpm exec prettier --write <file>` leaves the file clean (run it; Prettier owns formatting).
 - [ ] The collapsible TOC preserves the mtoc markers, omits `## Quick start`, and every anchor
       resolves to a real heading.

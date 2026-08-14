@@ -52,11 +52,14 @@ SDK initializes from your application and one screen event is accepted, and a vi
 confirm it.** It initializes one manager in `Application.onCreate`, registers the subclass in the
 manifest, and tracks the current screen from an activity's `onResume`.
 
-This quick start assumes your application policy permits Optimization to start with accepted consent
-and renders no end-user consent UI, so it seeds `StorageDefaults(consent = true)` — the shorthand
-that accepts both consent axes at once. If personalization must wait for a consent decision, keep this
-structure and add the [Consent and privacy-policy handoff](#consent-and-privacy-policy-handoff) step
-before you ship; it explains the two axes and the split form that sets them separately.
+> [!WARNING]
+>
+> This quick start assumes your application policy permits Optimization to start with accepted
+> consent and renders no end-user consent UI, so it seeds `StorageDefaults(consent = true)` — the
+> shorthand that accepts both consent axes at once. If personalization must wait for a consent
+> decision, keep this structure and add the
+> [Consent and privacy-policy handoff](#consent-and-privacy-policy-handoff) step before you ship; it
+> explains the two axes and the split form that sets them separately.
 
 1. Add the SDK dependency to your application module from Maven Central.
 
@@ -73,12 +76,15 @@ before you ship; it explains the two axes and the split form that sets them sepa
    ```
 
    The SDK declares `com.squareup.okhttp3:okhttp-android:5.x` as a runtime dependency directly,
-   because `contentful.java` 5.x pulls in okhttp 5.x's KMP metadata parent (`com.squareup.okhttp3:okhttp`)
-   whose `okhttp-jvm` variant is excluded on Android; without an Android runtime variant, the app
-   throws `ClassNotFoundException: okhttp3.OkHttpClient` at launch. If your app declares
+   because `contentful.java` 5.x pulls in okhttp 5.x's KMP metadata parent (`com.squareup.okhttp3:okhttp`
+   — a placeholder artifact Gradle resolves instead of a real implementation) whose `okhttp-jvm`
+   variant is excluded on Android; without an Android runtime variant, the app throws
+   `ClassNotFoundException: okhttp3.OkHttpClient` at launch. If your app declares
    `com.contentful.java:java-sdk` directly (or any other dependency that pulls the same KMP parent),
    exclude `com.squareup.okhttp3:okhttp-jvm` from it and align all okhttp declarations on 5.x so the
-   two variants do not coexist and cause duplicate-class packaging failures.
+   two variants do not coexist and cause duplicate-class packaging failures. See
+   [Troubleshooting](#troubleshooting) if you still see `ClassNotFoundException: okhttp3.OkHttpClient`
+   after adding the dependency.
 
    **Adapt this to your use case:**
 
@@ -94,6 +100,15 @@ before you ship; it explains the two axes and the split form that sets them sepa
 2. Initialize the SDK from your `Application` subclass. `OptimizationManager.initialize(...)` is a
    normal (non-suspend) call that constructs the process-wide client and starts it in the background;
    activities read `OptimizationManager.client` afterward.
+
+   The unchanged lines in the diff below are illustrative context to match against your own
+   `Application` subclass, not a block to paste over it. If your app has no `Application` subclass
+   yet, the whole file is new. `StorageDefaults` is an SDK config type that carries the SDK's startup
+   state, including the two consent axes; `StorageDefaults(consent = true)` grants both at launch.
+   `OptimizationLogLevel.debug` is verbose and not the SDK default (`error`); it is used here so you
+   can see the SDK's activity in logcat while verifying the quick start, but dial it back for
+   production (see step 4 below and
+   [Production checks](#production-checks)).
 
    **Adapt this to your use case:**
 
@@ -117,17 +132,13 @@ before you ship; it explains the two axes and the split form that sets them sepa
    +                // environment defaults to "main"; pass it only when your setup differs.
    +                locale = "en-US",
    +                defaults = StorageDefaults(consent = true),
+   +                // debug is verbose and non-default; useful here to see activity in logcat.
    +                logLevel = OptimizationLogLevel.debug,
    +            ),
    +        )
         }
     }
    ```
-
-   The unchanged lines above are illustrative context to match against your own `Application`
-   subclass, not a block to paste over it. If your app has no `Application` subclass yet, the whole
-   file is new. `StorageDefaults` is an SDK config type that carries the SDK's startup state,
-   including the two consent axes; `StorageDefaults(consent = true)` grants both at launch.
 
    Then register the subclass in `AndroidManifest.xml` with `android:name`. Without it,
    `Application.onCreate` never runs and the SDK never initializes.
@@ -144,6 +155,20 @@ before you ship; it explains the two axes and the split form that sets them sepa
 3. Track the current screen from an activity and reflect the outcome in a label. `HomeActivity` below
    is illustrative app shape — adapt it to a screen you already render, keeping the two stream
    subscriptions and the `ScreenTracker.trackScreen` call in `onResume`.
+
+   Add a `TextView` with the id `optimization_status` to that screen's layout (for example
+   `activity_home.xml`) before wiring the code below — the `findViewById<TextView>(R.id.optimization_status)`
+   call requires it to already exist in the layout.
+
+   **Copy this:**
+
+   ```xml
+   <TextView
+       android:id="@+id/optimization_status"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:text="Waiting for Optimization" />
+   ```
 
    **Adapt this to your use case:**
 
@@ -262,9 +287,11 @@ outside this guide:
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
 - **Your Optimization project values** — client ID and environment, from your Optimization project
-  settings. In the Contentful web app, the path depends on which navigation your organization uses:
-  in **classic navigation**, go to **Apps → Installed apps → Contentful Personalization → SDK keys**;
-  in **new navigation** (the Contentful app with ExO navigation enabled), go to
+  settings. In the Contentful web app, the path depends on which navigation your organization uses;
+  check your left-hand sidebar to tell which one applies: if it shows a top-level **Apps** entry, you
+  are on classic navigation; if it shows a top-level **Platform** entry above **Apps**, you are on new
+  navigation (the Contentful app with ExO navigation enabled). In **classic navigation**, go to
+  **Apps → Installed apps → Contentful Personalization → SDK keys**; in **new navigation**, go to
   **Platform/Apps → Installed apps → Contentful Personalization → SDK keys**. The Client ID and
   environment are listed there.
 
@@ -459,9 +486,19 @@ two independent axes: event consent (may the SDK personalize and emit events) an
    ```
 
 3. Use the split form when event emission is allowed but durable profile continuity must stay
-   session-only. `consent(events = false)` withdraws event consent and purges queues but leaves
-   persistence unless you also pass `persistence = false`; `consent(false)` clears both axes, purges
-   queues, and clears durable continuity while in-memory state stays usable until reset or teardown.
+   session-only.
+
+   | Axis                | Call form                                                | Effect                                                                           |
+   | ------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------- |
+   | Event consent       | `consent(true)` or `consent(events = true)`              | Allows event emission.                                                           |
+   | Event consent       | `consent(false)` or `consent(events = false)`            | Withdraws event consent and purges queued events.                                |
+   | Persistence consent | `consent(true)` (boolean form)                           | Allows durable profile continuity in `SharedPreferences`.                        |
+   | Persistence consent | `consent(events = false)` (persistence omitted)          | Leaves persistence consent unchanged — only the event axis is withdrawn.         |
+   | Persistence consent | `consent(false)` (boolean form) or `persistence = false` | Clears durable continuity; in-memory state stays usable until reset or teardown. |
+
+   The boolean form `consent(accepted)` sets both axes at once; the split form
+   `consent(events = ..., persistence = ...)` sets them independently, and any axis you omit from the
+   split form is left unchanged.
 
    **Adapt this to your use case:**
 
@@ -533,11 +570,19 @@ content model.
 1. Keep Contentful fetching in the application layer. Fetch by entry ID, or adapt the app's existing
    Contentful query with the slug filters below when navigation supplies a slug. Pass the one fetched entry to native
    resolution. Do not pass all-locale CDA responses or `locale=*` payloads to
-   `OptimizedEntryView` — they fall back to baseline. Every entry passed as a raw
-   `Map<String, Any>` must include a top-level `metadata` block (tags and concepts); if `metadata` is
-   missing, the resolver silently returns the baseline with no error, indistinguishable from an entry
-   that has no experience configured. The `setEntry(entry: CDAEntry)` overload below removes this
-   failure class by building `metadata` for you through the SDK-owned adapter.
+   `OptimizedEntryView` — they fall back to baseline.
+
+   > [!WARNING]
+   >
+   > Every entry passed as a raw `Map<String, Any>` must include a top-level `metadata` block (tags
+   > and concepts). Kotlin does not validate or reject a missing `metadata` key — the raw map is
+   > forwarded unmodified to the shared JS core, where the `isResolvedContentfulEntry` type guard
+   > requires a top-level `metadata` key that is present and is an object (its contents are never
+   > checked). When that check fails, `OptimizedEntryResolver.resolve` silently returns the baseline
+   > with no thrown error, indistinguishable from an entry that has no experience configured. The
+   > `setEntry(entry: CDAEntry)` overload below removes this failure class by always building
+   > `metadata` for you through the SDK-owned adapter.
+
    For a slug route, reuse the Contentful client and fetcher your app already owns. Send
    `content_type=page` and `fields.slug=<route slug>` as exact-equality filters, plus one concrete
    `locale`, enough `include` depth, and `limit=2`. Return the entry only for exactly one CDA item;
@@ -752,13 +797,20 @@ whether these events are allowed by its Analytics and privacy policy.
    )
    ```
 
-2. Override tracking per entry when a component needs different behavior from the global default. A
-   non-null `onTap` keeps the entry tappable even when global `trackTaps` is on; setting per-entry
-   `trackViews = false` or `trackTaps = false` opts that one entry out. `onTap` runs through the same
-   tap path as SDK tap tracking, so `trackTaps = false` disables both the `component_click` event and
-   `onTap` — do not combine them. When a component needs an app-owned tap handler without SDK tap
-   analytics, set `trackTaps = false` and attach a normal Android click listener inside the child view
-   your renderer returns instead.
+2. Override tracking per entry when a component needs different behavior from the global default.
+   `onTap` and `trackTaps` run through the same tap path, so their combination determines the
+   resulting behavior:
+
+   | `trackTaps` (per entry) | `onTap`            | Resulting behavior                                                                                                                                 |
+   | ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `true` (default)        | `null`             | SDK emits `component_click`; no app-owned tap handler.                                                                                             |
+   | `true` (default)        | non-null           | SDK emits `component_click`, then calls `onTap` — the entry stays tappable even when global `trackTaps` is on.                                     |
+   | `false`                 | `null` or non-null | Neither `component_click` nor `onTap` fires — `trackTaps = false` disables both, since `onTap` runs through the same tap path as SDK tap tracking. |
+
+   Setting per-entry `trackViews = false` opts that one entry out of view tracking independently.
+   When a component needs an app-owned tap handler without SDK tap analytics, set `trackTaps = false`
+   and attach a normal Android click listener inside the child view your renderer returns instead of
+   using `onTap`.
 
    **Adapt this to your use case:**
 
@@ -924,9 +976,13 @@ when it includes profile-driven text substitutions in Rich Text. Both read from 
 from entry-variant resolution, and they wait for initialization before returning real values.
 
 1. Read a flag once with `getFlag(name)` when a synchronous value is enough (returns `null` before
-   init or when unresolved). Each `getFlag` call emits a `component` flag-view event when consent
-   and profile allow, so every flag read is a tracked analytics exposure — not only observed
-   subscriptions. Apply the same governance you use for other SDK events.
+   init or when unresolved).
+
+   > [!WARNING]
+   >
+   > Each `getFlag` call emits a `component` flag-view event when consent and profile allow, so every
+   > flag read is a tracked analytics exposure — not only observed subscriptions. Apply the same
+   > governance you use for other SDK events.
 
    **Adapt this to your use case:**
 
@@ -941,9 +997,12 @@ from entry-variant resolution, and they wait for initialization before returning
 
 2. Observe with `observeFlag(name)` when a view must update as flag values change. It returns a
    `StateFlow<JSONValue?>` (the Android reactive idiom, where iOS uses a Combine publisher).
-   Subscribing to a flag observable emits a `component` flag-view event when consent and profile
-   allow, so treat a flag subscription as a tracked analytics exposure, not a free read, and govern it
-   like any other event.
+
+   > [!WARNING]
+   >
+   > Subscribing to a flag observable emits a `component` flag-view event when consent and profile
+   > allow, so treat a flag subscription as a tracked analytics exposure, not a free read, and govern
+   > it like any other event.
 
    **Adapt this to your use case:**
 
@@ -1141,11 +1200,15 @@ Before releasing an Android Views integration, verify these checks:
   The repository's maintainers validate Views behavior with Maestro flows driven from
   `implementations/android-sdk/`; those runners are maintainer commands, not app commands.
 - **Confirm in Live Events** — In addition to local log and status checks, open the target Contentful
-  space and environment's Live Events view in the Contentful web app, trigger a real flow from the app
-  (a screen view, an entry view or tap, an `identify()` call, or a custom `track()` call), and confirm
-  the corresponding event arrives with the expected wire type (`identify`, `screen`, `component`,
-  `component_click`, or `track`) and payload fields (for example `userId`/`traits` for `identify`,
-  `name`/`routeKey` for `screen`, `event`/`properties` for `track`).
+  space and environment's Live Events view in the Contentful web app — check your left-hand sidebar to
+  tell which navigation applies (a top-level **Apps** entry means classic navigation; a top-level
+  **Platform** entry above **Apps** means new navigation): in **classic navigation**, go to
+  **Apps → Installed apps → Contentful Personalization → Live Events**; in **new navigation**, go to
+  **Platform/Apps → Installed apps → Contentful Personalization → Live Events**. Trigger a real flow
+  from the app (a screen view, an entry view or tap, an `identify()` call, or a custom `track()` call),
+  and confirm the corresponding event arrives with the expected wire type (`identify`, `screen`,
+  `component`, `component_click`, or `track`) and payload fields (for example `userId`/`traits` for
+  `identify`, `name`/`routeKey` for `screen`, `event`/`properties` for `track`).
 
   **Reference excerpt:**
 
@@ -1156,6 +1219,12 @@ Before releasing an Android Views integration, verify these checks:
 
 ## Troubleshooting
 
+- **`ClassNotFoundException: okhttp3.OkHttpClient` at launch** — `contentful.java` 5.x pulls in
+  okhttp 5.x's KMP metadata parent (`com.squareup.okhttp3:okhttp`), a placeholder artifact with no
+  `okhttp-jvm` variant on Android. Exclude `com.squareup.okhttp3:okhttp-jvm` from any dependency that
+  pulls that parent (`com.contentful.java:java-sdk` and similar) and align all okhttp declarations on
+  5.x so the excluded `okhttp-jvm` variant and the SDK's direct `okhttp-android:5.x` implementation do
+  not coexist.
 - **SDK never initializes or events never emit** — Confirm the `Application` subclass is registered
   with `android:name` in `AndroidManifest.xml` (without it `onCreate` never runs), and that direct
   suspend calls await `client.isInitialized.first { it }` before running.

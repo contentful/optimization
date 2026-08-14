@@ -202,6 +202,22 @@ viewportHeight }` via `LocalScrollContext` that descendant `Modifier.trackViews`
   way, so callers on the CDAEntry overload read the resolved variant through `getField` /
   `hasField` / `id` instead of `as?` casts on a raw map. Numbers round-trip through JSON as
   `Double` (Gson's default); read numeric fields as `Double`, not `Int`. source: extern:CTEntry backed by SDK-owned Entry data class, from(CDAEntry)/from(Map, fallback)/from(String, fallback), Gson round-trip, toMap/toJSON, mirrored accessors, CDAEntry walk with ancestor cycle guard — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/contentful/CTEntry.kt#CTEntry
+- The raw-map `OptimizedEntry(Map, ...)` / `OptimizedEntryView.setEntry(Map, ...)` /
+  `resolveOptimizedEntry(Map, ...)` path never validates the map's shape in Kotlin — `CTEntry.from(Map,
+fallback)`'s own fail-soft `catch` only fires on a cyclic self-referential map or a Gson
+  deserialization type mismatch (e.g. `sys` present as a non-object). A map that simply omits a
+  top-level key parses successfully in Kotlin: `Entry.metadata` is a nullable field, so a missing
+  `metadata` key just becomes `null` with no exception and no fallback at this layer. The actual gate
+  lives in the shared JS core the raw map is forwarded to unmodified: `isResolvedContentfulEntry`
+  requires `isRecord(getRecord(value, 'metadata'))` — a top-level `metadata` key that is present and is
+  an object (its `tags`/`concepts` contents are never inspected; an empty `{}` satisfies the check) —
+  alongside `sys.type === 'Entry'`, `sys.id`, and `sys.contentType.sys.id`. `OptimizedEntryResolver.resolve`
+  calls `isResolvedOptimizedEntry` (which requires `isResolvedContentfulEntry`) first and, on failure,
+  logs a debug line and returns the baseline entry with no thrown error — a raw map missing the
+  `metadata` key is therefore indistinguishable, from the resolver's output, from an entry with no
+  experience configured at all. The `CDAEntry` overload sidesteps this because `CTEntry.Entry.from`
+  always populates `metadata` from `entry.metadata()` (defaulting to empty tag/concept lists, never
+  absent). source: extern:CTEntry.from(Map, fallback) catch only covers cyclic maps/Gson type mismatches, Entry.metadata is nullable so a missing key parses cleanly — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/contentful/CTEntry.kt#CTEntry; extern:resolveOptimizedEntry forwards the raw baseline map to the bridge unmodified — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationClient.kt#OptimizationClient; api-schemas#contentful/typeGuards.ts#isResolvedContentfulEntry; api-schemas#contentful/typeGuards.ts#isResolvedOptimizedEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#OptimizedEntryResolver
 - `OptimizedEntry(CDAEntry, ...)` (Compose) and `OptimizedEntryView.setEntry(CDAEntry, ...)` (Views)
   are typed overloads on the `Map<String, Any>` public surface: they wrap the live `CDAEntry` in a
   `CTEntry` at construction (which builds the SDK-owned `Entry` via the walk on `CTEntry.Entry.from`),
