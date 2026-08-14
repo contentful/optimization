@@ -1,0 +1,64 @@
+# NT-3955: unified personalization + analytics happy path. Mirrors the RN Detox
+# `analytics.test.js` ("should track entry view events for visible entries") and the iOS
+# `AnalyticsTests.testTracksEntryViewEventsForVisibleEntries` — the same merge tag entry
+# (1MwiFl4z7gkwqGYdvCmr8c) that resolves a personalized variant (the visitor's continent) is
+# also the entry the SDK's analytics layer auto-tracks, proving one SDK instance drives both
+# personalization and analytics for the same rendered entry.
+#
+# This intentionally stays a presence check, not a precise-timing one: exact dwell/duration/
+# viewId assertions are the `ExtendedViewTrackingTests` contract, which stays out of Android
+# E2E (see ../OFFLINE_TESTING.md's sibling rationale in ExtendedViewTrackingTests — reading
+# stats below the fold disturbs the visibility cycle under measurement). Here we only scroll
+# once, after the dwell threshold has already elapsed, to observe that the stats block exists.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible: 'Analytics Events'
+# The merge tag entry is first in the list and visible on launch, so it starts dwelling
+# immediately. `component`-typed events (view/duration events, and also the boolean flag's own
+# resolution event from `client.observeFlag("boolean")` in MainActivity) are excluded from the
+# events list itself and only populate componentStats (see AnalyticsEventDisplay/
+# AnalyticsEventDisplayBinder's `events.filter { it.type != "component" }`), so there is no
+# per-entry row to observe here, and `events-count` can't distinguish the merge tag entry's own
+# view event from the flag's unrelated component event — both count equally, and the flag's
+# fires on its own schedule with no dwell/visibility gate. Gating the first scroll on an
+# events-count threshold is therefore a race: on a slower renderer (Views) the flag event can
+# satisfy the threshold before this entry's 2s dwell finishes, so scrolling starts too early,
+# drops the entry below the 80% minVisibleRatio, and resets its dwell timer (see MainActivity's
+# `component-stats-1MwiFl4z…` comment) — confirmed locally via a genuine repro (fresh
+# `assembleDebug` install, not a stale cached APK): every *other* entry's `component-stats-*`
+# block existed in the failing hierarchy dump except this one's. So wait out the dwell threshold
+# directly instead of inferring it from event counts. Maestro has no plain fixed-delay command;
+# `extendedWaitUntil` against a selector that never matches, with `optional: true`, is the
+# documented way to get one.
+#
+# ViewTrackingController's dwell timer only starts once `attachController` runs, which itself
+# waits on an async `client.resolveOptimizedEntry` round-trip through the JS bridge — so the
+# 2000ms dwell doesn't start counting at launch, it starts once that resolution completes. A
+# 3000ms floor was enough on a local hardware-accelerated emulator but not enough in CI's
+# shared, software-rendered (`swiftshader_indirect`) runner, where that bridge round-trip itself
+# takes longer. Budget generously above dwellTimeMs (2000ms) for that variance instead of tuning
+# to the fastest environment observed.
+- extendedWaitUntil:
+    visible:
+      id: 'never-matches-used-as-fixed-delay'
+    timeout: 6000
+    optional: true
+# The component-stats block only renders once the SDK has emitted a view event for this
+# entry, so its presence is the observable signal that personalization resolution and
+# analytics emission both happened for the same entry. The Views binder fully rebuilds the
+# stats list (`removeAllViews` + re-add) on every event, including the periodic 5s duration
+# updates the entry keeps emitting while visible, so the element can be torn down and
+# recreated mid-scroll. `waitToSettleTimeoutMs` lets Maestro re-check after such a rebuild
+# instead of failing on a transient gap.
+- scrollUntilVisible:
+    element:
+      id: 'component-stats-1MwiFl4z7gkwqGYdvCmr8c'
+    direction: DOWN
+    waitToSettleTimeoutMs: 500
+    timeout: 20000
+- assertVisible:
+    id: 'event-count-1MwiFl4z7gkwqGYdvCmr8c'
