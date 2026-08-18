@@ -50,8 +50,9 @@
       "component": "optimization-react-native",
       "package-name": "@contentful/optimization-react-native",
       "release-type": "node",
+      "release-as": "1.0.0",
       "versioning": "prerelease",
-      "prerelease": true,
+      "prerelease": false,
       "prerelease-type": "beta"
     },
     "packages/android/ContentfulOptimization": {
@@ -59,8 +60,9 @@
       "package-name": "optimization-android",
       "release-type": "simple",
       "version-file": "VERSION",
+      "release-as": "1.0.0",
       "versioning": "prerelease",
-      "prerelease": true,
+      "prerelease": false,
       "prerelease-type": "beta"
     },
     "packages/ios/ContentfulOptimization": {
@@ -68,8 +70,9 @@
       "package-name": "optimization-swift",
       "release-type": "simple",
       "version-file": "VERSION",
+      "release-as": "1.0.0",
       "versioning": "prerelease",
-      "prerelease": true,
+      "prerelease": false,
       "prerelease-type": "beta"
     }
   },
