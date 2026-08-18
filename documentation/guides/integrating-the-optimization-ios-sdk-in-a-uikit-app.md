@@ -458,11 +458,14 @@ stored decision is what the SDK starts from, and let `consent(...)` carry your r
 
 When `allowedEventTypes` is unset, the SDK's default pre-consent allow-list lets `identify` and
 `screen` emit before event consent, so a mobile journey can establish profile context and anonymous
-screen analytics. Entry views, entry taps, custom `track` events, and `page` events (the page-view
-event the SDK shares with the web SDKs; UIKit apps track screens instead) are blocked until consent is
-accepted. A custom `allowedEventTypes` replaces that default, and `allowedEventTypes: []` blocks every
-SDK event until consent is accepted. `consent(false)` clears both axes, purges queues, and clears
-durable continuity while in-memory state stays usable until reset or teardown.
+screen analytics. Before consent, that list is the whole admission rule: entry views, entry taps,
+custom `track` events, and `page` events (the page-view event the SDK shares with the web SDKs; UIKit
+apps track screens instead) are blocked because they are absent from it, not because consent is
+undecided. Accepting event consent admits every type at once. A custom `allowedEventTypes` replaces the
+default list, so a type you add there emits with no consent decision at all, and
+`allowedEventTypes: []` blocks every SDK event until consent is accepted. `consent(false)` clears both
+axes, purges queues, and clears durable continuity while in-memory state stays usable until reset or
+teardown.
 
 **Adapt this to your use case:**
 
@@ -586,45 +589,85 @@ only for exactly one item, send zero items through your not-found path, and trea
 authoring or configuration error. Replace `page` and `slug` with your content type and slug-field IDs.
 The SDK never performs this request or reads these lookup values.
 
+`fetchArray` reports through a completion handler, so one continuation makes it awaitable and lets the
+call site handle a fetch failure instead of dropping it.
+
+Together the two snippets are the whole path, and it is worth reading in one direction: the view
+controller fetches a **baseline** entry, hands it to `cardView.configure(with:)`, and that method — the
+`ArticleCardView` above — calls `resolveOptimizedEntry`, which swaps in the visitor's selected variant
+locally and synchronously before anything renders. Nothing in the fetch is personalized; the entry that
+comes back from Contentful is the same for every visitor. Resolution is the only step that differs per
+visitor, which is why it belongs in view configuration rather than in the fetch: a re-configured or
+reused cell resolves again against the current `selectedOptimizations`, while a cached fetch stays
+valid. The view controller owns the `OptimizationClient` it injected into the card, so both objects
+resolve against the same client state.
+
 **Adapt this to your use case:**
 
 ```swift
 import Contentful
+import ContentfulOptimization
+import UIKit
 
 // One entry by its Contentful entry ID.
-let byId = Query.where(sys: .id, .equals(entryId))
-    .include(10)
-    // One concrete locale; an all-locale response falls back to baseline.
-    .localizeResults(withLocaleCode: appLocale)
+func entryIdQuery(_ entryId: String, locale: String) -> Query {
+    Query.where(sys: .id, .equals(entryId))
+        .include(10)
+        // One concrete locale; an all-locale response falls back to baseline.
+        .localizeResults(withLocaleCode: locale)
+}
 
 // Or one entry by route slug, for routes that carry a public slug.
-let bySlug = Query.where(contentTypeId: "page")
-    .where(field: "slug", .equals(routeSlug))
-    .include(10)
-    .localizeResults(withLocaleCode: appLocale)
-    // Two, so a duplicate slug is detectable instead of silently resolved.
-    .limit(to: 2)
+func slugQuery(_ routeSlug: String, locale: String) -> Query {
+    Query.where(contentTypeId: "page")
+        .where(field: "slug", .equals(routeSlug))
+        .include(10)
+        .localizeResults(withLocaleCode: locale)
+        // Two, so a duplicate slug is detectable instead of silently resolved.
+        .limit(to: 2)
+}
 
-// contentfulClient is your app's existing Contentful.Client.
-contentfulClient.fetchArray(of: Contentful.Entry.self, matching: bySlug) { result in
-    guard case let .success(response) = result else { return }
-    switch response.items.count {
-    case 1:
-        // Hand the fetched entry to resolution on the main actor. cardView is the
-        // reader-owned view from the snippet above.
-        Task { @MainActor in cardView.configure(with: response.items[0]) }
-    case 0:
-        showNotFound() // Reader-owned not-found path.
-    default:
-        // More than one match is an authoring or configuration error.
-        reportAmbiguousSlug(routeSlug)
+@MainActor
+final class ArticleViewController: UIViewController {
+    // Both clients are app-owned and injected; see Client lifetime and UIKit injection.
+    private let client: OptimizationClient
+    private let contentfulClient: Contentful.Client
+    private let appLocale: String
+    // The view from the snippet above. It holds the same OptimizationClient, and its
+    // configure(with:) is the only place resolution happens.
+    private let cardView: ArticleCardView
+
+    func loadCard(slug: String) async {
+        do {
+            let items = try await fetchEntries(matching: slugQuery(slug, locale: appLocale))
+            switch items.count {
+            case 1:
+                // Hand the baseline entry to the card. configure(with:) calls
+                // resolveOptimizedEntry, so the variant swap happens inside this line.
+                cardView.configure(with: items[0])
+            case 0:
+                showNotFound() // Reader-owned not-found path.
+            default:
+                // More than one match is an authoring or configuration error.
+                reportAmbiguousSlug(slug)
+            }
+        } catch {
+            reportFetchFailure(error) // Reader-owned error path.
+        }
+    }
+
+    // fetchArray reports through a completion handler; one continuation makes it awaitable.
+    private func fetchEntries(matching query: Query) async throws -> [Contentful.Entry] {
+        let response: HomogeneousArrayResponse<Contentful.Entry> =
+            try await withCheckedThrowingContinuation { continuation in
+                contentfulClient.fetchArray(of: Contentful.Entry.self, matching: query) { result in
+                    continuation.resume(with: result)
+                }
+            }
+        return response.items
     }
 }
 ```
-
-If your app fetches raw CDA JSON instead of `contentful.swift` values, the same method takes a plain
-`[String: Any]` entry dictionary with top-level `sys`, `fields`, and `metadata` — the
-`Contentful.Entry` overload builds that shape for you.
 
 Now the values the call returns. `client.selectedOptimizations` (plural) is the SDK's current set of
 selected optimizations — one selection per experience the visitor's profile matched, published on the
@@ -744,15 +787,19 @@ carry the same optimization context that produced the rendered variant.
    For gesture recognizers, gate the dispatch to the completed gesture state instead of suppressing
    later taps for the view's lifetime.
 
-Keep the fetched `Contentful.Entry` and the resolution it produced side by side. `TrackingMetadata`
-itself takes the baseline as a dictionary, so the typed entry is encoded at that call. Both stored
-properties and both methods below belong to the same view, cell, or view controller that resolved the
-entry.
+Keep the fetched `Contentful.Entry` and the resolution it produced side by side, both typed.
+`TrackingMetadata` takes the baseline as a dictionary rather than a typed entry, and reads exactly one
+value out of it: `sys.id`, which becomes `componentId`. The experience, variant index, and sticky flag
+all come from `selectedOptimization`. Encode with `CTEntry` at that call and nowhere else — the
+dictionary is what one SDK initializer accepts, not a shape to store in your own view, which stays
+typed. Both stored properties and both methods below belong to the same view, cell, or view controller
+that resolved the entry.
 
 **Adapt this to your use case:**
 
 ```swift
-// Reader-owned: your view or cell stores the entry and resolution it rendered.
+// Reader-owned: your view or cell stores the entry and resolution it rendered,
+// both typed.
 private var latestBaselineEntry: Contentful.Entry?
 private var latestResolution: ResolvedOptimizedEntry?
 
@@ -772,8 +819,8 @@ func configure(with entry: Contentful.Entry) {
     guard let entry = latestBaselineEntry, let result = latestResolution else { return }
 
     // TrackingMetadata carries the optimization context that produced the
-    // rendered variant, so the tap matches what the visitor actually saw. It
-    // reads the baseline in dictionary form, which is what CTEntry encodes.
+    // rendered variant, so the tap matches what the visitor actually saw. The
+    // CTEntry encode stays at this boundary, so the view keeps a typed entry.
     let metadata = TrackingMetadata(
         entry: CTEntry(entry).toDictionary(),
         optimizationContextId: result.optimizationContextId,

@@ -378,13 +378,15 @@ struct ConsentGate<Content: View>: View {
 client.consent(events: true, persistence: false)
 ```
 
-Before event consent is accepted, the native default allow-list lets `identify` and `screen` events
-emit; entry-view events (delivered as `component`), tap events (`component_click`), `page` events, and
-custom `track` events are blocked until consent is accepted or you allow-list them.
-`client.consent(false)`
-clears event and persistence consent, purges queued events, and clears durable profile continuity,
-while in-memory state stays usable until reset or teardown. To block every SDK event before consent —
-including `identify` and `screen` — set `allowedEventTypes: []`; see
+Before event consent is accepted, `allowedEventTypes` is the whole admission rule, and the native
+default allows `identify` and `screen`. Every type absent from that list is blocked: entry-view events
+(delivered as `component`), tap events (`component_click`), custom `track` events, and `page` events —
+the page-view event the SDK shares with the web SDKs, which SwiftUI apps replace with `screen`.
+Accepting event consent admits every type at once; adding a type to `allowedEventTypes` admits that one
+type with no consent decision at all. `client.consent(false)` clears event and persistence consent,
+purges queued events, and clears durable profile continuity, while in-memory state stays usable until
+reset or teardown. To block every SDK event before consent — including `identify` and `screen` — set
+`allowedEventTypes: []`; see
 [Strict event policy and endpoint controls](#strict-event-policy-and-endpoint-controls). For the
 cross-SDK consent model, see
 [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
@@ -622,8 +624,7 @@ struct DirectResolutionView: View {
 Both examples pass the fetched `Contentful.Entry` straight to the typed API rather than hand-mapping it
 to a dictionary first: the SDK-owned adapter builds the `{sys, fields, metadata}` shape the resolver
 expects, and what comes back is a `CTEntry` you read with `getField` instead of a raw dictionary you
-cast. An app whose fetch layer produces raw entry JSON rather than `Contentful.Entry` values uses the
-dictionary initializer and dictionary resolver overload instead, which hand back the entry dictionary.
+cast.
 
 For the shared resolution and fallback rules, see
 [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#fallback-behavior).
