@@ -349,7 +349,7 @@ measured `{y, height}` and the current viewport `{scrollY, viewportHeight}` to d
 Within a cycle, events fire based on accumulated visible time. The schedule mirrors the Web SDK's
 `ElementViewObserver`:
 
-```
+```text
 requiredMs_for_event_N = dwellTimeMs + N * viewDurationUpdateIntervalMs
 ```
 

@@ -1236,4 +1236,4 @@ pnpm test:e2e:react-web-sdk
   display, consent and identity controls, and environment-gated preview-panel attachment.
 - [Custom React adapter over the Web SDK](../../implementations/web-sdk_react/README.md): Builds a
   custom React adapter on top of `@contentful/optimization-web` for comparison when an app needs
-  full control instead of the official React Web SDK surface. </content>
+  full control instead of the official React Web SDK surface.
