@@ -262,8 +262,11 @@ outside this guide:
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
 - **Your Optimization project values** — client ID and environment, from your Optimization project
-  settings. Find them in the Contentful web app under **Apps → Installed apps → Contentful
-  Personalization → SDK keys**.
+  settings. In the Contentful web app the path depends on which navigation your organization uses: in
+  **classic navigation**, go to **Apps → Installed apps → Contentful Personalization → SDK keys**; in
+  **new navigation** (the Contentful app with ExO navigation enabled), go to **Platform/Apps →
+  Installed apps → Contentful Personalization → SDK keys**. The client ID and environment are listed
+  there.
 
   `OptimizationConfig.environment` defaults to `main`, so pass it only when your setup differs. That
   default belongs to `OptimizationConfig` alone: the preview panel's own Contentful client
@@ -299,7 +302,7 @@ passed.
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/contentful/optimization.swift.git", from: "<version>"),
+    .package(url: "https://github.com/contentful/optimization.swift", from: "<version>"),
 ],
 targets: [
     .target(

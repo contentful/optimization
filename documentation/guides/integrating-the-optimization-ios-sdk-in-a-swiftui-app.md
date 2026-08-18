@@ -210,8 +210,11 @@ outside this guide:
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
 - **Your Optimization project values** — client ID and environment, from your Optimization project
-  settings. Find them in the Contentful web app under **Apps → Installed apps → Contentful
-  Personalization → SDK keys**.
+  settings. In the Contentful web app the path depends on which navigation your organization uses: in
+  **classic navigation**, go to **Apps → Installed apps → Contentful Personalization → SDK keys**; in
+  **new navigation** (the Contentful app with ExO navigation enabled), go to **Platform/Apps →
+  Installed apps → Contentful Personalization → SDK keys**. The client ID and environment are listed
+  there.
 
   The Experience API (which picks variants) and the Insights API (which receives event and
   interaction delivery) each have a base URL that defaults correctly; you set them only for mocks or
