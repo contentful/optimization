@@ -6,17 +6,31 @@ export interface Heading {
   text: string
 }
 
+/**
+ * Marks which lines sit inside a fenced code block, so line-based passes never mistake code for
+ * prose. A fence delimiter line is itself marked `true`. Callers that rewrite prose (link rewriting,
+ * alert conversion) and callers that read structure (`headingsOf`) share this one convention, which
+ * is what keeps a Swift `#if DEBUG` or a JSX `<h1>` inside a fence from being misread.
+ */
+export function fenceMask(lines: string[]): boolean[] {
+  let inFence = false
+
+  return lines.map((rawLine) => {
+    if (/^\s*```/u.test(rawLine)) {
+      inFence = !inFence
+      return true
+    }
+    return inFence
+  })
+}
+
 /** ATX headings (`#`..`######`), skipping fenced code blocks so `# comment` lines are not counted. */
 export function headingsOf(lines: string[]): Heading[] {
   const headings: Heading[] = []
-  let inFence = false
+  const inFence = fenceMask(lines)
 
   lines.forEach((rawLine, index) => {
-    if (/^\s*```/u.test(rawLine)) {
-      inFence = !inFence
-      return
-    }
-    if (inFence) {
+    if (inFence[index] === true) {
       return
     }
     const match = /^(#{1,6})\s+(.+?)\s*$/u.exec(rawLine)
@@ -26,6 +40,18 @@ export function headingsOf(lines: string[]): Heading[] {
   })
 
   return headings
+}
+
+/** GitHub/Fern heading anchor: inline markup stripped, lowercased, spaces to hyphens. */
+export function headingAnchor(text: string): string {
+  return text
+    .replace(/`([^`]*)`/gu, '$1')
+    .replace(/\[([^\]]*)\]\([^)]*\)/gu, '$1')
+    .replace(/[*_]/gu, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N} _-]/gu, '')
+    .trim()
+    .replace(/\s+/gu, '-')
 }
 
 /** Splits a `| a | b |` table row into trimmed cells, or returns undefined for a non-row line. */
