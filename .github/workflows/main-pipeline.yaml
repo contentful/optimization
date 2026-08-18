@@ -144,7 +144,7 @@ jobs:
             # (no path is in two of these dirs at once), so `every` would be unsatisfiable and this
             # filter would never fire. A single alternation matches if a file is in any listed area.
             knowledge:
-              - '{documentation/internal/sdk-knowledge/**,documentation/internal/migration-knowledge/**,documentation/authoring/**,documentation/guides/**,skills/{optimization-guide-authoring,guide-newcomer-review,guide-source-verification,migration-guide-authoring,migration-knowledge-authoring,sdk-knowledge-authoring,sdk-knowledge-maintenance}/**,packages/**/src/**,implementations/**,scripts/{validate-sdk-knowledge.ts,validate-guide-authoring.ts,sdk-knowledge/**},.claude/{agents,commands,hooks}/**,.codex/{agents,hooks}/**}'
+              - '{documentation/internal/sdk-knowledge/**,documentation/internal/migration-knowledge/**,documentation/authoring/**,documentation/guides/**,documentation/concepts/**,documentation/fern-slugs.lock.json,skills/{optimization-guide-authoring,guide-newcomer-review,guide-source-verification,migration-guide-authoring,migration-knowledge-authoring,sdk-knowledge-authoring,sdk-knowledge-maintenance}/**,packages/**/src/**,implementations/**,scripts/{validate-sdk-knowledge.ts,validate-guide-authoring.ts,validate-fern-export.ts,export-fern-docs.ts,apply-fern-docs.ts,sdk-knowledge/**,fern/**},.claude/{agents,commands,hooks}/**,.codex/{agents,hooks}/**}'
 
   setup:
     name: 🛠️ pnpm install
@@ -248,6 +248,11 @@ jobs:
       # actually traversed (and how much) rather than a bare ✓ that could mask an empty run.
       - run: pnpm knowledge:check --verbose
       - run: pnpm guides:check
+      # Validates that the published docs can still produce a correct Fern bundle: every cross-document
+      # link resolves to a published page and a real heading anchor, no page links into internal-only
+      # authoring or knowledge directories, the MDX is safe, and no slug moved without a recorded
+      # redirect. This is what keeps the site's internal links from rotting between syncs.
+      - run: pnpm fern:check
 
   build:
     name: 📦 Build
