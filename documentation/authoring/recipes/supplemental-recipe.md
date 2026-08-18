@@ -20,9 +20,13 @@ Structure invariant: intro → `## Do you need this?` → `## Quick start` → T
 reader has passed them). Every fenced block carries one example-intent label from the integration
 recipe's label set.
 
+H1 form: the imperative mood, naming the task, as required by the `Headings` section of
+[`../../../STYLE_GUIDE.md`](../../../STYLE_GUIDE.md). Never a gerund. Name the supplemental task: "Forward Optimization SDK
+context to analytics and tag-management tools", "Build a custom JavaScript Optimization adapter".
+
 ## Template
 
-# ⟨Supplemental recipe guide title⟩
+# ⟨Imperative supplemental-recipe title, naming the task⟩
 
 Use this guide when ⟨the supplemental task⟩.
 
