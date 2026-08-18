@@ -32,9 +32,10 @@ pnpm implementation:run -- web-sdk_angular dev
 pnpm implementation:run -- web-sdk_angular build
 pnpm implementation:run -- web-sdk_angular typecheck
 pnpm implementation:lint
-pnpm implementation:run -- web-sdk_angular implementation:test:e2e:run
-pnpm test:e2e:web-sdk_angular
+pnpm test:e2e:web-sdk_angular <file-or-filter>
 ```
+
+The file or filter is optional; omit it only when the full Playwright suite is warranted.
 
 ## Known toolchain issue
 

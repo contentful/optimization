@@ -32,6 +32,12 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
 - Treat `dist/**`, `coverage/**`, `docs/**`, `pkgs/**`, `.rslib/**`, `.rsdoctor/**`,
   `node_modules/**`, and local `.env` files as generated or local-only unless the task explicitly
   targets them.
+- Never manually edit generated external API mock or MSW data. Change the external source or the
+  documented generator, then regenerate the output.
+- Never add synthetic scenarios to generated external API mock or MSW data. Put a narrowly scoped
+  scenario in the consuming test's owned fixture or handler when that test can own it honestly; if
+  an integration requires external generated data that does not exist, stop and report the missing
+  source scenario instead of fabricating it in generated output.
 - Start env setup from `.env.example`; do not overwrite an existing `.env` casually.
 - Implementations consume local package tarballs from `pkgs/` after `pnpm build:pkgs` plus the
   implementation install step.
@@ -45,6 +51,45 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
 - Do not treat reference implementations as optional demos, disposable samples, or places to reduce
   behavior for convenience. When public SDK behavior changes, identify affected reference
   implementations before concluding validation.
+
+## Pull request planning and pragmatic review
+
+- Define a pull request boundary as one independently mergeable, repository-consistent state that
+  passes every CI job triggered by its changed paths. An architecture phase, package boundary, or
+  ownership boundary is not automatically a valid pull request boundary.
+- Before proposing or delegating a multi-PR plan, inspect
+  `.github/workflows/main-pipeline.yaml`, especially its path filters and job prerequisites. Produce
+  a CI-impact matrix mapping each PR's changed paths to triggered jobs, downstream packages and
+  maintained implementations, source/docs/test updates, and validation commands.
+- Every intermediate PR must be CI green, mergeable, independently publishable, and useful if a
+  later planned PR never ships. A stacked PR may depend on an already merged and publishable
+  predecessor, but it must not depend on an unmerged sibling or atomic multi-PR release.
+- When a package API, export graph, shared runtime contract, or user-visible behavior changes,
+  include every required downstream update in the same PR: adapters and pass-throughs, maintained
+  reference implementations, package and implementation READMEs, SDK knowledge or guides, shared
+  fixtures, focused tests, and relevant E2E specifications.
+- A valid PR may span packages, platforms, documentation areas, and implementations when they form
+  the smallest vertical slice that leaves the repository consistent and CI green. Do not add a
+  compatibility shim merely to make an incomplete slice pass.
+- Split work only when the earlier PR remains complete and green without the later PR. Do not put
+  required downstream documentation or reference-consumer repairs into a follow-up.
+- Repository CI builds all packages, enforces bundle sizes, packs local SDK tarballs, installs and
+  lints maintained implementations for package/source changes, validates SDK knowledge and guides
+  for package source, and runs path-filtered Web/native E2E for affected implementation families.
+  Plan local validation and PR scope against those actual jobs rather than package ownership alone.
+- For every plan file intended to represent one PR, state prerequisites, complete
+  cross-repository scope, changed public contracts, affected maintained implementations,
+  documentation/knowledge updates, triggered CI jobs, dependency-ordered local validation, and an
+  exit criterion that the PR can merge without an unmerged follow-up.
+- Keep implementation and review within the stated commit/PR purpose and acceptance criteria.
+  Review the diff that exists, not a larger product or architecture that could also be built.
+- Do not require additional scope, a different design, generalized machinery, or a major refactor
+  unless a concrete supported failure in the current diff cannot be addressed locally.
+- Respect explicit, documented trade-offs. A blocking finding must identify the in-scope behavior
+  that fails, the relevant source or test evidence, and why the accepted trade-off does not cover
+  it. Label worthwhile out-of-purpose ideas as non-blocking follow-ups.
+- If the PR cannot be green and independently publishable within its purpose, stop and rescope it
+  instead of borrowing code, tests, or cleanup from a future PR.
 
 ## Code discipline
 
@@ -64,6 +109,24 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
 
 - Run the smallest meaningful validation for the change. For TypeScript, TSX, JavaScript, package,
   implementation, or shared tooling edits, include lint before claiming validation is complete.
+- Maintained E2E coverage may be incomplete for a focused behavior. After running the documented
+  relevant runner and only the prerequisites the agent is authorized to execute, focused unit tests
+  plus a documented logical inference are acceptable when no maintained E2E scenario exercises the
+  behavior or the runner is unavailable for a concrete environment reason.
+- The inference must name the missing E2E scenario, the attempted command or absence of a maintained
+  runner, the focused passing evidence, the source path that connects that evidence to the supported
+  behavior, and the remaining uncertainty. Never report E2E as passed when it did not run.
+- This inference rule never waives a task or PR plan that explicitly names an E2E runner as a
+  release gate. If that required runner is unavailable or cannot pass because its required
+  environment is unavailable, report the exact command and setup state as a blocker; unit evidence
+  and inference may explain confidence but cannot satisfy the gate.
+- When setup or provisioning is explicitly owned by the user or CI, do not invoke it automatically.
+  Run the normal E2E runner only after that setup is confirmed; if it is not ready, report the
+  missing prerequisite and required runner as blocked.
+- Do not broaden product scope, add synthetic generated mock/MSW scenarios, or create mock-owned
+  tests merely to manufacture E2E coverage. Reviewers should accept proportionate unit evidence and
+  a sound inference only when no explicit release gate requires the missing runner and they cannot
+  identify a concrete unsupported integration failure.
 - If no local lint script exists, use the nearest aggregate command: `pnpm lint` for `lib/` or
   `packages/`; `pnpm implementation:lint` for `implementations/`.
 - Prefer `pnpm format:fix` from the repository root for Prettier-covered files. Run it before manual
@@ -98,11 +161,12 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
 - Do not substitute a generic `test` script for Playwright, Detox, Maestro, or XCUITest E2E. If a
   generic test command fails before reaching the intended E2E runner, classify it as that command's
   failure and try the documented E2E command instead.
-- When an upstream package changes, run bundle-size validation for every downstream published
-  package that can bundle or re-export it, not only the package edited directly. If the affected
-  downstream set is uncertain, run the aggregate `pnpm size:check`.
-- Stop downstream validation when an upstream package build fails; stale downstream artifacts are
-  not evidence.
+- When an upstream package changes, validate every downstream published package that can bundle or
+  re-export it. If the downstream set is uncertain, run a full aggregate `pnpm build`, then
+  aggregate `pnpm size:report`. Aggregate `pnpm size:check` can exit on the first budget failure, so
+  it is enforcement—not evidence that every later package budget was evaluated.
+- Stop downstream validation only when an upstream package build fails. A budget failure after a
+  successful build must not stop report-only measurement of the remaining affected packages.
 - After public exports, entry graphs, shared types, or bundled runtime paths change in an Rslib
   package, run its `clean` script before trusting output. Rslib `clean` scripts must remove
   package-local `./node_modules/.cache/rspack`.
@@ -146,6 +210,17 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
 - iOS Swift package: `pnpm ios:test`
 - iOS XCUITest build: `pnpm implementation:run -- ios-sdk test:e2e:ios:build:release`
 - iOS XCUITest run: `IOS_SCHEME=SwiftUI pnpm implementation:run -- ios-sdk test:e2e:ios:run:release`
+- Web Playwright: `pnpm test:e2e:<implementation> <file-or-filter>`; omit the file/filter only when
+  the full suite is warranted. These specific root scripts are setup-free. If consumed SDK
+  packages changed, first run `pnpm build:pkgs` once and
+  `pnpm implementation:<implementation> implementation:install`; skip that refresh when installed
+  dependencies are already current.
+
+For routine local Web Playwright validation, do not run root `pnpm setup:e2e`,
+`pnpm setup:e2e:<implementation>`, or aggregate `pnpm test:e2e` automatically. Setup commands
+install dependencies or browser prerequisites and remain explicit user/CI-owned operations. Use a
+setup or Playwright install command only when its prerequisite is confirmed missing or the user
+explicitly requests it.
 
 ## Failure handling
 
@@ -179,8 +254,11 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
 
 ## Bundle size
 
-- Before bundle-size investigation or changes, inspect `git status --short` and run the relevant
-  `size:check` or `size:report` against the actual worktree.
+- Before bundle-size investigation or changes, inspect `git status --short`. Build the complete
+  affected graph first, then run aggregate `pnpm size:report` when a shared or upstream change can
+  affect multiple published packages. Use `size:check` after classification, safe remediation, or
+  an approved budget change to enforce the resulting budgets; never use its first failure as the
+  complete downstream size inventory.
 - Treat bundle-size checks as validation evidence. A budget failure is not approval to rewrite
   source code, remove behavior, or change budget policy.
 - Classify a budget failure before editing as a current-change regression, pre-existing budget
@@ -188,9 +266,10 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
   unknown.
 - Use `size:report`, generated analyzer output, or the package's existing build artifacts to
   identify concrete contributors before changing code. Do not guess at size causes.
-- For upstream package changes, treat downstream bundle-size checks as required validation. Run the
-  smallest complete downstream set when it is clear, or `pnpm size:check` when the dependency impact
-  crosses package families or is uncertain.
+- For upstream package changes, treat downstream bundle-size validation as required. Run the
+  smallest complete downstream report and enforcement set when it is clear. When the dependency
+  impact crosses package families or is uncertain, use aggregate `pnpm size:report` for the complete
+  inventory, then `pnpm size:check` after classification.
 - On failure, report the command, package or bundle, budget, actual size, and delta.
 - Allowed remediation is limited to confirmed current-change regressions, dependency/import
   mistakes, and measurement issues. Every remediation must preserve maintainability: do not make
@@ -242,15 +321,36 @@ Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments
   npm package README rendering.
 - Preserve `<!-- mtoc-start -->` and `<!-- mtoc-end -->` markers and keep TOCs synchronized.
 
+## Review triage
+
+- Before elevating an async, callback-reentrancy, or lifecycle-interleaving candidate, identify the
+  documented or supported consumer pattern or maintained integration that reaches it and the
+  concrete contract it violates. Mechanical composability of public callbacks alone is not
+  evidence that reentrant mutation is supported.
+- For coordinated runtime paths, name and trace the authority layer whose invariant allegedly
+  fails—method or event acceptance, shared-state publication authority, or framework presentation
+  settlement. Do not use success or acceptance in one layer as proof that another layer has
+  settled, and scope a finding to the lifecycle interval where the contract is violated.
+
 ## Bito PR reviews
 
-- Inspect each Bito finding against the source and tests. Fix valid issues; explain false positives
-  with evidence. In direct replies to Bito-started inline comments, mention `@bitoagent` or
-  `@askbito`, ask Bito to resolve the thread, and never use `@bito-code-review`.
-- Bito chat recognizes replies only in threads Bito started. A standalone PR comment may summarize
-  the overall review, but do not rely on a Bito chat tag there.
-- After posting, inspect the live PR state to confirm replies and resolutions instead of assuming
-  they succeeded.
+- Inspect every Bito finding against the current diff, source, and relevant tests. Fix valid
+  in-scope issues; explain false positives or accepted trade-offs with concrete evidence.
+- When authorized to reply in a Bito-started inline thread, mention `@bitoagent` or `@askbito`, state
+  the resolution or evidence, explicitly ask Bito to resolve the thread, and never use
+  `@bito-code-review`.
+- Bito chat tags are recognized only in threads Bito started. A standalone PR comment may summarize
+  the review, but do not rely on a Bito chat tag there and do not use it as a substitute for
+  thread-specific replies.
+- Keep replies within the PR purpose. Do not promise additional scope, redesign, generalized
+  machinery, or major refactoring to satisfy a suggestion that is outside the accepted change.
+- After posting replies or fixes, re-read the live PR review and thread state through the available
+  GitHub tool or CLI. Confirm that each reply exists on the intended Bito thread, references the
+  current diff, and is resolved or still requires action; never assume posting or resolution
+  succeeded.
+- If a valid thread remains unresolved, address the remaining in-scope issue and check live state
+  again. If an evidenced false positive or accepted trade-off remains open after the supported
+  reply, report its live state and stop rather than expanding scope or repeatedly posting.
 
 ## Safety and resume
 

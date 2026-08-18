@@ -17,8 +17,10 @@ Vanilla JS reference implementation for `@contentful/optimization-web`.
 
 ## Commands
 
-- `pnpm implementation:run -- web-sdk <script>` with `implementation:install`, `typecheck`, `build`,
-  `serve`, `serve:stop`, or `implementation:test:e2e:run`.
+- `pnpm implementation:web-sdk <script>` with `implementation:install`, `typecheck`, `build`,
+  `serve`, or `serve:stop`.
+- Playwright: `pnpm test:e2e:web-sdk <file-or-filter>`. The file or filter is optional; omit it only
+  when the full suite is warranted.
 
 ## Validate
 

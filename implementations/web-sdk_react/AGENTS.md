@@ -11,8 +11,10 @@ application.
 
 ## Commands
 
-- `pnpm implementation:run -- web-sdk_react <script>` with `implementation:install`, `typecheck`,
-  `build`, `dev`, `serve`, `serve:stop`, or `implementation:test:e2e:run`.
+- `pnpm implementation:web-sdk_react <script>` with `implementation:install`, `typecheck`, `build`,
+  `dev`, `serve`, or `serve:stop`.
+- Playwright: `pnpm test:e2e:web-sdk_react <file-or-filter>`. The file or filter is optional; omit
+  it only when the full suite is warranted.
 
 ## Validate
 

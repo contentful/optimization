@@ -15,6 +15,7 @@ const scopes = [
   'react-native',
   'react-web',
   'repo',
+  'runtime',
   'swift',
   'test',
   'web',

@@ -14,6 +14,13 @@ Web-family packages under `packages/web/`.
 - `frameworks/nextjs-sdk` owns the Next.js adapter. It may compose lower-layer behavior directly
   from declared dependencies or through public pass-through entrypoints exposed by its direct SDK
   dependency when a package contract intentionally keeps the direct dependency graph narrow.
+- `ContentfulOptimization`, the analytics-only runtime's internal SDK, React-owned roots, and Web
+  Component-owned roots all participate in the browser runtime's one `CoreStateful` singleton. The
+  optional `window.contentfulOptimization` property is a discovery surface, not the singleton lock;
+  the `globalThis` Core lock remains authoritative when a wrapper hides that property.
+- Snapshot runtimes and structural SDK-shaped test doubles are not additional live SDK instances.
+  Non-owning integration surfaces reuse the injected singleton; they must not create independent
+  stateful instances or partition singleton-owned state by provider, facade, or hydration target.
 - Keep Web `dev/` harnesses aligned with the browser, preview, or framework behavior they
   demonstrate.
 
