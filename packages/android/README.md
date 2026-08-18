@@ -200,17 +200,17 @@ tracking, screen tracking, live updates, preview-panel overrides, and shared moc
 
 ### Common options
 
-| Option              | Required? | Default                      | Description                                                                                        |
-| ------------------- | --------- | ---------------------------- | -------------------------------------------------------------------------------------------------- |
-| `clientId`          | Yes       | None                         | Optimization client identifier used for Experience API and Insights API calls.                     |
-| `environment`       | No        | `main`                       | Contentful environment name used by the Optimization APIs.                                         |
-| `api`               | No        | `null`                       | `OptimizationApiConfig` for endpoint overrides, enabled Experience features, and preflight.        |
-| `locale`            | No        | `null`                       | SDK Experience API and default event locale.                                                       |
-| `defaults`          | No        | `null`                       | Initial persisted-state seeds such as consent, persistence consent, profile, or selected variants. |
-| `allowedEventTypes` | No        | Bridge default               | Event types allowed before consent is explicitly set.                                              |
-| `logLevel`          | No        | `OptimizationLogLevel.error` | Minimum native and bridge log level.                                                               |
-| `queuePolicy`       | No        | SDK defaults                 | Queue flush retry behavior, offline bounds, and queue observability callbacks.                     |
-| `onEventBlocked`    | No        | `null`                       | Callback invoked with `reason`, `method`, and `args` when consent or guard logic blocks an event.  |
+| Option              | Required? | Default                      | Description                                                                                       |
+| ------------------- | --------- | ---------------------------- | ------------------------------------------------------------------------------------------------- |
+| `clientId`          | Yes       | None                         | Optimization client identifier used for Experience API and Insights API calls.                    |
+| `environment`       | No        | `main`                       | Contentful environment name used by the Optimization APIs.                                        |
+| `api`               | No        | `null`                       | `OptimizationApiConfig` for endpoint overrides, enabled Experience features, and preflight.       |
+| `locale`            | No        | `null`                       | SDK Experience API and default event locale.                                                      |
+| `defaults`          | No        | `null`                       | Startup defaults for consent, persistence consent, profile, or selected variants (see below).     |
+| `allowedEventTypes` | No        | Bridge default               | Event types allowed before consent is explicitly set.                                             |
+| `logLevel`          | No        | `OptimizationLogLevel.error` | Minimum native and bridge log level.                                                              |
+| `queuePolicy`       | No        | SDK defaults                 | Queue flush retry behavior, offline bounds, and queue observability callbacks.                    |
+| `onEventBlocked`    | No        | `null`                       | Callback invoked with `reason`, `method`, and `args` when consent or guard logic blocks an event. |
 
 `OptimizationRoot` and `OptimizationManager.initialize(...)` also accept global `trackViews`,
 `trackTaps`, and `liveUpdates` defaults. Entry view and tap tracking default to enabled;
@@ -265,6 +265,11 @@ val config = OptimizationConfig(
     defaults = StorageDefaults(consent = true),
 )
 ```
+
+`StorageDefaults` values are startup defaults, not one-time seeds: a configured value takes
+precedence over the stored `SharedPreferences` value on every launch, so a configured `consent` can
+replace a user's stored choice. Apps that persist a user's own decision leave `StorageDefaults.consent`
+unset and call `client.consent(...)` from resolved app policy instead.
 
 When application policy depends on user choice, leave consent unset and call `client.consent(true)`
 or `client.consent(false)` from the application-owned control. Boolean consent calls control both
