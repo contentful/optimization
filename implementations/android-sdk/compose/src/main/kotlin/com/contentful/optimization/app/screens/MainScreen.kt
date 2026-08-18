@@ -137,9 +137,9 @@ fun MainScreen() {
                         ) {
                             entries.forEach { cdaEntry ->
                                 // ContentEntryView/NestedContentEntryView are app-owned components
-                                // (not SDK entry points) built around the dictionary shape,
-                                // mirroring OptimizedEntry's own Map-based content callback.
-                                val entry = CTEntry.from(cdaEntry).toMap()
+                                // (not SDK entry points) built around CTEntry, mirroring the SDK's
+                                // own typed `OptimizedEntry(entry: CDAEntry, ...)` entry point.
+                                val entry = CTEntry.from(cdaEntry)
                                 if (isNestedContent(entry)) {
                                     NestedContentEntryView(entry = entry)
                                 } else {

@@ -3,6 +3,7 @@ package com.contentful.optimization.app.views.components
 import android.content.Context
 import android.view.View
 import android.widget.LinearLayout
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.views.OptimizedEntryView
 
 /**
@@ -11,8 +12,8 @@ import com.contentful.optimization.views.OptimizedEntryView
  */
 object NestedContentEntryViewBinder {
 
-    fun create(context: Context, entry: Map<String, Any>): View {
-        val entryId = entryId(entry)
+    fun create(context: Context, entry: CTEntry): View {
+        val entryId = entry.id ?: ""
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
         }
@@ -20,28 +21,23 @@ object NestedContentEntryViewBinder {
         val wrapper = OptimizedEntryView(context).apply {
             accessibilityIdentifier = "content-entry-$entryId"
         }
-        wrapper.setContentRenderer { resolvedEntry ->
+        wrapper.setContentRenderer { resolvedMap ->
             // Compose's NestedEntryText derives the test tag id from the RESOLVED entry, so the
             // personalization variant's sys.id becomes the test tag (e.g.
             // `entry-text-2KIWllNZJT205BwOSkMINg` for the nested return-visitor variant). The
             // outer OptimizedEntryView's accessibilityIdentifier stays on the BASE id to match
             // the non-nested path.
-            val resolvedId = entryId(resolvedEntry)
+            val resolvedEntry = CTEntry.from(resolvedMap)
+            val resolvedId = resolvedEntry.id ?: ""
             ContentEntryViewBinder.renderEntryColumn(context, resolvedEntry, resolvedId)
         }
-        wrapper.setEntry(entry)
+        wrapper.setEntry(entry.toMap())
         column.addView(wrapper)
 
-        @Suppress("UNCHECKED_CAST")
-        val fields = entry["fields"] as? Map<String, Any>
-        val nested = (fields?.get("nested") as? List<*>).orEmpty()
-        @Suppress("UNCHECKED_CAST")
-        nested
-            .filterIsInstance<Map<String, Any>>()
-            .filter {
-                val sys = it["sys"] as? Map<String, Any>
-                sys?.get("id") != null
-            }
+        entry.getField<List<Map<String, Any>>>("nested")
+            .orEmpty()
+            .map(CTEntry::from)
+            .filter { it.id != null }
             .forEach { nestedEntry ->
                 column.addView(create(context, nestedEntry))
             }
@@ -50,11 +46,4 @@ object NestedContentEntryViewBinder {
     }
 }
 
-@Suppress("UNCHECKED_CAST")
-internal fun isNestedContent(entry: Map<String, Any>): Boolean {
-    val sys = entry["sys"] as? Map<String, Any> ?: return false
-    val contentType = sys["contentType"] as? Map<String, Any> ?: return false
-    val innerSys = contentType["sys"] as? Map<String, Any> ?: return false
-    val id = innerSys["id"] as? String ?: return false
-    return id == "nestedContent"
-}
+internal fun isNestedContent(entry: CTEntry): Boolean = entry.contentTypeId == "nestedContent"

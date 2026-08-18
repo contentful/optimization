@@ -159,13 +159,10 @@ class MainActivity : AppCompatActivity() {
                 // diffing keeps existing nodes when the data is identical.
                 if (entriesLoaded) return@collect
                 entriesLoaded = true
-                // ContentEntryViewBinder/NestedContentEntryViewBinder are app-owned components
-                // (not SDK entry points) built around the dictionary shape, mirroring
-                // OptimizedEntryView's own Map-based content renderer.
                 val entries = ContentfulFetcher.fetchEntries(
                     AppConfig.entryIds,
                     AppConfig.defaultContentfulLocale,
-                ).map { CTEntry.from(it).toMap() }
+                ).map(CTEntry::from)
                 // Pre-resolve each entry's rich text on the (suspending) coroutine
                 // path BEFORE handing the entry to the synchronous view binder. This
                 // mirrors the iOS pattern where `RichText.resolveText` is a synchronous
@@ -182,9 +179,7 @@ class MainActivity : AppCompatActivity() {
                 // resetting the 2s dwell cycle — so the entry's `trackView` event
                 // never fired and `component-stats-1MwiFl4z…` never appeared.
                 val resolvedBaselineTexts = entries.map { entry ->
-                    @Suppress("UNCHECKED_CAST")
-                    val fields = entry["fields"] as? Map<String, Any>
-                    RichText.resolveText(fields?.get("text"), client)
+                    RichText.resolveText(entry.getField<Any>("text"), client)
                 }
                 renderEntries(entries, resolvedBaselineTexts)
             }
@@ -226,7 +221,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderEntries(
-        entries: List<Map<String, Any>>,
+        entries: List<CTEntry>,
         resolvedBaselineTexts: List<String> = emptyList(),
     ) {
         if (entries.isEmpty()) {
