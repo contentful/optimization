@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.contentful.java.cda.CDAEntry
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.shared.AppConfig
 import com.contentful.optimization.shared.ContentfulFetcher
 import com.contentful.optimization.shared.EventStore
@@ -41,7 +43,7 @@ fun MainScreen() {
     val state by client.state.collectAsState()
     val scope = rememberCoroutineScope()
 
-    var entries by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var entries by remember { mutableStateOf<List<CDAEntry>>(emptyList()) }
     var showNavigationTest by remember { mutableStateOf(false) }
     var showLiveUpdatesTest by remember { mutableStateOf(false) }
     var viewportHeight by remember { mutableStateOf(0f) }
@@ -133,7 +135,11 @@ fun MainScreen() {
                                 .fillMaxSize()
                                 .verticalScroll(rememberScrollState()),
                         ) {
-                            entries.forEach { entry ->
+                            entries.forEach { cdaEntry ->
+                                // ContentEntryView/NestedContentEntryView are app-owned components
+                                // (not SDK entry points) built around the dictionary shape,
+                                // mirroring OptimizedEntry's own Map-based content callback.
+                                val entry = CTEntry.from(cdaEntry).toMap()
                                 if (isNestedContent(entry)) {
                                     NestedContentEntryView(entry = entry)
                                 } else {

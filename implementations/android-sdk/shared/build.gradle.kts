@@ -32,5 +32,15 @@ dependencies {
     // the 4.x jar and 5.x aar together triggers duplicate-class packaging.
     implementation("com.squareup.okhttp3:okhttp-android:5.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-    implementation("org.json:json:20240303")
+
+    // Entries are fetched with Contentful's official Java/Android SDK — the same integration path
+    // recommended to customers, and the version ContentfulOptimization already resolves as
+    // compileOnly for its CDAEntry adapter (CTEntry.from(CDAEntry)). `api` (not `implementation`)
+    // because ContentfulFetcher's public surface returns `List<CDAEntry>`, and the Compose/Views
+    // shells consuming it (via `implementation(project(":shared"))`) construct and type against
+    // CDAEntry directly at their fetch call sites. okhttp-jvm is excluded to avoid a
+    // duplicate-class conflict with the okhttp-android variant declared above.
+    api("com.contentful.java:java-sdk:10.6.0") {
+        exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
+    }
 }

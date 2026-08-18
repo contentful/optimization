@@ -50,6 +50,41 @@ This mock app uses one Contentful locale. A production app can derive the applic
 its own navigation, i18n, or account-preference layer and pass that value to both SDK `locale` and
 CDA requests when they should stay aligned.
 
+## Contentful CDA client
+
+Both app shells fetch entries through Contentful's official
+[`com.contentful.java:java-sdk`](https://github.com/contentful/contentful.java) `CDAClient` rather
+than hand-rolled HTTP/JSON parsing, mirroring the iOS reference app's use of `contentful.swift`.
+`MockContentfulClient` (`shared/src/main/kotlin/com/contentful/optimization/shared/`) builds the
+shared `CDAClient` singleton, points it at the mock server via `setEndpoint`, and installs an OkHttp
+interceptor (`LocalesInterceptor`) that synthesizes the `/locales` and `/content_types` responses
+`CDAClient` requires before any entry fetch — the mock server only serves `/entries`. Content types
+are served from a bundled resource (`shared/src/main/resources/contentful/content_types.json`,
+exported by `lib/mocks`' `fetch:ctfl:space`) rather than an empty array, because `contentful.java`'s
+Rich Text resolution looks up each fetched entry's content type by ID and throws if it's missing.
+
+`ContentfulFetcher` uses this client for home-screen entries (by-ID fetch, single locale,
+`include=10`), decoding results with the SDK's typed entry APIs (`CTEntry.from(CDAEntry)`,
+`OptimizedEntry(CDAEntry)`, `OptimizedEntryView.setEntry(CDAEntry)`).
+
+`MockPreviewContentfulClient` wraps the same `CDAClient` for the preview panel's audience/experience
+fetch (`PreviewContentfulClient`), with two adaptations specific to that content-type-filtered query
+path:
+
+- **Serialized calls.** The preview panel issues concurrent `nt_audience` and `nt_experience`
+  fetches against the same shared `CDAClient`. `CDAClient` builds each response's resource array (and
+  its content-type cache) on shared instance state while a call is in flight, so two truly concurrent
+  calls can interleave and drop entries. `MockPreviewContentfulClient` serializes its calls with a
+  `Mutex` to avoid this; the built-in `ContentfulHTTPPreviewClient` doesn't need it because each of
+  its requests is an independent stateless `OkHttp` call.
+- **Raw-link-field restoration.** The mock server's content-type-filtered `entries` endpoint never
+  returns an `includes` section, so `contentful.java` can't resolve any linked entry and silently
+  drops the field entirely (not just nulls it) rather than keeping it as an unresolved link stub the
+  way the raw Contentful REST response would. Because `entryMappers.ts` only ever reads `sys.id` off
+  those fields, `MockPreviewContentfulClient` restores the raw, unresolved `{sys: {type: "Link",
+...}}` value from `CDAEntry.rawFields()` for any field `contentful.java` dropped, which is enough
+  to unblock the audience/experience grouping the preview panel depends on.
+
 ## Prerequisites
 
 - Android SDK with `ANDROID_HOME` set

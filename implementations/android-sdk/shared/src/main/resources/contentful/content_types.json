@@ -1,0 +1,693 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 6,
+  "skip": 0,
+  "limit": 1000,
+  "items": [
+    {
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "nt_audience",
+        "type": "ContentType",
+        "createdAt": "2025-10-06T12:55:28.972Z",
+        "updatedAt": "2026-02-06T13:43:15.743Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 7,
+        "publishedAt": "2026-02-06T13:43:15.743Z",
+        "firstPublishedAt": "2025-10-06T12:55:29.231Z",
+        "createdBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
+          }
+        },
+        "updatedBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
+          }
+        },
+        "publishedCounter": 4,
+        "version": 8,
+        "publishedBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
+          }
+        },
+        "urn": "crn:contentful:::content:spaces/uelxcuo7v97l/environments/master/content_types/nt_audience"
+      },
+      "displayField": "nt_name",
+      "name": "Ninetailed Audience",
+      "description": "Ninetailed Audience",
+      "fields": [
+        {
+          "id": "nt_name",
+          "name": "Name",
+          "type": "Symbol",
+          "localized": false,
+          "required": true,
+          "validations": [],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "nt_description",
+          "name": "Description",
+          "type": "Text",
+          "localized": false,
+          "required": false,
+          "validations": [],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "nt_rules",
+          "name": "Rules",
+          "type": "Object",
+          "localized": false,
+          "required": true,
+          "validations": [],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "nt_audience_id",
+          "name": "Audience Id",
+          "type": "Symbol",
+          "localized": false,
+          "required": true,
+          "validations": [
+            {
+              "unique": true
+            }
+          ],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "nt_metadata",
+          "name": "Metadata",
+          "type": "Object",
+          "localized": false,
+          "required": false,
+          "validations": [],
+          "disabled": true,
+          "omitted": false
+        }
+      ]
+    },
+    {
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "nt_mergetag",
+        "type": "ContentType",
+        "createdAt": "2025-10-06T12:55:29.978Z",
+        "updatedAt": "2026-02-06T13:43:17.106Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 7,
+        "publishedAt": "2026-02-06T13:43:17.106Z",
+        "firstPublishedAt": "2025-10-06T12:55:30.221Z",
+        "createdBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
+          }
+        },
+        "updatedBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
+          }
+        },
+        "publishedCounter": 4,
+        "version": 8,
+        "publishedBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
+          }
+        },
+        "urn": "crn:contentful:::content:spaces/uelxcuo7v97l/environments/master/content_types/nt_mergetag"
+      },
+      "displayField": "nt_name",
+      "name": "Ninetailed Merge Tag",
+      "description": "Ninetailed Merge Tag",
+      "fields": [
+        {
+          "id": "nt_name",
+          "name": "Name",
+          "type": "Symbol",
+          "localized": false,
+          "required": true,
+          "validations": [],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "nt_fallback",
+          "name": "Fallback",
+          "type": "Symbol",
+          "localized": false,
+          "required": false,
+          "validations": [],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "nt_mergetag_id",
+          "name": "Merge Tag Id",
+          "type": "Symbol",
+          "localized": false,
+          "required": true,
+          "validations": [
+            {
+              "unique": true
+            }
+          ],
+          "disabled": false,
+          "omitted": false
+        }
+      ]
+    },
+    {
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "nt_experience",
+        "type": "ContentType",
+        "createdAt": "2025-10-06T12:55:30.900Z",
+        "updatedAt": "2026-02-06T13:43:14.363Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 7,
+        "publishedAt": "2026-02-06T13:43:14.363Z",
+        "firstPublishedAt": "2025-10-06T12:55:31.163Z",
+        "createdBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
+          }
+        },
+        "updatedBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
+          }
+        },
+        "publishedCounter": 4,
+        "version": 8,
+        "publishedBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
+          }
+        },
+        "urn": "crn:contentful:::content:spaces/uelxcuo7v97l/environments/master/content_types/nt_experience"
+      },
+      "displayField": "nt_name",
+      "name": "Ninetailed Experience",
+      "description": "Ninetailed Experience",
+      "fields": [
+        {
+          "id": "nt_name",
+          "name": "Name",
+          "type": "Symbol",
+          "localized": false,
+          "required": true,
+          "validations": [
+            {
+              "unique": true
+            }
+          ],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "nt_description",
+          "name": "Description",
+          "type": "Text",
+          "localized": false,
+          "required": false,
+          "validations": [],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "nt_type",
+          "name": "Type",
+          "type": "Symbol",
+          "localized": false,
+          "required": true,
+          "validations": [
+            {
+              "in": ["nt_experiment", "nt_personalization"]
+            }
+          ],
+          "disabled": true,
+          "omitted": false
+        },
+        {
+          "id": "nt_config",
+          "name": "Config",
+          "type": "Object",
+          "localized": false,
+          "required": true,
+          "validations": [],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "nt_audience",
+          "name": "Audience",
+          "type": "Link",
+          "localized": false,
+          "required": false,
+          "validations": [
+            {
+              "linkContentType": ["nt_audience"]
+            }
+          ],
+          "disabled": true,
+          "omitted": false,
+          "linkType": "Entry"
+        },
+        {
+          "id": "nt_variants",
+          "name": "Variants",
+          "type": "Array",
+          "localized": false,
+          "required": false,
+          "validations": [],
+          "disabled": true,
+          "omitted": false,
+          "items": {
+            "type": "Link",
+            "validations": [],
+            "linkType": "Entry"
+          }
+        },
+        {
+          "id": "nt_experience_id",
+          "name": "Experience Id",
+          "type": "Symbol",
+          "localized": false,
+          "required": false,
+          "validations": [
+            {
+              "unique": true
+            }
+          ],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "nt_metadata",
+          "name": "Experience Metadata",
+          "type": "Object",
+          "localized": false,
+          "required": false,
+          "validations": [],
+          "disabled": true,
+          "omitted": false
+        }
+      ]
+    },
+    {
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "content",
+        "type": "ContentType",
+        "createdAt": "2025-10-13T10:08:18.049Z",
+        "updatedAt": "2025-10-13T10:28:44.344Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 11,
+        "publishedAt": "2025-10-13T10:28:44.344Z",
+        "firstPublishedAt": "2025-10-13T10:08:18.399Z",
+        "createdBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "User",
+            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+          }
+        },
+        "updatedBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "User",
+            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+          }
+        },
+        "publishedCounter": 6,
+        "version": 12,
+        "publishedBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "User",
+            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+          }
+        },
+        "urn": "crn:contentful:::content:spaces/uelxcuo7v97l/environments/master/content_types/content"
+      },
+      "displayField": "internalTitle",
+      "name": "Content",
+      "description": "Generic content type",
+      "fields": [
+        {
+          "id": "internalTitle",
+          "name": "Internal Title",
+          "type": "Symbol",
+          "localized": false,
+          "required": true,
+          "validations": [],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "text",
+          "name": "Text",
+          "type": "Symbol",
+          "localized": false,
+          "required": true,
+          "validations": [],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "nt_experiences",
+          "name": "Ninetailed",
+          "type": "Array",
+          "localized": false,
+          "required": false,
+          "validations": [],
+          "disabled": false,
+          "omitted": false,
+          "items": {
+            "type": "Link",
+            "validations": [
+              {
+                "linkContentType": ["nt_experience"]
+              }
+            ],
+            "linkType": "Entry"
+          }
+        }
+      ]
+    },
+    {
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "mergeTagContent",
+        "type": "ContentType",
+        "createdAt": "2025-10-15T15:15:35.439Z",
+        "updatedAt": "2025-10-15T15:15:35.812Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 1,
+        "publishedAt": "2025-10-15T15:15:35.812Z",
+        "firstPublishedAt": "2025-10-15T15:15:35.812Z",
+        "createdBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "User",
+            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+          }
+        },
+        "updatedBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "User",
+            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+          }
+        },
+        "publishedCounter": 1,
+        "version": 2,
+        "publishedBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "User",
+            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+          }
+        },
+        "urn": "crn:contentful:::content:spaces/uelxcuo7v97l/environments/master/content_types/mergeTagContent"
+      },
+      "displayField": "internalTitle",
+      "name": "Merge Tag Content",
+      "description": "Content type that can handle Merge Tags",
+      "fields": [
+        {
+          "id": "internalTitle",
+          "name": "Internal Title",
+          "type": "Symbol",
+          "localized": false,
+          "required": true,
+          "validations": [],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "text",
+          "name": "Text",
+          "type": "RichText",
+          "localized": false,
+          "required": false,
+          "validations": [
+            {
+              "enabledMarks": [
+                "bold",
+                "italic",
+                "underline",
+                "code",
+                "superscript",
+                "subscript",
+                "strikethrough"
+              ],
+              "message": "Only bold, italic, underline, code, superscript, subscript, and strikethrough marks are allowed"
+            },
+            {
+              "enabledNodeTypes": [
+                "heading-1",
+                "heading-2",
+                "heading-3",
+                "heading-4",
+                "heading-5",
+                "heading-6",
+                "ordered-list",
+                "unordered-list",
+                "hr",
+                "blockquote",
+                "embedded-entry-block",
+                "embedded-asset-block",
+                "table",
+                "asset-hyperlink",
+                "embedded-entry-inline",
+                "entry-hyperlink",
+                "hyperlink"
+              ],
+              "message": "Only heading 1, heading 2, heading 3, heading 4, heading 5, heading 6, ordered list, unordered list, horizontal rule, quote, block entry, asset, table, link to asset, inline entry, link to entry, and link to Url nodes are allowed"
+            },
+            {
+              "nodes": {
+                "embedded-entry-inline": [
+                  {
+                    "linkContentType": ["nt_mergetag"],
+                    "message": null
+                  }
+                ]
+              }
+            }
+          ],
+          "disabled": false,
+          "omitted": false
+        }
+      ]
+    },
+    {
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "nestedContent",
+        "type": "ContentType",
+        "createdAt": "2025-11-19T11:22:34.610Z",
+        "updatedAt": "2025-11-19T11:23:45.519Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 7,
+        "publishedAt": "2025-11-19T11:23:45.519Z",
+        "firstPublishedAt": "2025-11-19T11:22:34.916Z",
+        "createdBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "User",
+            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+          }
+        },
+        "updatedBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "User",
+            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+          }
+        },
+        "publishedCounter": 4,
+        "version": 8,
+        "publishedBy": {
+          "sys": {
+            "type": "Link",
+            "linkType": "User",
+            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+          }
+        },
+        "urn": "crn:contentful:::content:spaces/uelxcuo7v97l/environments/master/content_types/nestedContent"
+      },
+      "displayField": "internalTitle",
+      "name": "Nested Content",
+      "description": "Generic content type that allows references to other content entries",
+      "fields": [
+        {
+          "id": "internalTitle",
+          "name": "Internal Title",
+          "type": "Symbol",
+          "localized": false,
+          "required": true,
+          "validations": [],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "text",
+          "name": "Text",
+          "type": "Symbol",
+          "localized": false,
+          "required": true,
+          "validations": [],
+          "disabled": false,
+          "omitted": false
+        },
+        {
+          "id": "nested",
+          "name": "Nested",
+          "type": "Array",
+          "localized": false,
+          "required": false,
+          "validations": [
+            {
+              "size": {
+                "min": 1,
+                "max": 3
+              }
+            }
+          ],
+          "disabled": false,
+          "omitted": false,
+          "items": {
+            "type": "Link",
+            "validations": [
+              {
+                "linkContentType": ["content", "nt_experience", "nestedContent"]
+              }
+            ],
+            "linkType": "Entry"
+          }
+        },
+        {
+          "id": "nt_experiences",
+          "name": "Ninetailed",
+          "type": "Array",
+          "localized": false,
+          "required": false,
+          "validations": [],
+          "disabled": false,
+          "omitted": false,
+          "items": {
+            "type": "Link",
+            "validations": [
+              {
+                "linkContentType": ["nt_experience"]
+              }
+            ],
+            "linkType": "Entry"
+          }
+        }
+      ]
+    }
+  ]
+}

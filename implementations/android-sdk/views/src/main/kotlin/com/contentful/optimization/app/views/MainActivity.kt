@@ -14,6 +14,7 @@ import com.contentful.optimization.app.views.components.ContentEntryViewBinder
 import com.contentful.optimization.app.views.components.NestedContentEntryViewBinder
 import com.contentful.optimization.app.views.components.isNestedContent
 import com.contentful.optimization.app.views.support.setTestTag
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.core.OptimizationApiConfig
 import com.contentful.optimization.core.OptimizationConfig
 import com.contentful.optimization.core.OptimizationLogLevel
@@ -158,10 +159,13 @@ class MainActivity : AppCompatActivity() {
                 // diffing keeps existing nodes when the data is identical.
                 if (entriesLoaded) return@collect
                 entriesLoaded = true
+                // ContentEntryViewBinder/NestedContentEntryViewBinder are app-owned components
+                // (not SDK entry points) built around the dictionary shape, mirroring
+                // OptimizedEntryView's own Map-based content renderer.
                 val entries = ContentfulFetcher.fetchEntries(
                     AppConfig.entryIds,
                     AppConfig.defaultContentfulLocale,
-                )
+                ).map { CTEntry.from(it).toMap() }
                 // Pre-resolve each entry's rich text on the (suspending) coroutine
                 // path BEFORE handing the entry to the synchronous view binder. This
                 // mirrors the iOS pattern where `RichText.resolveText` is a synchronous

@@ -7,7 +7,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.contentful.java.cda.CDAEntry
 import com.contentful.optimization.app.views.support.setTestTag
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.shared.AppConfig
 import com.contentful.optimization.shared.ContentfulFetcher
 import com.contentful.optimization.views.OptimizationManager
@@ -43,7 +45,7 @@ class LiveUpdatesTestActivity : AppCompatActivity() {
     private var globalLiveUpdates = false
     private var isPreviewPanelSimulated = false
     private var isIdentified = false
-    private var loadedEntry: Map<String, Any>? = null
+    private var loadedEntry: CDAEntry? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -160,13 +162,9 @@ class LiveUpdatesTestActivity : AppCompatActivity() {
     }
 
     private fun renderEntryDisplay(entry: Map<String, Any>, prefix: String): View {
-        @Suppress("UNCHECKED_CAST")
-        val fields = entry["fields"] as? Map<String, Any>
-        val text = fields?.get("text") as? String ?: "No content"
-
-        @Suppress("UNCHECKED_CAST")
-        val sys = entry["sys"] as? Map<String, Any>
-        val entryId = sys?.get("id") as? String ?: ""
+        val ctEntry = CTEntry.from(entry)
+        val text = ctEntry.getField<String>("text") ?: "No content"
+        val entryId = ctEntry.id ?: ""
 
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
