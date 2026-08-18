@@ -100,8 +100,8 @@ pnpm version:pnpm
 | -------------------- | ----------------------------------------------------------------------------------- |
 | `lib/`               | Internal shared tooling and mock services, such as `build-tools` and `mocks`        |
 | `packages/`          | Workspace packages, including published SDKs and framework layers                   |
-| `packages/android/`  | Beta Android library                                                                |
-| `packages/ios/`      | Beta Swift package                                                                  |
+| `packages/android/`  | Android library                                                                     |
+| `packages/ios/`      | Swift package                                                                       |
 | `implementations/`   | Reference apps used for integration testing, validation evidence, and E2E coverage  |
 | `documentation/`     | Authored guides and concepts published with TypeDoc                                 |
 | `docs/`              | Generated TypeDoc output                                                            |
@@ -289,11 +289,11 @@ that release PR merges.
 
 Release tags use package components:
 
-| Artifact family | Release tag example                  | Publish target                                               |
-| --------------- | ------------------------------------ | ------------------------------------------------------------ |
-| NPM packages    | `optimization-web-v1.3.1`            | GitHub Packages                                              |
-| Android         | `optimization-android-v1.1.0-beta.0` | Maven Central                                                |
-| Swift           | `optimization-swift-v1.1.0-beta.0`   | `contentful/optimization.swift` with SPM tag `v1.1.0-beta.0` |
+| Artifact family | Release tag example           | Publish target                                        |
+| --------------- | ----------------------------- | ----------------------------------------------------- |
+| NPM packages    | `optimization-web-v1.3.1`     | GitHub Packages                                       |
+| Android         | `optimization-android-v1.1.0` | Maven Central                                         |
+| Swift           | `optimization-swift-v1.1.0`   | `contentful/optimization.swift` with SPM tag `v1.1.0` |
 
 ### Commit scopes
 
@@ -328,9 +328,9 @@ Dependency updates follow the same rule as other changes. Use `fix(scope): ...` 
 change affects published runtime behavior. Use `chore(deps): ...` for maintenance-only dependency
 work.
 
-Release Please assigns releases by changed package paths and workspace dependency updates. Android
-and Swift are configured as beta prerelease packages. The native bridge impact plugin also
-synthesizes Android and Swift patch releases from releasable shared runtime commits that touch
+Release Please assigns releases by changed package paths and workspace dependency updates. The
+native bridge impact plugin also synthesizes Android and Swift patch releases from releasable
+shared runtime commits that touch
 `packages/universal/api-schemas`, `packages/universal/api-client`, `packages/universal/core-sdk`, or
 `packages/universal/optimization-js-bridge`. When a change affects multiple packages, use the scope
 that best describes the user-facing change and list the affected packages in the pull request

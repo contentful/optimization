@@ -10,7 +10,7 @@ and [`../shared/concepts.md`](../shared/concepts.md). The concepts they capture 
 axes, baseline fallback, entry-source managed-vs-manual, live updates, single-locale entry contract,
 experience-response payload — are SDK-neutral and apply to the whole suite via the shared `core-sdk`.
 
-This is a **beta** native Swift Package, not a TypeScript package: its source has a `Package.swift`
+This is a native Swift Package, not a TypeScript package: its source has a `Package.swift`
 and no `package.json`/`src/`, so `knowledge:check` has no `ios` SDK key and cannot resolve Swift
 `#symbol` pointers. Swift-specific facts therefore use extern-prefixed pointers whose free text names
 the exact Swift file and symbol; behavior that actually executes in the shared JS layer uses the real
@@ -280,7 +280,6 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
 
 ## Version / runtime quirks
 
-- Beta: the API, setup flow, and bridge contract are subject to change. source: extern:beta status — packages/ios/README.md
 - JavaScriptCore bridge: `JSContextManager` creates **one `JSContext` per `OptimizationClient`
   lifetime**, registers the native polyfill bindings, evaluates the UMD bundle (polyfills prepended
   at build time), verifies `typeof __bridge === "object"`, registers the push-back native globals,

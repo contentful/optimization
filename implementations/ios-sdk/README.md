@@ -16,17 +16,13 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization iOS SDK is in beta. Breaking changes can be published at any time.
-
 Reference app for native iOS bridge and preview-panel validation work. This app exercises two iOS
 shells against the mock server in `lib/mocks/` and hosts the XCUITest suite.
 
 > [!NOTE]
 >
-> This reference app is not the iOS SDK package. The iOS SDK exists as a beta Swift Package;
-> for package status, see [`packages/ios`](../../packages/ios/README.md).
+> This reference app is not the iOS SDK package. The iOS SDK exists as a Swift Package; for
+> package status, see [`packages/ios`](../../packages/ios/README.md).
 
 ## What this demonstrates
 
@@ -228,7 +224,7 @@ Common local pitfalls:
 
 ## Related
 
-- [Optimization iOS SDK package](../../packages/ios/README.md) - Beta Swift Package status
+- [Optimization iOS SDK package](../../packages/ios/README.md) - Swift Package status
   and release notes
 - [Optimization iOS SDK code map](../../packages/ios/CODE_MAP.md) - Maintainer architecture map for
   the native iOS package

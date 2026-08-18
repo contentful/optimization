@@ -15,11 +15,7 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization Android SDK is in beta. Breaking changes can be published at any time.
-
-The Optimization Android SDK is a beta Kotlin Android library for native Android
+The Optimization Android SDK is a Kotlin Android library for native Android
 applications. It is part of the [Contentful Optimization SDK Suite](../../README.md) and runs shared
 optimization behavior through a local QuickJS bridge while Kotlin code owns native app concerns such
 as persistence, networking, lifecycle handling, Jetpack Compose UI, XML Views UI, and preview-panel

@@ -41,6 +41,8 @@ assets.
 - Maven Central publishing uses `.github/workflows/publish-android.yaml` on
   `optimization-android-v*` tags with group `com.contentful.java` and artifact
   `optimization-android`.
+- The SDK graduated to a stable 1.0.0 release; the public API, setup flow, and bridge contract
+  follow standard semantic versioning for breaking changes.
 - Published artifacts are generated; do not edit them by hand.
 - Android third-party notices are release assets. Debug/unit/local development must not depend on
   them. Release and publish flows that pass
