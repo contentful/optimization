@@ -14,6 +14,15 @@ Applies to all workspace packages under `packages/`.
 - Stateful SDK APIs that wire shared runtime state must not use `create*` or factory wording unless
   they create truly isolated state; name and document them by purpose with initialize, bind, or
   configure.
+- Every `CoreStateful`-backed SDK participates in the same `globalThis` singleton lock. Exactly one
+  active stateful SDK instance is supported per JavaScript runtime; call `destroy()` before
+  replacing it during teardown or hot reload. Structural runtime interfaces, injected providers,
+  snapshot runtimes, and test doubles do not represent permission to run multiple live stateful
+  instances.
+- Never model concurrent stateful SDK instances as supported behavior in state, request ownership,
+  hydration, or tests. Singleton-enforcement tests may attempt a second construction only to assert
+  that it fails. Framework roots and adapters either own the one active singleton or reuse that
+  injected singleton. Stateless request clients remain the separate request-scoped model.
 - Exception to the root `eslint-disable` rule: package constants may use the standardized
   `// eslint-disable-next-line @typescript-eslint/naming-convention -- Replaced at build-time`
   suppression for bundler-injected replacement globals such as `__OPTIMIZATION_VERSION__`. Keep the
@@ -21,6 +30,11 @@ Applies to all workspace packages under `packages/`.
 
 ## Dependency surfaces
 
+- Treat **public API** as package-accessible API, not as a synonym for normal application-facing
+  **consumer API**. Public surfaces may primarily serve downstream SDKs while remaining available
+  for exceptional custom integrations and unsupported frameworks. State the intended audience in
+  TSDoc and package guidance; do not hide an inter-SDK contract merely because ordinary
+  applications rarely call it.
 - SDK packages may expose pass-through entrypoints for lower-layer exports they intentionally make
   available to downstream adapters. A downstream SDK can depend on a single upstream SDK and reach
   lower-layer-owned exports through that upstream SDK's public pass-through entrypoints instead of

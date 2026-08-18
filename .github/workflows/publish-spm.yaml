@@ -51,6 +51,9 @@ jobs:
         env:
           RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
 
+      - name: Install Swift license-report generator
+        run: brew install licenseplist
+
       - name: Generate Swift third-party notices
         run: pnpm notices:generate:swift
 

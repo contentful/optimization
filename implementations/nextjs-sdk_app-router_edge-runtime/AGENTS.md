@@ -12,15 +12,17 @@ Next.js SDK App Router Edge runtime reference implementation for `@contentful/op
   belongs in `nextjs-sdk_app-router`.
 - Do not import lower-level SDK packages directly from this implementation.
 - Entry IDs and customer segments come from the shared `e2e-web` fixtures.
-- If consumed packages changed, run `pnpm build:pkgs` and reinstall before trusting results.
+- If consumed packages changed, run `pnpm build:pkgs` once, then
+  `pnpm implementation:nextjs-sdk_app-router_edge-runtime implementation:install`. Skip this refresh
+  when the installed dependencies are already current.
 
 ## Commands
 
 - `pnpm implementation:run -- nextjs-sdk_app-router_edge-runtime <script>` with
   `implementation:install`, `typecheck`, `lint`, `build`, `dev`, `serve`, `serve:stop`, or
   `test:e2e`.
-- Root wrappers: `pnpm setup:e2e:nextjs-sdk_app-router_edge-runtime` and
-  `pnpm test:e2e:nextjs-sdk_app-router_edge-runtime`.
+- Playwright: `pnpm test:e2e:nextjs-sdk_app-router_edge-runtime <file-or-filter>`. This runner is
+  setup-free. The file or filter is optional; omit it only when the full suite is warranted.
 
 ## E2E
 

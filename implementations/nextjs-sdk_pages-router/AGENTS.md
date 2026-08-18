@@ -25,14 +25,16 @@ uses Next.js SDK subpaths only for non-component runtime surfaces.
   provider wrappers around it.
 - Entry IDs and click scenarios come from the shared `e2e-web` fixtures (`PAGES`, `CLICK_SCENARIOS`
   from `e2e-web`). Do not duplicate these constants locally.
-- If consumed packages changed, run `pnpm build:pkgs` and reinstall before trusting results.
+- If consumed packages changed, run `pnpm build:pkgs` once, then
+  `pnpm implementation:nextjs-sdk_pages-router implementation:install`. Skip this refresh when the
+  installed dependencies are already current.
 
 ## Commands
 
 - `pnpm implementation:run -- nextjs-sdk_pages-router <script>` with `implementation:install`,
   `typecheck`, `lint`, `build`, `dev`, `serve`, `serve:stop`, or `test:e2e`.
-- Root wrappers: `pnpm setup:e2e:nextjs-sdk_pages-router` and
-  `pnpm test:e2e:nextjs-sdk_pages-router`.
+- Playwright: `pnpm test:e2e:nextjs-sdk_pages-router <file-or-filter>`. This runner is setup-free.
+  The file or filter is optional; omit it only when the full suite is warranted.
 
 ## E2E
 

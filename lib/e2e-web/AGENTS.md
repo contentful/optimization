@@ -28,11 +28,13 @@ Shared Playwright E2E package for web SDK reference implementations.
 
 ## Commands
 
-- `pnpm --dir lib/e2e-web setup:e2e`
-- `pnpm --dir lib/e2e-web test`
-- `IMPLEMENTATION=nextjs-sdk_app-router pnpm --dir lib/e2e-web test`
-- `IMPLEMENTATION=nextjs-sdk_pages-router pnpm --dir lib/e2e-web test`
-- `IMPLEMENTATION=react-web-sdk pnpm --dir lib/e2e-web test`
+- Prefer the implementation-aware setup-free root runner
+  `pnpm test:e2e:<implementation> <file-or-filter>` for normal validation. The file or filter is
+  optional; omit it only when the full suite is warranted.
+- Use `IMPLEMENTATION=<implementation> pnpm --dir lib/e2e-web test <file-or-filter>` only for direct
+  shared-suite debugging.
+- `pnpm --dir lib/e2e-web setup:e2e` installs browser prerequisites. It is an explicit user/CI-owned
+  setup operation, not routine run preparation.
 - `pnpm --dir lib/e2e-web test:codegen`
 - `pnpm --dir lib/e2e-web test:ui`
 - `pnpm --dir lib/e2e-web test:report`

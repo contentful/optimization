@@ -43,13 +43,19 @@ Applies to reference implementations and shared implementation contracts under `
 
 ## Shared failure modes
 
-- If package changes are not reflected in an implementation, run `pnpm build:pkgs`, then rerun that
-  implementation's install script.
+- If consumed package changes are not reflected in an implementation, run `pnpm build:pkgs` once,
+  then `pnpm implementation:<implementation> implementation:install`. Skip this refresh when the
+  installed dependencies are already current.
 - Missing SDK APIs or stale SDK types in an implementation are artifact or install-state failures
   until proven otherwise; compare built package declarations with installed declarations before
   adding implementation-local shims.
-- Prefer root `pnpm setup:e2e:<implementation>` and `pnpm test:e2e:<implementation>` wrappers when
-  they exist.
+- For Web Playwright, prefer the setup-free root runner
+  `pnpm test:e2e:<implementation> <file-or-filter>`. The file or filter is optional; omit it only
+  when the full suite is warranted.
+- Do not run root `pnpm setup:e2e`, `pnpm setup:e2e:<implementation>`, or aggregate
+  `pnpm test:e2e` automatically for routine local Web Playwright validation. Setup and browser
+  installation are explicit user/CI-owned operations; use them only when a prerequisite is
+  confirmed missing or the user explicitly requests them.
 - For native and React Native E2E, prefer the child implementation's runner script over raw tool
   invocations. The runners start mocks, build/install apps, configure ports, and clean up their own
   child processes.
