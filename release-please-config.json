@@ -49,31 +49,19 @@
     "packages/react-native-sdk": {
       "component": "optimization-react-native",
       "package-name": "@contentful/optimization-react-native",
-      "release-type": "node",
-      "release-as": "1.0.0",
-      "versioning": "prerelease",
-      "prerelease": false,
-      "prerelease-type": "beta"
+      "release-type": "node"
     },
     "packages/android/ContentfulOptimization": {
       "component": "optimization-android",
       "package-name": "optimization-android",
       "release-type": "simple",
-      "version-file": "VERSION",
-      "release-as": "1.0.0",
-      "versioning": "prerelease",
-      "prerelease": false,
-      "prerelease-type": "beta"
+      "version-file": "VERSION"
     },
     "packages/ios/ContentfulOptimization": {
       "component": "optimization-swift",
       "package-name": "optimization-swift",
       "release-type": "simple",
-      "version-file": "VERSION",
-      "release-as": "1.0.0",
-      "versioning": "prerelease",
-      "prerelease": false,
-      "prerelease-type": "beta"
+      "version-file": "VERSION"
     }
   },
   "plugins": [
