@@ -1173,7 +1173,7 @@ Before releasing a Compose integration, verify these points against the target a
 
 **Reference excerpt:**
 
-```bash
+```sh
 # These run against this repository's maintained Android reference implementation, not your app.
 # SDK unit tests, from packages/android/ContentfulOptimization:
 ./gradlew testDebugUnitTest
@@ -1199,5 +1199,3 @@ pnpm implementation:run -- android-sdk test:e2e:compose -- --flow <suite>
   fetching, entry resolution, interaction tracking, screen tracking, live updates,
   `getMergeTagValue(...)`, Custom Flags, event diagnostics, and preview-panel overrides against the
   same mock API.
-  </content>
-  </invoke>
