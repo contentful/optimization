@@ -1,4 +1,14 @@
-# Integrating the Optimization Android SDK in a Jetpack Compose app
+---
+fern:
+  navTitle: Integrate the Optimization Android SDK in a Compose app
+  slug: integrate-the-optimization-android-sdk-in-a-compose-app
+  section: Guides
+  description: >-
+    Use this guide to add Contentful personalization to a Jetpack Compose app with the Optimization
+    Android SDK.
+---
+
+# Integrate the Optimization Android SDK in a Jetpack Compose app
 
 Use this guide to add Contentful personalization to a Jetpack Compose app with the Optimization
 Android SDK. By the end of the quick start, the SDK is initialized inside your Compose app and emits
@@ -876,7 +886,7 @@ fun AnalyticsDebugPanel() {
 ```
 
 For cross-SDK forwarding patterns, see
-[Forwarding Optimization SDK context to analytics and tag management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+[Forward Optimization SDK context to analytics and tag management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
 
 ### Custom Flags and MergeTag rendering
 

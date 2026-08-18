@@ -1,8 +1,15 @@
 ---
-title: Forwarding Optimization SDK context to analytics and tag-management tools
+title: Forward Optimization SDK context to analytics and tag-management tools
+fern:
+  slug: forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools
+  section: Guides
+  description: >-
+    Use this guide when your application already sends events to an analytics, tag-management,
+    customer-data, replay, or product-analytics destination and you want to attach approved
+    Optimization SDK context to those events.
 ---
 
-# Forwarding Optimization SDK context to analytics and tag-management tools
+# Forward Optimization SDK context to analytics and tag-management tools
 
 Use this guide when your application already sends events to an analytics, tag-management,
 customer-data, replay, or product-analytics destination and you want to attach approved Optimization
@@ -610,17 +617,17 @@ third-party event and which runtime only sends Contentful SDK events.
 
 Use these guides when you need the SDK setup that this recipe assumes:
 
-- [Choosing the right SDK](./choosing-the-right-sdk.md)
-- [Integrating the Optimization Node SDK in a Node app](./integrating-the-node-sdk-in-a-node-app.md)
-- [Integrating the Optimization Web SDK in a web app](./integrating-the-web-sdk-in-a-web-app.md)
-- [Integrating the Optimization React Web SDK in a React app](./integrating-the-react-web-sdk-in-a-react-app.md)
-- [Integrating the Optimization Next.js SDK in a Next.js App Router app](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
-- [Integrating the Optimization Next.js SDK in a Next.js Pages Router app](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
-- [Integrating the Optimization React Native SDK in a React Native app](./integrating-the-react-native-sdk-in-a-react-native-app.md)
-- [Integrating the Optimization iOS SDK in a SwiftUI app](./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
-- [Integrating the Optimization iOS SDK in a UIKit app](./integrating-the-optimization-ios-sdk-in-a-uikit-app.md)
-- [Integrating the Optimization Android SDK in a Compose app](./integrating-the-optimization-android-sdk-in-a-compose-app.md)
-- [Integrating the Optimization Android SDK in a Views app](./integrating-the-optimization-android-sdk-in-a-views-app.md)
+- [Choose the right SDK](./choosing-the-right-sdk.md)
+- [Integrate the Optimization Node SDK in a Node app](./integrating-the-node-sdk-in-a-node-app.md)
+- [Integrate the Optimization Web SDK in a web app](./integrating-the-web-sdk-in-a-web-app.md)
+- [Integrate the Optimization React Web SDK in a React app](./integrating-the-react-web-sdk-in-a-react-app.md)
+- [Integrate the Optimization Next.js SDK in a Next.js App Router app](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
+- [Integrate the Optimization Next.js SDK in a Next.js Pages Router app](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
+- [Integrate the Optimization React Native SDK in a React Native app](./integrating-the-react-native-sdk-in-a-react-native-app.md)
+- [Integrate the Optimization iOS SDK in a SwiftUI app](./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
+- [Integrate the Optimization iOS SDK in a UIKit app](./integrating-the-optimization-ios-sdk-in-a-uikit-app.md)
+- [Integrate the Optimization Android SDK in a Compose app](./integrating-the-optimization-android-sdk-in-a-compose-app.md)
+- [Integrate the Optimization Android SDK in a Views app](./integrating-the-optimization-android-sdk-in-a-views-app.md)
 
 Use these concepts for mechanics behind the recipe:
 

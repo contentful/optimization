@@ -1,4 +1,13 @@
-# Migrating experience.js React to the React Web SDK
+---
+fern:
+  slug: migrate-experiencejs-to-react-web
+  section: Migration guides
+  description: >-
+    Use this guide when a React app uses `@ninetailed/experience.js-react` providers, hooks,
+    components, or flags and you want to move to `@contentful/optimization-react-web`.
+---
+
+# Migrate experience.js React to the React Web SDK
 
 Use this guide when a React app uses `@ninetailed/experience.js-react` providers, hooks,
 components, or flags and you want to move to `@contentful/optimization-react-web`.
@@ -29,7 +38,7 @@ Gather these inputs:
 ## Migration path
 
 1. Migrate Contentful authoring when legacy `nt_*` fields feed React rendering. See
-   [Migrating an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md).
+   [Migrate an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md).
 2. Install `@contentful/optimization-react-web`.
 3. Replace root wiring with `OptimizationRoot` and the appropriate router page tracker: React
    Router, TanStack Router, or an app-owned `trackPageView` call for a custom router.
@@ -97,7 +106,7 @@ Move policy and vendor work out of the core render migration:
 - Analytics vendors subscribe to accepted and blocked event streams instead of legacy plugins.
 - Preview uses the Optimization preview panel package attached to the live Web SDK.
 
-Use [Migrating experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md)
+Use [Migrate experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md)
 for those replacements.
 
 ### Validate React migration
@@ -131,6 +140,6 @@ Verify these outcomes before deleting the legacy packages:
 
 - [React Web integration guide](./integrating-the-react-web-sdk-in-a-react-app.md)
 - [Web SDK integration guide](./integrating-the-web-sdk-in-a-web-app.md)
-- [Migrating an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md)
-- [Migrating experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md)
+- [Migrate an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md)
+- [Migrate experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md)
 - [React Web reference implementation](../../implementations/react-web-sdk/README.md)
