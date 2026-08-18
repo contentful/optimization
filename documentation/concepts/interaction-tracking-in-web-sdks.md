@@ -1,5 +1,11 @@
 ---
 title: Interaction tracking in Web SDKs
+fern:
+  slug: interaction-tracking-in-web-sdks
+  section: Concepts
+  description: >-
+    Understand how browser interaction tracking works in `@contentful/optimization-web` and the
+    React layer provided by `@contentful/optimization-react-web`.
 ---
 
 # Interaction tracking in Web SDKs
@@ -10,9 +16,9 @@ It explains how entry views, clicks, hovers, Custom Flag views, page events, and
 from browser behavior to Core event delivery.
 
 For setup steps, see
-[Integrating the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md)
+[Integrate the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md)
 and
-[Integrating the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md).
+[Integrate the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md).
 For server-owned rendering, see
 [Interaction tracking in Node and stateless environments](./interaction-tracking-in-node-and-stateless-environments.md).
 
@@ -36,7 +42,7 @@ For server-owned rendering, see
 - [Delivery and flushing](#delivery-and-flushing)
 - [Debugging model](#debugging-model)
 - [Design boundaries](#design-boundaries)
-- [Related docs](#related-docs)
+- [Related documentation](#related-documentation)
 
 <!-- mtoc-end -->
 </details>
@@ -500,7 +506,7 @@ Keep these boundaries explicit when integrating or changing tracking behavior. D
 the browser runtime, event semantics belong to Core, and application-specific policy stays in the
 application.
 
-## Related docs
+## Related documentation
 
 - [Core state management](./core-state-management.md) - Core state, consent, queues, observables,
   and event streams.
@@ -513,11 +519,11 @@ application.
   and Web SDK setup options.
 - [Optimization React Web SDK README](../../packages/web/frameworks/react-web-sdk/README.md) - React
   provider, hook, router, and entry-rendering orientation.
-- [Integrating the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md) -
+- [Integrate the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md) -
   Step-by-step browser integration flow.
-- [Integrating the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md) -
+- [Integrate the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md) -
   Step-by-step React integration flow.
-- [Building a custom JavaScript Optimization adapter](../guides/building-a-custom-javascript-optimization-adapter.md) -
+- [Build a custom JavaScript Optimization adapter](../guides/building-a-custom-javascript-optimization-adapter.md) -
   Low-level entry-source lifecycle guidance for custom adapter authors.
-- [Forwarding Optimization SDK context to analytics and tag-management tools](../guides/forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
+- [Forward Optimization SDK context to analytics and tag-management tools](../guides/forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
   Consent-aware forwarding, sticky-view dedupe, and Custom Flag analytics handoff.

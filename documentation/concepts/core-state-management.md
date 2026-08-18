@@ -1,5 +1,12 @@
 ---
 title: Core state management
+fern:
+  slug: core-state-management
+  section: Concepts
+  description: >-
+    Understand how `CoreStateful` stores its internal state, why that state is protected from
+    outside interference, and which surface the SDK explicitly provides for consumers to observe and
+    influence state.
 ---
 
 # Core state management
@@ -50,7 +57,7 @@ extend behavior through the consumer-facing channels the SDK provides.
   - [State interceptors](#state-interceptors)
   - [When to use interceptors](#when-to-use-interceptors)
 - [What not to do: direct signal mutation](#what-not-to-do-direct-signal-mutation)
-- [Related docs](#related-docs)
+- [Related documentation](#related-documentation)
 
 <!-- mtoc-end -->
 </details>
@@ -410,7 +417,7 @@ same observable state surface to `onStatesReady`. Node and stateless runtimes do
 `sdk.states`; they bind state per request with `forRequest()`. Native iOS and Android expose
 equivalent state through `OptimizationClient.state`, event streams, and runtime-specific flag
 helpers. When using `onStatesReady`, replace `sdk.states` with the `states` callback parameter. Use
-the runtime guides in [Related docs](#related-docs) for exact Swift and Kotlin call shapes.
+the runtime guides in [Related documentation](#related-documentation) for exact Swift and Kotlin call shapes.
 
 ### Reacting to profile changes
 
@@ -774,17 +781,17 @@ The `signals` and `signalFns` exports are intended for SDK layers that extend `C
 as the Web SDK, React Native SDK, native JS bridge, and first-party preview tooling. They are not
 part of the application consumer API.
 
-## Related docs
+## Related documentation
 
 - [Optimization SDK guides](../guides/README.md)
-- [Integrating the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md)
-- [Integrating the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md)
-- [Integrating the Optimization Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md)
-- [Integrating the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
-- [Integrating the Optimization iOS SDK in a SwiftUI app](../guides/integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
-- [Integrating the Optimization iOS SDK in a UIKit app](../guides/integrating-the-optimization-ios-sdk-in-a-uikit-app.md)
-- [Integrating the Optimization Android SDK in a Jetpack Compose app](../guides/integrating-the-optimization-android-sdk-in-a-compose-app.md)
-- [Integrating the Optimization Android SDK in an Android Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md)
+- [Integrate the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md)
+- [Integrate the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md)
+- [Integrate the Optimization Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md)
+- [Integrate the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
+- [Integrate the Optimization iOS SDK in a SwiftUI app](../guides/integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
+- [Integrate the Optimization iOS SDK in a UIKit app](../guides/integrating-the-optimization-ios-sdk-in-a-uikit-app.md)
+- [Integrate the Optimization Android SDK in a Jetpack Compose app](../guides/integrating-the-optimization-android-sdk-in-a-compose-app.md)
+- [Integrate the Optimization Android SDK in an Android Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md)
 - [Optimization Web SDK README](../../packages/web/web-sdk/README.md)
 - [Optimization React Web SDK README](../../packages/web/frameworks/react-web-sdk/README.md)
 - [Optimization React Native SDK README](../../packages/react-native-sdk/README.md)

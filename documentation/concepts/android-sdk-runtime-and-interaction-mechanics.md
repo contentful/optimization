@@ -1,5 +1,12 @@
 ---
 title: Android SDK runtime and interaction mechanics
+fern:
+  slug: android-sdk-runtime-and-interaction-mechanics
+  section: Concepts
+  description: >-
+    Understand how the Optimization Android SDK runs shared optimization behavior in a native app,
+    how Compose and XML Views integrations share the same client model, and how consent, state,
+    entry resolution, tracking, preview overrides, and offline delivery work.
 ---
 
 # Android SDK runtime and interaction mechanics
@@ -9,9 +16,9 @@ behavior in a native app, how Compose and XML Views integrations share the same 
 how consent, state, entry resolution, tracking, preview overrides, and offline delivery work.
 
 For step-by-step setup, see
-[Integrating the Optimization Android SDK in a Jetpack Compose app](../guides/integrating-the-optimization-android-sdk-in-a-compose-app.md)
+[Integrate the Optimization Android SDK in a Jetpack Compose app](../guides/integrating-the-optimization-android-sdk-in-a-compose-app.md)
 and
-[Integrating the Optimization Android SDK in an XML Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md).
+[Integrate the Optimization Android SDK in an XML Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md).
 For the full Contentful entry contract, see
 [Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md).
 
@@ -327,10 +334,10 @@ model for Compose and XML Views integrations.
   Contentful entry contract, variant fallback behavior, and local resolution mechanics.
 - [Core state management](./core-state-management.md) - Shared state, consent, persistence, event
   queues, and observable mechanics used through the native bridge.
-- [Integrating the Optimization Android SDK in a Jetpack Compose app](../guides/integrating-the-optimization-android-sdk-in-a-compose-app.md) -
+- [Integrate the Optimization Android SDK in a Jetpack Compose app](../guides/integrating-the-optimization-android-sdk-in-a-compose-app.md) -
   Compose setup flow for `OptimizationRoot`, `OptimizedEntry`, screen tracking, and preview panel
   mounting.
-- [Integrating the Optimization Android SDK in an XML Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md) -
+- [Integrate the Optimization Android SDK in an XML Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md) -
   XML Views setup flow for `OptimizationManager`, `OptimizedEntryView`, screen tracking, and preview
   panel mounting.
 - [Android reference implementation](../../implementations/android-sdk/README.md) - Native Android
