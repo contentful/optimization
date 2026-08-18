@@ -48,8 +48,9 @@ them through `CTEntry`, so the app does no CDA JSON parsing or link resolution o
 Entry-ID lookup stays app-owned; the Optimization SDK resolves personalization against entries the
 app supplies rather than fetching them itself.
 
-`shared/MockContentfulTransport.swift` exists only to reach this repo's mock server and is not part
-of the recommended integration. The mock multiplexes the Contentful, Experience, and Insights APIs
+The client lives in `shared/MockContentfulClient.swift`, whose nested `Transport` exists only to
+reach this repo's mock server and is not part of the recommended integration. The mock multiplexes
+the Contentful, Experience, and Insights APIs
 onto one port and namespaces the CDA under `/contentful/`, which `Contentful.Client` cannot express,
 and it serves no `/locales` route, which the SDK requires before its first entry fetch. A production
 app builds `Contentful.Client(spaceId:accessToken:)` against `cdn.contentful.com` and needs none of

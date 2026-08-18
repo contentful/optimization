@@ -29,13 +29,11 @@
 		471F733790E71327EAA41CA8 /* LiveUpdatesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B85C1A5AF835283004FFE76D /* LiveUpdatesTests.swift */; };
 		4FEBB65BC56EFBD45D81C803 /* PreviewPanelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBCEDAABD36DADC093A8FD78 /* PreviewPanelTests.swift */; };
 		53F94866D0BA3E09271D73F7 /* ContentfulOptimization in Frameworks */ = {isa = PBXBuildFile; productRef = B622890DF93C3F71C32F81AB /* ContentfulOptimization */; };
-		55EBF3F91D016BC49C2C077E /* MockContentfulTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26C4493D66695EEA5637A015 /* MockContentfulTransport.swift */; };
 		58116AD3ED6029892390DFCE /* ScreenTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A09744E23C92FDCD9F5439 /* ScreenTrackingTests.swift */; };
 		58EF6936C43184E5E5BB149B /* Contentful in Frameworks */ = {isa = PBXBuildFile; productRef = 223614F3D65269BC06E8BC2A /* Contentful */; };
 		5C1226FB8DC19DE4D3783F11 /* UnidentifiedVariantsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E8E4E3EC9B5BB52E93ECC8 /* UnidentifiedVariantsTests.swift */; };
 		5F679B3B001F53CD0A6BBC98 /* IdentifiedVariantsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C44D0B58FB5CDE1A33ADEC3E /* IdentifiedVariantsTests.swift */; };
 		61D00339E0A84FBA44A0AF62 /* FlagViewTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79C1C23CB5619203CAD28A3 /* FlagViewTrackingTests.swift */; };
-		63D62559B4584A3C778A232C /* MockContentfulTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26C4493D66695EEA5637A015 /* MockContentfulTransport.swift */; };
 		68EBA430F06D7974D323C432 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F03F8B039B4ED4A7E7A32D5 /* SceneDelegate.swift */; };
 		68FDF01398E5C12FD8A37277 /* AnalyticsEventDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC9CA7E33164E91046FF6DF /* AnalyticsEventDisplay.swift */; };
 		6BEDE4E72E002CF5C3A8A9E1 /* ExtendedViewTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1324154A5A5CE58F32970813 /* ExtendedViewTrackingTests.swift */; };
@@ -96,7 +94,6 @@
 		102D5A209AF6AC8B69E4BD24 /* AnalyticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsTests.swift; sourceTree = "<group>"; };
 		1324154A5A5CE58F32970813 /* ExtendedViewTrackingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtendedViewTrackingTests.swift; sourceTree = "<group>"; };
 		1B353BE52F9AEFA1D6213FB4 /* NestedButtonTapTestScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestedButtonTapTestScreen.swift; sourceTree = "<group>"; };
-		26C4493D66695EEA5637A015 /* MockContentfulTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockContentfulTransport.swift; sourceTree = "<group>"; };
 		29032ACE1D4AEB3E5D1BB51A /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		2E855C4FA2D4C37DB188398F /* OptimizationAppSwiftUI.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OptimizationAppSwiftUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		354A498C8D7BC1CB974D2454 /* NestedContentEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestedContentEntryView.swift; sourceTree = "<group>"; };
@@ -224,7 +221,6 @@
 				F383552F49942336F9725020 /* ContentfulFetcher.swift */,
 				89CE81FC20185EE7C2FF7BEF /* EventStore.swift */,
 				6FC271C5DD5F3CFBBFF9A24A /* MockContentfulClient.swift */,
-				26C4493D66695EEA5637A015 /* MockContentfulTransport.swift */,
 				A72A25C095AB9AA5B35E3F57 /* MockPreviewContentfulClient.swift */,
 				820BE574DFF5E022220890CD /* RichText.swift */,
 			);
@@ -457,7 +453,6 @@
 				93DDB4FCE61B74F35663301D /* LiveUpdatesTestScreen.swift in Sources */,
 				8BE046C5FD5539712A40551C /* MainScreen.swift in Sources */,
 				B4EF5067C86627BF93949985 /* MockContentfulClient.swift in Sources */,
-				63D62559B4584A3C778A232C /* MockContentfulTransport.swift in Sources */,
 				7E0AE3A92E2EB13F275145C5 /* MockPreviewContentfulClient.swift in Sources */,
 				71EE02D789A2D2D922B4DC0A /* NavigationTestScreen.swift in Sources */,
 				C4757AF18FE122AC807B27E7 /* NestedButtonTapTestScreen.swift in Sources */,
@@ -499,7 +494,6 @@
 				D28A6D01EBA9877DD9174BCB /* LiveUpdatesTestViewController.swift in Sources */,
 				91A5DFA622284D666F20D46E /* MainViewController.swift in Sources */,
 				F00EF0DEE25152C62840DF82 /* MockContentfulClient.swift in Sources */,
-				55EBF3F91D016BC49C2C077E /* MockContentfulTransport.swift in Sources */,
 				3EC1F3129468B71C9DE3C486 /* MockPreviewContentfulClient.swift in Sources */,
 				7CE0E6C067281C01D8F0A85F /* NavigationTestViewController.swift in Sources */,
 				9550770C73B171616E3E23C4 /* NestedButtonTapTestViewController.swift in Sources */,

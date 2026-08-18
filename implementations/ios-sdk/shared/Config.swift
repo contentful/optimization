@@ -22,7 +22,7 @@ struct AppConfig {
 
     /// Path prefix the mock server namespaces the CDA under, so one process can
     /// also serve the Experience and Insights APIs. Consumed only by
-    /// `MockContentfulTransport` — `Contentful.Client` builds paths from the
+    /// `MockContentfulClient.Transport` — `Contentful.Client` builds paths from the
     /// host root and has nowhere to put a prefix.
     static let contentfulMockPathPrefix = "/contentful"
 
