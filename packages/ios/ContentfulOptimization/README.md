@@ -16,10 +16,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization iOS SDK is in beta. Breaking changes can be published at any time.
-
 > [!NOTE]
 >
 > Source lives at

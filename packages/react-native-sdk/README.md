@@ -15,10 +15,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization React Native SDK is in beta. Breaking changes can be published at any time.
-
 The Optimization React Native SDK provides a stateful mobile runtime on top of the
 [Optimization Core SDK](../universal/core-sdk/README.md). It adds React providers, hooks,
 `OptimizedEntry`, screen tracking, optional offline-aware event delivery, and in-app preview-panel

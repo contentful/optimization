@@ -10,7 +10,7 @@ and [`../shared/concepts.md`](../shared/concepts.md). The concepts they capture 
 axes, baseline fallback, entry-source managed-vs-manual, live updates, single-locale entry contract,
 experience-response payload — are SDK-neutral and apply to the whole suite via the shared `core-sdk`.
 
-This is a **beta** native Kotlin/Gradle library, not a TypeScript package: its source root is
+This is a native Kotlin/Gradle library, not a TypeScript package: its source root is
 `packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization` with a
 `build.gradle.kts` and no `package.json`/`src/`, so `knowledge:check` has no `android` SDK key and
 cannot resolve Kotlin `#symbol` pointers. Kotlin-specific facts therefore use extern-prefixed
@@ -345,7 +345,6 @@ fallback)`'s own fail-soft `catch` only fires on a cyclic self-referential map o
 
 ## Version / runtime quirks
 
-- Beta: the API, setup flow, and bridge contract are subject to change. source: extern:beta status — packages/android/README.md
 - QuickJS bridge: `QuickJsContextManager` creates **one `QuickJs` instance per `OptimizationClient`
   lifetime** on a dedicated single-thread dispatcher, defines the `__native` object bindings, evaluates
   a bootstrap script installing the polyfill globals, evaluates the UMD bundle

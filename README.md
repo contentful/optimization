@@ -87,21 +87,19 @@ General selection rules:
 
 ## Native and planned SDKs
 
-React Native support is available as a beta SDK through
+React Native support is available through
 [`@contentful/optimization-react-native`](./packages/react-native-sdk/README.md).
 
-Native iOS work is also present in this repository as a beta Swift Package under
+Native iOS support is also present in this repository as a Swift Package under
 [`packages/ios`](./packages/ios/README.md), backed by the shared
 [`@contentful/optimization-js-bridge`](./packages/universal/optimization-js-bridge/README.md)
-adapter and the [iOS reference app](./implementations/ios-sdk/README.md). Treat this surface as
-beta implementation work rather than a stable public native SDK.
+adapter and the [iOS reference app](./implementations/ios-sdk/README.md).
 
-Native Android support is also present as a beta Kotlin Android library under
+Native Android support is also present as a Kotlin Android library under
 [`packages/android`](./packages/android/README.md), published as the Maven AAR
 `com.contentful.java:optimization-android`, backed by the shared
 [`@contentful/optimization-js-bridge`](./packages/universal/optimization-js-bridge/README.md)
-adapter and the [Android reference app](./implementations/android-sdk/README.md). Treat this surface
-as beta implementation work rather than a stable public native SDK.
+adapter and the [Android reference app](./implementations/android-sdk/README.md).
 
 The following framework SDKs are planned but are not published from this repository:
 

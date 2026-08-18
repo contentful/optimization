@@ -16,10 +16,6 @@
 
 </div>
 
-> [!WARNING]
->
-> The Optimization Android SDK is in beta. Breaking changes can be published at any time.
-
 This is the native Android reference implementation for the
 [Contentful Optimization Android SDK](../../packages/android/README.md). It demonstrates the
 integration pattern for both Jetpack Compose (`:compose`) and XML Views (`:views`), and is the

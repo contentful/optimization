@@ -27,7 +27,7 @@ Applies to reference implementations and shared implementation contracts under `
 
 - Follow root Markdown rules and [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md).
 - Use the repo-standard header, implementation-specific `<h3>`, Readme/Guides/Reference/Contributing
-  navigation, native beta status warning when applicable, and an introduction naming the SDK
+  navigation, native release-status warning when applicable, and an introduction naming the SDK
   packages they integrate and the customer-style integration path they validate.
 - Use this default top-level order: header/navigation/status warning when applicable, introduction naming the integrated
   SDK package or native status, `## What this covers`, optional near-top architecture notes,

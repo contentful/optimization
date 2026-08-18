@@ -52,7 +52,7 @@ Server and web SDK guides are listed before native and mobile SDK guides.
 
 ### Native and mobile SDKs
 
-Native and mobile SDK guides route to beta SDK surfaces.
+Native and mobile SDK guides route to native SDK surfaces.
 
 | Guide                                                                                            | Runtime or app type                                        | Package                                    |
 | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------ |
