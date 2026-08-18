@@ -121,6 +121,22 @@ add per-archetype checks.
       resolves to a real heading.
 - [ ] Concept links and reference-implementation links are not front-loaded before the quick start
       unless the reader must understand them before acting.
+- [ ] **A term coined once in a compressed intro primer (e.g. a "five points" summary) is fully
+      defined again, inline, at its first standalone use later in the guide** — or that later
+      sentence explicitly says "defined above." A five-point primer bullet does not count as the
+      sole definition for a term the reader encounters pages later with no link back.
+- [ ] **Every state-summary clause ("that state is...", "these values are...") opens its own
+      sentence with an explicit antecedent**, never appended onto the tail of an unrelated preceding
+      sentence about a different topic. A dangling summary clause with no clear referent reads as an
+      editing artifact and is a comprehension blocker, not just density.
+- [ ] **A section marked `**Integration category:** Required for first integration` leads with the
+      mainline/common-case behavior before any edge case.** A required section that opens on an edge
+      case risks the reader believing the edge case is itself mandatory reading before they can
+      proceed.
+- [ ] **A side-effect warning with consent/privacy/cost stakes (e.g. "every read emits a tracked
+      event") gets its own sentence or callout, not a clause folded into a paragraph that also
+      introduces an unexplained multi-field key or tuple.** Density in the same sentence as the
+      warning risks the skimming reader missing the warning entirely.
 
 ## B. Integration guides (`integrating-*.md`)
 

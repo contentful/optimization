@@ -21,7 +21,9 @@ visitor's personalization consistent.
   ID; either way, the client stays yours.
 - You render the returned entry with the same application components you already use.
 
-The React Native SDK persists the profile across app launches when persistence consent allows it.
+The React Native SDK persists the profile across app launches when persistence consent — a separate,
+durable consent that governs only whether the profile survives between launches — allows it. The
+"Consent and privacy-policy handoff" section below covers this and the other consent axis in full.
 
 That is enough to start. The guide introduces policy and optional capabilities at the point you need
 them.
@@ -36,7 +38,8 @@ You will get there in two milestones:
   section that needs it.
 
 This guide uses `@contentful/optimization-react-native`. You mount one `OptimizationRoot` around your
-app; it creates the SDK instance, restores state from AsyncStorage, and provides it to the hooks and
+app; it creates the SDK instance, restores state from AsyncStorage — React Native's community local-
+storage package, which your app must install alongside the SDK — and provides it to the hooks and
 components below it. Your app still owns its Contentful Delivery API (CDA) client, locale policy,
 consent policy, identity policy, navigation, and final rendering.
 
@@ -90,7 +93,7 @@ before you ship, which explains the two axes and the object form that sets them 
    })
 
    function HomeScreen() {
-     // Automatic screen tracking uses current-screen dedupe.
+     // Automatic screen tracking avoids sending duplicate screen events.
      useScreenTracking({ name: 'Home' })
 
      // OptimizedEntry passes the selected variant or baseline fallback to the renderer.
@@ -118,7 +121,7 @@ before you ship, which explains the two axes and the object form that sets them 
            },
          }}
          defaults={{ consent: true }}
-         logLevel="debug" // Surface SDK activity, including the accepted screen event, so you can verify it.
+         logLevel="debug" // Surface SDK activity, including the screen event, so you can verify it.
        >
          <HomeScreen />
        </OptimizationRoot>
@@ -139,8 +142,10 @@ before you ship, which explains the two axes and the object form that sets them 
    programmatic check). To see personalization rather than the baseline, author (in Contentful) a
    variant of the baseline entry whose ID you copied from Contentful, then attach it to an experience
    that targets all visitors — every visitor matches it automatically, so the resolved ID changes to
-   the variant. Without an authored variant every launch shows the baseline entry, which is expected,
-   not a failure.
+   the variant. (Authoring variants and experiences happens in the Contentful web app's Optimization
+   experience builder, not in this SDK — this guide only covers consuming what you author there.)
+   Without an authored variant every launch shows the baseline entry, which is expected, not a
+   failure.
 
 <details>
   <summary>Table of Contents</summary>
@@ -323,12 +328,13 @@ profile-continuity state must stay session-only.
 `api`, `queuePolicy`, `getAnonymousId`, `onStatesReady`, and `trackEntryInteraction`) on first
 render; only `locale` reacts live and calls `sdk.setLocale(...)` when the prop changes. Reassigning
 `defaults` after mount has no effect — use `optimization.consent(...)` from `useOptimization()` for
-runtime consent changes, and change the provider's React `key` to force full re-initialization. That state is the anonymous identity, the profile,
-the **selected optimizations** (which variant the Experience API picked for each experience), and the
+runtime consent changes, and change the provider's React `key` to force full re-initialization.
+
+AsyncStorage persists SDK state across app launches: the anonymous identity, the profile, the
+**selected optimizations** (which variant the Experience API picked for each experience), and the
 **changes** (the profile-backed values the Experience API returns for feature flags — named on/off or
 valued settings — and merge tags — profile-driven substitutions in Rich Text; both are covered in
-[Merge tags and Custom Flags](#merge-tags-and-custom-flags)) — all of which otherwise persist in
-AsyncStorage across launches.
+[Merge tags and Custom Flags](#merge-tags-and-custom-flags)).
 
 For cross-SDK policy details, see
 [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
@@ -784,9 +790,10 @@ profile-backed values from SDK state.
 Every flag read is a tracked analytics exposure, not only subscriptions. `optimization.getFlag(name)`
 emits a `component` flag-view event on every call, and `optimization.states.flag(name)` emits one
 per delivered value — once on subscribe (or the first `.current` read) and again each time the
-delivered value changes. Deliveries are deduped by `(value, componentId, experienceId,
-variantIndex, profileId)` so the same value for the same context is not re-emitted, but the
-tracking attempt is unconditional. Apply the same governance to flag reads that you apply to other
+delivered value changes. Deliveries are deduped by the delivered value together with the flag's `componentId`,
+`experienceId`, and `variantIndex` (identifying which component, experience, and variant produced
+it) plus the current `profileId`, so the same value for the same context is not re-emitted — but the
+tracking attempt itself is unconditional. Apply the same governance to flag reads that you apply to other
 SDK events.
 
 1. Resolve merge tags inside your app-owned Rich Text renderer with the SDK instance returned by

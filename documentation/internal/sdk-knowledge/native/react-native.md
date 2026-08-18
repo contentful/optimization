@@ -132,6 +132,12 @@ consent changes. source: react-native-sdk#hooks/useOptimizationConsentState.ts#u
   empty result but does not invoke or render its consumer children. Live updates remove and restore
   consumer content as empty-variant state changes; an absent flag renders normally.
   source: react-native-sdk#components/OptimizedEntry.tsx#OptimizedEntry
+- `prefetchManagedEntries?: readonly ManagedEntryDescriptor[]` on `OptimizationProvider`/
+  `OptimizationRoot` is forwarded to `sdk.prefetchManagedEntries(...)` to warm the managed-entry
+  cache ahead of render; the provider keeps rendering while the cache warms, and later
+  `OptimizedEntry`/`useOptimizedEntry` calls that resolve to the same source key reuse the warmed
+  entry instead of issuing a duplicate fetch.
+  source: react-native-sdk#components/OptimizationProvider.tsx#OptimizationProvider; react-native-sdk#components/OptimizationRoot.tsx#OptimizationRoot
 - Loading model (RN, no server first paint): while a managed ID or slug fetch is unresolved,
   `useOptimizedEntry` returns `entry === undefined` / `metadata === undefined`, so `OptimizedEntry`
   renders `loadingFallback`. On resolved data it wraps children in a `View` carrying `onLayout`
@@ -253,6 +259,13 @@ selectedOptimizations, changes }` payload, and this stateful SDK applies it to i
   the store's getters read only its in-memory `cache` Map. State changes write through to
   AsyncStorage but runtime reads never hit it.
   source: react-native-sdk#storage/AsyncStorageStore.ts#AsyncStorageStore; react-native-sdk#ContentfulOptimization.ts#mergeConfig; core-sdk#CoreStateful.ts#CoreStates
+- Flag reads are unconditionally tracked, not only subscriptions: `optimization.getFlag(name)`
+  attempts a `component` flag-view tracking event on every call, and `states.flag(name)` attempts one
+  on subscribe (or first `.current` read) and again on each distinct delivered value. Delivered
+  values are deduped by `(value, componentId, experienceId, variantIndex, profileId)` so a repeat
+  delivery of the same value in the same context does not re-emit, but the tracking attempt itself
+  runs every time regardless of dedup outcome.
+  source: core-sdk#CoreStatefulEventEmitter.ts#getFlag; core-sdk#CoreStatefulEventEmitter.ts#buildFlagViewTrackingSignature
 
 ## Version / runtime quirks
 
