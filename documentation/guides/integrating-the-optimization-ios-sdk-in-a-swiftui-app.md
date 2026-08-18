@@ -1,4 +1,13 @@
-# Integrating the Optimization iOS SDK in a SwiftUI app
+---
+fern:
+  slug: integrate-the-optimization-ios-sdk-in-a-swiftui-app
+  section: Guides
+  description: >-
+    Use this guide to add Contentful personalization to a SwiftUI app using the Optimization iOS
+    SDK.
+---
+
+# Integrate the Optimization iOS SDK in a SwiftUI app
 
 Use this guide to add Contentful personalization to a SwiftUI app using the Optimization iOS SDK. By
 the end of the quick start, the SDK is initialized inside your SwiftUI app and emits one screen event
@@ -904,7 +913,7 @@ struct AnalyticsDiagnostics: View {
 ```
 
 For cross-SDK forwarding patterns, see
-[Forwarding Optimization SDK context to analytics and tag management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+[Forward Optimization SDK context to analytics and tag management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
 
 ### Custom Flags and MergeTag rendering
 

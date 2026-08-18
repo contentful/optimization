@@ -1,4 +1,13 @@
-# Integrating the Optimization iOS SDK in a UIKit app
+---
+fern:
+  slug: integrate-the-optimization-ios-sdk-in-a-uikit-app
+  section: Guides
+  description: >-
+    Use this guide to add Contentful personalization to a UIKit app with the
+    `ContentfulOptimization` Swift Package.
+---
+
+# Integrate the Optimization iOS SDK in a UIKit app
 
 Use this guide to add Contentful personalization to a UIKit app with the `ContentfulOptimization`
 Swift Package. By the end of the quick start, the SDK is running in your scene and one screen event
@@ -42,7 +51,7 @@ and inject it into the view controllers that track events or resolve entries. Th
 replace your app's Contentful client — your UIKit app still owns Contentful fetching, link
 resolution, consent UX, identity policy, navigation, caching, and rendering. If your app renders
 through SwiftUI views instead, use the
-[Integrating the Optimization iOS SDK in a SwiftUI app](./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
+[Integrate the Optimization iOS SDK in a SwiftUI app](./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
 guide. A UIKit app that hosts some screens in SwiftUI through `UIHostingController` can use that
 guide's SwiftUI view surface on those screens with this same client: those views read the client from
 the SwiftUI environment, so inject it with `.environmentObject(client)` on the hosted view rather
@@ -1061,7 +1070,7 @@ client.blockedEventStream
 When forwarding SDK events to third-party destinations, apply the same app-owned consent policy,
 deduplication, and data-minimization rules that govern the destination. For destination mapping,
 consent, identity, dedupe, and governance guidance, see
-[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+[Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
 
 ### Custom Flags and MergeTag rendering
 

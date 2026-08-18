@@ -1,4 +1,13 @@
-# Integrating the Optimization React Web SDK in a React app
+---
+fern:
+  slug: integrate-the-react-web-sdk-in-a-react-app
+  section: Guides
+  description: >-
+    This guide helps you add personalization and analytics to a React web application using
+    `@contentful/optimization-react-web`.
+---
+
+# Integrate the Optimization React Web SDK in a React app
 
 Use this guide to add Contentful personalization to a client-side React app you already have — a
 single-page app built with Vite, Create React App, React Router, or a similar setup. By the end of
@@ -1218,7 +1227,7 @@ interactions for entries of every content type. If you read
 `event.optimization?.resolvedEntry`, narrow that entry with `isEntryOfContentType` at the point of
 use; resolver-specific `S` types do not flow into later events. For vendor mappings,
 consent boundaries, and dedupe guidance, see
-[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+[Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
 For a narrowing example, see
 [TypeScript content-model choices](../concepts/entry-personalization-and-variant-resolution.md#typescript-content-model-choices).
 

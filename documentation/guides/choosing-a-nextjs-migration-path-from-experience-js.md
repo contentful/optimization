@@ -1,4 +1,14 @@
-# Choosing a Next.js migration path from experience.js
+---
+fern:
+  slug: choose-a-nextjs-migration-path-from-experience-js
+  section: Migration guides
+  description: >-
+    Use this guide when a Next.js app uses `@ninetailed/experience.js-next`,
+    `@ninetailed/experience.js-next-esr`, or SSR plugin behavior and you need to choose App Router,
+    Pages Router, or a manual Node/Web hybrid target before changing code.
+---
+
+# Choose a Next.js migration path from experience.js
 
 Use this guide when a Next.js app uses `@ninetailed/experience.js-next`,
 `@ninetailed/experience.js-next-esr`, or SSR plugin behavior and you need to choose App Router,
@@ -131,9 +141,9 @@ contract.
 
 ## Related guides
 
-- [Migrating experience.js Next.js to App Router](./migrating-experience-js-next-to-nextjs-app-router.md)
-- [Migrating experience.js Next.js to Pages Router](./migrating-experience-js-next-to-nextjs-pages-router.md)
-- [Migrating experience.js Node, SSR, and ESR](./migrating-experience-js-node-ssr-and-esr.md)
+- [Migrate experience.js Next.js to App Router](./migrating-experience-js-next-to-nextjs-app-router.md)
+- [Migrate experience.js Next.js to Pages Router](./migrating-experience-js-next-to-nextjs-pages-router.md)
+- [Migrate experience.js Node, SSR, and ESR](./migrating-experience-js-node-ssr-and-esr.md)
 - [Next.js App Router integration guide](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
 - [Next.js Pages Router integration guide](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
 - [Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md)
