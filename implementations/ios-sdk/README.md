@@ -53,12 +53,16 @@ conforms to `PreviewContentfulClient`, so the preview panel reads audiences and 
 the same `contentful.swift` client instead of the built-in `ContentfulHTTPPreviewClient` — wrapping
 an existing Contentful SDK client is the integration that protocol documents.
 
-Its nested `Transport` exists only to reach this repo's mock server and is not part of the
-recommended integration. The mock multiplexes the Contentful, Experience, and Insights APIs
-onto one port and namespaces the CDA under `/contentful/`, which `Contentful.Client` cannot express,
-and it serves no `/locales` route, which the SDK requires before its first entry fetch. A production
-app builds `Contentful.Client(spaceId:accessToken:)` against `cdn.contentful.com` and needs none of
-it.
+Only two arguments differ from a production integration: `host` points at `localhost:8000` and
+`clientConfiguration.secure` is `false` because the mock server is plain HTTP. A production app
+builds `Contentful.Client(spaceId:accessToken:)` and gets `cdn.contentful.com` over HTTPS.
+
+That works because `lib/mocks` also serves the CDA from the host root, in addition to the
+`/contentful/` namespace it multiplexes alongside the Experience and Insights APIs.
+`Contentful.Client` accepts only a `host[:port]` and builds `/spaces/...` from the root, so it has
+nowhere to put a path prefix — unlike `contentful.js`, which has `basePath` and keeps using the
+prefixed mount. The mock also serves `/locales`, which `contentful.swift` fetches before its first
+entry query to build the localization context it decodes entries with.
 
 ## CDA locale handling
 
