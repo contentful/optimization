@@ -41,7 +41,7 @@ struct LiveUpdatesTestScreen: View {
         }
         .task {
             let personalizedId = "2Z2WLOx07InSewC3LUB3eX"
-            let entries = await ContentfulFetcher.fetchEntries(
+            let entries = await ContentfulClient.fetchEntries(
                 ids: [personalizedId],
                 locale: AppConfig.defaultContentfulLocale
             )

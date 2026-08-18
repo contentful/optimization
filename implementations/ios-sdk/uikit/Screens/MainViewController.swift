@@ -57,7 +57,7 @@ final class MainViewController: UIViewController {
                 self.updateIdentifyControls(profile: profile)
                 guard profile != nil else { return }
                 Task { @MainActor in
-                    let fetched = await ContentfulFetcher.fetchEntries(
+                    let fetched = await ContentfulClient.fetchEntries(
                         ids: AppConfig.entryIds,
                         locale: AppConfig.defaultContentfulLocale
                     )

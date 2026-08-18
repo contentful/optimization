@@ -113,7 +113,7 @@ struct MainScreen: View {
         ) { profile in
             guard profile != nil else { return }
             Task {
-                entries = await ContentfulFetcher.fetchEntries(
+                entries = await ContentfulClient.fetchEntries(
                     ids: AppConfig.entryIds,
                     locale: AppConfig.defaultContentfulLocale
                 )

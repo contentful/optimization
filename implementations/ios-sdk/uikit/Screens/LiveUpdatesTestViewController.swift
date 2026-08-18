@@ -43,7 +43,7 @@ final class LiveUpdatesTestViewController: UIViewController {
         view.backgroundColor = .systemBackground
         layout()
         Task { @MainActor in
-            let entries = await ContentfulFetcher.fetchEntries(
+            let entries = await ContentfulClient.fetchEntries(
                 ids: [personalizedEntryId],
                 locale: AppConfig.defaultContentfulLocale
             )

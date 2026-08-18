@@ -40,7 +40,7 @@ can be compared across UI frameworks.
 
 Entries are fetched with Contentful's official Swift SDK,
 [`contentful.swift`](https://github.com/contentful/contentful.swift), which is the integration path
-recommended to customers. `shared/ContentfulFetcher.swift` queries by entry ID with `include(10)`,
+recommended to customers. `shared/ContentfulClient.swift` queries by entry ID with `include(10)`,
 and the fetched `Contentful.Entry` values are handed to the Optimization SDK's typed entry APIs:
 `OptimizedEntry(entry:)` in SwiftUI and `resolveOptimizedEntry(baseline:)` in UIKit. The SDK encodes
 them through `CTEntry`, so the app does no CDA JSON parsing or link resolution of its own.
@@ -48,9 +48,13 @@ them through `CTEntry`, so the app does no CDA JSON parsing or link resolution o
 Entry-ID lookup stays app-owned; the Optimization SDK resolves personalization against entries the
 app supplies rather than fetching them itself.
 
-The client lives in `shared/MockContentfulClient.swift`, whose nested `Transport` exists only to
-reach this repo's mock server and is not part of the recommended integration. The mock multiplexes
-the Contentful, Experience, and Insights APIs
+`shared/ContentfulClient.swift` holds the single client both CDA consumers share. It also
+conforms to `PreviewContentfulClient`, so the preview panel reads audiences and experiences through
+the same `contentful.swift` client instead of the built-in `ContentfulHTTPPreviewClient` — wrapping
+an existing Contentful SDK client is the integration that protocol documents.
+
+Its nested `Transport` exists only to reach this repo's mock server and is not part of the
+recommended integration. The mock multiplexes the Contentful, Experience, and Insights APIs
 onto one port and namespaces the CDA under `/contentful/`, which `Contentful.Client` cannot express,
 and it serves no `/locales` route, which the SDK requires before its first entry fetch. A production
 app builds `Contentful.Client(spaceId:accessToken:)` against `cdn.contentful.com` and needs none of

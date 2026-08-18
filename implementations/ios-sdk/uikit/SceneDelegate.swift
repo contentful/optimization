@@ -37,7 +37,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         PreviewPanelViewController.addFloatingButton(
             to: main,
             client: client,
-            contentfulClient: MockPreviewContentfulClient()
+            contentfulClient: ContentfulClient.shared
         )
     }
 }
