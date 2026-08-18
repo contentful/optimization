@@ -10,6 +10,14 @@ import type {
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import type { ContentOptimizationHydrationMode } from '../handoff'
+import {
+  didSdkPresentationEnd,
+  hasOptimizationReferences,
+  isExperienceRequestSettled,
+  isOptimizedEntryLoadingEntry,
+  resolveShouldLiveUpdate,
+  shouldResubscribe,
+} from './OptimizedEntryControllerPredicates'
 import type { OptimizedEntryLoadingTargetDisplay } from './OptimizedEntryLoadingPresentation'
 import { resolveLoadingPresentation } from './OptimizedEntryLoadingPresentation'
 import {
@@ -24,6 +32,7 @@ export type {
   OptimizedEntrySnapshot,
   OptimizedEntrySnapshotListener,
 } from './OptimizedEntrySnapshot'
+export { hasOptimizationReferences, resolveShouldLiveUpdate }
 
 const BASELINE_REVEAL_TIMEOUT_MS = 5000
 
@@ -33,10 +42,6 @@ const BASELINE_REVEAL_TIMEOUT_MS = 5000
  * @public
  */
 export const OPTIMIZED_ENTRY_HOST_DISPLAY = 'contents'
-
-interface ExperienceRequestStateLike {
-  readonly status: string
-}
 
 interface FetchContentfulEntry {
   (entryId: string, query?: ContentfulEntryQuery): Promise<Entry>
@@ -52,7 +57,7 @@ export interface OptimizedEntrySdk<
   /** SDK state observables used to resolve and track optimized entry content. */
   readonly states: {
     readonly canOptimize: Observable<boolean>
-    readonly experienceRequestState: Observable<ExperienceRequestStateLike>
+    readonly experienceRequestState: Observable<{ readonly status: string }>
     readonly optimizationPossible: Observable<boolean>
     readonly selectedOptimizations: Observable<SelectedOptimizationArray | undefined>
   }
@@ -95,24 +100,15 @@ interface NormalizedOptimizedEntryControllerOptions<
   S extends EntrySkeletonType,
   M extends ChainModifiers,
   L extends LocaleCode,
-> {
+> extends OptimizedEntryControllerOptions<S, M, L> {
+  readonly baselineRevealTimeoutMs: number
+  readonly hasCustomLoadingFallback: boolean
   readonly hydration: ContentOptimizationHydrationMode
   readonly isPresentationReady: boolean
-  readonly baselineEntry: EntryFor<S, M, L>
-  readonly entryLiveUpdatesEnabled?: boolean
-  readonly rootLiveUpdatesEnabled: boolean
-  readonly hasCustomLoadingFallback: boolean
-  readonly baselineRevealTimeoutMs: number
   readonly isPreviewPanelOpen: boolean
-  readonly sdk?: OptimizedEntrySdk<S, M, L>
   readonly isSdkStateReady: boolean
+  readonly rootLiveUpdatesEnabled: boolean
   readonly targetDisplay: OptimizedEntryLoadingTargetDisplay
-  readonly clickable?: boolean
-  readonly hoverDurationUpdateIntervalMs?: number
-  readonly trackClicks?: boolean
-  readonly trackHovers?: boolean
-  readonly trackViews?: boolean
-  readonly viewDurationUpdateIntervalMs?: number
 }
 
 /**
@@ -156,15 +152,6 @@ function normalizeOptions<
 }
 
 /**
- * Return whether a Contentful entry contains optimization references.
- *
- * @public
- */
-export function hasOptimizationReferences(entry: Entry): boolean {
-  return Array.isArray(entry.fields.nt_experiences) && entry.fields.nt_experiences.length > 0
-}
-
-/**
  * Resolve duplicate-baseline guard state for a nested optimized entry.
  *
  * @public
@@ -184,41 +171,14 @@ export function resolveOptimizedEntryNestingState(
 }
 
 /**
- * Resolve whether an optimized entry should react to later SDK state updates.
- *
- * @public
- */
-export function resolveShouldLiveUpdate(params: {
-  readonly entryLiveUpdatesEnabled: boolean | undefined
-  readonly rootLiveUpdatesEnabled: boolean
-  readonly isPreviewPanelOpen: boolean
-}): boolean {
-  const { entryLiveUpdatesEnabled, rootLiveUpdatesEnabled, isPreviewPanelOpen } = params
-
-  if (isPreviewPanelOpen) {
-    return true
-  }
-
-  return entryLiveUpdatesEnabled ?? rootLiveUpdatesEnabled
-}
-
-function createBaselineResolvedData<
-  S extends EntrySkeletonType,
-  M extends ChainModifiers,
-  L extends LocaleCode,
->(entry: EntryFor<S, M, L>): ResolvedData<S, M, L>
-function createBaselineResolvedData(entry: Entry): ResolvedData<EntrySkeletonType>
-function createBaselineResolvedData(entry: Entry): ResolvedData<EntrySkeletonType> {
-  return { entry, selectedOptimization: undefined }
-}
-
-function isExperienceRequestSettled(state: ExperienceRequestStateLike): boolean {
-  return state.status === 'success' || state.status === 'failed'
-}
-
-/**
  * Coordinates optimized-entry resolution, loading presentation, live updates, and tracking
  * attributes without depending on a specific UI framework.
+ *
+ * In the browser, the first usable presentation is committed for its baseline entry ID. Later SDK
+ * state is display-inert by default, while effective live updates may apply later defined
+ * selections. A different baseline entry ID starts a new presentation. Replacing the SDK or making
+ * its state unready also ends and resets the current presentation, even when the baseline ID stays
+ * the same.
  *
  * @public
  */
@@ -229,7 +189,8 @@ export class OptimizedEntryController<
 > {
   private canOptimize = false
   private connected = false
-  private hasExperienceRequestSettled = false
+  private hasCommittedPresentation = false
+  private experienceRequestStatus = 'idle'
   private optimizationPossible = true
   private listener: OptimizedEntrySnapshotListener<S, M, L> | undefined
   private baselineRevealTimeout: ReturnType<typeof setTimeout> | undefined
@@ -242,6 +203,8 @@ export class OptimizedEntryController<
   constructor(options: OptimizedEntryControllerOptions<S, M, L>) {
     this.options = normalizeOptions(options)
     this.primeStateFromSdk()
+    // A selection already present at construction is a synchronous seed, not later browser work.
+    this.commitPresentationIfReady(true)
     this.snapshot = this.createSnapshot()
   }
 
@@ -275,25 +238,38 @@ export class OptimizedEntryController<
     const nextOptions = normalizeOptions(options)
     const sdkChanged = previousOptions.sdk !== nextOptions.sdk
     const sdkStateReadyChanged = previousOptions.isSdkStateReady !== nextOptions.isSdkStateReady
+    const baselineChanged =
+      previousOptions.baselineEntry.sys.id !== nextOptions.baselineEntry.sys.id
+    const sdkPresentationEnded = didSdkPresentationEnd(
+      previousOptions.sdk !== undefined,
+      sdkChanged,
+      previousOptions.isSdkStateReady,
+      nextOptions.isSdkStateReady,
+    )
+    const shouldResetPresentation = baselineChanged || sdkPresentationEnded
 
     this.options = nextOptions
 
-    if (sdkChanged || !nextOptions.sdk || !nextOptions.isSdkStateReady) {
-      this.canOptimize = false
-      this.hasExperienceRequestSettled = false
-      this.optimizationPossible = true
-      this.selectedOptimizations = undefined
-    }
-
-    if (previousOptions.baselineEntry.sys.id !== nextOptions.baselineEntry.sys.id) {
+    if (shouldResetPresentation) {
+      this.hasCommittedPresentation = false
       this.hasBaselineRevealTimedOut = false
       this.clearLoadingRevealTimer()
     }
 
-    if (
-      this.connected &&
-      (sdkChanged || sdkStateReadyChanged || previousShouldLiveUpdate !== this.shouldLiveUpdate())
-    ) {
+    if (sdkChanged || nextOptions.sdk === undefined || !nextOptions.isSdkStateReady) {
+      this.canOptimize = false
+      this.experienceRequestStatus = 'idle'
+      this.optimizationPossible = true
+      this.selectedOptimizations = undefined
+    }
+
+    if (baselineChanged) {
+      this.selectedOptimizations = undefined
+      this.primeStateFromSdk()
+    }
+
+    const liveUpdateChanged = previousShouldLiveUpdate !== this.shouldLiveUpdate()
+    if (this.connected && shouldResubscribe(sdkChanged, sdkStateReadyChanged, liveUpdateChanged)) {
       this.resubscribe()
     }
 
@@ -332,12 +308,14 @@ export class OptimizedEntryController<
       states
     const { current: currentSelectedOptimizations } = selectedOptimizations
     const { current: currentCanOptimize } = canOptimize
-    const { current: currentExperienceRequestState } = experienceRequestState
+    const {
+      current: { status: currentExperienceRequestStatus },
+    } = experienceRequestState
     const { current: currentOptimizationPossible } = optimizationPossible
 
     this.acceptSelectedOptimizations(currentSelectedOptimizations)
     this.canOptimize = currentCanOptimize
-    this.hasExperienceRequestSettled = isExperienceRequestSettled(currentExperienceRequestState)
+    this.experienceRequestStatus = currentExperienceRequestStatus
     this.optimizationPossible = currentOptimizationPossible
   }
 
@@ -366,8 +344,8 @@ export class OptimizedEntryController<
         this.canOptimize = nextCanOptimize
         this.updateSnapshot()
       }),
-      experienceRequestState.subscribe((state) => {
-        this.hasExperienceRequestSettled = isExperienceRequestSettled(state)
+      experienceRequestState.subscribe(({ status }) => {
+        this.experienceRequestStatus = status
         this.updateSnapshot()
       }),
       optimizationPossible.subscribe((nextOptimizationPossible) => {
@@ -380,60 +358,114 @@ export class OptimizedEntryController<
   private acceptSelectedOptimizations(
     selectedOptimizations: SelectedOptimizationArray | undefined,
   ): boolean {
-    if (this.shouldLiveUpdate()) {
-      this.selectedOptimizations = selectedOptimizations
-      return true
+    if (selectedOptimizations === undefined) {
+      return false
     }
-
-    if (this.selectedOptimizations === undefined && selectedOptimizations !== undefined) {
-      this.selectedOptimizations = selectedOptimizations
-      return true
+    const canAcceptSelection =
+      this.shouldLiveUpdate() ||
+      (!this.hasCommittedPresentation && this.selectedOptimizations === undefined)
+    if (!canAcceptSelection) {
+      return false
     }
-
-    return false
+    this.selectedOptimizations = selectedOptimizations
+    return true
   }
 
   private resolveIsLoading(): boolean {
+    if (this.hasCommittedPresentation) {
+      return false
+    }
+
+    if (isOptimizedEntryLoadingEntry(this.options.baselineEntry)) {
+      return true
+    }
+
     const requiresOptimization = hasOptimizationReferences(this.options.baselineEntry)
     const hasResolvedOptimizations = this.selectedOptimizations !== undefined
     const isContentReady =
       !requiresOptimization ||
       !this.optimizationPossible ||
-      this.hasExperienceRequestSettled ||
+      isExperienceRequestSettled(this.experienceRequestStatus) ||
       hasResolvedOptimizations
 
-    return !isContentReady
+    const shouldHoldForBrowserPresentation =
+      typeof window !== 'undefined' && !this.options.isPresentationReady
+
+    return !isContentReady || shouldHoldForBrowserPresentation
   }
 
-  private createSnapshot(): OptimizedEntrySnapshot<S, M, L> {
+  private commitPresentationIfReady(acceptSynchronousSeed = false): void {
+    const { options } = this
+    const { baselineEntry } = options
+    const { experienceRequestStatus, hasBaselineRevealTimedOut, hasCommittedPresentation } = this
+    const hasExperienceRequestFailed = experienceRequestStatus === 'failed'
+    const canCommitPresentation =
+      typeof window !== 'undefined' &&
+      !hasCommittedPresentation &&
+      !isOptimizedEntryLoadingEntry(baselineEntry) &&
+      this.hasCommitCandidate(acceptSynchronousSeed)
+
+    if (!canCommitPresentation) {
+      return
+    }
+    if (hasExperienceRequestFailed || hasBaselineRevealTimedOut) {
+      this.selectedOptimizations = undefined
+    }
+    this.hasCommittedPresentation = true
+  }
+
+  private hasCommitCandidate(acceptSynchronousSeed: boolean): boolean {
+    const { options } = this
+    const { hydration, isPresentationReady } = options
+    const hasSynchronousSeed = acceptSynchronousSeed && this.selectedOptimizations !== undefined
+    const canCommitReadyPresentation = isPresentationReady && !this.resolveIsLoading()
+
+    return (
+      hydration === 'preserve-server' ||
+      hasSynchronousSeed ||
+      this.experienceRequestStatus === 'failed' ||
+      this.hasBaselineRevealTimedOut ||
+      canCommitReadyPresentation
+    )
+  }
+
+  private createSnapshot(
+    committedSnapshot?: OptimizedEntrySnapshot<S, M, L>,
+  ): OptimizedEntrySnapshot<S, M, L> {
+    const { options } = this
+    const { baselineEntry } = options
     const isLoading = this.resolveIsLoading()
-    const isServerRender = typeof window === 'undefined'
     const loadingPresentation = resolveLoadingPresentation({
       hasBaselineRevealTimedOut: this.hasBaselineRevealTimedOut,
-      hasCustomLoadingFallback: this.options.hasCustomLoadingFallback,
-      hydration: this.options.hydration,
+      hasCustomLoadingFallback: options.hasCustomLoadingFallback,
+      hydration: options.hydration,
       isLoading,
-      isPresentationReady: this.options.isPresentationReady,
-      isServerRender,
-      targetDisplay: this.options.targetDisplay,
+      isPresentationReady: options.isPresentationReady,
+      isServerRender: typeof window === 'undefined',
+      targetDisplay: options.targetDisplay,
     })
     const { showLoadingFallback } = loadingPresentation
-    const resolvedData =
-      this.options.sdk && this.options.isSdkStateReady
-        ? this.options.sdk.resolveOptimizedEntry(
-            this.options.baselineEntry,
-            this.selectedOptimizations,
-          )
-        : createBaselineResolvedData(this.options.baselineEntry)
+    const keepsCommittedResolution =
+      committedSnapshot !== undefined &&
+      !this.shouldLiveUpdate() &&
+      committedSnapshot.metadata.baselineEntryId === baselineEntry.sys.id
+    const selectedOptimizations = keepsCommittedResolution
+      ? committedSnapshot.selectedOptimizations
+      : this.selectedOptimizations
+    const resolvedData = keepsCommittedResolution
+      ? committedSnapshot.resolvedData
+      : options.sdk && options.isSdkStateReady
+        ? options.sdk.resolveOptimizedEntry(baselineEntry, selectedOptimizations)
+        : { entry: baselineEntry, selectedOptimization: undefined }
     const metadata: OptimizedEntryMetadata<S, M, L> = {
-      baselineEntry: this.options.baselineEntry,
-      baselineEntryId: this.options.baselineEntry.sys.id,
+      baselineEntry,
+      baselineEntryId: baselineEntry.sys.id,
       entry: resolvedData.entry,
       entryId: resolvedData.entry.sys.id,
       optimizationContextId: resolvedData.optimizationContextId,
       resolvedData,
       selectedOptimization: resolvedData.selectedOptimization,
-      selectedOptimizations: this.selectedOptimizations,
+      selectedOptimizations,
     }
     const isResolved = !isLoading && !showLoadingFallback
 
@@ -441,35 +473,37 @@ export class OptimizedEntryController<
       canOptimize: this.canOptimize,
       entry: metadata.entry,
       hostAttributes: isResolved
-        ? resolveOptimizedEntryTrackingAttributes(
-            this.options.baselineEntry,
-            resolvedData,
-            this.options,
-          )
+        ? resolveOptimizedEntryTrackingAttributes(baselineEntry, resolvedData, options)
         : {},
       isEmptyVariant: resolvedData.isEmptyVariant === true,
       isLoading,
-      isPresentationReady: this.options.isPresentationReady,
+      isPresentationReady: options.isPresentationReady,
       isResolved,
       loadingPresentation,
       metadata,
       resolvedData,
       selectedOptimization: metadata.selectedOptimization,
-      selectedOptimizations: this.selectedOptimizations,
+      selectedOptimizations,
     }
   }
 
   private updateSnapshot(): void {
+    const { hasCommittedPresentation: hadCommittedPresentation } = this
+    this.commitPresentationIfReady()
     const isLoading = this.resolveIsLoading()
 
     if (!isLoading) {
       this.hasBaselineRevealTimedOut = false
     }
 
-    const nextSnapshot = this.createSnapshot()
     const { snapshot: previousSnapshot } = this
+    const nextSnapshot = this.createSnapshot(
+      hadCommittedPresentation ? previousSnapshot : undefined,
+    )
     this.snapshot = nextSnapshot
-    this.syncLoadingRevealTimer(isLoading)
+    const shouldRunLoadingRevealTimer =
+      isLoading && !isOptimizedEntryLoadingEntry(this.options.baselineEntry)
+    this.syncLoadingRevealTimer(shouldRunLoadingRevealTimer)
 
     if (!areOptimizedEntrySnapshotsEqual(previousSnapshot, nextSnapshot)) {
       this.listener?.(nextSnapshot)
@@ -477,10 +511,11 @@ export class OptimizedEntryController<
   }
 
   private syncLoadingRevealTimer(isLoading: boolean): void {
-    if (!this.connected || !isLoading || this.hasBaselineRevealTimedOut) {
-      if (!isLoading || this.hasBaselineRevealTimedOut) {
-        this.clearLoadingRevealTimer()
-      }
+    const shouldClearTimer = !isLoading || this.hasBaselineRevealTimedOut
+    if (shouldClearTimer) {
+      this.clearLoadingRevealTimer()
+    }
+    if (!this.connected || shouldClearTimer) {
       return
     }
 
@@ -496,11 +531,9 @@ export class OptimizedEntryController<
   }
 
   private clearLoadingRevealTimer(): void {
-    if (this.baselineRevealTimeout === undefined) {
-      return
+    if (this.baselineRevealTimeout !== undefined) {
+      clearTimeout(this.baselineRevealTimeout)
     }
-
-    clearTimeout(this.baselineRevealTimeout)
     this.baselineRevealTimeout = undefined
   }
 }

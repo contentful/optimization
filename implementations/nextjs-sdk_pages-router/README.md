@@ -68,6 +68,10 @@ Use `getStaticProps` and `getStaticPaths` for finite public personalization perm
 `/selection-handoff/[segment]` route builds a public-permutation handoff with the SDK helper,
 renders resolved entries into raw HTML with tracking attributes, and revalidates every 60 seconds.
 
+The `/ssg-client-personalization` route uses `getStaticProps` for shared static output without a
+visitor-specific handoff. It keeps the raw entry region hidden and displays an accessible loading
+status until the browser resolves the current `OptimizedEntry` presentation.
+
 ## Prerequisites
 
 - Node.js >= 20.19.0 (24.15.0 recommended to match `.nvmrc`)
@@ -121,6 +125,12 @@ pnpm test:e2e:nextjs-sdk_pages-router
 
 The E2E suite reuses the shared `lib/e2e-web` browser scenarios for CSR, hydration, and SSR
 first-paint behavior under the Pages Router configuration.
+
+Run the focused readiness scenarios to verify the shared SSG route's raw HTML and reveal behavior:
+
+```sh
+pnpm test:e2e:nextjs-sdk_pages-router -- --grep readiness
+```
 
 Use Playwright UI or codegen when needed:
 

@@ -69,6 +69,12 @@ export default function App({
               <Link data-testid="link-selection-handoff" href="/selection-handoff/new-visitor">
                 Selection Handoff
               </Link>
+              <Link
+                data-testid="link-ssg-client-personalization"
+                href="/ssg-client-personalization"
+              >
+                Shared SSG Personalization
+              </Link>
             </nav>
             <div className="app-body">
               <aside className="app-sidebar">

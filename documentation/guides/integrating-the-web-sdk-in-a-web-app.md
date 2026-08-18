@@ -830,9 +830,12 @@ The optional Web Components entrypoint provides vanilla custom elements so you c
 render entries declaratively in markup instead of driving `resolveOptimizedEntry()` by hand. It is
 side-effect-free until you register the elements.
 
-1. Import and call `defineContentfulOptimizationElements()` once from
-   `@contentful/optimization-web/web-components` before using the elements. It registers
-   `<ctfl-optimization-root>` and `<ctfl-optimized-entry>`.
+1. Import `defineContentfulOptimizationElements()` from
+   `@contentful/optimization-web/web-components`. The import alone does not register the elements.
+   Attach entry lifecycle listeners to the original DOM nodes before calling it, as shown below,
+   then call it once. Registration teaches the browser how to activate
+   `<ctfl-optimization-root>` and `<ctfl-optimized-entry>` tags already in the document; that
+   activation is the custom-element upgrade.
 2. Use one `<ctfl-optimization-root>` for entries that share one SDK instance. The root creates the
    SDK from its attributes and assigned properties, reuses an existing
    `window.contentfulOptimization` instance automatically if one is already present, and lets you
@@ -856,26 +859,38 @@ side-effect-free until you register the elements.
    Per-entry tracking overrides use the `track-views`, `track-clicks`, `track-hovers`, and
    `live-updates` attributes either way.
 
-5. Listen for `ctfl-entry-loading`, `ctfl-entry-resolved`, and `ctfl-entry-error` on an entry
-   element to render app-owned UI; the root emits `ctfl-root-ready` and `ctfl-root-error`. The
-   `ctfl-entry-resolved` event still fires for an empty variant. Its `detail.resolvedData` is the
-   SDK's full resolution result; when `isEmptyVariant` is `true`, clear external app-owned UI instead
-   of rendering `detail.entry`.
+5. Put native `hidden` on each `<ctfl-optimized-entry>` in the original HTML when baseline or static
+   light-DOM content (the content between the element's opening and closing tags) must not appear
+   before personalization settles. Without it, the browser can paint that content before
+   registration activates the custom element. Setting it later from registration JavaScript cannot
+   undo that earlier paint. Put any app-owned loading or status UI outside the hidden host.
+6. Listen for `ctfl-entry-loading`, `ctfl-entry-resolved`, and `ctfl-entry-error` on an entry
+   element and update that host's children synchronously; the root emits `ctfl-root-ready` and
+   `ctfl-root-error`. The `ctfl-entry-resolved` event still fires for an empty variant. Its
+   `detail.resolvedData` is the SDK's full resolution result; when `isEmptyVariant` is `true`, clear
+   the host's children without removing the host.
 
-There are two separate rendering surfaces here. The `<ctfl-optimized-entry>` host and its light-DOM
-children are caller-owned: for an empty variant, the element keeps that host connected with its
-tracking attributes, applies the host's native `hidden` state, and leaves the child nodes in place
-so it can reveal the same nodes after a later non-empty result. UI created elsewhere by a
-`ctfl-entry-resolved` listener is app-owned external UI. In the example below, `clearHero()` clears
-only that external UI target; it must not remove the `<ctfl-optimized-entry>` host or its light-DOM
-children. An absent `isEmptyVariant` flag renders normally.
+The pattern below uses one render surface: the caller-owned children inside
+`<ctfl-optimized-entry>`. Its listener is attached before browser registration, checks that the
+bubbling event came from that entry, and synchronously replaces the host's children when it handles
+the resolved event. This prevents the revealed host from retaining stale baseline children.
+`renderHero()` is an app-owned renderer that returns one DOM `Node`. The same listener handles the
+managed markup shown below; only the manual path fetches and assigns `baselineEntry`.
+
+Before the first content is shown, producer-supplied `hidden` stays in place. The element removes it
+when selected content, baseline content, or a timeout/failure fallback is ready. With effective live
+updates disabled, the first content shown stays in place for the same baseline entry ID. A selected
+variant whose configured entry ID is empty is a no-content result and remains hidden. With effective
+live updates enabled, a later empty `selectedOptimizations` array (`[]`) means no selection applies;
+it resolves baseline content and matching baseline tracking metadata, so the host is revealed.
 
 The `data-entry-id` below is an example name you invent — the SDK does not read it. The SDK-owned
 ID attribute is `entry-id` (no `data-` prefix). Keep the two distinct.
 
-**Adapt this to your use case:** the manual path — you fetch and assign `baselineEntry`, then render
-on resolve. Here `data-entry-id` is your own lookup key, not the SDK's `entry-id` attribute.
-`renderHero()` and `clearHero()` are app-owned renderer functions.
+**Adapt this to your use case:** attach one host-owned render listener before registration, then use
+the manual path to fetch and assign `baselineEntry`. `#hero-entry` is your app-owned DOM selector,
+`data-entry-id` is your app-owned lookup key, and `renderHero()` is your app-owned renderer that
+returns one DOM `Node`. Neither app-owned identifier is the SDK's `entry-id` attribute.
 
 ```ts
 import {
@@ -885,6 +900,22 @@ import {
   defineContentfulOptimizationElements,
 } from '@contentful/optimization-web/web-components'
 
+const entryElement = document.querySelector<ContentfulOptimizedEntryElement>('#hero-entry')
+if (!entryElement) throw new Error('Missing #hero-entry')
+
+entryElement.addEventListener('ctfl-entry-resolved', (event) => {
+  if (event.target !== entryElement) return
+
+  const { detail } = event as CustomEvent<ContentfulOptimizedEntryEventDetail>
+  if (detail.resolvedData.isEmptyVariant) {
+    entryElement.replaceChildren()
+    return
+  }
+
+  entryElement.replaceChildren(renderHero(detail.entry))
+})
+
+// Register only after the original host has its lifecycle listener.
 defineContentfulOptimizationElements()
 
 const root = document.querySelector<ContentfulOptimizationRootElement>('ctfl-optimization-root')
@@ -894,10 +925,7 @@ if (root) {
   root.trackEntryInteraction = { hovers: false }
 }
 
-const entryElement = document.querySelector<ContentfulOptimizedEntryElement>(
-  'ctfl-optimized-entry[data-entry-id]',
-)
-if (entryElement?.dataset.entryId) {
+if (entryElement.dataset.entryId) {
   // data-entry-id here is YOUR app's lookup key — an attribute you named, not the SDK's entry-id.
   const baselineEntry = await contentfulClient.getEntry(entryElement.dataset.entryId, {
     include: 10,
@@ -906,23 +934,18 @@ if (entryElement?.dataset.entryId) {
 
   // Assigning the structured baseline entry object triggers resolution.
   entryElement.baselineEntry = baselineEntry
-  entryElement.addEventListener('ctfl-entry-resolved', (event) => {
-    const { detail } = event as CustomEvent<ContentfulOptimizedEntryEventDetail>
-    if (detail.resolvedData.isEmptyVariant) {
-      clearHero()
-      return
-    }
-    renderHero(detail.entry) // detail also carries selectedOptimization and snapshot
-  })
 }
 ```
 
-**Follow this pattern:** the markup the manual script above drives. `data-entry-id` is the app's own
-attribute; the script reads it to decide what to fetch.
+**Follow this pattern:** the markup the manual script above drives. `id="hero-entry"` is the
+app-owned selector for the render host. `data-entry-id` is the app's own attribute; the script reads
+it to decide what to fetch.
 
 ```html
 <ctfl-optimization-root client-id="your-optimization-client-id" environment="main" locale="en-US">
-  <ctfl-optimized-entry data-entry-id="4ib0hsHWoSOnCVdDkizE8d"></ctfl-optimized-entry>
+  <ctfl-optimized-entry id="hero-entry" hidden data-entry-id="4ib0hsHWoSOnCVdDkizE8d">
+    <article>Baseline content rendered by your app</article>
+  </ctfl-optimized-entry>
 </ctfl-optimization-root>
 ```
 
@@ -937,7 +960,9 @@ the fetch.
 ```html
 <!-- The shared SDK was constructed with contentful: { client }, so the element can fetch by slug. -->
 <ctfl-optimization-root>
-  <ctfl-optimized-entry content-type="page" slug="home"></ctfl-optimized-entry>
+  <ctfl-optimized-entry id="hero-entry" hidden content-type="page" slug="home">
+    <article>Static baseline content</article>
+  </ctfl-optimized-entry>
 </ctfl-optimization-root>
 ```
 

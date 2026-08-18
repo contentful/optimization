@@ -317,6 +317,15 @@ describe('Contentful Optimization Web Components', () => {
     },
   ]
 
+  const emptyVariantState: SelectedOptimizationArray = [
+    {
+      experienceId: '6IueRX1pS3iMJncbhUQTba',
+      sticky: false,
+      variantIndex: 3,
+      variants: { '4ib0hsHWoSOnCVdDkizE8d': '' },
+    },
+  ]
+
   afterEach(() => {
     document.body.innerHTML = ''
     rs.restoreAllMocks()
@@ -447,6 +456,7 @@ describe('Contentful Optimization Web Components', () => {
     const loading = rs.fn()
     const resolved = rs.fn((event: Event) => getEntryDetail(event))
 
+    entry.hidden = true
     entry.addEventListener('ctfl-entry-loading', loading)
     entry.addEventListener('ctfl-entry-resolved', resolved)
     root.append(entry)
@@ -455,6 +465,7 @@ describe('Contentful Optimization Web Components', () => {
     expect(loading).toHaveBeenCalledTimes(1)
     expect(entry.dataset.ctflBaselineId).toBeUndefined()
     expect(entry.dataset.ctflEntryId).toBeUndefined()
+    expect(entry.hidden).toBe(true)
     expect(entry.style.visibility).toBe('hidden')
 
     runtime.selectedOptimizations.emit(variantOneState)
@@ -475,7 +486,152 @@ describe('Contentful Optimization Web Components', () => {
     expect(entry.dataset.ctflEntryId).toBe('4k6ZyFQnR2POY5IJLLlJRb')
     expect(entry.dataset.ctflOptimizationId).toBe('6IueRX1pS3iMJncbhUQTba')
     expect(entry.dataset.ctflVariantIndex).toBe('1')
+    expect(entry.hidden).toBe(false)
     expect(entry.style.visibility).toBe('')
+  })
+
+  it('retains producer hidden before the baseline source is assigned', () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations ? variantA : entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const root = createRootElement(runtime.sdk)
+    const entry = document.createElement('ctfl-optimized-entry')
+
+    if (!(entry instanceof ContentfulOptimizedEntryElement)) {
+      throw new Error('ctfl-optimized-entry is not registered.')
+    }
+
+    entry.hidden = true
+    root.append(entry)
+    document.body.append(root)
+
+    expect(entry.hidden).toBe(true)
+
+    entry.baselineEntry = optimizedBaseline
+
+    expect(entry.hidden).toBe(true)
+
+    runtime.selectedOptimizations.emit(variantOneState)
+
+    expect(entry.hidden).toBe(false)
+    expect(entry.dataset.ctflEntryId).toBe('4k6ZyFQnR2POY5IJLLlJRb')
+  })
+
+  it('retains producer hidden through disconnected baseline and SDK assignment', () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations ? variantA : entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const entry = document.createElement('ctfl-optimized-entry')
+
+    if (!(entry instanceof ContentfulOptimizedEntryElement)) {
+      throw new Error('ctfl-optimized-entry is not registered.')
+    }
+
+    entry.hidden = true
+    entry.baselineEntry = optimizedBaseline
+
+    expect(entry.hidden).toBe(true)
+
+    entry.sdk = runtime.sdk
+
+    expect(entry.hidden).toBe(true)
+
+    document.body.append(entry)
+    runtime.selectedOptimizations.emit(variantOneState)
+
+    expect(entry.hidden).toBe(false)
+    expect(entry.dataset.ctflEntryId).toBe('4k6ZyFQnR2POY5IJLLlJRb')
+  })
+
+  it('does not capture a seeded empty variant as producer hidden before first connection', () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry,
+      ...(selectedOptimizations?.[0]?.variants[entry.sys.id] === ''
+        ? { isEmptyVariant: true as const }
+        : {}),
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const entry = document.createElement('ctfl-optimized-entry')
+
+    if (!(entry instanceof ContentfulOptimizedEntryElement)) {
+      throw new Error('ctfl-optimized-entry is not registered.')
+    }
+
+    runtime.selectedOptimizations.emit(emptyVariantState)
+    entry.baselineEntry = baseline
+    entry.sdk = runtime.sdk
+
+    expect(entry.isConnected).toBe(false)
+    expect(entry.hidden).toBe(true)
+
+    entry.sdk = undefined
+
+    expect(entry.hidden).toBe(false)
+  })
+
+  it('captures producer hidden added while detached before reconnect', () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations ? variantA : entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const root = createRootElement(runtime.sdk)
+    const entry = createEntryElement(optimizedBaseline)
+
+    root.append(entry)
+    document.body.append(root)
+
+    expect(entry.hidden).toBe(false)
+
+    entry.remove()
+    entry.hidden = true
+    root.append(entry)
+
+    expect(entry.hidden).toBe(true)
+
+    runtime.selectedOptimizations.emit(variantOneState)
+
+    expect(entry.hidden).toBe(false)
+  })
+
+  it('reveals producer-hidden baseline content and tracking when failure commits fallback', () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry) => ({ entry }))
+    const root = createRootElement(runtime.sdk)
+    const entry = createEntryElement(optimizedBaseline)
+    const loading = rs.fn()
+    const resolved = rs.fn((event: Event) => getEntryDetail(event))
+
+    entry.hidden = true
+    entry.addEventListener('ctfl-entry-loading', loading)
+    entry.addEventListener('ctfl-entry-resolved', resolved)
+    root.append(entry)
+    document.body.append(root)
+
+    expect(loading).toHaveBeenCalledTimes(1)
+    expect(entry.hidden).toBe(true)
+    expect(entry.dataset.ctflEntryId).toBeUndefined()
+
+    runtime.experienceRequestState.emit({ status: 'failed', reason: 'api-error' })
+
+    expect(resolved).toHaveReturnedWith(
+      expect.objectContaining({
+        entry: optimizedBaseline,
+        selectedOptimization: undefined,
+        selectedOptimizations: undefined,
+        snapshot: expect.objectContaining({ isResolved: true }),
+      }),
+    )
+    expect(entry.hidden).toBe(false)
+    expect(entry.dataset.ctflBaselineId).toBe('6KfLDCdA75BGwr5HfSeXac')
+    expect(entry.dataset.ctflEntryId).toBe('6KfLDCdA75BGwr5HfSeXac')
+    expect(entry.dataset.ctflOptimizationId).toBeUndefined()
+    expect(entry.dataset.ctflVariantIndex).toBe('0')
   })
 
   it('keeps optimized-entry hosts visible when the root uses preserve-server hydration', () => {
@@ -486,17 +642,14 @@ describe('Contentful Optimization Web Components', () => {
     const resolved = rs.fn((event: Event) => getEntryDetail(event))
 
     root.hydration = 'preserve-server'
+    entry.hidden = true
     entry.addEventListener('ctfl-entry-resolved', resolved)
     root.append(entry)
     document.body.append(root)
 
+    expect(entry.hidden).toBe(false)
     expect(entry.style.visibility).toBe('')
-    expect(entry.dataset.ctflEntryId).toBeUndefined()
-    expect(resolved).not.toHaveBeenCalled()
     expect(root.hydration).toBe('preserve-server')
-
-    runtime.experienceRequestState.emit({ status: 'success' })
-
     expect(resolved).toHaveReturnedWith(
       expect.objectContaining({
         entry: optimizedBaseline,
@@ -505,6 +658,10 @@ describe('Contentful Optimization Web Components', () => {
     )
     expect(entry.dataset.ctflBaselineId).toBe('6KfLDCdA75BGwr5HfSeXac')
     expect(entry.dataset.ctflEntryId).toBe('6KfLDCdA75BGwr5HfSeXac')
+
+    runtime.experienceRequestState.emit({ status: 'success' })
+
+    expect(resolved).toHaveBeenCalledTimes(1)
   })
 
   it('fetches entryId entries through the SDK before resolving', async () => {
@@ -938,7 +1095,7 @@ describe('Contentful Optimization Web Components', () => {
       selectedOptimization: selectedOptimizations?.[0],
     }))
     const root = createRootElement(runtime.sdk)
-    const entry = createEntryElement(baseline)
+    const entry = createEntryElement(optimizedBaseline)
     const resolved = rs.fn((event: Event) => getEntryDetail(event).entry.sys.id)
 
     entry.addEventListener('ctfl-entry-resolved', resolved)
@@ -1017,12 +1174,13 @@ describe('Contentful Optimization Web Components', () => {
     )
   })
 
-  it('suppresses and restores the same consumer nodes when only empty-variant state changes', () => {
+  it('keeps a selected empty entry hidden but reveals a live empty selection as baseline', () => {
     ensureElementsDefined()
-    let isEmptyVariant = false
     const runtime = createSdk((entry, selectedOptimizations) => ({
       entry,
-      ...(isEmptyVariant ? { isEmptyVariant: true as const } : {}),
+      ...(selectedOptimizations?.[0]?.variants[entry.sys.id] === ''
+        ? { isEmptyVariant: true as const }
+        : {}),
       selectedOptimization: selectedOptimizations?.[0],
     }))
     const root = createRootElement(runtime.sdk)
@@ -1042,8 +1200,7 @@ describe('Contentful Optimization Web Components', () => {
     runtime.selectedOptimizations.emit(variantOneState)
     resolved.mockClear()
 
-    isEmptyVariant = true
-    runtime.selectedOptimizations.emit(variantOneState)
+    runtime.selectedOptimizations.emit(emptyVariantState)
 
     expect(resolved).toHaveBeenCalledTimes(1)
     expect(resolved).toHaveReturnedWith(
@@ -1057,18 +1214,56 @@ describe('Contentful Optimization Web Components', () => {
     expect(entry.children[1]).toBe(input)
     expect(input.value).toBe('preserved')
 
-    isEmptyVariant = false
-    runtime.selectedOptimizations.emit(variantOneState)
+    runtime.selectedOptimizations.emit([])
 
     expect(resolved).toHaveBeenCalledTimes(2)
+    expect(resolved).toHaveReturnedWith(
+      expect.objectContaining({
+        entry: baseline,
+        selectedOptimization: undefined,
+        selectedOptimizations: [],
+      }),
+    )
     expect(entry.hidden).toBe(false)
     expect(entry.hasAttribute('hidden')).toBe(false)
+    expect(entry.dataset.ctflEntryId).toBe('4ib0hsHWoSOnCVdDkizE8d')
+    expect(entry.dataset.ctflOptimizationId).toBeUndefined()
+    expect(entry.dataset.ctflVariantIndex).toBe('0')
     expect(entry.children[0]).toBe(button)
     expect(entry.children[1]).toBe(input)
     expect(input.value).toBe('preserved')
 
     button.click()
     expect(clicked).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not retain resolver-owned empty state as producer hidden while disconnected', () => {
+    ensureElementsDefined()
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry,
+      ...(selectedOptimizations?.[0]?.variants[entry.sys.id] === ''
+        ? { isEmptyVariant: true as const }
+        : {}),
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const root = createRootElement(runtime.sdk)
+    const entry = createEntryElement(baseline)
+
+    entry.liveUpdates = true
+    root.append(entry)
+    document.body.append(root)
+    runtime.selectedOptimizations.emit(emptyVariantState)
+
+    expect(entry.hidden).toBe(true)
+
+    entry.remove()
+    entry.baselineEntry = undefined
+
+    expect(entry.hidden).toBe(false)
+
+    entry.baselineEntry = baseline
+
+    expect(entry.hidden).toBe(false)
   })
 
   it('bubbles resolved entry events for delegated listeners', () => {

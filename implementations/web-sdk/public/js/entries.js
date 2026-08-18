@@ -4,6 +4,9 @@ const CLICK_SCENARIOS = {
   '2Z2WLOx07InSewC3LUB3eX': 'ancestor',
 }
 
+const READINESS_ENTRY_TEST_ID = 'readiness-web-component-entry'
+const READINESS_LOADING_TEST_ID = 'readiness-web-component-loading'
+
 const entryCache = new Map()
 const configuredEntryElements = new WeakSet()
 
@@ -23,6 +26,12 @@ export async function fetchEntry(entryId) {
 
 function isRichText(field) {
   return field && typeof field === 'object' && field.content !== undefined
+}
+
+function containsMergeTag(node) {
+  if (!node || typeof node !== 'object') return false
+  if (node.nodeType === 'embedded-entry-inline') return true
+  return Array.isArray(node.content) && node.content.some(containsMergeTag)
 }
 
 function simpleRenderRichText(node, parent) {
@@ -151,6 +160,12 @@ function renderLiveUpdatesEntry(element, entry) {
   return true
 }
 
+function hideReadinessLoader(element) {
+  if (element.dataset.testid !== READINESS_ENTRY_TEST_ID) return
+  const loader = document.querySelector(`[data-testid="${READINESS_LOADING_TEST_ID}"]`)
+  if (loader) loader.hidden = true
+}
+
 /* ── Manual view tracking ────────────────────────────────────────────── */
 
 function enableManualViewTracking(element, resolvedEntry, selectedOptimization) {
@@ -186,7 +201,10 @@ function handleEntryResolved(event) {
     return
   }
 
-  if (renderLiveUpdatesEntry(element, entry)) return
+  if (renderLiveUpdatesEntry(element, entry)) {
+    hideReadinessLoader(element)
+    return
+  }
 
   const card = buildEntryCard(entry, baselineEntryId, observation, clickScenario)
 
@@ -215,6 +233,7 @@ function configureOptimizedEntry(element, baselineEntry) {
     element.addEventListener('ctfl-entry-resolved', handleEntryResolved)
     configuredEntryElements.add(element)
   }
+  if (containsMergeTag(baselineEntry.fields?.text)) element.liveUpdates = true
   element.baselineEntry = baselineEntry
 }
 

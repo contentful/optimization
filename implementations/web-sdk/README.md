@@ -109,6 +109,12 @@ The application can be accessed via Web browser at `http://localhost:3000`. See
 lightweight Node.js HTTP server that reads `.env` or `.env.example`, injects those values into the
 HTML, and serves `public/`; PM2 manages the `serve` and `serve:stop` processes.
 
+To verify producer-hidden Web Component readiness, load `/` and inspect the entry labeled
+`readiness-web-component-entry`. Its original HTML includes native `hidden`, while the external
+status remains visible. The existing `ctfl-entry-resolved` handler replaces the entry content and
+hides the status after the presentation resolves. Keep `hidden` in producer HTML so static baseline
+content cannot paint before the custom element upgrades.
+
 ## Running E2E tests
 
 E2E tests are run using Playwright.

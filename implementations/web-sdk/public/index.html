@@ -147,6 +147,26 @@
         </div>
       </section>
 
+      <section class="page-section">
+        <header class="page-section__header">
+          <h2>Producer-hidden Web Component</h2>
+          <p>The loading status remains visible until the optimized entry resolves.</p>
+        </header>
+        <div class="entry-grid">
+          <div data-testid="readiness-web-component-loading" role="status" aria-live="polite">
+            Loading personalized content…
+          </div>
+          <ctfl-optimized-entry
+            data-entry-id="2Z2WLOx07InSewC3LUB3eX"
+            data-live-updates-prefix="readiness-web-component"
+            data-testid="readiness-web-component-entry"
+            hidden
+          >
+            <p>Static baseline content</p>
+          </ctfl-optimized-entry>
+        </div>
+      </section>
+
       <section class="page-section" data-testid="live-updates-section">
         <header class="page-section__header">
           <h2>Live Updates</h2>

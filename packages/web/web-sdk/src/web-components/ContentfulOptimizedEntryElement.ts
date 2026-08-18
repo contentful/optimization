@@ -22,8 +22,6 @@ const ENTRY_LOADING_EVENT = 'ctfl-entry-loading'
 const ENTRY_RESOLVED_EVENT = 'ctfl-entry-resolved'
 const ENTRY_ERROR_EVENT = 'ctfl-entry-error'
 
-type HostAttributeValue = string | boolean | number | undefined
-
 export interface ContentfulOptimizedEntryEventDetail {
   readonly entry: Entry
   readonly metadata: OptimizedEntrySnapshot['metadata']
@@ -38,23 +36,11 @@ export interface ContentfulOptimizedEntryErrorEventDetail {
 }
 
 function parseOptionalBooleanAttribute(value: string | null): boolean | undefined {
-  if (value === null) {
-    return undefined
-  }
-
-  return value !== 'false'
+  return value === null ? undefined : value !== 'false'
 }
 
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error))
-}
-
-function isHostAttributeVisible(value: HostAttributeValue): value is string | boolean | number {
-  return value !== undefined
-}
-
-function toAttributeValue(value: string | boolean | number): string {
-  return String(value)
 }
 
 function hasResolvedDataChanged(
@@ -73,6 +59,14 @@ function hasResolvedDataChanged(
   )
 }
 
+/**
+ * Presents an optimized Contentful entry using an assigned SDK or the nearest optimization root.
+ *
+ * Producer-supplied `hidden` remains in place while a client-only presentation is loading. A
+ * resolved or preserved presentation removes it unless the selected variant is deliberately empty.
+ *
+ * @public
+ */
 export class ContentfulOptimizedEntryElement extends HTMLElement {
   static get observedAttributes(): string[] {
     return [
@@ -98,6 +92,12 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
   private optimizationRootContext: ContentfulOptimizationRootContext | undefined
   private unsubscribeFromRootContext: (() => void) | undefined
   private assignedSdk: OptimizedEntrySdk | undefined
+  /**
+   * The last presentation-authored value distinguishes SDK writes from producer changes. Producer
+   * state changes only when the DOM value differs and survives later SDK writes and reconnects.
+   */
+  private lastPresentationHidden: boolean | undefined
+  private producerHidden = false
 
   get baselineEntry(): Entry | undefined {
     return this.assignedBaselineEntry
@@ -201,6 +201,7 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
   }
 
   connectedCallback(): void {
+    this.captureProducerHidden()
     this.style.display ||= OPTIMIZED_ENTRY_HOST_DISPLAY
     this.previousSourceSnapshot = undefined
 
@@ -216,9 +217,7 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
     this.sourceController.setSnapshotListener(undefined)
     this.unsubscribeFromRootContext?.()
     this.unsubscribeFromRootContext = undefined
-    this.controller?.disconnect()
-    this.controller?.setSnapshotListener(undefined)
-    this.controller = undefined
+    this.clearController()
     this.optimizationRootContext = undefined
     this.previousSnapshot = undefined
     this.previousSourceSnapshot = undefined
@@ -233,12 +232,7 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
   }
 
   private setOptionalBooleanAttribute(name: string, value: boolean | undefined): void {
-    if (value === undefined) {
-      this.removeAttribute(name)
-      return
-    }
-
-    this.setAttribute(name, String(value))
+    this.setOptionalStringAttribute(name, value === undefined ? undefined : String(value))
   }
 
   private setOptionalStringAttribute(name: string, value: string | undefined): void {
@@ -283,6 +277,7 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
   }
 
   private syncEntryController(): void {
+    this.captureProducerHidden()
     const { sdk, isSdkStateReady } = this.resolveControllerSdk()
     const previousSourceSnapshot = this.sourceController.getSnapshot()
     const { contentType, entryId, slug, slugField } = this
@@ -307,6 +302,14 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
 
     const nextSourceSnapshot = this.sourceController.getSnapshot()
     this.applySourceSnapshot(nextSourceSnapshot, previousSourceSnapshot === nextSourceSnapshot)
+  }
+
+  /** Capture producer intent only when the current value was not written by the presentation. */
+  private captureProducerHidden(): void {
+    const { hidden } = this
+    if (this.lastPresentationHidden === undefined || hidden !== this.lastPresentationHidden) {
+      this.producerHidden = hidden
+    }
   }
 
   private syncBaselineEntryController(baselineEntry: Entry): void {
@@ -408,9 +411,8 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
   }
 
   private dispatchRootContextError(): void {
-    if (this.optimizationRootContext?.error) {
-      this.dispatchEntryError(this.optimizationRootContext.error)
-    }
+    const error = this.optimizationRootContext?.error
+    if (error) this.dispatchEntryError(error)
   }
 
   private createControllerOptions(
@@ -436,10 +438,9 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
   }
 
   private applySnapshot(snapshot: OptimizedEntrySnapshot): void {
-    const { isEmptyVariant } = snapshot
     const { previousSnapshot } = this
     this.applyHostAttributes(snapshot.hostAttributes)
-    this.hidden = isEmptyVariant
+    this.applyContentVisibility(snapshot)
     this.applyLoadingVisibility(snapshot)
 
     if (snapshot.loadingPresentation.showLoadingFallback) {
@@ -456,12 +457,25 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
     this.previousSnapshot = snapshot
   }
 
-  private applyHostAttributes(attributes: Record<string, HostAttributeValue>): void {
+  private applyContentVisibility(snapshot: OptimizedEntrySnapshot): void {
+    const preservesServerContent = this.optimizationRootContext?.hydration === 'preserve-server'
+    this.writePresentationHidden(
+      snapshot.isResolved || preservesServerContent ? snapshot.isEmptyVariant : this.producerHidden,
+    )
+  }
+
+  /** Apply and record an SDK-owned value without changing remembered producer intent. */
+  private writePresentationHidden(hidden: boolean): void {
+    this.hidden = hidden
+    this.lastPresentationHidden = hidden
+  }
+
+  private applyHostAttributes(attributes: OptimizedEntrySnapshot['hostAttributes']): void {
     const nextAttributes = new Map<string, string>()
 
     Object.entries(attributes).forEach(([name, value]) => {
-      if (isHostAttributeVisible(value)) {
-        nextAttributes.set(name, toAttributeValue(value))
+      if (value !== undefined) {
+        nextAttributes.set(name, String(value))
       }
     })
 
@@ -482,7 +496,7 @@ export class ContentfulOptimizedEntryElement extends HTMLElement {
 
   private resetPresentationState(): void {
     this.applyHostAttributes({})
-    this.hidden = false
+    this.writePresentationHidden(this.producerHidden)
     this.style.removeProperty('visibility')
     this.previousSnapshot = undefined
   }

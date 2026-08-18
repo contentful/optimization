@@ -138,11 +138,16 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   from its retained baseline entry. Manual render decisions use `resolveEntryData()` or
   `resolveOptimizedEntry()` and inspect the full result.
   source: react-web-sdk#hooks/useEntryResolver.ts#useEntryResolver
-- **Loading model:** default `client-only-hidden-until-ready` hydration renders baseline as a HIDDEN
-  layout target (no jump), reveals resolved content when resolution settles, and reveals baseline
-  after a **5s** timeout (`BASELINE_REVEAL_TIMEOUT_MS = 5000`) if resolution never settles;
-  `loadingFallback` shows custom UI in that window. `preserve-server` hydration suppresses loading
-  fallback, baseline-while-loading, and hidden layout target behavior.
+- `useOptimizedEntrySnapshot` attaches its controller listener, adopts readiness and options, and
+  connects during React layout effects. Loading, committed content, and `preserve-server` adoption
+  settle before browser paint; preserved content stays visible through snapshot-to-live adoption.
+  source: react-web-sdk#optimized-entry/useOptimizedEntry.ts#useOptimizedEntrySnapshot; web-sdk#presentation/OptimizedEntryController.ts#OptimizedEntryController
+- **Loading model:** default `client-only-hidden-until-ready` hydration renders baseline as a hidden
+  layout target, commits resolved content when ready, and commits baseline after a settled failure or
+  a **5s** timeout (`BASELINE_REVEAL_TIMEOUT_MS = 5000`) if resolution remains open;
+  `loadingFallback` shows custom UI in that window. A committed presentation does not return to
+  loading. `preserve-server` hydration keeps content visible through adoption and suppresses loading
+  fallback and hidden-layout behavior.
   source: web-sdk#presentation/OptimizedEntryController.ts#BASELINE_REVEAL_TIMEOUT_MS; web-sdk#presentation/OptimizedEntryController.ts#OptimizedEntryController; web-sdk#presentation/OptimizedEntryLoadingPresentation.ts#resolveLoadingPresentation; react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry; react-web-sdk#optimized-entry/useOptimizedEntry.ts#useOptimizedEntrySnapshot; react-web-sdk#context/OptimizationHydrationContext.tsx#useOptimizationHydrationMode
 - **Double-wrap:** nested `OptimizedEntry` sharing a baseline id returns `null` + dev-only warning
   (gated `NODE_ENV !== 'production'`); different baseline ids are fine.
@@ -245,8 +250,11 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   render.
   source: react-web-sdk#provider/OptimizationProvider.tsx#createInitialRuntime; core-sdk#handoff.ts#assertOptimizationCacheSafety
 - Live updates precedence: preview panel open → per-entry `liveUpdates` → root `liveUpdates` →
-  default (locked to first resolved state).
-  source: web-sdk#presentation/OptimizedEntryController.ts#resolveShouldLiveUpdate; react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry
+  default. The default retains the first committed presentation for the same baseline entry ID.
+  Effective live updates accept later defined selections; `[]` resolves baseline content and
+  matching baseline tracking. `undefined`, pending state, and failure state do not blank committed
+  content or restore loading.
+  source: web-sdk#presentation/OptimizedEntryController.ts#OptimizedEntryController; web-sdk#presentation/OptimizedEntryControllerPredicates.ts#resolveShouldLiveUpdate; react-web-sdk#optimized-entry/useOptimizedEntry.ts#useOptimizedEntrySnapshot
 - Preview panel is a separate published package `@contentful/optimization-web-preview-panel` (NOT
   part of `@contentful/optimization-react-web`); `attachOptimizationPreviewPanel` is its DEFAULT
   export, called imperatively (e.g. in an effect / dynamic import) with

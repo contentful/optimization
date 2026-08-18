@@ -321,7 +321,7 @@ The web preview panel attaches through the SDK bridge, registers a `PreviewOverr
 mutates the stateful SDK's `selectedOptimizations` and `changes` signals from a clean API baseline
 plus current overrides. Opening the panel sets `previewPanelOpen`, which forces optimized entries to
 live-update while the panel is open.
-source: preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanelToSdk; core-sdk#bridge-support/capabilities.ts#installCoreBridgeCapabilities; core-sdk#preview-support/PreviewOverrideManager.ts#syncOverridesToSignal; web-sdk#presentation/OptimizedEntryController.ts#resolveShouldLiveUpdate
+source: preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanelToSdk; core-sdk#bridge-support/capabilities.ts#installCoreBridgeCapabilities; core-sdk#preview-support/PreviewOverrideManager.ts#syncOverridesToSignal; web-sdk#presentation/OptimizedEntryControllerPredicates.ts#resolveShouldLiveUpdate
 
 Audience overrides activate all associated experiences at variant index `1` or deactivate them at
 variant index `0`; single-experience overrides replace that experience's `variantIndex`, appending a

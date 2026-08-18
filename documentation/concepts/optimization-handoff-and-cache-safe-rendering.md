@@ -176,11 +176,18 @@ the procedural Next.js recipe, see
 
 `hydration` controls the first browser presentation over already-rendered markup.
 
-| Hydration mode                   | Effect                                                                                                                                              |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `preserve-server`                | Keep server, static, ISR-style, or Edge runtime-rendered content visible while the browser hydrates; resolved metadata waits for settled state.     |
-| `client-only-hidden-until-ready` | Let the browser own content resolution; the default loading presentation can hide the baseline layout target until resolution settles or times out. |
-| `analytics-only`                 | Hydrate analytics state without providing content resolution context.                                                                               |
+| Hydration mode                   | Effect                                                                                                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `preserve-server`                | Keep server, static, ISR-style, or Edge runtime-rendered content continuously visible while browser presentation state adopts the live SDK.                         |
+| `client-only-hidden-until-ready` | Let the browser own content resolution; the default loading presentation can hide the baseline layout target until selected, baseline, or fallback content commits. |
+| `analytics-only`                 | Hydrate analytics state without providing content resolution context.                                                                                               |
+
+For each baseline entry ID, the first selected, baseline, preserved, or timeout/failure fallback
+becomes the browser commitment: it is the first content shown, and with live updates off it stays in
+place. Later selections, pending state, and failure state do not replace it or restore loading. With
+live updates on, later defined selections can replace it; an empty `selectedOptimizations` array
+(`[]`) means no selection applies and resolves baseline content with matching baseline tracking
+metadata. A different baseline entry ID starts a new presentation.
 
 `liveUpdates` controls later browser re-resolution after startup. A route can preserve the rendered
 content for stable first paint and still keep live updates off. Turn live updates on when visible
