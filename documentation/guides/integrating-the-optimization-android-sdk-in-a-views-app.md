@@ -510,11 +510,12 @@ two independent axes: event consent (may the SDK personalize and emit events) an
    }
    ```
 
-When `allowedEventTypes` is unset, the SDK's default pre-consent allow-list lets `identify` and
-`screen` emit before event consent, so a mobile journey can establish profile context and anonymous
-screen analytics. Entry views, entry taps, and custom `track` events are blocked until consent is
-accepted. To require strict opt-in before any Optimization event, replace the default allow-list
-during initialization.
+Before event consent is accepted, `allowedEventTypes` is the whole admission rule: any event type in
+the list emits with no consent decision at all. When `allowedEventTypes` is unset, the SDK's default
+pre-consent allow-list lets `identify` and `screen` emit before event consent, so a mobile journey
+can establish profile context and anonymous screen analytics. Entry views, entry taps, and custom
+`track` events are blocked until consent is accepted or you allow-list them. To require strict
+opt-in before any Optimization event, replace the default allow-list during initialization.
 
 **Copy this:**
 
