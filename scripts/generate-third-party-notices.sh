@@ -114,7 +114,12 @@ generate_android_report() {
 
 generate_swift_report() {
   if command -v license-plist >/dev/null 2>&1; then
-    license-plist --config-path "$ROOT_DIR/packages/ios/license_plist.yml" --no-color
+    license-plist \
+      --config-path "$ROOT_DIR/packages/ios/license_plist.yml" \
+      --package-path "$ROOT_DIR/packages/ios/ContentfulOptimization/Package.swift" \
+      --output-path "$REPORT_DIR/ios-license-plist" \
+      --markdown-path "$IOS_RAW_REPORT" \
+      --no-color
     pnpm exec tsx "$ROOT_DIR/scripts/format-ios-third-party-notices.ts" \
       "$IOS_RAW_REPORT" \
       "$IOS_REPORT"
