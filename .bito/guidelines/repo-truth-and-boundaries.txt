@@ -14,6 +14,16 @@ MONOREPO ROOT TOOLCHAIN
 - When an implementation README says commands run from the monorepo root, references to `.nvmrc`,
   the root `package.json`, the workspace, and root wrapper scripts refer to repository-root files.
   The absence of a duplicate file inside the implementation directory is not a defect.
+- Before calling a documented command nonexistent, inspect the root and implementation
+  `package.json` files plus the named wrapper's argument forwarding. A root wrapper need not be
+  duplicated as an implementation-local script, and forwarded Playwright flags are valid when the
+  wrapper preserves them.
+
+BASE/HEAD AND PATH CLAIMS
+- Describe an export, helper, route, or file as new only after confirming it is absent from the base
+  revision. The same base-versus-head check applies to impact analysis and informational summaries.
+- Verify that every path named in impact analysis exists in the head tree. Do not invent a likely
+  E2E, package, or source path from naming conventions.
 
 LAYER BOUNDARIES
 - Published SDK behavior belongs in packages/. Reference implementations consume the public SDK

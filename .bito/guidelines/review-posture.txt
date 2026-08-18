@@ -30,6 +30,12 @@ candidates under Additional Suggestions, Filtered Suggestions, summaries, impact
 recommendations, or informational sections. A true observation is not a finding unless it proves a
 concrete defect. Zero findings means post nothing.
 
+DIFF-LINE VERIFICATION
+- GitHub review hunks contain unchanged context lines. Before reporting a defect, verify that the
+  criticized token or its governing contract changed between base and head.
+- Do not attribute a pre-existing pattern to the PR merely because GitHub permits commenting on its
+  context line.
+
 REVIEW TRIAGE
 - Before elevating an async, callback-reentrancy, or lifecycle-interleaving candidate, identify the
   documented or supported consumer pattern or maintained integration that reaches it and the
@@ -66,6 +72,21 @@ EVIDENCE GATES
   Before suggesting a public-field rename, search for shared wire-format and cross-SDK usage.
 - Search the whole repository for callers, coverage, and equivalent behavior before claiming
   something is unused, untested, removed, or unsupported.
+
+DOM AND ACCESSIBILITY EVIDENCE
+- A repeated DOM property assignment is not a finding without a concrete affected callback,
+  observer, consumer contract, or measured impact. Inspect snapshot deduplication and
+  `observedAttributes` first.
+- Recommend `aria-controls` only when the carrying element actually controls the referenced
+  element's contents or presence. A sibling loading status does not automatically control the
+  content it describes, and `role="status"` already provides implicit polite live-region behavior.
+
+FIXTURE AND BRANCH REACHABILITY
+- Before claiming that one render, cleanup, or error branch omits required work, prove that the exact
+  maintained fixture can reach that branch by tracing its selectors, data attributes, source mode,
+  and discriminating inputs.
+- A hypothetical combination of fixture-only identifiers and incompatible branch configuration is
+  not a defect unless a supported public consumer can construct it and a concrete contract fails.
 
 CI AND SHELL FAILURE SEMANTICS
 - Before claiming that a CI command can fail silently or execution can continue after failure,
