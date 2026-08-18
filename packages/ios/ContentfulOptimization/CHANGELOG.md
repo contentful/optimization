@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.0](https://github.com/contentful/optimization/compare/optimization-swift-v1.0.0...optimization-swift-v1.1.0) (2026-08-18)
+
+### Features
+
+- **publish:** graduate mobile SDKs to stable ([#440](https://github.com/contentful/optimization/issues/440)) ([05be345](https://github.com/contentful/optimization/commit/05be345ccddc4951a576c0a28a167580a8608f50))
+
 ## [1.0.0](https://github.com/contentful/optimization/compare/optimization-swift-v1.0.0-beta.3...optimization-swift-v1.0.0) (2026-08-18)
 
 ### Features
