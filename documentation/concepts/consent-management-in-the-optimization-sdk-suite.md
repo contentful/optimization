@@ -1,5 +1,11 @@
 ---
 title: Consent management in the Optimization SDK Suite
+fern:
+  slug: consent-management-in-the-optimization-sdk-suite
+  section: Concepts
+  description: >-
+    Design consent flows that use the Optimization SDK suite without treating the SDK as the policy
+    engine.
 ---
 
 # Consent management in the Optimization SDK Suite
@@ -517,15 +523,15 @@ Before releasing a consent-aware Optimization SDK integration, verify these impl
 
 ## Related documentation
 
-- [Integrating the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md) -
+- [Integrate the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md) -
   Web SDK initialization, consent defaults, event diagnostics, and browser storage boundaries.
 - [Web SDK README](../../packages/web/web-sdk/README.md) - Package-level Web SDK configuration,
   consent, state streams, and tracking APIs.
-- [Integrating the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md) -
+- [Integrate the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md) -
   React Web providers, hooks, consent wiring, and blocked-event diagnostics.
 - [React Web SDK README](../../packages/web/frameworks/react-web-sdk/README.md) - Package-level
   React Web provider, hook, state, and consent surfaces.
-- [Integrating the Optimization Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md) -
+- [Integrate the Optimization Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md) -
   Request-scoped consent, profile persistence, and server event behavior.
 - [Node SDK README](../../packages/node/node-sdk/README.md) - Package-level Node SDK configuration,
   `forRequest()` usage, and stateless consent boundaries.
@@ -545,5 +551,5 @@ Before releasing a consent-aware Optimization SDK integration, verify these impl
   consent, UserDefaults persistence, streams, preview behavior, and offline delivery.
 - [Android SDK runtime and interaction mechanics](./android-sdk-runtime-and-interaction-mechanics.md) -
   Android consent, SharedPreferences persistence, streams, preview behavior, and offline delivery.
-- [Forwarding Optimization SDK context to analytics and tag management tools](../guides/forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
+- [Forward Optimization SDK context to analytics and tag management tools](../guides/forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
   Consent-aware routing to third-party analytics and tag management destinations.
