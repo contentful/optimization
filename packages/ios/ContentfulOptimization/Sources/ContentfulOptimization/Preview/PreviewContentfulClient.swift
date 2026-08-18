@@ -8,8 +8,10 @@ import Foundation
 /// from your Contentful space, enabling rich preview panel features like
 /// experience names, types, variant names, and traffic percentages.
 ///
-/// Use the built-in ``ContentfulHTTPPreviewClient`` for a simple implementation,
-/// or implement this protocol to wrap your existing Contentful SDK client.
+/// Use ``ContentfulSDKPreviewClient`` when the app already reads Contentful
+/// through `contentful.swift`, or ``ContentfulHTTPPreviewClient`` when it has no
+/// Contentful client to share. Implement this protocol directly only for a
+/// source neither covers, such as a caching or offline layer.
 public protocol PreviewContentfulClient {
     /// Fetch entries from the Contentful Delivery API.
     ///

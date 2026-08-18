@@ -28,7 +28,7 @@ struct OptimizationDemoApp: App {
                     logLevel: .debug
                 ),
                 previewPanel: PreviewPanelConfig(
-                    contentfulClient: ContentfulClient.shared
+                    contentfulClient: ContentfulClient.previewClient
                 )
             ) {
                 MainScreen()

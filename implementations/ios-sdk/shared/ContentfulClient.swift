@@ -3,21 +3,23 @@ import ContentfulOptimization
 import Foundation
 
 /// The demo app's Contentful Delivery API client: one `contentful.swift` client
-/// behind every CDA read, and the preview panel's `PreviewContentfulClient`.
-///
-/// Wrapping an existing Contentful SDK client is the preview-panel integration
-/// the protocol documents, as opposed to the built-in
-/// `ContentfulHTTPPreviewClient`.
+/// behind every CDA read, including the preview panel's.
 ///
 /// A production app constructs the client the same way, minus `host` and
 /// `clientConfiguration`: those two point it at the local mock server over plain
 /// HTTP instead of `cdn.contentful.com`.
-final class ContentfulClient: PreviewContentfulClient {
+final class ContentfulClient {
 
     /// One client for the whole app: `contentful.swift` fetches `/locales` once
     /// per client and caches the localization context it decodes entries with,
     /// so sharing avoids repeating that bootstrap per CDA consumer.
     static let shared = ContentfulClient()
+
+    /// The preview panel reads audiences and experiences through the same
+    /// client. `ContentfulSDKPreviewClient` is the SDK's wrapper for an existing
+    /// `contentful.swift` client, so the app implements no entry mapping.
+    static let previewClient: PreviewContentfulClient =
+        ContentfulSDKPreviewClient(client: shared.client)
 
     /// Matches the `include=10` CDA contract: linked entries are resolved by
     /// `contentful.swift` up to ten levels deep.
@@ -69,33 +71,6 @@ final class ContentfulClient: PreviewContentfulClient {
         // offline-behavior suite drives.
         let response = try? await fetchEntries(matching: query)
         return response?.items.first
-    }
-
-    // MARK: - PreviewContentfulClient
-
-    func getEntries(contentType: String, include: Int, skip: Int, limit: Int) async throws -> ContentfulEntriesResult {
-        let query = Query.where(contentTypeId: contentType)
-            .include(UInt(include))
-            .skip(theFirst: UInt(skip))
-            .limit(to: UInt(limit))
-
-        let response = try await fetchEntries(matching: query)
-
-        // `contentful.swift` resolves links in place, so `items` carry expanded
-        // linked entries where the raw CDA response carried link stubs. The
-        // preview mappers read linked entries by `sys.id`, which both shapes
-        // provide, and `includes.Entry` is still populated for lookups. The
-        // protocol is dictionary-shaped, so entries are encoded back down with
-        // `CTEntry.toDictionary()`.
-        return ContentfulEntriesResult(
-            items: response.items.map { CTEntry($0).toDictionary() },
-            total: Int(response.total),
-            skip: Int(response.skip),
-            limit: Int(response.limit),
-            includes: ContentfulIncludes(
-                entries: (response.includedEntries ?? []).map { CTEntry($0).toDictionary() }
-            )
-        )
     }
 
     // MARK: - Fetch bridge
