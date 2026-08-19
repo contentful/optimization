@@ -36,6 +36,7 @@ function createDeferred<T>(): {
 describe('initial Experience', () => {
   afterEach(() => {
     rs.useRealTimers()
+    rs.restoreAllMocks()
   })
 
   it('creates receiver-safe identify, screen, and track delegates', async () => {
@@ -289,6 +290,5 @@ describe('initial Experience', () => {
     )
 
     expect(logError).toHaveBeenCalledWith('React:InitialExperience', onErrorFailure)
-    logError.mockRestore()
   })
 })

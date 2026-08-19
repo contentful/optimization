@@ -943,11 +943,11 @@ code remains yours.
 
 The watchdog timeout bounds how long the root waits for returned callback work:
 
-| `maxWaitMs` value                             | Result                                                                                                                                                                        |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Omitted                                       | The root waits up to 3,000 ms.                                                                                                                                                |
-| Any positive finite number                    | The root waits up to that many milliseconds.                                                                                                                                  |
-| `0`, a negative number, `NaN`, or `±Infinity` | Rendering synchronously throws `TypeError('initialExperience.maxWaitMs must be a positive finite number.')` before the provider, callback, page, `onError`, or watchdog runs. |
+| `maxWaitMs` value                                         | Result                                                                                                                                                                        |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Omitted                                                   | The root waits up to 3,000 ms.                                                                                                                                                |
+| Any positive finite number                                | The root waits up to that many milliseconds.                                                                                                                                  |
+| `0`, a negative number, `NaN`, `Infinity`, or `-Infinity` | Rendering synchronously throws `TypeError('initialExperience.maxWaitMs must be a positive finite number.')` before the provider, callback, page, `onError`, or watchdog runs. |
 
 A **direct page attempt** means the root calls the page-event API itself once before automatic route
 tracking starts. The root's **page emitter** is its built-in route-change logic, not a tracker
