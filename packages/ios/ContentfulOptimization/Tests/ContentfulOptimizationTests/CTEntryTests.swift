@@ -1176,9 +1176,28 @@ final class CTEntryTests: XCTestCase {
         ])
 
         XCTAssertEqual(resolved.getField("title"), "Hello")
-        // `JSONValue.number` has no separate Int case — an Int field round-trips as Double.
+        // `JSONValue.number` has no separate Int case — a numeric field round-trips as Double,
+        // so requesting it as `Double` still returns the value. See
+        // `testGetFieldReturnsIntForWholeNumberField` for the `Int`-request coercion path.
         XCTAssertEqual(resolved.getField("count"), 3.0)
         XCTAssertEqual(resolved.getField("isFeatured"), true)
+    }
+
+    /// Regression for NT-4001: `JSONValue.number` stores `Double`, so a whole-number field must
+    /// still resolve when the caller requests `Int` rather than silently returning `nil`.
+    func testGetFieldReturnsIntForWholeNumberField() {
+        let resolved = CTEntry(any: ["sys": ["id": "e1"], "fields": ["count": 3.0]])
+
+        XCTAssertEqual(resolved.getField("count"), 3)
+    }
+
+    /// A fractional field has no exact `Int` representation, so requesting it as `Int` must fail
+    /// the cast and return `nil` rather than truncating.
+    func testGetFieldReturnsNilForFractionalFieldRequestedAsInt() {
+        let resolved = CTEntry(any: ["sys": ["id": "e1"], "fields": ["price": 3.5]])
+
+        let asInt: Int? = resolved.getField("price")
+        XCTAssertNil(asInt)
     }
 
     func testGetFieldReturnsNilForWrongRequestedType() {
