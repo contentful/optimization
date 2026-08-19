@@ -1,4 +1,13 @@
-# Integrating the Optimization Next.js SDK in a Next.js App Router app
+---
+fern:
+  slug: integrate-the-optimization-sdk-in-a-nextjs-app-router-app
+  section: Guides
+  description: >-
+    This guide helps you render a personalized Contentful entry on the server in a Next.js App
+    Router app and keep the same result when the browser starts, using an Optimization handoff.
+---
+
+# Integrate the Optimization Next.js SDK in a Next.js App Router app
 
 Use this guide to render a personalized Contentful entry on the server and keep the same result when
 the browser starts. The server gives the browser a plain-data snapshot of the selected variants and
@@ -1183,7 +1192,7 @@ browser root. Do not create a second binding or provider for forwarding. Keep
 ```
 
 For the full pattern, use
-[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+[Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
 
 ### Merge tags and Custom Flags
 
@@ -1483,7 +1492,7 @@ recipe instead.
 
 For complete SSG, App Router Cache Components, Pages Router ISR, Edge runtime, and analytics-only
 recipes, use
-[Rendering personalized Next.js routes with static, ISR, and edge handoffs](./rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md).
+[Render personalized Next.js routes with static, ISR, and edge handoffs](./rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md).
 For the mechanics behind handoff state and cache scopes, use
 [Optimization handoff and cache-safe rendering](../concepts/optimization-handoff-and-cache-safe-rendering.md).
 

@@ -1,4 +1,13 @@
-# Migrating experience.js plugins and preview
+---
+fern:
+  slug: migrate-experiencejs-plugins-and-preview
+  section: Migration guides
+  description: >-
+    Use this guide when an app uses experience.js analytics, privacy, preview, insights, or
+    third-party plugin packages and you need to replace them with Optimization SDK Suite surfaces.
+---
+
+# Migrate experience.js plugins and preview
 
 Use this guide when an app uses experience.js analytics, privacy, preview, insights, or third-party
 plugin packages and you need to replace them with Optimization SDK Suite surfaces.
@@ -124,7 +133,7 @@ Run these checks after the core runtime migration works:
 
 ## Related guides
 
-- [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
+- [Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
 - [Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md)
 - [Web SDK integration guide](./integrating-the-web-sdk-in-a-web-app.md)
 - [React Web integration guide](./integrating-the-react-web-sdk-in-a-react-app.md)

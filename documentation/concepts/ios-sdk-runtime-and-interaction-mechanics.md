@@ -1,5 +1,12 @@
 ---
 title: iOS SDK runtime and interaction mechanics
+fern:
+  slug: ios-sdk-runtime-and-interaction-mechanics
+  section: Concepts
+  description: >-
+    Understand how the Optimization iOS SDK runs shared optimization behavior in a native app, how
+    SwiftUI and UIKit integrations share the same client, and how consent, state, entry resolution,
+    tracking, preview overrides, and offline delivery work.
 ---
 
 # iOS SDK runtime and interaction mechanics
@@ -12,9 +19,9 @@ This document applies to native apps on iOS 15 or later. SwiftUI and UIKit
 sections name runtime-specific APIs where behavior differs.
 
 For step-by-step setup, see
-[Integrating the Optimization iOS SDK in a SwiftUI app](../guides/integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
+[Integrate the Optimization iOS SDK in a SwiftUI app](../guides/integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
 and
-[Integrating the Optimization iOS SDK in a UIKit app](../guides/integrating-the-optimization-ios-sdk-in-a-uikit-app.md).
+[Integrate the Optimization iOS SDK in a UIKit app](../guides/integrating-the-optimization-ios-sdk-in-a-uikit-app.md).
 For the full Contentful entry contract, see
 [Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md).
 
@@ -349,10 +356,10 @@ background flushing already perform best-effort delivery.
   Contentful entry contract, variant fallback behavior, and local resolution mechanics.
 - [Core state management](./core-state-management.md) - Shared state, consent, persistence, event
   queues, and observable mechanics used through the native bridge.
-- [Integrating the Optimization iOS SDK in a SwiftUI app](../guides/integrating-the-optimization-ios-sdk-in-a-swiftui-app.md) -
+- [Integrate the Optimization iOS SDK in a SwiftUI app](../guides/integrating-the-optimization-ios-sdk-in-a-swiftui-app.md) -
   SwiftUI setup flow for `OptimizationRoot`, `OptimizedEntry`, screen tracking, and preview panel
   mounting.
-- [Integrating the Optimization iOS SDK in a UIKit app](../guides/integrating-the-optimization-ios-sdk-in-a-uikit-app.md) -
+- [Integrate the Optimization iOS SDK in a UIKit app](../guides/integrating-the-optimization-ios-sdk-in-a-uikit-app.md) -
   UIKit setup flow for direct `OptimizationClient` usage, manual entry resolution, tracking, and
   preview panel mounting.
 - [iOS reference implementation](../../implementations/ios-sdk/README.md) - Native iOS validation

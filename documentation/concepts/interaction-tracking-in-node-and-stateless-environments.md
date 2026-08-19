@@ -1,5 +1,11 @@
 ---
 title: Interaction tracking in Node and stateless environments
+fern:
+  slug: interaction-tracking-in-node-and-stateless-environments
+  section: Concepts
+  description: >-
+    Understand how the Optimization SDK Suite resolves a Contentful baseline entry to the entry
+    variant selected for a visitor.
 ---
 
 # Interaction tracking in Node and stateless environments
@@ -11,9 +17,9 @@ server-generated HTML can use the Web SDK for interaction tracking without movin
 client-side.
 
 For step-by-step server setup, see
-[Integrating the Optimization Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md).
+[Integrate the Optimization Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md).
 For browser setup, see
-[Integrating the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md).
+[Integrate the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md).
 For Web SDK interaction tracking mechanics, see
 [Interaction tracking in Web SDKs](./interaction-tracking-in-web-sdks.md). For profile handoff
 between server and browser, see
@@ -41,7 +47,7 @@ between server and browser, see
 - [Stateless runtime constraints](#stateless-runtime-constraints)
 - [Architecture choices](#architecture-choices)
 - [Implementation checklist](#implementation-checklist)
-- [Related docs](#related-docs)
+- [Related documentation](#related-documentation)
 
 <!-- mtoc-end -->
 </details>
@@ -616,7 +622,7 @@ Use this checklist when implementing interaction tracking for Node-rendered HTML
 - If avoiding the Web SDK, scope the manual solution as a browser tracking system, not as a small
   API-call wrapper.
 
-## Related docs
+## Related documentation
 
 - [Node SDK integration guide](../guides/integrating-the-node-sdk-in-a-node-app.md)
 - [Web SDK integration guide](../guides/integrating-the-web-sdk-in-a-web-app.md)

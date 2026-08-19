@@ -1,4 +1,13 @@
-# Integrating the Optimization Node SDK in a Node app
+---
+fern:
+  slug: integrate-the-node-sdk-into-a-node-app
+  section: Guides
+  description: >-
+    This guide helps you implement server-side personalization in a Node runtime such as Express, a
+    custom SSR server, or a server-side function.
+---
+
+# Integrate the Optimization Node SDK in a Node app
 
 Use this guide to add Contentful personalization to a Node server you already have — an Express app,
 a custom SSR server, or a server-side function — using `@contentful/optimization-node`. By the end
@@ -987,7 +996,7 @@ analytics.track('Quote Requested', {
 ```
 
 Use
-[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
+[Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
 for request-local mapping, vendor examples, consent, identity, deduplication, and governance
 guidance.
 

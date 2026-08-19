@@ -1,5 +1,11 @@
 ---
 title: Entry optimization and variant resolution
+fern:
+  slug: entry-personalization-and-variant-resolution
+  section: Concepts
+  description: >-
+    Understand how the Optimization SDK suite resolves a Contentful baseline entry to the entry
+    variant selected for a visitor.
 ---
 
 # Entry optimization and variant resolution
@@ -699,17 +705,17 @@ Use these concept docs for mechanics that often affect entry resolution:
 
 Use these guides for SDK-specific integration paths:
 
-- [Integrating the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md)
-- [Integrating the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md)
-- [Integrating the React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
-- [Integrating the Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md)
-- [Building a custom JavaScript Optimization adapter](../guides/building-a-custom-javascript-optimization-adapter.md)
-- [Integrating the Optimization iOS SDK in a SwiftUI app](../guides/integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
-- [Integrating the Optimization iOS SDK in a UIKit app](../guides/integrating-the-optimization-ios-sdk-in-a-uikit-app.md)
-- [Integrating the Optimization Android SDK in a Jetpack Compose app](../guides/integrating-the-optimization-android-sdk-in-a-compose-app.md)
-- [Integrating the Optimization Android SDK in an XML Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md)
-- [Integrating the Optimization Next.js SDK in a Next.js App Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
-- [Integrating the Optimization Next.js SDK in a Next.js Pages Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
+- [Integrate the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md)
+- [Integrate the Optimization React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md)
+- [Integrate the React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
+- [Integrate the Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md)
+- [Build a custom JavaScript Optimization adapter](../guides/building-a-custom-javascript-optimization-adapter.md)
+- [Integrate the Optimization iOS SDK in a SwiftUI app](../guides/integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)
+- [Integrate the Optimization iOS SDK in a UIKit app](../guides/integrating-the-optimization-ios-sdk-in-a-uikit-app.md)
+- [Integrate the Optimization Android SDK in a Jetpack Compose app](../guides/integrating-the-optimization-android-sdk-in-a-compose-app.md)
+- [Integrate the Optimization Android SDK in an XML Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md)
+- [Integrate the Optimization Next.js SDK in a Next.js App Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
+- [Integrate the Optimization Next.js SDK in a Next.js Pages Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
 
 Use these package READMEs when you need runtime-specific API orientation:
 

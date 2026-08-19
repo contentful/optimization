@@ -1,4 +1,13 @@
-# Integrating the Optimization Web SDK in a web app
+---
+fern:
+  slug: integrate-the-web-sdk-in-a-web-app
+  section: Guides
+  description: >-
+    This guide helps you implement client-side personalization and analytics in a browser
+    application, such as a static site, multi-page app, SPA, or custom frontend runtime.
+---
+
+# Integrate the Optimization Web SDK in a web app
 
 Use this guide to add Contentful personalization to a browser app you already have that is not built
 with React — a static site, a multi-page app, a single-page app, or a custom frontend runtime where
@@ -1081,7 +1090,7 @@ window.addEventListener('beforeunload', () => {
 ```
 
 For destination mappings, consent alignment, dedupe, and governance, see
-[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+[Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
 
 ### Preview panel
 

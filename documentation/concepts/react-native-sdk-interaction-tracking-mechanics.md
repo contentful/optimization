@@ -1,5 +1,11 @@
 ---
 title: React Native SDK interaction tracking mechanics
+fern:
+  slug: react-native-sdk-interaction-tracking-mechanics
+  section: Concepts
+  description: >-
+    Understand what the `@contentful/optimization-react-native` SDK is tracking, when each event
+    fires, and how it leaves the device.
 ---
 
 # React Native SDK interaction tracking mechanics
@@ -9,7 +15,7 @@ when each event fires, and how events leave the device. The goal is to make trac
 predictable before you debug an entry view, tap, screen, or custom event in a running app.
 
 For step-by-step setup, see
-[Integrating the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md).
+[Integrate the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md).
 For the entry resolution model that supplies tracking metadata, see
 [Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md).
 
@@ -349,7 +355,7 @@ measured `{y, height}` and the current viewport `{scrollY, viewportHeight}` to d
 Within a cycle, events fire based on accumulated visible time. The schedule mirrors the Web SDK's
 `ElementViewObserver`:
 
-```
+```text
 requiredMs_for_event_N = dwellTimeMs + N * viewDurationUpdateIntervalMs
 ```
 
@@ -583,5 +589,5 @@ For a scrollable list screen with navigation and entry cards, tracking flows in 
   Contentful entry contract, variant fallback behavior, and local resolution mechanics.
 - [React Native reference implementation](../../implementations/react-native-sdk/README.md) -
   Working app that exercises the React Native SDK API surface in this monorepo.
-- [Integrating the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md) -
+- [Integrate the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md) -
   Step-by-step React Native integration flow.

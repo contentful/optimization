@@ -1,4 +1,13 @@
-# Integrating the Optimization React Native SDK in a React Native app
+---
+fern:
+  slug: integrate-the-react-native-sdk-in-a-react-native-app
+  section: Guides
+  description: >-
+    This guide helps you add personalization, analytics, screen tracking, and a preview panel to a
+    React Native (or Expo) application.
+---
+
+# Integrate the Optimization React Native SDK in a React Native app
 
 Use this guide to add Contentful personalization to a React Native or Expo app using
 `@contentful/optimization-react-native`. By the end of the quick start, one Contentful entry will
@@ -1003,7 +1012,7 @@ const forwardedMessageIds = new Set<string>()
 ```
 
 Use
-[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
+[Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
 for destination mapping, consent, identity, dedupe, and governance guidance.
 
 ## Advanced integrations
