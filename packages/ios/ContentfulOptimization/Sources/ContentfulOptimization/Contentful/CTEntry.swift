@@ -30,14 +30,30 @@ public struct CTEntry {
         self.entry = entry
     }
 
-    /// The `init(any:fallback:)` default — every reader below treats an empty entry as "absent."
-    static let empty = CTEntry(CDA.Entry(sys: nil, fields: [:], metadata: nil))
+    /// An entry with no `sys` and no fields — every reader treats it as "absent." The default
+    /// `fallback` for the fail-soft initializers.
+    public static let empty = CTEntry(CDA.Entry(sys: nil, fields: [:], metadata: nil))
 
     public init(_ contentfulEntry: Contentful.Entry) {
         entry = CDA.Entry(contentfulEntry, ancestors: [])
     }
 
-    init(json: String) throws {
+    /// Wraps a raw CDA entry dictionary — the shape ``toDictionary()`` produces and the shape the
+    /// dictionary-based SDK APIs accept — so callers holding an entry as a dictionary can read it
+    /// through `getField`/`hasField` instead of `as?` casts.
+    ///
+    /// Fail-soft, matching `CTEntry.from(any:fallback:)` on Android: a dictionary containing values
+    /// with no JSON representation logs and yields `fallback` (an empty entry by default) rather
+    /// than throwing.
+    public init(dictionary: [String: Any], fallback: @autoclosure () -> CTEntry = .empty) {
+        self.init(any: dictionary, fallback: fallback())
+    }
+
+    /// Parses a raw CDA entry JSON object, as produced by ``toJSON()``.
+    ///
+    /// Throws rather than falling back — unlike ``init(dictionary:fallback:)`` — because a malformed
+    /// JSON string carries a decoding error worth surfacing.
+    public init(json: String) throws {
         guard let data = json.data(using: .utf8) else {
             throw OptimizationError.configError("JSON string is not valid UTF-8")
         }

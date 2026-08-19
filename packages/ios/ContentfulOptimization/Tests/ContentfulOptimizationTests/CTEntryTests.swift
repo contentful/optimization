@@ -1340,4 +1340,50 @@ final class CTEntryTests: XCTestCase {
 
         XCTAssertEqual(resolved.id, "fallback-id")
     }
+
+    // MARK: - The public construction surface
+
+    /// `init(dictionary:fallback:)` and `init(json:)` are what a consumer holding a raw CDA entry
+    /// (an expanded child entry, a locally built one) uses to read it through `getField`/`hasField`
+    /// rather than `as?` casts. They mirror `CTEntry.from(any:)`/`from(json:)` on Android.
+    func testInitDictionaryReadsSysAndFields() {
+        let resolved = CTEntry(dictionary: [
+            "sys": [
+                "id": "e1",
+                "contentType": ["sys": ["id": "content", "type": "Link", "linkType": "ContentType"]],
+            ],
+            "fields": ["title": "Hello"],
+        ])
+
+        XCTAssertEqual(resolved.id, "e1")
+        XCTAssertEqual(resolved.contentTypeId, "content")
+        XCTAssertEqual(resolved[field: "title"], "Hello")
+    }
+
+    func testInitDictionaryFallsBackForUnsupportedType() {
+        let resolved = CTEntry(dictionary: ["fields": ["publishedAt": Date()]])
+
+        XCTAssertNil(resolved.id)
+        XCTAssertFalse(resolved.hasField("publishedAt"))
+    }
+
+    func testInitDictionaryUsesProvidedFallback() {
+        let fallback = CTEntry(dictionary: ["sys": ["id": "fallback-id"], "fields": [:]])
+        let resolved = CTEntry(dictionary: ["fields": ["publishedAt": Date()]], fallback: fallback)
+
+        XCTAssertEqual(resolved.id, "fallback-id")
+    }
+
+    func testInitJSONReadsSysAndFields() throws {
+        let resolved = try CTEntry(json: """
+        {"sys":{"id":"e1"},"fields":{"title":"Hello"}}
+        """)
+
+        XCTAssertEqual(resolved.id, "e1")
+        XCTAssertEqual(resolved[field: "title"], "Hello")
+    }
+
+    func testInitJSONThrowsForMalformedJSON() {
+        XCTAssertThrowsError(try CTEntry(json: "not json"))
+    }
 }

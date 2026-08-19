@@ -1,3 +1,4 @@
+import Contentful
 import ContentfulOptimization
 import SwiftUI
 
@@ -28,7 +29,7 @@ struct OptimizationDemoApp: App {
                     logLevel: .debug
                 ),
                 previewPanel: PreviewPanelConfig(
-                    contentfulClient: MockPreviewContentfulClient()
+                    contentfulClient: ContentfulClient.client
                 )
             ) {
                 MainScreen()

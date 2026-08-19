@@ -1,22 +1,45 @@
+import Contentful
 import ContentfulOptimization
 import SwiftUI
 
 struct NestedContentEntryView: View {
-    let entry: [String: Any]
+    /// A nested tree's root comes from the CDA as a `Contentful.Entry`, while its
+    /// children arrive already expanded inside the resolved parent, as
+    /// dictionaries. Both go through `OptimizedEntry` — each through the
+    /// initializer matching its shape.
+    private enum Source {
+        case fetched(Contentful.Entry)
+        case expanded([String: Any])
+    }
+
+    private let source: Source
 
     @EnvironmentObject private var client: OptimizationClient
 
-    private var entryId: String {
-        let sys = entry["sys"] as? [String: Any]
-        return sys?["id"] as? String ?? ""
+    init(entry: Contentful.Entry) {
+        source = .fetched(entry)
+    }
+
+    init(expandedEntry: [String: Any]) {
+        source = .expanded(expandedEntry)
     }
 
     var body: some View {
-        OptimizedEntry(
-            entry: entry,
-            accessibilityIdentifier: "content-entry-\(entryId)"
-        ) { resolvedEntry in
-            NestedContentItemView(resolvedEntry: resolvedEntry, client: client)
+        switch source {
+        case let .fetched(entry):
+            OptimizedEntry(
+                entry: entry,
+                accessibilityIdentifier: "content-entry-\(entry.sys.id)"
+            ) { resolvedEntry in
+                NestedContentItemView(resolvedEntry: resolvedEntry.toDictionary(), client: client)
+            }
+        case let .expanded(entry):
+            OptimizedEntry(
+                entry: entry,
+                accessibilityIdentifier: "content-entry-\(entryId(of: entry))"
+            ) { resolvedEntry in
+                NestedContentItemView(resolvedEntry: resolvedEntry, client: client)
+            }
         }
     }
 }
@@ -42,7 +65,7 @@ private struct NestedContentItemView: View {
             NestedEntryText(entry: resolvedEntry, client: client)
 
             ForEach(0..<nestedEntries.count, id: \.self) { index in
-                NestedContentEntryView(entry: nestedEntries[index])
+                NestedContentEntryView(expandedEntry: nestedEntries[index])
             }
         }
     }
@@ -72,4 +95,9 @@ private struct NestedEntryText: View {
         .accessibilityLabel("\(text) [Entry: \(entryId)]")
         .accessibilityIdentifier("entry-text-\(entryId)")
     }
+}
+
+private func entryId(of entry: [String: Any]) -> String {
+    let sys = entry["sys"] as? [String: Any]
+    return sys?["id"] as? String ?? ""
 }

@@ -1,11 +1,26 @@
 import Combine
+import Contentful
 import ContentfulOptimization
 import UIKit
 
 final class OptimizedEntryUIView: UIView {
 
+    /// A baseline entry either straight from the CDA — which the SDK can resolve
+    /// through its typed API — or already expanded inside a resolved parent
+    /// entry, which only exists in dictionary form.
+    private enum Baseline {
+        case fetched(Contentful.Entry)
+        case expanded([String: Any])
+    }
+
     private let client: OptimizationClient
-    private let entry: [String: Any]
+    private let baseline: Baseline
+
+    /// Dictionary form of the baseline, encoded once at init. `ViewTrackingController`
+    /// and `TrackingMetadata` are dictionary-only, and it doubles as the
+    /// unresolved value and the resolve fallback.
+    private let baselineDictionary: [String: Any]
+
     private let liveUpdates: Bool?
     private let globalLiveUpdates: Bool
     private let trackTaps: Bool
@@ -24,7 +39,36 @@ final class OptimizedEntryUIView: UIView {
     private var contentOffsetObservation: NSKeyValueObservation?
     private var boundsObservation: NSKeyValueObservation?
 
-    init(
+    /// Resolves through `resolveOptimizedEntry(baseline: Contentful.Entry, ...)`,
+    /// the typed SDK entry point.
+    convenience init(
+        client: OptimizationClient,
+        entry: Contentful.Entry,
+        scrollView: UIScrollView?,
+        liveUpdates: Bool? = nil,
+        globalLiveUpdates: Bool = false,
+        trackTaps: Bool = true,
+        trackViews: Bool = true,
+        accessibilityIdentifier: String? = nil,
+        contentBuilder: @escaping (_ resolved: [String: Any]) -> UIView
+    ) {
+        self.init(
+            client: client,
+            baseline: .fetched(entry),
+            baselineDictionary: CTEntry(entry).toDictionary(),
+            scrollView: scrollView,
+            liveUpdates: liveUpdates,
+            globalLiveUpdates: globalLiveUpdates,
+            trackTaps: trackTaps,
+            trackViews: trackViews,
+            accessibilityIdentifier: accessibilityIdentifier,
+            contentBuilder: contentBuilder
+        )
+    }
+
+    /// For entries that only exist in dictionary form: children expanded inside a
+    /// resolved parent, and locally constructed test entries.
+    convenience init(
         client: OptimizationClient,
         entry: [String: Any],
         scrollView: UIScrollView?,
@@ -35,15 +79,42 @@ final class OptimizedEntryUIView: UIView {
         accessibilityIdentifier: String? = nil,
         contentBuilder: @escaping (_ resolved: [String: Any]) -> UIView
     ) {
+        self.init(
+            client: client,
+            baseline: .expanded(entry),
+            baselineDictionary: entry,
+            scrollView: scrollView,
+            liveUpdates: liveUpdates,
+            globalLiveUpdates: globalLiveUpdates,
+            trackTaps: trackTaps,
+            trackViews: trackViews,
+            accessibilityIdentifier: accessibilityIdentifier,
+            contentBuilder: contentBuilder
+        )
+    }
+
+    private init(
+        client: OptimizationClient,
+        baseline: Baseline,
+        baselineDictionary: [String: Any],
+        scrollView: UIScrollView?,
+        liveUpdates: Bool?,
+        globalLiveUpdates: Bool,
+        trackTaps: Bool,
+        trackViews: Bool,
+        accessibilityIdentifier: String?,
+        contentBuilder: @escaping (_ resolved: [String: Any]) -> UIView
+    ) {
         self.client = client
-        self.entry = entry
+        self.baseline = baseline
+        self.baselineDictionary = baselineDictionary
         self.scrollView = scrollView
         self.liveUpdates = liveUpdates
         self.globalLiveUpdates = globalLiveUpdates
         self.trackTaps = trackTaps
         self.trackViews = trackViews
         self.contentBuilder = contentBuilder
-        self.resolvedEntry = entry
+        self.resolvedEntry = baselineDictionary
         super.init(frame: .zero)
         self.accessibilityIdentifier = accessibilityIdentifier
         self.isAccessibilityElement = false
@@ -85,7 +156,7 @@ final class OptimizedEntryUIView: UIView {
     // MARK: - Personalization
 
     private var isPersonalized: Bool {
-        guard let fields = entry["fields"] as? [String: Any] else { return false }
+        guard let fields = baselineDictionary["fields"] as? [String: Any] else { return false }
         return fields["nt_experiences"] != nil
     }
 
@@ -103,21 +174,31 @@ final class OptimizedEntryUIView: UIView {
     }
 
     private func resolve() -> Bool {
-        if isPersonalized {
-            let result = client.resolveOptimizedEntry(
-                baseline: entry,
-                selectedOptimizations: effectiveOptimizations
-            )
-            resolvedEntry = result.entry.toDictionary(fallback: entry)
-            resolvedOptimization = result.selectedOptimization
-            resolvedOptimizationContextId = result.optimizationContextId
-            return result.isEmptyVariant
-        } else {
-            resolvedEntry = entry
+        guard isPersonalized else {
+            resolvedEntry = baselineDictionary
             resolvedOptimization = nil
             resolvedOptimizationContextId = nil
             return false
         }
+
+        let result: ResolvedOptimizedEntry
+        switch baseline {
+        case let .fetched(entry):
+            result = client.resolveOptimizedEntry(
+                baseline: entry,
+                selectedOptimizations: effectiveOptimizations
+            )
+        case let .expanded(entry):
+            result = client.resolveOptimizedEntry(
+                baseline: entry,
+                selectedOptimizations: effectiveOptimizations
+            )
+        }
+
+        resolvedEntry = result.entry.toDictionary(fallback: baselineDictionary)
+        resolvedOptimization = result.selectedOptimization
+        resolvedOptimizationContextId = result.optimizationContextId
+        return result.isEmptyVariant
     }
 
     private func subscribeToPersonalizations() {
@@ -181,7 +262,7 @@ final class OptimizedEntryUIView: UIView {
         trackingController?.onDisappear()
         trackingController = ViewTrackingController(
             client: client,
-            entry: entry,
+            entry: baselineDictionary,
             optimizationContextId: resolvedOptimizationContextId,
             selectedOptimization: resolvedOptimization
         )
@@ -252,7 +333,7 @@ final class OptimizedEntryUIView: UIView {
 
     @objc private func handleTap() {
         let metadata = TrackingMetadata(
-            entry: entry,
+            entry: baselineDictionary,
             optimizationContextId: resolvedOptimizationContextId,
             selectedOptimization: resolvedOptimization
         )

@@ -8,6 +8,13 @@ options:
 packages:
   ContentfulOptimization:
     path: ../../packages/ios/ContentfulOptimization
+  # The app fetches CDA entries with Contentful's official Swift SDK, the same
+  # way a customer app would. Pinned to the exact version
+  # packages/ios/ContentfulOptimization already resolves, so SPM has a single
+  # version to pick for both the app targets and the SDK package.
+  contentful.swift:
+    url: https://github.com/contentful/contentful.swift
+    exactVersion: 5.5.15
 
 settings:
   base:
@@ -30,6 +37,8 @@ targets:
       INFOPLIST_FILE: swiftui/Info.plist
     dependencies:
       - package: ContentfulOptimization
+      - package: contentful.swift
+        product: Contentful
     scheme:
       testTargets: [OptimizationAppUITestsSwiftUI]
       # Scheme pre-actions fire before any target (including Swift Package
@@ -76,6 +85,8 @@ targets:
       INFOPLIST_FILE: uikit/Info.plist
     dependencies:
       - package: ContentfulOptimization
+      - package: contentful.swift
+        product: Contentful
     scheme:
       testTargets: [OptimizationAppUITestsUIKit]
       preActions:

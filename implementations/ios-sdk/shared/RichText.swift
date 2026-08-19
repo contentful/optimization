@@ -16,6 +16,19 @@ enum RichText {
         return dict["nodeType"] as? String == "document" && dict["content"] is [Any]
     }
 
+    /// Resolve a named field on a resolved entry to a display string.
+    ///
+    /// A Rich Text field arrives as a nested dictionary and a Symbol/Text field
+    /// as a plain string, so both shapes are read explicitly. `getField` is
+    /// called with a concrete type on purpose: with `T` inferred as `Any` it
+    /// always succeeds, so a missing field would come back non-nil.
+    static func resolveText(_ entry: CTEntry, field: String, client: OptimizationClient) -> String {
+        if let document: [String: Any] = entry.getField(field) {
+            return resolveText(document, client: client)
+        }
+        return resolveText(entry[field: field], client: client)
+    }
+
     /// Resolve an entry's `text` field to a display string: flatten a Rich Text
     /// document (resolving merge tags), pass a plain string through, otherwise
     /// fall back to `"No content"`.
@@ -56,8 +69,9 @@ enum RichText {
               let sys = target["sys"] as? [String: Any]
         else { return "[Merge Tag]" }
 
-        // A still-unresolved Link means `ContentfulFetcher` did not inline the
-        // entry; the flattener has nothing to resolve against.
+        // A still-unresolved Link means the CDA response never carried the
+        // linked entry, or `CTEntry` stubbed it as a back-edge; either way the
+        // flattener has nothing to resolve against.
         if sys["type"] as? String == "Link" { return "[Merge Tag]" }
 
         let contentTypeId = ((sys["contentType"] as? [String: Any])?["sys"] as? [String: Any])?["id"] as? String

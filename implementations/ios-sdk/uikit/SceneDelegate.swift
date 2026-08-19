@@ -1,3 +1,4 @@
+import Contentful
 import ContentfulOptimization
 import UIKit
 
@@ -37,7 +38,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         PreviewPanelViewController.addFloatingButton(
             to: main,
             client: client,
-            contentfulClient: MockPreviewContentfulClient()
+            contentfulClient: ContentfulClient.client
         )
     }
 }

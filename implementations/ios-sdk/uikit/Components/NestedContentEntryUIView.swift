@@ -1,21 +1,52 @@
+import Contentful
 import ContentfulOptimization
 import UIKit
 
 final class NestedContentEntryUIView: UIView {
 
-    init(client: OptimizationClient, entry: [String: Any], scrollView: UIScrollView?) {
+    /// A nested tree's root comes from the CDA as a `Contentful.Entry`, while its
+    /// children arrive already expanded inside the resolved parent, as
+    /// dictionaries.
+    private enum Source {
+        case fetched(Contentful.Entry)
+        case expanded([String: Any])
+    }
+
+    convenience init(client: OptimizationClient, entry: Contentful.Entry, scrollView: UIScrollView?) {
+        self.init(client: client, source: .fetched(entry), scrollView: scrollView)
+    }
+
+    convenience init(client: OptimizationClient, expandedEntry: [String: Any], scrollView: UIScrollView?) {
+        self.init(client: client, source: .expanded(expandedEntry), scrollView: scrollView)
+    }
+
+    private init(client: OptimizationClient, source: Source, scrollView: UIScrollView?) {
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
 
-        let entryId = (entry["sys"] as? [String: Any])?["id"] as? String ?? ""
-
-        let optimized = OptimizedEntryUIView(
-            client: client,
-            entry: entry,
-            scrollView: scrollView,
-            accessibilityIdentifier: "content-entry-\(entryId)"
-        ) { resolved in
+        let contentBuilder: (_ resolved: [String: Any]) -> UIView = { resolved in
             NestedContentItemUIView(client: client, resolvedEntry: resolved, scrollView: scrollView)
+        }
+
+        let optimized: OptimizedEntryUIView
+        switch source {
+        case let .fetched(entry):
+            optimized = OptimizedEntryUIView(
+                client: client,
+                entry: entry,
+                scrollView: scrollView,
+                accessibilityIdentifier: "content-entry-\(entry.sys.id)",
+                contentBuilder: contentBuilder
+            )
+        case let .expanded(entry):
+            let entryId = (entry["sys"] as? [String: Any])?["id"] as? String ?? ""
+            optimized = OptimizedEntryUIView(
+                client: client,
+                entry: entry,
+                scrollView: scrollView,
+                accessibilityIdentifier: "content-entry-\(entryId)",
+                contentBuilder: contentBuilder
+            )
         }
         optimized.translatesAutoresizingMaskIntoConstraints = false
         addSubview(optimized)
@@ -56,7 +87,9 @@ private final class NestedContentItemUIView: UIView {
         stack.addArrangedSubview(NestedEntryText(entry: resolvedEntry, client: client))
 
         for child in nestedEntries(in: resolvedEntry) {
-            stack.addArrangedSubview(NestedContentEntryUIView(client: client, entry: child, scrollView: scrollView))
+            stack.addArrangedSubview(
+                NestedContentEntryUIView(client: client, expandedEntry: child, scrollView: scrollView)
+            )
         }
     }
 

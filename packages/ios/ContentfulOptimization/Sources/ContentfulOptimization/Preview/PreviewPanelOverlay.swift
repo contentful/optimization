@@ -1,8 +1,18 @@
+import Contentful
 import SwiftUI
 
 /// A floating action button overlay that opens the preview panel sheet.
 ///
-/// Wrap your app content in this view to add a debug preview panel:
+/// Wrap your app content in this view to add a debug preview panel. Pass the
+/// `contentful.swift` client the app already reads Contentful with:
+/// ```swift
+/// PreviewPanelOverlay(contentfulClient: myContentfulClient) {
+///     YourAppContent()
+/// }
+/// ```
+///
+/// When the app has no Contentful client to share, pass a
+/// ``ContentfulHTTPPreviewClient`` instead:
 /// ```swift
 /// let contentfulClient = ContentfulHTTPPreviewClient(
 ///     spaceId: "your-space-id",
@@ -27,6 +37,16 @@ public struct PreviewPanelOverlay<Content: View>: View {
     public init(contentfulClient: PreviewContentfulClient? = nil, @ViewBuilder content: @escaping () -> Content) {
         self.contentfulClient = contentfulClient
         self.content = content
+    }
+
+    /// Creates an overlay that reads definitions through an existing
+    /// `contentful.swift` client, sharing its configuration, credentials, and
+    /// session rather than opening a second connection.
+    public init(contentfulClient: Contentful.Client, @ViewBuilder content: @escaping () -> Content) {
+        self.init(
+            contentfulClient: ContentfulSDKPreviewClient(client: contentfulClient),
+            content: content
+        )
     }
 
     public var body: some View {

@@ -1,10 +1,11 @@
+import Contentful
 import ContentfulOptimization
 import SwiftUI
 
 struct LiveUpdatesTestScreen: View {
     let onClose: () -> Void
     @EnvironmentObject private var client: OptimizationClient
-    @State private var entry: [String: Any]?
+    @State private var entry: Contentful.Entry?
     @State private var isLoading = true
     @State private var isIdentified = false
     @State private var globalLiveUpdates = false
@@ -40,7 +41,7 @@ struct LiveUpdatesTestScreen: View {
         }
         .task {
             let personalizedId = "2Z2WLOx07InSewC3LUB3eX"
-            let entries = await ContentfulFetcher.fetchEntries(
+            let entries = await ContentfulClient.fetchEntries(
                 ids: [personalizedId],
                 locale: AppConfig.defaultContentfulLocale
             )
@@ -108,7 +109,7 @@ struct LiveUpdatesTestScreen: View {
     }
 
     @ViewBuilder
-    private func contentSections(entry: [String: Any]) -> some View {
+    private func contentSections(entry: Contentful.Entry) -> some View {
         OptimizationScrollView(accessibilityIdentifier: "live-updates-scroll-view") {
             VStack(spacing: 20) {
                 VStack(alignment: .leading) {
@@ -173,17 +174,15 @@ struct LiveUpdatesTestScreen: View {
 // MARK: - LiveUpdatesEntryDisplay
 
 private struct LiveUpdatesEntryDisplay: View {
-    let entry: [String: Any]
+    let entry: CTEntry
     let prefix: String
 
     private var text: String {
-        let fields = entry["fields"] as? [String: Any]
-        return fields?["text"] as? String ?? "No content"
+        entry[field: "text"] ?? "No content"
     }
 
     private var entryId: String {
-        let sys = entry["sys"] as? [String: Any]
-        return sys?["id"] as? String ?? ""
+        entry.id ?? ""
     }
 
     var body: some View {

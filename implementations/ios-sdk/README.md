@@ -36,13 +36,41 @@ Both apps share `shared/` for configuration, Contentful fetching, and analytics 
 run the same UI test source tree from `uitests/` against their respective host apps so SDK behavior
 can be compared across UI frameworks.
 
+## Contentful entry fetching
+
+Entries are fetched with Contentful's official Swift SDK,
+[`contentful.swift`](https://github.com/contentful/contentful.swift), which is the integration path
+recommended to customers. `shared/ContentfulClient.swift` queries by entry ID with `include(10)`,
+and the fetched `Contentful.Entry` values are handed to the Optimization SDK's typed entry APIs:
+`OptimizedEntry(entry:)` in SwiftUI and `resolveOptimizedEntry(baseline:)` in UIKit. The SDK encodes
+them through `CTEntry`, so the app does no CDA JSON parsing or link resolution of its own.
+
+Entry-ID lookup stays app-owned; the Optimization SDK resolves personalization against entries the
+app supplies rather than fetching them itself.
+
+`shared/ContentfulClient.swift` holds the single client both CDA consumers share. It also
+conforms to `PreviewContentfulClient`, so the preview panel reads audiences and experiences through
+the same `contentful.swift` client instead of the built-in `ContentfulHTTPPreviewClient` — wrapping
+an existing Contentful SDK client is the integration that protocol documents.
+
+Only two arguments differ from a production integration: `host` points at `localhost:8000` and
+`clientConfiguration.secure` is `false` because the mock server is plain HTTP. A production app
+builds `Contentful.Client(spaceId:accessToken:)` and gets `cdn.contentful.com` over HTTPS.
+
+That works because `lib/mocks` also serves the CDA from the host root, in addition to the
+`/contentful/` namespace it multiplexes alongside the Experience and Insights APIs.
+`Contentful.Client` accepts only a `host[:port]` and builds `/spaces/...` from the root, so it has
+nowhere to put a path prefix — unlike `contentful.js`, which has `basePath` and keeps using the
+prefixed mount. The mock also serves `/locales`, which `contentful.swift` fetches before its first
+entry query to build the localization context it decodes entries with.
+
 ## CDA locale handling
 
 The app defines one locale in shared config, passes it to the native SDK as top-level `locale`, and
-passes it directly to the shared raw CDA fetch helper. Entries passed to SDK resolution use the
-standard single-locale CDA entry shape. Do not use all-locale CDA responses or `locale=*`, because
-entry resolution expects direct single-locale fields such as `fields.nt_experiences` and
-`fields.nt_variants`. See
+passes it to CDA requests through `localizeResults(withLocaleCode:)`. Entries passed to SDK
+resolution use the standard single-locale CDA entry shape. Do not use all-locale CDA responses or
+`locale=*`, because entry resolution expects direct single-locale fields such as
+`fields.nt_experiences` and `fields.nt_variants`. See
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
 for the broader locale model and
 [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)

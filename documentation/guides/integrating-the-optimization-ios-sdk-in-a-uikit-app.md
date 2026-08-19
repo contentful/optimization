@@ -1194,9 +1194,10 @@ For the precedence between live updates, locked variants, and preview-panel stat
 a debug or internal-build condition so production users cannot open local audience and variant
 overrides.
 
-1. Create a `PreviewContentfulClient` (the built-in `ContentfulHTTPPreviewClient` fetches
-   `nt_audience` and `nt_experience` definitions) for the space and environment holding your
-   Optimization entries.
+1. Supply a Contentful client for the space and environment holding your Optimization entries. Pass
+   an existing `contentful.swift` `Contentful.Client` directly and the SDK wraps it for you, or use
+   the built-in `ContentfulHTTPPreviewClient` when the app has no Contentful client to share. Either
+   one fetches the `nt_audience` and `nt_experience` definitions.
 2. Add the floating button to a host controller with `addFloatingButton(to:client:contentfulClient:)`,
    passing the same initialized `OptimizationClient` the rest of the app uses so overrides affect the
    same resolver and event state.

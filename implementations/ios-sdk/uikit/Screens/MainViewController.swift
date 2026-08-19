@@ -1,11 +1,12 @@
 import Combine
+import Contentful
 import ContentfulOptimization
 import UIKit
 
 final class MainViewController: UIViewController {
 
     private let client: OptimizationClient
-    private var entries: [[String: Any]] = []
+    private var entries: [Contentful.Entry] = []
     private var firstAppearHandled = false
     private var cancellables = Set<AnyCancellable>()
 
@@ -56,7 +57,7 @@ final class MainViewController: UIViewController {
                 self.updateIdentifyControls(profile: profile)
                 guard profile != nil else { return }
                 Task { @MainActor in
-                    let fetched = await ContentfulFetcher.fetchEntries(
+                    let fetched = await ContentfulClient.fetchEntries(
                         ids: AppConfig.entryIds,
                         locale: AppConfig.defaultContentfulLocale
                     )
@@ -242,13 +243,8 @@ final class MainViewController: UIViewController {
 
     // MARK: - Helpers
 
-    private func isNestedContent(_ entry: [String: Any]) -> Bool {
-        guard let sys = entry["sys"] as? [String: Any],
-              let contentType = sys["contentType"] as? [String: Any],
-              let innerSys = contentType["sys"] as? [String: Any],
-              let id = innerSys["id"] as? String
-        else { return false }
-        return id == "nestedContent"
+    private func isNestedContent(_ entry: Contentful.Entry) -> Bool {
+        entry.sys.contentTypeId == "nestedContent"
     }
 
 }

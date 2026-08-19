@@ -1,10 +1,11 @@
 import Combine
+import Contentful
 import ContentfulOptimization
 import SwiftUI
 
 struct MainScreen: View {
     @EnvironmentObject var client: OptimizationClient
-    @State private var entries: [[String: Any]] = []
+    @State private var entries: [Contentful.Entry] = []
     @State private var showNavigationTest = false
     @State private var showLiveUpdatesTest = false
     @State private var showNestedButtonTapTest = false
@@ -112,7 +113,7 @@ struct MainScreen: View {
         ) { profile in
             guard profile != nil else { return }
             Task {
-                entries = await ContentfulFetcher.fetchEntries(
+                entries = await ContentfulClient.fetchEntries(
                     ids: AppConfig.entryIds,
                     locale: AppConfig.defaultContentfulLocale
                 )
@@ -120,13 +121,8 @@ struct MainScreen: View {
         }
     }
 
-    private func isNestedContent(_ entry: [String: Any]) -> Bool {
-        guard let sys = entry["sys"] as? [String: Any],
-              let contentType = sys["contentType"] as? [String: Any],
-              let innerSys = contentType["sys"] as? [String: Any],
-              let id = innerSys["id"] as? String
-        else { return false }
-        return id == "nestedContent"
+    private func isNestedContent(_ entry: Contentful.Entry) -> Bool {
+        entry.sys.contentTypeId == "nestedContent"
     }
 
     private func handleIdentify() {
