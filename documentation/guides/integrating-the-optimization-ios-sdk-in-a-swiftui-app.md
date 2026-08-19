@@ -1009,9 +1009,9 @@ app-supplied `PreviewContentfulClient`, then lets users override audiences and v
 2. Pass `PreviewPanelConfig(enabled: false)` in builds where the panel must not render.
 3. Pass a `PreviewContentfulClient` so the panel shows audience and experience names instead of raw
    identifiers.
-4. Pass `ContentfulSDKPreviewClient(client:)` when your app already reads Contentful through
-   `contentful.swift`, so the panel shares that client's configuration and session. Use
-   `ContentfulHTTPPreviewClient` when there is no Contentful client to share.
+4. Pass your `Contentful.Client` directly when the app already reads Contentful through
+   `contentful.swift`, so the panel shares that client's configuration and session. The SDK wraps it
+   for you. Use `ContentfulHTTPPreviewClient` when there is no Contentful client to share.
 
 **Adapt this to your use case:**
 

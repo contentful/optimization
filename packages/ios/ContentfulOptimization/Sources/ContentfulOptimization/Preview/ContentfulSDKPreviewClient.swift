@@ -3,29 +3,25 @@ import Foundation
 
 /// A ``PreviewContentfulClient`` backed by an existing `contentful.swift` client.
 ///
-/// Use this when your app already reads Contentful through the official Swift
-/// SDK, so the preview panel shares that client's configuration, credentials,
-/// and session rather than opening a second connection of its own:
-/// ```swift
-/// let contentful = Contentful.Client(spaceId: "your-space-id", accessToken: "your-cda-token")
-///
-/// PreviewPanelConfig(contentfulClient: ContentfulSDKPreviewClient(client: contentful))
-/// ```
-///
-/// Use ``ContentfulHTTPPreviewClient`` instead when the app has no Contentful
-/// SDK client to share.
+/// The preview panel surfaces build this for an app that passes its own
+/// `Contentful.Client`, so the panel shares that client's configuration,
+/// credentials, and session rather than opening a second connection of its own.
+/// Apps reach it through the `Contentful.Client` overloads on
+/// ``PreviewPanelConfig``, ``PreviewPanelOverlay``, and
+/// ``PreviewPanelViewController``; it is deliberately not public API, so an app
+/// never names the adapter itself.
 ///
 /// Entries are encoded to the dictionary shape ``ContentfulEntriesResult`` uses,
 /// because the preview panel forwards them to the JS core, which runs the shared
 /// entry mappers for every platform.
-public final class ContentfulSDKPreviewClient: PreviewContentfulClient {
+final class ContentfulSDKPreviewClient: PreviewContentfulClient {
     private let client: Contentful.Client
 
-    public init(client: Contentful.Client) {
+    init(client: Contentful.Client) {
         self.client = client
     }
 
-    public func getEntries(contentType: String, include: Int, skip: Int, limit: Int) async throws -> ContentfulEntriesResult {
+    func getEntries(contentType: String, include: Int, skip: Int, limit: Int) async throws -> ContentfulEntriesResult {
         let query = Query.where(contentTypeId: contentType)
             .include(UInt(include))
             .skip(theFirst: UInt(skip))

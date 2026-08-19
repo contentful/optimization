@@ -1,17 +1,16 @@
 #if canImport(UIKit)
+import Contentful
 import SwiftUI
 import UIKit
 
 /// A UIKit view controller that presents the optimization preview/debug panel.
 ///
 /// Use this in UIKit apps to inspect and override audiences, variants, and profile state.
+/// Pass the `contentful.swift` client the app already reads Contentful with, or a
+/// ``ContentfulHTTPPreviewClient`` when it has none to share.
 ///
 /// ```swift
-/// let contentfulClient = ContentfulHTTPPreviewClient(
-///     spaceId: "your-space-id",
-///     accessToken: "your-cda-token"
-/// )
-/// let previewVC = PreviewPanelViewController(client: client, contentfulClient: contentfulClient)
+/// let previewVC = PreviewPanelViewController(client: client, contentfulClient: myContentfulClient)
 /// present(previewVC, animated: true)
 /// ```
 ///
@@ -31,6 +30,16 @@ public final class PreviewPanelViewController: UIHostingController<AnyView> {
         self.client = client
         let view = PreviewPanelContent(contentfulClient: contentfulClient).environmentObject(client)
         super.init(rootView: AnyView(view))
+    }
+
+    /// Creates a panel that reads definitions through an existing
+    /// `contentful.swift` client, sharing its configuration, credentials, and
+    /// session rather than opening a second connection.
+    public convenience init(client: OptimizationClient, contentfulClient: Contentful.Client) {
+        self.init(
+            client: client,
+            contentfulClient: ContentfulSDKPreviewClient(client: contentfulClient)
+        )
     }
 
     @available(*, unavailable)
@@ -91,6 +100,28 @@ public final class PreviewPanelViewController: UIHostingController<AnyView> {
         }, for: .touchUpInside)
 
         return button
+    }
+
+    /// Adds a floating debug button that reads definitions through an existing
+    /// `contentful.swift` client, sharing its configuration, credentials, and
+    /// session rather than opening a second connection.
+    ///
+    /// - Parameters:
+    ///   - viewController: The view controller to add the button to.
+    ///   - client: The optimization client instance.
+    ///   - contentfulClient: The app's `contentful.swift` client.
+    /// - Returns: The created button, in case you need to manage its lifecycle.
+    @discardableResult
+    public static func addFloatingButton(
+        to viewController: UIViewController,
+        client: OptimizationClient,
+        contentfulClient: Contentful.Client
+    ) -> UIButton {
+        addFloatingButton(
+            to: viewController,
+            client: client,
+            contentfulClient: ContentfulSDKPreviewClient(client: contentfulClient)
+        )
     }
 }
 #endif
