@@ -880,7 +880,8 @@ scope:
 3. The preview panel forces live updates while it is open, regardless of these settings.
 
 The effective precedence is: preview panel open, then the per-entry `liveUpdates` prop, then the
-root `liveUpdates` prop, then the default (locked to the first resolved state).
+root `liveUpdates` prop, then the default (live updates disabled). The preview panel forces live
+behavior while it is open, even when an entry sets `liveUpdates={false}`.
 
 **Follow this pattern:** the app-wide switch plus per-entry overrides.
 
@@ -902,8 +903,12 @@ root `liveUpdates` prop, then the default (locked to the first resolved state).
 ```
 
 To verify, enable live updates, then trigger `identifyUser()`, `setConsent()`, or `resetUser()`.
-Live entries re-resolve without a full reload; entries with `liveUpdates={false}` stay put until the
-next render.
+Live entries re-resolve without a full reload. With the preview panel closed and effective live
+updates disabled, a non-live entry keeps the first content shown while the same `OptimizedEntry`
+remains mounted with the same baseline entry ID. A different baseline entry ID, an unmount and
+remount, or explicit application teardown that ends the current SDK presentation starts a new
+presentation. For an injected SDK, teardown belongs to the application owner that created it;
+`OptimizationProvider` does not destroy injected instances.
 
 ### Merge tags and Custom Flags
 

@@ -63,6 +63,14 @@ TYPE SAFETY AT SDK BOUNDARIES
 - Do not widen a type to any or unknown to suppress a TypeScript error. Flag it if the diff shows
   this pattern.
 
+WEB COMPONENT VISIBILITY OWNERSHIP
+- In `ContentfulOptimizedEntryElement`, `producerHidden` records producer-authored DOM intent, while
+  `lastPresentationHidden` records only the last SDK/presentation-authored write.
+- Capturing producer intent must not advance the presentation-authored marker.
+- When considering visibility-write deduplication, compare against the actual reflected DOM
+  property, not the provenance marker, and identify a concrete supported failure before reporting
+  it.
+
 PLATFORM-SPECIFIC INVARIANTS
 - CDA entry fetches in reference implementations must be single-locale. Do not use withAllLocales
   or locale=*; the locale must be chosen by the application and passed explicitly.

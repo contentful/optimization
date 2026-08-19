@@ -162,13 +162,13 @@
         "handoff.mjs": 1600,
         "analytics.cjs": 12900,
         "analytics.mjs": 14100,
-        "contentful-optimization-web-components.umd.js": 41500,
-        "presentation.cjs": 3400,
-        "presentation.mjs": 3300,
+        "contentful-optimization-web-components.umd.js": 42000,
+        "presentation.cjs": 3600,
+        "presentation.mjs": 3500,
         "tracking-attributes.cjs": 1000,
         "tracking-attributes.mjs": 700,
-        "web-components.cjs": 16800,
-        "web-components.mjs": 18100
+        "web-components.cjs": 17200,
+        "web-components.mjs": 18700
       }
     }
   },

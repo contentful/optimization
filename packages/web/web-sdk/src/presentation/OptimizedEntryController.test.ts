@@ -8,6 +8,7 @@ import type {
   Subscription,
 } from '@contentful/optimization-core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
+import { createOptimizedEntryLoadingEntry } from '@contentful/optimization-core/entry-source'
 import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { isEntryOfContentType } from '../api-schemas'
 import {
@@ -198,8 +199,42 @@ describe('OptimizedEntryController', () => {
     },
   ]
 
+  function createLiveUpdatesController(): {
+    readonly controller: OptimizedEntryController
+    readonly runtime: ReturnType<typeof createSdk>
+  } {
+    const runtime = createSdk((entry, selectedOptimizations) => {
+      const selectedOptimization = selectedOptimizations?.[0]
+
+      return {
+        entry:
+          selectedOptimization?.variantIndex === 1
+            ? variantA
+            : selectedOptimization?.variantIndex === 2
+              ? variantB
+              : entry,
+        optimizationContextId: selectedOptimization ? 'ctx-live' : undefined,
+        selectedOptimization,
+      }
+    })
+    const controller = new OptimizedEntryController({
+      isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
+      rootLiveUpdatesEnabled: true,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+    runtime.selectedOptimizations.emit(variantOneState)
+    runtime.experienceRequestState.emit({ status: 'success' })
+
+    return { controller, runtime }
+  }
+
   afterEach(() => {
     rs.useRealTimers()
+    rs.unstubAllGlobals()
   })
 
   it('exposes the optimized entry host display invariant', () => {
@@ -238,6 +273,7 @@ describe('OptimizedEntryController', () => {
     const controller = new OptimizedEntryController({
       isPresentationReady: true,
       baselineEntry: baseline,
+      entryLiveUpdatesEnabled: true,
       sdk: runtime.sdk,
       isSdkStateReady: true,
       trackClicks: true,
@@ -325,11 +361,11 @@ describe('OptimizedEntryController', () => {
     controller.disconnect()
   })
 
-  it('keeps server-rendered content visible in preserve-server hydration while state is unresolved', () => {
+  it('commits preserve-server content without waiting for presentation readiness', () => {
     const runtime = createSdk((entry) => ({ entry }))
     const controller = new OptimizedEntryController({
       hydration: 'preserve-server',
-      isPresentationReady: true,
+      isPresentationReady: false,
       baselineEntry: optimizedBaseline,
       sdk: runtime.sdk,
       isSdkStateReady: true,
@@ -338,16 +374,20 @@ describe('OptimizedEntryController', () => {
     controller.connect()
 
     expect(controller.getSnapshot()).toMatchObject({
-      hostAttributes: {},
-      isLoading: true,
-      isResolved: false,
+      hostAttributes: {
+        'data-ctfl-baseline-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-entry-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-variant-index': 0,
+      },
+      isLoading: false,
+      isResolved: true,
       loadingPresentation: {
         hideLoadingLayoutTarget: false,
         showLoadingFallback: false,
       },
     })
 
-    runtime.experienceRequestState.emit({ status: 'success' })
+    runtime.experienceRequestState.emit({ status: 'pending' })
 
     expect(controller.getSnapshot()).toMatchObject({
       hostAttributes: {
@@ -412,7 +452,7 @@ describe('OptimizedEntryController', () => {
     controller.disconnect()
   })
 
-  it('immediately shows baseline when optimization is not possible (consent false, empty allowedEventTypes)', () => {
+  it('keeps the impossible-optimization baseline committed when optimization later becomes possible', () => {
     const runtime = createSdk((entry) => ({ entry }), { initialOptimizationPossible: false })
     const controller = new OptimizedEntryController({
       isPresentationReady: true,
@@ -425,22 +465,27 @@ describe('OptimizedEntryController', () => {
 
     expect(controller.getSnapshot().isLoading).toBe(false)
 
-    // If consent is later granted (optimizationPossible flips true), revert to loading
-    // until the Experience API settles
     runtime.optimizationPossible.emit(true)
 
-    expect(controller.getSnapshot().isLoading).toBe(true)
-
-    runtime.experienceRequestState.emit({ status: 'success' })
-
-    expect(controller.getSnapshot().isLoading).toBe(false)
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      isLoading: false,
+      isResolved: true,
+      hostAttributes: {
+        'data-ctfl-entry-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-variant-index': 0,
+      },
+    })
 
     controller.disconnect()
   })
 
-  it('reveals baseline presentation after the loading timeout', async () => {
+  it('commits an honest baseline presentation after the loading timeout and ignores a late default selection', async () => {
     rs.useFakeTimers()
-    const runtime = createSdk((entry) => ({ entry }))
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations?.length ? variantA : entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
     const controller = new OptimizedEntryController({
       isPresentationReady: true,
       baselineEntry: optimizedBaseline,
@@ -460,10 +505,33 @@ describe('OptimizedEntryController', () => {
 
     await rs.advanceTimersByTimeAsync(50)
 
-    expect(controller.getSnapshot().loadingPresentation).toMatchObject({
-      hideLoadingLayoutTarget: false,
-      shouldRenderBaselineWhileLoading: true,
-      showLoadingFallback: true,
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimization: undefined,
+      selectedOptimizations: undefined,
+      hostAttributes: {
+        'data-ctfl-baseline-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-entry-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-variant-index': 0,
+      },
+      loadingPresentation: {
+        showLoadingFallback: false,
+      },
+    })
+
+    runtime.selectedOptimizations.emit(variantOneState)
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimizations: undefined,
+      hostAttributes: {
+        'data-ctfl-entry-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-variant-index': 0,
+      },
     })
 
     controller.disconnect()
@@ -485,7 +553,12 @@ describe('OptimizedEntryController', () => {
     controller.connect()
     await rs.advanceTimersByTimeAsync(50)
 
-    expect(controller.getSnapshot().loadingPresentation.shouldRenderBaselineWhileLoading).toBe(true)
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      isLoading: false,
+      isResolved: true,
+    })
+    expect(rs.getTimerCount()).toBe(0)
 
     controller.updateOptions({
       isPresentationReady: true,
@@ -496,18 +569,30 @@ describe('OptimizedEntryController', () => {
       isSdkStateReady: true,
     })
 
-    expect(controller.getSnapshot().loadingPresentation.shouldRenderBaselineWhileLoading).toBe(
-      false,
-    )
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: nextOptimizedBaseline,
+      isLoading: true,
+      isResolved: false,
+      loadingPresentation: {
+        shouldRenderBaselineWhileLoading: false,
+      },
+    })
+    expect(rs.getTimerCount()).toBe(1)
 
     await rs.advanceTimersByTimeAsync(50)
 
-    expect(controller.getSnapshot().loadingPresentation.shouldRenderBaselineWhileLoading).toBe(true)
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: nextOptimizedBaseline,
+      isLoading: false,
+      isResolved: true,
+    })
+    expect(rs.getTimerCount()).toBe(0)
 
     controller.disconnect()
   })
 
-  it('locks selected optimizations unless live updates are enabled', () => {
+  it('refreshes the current SDK selection when a new baseline ID starts a presentation', () => {
+    const nextOptimizedBaseline = createOptimizableTestEntry('3Z2hP4vR8sT1nY6mK9qL0a')
     const runtime = createSdk((entry, selectedOptimizations) => ({
       entry:
         selectedOptimizations?.[0]?.variantIndex === 1
@@ -519,7 +604,557 @@ describe('OptimizedEntryController', () => {
     }))
     const controller = new OptimizedEntryController({
       isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+    runtime.selectedOptimizations.emit(variantOneState)
+    runtime.selectedOptimizations.emit(variantTwoState)
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: variantA,
+      selectedOptimizations: variantOneState,
+    })
+
+    controller.updateOptions({
+      isPresentationReady: true,
+      baselineEntry: nextOptimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: variantB,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimizations: variantTwoState,
+      metadata: {
+        baselineEntryId: '3Z2hP4vR8sT1nY6mK9qL0a',
+      },
+    })
+
+    controller.disconnect()
+  })
+
+  it('restarts the loading reveal timeout when the SDK instance changes', async () => {
+    rs.useFakeTimers()
+    const firstRuntime = createSdk((entry) => ({ entry }))
+    const secondRuntime = createSdk((entry) => ({ entry }))
+    const controller = new OptimizedEntryController({
+      isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
+      hasCustomLoadingFallback: true,
+      baselineRevealTimeoutMs: 50,
+      sdk: firstRuntime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+    await rs.advanceTimersByTimeAsync(25)
+
+    controller.updateOptions({
+      isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
+      hasCustomLoadingFallback: true,
+      baselineRevealTimeoutMs: 50,
+      sdk: secondRuntime.sdk,
+      isSdkStateReady: true,
+    })
+
+    expect(rs.getTimerCount()).toBe(1)
+
+    await rs.advanceTimersByTimeAsync(25)
+
+    expect(controller.getSnapshot()).toMatchObject({
+      isLoading: true,
+      isResolved: false,
+      loadingPresentation: {
+        shouldRenderBaselineWhileLoading: false,
+      },
+    })
+
+    await rs.advanceTimersByTimeAsync(25)
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      isLoading: false,
+      isResolved: true,
+    })
+    expect(rs.getTimerCount()).toBe(0)
+
+    controller.disconnect()
+  })
+
+  it('does not commit a managed-entry loading placeholder before its same-ID baseline arrives', () => {
+    const loadingEntry = createOptimizedEntryLoadingEntry(baseline.sys.id)
+    const runtime = createSdk((entry) => ({ entry }))
+    const controller = new OptimizedEntryController({
+      isPresentationReady: true,
+      baselineEntry: loadingEntry,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: loadingEntry,
+      hostAttributes: {},
+      isLoading: true,
+      isResolved: false,
+    })
+
+    controller.updateOptions({
+      isPresentationReady: true,
       baselineEntry: baseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: baseline,
+      isLoading: false,
+      isResolved: true,
+      hostAttributes: {
+        'data-ctfl-entry-id': '4ib0hsHWoSOnCVdDkizE8d',
+        'data-ctfl-variant-index': 0,
+      },
+    })
+
+    controller.disconnect()
+  })
+
+  it('does not let a delayed same-ID managed-entry placeholder force a stale timeout fallback', async () => {
+    rs.useFakeTimers()
+    const loadingEntry = createOptimizedEntryLoadingEntry(optimizedBaseline.sys.id)
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations?.length ? variantA : entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const controller = new OptimizedEntryController({
+      isPresentationReady: true,
+      baselineEntry: loadingEntry,
+      baselineRevealTimeoutMs: 50,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+    runtime.selectedOptimizations.emit(variantOneState)
+    await rs.advanceTimersByTimeAsync(100)
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: variantA,
+      hostAttributes: {},
+      isLoading: true,
+      isResolved: false,
+      selectedOptimizations: variantOneState,
+    })
+    expect(rs.getTimerCount()).toBe(0)
+
+    controller.updateOptions({
+      isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
+      baselineRevealTimeoutMs: 50,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: variantA,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimizations: variantOneState,
+      hostAttributes: {
+        'data-ctfl-entry-id': '4k6ZyFQnR2POY5IJLLlJRb',
+        'data-ctfl-variant-index': 1,
+      },
+    })
+    expect(rs.getTimerCount()).toBe(0)
+
+    controller.disconnect()
+  })
+
+  it('keeps a settled-failure baseline committed through later pending state', () => {
+    const runtime = createSdk((entry) => ({ entry }))
+    const controller = new OptimizedEntryController({
+      isPresentationReady: false,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+    runtime.experienceRequestState.emit({ status: 'failed', reason: 'api-error' })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimizations: undefined,
+      hostAttributes: {
+        'data-ctfl-baseline-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-entry-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-variant-index': 0,
+      },
+    })
+
+    runtime.selectedOptimizations.emit(variantOneState)
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimizations: undefined,
+      hostAttributes: {
+        'data-ctfl-entry-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-variant-index': 0,
+      },
+    })
+
+    runtime.experienceRequestState.emit({ status: 'pending' })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      isLoading: false,
+      isResolved: true,
+      hostAttributes: {
+        'data-ctfl-entry-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-variant-index': 0,
+      },
+      loadingPresentation: {
+        showLoadingFallback: false,
+      },
+    })
+
+    controller.disconnect()
+  })
+
+  it('holds a later selection while an open browser presentation is not ready', () => {
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations?.length ? variantA : entry,
+      optimizationContextId: selectedOptimizations?.length ? 'ctx-1' : undefined,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const controller = new OptimizedEntryController({
+      isPresentationReady: false,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+    runtime.selectedOptimizations.emit(variantOneState)
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: variantA,
+      hostAttributes: {},
+      isLoading: true,
+      isResolved: false,
+      selectedOptimizations: variantOneState,
+      loadingPresentation: {
+        showLoadingFallback: true,
+      },
+    })
+
+    controller.updateOptions({
+      isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: variantA,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimizations: variantOneState,
+      hostAttributes: {
+        'data-ctfl-entry-id': '4k6ZyFQnR2POY5IJLLlJRb',
+        'data-ctfl-optimization-context-id': 'ctx-1',
+        'data-ctfl-variant-index': 1,
+      },
+    })
+
+    controller.disconnect()
+  })
+
+  it('does not reopen an existing commitment when browser presentation readiness becomes false', () => {
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations?.length ? variantA : entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const controller = new OptimizedEntryController({
+      isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+    runtime.selectedOptimizations.emit(variantOneState)
+
+    controller.updateOptions({
+      isPresentationReady: false,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: variantA,
+      isLoading: false,
+      isPresentationReady: false,
+      isResolved: true,
+      selectedOptimizations: variantOneState,
+      hostAttributes: {
+        'data-ctfl-entry-id': '4k6ZyFQnR2POY5IJLLlJRb',
+        'data-ctfl-variant-index': 1,
+      },
+      loadingPresentation: {
+        showLoadingFallback: false,
+      },
+    })
+
+    controller.disconnect()
+  })
+
+  it('keeps readiness gating and browser commitment out of server snapshots', () => {
+    rs.stubGlobal('window', undefined)
+    const runtime = createSdk((entry) => ({ entry }), { initialOptimizationPossible: false })
+    const controller = new OptimizedEntryController({
+      isPresentationReady: false,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      hostAttributes: {},
+      isLoading: false,
+      isResolved: false,
+      loadingPresentation: {
+        hideLoadingLayoutTarget: true,
+        showLoadingFallback: true,
+      },
+    })
+
+    runtime.optimizationPossible.emit(true)
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      hostAttributes: {},
+      isLoading: true,
+      isResolved: false,
+      loadingPresentation: {
+        hideLoadingLayoutTarget: true,
+        showLoadingFallback: true,
+      },
+    })
+
+    controller.disconnect()
+  })
+
+  it('keeps a pre-existing synchronous seed visible when browser presentation readiness is false', () => {
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations?.length ? variantA : entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    runtime.selectedOptimizations.emit(variantOneState)
+    const controller = new OptimizedEntryController({
+      isPresentationReady: false,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: variantA,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimizations: variantOneState,
+      hostAttributes: {
+        'data-ctfl-entry-id': '4k6ZyFQnR2POY5IJLLlJRb',
+        'data-ctfl-variant-index': 1,
+      },
+    })
+
+    controller.disconnect()
+  })
+
+  it('keeps a committed live variant through undefined, pending, and failure state', () => {
+    const { controller, runtime } = createLiveUpdatesController()
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: variantA,
+      isLoading: false,
+      isResolved: true,
+      hostAttributes: {
+        'data-ctfl-entry-id': '4k6ZyFQnR2POY5IJLLlJRb',
+        'data-ctfl-optimization-context-id': 'ctx-live',
+        'data-ctfl-variant-index': 1,
+      },
+    })
+
+    runtime.selectedOptimizations.emit(undefined)
+    runtime.experienceRequestState.emit({ status: 'pending' })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: variantA,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimizations: variantOneState,
+      hostAttributes: {
+        'data-ctfl-entry-id': '4k6ZyFQnR2POY5IJLLlJRb',
+        'data-ctfl-optimization-context-id': 'ctx-live',
+        'data-ctfl-variant-index': 1,
+      },
+    })
+
+    runtime.experienceRequestState.emit({ status: 'failed', reason: 'api-error' })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: variantA,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimizations: variantOneState,
+    })
+
+    controller.disconnect()
+  })
+
+  it('applies a later defined variant in live mode', () => {
+    const { controller, runtime } = createLiveUpdatesController()
+
+    runtime.selectedOptimizations.emit(variantTwoState)
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: variantB,
+      selectedOptimizations: variantTwoState,
+      hostAttributes: {
+        'data-ctfl-entry-id': '2qVK4T5lnScbswoyBuGipd',
+        'data-ctfl-variant-index': 2,
+      },
+    })
+
+    controller.disconnect()
+  })
+
+  it('resolves a live empty selection to baseline content and tracking', () => {
+    const { controller, runtime } = createLiveUpdatesController()
+
+    runtime.selectedOptimizations.emit([])
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimization: undefined,
+      selectedOptimizations: [],
+      hostAttributes: {
+        'data-ctfl-baseline-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-entry-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-optimization-context-id': undefined,
+        'data-ctfl-optimization-id': undefined,
+        'data-ctfl-variant-index': 0,
+      },
+    })
+
+    controller.disconnect()
+  })
+
+  it('keeps a committed live empty selection through undefined, pending, and failure state', () => {
+    const { controller, runtime } = createLiveUpdatesController()
+
+    runtime.selectedOptimizations.emit([])
+
+    runtime.selectedOptimizations.emit(undefined)
+    runtime.experienceRequestState.emit({ status: 'pending' })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimizations: [],
+      hostAttributes: {
+        'data-ctfl-entry-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-variant-index': 0,
+      },
+    })
+
+    runtime.experienceRequestState.emit({ status: 'failed', reason: 'timeout' })
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimizations: [],
+    })
+
+    controller.disconnect()
+  })
+
+  it('commits a defined selected-baseline result under default non-live behavior', () => {
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const controller = new OptimizedEntryController({
+      isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+    runtime.selectedOptimizations.emit([])
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      isLoading: false,
+      isResolved: true,
+      selectedOptimization: undefined,
+      selectedOptimizations: [],
+      hostAttributes: {
+        'data-ctfl-entry-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-variant-index': 0,
+      },
+    })
+
+    runtime.selectedOptimizations.emit(variantOneState)
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: optimizedBaseline,
+      selectedOptimizations: [],
+      hostAttributes: {
+        'data-ctfl-entry-id': '6KfLDCdA75BGwr5HfSeXac',
+        'data-ctfl-variant-index': 0,
+      },
+    })
+
+    controller.disconnect()
+  })
+
+  it('locks a selected commitment unless preview forces live updates', () => {
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry:
+        selectedOptimizations?.[0]?.variantIndex === 1
+          ? variantA
+          : selectedOptimizations?.[0]?.variantIndex === 2
+            ? variantB
+            : entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const controller = new OptimizedEntryController({
+      isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
       sdk: runtime.sdk,
       isSdkStateReady: true,
     })
@@ -533,7 +1168,7 @@ describe('OptimizedEntryController', () => {
 
     controller.updateOptions({
       isPresentationReady: true,
-      baselineEntry: baseline,
+      baselineEntry: optimizedBaseline,
       isPreviewPanelOpen: true,
       sdk: runtime.sdk,
       isSdkStateReady: true,
@@ -555,7 +1190,7 @@ describe('OptimizedEntryController', () => {
     }))
     const controller = new OptimizedEntryController({
       isPresentationReady: true,
-      baselineEntry: baseline,
+      baselineEntry: optimizedBaseline,
       sdk: firstRuntime.sdk,
       isSdkStateReady: true,
     })
@@ -568,7 +1203,7 @@ describe('OptimizedEntryController', () => {
 
     controller.updateOptions({
       isPresentationReady: true,
-      baselineEntry: baseline,
+      baselineEntry: optimizedBaseline,
       sdk: secondRuntime.sdk,
       isSdkStateReady: true,
     })

@@ -7,12 +7,41 @@ UNUSED DECLARATIONS
   declaration-only variance helpers as real uses. Type-only code emitting no JavaScript is not dead
   merely because it has no runtime reference.
 
+MODULE CONTEXT
+- Before claiming that `await` lacks an async context, inspect the complete file or fenced example.
+  Static `import` or `export` makes the code an ES module, where top-level await is valid when the
+  documented target supports it. Flag only a demonstrated non-module or unsupported-target use.
+
+MOCK RESTORATION
+- Distinguish standalone `fn()` mocks from `spyOn()` or stubs that replace properties on shared
+  objects, prototypes, modules, or globals.
+- Require restoration only when shared state was mutated and can survive the test. A test-local
+  standalone mock passed into a test-local fixture does not require `mockRestore()`.
+
 PUBLIC EXPORTS
 - Do not infer that a type needs a package-level export merely because its source declaration uses
   `export`. First verify the package's configured entrypoints and show a consumer-facing API that
   requires callers to name the type.
 - Internal helper types used to construct an exported declaration do not need separate public
   exports. Do not recommend expanding the public API for convenience or symmetry alone.
+
+PRIVATE STATE AND DERIVED OUTPUTS
+- A private field does not need a same-named property on a public snapshot, event, or return type.
+  Trace how it derives the existing public fields and identify a documented public contract or real
+  consumer that requires the raw value before recommending API expansion.
+- Do not claim consumers read an absent private field as `undefined` when the public type does not
+  declare that access. Check whether the raw state is already available through its owning public
+  SDK surface.
+
+CONSTRUCTOR INITIALIZATION
+- A method call before a field assignment is not evidence of an uninitialized read. Trace the full
+  constructor call graph, including short-circuit branches, and identify the exact access to that
+  field before reporting a failure.
+
+TEST GLOBALS
+- Before reporting a missing test import, inspect the test runner's `globals` configuration and the
+  package TypeScript `types`. A configured global used successfully by package typecheck and the
+  focused test is not a missing import.
 
 GENERICS AND OVERLOADS
 - Read every generic default before claiming omitted arguments become `unknown`, lose inference, or

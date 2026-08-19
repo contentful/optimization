@@ -203,6 +203,10 @@ continuity needs to stay session-only. For cross-SDK consent guidance, see
 `OptimizationRoot` owns the Web SDK lifecycle. Provider-owned initialization runs after React
 commit, outside render. Children render against an initial snapshot runtime, then a layout-effect
 setup initializes the live SDK before the first visible paint in normal browser rendering.
+Optimized-entry hooks also attach their controller listener, adopt current options, and connect
+during the layout phase so loading or committed content settles before paint. With
+`hydration="preserve-server"`, server-rendered content remains continuously visible while the entry
+adopts live SDK state; this uses the existing root and entry APIs.
 
 Use the dedicated React SDK action hooks when components need common Optimization actions:
 
@@ -443,7 +447,9 @@ Use `loadingFallback`, direct children, wrapper props, and nested composition pa
 For optimized entries, the loading phase begins immediately while optimization is unresolved. If the
 state is still unresolved after 5 seconds, the component reveals baseline content so loading does
 not persist forever. Without a custom `loadingFallback`, the wrapper preserves layout by hiding the
-baseline until that timeout elapses. The React Web guide covers those variants in context.
+baseline until that timeout elapses. That baseline is the first content shown for its baseline entry
+ID, so later pending or failed state cannot restore loading. The React Web guide covers those
+variants in context.
 
 ### Entry interaction tracking
 
@@ -499,7 +505,8 @@ for router-specific examples.
 
 ### Live updates and preview
 
-`liveUpdates` defaults to `false`, so optimized entries lock to the first resolved value. Set
+`liveUpdates` defaults to `false`, so optimized entries keep the first content shown for their
+baseline entry ID. Set
 `liveUpdates` globally or per `OptimizedEntry` when entries must react to profile, flag, or preview
 changes:
 

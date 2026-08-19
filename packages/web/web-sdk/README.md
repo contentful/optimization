@@ -112,11 +112,18 @@ Use `<ctfl-optimization-root>` once around the entries that share one SDK instan
 
 ```html
 <ctfl-optimization-root client-id="your-client-id" environment="main" locale="en-US">
-  <ctfl-optimized-entry id="hero-entry">
+  <ctfl-optimized-entry id="hero-entry" hidden>
     <article>Baseline content rendered by your app</article>
   </ctfl-optimized-entry>
 </ctfl-optimization-root>
 ```
+
+Put native `hidden` on the entry in the original HTML when baseline or static content between its
+opening and closing tags must not appear before personalization settles. The element retains that
+producer-owned concealment while the presentation is loading and removes it when selected content,
+baseline content, or a fallback is ready. Setting `hidden` later from registration JavaScript cannot
+prevent the browser from painting the original tag contents before the custom element is registered.
+A selected variant whose configured entry ID is empty remains hidden.
 
 Assign complex values as DOM properties, not string attributes:
 
@@ -166,6 +173,15 @@ lookup uses the fetched entry's `sys.id` in resolution events and `data-ctfl-*` 
 not the slug. Configure only one managed source; combining a non-empty entry ID with a complete slug
 source emits `Optimized entry source cannot include both entryId and managedEntry.` and fetches
 neither.
+
+For each baseline entry ID, the first selected, baseline, preserved, or timeout/failure fallback
+result becomes the content shown. A timeout or failure is an honest baseline result: loading ends,
+and baseline content and tracking metadata agree. With effective live updates disabled, later
+defined selections, `undefined`, pending state, and failure state do not replace that content or
+restore loading. Effective live updates accept later defined selections. An empty
+`selectedOptimizations` array (`[]`) means no selection applies and resolves baseline content with
+matching baseline tracking. That case is distinct from a selected variant whose configured entry ID
+is empty, which remains hidden. A different baseline entry ID starts a new presentation.
 
 For script-tag usage, load the main Web SDK UMD bundle and the separate Web Components UMD bundle:
 

@@ -16,7 +16,7 @@ import {
   type OptimizedEntrySourceSnapshot,
 } from '@contentful/optimization-web/presentation'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useOptimizationHydrationMode } from '../context/OptimizationHydrationContext'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimizationContext } from '../hooks/useOptimization'
@@ -163,7 +163,7 @@ export function useManagedBaselineEntry({
   })
   const reportedErrorRef = useRef<Error | undefined>(undefined)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     controller.setSnapshotListener(setSnapshot)
 
     return () => {
@@ -172,7 +172,7 @@ export function useManagedBaselineEntry({
     }
   }, [controller])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     controller.updateOptions({
       baselineEntry: effectiveBaselineEntry,
       entryId,
@@ -220,6 +220,9 @@ export function useManagedBaselineEntry({
 
 /**
  * Return the low-level optimized-entry presentation snapshot for a baseline entry.
+ *
+ * Client controller state is adopted during layout so loading, preserved content, and resolved
+ * commitments settle before the browser paints the current presentation.
  *
  * @public
  */
@@ -290,18 +293,18 @@ export function useOptimizedEntrySnapshot<
     controller.getSnapshot(),
   )
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setIsPresentationReady(isSdkReady)
   }, [isSdkReady])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     controller.setSnapshotListener(setSnapshot)
     return () => {
       controller.setSnapshotListener(undefined)
     }
   }, [controller])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     controller.updateOptions(controllerOptions)
     controller.connect()
 
@@ -311,6 +314,14 @@ export function useOptimizedEntrySnapshot<
   }, [controller, controllerOptions])
 
   return snapshot
+}
+
+function resolveOptimizedEntryIsLoading(params: {
+  readonly hasEntry: boolean
+  readonly managedEntryIsLoading: boolean
+  readonly presentationIsLoading: boolean
+}): boolean {
+  return params.managedEntryIsLoading || (params.hasEntry && params.presentationIsLoading)
 }
 
 /**
@@ -349,7 +360,11 @@ export function useOptimizedEntry(params: UseOptimizedEntryParams): UseOptimized
     baselineEntry: managedEntry.entry,
     entry: hasEntry ? snapshot.entry : undefined,
     error: managedEntry.error,
-    isLoading: managedEntry.isLoading || snapshot.isLoading,
+    isLoading: resolveOptimizedEntryIsLoading({
+      hasEntry,
+      managedEntryIsLoading: managedEntry.isLoading,
+      presentationIsLoading: snapshot.isLoading,
+    }),
     isPresentationReady,
     isResolved: hasEntry && snapshot.isResolved,
     metadata: hasEntry ? snapshot.metadata : undefined,

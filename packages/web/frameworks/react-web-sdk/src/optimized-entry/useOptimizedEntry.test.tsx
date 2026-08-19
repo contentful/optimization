@@ -1,9 +1,18 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { ManagedEntryDescriptor } from '@contentful/optimization-web/core-sdk'
-import { getOptimizedEntrySourceKey } from '@contentful/optimization-web/presentation'
-import { act, useState } from 'react'
+import {
+  getOptimizedEntrySourceKey,
+  OptimizedEntryController,
+  type OptimizedEntrySnapshot,
+} from '@contentful/optimization-web/presentation'
+import { act, useLayoutEffect, useRef, useState } from 'react'
 import type { LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
-import type { OptimizationContextValue, OptimizationSdk } from '../context/OptimizationContext'
+import {
+  OptimizationContext,
+  type OptimizationContextValue,
+  type OptimizationSdk,
+} from '../context/OptimizationContext'
+import { OptimizationHydrationContext } from '../context/OptimizationHydrationContext'
 import {
   createOptimizationSdk,
   createRuntime,
@@ -12,7 +21,11 @@ import {
   createOptimizableTestEntry as makeOptimizableEntry,
   renderWithOptimizationProviders,
 } from '../test/sdkTestUtils'
-import { useOptimizedEntry, type UseOptimizedEntryResult } from './useOptimizedEntry'
+import {
+  useOptimizedEntry,
+  useOptimizedEntrySnapshot,
+  type UseOptimizedEntryResult,
+} from './useOptimizedEntry'
 
 function createDeferred<T>(): {
   readonly promise: Promise<T>
@@ -24,6 +37,10 @@ function createDeferred<T>(): {
   })
 
   return { promise, resolve: resolveDeferred }
+}
+
+function getPresentationCandidate(snapshot: OptimizedEntrySnapshot): string {
+  return snapshot.loadingPresentation.showLoadingFallback ? 'loading' : snapshot.entry.sys.id
 }
 
 async function renderHook(params: {
@@ -69,6 +86,233 @@ async function renderHook(params: {
 }
 
 describe('useOptimizedEntry', () => {
+  it('attaches the listener, adopts options, and connects before component layout effects', async () => {
+    const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const { optimization } = createRuntime((entry) => ({ entry }))
+    const setSnapshotListener = rs.spyOn(OptimizedEntryController.prototype, 'setSnapshotListener')
+    const updateOptions = rs.spyOn(OptimizedEntryController.prototype, 'updateOptions')
+    const connect = rs.spyOn(OptimizedEntryController.prototype, 'connect')
+    const disconnect = rs.spyOn(OptimizedEntryController.prototype, 'disconnect')
+    const layoutObservations: Array<{
+      readonly connected: boolean
+      readonly listenerAttached: boolean
+      readonly optionsAdopted: boolean
+    }> = []
+
+    function Probe(): null {
+      useOptimizedEntry({ baselineEntry })
+      useLayoutEffect(() => {
+        layoutObservations.push({
+          connected: connect.mock.calls.length > 0,
+          listenerAttached: setSnapshotListener.mock.calls.some(
+            ([listener]) => listener !== undefined,
+          ),
+          optionsAdopted: updateOptions.mock.calls.length > 0,
+        })
+      }, [])
+      return null
+    }
+
+    const view = await renderWithOptimizationProviders(<Probe />, optimization)
+
+    expect(layoutObservations).toEqual([
+      { connected: true, listenerAttached: true, optionsAdopted: true },
+    ])
+
+    await view.unmount()
+
+    expect(setSnapshotListener).toHaveBeenLastCalledWith(undefined)
+    expect(disconnect).toHaveBeenCalledTimes(1)
+    setSnapshotListener.mockRestore()
+    updateOptions.mockRestore()
+    connect.mockRestore()
+    disconnect.mockRestore()
+  })
+
+  it('presents loading before an unseeded optimized baseline can become visible', async () => {
+    const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const { optimization } = createRuntime((entry) => ({ entry }))
+    const renderCandidates: string[] = []
+
+    function Probe(): React.JSX.Element {
+      const snapshot = useOptimizedEntrySnapshot({ baselineEntry })
+      const candidate = getPresentationCandidate(snapshot)
+      renderCandidates.push(candidate)
+
+      return <span>{candidate}</span>
+    }
+
+    const view = await renderWithOptimizationProviders(<Probe />, optimization)
+
+    expect(renderCandidates[0]).toBe('loading')
+    expect(renderCandidates.every((candidate) => candidate === 'loading')).toBe(true)
+    expect(view.container.textContent).toBe('loading')
+
+    await view.unmount()
+  })
+
+  it('keeps preserve-server content visible through snapshot-to-live adoption', async () => {
+    const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const { optimization } = createRuntime((entry) => ({ entry }))
+    const renderCandidates: string[] = []
+    let adoptLiveSdk: (() => void) | undefined = undefined
+
+    function Probe(): React.JSX.Element {
+      const snapshot = useOptimizedEntrySnapshot({ baselineEntry })
+      const candidate = getPresentationCandidate(snapshot)
+      renderCandidates.push(candidate)
+
+      return <span>{candidate}</span>
+    }
+
+    function AdoptionHarness(): React.JSX.Element {
+      const [liveSdk, setLiveSdk] = useState<OptimizationSdk | undefined>(undefined)
+      adoptLiveSdk = () => {
+        setLiveSdk(optimization)
+      }
+
+      return (
+        <OptimizationContext.Provider
+          value={{ error: undefined, isLive: liveSdk !== undefined, sdk: liveSdk }}
+        >
+          <OptimizationHydrationContext.Provider value="preserve-server">
+            <Probe />
+          </OptimizationHydrationContext.Provider>
+        </OptimizationContext.Provider>
+      )
+    }
+
+    const view = await renderWithOptimizationProviders(<AdoptionHarness />, optimization)
+
+    await act(async () => {
+      adoptLiveSdk?.()
+      await Promise.resolve()
+    })
+
+    expect(renderCandidates.length).toBeGreaterThan(1)
+    expect(renderCandidates.every((candidate) => candidate === baselineEntry.sys.id)).toBe(true)
+    expect(view.container.textContent).toBe(baselineEntry.sys.id)
+
+    await view.unmount()
+  })
+
+  it('does not restore loading after a selected presentation commits', async () => {
+    const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const variantEntry = makeEntry('4k6ZyFQnR2POY5IJLLlJRb')
+    const variantState: SelectedOptimizationArray = [
+      {
+        experienceId: '6IueRX1pS3iMJncbhUQTba',
+        sticky: true,
+        variantIndex: 1,
+        variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
+      },
+    ]
+    const { emit, optimization, setExperienceRequestState } = createRuntime(
+      (entry, selectedOptimizations) => ({
+        entry: selectedOptimizations ? variantEntry : entry,
+        selectedOptimization: selectedOptimizations?.[0],
+      }),
+    )
+    const candidates: string[] = []
+
+    function Probe(): React.JSX.Element {
+      const snapshot = useOptimizedEntrySnapshot({ baselineEntry })
+      const candidate = getPresentationCandidate(snapshot)
+      candidates.push(candidate)
+      return <span>{candidate}</span>
+    }
+
+    const view = await renderWithOptimizationProviders(<Probe />, optimization)
+    await emit(variantState)
+    const committedCandidateIndex = candidates.lastIndexOf(variantEntry.sys.id)
+
+    await setExperienceRequestState({ status: 'pending' })
+    await setExperienceRequestState({ status: 'failed', reason: 'api-error' })
+
+    expect(committedCandidateIndex).toBeGreaterThan(-1)
+    expect(candidates.slice(committedCandidateIndex)).not.toContain('loading')
+    expect(view.container.textContent).toBe(variantEntry.sys.id)
+
+    await view.unmount()
+  })
+
+  it('opens a loading presentation before paint when the baseline ID changes', async () => {
+    const firstEntry = makeEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const secondEntry = makeOptimizableEntry('3Z2hP4vR8sT1nY6mK9qL0a')
+    const { optimization } = createRuntime((entry) => ({ entry }))
+    const secondEntryRenderCandidates: string[] = []
+    const secondEntryPrePaintCandidates: string[] = []
+    let setBaselineEntry: ((entry: typeof firstEntry) => void) | undefined = undefined
+
+    function Probe(): React.JSX.Element {
+      const [baselineEntry, setEntry] = useState(firstEntry)
+      const presentationRef = useRef<HTMLSpanElement>(null)
+      setBaselineEntry = setEntry
+      const snapshot = useOptimizedEntrySnapshot({ baselineEntry })
+      const candidate = getPresentationCandidate(snapshot)
+
+      if (baselineEntry === secondEntry) {
+        secondEntryRenderCandidates.push(candidate)
+      }
+      useLayoutEffect(() => {
+        if (baselineEntry === secondEntry) {
+          queueMicrotask(() => {
+            secondEntryPrePaintCandidates.push(
+              presentationRef.current?.textContent ?? 'missing-presentation',
+            )
+          })
+        }
+      }, [baselineEntry, candidate])
+
+      return <span ref={presentationRef}>{candidate}</span>
+    }
+
+    const view = await renderWithOptimizationProviders(<Probe />, optimization)
+
+    await act(async () => {
+      setBaselineEntry?.(secondEntry)
+      await Promise.resolve()
+    })
+
+    expect(secondEntryRenderCandidates).toContain('loading')
+    expect(secondEntryPrePaintCandidates.length).toBeGreaterThan(0)
+    expect(secondEntryPrePaintCandidates.every((candidate) => candidate === 'loading')).toBe(true)
+    expect(view.container.textContent).toBe('loading')
+
+    await view.unmount()
+  })
+
+  it('does not publish controller state after cleanup', async () => {
+    const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const variantEntry = makeEntry('4k6ZyFQnR2POY5IJLLlJRb')
+    const variantState: SelectedOptimizationArray = [
+      {
+        experienceId: '6IueRX1pS3iMJncbhUQTba',
+        sticky: true,
+        variantIndex: 1,
+        variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
+      },
+    ]
+    const resolveOptimizedEntry = rs.fn((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations ? variantEntry : entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const { emit, optimization } = createRuntime(resolveOptimizedEntry)
+
+    function Probe(): null {
+      useOptimizedEntrySnapshot({ baselineEntry })
+      return null
+    }
+
+    const view = await renderWithOptimizationProviders(<Probe />, optimization)
+    await view.unmount()
+    const resolutionCountAfterCleanup = resolveOptimizedEntry.mock.calls.length
+
+    await emit(variantState)
+
+    expect(resolveOptimizedEntry).toHaveBeenCalledTimes(resolutionCountAfterCleanup)
+  })
+
   it('returns baseline state before optimization is available', async () => {
     const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
     const { optimization } = createRuntime((entry) => ({ entry }))

@@ -110,11 +110,20 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   Shared modeling and narrowing behavior: see
   [`../shared/concepts.md`](../shared/concepts.md#entry-resolution).
   source: web-sdk#presentation/OptimizedEntrySnapshot.ts#OptimizedEntrySnapshot; web-sdk#presentation/OptimizedEntryController.ts#OptimizedEntryController; web-sdk#presentation/OptimizedEntryTrackingAttributes.ts#resolveOptimizedEntryTrackingAttributes; core-sdk#OptimizedEntryMetadata.ts#OptimizedEntryMetadata
-- `<ctfl-optimized-entry>` maps an empty result to the host's native `hidden` state. The element stays
-  connected with its tracking attributes and emits `ctfl-entry-resolved` with the full result, while
-  caller-owned light-DOM nodes stay in place and become visible again when a later result is not
-  empty. A change to only the empty-variant state still emits the resolved event.
-  source: web-sdk#web-components/ContentfulOptimizedEntryElement.ts#ContentfulOptimizedEntryElement
+- The browser controller commits the first selected, baseline, preserved, or timeout/failure
+  presentation for a baseline entry ID. Timeout/failure commits baseline content with matching
+  baseline tracking. Non-live presentation retains committed content and tracking through later
+  defined selections, `undefined`, pending state, and failure state. Live presentation accepts later
+  defined selections, including `[]`, which resolves baseline content and tracking. A different
+  baseline entry ID, SDK replacement, or SDK readiness transition from ready to unready opens a new
+  presentation.
+  source: web-sdk#presentation/OptimizedEntryController.ts#OptimizedEntryController
+- `<ctfl-optimized-entry>` retains producer-supplied native `hidden` while the presentation is open
+  or loading, then removes it for a selected, baseline, fallback, or preserved presentation. An
+  explicitly selected empty variant stays hidden, while a live `[]` replacement uses the
+  controller's baseline presentation. The element stays connected, retains its light-DOM nodes, and
+  emits `ctfl-entry-resolved` when resolved data changes.
+  source: web-sdk#web-components/ContentfulOptimizedEntryElement.ts#ContentfulOptimizedEntryElement; web-sdk#presentation/OptimizedEntryController.ts#OptimizedEntryController
 - **Control-variant precision (subtle):** `selectedOptimization` is `undefined` ONLY when no
   experience matched — no selections, entry not optimized, no optimization entry, or no matching
   selection. When an experience matches but assigns the visitor to the CONTROL/baseline variant
@@ -234,6 +243,6 @@ None (imperative class + Web Components; no React surface). Web Components eleme
 - Preview overrides force audiences, variants, and inline-variable flag values by mutating
   stateful SDK signals from an API baseline; panel-open state forces optimized entries to
   live-update. See [`../shared/concepts.md`](../shared/concepts.md#preview-overrides).
-  source: preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanelToSdk; core-sdk#preview-support/PreviewOverrideManager.ts#setVariantOverride; core-sdk#preview-support/applyChangeOverrides.ts#applyChangeOverrides; web-sdk#presentation/OptimizedEntryController.ts#resolveShouldLiveUpdate
+  source: preview-panel#attachOptimizationPreviewPanel.ts#attachOptimizationPreviewPanelToSdk; core-sdk#preview-support/PreviewOverrideManager.ts#setVariantOverride; core-sdk#preview-support/applyChangeOverrides.ts#applyChangeOverrides; web-sdk#presentation/OptimizedEntryControllerPredicates.ts#resolveShouldLiveUpdate
 - Validation: `pnpm implementation:run -- web-sdk typecheck`; `pnpm test:e2e:web-sdk`.
   source: impl:web-sdk#package.json

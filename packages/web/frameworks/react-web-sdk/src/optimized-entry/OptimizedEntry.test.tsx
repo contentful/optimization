@@ -137,13 +137,14 @@ function createDeferred<T>(): {
 
 describe('OptimizedEntry', () => {
   const baseline = makeEntry('4ib0hsHWoSOnCVdDkizE8d')
+  const optimizedVariantBaseline = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
   const optimizedBaseline = makeOptimizableEntry('6KfLDCdA75BGwr5HfSeXac')
   const variantA = makeEntry('4k6ZyFQnR2POY5IJLLlJRb')
   const variantB = makeEntry('2qVK4T5lnScbswoyBuGipd')
 
-  const baselineParent = makeEntry('3Z2hP4vR8sT1nY6mK9qL0a')
+  const baselineParent = makeOptimizableEntry('3Z2hP4vR8sT1nY6mK9qL0a')
   const variantParent = makeEntry('5mN8rY2pL6qT9vW3xA4bCd')
-  const baselineChild = makeEntry('7pQ2rS5tU8vW1xY4zA6bCd')
+  const baselineChild = makeOptimizableEntry('7pQ2rS5tU8vW1xY4zA6bCd')
   const variantChild = makeEntry('9sT4uV7wX0yZ3aB6cD8eFg')
 
   function makeMergeTagEntry(id: string): MergeTagEntry {
@@ -284,7 +285,9 @@ describe('OptimizedEntry', () => {
     })
 
     const view = await renderComponent(
-      <OptimizedEntry baselineEntry={baseline}>{(resolved) => readTitle(resolved)}</OptimizedEntry>,
+      <OptimizedEntry baselineEntry={optimizedVariantBaseline}>
+        {(resolved) => readTitle(resolved)}
+      </OptimizedEntry>,
       optimization,
     )
 
@@ -511,8 +514,11 @@ describe('OptimizedEntry', () => {
     expect(view.container.textContent).toContain('6KfLDCdA75BGwr5HfSeXac')
     expect(view.container.textContent).not.toContain('loading')
 
-    const loadingWrapper = getWrapper(view.container)
-    expect(loadingWrapper.dataset.ctflEntryId).toBeUndefined()
+    const resolvedWrapper = getWrapper(view.container)
+    expect(resolvedWrapper.dataset.ctflBaselineId).toBe('6KfLDCdA75BGwr5HfSeXac')
+    expect(resolvedWrapper.dataset.ctflEntryId).toBe('6KfLDCdA75BGwr5HfSeXac')
+    expect(resolvedWrapper.dataset.ctflOptimizationId).toBeUndefined()
+    expect(resolvedWrapper.dataset.ctflVariantIndex).toBe('0')
 
     await view.unmount()
     rs.useRealTimers()
@@ -559,7 +565,9 @@ describe('OptimizedEntry', () => {
     })
 
     const view = await renderComponent(
-      <OptimizedEntry baselineEntry={baseline}>{(resolved) => readTitle(resolved)}</OptimizedEntry>,
+      <OptimizedEntry baselineEntry={optimizedVariantBaseline}>
+        {(resolved) => readTitle(resolved)}
+      </OptimizedEntry>,
       optimization,
     )
 
@@ -614,7 +622,7 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
-  it('keeps preserve-server content visible while onEntryResolved waits for settled state', async () => {
+  it('keeps preserve-server content visible and resolves it immediately', async () => {
     const onEntryResolved = rs.fn()
     const { optimization, setExperienceRequestState } = createRuntime((entry) => ({ entry }))
 
@@ -628,17 +636,18 @@ describe('OptimizedEntry', () => {
     )
 
     expect(view.container.textContent).toContain('6KfLDCdA75BGwr5HfSeXac')
-    expect(getWrapper(view.container).dataset.ctflEntryId).toBeUndefined()
-    expect(onEntryResolved).not.toHaveBeenCalled()
-
-    await setExperienceRequestState({ status: 'success' })
-
+    expect(getWrapper(view.container).dataset.ctflEntryId).toBe('6KfLDCdA75BGwr5HfSeXac')
     expect(onEntryResolved).toHaveBeenCalledWith(
       expect.objectContaining({
         baselineEntryId: '6KfLDCdA75BGwr5HfSeXac',
         entryId: '6KfLDCdA75BGwr5HfSeXac',
       }),
     )
+    expect(onEntryResolved).toHaveBeenCalledTimes(1)
+
+    await setExperienceRequestState({ status: 'success' })
+
+    expect(onEntryResolved).toHaveBeenCalledTimes(1)
     expect(getWrapper(view.container).dataset.ctflEntryId).toBe('6KfLDCdA75BGwr5HfSeXac')
 
     await view.unmount()
@@ -697,7 +706,7 @@ describe('OptimizedEntry', () => {
     })
 
     const props: DerivedMetadataOverrideProps = {
-      baselineEntry: baseline,
+      baselineEntry: optimizedVariantBaseline,
       children: (resolved: TestEntry) => readTitle(resolved),
       'data-ctfl-baseline-id': '4ib0hsHWoSOnCVdDkizE8d',
       'data-ctfl-duplication-scope': 'caller-scope',
@@ -910,8 +919,12 @@ describe('OptimizedEntry', () => {
     })
 
     expect(view.container.textContent).toContain('6KfLDCdA75BGwr5HfSeXac')
-    expect(loadingTarget.style.visibility).toBe('')
-    expect(getWrapper(view.container).dataset.ctflEntryId).toBeUndefined()
+    expect(view.container.querySelector('[data-ctfl-loading-layout-target]')).toBeNull()
+    const resolvedWrapper = getWrapper(view.container)
+    expect(resolvedWrapper.dataset.ctflBaselineId).toBe('6KfLDCdA75BGwr5HfSeXac')
+    expect(resolvedWrapper.dataset.ctflEntryId).toBe('6KfLDCdA75BGwr5HfSeXac')
+    expect(resolvedWrapper.dataset.ctflOptimizationId).toBeUndefined()
+    expect(resolvedWrapper.dataset.ctflVariantIndex).toBe('0')
 
     await view.unmount()
   })
