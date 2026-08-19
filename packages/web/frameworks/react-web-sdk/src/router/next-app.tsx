@@ -6,9 +6,16 @@ import { buildAutoPagePayload } from '../auto-page/pagePayload'
 import type { AutoPagePayload, AutoPagePayloadOptions } from '../auto-page/types'
 import { useAutoPageEmitter, type InitialAutoPageEvent } from '../auto-page/useAutoPageEmitter'
 
-function toSearch(searchParams: ReturnType<typeof useSearchParams>): string {
+function toSearch(searchParams: { readonly toString: () => string }): string {
   const value = searchParams.toString()
   return value.length > 0 ? `?${value}` : ''
+}
+
+function toBrowserRouteKey(): string | undefined {
+  if (typeof window === 'undefined') return undefined
+
+  const search = toSearch(new URLSearchParams(window.location.search))
+  return `${window.location.pathname}${search}`
 }
 
 function toQueryDictionary(
@@ -69,19 +76,13 @@ export function useNextAppAutoPageInputs({
     }),
     [routerPathname, routerSearch, routerSearchParams],
   )
-  const browserRouteKey =
-    typeof window === 'undefined'
-      ? undefined
-      : `${window.location.pathname}${window.location.search}`
+  const browserRouteKey = toBrowserRouteKey()
   const [lastBrowserConfirmedRoute, setLastBrowserConfirmedRoute] = useState<
     NextAppRouteSnapshot | undefined
   >(undefined)
 
   useEffect(() => {
-    const committedBrowserRouteKey =
-      typeof window === 'undefined'
-        ? undefined
-        : `${window.location.pathname}${window.location.search}`
+    const committedBrowserRouteKey = toBrowserRouteKey()
     if (committedBrowserRouteKey !== routerRouteSnapshot.routeKey) return
 
     setLastBrowserConfirmedRoute((current) =>

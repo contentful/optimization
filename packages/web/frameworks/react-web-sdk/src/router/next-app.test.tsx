@@ -237,6 +237,35 @@ describe('NextAppAutoPageTracker', () => {
     await rendered.unmount()
   })
 
+  it('keeps a percent-encoded browser route during stale hook replay', async () => {
+    const sdk = createOptimizationSdk()
+    const onInputs = rs.fn<(inputs: ReturnType<typeof useNextAppAutoPageInputs>) => void>()
+    currentPathname = '/search'
+    currentSearchParams = new URLSearchParams('q=hello%20world')
+    window.history.replaceState(null, '', '/search?q=hello%20world')
+
+    const rendered = await renderTracker(<AutoPageInputsProbe onInputs={onInputs} />, sdk)
+
+    expect(window.location.search).toBe('?q=hello%20world')
+    expect(onInputs.mock.calls.at(-1)?.[0].routeKey).toBe('/search?q=hello+world')
+
+    setCurrentRoute('/stale', new URLSearchParams('q=older'), false)
+    await rendered.rerender(<AutoPageInputsProbe onInputs={onInputs} />)
+
+    const inputs = onInputs.mock.calls.at(-1)?.[0]
+    expect(inputs?.routeKey).toBe('/search?q=hello+world')
+    expect(inputs?.buildPagePayload({ isInitialEmission: false })).toEqual({
+      properties: {
+        path: '/search',
+        query: { q: 'hello world' },
+        search: '?q=hello+world',
+        url: `${window.location.origin}/search?q=hello+world`,
+      },
+    })
+
+    await rendered.unmount()
+  })
+
   it('keeps the attempted latest route across readiness without suppressing a later route', async () => {
     const callback = createDeferred<undefined>()
     const trackCurrentPage = rs
