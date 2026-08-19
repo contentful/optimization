@@ -22,6 +22,11 @@ const INSIGHTS_BASE_URL = process.env.INSIGHTS_BASE_URL ?? `${BASE_HOST}:${PORT}
 const app = createServer(
   http.get('*/health', () => HttpResponse.text('ok')),
   ...getContentfulHandlers(`*${CONTENTFUL_PATH}`),
+  // The CDA is also served from the host root, because SDK clients that accept
+  // only a `host[:port]` cannot express the `/contentful/` namespace above.
+  // `contentful.js` has `basePath` and keeps using the prefixed mount;
+  // `contentful.swift` has no equivalent and uses this one.
+  ...getContentfulHandlers('*/'),
   ...getExperienceHandlers(`*${EXPERIENCE_PATH}`),
   ...getInsightsHandlers(`*${INSIGHTS_PATH}`),
 )

@@ -4,6 +4,9 @@ import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const BASE_DIR = './src/contentful/data/entries'
+const SPACE_DATA_PATH = './src/contentful/data/space/ctfl-space-data.json'
+/** Mirrors the `limit` Contentful SDKs send when reading the space's locales. */
+const LOCALES_LIMIT = 1000
 
 function getContentTypeId(entry: Record<string, unknown>): string | undefined {
   const { sys } = entry
@@ -83,7 +86,11 @@ async function handleContentTypeQuery(
     })
     const requestedLimit = Number(searchParams.get('limit') ?? 100)
     const limit = Number.isInteger(requestedLimit) && requestedLimit >= 0 ? requestedLimit : 100
-    const items = filtered.slice(0, limit)
+    const requestedSkip = Number(searchParams.get('skip') ?? 0)
+    const skip = Number.isInteger(requestedSkip) && requestedSkip >= 0 ? requestedSkip : 0
+    // Paginate like the CDA: without honoring `skip`, every page returns the
+    // first one and paging consumers silently loop over the same entries.
+    const items = filtered.slice(skip, skip + limit)
 
     if (searchParams.get('cursor') === 'true') {
       return HttpResponse.json(
@@ -92,13 +99,49 @@ async function handleContentTypeQuery(
       )
     } else {
       return HttpResponse.json(
-        { sys: { type: 'Array' }, total: filtered.length, skip: 0, limit, items },
+        { sys: { type: 'Array' }, total: filtered.length, skip, limit, items },
         { headers: CORS_HEADERS, status: 200 },
       )
     }
   } catch {
     return HttpResponse.json(
       { error: 'Failed to load entries.' },
+      { headers: CORS_HEADERS, status: 500 },
+    )
+  }
+}
+
+/**
+ * Serves the space's locale set from the space fixture.
+ *
+ * Contentful SDKs that resolve locale fallback chains client-side, such as
+ * `contentful.swift`, fetch this endpoint before their first entry query and
+ * cannot decode entries without it. `contentful.js` sends `locale` to the API
+ * instead, so web consumers never request it.
+ */
+async function handleLocalesQuery(searchParams: URLSearchParams): Promise<Response> {
+  try {
+    const text = await readFile(SPACE_DATA_PATH, 'utf8')
+    const json: unknown = JSON.parse(text)
+    const locales =
+      isRecord(json) && Array.isArray(json.locales) ? json.locales.filter(isRecord) : []
+    const requestedLimit = Number(searchParams.get('limit') ?? LOCALES_LIMIT)
+    const limit =
+      Number.isInteger(requestedLimit) && requestedLimit >= 0 ? requestedLimit : LOCALES_LIMIT
+
+    return HttpResponse.json(
+      {
+        sys: { type: 'Array' },
+        total: locales.length,
+        skip: 0,
+        limit,
+        items: locales.slice(0, limit),
+      },
+      { headers: CORS_HEADERS, status: 200 },
+    )
+  } catch {
+    return HttpResponse.json(
+      { error: 'Failed to load locales.' },
       { headers: CORS_HEADERS, status: 500 },
     )
   }
@@ -215,6 +258,11 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
           'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-contentful-user-agent',
         },
       }),
+    ),
+
+    http.get(
+      `${baseUrl}spaces/:spaceId/environments/:environmentId/locales`,
+      async ({ request }) => await handleLocalesQuery(new URL(request.url).searchParams),
     ),
 
     http.get(
