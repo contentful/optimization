@@ -12,24 +12,14 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
- * `PreviewContentfulClient` backed by `contentful.java`'s `CDAClient` ([MockContentfulClient]),
- * targeting the local mock server rather than Contentful's production CDA.
+ * `PreviewContentfulClient` backed by `contentful.java`'s `CDAClient` ([ContentfulFetcher.client]).
  *
- * Wrapping an existing Contentful SDK client is the integration the protocol documents, as opposed
- * to the built-in `ContentfulHTTPPreviewClient`. The protocol is dictionary-shaped, so fetched
- * entries are encoded back down with `CTEntry.toMap()`.
- *
- * `fetchAudienceAndExperienceEntries` issues its `nt_audience` and `nt_experience` requests
- * concurrently against the same [CDAClient] instance. `CDAClient` builds each response's array of
- * resources (and its own content-type cache) on shared instance state while a call is in flight, so
- * two concurrent `.all()` calls on one client can interleave and silently drop entries from
- * whichever response finishes parsing "in the middle" of the other. [getEntries] takes a [mutex] to
- * serialize calls against this client and avoid that corruption; the built-in
- * `ContentfulHTTPPreviewClient` doesn't need this because each of its requests is an independent
- * stateless `OkHttp` call.
+ * [mutex] serializes calls: `CDAClient` mutates shared instance state (its resource array, its
+ * content-type cache) while a call is in flight, so concurrent `.all()` calls can interleave and
+ * silently drop entries.
  */
 class MockPreviewContentfulClient(
-    private val client: CDAClient = MockContentfulClient.shared,
+    private val client: CDAClient = ContentfulFetcher.client,
 ) : PreviewContentfulClient {
 
     private val mutex = Mutex()
@@ -72,16 +62,9 @@ class MockPreviewContentfulClient(
     }
 
     /**
-     * Encodes [this] the same way [CTEntry.toMap] does, but restores any Link/Array<Link> field
-     * `contentful.java` dropped because its target couldn't be resolved.
-     *
-     * The mock server's content-type-filtered `entries` endpoint (used here, unlike the by-id
-     * endpoint [ContentfulFetcher] uses) never returns an `includes` section, so `contentful.java`
-     * can't resolve any of an entry's linked entries and silently removes those fields rather than
-     * keeping them as link stubs the way the raw Contentful REST response would. The preview
-     * mappers (`entryMappers.ts`) only ever read `sys.id` off such fields, so restoring the raw
-     * `{sys: {type: "Link", ...}}` stub `contentful.java` parsed before resolution is enough to
-     * unblock them, without needing the target entry's fields.
+     * Encodes [this] like [CTEntry.toMap], restoring any Link/Array<Link> field `contentful.java`
+     * dropped because it couldn't resolve the target (this endpoint returns no `includes` section).
+     * The preview mappers only read `sys.id` off link fields, so the raw link stub is enough.
      */
     @Suppress("UNCHECKED_CAST")
     private fun CDAEntry.toPreviewMap(): Map<String, Any> {

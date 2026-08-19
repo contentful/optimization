@@ -147,6 +147,39 @@ async function handleLocalesQuery(searchParams: URLSearchParams): Promise<Respon
   }
 }
 
+/**
+ * Serves the space's content-type definitions from the space fixture.
+ *
+ * `contentful.java` requires this to resolve Rich Text fields and 404s hard without it;
+ * `contentful.js` and `contentful.swift` don't request it.
+ */
+async function handleContentTypesQuery(searchParams: URLSearchParams): Promise<Response> {
+  try {
+    const text = await readFile(SPACE_DATA_PATH, 'utf8')
+    const json: unknown = JSON.parse(text)
+    const contentTypes =
+      isRecord(json) && Array.isArray(json.contentTypes) ? json.contentTypes.filter(isRecord) : []
+    const requestedLimit = Number(searchParams.get('limit') ?? 100)
+    const limit = Number.isInteger(requestedLimit) && requestedLimit >= 0 ? requestedLimit : 100
+
+    return HttpResponse.json(
+      {
+        sys: { type: 'Array' },
+        total: contentTypes.length,
+        skip: 0,
+        limit,
+        items: contentTypes.slice(0, limit),
+      },
+      { headers: CORS_HEADERS, status: 200 },
+    )
+  } catch {
+    return HttpResponse.json(
+      { error: 'Failed to load content types.' },
+      { headers: CORS_HEADERS, status: 500 },
+    )
+  }
+}
+
 function handleEntryIdError(err: unknown, entryId: string): Response {
   if (typeof err === 'object' && err && 'code' in err && err.code === 'ENOENT') {
     return HttpResponse.json(
@@ -263,6 +296,11 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
     http.get(
       `${baseUrl}spaces/:spaceId/environments/:environmentId/locales`,
       async ({ request }) => await handleLocalesQuery(new URL(request.url).searchParams),
+    ),
+
+    http.get(
+      `${baseUrl}spaces/:spaceId/environments/:environmentId/content_types`,
+      async ({ request }) => await handleContentTypesQuery(new URL(request.url).searchParams),
     ),
 
     http.get(

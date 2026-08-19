@@ -1,30 +1,45 @@
 package com.contentful.optimization.shared
 
 import android.util.Log
+import com.contentful.java.cda.CDAClient
 import com.contentful.java.cda.CDAEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
-/**
- * Fetches the home screen's content entries from the Contentful Delivery API.
- *
- * Entry-ID lookup is app-owned: the Optimization SDK resolves personalization against entries the
- * app supplies, it does not fetch them. The returned [CDAEntry] values go straight into the SDK's
- * typed entry points (`OptimizedEntry(entry: CDAEntry, ...)`, `OptimizedEntryView.setEntry(entry:
- * CDAEntry, ...)`, `CTEntry.from(CDAEntry)`), which encode them through `CTEntry` — this object does
- * no CDA JSON parsing or link resolution of its own; that comes from `contentful.java`'s `CDAClient`
- * via [MockContentfulClient].
- */
+// Shared CDAClient for every CDA read: home-screen entries here, plus the preview panel's
+// audience/experience fetch in MockPreviewContentfulClient. `setEndpoint` points it at the mock
+// server's `/contentful/` mount instead of `cdn.contentful.com`; `setToken` is required by the
+// builder even though the mock ignores auth.
 object ContentfulFetcher {
 
     private const val TAG = "ContentfulFetcher"
     private const val MAX_ATTEMPTS = 3
     private const val RETRY_BACKOFF_MS = 250L
+    private const val MOCK_ACCESS_TOKEN = "mock-access-token"
 
     // Matches the `include=10` CDA contract: linked entries are resolved by contentful.java up to
     // ten levels deep.
     private const val INCLUDE_DEPTH = 10
+
+    val client: CDAClient by lazy {
+        val httpClient = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(45, TimeUnit.SECONDS)
+            .build()
+
+        CDAClient.builder()
+            .setSpace(AppConfig.contentfulSpaceId)
+            .setEnvironment(AppConfig.environment)
+            .setToken(MOCK_ACCESS_TOKEN)
+            .setEndpoint(AppConfig.contentfulBaseUrl)
+            .setCallFactory(httpClient)
+            .build()
+    }
 
     suspend fun fetchEntries(ids: List<String>, locale: String): List<CDAEntry> {
         val entries = mutableListOf<CDAEntry>()
@@ -55,7 +70,7 @@ object ContentfulFetcher {
     private suspend fun fetchEntryOnce(id: String, locale: String, attempt: Int): CDAEntry? =
         withContext(Dispatchers.IO) {
             try {
-                val array = MockContentfulClient.shared
+                val array = client
                     .fetch(CDAEntry::class.java)
                     .where("sys.id", id)
                     .include(INCLUDE_DEPTH)
