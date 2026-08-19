@@ -8,6 +8,7 @@ import android.widget.TextView
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.contentful.optimization.app.views.support.setTestTag
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.shared.RichText
 import com.contentful.optimization.views.OptimizationManager
 import com.contentful.optimization.views.OptimizedEntryView
@@ -33,34 +34,33 @@ object ContentEntryViewBinder {
      */
     fun create(
         context: Context,
-        entry: Map<String, Any>,
+        entry: CTEntry,
         resolvedBaselineText: String? = null,
     ): View {
-        val entryId = entryId(entry)
+        val entryId = entry.id ?: ""
 
         val view = OptimizedEntryView(context).apply {
             accessibilityIdentifier = "content-entry-$entryId"
         }
-        view.setContentRenderer { resolvedEntry ->
-            val text = if (resolvedBaselineText != null && entryId(resolvedEntry) == entryId) {
+        view.setContentRenderer { resolvedMap ->
+            val resolvedEntry = CTEntry.from(resolvedMap)
+            val text = if (resolvedBaselineText != null && (resolvedEntry.id ?: "") == entryId) {
                 resolvedBaselineText
             } else {
                 null
             }
             renderEntryColumn(context, resolvedEntry, entryId, text)
         }
-        view.setEntry(entry)
+        view.setEntry(entry.toMap())
         return view
     }
 
     internal fun renderEntryColumn(
         context: Context,
-        resolvedEntry: Map<String, Any>,
+        resolvedEntry: CTEntry,
         entryId: String,
         preResolvedText: String? = null,
     ): View {
-        @Suppress("UNCHECKED_CAST")
-        val fields = resolvedEntry["fields"] as? Map<String, Any>
         // 16dp matches the Compose ContentEntryView's `.padding(16.dp)` — but the Compose Column
         // uses Material3 typography with tighter line height than the default platform TextView,
         // which makes the analytics block sit just below the viewport on identical content. Trim
@@ -98,7 +98,7 @@ object ContentEntryViewBinder {
                         val owner = v.findViewTreeLifecycleOwner() ?: return
                         owner.lifecycleScope.launch {
                             val resolved = RichText.resolveText(
-                                fields?.get("text"),
+                                resolvedEntry.getField<Any>("text"),
                                 OptimizationManager.client,
                             )
                             textView.text = resolved
@@ -122,9 +122,3 @@ internal fun Context.dp(value: Int): Int =
         value.toFloat(),
         resources.displayMetrics,
     ).toInt()
-
-@Suppress("UNCHECKED_CAST")
-internal fun entryId(entry: Map<String, Any>): String {
-    val sys = entry["sys"] as? Map<String, Any>
-    return sys?.get("id") as? String ?: ""
-}

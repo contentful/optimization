@@ -16,28 +16,24 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.contentful.optimization.compose.LocalOptimizationClient
 import com.contentful.optimization.compose.OptimizedEntry
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.shared.RichText
 
 @Composable
-fun NestedContentEntryView(entry: Map<String, Any>) {
-    val entryId = entryId(entry)
+fun NestedContentEntryView(entry: CTEntry) {
+    val entryId = entry.id ?: ""
 
-    @Suppress("UNCHECKED_CAST")
-    val fields = entry["fields"] as? Map<String, Any>
-    val nestedArray = fields?.get("nested") as? List<*> ?: emptyList<Any>()
-
-    @Suppress("UNCHECKED_CAST")
-    val nestedEntries = nestedArray.filterIsInstance<Map<String, Any>>().filter { item ->
-        val sys = item["sys"] as? Map<String, Any>
-        sys?.get("id") != null
-    }
+    val nestedEntries = entry.getField<List<Map<String, Any>>>("nested")
+        .orEmpty()
+        .map(CTEntry::from)
+        .filter { it.id != null }
 
     Column {
         OptimizedEntry(
-            entry = entry,
+            entry = entry.toMap(),
             accessibilityIdentifier = "content-entry-$entryId",
         ) { resolvedEntry ->
-            NestedEntryText(entry = resolvedEntry)
+            NestedEntryText(entry = CTEntry.from(resolvedEntry))
         }
 
         nestedEntries.forEach { nestedEntry ->
@@ -47,14 +43,14 @@ fun NestedContentEntryView(entry: Map<String, Any>) {
 }
 
 @Composable
-private fun NestedEntryText(entry: Map<String, Any>) {
-    val id = entryId(entry)
+private fun NestedEntryText(entry: CTEntry) {
+    val id = entry.id ?: ""
     val client = LocalOptimizationClient.current
-    @Suppress("UNCHECKED_CAST")
-    val fields = entry["fields"] as? Map<String, Any>
-    var text by remember(entry) { mutableStateOf("No content") }
-    LaunchedEffect(entry) {
-        text = RichText.resolveText(fields?.get("text"), client)
+    // CTEntry has no structural equals, so key on its Map form (see ContentEntryView).
+    val entryMap = entry.toMap()
+    var text by remember(entryMap) { mutableStateOf("No content") }
+    LaunchedEffect(entryMap) {
+        text = RichText.resolveText(entry.getField<Any>("text"), client)
     }
 
     Column(
@@ -70,11 +66,4 @@ private fun NestedEntryText(entry: Map<String, Any>) {
     }
 }
 
-@Suppress("UNCHECKED_CAST")
-fun isNestedContent(entry: Map<String, Any>): Boolean {
-    val sys = entry["sys"] as? Map<String, Any> ?: return false
-    val contentType = sys["contentType"] as? Map<String, Any> ?: return false
-    val innerSys = contentType["sys"] as? Map<String, Any> ?: return false
-    val id = innerSys["id"] as? String ?: return false
-    return id == "nestedContent"
-}
+fun isNestedContent(entry: CTEntry): Boolean = entry.contentTypeId == "nestedContent"

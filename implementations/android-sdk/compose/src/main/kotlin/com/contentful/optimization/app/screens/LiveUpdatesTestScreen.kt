@@ -31,6 +31,8 @@ import com.contentful.optimization.compose.LocalTrackingConfig
 import com.contentful.optimization.compose.OptimizationLazyColumn
 import com.contentful.optimization.compose.OptimizedEntry
 import com.contentful.optimization.compose.TrackingConfig
+import com.contentful.java.cda.CDAEntry
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.shared.AppConfig
 import com.contentful.optimization.shared.ContentfulFetcher
 import kotlinx.coroutines.launch
@@ -40,7 +42,7 @@ fun LiveUpdatesTestScreen(onClose: () -> Unit) {
     val client = LocalOptimizationClient.current
     val scope = rememberCoroutineScope()
 
-    var entry by remember { mutableStateOf<Map<String, Any>?>(null) }
+    var entry by remember { mutableStateOf<CDAEntry?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var isIdentified by remember { mutableStateOf(false) }
     var globalLiveUpdates by remember { mutableStateOf(false) }
@@ -249,14 +251,9 @@ fun LiveUpdatesTestScreen(onClose: () -> Unit) {
 }
 
 @Composable
-private fun LiveUpdatesEntryDisplay(entry: Map<String, Any>, prefix: String) {
-    @Suppress("UNCHECKED_CAST")
-    val fields = entry["fields"] as? Map<String, Any>
-    val text = fields?.get("text") as? String ?: "No content"
-
-    @Suppress("UNCHECKED_CAST")
-    val sys = entry["sys"] as? Map<String, Any>
-    val entryId = sys?.get("id") as? String ?: ""
+private fun LiveUpdatesEntryDisplay(entry: CTEntry, prefix: String) {
+    val text = entry.getField<String>("text") ?: "No content"
+    val entryId = entry.id ?: ""
 
     Column(modifier = Modifier.testTag("$prefix-container")) {
         Text(

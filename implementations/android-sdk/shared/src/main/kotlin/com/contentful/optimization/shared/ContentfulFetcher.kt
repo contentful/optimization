@@ -1,36 +1,48 @@
 package com.contentful.optimization.shared
 
 import android.util.Log
+import com.contentful.java.cda.CDAClient
+import com.contentful.java.cda.CDAEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.json.JSONArray
-import org.json.JSONObject
-import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
+// Shared CDAClient for every CDA read: home-screen entries here, plus the preview panel's
+// audience/experience fetch in MockPreviewContentfulClient. `setEndpoint` points it at the mock
+// server's `/contentful/` mount instead of `cdn.contentful.com`; `setToken` is required by the
+// builder even though the mock ignores auth.
 object ContentfulFetcher {
 
     private const val TAG = "ContentfulFetcher"
     private const val MAX_ATTEMPTS = 3
     private const val RETRY_BACKOFF_MS = 250L
+    private const val MOCK_ACCESS_TOKEN = "mock-access-token"
 
-    // Generous timeouts plus a small retry loop keep this fetch path deterministic on a
-    // loaded CI emulator, where the first fetch after activity launch could otherwise time
-    // out under OkHttp's 10s defaults and silently return null — leaving AppConfig entries
-    // unrendered. The mock is reached via the emulator host alias `10.0.2.2` (see
-    // AppConfig.mockHost), so this no longer rides the fragile `adb reverse` tunnel.
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
-        .callTimeout(45, TimeUnit.SECONDS)
-        .build()
+    // Matches the `include=10` CDA contract: linked entries are resolved by contentful.java up to
+    // ten levels deep.
+    private const val INCLUDE_DEPTH = 10
 
-    suspend fun fetchEntries(ids: List<String>, locale: String): List<Map<String, Any>> {
-        val entries = mutableListOf<Map<String, Any>>()
+    val client: CDAClient by lazy {
+        val httpClient = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(45, TimeUnit.SECONDS)
+            .build()
+
+        CDAClient.builder()
+            .setSpace(AppConfig.contentfulSpaceId)
+            .setEnvironment(AppConfig.environment)
+            .setToken(MOCK_ACCESS_TOKEN)
+            .setEndpoint(AppConfig.contentfulBaseUrl)
+            .setCallFactory(httpClient)
+            .build()
+    }
+
+    suspend fun fetchEntries(ids: List<String>, locale: String): List<CDAEntry> {
+        val entries = mutableListOf<CDAEntry>()
         for (id in ids) {
             val entry = fetchEntry(id, locale)
             if (entry != null) {
@@ -42,7 +54,7 @@ object ContentfulFetcher {
         return entries
     }
 
-    private suspend fun fetchEntry(id: String, locale: String): Map<String, Any>? {
+    private suspend fun fetchEntry(id: String, locale: String): CDAEntry? {
         repeat(MAX_ATTEMPTS) { attempt ->
             val result = fetchEntryOnce(id, locale, attempt)
             if (result != null) return result
@@ -53,123 +65,26 @@ object ContentfulFetcher {
         return null
     }
 
-    private suspend fun fetchEntryOnce(id: String, locale: String, attempt: Int): Map<String, Any>? {
-        val queryLocale = URLEncoder.encode(locale, Charsets.UTF_8.name())
-        val url = "${AppConfig.contentfulBaseUrl}spaces/${AppConfig.contentfulSpaceId}" +
-            "/environments/${AppConfig.environment}/entries?sys.id=$id&include=10" +
-            "&locale=$queryLocale"
-
-        return withContext(Dispatchers.IO) {
+    // Single-locale request. Entry resolution expects direct fields such as
+    // `fields.nt_experiences`, so all-locale responses must not be used.
+    private suspend fun fetchEntryOnce(id: String, locale: String, attempt: Int): CDAEntry? =
+        withContext(Dispatchers.IO) {
             try {
-                val request = Request.Builder().url(url).build()
-                val response = httpClient.newCall(request).execute()
-                val code = response.code
-                val body = response.body?.string()
-                if (body == null) {
-                    Log.w(TAG, "fetchEntry[$id] attempt=$attempt: empty body (status=$code)")
-                    return@withContext null
-                }
+                val array = client
+                    .fetch(CDAEntry::class.java)
+                    .where("sys.id", id)
+                    .include(INCLUDE_DEPTH)
+                    .withLocale(locale)
+                    .all()
 
-                val json = JSONObject(body)
-                val items = json.optJSONArray("items")
-                if (items == null || items.length() == 0) {
-                    Log.w(TAG, "fetchEntry[$id] attempt=$attempt: no items (status=$code, body length=${body.length})")
-                    return@withContext null
+                val entry = array.items().firstOrNull() as? CDAEntry
+                if (entry == null) {
+                    Log.w(TAG, "fetchEntry[$id] attempt=$attempt: no items")
                 }
-
-                val entry = jsonObjectToMap(items.getJSONObject(0))
-                val includes = json.optJSONObject("includes")?.let { jsonObjectToMap(it) }
-                resolveLinks(entry, includes)
+                entry
             } catch (e: Exception) {
-                Log.w(TAG, "fetchEntry[$id] attempt=$attempt: ${e.javaClass.simpleName}: ${e.message}")
+                Log.w(TAG, "fetchEntry[$id] attempt=$attempt: ${e.javaClass.simpleName}: ${e.message}", e)
                 null
             }
         }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun resolveLinks(
-        entry: Map<String, Any>,
-        includes: Map<String, Any>?,
-    ): Map<String, Any> {
-        val lookup = mutableMapOf<String, Map<String, Any>>()
-
-        val includeEntries = includes?.get("Entry") as? List<Map<String, Any>>
-        includeEntries?.forEach { e ->
-            val sys = e["sys"] as? Map<String, Any>
-            val id = sys?.get("id") as? String
-            if (id != null) lookup[id] = e
-        }
-
-        val includeAssets = includes?.get("Asset") as? List<Map<String, Any>>
-        includeAssets?.forEach { a ->
-            val sys = a["sys"] as? Map<String, Any>
-            val id = sys?.get("id") as? String
-            if (id != null) lookup[id] = a
-        }
-
-        return resolveValue(entry, lookup) as? Map<String, Any> ?: entry
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun resolveValue(value: Any, lookup: Map<String, Map<String, Any>>, depth: Int = 0): Any {
-        // Each recursion into an object key, array element, or Link target
-        // bumps depth, so reaching a variant entry under
-        // `<parent>.fields.nested[*].fields.nt_experiences[*].fields.nt_variants[*]`
-        // crosses depth 10. A budget of 32 covers nested optimization trees
-        // without risking pathological cycles.
-        if (depth >= 32) return value
-
-        if (value is Map<*, *>) {
-            val dict = value as Map<String, Any>
-            val sys = dict["sys"] as? Map<String, Any>
-            if (sys != null) {
-                val type = sys["type"] as? String
-                val id = sys["id"] as? String
-                if (type == "Link" && id != null) {
-                    val resolved = lookup[id]
-                    if (resolved != null) {
-                        return resolveValue(resolved, lookup, depth + 1)
-                    }
-                }
-            }
-
-            val result = mutableMapOf<String, Any>()
-            for ((key, v) in dict) {
-                result[key] = resolveValue(v, lookup, depth + 1)
-            }
-            return result
-        }
-
-        if (value is List<*>) {
-            return value.map { resolveValue(it ?: return@map it, lookup, depth + 1) }
-        }
-
-        return value
-    }
-
-    private fun jsonObjectToMap(obj: JSONObject): Map<String, Any> {
-        val map = mutableMapOf<String, Any>()
-        for (key in obj.keys()) {
-            map[key] = jsonValueToKotlin(obj.get(key))
-        }
-        return map
-    }
-
-    private fun jsonArrayToList(arr: JSONArray): List<Any> {
-        val list = mutableListOf<Any>()
-        for (i in 0 until arr.length()) {
-            list.add(jsonValueToKotlin(arr.get(i)))
-        }
-        return list
-    }
-
-    private fun jsonValueToKotlin(value: Any): Any {
-        return when (value) {
-            is JSONObject -> jsonObjectToMap(value)
-            is JSONArray -> jsonArrayToList(value)
-            JSONObject.NULL -> "null"
-            else -> value
-        }
-    }
 }

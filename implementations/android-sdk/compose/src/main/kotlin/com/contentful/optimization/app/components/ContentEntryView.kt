@@ -16,28 +16,32 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.contentful.optimization.compose.LocalOptimizationClient
 import com.contentful.optimization.compose.OptimizedEntry
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.shared.RichText
 
 @Composable
-fun ContentEntryView(entry: Map<String, Any>) {
-    val entryId = entryId(entry)
+fun ContentEntryView(entry: CTEntry) {
+    val entryId = entry.id ?: ""
 
     OptimizedEntry(
-        entry = entry,
+        entry = entry.toMap(),
         accessibilityIdentifier = "content-entry-$entryId",
     ) { resolvedEntry ->
-        EntryContent(entry = resolvedEntry, entryId = entryId)
+        EntryContent(entry = CTEntry.from(resolvedEntry), entryId = entryId)
     }
 }
 
 @Composable
-private fun EntryContent(entry: Map<String, Any>, entryId: String) {
+private fun EntryContent(entry: CTEntry, entryId: String) {
     val client = LocalOptimizationClient.current
-    @Suppress("UNCHECKED_CAST")
-    val fields = entry["fields"] as? Map<String, Any>
-    var text by remember(entry) { mutableStateOf("No content") }
-    LaunchedEffect(entry) {
-        text = RichText.resolveText(fields?.get("text"), client)
+    // CTEntry has no structural equals, so key on its Map form: this mirrors the
+    // resolved-content-sensitive keying the previous Map-based implementation relied
+    // on, e.g. re-resolving merge-tag text after an identify() call changes the
+    // profile even when the entry's own sys.id is unchanged.
+    val entryMap = entry.toMap()
+    var text by remember(entryMap) { mutableStateOf("No content") }
+    LaunchedEffect(entryMap) {
+        text = RichText.resolveText(entry.getField<Any>("text"), client)
     }
 
     Column(
@@ -51,10 +55,4 @@ private fun EntryContent(entry: Map<String, Any>, entryId: String) {
         Text(text)
         Text("[Entry: $entryId]")
     }
-}
-
-@Suppress("UNCHECKED_CAST")
-internal fun entryId(entry: Map<String, Any>): String {
-    val sys = entry["sys"] as? Map<String, Any>
-    return sys?.get("id") as? String ?: ""
 }

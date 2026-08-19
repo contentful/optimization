@@ -14,6 +14,7 @@ import com.contentful.optimization.app.views.components.ContentEntryViewBinder
 import com.contentful.optimization.app.views.components.NestedContentEntryViewBinder
 import com.contentful.optimization.app.views.components.isNestedContent
 import com.contentful.optimization.app.views.support.setTestTag
+import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.core.OptimizationApiConfig
 import com.contentful.optimization.core.OptimizationConfig
 import com.contentful.optimization.core.OptimizationLogLevel
@@ -161,7 +162,7 @@ class MainActivity : AppCompatActivity() {
                 val entries = ContentfulFetcher.fetchEntries(
                     AppConfig.entryIds,
                     AppConfig.defaultContentfulLocale,
-                )
+                ).map(CTEntry::from)
                 // Pre-resolve each entry's rich text on the (suspending) coroutine
                 // path BEFORE handing the entry to the synchronous view binder. This
                 // mirrors the iOS pattern where `RichText.resolveText` is a synchronous
@@ -178,9 +179,7 @@ class MainActivity : AppCompatActivity() {
                 // resetting the 2s dwell cycle — so the entry's `trackView` event
                 // never fired and `component-stats-1MwiFl4z…` never appeared.
                 val resolvedBaselineTexts = entries.map { entry ->
-                    @Suppress("UNCHECKED_CAST")
-                    val fields = entry["fields"] as? Map<String, Any>
-                    RichText.resolveText(fields?.get("text"), client)
+                    RichText.resolveText(entry.getField<Any>("text"), client)
                 }
                 renderEntries(entries, resolvedBaselineTexts)
             }
@@ -222,7 +221,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderEntries(
-        entries: List<Map<String, Any>>,
+        entries: List<CTEntry>,
         resolvedBaselineTexts: List<String> = emptyList(),
     ) {
         if (entries.isEmpty()) {
