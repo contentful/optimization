@@ -17,6 +17,8 @@ const INITIAL_EXPERIENCE_PATH = '/ssg-client-personalization?initialExperience=r
 const INITIAL_EXPERIENCE_PRESERVED_PATH = '/page-two?initialExperience=readiness'
 const INITIAL_EXPERIENCE_WATCHDOG_EVIDENCE_TIMEOUT_MS = 2_000
 const diagnosticsByPage = new WeakMap<Page, Diagnostics>()
+const appRouterCsrTest =
+  hasFlag('CSR') && implementation === 'nextjs-sdk_app-router' ? test : test.skip
 const pagesCsrTest =
   hasFlag('CSR') && implementation === 'nextjs-sdk_pages-router' ? test : test.skip
 const pagesSsrTest =
@@ -681,6 +683,65 @@ test.describe('readiness', () => {
               .map(({ pageRouteKey }) => pageRouteKey),
           )
           .toEqual(['/ssg-client-personalization', PAGES.home.path])
+        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page', 'page'])
+        expectNoErrors(diagnostics)
+      } finally {
+        await identifyRequest.remove()
+        recorder.remove()
+      }
+    },
+  )
+
+  appRouterCsrTest(
+    'initial Experience App request root avoids handoff duplicates and emits once later',
+    async ({ page }) => {
+      const diagnostics = watchDiagnostics(page)
+      const recorder = recordExperienceEvents(page)
+      const identifyRequest = await holdNextRequest(page, 'identify')
+      try {
+        await page.goto(INITIAL_EXPERIENCE_PRESERVED_PATH)
+        await expect.poll(identifyRequest.held).toBe(true)
+        await expect(page.getByTestId('page-two-view')).toBeVisible()
+        expect(recorder.events().map(({ type }) => type)).toEqual(['identify'])
+
+        await page.getByTestId('link-home').click()
+        expect(
+          recorder.events().filter(({ type }) => type === 'page'),
+          'the browser-owned home page must wait for the returned identify request',
+        ).toEqual([])
+
+        const heldIdentifyRequest = identifyRequest.request()
+        const releasedIdentifyResponse = page.waitForResponse(
+          (response) => response.request() === heldIdentifyRequest,
+        )
+        identifyRequest.release()
+        const identifyResponse = await releasedIdentifyResponse
+        expect(identifyResponse.request()).toBe(heldIdentifyRequest)
+        expect(identifyResponse.status()).toBe(200)
+        await expect(page).toHaveURL(PAGES.home.path)
+        await expect(page.getByRole('heading', { name: 'Next.js SDK App Router' })).toBeVisible()
+        await expect
+          .poll(() =>
+            recorder
+              .events()
+              .filter(({ type }) => type === 'page')
+              .map(({ pageRouteKey }) => pageRouteKey),
+          )
+          .toEqual([PAGES.home.path])
+        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page'])
+
+        await page.getByTestId('link-page-two').click()
+        await expect(page).toHaveURL(PAGES.pageTwo.path)
+        await expect(page.getByTestId('page-two-view')).toBeVisible()
+        await expect(page.getByRole('heading', { name: 'Page Two' })).toBeVisible()
+        await expect
+          .poll(() =>
+            recorder
+              .events()
+              .filter(({ type }) => type === 'page')
+              .map(({ pageRouteKey }) => pageRouteKey),
+          )
+          .toEqual([PAGES.home.path, PAGES.pageTwo.path])
         expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page', 'page'])
         expectNoErrors(diagnostics)
       } finally {

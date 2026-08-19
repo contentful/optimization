@@ -12,17 +12,22 @@ import {
 import { resolveEntriesForSelections } from '@contentful/optimization-react-web/core-sdk'
 import {
   NextAppAutoPageTracker,
+  useNextAppAutoPageInputs,
   type NextAppAutoPageContext,
   type NextAppAutoPageTrackerProps,
 } from '@contentful/optimization-react-web/router/next-app'
 import { createElement, type ReactElement } from 'react'
 import type {
+  BoundNextjsAppRouterRequestClientRootProps,
   BoundNextjsOptimizationAnalyticsRootProps,
   BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
+  BoundNextjsOptimizationRootWithInitialExperienceProps,
   NextjsBoundOptimizedEntryComponent,
   NextjsBoundProviderConfig,
-  NextjsOptimizationComponentsConfig,
+  NextjsClientOptimizationConfig,
+  NextjsClientOptimizationConfigWithInitialExperience,
+  NextjsClientOptimizationConfigWithoutInitialExperience,
 } from './bound-component-types'
 import {
   createHandoffFromSelections,
@@ -32,10 +37,19 @@ import {
 } from './handoff'
 
 export type {
+  InitialExperienceClient,
+  InitialExperienceOptions,
+} from '@contentful/optimization-react-web'
+export type {
+  BoundNextjsAppRouterRequestClientRootProps,
   BoundNextjsOptimizationAnalyticsRootProps,
   BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
+  BoundNextjsOptimizationRootWithInitialExperienceProps,
   NextjsBoundOptimizedEntryProps,
+  NextjsClientOptimizationConfig,
+  NextjsClientOptimizationConfigWithInitialExperience,
+  NextjsClientOptimizationConfigWithoutInitialExperience,
   NextjsCookieReader,
   NextjsCookieValue,
   NextjsOptimizationComponentsConfig,
@@ -72,18 +86,70 @@ export interface NextjsAppRouterClientOptimization {
   readonly resolveEntriesForSelections: typeof resolveEntriesForSelections
 }
 
+export interface NextjsAppRouterClientOptimizationWithInitialExperience extends Omit<
+  NextjsAppRouterClientOptimization,
+  'OptimizationRoot'
+> {
+  readonly OptimizationRoot: (
+    props: BoundNextjsOptimizationRootWithInitialExperienceProps,
+  ) => ReactElement
+  readonly RequestOptimizationRoot: (
+    props: BoundNextjsAppRouterRequestClientRootProps,
+  ) => ReactElement
+}
+
 export function bindNextjsAppRouterClientOptimization(
-  config: NextjsOptimizationComponentsConfig,
-): NextjsAppRouterClientOptimization {
+  config: NextjsClientOptimizationConfigWithoutInitialExperience,
+): NextjsAppRouterClientOptimization
+export function bindNextjsAppRouterClientOptimization(
+  config: NextjsClientOptimizationConfigWithInitialExperience,
+): NextjsAppRouterClientOptimizationWithInitialExperience
+export function bindNextjsAppRouterClientOptimization(
+  config: NextjsClientOptimizationConfig,
+): NextjsAppRouterClientOptimization | NextjsAppRouterClientOptimizationWithInitialExperience
+export function bindNextjsAppRouterClientOptimization(
+  config: NextjsClientOptimizationConfig,
+): NextjsAppRouterClientOptimization | NextjsAppRouterClientOptimizationWithInitialExperience {
+  const { initialExperience } = config
   const rootConfig = toClientRootConfig(config)
   const providerConfig = toClientProviderConfig(config)
   const analyticsRootConfig = toAnalyticsRootConfig(config)
 
-  function OptimizationRoot({
+  function OptimizationRootWithoutInitialExperience({
     children,
     ...rootProps
   }: BoundNextjsOptimizationRootProps): ReactElement {
     return createElement(ReactWebOptimizationRoot, { ...rootConfig, ...rootProps }, children)
+  }
+
+  function OptimizationRootWithInitialExperience({
+    children,
+    ...rootProps
+  }: BoundNextjsOptimizationRootWithInitialExperienceProps): ReactElement {
+    return createElement(
+      ReactWebOptimizationRoot,
+      { ...rootConfig, ...rootProps, initialExperience },
+      children,
+    )
+  }
+
+  function RequestOptimizationRoot({
+    children,
+    ...requestRootProps
+  }: BoundNextjsAppRouterRequestClientRootProps): ReactElement {
+    const { buildPagePayload, routeKey } = useNextAppAutoPageInputs()
+
+    return createElement(
+      ReactWebOptimizationRoot,
+      {
+        ...rootConfig,
+        ...requestRootProps,
+        buildPagePayload,
+        initialExperience,
+        routeKey,
+      },
+      children,
+    )
   }
 
   function OptimizationProvider({
@@ -109,23 +175,37 @@ export function bindNextjsAppRouterClientOptimization(
     return createElement(ReactWebOptimizationAnalyticsRoot, { ...analyticsRootConfig, ...props })
   }
 
-  return {
+  const commonResult = {
     NextAppAutoPageTracker,
     OptimizationAnalyticsRoot,
     OptimizationProvider,
-    OptimizationRoot,
     OptimizedEntry: ReactWebOptimizedEntry,
     createHandoffFromSelections,
     createOptimizationCacheKey,
     createPublicPermutationHandoff,
     resolveEntriesForSelections,
   }
+
+  if (initialExperience === undefined) {
+    return { ...commonResult, OptimizationRoot: OptimizationRootWithoutInitialExperience }
+  }
+
+  return {
+    ...commonResult,
+    OptimizationRoot: OptimizationRootWithInitialExperience,
+    RequestOptimizationRoot,
+  }
 }
 
 function toClientRootConfig(
-  config: NextjsOptimizationComponentsConfig,
+  config: NextjsClientOptimizationConfig,
 ): NextjsBoundProviderConfig & Pick<OptimizationRootProps, 'liveUpdates'> {
-  const { consent, cookie: _cookie, ...clientConfig } = config
+  const {
+    consent,
+    cookie: _cookie,
+    initialExperience: _initialExperience,
+    ...clientConfig
+  } = config
 
   return {
     ...clientConfig,
@@ -133,16 +213,14 @@ function toClientRootConfig(
   }
 }
 
-function toClientProviderConfig(
-  config: NextjsOptimizationComponentsConfig,
-): NextjsBoundProviderConfig {
+function toClientProviderConfig(config: NextjsClientOptimizationConfig): NextjsBoundProviderConfig {
   const { liveUpdates: _liveUpdates, ...providerConfig } = toClientRootConfig(config)
 
   return providerConfig
 }
 
 function toAnalyticsRootConfig(
-  config: NextjsOptimizationComponentsConfig,
+  config: NextjsClientOptimizationConfig,
 ): Omit<ReactWebOptimizationAnalyticsRootProps, keyof BoundNextjsOptimizationAnalyticsRootProps> {
   const { liveUpdates: _liveUpdates, ...rootConfig } = toClientRootConfig(config)
 

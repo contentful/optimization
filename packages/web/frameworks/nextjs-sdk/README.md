@@ -350,8 +350,65 @@ to the browser handoff. The bound client `OptimizedEntry` and `/client` `useOpti
 
 ## Initial Experience before the first page
 
-The Pages Router client binder accepts `initialExperience` when important browser identity or
-Experience work must finish before the bound content root's initial page decision:
+Both client binders accept `initialExperience` when important browser identity or Experience work
+must finish before the bound content root's initial page decision:
+
+```tsx
+'use client'
+
+import { bindNextjsAppRouterClientOptimization } from '@contentful/optimization-nextjs/app-router/client'
+
+export const clientOptimization = bindNextjsAppRouterClientOptimization({
+  clientId: 'client-id',
+  environment: 'main',
+  initialExperience: {
+    run: async ({ identify }) => {
+      await identify({ userId: visitor.id })
+    },
+    onError: reportInitialExperienceError,
+  },
+})
+
+export const { RequestOptimizationRoot: ClientRequestOptimizationRoot } = clientOptimization
+
+export function OptimizationApp({ children, routeKey }) {
+  return (
+    <clientOptimization.OptimizationRoot
+      routeKey={routeKey}
+      buildPagePayload={() => ({ properties: { route: routeKey } })}
+    >
+      {children}
+    </clientOptimization.OptimizationRoot>
+  )
+}
+```
+
+The direct App client `OptimizationRoot` requires those explicit route inputs. For the App Router
+request family, inject the callback-enabled client request root into the server binder instead:
+
+```tsx
+import 'server-only'
+
+import { bindNextjsAppRouterServerOptimization } from '@contentful/optimization-nextjs/app-router/server'
+import { ClientRequestOptimizationRoot } from './optimization-client'
+
+export const optimization = bindNextjsAppRouterServerOptimization(serverConfig, {
+  request: { OptimizationRoot: ClientRequestOptimizationRoot },
+})
+
+export const { OptimizationRoot: RequestOptimizationRoot } = optimization.request
+```
+
+`RequestOptimizationRoot` is part of the callback-present App client result; the callback-absent
+result keeps its existing members.
+
+The injected `RequestOptimizationRoot` derives `routeKey` and `buildPagePayload` from App Router
+state and replaces the request family's default root. Mount it without
+`RequestNextAppAutoPageTracker`; the injected root owns the direct initial page decision and later
+route changes. The component reference crosses the server composition boundary, but the callback
+remains in its client module and does not enter server config or Flight data.
+
+The Pages Router client binder uses the same option in its client-only module:
 
 ```tsx
 import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router'
@@ -369,7 +426,7 @@ The client binder captures the callback and forwards it only to the bound conten
 receives receiver-safe `identify`, `screen`, and `track` methods. It is not forwarded to the bound
 `OptimizationProvider` or `OptimizationAnalyticsRoot`, and injected providers do not accept it.
 
-The client config branches derive from `NextjsBoundRootConfig`, and the selected branch determines
+Both client config branches derive from `NextjsBoundRootConfig`, and the selected branch determines
 the bound root's page props. Without `initialExperience`, the existing optional page inputs remain
 available, including `initialPagePayload`. With `initialExperience`, the bound root requires
 `routeKey` and lazy `buildPagePayload` and rejects `initialPagePayload`. A variable typed as the
@@ -381,7 +438,8 @@ route and payload builder for one direct page attempt. A successfully applied sa
 make that direct decision a `skip`; otherwise, it attempts `emit`. After the attempt reaches a
 terminal result, the existing page emitter makes a non-emitting initial `skip` mark for the
 attempted route, then uses its normal `emit` path for later route changes. The callback-enabled root
-is the sole page owner in its subtree. Pages roots therefore do not mount a separate
+is the sole page owner in its subtree. Direct App roots, injected App request roots, and Pages roots
+therefore do not mount a separate `NextAppAutoPageTracker`, `RequestNextAppAutoPageTracker`, or
 `NextPagesAutoPageTracker` on this path.
 
 When `maxWaitMs` is omitted, it defaults to 3,000 ms. It accepts positive finite values. `0`,
@@ -396,10 +454,13 @@ attempt. The latest route is read before that attempt, but navigation after the 
 not canceled or ordered against it. The existing entry deadline can commit fallback content first,
 and default non-live behavior keeps that fallback frozen after a later startup success.
 
-Keep callback-present config in a client-only module. The Pages Router server binder uses an
-explicit `initialExperience?: never` boundary and rejects an exported callback-present client-config
-variable. Server-side Optimization behavior and serialized data remain unchanged: the callback does
-not enter page props, handoff, cache state, ISR, or server helpers.
+Keep callback-present config in a client-only module. The App Router server config inherits, and the
+Pages Router server binder uses, an explicit `initialExperience?: never` boundary. Both server
+binders reject an exported callback-present client-config variable. App request-root injection
+passes a client component reference separately; it does not weaken that config boundary. The
+server-side Optimization behavior and serialized data remain unchanged: the callback does not
+enter Server Components, request config, page or Flight props, handoff, cache state, ISR, or Edge
+helpers.
 
 ## Edge runtime
 

@@ -3,7 +3,7 @@ import { ControlPanel } from '@/components/ControlPanel'
 import { ManagedEntryCard } from '@/components/EntryCard'
 import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
 import { PreviewPanel } from '@/components/PreviewPanel'
-import { RequestNextAppAutoPageTracker, RequestOptimizationRoot } from '@/lib/optimization'
+import { RequestOptimizationRoot } from '@/lib/optimization'
 import { PAGES } from 'e2e-web'
 import { connection } from 'next/server'
 
@@ -16,7 +16,6 @@ export async function PrivateRequestSlot() {
     <RequestOptimizationRoot prefetchManagedEntries={[entryId]}>
       <GlobalLiveUpdatesProvider>
         <PreviewPanel />
-        <RequestNextAppAutoPageTracker />
         <section data-testid="private-request-slot">
           <AppShellBody>
             <div className="page-header">

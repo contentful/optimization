@@ -1,15 +1,28 @@
 import type NodeContentfulOptimization from '@contentful/optimization-node'
 import type { ResolvedData } from '@contentful/optimization-node/core-sdk'
 import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
-import type {
-  BoundNextjsOptimizationProviderProps,
-  BoundNextjsOptimizationRootProps,
-  NextjsAppRouterClientOptimization as NextjsAppClientComponents,
-  NextjsBoundOptimizedEntryProps,
+import type { ReactElement } from 'react'
+import {
+  bindNextjsAppRouterClientOptimization,
+  type InitialExperienceClient as AppInitialExperienceClient,
+  type InitialExperienceOptions as AppInitialExperienceOptions,
+  type BoundNextjsAppRouterRequestClientRootProps,
+  type BoundNextjsOptimizationAnalyticsRootProps,
+  type BoundNextjsOptimizationProviderProps,
+  type BoundNextjsOptimizationRootProps,
+  type BoundNextjsOptimizationRootWithInitialExperienceProps,
+  type NextjsAppRouterClientOptimization as NextjsAppClientComponents,
+  type NextjsAppRouterClientOptimizationWithInitialExperience,
+  type NextjsBoundOptimizedEntryProps,
+  type NextjsClientOptimizationConfig,
+  type NextjsClientOptimizationConfigWithInitialExperience,
+  type NextjsClientOptimizationConfigWithoutInitialExperience,
 } from './app-router-client'
-import type {
-  NextjsAppRouterServerOptimizationConfig,
-  NextjsAppRouterServerOptimization as NextjsAppServerComponents,
+import {
+  bindNextjsAppRouterServerOptimization,
+  type NextjsAppRouterServerOptimizationConfig,
+  type NextjsAppRouterServerOptimizationOptions,
+  type NextjsAppRouterServerOptimization as NextjsAppServerComponents,
 } from './app-router-server'
 import type { NextjsOptimizationComponentsConfig } from './bound-component-types'
 import type {
@@ -23,7 +36,6 @@ import type {
 import type { ContentOptimizationHandoff } from './handoff'
 import {
   bindNextjsPagesRouterOptimization,
-  type BoundNextjsOptimizationAnalyticsRootProps,
   type NextjsClientOptimizationConfig as NextjsPagesClientOptimizationConfig,
   type NextjsClientOptimizationConfigWithInitialExperience as NextjsPagesClientOptimizationConfigWithInitialExperience,
   type NextjsClientOptimizationConfigWithoutInitialExperience as NextjsPagesClientOptimizationConfigWithoutInitialExperience,
@@ -345,16 +357,90 @@ const initialPagePayload = { properties: { route: '/products' } }
 
 export function acceptInitialExperienceClientTypePassThroughs(
   client: InitialExperienceClient,
+  appClient: AppInitialExperienceClient,
   pagesClient: PagesInitialExperienceClient,
 ): void {
-  void [client, pagesClient]
+  void [client, appClient, pagesClient]
 }
 
 export function acceptInitialExperienceOptionsTypePassThroughs(
   options: InitialExperienceOptions,
+  appOptions: AppInitialExperienceOptions,
   pagesOptions: PagesInitialExperienceOptions,
 ): void {
-  void [options, pagesOptions]
+  void [options, appOptions, pagesOptions]
+}
+
+export function assertAppRouterClientConfigBranches(
+  absentExport: NextjsClientOptimizationConfigWithoutInitialExperience,
+  presentExport: NextjsClientOptimizationConfigWithInitialExperience,
+  widenedExport: NextjsClientOptimizationConfig,
+  maybeInitialExperience: InitialExperienceOptions | undefined,
+): void {
+  const absentLiteral = bindNextjsAppRouterClientOptimization({ ...clientBindingConfig })
+  absentLiteral.OptimizationRoot({ initialPagePayload, routeKey: '/products' })
+
+  const presentLiteral = bindNextjsAppRouterClientOptimization({
+    ...clientBindingConfig,
+    initialExperience,
+  })
+  presentLiteral.OptimizationRoot({ buildPagePayload, routeKey: '/products' })
+  // @ts-expect-error Callback-present roots require a route key.
+  presentLiteral.OptimizationRoot({ buildPagePayload })
+  // @ts-expect-error Callback-present roots require a payload builder.
+  presentLiteral.OptimizationRoot({ routeKey: '/products' })
+  // @ts-expect-error Callback-present roots require both page inputs.
+  presentLiteral.OptimizationRoot({})
+  // @ts-expect-error Callback-present roots cannot use an eager initial page payload.
+  presentLiteral.OptimizationRoot({ initialPagePayload, routeKey: '/products' })
+
+  const absentSatisfies = {
+    ...clientBindingConfig,
+  } satisfies NextjsClientOptimizationConfig
+  bindNextjsAppRouterClientOptimization(absentSatisfies).OptimizationRoot({
+    initialPagePayload,
+    routeKey: '/products',
+  })
+
+  const presentSatisfies = {
+    ...clientBindingConfig,
+    initialExperience,
+  } satisfies NextjsClientOptimizationConfig
+  bindNextjsAppRouterClientOptimization(presentSatisfies).OptimizationRoot({
+    buildPagePayload,
+    routeKey: '/products',
+  })
+
+  bindNextjsAppRouterClientOptimization(absentExport).OptimizationRoot({
+    initialPagePayload,
+    routeKey: '/products',
+  })
+  const presentBound: NextjsAppRouterClientOptimizationWithInitialExperience =
+    bindNextjsAppRouterClientOptimization(presentExport)
+  presentBound.OptimizationRoot({ buildPagePayload, routeKey: '/products' })
+  presentBound.RequestOptimizationRoot({ children: null })
+
+  // @ts-expect-error Callback-absent App bindings do not expose a request client root.
+  const absentRequestRoot = absentLiteral.RequestOptimizationRoot
+  void absentRequestRoot
+
+  const widenedBound = bindNextjsAppRouterClientOptimization(widenedExport)
+  widenedBound.OptimizationRoot({ buildPagePayload, routeKey: '/products' })
+  // @ts-expect-error A widened branch must satisfy the callback-present root contract.
+  widenedBound.OptimizationRoot({})
+  // @ts-expect-error A widened branch cannot safely accept an eager initial page payload.
+  widenedBound.OptimizationRoot({ initialPagePayload, routeKey: '/products' })
+
+  const widenedMaybeConfig: NextjsClientOptimizationConfig = {
+    ...clientBindingConfig,
+    initialExperience: maybeInitialExperience,
+  }
+  const widenedMaybeBound = bindNextjsAppRouterClientOptimization(widenedMaybeConfig)
+  widenedMaybeBound.OptimizationRoot({ buildPagePayload, routeKey: '/products' })
+  // @ts-expect-error A maybe-undefined branch retains the conservative root contract.
+  widenedMaybeBound.OptimizationRoot({})
+  // @ts-expect-error A maybe-undefined branch cannot safely accept an eager page payload.
+  widenedMaybeBound.OptimizationRoot({ initialPagePayload, routeKey: '/products' })
 }
 
 export function assertPagesRouterClientConfigBranches(
@@ -425,11 +511,12 @@ export function assertPagesRouterClientConfigBranches(
 }
 
 export function rejectInitialExperienceFromProviderAndAnalyticsProps(
+  appComponents: NextjsAppClientComponents,
   pagesComponents: NextjsPagesRouterOptimization,
   providerProps: BoundNextjsOptimizationProviderProps,
   analyticsProps: BoundNextjsOptimizationAnalyticsRootProps,
 ): void {
-  pagesComponents.OptimizationProvider({
+  appComponents.OptimizationProvider({
     ...providerProps,
     // @ts-expect-error The client binder captures initial Experience outside provider props.
     initialExperience,
@@ -444,6 +531,13 @@ export function rejectInitialExperienceFromProviderAndAnalyticsProps(
 export function rejectInitialExperienceFromBoundRootProps(
   rootProps: BoundNextjsOptimizationRootProps,
 ): void {
+  const boundRootProps: BoundNextjsOptimizationRootWithInitialExperienceProps = {
+    ...rootProps,
+    buildPagePayload,
+    // @ts-expect-error The client binder captures initial Experience outside bound root props.
+    initialExperience,
+    routeKey: '/products',
+  }
   const pagesBoundRootProps: PagesBoundNextjsOptimizationRootWithInitialExperienceProps = {
     ...rootProps,
     buildPagePayload,
@@ -451,21 +545,89 @@ export function rejectInitialExperienceFromBoundRootProps(
     initialExperience,
     routeKey: '/products',
   }
-  void pagesBoundRootProps
+  void [boundRootProps, pagesBoundRootProps]
 }
 
 export function rejectInitialExperienceFromServerAndSerializedBoundaries(
-  presentExport: NextjsPagesClientOptimizationConfigWithInitialExperience,
+  presentExport: NextjsClientOptimizationConfigWithInitialExperience,
   handoff: ContentOptimizationHandoff,
 ): void {
+  // @ts-expect-error App server binders reject callback-present client configuration variables.
+  bindNextjsAppRouterServerOptimization(presentExport)
   // @ts-expect-error Pages server binders reject callback-present client configuration variables.
   bindNextjsPagesRouterServerOptimization(presentExport)
+  const requestConfig: NextjsAppRouterServerOptimizationConfig = {
+    ...clientBindingConfig,
+    request: {
+      // @ts-expect-error App request configuration does not accept initial Experience.
+      initialExperience,
+    },
+  }
   const serializedHandoff: ContentOptimizationHandoff = {
     ...handoff,
     // @ts-expect-error Browser handoff shapes cannot carry callback functions.
     initialExperience,
   }
-  void serializedHandoff
+  void [requestConfig, serializedHandoff]
+}
+
+export function acceptAppRouterRequestClientRootComposition(
+  config: NextjsAppRouterServerOptimizationConfig,
+  ClientRequestOptimizationRoot: (
+    props: BoundNextjsAppRouterRequestClientRootProps,
+  ) => ReactElement,
+): NextjsAppRouterServerOptimizationOptions {
+  const options: NextjsAppRouterServerOptimizationOptions = {
+    request: { OptimizationRoot: ClientRequestOptimizationRoot },
+  }
+
+  bindNextjsAppRouterServerOptimization(config, options)
+  ClientRequestOptimizationRoot({
+    children: null,
+    defaults: { consent: true, persistenceConsent: false },
+    handoff: undefined,
+    hydration: 'preserve-server',
+  })
+
+  return options
+}
+
+export function rejectAppRouterRequestClientRootOwnedInputs(
+  props: BoundNextjsAppRouterRequestClientRootProps,
+): void {
+  const withCallback: BoundNextjsAppRouterRequestClientRootProps = {
+    ...props,
+    // @ts-expect-error The client binder captures initial Experience outside Flight props.
+    initialExperience,
+  }
+  const withRoute: BoundNextjsAppRouterRequestClientRootProps = {
+    ...props,
+    // @ts-expect-error The request client root derives its route in the browser.
+    routeKey: '/products',
+  }
+  const withPayloadBuilder: BoundNextjsAppRouterRequestClientRootProps = {
+    ...props,
+    // @ts-expect-error The request client root derives its lazy payload builder in the browser.
+    buildPagePayload,
+  }
+  void [withCallback, withRoute, withPayloadBuilder]
+}
+
+export function rejectInvalidAppRouterRequestClientRootReference(
+  config: NextjsAppRouterServerOptimizationConfig,
+): void {
+  const InvalidRequestRoot = (_props: {
+    readonly initialExperience: InitialExperienceOptions
+  }): ReactElement => {
+    throw new Error('type-only invalid request root')
+  }
+
+  bindNextjsAppRouterServerOptimization(config, {
+    request: {
+      // @ts-expect-error Request root references must accept only the serializable request props.
+      OptimizationRoot: InvalidRequestRoot,
+    },
+  })
 }
 
 describe('Next.js runtime type contracts', () => {

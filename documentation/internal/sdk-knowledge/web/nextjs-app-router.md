@@ -32,6 +32,13 @@ dependencies; each carries a symbol-anchored source pointer.
   nested request family. Browser defaults are supplied through `consent.clientDefaults`;
   server/request consent is supplied through `consent.server`.
   source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`; `nextjs-sdk#app-router-server.tsx#getRequestHandoffStore`; `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#app-router-client.ts#bindNextjsAppRouterClientOptimization`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationConsentConfig`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationServerConsentResolver`
+- A separately supplied request-root component reference replaces the default browser root only for
+  the server binder's request family. Request authority supplies only its resolved handoff,
+  hydration, defaults, and children to that component. The callback and lazy page-payload builder
+  stay in the client module and do not cross the Flight boundary through server config or
+  request-root data. Without the reference, the request family uses the default root; top-level
+  explicit, static/public-permutation, and analytics roots do not consult it.
+  source: nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization; nextjs-sdk#app-router-client.ts#bindNextjsAppRouterClientOptimization
 - `api.experienceBaseUrl` and `api.insightsBaseUrl` override the API clients' built-in production
   endpoints; omit them for the default hosts. `app: { name, version }` is attached to outgoing event
   context as application attribution metadata.
@@ -199,13 +206,22 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
 - App Router request handoff helpers call the request-bound SDK's `page()` method. A browser handoff
   carries explicit `initialPageEvent`; direct request helpers set it from `pageResult.accepted`,
   forwarded request handoffs set it from boolean `pageAccepted`, and selection helpers require the
-  caller to provide it. The nested request tracker receives this value from its shared handoff, so
-  page-event ownership does not depend on which request wrapper starts first.
+  caller to provide it. On the default request-root path, the nested request tracker receives this
+  value from its shared handoff, so page-event ownership does not depend on which request wrapper
+  starts first.
   source: `nextjs-sdk#server.tsx#createNextjsRequestHandoff`; `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#app-router-request-handoff.ts#readNextjsForwardedServerData`; `nextjs-sdk#handoff.ts#createHandoffFromSelections`
 - `NextAppAutoPageTracker` must stay inside `Suspense` (reads `useSearchParams`).
   Duplicate-page-event control: `initialPageEvent="skip"` when the server already reported the view,
   `"emit"` for browser-owned routes.
   source: `react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker`; `react-web-sdk#auto-page/useAutoPageEmitter.ts#InitialAutoPageEvent`
+- The App Router client binder forwards initial Experience only to its direct and request-family
+  content roots; its bound provider and analytics root projections omit it. The request-family root
+  captures the callback in the client, derives the current route and lazy payload through the
+  non-emitting App Router inputs hook, and owns the page sequence without
+  `NextAppAutoPageTracker`. The React-owned callback, watchdog, readiness, direct-page,
+  attempted-route mark, later-route, and failure behavior is recorded in
+  [`react-web.md`](./react-web.md).
+  source: nextjs-sdk#app-router-client.ts#bindNextjsAppRouterClientOptimization; nextjs-sdk#app-router-client.ts#toClientRootConfig; react-web-sdk#router/next-app.tsx#useNextAppAutoPageInputs; kb:web/react-web.md
 - Interaction tracking on by default with `OptimizedEntry`; opt out via binding config
   `trackEntryInteraction`; uses resolved entry id.
   source: `react-web-sdk#provider/OptimizationProvider.tsx#TrackEntryInteractionOptions`; concept:interaction-tracking-in-web-sdks

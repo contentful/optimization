@@ -22,6 +22,7 @@ import {
   type AppRouterCreateRequestHandoffOptions,
 } from './app-router-request-runtime'
 import type {
+  BoundNextjsAppRouterRequestClientRootProps,
   BoundNextjsOptimizationAnalyticsRootProps,
   BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
@@ -53,6 +54,7 @@ import type { ServerTrackingBaselineEntry } from './tracking-attributes'
 
 export type { OptimizedEntryRenderContext } from '@contentful/optimization-react-web'
 export type {
+  BoundNextjsAppRouterRequestClientRootProps,
   BoundNextjsOptimizationAnalyticsRootProps,
   BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
@@ -113,6 +115,12 @@ export interface NextjsAppRouterServerOptimization {
   readonly resolveEntriesForSelections: typeof resolveEntriesForSelections
 }
 
+export interface NextjsAppRouterServerOptimizationOptions {
+  readonly request: {
+    readonly OptimizationRoot: (props: BoundNextjsAppRouterRequestClientRootProps) => ReactElement
+  }
+}
+
 interface AppRouterRequestHandoffStore {
   defaults?: StatefulDefaults
   state?: BrowserOptimizationHandoff['state']
@@ -122,6 +130,7 @@ const getRequestHandoffStore = cache((): AppRouterRequestHandoffStore => ({}))
 
 export function bindNextjsAppRouterServerOptimization(
   config: NextjsAppRouterServerOptimizationConfig,
+  options?: NextjsAppRouterServerOptimizationOptions,
 ): NextjsAppRouterServerOptimization {
   const sdk = configureNextjsServerOptimization(toServerOptimizationConfig(config))
   const rootConfig = toClientRootConfig(config)
@@ -195,6 +204,37 @@ export function bindNextjsAppRouterServerOptimization(
   }
 
   const OptimizationRoot = renderBoundRootTree
+
+  async function renderBoundRequestRootTree({
+    children,
+    handoff,
+    prefetchManagedEntries,
+    ...rootProps
+  }: BoundNextjsOptimizationRootProps): Promise<ReactElement> {
+    const RequestOptimizationRoot = options?.request.OptimizationRoot
+    if (RequestOptimizationRoot === undefined) {
+      return await renderBoundRootTree({
+        ...rootProps,
+        children,
+        handoff,
+        prefetchManagedEntries,
+      })
+    }
+
+    const effectiveHandoff = await resolveHandoffEntries(handoff, prefetchManagedEntries)
+    rememberRequestHandoff(effectiveHandoff)
+    const { defaults } = withRequestDefaults(rootConfig)
+
+    return createElement(
+      RequestOptimizationRoot,
+      {
+        defaults,
+        handoff: effectiveHandoff,
+        hydration: rootProps.hydration,
+      },
+      children,
+    )
+  }
 
   async function OptimizationProvider({
     children,
@@ -353,7 +393,7 @@ export function bindNextjsAppRouterServerOptimization(
   const { createRequestHandoff, request } = bindNextjsAppRouterRequestRuntime({
     config,
     OptimizationProvider,
-    OptimizationRoot,
+    OptimizationRoot: renderBoundRequestRootTree,
     OptimizedEntry,
     rememberRequestHandoff,
     resolveHandoffEntries,

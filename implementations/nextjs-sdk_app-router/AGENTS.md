@@ -12,8 +12,11 @@ per-entry `liveUpdates` or `loadingFallback`.
   `bindNextjsAppRouterServerOptimization()` from
   `@contentful/optimization-nextjs/app-router/server`.
 - Configure request hydration and trusted handoff once in `lib/optimization.ts`.
-- The app-local request family exports `RequestOptimizationRoot`, `RequestOptimizedEntry`, and
-  `RequestNextAppAutoPageTracker` from `@/lib/optimization`.
+- Configure the callback-bound `ClientRequestOptimizationRoot` only in
+  `lib/optimization-client.ts`, then inject it into the server binding from `lib/optimization.ts`.
+- The app-local request family exports `RequestOptimizationRoot` and `RequestOptimizedEntry` from
+  `@/lib/optimization`. The request root owns initial and later browser page sequencing; do not
+  mount or export a request page tracker beside it.
 - Request routes, private request slots, and `EntryCard` use the applicable request aliases.
 - Static selection-handoff routes use `ExplicitOptimizationRoot` and `ExplicitOptimizedEntry` from
   `@/lib/optimization`. Analytics-only routes use the top-level `OptimizationAnalyticsRoot`.

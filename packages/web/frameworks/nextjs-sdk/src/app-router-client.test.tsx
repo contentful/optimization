@@ -155,6 +155,53 @@ describe('Next.js App Router client components', () => {
     expect(getEntries).not.toHaveBeenCalled()
   })
 
+  it('forwards initial Experience only to the bound content root', () => {
+    const initialExperience = {
+      run: rs.fn(() => undefined),
+    }
+    const components = appRouter.bindNextjsAppRouterClientOptimization({
+      ...testConfig,
+      initialExperience,
+    })
+    const analyticsHandoff = components.createHandoffFromSelections({
+      cache: { scope: 'static' },
+      hydration: 'analytics-only',
+      initialPageEvent: 'emit',
+      selectedOptimizations: [],
+    })
+    const root = components.OptimizationRoot({
+      buildPagePayload: () => ({ properties: { route: '/products' } }),
+      children: 'Root content',
+      routeKey: '/products',
+    })
+    const provider = components.OptimizationProvider({ children: 'Provider content' })
+    const analyticsRoot = components.OptimizationAnalyticsRoot({
+      children: 'Analytics content',
+      handoff: analyticsHandoff,
+      routeKey: '/products',
+    })
+
+    expect(root.props).toMatchObject({ initialExperience })
+    expect(components.RequestOptimizationRoot).toBeTypeOf('function')
+    expect(provider?.props).not.toHaveProperty('initialExperience')
+    expect(analyticsRoot.props).not.toHaveProperty('initialExperience')
+    expect(components).not.toHaveProperty('initialExperience')
+  })
+
+  it('adds the request content root only to callback-present bindings', () => {
+    const withoutInitialExperience = appRouter.bindNextjsAppRouterClientOptimization(testConfig)
+    const withInitialExperience = appRouter.bindNextjsAppRouterClientOptimization({
+      ...testConfig,
+      initialExperience: { run: () => undefined },
+    })
+
+    expect(withoutInitialExperience).not.toHaveProperty('RequestOptimizationRoot')
+    expect(withInitialExperience.RequestOptimizationRoot).toBeTypeOf('function')
+    expect(withInitialExperience.RequestOptimizationRoot).not.toBe(
+      withInitialExperience.OptimizationRoot,
+    )
+  })
+
   it('keeps the low-level client entry free of router-specific exports', () => {
     expect(Object.keys(client).sort()).toEqual(Object.keys(reactWeb).sort())
     expect(client).not.toHaveProperty('NextAppAutoPageTracker')
