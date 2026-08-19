@@ -34,18 +34,11 @@ rs.mock('next/navigation.js', () => ({
   useSearchParams: () => currentSearchParams,
 }))
 
-const routeState = {
-  pathname: '/',
-  searchParams: new URLSearchParams(),
-}
-
 function setCurrentRoute(
   pathname: string,
   searchParams = new URLSearchParams(),
   updateBrowserLocation = true,
 ): void {
-  routeState.pathname = pathname
-  routeState.searchParams = searchParams
   currentPathname = pathname
   currentSearchParams = searchParams
 
@@ -437,7 +430,7 @@ describe('NextAppAutoPageTracker', () => {
       pathname: '/products',
       router: routerState,
       search: '?tab=featured',
-      searchParams: routeState.searchParams,
+      searchParams: currentSearchParams,
       url: '/products?tab=featured',
       isInitialEmission: true,
     })
