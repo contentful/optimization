@@ -371,6 +371,39 @@ describe('Next.js App Router v2 binding', () => {
     expect(optimization).not.toHaveProperty('proxy')
   })
 
+  it('replaces only the request root with an injected serializable client root', async () => {
+    setCurrentNextRequest('https://example.test/page-two?initialExperience=readiness')
+    mockRequestPage({ accepted: true, data: optimizationData })
+    const ClientRequestOptimizationRoot = (_props: {
+      readonly children?: React.ReactNode
+    }): ReactElement => React.createElement(React.Fragment)
+    const { OptimizationRoot, request } = bindNextjsAppRouterServerOptimization(sdkConfig, {
+      request: { OptimizationRoot: ClientRequestOptimizationRoot },
+    })
+
+    const requestRoot = await request.OptimizationRoot({ children: 'Request content' })
+    const requestProps = getElementProps(requestRoot)
+    const explicitRoot = await OptimizationRoot({ children: 'Explicit content' })
+
+    expect(requestRoot.type).toBe(ClientRequestOptimizationRoot)
+    expect(requestProps).toMatchObject({
+      children: 'Request content',
+      defaults: { consent: false, persistenceConsent: false },
+      handoff: {
+        hydration: 'preserve-server',
+        initialPageEvent: 'skip',
+      },
+      hydration: 'preserve-server',
+    })
+    expect(requestProps).not.toHaveProperty('buildPagePayload')
+    expect(requestProps).not.toHaveProperty('initialExperience')
+    expect(requestProps).not.toHaveProperty('initialPagePayload')
+    expect(requestProps).not.toHaveProperty('prefetchManagedEntries')
+    expect(requestProps).not.toHaveProperty('routeKey')
+    expect(Object.values(requestProps).every((value) => typeof value !== 'function')).toBe(true)
+    expect(explicitRoot.type).not.toBe(ClientRequestOptimizationRoot)
+  })
+
   it('waits for the shared request handoff when OptimizedEntry starts before the root', async () => {
     setCurrentNextRequest()
     const { page } = mockRequestPage({ accepted: true, data: optimizationData })

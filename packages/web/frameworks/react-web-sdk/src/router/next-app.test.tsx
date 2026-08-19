@@ -1,11 +1,18 @@
+import ContentfulOptimization from '@contentful/optimization-web'
 import { rs } from '@rstest/core'
-import { act, StrictMode, type ReactNode } from 'react'
+import { act, StrictMode, useEffect, useLayoutEffect, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { resetAutoPageEmitterState } from '../auto-page/useAutoPageEmitter'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import { OptimizationContext } from '../context/OptimizationContext'
+import type { InitialExperienceOptions } from '../initial-experience/initialExperience'
+import { OptimizationRoot } from '../root/OptimizationRoot'
 import { createOptimizationSdk, defaultLiveUpdatesContext } from '../test/sdkTestUtils'
-import { NextAppAutoPageTracker, type NextAppAutoPageContext } from './next-app'
+import {
+  NextAppAutoPageTracker,
+  useNextAppAutoPageInputs,
+  type NextAppAutoPageContext,
+} from './next-app'
 
 const routerState = {
   back: () => undefined,
@@ -30,6 +37,22 @@ rs.mock('next/navigation.js', () => ({
 const routeState = {
   pathname: '/',
   searchParams: new URLSearchParams(),
+}
+
+function setCurrentRoute(
+  pathname: string,
+  searchParams = new URLSearchParams(),
+  updateBrowserLocation = true,
+): void {
+  routeState.pathname = pathname
+  routeState.searchParams = searchParams
+  currentPathname = pathname
+  currentSearchParams = searchParams
+
+  if (updateBrowserLocation) {
+    const search = searchParams.toString()
+    window.history.replaceState(null, '', `${pathname}${search.length > 0 ? `?${search}` : ''}`)
+  }
 }
 
 async function renderTracker(
@@ -70,6 +93,70 @@ async function renderTracker(
   }
 }
 
+function AutoPageInputsProbe({
+  browserCommitHref,
+  onInputs,
+}: {
+  readonly browserCommitHref?: string
+  readonly onInputs: (inputs: ReturnType<typeof useNextAppAutoPageInputs>) => void
+}): null {
+  const inputs = useNextAppAutoPageInputs()
+
+  useLayoutEffect(() => {
+    if (browserCommitHref !== undefined) {
+      window.history.replaceState(null, '', browserCommitHref)
+    }
+  }, [browserCommitHref])
+
+  useEffect(() => {
+    onInputs(inputs)
+  }, [inputs.buildPagePayload, inputs.routeKey, onInputs])
+
+  return null
+}
+
+function InitialExperienceRequestRoot({
+  initialExperience,
+}: {
+  readonly initialExperience: InitialExperienceOptions
+}): ReactNode {
+  const { buildPagePayload, routeKey } = useNextAppAutoPageInputs()
+
+  return (
+    <OptimizationRoot
+      api={{
+        experienceBaseUrl: 'http://localhost:8000/experience/',
+        insightsBaseUrl: 'http://localhost:8000/insights/',
+      }}
+      buildPagePayload={buildPagePayload}
+      clientId="test-client-id"
+      environment="main"
+      initialExperience={initialExperience}
+      routeKey={routeKey}
+    >
+      <div />
+    </OptimizationRoot>
+  )
+}
+
+function createDeferred<T>(): {
+  readonly promise: Promise<T>
+  readonly resolve: (value: T) => void
+} {
+  let resolveDeferred: ((value: T) => void) | undefined
+  const promise = new Promise<T>((resolve) => {
+    resolveDeferred = resolve
+  })
+
+  return {
+    promise,
+    resolve(value: T) {
+      if (resolveDeferred === undefined) throw new Error('Expected deferred resolver.')
+      resolveDeferred(value)
+    },
+  }
+}
+
 describe('NextAppAutoPageTracker', () => {
   void afterEach(() => {
     rs.restoreAllMocks()
@@ -77,16 +164,136 @@ describe('NextAppAutoPageTracker', () => {
 
   void beforeEach(() => {
     resetAutoPageEmitterState()
-    routeState.pathname = '/'
-    routeState.searchParams = new URLSearchParams()
-    const { pathname, searchParams } = routeState
-    currentPathname = pathname
+    setCurrentRoute('/')
     currentRouterState = routerState
-    currentSearchParams = searchParams
   })
 
   it('is exported from the router subpath module', () => {
     expect(NextAppAutoPageTracker).toBeTypeOf('function')
+    expect(useNextAppAutoPageInputs).toBeTypeOf('function')
+  })
+
+  it('derives lazy route inputs without emitting a page', async () => {
+    const page = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const sdk = createOptimizationSdk({ page })
+    const onInputs = rs.fn<(inputs: ReturnType<typeof useNextAppAutoPageInputs>) => void>()
+    setCurrentRoute('/products', new URLSearchParams('tab=featured'))
+
+    const rendered = await renderTracker(<AutoPageInputsProbe onInputs={onInputs} />, sdk)
+    const firstInputs = onInputs.mock.calls.at(-1)?.[0]
+
+    expect(firstInputs?.routeKey).toBe('/products?tab=featured')
+    expect(firstInputs?.buildPagePayload({ isInitialEmission: true })).toEqual({
+      properties: {
+        path: '/products',
+        query: { tab: 'featured' },
+        search: '?tab=featured',
+        url: `${window.location.origin}/products?tab=featured`,
+      },
+    })
+    expect(page).not.toHaveBeenCalled()
+
+    setCurrentRoute('/products/new', new URLSearchParams('ref=nav'))
+    await rendered.rerender(<AutoPageInputsProbe onInputs={onInputs} />)
+
+    const nextInputs = onInputs.mock.calls.at(-1)?.[0]
+    expect(nextInputs?.routeKey).toBe('/products/new?ref=nav')
+    expect(nextInputs?.buildPagePayload({ isInitialEmission: false })).toEqual({
+      properties: {
+        path: '/products/new',
+        query: { ref: 'nav' },
+        search: '?ref=nav',
+        url: `${window.location.origin}/products/new?ref=nav`,
+      },
+    })
+    expect(nextInputs?.buildPagePayload).not.toBe(firstInputs?.buildPagePayload)
+    expect(page).not.toHaveBeenCalled()
+
+    await rendered.unmount()
+  })
+
+  it('adopts a route whose browser URL commits after the router render', async () => {
+    const page = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const sdk = createOptimizationSdk({ page })
+    const onInputs = rs.fn<(inputs: ReturnType<typeof useNextAppAutoPageInputs>) => void>()
+    const rendered = await renderTracker(<AutoPageInputsProbe onInputs={onInputs} />, sdk)
+
+    setCurrentRoute('/products', new URLSearchParams('tab=featured'), false)
+    await rendered.rerender(
+      <AutoPageInputsProbe browserCommitHref="/products?tab=featured" onInputs={onInputs} />,
+    )
+
+    const inputs = onInputs.mock.calls.at(-1)?.[0]
+    expect(inputs?.routeKey).toBe('/products?tab=featured')
+    expect(inputs?.buildPagePayload({ isInitialEmission: false })).toEqual({
+      properties: {
+        path: '/products',
+        query: { tab: 'featured' },
+        search: '?tab=featured',
+        url: `${window.location.origin}/products?tab=featured`,
+      },
+    })
+    expect(page).not.toHaveBeenCalled()
+
+    await rendered.unmount()
+  })
+
+  it('keeps the attempted latest route across readiness without suppressing a later route', async () => {
+    const callback = createDeferred<undefined>()
+    const trackCurrentPage = rs
+      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+      .mockResolvedValue({ accepted: true })
+    const initialExperience = {
+      run: async () => {
+        await callback.promise
+      },
+    }
+    setCurrentRoute('/page-two', new URLSearchParams('initialExperience=readiness'))
+    const rendered = await renderTracker(
+      <InitialExperienceRequestRoot initialExperience={initialExperience} />,
+      createOptimizationSdk(),
+    )
+
+    setCurrentRoute('/')
+    await rendered.rerender(<InitialExperienceRequestRoot initialExperience={initialExperience} />)
+    callback.resolve(undefined)
+    await act(async () => {
+      await callback.promise
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(trackCurrentPage).toHaveBeenCalledTimes(2)
+    expect(trackCurrentPage).toHaveBeenNthCalledWith(1, {
+      buildPayload: expect.any(Function),
+      initialPageEvent: 'emit',
+      routeKey: '/',
+    })
+    expect(trackCurrentPage).toHaveBeenNthCalledWith(2, {
+      initialPageEvent: 'skip',
+      routeKey: '/',
+    })
+
+    setCurrentRoute('/page-two', new URLSearchParams('initialExperience=readiness'), false)
+    await rendered.rerender(<InitialExperienceRequestRoot initialExperience={initialExperience} />)
+    expect(trackCurrentPage).toHaveBeenCalledTimes(2)
+
+    setCurrentRoute('/page-two')
+    await rendered.rerender(<InitialExperienceRequestRoot initialExperience={initialExperience} />)
+    expect(trackCurrentPage).toHaveBeenCalledTimes(3)
+    expect(trackCurrentPage).toHaveBeenNthCalledWith(3, {
+      buildPayload: expect.any(Function),
+      initialPageEvent: 'emit',
+      routeKey: '/page-two',
+    })
+
+    await rendered.unmount()
   })
 
   it('emits once on initial render', async () => {
@@ -119,11 +326,7 @@ describe('NextAppAutoPageTracker', () => {
     const sdk = createOptimizationSdk({ page })
     const rendered = await renderTracker(<NextAppAutoPageTracker />, sdk)
 
-    routeState.pathname = '/products'
-    routeState.searchParams = new URLSearchParams('tab=featured')
-    const { pathname, searchParams } = routeState
-    currentPathname = pathname
-    currentSearchParams = searchParams
+    setCurrentRoute('/products', new URLSearchParams('tab=featured'))
 
     await rendered.rerender(<NextAppAutoPageTracker />)
 
@@ -165,9 +368,7 @@ describe('NextAppAutoPageTracker', () => {
 
     expect(page).not.toHaveBeenCalled()
 
-    routeState.pathname = '/products'
-    const { pathname } = routeState
-    currentPathname = pathname
+    setCurrentRoute('/products')
 
     await rendered.rerender(<NextAppAutoPageTracker initialPageEvent="skip" />)
 
@@ -177,8 +378,7 @@ describe('NextAppAutoPageTracker', () => {
 
     expect(page).toHaveBeenCalledTimes(1)
 
-    routeState.pathname = '/'
-    currentPathname = routeState.pathname
+    setCurrentRoute('/')
 
     await rendered.rerender(<NextAppAutoPageTracker initialPageEvent="skip" />)
 
@@ -193,11 +393,7 @@ describe('NextAppAutoPageTracker', () => {
       return undefined
     })
     const sdk = createOptimizationSdk({ page })
-    routeState.pathname = '/products'
-    routeState.searchParams = new URLSearchParams('tab=featured')
-    const { pathname, searchParams } = routeState
-    currentPathname = pathname
-    currentSearchParams = searchParams
+    setCurrentRoute('/products', new URLSearchParams('tab=featured'))
     const getPagePayload = rs.fn(
       ({ url, isInitialEmission }: NextAppAutoPageContext & { isInitialEmission: boolean }) => ({
         locale: isInitialEmission ? 'en-US' : 'de-DE',

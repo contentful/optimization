@@ -154,8 +154,8 @@
       "gzipBudgets": {
         "index.cjs": 7100,
         "index.mjs": 6200,
-        "router/next-app.cjs": 1900,
-        "router/next-app.mjs": 1800,
+        "router/next-app.cjs": 2000,
+        "router/next-app.mjs": 2000,
         "router/next-pages.cjs": 1900,
         "router/next-pages.mjs": 1900,
         "router/react-router.cjs": 1900,

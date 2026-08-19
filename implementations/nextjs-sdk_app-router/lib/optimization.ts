@@ -13,6 +13,7 @@ import type { NextRequest, NextResponse } from 'next/server'
 import { appConfig } from './config'
 import { client } from './contentful'
 import { getCustomerSegment, type CustomerSegment } from './customer-segments'
+import { ClientRequestOptimizationRoot } from './optimization-client'
 import { getAppConsent } from './util'
 
 const HIDDEN_UNTIL_READY_ROUTE = '/hidden-until-ready'
@@ -38,21 +39,28 @@ const serverOptimizationConfig = {
 const serverConsent: NextjsOptimizationServerConsentResolver = ({ cookies }) =>
   getAppConsent(cookies) ? { events: true, persistence: true } : false
 
-const optimization = bindNextjsAppRouterServerOptimization({
-  ...serverOptimizationConfig,
-  contentful: { client },
-  trackEntryInteraction: { views: true, clicks: true, hovers: true },
-  consent: {
-    server: serverConsent,
-    clientDefaults: { consent: false, persistenceConsent: false },
+const optimization = bindNextjsAppRouterServerOptimization(
+  {
+    ...serverOptimizationConfig,
+    contentful: { client },
+    trackEntryInteraction: { views: true, clicks: true, hovers: true },
+    consent: {
+      server: serverConsent,
+      clientDefaults: { consent: false, persistenceConsent: false },
+    },
+    request: {
+      hydration: ({ routeKey }) =>
+        routeKey.split('?')[0] === HIDDEN_UNTIL_READY_ROUTE
+          ? 'client-only-hidden-until-ready'
+          : 'preserve-server',
+    },
   },
-  request: {
-    hydration: ({ routeKey }) =>
-      routeKey.split('?')[0] === HIDDEN_UNTIL_READY_ROUTE
-        ? 'client-only-hidden-until-ready'
-        : 'preserve-server',
+  {
+    request: {
+      OptimizationRoot: ClientRequestOptimizationRoot,
+    },
   },
-})
+)
 
 export const {
   OptimizationAnalyticsRoot,
@@ -63,11 +71,8 @@ export const {
   createPublicPermutationHandoff,
   resolveEntriesForSelections,
 } = optimization
-export const {
-  NextAppAutoPageTracker: RequestNextAppAutoPageTracker,
-  OptimizationRoot: RequestOptimizationRoot,
-  OptimizedEntry: RequestOptimizedEntry,
-} = optimization.request
+export const { OptimizationRoot: RequestOptimizationRoot, OptimizedEntry: RequestOptimizedEntry } =
+  optimization.request
 export { getServerTrackingAttributes }
 
 const cacheMiddleware: NextjsPublicPermutationCacheMiddleware =

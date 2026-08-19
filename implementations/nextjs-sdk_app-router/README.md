@@ -28,6 +28,8 @@ Edge runtime routes live in the
 ## What this covers
 
 - A single server binding in `lib/optimization.ts`.
+- A client-only binding in `lib/optimization-client.ts` that runs optional initial Experience work
+  before the request root's browser-owned page event.
 - Request-bound Server Components with browser hydration and live updates.
 - Static public permutation and analytics-only handoff.
 - App-owned and SDK-managed Contentful entry fetching.
@@ -84,6 +86,20 @@ async function PrivateRequestSlot() {
 ```
 
 Keep provider-dependent tools inside `RequestOptimizationRoot`.
+
+## Run initial Experience work before the browser page
+
+`lib/optimization-client.ts` binds a client-only `initialExperience` callback. The maintained
+callback identifies only when the URL contains `?initialExperience=readiness`; ordinary routes do
+nothing. `lib/optimization.ts` injects that module's `ClientRequestOptimizationRoot` into the server
+request family as a Client Component reference.
+
+The server passes only children, defaults, handoff, and hydration through the request root. The
+client root derives the current App Router route and lazy page payload in the browser, so neither the
+callback nor a payload-builder function crosses the Server Component boundary. It makes the direct
+initial page attempt, marks that attempted route through the existing non-emitting initial `skip`
+path, and emits once for each later route. Do not mount a separate request page tracker in the same
+subtree.
 
 ## Choose entry-fetch ownership
 

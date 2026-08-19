@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation.js'
-import { useCallback, useMemo, type ReactElement } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
 import { buildAutoPagePayload } from '../auto-page/pagePayload'
 import type { AutoPagePayload, AutoPagePayloadOptions } from '../auto-page/types'
 import { useAutoPageEmitter, type InitialAutoPageEvent } from '../auto-page/useAutoPageEmitter'
@@ -41,17 +41,66 @@ export interface NextAppAutoPageTrackerProps extends AutoPagePayloadOptions<Next
   readonly initialPageEvent?: InitialAutoPageEvent
 }
 
-export function NextAppAutoPageTracker({
-  initialPageEvent,
+interface NextAppRouteSnapshot {
+  readonly pathname: string
+  readonly routeKey: string
+  readonly search: string
+  readonly searchParams: ReturnType<typeof useSearchParams>
+}
+
+export function useNextAppAutoPageInputs({
   pagePayload,
   getPagePayload,
-}: NextAppAutoPageTrackerProps): ReactElement | null {
-  const pathname = usePathname()
+}: AutoPagePayloadOptions<NextAppAutoPageContext> = {}): {
+  readonly buildPagePayload: (metadata: { readonly isInitialEmission: boolean }) => AutoPagePayload
+  readonly routeKey: string
+} {
+  const routerPathname = usePathname()
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const routerSearchParams = useSearchParams()
 
-  const search = useMemo(() => toSearch(searchParams), [searchParams])
-  const routeKey = `${pathname}${search}`
+  const routerSearch = useMemo(() => toSearch(routerSearchParams), [routerSearchParams])
+  const routerRouteSnapshot = useMemo<NextAppRouteSnapshot>(
+    () => ({
+      pathname: routerPathname,
+      routeKey: `${routerPathname}${routerSearch}`,
+      search: routerSearch,
+      searchParams: routerSearchParams,
+    }),
+    [routerPathname, routerSearch, routerSearchParams],
+  )
+  const browserRouteKey =
+    typeof window === 'undefined'
+      ? undefined
+      : `${window.location.pathname}${window.location.search}`
+  const [lastBrowserConfirmedRoute, setLastBrowserConfirmedRoute] = useState<
+    NextAppRouteSnapshot | undefined
+  >(undefined)
+
+  useEffect(() => {
+    const committedBrowserRouteKey =
+      typeof window === 'undefined'
+        ? undefined
+        : `${window.location.pathname}${window.location.search}`
+    if (committedBrowserRouteKey !== routerRouteSnapshot.routeKey) return
+
+    setLastBrowserConfirmedRoute((current) =>
+      current?.routeKey === routerRouteSnapshot.routeKey ? current : routerRouteSnapshot,
+    )
+  }, [routerRouteSnapshot])
+
+  // A retained App Router layout can briefly replay an older navigation
+  // snapshot during an unrelated state update. Keep the last route confirmed
+  // by both the router and the browser until they agree on a genuine next URL.
+  // Next can also render the new router snapshot before committing its URL, so
+  // the effect above reconciles that snapshot after the browser commit.
+  const routeSnapshot =
+    browserRouteKey !== routerRouteSnapshot.routeKey &&
+    lastBrowserConfirmedRoute !== undefined &&
+    lastBrowserConfirmedRoute.routeKey === browserRouteKey
+      ? lastBrowserConfirmedRoute
+      : routerRouteSnapshot
+  const { pathname, routeKey, search, searchParams } = routeSnapshot
 
   // Hash intentionally omitted: Next.js App Router does not expose it; the
   // SDK's getPageProperties will read window.location.hash, which is not
@@ -68,7 +117,7 @@ export function NextAppAutoPageTracker({
     [pathname, routeKey, search, searchParams],
   )
 
-  const buildPayload = useCallback(
+  const buildPagePayload = useCallback(
     ({ isInitialEmission }: { isInitialEmission: boolean }): AutoPagePayload =>
       buildAutoPagePayload(
         routerPayload,
@@ -89,7 +138,25 @@ export function NextAppAutoPageTracker({
     [getPagePayload, pagePayload, pathname, routeKey, router, routerPayload, search, searchParams],
   )
 
-  useAutoPageEmitter({ enabled: true, initialPageEvent, routeKey, buildPayload })
+  return { buildPagePayload, routeKey }
+}
+
+export function NextAppAutoPageTracker({
+  initialPageEvent,
+  pagePayload,
+  getPagePayload,
+}: NextAppAutoPageTrackerProps): ReactElement | null {
+  const { buildPagePayload, routeKey } = useNextAppAutoPageInputs({
+    getPagePayload,
+    pagePayload,
+  })
+
+  useAutoPageEmitter({
+    buildPayload: buildPagePayload,
+    enabled: true,
+    initialPageEvent,
+    routeKey,
+  })
 
   return null
 }

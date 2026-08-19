@@ -7,10 +7,11 @@ import type {
   OptimizedEntryManagedProps,
   OptimizedEntryProps,
 } from '@contentful/optimization-react-web'
+import type { StatefulDefaults } from '@contentful/optimization-react-web/core-sdk'
 import type { NextAppAutoPageTrackerProps } from '@contentful/optimization-react-web/router/next-app'
 import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
 import type { ReactElement, ReactNode } from 'react'
-import type { ContentOptimizationHydrationMode } from './handoff'
+import type { ContentOptimizationHandoff, ContentOptimizationHydrationMode } from './handoff'
 
 export type NextjsBoundProviderConfig = Omit<
   OptimizationProviderConfigProps,
@@ -155,6 +156,13 @@ export type BoundNextjsOptimizationRootWithInitialExperienceProps = Omit<
   readonly routeKey: string
   readonly buildPagePayload: NonNullable<OptimizationRootProps['buildPagePayload']>
   readonly initialPagePayload?: never
+}
+
+export interface BoundNextjsAppRouterRequestClientRootProps {
+  readonly children?: ReactNode
+  readonly defaults?: StatefulDefaults
+  readonly handoff?: ContentOptimizationHandoff
+  readonly hydration?: ContentOptimizationHydrationMode
 }
 
 export type NextjsAppRouterRequestOptimizationRootProps = Omit<

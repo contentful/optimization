@@ -183,6 +183,13 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   Strict Mode double effects. Mount ONE tracker per router tree. React Router / TanStack trackers do
   NOT take `initialPageEvent`; only next-pages / next-app trackers do (React-Web-only Next setups).
   source: react-web-sdk#router/react-router.tsx#ReactRouterAutoPageTracker; react-web-sdk#router/tanstack-router.tsx#TanStackRouterAutoPageTracker; react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker; react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker; web-sdk#ContentfulOptimization.ts#trackCurrentPage
+- `useNextAppAutoPageInputs` derives the current App Router route key and lazy page-payload builder
+  from pathname and search state without emitting. In a retained App layout, when Next.js hooks
+  transiently replay an older route snapshot that disagrees with `window.location`, the hook keeps
+  the last route inputs confirmed by both the hooks and browser. A later route becomes current when
+  the hooks and browser location agree. `NextAppAutoPageTracker` consumes those inputs and passes
+  them to the shared auto-page emitter for its initial and later page behavior.
+  source: react-web-sdk#router/next-app.tsx#useNextAppAutoPageInputs; react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker
 - Initial page event is auto-emitted on mount, not only on navigation: the shared emitter
   `useAutoPageEmitter` defaults `initialPageEvent` to `'emit'` and calls `sdk.trackCurrentPage()` in a
   mount effect, so the first route emits its `page` event as soon as the tracker mounts. Trackers that
