@@ -215,6 +215,38 @@ describe('Next.js Pages Router client components', () => {
     expect(getEntries).not.toHaveBeenCalled()
   })
 
+  it('forwards initial Experience only to the bound content root', () => {
+    const initialExperience = {
+      run: rs.fn(() => undefined),
+    }
+    const components = pagesRouter.bindNextjsPagesRouterOptimization({
+      ...testConfig,
+      initialExperience,
+    })
+    const analyticsHandoff = components.createHandoffFromSelections({
+      cache: { scope: 'static' },
+      hydration: 'analytics-only',
+      initialPageEvent: 'emit',
+      selectedOptimizations: [],
+    })
+    const root = components.OptimizationRoot({
+      buildPagePayload: () => ({ properties: { route: '/products' } }),
+      children: 'Root content',
+      routeKey: '/products',
+    })
+    const provider = components.OptimizationProvider({ children: 'Provider content' })
+    const analyticsRoot = components.OptimizationAnalyticsRoot({
+      children: 'Analytics content',
+      handoff: analyticsHandoff,
+      routeKey: '/products',
+    })
+
+    expect(root.props).toMatchObject({ initialExperience })
+    expect(provider?.props).not.toHaveProperty('initialExperience')
+    expect(analyticsRoot.props).not.toHaveProperty('initialExperience')
+    expect(components).not.toHaveProperty('initialExperience')
+  })
+
   it('returns Pages Router v2 helpers only', () => {
     const components = pagesRouter.bindNextjsPagesRouterOptimization(testConfig)
 

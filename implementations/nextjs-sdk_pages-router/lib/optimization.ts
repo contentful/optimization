@@ -2,6 +2,9 @@ import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-next
 import { appConfig } from './config'
 import { getBrowserAppConsent } from './util'
 
+const INITIAL_EXPERIENCE_QUERY_VALUE = 'readiness'
+const INITIAL_EXPERIENCE_MAX_WAIT_MS = 1_500
+
 function getBrowserClientDefaults(): {
   readonly consent: boolean
   readonly persistenceConsent: boolean
@@ -12,7 +15,6 @@ function getBrowserClientDefaults(): {
 }
 
 export const {
-  NextPagesAutoPageTracker,
   OptimizationAnalyticsRoot,
   OptimizationRoot,
   OptimizedEntry,
@@ -32,6 +34,15 @@ export const {
   app: {
     name: 'Contentful Optimization Next.js SDK Pages Router',
     version: '0.1.0',
+  },
+  initialExperience: {
+    maxWaitMs: INITIAL_EXPERIENCE_MAX_WAIT_MS,
+    run: ({ identify }) => {
+      const scenario = new URLSearchParams(window.location.search).get('initialExperience')
+      if (scenario !== INITIAL_EXPERIENCE_QUERY_VALUE) return
+
+      return identify({ userId: 'charles', traits: { identified: true } })
+    },
   },
 })
 export { getServerTrackingAttributes } from '@contentful/optimization-nextjs/tracking-attributes'

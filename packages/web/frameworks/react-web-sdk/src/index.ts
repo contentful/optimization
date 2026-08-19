@@ -36,6 +36,10 @@ export {
   useProfileState,
   useSelectedOptimizationsState,
 } from './hooks/useOptimizationState'
+export type {
+  InitialExperienceClient,
+  InitialExperienceOptions,
+} from './initial-experience/initialExperience'
 export { OptimizedEntry } from './optimized-entry/OptimizedEntry'
 export type {
   OptimizedEntryBaselineProps,

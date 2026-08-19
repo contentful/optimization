@@ -1,9 +1,26 @@
-import type { TrackCurrentPageOptions } from '@contentful/optimization-web'
+import type {
+  TrackCurrentPageOptions,
+  TrackCurrentPageSkipOptions,
+} from '@contentful/optimization-web'
 import type { ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
-import { useEffect, useRef, type ReactElement } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PropsWithChildren,
+  type ReactElement,
+} from 'react'
 
 import type { AutoPagePayload } from '../auto-page/types'
 import { useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
+import { InitialExperienceContext } from '../context/InitialExperienceContext'
+import { useOptimizationContext } from '../hooks/useOptimization'
+import {
+  resolveInitialExperienceMaxWaitMs,
+  runInitialExperience,
+  type InitialExperienceOptions,
+} from '../initial-experience/initialExperience'
 import { createScopedLogger } from '../logger'
 import { LiveUpdatesProvider } from '../provider/LiveUpdatesProvider'
 import {
@@ -11,12 +28,37 @@ import {
   type OptimizationProviderConfigProps,
 } from '../provider/OptimizationProvider'
 
-export type OptimizationRootProps = OptimizationProviderConfigProps & {
+interface OptimizationRootCommonProps {
   readonly liveUpdates?: boolean
+}
+
+interface OptimizationRootWithoutInitialExperienceProps {
+  readonly initialExperience?: never
   readonly routeKey?: string
   readonly buildPagePayload?: TrackCurrentPageOptions['buildPayload']
   readonly initialPagePayload?: AutoPagePayload
 }
+
+interface OptimizationRootWithInitialExperienceProps {
+  readonly initialExperience: InitialExperienceOptions
+  readonly routeKey: string
+  readonly buildPagePayload: TrackCurrentPageOptions['buildPayload']
+  readonly initialPagePayload?: never
+}
+
+export type OptimizationRootProps = OptimizationProviderConfigProps &
+  OptimizationRootCommonProps &
+  (OptimizationRootWithoutInitialExperienceProps | OptimizationRootWithInitialExperienceProps)
+
+type DefaultOptimizationRootProps = OptimizationProviderConfigProps &
+  OptimizationRootCommonProps &
+  OptimizationRootWithoutInitialExperienceProps
+
+type InitialExperienceOptimizationRootProps = OptimizationProviderConfigProps &
+  OptimizationRootCommonProps &
+  OptimizationRootWithInitialExperienceProps & {
+    readonly maxWaitMs: number
+  }
 
 const logger = createScopedLogger('React:OptimizationRoot')
 
@@ -101,7 +143,7 @@ function shouldWarnMissingInitialPagePayload({
   )
 }
 
-export function OptimizationRoot({
+function DefaultOptimizationRoot({
   buildPagePayload,
   children,
   handoff,
@@ -109,7 +151,7 @@ export function OptimizationRoot({
   liveUpdates = false,
   routeKey,
   ...providerProps
-}: OptimizationRootProps): ReactElement {
+}: DefaultOptimizationRootProps): ReactElement {
   const initialRouteKey = useRef<string | undefined>(undefined)
   initialRouteKey.current ??= routeKey
   const initialPageEmitterProps = resolveInitialPageEmitterProps({
@@ -133,4 +175,177 @@ export function OptimizationRoot({
       <LiveUpdatesProvider globalLiveUpdates={liveUpdates}>{children}</LiveUpdatesProvider>
     </OptimizationProvider>
   )
+}
+
+interface InitialExperienceSequenceState {
+  readonly emitterRouteKey: string
+  readonly isReady: boolean
+}
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error))
+}
+
+function logInitialPageError(error: unknown): void {
+  try {
+    logger.error('OptimizationRoot failed to track the initial browser page.', toError(error))
+  } catch {
+    // Logging is best-effort and must not block readiness.
+  }
+}
+
+function InitialExperienceSequence({
+  buildPagePayload,
+  children,
+  handoff,
+  initialExperience,
+  initialRouteKey,
+  maxWaitMs,
+  routeKey,
+}: PropsWithChildren<{
+  readonly buildPagePayload: TrackCurrentPageOptions['buildPayload']
+  readonly handoff?: ContentOptimizationHandoff
+  readonly initialExperience: InitialExperienceOptions
+  readonly initialRouteKey: string
+  readonly maxWaitMs: number
+  readonly routeKey: string
+}>): ReactElement {
+  const { error, isLive, sdk } = useOptimizationContext()
+  const [sequenceState, setSequenceState] = useState<InitialExperienceSequenceState>({
+    emitterRouteKey: initialRouteKey,
+    isReady: false,
+  })
+  const buildPagePayloadRef = useRef(buildPagePayload)
+  const currentRuntimeRef = useRef(sdk)
+  const currentRuntimeIsLiveRef = useRef(isLive === true)
+  const initialHandoffRef = useRef(handoff)
+  const initialExperienceRef = useRef(initialExperience)
+  const initialMaxWaitMsRef = useRef(maxWaitMs)
+  const lastObservedRouteKeyRef = useRef(routeKey)
+  const mountedRef = useRef(false)
+  const routeKeyRef = useRef(routeKey)
+  const sequenceStartedRef = useRef(false)
+  buildPagePayloadRef.current = buildPagePayload
+  currentRuntimeRef.current = sdk
+  currentRuntimeIsLiveRef.current = isLive === true
+  routeKeyRef.current = routeKey
+
+  const buildLatestPagePayload = useCallback<TrackCurrentPageOptions['buildPayload']>(
+    (metadata) => buildPagePayloadRef.current(metadata),
+    [],
+  )
+
+  useEffect(() => {
+    mountedRef.current = true
+
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (sequenceStartedRef.current || !isLive || sdk === undefined) return
+
+    sequenceStartedRef.current = true
+    const sequenceRuntime = sdk
+    const isCurrentRuntime = (): boolean =>
+      mountedRef.current &&
+      currentRuntimeIsLiveRef.current &&
+      currentRuntimeRef.current === sequenceRuntime
+
+    void (async () => {
+      await runInitialExperience(
+        sequenceRuntime,
+        initialExperienceRef.current,
+        initialMaxWaitMsRef.current,
+      )
+
+      if (!isCurrentRuntime()) return
+
+      const { current: attemptedRouteKey } = routeKeyRef
+      const { current: initialHandoff } = initialHandoffRef
+      const canSkipDirectPage =
+        initialHandoff !== undefined &&
+        error === undefined &&
+        initialHandoff.initialPageEvent === 'skip' &&
+        attemptedRouteKey === initialRouteKey
+      const pageOptions: TrackCurrentPageOptions | TrackCurrentPageSkipOptions = canSkipDirectPage
+        ? { initialPageEvent: 'skip', routeKey: attemptedRouteKey }
+        : {
+            buildPayload: buildPagePayloadRef.current,
+            initialPageEvent: 'emit',
+            routeKey: attemptedRouteKey,
+          }
+
+      try {
+        await sequenceRuntime.trackCurrentPage(pageOptions)
+      } catch (pageError: unknown) {
+        logInitialPageError(pageError)
+      }
+
+      if (!isCurrentRuntime()) return
+
+      const { current: currentRouteKey } = routeKeyRef
+      lastObservedRouteKeyRef.current = currentRouteKey
+      setSequenceState({ emitterRouteKey: attemptedRouteKey, isReady: true })
+    })()
+  }, [error, initialRouteKey, isLive, sdk])
+
+  useAutoPageEmitter({
+    buildPayload: buildLatestPagePayload,
+    enabled: sequenceState.isReady,
+    initialPageEvent: 'skip',
+    routeKey: sequenceState.emitterRouteKey,
+  })
+
+  useEffect(() => {
+    if (!sequenceState.isReady || lastObservedRouteKeyRef.current === routeKey) return
+
+    lastObservedRouteKeyRef.current = routeKey
+    setSequenceState({ emitterRouteKey: routeKey, isReady: true })
+  }, [routeKey, sequenceState.isReady])
+
+  return (
+    <InitialExperienceContext.Provider value={sequenceState.isReady}>
+      {children}
+    </InitialExperienceContext.Provider>
+  )
+}
+
+function InitialExperienceOptimizationRoot({
+  buildPagePayload,
+  children,
+  handoff,
+  initialExperience,
+  liveUpdates = false,
+  maxWaitMs,
+  routeKey,
+  ...providerProps
+}: InitialExperienceOptimizationRootProps): ReactElement {
+  const initialRouteKey = useRef(routeKey)
+
+  return (
+    <OptimizationProvider {...providerProps} handoff={handoff}>
+      <InitialExperienceSequence
+        buildPagePayload={buildPagePayload}
+        handoff={handoff}
+        initialExperience={initialExperience}
+        initialRouteKey={initialRouteKey.current}
+        maxWaitMs={maxWaitMs}
+        routeKey={routeKey}
+      >
+        <LiveUpdatesProvider globalLiveUpdates={liveUpdates}>{children}</LiveUpdatesProvider>
+      </InitialExperienceSequence>
+    </OptimizationProvider>
+  )
+}
+
+export function OptimizationRoot(props: OptimizationRootProps): ReactElement {
+  if (props.initialExperience === undefined) {
+    return <DefaultOptimizationRoot {...props} />
+  }
+
+  const maxWaitMs = resolveInitialExperienceMaxWaitMs(props.initialExperience.maxWaitMs)
+
+  return <InitialExperienceOptimizationRoot {...props} maxWaitMs={maxWaitMs} />
 }

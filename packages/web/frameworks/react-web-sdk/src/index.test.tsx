@@ -5,6 +5,7 @@ import type { Entry } from 'contentful'
 import { act, StrictMode, type ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
+import * as ReactWebSdk from './index'
 import {
   LiveUpdatesProvider,
   OptimizationAnalyticsRoot,
@@ -23,7 +24,12 @@ import {
   useOptimizedEntry,
   useProfileState,
   useSelectedOptimizationsState,
+  type InitialExperienceClient,
+  type InitialExperienceOptions,
+  type OptimizationAnalyticsRootProps,
   type OptimizationContextValue,
+  type OptimizationProviderProps,
+  type OptimizationRootProps,
   type OptimizationSdk,
   type UseEntryResolverResult,
   type UseOptimizationActionsResult,
@@ -99,6 +105,88 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(useSelectedOptimizationsState).toBeTypeOf('function')
     expect(useLiveUpdates).toBeTypeOf('function')
     expect(OptimizedEntry).toBeTypeOf('function')
+  })
+
+  it('keeps runtime export keys unchanged when initial Experience types are exported', () => {
+    expect(Object.keys(ReactWebSdk).sort()).toEqual([
+      'LiveUpdatesContext',
+      'LiveUpdatesProvider',
+      'OptimizationAnalyticsRoot',
+      'OptimizationContext',
+      'OptimizationProvider',
+      'OptimizationRoot',
+      'OptimizedEntry',
+      'prefetchManagedEntries',
+      'useCanOptimizeState',
+      'useConsentState',
+      'useEntryResolver',
+      'useEventStreamState',
+      'useLiveUpdates',
+      'useMergeTagResolver',
+      'useOptimization',
+      'useOptimizationActions',
+      'useOptimizationContext',
+      'useOptimizedEntry',
+      'useProfileState',
+      'useSelectedOptimizationsState',
+    ])
+  })
+
+  it('types initial Experience only on an owned root with current lazy page inputs', () => {
+    const initialExperience: InitialExperienceOptions = {
+      run: async ({ identify }) => await identify({ userId: 'user-1' }),
+    }
+    const buildPagePayload = (): { properties: { route: string } } => ({
+      properties: { route: '/products' },
+    })
+    const withoutInitialExperience: OptimizationRootProps = {
+      ...testConfig,
+      children: <div />,
+      initialPagePayload: { properties: { route: '/products' } },
+      routeKey: '/products',
+    }
+    const withInitialExperience: OptimizationRootProps = {
+      ...testConfig,
+      buildPagePayload,
+      children: <div />,
+      initialExperience,
+      routeKey: '/products',
+    }
+    const clientKeys: ReadonlyArray<keyof InitialExperienceClient> = ['identify', 'screen', 'track']
+
+    // @ts-expect-error Callback-enabled roots require routeKey and buildPagePayload.
+    const missingPageInputs: OptimizationRootProps = {
+      ...testConfig,
+      children: <div />,
+      initialExperience,
+    }
+    // @ts-expect-error Callback-enabled roots forbid initialPagePayload.
+    const serializableInitialPayload: OptimizationRootProps = {
+      ...testConfig,
+      buildPagePayload,
+      children: <div />,
+      initialExperience,
+      initialPagePayload: { properties: { route: '/products' } },
+      routeKey: '/products',
+    }
+    // @ts-expect-error The initial Experience client does not expose page.
+    const unsupportedClientKey: keyof InitialExperienceClient = 'page'
+
+    type ProviderExcludesInitialExperience =
+      'initialExperience' extends keyof OptimizationProviderProps ? false : true
+    type AnalyticsExcludesInitialExperience =
+      'initialExperience' extends keyof OptimizationAnalyticsRootProps ? false : true
+    const providerExcludesInitialExperience: ProviderExcludesInitialExperience = true
+    const analyticsExcludesInitialExperience: AnalyticsExcludesInitialExperience = true
+
+    expect(withoutInitialExperience.initialPagePayload).toBeDefined()
+    expect(withInitialExperience.initialExperience).toBe(initialExperience)
+    expect(clientKeys).toEqual(['identify', 'screen', 'track'])
+    expect(missingPageInputs).toBeDefined()
+    expect(serializableInitialPayload).toBeDefined()
+    expect(unsupportedClientKey).toBe('page')
+    expect(providerExcludesInitialExperience).toBe(true)
+    expect(analyticsExcludesInitialExperience).toBe(true)
   })
 
   it('creates optimization instance from config props via OptimizationProvider', () => {
