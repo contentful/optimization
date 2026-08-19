@@ -2,6 +2,7 @@ import { optimizedEntry } from '@contentful/optimization-core/test/fixtures/opti
 import { selectedOptimizations } from '@contentful/optimization-core/test/fixtures/selectedOptimizations'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
+import { InterceptorManager } from '@contentful/optimization-web/core-sdk'
 import type { ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
 import { beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { act, type ReactElement, useContext } from 'react'
@@ -23,6 +24,7 @@ import { useManagedBaselineEntry } from '../optimized-entry/useOptimizedEntry'
 import {
   createOptimizationSdk,
   createTestEntry,
+  requireOptimizationContext,
   requireOptimizationSdk,
 } from '../test/sdkTestUtils'
 
@@ -389,6 +391,71 @@ describe('OptimizationProvider onStatesReady', () => {
     expect(profileFromOnStatesReady).toEqual(handoff.state?.profile)
     expect(childProfiles).toEqual([handoff.state?.profile, handoff.state?.profile])
     rendered.unmount()
+  })
+
+  it('retains a usable owned runtime and surfaces the error when initial handoff apply fails', async () => {
+    const hydrationError = new Error('owned handoff apply failed')
+    const hydration = rs
+      .spyOn(InterceptorManager.prototype, 'run')
+      .mockRejectedValueOnce(hydrationError)
+    const destroy = rs.spyOn(ContentfulOptimization.prototype, 'destroy')
+    const handoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b')
+    let capturedContext: OptimizationContextValue | null = null
+
+    function Probe(): null {
+      capturedContext = useOptimizationContext()
+      return null
+    }
+
+    const rendered = await renderClientAsync(
+      <OptimizationProvider {...testConfig} handoff={handoff}>
+        <Probe />
+      </OptimizationProvider>,
+    )
+    const context = requireOptimizationContext(capturedContext)
+
+    expect(context).toEqual(expect.objectContaining({ error: hydrationError, isLive: true }))
+    const sdk = requireOptimizationSdk(context.sdk)
+    expect(sdk).toBeInstanceOf(ContentfulOptimization)
+    await expect(
+      sdk.trackCurrentPage({ initialPageEvent: 'skip', routeKey: '/failed-handoff' }),
+    ).resolves.toEqual({ accepted: true })
+    expect(destroy).not.toHaveBeenCalled()
+
+    rendered.unmount()
+    expect(destroy).toHaveBeenCalledTimes(1)
+    hydration.mockRestore()
+    destroy.mockRestore()
+  })
+
+  it('keeps injected initial-handoff failure behavior unchanged', async () => {
+    const hydrationError = new Error('injected handoff apply failed')
+    const sdk = new ContentfulOptimization(testConfig)
+    sdk.interceptors.state.add(async () => await Promise.reject(hydrationError))
+    const destroy = rs.spyOn(sdk, 'destroy')
+    const handoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b')
+    let capturedContext: OptimizationContextValue | null = null
+
+    function Probe(): null {
+      capturedContext = useOptimizationContext()
+      return null
+    }
+
+    const rendered = await renderClientAsync(
+      <OptimizationProvider sdk={sdk} handoff={handoff}>
+        <Probe />
+      </OptimizationProvider>,
+    )
+
+    expect(capturedContext).toEqual(
+      expect.objectContaining({ error: hydrationError, isLive: false, sdk: undefined }),
+    )
+    expect(destroy).not.toHaveBeenCalled()
+
+    rendered.unmount()
+    expect(destroy).not.toHaveBeenCalled()
+    destroy.mockRestore()
+    sdk.destroy()
   })
 
   it('applies handoff state to injected SDK instances before child render', async () => {

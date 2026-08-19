@@ -1,4 +1,5 @@
 import type {
+  InitialExperienceOptions,
   OptimizationAnalyticsRootProps,
   OptimizationProviderConfigProps,
   OptimizationRootProps,
@@ -55,7 +56,21 @@ export type NextjsBoundRootConfig = Omit<NextjsBoundProviderConfig, 'defaults'> 
   readonly cookie?: NextjsOptimizationCookieConfig
 } & Pick<OptimizationRootProps, 'liveUpdates'>
 
-export type NextjsOptimizationComponentsConfig = NextjsBoundRootConfig
+export type NextjsOptimizationComponentsConfig = NextjsBoundRootConfig & {
+  readonly initialExperience?: never
+}
+
+export type NextjsClientOptimizationConfigWithoutInitialExperience = NextjsBoundRootConfig & {
+  readonly initialExperience?: never
+}
+
+export type NextjsClientOptimizationConfigWithInitialExperience = NextjsBoundRootConfig & {
+  readonly initialExperience: InitialExperienceOptions
+}
+
+export type NextjsClientOptimizationConfig =
+  | NextjsClientOptimizationConfigWithoutInitialExperience
+  | NextjsClientOptimizationConfigWithInitialExperience
 
 export interface NextjsAppRouterRequestContext {
   readonly requestUrl: string
@@ -132,6 +147,15 @@ export interface BoundNextjsOptimizationRootProps
   extends
     BoundNextjsOptimizationProviderProps,
     Pick<OptimizationRootProps, 'buildPagePayload' | 'initialPagePayload' | 'routeKey'> {}
+
+export type BoundNextjsOptimizationRootWithInitialExperienceProps = Omit<
+  BoundNextjsOptimizationRootProps,
+  'buildPagePayload' | 'initialPagePayload' | 'routeKey'
+> & {
+  readonly routeKey: string
+  readonly buildPagePayload: NonNullable<OptimizationRootProps['buildPagePayload']>
+  readonly initialPagePayload?: never
+}
 
 export type NextjsAppRouterRequestOptimizationRootProps = Omit<
   BoundNextjsOptimizationRootProps,

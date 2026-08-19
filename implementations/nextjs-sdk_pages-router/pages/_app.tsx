@@ -1,7 +1,7 @@
 import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { TrackingLog } from '@/components/TrackingLog'
-import { NextPagesAutoPageTracker, OptimizationRoot } from '@/lib/optimization'
+import { OptimizationRoot } from '@/lib/optimization'
 import type { PagesRouterOptimizationProps } from '@/lib/optimization-server'
 import 'e2e-web/theme.css'
 import type { AppProps } from 'next/app'
@@ -55,9 +55,6 @@ export default function App({
       >
         <GlobalLiveUpdatesProvider>
           <PreviewPanel />
-          <NextPagesAutoPageTracker
-            initialPageEvent={contentfulOptimization?.handoff.initialPageEvent}
-          />
           <div className="app-shell">
             <nav>
               <Link data-testid="link-home" href="/">

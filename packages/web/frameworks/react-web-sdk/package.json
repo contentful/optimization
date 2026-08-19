@@ -152,8 +152,8 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 6000,
-        "index.mjs": 5300,
+        "index.cjs": 7100,
+        "index.mjs": 6200,
         "router/next-app.cjs": 1900,
         "router/next-app.mjs": 1800,
         "router/next-pages.cjs": 1900,

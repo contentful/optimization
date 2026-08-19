@@ -13,6 +13,9 @@ import { hasFlag, implementation } from './utils'
 const segment = CUSTOMER_SEGMENTS['new-visitor']
 const EVIDENCE_KEY = '__ctflReadinessEvidence'
 const EXPERIENCE_ROUTE = '**/experience/**'
+const INITIAL_EXPERIENCE_PATH = '/ssg-client-personalization?initialExperience=readiness'
+const INITIAL_EXPERIENCE_PRESERVED_PATH = '/page-two?initialExperience=readiness'
+const INITIAL_EXPERIENCE_WATCHDOG_EVIDENCE_TIMEOUT_MS = 2_000
 const diagnosticsByPage = new WeakMap<Page, Diagnostics>()
 const pagesCsrTest =
   hasFlag('CSR') && implementation === 'nextjs-sdk_pages-router' ? test : test.skip
@@ -47,6 +50,16 @@ interface Diagnostics {
   readonly consoleErrors: string[]
   readonly hydrationErrors: string[]
   readonly pageErrors: string[]
+}
+
+interface RecordedExperienceEvent {
+  readonly pageRouteKey?: string
+  readonly type: 'identify' | 'page'
+}
+
+interface ExperienceEventRecorder {
+  readonly events: () => readonly RecordedExperienceEvent[]
+  readonly remove: () => void
 }
 
 function watchDiagnostics(page: Page): Diagnostics {
@@ -185,16 +198,52 @@ function isEvidence(value: unknown): value is Evidence {
   )
 }
 
-function containsEvent(request: Request, type: 'identify' | 'page'): boolean {
+function toPageRouteKey(event: Readonly<Record<string, unknown>>): string | undefined {
+  const { properties } = event
+  if (!isRecord(properties) || typeof properties.url !== 'string') return undefined
+
+  try {
+    const url = new URL(properties.url, 'http://readiness.local')
+    return `${url.pathname}${url.search}`
+  } catch {
+    return properties.url
+  }
+}
+
+function readRecordedExperienceEvents(request: Request): readonly RecordedExperienceEvent[] {
   try {
     const payload: unknown = request.postDataJSON()
-    return (
-      isRecord(payload) &&
-      Array.isArray(payload.events) &&
-      payload.events.some((event) => isRecord(event) && event.type === type)
-    )
+    if (!isRecord(payload) || !Array.isArray(payload.events)) return []
+
+    return payload.events.flatMap((event): RecordedExperienceEvent[] => {
+      if (!isRecord(event) || (event.type !== 'identify' && event.type !== 'page')) return []
+
+      return [
+        {
+          pageRouteKey: event.type === 'page' ? toPageRouteKey(event) : undefined,
+          type: event.type,
+        },
+      ]
+    })
   } catch {
-    return false
+    return []
+  }
+}
+
+function containsEvent(request: Request, type: 'identify' | 'page'): boolean {
+  return readRecordedExperienceEvents(request).some((event) => event.type === type)
+}
+
+function recordExperienceEvents(page: Page): ExperienceEventRecorder {
+  const events: RecordedExperienceEvent[] = []
+  const record = (request: Request): void => {
+    events.push(...readRecordedExperienceEvents(request))
+  }
+  page.on('request', record)
+
+  return {
+    events: () => [...events],
+    remove: () => page.off('request', record),
   }
 }
 
@@ -202,6 +251,10 @@ interface HeldResponse {
   readonly held: () => boolean
   readonly release: () => void
   readonly remove: () => Promise<void>
+}
+
+interface HeldRequest extends HeldResponse {
+  readonly request: () => Request
 }
 
 interface TrackedRouteHandler {
@@ -249,6 +302,43 @@ async function holdExistingResponse(page: Page, type: 'identify' | 'page'): Prom
   return {
     held: () => held,
     release,
+    remove: async (): Promise<void> => {
+      if (removed) return
+      removed = true
+      release()
+      await tracked.drain()
+      await page.unroute(EXPERIENCE_ROUTE, tracked.handler)
+      await tracked.drain()
+    },
+  }
+}
+
+async function holdNextRequest(page: Page, type: 'identify' | 'page'): Promise<HeldRequest> {
+  let held = false
+  let heldRequest: Request | undefined
+  let removed = false
+  let release = (): void => undefined
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const tracked = trackRouteHandler(async (route): Promise<void> => {
+    if (held || !containsEvent(route.request(), type)) {
+      await route.continue()
+      return
+    }
+    heldRequest = route.request()
+    held = true
+    await gate
+    await route.continue()
+  })
+  await page.route(EXPERIENCE_ROUTE, tracked.handler)
+  return {
+    held: () => held,
+    release,
+    request: () => {
+      if (heldRequest === undefined) throw new Error(`No ${type} request is currently held.`)
+      return heldRequest
+    },
     remove: async (): Promise<void> => {
       if (removed) return
       removed = true
@@ -542,6 +632,163 @@ test.describe('readiness', () => {
     expectNoVisibleBlankAfterCommitment(evidence)
     expectNoErrors(diagnostics)
   })
+
+  pagesCsrTest(
+    'initial Experience uses the latest route and emits once after readiness',
+    async ({ page }) => {
+      const diagnostics = watchDiagnostics(page)
+      const recorder = recordExperienceEvents(page)
+      const identifyRequest = await holdNextRequest(page, 'identify')
+      try {
+        await observeFromDocumentStart(page, `[data-testid="entry-text-${PAGES.pageTwo.auto}"]`)
+        await page.goto(INITIAL_EXPERIENCE_PRESERVED_PATH)
+        await expect.poll(identifyRequest.held).toBe(true)
+        expect(recorder.events().map(({ type }) => type)).toEqual(['identify'])
+
+        await expect(page.getByTestId('page-two-view')).toBeVisible()
+        await expect.poll(async () => (await readEvidence(page)).visibleCandidates.length).toBe(1)
+        const pendingEvidence = await readEvidence(page)
+        expectPreservedFirst(pendingEvidence)
+        expectContinuouslyVisible(pendingEvidence)
+        expectNewVisitor(candidateAt(pendingEvidence))
+        expectNoVisibleBlankAfterCommitment(pendingEvidence)
+        expect(
+          recorder.events().filter(({ type }) => type === 'page'),
+          'the root page must wait for the returned identify request',
+        ).toEqual([])
+
+        await page.getByTestId('link-ssg-client-personalization').click()
+        await expect(page.getByTestId('readiness-ssg-route')).toBeVisible()
+        identifyRequest.release()
+        await expect
+          .poll(() =>
+            recorder
+              .events()
+              .filter(({ type }) => type === 'page')
+              .map(({ pageRouteKey }) => pageRouteKey),
+          )
+          .toEqual(['/ssg-client-personalization'])
+        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page'])
+        await expect(page.getByTestId('readiness-ssg-entry')).toBeVisible()
+
+        await page.getByTestId('link-home').click()
+        await expect(page.getByRole('heading', { name: 'Next.js SDK Pages Router' })).toBeVisible()
+        await expect
+          .poll(() =>
+            recorder
+              .events()
+              .filter(({ type }) => type === 'page')
+              .map(({ pageRouteKey }) => pageRouteKey),
+          )
+          .toEqual(['/ssg-client-personalization', PAGES.home.path])
+        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page', 'page'])
+        expectNoErrors(diagnostics)
+      } finally {
+        await identifyRequest.remove()
+        recorder.remove()
+      }
+    },
+  )
+
+  pagesCsrTest('initial Experience rejection continues to the page', async ({ page }) => {
+    const diagnostics = watchDiagnostics(page)
+    const recorder = recordExperienceEvents(page)
+    const identifyRequest = await failNextRequest(page, 'identify')
+    try {
+      await observeFromDocumentStart(
+        page,
+        '[data-testid="readiness-ssg-entry"]',
+        '[data-testid="readiness-ssg-loading"]',
+      )
+      await page.goto(INITIAL_EXPERIENCE_PATH)
+      await expect.poll(identifyRequest.failed).toBe(true)
+      await expect
+        .poll(() =>
+          recorder
+            .events()
+            .filter(({ type }) => type === 'page')
+            .map(({ pageRouteKey }) => pageRouteKey),
+        )
+        .toEqual([INITIAL_EXPERIENCE_PATH])
+      await expect(page.getByTestId('readiness-ssg-entry')).toBeVisible()
+
+      const evidence = await readEvidence(page)
+      expectLoadingFirst(evidence, true)
+      expect(evidence.visibleCandidates).toHaveLength(1)
+      expectBaselineOrNewVisitor(candidateAt(evidence))
+      expectContinuouslyVisible(evidence, true)
+      expect(evidence.secondVisibleCandidateAfterCommitment).toBe(false)
+      expectNoVisibleBlankAfterCommitment(evidence)
+      expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page'])
+      expectOnlyIntentionalRequestErrors(diagnostics)
+    } finally {
+      await identifyRequest.remove()
+      recorder.remove()
+    }
+  })
+
+  pagesCsrTest(
+    'initial Experience watchdog continues without canceling identify',
+    async ({ page }) => {
+      const diagnostics = watchDiagnostics(page)
+      const recorder = recordExperienceEvents(page)
+      const identifyRequest = await holdNextRequest(page, 'identify')
+      try {
+        await observeFromDocumentStart(
+          page,
+          '[data-testid="entry-text-live-default"]',
+          '[data-testid="sdk-loading"], [data-testid="home-loading"]',
+        )
+        await page.goto(INITIAL_EXPERIENCE_PATH)
+        await expect.poll(identifyRequest.held).toBe(true)
+
+        await page.getByTestId('link-home').click()
+        await expect(page.getByRole('heading', { name: 'Next.js SDK Pages Router' })).toBeVisible()
+        await expect.poll(async () => (await readEvidence(page)).visibleCandidates.length).toBe(1)
+        const pendingEvidence = await readEvidence(page)
+        expect(pendingEvidence.visibility[0]).toMatchObject({
+          contentVisible: true,
+          loaderVisible: false,
+        })
+        expectBaselineOrNewVisitor(candidateAt(pendingEvidence))
+        expectContinuouslyVisible(pendingEvidence)
+
+        await expect
+          .poll(
+            () =>
+              recorder
+                .events()
+                .filter(({ type }) => type === 'page')
+                .map(({ pageRouteKey }) => pageRouteKey),
+            { timeout: INITIAL_EXPERIENCE_WATCHDOG_EVIDENCE_TIMEOUT_MS },
+          )
+          .toEqual([PAGES.home.path])
+        expect(identifyRequest.held()).toBe(true)
+
+        const heldIdentifyRequest = identifyRequest.request()
+        const releasedIdentifyResponse = page.waitForResponse(
+          (response) => response.request() === heldIdentifyRequest,
+        )
+        identifyRequest.release()
+        expect((await releasedIdentifyResponse).ok()).toBe(true)
+        expect(
+          recorder
+            .events()
+            .filter(({ type }) => type === 'page')
+            .map(({ pageRouteKey }) => pageRouteKey),
+        ).toEqual([PAGES.home.path])
+
+        const evidence = await readEvidence(page)
+        expect(evidence.visibleCandidates).toEqual(pendingEvidence.visibleCandidates)
+        expectContinuouslyVisible(evidence)
+        expectNoVisibleBlankAfterCommitment(evidence)
+        expectOnlyIntentionalRequestErrors(diagnostics)
+      } finally {
+        await identifyRequest.remove()
+        recorder.remove()
+      }
+    },
+  )
 
   reactCsrTest('timeout/failure then late response', async ({ page }) => {
     const diagnostics = watchDiagnostics(page)

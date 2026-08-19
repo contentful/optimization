@@ -6,6 +6,7 @@ import {
   type OptimizedEntrySnapshot,
 } from '@contentful/optimization-web/presentation'
 import { act, useLayoutEffect, useRef, useState } from 'react'
+import { InitialExperienceContext } from '../context/InitialExperienceContext'
 import type { LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
 import {
   OptimizationContext,
@@ -85,7 +86,70 @@ async function renderHook(params: {
   }
 }
 
+async function renderSnapshotWithInitialExperience(params: {
+  baselineEntry: ReturnType<typeof makeEntry>
+  hasCustomLoadingFallback?: boolean
+  hydration?: 'client-only-hidden-until-ready' | 'preserve-server'
+  initialExperienceReady: boolean
+  optimization: OptimizationSdk
+}): Promise<{
+  getSnapshot: () => OptimizedEntrySnapshot
+  setInitialExperienceReady: (isReady: boolean) => Promise<void>
+  unmount: () => Promise<void>
+}> {
+  const {
+    baselineEntry,
+    hasCustomLoadingFallback,
+    hydration = 'client-only-hidden-until-ready',
+    initialExperienceReady,
+    optimization,
+  } = params
+  let captured: OptimizedEntrySnapshot | undefined = undefined
+  let updateInitialExperienceReady: ((isReady: boolean) => void) | undefined = undefined
+
+  function Probe(): null {
+    captured = useOptimizedEntrySnapshot({ baselineEntry, hasCustomLoadingFallback })
+    return null
+  }
+
+  function Harness(): React.JSX.Element {
+    const [isReady, setIsReady] = useState(initialExperienceReady)
+    updateInitialExperienceReady = setIsReady
+
+    return (
+      <InitialExperienceContext.Provider value={isReady}>
+        <OptimizationHydrationContext.Provider value={hydration}>
+          <Probe />
+        </OptimizationHydrationContext.Provider>
+      </InitialExperienceContext.Provider>
+    )
+  }
+
+  const view = await renderWithOptimizationProviders(<Harness />, optimization)
+
+  return {
+    getSnapshot() {
+      if (!captured) {
+        throw new Error('Expected optimized-entry snapshot to be captured')
+      }
+
+      return captured
+    },
+    async setInitialExperienceReady(isReady) {
+      await act(async () => {
+        updateInitialExperienceReady?.(isReady)
+        await Promise.resolve()
+      })
+    },
+    unmount: view.unmount,
+  }
+}
+
 describe('useOptimizedEntry', () => {
+  afterEach(() => {
+    rs.useRealTimers()
+  })
+
   it('attaches the listener, adopts options, and connects before component layout effects', async () => {
     const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
     const { optimization } = createRuntime((entry) => ({ entry }))
@@ -149,6 +213,162 @@ describe('useOptimizedEntry', () => {
     expect(view.container.textContent).toBe('loading')
 
     await view.unmount()
+  })
+
+  it('holds an open presentation until the initial Experience sequence is ready', async () => {
+    const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const variantEntry = makeEntry('4k6ZyFQnR2POY5IJLLlJRb')
+    const variantState: SelectedOptimizationArray = [
+      {
+        experienceId: '6IueRX1pS3iMJncbhUQTba',
+        sticky: true,
+        variantIndex: 1,
+        variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
+      },
+    ]
+    const { emit, optimization } = createRuntime((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations ? variantEntry : entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const rendered = await renderSnapshotWithInitialExperience({
+      baselineEntry,
+      initialExperienceReady: false,
+      optimization,
+    })
+
+    await emit(variantState)
+
+    expect(rendered.getSnapshot()).toMatchObject({
+      entry: variantEntry,
+      hostAttributes: {},
+      isLoading: true,
+      isPresentationReady: false,
+      isResolved: false,
+      selectedOptimizations: variantState,
+    })
+
+    await rendered.setInitialExperienceReady(true)
+
+    expect(rendered.getSnapshot()).toMatchObject({
+      entry: variantEntry,
+      isLoading: false,
+      isPresentationReady: true,
+      isResolved: true,
+      selectedOptimizations: variantState,
+    })
+
+    await rendered.unmount()
+  })
+
+  it('keeps preserve-server content immediate while initial Experience work is pending', async () => {
+    const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const { optimization, setExperienceRequestState } = createRuntime((entry) => ({ entry }))
+    const rendered = await renderSnapshotWithInitialExperience({
+      baselineEntry,
+      hydration: 'preserve-server',
+      initialExperienceReady: false,
+      optimization,
+    })
+
+    await setExperienceRequestState({ status: 'pending' })
+
+    expect(rendered.getSnapshot()).toMatchObject({
+      entry: baselineEntry,
+      isLoading: false,
+      isPresentationReady: false,
+      isResolved: true,
+    })
+
+    await rendered.unmount()
+  })
+
+  it('keeps a pre-existing synchronous seed immediate while initial Experience work is pending', async () => {
+    const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const variantEntry = makeEntry('4k6ZyFQnR2POY5IJLLlJRb')
+    const variantState: SelectedOptimizationArray = [
+      {
+        experienceId: '6IueRX1pS3iMJncbhUQTba',
+        sticky: true,
+        variantIndex: 1,
+        variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
+      },
+    ]
+    const { emit, optimization } = createRuntime((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations ? variantEntry : entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    await emit(variantState)
+
+    const rendered = await renderSnapshotWithInitialExperience({
+      baselineEntry,
+      initialExperienceReady: false,
+      optimization,
+    })
+
+    expect(rendered.getSnapshot()).toMatchObject({
+      entry: variantEntry,
+      isLoading: false,
+      isPresentationReady: false,
+      isResolved: true,
+      selectedOptimizations: variantState,
+    })
+
+    await rendered.unmount()
+  })
+
+  it('keeps a deadline fallback frozen after late initial Experience readiness', async () => {
+    rs.useFakeTimers()
+    const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
+    const variantEntry = makeEntry('4k6ZyFQnR2POY5IJLLlJRb')
+    const variantState: SelectedOptimizationArray = [
+      {
+        experienceId: '6IueRX1pS3iMJncbhUQTba',
+        sticky: true,
+        variantIndex: 1,
+        variants: { '4ib0hsHWoSOnCVdDkizE8d': '4k6ZyFQnR2POY5IJLLlJRb' },
+      },
+    ]
+    const { emit, optimization } = createRuntime((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations ? variantEntry : entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    const rendered = await renderSnapshotWithInitialExperience({
+      baselineEntry,
+      hasCustomLoadingFallback: true,
+      initialExperienceReady: false,
+      optimization,
+    })
+
+    expect(rendered.getSnapshot()).toMatchObject({
+      isLoading: true,
+      isPresentationReady: false,
+      isResolved: false,
+    })
+
+    await act(async () => {
+      await rs.advanceTimersByTimeAsync(5000)
+    })
+
+    expect(rendered.getSnapshot()).toMatchObject({
+      entry: baselineEntry,
+      isLoading: false,
+      isPresentationReady: false,
+      isResolved: true,
+      selectedOptimizations: undefined,
+    })
+
+    await emit(variantState)
+    await rendered.setInitialExperienceReady(true)
+
+    expect(rendered.getSnapshot()).toMatchObject({
+      entry: baselineEntry,
+      isLoading: false,
+      isPresentationReady: true,
+      isResolved: true,
+      selectedOptimizations: undefined,
+    })
+
+    await rendered.unmount()
   })
 
   it('keeps preserve-server content visible through snapshot-to-live adoption', async () => {

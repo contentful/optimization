@@ -134,6 +134,12 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
 - Page events: `NextPagesAutoPageTracker` emits on navigation; reads route via `useRouter` (NOT
   `useSearchParams`) ⇒ **no `Suspense` boundary needed** (App Router's tracker does need it).
   source: `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker`.
+- The Pages Router client binder forwards initial Experience only to its bound content root; its
+  bound provider and analytics root projections omit it. On this path the bound content root, rather
+  than `NextPagesAutoPageTracker`, owns page emission. The React-owned callback, watchdog, readiness,
+  direct-page, attempted-route mark, later-route, and failure behavior is recorded in
+  [`react-web.md`](./react-web.md).
+  source: nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization; nextjs-sdk#pages-router.ts#toClientRootConfig; kb:web/react-web.md
 - `getPagePayload` callback receives `AutoPageEmissionContext<NextPagesAutoPageContext>` =
   `{ context, routeKey, isInitialEmission }`. Route fields (`pathname`, `asPath`, `query`, `router`,
   `routeKey`) are nested under `.context`, NOT top-level ⇒ destructure

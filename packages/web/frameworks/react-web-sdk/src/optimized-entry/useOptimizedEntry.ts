@@ -17,6 +17,7 @@ import {
 } from '@contentful/optimization-web/presentation'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useInitialExperienceReady } from '../context/InitialExperienceContext'
 import { useOptimizationHydrationMode } from '../context/OptimizationHydrationContext'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimizationContext } from '../hooks/useOptimization'
@@ -221,8 +222,9 @@ export function useManagedBaselineEntry({
 /**
  * Return the low-level optimized-entry presentation snapshot for a baseline entry.
  *
- * Client controller state is adopted during layout so loading, preserved content, and resolved
- * commitments settle before the browser paints the current presentation.
+ * Client controller state and owned-root initial Experience readiness are adopted during layout so
+ * loading, preserved content, and resolved commitments settle before the browser paints the current
+ * presentation.
  *
  * @public
  */
@@ -246,9 +248,11 @@ export function useOptimizedEntrySnapshot<
     readonly sdk?: OptimizedEntrySdk<S, M, L>
   }
   const hydration = useOptimizationHydrationMode()
+  const isInitialExperienceReady = useInitialExperienceReady()
   const liveUpdatesContext = useLiveUpdates()
   const isSdkReady = sdk !== undefined
-  const [isPresentationReady, setIsPresentationReady] = useState(isSdkReady)
+  const currentPresentationReady = isSdkReady && isInitialExperienceReady
+  const [isPresentationReady, setIsPresentationReady] = useState(currentPresentationReady)
 
   const controllerOptions = useMemo(
     () => ({
@@ -294,8 +298,8 @@ export function useOptimizedEntrySnapshot<
   )
 
   useLayoutEffect(() => {
-    setIsPresentationReady(isSdkReady)
-  }, [isSdkReady])
+    setIsPresentationReady(currentPresentationReady)
+  }, [currentPresentationReady])
 
   useLayoutEffect(() => {
     controller.setSnapshotListener(setSnapshot)

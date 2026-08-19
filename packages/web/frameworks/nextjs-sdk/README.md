@@ -348,6 +348,59 @@ to the browser handoff. The bound client `OptimizedEntry` and `/client` `useOpti
 `baselineEntry`, `entryId` with optional `entryQuery`, or a content-type/slug descriptor under
 `managedEntry`. Matching slug sources use the handed-off baseline and its real `sys.id`.
 
+## Initial Experience before the first page
+
+The Pages Router client binder accepts `initialExperience` when important browser identity or
+Experience work must finish before the bound content root's initial page decision:
+
+```tsx
+import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router'
+
+export const optimization = bindNextjsPagesRouterOptimization({
+  clientId: 'client-id',
+  environment: 'main',
+  initialExperience: {
+    run: ({ identify }) => identify({ userId: visitor.id }),
+  },
+})
+```
+
+The client binder captures the callback and forwards it only to the bound content root. The callback
+receives receiver-safe `identify`, `screen`, and `track` methods. It is not forwarded to the bound
+`OptimizationProvider` or `OptimizationAnalyticsRoot`, and injected providers do not accept it.
+
+The client config branches derive from `NextjsBoundRootConfig`, and the selected branch determines
+the bound root's page props. Without `initialExperience`, the existing optional page inputs remain
+available, including `initialPagePayload`. With `initialExperience`, the bound root requires
+`routeKey` and lazy `buildPagePayload` and rejects `initialPagePayload`. A variable typed as the
+widened `NextjsClientOptimizationConfig` uses this stricter callback-ready root contract until the
+config is narrowed before binding.
+
+After the callback's returned work finishes or the watchdog expires, the root reads the latest
+route and payload builder for one direct page attempt. A successfully applied same-route handoff can
+make that direct decision a `skip`; otherwise, it attempts `emit`. After the attempt reaches a
+terminal result, the existing page emitter makes a non-emitting initial `skip` mark for the
+attempted route, then uses its normal `emit` path for later route changes. The callback-enabled root
+is the sole page owner in its subtree. Pages roots therefore do not mount a separate
+`NextPagesAutoPageTracker` on this path.
+
+When `maxWaitMs` is omitted, it defaults to 3,000 ms. It accepts positive finite values. `0`,
+negative values, `NaN`, `Infinity`, and `-Infinity` synchronously throw
+`TypeError('initialExperience.maxWaitMs must be a positive finite number.')` before the provider,
+callback, page, or `onError` runs.
+
+The sequence is best-effort. Return every promise or thenable that belongs to startup.
+Fire-and-forget work is later activity, and the watchdog stops waiting without canceling callback
+code or in-flight requests. Callback failure or watchdog expiry still leads to the direct page
+attempt. The latest route is read before that attempt, but navigation after the request begins is
+not canceled or ordered against it. The existing entry deadline can commit fallback content first,
+and default non-live behavior keeps that fallback frozen after a later startup success.
+
+Keep callback-present config in a client-only module. The Pages Router server binder uses an
+explicit `initialExperience?: never` boundary and rejects an exported callback-present client-config
+variable. Server-side Optimization behavior and serialized data remain unchanged: the callback does
+not enter page props, handoff, cache state, ISR, or server helpers.
+
 ## Edge runtime
 
 Use `/edge` for Edge runtime route handlers that export `runtime = 'edge'`. The helper accepts

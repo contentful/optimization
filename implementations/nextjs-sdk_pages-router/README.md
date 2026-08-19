@@ -18,16 +18,16 @@
 
 Reference implementation for `@contentful/optimization-nextjs` in a Next.js Pages Router
 application. Pages call `createRequestHandoff()` from `getServerSideProps`, pass the returned
-browser handoff through `pageProps`, and mount the bound Pages Router root and route tracker once in
-`pages/_app.tsx`. The public permutation route uses `createPublicPermutationHandoff()` from
-`getStaticProps` with ISR.
+browser handoff through `pageProps`, and mount the bound Pages Router root once in `pages/_app.tsx`.
+That callback-enabled root owns its initial and later browser page events. The public permutation
+route uses `createPublicPermutationHandoff()` from `getStaticProps` with ISR.
 
-The implementation binds `OptimizationRoot`, `OptimizedEntry`, and `NextPagesAutoPageTracker` once
-in `@/lib/optimization` with `bindNextjsPagesRouterOptimization()`. Browser runtime imports use
-Next.js SDK package subpaths. The package root is not imported:
+The implementation binds `OptimizationRoot` and `OptimizedEntry` once in `@/lib/optimization` with
+`bindNextjsPagesRouterOptimization()`. Browser runtime imports use Next.js SDK package subpaths. The
+package root is not imported:
 
 - `@contentful/optimization-nextjs/pages-router` in `@/lib/optimization` for the bound component
-  binding and route tracker
+  binding and initial Experience callback
 - `@contentful/optimization-nextjs/pages-router/server` in `@/lib/optimization-server` for
   `getServerSideProps` request handoff
 - `@contentful/optimization-nextjs/client` for browser hooks and providers
@@ -42,7 +42,8 @@ after hydration. It covers:
 - App-local bound components from `bindNextjsPagesRouterOptimization()`
 - Request handoff from `createRequestHandoff()` through `pageProps`
 - Public permutation handoff from `getStaticProps` with `fallback: false` and `revalidate: 60`
-- Pages Router route tracking with `NextPagesAutoPageTracker`
+- Query-controlled initial Experience work before the root-owned browser page
+- Root-owned initial and later route tracking without a separate router tracker
 - Browser-side entry resolution with the app-local `OptimizedEntry`
 - `initialPageEvent` ownership from the handoff so the browser skips only when the server request
   accepted the first page event
@@ -63,6 +64,15 @@ calls the Pages Router Optimization helper, and returns both through `props`. `p
 passes `pageProps.contentfulOptimization.handoff` to the bound `OptimizationRoot` with the current
 `routeKey` and `buildPagePayload`; the handoff carries the first-page-event decision so the browser
 does not duplicate an accepted server page event.
+
+The bound client config uses `initialExperience` to make this root the only browser page owner in
+its subtree. The callback returns immediately on ordinary routes. Add
+`?initialExperience=readiness` to run the maintained identify-before-page scenario: the callback
+returns its `identify()` request, and the root waits for that work before making its direct page
+attempt with the latest route and lazy payload. When the attempt finishes, the root activates its
+existing page emitter with a non-emitting initial `skip` mark for the attempted route. A later route
+change uses the emitter's normal `emit` path. Do not mount `NextPagesAutoPageTracker` beside this
+callback-enabled root; that would introduce a second page owner.
 
 Use `getStaticProps` and `getStaticPaths` for finite public personalization permutations. The
 `/selection-handoff/[segment]` route builds a public-permutation handoff with the SDK helper,
@@ -130,6 +140,13 @@ Run the focused readiness scenarios to verify the shared SSG route's raw HTML an
 
 ```sh
 pnpm test:e2e:nextjs-sdk_pages-router -- --grep readiness
+```
+
+Run the focused initial Experience scenarios to verify callback-before-page ordering, latest-route
+capture, rejection and watchdog continuation, preserved content, and later-route emission:
+
+```sh
+pnpm test:e2e:nextjs-sdk_pages-router -- --grep "initial Experience"
 ```
 
 Use Playwright UI or codegen when needed:

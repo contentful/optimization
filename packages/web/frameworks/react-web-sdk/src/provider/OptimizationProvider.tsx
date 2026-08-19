@@ -49,6 +49,11 @@ interface ProviderState {
   readonly runtime: WebOptimizationRuntime | undefined
 }
 
+interface ProviderSdkInitialization {
+  readonly error?: Error
+  readonly sdkBinding: ProviderSdkBinding
+}
+
 interface OptimizationHandoffProps {
   /**
    * Server/static/edge Optimization handoff to apply before provider children mount.
@@ -148,7 +153,8 @@ async function initializeServerOptimizationState(
   sdkBinding: ProviderSdkBinding,
   handoff: ContentOptimizationHandoff,
   onStatesReady: OnStatesReady | undefined,
-): Promise<ProviderSdkBinding> {
+  retainOwnedSdkOnHydrationError: boolean,
+): Promise<ProviderSdkInitialization> {
   try {
     const hydrationResult: unknown = Reflect.apply(hydrateOptimizationHandoff, undefined, [
       sdkBinding.sdk,
@@ -158,8 +164,17 @@ async function initializeServerOptimizationState(
     if (isPromiseLike(hydrationResult)) {
       await hydrationResult
     }
+  } catch (error: unknown) {
+    if (retainOwnedSdkOnHydrationError) {
+      return { error: toError(error), sdkBinding }
+    }
 
-    return bindOnStatesReady(sdkBinding, onStatesReady)
+    disposeSdkBinding(sdkBinding)
+    throw error
+  }
+
+  try {
+    return { sdkBinding: bindOnStatesReady(sdkBinding, onStatesReady) }
   } catch (error: unknown) {
     disposeSdkBinding(sdkBinding)
     throw error
@@ -168,20 +183,20 @@ async function initializeServerOptimizationState(
 
 function initializeProviderSdk(
   props: OptimizationProviderProps,
-): ProviderSdkBinding | Promise<ProviderSdkBinding> {
-  const sdkBinding =
-    props.sdk === undefined ? createOwnedSdkBinding(props) : createInjectedSdkBinding(props)
+): ProviderSdkInitialization | Promise<ProviderSdkInitialization> {
+  const ownsSdk = props.sdk === undefined
+  const sdkBinding = ownsSdk ? createOwnedSdkBinding(props) : createInjectedSdkBinding(props)
 
   if (props.handoff === undefined) {
     try {
-      return bindOnStatesReady(sdkBinding, props.onStatesReady)
+      return { sdkBinding: bindOnStatesReady(sdkBinding, props.onStatesReady) }
     } catch (error: unknown) {
       disposeSdkBinding(sdkBinding)
       throw error
     }
   }
 
-  return initializeServerOptimizationState(sdkBinding, props.handoff, props.onStatesReady)
+  return initializeServerOptimizationState(sdkBinding, props.handoff, props.onStatesReady, ownsSdk)
 }
 
 function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
@@ -266,14 +281,17 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       disposedBinding = binding
     }
 
-    function setInitializedState(initializedBinding: ProviderSdkBinding): void {
+    function setInitializedState({
+      error,
+      sdkBinding: initializedBinding,
+    }: ProviderSdkInitialization): void {
       if (setupState.disposed) {
         disposeOnce(initializedBinding)
         return
       }
 
       sdkBinding = initializedBinding
-      setState({ error: undefined, isLive: true, runtime: initializedBinding.sdk })
+      setState({ error, isLive: true, runtime: initializedBinding.sdk })
     }
 
     function setInitializationError(error: unknown): void {

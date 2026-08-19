@@ -29,6 +29,8 @@ export type {
   AutoPageRouteState,
   ContentfulOptimizationOrNull,
   InitialAutoPageEvent,
+  InitialExperienceClient,
+  InitialExperienceOptions,
   LiveUpdatesContextValue,
   LiveUpdatesProviderProps,
   ManagedEntryDescriptor,
