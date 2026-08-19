@@ -12,9 +12,11 @@ uses Next.js SDK subpaths only for non-component runtime surfaces.
 - `lib/optimization-server.ts` is the only place that imports
   `bindNextjsPagesRouterServerOptimization()` from
   `@contentful/optimization-nextjs/pages-router/server`.
-- Routes and shared components import `OptimizationRoot`, `OptimizedEntry`, and
-  `NextPagesAutoPageTracker` from `@/lib/optimization`; do not import those components from
+- Routes and shared components import `OptimizationRoot` and `OptimizedEntry` from
+  `@/lib/optimization`; do not import those components from
   `@contentful/optimization-nextjs/server` or `@contentful/optimization-nextjs/client`.
+- The callback-enabled `OptimizationRoot` in `pages/_app.tsx` owns initial and later browser page
+  sequencing; do not mount or export `NextPagesAutoPageTracker` beside it.
 - Browser hooks and providers import from `@contentful/optimization-nextjs/client`.
 - Do not import lower-level SDK packages directly from this implementation.
 - Personalized pages should load request handoff in `getServerSideProps`; interactive/reactive surfaces

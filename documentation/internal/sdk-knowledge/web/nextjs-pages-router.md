@@ -191,8 +191,10 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
   valid for those routes only when application code supplies selected optimizations and public
   permutation dimensions without reading request profile state.
   source: `nextjs-sdk#handoff.ts#createPublicPermutationHandoff`; `core-sdk#handoff.ts#createPublicPermutationCacheMetadata`; `core-sdk#handoff.ts#assertOptimizationCacheSafety`
-- `_app.tsx` is the mount point for `OptimizationRoot` + tracker and passes
-  `pageProps.contentfulOptimization.handoff` to the bound root. source: `impl:nextjs-sdk_pages-router#pages/_app.tsx`.
+- The maintained `_app.tsx` mounts the callback-enabled bound `OptimizationRoot` with the current
+  handoff, route key, and lazy page-payload builder. That root is the sole owner of the direct initial
+  browser page attempt and later route emissions in this tree; no separate page tracker is mounted.
+  source: `impl:nextjs-sdk_pages-router#pages/_app.tsx`; `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; kb:web/react-web.md
 - The bound `OptimizationProvider` handles content SDK context, handoff, hydration mode, and
   managed-entry prefetch; the bound `OptimizationRoot` additionally accepts route/page-event inputs.
   source: `nextjs-sdk#pages-router.ts#OptimizationRoot`; `nextjs-sdk#pages-router.ts#OptimizationProvider`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationRootProps`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationProviderProps`.
