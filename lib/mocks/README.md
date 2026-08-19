@@ -82,6 +82,22 @@ For example, `pnpm implementation:run -- web-sdk serve` starts both the Web impl
 named mock-server process, and `pnpm implementation:run -- web-sdk serve:stop` stops only that
 implementation's processes.
 
+### Contentful CDA mount points
+
+The server mounts the same Contentful Delivery API handlers twice, so each SDK client can reach them
+with the configuration it actually exposes:
+
+- `/contentful/…` is used by `contentful.js`, which accepts a `basePath`, and by the Android
+  reference app, which builds its mock URLs from `AppConfig.contentfulBaseUrl`.
+- `/…` at the host root is used by `contentful.swift`. Its `Client` builds every request as
+  `scheme://host[:port]/spaces/…` and offers no base-path hook, so it cannot address the namespaced
+  mount.
+
+The handlers also serve `/spaces/:spaceId/environments/:environmentId/locales` from the locale set
+in the space fixture. Clients that resolve locale fallback chains themselves request it before their
+first entry query and cannot decode entries without it; `contentful.swift` does this, while
+`contentful.js` sends `locale` to the API and never requests the endpoint.
+
 ## Updating local mocks & fixtures
 
 To fetch space configuration data (Content Types, etc.) and the supported fixture entry subset from
