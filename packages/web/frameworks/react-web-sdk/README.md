@@ -37,7 +37,7 @@ source of truth for exported API signatures.
   - [Consent](#consent)
   - [Provider and hook access](#provider-and-hook-access)
   - [Provider-managed state subscriptions](#provider-managed-state-subscriptions)
-  - [Initial Experience before the first page](#initial-experience-before-the-first-page)
+  - [Work before the initial page decision](#work-before-the-initial-page-decision)
   - [Analytics-only handoff](#analytics-only-handoff)
   - [OptimizedEntry](#optimizedentry)
   - [Entry interaction tracking](#entry-interaction-tracking)
@@ -115,7 +115,7 @@ such as `liveUpdates`, `onStatesReady`, `handoff`, and `hydration`. The Web SDK
 | `allowedEventTypes`      | No        | `['identify', 'page']`                        | Event types allowed before consent is explicitly set                |
 | `trackEntryInteraction`  | No        | `{ views: true, clicks: true, hovers: true }` | Automatic entry interaction tracking for `OptimizedEntry` elements  |
 | `cookie`                 | No        | `{ domain: undefined, expires: 365 }`         | Anonymous ID cookie settings inherited from the Web SDK             |
-| `initialExperience`      | No        | `undefined`                                   | Owned-root callback that completes before the initial page sequence |
+| `beforeInitialPage`      | No        | `undefined`                                   | Owned-root callback that completes before the initial page decision |
 | `liveUpdates`            | No        | `false`                                       | Whether `OptimizedEntry` components react continuously to SDK state |
 | `onStatesReady`          | No        | `undefined`                                   | Provider-managed app-level state subscription hook                  |
 | `queuePolicy`            | No        | SDK defaults                                  | Flush retry behavior and offline queue bounds                       |
@@ -339,10 +339,12 @@ live state surface. Initial children can already render against a snapshot runti
 subscriptions can still observe events emitted by child effects such as router page tracking. For
 component-local UI state, keep using hooks and React effects under the provider.
 
-### Initial Experience before the first page
+### Work before the initial page decision
 
-Use `initialExperience` on an owned `OptimizationRoot` when important browser identity or Experience
-work must finish before that root's initial page decision. The callback receives receiver-safe
+Use `beforeInitialPage` on an owned `OptimizationRoot` when browser identity or custom Experience
+event work must finish before that root's initial page decision. The initial page decision is the
+root's one choice to send the first browser page event or skip it because an applied handoff already
+owns that route. After the root's live owned runtime exists, the callback receives receiver-safe
 `identify`, `screen`, and `track` methods, so you can destructure and call them without losing the
 SDK receiver:
 
@@ -352,41 +354,48 @@ SDK receiver:
   environment="main"
   routeKey={routeKey}
   buildPagePayload={() => ({ properties: { route: routeKey } })}
-  initialExperience={{
+  beforeInitialPage={{
     run: async ({ identify }) => {
       await identify({ userId: visitor.id })
     },
-    onError: reportInitialExperienceError,
+    onError: reportBeforeInitialPageError,
   }}
 >
   <YourApp />
 </OptimizationRoot>
 ```
 
-A callback-enabled root requires `routeKey` and lazy `buildPagePayload`, and it does not accept
-`initialPagePayload`. The root awaits the work returned by `run` or its watchdog, reads the latest
-route and payload builder for one direct page attempt, activates the existing page emitter with a
-non-emitting initial `skip` mark for the attempted route, and emits normally for later route
-changes. A successfully applied same-route handoff can make the direct page decision a `skip`;
-otherwise, the direct page attempt uses `emit`.
+A root with `beforeInitialPage` requires `routeKey` and lazy `buildPagePayload`, and it does not
+accept `initialPagePayload`. The app owns `routeKey` as the stable identity of the current route and
+owns `buildPagePayload` as a lazy read of current page data. The root awaits the work returned by
+`run` or its watchdog, reads the latest route and payload builder for one direct page attempt,
+activates the existing page emitter with a non-emitting initial `skip` mark for the attempted route,
+and emits normally for later route changes. A successfully applied same-route handoff can make the
+direct page decision a `skip`; otherwise, the direct page attempt uses `emit`.
 
 This root is the sole page owner for its subtree. Do not also mount a React Router, TanStack Router,
-Next.js App Router, or Next.js Pages Router automatic page tracker. Omit `initialExperience` when a
+Next.js App Router, or Next.js Pages Router automatic page tracker. Omit `beforeInitialPage` when a
 separate router tracker owns page events. The option is available only to the owned content root;
 `OptimizationProvider`, injected providers, and `OptimizationAnalyticsRoot` do not accept it.
 
 When `maxWaitMs` is omitted, it defaults to 3,000 ms. It accepts positive finite values. `0`,
 negative values, `NaN`, `Infinity`, and `-Infinity` synchronously throw
-`TypeError('initialExperience.maxWaitMs must be a positive finite number.')` before the provider,
+`TypeError('beforeInitialPage.maxWaitMs must be a positive finite number.')` before the provider,
 callback, page, or `onError` runs.
 
 The sequence is best-effort. Return every promise or thenable that must finish before page;
 fire-and-forget work continues as later activity. Callback rejection or watchdog expiry is reported
-through `onError` when supplied, then the page is still attempted. The watchdog stops waiting but
-does not cancel callback code or an in-flight request. Route freshness is read immediately before
-the direct page attempt, not enforced after that request starts. The existing optimized-entry
-deadline can commit baseline content first, and with default `liveUpdates={false}`, that fallback
-remains frozen after later startup success.
+through `onError` when supplied. While the root remains mounted and the same live owned runtime is
+current, the page is still attempted. The watchdog stops waiting but does not cancel callback code
+or an in-flight request. If the root unmounts or its runtime is replaced, only unsent local page and
+readiness continuation is suppressed.
+
+A route change after the direct page attempt starts neither cancels that attempt nor starts a
+competing attempt. The root settles and marks the captured attempted route before enabling later
+page emission. A route observed only during the in-flight attempt is not emitted; a route change
+after readiness emits normally. The existing optimized-entry deadline can commit baseline content
+first, and with default `liveUpdates={false}`, that fallback remains frozen after the
+before-initial-page work later succeeds.
 
 ### Analytics-only handoff
 

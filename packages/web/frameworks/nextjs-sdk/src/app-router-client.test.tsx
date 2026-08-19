@@ -155,13 +155,13 @@ describe('Next.js App Router client components', () => {
     expect(getEntries).not.toHaveBeenCalled()
   })
 
-  it('forwards initial Experience only to the bound content root', () => {
-    const initialExperience = {
+  it('forwards the before-initial-page callback only to the bound content root', () => {
+    const beforeInitialPage = {
       run: rs.fn(() => undefined),
     }
     const components = appRouter.bindNextjsAppRouterClientOptimization({
       ...testConfig,
-      initialExperience,
+      beforeInitialPage,
     })
     const analyticsHandoff = components.createHandoffFromSelections({
       cache: { scope: 'static' },
@@ -181,24 +181,24 @@ describe('Next.js App Router client components', () => {
       routeKey: '/products',
     })
 
-    expect(root.props).toMatchObject({ initialExperience })
+    expect(root.props).toMatchObject({ beforeInitialPage })
     expect(components.RequestOptimizationRoot).toBeTypeOf('function')
-    expect(provider?.props).not.toHaveProperty('initialExperience')
-    expect(analyticsRoot.props).not.toHaveProperty('initialExperience')
-    expect(components).not.toHaveProperty('initialExperience')
+    expect(provider?.props).not.toHaveProperty('beforeInitialPage')
+    expect(analyticsRoot.props).not.toHaveProperty('beforeInitialPage')
+    expect(components).not.toHaveProperty('beforeInitialPage')
   })
 
   it('adds the request content root only to callback-present bindings', () => {
-    const withoutInitialExperience = appRouter.bindNextjsAppRouterClientOptimization(testConfig)
-    const withInitialExperience = appRouter.bindNextjsAppRouterClientOptimization({
+    const withoutBeforeInitialPage = appRouter.bindNextjsAppRouterClientOptimization(testConfig)
+    const withBeforeInitialPage = appRouter.bindNextjsAppRouterClientOptimization({
       ...testConfig,
-      initialExperience: { run: () => undefined },
+      beforeInitialPage: { run: () => undefined },
     })
 
-    expect(withoutInitialExperience).not.toHaveProperty('RequestOptimizationRoot')
-    expect(withInitialExperience.RequestOptimizationRoot).toBeTypeOf('function')
-    expect(withInitialExperience.RequestOptimizationRoot).not.toBe(
-      withInitialExperience.OptimizationRoot,
+    expect(withoutBeforeInitialPage).not.toHaveProperty('RequestOptimizationRoot')
+    expect(withBeforeInitialPage.RequestOptimizationRoot).toBeTypeOf('function')
+    expect(withBeforeInitialPage.RequestOptimizationRoot).not.toBe(
+      withBeforeInitialPage.OptimizationRoot,
     )
   })
 

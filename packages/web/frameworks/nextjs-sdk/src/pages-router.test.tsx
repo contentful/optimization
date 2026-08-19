@@ -215,13 +215,13 @@ describe('Next.js Pages Router client components', () => {
     expect(getEntries).not.toHaveBeenCalled()
   })
 
-  it('forwards initial Experience only to the bound content root', () => {
-    const initialExperience = {
+  it('forwards the before-initial-page callback only to the bound content root', () => {
+    const beforeInitialPage = {
       run: rs.fn(() => undefined),
     }
     const components = pagesRouter.bindNextjsPagesRouterOptimization({
       ...testConfig,
-      initialExperience,
+      beforeInitialPage,
     })
     const analyticsHandoff = components.createHandoffFromSelections({
       cache: { scope: 'static' },
@@ -241,10 +241,10 @@ describe('Next.js Pages Router client components', () => {
       routeKey: '/products',
     })
 
-    expect(root.props).toMatchObject({ initialExperience })
-    expect(provider?.props).not.toHaveProperty('initialExperience')
-    expect(analyticsRoot.props).not.toHaveProperty('initialExperience')
-    expect(components).not.toHaveProperty('initialExperience')
+    expect(root.props).toMatchObject({ beforeInitialPage })
+    expect(provider?.props).not.toHaveProperty('beforeInitialPage')
+    expect(analyticsRoot.props).not.toHaveProperty('beforeInitialPage')
+    expect(components).not.toHaveProperty('beforeInitialPage')
   })
 
   it('returns Pages Router v2 helpers only', () => {

@@ -3,9 +3,9 @@ import { rs } from '@rstest/core'
 import { act, StrictMode, useEffect, useLayoutEffect, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { resetAutoPageEmitterState } from '../auto-page/useAutoPageEmitter'
+import type { BeforeInitialPageOptions } from '../before-initial-page/beforeInitialPage'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import { OptimizationContext } from '../context/OptimizationContext'
-import type { InitialExperienceOptions } from '../initial-experience/initialExperience'
 import { OptimizationRoot } from '../root/OptimizationRoot'
 import { createOptimizationSdk, defaultLiveUpdatesContext } from '../test/sdkTestUtils'
 import {
@@ -108,10 +108,10 @@ function AutoPageInputsProbe({
   return null
 }
 
-function InitialExperienceRequestRoot({
-  initialExperience,
+function BeforeInitialPageRequestRoot({
+  beforeInitialPage,
 }: {
-  readonly initialExperience: InitialExperienceOptions
+  readonly beforeInitialPage: BeforeInitialPageOptions
 }): ReactNode {
   const { buildPagePayload, routeKey } = useNextAppAutoPageInputs()
 
@@ -124,7 +124,7 @@ function InitialExperienceRequestRoot({
       buildPagePayload={buildPagePayload}
       clientId="test-client-id"
       environment="main"
-      initialExperience={initialExperience}
+      beforeInitialPage={beforeInitialPage}
       routeKey={routeKey}
     >
       <div />
@@ -271,19 +271,19 @@ describe('NextAppAutoPageTracker', () => {
     const trackCurrentPage = rs
       .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
       .mockResolvedValue({ accepted: true })
-    const initialExperience = {
+    const beforeInitialPage = {
       run: async () => {
         await callback.promise
       },
     }
-    setCurrentRoute('/page-two', new URLSearchParams('initialExperience=readiness'))
+    setCurrentRoute('/page-two', new URLSearchParams('beforeInitialPage=readiness'))
     const rendered = await renderTracker(
-      <InitialExperienceRequestRoot initialExperience={initialExperience} />,
+      <BeforeInitialPageRequestRoot beforeInitialPage={beforeInitialPage} />,
       createOptimizationSdk(),
     )
 
     setCurrentRoute('/')
-    await rendered.rerender(<InitialExperienceRequestRoot initialExperience={initialExperience} />)
+    await rendered.rerender(<BeforeInitialPageRequestRoot beforeInitialPage={beforeInitialPage} />)
     callback.resolve(undefined)
     await act(async () => {
       await callback.promise
@@ -302,12 +302,12 @@ describe('NextAppAutoPageTracker', () => {
       routeKey: '/',
     })
 
-    setCurrentRoute('/page-two', new URLSearchParams('initialExperience=readiness'), false)
-    await rendered.rerender(<InitialExperienceRequestRoot initialExperience={initialExperience} />)
+    setCurrentRoute('/page-two', new URLSearchParams('beforeInitialPage=readiness'), false)
+    await rendered.rerender(<BeforeInitialPageRequestRoot beforeInitialPage={beforeInitialPage} />)
     expect(trackCurrentPage).toHaveBeenCalledTimes(2)
 
     setCurrentRoute('/page-two')
-    await rendered.rerender(<InitialExperienceRequestRoot initialExperience={initialExperience} />)
+    await rendered.rerender(<BeforeInitialPageRequestRoot beforeInitialPage={beforeInitialPage} />)
     expect(trackCurrentPage).toHaveBeenCalledTimes(3)
     expect(trackCurrentPage).toHaveBeenNthCalledWith(3, {
       buildPayload: expect.any(Function),

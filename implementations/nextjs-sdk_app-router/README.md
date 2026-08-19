@@ -28,7 +28,7 @@ Edge runtime routes live in the
 ## What this covers
 
 - A single server binding in `lib/optimization.ts`.
-- A client-only binding in `lib/optimization-client.ts` that runs optional initial Experience work
+- A client-only binding in `lib/optimization-client.ts` that runs optional before-initial-page work
   before the request root's browser-owned page event.
 - Request-bound Server Components with browser hydration and live updates.
 - Static public permutation and analytics-only handoff.
@@ -87,10 +87,10 @@ async function PrivateRequestSlot() {
 
 Keep provider-dependent tools inside `RequestOptimizationRoot`.
 
-## Run initial Experience work before the browser page
+## Run before-initial-page work
 
-`lib/optimization-client.ts` binds a client-only `initialExperience` callback. The maintained
-callback identifies only when the URL contains `?initialExperience=readiness`; ordinary routes do
+`lib/optimization-client.ts` binds a client-only `beforeInitialPage` callback. The maintained
+callback identifies only when the URL contains `?beforeInitialPage=readiness`; ordinary routes do
 nothing. `lib/optimization.ts` injects that module's `ClientRequestOptimizationRoot` into the server
 request family as a Client Component reference.
 

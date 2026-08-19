@@ -3,10 +3,10 @@ import { afterEach, describe, expect, it, rs } from '@rstest/core'
 import type { OptimizationSdk } from '../context/OptimizationContext'
 import { createOptimizationSdk } from '../test/sdkTestUtils'
 import {
-  createInitialExperienceClient,
-  resolveInitialExperienceMaxWaitMs,
-  runInitialExperience,
-} from './initialExperience'
+  createBeforeInitialPageClient,
+  resolveBeforeInitialPageMaxWaitMs,
+  runBeforeInitialPage,
+} from './beforeInitialPage'
 
 function createDeferred<T>(): {
   readonly promise: Promise<T>
@@ -33,7 +33,7 @@ function createDeferred<T>(): {
   }
 }
 
-describe('initial Experience', () => {
+describe('before initial page', () => {
   afterEach(() => {
     rs.useRealTimers()
     rs.restoreAllMocks()
@@ -57,7 +57,7 @@ describe('initial Experience', () => {
       return await Promise.resolve(trackResult)
     })
     const sdk = createOptimizationSdk({ identify, screen, track })
-    const client = createInitialExperienceClient(sdk)
+    const client = createBeforeInitialPageClient(sdk)
     const { identify: identifyDelegate, screen: screenDelegate, track: trackDelegate } = client
 
     await expect(identifyDelegate({ userId: 'user-1' })).resolves.toBe(identifyResult)
@@ -72,14 +72,14 @@ describe('initial Experience', () => {
     { configured: 25, expected: 25 },
     { configured: 0.5, expected: 0.5 },
   ])('resolves an accepted max wait of $expected ms', ({ configured, expected }) => {
-    expect(resolveInitialExperienceMaxWaitMs(configured)).toBe(expected)
+    expect(resolveBeforeInitialPageMaxWaitMs(configured)).toBe(expected)
   })
 
   it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
     'rejects invalid max wait %s',
     (maxWaitMs) => {
-      expect(() => resolveInitialExperienceMaxWaitMs(maxWaitMs)).toThrow(
-        new TypeError('initialExperience.maxWaitMs must be a positive finite number.'),
+      expect(() => resolveBeforeInitialPageMaxWaitMs(maxWaitMs)).toThrow(
+        new TypeError('beforeInitialPage.maxWaitMs must be a positive finite number.'),
       )
     },
   )
@@ -94,7 +94,7 @@ describe('initial Experience', () => {
       const work = createDeferred<undefined>()
       const onError = rs.fn()
       const sdk = createOptimizationSdk()
-      const running = runInitialExperience(
+      const running = runBeforeInitialPage(
         sdk,
         {
           onError,
@@ -103,7 +103,7 @@ describe('initial Experience', () => {
             return 'ready'
           },
         },
-        resolveInitialExperienceMaxWaitMs(configured),
+        resolveBeforeInitialPageMaxWaitMs(configured),
       )
 
       await rs.advanceTimersByTimeAsync(beforeDeadline)
@@ -122,7 +122,7 @@ describe('initial Experience', () => {
     const thenable: PromiseLike<unknown> = { then: work.promise.then.bind(work.promise) }
     const sdk = createOptimizationSdk()
     let settled = false
-    const running = runInitialExperience(sdk, { run: () => thenable }, 25).then(() => {
+    const running = runBeforeInitialPage(sdk, { run: () => thenable }, 25).then(() => {
       settled = true
     })
 
@@ -141,7 +141,7 @@ describe('initial Experience', () => {
     const detached = createDeferred<undefined>()
     let compositeSettled = false
     const sdk = createOptimizationSdk()
-    const composite = runInitialExperience(
+    const composite = runBeforeInitialPage(
       sdk,
       {
         run: async () => {
@@ -162,7 +162,7 @@ describe('initial Experience', () => {
     await composite
     expect(compositeSettled).toBe(true)
 
-    await runInitialExperience(
+    await runBeforeInitialPage(
       sdk,
       {
         run: () => {
@@ -190,7 +190,7 @@ describe('initial Experience', () => {
     const callbackError = new Error('callback failed')
     const onError = rs.fn()
 
-    await runInitialExperience(
+    await runBeforeInitialPage(
       createOptimizationSdk(),
       {
         onError,
@@ -210,7 +210,7 @@ describe('initial Experience', () => {
     const onError = rs.fn()
     const rejectedNonError = Reflect.apply(Promise.reject, Promise, ['callback failed'])
 
-    await runInitialExperience(
+    await runBeforeInitialPage(
       createOptimizationSdk(),
       {
         onError,
@@ -227,7 +227,7 @@ describe('initial Experience', () => {
     rs.useFakeTimers()
     const work = createDeferred<undefined>()
     const onError = rs.fn()
-    const running = runInitialExperience(
+    const running = runBeforeInitialPage(
       createOptimizationSdk(),
       {
         onError,
@@ -252,7 +252,7 @@ describe('initial Experience', () => {
     rs.useFakeTimers()
     const work = createDeferred<undefined>()
     const onError = rs.fn()
-    const running = runInitialExperience(
+    const running = runBeforeInitialPage(
       createOptimizationSdk(),
       {
         onError,
@@ -278,7 +278,7 @@ describe('initial Experience', () => {
     const onErrorFailure = new Error('onError failed')
     const logError = rs.spyOn(logger, 'error').mockImplementation(() => undefined)
 
-    await runInitialExperience(
+    await runBeforeInitialPage(
       createOptimizationSdk(),
       {
         onError: () => {
@@ -289,6 +289,6 @@ describe('initial Experience', () => {
       25,
     )
 
-    expect(logError).toHaveBeenCalledWith('React:InitialExperience', onErrorFailure)
+    expect(logError).toHaveBeenCalledWith('React:BeforeInitialPage', onErrorFailure)
   })
 })

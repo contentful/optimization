@@ -348,10 +348,12 @@ to the browser handoff. The bound client `OptimizedEntry` and `/client` `useOpti
 `baselineEntry`, `entryId` with optional `entryQuery`, or a content-type/slug descriptor under
 `managedEntry`. Matching slug sources use the handed-off baseline and its real `sys.id`.
 
-## Initial Experience before the first page
+## Work before the initial page decision
 
-Both client binders accept `initialExperience` when important browser identity or Experience work
-must finish before the bound content root's initial page decision:
+Both client binders accept `beforeInitialPage` when browser identity or custom Experience event work
+must finish before the bound content root's initial page decision. That decision is the root's one
+choice to send the first browser page event or skip it because an applied handoff already owns that
+route:
 
 ```tsx
 'use client'
@@ -361,11 +363,11 @@ import { bindNextjsAppRouterClientOptimization } from '@contentful/optimization-
 export const clientOptimization = bindNextjsAppRouterClientOptimization({
   clientId: 'client-id',
   environment: 'main',
-  initialExperience: {
+  beforeInitialPage: {
     run: async ({ identify }) => {
       await identify({ userId: visitor.id })
     },
-    onError: reportInitialExperienceError,
+    onError: reportBeforeInitialPageError,
   },
 })
 
@@ -384,7 +386,8 @@ export function OptimizationApp({ children, routeKey }) {
 ```
 
 The direct App client `OptimizationRoot` requires those explicit route inputs. For the App Router
-request family, inject the callback-enabled client request root into the server binder instead:
+request family, inject the client request root with before-initial-page work into the server binder
+instead:
 
 ```tsx
 import 'server-only'
@@ -399,14 +402,19 @@ export const optimization = bindNextjsAppRouterServerOptimization(serverConfig, 
 export const { OptimizationRoot: RequestOptimizationRoot } = optimization.request
 ```
 
-`RequestOptimizationRoot` is part of the callback-present App client result; the callback-absent
-result keeps its existing members.
+`RequestOptimizationRoot` is part of the App client result with before-initial-page work; the result
+without that work keeps its existing members.
 
 The injected `RequestOptimizationRoot` derives `routeKey` and `buildPagePayload` from App Router
 state and replaces the request family's default root. Mount it without
 `RequestNextAppAutoPageTracker`; the injected root owns the direct initial page decision and later
 route changes. The component reference crosses the server composition boundary, but the callback
 remains in its client module and does not enter server config or Flight data.
+
+The App server request family can accept its page event and put that ownership in the handoff. The
+browser request root applies the handoff; after its live owned runtime exists, it invokes
+`beforeInitialPage`, makes one direct page attempt or same-route handoff skip, marks the attempted
+route, and emits for later route changes.
 
 The Pages Router client binder uses the same option in its client-only module:
 
@@ -416,7 +424,7 @@ import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-next
 export const optimization = bindNextjsPagesRouterOptimization({
   clientId: 'client-id',
   environment: 'main',
-  initialExperience: {
+  beforeInitialPage: {
     run: ({ identify }) => identify({ userId: visitor.id }),
   },
 })
@@ -425,41 +433,55 @@ export const optimization = bindNextjsPagesRouterOptimization({
 The client binder captures the callback and forwards it only to the bound content root. The callback
 receives receiver-safe `identify`, `screen`, and `track` methods. It is not forwarded to the bound
 `OptimizationProvider` or `OptimizationAnalyticsRoot`, and injected providers do not accept it.
+For Pages Router requests, the server helper can accept the page event and record that ownership in
+the handoff passed through page props. After the browser root applies that handoff and its live owned
+runtime exists, it invokes `beforeInitialPage`, makes one direct page attempt or same-route handoff
+skip, marks the attempted route, and emits for later route changes.
 
-Both client config branches derive from `NextjsBoundRootConfig`, and the selected branch determines
-the bound root's page props. Without `initialExperience`, the existing optional page inputs remain
-available, including `initialPagePayload`. With `initialExperience`, the bound root requires
-`routeKey` and lazy `buildPagePayload` and rejects `initialPagePayload`. A variable typed as the
-widened `NextjsClientOptimizationConfig` uses this stricter callback-ready root contract until the
+The `NextjsClientOptimizationConfigWithoutBeforeInitialPage` and
+`NextjsClientOptimizationConfigWithBeforeInitialPage` branches derive from
+`NextjsBoundRootConfig`, and the selected branch determines the bound root's page props. Without
+`beforeInitialPage`, the existing optional page inputs remain available, including
+`initialPagePayload`. With `beforeInitialPage`, the bound root requires `routeKey` and lazy
+`buildPagePayload` and rejects `initialPagePayload`. A variable typed as the widened
+`NextjsClientOptimizationConfig` uses this stricter before-initial-page root contract until the
 config is narrowed before binding.
 
-After the callback's returned work finishes or the watchdog expires, the root reads the latest
-route and payload builder for one direct page attempt. A successfully applied same-route handoff can
-make that direct decision a `skip`; otherwise, it attempts `emit`. After the attempt reaches a
-terminal result, the existing page emitter makes a non-emitting initial `skip` mark for the
-attempted route, then uses its normal `emit` path for later route changes. The callback-enabled root
-is the sole page owner in its subtree. Direct App roots, injected App request roots, and Pages roots
-therefore do not mount a separate `NextAppAutoPageTracker`, `RequestNextAppAutoPageTracker`, or
+After the callback's returned work finishes or the watchdog expires, the root reads the latest route
+and payload builder for one direct page attempt. A successfully applied same-route handoff can make
+that direct decision a `skip`; otherwise, it attempts `emit`. After the attempt reaches a terminal
+result, the existing page emitter makes a non-emitting initial `skip` mark for the attempted route,
+then uses its normal `emit` path for later route changes. The before-initial-page root is the sole
+page owner in its subtree. Direct App roots, injected App request roots, and Pages roots therefore
+do not mount a separate `NextAppAutoPageTracker`, `RequestNextAppAutoPageTracker`, or
 `NextPagesAutoPageTracker` on this path.
 
 When `maxWaitMs` is omitted, it defaults to 3,000 ms. It accepts positive finite values. `0`,
 negative values, `NaN`, `Infinity`, and `-Infinity` synchronously throw
-`TypeError('initialExperience.maxWaitMs must be a positive finite number.')` before the provider,
+`TypeError('beforeInitialPage.maxWaitMs must be a positive finite number.')` before the provider,
 callback, page, or `onError` runs.
 
-The sequence is best-effort. Return every promise or thenable that belongs to startup.
-Fire-and-forget work is later activity, and the watchdog stops waiting without canceling callback
-code or in-flight requests. Callback failure or watchdog expiry still leads to the direct page
-attempt. The latest route is read before that attempt, but navigation after the request begins is
-not canceled or ordered against it. The existing entry deadline can commit fallback content first,
-and default non-live behavior keeps that fallback frozen after a later startup success.
+The sequence is best-effort. Return every promise or thenable that belongs to the
+before-initial-page work. Fire-and-forget work is later activity, and the watchdog stops waiting
+without canceling callback code or in-flight requests. While the root remains mounted and the same
+live owned runtime is current, callback failure or watchdog expiry still leads to the direct page
+attempt. If the root unmounts or its runtime is replaced, only unsent local page and readiness
+continuation is suppressed.
 
-Keep callback-present config in a client-only module. The App Router server config inherits, and the
-Pages Router server binder uses, an explicit `initialExperience?: never` boundary. Both server
-binders reject an exported callback-present client-config variable. App request-root injection
-passes a client component reference separately; it does not weaken that config boundary. The
-server-side Optimization behavior and serialized data remain unchanged: the callback does not
-enter Server Components, request config, page or Flight props, handoff, cache state, ISR, or Edge
+A route change after the direct page attempt starts neither cancels that attempt nor starts a
+competing attempt. The root settles and marks the captured attempted route before enabling later
+page emission. A route observed only during the in-flight attempt is not emitted; a route change
+after readiness emits normally. The existing entry deadline can commit fallback content first, and
+default non-live behavior keeps that fallback frozen after the before-initial-page work later
+succeeds.
+
+Keep `beforeInitialPage` config in a client-only module. The App Router server config inherits, and
+the Pages Router server binder uses, an explicit `beforeInitialPage?: never` boundary. Both server
+binders reject an exported client-config variable that contains this callback. App request-root
+injection passes a client component reference separately; it does not weaken that config boundary.
+The Pages server binder neither runs the callback nor serializes it into the handoff passed through
+page props. In App Router composition, the callback stays in its Client Component module and does
+not enter Server Components, request config, Flight data, the handoff, cache state, ISR, or Edge
 helpers.
 
 ## Edge runtime

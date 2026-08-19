@@ -14,13 +14,13 @@ import {
 
 import type { AutoPagePayload } from '../auto-page/types'
 import { useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
-import { InitialExperienceContext } from '../context/InitialExperienceContext'
-import { useOptimizationContext } from '../hooks/useOptimization'
 import {
-  resolveInitialExperienceMaxWaitMs,
-  runInitialExperience,
-  type InitialExperienceOptions,
-} from '../initial-experience/initialExperience'
+  resolveBeforeInitialPageMaxWaitMs,
+  runBeforeInitialPage,
+  type BeforeInitialPageOptions,
+} from '../before-initial-page/beforeInitialPage'
+import { BeforeInitialPageContext } from '../context/BeforeInitialPageContext'
+import { useOptimizationContext } from '../hooks/useOptimization'
 import { createScopedLogger } from '../logger'
 import { LiveUpdatesProvider } from '../provider/LiveUpdatesProvider'
 import {
@@ -32,15 +32,15 @@ interface OptimizationRootCommonProps {
   readonly liveUpdates?: boolean
 }
 
-interface OptimizationRootWithoutInitialExperienceProps {
-  readonly initialExperience?: never
+interface OptimizationRootWithoutBeforeInitialPageProps {
+  readonly beforeInitialPage?: never
   readonly routeKey?: string
   readonly buildPagePayload?: TrackCurrentPageOptions['buildPayload']
   readonly initialPagePayload?: AutoPagePayload
 }
 
-interface OptimizationRootWithInitialExperienceProps {
-  readonly initialExperience: InitialExperienceOptions
+interface OptimizationRootWithBeforeInitialPageProps {
+  readonly beforeInitialPage: BeforeInitialPageOptions
   readonly routeKey: string
   readonly buildPagePayload: TrackCurrentPageOptions['buildPayload']
   readonly initialPagePayload?: never
@@ -48,15 +48,15 @@ interface OptimizationRootWithInitialExperienceProps {
 
 export type OptimizationRootProps = OptimizationProviderConfigProps &
   OptimizationRootCommonProps &
-  (OptimizationRootWithoutInitialExperienceProps | OptimizationRootWithInitialExperienceProps)
+  (OptimizationRootWithoutBeforeInitialPageProps | OptimizationRootWithBeforeInitialPageProps)
 
 type DefaultOptimizationRootProps = OptimizationProviderConfigProps &
   OptimizationRootCommonProps &
-  OptimizationRootWithoutInitialExperienceProps
+  OptimizationRootWithoutBeforeInitialPageProps
 
-type InitialExperienceOptimizationRootProps = OptimizationProviderConfigProps &
+type BeforeInitialPageOptimizationRootProps = OptimizationProviderConfigProps &
   OptimizationRootCommonProps &
-  OptimizationRootWithInitialExperienceProps & {
+  OptimizationRootWithBeforeInitialPageProps & {
     readonly maxWaitMs: number
   }
 
@@ -177,7 +177,7 @@ function DefaultOptimizationRoot({
   )
 }
 
-interface InitialExperienceSequenceState {
+interface BeforeInitialPageSequenceState {
   readonly emitterRouteKey: string
   readonly isReady: boolean
 }
@@ -194,24 +194,24 @@ function logInitialPageError(error: unknown): void {
   }
 }
 
-function InitialExperienceSequence({
+function BeforeInitialPageSequence({
   buildPagePayload,
   children,
   handoff,
-  initialExperience,
+  beforeInitialPage,
   initialRouteKey,
   maxWaitMs,
   routeKey,
 }: PropsWithChildren<{
   readonly buildPagePayload: TrackCurrentPageOptions['buildPayload']
   readonly handoff?: ContentOptimizationHandoff
-  readonly initialExperience: InitialExperienceOptions
+  readonly beforeInitialPage: BeforeInitialPageOptions
   readonly initialRouteKey: string
   readonly maxWaitMs: number
   readonly routeKey: string
 }>): ReactElement {
   const { error, isLive, sdk } = useOptimizationContext()
-  const [sequenceState, setSequenceState] = useState<InitialExperienceSequenceState>({
+  const [sequenceState, setSequenceState] = useState<BeforeInitialPageSequenceState>({
     emitterRouteKey: initialRouteKey,
     isReady: false,
   })
@@ -219,7 +219,7 @@ function InitialExperienceSequence({
   const currentRuntimeRef = useRef(sdk)
   const currentRuntimeIsLiveRef = useRef(isLive === true)
   const initialHandoffRef = useRef(handoff)
-  const initialExperienceRef = useRef(initialExperience)
+  const beforeInitialPageRef = useRef(beforeInitialPage)
   const initialMaxWaitMsRef = useRef(maxWaitMs)
   const lastObservedRouteKeyRef = useRef(routeKey)
   const mountedRef = useRef(false)
@@ -254,9 +254,9 @@ function InitialExperienceSequence({
       currentRuntimeRef.current === sequenceRuntime
 
     void (async () => {
-      await runInitialExperience(
+      await runBeforeInitialPage(
         sequenceRuntime,
-        initialExperienceRef.current,
+        beforeInitialPageRef.current,
         initialMaxWaitMsRef.current,
       )
 
@@ -306,46 +306,46 @@ function InitialExperienceSequence({
   }, [routeKey, sequenceState.isReady])
 
   return (
-    <InitialExperienceContext.Provider value={sequenceState.isReady}>
+    <BeforeInitialPageContext.Provider value={sequenceState.isReady}>
       {children}
-    </InitialExperienceContext.Provider>
+    </BeforeInitialPageContext.Provider>
   )
 }
 
-function InitialExperienceOptimizationRoot({
+function BeforeInitialPageOptimizationRoot({
   buildPagePayload,
   children,
   handoff,
-  initialExperience,
+  beforeInitialPage,
   liveUpdates = false,
   maxWaitMs,
   routeKey,
   ...providerProps
-}: InitialExperienceOptimizationRootProps): ReactElement {
+}: BeforeInitialPageOptimizationRootProps): ReactElement {
   const initialRouteKey = useRef(routeKey)
 
   return (
     <OptimizationProvider {...providerProps} handoff={handoff}>
-      <InitialExperienceSequence
+      <BeforeInitialPageSequence
         buildPagePayload={buildPagePayload}
         handoff={handoff}
-        initialExperience={initialExperience}
+        beforeInitialPage={beforeInitialPage}
         initialRouteKey={initialRouteKey.current}
         maxWaitMs={maxWaitMs}
         routeKey={routeKey}
       >
         <LiveUpdatesProvider globalLiveUpdates={liveUpdates}>{children}</LiveUpdatesProvider>
-      </InitialExperienceSequence>
+      </BeforeInitialPageSequence>
     </OptimizationProvider>
   )
 }
 
 export function OptimizationRoot(props: OptimizationRootProps): ReactElement {
-  if (props.initialExperience === undefined) {
+  if (props.beforeInitialPage === undefined) {
     return <DefaultOptimizationRoot {...props} />
   }
 
-  const maxWaitMs = resolveInitialExperienceMaxWaitMs(props.initialExperience.maxWaitMs)
+  const maxWaitMs = resolveBeforeInitialPageMaxWaitMs(props.beforeInitialPage.maxWaitMs)
 
-  return <InitialExperienceOptimizationRoot {...props} maxWaitMs={maxWaitMs} />
+  return <BeforeInitialPageOptimizationRoot {...props} maxWaitMs={maxWaitMs} />
 }

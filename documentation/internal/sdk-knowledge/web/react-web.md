@@ -33,12 +33,12 @@ Package source root: `packages/web/frameworks/react-web-sdk/src`; underlying Web
   that uses the SDK. It composes `OptimizationProvider` + `LiveUpdatesProvider`, creates the Web SDK
   instance after React commits, and destroys it on unmount.
   source: react-web-sdk#root/OptimizationRoot.tsx#OptimizationRoot
-- A callback-enabled owned root resolves its watchdog before mounting the provider. Omission uses
-  3,000 ms, and positive finite configured values are accepted. `0`, negative values, `NaN`, and
-  either infinity synchronously throw
-  `TypeError('initialExperience.maxWaitMs must be a positive finite number.')`; the provider,
+- An owned root with `beforeInitialPage` resolves its watchdog before mounting the provider.
+  Omission uses 3,000 ms, and positive finite configured values are accepted. `0`, negative values,
+  `NaN`, and either infinity synchronously throw
+  `TypeError('beforeInitialPage.maxWaitMs must be a positive finite number.')`; the provider,
   callback, page, `onError`, and watchdog do not run.
-  source: react-web-sdk#initial-experience/initialExperience.ts#resolveInitialExperienceMaxWaitMs; react-web-sdk#root/OptimizationRoot.tsx#OptimizationRoot
+  source: react-web-sdk#before-initial-page/beforeInitialPage.ts#resolveBeforeInitialPageMaxWaitMs; react-web-sdk#root/OptimizationRoot.tsx#OptimizationRoot
 - `OptimizationRootProps` extends `OptimizationProviderConfigProps` and adds `liveUpdates`,
   `routeKey`, `buildPagePayload`, and `initialPagePayload`.
   source: react-web-sdk#root/OptimizationRoot.tsx#OptimizationRootProps
@@ -148,12 +148,13 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   connects during React layout effects. Loading, committed content, and `preserve-server` adoption
   settle before browser paint; preserved content stays visible through snapshot-to-live adoption.
   source: react-web-sdk#optimized-entry/useOptimizedEntry.ts#useOptimizedEntrySnapshot; web-sdk#presentation/OptimizedEntryController.ts#OptimizedEntryController
-- Initial Experience readiness applies only inside a callback-enabled root and holds an open
+- Before-initial-page readiness applies only inside a root with `beforeInitialPage` and holds an open
   presentation until the direct page attempt reaches terminality. `preserve-server`, a permitted
   pre-existing seed, and an existing commitment remain visible. The entry's existing deadline can
-  commit baseline first, and default non-live behavior keeps that fallback after later startup work.
+  commit baseline first, and default non-live behavior keeps that fallback after the
+  before-initial-page work later finishes.
   Outside this root path, the readiness context defaults to ready.
-  source: react-web-sdk#context/InitialExperienceContext.tsx#InitialExperienceContext; react-web-sdk#optimized-entry/useOptimizedEntry.ts#useOptimizedEntrySnapshot; web-sdk#presentation/OptimizedEntryController.ts#OptimizedEntryController
+  source: react-web-sdk#context/BeforeInitialPageContext.tsx#BeforeInitialPageContext; react-web-sdk#optimized-entry/useOptimizedEntry.ts#useOptimizedEntrySnapshot; web-sdk#presentation/OptimizedEntryController.ts#OptimizedEntryController
 - **Loading model:** default `client-only-hidden-until-ready` hydration renders baseline as a hidden
   layout target, commits resolved content when ready, and commits baseline after a settled failure or
   a **5s** timeout (`BASELINE_REVEAL_TIMEOUT_MS = 5000`) if resolution remains open;
@@ -197,21 +198,26 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   next-pages / next-app trackers can pass `'skip'` to suppress it. With the `['identify','page']`
   pre-consent allow-list this initial `page` is admitted before any explicit consent call.
   source: react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter; kb:shared/concepts.md
-- Without initial Experience, `OptimizationRoot` emits a handoff-owned initial page event only when
+- Without `beforeInitialPage`, `OptimizationRoot` emits a handoff-owned initial page event only when
   it has a route key and either `buildPagePayload` or `initialPagePayload`. For
   `initialPageEvent: 'skip'`, it can mark the initial route accepted with the initial route key even
   without a payload builder. If `initialPageEvent: 'emit'` lacks a route key or page payload source,
   it warns and skips browser emission.
   source: react-web-sdk#root/OptimizationRoot.tsx#resolveInitialPageEmitterProps; react-web-sdk#root/OptimizationRoot.tsx#shouldWarnMissingInitialPagePayload; react-web-sdk#root/OptimizationRoot.tsx#MissingInitialPagePayloadWarning; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
-- After a live owned runtime exists, a callback-enabled root invokes the callback once per retained
-  root lifetime with receiver-safe bound `identify`, `screen`, and `track` delegates. It awaits only
-  returned work or the watchdog, then reads the latest route and payload builder for one direct page
-  attempt. A successfully applied same-route handoff can skip that attempt; a failed handoff or
-  changed route emits. After the attempt settles, including rejection or `{ accepted: false }`,
-  readiness activates the existing emitter with one non-emitting `skip` mark for the attempted
-  route. A later route emits through that emitter. This root owns the page sequence for its subtree;
-  a separate auto-page tracker is a second page owner.
-  source: react-web-sdk#initial-experience/initialExperience.ts#createInitialExperienceClient; react-web-sdk#initial-experience/initialExperience.ts#runInitialExperience; react-web-sdk#root/OptimizationRoot.tsx#InitialExperienceSequence; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
+- A root with `beforeInitialPage` invokes the callback only after its owned runtime is live, once per
+  retained root lifetime, with receiver-safe bound `identify`, `screen`, and `track` delegates. It
+  awaits only returned work or the watchdog, then reads the latest route and payload builder for one
+  direct page attempt. A successfully applied same-route handoff can skip that attempt; a failed
+  handoff or changed route emits. After the attempt settles, including rejection or
+  `{ accepted: false }`, readiness activates the existing emitter with one non-emitting `skip` mark
+  for the attempted route. This root owns the page sequence for its subtree; a separate auto-page
+  tracker is a second page owner.
+  source: react-web-sdk#before-initial-page/beforeInitialPage.ts#createBeforeInitialPageClient; react-web-sdk#before-initial-page/beforeInitialPage.ts#runBeforeInitialPage; react-web-sdk#root/OptimizationRoot.tsx#BeforeInitialPageSequence; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
+- A route change after the direct page attempt starts neither cancels that attempt nor starts a
+  competing page attempt. The root settles and marks the captured attempted route before enabling
+  later page emission; a route observed only during the in-flight attempt is not emitted, while a
+  route change after readiness emits normally.
+  source: react-web-sdk#root/OptimizationRoot.tsx#BeforeInitialPageSequence; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter
 - `getPagePayload` receives `{ context, routeKey, isInitialEmission }`; React Router `context` has
   `pathname`. It returns `AutoPagePayload | undefined`, the argument shape accepted by `sdk.page()`.
   Put application-specific route values under `properties` rather than returning arbitrary
@@ -312,13 +318,15 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   supplied and logged otherwise. While the root remains mounted on the same runtime, the direct page
   is still attempted. A throwing `onError` and page rejection are caught and logged; page rejection
   and `{ accepted: false }` both release readiness. The watchdog does not cancel callback work or
-  requests, fire-and-forget work is not awaited, and unmount or runtime replacement suppresses only
-  unsent local page/readiness continuation.
-  source: react-web-sdk#initial-experience/initialExperience.ts#runInitialExperience; react-web-sdk#root/OptimizationRoot.tsx#InitialExperienceSequence
+  requests, and fire-and-forget work is not awaited. If the root unmounts or its live owned runtime
+  is no longer current, this sequence suppresses only unsent local page/readiness continuation; it
+  does not cancel callback or page work it already started.
+  source: react-web-sdk#before-initial-page/beforeInitialPage.ts#runBeforeInitialPage; react-web-sdk#root/OptimizationRoot.tsx#BeforeInitialPageSequence
 - If owned SDK construction succeeds but initial handoff hydration fails, the provider retains the
-  live runtime and publishes the error. A callback-enabled root treats that handoff as unapplied and
-  uses an emitting direct page attempt. This retention applies only to the owned-runtime path.
-  source: react-web-sdk#provider/OptimizationProvider.tsx#initializeServerOptimizationState; react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider; react-web-sdk#root/OptimizationRoot.tsx#InitialExperienceSequence
+  live runtime and publishes the error. A root with `beforeInitialPage` treats that handoff as
+  unapplied and uses an emitting direct page attempt. This retention applies only to the
+  owned-runtime path.
+  source: react-web-sdk#provider/OptimizationProvider.tsx#initializeServerOptimizationState; react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider; react-web-sdk#root/OptimizationRoot.tsx#BeforeInitialPageSequence
 - On SDK **initialization failure**, `useOptimizationContext().error` is set; `OptimizedEntry`
   throws rather than rendering baseline, so it must render under an ancestor that handles `error`
   (an unguarded subtree crashes).

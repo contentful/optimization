@@ -17,7 +17,7 @@ import {
 } from '@contentful/optimization-web/presentation'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useInitialExperienceReady } from '../context/InitialExperienceContext'
+import { useBeforeInitialPageReady } from '../context/BeforeInitialPageContext'
 import { useOptimizationHydrationMode } from '../context/OptimizationHydrationContext'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimizationContext } from '../hooks/useOptimization'
@@ -222,7 +222,7 @@ export function useManagedBaselineEntry({
 /**
  * Return the low-level optimized-entry presentation snapshot for a baseline entry.
  *
- * Client controller state and owned-root initial Experience readiness are adopted during layout so
+ * Client controller state and owned-root before initial page readiness are adopted during layout so
  * loading, preserved content, and resolved commitments settle before the browser paints the current
  * presentation.
  *
@@ -248,10 +248,10 @@ export function useOptimizedEntrySnapshot<
     readonly sdk?: OptimizedEntrySdk<S, M, L>
   }
   const hydration = useOptimizationHydrationMode()
-  const isInitialExperienceReady = useInitialExperienceReady()
+  const isBeforeInitialPageReady = useBeforeInitialPageReady()
   const liveUpdatesContext = useLiveUpdates()
   const isSdkReady = sdk !== undefined
-  const currentPresentationReady = isSdkReady && isInitialExperienceReady
+  const currentPresentationReady = isSdkReady && isBeforeInitialPageReady
   const [isPresentationReady, setIsPresentationReady] = useState(currentPresentationReady)
 
   const controllerOptions = useMemo(

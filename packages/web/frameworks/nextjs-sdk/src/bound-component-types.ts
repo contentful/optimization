@@ -1,5 +1,5 @@
 import type {
-  InitialExperienceOptions,
+  BeforeInitialPageOptions,
   OptimizationAnalyticsRootProps,
   OptimizationProviderConfigProps,
   OptimizationRootProps,
@@ -58,20 +58,20 @@ export type NextjsBoundRootConfig = Omit<NextjsBoundProviderConfig, 'defaults'> 
 } & Pick<OptimizationRootProps, 'liveUpdates'>
 
 export type NextjsOptimizationComponentsConfig = NextjsBoundRootConfig & {
-  readonly initialExperience?: never
+  readonly beforeInitialPage?: never
 }
 
-export type NextjsClientOptimizationConfigWithoutInitialExperience = NextjsBoundRootConfig & {
-  readonly initialExperience?: never
+export type NextjsClientOptimizationConfigWithoutBeforeInitialPage = NextjsBoundRootConfig & {
+  readonly beforeInitialPage?: never
 }
 
-export type NextjsClientOptimizationConfigWithInitialExperience = NextjsBoundRootConfig & {
-  readonly initialExperience: InitialExperienceOptions
+export type NextjsClientOptimizationConfigWithBeforeInitialPage = NextjsBoundRootConfig & {
+  readonly beforeInitialPage: BeforeInitialPageOptions
 }
 
 export type NextjsClientOptimizationConfig =
-  | NextjsClientOptimizationConfigWithoutInitialExperience
-  | NextjsClientOptimizationConfigWithInitialExperience
+  | NextjsClientOptimizationConfigWithoutBeforeInitialPage
+  | NextjsClientOptimizationConfigWithBeforeInitialPage
 
 export interface NextjsAppRouterRequestContext {
   readonly requestUrl: string
@@ -149,7 +149,7 @@ export interface BoundNextjsOptimizationRootProps
     BoundNextjsOptimizationProviderProps,
     Pick<OptimizationRootProps, 'buildPagePayload' | 'initialPagePayload' | 'routeKey'> {}
 
-export type BoundNextjsOptimizationRootWithInitialExperienceProps = Omit<
+export type BoundNextjsOptimizationRootWithBeforeInitialPageProps = Omit<
   BoundNextjsOptimizationRootProps,
   'buildPagePayload' | 'initialPagePayload' | 'routeKey'
 > & {

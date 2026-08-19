@@ -27,7 +27,7 @@ The implementation binds `OptimizationRoot` and `OptimizedEntry` once in `@/lib/
 package root is not imported:
 
 - `@contentful/optimization-nextjs/pages-router` in `@/lib/optimization` for the bound component
-  binding and initial Experience callback
+  binding and before-initial-page callback
 - `@contentful/optimization-nextjs/pages-router/server` in `@/lib/optimization-server` for
   `getServerSideProps` request handoff
 - `@contentful/optimization-nextjs/client` for browser hooks and providers
@@ -42,7 +42,7 @@ after hydration. It covers:
 - App-local bound components from `bindNextjsPagesRouterOptimization()`
 - Request handoff from `createRequestHandoff()` through `pageProps`
 - Public permutation handoff from `getStaticProps` with `fallback: false` and `revalidate: 60`
-- Query-controlled initial Experience work before the root-owned browser page
+- Query-controlled before-initial-page work in the root-owned browser page flow
 - Root-owned initial and later route tracking without a separate router tracker
 - Browser-side entry resolution with the app-local `OptimizedEntry`
 - `initialPageEvent` ownership from the handoff so the browser skips only when the server request
@@ -65,9 +65,9 @@ passes `pageProps.contentfulOptimization.handoff` to the bound `OptimizationRoot
 `routeKey` and `buildPagePayload`; the handoff carries the first-page-event decision so the browser
 does not duplicate an accepted server page event.
 
-The bound client config uses `initialExperience` to make this root the only browser page owner in
+The bound client config uses `beforeInitialPage` to make this root the only browser page owner in
 its subtree. The callback returns immediately on ordinary routes. Add
-`?initialExperience=readiness` to run the maintained identify-before-page scenario: the callback
+`?beforeInitialPage=readiness` to run the maintained identify-before-page scenario: the callback
 returns its `identify()` request, and the root waits for that work before making its direct page
 attempt with the latest route and lazy payload. When the attempt finishes, the root activates its
 existing page emitter with a non-emitting initial `skip` mark for the attempted route. A later route
@@ -142,11 +142,11 @@ Run the focused readiness scenarios to verify the shared SSG route's raw HTML an
 pnpm test:e2e:nextjs-sdk_pages-router -- --grep readiness
 ```
 
-Run the focused initial Experience scenarios to verify callback-before-page ordering, latest-route
+Run the focused before initial page scenarios to verify callback-before-page ordering, latest-route
 capture, rejection and watchdog continuation, preserved content, and later-route emission:
 
 ```sh
-pnpm test:e2e:nextjs-sdk_pages-router -- --grep "initial Experience"
+pnpm test:e2e:nextjs-sdk_pages-router -- --grep "before initial page"
 ```
 
 Use Playwright UI or codegen when needed:

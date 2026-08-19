@@ -190,7 +190,7 @@ updates; and production hardening. Read straight through, or jump to the section
   - [Entry interaction tracking](#entry-interaction-tracking)
   - [Identity, profile, and reset](#identity-profile-and-reset)
 - [Optional integrations](#optional-integrations)
-  - [Run initial Experience work before the first page event](#run-initial-experience-work-before-the-first-page-event)
+  - [Run work before the initial page decision](#run-work-before-the-initial-page-decision)
   - [Live updates](#live-updates)
   - [Merge tags and Custom Flags](#merge-tags-and-custom-flags)
   - [Analytics forwarding](#analytics-forwarding)
@@ -652,9 +652,13 @@ evaluate route-based experiences, so most integrations emit one on first load an
 change. React Web ships auto page trackers for common routers; each dedupes consecutive route keys,
 including React Strict Mode's double effects.
 
-Choose one page-ownership mode for each root. The steps below use the normal tracker mode. If the
-root runs initial Experience work before its first page event, replace the tracker with the
-[callback-enabled root](#run-initial-experience-work-before-the-first-page-event).
+Choose one page-ownership mode for each root. The steps below use the normal tracker mode. In
+`beforeInitialPage` mode, the **initial page decision** is the root's one choice to send the first
+browser `page` event or skip it because an applied handoff already owns that route. The root runs
+the callback after its live owned runtime exists, makes that direct page attempt or skip, marks the
+attempted route without emitting it again, and emits for later route changes. Replace the tracker
+with the
+[before-initial-page root](#run-work-before-the-initial-page-decision).
 
 1. In normal tracker mode, mount one tracker inside `OptimizationRoot` and inside the router context
    it reads. Use the tracker that matches your router.
@@ -676,7 +680,7 @@ and `next-app` trackers exist for React-Web-only Next.js setups; a full Next.js 
 use the dedicated Next.js SDK guides instead.)
 
 **Adapt this to your use case:** the normal tracker mode, with one tracker mounted in your router
-root. Do not keep this tracker when you switch the root to `initialExperience`.
+root. Do not keep this tracker when you switch the root to `beforeInitialPage`.
 
 ```tsx
 import { OptimizationRoot } from '@contentful/optimization-react-web'
@@ -868,32 +872,35 @@ behavior, see
 
 ## Optional integrations
 
-### Run initial Experience work before the first page event
+### Run work before the initial page decision
 
 **Integration category:** Optional
 
-Use `initialExperience` when an owned `OptimizationRoot` must finish returned identity or custom
-Experience work before that root owns its first page event. This is an alternative to the router
-tracker in [Page events and route tracking](#page-events-and-route-tracking), not an addition to it.
-The callback-enabled root is the sole page owner for its subtree.
+Use `beforeInitialPage` when an owned `OptimizationRoot` must finish returned identity or custom
+Experience event work before that root makes its initial page decision. This is an alternative to
+the router tracker in [Page events and route tracking](#page-events-and-route-tracking), not an
+addition to it. The before-initial-page root is the sole page owner for its subtree.
 
-The callback runs once during a retained root lifetime, which starts when that `OptimizationRoot`
-mounts and ends when it unmounts. A real remount starts a new lifetime and runs the callback again.
-The SDK-provided `InitialExperienceClient` exposes three methods that stay bound when destructured:
+After the root's owned runtime is live, the callback runs once during a retained root lifetime,
+which starts when that `OptimizationRoot` mounts and ends when it unmounts. A real remount starts a
+new lifetime and runs the callback again. The SDK-provided `BeforeInitialPageClient` exposes three
+methods that stay bound when destructured:
 
 - `identify` supplies the visitor ID and traits your app is allowed to send.
 - `screen` records a screen-view Experience event.
 - `track` sends an app-named custom Experience event.
 
-Return one value that represents all startup operations. A JavaScript `Promise` represents work
-that finishes later; a **thenable** is a Promise-like object with a `.then()` method. An `async`
-callback returns one Promise automatically, and every operation you `await` becomes part of the
-work the root waits for.
+Return one value that represents all before-initial-page operations. A JavaScript `Promise`
+represents work that finishes later; a **thenable** is a Promise-like object with a `.then()` method.
+An `async` callback returns one Promise automatically, and every operation you `await` becomes part
+of the work the root waits for.
 
-Supplying `initialExperience` changes the root's required props: `routeKey` and
+Supplying `beforeInitialPage` changes the root's required props: `routeKey` and
 `buildPagePayload` are required. `initialPagePayload`, an eager page data object computed before
 later route changes, is not accepted. The lazy builder matters because the route can change while
-callback work is pending.
+callback work is pending. Your app owns `routeKey`: make it a stable identity for the current route
+and update it when the router changes. Your app also owns `buildPagePayload`; keep it lazy so the
+root reads current route data after the callback instead of capturing an eager initial payload.
 
 **Adapt this to your use case:** replace the normal tracker in the router root from the earlier
 section. `app-user-id` and `client_ready` are app-owned identifiers in this example; replace them
@@ -906,21 +913,21 @@ code remains yours.
 -import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 +import {
 +  OptimizationRoot,
-+  type InitialExperienceOptions,
++  type BeforeInitialPageOptions,
 +} from '@contentful/optimization-react-web'
 +import { createBrowserRouter, Outlet, RouterProvider, useLocation } from 'react-router-dom'
 
 +const APP_USER_ID_KEY = 'app-user-id'
 +const CLIENT_READY_EVENT = 'client_ready'
 +
-+const initialExperience = {
++const beforeInitialPage = {
 +  run: async ({ identify, track }) => {
 +    const userId = window.localStorage.getItem(APP_USER_ID_KEY)
 +    if (userId !== null) await identify({ userId })
 +    await track({ event: CLIENT_READY_EVENT })
 +  },
-+  onError: (error) => console.warn('Initial Optimization work failed.', error),
-+} satisfies InitialExperienceOptions
++  onError: (error) => console.warn('Before-initial-page work failed.', error),
++} satisfies BeforeInitialPageOptions
 +
  function RootLayout() {
 +  const location = useLocation()
@@ -933,7 +940,22 @@ code remains yours.
 +      clientId={import.meta.env.PUBLIC_OPTIMIZATION_CLIENT_ID}
 +      routeKey={routeKey}
 +      buildPagePayload={() => ({ properties: { path: routeKey } })}
-+      initialExperience={initialExperience}
++      beforeInitialPage={beforeInitialPage}
++      onStatesReady={(states) => {
++        if (!import.meta.env.DEV) return
++
++        const accepted = states.eventStream.subscribe((event) => {
++          if (event) console.debug('Contentful Optimization event accepted', event)
++        })
++        const blocked = states.blockedEventStream.subscribe((event) => {
++          if (event) console.debug('Contentful Optimization event blocked', event)
++        })
++
++        return () => {
++          accepted.unsubscribe()
++          blocked.unsubscribe()
++        }
++      }}
 +    >
        <Outlet />
      </OptimizationRoot>
@@ -947,7 +969,7 @@ The watchdog timeout bounds how long the root waits for returned callback work:
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Omitted                                                   | The root waits up to 3,000 ms.                                                                                                                                                |
 | Any positive finite number                                | The root waits up to that many milliseconds.                                                                                                                                  |
-| `0`, a negative number, `NaN`, `Infinity`, or `-Infinity` | Rendering synchronously throws `TypeError('initialExperience.maxWaitMs must be a positive finite number.')` before the provider, callback, page, `onError`, or watchdog runs. |
+| `0`, a negative number, `NaN`, `Infinity`, or `-Infinity` | Rendering synchronously throws `TypeError('beforeInitialPage.maxWaitMs must be a positive finite number.')` before the provider, callback, page, `onError`, or watchdog runs. |
 
 A **direct page attempt** means the root calls the page-event API itself once before automatic route
 tracking starts. The root's **page emitter** is its built-in route-change logic, not a tracker
@@ -958,31 +980,35 @@ not admit that page event locally; the sequence still advances and does not retr
 immediately.
 
 A callback throw, returned-work rejection, or watchdog expiry is reported to `onError` when you
-supply it, and the root still makes the direct page attempt. A page rejection also ends the initial
-sequence. The watchdog stops waiting but does not cancel the callback or a request it already sent.
-Work started without being returned is fire-and-forget activity and can finish after the page.
+supply it. While the root remains mounted and the same live owned runtime is current, the root still
+makes the direct page attempt. A page rejection also ends the initial sequence. The watchdog stops
+waiting but does not cancel the callback or a request it already sent. Work started without being
+returned is fire-and-forget activity and can finish after the page. If the root unmounts or its live
+runtime is replaced, only unsent local page and readiness continuation is suppressed; work already
+started is not canceled.
 
-The root reads the latest route immediately before the direct page attempt. Navigation after that
-attempt starts is not canceled or reordered against it.
+A route change after the direct page attempt starts neither cancels that attempt nor starts a
+competing page attempt. The root settles and marks the captured attempted route before enabling
+later page emission. A route observed only while the attempt is in flight is not emitted; a route
+change after readiness emits normally.
 
 > [!NOTE]
 >
 > If callback and page work remain pending when an entry reaches its existing five-second fallback
 > deadline, the entry can reveal baseline content. With live updates disabled, that first visible
-> content stays frozen even if startup later selects a variant. Enable [Live updates](#live-updates)
-> only when a late replacement is the intended experience.
+> content stays frozen even if the before-initial-page work later selects a variant. Enable
+> [Live updates](#live-updates) only when a late replacement is the intended experience.
 
-Verify ordering and page ownership in development with the `onStatesReady` event-stream subscription
-shown in [Analytics forwarding](#analytics-forwarding). Temporarily log each accepted event type and
-subscribe to `states.blockedEventStream` for locally rejected calls. Also log immediately before the
-first `await` and after the last `await` in `run`. Set the example identity first with
+The inline development-only `onStatesReady` observer logs locally accepted and blocked events and
+unsubscribes from both streams during cleanup. Set the example identity first with
 `localStorage.setItem('app-user-id', 'guide-user')`, then reload. The callback's identify and
 `client_ready` results must appear, as accepted or blocked calls, before at most one initial `page`
-result. Navigate once and confirm one later `page` result. An initial `page` before callback
-completion or two initial page results usually means the normal tracker is still mounted. These
-streams prove local SDK admission or blocking, not API delivery.
+result. Navigate once after readiness and confirm one later `page` result. An initial `page` before
+the callback results or two initial page results usually means the normal tracker is still mounted.
+These streams prove local SDK admission or blocking, not API delivery. Remove the observer after
+this development check.
 
-`initialExperience` belongs only to an owned content `OptimizationRoot`. An injected
+`beforeInitialPage` belongs only to an owned content `OptimizationRoot`. An injected
 `OptimizationProvider` and `OptimizationAnalyticsRoot` do not accept it. Direct Web and Node
 integrations also keep this sequence application-owned: await the identity or custom-event work
 that belongs before the page, then call the runtime's existing page-event API.
@@ -1097,7 +1123,8 @@ customer-data platform, or analytics destination. The SDK still sends its own ev
 forwarding is application-owned.
 
 1. Register the subscription with the `onStatesReady` prop so it attaches before child effects,
-   such as a normal route tracker or the callback root's built-in page emitter, emit events.
+   such as a normal route tracker or the `beforeInitialPage` root's built-in page emitter, emit
+   events.
 2. Dedupe forwarded events by `messageId`. To receive only future events, read the current
    `messageId` before subscribing and skip it.
 3. Store forwarded message ids in module or app state so remounts do not forward the same event
@@ -1105,8 +1132,8 @@ forwarding is application-owned.
 4. Gate forwarding with the same consent and destination policy that governs the rest of your
    analytics stack.
 
-The JSX below uses normal tracker mode. For a callback-enabled root, keep the subscription but omit
-`ReactRouterAutoPageTracker`; the root's built-in emitter owns page events.
+The JSX below uses normal tracker mode. For a root with `beforeInitialPage`, keep the subscription
+but omit `ReactRouterAutoPageTracker`; the root's built-in emitter owns page events.
 
 **Follow this pattern:**
 
@@ -1136,7 +1163,7 @@ const forwardedMessageIds = new Set<string>()
     return () => subscription.unsubscribe()
   }}
 >
-  {/* Normal tracker mode only. Omit this component from a callback-enabled root. */}
+  {/* Normal tracker mode only. Omit this component from a before-initial-page root. */}
   <ReactRouterAutoPageTracker />
   <YourApp />
 </OptimizationRoot>
@@ -1321,10 +1348,10 @@ Run these checks before release:
   `withAllLocales` / `locale=*` payloads to `OptimizedEntry` or the resolver hooks.
 - Confirm default-on vs opt-in startup matches policy, `allowedEventTypes` matches the pre-consent
   posture, and revoking consent blocks non-allowed events.
-- Confirm the first page event and route-change page events deliver. In normal mode, mount one tracker
-  per router tree. In callback mode, mount no tracker and confirm the root's direct attempt plus
-  built-in emitter do not duplicate the initial route. Confirm Strict Mode remounts do not duplicate
-  either mode.
+- Confirm the first page event and route-change page events deliver. In normal tracker mode, mount
+  one tracker per router tree. In `beforeInitialPage` mode, mount no tracker and confirm the root's
+  direct attempt plus built-in emitter do not duplicate the initial route. Confirm Strict Mode
+  remounts do not duplicate either mode.
 - Confirm baseline fallback renders when the Experience API fails, variants are missing, links are
   unresolved, or a payload is all-locale — and that `OptimizedEntry` stops showing loading after
   resolution settles or the 5-second reveal.
@@ -1350,20 +1377,20 @@ pnpm test:e2e:react-web-sdk
 
 ## Troubleshooting
 
-| Symptom                                                           | Likely cause                                                                                          | Check                                                                                                                                           |
-| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Entry stays on baseline                                           | No variant applies, denied consent, unresolved Contentful links, or an all-locale payload             | Author a variant that targets you, check consent, fetch one `locale` with enough `include`                                                      |
-| The variant never appears even though it is authored              | Your test visitor does not match the experience's audience, or no page event was emitted              | Target all visitors for a first test, or force the variant with the preview panel; confirm the normal tracker or callback root owns page events |
-| `Content failed to load.` appears                                 | The app's Contentful entry request rejected                                                           | Inspect the logged fetch error, credentials, entry ID, environment, and network request                                                         |
-| A heterogeneous render cannot read content-type-specific fields   | The skeleton union omits a possible content type, or the entry was not narrowed before rendering      | Include every baseline and variant skeleton in `S`, then narrow with `isEntryOfContentType`                                                     |
-| Entry is stuck showing loading UI                                 | Optimization state never settled; only entries with optimization references wait                      | It reveals baseline after 5s automatically; check the Experience request and `include: 10`                                                      |
-| A managed `<OptimizedEntry>` renders the error fallback           | Managed fetch failed, or `contentful: { client }` is not configured on `OptimizationRoot`             | Confirm the root `contentful` client, source values, and query; inspect the `onEntryError` error                                                |
-| `useOptimization must be used within an OptimizationProvider`     | A hook renders outside `OptimizationRoot` / `OptimizationProvider`                                    | Move the provider above that component tree                                                                                                     |
-| `ContentfulOptimization is already initialized`                   | More than one owned SDK instance in the same browser runtime                                          | Keep one `OptimizationRoot`, or inject a single shared instance via `OptimizationProvider`                                                      |
-| Route page events fire more than expected                         | Normal mode has multiple trackers or a duplicate manual call, or callback mode still mounts a tracker | Keep one tracker only in normal mode; in callback mode remove every tracker and let the root own direct and later page events                   |
-| View, click, or hover events do not emit                          | Consent not accepted, interaction opted out, entry still loading, or DOM lacks resolved metadata      | Check `trackEntryInteraction`, per-entry props, consent state, and rendered `data-ctfl-*` attributes                                            |
-| Live entries do not update after `identifyUser()` / `resetUser()` | Live updates are off (the default)                                                                    | Set `liveUpdates` on `OptimizationRoot`, or pass `liveUpdates` to the `OptimizedEntry`                                                          |
-| Preview panel does not attach                                     | Package not installed, gate is false, attach ran before the SDK existed, or no singleton exists       | Attach from `onStatesReady`, verify the gate, and pass `optimization` when using an injected instance                                           |
+| Symptom                                                           | Likely cause                                                                                                             | Check                                                                                                                                                      |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entry stays on baseline                                           | No variant applies, denied consent, unresolved Contentful links, or an all-locale payload                                | Author a variant that targets you, check consent, fetch one `locale` with enough `include`                                                                 |
+| The variant never appears even though it is authored              | Your test visitor does not match the experience's audience, or no page event was emitted                                 | Target all visitors for a first test, or force the variant with the preview panel; confirm the normal tracker or `beforeInitialPage` root owns page events |
+| `Content failed to load.` appears                                 | The app's Contentful entry request rejected                                                                              | Inspect the logged fetch error, credentials, entry ID, environment, and network request                                                                    |
+| A heterogeneous render cannot read content-type-specific fields   | The skeleton union omits a possible content type, or the entry was not narrowed before rendering                         | Include every baseline and variant skeleton in `S`, then narrow with `isEntryOfContentType`                                                                |
+| Entry is stuck showing loading UI                                 | Optimization state never settled; only entries with optimization references wait                                         | It reveals baseline after 5s automatically; check the Experience request and `include: 10`                                                                 |
+| A managed `<OptimizedEntry>` renders the error fallback           | Managed fetch failed, or `contentful: { client }` is not configured on `OptimizationRoot`                                | Confirm the root `contentful` client, source values, and query; inspect the `onEntryError` error                                                           |
+| `useOptimization must be used within an OptimizationProvider`     | A hook renders outside `OptimizationRoot` / `OptimizationProvider`                                                       | Move the provider above that component tree                                                                                                                |
+| `ContentfulOptimization is already initialized`                   | More than one owned SDK instance in the same browser runtime                                                             | Keep one `OptimizationRoot`, or inject a single shared instance via `OptimizationProvider`                                                                 |
+| Route page events fire more than expected                         | Normal tracker mode has multiple trackers or a duplicate manual call, or `beforeInitialPage` mode still mounts a tracker | Keep one tracker only in normal tracker mode; in `beforeInitialPage` mode remove every tracker and let the root own direct and later page events           |
+| View, click, or hover events do not emit                          | Consent not accepted, interaction opted out, entry still loading, or DOM lacks resolved metadata                         | Check `trackEntryInteraction`, per-entry props, consent state, and rendered `data-ctfl-*` attributes                                                       |
+| Live entries do not update after `identifyUser()` / `resetUser()` | Live updates are off (the default)                                                                                       | Set `liveUpdates` on `OptimizationRoot`, or pass `liveUpdates` to the `OptimizedEntry`                                                                     |
+| Preview panel does not attach                                     | Package not installed, gate is false, attach ran before the SDK existed, or no singleton exists                          | Attach from `onStatesReady`, verify the gate, and pass `optimization` when using an injected instance                                                      |
 
 ## Reference implementations to compare against
 
