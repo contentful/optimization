@@ -423,23 +423,30 @@ handoff's `initialPageEvent` instruction; those props do not belong on `Optimiza
 separate `NextPagesAutoPageTracker` should emit the initial event when no handoff exists and skip it
 when a handoff lets the root own that first route, then track later client navigations.
 
-As an optional alternative, the browser binder accepts `initialExperience` for an owned content
-root that must finish returned identity or custom Experience work before its first page event. The
-binder captures the callback only for its bound `OptimizationRoot`; its bound
+As an optional alternative, the browser binder accepts `beforeInitialPage` for an owned content
+root that must finish returned identity or custom Experience event work before its initial page
+decision. The **initial page decision** is the root's one choice to send the first browser `page`
+event or skip it because an applied handoff already owns that route. During `getServerSideProps`,
+the server helper can accept the page event and record that ownership in the handoff. `_app.tsx`
+passes the handoff to the browser root; after its live owned runtime exists, the root invokes the
+callback, makes one direct page attempt or same-route handoff skip, marks the attempted route, and
+emits for later route changes.
+
+The binder captures the callback only for its bound `OptimizationRoot`; its bound
 `OptimizationProvider` and `OptimizationAnalyticsRoot` do not receive it. Here, **identity** means
 the visitor ID and traits your application is allowed to send; the full lifecycle is covered in
-[Consent, identity, profile, and reset](#consent-identity-profile-and-reset).
-
-The callback runs once during a retained root lifetime, which starts when that root mounts and ends
-when it unmounts. A real remount starts another lifetime. Its SDK-provided
-`InitialExperienceClient` exposes methods that stay bound when destructured: `identify` supplies
+[Consent, identity, profile, and reset](#consent-identity-profile-and-reset). The callback runs once
+after that live owned runtime exists, during a retained root lifetime that ends when the root
+unmounts. A real remount starts another lifetime. Its SDK-provided
+`BeforeInitialPageClient` exposes methods that stay bound when destructured: `identify` supplies
 visitor identity, `screen` records a screen-view Experience event, and `track` sends an app-named
 custom Experience event.
 
-Return one value that represents all startup operations. A JavaScript `Promise` represents work
-that finishes later; a **thenable** is a Promise-like object with a `.then()` method. An `async`
-callback returns one Promise automatically, and every operation you `await` becomes part of that
-returned work. A standalone `OptimizationProvider` with an injected SDK does not accept this option.
+Return one value that represents all before-initial-page operations. A JavaScript `Promise`
+represents work that finishes later; a **thenable** is a Promise-like object with a `.then()` method.
+An `async` callback returns one Promise automatically, and every operation you `await` becomes part
+of that returned work. A standalone `OptimizationProvider` with an injected SDK does not accept
+this option.
 
 **Adapt this to your use case:** add the callback to the existing browser binding and stop exporting
 the separate tracker for this path. `app-user-id` and `client_ready` are app-owned identifiers in
@@ -450,36 +457,36 @@ this example; replace them with the browser identity store and custom event name
 -import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router'
 +import {
 +  bindNextjsPagesRouterOptimization,
-+  type InitialExperienceOptions,
++  type BeforeInitialPageOptions,
 +} from '@contentful/optimization-nextjs/pages-router'
 
 -export const { NextPagesAutoPageTracker, OptimizationRoot, OptimizedEntry } =
 +const APP_USER_ID_KEY = 'app-user-id'
 +const CLIENT_READY_EVENT = 'client_ready'
 +
-+const initialExperience = {
++const beforeInitialPage = {
 +  run: async ({ identify, track }) => {
 +    const userId = window.localStorage.getItem(APP_USER_ID_KEY)
 +    if (userId !== null) await identify({ userId })
 +    await track({ event: CLIENT_READY_EVENT })
 +  },
-+  onError: (error) => console.warn('Initial Optimization work failed.', error),
-+} satisfies InitialExperienceOptions
++  onError: (error) => console.warn('Before-initial-page work failed.', error),
++} satisfies BeforeInitialPageOptions
 +
 +export const { OptimizationRoot, OptimizedEntry } =
    bindNextjsPagesRouterOptimization({
      clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
      environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'main',
      locale: 'en-US',
-+    initialExperience,
++    beforeInitialPage,
      // your existing browser config
    })
 ```
 
-The callback-enabled root requires `routeKey` and lazy `buildPagePayload`. It does not accept
+The before-initial-page root requires `routeKey` and lazy `buildPagePayload`. It does not accept
 `initialPagePayload`, the eager page data object computed before later route changes. The `_app.tsx`
 root in the quick start already supplies the two required values. Remove only the separate tracker
-from this callback-enabled subtree; leaving it mounted creates a second page owner.
+from this before-initial-page subtree; leaving it mounted creates a second page owner.
 
 **Adapt this to your use case:** keep the handoff, current route key, lazy payload builder, and page
 component from your existing `_app.tsx`.
@@ -509,20 +516,26 @@ retry.
 
 The watchdog uses 3,000 ms when `maxWaitMs` is omitted and accepts any positive finite value. A
 value of `0`, a negative number, `NaN`, `Infinity`, or `-Infinity` synchronously throws
-`TypeError('initialExperience.maxWaitMs must be a positive finite number.')` before the provider,
+`TypeError('beforeInitialPage.maxWaitMs must be a positive finite number.')` before the provider,
 callback, page, `onError`, or watchdog runs. A callback throw, returned-work rejection, or watchdog
-expiry is reported to `onError` when supplied, and the root still attempts the page.
+expiry is reported to `onError` when supplied. While the root remains mounted and the same live
+owned runtime is current, the root still attempts the page.
 
 The watchdog stops waiting but does not cancel callback code or a request it already sent.
-Fire-and-forget work that the callback does not return can finish after the page. The root reads the
-latest route immediately before the direct attempt; navigation after that attempt begins is not
-canceled or reordered against it.
+Fire-and-forget work that the callback does not return can finish after the page. If the root
+unmounts or its live runtime is replaced, only unsent local page and readiness continuation is
+suppressed; work already started is not canceled.
+
+A route change after the direct page attempt starts neither cancels that attempt nor starts a
+competing page attempt. The root settles and marks the captured attempted route before enabling
+later page emission. A route observed only while the attempt is in flight is not emitted; a route
+change after readiness emits normally.
 
 > [!NOTE]
 >
 > If callback and page work remain pending when an entry reaches its existing five-second fallback
 > deadline, the entry can reveal baseline content. With live updates disabled, that first visible
-> content stays frozen even if startup later selects a variant. Enable
+> content stays frozen even if the before-initial-page work later selects a variant. Enable
 > [Browser takeover and live updates](#browser-takeover-and-live-updates) only when a late
 > replacement is intended.
 
@@ -534,7 +547,7 @@ complete event records and removes both subscriptions when the root tears down.
 
 ```diff
  bindNextjsPagesRouterOptimization({
-   // your existing browser config and initialExperience
+   // your existing browser config and beforeInitialPage
 +  onStatesReady: (states) => {
 +    if (process.env.NODE_ENV !== 'development') return
 +
@@ -554,17 +567,18 @@ complete event records and removes both subscriptions when the root tears down.
 ```
 
 Set the example identity first with
-`localStorage.setItem('app-user-id', 'guide-user')`, then reload the callback-enabled page. The
-identify and `client_ready` results must appear, as accepted or blocked calls, before at most one
-initial `page` result. Navigate once and confirm one later `page` result. An initial `page` before
+`localStorage.setItem('app-user-id', 'guide-user')`, then reload the page that uses
+`beforeInitialPage`. The identify and `client_ready` results must appear, as accepted or blocked
+calls, before at most one initial `page` result. Navigate once and confirm one later `page` result.
+An initial `page` before
 callback completion or two initial page results usually means the separate tracker is still
 mounted. These streams prove local SDK admission or blocking, not API delivery.
 
-The Pages server binder deliberately rejects a callback-present client config variable through its
-`initialExperience?: never` parameter boundary. The callback remains browser-only: server runtime
-behavior and serialized handoff/page props are unchanged. Direct Web and Node integrations keep
-this ordering in application code by awaiting their identity or custom-event work before calling
-their existing page-event API.
+The Pages server binder deliberately rejects `NextjsClientOptimizationConfigWithBeforeInitialPage`
+through its `beforeInitialPage?: never` parameter boundary. The callback remains browser-only:
+the server binder does not run it or serialize it into the handoff that the app passes through page
+props. Direct Web and Node integrations keep this ordering in application code by awaiting their
+identity or custom-event work before calling their existing page-event API.
 
 ### Personalizing entries
 
@@ -687,7 +701,7 @@ bindNextjsPagesRouterServerOptimization({
 
 ## Optional integrations
 
-Looking for the optional initial Experience path? Because it changes first-page ownership, its
+Looking for optional before-initial-page work? Because it changes first-page ownership, its
 setup and verification live in
 [The bound root and page events](#the-bound-root-and-page-events).
 
@@ -889,9 +903,9 @@ Use blocked-event diagnostics to verify denied events are dropped at the SDK bou
 - Confirm `consent.server`, request handoff defaults, browser consent defaults, and app-owned
   consent storage agree.
 - Confirm `ctfl-opt-aid` is browser-readable where server and browser profile continuity is needed.
-- Confirm first-page ownership matches one mode. In normal mode, the separate tracker skips a
-  server-owned first event and emits later routes. In callback mode, no tracker is mounted and the
-  root's direct attempt plus built-in emitter do not duplicate the initial route.
+- Confirm first-page ownership matches one mode. In normal tracker mode, the separate tracker skips
+  a server-owned first event and emits later routes. In `beforeInitialPage` mode, no tracker is
+  mounted and the root's direct attempt plus built-in emitter do not duplicate the initial route.
 - Confirm baseline fallback is acceptable when no variant applies or Contentful links are
   unresolved.
 - Confirm request-personalized output is never stored in a public shared cache.
@@ -900,14 +914,14 @@ Use blocked-event diagnostics to verify denied events are dropped at the SDK bou
 
 ## Troubleshooting
 
-| Symptom                                                         | Likely cause                                                                                                    | Check                                                                                                                                                    |
-| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Entries stay on baseline                                        | Missing handoff props, no matching variant, denied consent, unresolved variant links, or all-locale CDA payload | Target all visitors for the first test, pass `contentfulOptimization.handoff` into `_app.tsx`, and fetch one locale with enough `include` depth          |
-| A heterogeneous render cannot read content-type-specific fields | The skeleton union omits a possible content type, or the entry was not narrowed before rendering                | Include every baseline and variant skeleton in `S`, then narrow with `isEntryOfContentType`                                                              |
-| Page returns 500 instead of baseline                            | The request handoff call threw and the page did not catch it                                                    | Wrap the personalization helper according to your fallback policy                                                                                        |
-| Duplicate first page events                                     | Normal mode gave both root and tracker the initial event, or callback mode still mounts the tracker             | In normal mode, set the tracker from the handoff's `initialPageEvent`; in callback mode, remove the tracker and let the root own initial and later pages |
-| Live entries do not change after identify or reset              | The entry is locked to the handoff and live updates are off                                                     | Enable live updates for the route or entry, or open the preview panel in an allowed environment                                                          |
-| Personalized HTML is cached for the wrong visitor               | Request handoff output entered a public cache                                                                   | Keep request handoff pages private and use public permutation handoff only for explicit static or ISR permutations                                       |
+| Symptom                                                         | Likely cause                                                                                                           | Check                                                                                                                                                                       |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entries stay on baseline                                        | Missing handoff props, no matching variant, denied consent, unresolved variant links, or all-locale CDA payload        | Target all visitors for the first test, pass `contentfulOptimization.handoff` into `_app.tsx`, and fetch one locale with enough `include` depth                             |
+| A heterogeneous render cannot read content-type-specific fields | The skeleton union omits a possible content type, or the entry was not narrowed before rendering                       | Include every baseline and variant skeleton in `S`, then narrow with `isEntryOfContentType`                                                                                 |
+| Page returns 500 instead of baseline                            | The request handoff call threw and the page did not catch it                                                           | Wrap the personalization helper according to your fallback policy                                                                                                           |
+| Duplicate first page events                                     | Normal tracker mode gave both root and tracker the initial event, or `beforeInitialPage` mode still mounts the tracker | In normal tracker mode, set the tracker from the handoff's `initialPageEvent`; in `beforeInitialPage` mode, remove the tracker and let the root own initial and later pages |
+| Live entries do not change after identify or reset              | The entry is locked to the handoff and live updates are off                                                            | Enable live updates for the route or entry, or open the preview panel in an allowed environment                                                                             |
+| Personalized HTML is cached for the wrong visitor               | Request handoff output entered a public cache                                                                          | Keep request handoff pages private and use public permutation handoff only for explicit static or ISR permutations                                                          |
 
 ## Reference implementations to compare against
 

@@ -17,6 +17,10 @@ export type {
   AutoPageRouteState,
 } from './auto-page/types'
 export type { InitialAutoPageEvent } from './auto-page/useAutoPageEmitter'
+export type {
+  BeforeInitialPageClient,
+  BeforeInitialPageOptions,
+} from './before-initial-page/beforeInitialPage'
 export { LiveUpdatesContext } from './context/LiveUpdatesContext'
 export type { LiveUpdatesContextValue } from './context/LiveUpdatesContext'
 export { OptimizationContext } from './context/OptimizationContext'
@@ -36,10 +40,6 @@ export {
   useProfileState,
   useSelectedOptimizationsState,
 } from './hooks/useOptimizationState'
-export type {
-  InitialExperienceClient,
-  InitialExperienceOptions,
-} from './initial-experience/initialExperience'
 export { OptimizedEntry } from './optimized-entry/OptimizedEntry'
 export type {
   OptimizedEntryBaselineProps,

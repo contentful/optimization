@@ -6,7 +6,7 @@ import {
   type OptimizedEntrySnapshot,
 } from '@contentful/optimization-web/presentation'
 import { act, useLayoutEffect, useRef, useState } from 'react'
-import { InitialExperienceContext } from '../context/InitialExperienceContext'
+import { BeforeInitialPageContext } from '../context/BeforeInitialPageContext'
 import type { LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
 import {
   OptimizationContext,
@@ -86,26 +86,26 @@ async function renderHook(params: {
   }
 }
 
-async function renderSnapshotWithInitialExperience(params: {
+async function renderSnapshotWithBeforeInitialPage(params: {
   baselineEntry: ReturnType<typeof makeEntry>
   hasCustomLoadingFallback?: boolean
   hydration?: 'client-only-hidden-until-ready' | 'preserve-server'
-  initialExperienceReady: boolean
+  beforeInitialPageReady: boolean
   optimization: OptimizationSdk
 }): Promise<{
   getSnapshot: () => OptimizedEntrySnapshot
-  setInitialExperienceReady: (isReady: boolean) => Promise<void>
+  setBeforeInitialPageReady: (isReady: boolean) => Promise<void>
   unmount: () => Promise<void>
 }> {
   const {
     baselineEntry,
     hasCustomLoadingFallback,
     hydration = 'client-only-hidden-until-ready',
-    initialExperienceReady,
+    beforeInitialPageReady,
     optimization,
   } = params
   let captured: OptimizedEntrySnapshot | undefined = undefined
-  let updateInitialExperienceReady: ((isReady: boolean) => void) | undefined = undefined
+  let updateBeforeInitialPageReady: ((isReady: boolean) => void) | undefined = undefined
 
   function Probe(): null {
     captured = useOptimizedEntrySnapshot({ baselineEntry, hasCustomLoadingFallback })
@@ -113,15 +113,15 @@ async function renderSnapshotWithInitialExperience(params: {
   }
 
   function Harness(): React.JSX.Element {
-    const [isReady, setIsReady] = useState(initialExperienceReady)
-    updateInitialExperienceReady = setIsReady
+    const [isReady, setIsReady] = useState(beforeInitialPageReady)
+    updateBeforeInitialPageReady = setIsReady
 
     return (
-      <InitialExperienceContext.Provider value={isReady}>
+      <BeforeInitialPageContext.Provider value={isReady}>
         <OptimizationHydrationContext.Provider value={hydration}>
           <Probe />
         </OptimizationHydrationContext.Provider>
-      </InitialExperienceContext.Provider>
+      </BeforeInitialPageContext.Provider>
     )
   }
 
@@ -135,9 +135,9 @@ async function renderSnapshotWithInitialExperience(params: {
 
       return captured
     },
-    async setInitialExperienceReady(isReady) {
+    async setBeforeInitialPageReady(isReady) {
       await act(async () => {
-        updateInitialExperienceReady?.(isReady)
+        updateBeforeInitialPageReady?.(isReady)
         await Promise.resolve()
       })
     },
@@ -215,7 +215,7 @@ describe('useOptimizedEntry', () => {
     await view.unmount()
   })
 
-  it('holds an open presentation until the initial Experience sequence is ready', async () => {
+  it('holds an open presentation until the before initial page sequence is ready', async () => {
     const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
     const variantEntry = makeEntry('4k6ZyFQnR2POY5IJLLlJRb')
     const variantState: SelectedOptimizationArray = [
@@ -230,9 +230,9 @@ describe('useOptimizedEntry', () => {
       entry: selectedOptimizations ? variantEntry : entry,
       selectedOptimization: selectedOptimizations?.[0],
     }))
-    const rendered = await renderSnapshotWithInitialExperience({
+    const rendered = await renderSnapshotWithBeforeInitialPage({
       baselineEntry,
-      initialExperienceReady: false,
+      beforeInitialPageReady: false,
       optimization,
     })
 
@@ -247,7 +247,7 @@ describe('useOptimizedEntry', () => {
       selectedOptimizations: variantState,
     })
 
-    await rendered.setInitialExperienceReady(true)
+    await rendered.setBeforeInitialPageReady(true)
 
     expect(rendered.getSnapshot()).toMatchObject({
       entry: variantEntry,
@@ -260,13 +260,13 @@ describe('useOptimizedEntry', () => {
     await rendered.unmount()
   })
 
-  it('keeps preserve-server content immediate while initial Experience work is pending', async () => {
+  it('keeps preserve-server content immediate while before initial page work is pending', async () => {
     const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
     const { optimization, setExperienceRequestState } = createRuntime((entry) => ({ entry }))
-    const rendered = await renderSnapshotWithInitialExperience({
+    const rendered = await renderSnapshotWithBeforeInitialPage({
       baselineEntry,
       hydration: 'preserve-server',
-      initialExperienceReady: false,
+      beforeInitialPageReady: false,
       optimization,
     })
 
@@ -282,7 +282,7 @@ describe('useOptimizedEntry', () => {
     await rendered.unmount()
   })
 
-  it('keeps a pre-existing synchronous seed immediate while initial Experience work is pending', async () => {
+  it('keeps a pre-existing synchronous seed immediate while before initial page work is pending', async () => {
     const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
     const variantEntry = makeEntry('4k6ZyFQnR2POY5IJLLlJRb')
     const variantState: SelectedOptimizationArray = [
@@ -299,9 +299,9 @@ describe('useOptimizedEntry', () => {
     }))
     await emit(variantState)
 
-    const rendered = await renderSnapshotWithInitialExperience({
+    const rendered = await renderSnapshotWithBeforeInitialPage({
       baselineEntry,
-      initialExperienceReady: false,
+      beforeInitialPageReady: false,
       optimization,
     })
 
@@ -316,7 +316,7 @@ describe('useOptimizedEntry', () => {
     await rendered.unmount()
   })
 
-  it('keeps a deadline fallback frozen after late initial Experience readiness', async () => {
+  it('keeps a deadline fallback frozen after late before initial page readiness', async () => {
     rs.useFakeTimers()
     const baselineEntry = makeOptimizableEntry('4ib0hsHWoSOnCVdDkizE8d')
     const variantEntry = makeEntry('4k6ZyFQnR2POY5IJLLlJRb')
@@ -332,10 +332,10 @@ describe('useOptimizedEntry', () => {
       entry: selectedOptimizations ? variantEntry : entry,
       selectedOptimization: selectedOptimizations?.[0],
     }))
-    const rendered = await renderSnapshotWithInitialExperience({
+    const rendered = await renderSnapshotWithBeforeInitialPage({
       baselineEntry,
       hasCustomLoadingFallback: true,
-      initialExperienceReady: false,
+      beforeInitialPageReady: false,
       optimization,
     })
 
@@ -358,7 +358,7 @@ describe('useOptimizedEntry', () => {
     })
 
     await emit(variantState)
-    await rendered.setInitialExperienceReady(true)
+    await rendered.setBeforeInitialPageReady(true)
 
     expect(rendered.getSnapshot()).toMatchObject({
       entry: baselineEntry,

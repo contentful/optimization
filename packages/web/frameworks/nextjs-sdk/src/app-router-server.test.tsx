@@ -372,7 +372,7 @@ describe('Next.js App Router v2 binding', () => {
   })
 
   it('replaces only the request root with an injected serializable client root', async () => {
-    setCurrentNextRequest('https://example.test/page-two?initialExperience=readiness')
+    setCurrentNextRequest('https://example.test/page-two?beforeInitialPage=readiness')
     mockRequestPage({ accepted: true, data: optimizationData })
     const ClientRequestOptimizationRoot = (_props: {
       readonly children?: React.ReactNode
@@ -396,7 +396,7 @@ describe('Next.js App Router v2 binding', () => {
       hydration: 'preserve-server',
     })
     expect(requestProps).not.toHaveProperty('buildPagePayload')
-    expect(requestProps).not.toHaveProperty('initialExperience')
+    expect(requestProps).not.toHaveProperty('beforeInitialPage')
     expect(requestProps).not.toHaveProperty('initialPagePayload')
     expect(requestProps).not.toHaveProperty('prefetchManagedEntries')
     expect(requestProps).not.toHaveProperty('routeKey')

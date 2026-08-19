@@ -214,7 +214,7 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
   Duplicate-page-event control: `initialPageEvent="skip"` when the server already reported the view,
   `"emit"` for browser-owned routes.
   source: `react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker`; `react-web-sdk#auto-page/useAutoPageEmitter.ts#InitialAutoPageEvent`
-- The App Router client binder forwards initial Experience only to its direct and request-family
+- The App Router client binder forwards `beforeInitialPage` only to its direct and request-family
   content roots; its bound provider and analytics root projections omit it. The request-family root
   captures the callback in the client, derives the current route and lazy payload through the
   non-emitting App Router inputs hook, and owns the page sequence without

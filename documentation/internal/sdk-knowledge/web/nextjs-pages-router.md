@@ -38,6 +38,11 @@ source: `nextjs-sdk#../package.json`; `nextjs-sdk#pages-router.ts#bindNextjsPage
   from resolved server consent, the handoff defaults override those static browser defaults for the
   same axes.
   source: `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#pages-router.ts#toClientRootConfig`; `nextjs-sdk#pages-router.ts#toClientProviderConfig`; `nextjs-sdk#pages-router.ts#withRequestDefaults`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationConsentConfig`; `web-sdk#ContentfulOptimization.ts#ContentfulOptimization`.
+- `beforeInitialPage` stays in the browser binder closure and is forwarded only when that binder
+  creates its bound content root. The separately imported Pages server binder constructs its request
+  runtime and returned browser handoff without the callback, so the callback does not cross the
+  handoff boundary that applications serialize through page props.
+  source: `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; `nextjs-sdk#pages-router.ts#toClientRootConfig`; `nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization`; `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`.
 - **Server:** `bindNextjsPagesRouterServerOptimization(config)` → `{ createRequestHandoff }`. Server
   consent is supplied through `consent.server`, which receives `{ cookies, headers }`.
   source: `nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization`; `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterOptimization`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationServerConsentResolver`.
@@ -134,7 +139,7 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
 - Page events: `NextPagesAutoPageTracker` emits on navigation; reads route via `useRouter` (NOT
   `useSearchParams`) ⇒ **no `Suspense` boundary needed** (App Router's tracker does need it).
   source: `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker`.
-- The Pages Router client binder forwards initial Experience only to its bound content root; its
+- The Pages Router client binder forwards `beforeInitialPage` only to its bound content root; its
   bound provider and analytics root projections omit it. On this path the bound content root, rather
   than `NextPagesAutoPageTracker`, owns page emission. The React-owned callback, watchdog, readiness,
   direct-page, attempted-route mark, later-route, and failure behavior is recorded in
@@ -191,9 +196,10 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
   valid for those routes only when application code supplies selected optimizations and public
   permutation dimensions without reading request profile state.
   source: `nextjs-sdk#handoff.ts#createPublicPermutationHandoff`; `core-sdk#handoff.ts#createPublicPermutationCacheMetadata`; `core-sdk#handoff.ts#assertOptimizationCacheSafety`
-- The maintained `_app.tsx` mounts the callback-enabled bound `OptimizationRoot` with the current
-  handoff, route key, and lazy page-payload builder. That root is the sole owner of the direct initial
-  browser page attempt and later route emissions in this tree; no separate page tracker is mounted.
+- The maintained `_app.tsx` mounts the bound `OptimizationRoot` with `beforeInitialPage`, the current
+  handoff, route key, and lazy page-payload builder. That root is the sole owner of the direct
+  initial browser page attempt and later route emissions in this tree; no separate page tracker is
+  mounted.
   source: `impl:nextjs-sdk_pages-router#pages/_app.tsx`; `nextjs-sdk#pages-router.ts#bindNextjsPagesRouterOptimization`; kb:web/react-web.md
 - The bound `OptimizationProvider` handles content SDK context, handoff, hydration mode, and
   managed-entry prefetch; the bound `OptimizationRoot` additionally accepts route/page-event inputs.

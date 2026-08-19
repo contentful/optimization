@@ -23,11 +23,11 @@ import type {
   BoundNextjsOptimizationAnalyticsRootProps,
   BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
-  BoundNextjsOptimizationRootWithInitialExperienceProps,
+  BoundNextjsOptimizationRootWithBeforeInitialPageProps,
   NextjsBoundProviderConfig,
   NextjsClientOptimizationConfig,
-  NextjsClientOptimizationConfigWithInitialExperience,
-  NextjsClientOptimizationConfigWithoutInitialExperience,
+  NextjsClientOptimizationConfigWithBeforeInitialPage,
+  NextjsClientOptimizationConfigWithoutBeforeInitialPage,
 } from './bound-component-types'
 import {
   createHandoffFromSelections,
@@ -42,17 +42,17 @@ type PagesRouterRequestDefaultsHandoff = BrowserOptimizationHandoff & {
 }
 
 export type {
-  InitialExperienceClient,
-  InitialExperienceOptions,
+  BeforeInitialPageClient,
+  BeforeInitialPageOptions,
 } from '@contentful/optimization-react-web'
 export type {
   BoundNextjsOptimizationAnalyticsRootProps,
   BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
-  BoundNextjsOptimizationRootWithInitialExperienceProps,
+  BoundNextjsOptimizationRootWithBeforeInitialPageProps,
   NextjsClientOptimizationConfig,
-  NextjsClientOptimizationConfigWithInitialExperience,
-  NextjsClientOptimizationConfigWithoutInitialExperience,
+  NextjsClientOptimizationConfigWithBeforeInitialPage,
+  NextjsClientOptimizationConfigWithoutBeforeInitialPage,
   NextjsOptimizationComponentsConfig,
   NextjsOptimizationConsentConfig,
   NextjsOptimizationCookieConfig,
@@ -84,33 +84,33 @@ export interface NextjsPagesRouterOptimization {
   readonly resolveEntriesForSelections: typeof resolveEntriesForSelections
 }
 
-export interface NextjsPagesRouterOptimizationWithInitialExperience extends Omit<
+export interface NextjsPagesRouterOptimizationWithBeforeInitialPage extends Omit<
   NextjsPagesRouterOptimization,
   'OptimizationRoot'
 > {
   readonly OptimizationRoot: (
-    props: BoundNextjsOptimizationRootWithInitialExperienceProps,
+    props: BoundNextjsOptimizationRootWithBeforeInitialPageProps,
   ) => ReactElement
 }
 
 export function bindNextjsPagesRouterOptimization(
-  config: NextjsClientOptimizationConfigWithoutInitialExperience,
+  config: NextjsClientOptimizationConfigWithoutBeforeInitialPage,
 ): NextjsPagesRouterOptimization
 export function bindNextjsPagesRouterOptimization(
-  config: NextjsClientOptimizationConfigWithInitialExperience,
-): NextjsPagesRouterOptimizationWithInitialExperience
+  config: NextjsClientOptimizationConfigWithBeforeInitialPage,
+): NextjsPagesRouterOptimizationWithBeforeInitialPage
 export function bindNextjsPagesRouterOptimization(
   config: NextjsClientOptimizationConfig,
-): NextjsPagesRouterOptimization | NextjsPagesRouterOptimizationWithInitialExperience
+): NextjsPagesRouterOptimization | NextjsPagesRouterOptimizationWithBeforeInitialPage
 export function bindNextjsPagesRouterOptimization(
   config: NextjsClientOptimizationConfig,
-): NextjsPagesRouterOptimization | NextjsPagesRouterOptimizationWithInitialExperience {
-  const { initialExperience } = config
+): NextjsPagesRouterOptimization | NextjsPagesRouterOptimizationWithBeforeInitialPage {
+  const { beforeInitialPage } = config
   const rootConfig = toClientRootConfig(config)
   const providerConfig = toClientProviderConfig(config)
   const analyticsRootConfig = toAnalyticsRootConfig(config)
 
-  function OptimizationRootWithoutInitialExperience({
+  function OptimizationRootWithoutBeforeInitialPage({
     children,
     ...rootProps
   }: BoundNextjsOptimizationRootProps): ReactElement {
@@ -121,13 +121,13 @@ export function bindNextjsPagesRouterOptimization(
     )
   }
 
-  function OptimizationRootWithInitialExperience({
+  function OptimizationRootWithBeforeInitialPage({
     children,
     ...rootProps
-  }: BoundNextjsOptimizationRootWithInitialExperienceProps): ReactElement {
+  }: BoundNextjsOptimizationRootWithBeforeInitialPageProps): ReactElement {
     return createElement(
       ReactWebOptimizationRoot,
-      withRequestDefaults({ ...rootConfig, ...rootProps, initialExperience }, rootProps.handoff),
+      withRequestDefaults({ ...rootConfig, ...rootProps, beforeInitialPage }, rootProps.handoff),
       children,
     )
   }
@@ -172,11 +172,11 @@ export function bindNextjsPagesRouterOptimization(
     resolveEntriesForSelections,
   }
 
-  if (initialExperience === undefined) {
-    return { ...commonResult, OptimizationRoot: OptimizationRootWithoutInitialExperience }
+  if (beforeInitialPage === undefined) {
+    return { ...commonResult, OptimizationRoot: OptimizationRootWithoutBeforeInitialPage }
   }
 
-  return { ...commonResult, OptimizationRoot: OptimizationRootWithInitialExperience }
+  return { ...commonResult, OptimizationRoot: OptimizationRootWithBeforeInitialPage }
 }
 
 function withRequestDefaults<T extends { readonly defaults?: StatefulDefaults }>(
@@ -202,7 +202,7 @@ function toClientRootConfig(
   const {
     consent,
     cookie: _cookie,
-    initialExperience: _initialExperience,
+    beforeInitialPage: _beforeInitialPage,
     ...clientConfig
   } = config
 

@@ -13,9 +13,11 @@ import { hasFlag, implementation } from './utils'
 const segment = CUSTOMER_SEGMENTS['new-visitor']
 const EVIDENCE_KEY = '__ctflReadinessEvidence'
 const EXPERIENCE_ROUTE = '**/experience/**'
-const INITIAL_EXPERIENCE_PATH = '/ssg-client-personalization?initialExperience=readiness'
-const INITIAL_EXPERIENCE_PRESERVED_PATH = '/page-two?initialExperience=readiness'
-const INITIAL_EXPERIENCE_WATCHDOG_EVIDENCE_TIMEOUT_MS = 2_000
+const BEFORE_INITIAL_PAGE_PATH = '/ssg-client-personalization?beforeInitialPage=readiness'
+const BEFORE_INITIAL_PAGE_PRESERVED_PATH = '/page-two?beforeInitialPage=readiness'
+const BEFORE_INITIAL_PAGE_WATCHDOG_EVIDENCE_TIMEOUT_MS = 2_000
+const BEFORE_INITIAL_PAGE_WATCHDOG_ERROR =
+  /^\[error\] \[Ctfl:O10n:React:BeforeInitialPage\] Error: beforeInitialPage\.run timed out after \d+ ms\.$/
 const diagnosticsByPage = new WeakMap<Page, Diagnostics>()
 const appRouterCsrTest =
   hasFlag('CSR') && implementation === 'nextjs-sdk_app-router' ? test : test.skip
@@ -496,11 +498,15 @@ function expectNoErrors(diagnostics: Diagnostics): void {
   expect(diagnostics).toEqual({ consoleErrors: [], hydrationErrors: [], pageErrors: [] })
 }
 
-function expectOnlyIntentionalRequestErrors(diagnostics: Diagnostics): void {
+function expectOnlyIntentionalRequestErrors(
+  diagnostics: Diagnostics,
+  allowedDiagnostics: readonly RegExp[] = [],
+): void {
   expect(diagnostics.hydrationErrors).toEqual([])
   const requestErrors = [...diagnostics.consoleErrors, ...diagnostics.pageErrors]
   expect(requestErrors.length).toBeGreaterThan(0)
   for (const error of requestErrors) {
+    if (allowedDiagnostics.some((pattern) => pattern.test(error))) continue
     expect(error).toMatch(/abort|fetch|resource|network|experience|net::err/i)
   }
 }
@@ -636,14 +642,14 @@ test.describe('readiness', () => {
   })
 
   pagesCsrTest(
-    'initial Experience uses the latest route and emits once after readiness',
+    'before initial page uses the latest route and emits once after readiness',
     async ({ page }) => {
       const diagnostics = watchDiagnostics(page)
       const recorder = recordExperienceEvents(page)
       const identifyRequest = await holdNextRequest(page, 'identify')
       try {
         await observeFromDocumentStart(page, `[data-testid="entry-text-${PAGES.pageTwo.auto}"]`)
-        await page.goto(INITIAL_EXPERIENCE_PRESERVED_PATH)
+        await page.goto(BEFORE_INITIAL_PAGE_PRESERVED_PATH)
         await expect.poll(identifyRequest.held).toBe(true)
         expect(recorder.events().map(({ type }) => type)).toEqual(['identify'])
 
@@ -693,13 +699,13 @@ test.describe('readiness', () => {
   )
 
   appRouterCsrTest(
-    'initial Experience App request root avoids handoff duplicates and emits once later',
+    'before initial page App request root avoids handoff duplicates and emits once later',
     async ({ page }) => {
       const diagnostics = watchDiagnostics(page)
       const recorder = recordExperienceEvents(page)
       const identifyRequest = await holdNextRequest(page, 'identify')
       try {
-        await page.goto(INITIAL_EXPERIENCE_PRESERVED_PATH)
+        await page.goto(BEFORE_INITIAL_PAGE_PRESERVED_PATH)
         await expect.poll(identifyRequest.held).toBe(true)
         await expect(page.getByTestId('page-two-view')).toBeVisible()
         expect(recorder.events().map(({ type }) => type)).toEqual(['identify'])
@@ -751,7 +757,7 @@ test.describe('readiness', () => {
     },
   )
 
-  pagesCsrTest('initial Experience rejection continues to the page', async ({ page }) => {
+  pagesCsrTest('before initial page rejection continues to the page', async ({ page }) => {
     const diagnostics = watchDiagnostics(page)
     const recorder = recordExperienceEvents(page)
     const identifyRequest = await failNextRequest(page, 'identify')
@@ -761,7 +767,7 @@ test.describe('readiness', () => {
         '[data-testid="readiness-ssg-entry"]',
         '[data-testid="readiness-ssg-loading"]',
       )
-      await page.goto(INITIAL_EXPERIENCE_PATH)
+      await page.goto(BEFORE_INITIAL_PAGE_PATH)
       await expect.poll(identifyRequest.failed).toBe(true)
       await expect
         .poll(() =>
@@ -770,7 +776,7 @@ test.describe('readiness', () => {
             .filter(({ type }) => type === 'page')
             .map(({ pageRouteKey }) => pageRouteKey),
         )
-        .toEqual([INITIAL_EXPERIENCE_PATH])
+        .toEqual([BEFORE_INITIAL_PAGE_PATH])
       await expect(page.getByTestId('readiness-ssg-entry')).toBeVisible()
 
       const evidence = await readEvidence(page)
@@ -789,7 +795,7 @@ test.describe('readiness', () => {
   })
 
   pagesCsrTest(
-    'initial Experience watchdog continues without canceling identify',
+    'before initial page watchdog continues without canceling identify',
     async ({ page }) => {
       const diagnostics = watchDiagnostics(page)
       const recorder = recordExperienceEvents(page)
@@ -800,7 +806,7 @@ test.describe('readiness', () => {
           '[data-testid="entry-text-live-default"]',
           '[data-testid="sdk-loading"], [data-testid="home-loading"]',
         )
-        await page.goto(INITIAL_EXPERIENCE_PATH)
+        await page.goto(BEFORE_INITIAL_PAGE_PATH)
         await expect.poll(identifyRequest.held).toBe(true)
 
         await page.getByTestId('link-home').click()
@@ -821,7 +827,7 @@ test.describe('readiness', () => {
                 .events()
                 .filter(({ type }) => type === 'page')
                 .map(({ pageRouteKey }) => pageRouteKey),
-            { timeout: INITIAL_EXPERIENCE_WATCHDOG_EVIDENCE_TIMEOUT_MS },
+            { timeout: BEFORE_INITIAL_PAGE_WATCHDOG_EVIDENCE_TIMEOUT_MS },
           )
           .toEqual([PAGES.home.path])
         expect(identifyRequest.held()).toBe(true)
@@ -843,7 +849,7 @@ test.describe('readiness', () => {
         expect(evidence.visibleCandidates).toEqual(pendingEvidence.visibleCandidates)
         expectContinuouslyVisible(evidence)
         expectNoVisibleBlankAfterCommitment(evidence)
-        expectOnlyIntentionalRequestErrors(diagnostics)
+        expectOnlyIntentionalRequestErrors(diagnostics, [BEFORE_INITIAL_PAGE_WATCHDOG_ERROR])
       } finally {
         await identifyRequest.remove()
         recorder.remove()

@@ -6,11 +6,11 @@ import { afterEach, describe, expect, it, rs } from '@rstest/core'
 import { act, StrictMode, useContext, type ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
-import { useInitialExperienceReady } from '../context/InitialExperienceContext'
+import type { BeforeInitialPageOptions } from '../before-initial-page/beforeInitialPage'
+import { useBeforeInitialPageReady } from '../context/BeforeInitialPageContext'
 import type { OptimizationContextValue } from '../context/OptimizationContext'
 import { OptimizationHydrationContext } from '../context/OptimizationHydrationContext'
 import { useOptimizationContext } from '../hooks/useOptimization'
-import type { InitialExperienceOptions } from '../initial-experience/initialExperience'
 import { OptimizationRoot } from './OptimizationRoot'
 
 const testConfig = {
@@ -92,17 +92,17 @@ function createDeferred<T>(): {
   }
 }
 
-function createInitialExperienceRoot({
+function createBeforeInitialPageRoot({
   buildPagePayload,
   children = <div />,
   handoff,
-  initialExperience,
+  beforeInitialPage,
   routeKey = '/initial',
 }: {
   readonly buildPagePayload?: () => { properties: { route: string } }
   readonly children?: ReactElement
   readonly handoff?: ContentOptimizationHandoff
-  readonly initialExperience: InitialExperienceOptions
+  readonly beforeInitialPage: BeforeInitialPageOptions
   readonly routeKey?: string
 }): ReactElement {
   return (
@@ -110,7 +110,7 @@ function createInitialExperienceRoot({
       {...testConfig}
       buildPagePayload={buildPagePayload ?? (() => ({ properties: { route: routeKey } }))}
       handoff={handoff}
-      initialExperience={initialExperience}
+      beforeInitialPage={beforeInitialPage}
       routeKey={routeKey}
     >
       {children}
@@ -278,7 +278,7 @@ describe('OptimizationRoot handoff', () => {
   })
 })
 
-describe('OptimizationRoot initial Experience', () => {
+describe('OptimizationRoot before initial page', () => {
   it('awaits callback work before the direct page and releases readiness after page terminality', async () => {
     const callback = createDeferred<undefined>()
     const page = createDeferred<{ accepted: true }>()
@@ -293,14 +293,14 @@ describe('OptimizationRoot initial Experience', () => {
       .mockResolvedValue({ accepted: true })
 
     function ReadinessProbe(): null {
-      readiness.push(useInitialExperienceReady())
+      readiness.push(useBeforeInitialPageReady())
       return null
     }
 
     const rendered = await renderClientAsync(
-      createInitialExperienceRoot({
+      createBeforeInitialPageRoot({
         children: <ReadinessProbe />,
-        initialExperience: {
+        beforeInitialPage: {
           run: async () => {
             order.push('callback')
             await callback.promise
@@ -359,8 +359,8 @@ describe('OptimizationRoot initial Experience', () => {
       .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
       .mockResolvedValue({ accepted: true })
     const rendered = await renderClientAsync(
-      createInitialExperienceRoot({
-        initialExperience: {
+      createBeforeInitialPageRoot({
+        beforeInitialPage: {
           onError,
           run: (): ReturnType<typeof run> => {
             const result = run(callbackError)
@@ -399,8 +399,8 @@ describe('OptimizationRoot initial Experience', () => {
         .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
         .mockResolvedValue({ accepted: true })
       const rendered = await renderClientAsync(
-        createInitialExperienceRoot({
-          initialExperience: {
+        createBeforeInitialPageRoot({
+          beforeInitialPage: {
             maxWaitMs: configured,
             onError,
             run: async () => {
@@ -433,7 +433,7 @@ describe('OptimizationRoot initial Experience', () => {
 
   it('reads the latest route and payload builder after callback work settles', async () => {
     const callback = createDeferred<undefined>()
-    const initialExperience = {
+    const beforeInitialPage = {
       run: async () => {
         await callback.promise
         return 'ready'
@@ -446,18 +446,18 @@ describe('OptimizationRoot initial Experience', () => {
       .mockResolvedValue({ accepted: true })
     const handoff = createContentHandoff({ initialPageEvent: 'skip' })
     const rendered = await renderClientAsync(
-      createInitialExperienceRoot({
+      createBeforeInitialPageRoot({
         buildPagePayload: firstBuilder,
         handoff,
-        initialExperience,
+        beforeInitialPage,
       }),
     )
 
     await rendered.rerender(
-      createInitialExperienceRoot({
+      createBeforeInitialPageRoot({
         buildPagePayload: latestBuilder,
         handoff,
-        initialExperience,
+        beforeInitialPage,
         routeKey: '/latest',
       }),
     )
@@ -480,13 +480,13 @@ describe('OptimizationRoot initial Experience', () => {
 
   it('marks the attempted route before observing route changes made during the direct page', async () => {
     const page = createDeferred<{ accepted: true }>()
-    const initialExperience = { run: () => undefined }
+    const beforeInitialPage = { run: () => undefined }
     const trackCurrentPage = rs
       .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
       .mockImplementationOnce(async () => await page.promise)
       .mockResolvedValue({ accepted: true })
     const rendered = await renderClientAsync(
-      createInitialExperienceRoot({ initialExperience, routeKey: '/attempted' }),
+      createBeforeInitialPageRoot({ beforeInitialPage, routeKey: '/attempted' }),
     )
 
     expect(trackCurrentPage).toHaveBeenCalledTimes(1)
@@ -497,7 +497,7 @@ describe('OptimizationRoot initial Experience', () => {
     })
 
     await rendered.rerender(
-      createInitialExperienceRoot({ initialExperience, routeKey: '/during-page' }),
+      createBeforeInitialPageRoot({ beforeInitialPage, routeKey: '/during-page' }),
     )
     expect(trackCurrentPage).toHaveBeenCalledTimes(1)
 
@@ -511,7 +511,7 @@ describe('OptimizationRoot initial Experience', () => {
     })
 
     await rendered.rerender(
-      createInitialExperienceRoot({ initialExperience, routeKey: '/after-readiness' }),
+      createBeforeInitialPageRoot({ beforeInitialPage, routeKey: '/after-readiness' }),
     )
     expect(trackCurrentPage).toHaveBeenCalledTimes(3)
     expect(trackCurrentPage).toHaveBeenNthCalledWith(3, {
@@ -528,9 +528,9 @@ describe('OptimizationRoot initial Experience', () => {
       .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
       .mockResolvedValue({ accepted: true })
     const rendered = await renderClientAsync(
-      createInitialExperienceRoot({
+      createBeforeInitialPageRoot({
         handoff: createContentHandoff({ initialPageEvent: 'skip' }),
-        initialExperience: { run: () => undefined },
+        beforeInitialPage: { run: () => undefined },
       }),
     )
 
@@ -561,10 +561,10 @@ describe('OptimizationRoot initial Experience', () => {
     }
 
     const rendered = await renderClientAsync(
-      createInitialExperienceRoot({
+      createBeforeInitialPageRoot({
         children: <ContextProbe />,
         handoff: createContentHandoff({ initialPageEvent: 'skip' }),
-        initialExperience: { run: () => undefined },
+        beforeInitialPage: { run: () => undefined },
       }),
     )
 
@@ -604,8 +604,8 @@ describe('OptimizationRoot initial Experience', () => {
         .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
         .mockImplementationOnce(result)
         .mockResolvedValue({ accepted: true })
-      const initialExperience = { run: () => undefined }
-      const rendered = await renderClientAsync(createInitialExperienceRoot({ initialExperience }))
+      const beforeInitialPage = { run: () => undefined }
+      const rendered = await renderClientAsync(createBeforeInitialPageRoot({ beforeInitialPage }))
 
       expect(trackCurrentPage).toHaveBeenCalledTimes(2)
       expect(trackCurrentPage).toHaveBeenNthCalledWith(1, {
@@ -619,7 +619,7 @@ describe('OptimizationRoot initial Experience', () => {
       })
 
       await rendered.rerender(
-        createInitialExperienceRoot({ initialExperience, routeKey: '/later' }),
+        createBeforeInitialPageRoot({ beforeInitialPage, routeKey: '/later' }),
       )
 
       expect(trackCurrentPage).toHaveBeenCalledTimes(3)
@@ -644,11 +644,11 @@ describe('OptimizationRoot initial Experience', () => {
 
       expect(() =>
         renderToString(
-          createInitialExperienceRoot({
-            initialExperience: { maxWaitMs, onError, run },
+          createBeforeInitialPageRoot({
+            beforeInitialPage: { maxWaitMs, onError, run },
           }),
         ),
-      ).toThrow(new TypeError('initialExperience.maxWaitMs must be a positive finite number.'))
+      ).toThrow(new TypeError('beforeInitialPage.maxWaitMs must be a positive finite number.'))
       expect(window.contentfulOptimization).toBeUndefined()
       expect(run).not.toHaveBeenCalled()
       expect(onError).not.toHaveBeenCalled()
@@ -663,8 +663,8 @@ describe('OptimizationRoot initial Experience', () => {
       .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
       .mockResolvedValue({ accepted: true })
     const rendered = await renderClientAsync(
-      createInitialExperienceRoot({
-        initialExperience: {
+      createBeforeInitialPageRoot({
+        beforeInitialPage: {
           run: async () => {
             await callback.promise
             return 'ready'
@@ -686,7 +686,7 @@ describe('OptimizationRoot initial Experience', () => {
       .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
       .mockResolvedValue({ accepted: true })
     const rendered = await renderClientAsync(
-      <StrictMode>{createInitialExperienceRoot({ initialExperience: { run } })}</StrictMode>,
+      <StrictMode>{createBeforeInitialPageRoot({ beforeInitialPage: { run } })}</StrictMode>,
     )
 
     expect(run).toHaveBeenCalledTimes(1)
