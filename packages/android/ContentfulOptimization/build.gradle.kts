@@ -302,14 +302,16 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
 
     // compileOnly so consumers who only pass entry Maps don't need it. okhttp-jvm is excluded
-    // to avoid a duplicate-class conflict with the okhttp-android variant.
-    compileOnly("com.contentful.java:java-sdk:10.6.0") {
+    // to avoid a duplicate-class conflict with the okhttp-android variant. Range (not a single
+    // version) so a consumer's own contentful.java dependency can resolve to any compatible
+    // 10.x release instead of forcing exactly 10.6.0 across the whole dependency graph.
+    compileOnly("com.contentful.java:java-sdk:[10.6.0,11.0.0)") {
         exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
     }
-    testCompileOnly("com.contentful.java:java-sdk:10.6.0") {
+    testCompileOnly("com.contentful.java:java-sdk:[10.6.0,11.0.0)") {
         exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
     }
-    testImplementation("com.contentful.java:java-sdk:10.6.0") {
+    testImplementation("com.contentful.java:java-sdk:[10.6.0,11.0.0)") {
         exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
     }
 
