@@ -12,7 +12,7 @@ let package: Package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/contentful/contentful.swift", exact: "5.5.15"),
+        .package(url: "https://github.com/contentful/contentful.swift", .upToNextMajor(from: "5.5.15")),
     ],
     targets: [
         .target(
