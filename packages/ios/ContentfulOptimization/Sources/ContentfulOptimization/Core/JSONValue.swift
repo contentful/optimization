@@ -90,12 +90,15 @@ public extension JSONValue {
         return dict[key]
     }
 
-    /// Converts to a Foundation type (`[String: Any]`, `[Any]`, `String`, `Bool`, `Double`, or `NSNull`).
+    /// Converts to a Foundation type (`[String: Any]`, `[Any]`, `String`, `Bool`, `NSNumber`, or
+    /// `NSNull`).
+    ///
+    /// `.number` boxes as `NSNumber` so `as? Int` and `as? Double` both work off the same value.
     func toFoundation() -> Any {
         switch self {
         case .null: return NSNull()
         case .bool(let v): return v
-        case .number(let v): return v
+        case .number(let v): return NSNumber(value: v)
         case .string(let v): return v
         case .array(let v): return v.map { $0.toFoundation() }
         case .object(let v): return v.mapValues { $0.toFoundation() }
