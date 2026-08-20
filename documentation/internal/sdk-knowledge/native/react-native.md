@@ -191,14 +191,20 @@ source: core-sdk#constants.ts#ANONYMOUS_ID_KEY; core-sdk#constants.ts#ANONYMOUS_
   builds `routeKey` from the screen name, appending JSON-validated params only when
   `includeParams` is true. It skips tracking when `hasConsent('screen')` is false and re-tracks the
   current route when consent changes. source: react-native-sdk#components/OptimizationNavigationContainer.tsx#OptimizationNavigationContainer; react-native-sdk#components/OptimizationNavigationContainer.tsx#createScreenTrackingDescriptor
-- Entry view tracking (`useViewportTracking`) uses a fixed 10% visibility threshold, 1000 ms dwell,
-  and 5000 ms duration-update interval. Lifecycle per visibility cycle: initial `trackView` after
-  accumulated visible time reaches 1000 ms, periodic duration updates every 5000 ms, and a final
-  event on visibility end (only if ≥1 event already fired). Visibility uses `useScrollContext` when
-  present, else screen `Dimensions` (assumes
-  `scrollY = 0`, screen height as viewport). Time accumulation pauses on `AppState` background/
-  inactive; a final event is emitted when backgrounded mid-cycle. Consent-gated by
-  `hasConsent('trackView')`. source: react-native-sdk#hooks/useViewportTracking.ts#useViewportTracking
+- Entry view tracking (`useViewportTracking`) uses a fixed 10% visibility threshold and 1000 ms
+  continuous dwell. A qualified visibility session emits two `component` records: one start at the
+  dwell threshold and one final when visibility falls below 10% or another lifecycle ending occurs.
+  The SDK owns the shared `viewId`; `viewDurationMs` measures from initial threshold entry and
+  includes the qualifying dwell. A session that ends before qualification emits no event, and active
+  sessions emit no periodic duration events. Visibility uses `useScrollContext` when present, else
+  screen `Dimensions` (assumes `scrollY = 0`, screen height as viewport). Consent-gated by
+  `hasConsent('trackView')`.
+  source: react-native-sdk#hooks/useViewportTracking.ts#useViewportTracking
+- Moving to `AppState` background/inactive or unmounting ends and resets the current view session,
+  emitting the qualified session's one final event. Returning to active re-evaluates the last geometry
+  and starts a fresh session when the entry is still visible; the fresh session must satisfy the
+  1000 ms dwell again.
+  source: react-native-sdk#hooks/useViewportTracking.ts#useViewportTracking
 - Entry tap tracking (`useTapTracking`): uses `onTouchStart`/`onTouchEnd` (not a wrapping
   `Pressable`) so taps register even when a child handles the gesture; a touch counts as a tap only
   when movement `< TAP_DISTANCE_THRESHOLD` (10 points). Emits wire type `component_click` via

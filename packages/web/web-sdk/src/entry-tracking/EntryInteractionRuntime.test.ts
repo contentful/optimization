@@ -1,3 +1,4 @@
+import { deferred } from '../test/helpers'
 import type { EntryInteractionDetector } from './EntryInteractionDetector'
 import { EntryInteractionRuntime } from './EntryInteractionRuntime'
 import * as clickDetectorModule from './events/click/createEntryClickDetector'
@@ -17,7 +18,7 @@ interface DetectorMocks<
   enableElement: ReturnType<typeof rs.fn>
   disableElement: ReturnType<typeof rs.fn>
   clearElement: ReturnType<typeof rs.fn>
-  flushActive: ReturnType<typeof rs.fn>
+  endActive: ReturnType<typeof rs.fn>
 }
 
 const createDetectorMocks = <TStartOptions, TElementOptions>(): DetectorMocks<
@@ -33,7 +34,7 @@ const createDetectorMocks = <TStartOptions, TElementOptions>(): DetectorMocks<
   enableElement: rs.fn(),
   disableElement: rs.fn(),
   clearElement: rs.fn(),
-  flushActive: rs.fn(),
+  endActive: rs.fn().mockResolvedValue(undefined),
 })
 
 function createRuntime(
@@ -363,27 +364,43 @@ describe('EntryInteractionRuntime', () => {
     expect(Reflect.get(runtime, 'entryElementObserver')).toBeUndefined()
   })
 
-  it('flushActiveInteractions asks running view and hover detectors to flush', () => {
+  it('endActiveInteractions awaits all running view and hover detectors', async () => {
     const { clickDetector, hoverDetector, runtime, viewDetector } = createRuntime()
+    const viewEnding = deferred()
+    const hoverEnding = deferred()
+    viewDetector.endActive.mockReturnValue(viewEnding.promise)
+    hoverDetector.endActive.mockReturnValue(hoverEnding.promise)
 
     runtime.tracking.enable('views')
     runtime.tracking.enable('hovers')
 
-    runtime.flushActiveInteractions()
+    let settled = false
+    const result = runtime.endActiveInteractions().then(() => {
+      settled = true
+    })
 
-    expect(viewDetector.flushActive).toHaveBeenCalledTimes(1)
-    expect(hoverDetector.flushActive).toHaveBeenCalledTimes(1)
-    expect(clickDetector.flushActive).not.toHaveBeenCalled()
+    expect(viewDetector.endActive).toHaveBeenCalledTimes(1)
+    expect(hoverDetector.endActive).toHaveBeenCalledTimes(1)
+    expect(clickDetector.endActive).not.toHaveBeenCalled()
+    expect(settled).toBe(false)
+
+    viewEnding.resolve(undefined)
+    await Promise.resolve()
+    expect(settled).toBe(false)
+
+    hoverEnding.resolve(undefined)
+    await result
+    expect(settled).toBe(true)
   })
 
-  it('flushActiveInteractions skips detectors that are not running', () => {
+  it('endActiveInteractions skips detectors that are not running', async () => {
     const { hoverDetector, runtime, viewDetector } = createRuntime()
 
     runtime.tracking.enable('views')
 
-    runtime.flushActiveInteractions()
+    await runtime.endActiveInteractions()
 
-    expect(viewDetector.flushActive).toHaveBeenCalledTimes(1)
-    expect(hoverDetector.flushActive).not.toHaveBeenCalled()
+    expect(viewDetector.endActive).toHaveBeenCalledTimes(1)
+    expect(hoverDetector.endActive).not.toHaveBeenCalled()
   })
 })

@@ -266,15 +266,17 @@ events:
 SDK-managed entry interaction tracking uses these defaults:
 
 - Entry view and tap tracking are enabled by default.
-- Initial view event after 1 second at 10% visibility.
-- Periodic duration updates every 5 seconds while the entry remains visible.
-- Final duration update when the entry leaves view after a view event has already fired.
-- On iOS/UIKit, backgrounding pauses active view cycles. If the cycle has already emitted a view
-  event, `pause()` emits a final duration update; foreground resume re-evaluates visibility and
-  starts a fresh cycle when the entry is still eligible.
+- A view session qualifies after 1 second at 10% visibility and emits one start interaction.
+- While the entry remains visible, the SDK measures duration without periodic interaction timers or
+  emissions.
+- When a qualified session ends, the SDK emits one end interaction with the same `viewId` and the
+  final duration. A session that ends before the dwell threshold emits nothing.
+- Backgrounding, disappearance, and unmounting end and reset active view sessions. On iOS/UIKit,
+  `pause()` ends a qualified session instead of preserving it. Foreground resume re-evaluates
+  visibility and starts a fresh session when the entry is still eligible.
 
-The 10% visibility threshold, 1-second dwell, and 5-second duration-update interval are fixed. Wrap
-scrollable SwiftUI content in `OptimizationScrollView` when view timing needs an accurate viewport.
+The 10% visibility threshold and 1-second dwell are fixed. Wrap scrollable SwiftUI content in
+`OptimizationScrollView` when view timing needs an accurate viewport.
 
 UIKit does not have automatic component visibility tracking. UIKit apps compute visibility and
 duration through their own table, collection, or view-controller callbacks. Use
@@ -328,6 +330,9 @@ Default delivery behavior:
   events wait for reconnect.
 - Queues do not survive process death. Keep one `OptimizationClient` alive for the app or scene
   lifetime to preserve queued events across transient connectivity changes.
+
+Periodic Insights batch flushing is a queue-delivery schedule. It does not emit additional view
+interactions while an entry session remains visible.
 
 Use `OptimizationConfig(queuePolicy:)` when production behavior needs non-default delivery
 constraints. `QueuePolicy.offlineMaxEvents` changes the Experience offline cap, `QueueFlushPolicy`

@@ -21,10 +21,8 @@ import org.junit.Test
  * synthetic visibility geometry and a virtual clock via `kotlinx-coroutines-test`'s `TestScope`,
  * so timing is fully deterministic — no emulator, no scroll animation, no JS bridge.
  *
- * Note on test driving primitives: the controller's `scheduleNextFire` re-arms a new timer
- * coroutine after each emit, so `advanceUntilIdle` would never reach "idle" while the entry is
- * visible. These tests use `advanceTimeBy(N)` followed by `runCurrent()` to step the virtual
- * clock by a known interval and drain only the tasks that became eligible at the new time.
+ * These tests use `advanceTimeBy(N)` followed by `runCurrent()` to step the virtual clock by a
+ * known interval and drain the tasks that became eligible at the new time.
  *
  * This is the right layer for the dwell contract. The E2E `@Test` methods that previously
  * asserted on `component-stats-<id>` resource ids after a real swipe were conflating three
@@ -47,18 +45,19 @@ class ViewTrackingControllerTest {
         // Exactly 10px of a 100px entry is visible: ratio = 0.1 (the fixed threshold).
         controller.updateVisibility(elementY = 0f, elementHeight = 100f, scrollY = 0f, viewportHeight = 10f)
         // Step the clock by the fixed 1000 ms dwell and drain.
-        advanceTimeBy(1_001L)
+        advanceTimeBy(1_000L)
         runCurrent()
 
         assertEquals("expected exactly one trackView call", 1, recorded.size)
         assertEquals(TEST_ENTRY_ID, recorded.single().componentId)
         assertEquals(0, recorded.single().variantIndex)
+        assertEquals(1_000, recorded.single().viewDurationMs)
 
         cleanup(controller)
     }
 
     @Test
-    fun `becoming invisible before the fixed dwell with attempts equals zero emits no event and resets the cycle`() = runTest {
+    fun `becoming invisible before the fixed dwell emits no event and resets the cycle`() = runTest {
         val recorded = mutableListOf<TrackViewPayload>()
         val controller = makeController(
             scope = this,
@@ -79,7 +78,7 @@ class ViewTrackingControllerTest {
         runCurrent()
 
         assertTrue(
-            "expected no trackView calls when dwell was interrupted at attempts=0, got $recorded",
+            "expected no trackView calls when dwell was interrupted, got $recorded",
             recorded.isEmpty(),
         )
         assertEquals(false, controller.isVisible)
@@ -88,7 +87,7 @@ class ViewTrackingControllerTest {
     }
 
     @Test
-    fun `becoming invisible AFTER first emit (attempts greater than zero) fires a final event with the accumulated duration`() = runTest {
+    fun `becoming invisible after the start event emits exactly one final event with the same view id`() = runTest {
         val recorded = mutableListOf<TrackViewPayload>()
         val controller = makeController(
             scope = this,
@@ -98,58 +97,24 @@ class ViewTrackingControllerTest {
 
         // Fully visible -> first emit after the fixed 1000 ms dwell.
         controller.updateVisibility(0f, 100f, 0f, 200f)
-        advanceTimeBy(1_001L)
+        advanceTimeBy(1_000L)
         runCurrent()
-        assertEquals("first attempt emit", 1, recorded.size)
+        assertEquals("start event", 1, recorded.size)
 
         // Dwell another 1000ms while still visible
         advanceTimeBy(1_000L)
         runCurrent()
-        // Now become invisible — attempts > 0 path fires a final event
+        // Now become invisible — the qualified session emits its final event.
         controller.updateVisibility(0f, 100f, 95f, 200f) // ratio 0.05
+        runCurrent()
+        // Repeating the same invisible geometry must not emit another final event.
+        controller.updateVisibility(0f, 100f, 95f, 200f)
         runCurrent()
 
         assertEquals("expected initial emit + final emit", 2, recorded.size)
-        val finalDuration = recorded.last().viewDurationMs
-        assertTrue(
-            "expected final viewDurationMs to include the 2s of visibility, got $finalDuration",
-            finalDuration >= 2_000,
-        )
-
-        cleanup(controller)
-    }
-
-    @Test
-    fun `subsequent timer firings follow the fixed one second then five second cadence`() = runTest {
-        val recorded = mutableListOf<TrackViewPayload>()
-        val controller = makeController(
-            scope = this,
-            onTrackView = { recorded.add(it) },
-            clock = { testScheduler.currentTime },
-        )
-
-        controller.updateVisibility(0f, 100f, 0f, 200f)
-
-        // First emit at 1_000 ms.
-        advanceTimeBy(1_001L)
-        runCurrent()
-        assertEquals(1, recorded.size)
-
-        // Second emit at 6_000 ms.
-        advanceTimeBy(5_000L)
-        runCurrent()
-        assertEquals(2, recorded.size)
-
-        // Third emit at 11_000 ms.
-        advanceTimeBy(5_000L)
-        runCurrent()
-        assertEquals(3, recorded.size)
-
-        recorded.forEach { payload ->
-            assertEquals("all emits should share the same componentId", TEST_ENTRY_ID, payload.componentId)
-        }
-        val viewIds = recorded.map { it.viewId }.distinct()
-        assertEquals("all emits in a single visibility cycle share the same viewId", 1, viewIds.size)
+        assertEquals(1_000, recorded.first().viewDurationMs)
+        assertEquals(2_000, recorded.last().viewDurationMs)
+        assertEquals(recorded.first().viewId, recorded.last().viewId)
 
         cleanup(controller)
     }
@@ -169,9 +134,13 @@ class ViewTrackingControllerTest {
         )
 
         controller.updateVisibility(0f, 100f, 0f, 200f)
-        advanceTimeBy(1_001L)
+        advanceTimeBy(1_000L)
         runCurrent()
-        advanceTimeBy(5_000L)
+        advanceTimeBy(1_000L)
+        runCurrent()
+        controller.onDisappear()
+        runCurrent()
+        controller.onDisappear()
         runCurrent()
 
         assertEquals(2, recorded.size)
@@ -179,15 +148,63 @@ class ViewTrackingControllerTest {
         assertEquals(true, recorded[1].sticky)
         assertTrue(recorded[0].stickyTrackingKey?.isNotBlank() == true)
         assertEquals(recorded[0].stickyTrackingKey, recorded[1].stickyTrackingKey)
+        assertEquals(recorded[0].viewId, recorded[1].viewId)
+        assertEquals(1_000, recorded[0].viewDurationMs)
+        assertEquals(2_000, recorded[1].viewDurationMs)
 
         cleanup(controller)
     }
 
     @Test
-    fun `onStop pauses accumulation and onStart re-evaluates from last known geometry`() = runTest {
+    fun `onPause emits one final event and onResume starts a fresh cycle from stored geometry`() = runTest {
         val recorded = mutableListOf<TrackViewPayload>()
         val testLifecycleOwner = TestLifecycleOwner(
-            initialState = Lifecycle.State.STARTED,
+            initialState = Lifecycle.State.RESUMED,
+            coroutineDispatcher = UnconfinedTestDispatcher(testScheduler),
+        )
+        val controller = makeController(
+            scope = this,
+            onTrackView = { recorded.add(it) },
+            clock = { testScheduler.currentTime },
+            lifecycleOwner = testLifecycleOwner,
+        )
+
+        controller.updateVisibility(0f, 100f, 0f, 200f)
+        advanceTimeBy(1_000L)
+        runCurrent()
+        assertEquals("start event", 1, recorded.size)
+        val backgroundedViewId = recorded.single().viewId
+
+        advanceTimeBy(500L)
+        runCurrent()
+
+        // The UI owner pauses promptly -> onPause emits the final event and resets the cycle.
+        testLifecycleOwner.currentState = Lifecycle.State.STARTED
+        runCurrent()
+        assertEquals(false, controller.isVisible)
+        assertEquals(2, recorded.size)
+        assertEquals(backgroundedViewId, recorded.last().viewId)
+        assertEquals(1_500, recorded.last().viewDurationMs)
+
+        // The UI owner resumes -> onResume re-evaluates last known geometry (still ratio=1.0).
+        testLifecycleOwner.currentState = Lifecycle.State.RESUMED
+        runCurrent()
+        assertEquals(true, controller.isVisible)
+
+        // After the fixed post-resume dwell, a new session emits its start event.
+        advanceTimeBy(1_000L)
+        runCurrent()
+        assertEquals(3, recorded.size)
+        assertTrue(recorded.last().viewId != backgroundedViewId)
+
+        cleanup(controller)
+    }
+
+    @Test
+    fun `onPause before the dwell cancels qualification until a fresh resumed cycle`() = runTest {
+        val recorded = mutableListOf<TrackViewPayload>()
+        val testLifecycleOwner = TestLifecycleOwner(
+            initialState = Lifecycle.State.RESUMED,
             coroutineDispatcher = UnconfinedTestDispatcher(testScheduler),
         )
         val controller = makeController(
@@ -201,21 +218,27 @@ class ViewTrackingControllerTest {
         advanceTimeBy(500L)
         runCurrent()
 
-        // App backgrounded -> pause should be called via DefaultLifecycleObserver.onStop
-        testLifecycleOwner.currentState = Lifecycle.State.CREATED
+        // A UI lifecycle pause arrives immediately instead of waiting for a delayed process callback.
+        testLifecycleOwner.currentState = Lifecycle.State.STARTED
         runCurrent()
         assertEquals(false, controller.isVisible)
-        assertTrue("no emit yet (attempts was 0)", recorded.isEmpty())
 
-        // App foregrounded -> resume re-evaluates last known geometry (still ratio=1.0)
-        testLifecycleOwner.currentState = Lifecycle.State.STARTED
+        // A layout callback after onPause may refresh geometry but cannot restart qualification.
+        controller.updateVisibility(0f, 100f, 0f, 200f)
+        assertEquals(false, controller.isVisible)
+
+        advanceTimeBy(1_000L)
+        runCurrent()
+        assertTrue("the cancelled sub-dwell cycle must not emit", recorded.isEmpty())
+
+        testLifecycleOwner.currentState = Lifecycle.State.RESUMED
         runCurrent()
         assertEquals(true, controller.isVisible)
 
-        // After the fixed post-resume dwell, emit fires
-        advanceTimeBy(1_001L)
+        advanceTimeBy(1_000L)
         runCurrent()
-        assertEquals(1, recorded.size)
+        assertEquals("the resumed cycle qualifies independently", 1, recorded.size)
+        assertEquals(1_000, recorded.single().viewDurationMs)
 
         cleanup(controller)
     }
@@ -232,7 +255,7 @@ class ViewTrackingControllerTest {
         )
 
         controller.updateVisibility(0f, 100f, 0f, 200f)
-        advanceTimeBy(1_001L)
+        advanceTimeBy(1_000L)
         runCurrent()
 
         assertEquals(false, controller.isVisible)
@@ -243,7 +266,7 @@ class ViewTrackingControllerTest {
 
         assertEquals(true, controller.isVisible)
 
-        advanceTimeBy(1_001L)
+        advanceTimeBy(1_000L)
         runCurrent()
 
         assertEquals("expected one post-consent current-visibility event", 1, recorded.size)
@@ -290,10 +313,8 @@ class ViewTrackingControllerTest {
     // --- helpers ---
 
     /**
-     * Tear down the controller and any pending coroutines it launched into the TestScope
-     * (the next-attempt timer or in-flight emit). Without this, `runTest`'s end-of-test
-     * "did the test body complete?" check trips because the controller's `scheduleNextFire`
-     * unconditionally re-arms a fresh timer after every emit.
+     * Tear down the controller and any pending dwell or event coroutines it launched into the
+     * [TestScope].
      */
     private fun TestScope.cleanup(controller: ViewTrackingController) {
         controller.destroy()
@@ -309,7 +330,7 @@ class ViewTrackingControllerTest {
         selectedOptimization: Map<String, Any>? = null,
         isTrackingAllowed: () -> Boolean = { true },
         lifecycleOwner: LifecycleOwner = TestLifecycleOwner(
-            initialState = Lifecycle.State.STARTED,
+            initialState = Lifecycle.State.RESUMED,
             coroutineDispatcher = UnconfinedTestDispatcher(testScheduler),
         ),
     ): ViewTrackingController = ViewTrackingController(

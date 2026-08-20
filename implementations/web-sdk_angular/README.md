@@ -35,7 +35,7 @@ an Angular-specific SDK adapter.
 - Nested entries with recursive resolution
 - Rich text rendering with inline merge tags
 - Feature flag subscription with auto-emitted view events
-- Analytics event display with heartbeat deduplication
+- Analytics event display with interaction-session aggregation
 - Multi-route navigation with conversion tracking
 
 ## CDA locale handling

@@ -6,6 +6,8 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.ViewTreeObserver
 import android.widget.FrameLayout
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.findViewTreeLifecycleOwner
 import com.contentful.java.cda.CDAEntry
 import com.contentful.optimization.contentful.CTEntry
 import com.contentful.optimization.core.ResolvedOptimizedEntry
@@ -291,6 +293,7 @@ public class OptimizedEntryView @JvmOverloads constructor(
             entry = entry,
             optimizationContextId = newOptimizationContextId,
             selectedOptimization = newSelectedOptimization,
+            lifecycleOwner = findViewTreeLifecycleOwner() ?: ProcessLifecycleOwner.get(),
         )
         controllerEntry = entry
         controllerSelectedOptimization = newSelectedOptimization

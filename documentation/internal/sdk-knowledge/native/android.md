@@ -273,16 +273,25 @@ fallback)`'s own fail-soft `catch` only fires on a cyclic self-referential map o
   so a repeat of the same current screen is skipped and a blocked attempt is retried once consent
   allows. Plain `screen(name)` calls core `screen()` with no dedupe. source: extern:ScreenTrackingEffect keyed on screenName+consent → trackCurrentScreen — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/ScreenTrackingEffect.kt#ScreenTrackingEffect; extern:ScreenTracker re-tracks on state change — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/ScreenTracker.kt#ScreenTracker; optimization-js-bridge#index.ts#Bridge; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker
 - Entry view tracking timing (`ViewTrackingController`, shared by both adapters) uses a fixed 10%
-  visibility threshold, 1000 ms dwell, and 5000 ms duration-update interval. Three-phase cycle:
-  initial `trackView` after accumulated visible time reaches 1000 ms, periodic duration updates every
-  5000 ms while visible, and a final duration event when visibility ends (only if ≥1 event already
-  fired). Gated on `hasConsent("trackView")` (→ core wire type `component`).
-  source: extern:ViewTrackingController three-phase timing fixed at 1000/0.1/5000, isTrackingAllowed=hasConsent(trackView) — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/tracking/ViewTrackingController.kt#ViewTrackingController; core-sdk#consent/ConsentPolicy.ts#hasEventConsent
-- Background handling of view cycles: `ViewTrackingController` is a `ProcessLifecycleOwner`
-  `DefaultLifecycleObserver`. On `onStop` (app backgrounded) it pauses accumulation, emits a final
-  event if `attempts > 0`, and resets the cycle; on `onStart` it re-evaluates visibility from the last
-  known geometry and starts a fresh cycle when still visible (so nothing needs to scroll to restart).
-  source: extern:ViewTrackingController pause/resume on ProcessLifecycleOwner onStop/onStart — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/tracking/ViewTrackingController.kt#ViewTrackingController
+  visibility threshold and 1000 ms continuous dwell. A qualified session emits two `component`
+  records: one start at the dwell threshold and one final when visibility falls below 10% or another
+  lifecycle ending occurs. The SDK owns the shared `viewId`; `viewDurationMs` measures from initial
+  threshold entry and includes the qualifying dwell. A session that ends before qualification emits
+  no event, and active sessions emit no periodic duration events. Gated on
+  `hasConsent("trackView")`.
+  source: extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/tracking/ViewTrackingController.kt; core-sdk#consent/ConsentPolicy.ts#hasEventConsent
+- `onDisappear()` and the supplied UI lifecycle owner's `onPause` end and reset the current view
+  session, emitting the qualified session's one final event. On `onResume`, the controller
+  re-evaluates the last known geometry and starts a fresh session when still visible; the fresh
+  session must satisfy the 1000 ms dwell again. `ProcessLifecycleOwner` is only the fallback when an
+  adapter cannot resolve a UI lifecycle owner.
+  source: extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/tracking/ViewTrackingController.kt
+- Compose `Modifier.trackViews` supplies `LocalLifecycleOwner.current` and calls
+  `ViewTrackingController.onDisappear()` when the tracked modifier leaves composition or tracking
+  becomes unavailable. XML Views `OptimizedEntryView` supplies its view-tree lifecycle owner and
+  calls `onDisappear()` when detached or when replacing/removing its controller, ending any
+  qualified session.
+  source: extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/ViewTrackingLayout.kt; extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/OptimizedEntryView.kt
 - Sticky entry-view dedupe lives in the bridge, not Kotlin: `trackView` keys sticky views by
   `stickyTrackingKey ?? viewId` and only sends a sticky view once accepted, via
   `shouldSendStickyEntryView` / `shouldRememberStickyEntryViewResult`. The Kotlin controller passes a

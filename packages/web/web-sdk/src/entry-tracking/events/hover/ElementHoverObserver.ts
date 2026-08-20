@@ -2,11 +2,10 @@
  * Lean hover dwell tracker for entry hovers.
  *
  * Behavior:
- * - Fires callback after dwell threshold, then continues firing periodic
- *   duration updates while the same hover cycle remains active.
- * - Emits a final hover-duration callback when hover ends after first fire.
- * - Pauses/resumes dwell timers across page visibility changes.
- * - Coalesces concurrent callback attempts per element.
+ * - Fires one start callback after the dwell threshold.
+ * - Emits one final hover-duration callback when a qualified hover ends.
+ * - Ends hover sessions when the page is hidden and requires a fresh pointer entry.
+ * - Serializes start and final callbacks per element.
  * - Sweeps orphan/disconnected element state to avoid leaks.
  */
 
@@ -50,8 +49,8 @@ const isNaturalHoverEvent = (event: Event): boolean => {
 }
 
 /**
- * Observe elements and invoke a callback once hover dwell is satisfied, then
- * emit periodic duration updates while hovered.
+ * Observe elements and invoke a start callback once hover dwell is satisfied,
+ * then one final callback when the qualified hover ends.
  *
  * @public
  */
@@ -59,14 +58,15 @@ class ElementHoverObserver {
   private readonly callback: ElementHoverCallback
   private readonly states = new WeakMap<Element, ElementState>()
   private readonly activeStates = new Set<ElementState>()
+  private readonly pendingCallbacks = new Set<Promise<void>>()
   private cleanupVisibilityListener?: () => void
   private sweepInterval: Interval | null = null
 
   public constructor(callback: ElementHoverCallback) {
     this.callback = callback
 
-    this.cleanupVisibilityListener = addVisibilityChangeListener(() => {
-      this.onPageVisibilityChange()
+    this.cleanupVisibilityListener = addVisibilityChangeListener((isVisible) => {
+      this.onPageVisibilityChange(isVisible)
     })
   }
 
@@ -118,15 +118,14 @@ class ElementHoverObserver {
     this.stopSweeper()
   }
 
-  public flushActive(): void {
+  public async endActive(): Promise<void> {
     const now = NOW()
 
     for (const state of this.activeStates) {
-      if (state.done || state.inFlight || state.hoverId === null || state.attempts === 0) continue
-      if (!state.isHovered) continue
-
-      this.trigger(state, now)
+      this.endHoverCycle(state, now)
     }
+
+    await Promise.all(this.pendingCallbacks)
   }
 
   private createState(element: Element, options?: ElementHoverElementOptions): ElementState {
@@ -142,9 +141,8 @@ class ElementHoverObserver {
       attempts: 0,
       hoverId: null,
       done: false,
-      inFlight: false,
       isHovered: false,
-      pendingFinal: false,
+      callbackChain: null,
       enterHandler: () => undefined,
       leaveHandler: () => undefined,
     }
@@ -184,85 +182,39 @@ class ElementHoverObserver {
   }
 
   private onHoverStart(state: ElementState, event: Event): void {
-    if (state.done || state.isHovered || !isNaturalHoverEvent(event)) return
+    if (state.done || state.isHovered || !isNaturalHoverEvent(event) || !isPageVisible()) {
+      return
+    }
 
     const now = NOW()
     state.isHovered = true
-    state.pendingFinal = false
     state.accumulatedMs = 0
     state.attempts = 0
     state.hoverId = createHoverId()
-    state.hoverSince = isPageVisible() ? now : null
+    state.hoverSince = now
     clearFireTimer(state)
-
-    if (state.hoverSince !== null) {
-      this.scheduleFireIfDue(state, now)
-    }
+    this.scheduleQualification(state)
   }
 
   private onHoverEnd(state: ElementState, event: Event): void {
     if (state.done || !state.isHovered || !isNaturalHoverEvent(event)) return
 
-    const now = NOW()
-    if (state.hoverSince !== null) {
-      state.accumulatedMs += now - state.hoverSince
-      state.hoverSince = null
-    }
-
-    clearFireTimer(state)
-    state.isHovered = false
-
-    if (state.hoverId === null || state.attempts === 0) {
-      ElementHoverObserver.resetHoverCycle(state)
-      return
-    }
-
-    if (state.inFlight) {
-      state.pendingFinal = true
-      return
-    }
-
-    void this.attemptCallback(state, state.accumulatedMs)
+    this.endHoverCycle(state, NOW())
   }
 
-  private onPageVisibilityChange(): void {
-    const now = NOW()
-    const hidden = !isPageVisible()
-
-    for (const state of this.activeStates) {
-      if (state.done) continue
-
-      if (hidden) {
-        ElementHoverObserver.pauseHoverCycle(state, now)
-      } else {
-        this.resumeHoverCycle(state, now)
+  private onPageVisibilityChange(isVisible: boolean): void {
+    if (!isVisible) {
+      const now = NOW()
+      for (const state of this.activeStates) {
+        this.endHoverCycle(state, now)
       }
     }
 
     this.sweepOrphans()
   }
 
-  private static pauseHoverCycle(state: ElementState, now: number): void {
-    if (!state.isHovered) return
-
-    if (state.hoverSince !== null) {
-      state.accumulatedMs += now - state.hoverSince
-      state.hoverSince = null
-    }
-
-    clearFireTimer(state)
-  }
-
-  private resumeHoverCycle(state: ElementState, now: number): void {
-    if (!state.isHovered || state.done || state.inFlight) return
-
-    state.hoverSince ??= now
-    this.scheduleFireIfDue(state, now)
-  }
-
   private static resetHoverCycle(state: ElementState): void {
     state.isHovered = false
-    state.pendingFinal = false
     state.accumulatedMs = 0
     state.hoverSince = null
     state.attempts = 0
@@ -270,10 +222,9 @@ class ElementHoverObserver {
     clearFireTimer(state)
   }
 
-  private scheduleFireIfDue(state: ElementState, now: number): void {
+  private scheduleQualification(state: ElementState): void {
     if (
       state.done ||
-      state.inFlight ||
       state.fireTimer !== null ||
       !state.isHovered ||
       !isPageVisible() ||
@@ -282,101 +233,88 @@ class ElementHoverObserver {
       return
     }
 
-    const elapsed = state.accumulatedMs + (state.hoverSince !== null ? now - state.hoverSince : 0)
-    const remaining = ElementHoverObserver.getRemainingMsUntilNextFire(state, elapsed)
-
-    if (remaining <= 0) {
-      this.trigger(state, now)
-      return
-    }
-
     state.fireTimer = setTimeout(() => {
       if (
         state.done ||
-        state.inFlight ||
         !state.isHovered ||
         !isPageVisible() ||
-        state.hoverSince === null
+        state.hoverSince === null ||
+        state.hoverId === null
       ) {
         clearFireTimer(state)
         return
       }
 
-      this.trigger(state, NOW())
-    }, Math.ceil(remaining))
+      this.qualify(state, NOW())
+    }, DEFAULTS.DWELL_MS)
   }
 
-  private trigger(state: ElementState, now: number): void {
-    if (state.done || state.inFlight || state.hoverId === null) return
-
-    if (state.hoverSince !== null) {
-      state.accumulatedMs += now - state.hoverSince
-      state.hoverSince = now
-    }
+  private qualify(state: ElementState, now: number): void {
+    if (state.done || !state.isHovered || state.hoverId === null || state.hoverSince === null)
+      return
 
     clearFireTimer(state)
-
-    const { accumulatedMs: totalHoverMs } = state
-    void this.attemptCallback(state, totalHoverMs)
+    state.attempts = 1
+    state.accumulatedMs = Math.max(0, now - state.hoverSince)
+    void this.queueCallback(state, state.hoverId, state.accumulatedMs, state.attempts)
   }
 
-  private async attemptCallback(state: ElementState, totalHoverMs: number): Promise<void> {
-    if (state.done || state.inFlight || state.hoverId === null) return
+  private endHoverCycle(state: ElementState, now: number): void {
+    if (state.done || !state.isHovered || state.hoverId === null) return
 
+    if (state.hoverSince !== null) {
+      state.accumulatedMs = Math.max(state.accumulatedMs, now - state.hoverSince)
+    }
+
+    const { hoverId } = state
+    const { accumulatedMs: totalHoverMs } = state
+    const qualified = state.attempts > 0
+
+    clearFireTimer(state)
+    ElementHoverObserver.resetHoverCycle(state)
+
+    if (qualified) {
+      void this.queueCallback(state, hoverId, totalHoverMs, 2)
+    }
+  }
+
+  private async queueCallback(
+    state: ElementState,
+    hoverId: string,
+    totalHoverMs: number,
+    attempts: number,
+  ): Promise<void> {
     const element = derefElement(state)
     if (!element) {
       this.finalizeDroppedState(state)
       return
     }
 
-    state.inFlight = true
-    state.attempts += 1
-    const { hoverId } = state
-
-    await safeCallAsync(
-      (): void | Promise<void> =>
-        this.callback(element, {
-          totalHoverMs,
-          hoverId,
-          attempts: state.attempts,
-          data: state.data,
-        }),
-      (error) => {
-        logger.error('Error in element hover callback:', error)
-      },
-    )
-
-    this.onAttemptSettled(state)
-  }
-
-  private onAttemptSettled(state: ElementState): void {
-    state.inFlight = false
-
-    if (state.done) return
-
-    if (!state.isHovered) {
-      if (state.pendingFinal && state.hoverId !== null) {
-        state.pendingFinal = false
-        void this.attemptCallback(state, state.accumulatedMs)
-        return
-      }
-
-      ElementHoverObserver.resetHoverCycle(state)
-      return
+    const { data } = state
+    const invoke = async (): Promise<void> => {
+      await safeCallAsync(
+        (): void | Promise<void> =>
+          this.callback(element, {
+            totalHoverMs,
+            hoverId,
+            attempts,
+            data,
+          }),
+        (error) => {
+          logger.error('Error in element hover callback:', error)
+        },
+      )
     }
+    const pending = state.callbackChain ? state.callbackChain.then(invoke) : invoke()
 
-    if (!isPageVisible()) return
+    state.callbackChain = pending
+    this.pendingCallbacks.add(pending)
+    void pending.then(() => {
+      if (state.callbackChain === pending) state.callbackChain = null
+      this.pendingCallbacks.delete(pending)
+    })
 
-    const now = NOW()
-    state.hoverSince ??= now
-    this.scheduleFireIfDue(state, now)
-  }
-
-  private static getRemainingMsUntilNextFire(state: ElementState, elapsedMs: number): number {
-    const requiredElapsedMs =
-      DEFAULTS.DWELL_MS + state.attempts * DEFAULTS.HOVER_DURATION_UPDATE_INTERVAL_MS
-
-    return requiredElapsedMs - elapsedMs
+    await pending
   }
 
   private finalizeDroppedState(state: ElementState): void {

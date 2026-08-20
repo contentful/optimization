@@ -58,7 +58,7 @@ function toAnalyticsEvent(event: unknown, id: string): AnalyticsEvent | undefine
   }
 }
 
-function isViewHeartbeatEvent(event: AnalyticsEvent): boolean {
+function isViewInteractionEvent(event: AnalyticsEvent): boolean {
   return (
     event.type === 'component' &&
     typeof event.viewId === 'string' &&
@@ -66,7 +66,7 @@ function isViewHeartbeatEvent(event: AnalyticsEvent): boolean {
   )
 }
 
-function isHoverHeartbeatEvent(event: AnalyticsEvent): boolean {
+function isHoverInteractionEvent(event: AnalyticsEvent): boolean {
   return (
     event.type === 'component_hover' &&
     typeof event.hoverId === 'string' &&
@@ -74,16 +74,16 @@ function isHoverHeartbeatEvent(event: AnalyticsEvent): boolean {
   )
 }
 
-function getHeartbeatKey(event: AnalyticsEvent): string | undefined {
-  if (isViewHeartbeatEvent(event)) return `component:${event.viewId}`
-  if (isHoverHeartbeatEvent(event)) return `component_hover:${event.hoverId}`
+function getInteractionSessionKey(event: AnalyticsEvent): string | undefined {
+  if (isViewInteractionEvent(event)) return `component:${event.viewId}`
+  if (isHoverInteractionEvent(event)) return `component_hover:${event.hoverId}`
   return undefined
 }
 
 function upsertAnalyticsEvent(previous: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] {
-  const key = getHeartbeatKey(next)
+  const key = getInteractionSessionKey(next)
   if (!key) return [next, ...previous]
-  const existingIndex = previous.findIndex((e) => getHeartbeatKey(e) === key)
+  const existingIndex = previous.findIndex((e) => getInteractionSessionKey(e) === key)
   if (existingIndex === -1) return [next, ...previous]
   const updated = [...previous]
   updated[existingIndex] = {

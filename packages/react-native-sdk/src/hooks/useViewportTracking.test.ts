@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import type { Entry } from 'contentful'
 import type { LayoutChangeEvent } from 'react-native'
 
+let appStateChangeHandler: ((nextState: string) => void) | undefined
+
 rs.mock('react-native', () => ({
   Platform: { OS: 'ios' },
   Dimensions: {
@@ -10,7 +12,10 @@ rs.mock('react-native', () => ({
     addEventListener: rs.fn(() => ({ remove: rs.fn() })),
   },
   AppState: {
-    addEventListener: rs.fn(() => ({ remove: rs.fn() })),
+    addEventListener: rs.fn((_event: string, handler: (nextState: string) => void) => {
+      appStateChangeHandler = handler
+      return { remove: rs.fn() }
+    }),
   },
   NativeModules: {},
 }))
@@ -72,6 +77,7 @@ type EffectFn = () => undefined | (() => void)
 type CallbackFn = (...args: unknown[]) => unknown
 
 const effects: EffectFn[] = []
+const effectCleanups: Array<() => void> = []
 
 const refs = new Map<number, { current: unknown }>()
 let refCounter = 0
@@ -80,7 +86,8 @@ rs.mock('react', () => ({
   useState: (initial: unknown) => [initial, rs.fn()],
   useEffect: (fn: EffectFn) => {
     effects.push(fn)
-    fn()
+    const cleanup = fn()
+    if (cleanup) effectCleanups.push(cleanup)
   },
   useCallback: (fn: CallbackFn) => fn,
   useRef: (initial: unknown) => {
@@ -100,13 +107,24 @@ rs.mock('react', () => ({
 
 function resetHookState(): void {
   effects.length = 0
+  effectCleanups.length = 0
   refs.clear()
   refCounter = 0
+  appStateChangeHandler = undefined
 }
 
 function rerenderHook<T>(render: () => T): T {
   refCounter = 0
   return render()
+}
+
+function unmountHook(): void {
+  for (const cleanup of effectCleanups) cleanup()
+}
+
+function changeAppState(nextState: string): void {
+  if (!appStateChangeHandler) throw new Error('Expected AppState listener to be registered')
+  appStateChangeHandler(nextState)
 }
 
 function createMockEntry(id: string): Entry {
@@ -208,76 +226,116 @@ describe('useViewportTracking', () => {
     })
   })
 
-  describe('periodic event scheduling', () => {
-    it('should fire periodic events at the fixed interval after the initial event', async () => {
+  describe('qualified view lifecycle', () => {
+    it('should emit a qualified start and a final with the same viewId', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('entry-3')
+      const render = (): ReturnType<typeof useViewportTracking> => useViewportTracking({ entry })
 
-      const { onLayout } = useViewportTracking({ entry })
-
+      const { onLayout } = render()
       onLayout(createLayoutEvent())
 
       rs.advanceTimersByTime(1000)
       expect(mockTrackView).toHaveBeenCalledTimes(1)
 
-      rs.advanceTimersByTime(5000)
-      expect(mockTrackView).toHaveBeenCalledTimes(2)
+      const start = getCallArg(0)
+      expect(start.viewDurationMs).toBeGreaterThanOrEqual(1000)
 
-      rs.advanceTimersByTime(5000)
-      expect(mockTrackView).toHaveBeenCalledTimes(3)
+      scrollContextValue = { scrollY: 200, viewportHeight: 800 }
+      rerenderHook(render)
+
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
+      const final = getCallArg(1)
+      expect(final.viewId).toBe(start.viewId)
+      expect(Number(final.viewDurationMs)).toBeGreaterThanOrEqual(Number(start.viewDurationMs))
     })
 
-    it('should send increasing viewDurationMs with each periodic event', async () => {
+    it('should start a fresh session after an ended qualified view', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('entry-4')
+      const render = (): ReturnType<typeof useViewportTracking> => useViewportTracking({ entry })
 
-      const { onLayout } = useViewportTracking({ entry })
-
+      const { onLayout } = render()
       onLayout(createLayoutEvent())
-
       rs.advanceTimersByTime(1000)
-      const firstDuration = Number(getCallArg(0).viewDurationMs)
-
-      rs.advanceTimersByTime(5000)
-      const secondDuration = Number(getCallArg(1).viewDurationMs)
-
-      expect(secondDuration).toBeGreaterThan(firstDuration)
-    })
-  })
-
-  describe('viewId lifecycle', () => {
-    it('should use the same viewId for all events within a visibility cycle', async () => {
-      const { useViewportTracking } = await import('./useViewportTracking')
-      const entry = createMockEntry('entry-5')
-
-      const { onLayout } = useViewportTracking({ entry })
-
-      onLayout(createLayoutEvent())
-
-      rs.advanceTimersByTime(1000)
-      rs.advanceTimersByTime(5000)
 
       const firstViewId = getCallArg(0).viewId
-      const secondViewId = getCallArg(1).viewId
 
-      expect(firstViewId).toBe(secondViewId)
+      scrollContextValue = { scrollY: 200, viewportHeight: 800 }
+      rerenderHook(render)
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
+
+      scrollContextValue = { scrollY: 0, viewportHeight: 800 }
+      rerenderHook(render)
+      rs.advanceTimersByTime(999)
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
+
+      rs.advanceTimersByTime(1)
+      expect(mockTrackView).toHaveBeenCalledTimes(3)
+      expect(getCallArg(2).viewId).not.toBe(firstViewId)
     })
-  })
 
-  describe('real accumulated viewDurationMs', () => {
-    it('should send the real accumulated duration at the fixed dwell threshold', async () => {
+    it('should emit one final on unmount after the initial attempt', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
-      const entry = createMockEntry('entry-6')
+      const entry = createMockEntry('entry-unmount')
 
       const { onLayout } = useViewportTracking({ entry })
-
       onLayout(createLayoutEvent())
-
       rs.advanceTimersByTime(1000)
 
-      const call = getCallArg(0)
-      expect(call.viewDurationMs).toBeGreaterThanOrEqual(1000)
-      expect(typeof call.viewDurationMs).toBe('number')
+      const startViewId = getCallArg(0).viewId
+      rs.advanceTimersByTime(2500)
+      unmountHook()
+
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
+      expect(getCallArg(1).viewId).toBe(startViewId)
+
+      unmountHook()
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
+    })
+
+    it('should finalize once on inactive and start a fresh session on active', async () => {
+      const { useViewportTracking } = await import('./useViewportTracking')
+      const entry = createMockEntry('entry-app-state')
+
+      const { onLayout } = useViewportTracking({ entry })
+      onLayout(createLayoutEvent())
+      rs.advanceTimersByTime(1000)
+
+      const firstViewId = getCallArg(0).viewId
+      changeAppState('inactive')
+
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
+      expect(getCallArg(1).viewId).toBe(firstViewId)
+
+      changeAppState('background')
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
+
+      changeAppState('active')
+      rs.advanceTimersByTime(1000)
+
+      expect(mockTrackView).toHaveBeenCalledTimes(3)
+      expect(getCallArg(2).viewId).not.toBe(firstViewId)
+    })
+
+    it('should reset a sub-dwell session in the background and re-evaluate on active', async () => {
+      const { useViewportTracking } = await import('./useViewportTracking')
+      const entry = createMockEntry('entry-sub-dwell-background')
+
+      const { onLayout } = useViewportTracking({ entry })
+      onLayout(createLayoutEvent())
+      rs.advanceTimersByTime(500)
+
+      changeAppState('background')
+      rs.advanceTimersByTime(1000)
+      expect(mockTrackView).not.toHaveBeenCalled()
+
+      changeAppState('active')
+      rs.advanceTimersByTime(999)
+      expect(mockTrackView).not.toHaveBeenCalled()
+
+      rs.advanceTimersByTime(1)
+      expect(mockTrackView).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -336,19 +394,18 @@ describe('useViewportTracking', () => {
         variants: { 'sticky-success-baseline-entry': 'sticky-success-entry' },
         sticky: true,
       }
+      const render = (): ReturnType<typeof useViewportTracking> =>
+        useViewportTracking({ entry, selectedOptimization })
 
       mockTrackView.mockResolvedValue({ accepted: true, data: {} })
 
-      const { onLayout } = useViewportTracking({
-        entry,
-        selectedOptimization,
-      })
+      const { onLayout } = render()
 
       onLayout(createLayoutEvent())
 
       rs.advanceTimersByTime(1000)
       await Promise.resolve()
-      rs.advanceTimersByTime(5000)
+      changeAppState('background')
 
       expect(mockTrackView).toHaveBeenCalledTimes(2)
       expect(getCallArg(0).sticky).toBe(true)
@@ -365,29 +422,24 @@ describe('useViewportTracking', () => {
         variants: { 'sticky-retry-baseline-entry': 'sticky-retry-entry' },
         sticky: true,
       }
+      const render = (): ReturnType<typeof useViewportTracking> =>
+        useViewportTracking({ entry, selectedOptimization })
 
       mockTrackView
         .mockResolvedValueOnce({ accepted: false })
         .mockResolvedValueOnce({ accepted: true, data: {} })
-        .mockResolvedValue({ accepted: true, data: {} })
 
-      const { onLayout } = useViewportTracking({
-        entry,
-        selectedOptimization,
-      })
+      const { onLayout } = render()
 
       onLayout(createLayoutEvent())
 
       rs.advanceTimersByTime(1000)
       await Promise.resolve()
-      rs.advanceTimersByTime(5000)
-      await Promise.resolve()
-      rs.advanceTimersByTime(5000)
+      changeAppState('background')
 
-      expect(mockTrackView).toHaveBeenCalledTimes(3)
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
       expect(getCallArg(0).sticky).toBe(true)
       expect(getCallArg(1).sticky).toBe(true)
-      expect(getCallArg(2).sticky).toBeUndefined()
     })
 
     it('should dedupe sticky after an accepted queued trackView without data', async () => {
@@ -400,19 +452,18 @@ describe('useViewportTracking', () => {
         variants: { 'sticky-queued-baseline-entry': 'sticky-queued-entry' },
         sticky: true,
       }
+      const render = (): ReturnType<typeof useViewportTracking> =>
+        useViewportTracking({ entry, selectedOptimization })
 
       mockTrackView.mockResolvedValue({ accepted: true })
 
-      const { onLayout } = useViewportTracking({
-        entry,
-        selectedOptimization,
-      })
+      const { onLayout } = render()
 
       onLayout(createLayoutEvent())
 
       rs.advanceTimersByTime(1000)
       await Promise.resolve()
-      rs.advanceTimersByTime(5000)
+      changeAppState('background')
 
       expect(mockTrackView).toHaveBeenCalledTimes(2)
       expect(getCallArg(0).sticky).toBe(true)
@@ -454,7 +505,7 @@ describe('useViewportTracking', () => {
   })
 
   describe('fixed timing', () => {
-    it('uses a 10% threshold, 1000 ms dwell, and 5000 ms update interval', async () => {
+    it('uses a 10% threshold and 1000 ms dwell', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('defaults-test')
 
@@ -467,9 +518,6 @@ describe('useViewportTracking', () => {
 
       rs.advanceTimersByTime(1)
       expect(mockTrackView).toHaveBeenCalledTimes(1)
-
-      rs.advanceTimersByTime(5000)
-      expect(mockTrackView).toHaveBeenCalledTimes(2)
     })
 
     it('tracks an entry at exactly 10% visibility', async () => {
@@ -496,6 +544,19 @@ describe('useViewportTracking', () => {
       rs.advanceTimersByTime(2000)
 
       expect(mockTrackView).not.toHaveBeenCalled()
+    })
+
+    it('uses screen dimensions when no scroll context is available', async () => {
+      const { useViewportTracking } = await import('./useViewportTracking')
+      const entry = createMockEntry('screen-dimensions-entry')
+      scrollContextValue = null
+
+      const { onLayout } = useViewportTracking({ entry })
+
+      onLayout(createLayoutEvent())
+      rs.advanceTimersByTime(1000)
+
+      expect(mockTrackView).toHaveBeenCalledTimes(1)
     })
   })
 

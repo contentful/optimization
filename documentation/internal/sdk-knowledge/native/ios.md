@@ -226,15 +226,23 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   same current screen is skipped; a blocked attempt is retried once consent allows. Plain
   `screen(name:)` calls the core `screen()` with no dedupe. source: extern:.trackScreen fires onAppear/consent/name change → trackCurrentScreen — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Views/ScreenTrackingModifier.swift#ScreenTrackingModifier; optimization-js-bridge#index.ts#Bridge; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker
 - Entry view tracking timing (SwiftUI `OptimizedEntry` and UIKit `ViewTrackingController`) uses a
-  fixed 10% visibility threshold, 1000 ms dwell, and 5000 ms duration-update interval. Three-phase
-  cycle: initial `trackView` after accumulated visible time reaches 1000 ms, periodic duration
-  updates every 5000 ms while visible, and a final duration event when visibility ends (only if ≥1
-  event already fired). Gated on `hasConsent("trackView")` (→ core wire type `component`). source: extern:ViewTrackingController three-phase timing fixed at 1000/0.1/5000 — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Tracking/ViewTrackingController.swift#ViewTrackingController; core-sdk#consent/ConsentPolicy.ts#hasEventConsent
-- Background handling of view cycles: on `UIApplication.didEnterBackgroundNotification` the
-  controller pauses accumulation, emits a final event if `attempts > 0`, and resets the cycle; on
-  `didBecomeActive` it re-evaluates visibility from the last known geometry and starts a fresh cycle
-  when still visible (so nothing needs to scroll to restart). UIKit-only (`#if canImport(UIKit)`).
-  source: extern:ViewTrackingController pause/resume on background/foreground notifications — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Tracking/ViewTrackingController.swift#ViewTrackingController
+  fixed 10% visibility threshold and 1000 ms continuous dwell. A qualified session emits two
+  `component` records: one start at the dwell threshold and one final when visibility falls below
+  10% or another lifecycle ending occurs. The SDK owns the shared `viewId`; `viewDurationMs` measures
+  from initial threshold entry and includes the qualifying dwell. A session that ends before
+  qualification emits no event, and active sessions emit no periodic duration events. Gated on
+  `hasConsent("trackView")`.
+  source: extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Tracking/ViewTrackingController.swift; core-sdk#consent/ConsentPolicy.ts#hasEventConsent
+- `onDisappear()` and `UIApplication.didEnterBackgroundNotification` end and reset the current view
+  session, emitting the qualified session's one final event. On `didBecomeActive`, the controller
+  re-evaluates the last known geometry and starts a fresh session when still visible; the fresh
+  session must satisfy the 1000 ms dwell again. Background and foreground observation is UIKit-only
+  (`#if canImport(UIKit)`).
+  source: extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Tracking/ViewTrackingController.swift
+- SwiftUI `ViewTrackingModifier` calls `ViewTrackingController.onDisappear()` when its tracked view
+  leaves the hierarchy or when tracking is disabled, ending any qualified view session. UIKit
+  integrations call the public controller lifecycle method from their app-owned view lifecycle.
+  source: extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Tracking/ViewTrackingModifier.swift
 - Sticky entry-view dedupe lives in the bridge, not Swift: `trackView` keys sticky views by
   `stickyTrackingKey ?? viewId` and only sends a sticky view once accepted, via
   `shouldSendStickyEntryView` / `shouldRememberStickyEntryViewResult`. The Swift controller passes a

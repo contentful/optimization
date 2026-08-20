@@ -83,31 +83,6 @@ describe('ElementHoverObserver', () => {
     )
   })
 
-  it('emits duration updates at the fixed interval while still hovered', async () => {
-    const el = makeElement()
-    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
-
-    const obs = new ElementHoverObserver(cb)
-    obs.observe(el)
-
-    dispatchHoverEnter(el)
-
-    await advance(1000)
-    expect(cb).toHaveBeenCalledTimes(1)
-
-    await advance(5000)
-    expect(cb).toHaveBeenCalledTimes(2)
-
-    const firstMeta = cb.mock.calls[0]?.[1]
-    const secondMeta = cb.mock.calls[1]?.[1]
-    if (!isMeta(firstMeta) || !isMeta(secondMeta)) {
-      throw new Error('Unexpected callback payload')
-    }
-
-    expect(secondMeta.totalHoverMs).toBe(6000)
-    expect(secondMeta.hoverId).toBe(firstMeta.hoverId)
-  })
-
   it('emits a final duration update when hover ends after dwell has fired', async () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
@@ -176,7 +151,7 @@ describe('ElementHoverObserver', () => {
     expect(firstMeta.hoverId).not.toBe(thirdMeta.hoverId)
   })
 
-  it('pauses dwell timers when hidden and resumes with remaining dwell time', async () => {
+  it('ends on hide and requires a fresh pointer entry after the page returns', async () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
@@ -187,17 +162,29 @@ describe('ElementHoverObserver', () => {
 
     await advance(300)
     setDocumentVisibility('hidden')
-
-    await advance(1000)
     expect(cb).not.toHaveBeenCalled()
 
     setDocumentVisibility('visible')
-
-    await advance(699)
+    await advance(1000)
     expect(cb).not.toHaveBeenCalled()
 
-    await advance(1)
+    dispatchHoverEnter(el)
+    await advance(1000)
     expect(cb).toHaveBeenCalledTimes(1)
+
+    await advance(250)
+    window.dispatchEvent(new Event('pagehide'))
+    window.dispatchEvent(new Event('beforeunload'))
+    await obs.endActive()
+
+    expect(cb).toHaveBeenCalledTimes(2)
+    const startMeta = cb.mock.calls[0]?.[1]
+    const finalMeta = cb.mock.calls[1]?.[1]
+    if (!isMeta(startMeta) || !isMeta(finalMeta)) {
+      throw new Error('Unexpected callback payload')
+    }
+    expect(finalMeta.hoverId).toBe(startMeta.hoverId)
+    expect(finalMeta.totalHoverMs).toBe(1250)
   })
 
   it('passes per-element data to the callback', async () => {
@@ -226,31 +213,7 @@ describe('ElementHoverObserver', () => {
     )
   })
 
-  it('coalesces in-flight attempts and does not trigger duplicate callbacks', async () => {
-    const el = makeElement()
-    const firstAttempt = deferred()
-    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockImplementation(async () => {
-      await firstAttempt.promise
-    })
-
-    const obs = new ElementHoverObserver(cb)
-    obs.observe(el)
-
-    dispatchHoverEnter(el)
-    await advance(1000)
-    expect(cb).toHaveBeenCalledTimes(1)
-
-    await advance(100)
-    expect(cb).toHaveBeenCalledTimes(1)
-
-    firstAttempt.resolve(undefined)
-    await Promise.resolve()
-    await Promise.resolve()
-
-    expect(cb).toHaveBeenCalledTimes(1)
-  })
-
-  it('emits a final callback after in-flight callback settles on hover end', async () => {
+  it('awaits an in-flight start before emitting and settling the final callback', async () => {
     const el = makeElement()
     const firstAttempt = deferred()
     let callCount = 0
@@ -267,20 +230,24 @@ describe('ElementHoverObserver', () => {
     dispatchHoverEnter(el)
     await advance(1000)
     await advance(250)
-    dispatchHoverLeave(el)
+    const ending = obs.endActive()
 
     expect(cb).toHaveBeenCalledTimes(1)
 
     firstAttempt.resolve(undefined)
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
+    await ending
 
     expect(cb).toHaveBeenCalledTimes(2)
+    const startMeta = cb.mock.calls[0]?.[1]
+    const finalMeta = cb.mock.calls[1]?.[1]
+    if (!isMeta(startMeta) || !isMeta(finalMeta)) {
+      throw new Error('Unexpected callback payload')
+    }
+    expect(finalMeta.hoverId).toBe(startMeta.hoverId)
+    expect(finalMeta.totalHoverMs).toBe(1250)
   })
 
-  it('continues scheduled updates after callback failure', async () => {
+  it('emits the final callback after a start callback failure', async () => {
     const el = makeElement()
     let calls = 0
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockImplementation(async () => {
@@ -295,12 +262,8 @@ describe('ElementHoverObserver', () => {
     dispatchHoverEnter(el)
 
     await advance(1000)
-    await Promise.resolve()
-    await Promise.resolve()
-
-    expect(cb).toHaveBeenCalledTimes(1)
-
-    await advance(5000)
+    await advance(250)
+    await obs.endActive()
     expect(cb).toHaveBeenCalledTimes(2)
   })
 
@@ -367,7 +330,7 @@ describe('ElementHoverObserver', () => {
     expect(cb).not.toHaveBeenCalled()
   })
 
-  it('flushActive emits a latest-duration heartbeat for active hovers past dwell', async () => {
+  it('endActive is idempotent and emits one final callback for a qualified hover', async () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
@@ -380,8 +343,7 @@ describe('ElementHoverObserver', () => {
     expect(cb).toHaveBeenCalledTimes(1)
 
     await advance(750)
-    obs.flushActive()
-    await Promise.resolve()
+    await Promise.all([obs.endActive(), obs.endActive()])
 
     expect(cb).toHaveBeenCalledTimes(2)
 
@@ -395,7 +357,7 @@ describe('ElementHoverObserver', () => {
     expect(secondMeta.totalHoverMs).toBe(1750)
   })
 
-  it('flushActive does not emit for hovers that have not passed dwell yet', async () => {
+  it('endActive emits nothing for a sub-dwell hover', async () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
@@ -405,8 +367,7 @@ describe('ElementHoverObserver', () => {
     dispatchHoverEnter(el)
 
     await advance(500)
-    obs.flushActive()
-    await Promise.resolve()
+    await obs.endActive()
 
     expect(cb).not.toHaveBeenCalled()
   })

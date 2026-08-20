@@ -17,47 +17,64 @@ final class ExtendedViewTrackingTests: XCTestCase {
         clearProfileState(app: app, requireFreshAppInstance: true)
     }
 
-    func testPeriodicEventsForContinuouslyVisibleEntry() {
+    func testQualifiedStartAndFinalEventForContinuouslyVisibleEntry() {
         waitForElement(app.staticTexts["Analytics Events"])
 
-        // Wait for the initial event (after dwell threshold ~1s)
-        waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: 1, app: app, timeout: EXTENDED_TIMEOUT)
+        // Observe the qualified start without scrolling the entry out of view.
+        let eventCountId = "event-count-\(VISIBLE_ENTRY_ID)"
+        let startText = waitForElementText(eventCountId, app: app, timeout: EXTENDED_TIMEOUT) {
+            self.parseComponentCount($0) >= 1
+        }
+        XCTAssertEqual(parseComponentCount(startText), 1)
 
-        // Wait for at least one periodic update (dwell 1s + update interval 5s = ~6s total)
-        waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: 2, app: app, timeout: EXTENDED_TIMEOUT)
+        // Scrolling to the stats ends the active visibility cycle.
+        scrollToElement(testId: eventCountId, scrollViewId: "main-scroll-view", app: app)
+        let finalText = waitForElementText(eventCountId, app: app, timeout: EXTENDED_TIMEOUT) {
+            self.parseComponentCount($0) >= 2
+        }
+        XCTAssertEqual(parseComponentCount(finalText), 2)
     }
 
-    func testIncreasingViewDurationMs() {
+    func testViewDurationIncreasesAtVisibilityEnd() {
         waitForElement(app.staticTexts["Analytics Events"])
 
-        // Wait for at least 2 events so we can check duration is increasing
-        waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: 2, app: app, timeout: EXTENDED_TIMEOUT)
+        let eventCountId = "event-count-\(VISIBLE_ENTRY_ID)"
+        _ = waitForElementText(eventCountId, app: app, timeout: EXTENDED_TIMEOUT) {
+            self.parseComponentCount($0) >= 1
+        }
+        let startDuration = getViewDuration(VISIBLE_ENTRY_ID, app: app)
 
-        let duration = getViewDuration(VISIBLE_ENTRY_ID, app: app)
+        scrollToElement(testId: eventCountId, scrollViewId: "main-scroll-view", app: app)
+        _ = waitForElementText(eventCountId, app: app, timeout: EXTENDED_TIMEOUT) {
+            self.parseComponentCount($0) >= 2
+        }
+        let finalDuration = getViewDuration(VISIBLE_ENTRY_ID, app: app)
 
-        // Duration should exceed the dwell threshold (1000ms) since we've had at least 2 events
-        XCTAssertNotNil(duration)
-        XCTAssertGreaterThan(duration!, 1000)
+        XCTAssertNotNil(startDuration)
+        XCTAssertNotNil(finalDuration)
+        XCTAssertGreaterThanOrEqual(startDuration!, 1000)
+        XCTAssertGreaterThan(finalDuration!, startDuration!)
     }
 
-    func testStableViewIdWithinCycle() {
+    func testStableViewIdBetweenStartAndFinal() {
         waitForElement(app.staticTexts["Analytics Events"])
 
-        // Capture the viewId from the FIRST event of the cycle, before any periodic
-        // update can overwrite latestViewId.
-        waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: 1, app: app, timeout: EXTENDED_TIMEOUT)
+        let eventCountId = "event-count-\(VISIBLE_ENTRY_ID)"
+        _ = waitForElementText(eventCountId, app: app, timeout: EXTENDED_TIMEOUT) {
+            self.parseComponentCount($0) >= 1
+        }
         let firstEventViewId = getViewId(VISIBLE_ENTRY_ID, app: app)
 
         XCTAssertNotNil(firstEventViewId)
         XCTAssertGreaterThan(firstEventViewId!.count, 0)
 
-        // Wait for the next periodic event in the SAME visibility cycle and re-read.
-        // A correct SDK reuses one viewId for the whole cycle, so the second read
-        // must equal the first.
-        waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: 2, app: app, timeout: EXTENDED_TIMEOUT)
-        let secondEventViewId = getViewId(VISIBLE_ENTRY_ID, app: app)
+        scrollToElement(testId: eventCountId, scrollViewId: "main-scroll-view", app: app)
+        _ = waitForElementText(eventCountId, app: app, timeout: EXTENDED_TIMEOUT) {
+            self.parseComponentCount($0) >= 2
+        }
+        let finalEventViewId = getViewId(VISIBLE_ENTRY_ID, app: app)
 
-        XCTAssertEqual(secondEventViewId, firstEventViewId)
+        XCTAssertEqual(finalEventViewId, firstEventViewId)
     }
 
     func testFinalEventOnScrollOut() {

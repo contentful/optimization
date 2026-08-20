@@ -1,5 +1,5 @@
 import { ENTRY_ID_ATTRIBUTE, ENTRY_SELECTOR, HAS_MUTATION_OBSERVER } from '../constants'
-import { safeCall } from '../lib/safeCall'
+import { safeCall, safeCallAsync } from '../lib/safeCall'
 import type { EntryInteractionDetector } from './EntryInteractionDetector'
 import {
   createEntryClickDetector,
@@ -229,12 +229,15 @@ export class EntryInteractionRuntime {
     this.reconcileAllInteractions()
   }
 
-  public flushActiveInteractions(): void {
-    for (const interaction of ENTRY_INTERACTIONS) {
-      if (!this.isInteractionRunning[interaction]) continue
-      const { flushActive: fn, onError } = this.getDetector(interaction)
-      if (fn) safeCall(fn, onError)
-    }
+  public async endActiveInteractions(): Promise<void> {
+    await Promise.all(
+      ENTRY_INTERACTIONS.map(async (interaction) => {
+        if (!this.isInteractionRunning[interaction]) return
+
+        const { endActive, onError } = this.getDetector(interaction)
+        if (endActive) await safeCallAsync(endActive, onError)
+      }),
+    )
   }
 
   private reconcileAllInteractions(): void {

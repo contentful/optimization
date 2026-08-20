@@ -1,3 +1,4 @@
+import { deferred } from '../../test/helpers'
 import { isEntryElement, type EntryElement } from '../resolveTrackingPayload'
 import { createTimedEntryDetector, isHtmlOrSvgElement } from './createTimedEntryDetector'
 
@@ -9,14 +10,14 @@ interface TestObserver {
   observe: ReturnType<typeof rs.fn>
   unobserve: ReturnType<typeof rs.fn>
   disconnect: ReturnType<typeof rs.fn>
-  flushActive: ReturnType<typeof rs.fn>
+  endActive: ReturnType<typeof rs.fn>
 }
 
 const makeObserver = (): TestObserver => ({
   observe: rs.fn(),
   unobserve: rs.fn(),
   disconnect: rs.fn(),
-  flushActive: rs.fn(),
+  endActive: rs.fn().mockResolvedValue(undefined),
 })
 
 const makeEntryElement = (id = 'entry-1'): EntryElement => {
@@ -92,6 +93,40 @@ describe('createTimedEntryDetector', () => {
     observer.observe.mockClear()
     detector.enableElement?.(element)
     expect(observer.observe).not.toHaveBeenCalled()
+  })
+
+  it('awaits the observer when ending active interactions', async () => {
+    const observer = makeObserver()
+    const ending = deferred()
+    observer.endActive.mockReturnValue(ending.promise)
+    const detector = createTimedEntryDetector<
+      unknown,
+      undefined,
+      undefined,
+      TestInfo,
+      TestObserver
+    >({
+      core: {},
+      interaction: 'views',
+      createObserver: () => observer,
+      resolveAttributeOptions: () => undefined,
+      track: noopTrack,
+    })
+
+    detector.start(undefined)
+    let settled = false
+    const result = detector.endActive?.().then(() => {
+      settled = true
+    })
+
+    await Promise.resolve()
+    expect(settled).toBe(false)
+
+    ending.resolve()
+    await result
+
+    expect(observer.endActive).toHaveBeenCalledTimes(1)
+    expect(settled).toBe(true)
   })
 
   it('observes entries added by auto-tracking and stops when removed', () => {

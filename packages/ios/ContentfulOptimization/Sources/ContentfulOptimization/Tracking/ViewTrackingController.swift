@@ -7,8 +7,7 @@ import Foundation
 
 enum ViewTrackingDefaults {
     static let minimumVisibleRatio = 0.1
-    static let initialViewDelayMs = 1000
-    static let durationUpdateIntervalMs = 5000
+    static let dwellTimeMs = 1000
 }
 
 /// Extracts tracking metadata from an entry and its selected optimization.
@@ -33,17 +32,18 @@ public struct TrackingMetadata {
     }
 }
 
-/// Manages viewport tracking for a single component, implementing the three-phase event lifecycle:
+/// Manages viewport tracking for a single component, implementing the two-phase event lifecycle:
 ///
-/// 1. **Initial event**: After 1000ms of accumulated visible time
-/// 2. **Periodic updates**: Every 5000ms while visible
-/// 3. **Final event**: When visibility ends (only if at least one event was already emitted)
+/// 1. **Start event**: After 1000ms of accumulated visible time
+/// 2. **Final event**: When visibility ends (only if the start event was emitted)
 ///
 /// State machine per visibility cycle:
 /// ```
-/// INVISIBLE → (ratio >= 0.1) → VISIBLE → timer → EMIT → schedule next
-///                                       ↓
-///                            (ratio < 0.1) → INVISIBLE (emit final if attempts > 0)
+/// INVISIBLE → (ratio >= 0.1) → QUALIFYING → timer → TRACKING
+///                                     ↓                    ↓
+///                            (ratio < 0.1)             (ratio < 0.1)
+///                                     ↓                    ↓
+///                                 INVISIBLE        EMIT FINAL → INVISIBLE
 /// ```
 @MainActor
 public final class ViewTrackingController {
@@ -56,9 +56,11 @@ public final class ViewTrackingController {
     private var viewId: String?
     private var visibleSince: Date?
     private var accumulatedMs: Double = 0
-    private var attempts: Int = 0
+    private var hasEmittedStart = false
     private var timer: Timer?
     private let stickyTrackingKey = UUID().uuidString
+    private let now: () -> Date
+    private let onEvent: ((TrackViewPayload) -> Void)?
 
     // Last known visibility parameters for re-evaluation after resume
     private var lastElementY: CGFloat = 0
@@ -82,11 +84,31 @@ public final class ViewTrackingController {
         #endif
     }
 
-    public init(
+    public convenience init(
         client: OptimizationClient,
         entry: [String: Any],
         optimizationContextId: String? = nil,
         selectedOptimization: [String: Any]?
+    ) {
+        self.init(
+            client: client,
+            entry: entry,
+            optimizationContextId: optimizationContextId,
+            selectedOptimization: selectedOptimization,
+            now: Date.init,
+            onEvent: nil
+        )
+    }
+
+    // Package tests inject a clock and payload sink through this initializer so
+    // qualification and lifecycle transitions stay deterministic without a scheduler abstraction.
+    init(
+        client: OptimizationClient,
+        entry: [String: Any],
+        optimizationContextId: String? = nil,
+        selectedOptimization: [String: Any]?,
+        now: @escaping () -> Date,
+        onEvent: ((TrackViewPayload) -> Void)?
     ) {
         self.client = client
         self.metadata = TrackingMetadata(
@@ -94,6 +116,8 @@ public final class ViewTrackingController {
             optimizationContextId: optimizationContextId,
             selectedOptimization: selectedOptimization
         )
+        self.now = now
+        self.onEvent = onEvent
         #if canImport(UIKit)
         backgroundObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.didEnterBackgroundNotification,
@@ -124,12 +148,6 @@ public final class ViewTrackingController {
         scrollY: CGFloat,
         viewportHeight: CGFloat
     ) {
-        guard client?.hasConsent(method: "trackView") == true else {
-            if isVisible {
-                onBecameInvisible()
-            }
-            return
-        }
         guard elementHeight > 0 else { return }
 
         // Store for re-evaluation after resume
@@ -137,6 +155,13 @@ public final class ViewTrackingController {
         lastElementHeight = elementHeight
         lastScrollY = scrollY
         lastViewportHeight = viewportHeight
+
+        guard client?.hasConsent(method: "trackView") == true else {
+            if isVisible {
+                onBecameInvisible()
+            }
+            return
+        }
 
         let visibleTop = max(elementY, scrollY)
         let visibleBottom = min(elementY + elementHeight, scrollY + viewportHeight)
@@ -164,7 +189,7 @@ public final class ViewTrackingController {
         pauseAccumulation()
         timer?.invalidate()
         timer = nil
-        if attempts > 0 {
+        if hasEmittedStart {
             emitEvent()
         }
         isVisible = false
@@ -190,10 +215,10 @@ public final class ViewTrackingController {
     private func onBecameVisible() {
         isVisible = true
         viewId = UUID().uuidString
-        visibleSince = Date()
+        visibleSince = now()
         accumulatedMs = 0
-        attempts = 0
-        scheduleNextFire()
+        hasEmittedStart = false
+        scheduleQualification()
     }
 
     private func onBecameInvisible() {
@@ -201,7 +226,7 @@ public final class ViewTrackingController {
         timer?.invalidate()
         timer = nil
         flushAccumulatedTime()
-        if attempts > 0 {
+        if hasEmittedStart {
             emitEvent()
         }
         resetCycle()
@@ -210,42 +235,57 @@ public final class ViewTrackingController {
     /// Adds elapsed time since `visibleSince` to `accumulatedMs` and resets `visibleSince` to now.
     private func flushAccumulatedTime() {
         guard let since = visibleSince else { return }
-        accumulatedMs += Date().timeIntervalSince(since) * 1000
-        visibleSince = Date()
+        let currentDate = now()
+        accumulatedMs += currentDate.timeIntervalSince(since) * 1000
+        visibleSince = currentDate
     }
 
     /// Pauses time accumulation without resetting the cycle (used when app is backgrounded).
     private func pauseAccumulation() {
         guard let since = visibleSince else { return }
-        accumulatedMs += Date().timeIntervalSince(since) * 1000
+        accumulatedMs += now().timeIntervalSince(since) * 1000
         visibleSince = nil
     }
 
-    private func scheduleNextFire() {
+    private func scheduleQualification() {
         flushAccumulatedTime()
-        let requiredMs = Double(ViewTrackingDefaults.initialViewDelayMs)
-            + Double(attempts) * Double(ViewTrackingDefaults.durationUpdateIntervalMs)
-        let remainingMs = max(0, requiredMs - accumulatedMs)
+        let remainingMs = max(
+            0,
+            Double(ViewTrackingDefaults.dwellTimeMs) - accumulatedMs
+        )
         let interval = remainingMs / 1000.0
 
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+        let qualificationTimer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
             Task { @MainActor in
-                self?.timerFired()
+                self?.qualificationTimerFired()
             }
         }
+        timer = qualificationTimer
+        // UIScrollView switches the main run loop into tracking mode while scrolling.
+        RunLoop.main.add(qualificationTimer, forMode: .common)
     }
 
-    private func timerFired() {
+    // Internal for the same deterministic package-test seam used by the initializer above.
+    func qualificationTimerFired() {
+        timer?.invalidate()
+        timer = nil
+
+        guard isVisible, !hasEmittedStart else { return }
+
         flushAccumulatedTime()
-        emitEvent()
-        attempts += 1
-        scheduleNextFire()
+        guard accumulatedMs >= Double(ViewTrackingDefaults.dwellTimeMs) else {
+            scheduleQualification()
+            return
+        }
+
+        hasEmittedStart = emitEvent()
     }
 
-    private func emitEvent() {
-        guard let client = client, let viewId = viewId else { return }
-        guard client.hasConsent(method: "trackView") else { return }
+    @discardableResult
+    private func emitEvent() -> Bool {
+        guard let client = client, let viewId = viewId else { return false }
+        guard client.hasConsent(method: "trackView") else { return false }
 
         let payload = TrackViewPayload(
             componentId: metadata.componentId,
@@ -257,15 +297,20 @@ public final class ViewTrackingController {
             sticky: metadata.sticky,
             stickyTrackingKey: stickyTrackingKey
         )
+        if let onEvent {
+            onEvent(payload)
+            return true
+        }
         Task {
             try? await client.trackView(payload)
         }
+        return true
     }
 
     private func resetCycle() {
         viewId = nil
         visibleSince = nil
         accumulatedMs = 0
-        attempts = 0
+        hasEmittedStart = false
     }
 }

@@ -227,7 +227,7 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   source: react-web-sdk#auto-page/types.ts#AutoPageEmissionContext; react-web-sdk#auto-page/types.ts#AutoPagePayloadOptions; react-web-sdk#router/react-router.tsx#ReactRouterAutoPageContext; react-web-sdk#auto-page/pagePayload.ts#buildAutoPagePayload; core-sdk#events/EventBuilder.ts#PageViewBuilderArgs
 - Interaction tracking (views/clicks/hovers): on by default with `OptimizedEntry`; opt out per-type
   via `OptimizationRoot` `trackEntryInteraction`; per-entry props `clickable`/`trackViews`/
-  `trackClicks`/`trackHovers` + duration props; uses RESOLVED entry id. Manual DOM:
+  `trackClicks`/`trackHovers`; uses RESOLVED entry id. Manual DOM:
   `sdk.tracking.enableElement('views', el, { data })` / `clearElement`.
   source: web-sdk#entry-tracking/EntryInteractionRuntime.ts#EntryInteractionRuntime; web-sdk#entry-tracking/resolveAutoTrackEntryInteractionOptions.ts#EntryInteractionApi; web-sdk#presentation/OptimizedEntryTrackingAttributes.ts#resolveOptimizedEntryTrackingAttributes
 - Automatic interaction detectors run only while the corresponding event method is allowed by

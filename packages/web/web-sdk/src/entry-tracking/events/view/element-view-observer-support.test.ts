@@ -18,9 +18,8 @@ const makeState = (overrides: Partial<ElementState> = {}): ElementState => ({
   attempts: 0,
   viewId: null,
   done: false,
-  inFlight: false,
   lastKnownVisible: false,
-  pendingFinal: false,
+  callbackChain: null,
   ...overrides,
 })
 

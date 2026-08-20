@@ -11,7 +11,6 @@ export { NOW, clearFireTimer, derefElement, isPageVisible, type Interval, type T
 
 export const DEFAULTS = {
   DWELL_MS: 1000,
-  VIEW_DURATION_UPDATE_INTERVAL_MS: 5000,
   RATIO: 0.1,
   SWEEP_INTERVAL_MS: 30000,
 } as const
@@ -53,9 +52,8 @@ export interface ElementState {
   attempts: number
   viewId: string | null
   done: boolean
-  inFlight: boolean
   lastKnownVisible: boolean
-  pendingFinal: boolean
+  callbackChain: Promise<void> | null
 }
 
 export const initElementViewObserverOptions = (
@@ -83,32 +81,7 @@ export const createElementState = (
     attempts: 0,
     viewId: null,
     done: false,
-    inFlight: false,
     lastKnownVisible: false,
-    pendingFinal: false,
+    callbackChain: null,
   }
 }
-
-export const pauseVisibilityCycle = (state: ElementState, now: number): void => {
-  if (!state.lastKnownVisible) return
-
-  if (state.visibleSince !== null) {
-    state.accumulatedMs += now - state.visibleSince
-    state.visibleSince = null
-  }
-
-  clearFireTimer(state)
-}
-
-export const resetVisibilityCycle = (state: ElementState): void => {
-  state.lastKnownVisible = false
-  state.pendingFinal = false
-  state.accumulatedMs = 0
-  state.visibleSince = null
-  state.attempts = 0
-  state.viewId = null
-  clearFireTimer(state)
-}
-
-export const getRemainingMsUntilNextFire = (state: ElementState, elapsedMs: number): number =>
-  DEFAULTS.DWELL_MS + state.attempts * DEFAULTS.VIEW_DURATION_UPDATE_INTERVAL_MS - elapsedMs

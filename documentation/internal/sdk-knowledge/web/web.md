@@ -165,10 +165,22 @@ None (imperative class + Web Components; no React surface). Web Components eleme
 - Interaction tracking: SDK observes any DOM element carrying `data-ctfl-*`; auto view/click/hover
   on by default; opt out per-type via `autoTrackEntryInteraction`. Manual:
   `tracking.enableElement('views', el, { data })` / `disableElement` / `clearElement` (manual data
-  precedes attributes). Uses RESOLVED entry id. View tracking uses a fixed 1000 ms dwell, 5000 ms
-  duration-update interval, and 10% visibility threshold; hover tracking uses a fixed 1000 ms dwell
-  and 5000 ms duration-update interval.
+  precedes attributes). Uses RESOLVED entry id. View tracking uses a fixed 10% visibility threshold
+  and 1000 ms dwell; hover tracking uses a fixed 1000 ms dwell.
   source: web-sdk#entry-tracking/EntryInteractionRuntime.ts#EntryInteractionRuntime; web-sdk#entry-tracking/resolveAutoTrackEntryInteractionOptions.ts#EntryInteractionApi; web-sdk#presentation/OptimizedEntryTrackingAttributes.ts#resolveOptimizedEntryTrackingAttributes; web-sdk#entry-tracking/events/view/element-view-observer-support.ts#DEFAULTS; web-sdk#entry-tracking/events/hover/element-hover-observer-support.ts#DEFAULTS
+- Each qualified view or hover session emits one start event at the dwell threshold and one final
+  event when the interaction ends, with the same `viewId` or `hoverId` and the final total duration.
+  Both records use the interaction's normal wire event type. The SDK owns the session ID, and the
+  duration is milliseconds measured from initial threshold entry, including the qualifying dwell.
+  Falling below the view threshold, pointer leave/cancel, or the applicable lifecycle ending closes
+  the session. The qualifying dwell is continuous: an interaction that ends before the threshold
+  emits no event. Active sessions emit no periodic duration events.
+  source: web-sdk#entry-tracking/events/view/ElementViewObserver.ts#ElementViewObserver; web-sdk#entry-tracking/events/hover/ElementHoverObserver.ts#ElementHoverObserver
+- `visibilitychange` to hidden, `pagehide`, and `beforeunload` end active qualified view and hover
+  sessions. A still-visible element starts a fresh view session when the page returns; hover requires
+  a fresh pointer entry. The SDK awaits active interaction endings before its forced lifecycle queue
+  flush uses Beacon, so final interaction events are queued first.
+  source: web-sdk#entry-tracking/events/observerSupport.ts#addVisibilityChangeListener; web-sdk#entry-tracking/events/view/ElementViewObserver.ts#ElementViewObserver; web-sdk#entry-tracking/events/hover/ElementHoverObserver.ts#ElementHoverObserver; web-sdk#entry-tracking/EntryInteractionRuntime.ts#EntryInteractionRuntime; web-sdk#ContentfulOptimization.ts#ContentfulOptimization; web-sdk#handlers/createVisibilityChangeListener.ts#createVisibilityChangeListener
 - Analytics-only handoff: `initializeOptimizationAnalyticsRuntime(config)` creates a narrow Web
   runtime with `tracking`, `trackCurrentPage`, `flush`, and `destroy`, but no content-resolution
   surface. It removes the global browser SDK reference if construction registered this analytics

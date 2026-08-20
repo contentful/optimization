@@ -183,44 +183,6 @@ describe('EntryHoverTracker', () => {
     cleanup()
   })
 
-  it('emits periodic duration updates while an observed entry remains hovered', async () => {
-    const entry = document.createElement('div')
-    entry.dataset.ctflEntryId = 'entry-periodic-hover'
-    document.body.append(entry)
-
-    const { core, trackHover } = createCore()
-    const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
-
-    tracker.start()
-
-    dispatchHoverEnter(entry)
-
-    await advance(1000)
-    await advance(5000)
-
-    expect(trackHover).toHaveBeenCalledTimes(2)
-
-    const firstPayload = trackHover.mock.calls[0]?.[0]
-    const secondPayload = trackHover.mock.calls[1]?.[0]
-
-    expect(firstPayload).toEqual(
-      expect.objectContaining({
-        componentId: 'entry-periodic-hover',
-        hoverId: expect.any(String),
-        hoverDurationMs: 1000,
-      }),
-    )
-    expect(secondPayload).toEqual(
-      expect.objectContaining({
-        componentId: 'entry-periodic-hover',
-        hoverId: firstPayload?.hoverId,
-        hoverDurationMs: 6000,
-      }),
-    )
-
-    cleanup()
-  })
-
   it('emits a final duration update when hover ends', async () => {
     const entry = document.createElement('div')
     entry.dataset.ctflEntryId = 'entry-hover-final'

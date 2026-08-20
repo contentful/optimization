@@ -211,7 +211,7 @@ describe('EntryViewTracker', () => {
     cleanup()
   })
 
-  it('emits periodic and final updates for virtual aggregate entries', async () => {
+  it('emits start and final updates for virtual aggregate entries', async () => {
     const root = document.createElement('div')
     setRect(root, rect(0, 0, 300, 100))
     document.body.append(root)
@@ -231,7 +231,7 @@ describe('EntryViewTracker', () => {
     tracker.start({ root })
 
     await advance(1000)
-    await advance(5000)
+    await advance(400)
 
     rectsByElement.set(entry, [rect(10, 140, 100, 40)])
     document.dispatchEvent(new Event('scroll'))
@@ -239,11 +239,10 @@ describe('EntryViewTracker', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(trackView).toHaveBeenCalledTimes(3)
+    expect(trackView).toHaveBeenCalledTimes(2)
 
     const firstPayload = trackView.mock.calls[0]?.[0]
-    const secondPayload = trackView.mock.calls[1]?.[0]
-    const finalPayload = trackView.mock.calls[2]?.[0]
+    const finalPayload = trackView.mock.calls[1]?.[0]
 
     expect(firstPayload).toEqual(
       expect.objectContaining({
@@ -251,18 +250,11 @@ describe('EntryViewTracker', () => {
         viewDurationMs: 1000,
       }),
     )
-    expect(secondPayload).toEqual(
-      expect.objectContaining({
-        componentId: 'entry-aggregate-duration',
-        viewId: firstPayload?.viewId,
-        viewDurationMs: 6000,
-      }),
-    )
     expect(finalPayload).toEqual(
       expect.objectContaining({
         componentId: 'entry-aggregate-duration',
         viewId: firstPayload?.viewId,
-        viewDurationMs: 6000,
+        viewDurationMs: 1400,
       }),
     )
 
@@ -459,50 +451,6 @@ describe('EntryViewTracker', () => {
     cleanup()
   })
 
-  it('emits periodic duration updates while an observed entry remains visible', async () => {
-    const entry = document.createElement('div')
-    entry.dataset.ctflEntryId = 'entry-periodic-view'
-    document.body.append(entry)
-
-    const { core, trackView } = createCore()
-    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
-
-    tracker.start()
-
-    const instance = io.getLast()
-
-    if (!instance) {
-      throw new Error('IntersectionObserver polyfill instance not found')
-    }
-
-    instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
-
-    await advance(1000)
-    await advance(5000)
-
-    expect(trackView).toHaveBeenCalledTimes(2)
-
-    const firstPayload = trackView.mock.calls[0]?.[0]
-    const secondPayload = trackView.mock.calls[1]?.[0]
-
-    expect(firstPayload).toEqual(
-      expect.objectContaining({
-        componentId: 'entry-periodic-view',
-        viewId: expect.any(String),
-        viewDurationMs: 1000,
-      }),
-    )
-    expect(secondPayload).toEqual(
-      expect.objectContaining({
-        componentId: 'entry-periodic-view',
-        viewId: firstPayload?.viewId,
-        viewDurationMs: 6000,
-      }),
-    )
-
-    cleanup()
-  })
-
   it('emits sticky only once per element across visibility cycles after success', async () => {
     const entry = document.createElement('div')
     entry.dataset.ctflEntryId = 'entry-sticky-once'
@@ -525,11 +473,11 @@ describe('EntryViewTracker', () => {
     instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
     await advance(1000)
     instance.trigger({ target: entry, isIntersecting: false, intersectionRatio: 0 })
-    await Promise.resolve()
+    await tracker.endActive()
     instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
     await advance(1000)
 
-    expect(trackView).toHaveBeenCalledTimes(2)
+    expect(trackView).toHaveBeenCalledTimes(3)
     expect(trackView.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
         componentId: 'entry-sticky-once',
@@ -537,6 +485,12 @@ describe('EntryViewTracker', () => {
       }),
     )
     expect(trackView.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-sticky-once',
+        sticky: undefined,
+      }),
+    )
+    expect(trackView.mock.calls[2]?.[0]).toEqual(
       expect.objectContaining({
         componentId: 'entry-sticky-once',
         sticky: undefined,
@@ -572,11 +526,7 @@ describe('EntryViewTracker', () => {
     instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
     await advance(1000)
     instance.trigger({ target: entry, isIntersecting: false, intersectionRatio: 0 })
-    await Promise.resolve()
-    instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
-    await advance(1000)
-    instance.trigger({ target: entry, isIntersecting: false, intersectionRatio: 0 })
-    await Promise.resolve()
+    await tracker.endActive()
     instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
     await advance(1000)
 

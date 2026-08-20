@@ -191,6 +191,7 @@ interface EntryTrackingHarness<TStartOptions = never, TElementOptions = never> {
   readonly tracker: {
     start: (options?: TStartOptions) => void
     stop: () => void
+    endActive: () => Promise<void>
     setAuto: (enabled: boolean) => void
     enableElement: (element: Element, options?: TElementOptions) => void
     disableElement: (element: Element) => void
@@ -289,6 +290,9 @@ export function createEntryTrackingHarness<TStartOptions = never, TElementOption
       mutationObserver = undefined
       trackedEntries.clear()
       detector.stop()
+    },
+    endActive: async (): Promise<void> => {
+      await detector.endActive?.()
     },
     setAuto: (enabled: boolean): void => {
       detector.setAuto?.(enabled)

@@ -60,7 +60,6 @@ export interface UseViewportTrackingReturn {
 const PERCENTAGE_MULTIPLIER = 100
 const DEFAULT_MIN_VISIBLE_RATIO = 0.1
 const DEFAULT_DWELL_TIME_MS = 1000
-const DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS = 5000
 const HEX_RADIX = 16
 const createViewId = (): string => {
   try {
@@ -78,7 +77,7 @@ interface ViewCycleState {
   viewId: string | null
   visibleSince: number | null
   accumulatedMs: number
-  attempts: number
+  hasAttemptedStart: boolean
 }
 
 interface StickyState {
@@ -91,7 +90,7 @@ const createInitialCycleState = (): ViewCycleState => ({
   viewId: null,
   visibleSince: null,
   accumulatedMs: 0,
-  attempts: 0,
+  hasAttemptedStart: false,
 })
 
 /**
@@ -120,7 +119,7 @@ function resetCycleState(cycle: ViewCycleState): void {
   cycle.viewId = null
   cycle.visibleSince = null
   cycle.accumulatedMs = 0
-  cycle.attempts = 0
+  cycle.hasAttemptedStart = false
 }
 
 /**
@@ -168,29 +167,12 @@ export function extractTrackingMetadata(
 }
 
 /**
- * Compute remaining ms until the next event fires, based on accumulated
- * visible time and the number of events already emitted.
- *
- * Formula mirrors Web SDK `ElementViewObserver.getRemainingMsUntilNextFire`:
- *   requiredMs = fixedDwellMs + attempts * fixedUpdateIntervalMs
- *   remaining  = requiredMs - accumulatedMs
- */
-function getRemainingMsUntilNextFire(cycle: ViewCycleState): number {
-  return (
-    DEFAULT_DWELL_TIME_MS +
-    cycle.attempts * DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS -
-    cycle.accumulatedMs
-  )
-}
-
-/**
  * Tracks whether an entry is visible in the viewport and fires entry view
- * events with accumulated duration tracking.
+ * events at the start and end of a qualified visibility cycle.
  *
- * The hook implements a three-phase event lifecycle per visibility cycle:
+ * The hook implements a two-phase event lifecycle per visibility cycle:
  * 1. **Initial event** after 1000 ms of accumulated visible time.
- * 2. **Periodic updates** every 5000 ms while visible.
- * 3. **Final event** when visibility ends (only if at least one event was already emitted).
+ * 2. **Final event** when visibility ends (only if the initial event was attempted).
  *
  * @param options - {@link UseViewportTrackingOptions} including the entry and selected optimization data.
  * @returns An object with `isVisible` state and an `onLayout` callback for the tracked View.
@@ -296,8 +278,8 @@ export function useViewportTracking({
     }
   }, [])
 
-  const emitViewEvent = useCallback(() => {
-    if (!viewTrackingAllowedRef.current) return
+  const emitViewEvent = useCallback((): boolean => {
+    if (!viewTrackingAllowedRef.current) return false
 
     const { current: cycle } = cycleRef
     const now = Date.now()
@@ -312,10 +294,8 @@ export function useViewportTracking({
         optimizationContextIdRef.current,
       )
 
-    cycle.attempts += 1
-
     logger.info(
-      `Emitting view event #${cycle.attempts} for ${componentId} (viewDurationMs=${durationMs}, viewId=${viewId})`,
+      `Emitting ${cycle.hasAttemptedStart ? 'final' : 'start'} view event for ${componentId} (viewDurationMs=${durationMs}, viewId=${viewId})`,
     )
 
     const { current: stickyState } = stickyStateRef
@@ -355,37 +335,35 @@ export function useViewportTracking({
         }
       }
     })()
+    return true
   }, [])
 
-  const scheduleNextFire = useCallback(() => {
+  const scheduleInitialFire = useCallback(() => {
     clearFireTimer()
     const { current: cycle } = cycleRef
 
-    if (cycle.viewId === null || cycle.visibleSince === null) {
+    if (cycle.viewId === null || cycle.visibleSince === null || cycle.hasAttemptedStart) {
       return
     }
 
     const now = Date.now()
     flushAccumulatedTime(cycle, now)
 
-    const remainingMs = getRemainingMsUntilNextFire(cycle)
+    const remainingMs = DEFAULT_DWELL_TIME_MS - cycle.accumulatedMs
 
     if (remainingMs <= 0) {
-      emitViewEvent()
-      scheduleNextFire()
+      cycle.hasAttemptedStart = emitViewEvent()
       return
     }
 
-    logger.debug(
-      `Scheduling next fire for ${entryId} in ${remainingMs}ms (attempt #${cycle.attempts + 1})`,
-    )
+    logger.debug(`Scheduling initial fire for ${entryId} in ${remainingMs}ms`)
 
     fireTimerRef.current = setTimeout(() => {
-      if (!isVisibleRef.current) {
+      fireTimerRef.current = null
+      if (!isVisibleRef.current || cycleRef.current.hasAttemptedStart) {
         return
       }
-      emitViewEvent()
-      scheduleNextFire()
+      cycleRef.current.hasAttemptedStart = emitViewEvent()
     }, remainingMs)
   }, [clearFireTimer, emitViewEvent])
 
@@ -401,8 +379,8 @@ export function useViewportTracking({
 
     logger.info(`Visibility cycle started for ${entryId} (id=${cycle.viewId})`)
 
-    scheduleNextFire()
-  }, [enabled, scheduleNextFire])
+    scheduleInitialFire()
+  }, [enabled, scheduleInitialFire])
 
   const onVisibilityEnd = useCallback(() => {
     const { current: cycle } = cycleRef
@@ -411,8 +389,8 @@ export function useViewportTracking({
     clearFireTimer()
     pauseAccumulation(cycle, now)
 
-    if (cycle.viewId !== null && cycle.attempts > 0) {
-      logger.info(`Visibility ended for ${entryId} after ${cycle.attempts} events, emitting final`)
+    if (cycle.viewId !== null && cycle.hasAttemptedStart) {
+      logger.info(`Visibility ended for ${entryId} after the start event, emitting final`)
       emitViewEvent()
     } else {
       logger.debug(`Visibility ended for ${entryId} before dwell requirement, no final event`)
@@ -533,12 +511,13 @@ export function useViewportTracking({
           clearFireTimer()
           pauseAccumulation(cycle, now)
 
-          if (cycle.attempts > 0) {
+          if (cycle.hasAttemptedStart) {
             logger.info(`App backgrounded, emitting final event for ${entryId}`)
             emitViewEvent()
-            resetCycleState(cycle)
-            isVisibleRef.current = false
           }
+
+          resetCycleState(cycle)
+          isVisibleRef.current = false
         }
       } else if (nextState === 'active') {
         if (dimensionsRef.current !== null) {
@@ -559,7 +538,7 @@ export function useViewportTracking({
         clearTimeout(fireTimerRef.current)
       }
       const { current: cycle } = cycleRef
-      if (cycle.viewId !== null && cycle.attempts > 0) {
+      if (cycle.viewId !== null && cycle.hasAttemptedStart) {
         pauseAccumulation(cycle, Date.now())
         emitViewEvent()
       }

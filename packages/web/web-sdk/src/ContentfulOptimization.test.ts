@@ -12,6 +12,7 @@ import ContentfulOptimization from './ContentfulOptimization'
 import { OPTIMIZATION_WEB_SDK_NAME } from './constants'
 import { EntryInteractionRuntime } from './entry-tracking/EntryInteractionRuntime'
 import { getCookie, removeCookie, setCookie } from './lib/cookies'
+import { deferred } from './test/helpers'
 
 const CLIENT_ID = 'key_123'
 const ENVIRONMENT = 'main'
@@ -660,8 +661,9 @@ describe('ContentfulOptimization', () => {
 
     await web.trackClick({ componentId: 'hero-banner' })
     window.dispatchEvent(new Event('pagehide'))
-    await Promise.resolve()
-    await Promise.resolve()
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0)
+    })
 
     const beacon = sendBatchEvents.mock.calls[0]?.[1]?.beacon
     expect(typeof beacon).toBe('function')
@@ -669,7 +671,7 @@ describe('ContentfulOptimization', () => {
     expect(sendBeacon).toHaveBeenCalledWith('/collect', '[]')
   })
 
-  it('flushes active entry interactions before the lifecycle Insights flush', async () => {
+  it('awaits active entry interaction endings before the lifecycle Insights flush', async () => {
     const web = new ContentfulOptimization({
       ...config,
       defaults: { consent: true, profile: DEFAULT_PROFILE },
@@ -681,10 +683,13 @@ describe('ContentfulOptimization', () => {
     }
 
     const invocations: string[] = []
-    const flushActiveInteractions = rs
-      .spyOn(runtime, 'flushActiveInteractions')
-      .mockImplementation(() => {
-        invocations.push('flushActiveInteractions')
+    const ending = deferred()
+    const endActiveInteractions = rs
+      .spyOn(runtime, 'endActiveInteractions')
+      .mockImplementation(async () => {
+        invocations.push('endActiveInteractions:start')
+        await ending.promise
+        invocations.push('endActiveInteractions:end')
       })
     const sendBatchEvents = rs
       .spyOn(web.api.insights, 'sendBatchEvents')
@@ -699,9 +704,20 @@ describe('ContentfulOptimization', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(flushActiveInteractions).toHaveBeenCalledTimes(1)
+    expect(endActiveInteractions).toHaveBeenCalledTimes(1)
+    expect(sendBatchEvents).not.toHaveBeenCalled()
+
+    ending.resolve(undefined)
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0)
+    })
+
     expect(sendBatchEvents).toHaveBeenCalledTimes(1)
-    expect(invocations).toEqual(['flushActiveInteractions', 'sendBatchEvents'])
+    expect(invocations).toEqual([
+      'endActiveInteractions:start',
+      'endActiveInteractions:end',
+      'sendBatchEvents',
+    ])
   })
 
   it('allows creating a new instance after destroy', () => {

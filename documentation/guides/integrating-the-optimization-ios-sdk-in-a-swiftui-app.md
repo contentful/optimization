@@ -706,9 +706,18 @@ them.
 View tracking is viewport-based. Wrap scrollable content in `OptimizationScrollView` so view timing
 uses the real scroll position; without an enclosing scroll view, tracking assumes `scrollY` is `0` and
 uses the screen height as the viewport, which suits only non-scrolling or already-visible layouts. The
-view threshold is fixed at 10% visibility for a cumulative 1000 ms — visible time accumulates, so the
-threshold does not require one unbroken visible window. After the first view event, duration updates
-emit every 5000 ms while the entry stays visible.
+view threshold is fixed at 10%. A view session begins when the entry reaches that threshold and
+qualifies after a continuous 1000 ms dwell. A qualified view session produces two normal event records
+whose `type` field is `component`: the first when it qualifies and the second, final record when
+visibility falls below 10% or another ending occurs. Both records carry the same SDK-owned `viewId`. The
+`viewDurationMs` value is milliseconds measured from the moment that view session began at 10%
+visibility, so it includes the qualifying dwell. A view session that ends before qualification emits
+no record, and active view sessions emit no periodic duration records.
+
+When the entry disappears or the app enters the background, the SDK ends and resets the current view
+session. When the app becomes active again, it checks the last measured entry and viewport positions.
+If the entry is still visible, it starts a fresh view session that must satisfy the continuous 1000 ms
+dwell again.
 
 A tap observer on the `OptimizedEntry` wrapper emits the `component_click` event, then calls the
 optional `onTap` closure. That closure receives the **baseline** entry you passed in, not the resolved
@@ -722,8 +731,8 @@ fields from it. Because `onTap` runs through that same tap observer, `trackTaps:
    default, not a lock: an entry that passes `trackTaps: true`, or a non-nil `onTap`, still emits
    `component_click`.
 3. Wrap scrollable entry lists in `OptimizationScrollView` for accurate viewport timing.
-4. Account for the fixed 10% visibility, 1000 ms dwell, and 5000 ms update interval in analytics
-   expectations.
+4. Account for the fixed 10% visibility threshold, continuous 1000 ms dwell, and two-record view
+   session in analytics expectations.
 5. Use a `Button` or app gesture inside the render closure for navigation, and `onTap` only when the
    SDK tap event should also drive it.
 

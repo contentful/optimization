@@ -11,7 +11,6 @@ export { NOW, clearFireTimer, derefElement, isPageVisible, type Interval, type T
 
 export const DEFAULTS = {
   DWELL_MS: 1000,
-  HOVER_DURATION_UPDATE_INTERVAL_MS: 5000,
   SWEEP_INTERVAL_MS: 30000,
 } as const
 
@@ -41,9 +40,8 @@ export interface ElementState {
   attempts: number
   hoverId: string | null
   done: boolean
-  inFlight: boolean
   isHovered: boolean
-  pendingFinal: boolean
+  callbackChain: Promise<void> | null
   enterHandler: (event: Event) => void
   leaveHandler: (event: Event) => void
 }
