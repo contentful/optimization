@@ -160,19 +160,17 @@ the underlying state is still current and the event has not already been accepte
 Automatic tracking starts from DOM metadata. The Web SDK looks for HTML or SVG elements with a
 non-empty `data-ctfl-entry-id` attribute.
 
-| Attribute                                     | Used for                                                                                             |
-| --------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `data-ctfl-entry-id`                          | Required. Becomes `componentId` in entry interaction events.                                         |
-| `data-ctfl-optimization-id`                   | Optional. Becomes `experienceId`.                                                                    |
-| `data-ctfl-optimization-context-id`           | Optional. Runtime-owned context for follow-up event enrichment and diagnostics.                      |
-| `data-ctfl-sticky`                            | Optional. `true` sends the first successful view for the element through the sticky Experience path. |
-| `data-ctfl-variant-index`                     | Optional. Non-negative integer used as `variantIndex`; invalid or unsafe values are ignored.         |
-| `data-ctfl-track-views`                       | Optional. `true` or `false` override for view observation when the view detector is running.         |
-| `data-ctfl-track-clicks`                      | Optional. `true` or `false` override for click observation when the click detector is running.       |
-| `data-ctfl-track-hovers`                      | Optional. `true` or `false` override for hover observation when the hover detector is running.       |
-| `data-ctfl-view-duration-update-interval-ms`  | Optional. Per-element interval for periodic view-duration updates.                                   |
-| `data-ctfl-hover-duration-update-interval-ms` | Optional. Per-element interval for periodic hover-duration updates.                                  |
-| `data-ctfl-clickable`                         | Optional. `true` marks a non-semantic element as part of a clickable path for click tracking.        |
+| Attribute                           | Used for                                                                                             |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `data-ctfl-entry-id`                | Required. Becomes `componentId` in entry interaction events.                                         |
+| `data-ctfl-optimization-id`         | Optional. Becomes `experienceId`.                                                                    |
+| `data-ctfl-optimization-context-id` | Optional. Runtime-owned context for follow-up event enrichment and diagnostics.                      |
+| `data-ctfl-sticky`                  | Optional. `true` sends the first successful view for the element through the sticky Experience path. |
+| `data-ctfl-variant-index`           | Optional. Non-negative integer used as `variantIndex`; invalid or unsafe values are ignored.         |
+| `data-ctfl-track-views`             | Optional. `true` or `false` override for view observation when the view detector is running.         |
+| `data-ctfl-track-clicks`            | Optional. `true` or `false` override for click observation when the click detector is running.       |
+| `data-ctfl-track-hovers`            | Optional. `true` or `false` override for hover observation when the hover detector is running.       |
+| `data-ctfl-clickable`               | Optional. `true` marks a non-semantic element as part of a clickable path for click tracking.        |
 
 The tracking payload uses the resolved entry ID, not the baseline entry ID. When an application
 needs the baseline ID for rerendering, store it separately, for example in `data-ctfl-baseline-id`.
@@ -251,47 +249,53 @@ The registry observes element existence and `data-ctfl-entry-id` mutations, not 
 changes. Payload attributes such as `data-ctfl-optimization-id`,
 `data-ctfl-optimization-context-id`, and `data-ctfl-variant-index` are read when an event fires, so
 updated values can affect later payloads. Per-element tracking overrides such as
-`data-ctfl-track-views` and interval attributes are resolved when the element is added to the
-detector. If an existing mounted element needs dynamic non-entry-ID override changes, use the
+`data-ctfl-track-views` are resolved when the element is added to the detector. If an existing
+mounted element needs dynamic non-entry-ID override changes, use the
 `tracking.*Element(...)` API or remount the tracked element.
 
 ## View tracking mechanics
 
-View tracking uses `IntersectionObserver` and dwell-time timers.
+View tracking uses `IntersectionObserver` and a qualification dwell timer.
 
-Default view settings:
+View timing uses these fixed values:
 
-| Setting                             | Default  |
-| ----------------------------------- | -------- |
-| Required visible dwell time         | 1000 ms  |
-| Periodic duration update interval   | 5000 ms  |
-| Minimum visible ratio               | 0.1      |
-| `IntersectionObserver` root         | `null`   |
-| `IntersectionObserver` root margin  | `0px`    |
-| Disconnected-element sweep interval | 30000 ms |
+| Behavior                    | Value   |
+| --------------------------- | ------- |
+| Required visible dwell time | 1000 ms |
+| Minimum visible ratio       | 10%     |
 
-A view cycle works like this:
+The `IntersectionObserver` root defaults to the viewport, its root margin defaults to `0px`, and
+the observer sweeps disconnected elements every 30000 ms. Applications can choose the root and root
+margin, but cannot override the timing or visibility values.
 
-1. The element crosses the configured visibility threshold.
-2. The observer starts a fresh cycle, assigns a `viewId`, resets accumulated duration, and starts
+A view session works like this:
+
+1. The element crosses the fixed 10% visibility threshold.
+2. The observer starts a fresh session, assigns a `viewId`, resets accumulated duration, and starts
    the dwell timer.
-3. After the dwell time passes, the observer calls `trackView()` with `viewId` and `viewDurationMs`.
-4. While the element remains visible, the observer sends periodic duration updates using the same
-   `viewId`.
-5. When the element leaves view after at least one view event fired, the observer sends a final
-   duration update.
-6. If the element leaves view before dwell time completes, the cycle resets without sending an
+3. After the dwell time passes, the observer calls `trackView()` once to mark the session start,
+   with `viewId` and the accumulated `viewDurationMs`.
+4. While the element remains visible, the observer continues measuring duration without scheduling
+   periodic interaction timers or emissions.
+5. When the element leaves view after the session started, the observer calls `trackView()` once
+   more to mark the session end, using the same `viewId` and the final `viewDurationMs`.
+6. If the element leaves view before dwell time completes, the session resets without sending an
    event.
 
-The observer pauses dwell accumulation when the page is hidden and resumes when the page becomes
-visible again. It coalesces in-flight callbacks so a slow or failing event send does not create
-duplicate concurrent sends for the same element. If visibility ends while an event send is in
-flight, the final duration update is sent after that in-flight attempt settles.
+The observer ends and resets an active view session when the page becomes hidden or receives a
+`pagehide` or `beforeunload` event. A qualified session gets its end interaction; a sub-dwell
+session emits nothing. If the page becomes visible again and the element still meets the visibility
+threshold, the observer starts a fresh session with a new `viewId` and dwell period instead of
+resuming the ended session.
+
+The observer coalesces in-flight callbacks so a slow or failing event send does not create duplicate
+concurrent sends for the same element. If visibility or page lifecycle ends while the start event is
+in flight, the end event is queued after that in-flight attempt settles.
 
 Sticky view handling is per DOM element. If the payload has `sticky: true`, the first view attempt
 for that element sends `sticky: true` to Core. After Core accepts that sticky view, later view
 events for the same element omit `sticky`. If the sticky attempt is blocked, the detector retries
-sticky on the next visibility cycle for that element. Separately rendered elements with the same
+sticky on the next visibility session for that element. Separately rendered elements with the same
 entry ID are treated as separate sticky targets.
 
 ### `display: contents` wrappers
@@ -344,28 +348,28 @@ Hover tracking uses element-level listeners. When `PointerEvent` is available, t
 for `pointerenter`, `pointerleave`, and `pointercancel`, and ignores touch pointer events. When
 pointer events are unavailable, it falls back to `mouseenter` and `mouseleave`.
 
-Default hover settings:
+Hover tracking uses a fixed 1000 ms dwell time.
 
-| Setting                             | Default  |
-| ----------------------------------- | -------- |
-| Required hover dwell time           | 1000 ms  |
-| Periodic duration update interval   | 5000 ms  |
-| Disconnected-element sweep interval | 30000 ms |
+The observer sweeps disconnected elements every 30000 ms. Applications cannot override the hover
+timing values.
 
-A hover cycle mirrors the view cycle:
+A hover session mirrors the view session:
 
 1. The pointer enters a tracked element.
-2. The observer starts a fresh cycle, assigns a `hoverId`, resets accumulated duration, and starts
+2. The observer starts a fresh session, assigns a `hoverId`, resets accumulated duration, and starts
    the dwell timer.
-3. After dwell time passes, the observer calls `trackHover()` with `hoverId` and `hoverDurationMs`.
-4. While the pointer remains hovered, the observer sends periodic duration updates using the same
-   `hoverId`.
-5. When the pointer leaves after at least one hover event fired, the observer sends a final duration
-   update.
-6. If hover ends before dwell time completes, the cycle resets without sending an event.
+3. After dwell time passes, the observer calls `trackHover()` once to mark the session start, with
+   `hoverId` and the accumulated `hoverDurationMs`.
+4. While the pointer remains hovered, the observer continues measuring duration without scheduling
+   periodic interaction timers or emissions.
+5. When the pointer leaves after the session started, the observer calls `trackHover()` once more to
+   mark the session end, using the same `hoverId` and the final `hoverDurationMs`.
+6. If hover ends before dwell time completes, the session resets without sending an event.
 
-Like view tracking, hover tracking pauses while the page is hidden, coalesces in-flight callbacks,
-and sweeps disconnected element state.
+Like view tracking, hover tracking ends and resets its active session when the page becomes hidden
+or receives `pagehide` or `beforeunload`. Restoring the visible page does not resume the ended hover
+or infer that the pointer is still present. A new hover session needs a fresh pointer or mouse entry.
+The observer also coalesces in-flight callbacks and sweeps disconnected element state.
 
 ## React Web mechanics
 
@@ -445,10 +449,13 @@ signal becomes `true`.
 The Web SDK wires browser lifecycle events into this queue model:
 
 - `online` and `offline` update Core's online signal. Going online forces a flush.
-- `visibilitychange`, `pagehide`, and `beforeunload` force an Insights flush with
-  `navigator.sendBeacon()` once per hide cycle.
+- A hidden `visibilitychange`, `pagehide`, or `beforeunload` ends active qualified view and hover
+  sessions first so their end interactions can enter the Insights queue. The SDK then makes a
+  best-effort `navigator.sendBeacon()` flush once per hide cycle. Browser shutdown can still end
+  before delivery completes.
 - Normal periodic, threshold, online, and explicit flushes use fetch so retry and failure policy can
-  observe the response.
+  observe the response. This periodic queue delivery is separate from interaction session timing;
+  active view and hover sessions do not emit periodic duration updates.
 
 Browser storage writes are best-effort. If a `localStorage` write fails, live SDK state continues in
 memory for the current runtime while durable continuity is limited. At startup, the SDK reads
@@ -471,7 +478,7 @@ When an expected interaction does not appear, check the gates in this order:
    opted the relevant interaction out.
 4. **Element metadata** - Confirm the tracked element is an HTML or SVG element with non-empty
    `data-ctfl-entry-id`, or that `enableElement(...)` supplies valid `data.entryId`.
-5. **View threshold** - Confirm the element stays above `minVisibleRatio` for `dwellTimeMs`.
+5. **View threshold** - Confirm the element remains at least 10% visible for 1000 ms.
 6. **Clickability** - Confirm clicks happen on a semantic clickable path or an element marked with
    `data-ctfl-clickable="true"`.
 7. **Hover source** - Confirm the event is not a touch pointer event and that the pointer remains

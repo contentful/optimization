@@ -123,33 +123,29 @@ async function waitForTrackedItemEventCount(
   timeout = ELEMENT_VISIBILITY_TIMEOUT,
 ) {
   const testId = `event-count-${componentId}`
+  const deadline = Date.now() + timeout
+  let lastText = ''
 
-  // Ensure the stats section is scrolled into view
-  try {
-    await element(by.id('main-scroll-view')).scrollTo('top')
-  } catch {
-    // Scroll may not be possible if view is not scrollable
-  }
-
-  try {
-    await waitFor(element(by.id(testId)))
-      .toBeVisible()
-      .whileElement(by.id('main-scroll-view'))
-      .scroll(300, 'down')
-  } catch {
-    // May already be visible
-  }
-
-  await waitForElementTextById(
-    testId,
-    (text) => {
+  // These stats are fully mounted inside the app's ScrollView, so Detox can
+  // read their attributes while they are off-screen. Do not scroll them into
+  // view here: scrolling changes the visibility cycle under observation.
+  while (Date.now() < deadline) {
+    try {
+      const text = await getElementTextById(testId)
+      lastText = text
       const match = /Count:\s*(\d+)/.exec(text)
-      if (!match || !match[1]) {
-        return false
+      if (match?.[1] && Number(match[1]) >= minCount) {
+        return
       }
-      return Number(match[1]) >= minCount
-    },
-    timeout,
+    } catch {
+      // The stats element is added only after the first matching event.
+    }
+
+    await sleep(150)
+  }
+
+  throw new Error(
+    `Timed out waiting for ${minCount} tracked events for "${componentId}". Last text: "${lastText}"`,
   )
 }
 

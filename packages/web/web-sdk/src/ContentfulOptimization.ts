@@ -357,7 +357,7 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
     })
 
     this.cleanupVisibilityListener = createVisibilityChangeListener(async () => {
-      this.entryInteractionRuntime.flushActiveInteractions()
+      await this.entryInteractionRuntime.endActiveInteractions()
       await this.flushQueues({ force: true, beacon: beaconHandler })
     })
 

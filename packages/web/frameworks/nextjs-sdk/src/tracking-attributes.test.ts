@@ -56,25 +56,21 @@ describe('getServerTrackingAttributes', () => {
     expect(
       getServerTrackingAttributes(baselineEntry, resolvedData, {
         clickable: true,
-        hoverDurationUpdateIntervalMs: 1000,
         trackClicks: true,
         trackHovers: false,
         trackViews: true,
-        viewDurationUpdateIntervalMs: 2500,
       }),
     ).toEqual({
       'data-ctfl-baseline-id': '4ib0hsHWoSOnCVdDkizE8d',
       'data-ctfl-clickable': true,
       'data-ctfl-duplication-scope': 'profile',
       'data-ctfl-entry-id': '4k6ZyFQnR2POY5IJLLlJRb',
-      'data-ctfl-hover-duration-update-interval-ms': 1000,
       'data-ctfl-optimization-id': '6IueRX1pS3iMJncbhUQTba',
       'data-ctfl-sticky': true,
       'data-ctfl-track-clicks': true,
       'data-ctfl-track-hovers': false,
       'data-ctfl-track-views': true,
       'data-ctfl-variant-index': 2,
-      'data-ctfl-view-duration-update-interval-ms': 2500,
     })
   })
 })

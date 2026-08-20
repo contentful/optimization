@@ -26,22 +26,18 @@ appId: ${APP_ID}
 # view event from the flag's unrelated component event — both count equally, and the flag's
 # fires on its own schedule with no dwell/visibility gate. Gating the first scroll on an
 # events-count threshold is therefore a race: on a slower renderer (Views) the flag event can
-# satisfy the threshold before this entry's 2s dwell finishes, so scrolling starts too early,
-# drops the entry below the 80% minVisibleRatio, and resets its dwell timer (see MainActivity's
-# `component-stats-1MwiFl4z…` comment) — confirmed locally via a genuine repro (fresh
-# `assembleDebug` install, not a stale cached APK): every *other* entry's `component-stats-*`
-# block existed in the failing hierarchy dump except this one's. So wait out the dwell threshold
-# directly instead of inferring it from event counts. Maestro has no plain fixed-delay command;
+# satisfy the threshold before this entry's 1s dwell finishes, so scrolling starts too early,
+# moves the entry below the fixed 10% visibility threshold, and resets its dwell timer. Wait out
+# the dwell threshold directly instead of inferring it from event counts. Maestro has no plain
+# fixed-delay command;
 # `extendedWaitUntil` against a selector that never matches, with `optional: true`, is the
 # documented way to get one.
 #
 # ViewTrackingController's dwell timer only starts once `attachController` runs, which itself
 # waits on an async `client.resolveOptimizedEntry` round-trip through the JS bridge — so the
-# 2000ms dwell doesn't start counting at launch, it starts once that resolution completes. A
-# 3000ms floor was enough on a local hardware-accelerated emulator but not enough in CI's
-# shared, software-rendered (`swiftshader_indirect`) runner, where that bridge round-trip itself
-# takes longer. Budget generously above dwellTimeMs (2000ms) for that variance instead of tuning
-# to the fastest environment observed.
+# 1000ms dwell doesn't start counting at launch, it starts once that resolution completes. Keep
+# the existing 6000ms budget above the fixed dwell for bridge and renderer variance instead of
+# tuning to the fastest environment observed.
 - extendedWaitUntil:
     visible:
       id: 'never-matches-used-as-fixed-delay'
@@ -49,11 +45,9 @@ appId: ${APP_ID}
     optional: true
 # The component-stats block only renders once the SDK has emitted a view event for this
 # entry, so its presence is the observable signal that personalization resolution and
-# analytics emission both happened for the same entry. The Views binder fully rebuilds the
-# stats list (`removeAllViews` + re-add) on every event, including the periodic 5s duration
-# updates the entry keeps emitting while visible, so the element can be torn down and
-# recreated mid-scroll. `waitToSettleTimeoutMs` lets Maestro re-check after such a rebuild
-# instead of failing on a transient gap.
+# analytics emission both happened for the same entry. `waitToSettleTimeoutMs` lets Maestro
+# re-check after the stats block's initial render and the scroll settle instead of failing on a
+# transient gap.
 - scrollUntilVisible:
     element:
       id: 'component-stats-1MwiFl4z7gkwqGYdvCmr8c'

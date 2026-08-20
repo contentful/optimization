@@ -16,16 +16,12 @@ export type OptimizedEntryHostAttributeValue = string | boolean | number | undef
 export interface OptimizedEntryTrackingAttributeOptions {
   /** Whether the host element should be treated as a click target. */
   readonly clickable?: boolean
-  /** Hover duration update interval in milliseconds. */
-  readonly hoverDurationUpdateIntervalMs?: number
   /** Per-entry click tracking override. */
   readonly trackClicks?: boolean
   /** Per-entry hover tracking override. */
   readonly trackHovers?: boolean
   /** Per-entry view tracking override. */
   readonly trackViews?: boolean
-  /** View duration update interval in milliseconds. */
-  readonly viewDurationUpdateIntervalMs?: number
 }
 
 /**
@@ -75,14 +71,7 @@ export function resolveOptimizedEntryTrackingAttributes<
       sys: { id: entryId },
     },
   } = resolvedData
-  const {
-    clickable,
-    hoverDurationUpdateIntervalMs,
-    trackClicks,
-    trackHovers,
-    trackViews,
-    viewDurationUpdateIntervalMs,
-  } = options
+  const { clickable, trackClicks, trackHovers, trackViews } = options
 
   return {
     'data-ctfl-baseline-id': baselineEntry.sys.id,
@@ -90,7 +79,6 @@ export function resolveOptimizedEntryTrackingAttributes<
     'data-ctfl-duplication-scope': resolveDuplicationScope(selectedOptimization),
     'data-ctfl-empty-variant': resolvedData.isEmptyVariant === true ? true : undefined,
     'data-ctfl-entry-id': entryId,
-    'data-ctfl-hover-duration-update-interval-ms': hoverDurationUpdateIntervalMs,
     'data-ctfl-optimization-id': selectedOptimization?.experienceId,
     'data-ctfl-optimization-context-id': resolvedData.optimizationContextId,
     'data-ctfl-sticky': selectedOptimization?.sticky,
@@ -98,6 +86,5 @@ export function resolveOptimizedEntryTrackingAttributes<
     'data-ctfl-track-hovers': trackHovers,
     'data-ctfl-track-views': trackViews,
     'data-ctfl-variant-index': selectedOptimization?.variantIndex ?? 0,
-    'data-ctfl-view-duration-update-interval-ms': viewDurationUpdateIntervalMs,
   }
 }

@@ -678,16 +678,25 @@ uses the real scroll position; without an enclosing scroll context, tracking ass
 and uses the system display height as the viewport, which suits only non-scrolling or already-visible
 layouts.
 
-Default viewport-tracking parameters:
+Fixed viewport-tracking behavior:
 
-| Parameter                      | Default | Meaning                                                                                     |
-| ------------------------------ | ------- | ------------------------------------------------------------------------------------------- |
-| `minVisibleRatio`              | `0.8`   | Fraction of the entry that must be visible to count as viewed.                              |
-| `dwellTimeMs`                  | `2000`  | How long that visibility must hold before the first view event fires.                       |
-| `viewDurationUpdateIntervalMs` | `5000`  | How often a duration update emits while the entry stays visible after the first view event. |
+| Behavior                | Value   | Meaning                                                          |
+| ----------------------- | ------- | ---------------------------------------------------------------- |
+| Minimum visible portion | 10%     | Fraction of the entry that begins a view session.                |
+| Continuous dwell        | 1000 ms | Time at or above 10% required before the view session qualifies. |
 
-A final duration update emits when the entry leaves the viewport, once at least one view event has
-fired.
+A qualified view session produces two normal event records whose `type` field is `component`: the
+first when it qualifies and the second, final record when visibility falls below 10% or another
+ending occurs.
+Both records carry the same SDK-owned `viewId`. The `viewDurationMs` value is milliseconds measured
+from the moment that view session began at 10% visibility, so it includes the qualifying dwell. A view
+session that ends before qualification emits no record, and active view sessions emit no periodic
+duration records.
+
+When the entry leaves composition, tracking becomes unavailable, or the app moves to the background,
+the SDK ends and resets the current view session. When the app returns to the foreground, it checks
+the last measured entry and viewport positions. If the entry is still visible, it starts a fresh view
+session that must satisfy the continuous 1000 ms dwell again.
 
 A tap uses Compose's `clickable {}` on the `OptimizedEntry` wrapper: it emits the `component_click`
 event, then calls the optional `onTap` lambda. That lambda receives the **baseline** entry you passed
@@ -700,8 +709,7 @@ from the resolved entry the render lambda provides.
 2. Set `trackViews = false` or `trackTaps = false` on `OptimizationRoot` for a tree-wide opt-out, or on
    an individual `OptimizedEntry` for one surface.
 3. Wrap scrollable entry lists in `OptimizationLazyColumn` for accurate viewport timing.
-4. Tune `dwellTimeMs`, `minVisibleRatio`, and `viewDurationUpdateIntervalMs` per entry only when
-   analytics requirements differ from the defaults.
+4. Account for the fixed view timing in analytics expectations.
 5. Drive navigation from the resolved entry in the render lambda, and use `onTap` only for side effects
    the SDK tap event should also trigger.
 

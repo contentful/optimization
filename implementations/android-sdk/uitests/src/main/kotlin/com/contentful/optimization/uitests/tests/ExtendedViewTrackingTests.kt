@@ -55,10 +55,10 @@ class ExtendedViewTrackingTests {
     fun testPeriodicEventsForContinuouslyVisibleEntry() {
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
 
-        // Initial event after the dwell threshold (~2s).
+        // Initial event after the dwell threshold (~1s).
         TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 1, timeout = TestHelpers.EXTENDED_TIMEOUT)
 
-        // At least one periodic update (dwell 2s + update interval 5s).
+        // At least one periodic update (dwell 1s + update interval 5s).
         TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 2, timeout = TestHelpers.EXTENDED_TIMEOUT)
     }
 
@@ -70,7 +70,7 @@ class ExtendedViewTrackingTests {
 
         val duration = TestHelpers.getViewDuration(device, VISIBLE_ENTRY_ID)
         Assert.assertNotNull("Duration should not be null", duration)
-        Assert.assertTrue("Duration should be > 2000ms, got: $duration", duration!! > 2000)
+        Assert.assertTrue("Duration should be > 1000ms, got: $duration", duration!! > 1000)
     }
 
     @Test
@@ -147,8 +147,8 @@ class ExtendedViewTrackingTests {
         TestHelpers.waitForElement(device, By.res("main-scroll-view"), TestHelpers.ELEMENT_TIMEOUT)
 
         // Sweep the below-fold entry up and out with large, fast momentum-free
-        // drags so it transits the 0.8 visibility band without ever resting on
-        // screen long enough to trip the 2000ms dwell timer.
+        // drags so it transits the 0.1 visibility band without ever resting on
+        // screen long enough to trip the 1000ms dwell timer.
         repeat(5) { device.scrollByOffset(dy = 700, fast = true) }
 
         // Wait long enough that an event WOULD have fired if tracking hadn't been cancelled.
@@ -290,8 +290,8 @@ class ExtendedViewTrackingTests {
         val secondCycleDuration = TestHelpers.getViewDuration(device, VISIBLE_ENTRY_ID)
         Assert.assertNotNull("Second cycle duration should not be null", secondCycleDuration)
         Assert.assertTrue(
-            "Second cycle duration should be >= 2000ms, got: ${secondCycleDuration}ms",
-            secondCycleDuration!! >= 2000,
+            "Second cycle duration should be >= 1000ms, got: ${secondCycleDuration}ms",
+            secondCycleDuration!! >= 1000,
         )
         Assert.assertTrue(
             "New cycle duration should reset — expected < 4000ms but got ${secondCycleDuration}ms",

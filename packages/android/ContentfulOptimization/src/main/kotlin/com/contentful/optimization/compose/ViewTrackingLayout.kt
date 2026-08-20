@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.contentful.optimization.core.OptimizationClient
 import com.contentful.optimization.tracking.ViewTrackingController
 
@@ -18,9 +19,6 @@ import com.contentful.optimization.tracking.ViewTrackingController
 public fun Modifier.trackViews(
     entry: Map<String, Any>,
     selectedOptimization: Map<String, Any>?,
-    minVisibleRatio: Double,
-    dwellTimeMs: Int,
-    viewDurationUpdateIntervalMs: Int,
     enabled: Boolean,
     client: OptimizationClient,
     optimizationContextId: String? = null,
@@ -30,16 +28,15 @@ public fun Modifier.trackViews(
 
     if (!enabled) return this
 
+    val lifecycleOwner = LocalLifecycleOwner.current
     val scrollContext = LocalScrollContext.current
-    val controller = remember(entry, selectedOptimization, optimizationContextId) {
+    val controller = remember(entry, selectedOptimization, optimizationContextId, lifecycleOwner) {
         ViewTrackingController(
             client = client,
             entry = entry,
             optimizationContextId = optimizationContextId,
             selectedOptimization = selectedOptimization,
-            minVisibleRatio = minVisibleRatio,
-            dwellTimeMs = dwellTimeMs,
-            viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
+            lifecycleOwner = lifecycleOwner,
         )
     }
 

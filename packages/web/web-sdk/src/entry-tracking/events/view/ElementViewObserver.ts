@@ -2,11 +2,10 @@
  * Lean IntersectionObserver-based dwell tracker for entry views.
  *
  * Behavior:
- * - Fires callback after dwell threshold, then continues firing periodic
- *   duration updates while the same visibility cycle remains active
- * - Emits a final view-duration callback when visibility ends after first fire
- * - Pauses/resumes dwell timers across page visibility changes
- * - Coalesces concurrent callback attempts per element
+ * - Fires one start callback after the dwell threshold
+ * - Emits one final view-duration callback when a qualified view ends
+ * - Ends view sessions when the page is hidden and starts a fresh session on return
+ * - Serializes start and final callbacks per element
  * - Sweeps orphan/disconnected element state to avoid leaks
  */
 
@@ -31,11 +30,8 @@ import {
   clearFireTimer,
   createElementState,
   derefElement,
-  getRemainingMsUntilNextFire,
   initElementViewObserverOptions,
   isPageVisible,
-  pauseVisibilityCycle,
-  resetVisibilityCycle,
 } from './element-view-observer-support'
 import ElementViewSourceController from './elementViewSourceController'
 
@@ -43,8 +39,8 @@ const logger = createScopedLogger('Web:ElementViewObserver')
 const createViewId = (): string => crypto.randomUUID()
 
 /**
- * Observe elements with `IntersectionObserver` and invoke a callback once dwell
- * is satisfied, then emit periodic duration updates while visible.
+ * Observe elements with `IntersectionObserver` and invoke a start callback once
+ * dwell is satisfied, then one final callback when the qualified view ends.
  *
  * @public
  */
@@ -55,6 +51,7 @@ class ElementViewObserver {
   private readonly sourceController: ElementViewSourceController
   private readonly states = new WeakMap<Element, ElementState>()
   private readonly activeStates = new Set<ElementState>()
+  private readonly pendingCallbacks = new Set<Promise<void>>()
   private cleanupVisibilityListener?: () => void
   private sweepInterval: Interval | null = null
 
@@ -68,7 +65,7 @@ class ElementViewObserver {
       {
         root: this.opts.root ?? null,
         rootMargin: this.opts.rootMargin,
-        threshold: this.opts.minVisibleRatio === 0 ? [0] : [0, this.opts.minVisibleRatio],
+        threshold: [0, DEFAULTS.RATIO],
       },
     )
     this.sourceController = new ElementViewSourceController(this.io, this.opts, {
@@ -78,8 +75,8 @@ class ElementViewObserver {
       sweep: this.sweepOrphans.bind(this),
     })
 
-    this.cleanupVisibilityListener = addVisibilityChangeListener(() => {
-      this.onPageVisibilityChange()
+    this.cleanupVisibilityListener = addVisibilityChangeListener((isVisible) => {
+      this.onPageVisibilityChange(isVisible)
     })
   }
 
@@ -87,7 +84,7 @@ class ElementViewObserver {
     let state = this.states.get(element)
 
     if (!state) {
-      state = createElementState(element, this.opts, options)
+      state = createElementState(element, options)
       this.states.set(element, state)
       this.activeStates.add(state)
       this.ensureSweeper()
@@ -133,38 +130,32 @@ class ElementViewObserver {
     this.stopSweeper()
   }
 
-  public flushActive(): void {
+  public async endActive(): Promise<void> {
     const now = NOW()
 
     for (const state of this.activeStates) {
-      if (state.done || state.inFlight || state.viewId === null || state.attempts === 0) continue
-      if (!state.lastKnownVisible) continue
-
-      this.trigger(state, now)
+      this.endVisibilitySession(state, now)
     }
+
+    await Promise.all(this.pendingCallbacks)
   }
 
-  private onPageVisibilityChange(): void {
+  private onPageVisibilityChange(isVisible: boolean): void {
     const now = NOW()
-    const hidden = !isPageVisible()
 
     for (const state of this.activeStates) {
       if (state.done) continue
 
-      hidden ? pauseVisibilityCycle(state, now) : this.resumeVisibilityCycle(state, now)
+      if (isVisible) {
+        this.startVisibilitySession(state, now)
+      } else {
+        this.endVisibilitySession(state, now)
+      }
     }
 
-    if (!hidden) this.sourceController.requestVirtualMeasurement()
+    if (isVisible) this.sourceController.requestVirtualMeasurement()
 
     this.sweepOrphans()
-  }
-
-  private resumeVisibilityCycle(state: ElementState, now: number): void {
-    if (!state.lastKnownVisible || state.done || state.inFlight) return
-
-    state.visibleSince ??= now
-
-    this.scheduleFireIfDue(state, now)
   }
 
   private onIntersect(entries: readonly IntersectionObserverEntry[]): void {
@@ -179,7 +170,7 @@ class ElementViewObserver {
         if (state.done) continue
 
         const intersectsThreshold =
-          entry.isIntersecting && entry.intersectionRatio >= this.opts.minVisibleRatio
+          entry.isIntersecting && entry.intersectionRatio >= DEFAULTS.RATIO
 
         if (intersectsThreshold) {
           this.onIntersecting(state, now)
@@ -193,57 +184,42 @@ class ElementViewObserver {
   }
 
   private onIntersecting(state: ElementState, now: number): void {
-    if (!state.lastKnownVisible) {
-      state.lastKnownVisible = true
-      state.pendingFinal = false
-      state.accumulatedMs = 0
-      state.attempts = 0
-      state.viewId = createViewId()
-      state.visibleSince = isPageVisible() ? now : null
-      clearFireTimer(state)
+    state.lastKnownVisible = true
 
-      if (state.visibleSince !== null) {
-        this.scheduleFireIfDue(state, now)
-      }
-
-      return
-    }
-
-    if (state.visibleSince === null && isPageVisible()) {
-      state.visibleSince = now
-    }
-
-    this.scheduleFireIfDue(state, now)
+    this.startVisibilitySession(state, now)
   }
 
   private onVisibilityEnd(state: ElementState, now: number): void {
     if (!state.lastKnownVisible) return
 
-    if (state.visibleSince !== null) {
-      state.accumulatedMs += now - state.visibleSince
-      state.visibleSince = null
-    }
-
-    clearFireTimer(state)
     state.lastKnownVisible = false
-
-    if (state.viewId === null || state.attempts === 0) {
-      resetVisibilityCycle(state)
-      return
-    }
-
-    if (state.inFlight) {
-      state.pendingFinal = true
-      return
-    }
-
-    void this.attemptCallback(state, state.accumulatedMs)
+    this.endVisibilitySession(state, now)
   }
 
-  private scheduleFireIfDue(state: ElementState, now: number): void {
+  private startVisibilitySession(state: ElementState, now: number): void {
+    if (state.done || !state.lastKnownVisible || !isPageVisible() || state.viewId !== null) {
+      return
+    }
+
+    state.accumulatedMs = 0
+    state.attempts = 0
+    state.viewId = createViewId()
+    state.visibleSince = now
+    clearFireTimer(state)
+    this.scheduleQualification(state)
+  }
+
+  private static resetVisibilitySession(state: ElementState): void {
+    state.accumulatedMs = 0
+    state.visibleSince = null
+    state.attempts = 0
+    state.viewId = null
+    clearFireTimer(state)
+  }
+
+  private scheduleQualification(state: ElementState): void {
     if (
       state.done ||
-      state.inFlight ||
       state.fireTimer !== null ||
       !state.lastKnownVisible ||
       !isPageVisible() ||
@@ -252,96 +228,85 @@ class ElementViewObserver {
       return
     }
 
-    const elapsed =
-      state.accumulatedMs + (state.visibleSince !== null ? now - state.visibleSince : 0)
-    const remaining = getRemainingMsUntilNextFire(state, elapsed)
-
-    if (remaining <= 0) {
-      this.trigger(state, now)
-      return
-    }
-
     state.fireTimer = setTimeout(() => {
       if (
         state.done ||
-        state.inFlight ||
         !state.lastKnownVisible ||
         !isPageVisible() ||
-        state.visibleSince === null
+        state.visibleSince === null ||
+        state.viewId === null
       ) {
         clearFireTimer(state)
         return
       }
 
-      this.trigger(state, NOW())
-    }, Math.ceil(remaining))
+      this.qualify(state, NOW())
+    }, DEFAULTS.DWELL_MS)
   }
 
-  private trigger(state: ElementState, now: number): void {
-    if (state.done || state.inFlight || state.viewId === null) return
-
-    if (state.visibleSince !== null) {
-      state.accumulatedMs += now - state.visibleSince
-      state.visibleSince = now
-    }
+  private qualify(state: ElementState, now: number): void {
+    if (state.done || state.viewId === null || state.visibleSince === null) return
 
     clearFireTimer(state)
-
-    const { accumulatedMs: totalVisibleMs } = state
-    void this.attemptCallback(state, totalVisibleMs)
+    state.attempts = 1
+    state.accumulatedMs = Math.max(0, now - state.visibleSince)
+    void this.queueCallback(state, state.viewId, state.accumulatedMs, state.attempts)
   }
 
-  private async attemptCallback(state: ElementState, totalVisibleMs: number): Promise<void> {
-    if (state.done || state.inFlight || state.viewId === null) return
+  private endVisibilitySession(state: ElementState, now: number): void {
+    if (state.done || state.viewId === null) return
 
+    if (state.visibleSince !== null) {
+      state.accumulatedMs = Math.max(state.accumulatedMs, now - state.visibleSince)
+    }
+
+    const { viewId, accumulatedMs: totalVisibleMs } = state
+    const qualified = state.attempts > 0
+
+    ElementViewObserver.resetVisibilitySession(state)
+
+    if (qualified) {
+      void this.queueCallback(state, viewId, totalVisibleMs, 2)
+    }
+  }
+
+  private async queueCallback(
+    state: ElementState,
+    viewId: string,
+    totalVisibleMs: number,
+    attempts: number,
+  ): Promise<void> {
     const element = derefElement(state)
-
     if (!element) {
       this.finalizeDroppedState(state)
       return
     }
 
-    state.inFlight = true
-    state.attempts += 1
-    const { viewId } = state
-
-    await safeCallAsync(
-      (): void | Promise<void> =>
-        this.callback(element, {
-          totalVisibleMs,
-          viewId,
-          attempts: state.attempts,
-          data: state.data,
-        }),
-      (error) => {
-        logger.error('Error in element view callback:', error)
-      },
-    )
-
-    this.onAttemptSettled(state)
-  }
-
-  private onAttemptSettled(state: ElementState): void {
-    state.inFlight = false
-
-    if (state.done) return
-
-    if (!state.lastKnownVisible) {
-      if (state.pendingFinal && state.viewId !== null) {
-        state.pendingFinal = false
-        void this.attemptCallback(state, state.accumulatedMs)
-        return
-      }
-
-      resetVisibilityCycle(state)
-      return
+    const { data } = state
+    const invoke = async (): Promise<void> => {
+      await safeCallAsync(
+        (): void | Promise<void> =>
+          this.callback(element, {
+            totalVisibleMs,
+            viewId,
+            attempts,
+            data,
+          }),
+        (error) => {
+          logger.error('Error in element view callback:', error)
+        },
+      )
     }
+    const pending = state.callbackChain ? state.callbackChain.then(invoke) : invoke()
 
-    if (!isPageVisible()) return
+    state.callbackChain = pending
+    this.pendingCallbacks.add(pending)
+    void pending.then(() => {
+      if (state.callbackChain === pending) state.callbackChain = null
+      this.pendingCallbacks.delete(pending)
+    })
 
-    const now = NOW()
-    state.visibleSince ??= now
-    this.scheduleFireIfDue(state, now)
+    await pending
   }
 
   private finalizeDroppedState(state: ElementState): void {

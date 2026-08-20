@@ -1,3 +1,4 @@
+import { deferred } from '../test/helpers'
 import type { EntryInteractionDetector } from './EntryInteractionDetector'
 import { EntryInteractionRuntime } from './EntryInteractionRuntime'
 import * as clickDetectorModule from './events/click/createEntryClickDetector'
@@ -17,7 +18,7 @@ interface DetectorMocks<
   enableElement: ReturnType<typeof rs.fn>
   disableElement: ReturnType<typeof rs.fn>
   clearElement: ReturnType<typeof rs.fn>
-  flushActive: ReturnType<typeof rs.fn>
+  endActive: ReturnType<typeof rs.fn>
 }
 
 const createDetectorMocks = <TStartOptions, TElementOptions>(): DetectorMocks<
@@ -33,7 +34,7 @@ const createDetectorMocks = <TStartOptions, TElementOptions>(): DetectorMocks<
   enableElement: rs.fn(),
   disableElement: rs.fn(),
   clearElement: rs.fn(),
-  flushActive: rs.fn(),
+  endActive: rs.fn().mockResolvedValue(undefined),
 })
 
 function createRuntime(
@@ -42,30 +43,14 @@ function createRuntime(
 ): {
   runtime: EntryInteractionRuntime
   clickDetector: DetectorMocks<undefined, { data?: unknown }>
-  hoverDetector: DetectorMocks<
-    | {
-        dwellTimeMs?: number
-        hoverDurationUpdateIntervalMs?: number
-      }
-    | undefined,
-    {
-      data?: unknown
-      dwellTimeMs?: number
-      hoverDurationUpdateIntervalMs?: number
-    }
-  >
+  hoverDetector: DetectorMocks<undefined, { data?: unknown }>
   viewDetector: DetectorMocks<
     | {
-        dwellTimeMs?: number
-        minVisibleRatio?: number
-        viewDurationUpdateIntervalMs?: number
+        root?: Element | Document | null
+        rootMargin?: string
       }
     | undefined,
-    {
-      data?: unknown
-      dwellTimeMs?: number
-      viewDurationUpdateIntervalMs?: number
-    }
+    { data?: unknown }
   >
 } {
   const core = {
@@ -75,22 +60,14 @@ function createRuntime(
     hasConsent: rs.fn(hasConsent),
   }
   const clickDetector = createDetectorMocks<undefined, { data?: unknown }>()
-  const hoverDetector = createDetectorMocks<
-    | {
-        dwellTimeMs?: number
-        hoverDurationUpdateIntervalMs?: number
-      }
-    | undefined,
-    { data?: unknown; dwellTimeMs?: number; hoverDurationUpdateIntervalMs?: number }
-  >()
+  const hoverDetector = createDetectorMocks<undefined, { data?: unknown }>()
   const viewDetector = createDetectorMocks<
     | {
-        dwellTimeMs?: number
-        minVisibleRatio?: number
-        viewDurationUpdateIntervalMs?: number
+        root?: Element | Document | null
+        rootMargin?: string
       }
     | undefined,
-    { data?: unknown; dwellTimeMs?: number; viewDurationUpdateIntervalMs?: number }
+    { data?: unknown }
   >()
 
   rs.spyOn(clickDetectorModule, 'createEntryClickDetector').mockReturnValue(clickDetector)
@@ -135,15 +112,13 @@ describe('EntryInteractionRuntime', () => {
     document.body.innerHTML = ''
   })
 
-  it('enables interactions through tracking API and forwards start options', () => {
+  it('enables interactions through tracking API and forwards supported start options', () => {
     const { clickDetector, hoverDetector, runtime, viewDetector } = createRuntime()
+    const root = document.createElement('main')
 
     runtime.tracking.enable('clicks')
-    runtime.tracking.enable('views', { dwellTimeMs: 250, minVisibleRatio: 0.25 })
-    runtime.tracking.enable('hovers', {
-      dwellTimeMs: 100,
-      hoverDurationUpdateIntervalMs: 2000,
-    })
+    runtime.tracking.enable('views', { root, rootMargin: '10px' })
+    runtime.tracking.enable('hovers')
 
     expect(getAutoTrack(runtime).clicks).toBe(true)
     expect(getAutoTrack(runtime).hovers).toBe(true)
@@ -152,13 +127,10 @@ describe('EntryInteractionRuntime', () => {
     expect(hoverDetector.setAuto).toHaveBeenCalledWith(true)
     expect(viewDetector.setAuto).toHaveBeenCalledWith(true)
     expect(clickDetector.start).toHaveBeenCalledWith()
-    expect(hoverDetector.start).toHaveBeenCalledWith({
-      dwellTimeMs: 100,
-      hoverDurationUpdateIntervalMs: 2000,
-    })
+    expect(hoverDetector.start).toHaveBeenCalledWith()
     expect(viewDetector.start).toHaveBeenCalledWith({
-      dwellTimeMs: 250,
-      minVisibleRatio: 0.25,
+      root,
+      rootMargin: '10px',
     })
   })
 
@@ -264,14 +236,12 @@ describe('EntryInteractionRuntime', () => {
     runtime.tracking.enable('views')
     runtime.tracking.enableElement('views', element, {
       data: { entryId: 'view-entry' },
-      dwellTimeMs: 10,
     })
     runtime.tracking.disableElement('views', element)
     runtime.tracking.clearElement('views', element)
 
     expect(viewDetector.enableElement).toHaveBeenCalledWith(element, {
       data: { entryId: 'view-entry' },
-      dwellTimeMs: 10,
     })
     expect(viewDetector.disableElement).toHaveBeenCalledWith(element)
     expect(viewDetector.clearElement).toHaveBeenCalledWith(element)
@@ -360,12 +330,12 @@ describe('EntryInteractionRuntime', () => {
   it('restarts an interaction when re-enabled with new start options', () => {
     const { runtime, viewDetector } = createRuntime()
 
-    runtime.tracking.enable('views', { dwellTimeMs: 50 })
-    runtime.tracking.enable('views', { dwellTimeMs: 100 })
+    runtime.tracking.enable('views', { rootMargin: '5px' })
+    runtime.tracking.enable('views', { rootMargin: '10px' })
 
     expect(viewDetector.stop).toHaveBeenCalledTimes(1)
     expect(viewDetector.start).toHaveBeenCalledTimes(2)
-    expect(viewDetector.start).toHaveBeenNthCalledWith(2, { dwellTimeMs: 100 })
+    expect(viewDetector.start).toHaveBeenNthCalledWith(2, { rootMargin: '10px' })
   })
 
   it('reset stops all interaction trackers and clears element overrides', () => {
@@ -394,27 +364,43 @@ describe('EntryInteractionRuntime', () => {
     expect(Reflect.get(runtime, 'entryElementObserver')).toBeUndefined()
   })
 
-  it('flushActiveInteractions asks running view and hover detectors to flush', () => {
+  it('endActiveInteractions awaits all running view and hover detectors', async () => {
     const { clickDetector, hoverDetector, runtime, viewDetector } = createRuntime()
+    const viewEnding = deferred()
+    const hoverEnding = deferred()
+    viewDetector.endActive.mockReturnValue(viewEnding.promise)
+    hoverDetector.endActive.mockReturnValue(hoverEnding.promise)
 
     runtime.tracking.enable('views')
     runtime.tracking.enable('hovers')
 
-    runtime.flushActiveInteractions()
+    let settled = false
+    const result = runtime.endActiveInteractions().then(() => {
+      settled = true
+    })
 
-    expect(viewDetector.flushActive).toHaveBeenCalledTimes(1)
-    expect(hoverDetector.flushActive).toHaveBeenCalledTimes(1)
-    expect(clickDetector.flushActive).not.toHaveBeenCalled()
+    expect(viewDetector.endActive).toHaveBeenCalledTimes(1)
+    expect(hoverDetector.endActive).toHaveBeenCalledTimes(1)
+    expect(clickDetector.endActive).not.toHaveBeenCalled()
+    expect(settled).toBe(false)
+
+    viewEnding.resolve(undefined)
+    await Promise.resolve()
+    expect(settled).toBe(false)
+
+    hoverEnding.resolve(undefined)
+    await result
+    expect(settled).toBe(true)
   })
 
-  it('flushActiveInteractions skips detectors that are not running', () => {
+  it('endActiveInteractions skips detectors that are not running', async () => {
     const { hoverDetector, runtime, viewDetector } = createRuntime()
 
     runtime.tracking.enable('views')
 
-    runtime.flushActiveInteractions()
+    await runtime.endActiveInteractions()
 
-    expect(viewDetector.flushActive).toHaveBeenCalledTimes(1)
-    expect(hoverDetector.flushActive).not.toHaveBeenCalled()
+    expect(viewDetector.endActive).toHaveBeenCalledTimes(1)
+    expect(hoverDetector.endActive).not.toHaveBeenCalled()
   })
 })

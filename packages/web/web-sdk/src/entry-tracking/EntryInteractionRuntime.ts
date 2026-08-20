@@ -1,5 +1,5 @@
 import { ENTRY_ID_ATTRIBUTE, ENTRY_SELECTOR, HAS_MUTATION_OBSERVER } from '../constants'
-import { safeCall } from '../lib/safeCall'
+import { safeCall, safeCallAsync } from '../lib/safeCall'
 import type { EntryInteractionDetector } from './EntryInteractionDetector'
 import {
   createEntryClickDetector,
@@ -19,7 +19,6 @@ import {
   type EntryClickInteractionElementOptions,
   type EntryElementInteraction,
   type EntryHoverInteractionElementOptions,
-  type EntryHoverInteractionStartOptions,
   type EntryInteraction,
   type EntryInteractionApi,
   type EntryInteractionStartOptions,
@@ -59,10 +58,7 @@ interface EntryInteractionDetectorMap {
     EntryViewInteractionStartOptions | undefined,
     EntryViewInteractionElementOptions
   >
-  hovers: EntryInteractionDetector<
-    EntryHoverInteractionStartOptions | undefined,
-    EntryHoverInteractionElementOptions
-  >
+  hovers: EntryInteractionDetector<undefined, EntryHoverInteractionElementOptions>
 }
 
 const isNode = (value: unknown): value is Node =>
@@ -171,7 +167,6 @@ export class EntryInteractionRuntime {
     hovers: new Map(),
   }
   private viewStartOptions: EntryViewInteractionStartOptions | undefined
-  private hoverStartOptions: EntryHoverInteractionStartOptions | undefined
   private readonly isInteractionRunning: Record<EntryInteraction, boolean> = {
     clicks: false,
     views: false,
@@ -234,12 +229,15 @@ export class EntryInteractionRuntime {
     this.reconcileAllInteractions()
   }
 
-  public flushActiveInteractions(): void {
-    for (const interaction of ENTRY_INTERACTIONS) {
-      if (!this.isInteractionRunning[interaction]) continue
-      const { flushActive: fn, onError } = this.getDetector(interaction)
-      if (fn) safeCall(fn, onError)
-    }
+  public async endActiveInteractions(): Promise<void> {
+    await Promise.all(
+      ENTRY_INTERACTIONS.map(async (interaction) => {
+        if (!this.isInteractionRunning[interaction]) return
+
+        const { endActive, onError } = this.getDetector(interaction)
+        if (endActive) await safeCallAsync(endActive, onError)
+      }),
+    )
   }
 
   private reconcileAllInteractions(): void {
@@ -297,7 +295,7 @@ export class EntryInteractionRuntime {
     if (interaction === 'clicks') this.entryInteractionDetectors.clicks.start()
     else if (interaction === 'views')
       this.entryInteractionDetectors.views.start(this.viewStartOptions)
-    else this.entryInteractionDetectors.hovers.start(this.hoverStartOptions)
+    else this.entryInteractionDetectors.hovers.start()
 
     this.ensureEntryElementObservation()
     this.seedInitialEntryElements()
@@ -542,8 +540,6 @@ export class EntryInteractionRuntime {
 
     if (interaction === 'views') {
       this.viewStartOptions = options
-    } else if (interaction === 'hovers') {
-      this.hoverStartOptions = options
     }
 
     this.reconcileInteraction(interaction, true)

@@ -737,6 +737,27 @@ observes any element in the DOM carrying the `data-ctfl-*` tracking attributes, 
 matching events once consent permits. Automatic tracking for all three interaction types is on by
 default, so you rarely configure anything to get started.
 
+A view interaction session begins when an element reaches the fixed 10% visibility threshold. It
+qualifies after the element stays at or above that threshold for a continuous 1000 ms dwell. A hover
+interaction session begins on pointer entry and qualifies after the pointer remains for a continuous
+1000 ms dwell.
+
+A qualified view interaction session produces two normal event records whose `type` field is
+`component`: the first when it qualifies and the second, final record when it ends, normally because
+visibility falls below 10%.
+Both records carry the same SDK-owned `viewId`. The `viewDurationMs` value is milliseconds measured
+from the beginning of that view interaction session, when the element reached 10%, so it includes the
+qualifying dwell. A qualified hover interaction session follows the same two-record pattern with a
+`type` field of `component_hover`, an SDK-owned `hoverId`, and `hoverDurationMs` measured in
+milliseconds from pointer entry. Pointer leave or cancel normally ends a hover interaction session. An interaction
+session that ends before qualification emits no record, and active interaction sessions emit no
+periodic duration records.
+
+When the document becomes hidden, or the page fires `pagehide` or starts unloading, the SDK makes a
+best-effort attempt to end active qualified interaction sessions. When the page becomes visible
+again, an element that is still visible starts a fresh view interaction session and must satisfy the
+1000 ms dwell again. Hover tracking requires a fresh pointer entry.
+
 1. Render `data-ctfl-entry-id` on each tracked element using the **resolved** entry id, not the
    baseline id. The [resolve-and-render helper](#resolving-entries-and-rendering-the-result) already
    writes it, alongside `data-ctfl-optimization-id`, `data-ctfl-optimization-context-id`, and
@@ -771,7 +792,6 @@ optimization.tracking.enableElement('views', element, {
     optimizationId: selectedOptimization?.experienceId,
     variantIndex: selectedOptimization?.variantIndex,
   },
-  dwellTimeMs: 1000,
 })
 
 await optimization.track({
@@ -782,7 +802,7 @@ await optimization.track({
 
 Use `tracking.disableElement(...)` to force-disable one element, or `tracking.clearElement(...)` to
 remove a manual override so recycled DOM nodes do not keep stale entry data. For thresholds,
-attribute precedence, and delivery paths, see
+fixed interaction timing, attribute precedence, and delivery paths, see
 [Interaction tracking in Web SDKs](../concepts/interaction-tracking-in-web-sdks.md).
 
 ### Identity, profile, and reset

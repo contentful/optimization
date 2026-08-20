@@ -12,9 +12,6 @@ import { isRecord } from '../test/typeGuards'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
-const TEST_DWELL_TIME_MS = 1234
-const TEST_MIN_VISIBLE_RATIO = 0.4
-
 let selectedOptimizationsListener:
   | ((selectedOptimizations: SelectedOptimizationArray | undefined) => void)
   | undefined
@@ -158,7 +155,7 @@ describe('OptimizedEntry', () => {
     }
   })
 
-  it('passes baselineEntry and renamed view timing props to viewport tracking', async () => {
+  it('passes the resolved entry to viewport tracking without timing overrides', async () => {
     const { OptimizedEntry } = await import('./OptimizedEntry')
     const testRenderer = await loadTestRenderer<TestRenderer>()
     const baselineEntry = createEntry('baseline-entry')
@@ -166,22 +163,12 @@ describe('OptimizedEntry', () => {
 
     act(() => {
       renderer = testRenderer.create(
-        <OptimizedEntry
-          baselineEntry={baselineEntry}
-          dwellTimeMs={TEST_DWELL_TIME_MS}
-          minVisibleRatio={TEST_MIN_VISIBLE_RATIO}
-        >
-          content
-        </OptimizedEntry>,
+        <OptimizedEntry baselineEntry={baselineEntry}>content</OptimizedEntry>,
       )
     })
 
     const viewportOptions = getCallOptions(useViewportTracking)
     expect(viewportOptions.entry).toBe(baselineEntry)
-    expect(viewportOptions.dwellTimeMs).toBe(TEST_DWELL_TIME_MS)
-    expect(viewportOptions.minVisibleRatio).toBe(TEST_MIN_VISIBLE_RATIO)
-    expect(viewportOptions).not.toHaveProperty('viewTimeMs')
-    expect(viewportOptions).not.toHaveProperty('threshold')
   })
 
   it('uses React Native interaction tracking defaults', async () => {

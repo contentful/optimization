@@ -16,12 +16,6 @@ export interface EntryClickInteractionElementOptions {
  * Start options for automatic entry view tracking.
  */
 export interface EntryViewInteractionStartOptions {
-  /** Required visible time (in ms) before the callback is fired. */
-  readonly dwellTimeMs?: number
-  /** Interval (in ms) for emitting updated view-duration events while visible. */
-  readonly viewDurationUpdateIntervalMs?: number
-  /** Minimum intersection ratio (0-1) considered visible. */
-  readonly minVisibleRatio?: number
   /** IntersectionObserver root. Default: null (viewport). */
   readonly root?: Element | Document | null
   /** IntersectionObserver rootMargin. Default: `"0px"`. */
@@ -32,32 +26,14 @@ export interface EntryViewInteractionStartOptions {
  * Per-element options for view interaction tracking.
  */
 export interface EntryViewInteractionElementOptions {
-  /** Per-element dwell time override in ms. */
-  readonly dwellTimeMs?: number
-  /** Per-element override of view-duration update interval in ms. */
-  readonly viewDurationUpdateIntervalMs?: number
   /** Arbitrary data to pass through to the callback for this element. */
   readonly data?: unknown
-}
-
-/**
- * Start options for automatic entry hover tracking.
- */
-export interface EntryHoverInteractionStartOptions {
-  /** Required hover time (in ms) before the first hover event is emitted. */
-  readonly dwellTimeMs?: number
-  /** Interval (in ms) for emitting updated hover-duration events while hovered. */
-  readonly hoverDurationUpdateIntervalMs?: number
 }
 
 /**
  * Per-element options for hover interaction tracking.
  */
 export interface EntryHoverInteractionElementOptions {
-  /** Per-element dwell time override in ms. */
-  readonly dwellTimeMs?: number
-  /** Per-element override of hover-duration update interval in ms. */
-  readonly hoverDurationUpdateIntervalMs?: number
   /** Arbitrary data to pass through to the callback for this element. */
   readonly data?: unknown
 }
@@ -65,7 +41,7 @@ export interface EntryHoverInteractionElementOptions {
 export interface EntryInteractionStartOptionsMap {
   clicks: undefined
   views: EntryViewInteractionStartOptions | undefined
-  hovers: EntryHoverInteractionStartOptions | undefined
+  hovers: undefined
 }
 
 export interface EntryInteractionElementOptionsMap {

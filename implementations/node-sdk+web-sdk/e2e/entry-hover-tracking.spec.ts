@@ -100,13 +100,9 @@ test.describe('entry hover tracking', () => {
 
         await movePointerAwayFromEntries(page)
       }
-
-      await expect.poll(async () => await hoverButtons.count()).toBeGreaterThanOrEqual(3)
     })
 
-    test('updates hover duration while hovered and emits a final update after hover ends', async ({
-      page,
-    }) => {
+    test('emits qualified hover start and end events with the same ID', async ({ page }) => {
       const scenario = hoverScenarios[0]
       if (!scenario) return
 
@@ -120,7 +116,7 @@ test.describe('entry hover tracking', () => {
         .poll(async () => await hoverButtons.count(), {
           message: `${scenario.name}: initial hover event should be emitted`,
         })
-        .toBeGreaterThan(baselineHoverEventCount)
+        .toBe(baselineHoverEventCount + 1)
 
       const hoverSessionButton = hoverButtons.last()
 
@@ -132,27 +128,19 @@ test.describe('entry hover tracking', () => {
       await expect
         .poll(async () => await readHoverDurationMs(hoverSessionButton))
         .toBeGreaterThanOrEqual(1000)
-      const firstHoverDurationMs = await readHoverDurationMs(hoverSessionButton)
-
-      await expect
-        .poll(async () => await readHoverDurationMs(hoverSessionButton))
-        .toBeGreaterThan(firstHoverDurationMs)
-      const updatedHoverDurationMs = await readHoverDurationMs(hoverSessionButton)
-
-      const updatedHoverId = await hoverSessionButton.getAttribute('data-hover-id')
-      expect(updatedHoverId).toEqual(hoverId)
+      const qualifiedHoverDurationMs = await readHoverDurationMs(hoverSessionButton)
 
       await page.waitForTimeout(300)
       await movePointerAwayFromEntries(page)
 
       await expect
         .poll(async () => await readHoverDurationMs(hoverSessionButton))
-        .toBeGreaterThan(updatedHoverDurationMs)
+        .toBeGreaterThan(qualifiedHoverDurationMs)
       const finalHoverDurationMs = await readHoverDurationMs(hoverSessionButton)
 
-      const finalHoverId = await hoverSessionButton.getAttribute('data-hover-id')
-      expect(finalHoverId).toEqual(hoverId)
-      expect(finalHoverDurationMs).toBeGreaterThan(firstHoverDurationMs)
+      expect(finalHoverDurationMs).toBeGreaterThan(qualifiedHoverDurationMs)
+      expect(await hoverSessionButton.getAttribute('data-hover-id')).toBe(hoverId)
+      expect(await hoverButtons.count()).toBe(baselineHoverEventCount + 1)
     })
   })
 })

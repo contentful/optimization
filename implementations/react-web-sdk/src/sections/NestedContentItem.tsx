@@ -13,7 +13,7 @@ function renderText(entry: ContentEntry): string {
 
 export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Element {
   return (
-    <OptimizedEntry baselineEntry={entry} hoverDurationUpdateIntervalMs={1000}>
+    <OptimizedEntry baselineEntry={entry}>
       {(resolvedEntry) => {
         const nestedEntries = Array.isArray(resolvedEntry.fields.nested)
           ? resolvedEntry.fields.nested.filter(isResolvedContentfulEntry<ContentEntrySkeleton>)

@@ -317,7 +317,7 @@
       const viewEventDialogs = new Map()
       const hoverEventDialogs = new Map()
 
-      function isViewHeartbeatEvent(event) {
+      function isViewInteractionEvent(event) {
         return (
           event?.type === 'component' &&
           typeof event?.viewId === 'string' &&
@@ -326,7 +326,7 @@
         )
       }
 
-      function isHoverHeartbeatEvent(event) {
+      function isHoverInteractionEvent(event) {
         return (
           event?.type === 'component_hover' &&
           typeof event?.hoverId === 'string' &&
@@ -616,7 +616,7 @@
       contentfulOptimization.states.eventStream.subscribe((event) => {
         if (!event) return
 
-        if (isViewHeartbeatEvent(event)) {
+        if (isViewInteractionEvent(event)) {
           const existingDialog = viewEventDialogs.get(event.viewId)
 
           if (existingDialog) {
@@ -633,7 +633,7 @@
           return
         }
 
-        if (isHoverHeartbeatEvent(event)) {
+        if (isHoverInteractionEvent(event)) {
           const existingDialog = hoverEventDialogs.get(event.hoverId)
 
           if (existingDialog) {

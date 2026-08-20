@@ -8,11 +8,7 @@ import type {
   EntryViewInteractionElementOptions,
   EntryViewInteractionStartOptions,
 } from '../../resolveAutoTrackEntryInteractionOptions'
-import {
-  createTimedEntryDetector,
-  isHtmlOrSvgElement,
-  parseNonNegativeNumber,
-} from '../createTimedEntryDetector'
+import { createTimedEntryDetector } from '../createTimedEntryDetector'
 import type { ElementViewCallbackInfo } from './element-view-observer-support'
 import ElementViewObserver from './ElementViewObserver'
 
@@ -44,19 +40,7 @@ export function createEntryViewDetector(
     core,
     interaction: 'views',
     createObserver: (callback, options) => new ElementViewObserver(callback, options),
-    resolveAttributeOptions: (element): EntryViewInteractionElementOptions | undefined => {
-      if (!isHtmlOrSvgElement(element)) return undefined
-
-      const viewDurationUpdateIntervalMs = parseNonNegativeNumber(
-        element.dataset.ctflViewDurationUpdateIntervalMs,
-      )
-
-      if (viewDurationUpdateIntervalMs === undefined) return undefined
-
-      return {
-        viewDurationUpdateIntervalMs,
-      }
-    },
+    resolveAttributeOptions: (): undefined => undefined,
     track: async (runtimeCore, payload, info: ElementViewCallbackInfo, element): Promise<void> => {
       const shouldSendSticky = shouldSendStickyEntryView(
         payload.sticky,

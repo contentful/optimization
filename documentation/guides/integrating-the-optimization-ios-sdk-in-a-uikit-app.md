@@ -843,19 +843,28 @@ func configure(with entry: Contentful.Entry) {
 
 **Entry views.** Feed app-owned scroll or layout geometry to a `ViewTrackingController` — the SDK's
 imperative view-timing engine for UIKit — and it applies the same timing model and emits a
-`TrackViewPayload` (an SDK payload type) through the client for you. The controller uses the default
-model: an initial view event once the entry has accumulated a cumulative 2 seconds (`dwellTimeMs`) at
-or above 80% visibility (`minVisibleRatio`) — visible time adds up, so scrolling away and back does not
-restart the count — periodic duration updates every 5 seconds (`viewDurationUpdateIntervalMs`) while
-visible, and a final duration event when visibility ends, once at least one event has fired. It also
-pauses on backgrounding and re-evaluates on foreground, and dedupes its own sticky views, so you own
-the geometry and the call sites.
+`TrackViewPayload` (an SDK payload type) through the client for you. The controller uses a fixed
+model: a view session begins when the entry reaches 10% visibility and qualifies after a continuous
+1000 ms dwell. A qualified view session produces two normal event records whose `type` field is
+`component`: the first when it qualifies and the second, final record when visibility falls below 10% or another
+ending occurs. Both records carry the same SDK-owned `viewId`. The `viewDurationMs` value is
+milliseconds measured from the moment that view session began at 10% visibility, so it includes the
+qualifying dwell. A view session that ends before qualification emits no record, and active view
+sessions emit no periodic duration records.
+
+The controller observes app background and foreground transitions automatically. Backgrounding ends
+and resets the current view session. On foreground, the controller checks the last measured entry and
+viewport positions; if the entry is still visible, it starts a fresh view session that must satisfy
+the continuous 1000 ms dwell again. Your UIKit integration must still feed geometry updates and call
+`onDisappear()` when the tracked view leaves the screen or its tracking metadata is replaced. The
+controller also dedupes its own sticky views.
 
 Those call sites are the part a UIKit app is responsible for, and there are three: geometry updates
 while the entry is on screen, a rebuild when a new resolution changes the tracking metadata, and
-`onDisappear()` when the entry leaves the screen. Skip the last one and the visibility cycle never
-closes, so the final duration event never fires — and a reused cell keeps reporting the previous
-entry's cycle. `contentHost` is a reader-owned container: the class's omitted initializer and layout
+`onDisappear()` when the entry leaves the screen. Skip the last one and a view session that remains
+above the threshold can stay open, so the final record is not emitted — and a reused cell keeps the
+previous entry's view session open. `contentHost` is a reader-owned container: the class's omitted
+initializer and layout
 code must add it with `addSubview(contentHost)` and size or constrain it before `configure()` runs; the
 SDK does not create or mount that container. `ViewTrackingController` and `TrackingMetadata` read the
 baseline entry in dictionary form — they have no typed-entry initializer — so a typed `Contentful.Entry`
@@ -887,7 +896,7 @@ final class OptimizedEntryView: UIView {
     }
 
     // Rebuild the controller whenever a newly resolved variant changes the
-    // tracking metadata, ending the previous visibility cycle first.
+    // tracking metadata, ending the previous view session first.
     private func rebuildTracking(result: ResolvedOptimizedEntry) {
         trackingController?.onDisappear()
         trackingController = ViewTrackingController(
@@ -921,7 +930,7 @@ final class OptimizedEntryView: UIView {
         emitVisibility()
     }
 
-    // Call site 3: end the cycle when the entry leaves the screen, and stop
+    // Call site 3: end the view session when the entry leaves the screen, and stop
     // observing with it. A reusable cell runs the same teardown from
     // prepareForReuse().
     override func willMove(toWindow newWindow: UIWindow?) {
@@ -933,8 +942,8 @@ final class OptimizedEntryView: UIView {
     }
 
     // Reader-owned geometry: your app computes the element's position and feeds
-    // it to the controller, which owns timing, consent checks, and duplicate
-    // duration-event prevention for the cycle.
+    // it to the controller, which owns timing, consent checks, and the view session's
+    // single final record.
     private func emitVisibility() {
         guard let controller = trackingController, let scrollView else { return }
         let frameInScroll = convert(bounds, to: scrollView)

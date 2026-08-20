@@ -160,14 +160,14 @@ Diagnostics flow through two channels:
 ```mermaid
 stateDiagram-v2
     [*] --> Invisible: View appears
-    Invisible --> Visible: visibleHeight/elementHeight ≥ minVisibleRatio
-    Visible --> Invisible: Below minVisibleRatio
+    Invisible --> Visible: visibleHeight/elementHeight ≥ 10%
+    Visible --> Invisible: Below 10%
     Visible --> Visible: Timer fires → emit event
 
     state Visible {
         [*] --> Accumulating
-        Accumulating --> InitialEvent: accumulatedTime ≥ dwellTimeMs (2s)
-        InitialEvent --> PeriodicUpdates: every viewDurationUpdateIntervalMs (5s)
+        Accumulating --> InitialEvent: accumulatedTime ≥ 1s
+        InitialEvent --> PeriodicUpdates: every 5s
     }
 
     Invisible --> FinalEvent: if ≥1 event emitted
@@ -200,7 +200,7 @@ stateDiagram-v2
 | **TrackingMetadata**                                      | Extraction from entry/selectedOptimization dicts, defaults                                                                                                                                                                    | 2 tests  |
 | **TrackingConfig**                                        | Default values, custom values                                                                                                                                                                                                 | 2 tests  |
 | **ScrollContext**                                         | Defaults, equality, inequality, coordinate space name                                                                                                                                                                         | 4 tests  |
-| **ViewTrackingController**                                | Initially invisible, becomes visible above minVisibleRatio, stays invisible below, disappear resets, pause/resume, partial overlap, zero height ignored, scrolled past element, new cycle reset                               | 9 tests  |
+| **ViewTrackingController**                                | Initially invisible, becomes visible at the fixed 10% threshold, stays invisible below, disappear resets, pause/resume, partial overlap, zero height ignored, scrolled past element, new cycle reset                          | 9 tests  |
 | **Optimization**                                          | Resolves baseline with no selected optimizations                                                                                                                                                                              | 1 test   |
 | **NativePolyfills.TimerStore**                            | Isolation, cancelAll, fired-removes-entry                                                                                                                                                                                     | 3 tests  |
 | **Timer lifecycle**                                       | Register returns separate stores, destroy cancels timers                                                                                                                                                                      | 2 tests  |

@@ -114,13 +114,11 @@ export interface UseOptimizedEntrySnapshotParams<
   baselineEntry: EntryFor<S, M, L>
   clickable?: boolean
   hasCustomLoadingFallback?: boolean
-  hoverDurationUpdateIntervalMs?: number
   liveUpdates?: boolean
   targetDisplay?: 'block' | 'inline'
   trackClicks?: boolean
   trackHovers?: boolean
   trackViews?: boolean
-  viewDurationUpdateIntervalMs?: number
 }
 
 export function useManagedBaselineEntry<
@@ -236,13 +234,11 @@ export function useOptimizedEntrySnapshot<
   baselineEntry,
   clickable,
   hasCustomLoadingFallback,
-  hoverDurationUpdateIntervalMs,
   liveUpdates,
   targetDisplay,
   trackClicks,
   trackHovers,
   trackViews,
-  viewDurationUpdateIntervalMs,
 }: UseOptimizedEntrySnapshotParams<S, M, L>): OptimizedEntrySnapshot<S, M, L> {
   const { sdk } = useOptimizationContext() as {
     readonly sdk?: OptimizedEntrySdk<S, M, L>
@@ -267,18 +263,15 @@ export function useOptimizedEntrySnapshot<
       isSdkStateReady: isSdkReady,
       targetDisplay,
       clickable,
-      hoverDurationUpdateIntervalMs,
       trackClicks,
       trackHovers,
       trackViews,
-      viewDurationUpdateIntervalMs,
     }),
     [
       isPresentationReady,
       baselineEntry,
       clickable,
       hasCustomLoadingFallback,
-      hoverDurationUpdateIntervalMs,
       hydration,
       isSdkReady,
       liveUpdates,
@@ -289,7 +282,6 @@ export function useOptimizedEntrySnapshot<
       trackClicks,
       trackHovers,
       trackViews,
-      viewDurationUpdateIntervalMs,
     ],
   )
   const [controller] = useState(() => new OptimizedEntryController<S, M, L>(controllerOptions))

@@ -831,23 +831,21 @@ whether these events are allowed by its Analytics and privacy policy.
    }
    ```
 
-3. Tune view-tracking timing only when the default 2-second dwell time, 80% visible ratio, or
-   5-second update interval does not match the component.
+3. Account for the fixed view timing in analytics expectations. A view session begins when the entry
+   reaches 10% visibility and qualifies after a continuous 1000 ms dwell. A qualified view session
+   produces two normal event records whose `type` field is `component`: the first when it qualifies
+   and the second, final record when visibility falls below 10% or another ending occurs. Both records carry
+   the same SDK-owned `viewId`. The `viewDurationMs` value is milliseconds measured from the moment
+   the entry began that view session at 10% visibility, so it includes the qualifying dwell. A view
+   session that ends before qualification emits no record, and active view sessions emit no periodic
+   duration records.
 
-   **Adapt this to your use case:**
+4. When an entry is detached, its tracking controller is replaced, or the app moves to the
+   background, the SDK ends and resets the current view session. On foreground, it checks the last
+   measured entry and viewport positions. If the entry is still visible, it starts a fresh view
+   session that must satisfy the continuous 1000 ms dwell again.
 
-   ```kotlin
-   OptimizedEntryView(context).apply {
-       // Changing timing changes when view events are emitted for this entry.
-       minVisibleRatio = 0.75
-       dwellTimeMs = 1500
-       viewDurationUpdateIntervalMs = 5000
-       setContentRenderer { resolvedEntry -> ContentEntryBinder.create(context, resolvedEntry) }
-       setEntry(promo)
-   }
-   ```
-
-4. For a `RecyclerView` screen, use the SDK's `TrackingRecyclerView` (a `RecyclerView` subclass) so
+5. For a `RecyclerView` screen, use the SDK's `TrackingRecyclerView` (a `RecyclerView` subclass) so
    descendant `OptimizedEntryView` instances re-check visibility on each scroll frame. It is an
    optional, redundant signal — each `OptimizedEntryView` also re-checks from its own layout callbacks
    — so plain scroll containers work without it. Keep item views stable across rebinding so dwell

@@ -62,12 +62,10 @@ export function renderOptimizedEntryOnServer<
   baselineEntry,
   children,
   clickable,
-  hoverDurationUpdateIntervalMs,
   resolvedData,
   trackClicks,
   trackHovers,
   trackViews,
-  viewDurationUpdateIntervalMs,
   ...htmlProps
 }: ServerEntryRendererProps<TElement, S, M, L>): ReactElement {
   const Element = as ?? 'div'
@@ -76,11 +74,9 @@ export function renderOptimizedEntryOnServer<
     resolvedData,
     {
       clickable,
-      hoverDurationUpdateIntervalMs,
       trackClicks,
       trackHovers,
       trackViews,
-      viewDurationUpdateIntervalMs,
     },
   )
 

@@ -300,10 +300,14 @@ The Web SDK owns browser runtime mechanics that stateless Node does not own:
 - manual element tracking with `optimization.tracking.enableElement(...)`
 - observable state for event streams and blocked-event diagnostics
 
-For entry views, the Web SDK uses `IntersectionObserver`, dwell-time timers, visibility-change pause
-and resume, periodic duration updates, and final duration events when visibility ends. For clicks,
-it listens at the document level and resolves the nearest tracked entry plus a semantic clickable
-path. For hovers, it uses pointer or mouse enter and leave events with dwell-time timers.
+For entry views, the Web SDK uses `IntersectionObserver` to qualify a session after 1000 ms at the
+fixed 10% visibility threshold. It emits one start interaction after qualification and one end
+interaction with the same `viewId` and final duration. A sub-dwell session emits nothing, and
+hiding or unloading the page ends the session instead of pausing it. For clicks, the SDK listens at
+the document level and resolves the nearest tracked entry plus a semantic clickable path. For
+hovers, it uses pointer or mouse enter and leave events, qualifies after 1000 ms, and emits one
+start and one end interaction with the same `hoverId`. Restoring a hidden page requires a fresh
+pointer entry before hover tracking starts another session.
 
 Those browser mechanics are useful even when the server owns every personalization decision.
 
@@ -350,8 +354,7 @@ return <article {...trackingAttributes}>...</article>
 
 Those helpers stay aligned with the current Web and React Web tracking attributes, including
 per-element control attributes such as `data-ctfl-track-views`, `data-ctfl-track-clicks`,
-`data-ctfl-track-hovers`, `data-ctfl-clickable`, `data-ctfl-view-duration-update-interval-ms`, and
-`data-ctfl-hover-duration-update-interval-ms`.
+`data-ctfl-track-hovers`, and `data-ctfl-clickable`.
 
 If an application renders raw attributes manually, keep the stable browser tracking payload contract
 separate from SDK control metadata:
@@ -541,18 +544,18 @@ browser tracking system. The server Node SDK does not fill that gap by itself.
 
 A manual solution needs to implement at least these areas:
 
-| Area           | Work the application must own                                                                                                                                                           |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Identity       | Read or receive the profile ID, handle anonymous and known identity, keep server and browser continuity aligned, and avoid cross-user leakage.                                          |
-| Consent        | Store the user's decision, block or allow event types consistently, and define what happens to profile continuity after revocation.                                                     |
-| Event payloads | Build valid event shapes with `channel`, context, `messageId`, timestamps, `componentType`, `componentId`, `experienceId`, and `variantIndex`.                                          |
-| DOM registry   | Find server-rendered entry elements, detect added and removed elements, support nested entries, and clean up observers.                                                                 |
-| View tracking  | Use `IntersectionObserver`, define visible ratio and dwell time, pause on hidden tabs, emit periodic duration updates, emit final events, and reuse `viewId` within a visibility cycle. |
-| Click tracking | Resolve the tracked entry from the click target, distinguish real clickable paths, support semantic elements and application clickability hints, and avoid duplicate events.            |
-| Hover tracking | Ignore touch pointer hovers, measure dwell time, emit periodic and final hover durations, and clean up event listeners.                                                                 |
-| Delivery       | Batch events by profile, retry or drop predictably, flush on `visibilitychange` or unload, and use `sendBeacon` or `keepalive` where appropriate.                                       |
-| Sticky views   | Send sticky views through Experience, send paired Insights events, persist returned profile state, and avoid repeated sticky mutations for the same element.                            |
-| Diagnostics    | Record blocked events, failed deliveries, missing profile state, invalid metadata, and observer errors without breaking the host page.                                                  |
+| Area           | Work the application must own                                                                                                                                                                        |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity       | Read or receive the profile ID, handle anonymous and known identity, keep server and browser continuity aligned, and avoid cross-user leakage.                                                       |
+| Consent        | Store the user's decision, block or allow event types consistently, and define what happens to profile continuity after revocation.                                                                  |
+| Event payloads | Build valid event shapes with `channel`, context, `messageId`, timestamps, `componentType`, `componentId`, `experienceId`, and `variantIndex`.                                                       |
+| DOM registry   | Find server-rendered entry elements, detect added and removed elements, support nested entries, and clean up observers.                                                                              |
+| View tracking  | Use `IntersectionObserver`, define visible ratio and dwell time, emit one start and one end interaction with the same `viewId`, and end rather than pause sessions on hidden or unloading pages.     |
+| Click tracking | Resolve the tracked entry from the click target, distinguish real clickable paths, support semantic elements and application clickability hints, and avoid duplicate events.                         |
+| Hover tracking | Ignore touch pointer hovers, measure dwell time, emit one start and one end interaction with the same `hoverId`, require fresh pointer entry after page restore, and clean up listeners.             |
+| Delivery       | Batch events by profile, retry or drop predictably, queue lifecycle end interactions before a best-effort `visibilitychange` or unload flush, and use `sendBeacon` or `keepalive` where appropriate. |
+| Sticky views   | Send sticky views through Experience, send paired Insights events, persist returned profile state, and avoid repeated sticky mutations for the same element.                                         |
+| Diagnostics    | Record blocked events, failed deliveries, missing profile state, invalid metadata, and observer errors without breaking the host page.                                                               |
 
 There are two common manual transport choices:
 

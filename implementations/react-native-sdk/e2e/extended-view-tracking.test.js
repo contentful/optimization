@@ -20,8 +20,14 @@ const SECOND_ENTRY_ID = '4ib0hsHWoSOnCVdDkizE8d'
 // An entry that starts below the fold (not visible on launch).
 const BELOW_FOLD_ENTRY_ID = '7pa5bOx8Z9NmNcr7mISvD'
 
-// Extended timeouts for periodic event tests - need to wait for dwell (2s) + update intervals (5s each)
+// Extended timeout for the 1s dwell plus native rendering and event propagation.
 const EXTENDED_TIMEOUT = 30000
+
+async function getTrackedItemEventCount(componentId) {
+  const text = await getElementTextById(`event-count-${componentId}`)
+  const match = /Count:\s*(\d+)/.exec(text)
+  return match && match[1] ? Number(match[1]) : 0
+}
 
 describe('Extended View Tracking', () => {
   beforeAll(async () => {
@@ -32,61 +38,29 @@ describe('Extended View Tracking', () => {
     await clearProfileState({ requireFreshAppInstance: true })
   })
 
-  it('should emit periodic events for a continuously visible entry', async () => {
+  it('should emit a qualified start with a viewId and dwell duration', async () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    // Wait for the initial event (after dwell threshold ~2s)
+    // The qualified start is emitted after the fixed 1s dwell.
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
 
-    // Wait for at least one periodic update (dwell 2s + update interval 5s = ~7s total)
-    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
-  })
-
-  it('should report increasing viewDurationMs across periodic events', async () => {
-    const analyticsTitle = element(by.text('Analytics Events'))
-    await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
-
-    // Wait for at least 2 events so we can check duration is increasing
-    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
-
+    const eventCount = await getTrackedItemEventCount(VISIBLE_ENTRY_ID)
     const duration = await getViewDuration(VISIBLE_ENTRY_ID)
+    const viewId = await getViewId(VISIBLE_ENTRY_ID)
 
-    // Duration should exceed the dwell threshold (2000ms) since we've had at least 2 events
-    jestExpect(duration).toBeGreaterThan(2000)
-  })
-
-  it('should maintain a stable viewId within a visibility cycle', async () => {
-    const analyticsTitle = element(by.text('Analytics Events'))
-    await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
-
-    // Capture the viewId from the FIRST event of the cycle, before any periodic
-    // update can overwrite latestViewId. The previous version read the viewId
-    // only once after >=2 events, so it could not distinguish a genuinely
-    // stable cycle from an SDK that mints a fresh viewId on every event — the
-    // single read would still see *some* string either way.
-    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
-    const firstEventViewId = await getViewId(VISIBLE_ENTRY_ID)
-
-    jestExpect(firstEventViewId).not.toBeNull()
-    jestExpect(typeof firstEventViewId).toBe('string')
-    jestExpect(firstEventViewId.length).toBeGreaterThan(0)
-
-    // Wait for the next periodic event in the SAME visibility cycle and re-read.
-    // A correct SDK reuses one viewId for the whole cycle, so the second read
-    // must equal the first. This equality is the assertion that actually
-    // exercises the "stable viewId" contract the test name claims.
-    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
-    const secondEventViewId = await getViewId(VISIBLE_ENTRY_ID)
-
-    jestExpect(secondEventViewId).toBe(firstEventViewId)
+    jestExpect(eventCount).toBe(1)
+    jestExpect(duration).toBeGreaterThanOrEqual(1000)
+    jestExpect(viewId).not.toBeNull()
+    jestExpect(typeof viewId).toBe('string')
+    jestExpect(viewId.length).toBeGreaterThan(0)
   })
 
   it('should emit a final event when scrolling a tracked entry out of view', async () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    // Wait for at least 1 event from the visible entry
+    // Wait for the qualified start from the visible entry.
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
 
     const preScrollViewId = await getViewId(VISIBLE_ENTRY_ID)
@@ -94,23 +68,12 @@ describe('Extended View Tracking', () => {
     // Scroll the entry out of the viewport (scroll down far enough)
     await element(by.id('main-scroll-view')).scroll(1500, 'down')
 
-    // Give the final event time to fire
-    await sleep(1000)
-
-    // Scroll back to the top so the stats elements become visible again
-    await element(by.id('main-scroll-view')).scrollTo('top')
-
-    // Scroll to the events display to read updated stats
-    await waitFor(element(by.id(`event-count-${VISIBLE_ENTRY_ID}`)))
-      .toBeVisible()
-      .whileElement(by.id('main-scroll-view'))
-      .scroll(300, 'down')
-
-    // The event count should have incremented by the final event
+    // The lifecycle end emits exactly the final for this session.
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, ELEMENT_VISIBILITY_TIMEOUT)
 
-    // The viewId should still match the original cycle
+    const eventCount = await getTrackedItemEventCount(VISIBLE_ENTRY_ID)
     const postScrollViewId = await getViewId(VISIBLE_ENTRY_ID)
+    jestExpect(eventCount).toBe(2)
     jestExpect(postScrollViewId).toBe(preScrollViewId)
   })
 
@@ -125,18 +88,19 @@ describe('Extended View Tracking', () => {
 
     // Scroll the entry out of the viewport
     await element(by.id('main-scroll-view')).scroll(1500, 'down')
-    await sleep(1000)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, ELEMENT_VISIBILITY_TIMEOUT)
 
     // Scroll back to the top to make the entry visible again
     await element(by.id('main-scroll-view')).scrollTo('top')
-    await sleep(500)
 
-    // Wait for new events from the second visibility cycle (at least 1 more beyond what we had)
+    // First session start + final, then the new session start.
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 3, EXTENDED_TIMEOUT)
 
+    const eventCount = await getTrackedItemEventCount(VISIBLE_ENTRY_ID)
     const secondCycleViewId = await getViewId(VISIBLE_ENTRY_ID)
 
     // The second cycle should have a different viewId
+    jestExpect(eventCount).toBe(3)
     jestExpect(secondCycleViewId).not.toBeNull()
     jestExpect(secondCycleViewId).not.toBe(firstCycleViewId)
   })
@@ -151,7 +115,8 @@ describe('Extended View Tracking', () => {
       .whileElement(by.id('main-scroll-view'))
       .scroll(300, 'down')
 
-    // Immediately scroll back to top — the entry was visible for well under 2s
+    // Immediately scroll back to top — the entry is intended to remain visible for well under 1s.
+    // The lower 10% visibility threshold makes this gesture-bound assertion more timing-sensitive.
     await element(by.id('main-scroll-view')).scrollTo('top')
 
     // Wait long enough that an event WOULD have fired if tracking hadn't been cancelled
@@ -238,23 +203,12 @@ describe('Extended View Tracking', () => {
       .toBeVisible()
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    // Establish the first visibility cycle and prove its viewId is stable
-    // across two events BEFORE backgrounding. Anchoring the post-resume
-    // comparison to a viewId proven stable within this process closes the
-    // hole the previous version had: comparing against a viewId captured
-    // after a single event meant any SDK that emits *some* fresh viewId on
-    // resume passed trivially, even one that never actually paused.
+    // Establish the first visibility session before backgrounding.
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
     const firstCycleViewId = await getViewId(VISIBLE_ENTRY_ID)
-    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
-    jestExpect(await getViewId(VISIBLE_ENTRY_ID)).toBe(firstCycleViewId)
 
-    // Record the cycle's event count so the post-resume assertion can require
-    // a concrete delta rather than an arbitrary absolute threshold.
-    const preBackgroundText = await getElementTextById(`event-count-${VISIBLE_ENTRY_ID}`)
-    const preBackgroundMatch = /Count:\s*(\d+)/.exec(preBackgroundText)
-    const countBeforeBackground =
-      preBackgroundMatch && preBackgroundMatch[1] ? Number(preBackgroundMatch[1]) : 0
+    const countBeforeBackground = await getTrackedItemEventCount(VISIBLE_ENTRY_ID)
+    jestExpect(countBeforeBackground).toBe(1)
 
     // Send app to background
     await device.sendToHome()
@@ -269,17 +223,14 @@ describe('Extended View Tracking', () => {
       .whileElement(by.id('main-scroll-view'))
       .scroll(300, 'down')
 
-    // Foregrounding must start a fresh cycle with its own event. A background
-    // final event may also arrive, but the resume contract only needs one
-    // post-background event plus a new viewId.
+    // Backgrounding finalizes the first session, then foregrounding starts a
+    // fresh qualified session.
     await waitForTrackedItemEventCount(
       VISIBLE_ENTRY_ID,
-      countBeforeBackground + 1,
+      countBeforeBackground + 2,
       EXTENDED_TIMEOUT,
     )
 
-    // The +1 event may be the final event from backgrounding, still carrying
-    // the old viewId. Wait for the foreground cycle's stats update.
     await waitForElementTextById(
       `event-view-id-${VISIBLE_ENTRY_ID}`,
       (text) => {
@@ -296,30 +247,25 @@ describe('Extended View Tracking', () => {
       .toBeVisible()
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    // Wait for at least 2 events so duration accumulates beyond the dwell threshold
-    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
-    const firstCycleDuration = await getViewDuration(VISIBLE_ENTRY_ID)
-
-    // Duration after 2 events should be well above the dwell threshold
-    jestExpect(firstCycleDuration).toBeGreaterThan(4000)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
+    const startDuration = await getViewDuration(VISIBLE_ENTRY_ID)
+    await sleep(1500)
 
     // Scroll entry out of view (end cycle, triggers final event)
     await element(by.id('main-scroll-view')).scroll(1500, 'down')
-    await sleep(1000)
+
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, ELEMENT_VISIBILITY_TIMEOUT)
+    const finalDuration = await getViewDuration(VISIBLE_ENTRY_ID)
+    jestExpect(finalDuration).toBeGreaterThan(startDuration)
 
     // Scroll back to top (entry visible again, new cycle starts)
     await element(by.id('main-scroll-view')).scrollTo('top')
-    await sleep(500)
 
-    // Wait for the new cycle's initial event
-    // Cycle 1: initial(1) + periodic(2) + final(3) = 3 events
-    // New cycle initial = event 4
-    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 4, EXTENDED_TIMEOUT)
+    // First session start + final, then the new session start.
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 3, EXTENDED_TIMEOUT)
 
-    // The new cycle's duration should be around the dwell threshold (~2000ms),
-    // not carrying over the 4000+ms from cycle 1
     const secondCycleDuration = await getViewDuration(VISIBLE_ENTRY_ID)
-    jestExpect(secondCycleDuration).toBeGreaterThanOrEqual(2000)
-    jestExpect(secondCycleDuration).toBeLessThan(4000)
+    jestExpect(secondCycleDuration).toBeGreaterThanOrEqual(1000)
+    jestExpect(secondCycleDuration).toBeLessThan(finalDuration)
   })
 })

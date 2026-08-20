@@ -205,7 +205,6 @@ class ElementViewSourceController {
       }
 
       const visible = measureVirtualVisibility(element, {
-        minVisibleRatio: this.opts.minVisibleRatio,
         root: this.opts.root,
         rootMargin: this.rootMargin,
       })

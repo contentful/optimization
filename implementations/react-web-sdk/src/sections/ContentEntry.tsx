@@ -14,8 +14,6 @@ interface ContentEntryProps {
   viewTracking: ViewTrackingMode
 }
 
-const HOVER_DURATION_UPDATE_INTERVAL_MS = 1000
-
 function getEntryText(entry: ContentEntryType): string {
   return typeof entry.fields.text === 'string' ? entry.fields.text : 'No content'
 }
@@ -64,9 +62,6 @@ export function ContentEntry({
       <OptimizedEntry
         baselineEntry={entry}
         clickable={autoTrackViews && clickScenario === 'direct'}
-        hoverDurationUpdateIntervalMs={
-          autoTrackViews ? HOVER_DURATION_UPDATE_INTERVAL_MS : undefined
-        }
         trackViews={autoTrackViews ? undefined : false}
       >
         {(resolvedEntry, { getMergeTagValue }) => {

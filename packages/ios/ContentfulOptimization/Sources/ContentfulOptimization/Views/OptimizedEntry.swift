@@ -18,9 +18,6 @@ import SwiftUI
 /// ```
 public struct OptimizedEntry<Content: View>: View {
     let entry: CTEntry
-    let dwellTimeMs: Int
-    let minVisibleRatio: Double
-    let viewDurationUpdateIntervalMs: Int
     let liveUpdates: Bool?
     let trackViews: Bool?
     let trackTaps: Bool?
@@ -37,9 +34,6 @@ public struct OptimizedEntry<Content: View>: View {
 
     public init(
         entry: [String: Any],
-        dwellTimeMs: Int = 2000,
-        minVisibleRatio: Double = 0.8,
-        viewDurationUpdateIntervalMs: Int = 5000,
         liveUpdates: Bool? = nil,
         trackViews: Bool? = nil,
         trackTaps: Bool? = nil,
@@ -48,9 +42,6 @@ public struct OptimizedEntry<Content: View>: View {
         @ViewBuilder content: @escaping ([String: Any]) -> Content
     ) {
         self.entry = CTEntry(any: entry)
-        self.dwellTimeMs = dwellTimeMs
-        self.minVisibleRatio = minVisibleRatio
-        self.viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs
         self.liveUpdates = liveUpdates
         self.trackViews = trackViews
         self.trackTaps = trackTaps
@@ -65,9 +56,6 @@ public struct OptimizedEntry<Content: View>: View {
     /// The encoding happens once, here, at construction.
     public init(
         entry: Contentful.Entry,
-        dwellTimeMs: Int = 2000,
-        minVisibleRatio: Double = 0.8,
-        viewDurationUpdateIntervalMs: Int = 5000,
         liveUpdates: Bool? = nil,
         trackViews: Bool? = nil,
         trackTaps: Bool? = nil,
@@ -76,9 +64,6 @@ public struct OptimizedEntry<Content: View>: View {
         @ViewBuilder content: @escaping (CTEntry) -> Content
     ) {
         self.entry = CTEntry(entry)
-        self.dwellTimeMs = dwellTimeMs
-        self.minVisibleRatio = minVisibleRatio
-        self.viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs
         self.liveUpdates = liveUpdates
         self.trackViews = trackViews
         self.trackTaps = trackTaps
@@ -140,9 +125,6 @@ public struct OptimizedEntry<Content: View>: View {
                 entry: entryDict,
                 optimizationContextId: result.optimizationContextId,
                 selectedOptimization: result.selectedOptimization,
-                minVisibleRatio: minVisibleRatio,
-                dwellTimeMs: dwellTimeMs,
-                viewDurationUpdateIntervalMs: viewDurationUpdateIntervalMs,
                 enabled: viewsEnabled,
                 client: client
             ))

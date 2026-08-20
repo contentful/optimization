@@ -83,7 +83,7 @@ describe('EntryViewTracker', () => {
     const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0 })
+    tracker.start()
 
     const instance = io.getLast()
 
@@ -93,14 +93,14 @@ describe('EntryViewTracker', () => {
 
     instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
 
-    await advance(0)
+    await advance(1000)
 
     expect(trackView).toHaveBeenCalledTimes(1)
     expect(trackView).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-auto-view',
         viewId: expect.any(String),
-        viewDurationMs: 0,
+        viewDurationMs: 1000,
       }),
     )
 
@@ -118,7 +118,7 @@ describe('EntryViewTracker', () => {
     const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0 })
+    tracker.start()
 
     const instance = io.getLast()
 
@@ -128,14 +128,14 @@ describe('EntryViewTracker', () => {
 
     instance.trigger({ target: child, isIntersecting: true, intersectionRatio: 1 })
 
-    await advance(0)
+    await advance(1000)
 
     expect(trackView).toHaveBeenCalledTimes(1)
     expect(trackView).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-single-child-view',
         viewId: expect.any(String),
-        viewDurationMs: 0,
+        viewDurationMs: 1000,
       }),
     )
 
@@ -163,16 +163,16 @@ describe('EntryViewTracker', () => {
     const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0, root })
+    tracker.start({ root })
 
-    await advance(0)
+    await advance(1000)
 
     expect(trackView).toHaveBeenCalledTimes(1)
     expect(trackView).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-aggregate-view',
         viewId: expect.any(String),
-        viewDurationMs: 0,
+        viewDurationMs: 1000,
       }),
     )
 
@@ -195,23 +195,23 @@ describe('EntryViewTracker', () => {
     const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0, root })
+    tracker.start({ root })
 
-    await advance(0)
+    await advance(1000)
 
     expect(trackView).toHaveBeenCalledTimes(1)
     expect(trackView).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-text-view',
         viewId: expect.any(String),
-        viewDurationMs: 0,
+        viewDurationMs: 1000,
       }),
     )
 
     cleanup()
   })
 
-  it('emits periodic and final updates for virtual aggregate entries', async () => {
+  it('emits start and final updates for virtual aggregate entries', async () => {
     const root = document.createElement('div')
     setRect(root, rect(0, 0, 300, 100))
     document.body.append(root)
@@ -228,10 +228,10 @@ describe('EntryViewTracker', () => {
     const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0, root, viewDurationUpdateIntervalMs: 1000 })
+    tracker.start({ root })
 
-    await advance(0)
     await advance(1000)
+    await advance(400)
 
     rectsByElement.set(entry, [rect(10, 140, 100, 40)])
     document.dispatchEvent(new Event('scroll'))
@@ -239,22 +239,14 @@ describe('EntryViewTracker', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(trackView).toHaveBeenCalledTimes(3)
+    expect(trackView).toHaveBeenCalledTimes(2)
 
     const firstPayload = trackView.mock.calls[0]?.[0]
-    const secondPayload = trackView.mock.calls[1]?.[0]
-    const finalPayload = trackView.mock.calls[2]?.[0]
+    const finalPayload = trackView.mock.calls[1]?.[0]
 
     expect(firstPayload).toEqual(
       expect.objectContaining({
         componentId: 'entry-aggregate-duration',
-        viewDurationMs: 0,
-      }),
-    )
-    expect(secondPayload).toEqual(
-      expect.objectContaining({
-        componentId: 'entry-aggregate-duration',
-        viewId: firstPayload?.viewId,
         viewDurationMs: 1000,
       }),
     )
@@ -262,7 +254,7 @@ describe('EntryViewTracker', () => {
       expect.objectContaining({
         componentId: 'entry-aggregate-duration',
         viewId: firstPayload?.viewId,
-        viewDurationMs: 1000,
+        viewDurationMs: 1400,
       }),
     )
 
@@ -287,7 +279,7 @@ describe('EntryViewTracker', () => {
     const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0, root })
+    tracker.start({ root })
 
     const instance = io.getLast()
 
@@ -301,14 +293,14 @@ describe('EntryViewTracker', () => {
     await advance(0)
 
     instance.trigger({ target: first, isIntersecting: true, intersectionRatio: 1 })
-    await advance(0)
+    await advance(1000)
 
     expect(trackView).toHaveBeenCalledTimes(1)
     expect(trackView).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-retarget-view',
         viewId: expect.any(String),
-        viewDurationMs: 0,
+        viewDurationMs: 1000,
       }),
     )
 
@@ -322,8 +314,8 @@ describe('EntryViewTracker', () => {
     const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0 })
-    tracker.enableElement(element, { data: { entryId: 'manual-view-entry' }, dwellTimeMs: 0 })
+    tracker.start()
+    tracker.enableElement(element, { data: { entryId: 'manual-view-entry' } })
 
     const instance = io.getLast()
 
@@ -333,14 +325,14 @@ describe('EntryViewTracker', () => {
 
     instance.trigger({ target: element, isIntersecting: true, intersectionRatio: 1 })
 
-    await advance(0)
+    await advance(1000)
 
     expect(trackView).toHaveBeenCalledTimes(1)
     expect(trackView).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'manual-view-entry',
         viewId: expect.any(String),
-        viewDurationMs: 0,
+        viewDurationMs: 1000,
       }),
     )
 
@@ -354,8 +346,8 @@ describe('EntryViewTracker', () => {
     const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0 })
-    tracker.enableElement(element, { data: { entryId: 'manual-view-entry' }, dwellTimeMs: 0 })
+    tracker.start()
+    tracker.enableElement(element, { data: { entryId: 'manual-view-entry' } })
     tracker.clearElement(element)
 
     const instance = io.getLast()
@@ -381,7 +373,7 @@ describe('EntryViewTracker', () => {
     const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0 })
+    tracker.start()
     tracker.disableElement(entry)
 
     const instance = io.getLast()
@@ -408,7 +400,7 @@ describe('EntryViewTracker', () => {
     const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0 })
+    tracker.start()
 
     const instance = io.getLast()
 
@@ -435,7 +427,7 @@ describe('EntryViewTracker', () => {
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
     tracker.setAuto(false)
-    tracker.start({ dwellTimeMs: 0 })
+    tracker.start()
 
     const instance = io.getLast()
 
@@ -445,57 +437,13 @@ describe('EntryViewTracker', () => {
 
     instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
 
-    await advance(0)
+    await advance(1000)
 
     expect(trackView).toHaveBeenCalledTimes(1)
     expect(trackView).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-auto-view-enabled-by-data',
         viewId: expect.any(String),
-        viewDurationMs: 0,
-      }),
-    )
-
-    cleanup()
-  })
-
-  it('emits periodic duration updates while an observed entry remains visible', async () => {
-    const entry = document.createElement('div')
-    entry.dataset.ctflEntryId = 'entry-periodic-view'
-    document.body.append(entry)
-
-    const { core, trackView } = createCore()
-    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
-
-    tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 1000 })
-
-    const instance = io.getLast()
-
-    if (!instance) {
-      throw new Error('IntersectionObserver polyfill instance not found')
-    }
-
-    instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
-
-    await advance(0)
-    await advance(1000)
-
-    expect(trackView).toHaveBeenCalledTimes(2)
-
-    const firstPayload = trackView.mock.calls[0]?.[0]
-    const secondPayload = trackView.mock.calls[1]?.[0]
-
-    expect(firstPayload).toEqual(
-      expect.objectContaining({
-        componentId: 'entry-periodic-view',
-        viewId: expect.any(String),
-        viewDurationMs: 0,
-      }),
-    )
-    expect(secondPayload).toEqual(
-      expect.objectContaining({
-        componentId: 'entry-periodic-view',
-        viewId: firstPayload?.viewId,
         viewDurationMs: 1000,
       }),
     )
@@ -514,7 +462,7 @@ describe('EntryViewTracker', () => {
     const core: EntryViewTrackingCore = { trackView }
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
+    tracker.start()
 
     const instance = io.getLast()
 
@@ -523,13 +471,13 @@ describe('EntryViewTracker', () => {
     }
 
     instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
-    await advance(0)
+    await advance(1000)
     instance.trigger({ target: entry, isIntersecting: false, intersectionRatio: 0 })
-    await Promise.resolve()
+    await tracker.endActive()
     instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
-    await advance(0)
+    await advance(1000)
 
-    expect(trackView).toHaveBeenCalledTimes(2)
+    expect(trackView).toHaveBeenCalledTimes(3)
     expect(trackView.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
         componentId: 'entry-sticky-once',
@@ -537,6 +485,12 @@ describe('EntryViewTracker', () => {
       }),
     )
     expect(trackView.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-sticky-once',
+        sticky: undefined,
+      }),
+    )
+    expect(trackView.mock.calls[2]?.[0]).toEqual(
       expect.objectContaining({
         componentId: 'entry-sticky-once',
         sticky: undefined,
@@ -561,7 +515,7 @@ describe('EntryViewTracker', () => {
     const core: EntryViewTrackingCore = { trackView }
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
+    tracker.start()
 
     const instance = io.getLast()
 
@@ -570,15 +524,11 @@ describe('EntryViewTracker', () => {
     }
 
     instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
-    await advance(0)
+    await advance(1000)
     instance.trigger({ target: entry, isIntersecting: false, intersectionRatio: 0 })
-    await Promise.resolve()
+    await tracker.endActive()
     instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
-    await advance(0)
-    instance.trigger({ target: entry, isIntersecting: false, intersectionRatio: 0 })
-    await Promise.resolve()
-    instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
-    await advance(0)
+    await advance(1000)
 
     expect(trackView).toHaveBeenCalledTimes(3)
     expect(trackView.mock.calls[0]?.[0]).toEqual(
@@ -619,7 +569,7 @@ describe('EntryViewTracker', () => {
     const core: EntryViewTrackingCore = { trackView }
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
+    tracker.start()
 
     const instance = io.getLast()
 
@@ -628,9 +578,9 @@ describe('EntryViewTracker', () => {
     }
 
     instance.trigger({ target: first, isIntersecting: true, intersectionRatio: 1 })
-    await advance(0)
+    await advance(1000)
     instance.trigger({ target: second, isIntersecting: true, intersectionRatio: 1 })
-    await advance(0)
+    await advance(1000)
 
     expect(trackView).toHaveBeenCalledTimes(2)
     expect(trackView.mock.calls[0]?.[0]).toEqual(
@@ -657,7 +607,7 @@ describe('EntryViewTracker', () => {
     const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
-    tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
+    tracker.start()
 
     const instance = io.getLast()
 
@@ -666,7 +616,7 @@ describe('EntryViewTracker', () => {
     }
 
     instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
-    await advance(0)
+    await advance(1000)
     await advance(500)
     instance.trigger({ target: entry, isIntersecting: false, intersectionRatio: 0 })
     await Promise.resolve()
@@ -680,66 +630,9 @@ describe('EntryViewTracker', () => {
       expect.objectContaining({
         componentId: 'entry-view-final',
         viewId: firstPayload?.viewId,
-        viewDurationMs: 500,
+        viewDurationMs: 1500,
       }),
     )
-
-    cleanup()
-  })
-
-  it('applies view-duration interval override from data attributes for auto-tracked entries', async () => {
-    const entry = document.createElement('div')
-    entry.dataset.ctflEntryId = 'entry-attr-interval'
-    entry.dataset.ctflViewDurationUpdateIntervalMs = '250'
-    document.body.append(entry)
-
-    const { core, trackView } = createCore()
-    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
-
-    tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
-
-    const instance = io.getLast()
-
-    if (!instance) {
-      throw new Error('IntersectionObserver polyfill instance not found')
-    }
-
-    instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
-
-    await advance(0)
-    await advance(250)
-
-    expect(trackView).toHaveBeenCalledTimes(2)
-
-    cleanup()
-  })
-
-  it('applies view-duration interval override for manually enabled elements', async () => {
-    const element = document.createElement('section')
-    document.body.append(element)
-
-    const { core, trackView } = createCore()
-    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
-
-    tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
-    tracker.enableElement(element, {
-      data: { entryId: 'manual-interval-entry' },
-      dwellTimeMs: 0,
-      viewDurationUpdateIntervalMs: 200,
-    })
-
-    const instance = io.getLast()
-
-    if (!instance) {
-      throw new Error('IntersectionObserver polyfill instance not found')
-    }
-
-    instance.trigger({ target: element, isIntersecting: true, intersectionRatio: 1 })
-
-    await advance(0)
-    await advance(200)
-
-    expect(trackView).toHaveBeenCalledTimes(2)
 
     cleanup()
   })

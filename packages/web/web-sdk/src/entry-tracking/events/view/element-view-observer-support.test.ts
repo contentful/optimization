@@ -4,20 +4,13 @@ import {
   isPageVisible,
   NOW,
   type ElementState,
-  type PerElementEffectiveOptions,
 } from './element-view-observer-support'
-
-const defaultPerElOpts: PerElementEffectiveOptions = {
-  dwellTimeMs: 1000,
-  viewDurationUpdateIntervalMs: 5000,
-}
 
 const makeState = (overrides: Partial<ElementState> = {}): ElementState => ({
   ref: null,
   strongRef: null,
   source: 'element',
   target: null,
-  opts: defaultPerElOpts,
   data: undefined,
   accumulatedMs: 0,
   visibleSince: null,
@@ -25,9 +18,8 @@ const makeState = (overrides: Partial<ElementState> = {}): ElementState => ({
   attempts: 0,
   viewId: null,
   done: false,
-  inFlight: false,
   lastKnownVisible: false,
-  pendingFinal: false,
+  callbackChain: null,
   ...overrides,
 })
 

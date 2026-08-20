@@ -31,7 +31,6 @@ export type {
   EntryClickInteractionElementOptions,
   EntryElementInteraction,
   EntryHoverInteractionElementOptions,
-  EntryHoverInteractionStartOptions,
   EntryInteraction,
   EntryInteractionApi,
   EntryInteractionElementOptions,

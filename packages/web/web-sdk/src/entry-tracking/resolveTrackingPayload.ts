@@ -24,10 +24,6 @@ export type CtflDataset = DOMStringMap & {
   ctflTrackViews?: 'true' | 'false'
   /** Optional per-element override for automatic hover tracking (`'true'`/`'false'`). */
   ctflTrackHovers?: 'true' | 'false'
-  /** Optional per-element view-duration update interval override in milliseconds. */
-  ctflViewDurationUpdateIntervalMs?: string
-  /** Optional per-element hover-duration update interval override in milliseconds. */
-  ctflHoverDurationUpdateIntervalMs?: string
 }
 
 /**

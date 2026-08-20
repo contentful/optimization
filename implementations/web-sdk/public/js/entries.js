@@ -66,7 +66,6 @@ function buildEntryCard(resolvedEntry, baselineEntryId, observation, clickScenar
   if (observation === 'auto') {
     card.dataset.ctflEntryId = resolvedEntry.sys.id
     card.dataset.ctflBaselineId = baselineEntryId
-    card.dataset.ctflHoverDurationUpdateIntervalMs = '1000'
     if (clickScenario === 'direct') card.dataset.ctflClickable = 'true'
   } else {
     card.dataset.entryId = baselineEntryId

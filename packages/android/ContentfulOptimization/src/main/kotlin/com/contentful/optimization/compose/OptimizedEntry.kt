@@ -20,9 +20,6 @@ import com.contentful.optimization.core.resolvePreviewCloseLockState
 @Composable
 public fun OptimizedEntry(
     entry: Map<String, Any>,
-    dwellTimeMs: Int = 2000,
-    minVisibleRatio: Double = 0.8,
-    viewDurationUpdateIntervalMs: Int = 5000,
     liveUpdates: Boolean? = null,
     trackViews: Boolean? = null,
     trackTaps: Boolean? = null,
@@ -121,9 +118,6 @@ public fun OptimizedEntry(
             entry = entry,
             optimizationContextId = result.optimizationContextId,
             selectedOptimization = result.selectedOptimization,
-            minVisibleRatio = minVisibleRatio,
-            dwellTimeMs = dwellTimeMs,
-            viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
             enabled = viewsEnabled,
             client = client,
         )
@@ -154,9 +148,6 @@ public fun OptimizedEntry(
 @Composable
 public fun OptimizedEntry(
     entry: CDAEntry,
-    dwellTimeMs: Int = 2000,
-    minVisibleRatio: Double = 0.8,
-    viewDurationUpdateIntervalMs: Int = 5000,
     liveUpdates: Boolean? = null,
     trackViews: Boolean? = null,
     trackTaps: Boolean? = null,
@@ -167,9 +158,6 @@ public fun OptimizedEntry(
     val entryMap = remember(entry) { CTEntry.from(entry).toMap() }
     OptimizedEntry(
         entry = entryMap,
-        dwellTimeMs = dwellTimeMs,
-        minVisibleRatio = minVisibleRatio,
-        viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
         liveUpdates = liveUpdates,
         trackViews = trackViews,
         trackTaps = trackTaps,

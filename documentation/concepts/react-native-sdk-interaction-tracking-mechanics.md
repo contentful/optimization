@@ -47,8 +47,9 @@ and which state can survive a process restart:
 If you mount `OptimizationRoot`, wrap React Navigation with `OptimizationNavigationContainer`, and
 wrap Contentful entries in `<OptimizedEntry />`, the SDK gives you these tracking behaviors:
 
-- **Entry view tracking** - Initial event after 2 s at 80% or greater visibility, periodic updates
-  every 5 s while visible, and a final event when visibility ends after an event has already fired.
+- **Entry view tracking** - One session-start event after 1 s at 10% or greater visibility and one
+  session-end event with the same `viewId` and final duration when visibility ends. A sub-dwell
+  session emits nothing.
 - **Screen tracking** - A `screen` event on every active route change.
 - **Default pre-consent `identify` and `screen` events** - The React Native default allows these
   events before event consent. A custom `allowedEventTypes` list can allow fewer, more, or different
@@ -91,9 +92,9 @@ Applications still own these choices:
 - [Consent gating](#consent-gating)
   - [Why is nothing tracking?](#why-is-nothing-tracking)
 - [Entry view tracking mechanics](#entry-view-tracking-mechanics)
-  - [Default visibility and timing](#default-visibility-and-timing)
+  - [Fixed visibility and timing](#fixed-visibility-and-timing)
   - [The visibility state machine](#the-visibility-state-machine)
-  - [Initial, periodic, and final events](#initial-periodic-and-final-events)
+  - [Session-start and session-end events](#session-start-and-session-end-events)
   - [App backgrounding and cleanup](#app-backgrounding-and-cleanup)
 - [Scroll context and viewport resolution](#scroll-context-and-viewport-resolution)
   - [Inside OptimizationScrollProvider](#inside-optimizationscrollprovider)
@@ -123,14 +124,13 @@ These are emitted by the SDK without an application-level call when consent or `
 permits the event type and the relevant provider or component is mounted. Insights-backed automatic
 events also need an active profile.
 
-| Event                             | When it fires                                                                                                | Required wiring                                                                                             |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| **Screen view**                   | Each time the active navigation route changes.                                                               | `<OptimizationNavigationContainer>` wrapping `NavigationContainer` (or `useScreenTracking` on each screen). |
-| **Entry view (initial)**          | When a wrapped entry has accumulated enough visible time (default 2000 ms at ≥ 80% visibility).              | `<OptimizedEntry baselineEntry={entry}>` with view tracking enabled (the default).                          |
-| **Entry view (periodic updates)** | Every `viewDurationUpdateIntervalMs` (default 5000 ms) while the entry remains visible.                      | Same as above.                                                                                              |
-| **Entry view (final)**            | When visibility ends (scrolled away, unmounted, or app backgrounded) _if_ at least one event already fired.  | Same as above.                                                                                              |
-| **Entry tap**                     | On touch end, when the touch moved less than 10 points from touch start, on a wrapped entry.                 | `<OptimizedEntry>` with tap tracking enabled (the default; opt out with `trackTaps={false}`).               |
-| **Flag view**                     | Attempted when a flag value is read or a subscribed value is delivered; accepted emissions are deduplicated. | Any `getFlag(...)` call or `states.flag(...)` subscription.                                                 |
+| Event                          | When it fires                                                                                                | Required wiring                                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| **Screen view**                | Each time the active navigation route changes.                                                               | `<OptimizationNavigationContainer>` wrapping `NavigationContainer` (or `useScreenTracking` on each screen). |
+| **Entry view (session start)** | Once a wrapped entry has accumulated 1000 ms at ≥ 10% visibility.                                            | `<OptimizedEntry baselineEntry={entry}>` with view tracking enabled (the default).                          |
+| **Entry view (session end)**   | Once when a qualified session ends because the entry leaves visibility, unmounts, or the app backgrounds.    | Same as above.                                                                                              |
+| **Entry tap**                  | On touch end, when the touch moved less than 10 points from touch start, on a wrapped entry.                 | `<OptimizedEntry>` with tap tracking enabled (the default; opt out with `trackTaps={false}`).               |
+| **Flag view**                  | Attempted when a flag value is read or a subscribed value is delivered; accepted emissions are deduplicated. | Any `getFlag(...)` call or `states.flag(...)` subscription.                                                 |
 
 ### Manual events
 
@@ -196,9 +196,10 @@ The React Native SDK layers React Native-specific behavior on top:
    always online. Tracking continues, but offline durability is reduced.
 2. **Background flushing.** On `AppState` transition to `background` or `inactive`, the SDK calls
    `flush()` and drains pending AsyncStorage persistence before the OS might suspend the process.
-3. **Final view event on background.** If an entry is mid-visibility-cycle when the app backgrounds,
-   `useViewportTracking` pauses, emits a final view event if at least one event already fired, and
-   resets.
+3. **View session end on background.** If an entry has a qualified visibility session when the app
+   backgrounds, `useViewportTracking` emits the session-end view event and resets. A sub-dwell
+   session resets without an event. Foregrounding re-evaluates visibility and starts a new session
+   when the entry still meets the visibility threshold.
 
 `queuePolicy.offlineMaxEvents` caps offline Experience events, and `queuePolicy.onOfflineDrop` is
 called when older offline Experience events are dropped to honor that cap. Insights events share the
@@ -295,7 +296,8 @@ Five checks, in order of likelihood:
    current profile exists.
 3. **Tap tracking opt-out.** Views and taps default to `true`; check for root or per-entry
    `taps: false` or `trackTaps={false}` overrides.
-4. **Visibility requirement.** Defaults are strict (80% for 2 s). Scroll-by content never fires.
+4. **Visibility requirement.** The fixed requirement is 10% for 1 s. Brief scroll-by content
+   never fires.
 5. **No scroll context.** An entry below the fold without `<OptimizationScrollProvider>` will never
    pass the visibility requirement because `scrollY` is assumed `0`.
 
@@ -304,15 +306,14 @@ Five checks, in order of likelihood:
 This section describes the internals of `useViewportTracking`, the hook `<OptimizedEntry />` uses
 under the hood.
 
-### Default visibility and timing
+### Fixed visibility and timing
 
-The default entry view settings are:
+Entry view tracking uses these fixed values:
 
-| Constant                                   | Value  | Meaning                                                                                                              |
-| ------------------------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------- |
-| `DEFAULT_MIN_VISIBLE_RATIO`                | `0.8`  | Minimum visibility ratio (0.0 to 1.0). An entry is "visible" when at least 80% of its height is within the viewport. |
-| `DEFAULT_DWELL_TIME_MS`                    | `2000` | Minimum accumulated visible time (ms) before the **initial** view event fires.                                       |
-| `DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS` | `5000` | Interval (ms) between **periodic** duration update events after the initial event.                                   |
+| Constant                    | Value  | Meaning                                                                                                              |
+| --------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------- |
+| `DEFAULT_MIN_VISIBLE_RATIO` | `0.1`  | Minimum visibility ratio (0.0 to 1.0). An entry is "visible" when at least 10% of its height is within the viewport. |
+| `DEFAULT_DWELL_TIME_MS`     | `1000` | Minimum continuous visible time (ms) before the session-start view event fires.                                      |
 
 Tap tracking has one additional requirement:
 
@@ -322,81 +323,63 @@ Tap tracking has one additional requirement:
 
 ### The visibility state machine
 
-Each mounted `<OptimizedEntry>` runs a small state machine keyed on a "visibility cycle". A cycle
-starts when the entry goes from not visible to visible, and ends when it transitions back or
-unmounts. State lives in refs (not React state) to avoid re-rendering on every scroll tick:
-
-```ts
-interface ViewCycleState {
-  viewId: string | null // UUID; correlates all events in this cycle
-  visibleSince: number | null // Timestamp of last visibility entry; null while paused
-  accumulatedMs: number // Running total of visible time
-  attempts: number // Number of view events already emitted
-}
-```
+Each mounted `<OptimizedEntry>` runs a small state machine keyed on a visibility session. A session
+starts when the entry goes from not visible to visible, and ends when it leaves visibility,
+unmounts, or the app backgrounds. The hook keeps this tracking state in refs to avoid re-rendering
+on every scroll tick.
 
 On every scroll tick or layout change, `checkVisibility()` computes the overlap between the entry's
 measured `{y, height}` and the current viewport `{scrollY, viewportHeight}` to derive a
-`visibilityRatio`, and compares it to `minVisibleRatio`:
+`visibilityRatio`, and compares it to the fixed 10% threshold:
 
-- **Not visible to visible** - `onVisibilityStart` resets the cycle, mints a fresh `viewId`, sets
-  `visibleSince = now`, and schedules the next fire.
-- **Visible to not visible** - `onVisibilityEnd` clears the fire timer, records the final
-  accumulated duration, emits a **final** event if `attempts > 0`, and resets the cycle.
+- **Not visible to visible** - `onVisibilityStart` resets session state, mints a fresh `viewId`, and
+  starts the qualification dwell timer.
+- **Visible to not visible** - `onVisibilityEnd` clears an unfinished dwell timer, emits one
+  session-end event if the session qualified, and resets session state.
 
-### Initial, periodic, and final events
+### Session-start and session-end events
 
-Within a cycle, events fire based on accumulated visible time. The schedule mirrors the Web SDK's
-`ElementViewObserver`:
+Within a session, automatic view tracking emits at most two interactions:
 
-```
-requiredMs_for_event_N = dwellTimeMs + N * viewDurationUpdateIntervalMs
-```
+| Interaction | When it fires                                                                             |
+| ----------- | ----------------------------------------------------------------------------------------- |
+| Start       | Once, after 1000 ms of continuous visibility at or above the 10% threshold.               |
+| End         | Once, when the qualified session ends, with the same `viewId` and final `viewDurationMs`. |
 
-So with defaults:
-
-| Event       | When it fires (from cycle start)         |
-| ----------- | ---------------------------------------- |
-| Initial     | 2000 ms accumulated visible              |
-| Periodic #1 | 7000 ms accumulated visible              |
-| Periodic #2 | 12 000 ms accumulated visible            |
-| Periodic #N | `2000 + N * 5000` ms accumulated visible |
-| Final       | At `onVisibilityEnd`, if `attempts > 0`  |
-
-Accumulation applies only inside the current visibility cycle. Leaving visibility ends the cycle,
-clears the fire timer, and resets accumulated time after any eligible final event is emitted. If the
-user scrolls away at 1.5 s and returns later, the return starts a fresh dwell timer from 0 ms with a
-new `viewId`.
+After the start interaction, the hook measures duration without scheduling periodic interaction
+timers or emissions. Leaving visibility resets the session after any eligible end interaction. If
+the user scrolls away at 0.5 s and returns later, the return starts a fresh dwell timer from 0 ms
+with a new `viewId`.
 
 A few consequences:
 
-- **An entry briefly scrolled into view (< 2 s total) fires no events.** The initial gate is never
-  crossed, so the final event is suppressed (guarded by `attempts > 0`).
-- **An entry scrolled into view for 2 s and then immediately unmounted** fires one initial event,
-  then one final event from the unmount cleanup effect.
-- **Each event carries `viewDurationMs`**, computed from the cycle's accumulated time at the moment
-  of emission. The sequence of events for a 12 s continuous view is: initial (~2000 ms), periodic
-  (~7000 ms), periodic (~12 000 ms), final (~12 000 ms).
-- **Each event also carries `viewId`**, the UUID for the cycle. All events in one cycle share a
-  `viewId`; a new cycle gets a fresh one. Use `viewId` downstream to correlate.
+- **An entry briefly scrolled into view (< 1 s total) fires no events.** The session never
+  qualifies, so neither a start nor an end interaction is emitted.
+- **An entry scrolled into view for 1 s and then immediately unmounted** fires one start interaction,
+  then one end interaction from the unmount cleanup effect.
+- **Each event carries `viewDurationMs`**, computed from the session's accumulated time at the moment
+  of emission. The sequence for a 12 s continuous view is a start at about 1000 ms and an end at
+  about 12 000 ms.
+- **Each event also carries `viewId`**, the UUID for the session. Both events in one session share a
+  `viewId`; a new session gets a fresh one. Use `viewId` downstream to correlate.
 
 ### App backgrounding and cleanup
 
 Two additional transitions matter:
 
 1. **AppState background or inactive transition.** The hook listens to `AppState` changes. On
-   transition to `background` or `inactive`, it clears the fire timer, pauses accumulation, and
-   emits a final event before resetting the cycle and marking `isVisibleRef.current = false` when
-   `attempts > 0`. When the app becomes `active` again, it re-checks visibility from scratch, which
-   starts a new cycle if the entry is still on screen.
+   transition to `background` or `inactive`, it clears an unfinished dwell timer, emits the end
+   interaction for a qualified session, and resets the session. When the app becomes `active`
+   again, it re-checks visibility from scratch, which starts a new session if the entry is still on
+   screen.
 
-2. **Component unmount.** The unmount cleanup clears the fire timer and, if the cycle already made a
-   view emission attempt (`attempts > 0`), schedules a final view event through the same async
-   `trackView` path.
+2. **Component unmount.** The unmount cleanup clears an unfinished dwell timer and, for a qualified
+   session, schedules the end interaction through the same async `trackView` path before resetting
+   the session.
 
-Combined, these transitions mean that when the initial view emission attempt has occurred, the hook
-emits a final event with the same `viewId` and the cycle duration when visibility ends naturally,
-the user backgrounds the app, or the component unmounts.
+Combined, these transitions mean that a qualified session gets one end interaction with the same
+`viewId` and final duration when visibility ends naturally, the user backgrounds the app, or the
+component unmounts. A sub-dwell session resets without emitting either interaction.
 
 ## Scroll context and viewport resolution
 
@@ -540,14 +523,14 @@ surface:
 
 - Use `trackView` for a screen-wide or manually timed entry view. Provide a stable `viewId` and
   measured `viewDurationMs`; automatic entry tracking generates those values for each visibility
-  cycle.
+  session.
 - Use `trackClick` when a non-Contentful wrapper still represents a component click or tap that
   Analytics must count.
 - Use `track` for business events unrelated to a Contentful entry. This follows the Experience path
   and can update the profile while online.
 
 For anything backed by a Contentful entry and visible in the viewport, prefer `<OptimizedEntry>`. It
-owns the initial, periodic, and final sequencing, final-on-unmount behavior, final-on-background
+owns session qualification, start-and-end sequencing, end-on-unmount behavior, end-on-background
 behavior, and `viewId` correlation.
 
 ## Lifecycle summary
@@ -561,13 +544,14 @@ For a scrollable list screen with navigation and entry cards, tracking flows in 
   active profile needed by Insights.
 - **Entry rendering** - `OptimizedEntry` resolves variants from current selected optimizations and
   attaches view and tap tracking metadata.
-- **View cycle** - A card that stays at least 80% visible for 2 s emits the initial Insights view,
-  then periodic updates every 5 s, then a final view when visibility ends if at least one view event
-  already fired.
+- **View session** - A card that stays at least 10% visible for 1 s emits the session-start Insights
+  view,
+  continues accumulating duration without periodic interaction emissions, then emits the end view
+  with the same `viewId` and final duration when visibility ends.
 - **Tap** - A short touch movement on the wrapped entry emits a `component_click` Insights event
   when `trackClick` is allowed and calls the application `onTap` handler when provided, even when
   the Analytics event is skipped.
-- **Background or offline** - Backgrounding triggers a final view for active cycles and asks queues
+- **Background or offline** - Backgrounding triggers a final view for active sessions and asks queues
   to flush. Offline Insights events and offline Experience events remain in memory and replay on
   reconnect if the process survives.
 

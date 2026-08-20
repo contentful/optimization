@@ -4,8 +4,6 @@ import type { EntryClickScenario } from 'e2e-web'
 import type { JSX } from 'react'
 import { createRichTextRenderOptions, EntryCardContent } from './EntryCardContent'
 
-const HOVER_DURATION_UPDATE_INTERVAL_MS = 1000
-
 interface EntryCardProps {
   baselineEntry: ContentEntry
   clickScenario?: EntryClickScenario
@@ -25,9 +23,6 @@ export function EntryCard({
         as="div"
         baselineEntry={baselineEntry}
         clickable={autoTrackViews && clickScenario === 'direct'}
-        hoverDurationUpdateIntervalMs={
-          autoTrackViews ? HOVER_DURATION_UPDATE_INTERVAL_MS : undefined
-        }
         trackViews={autoTrackViews ? undefined : false}
       >
         {(resolvedEntry, { getMergeTagValue }) => {

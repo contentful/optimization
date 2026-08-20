@@ -331,12 +331,7 @@ describe('OptimizedEntry', () => {
     })
 
     const view = await renderComponent(
-      <OptimizedEntry
-        baselineEntry={optimizedBaseline}
-        clickable
-        hoverDurationUpdateIntervalMs={1000}
-        loadingFallback={() => 'loading'}
-      >
+      <OptimizedEntry baselineEntry={optimizedBaseline} clickable loadingFallback={() => 'loading'}>
         {(resolved) => readTitle(resolved)}
       </OptimizedEntry>,
       optimization,
@@ -347,7 +342,6 @@ describe('OptimizedEntry', () => {
     const loadingWrapper = getWrapper(view.container)
     expect(loadingWrapper.dataset.ctflClickable).toBeUndefined()
     expect(loadingWrapper.dataset.ctflEntryId).toBeUndefined()
-    expect(loadingWrapper.dataset.ctflHoverDurationUpdateIntervalMs).toBeUndefined()
 
     await emit(variantOneState)
 
@@ -356,8 +350,6 @@ describe('OptimizedEntry', () => {
     expect(resolvedWrapper.dataset.ctflClickable).toBe('true')
     expect(resolvedWrapper.dataset.ctflBaselineId).toBe('6KfLDCdA75BGwr5HfSeXac')
     expect(resolvedWrapper.dataset.ctflEntryId).toBe('4k6ZyFQnR2POY5IJLLlJRb')
-    expect(resolvedWrapper.dataset.ctflHoverDurationUpdateIntervalMs).toBe('1000')
-
     await view.unmount()
   })
 
@@ -653,18 +645,16 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
-  it('maps configurable Web SDK attributes to data attributes', async () => {
+  it('maps supported Web SDK tracking props to data attributes', async () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
     const view = await renderComponent(
       <OptimizedEntry
         baselineEntry={baseline}
         clickable
-        hoverDurationUpdateIntervalMs={1000}
         trackClicks
         trackHovers={false}
         trackViews={false}
-        viewDurationUpdateIntervalMs={2000}
       >
         {(resolved) => readTitle(resolved)}
       </OptimizedEntry>,
@@ -673,11 +663,9 @@ describe('OptimizedEntry', () => {
 
     const wrapper = getWrapper(view.container)
     expect(wrapper.dataset.ctflClickable).toBe('true')
-    expect(wrapper.dataset.ctflHoverDurationUpdateIntervalMs).toBe('1000')
     expect(wrapper.dataset.ctflTrackClicks).toBe('true')
     expect(wrapper.dataset.ctflTrackHovers).toBe('false')
     expect(wrapper.dataset.ctflTrackViews).toBe('false')
-    expect(wrapper.dataset.ctflViewDurationUpdateIntervalMs).toBe('2000')
 
     await view.unmount()
   })

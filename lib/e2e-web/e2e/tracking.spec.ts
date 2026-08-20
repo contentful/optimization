@@ -149,21 +149,22 @@ test.describe('Tracking', () => {
 
         await movePointerAwayFromEntries(page)
       }
-
-      await expect.poll(async () => await hoverEvents.count()).toBeGreaterThanOrEqual(2)
     })
 
-    test('updates hover duration while hovered and emits a final update when hover ends', async ({
-      page,
-    }) => {
+    test('emits qualified hover start and end events with the same ID', async ({ page }) => {
       await page.getByTestId('consent-button').click()
 
       const target = page.getByTestId(`content-${HOVER_ENTRY_BASELINE_ID}`)
       await target.scrollIntoViewIfNeeded()
+      const hoverEvents = page.locator('[data-hover-id]')
+      const baselineHoverEventCount = await hoverEvents.count()
       await target.hover()
 
-      const hoverEvents = page.locator('[data-hover-id]')
-      await expect(hoverEvents.first()).toBeVisible()
+      await expect
+        .poll(async () => await hoverEvents.count(), {
+          message: 'initial qualified hover event should be displayed',
+        })
+        .toBeGreaterThan(baselineHoverEventCount)
 
       const hoverId = await readHoverEventId(page)
       expect(hoverId).toBeTruthy()
@@ -172,35 +173,39 @@ test.describe('Tracking', () => {
       await expect
         .poll(async () => await readHoverDurationMs(page, hoverId))
         .toBeGreaterThanOrEqual(1000)
-      const firstHoverDurationMs = await readHoverDurationMs(page, hoverId)
-
-      await expect
-        .poll(async () => await readHoverDurationMs(page, hoverId))
-        .toBeGreaterThan(firstHoverDurationMs)
-      const updatedHoverDurationMs = await readHoverDurationMs(page, hoverId)
+      const qualifiedHoverDurationMs = await readHoverDurationMs(page, hoverId)
 
       await page.waitForTimeout(300)
       await movePointerAwayFromEntries(page)
 
       await expect
         .poll(async () => await readHoverDurationMs(page, hoverId))
-        .toBeGreaterThan(updatedHoverDurationMs)
+        .toBeGreaterThan(qualifiedHoverDurationMs)
       const finalHoverDurationMs = await readHoverDurationMs(page, hoverId)
 
-      expect(finalHoverDurationMs).toBeGreaterThan(firstHoverDurationMs)
+      expect(finalHoverDurationMs).toBeGreaterThan(qualifiedHoverDurationMs)
+      await expect(page.locator(`[data-hover-id="${hoverId}"]`)).toHaveAttribute(
+        'data-hover-id',
+        hoverId,
+      )
     })
 
-    test('emits a final hover heartbeat when the page becomes hidden while still hovered', async ({
+    test('emits a hover end event with the same ID when the page becomes hidden', async ({
       page,
     }) => {
       await page.getByTestId('consent-button').click()
 
       const target = page.getByTestId(`content-${HOVER_ENTRY_BASELINE_ID}`)
       await target.scrollIntoViewIfNeeded()
+      const hoverEvents = page.locator('[data-hover-id]')
+      const baselineHoverEventCount = await hoverEvents.count()
       await target.hover()
 
-      const hoverEvents = page.locator('[data-hover-id]')
-      await expect(hoverEvents.first()).toBeVisible()
+      await expect
+        .poll(async () => await hoverEvents.count(), {
+          message: 'initial qualified hover event should be displayed',
+        })
+        .toBeGreaterThan(baselineHoverEventCount)
 
       const hoverId = await readHoverEventId(page)
       expect(hoverId).toBeTruthy()
@@ -209,7 +214,7 @@ test.describe('Tracking', () => {
       await expect
         .poll(async () => await readHoverDurationMs(page, hoverId))
         .toBeGreaterThanOrEqual(1000)
-      const beforeHiddenDurationMs = await readHoverDurationMs(page, hoverId)
+      const qualifiedHoverDurationMs = await readHoverDurationMs(page, hoverId)
 
       await page.waitForTimeout(300)
 
@@ -223,7 +228,14 @@ test.describe('Tracking', () => {
 
       await expect
         .poll(async () => await readHoverDurationMs(page, hoverId))
-        .toBeGreaterThan(beforeHiddenDurationMs)
+        .toBeGreaterThan(qualifiedHoverDurationMs)
+      const finalHoverDurationMs = await readHoverDurationMs(page, hoverId)
+
+      expect(finalHoverDurationMs).toBeGreaterThan(qualifiedHoverDurationMs)
+      await expect(page.locator(`[data-hover-id="${hoverId}"]`)).toHaveAttribute(
+        'data-hover-id',
+        hoverId,
+      )
     })
   })
 

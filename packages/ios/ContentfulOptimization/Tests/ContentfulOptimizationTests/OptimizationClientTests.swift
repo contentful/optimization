@@ -1704,29 +1704,23 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
         XCTAssertFalse(controller.isVisible)
     }
 
     @MainActor
-    func testViewTrackingControllerBecomesVisibleAboveThreshold() {
+    func testViewTrackingControllerBecomesVisibleAtThreshold() {
         let client = makeViewTrackingClient()
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
-        // Element fully visible (100% ratio >= 0.8 minVisibleRatio)
+        // Exactly 10px of a 100px element is visible (10% = the fixed threshold).
         controller.updateVisibility(
-            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 500
+            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 10
         )
         XCTAssertTrue(controller.isVisible)
     }
@@ -1737,15 +1731,12 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
-        // Only 10px of 100px element visible (10% < 80% minVisibleRatio)
+        // Only 9px of a 100px element is visible (9% < the fixed 10% threshold).
         controller.updateVisibility(
-            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 10
+            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 9
         )
         XCTAssertFalse(controller.isVisible)
     }
@@ -1756,10 +1747,7 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
         controller.updateVisibility(
@@ -1769,15 +1757,97 @@ final class OptimizationClientTests: XCTestCase {
     }
 
     @MainActor
-    func testViewTrackingControllerBecomesInvisibleOnDisappear() {
+    func testViewTrackingControllerEmitsStartAtFixedDwellAndFinalOnVisibilityEnd() throws {
         let client = makeViewTrackingClient()
+        var currentDate = Date(timeIntervalSince1970: 0)
+        var events: [TrackViewPayload] = []
+        let controller = ViewTrackingController(
+            client: client,
+            entry: ["sys": ["id": "component-1"]],
+            optimizationContextId: "context-1",
+            selectedOptimization: [
+                "experienceId": "experience-1",
+                "variantIndex": 2,
+                "sticky": true,
+            ],
+            now: { currentDate },
+            onEvent: { events.append($0) }
+        )
+
+        // Exactly 10% visible qualifies after the fixed 1000ms dwell.
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 10
+        )
+        currentDate = Date(timeIntervalSince1970: 1)
+        controller.qualificationTimerFired()
+
+        let start = try XCTUnwrap(events.first)
+        XCTAssertEqual(events.count, 1)
+        XCTAssertEqual(start.componentId, "component-1")
+        XCTAssertEqual(start.experienceId, "experience-1")
+        XCTAssertEqual(start.optimizationContextId, "context-1")
+        XCTAssertEqual(start.variantIndex, 2)
+        XCTAssertEqual(start.viewDurationMs, 1000)
+        XCTAssertEqual(start.sticky, true)
+        XCTAssertNotNil(start.stickyTrackingKey)
+
+        // Dropping below 10% ends the qualified cycle and emits one final event.
+        currentDate = Date(timeIntervalSince1970: 2)
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 100, scrollY: 91, viewportHeight: 100
+        )
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 100, scrollY: 91, viewportHeight: 100
+        )
+
+        XCTAssertEqual(events.count, 2)
+        let final = events[1]
+        XCTAssertEqual(final.viewId, start.viewId)
+        XCTAssertEqual(final.viewDurationMs, 2000)
+        XCTAssertEqual(final.stickyTrackingKey, start.stickyTrackingKey)
+        XCTAssertFalse(controller.isVisible)
+    }
+
+    @MainActor
+    func testViewTrackingControllerEmitsNothingForSubDwellVisibility() {
+        let client = makeViewTrackingClient()
+        var currentDate = Date(timeIntervalSince1970: 0)
+        var events: [TrackViewPayload] = []
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
             selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            now: { currentDate },
+            onEvent: { events.append($0) }
+        )
+
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 100
+        )
+        currentDate = Date(timeIntervalSince1970: 0.999)
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 100, scrollY: 91, viewportHeight: 100
+        )
+
+        // A cancelled qualification timer cannot emit after the cycle resets.
+        currentDate = Date(timeIntervalSince1970: 2)
+        controller.qualificationTimerFired()
+
+        XCTAssertTrue(events.isEmpty)
+        XCTAssertFalse(controller.isVisible)
+    }
+
+    @MainActor
+    func testViewTrackingControllerEmitsOneFinalEventOnDisappear() throws {
+        let client = makeViewTrackingClient()
+        var currentDate = Date(timeIntervalSince1970: 0)
+        var events: [TrackViewPayload] = []
+        let controller = ViewTrackingController(
+            client: client,
+            entry: ["sys": ["id": "test"]],
+            selectedOptimization: nil,
+            now: { currentDate },
+            onEvent: { events.append($0) }
         )
 
         controller.updateVisibility(
@@ -1785,7 +1855,17 @@ final class OptimizationClientTests: XCTestCase {
         )
         XCTAssertTrue(controller.isVisible)
 
+        currentDate = Date(timeIntervalSince1970: 1)
+        controller.qualificationTimerFired()
+        let start = try XCTUnwrap(events.first)
+
+        currentDate = Date(timeIntervalSince1970: 1.5)
         controller.onDisappear()
+        controller.onDisappear()
+
+        XCTAssertEqual(events.count, 2)
+        XCTAssertEqual(events[1].viewId, start.viewId)
+        XCTAssertEqual(events[1].viewDurationMs, 1500)
         XCTAssertFalse(controller.isVisible)
     }
 
@@ -1795,10 +1875,7 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
         // First cycle: become visible then disappear
@@ -1817,15 +1894,16 @@ final class OptimizationClientTests: XCTestCase {
     }
 
     @MainActor
-    func testViewTrackingControllerPauseAndResume() {
+    func testViewTrackingControllerPauseEmitsFinalAndResumeReevaluatesGeometry() throws {
         let client = makeViewTrackingClient()
+        var currentDate = Date(timeIntervalSince1970: 0)
+        var events: [TrackViewPayload] = []
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
             selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            now: { currentDate },
+            onEvent: { events.append($0) }
         )
 
         controller.updateVisibility(
@@ -1833,14 +1911,31 @@ final class OptimizationClientTests: XCTestCase {
         )
         XCTAssertTrue(controller.isVisible)
 
+        currentDate = Date(timeIntervalSince1970: 1)
+        controller.qualificationTimerFired()
+        let backgroundedViewId = try XCTUnwrap(events.first?.viewId)
+
+        currentDate = Date(timeIntervalSince1970: 1.5)
         controller.pause()
+        controller.pause()
+
         XCTAssertFalse(controller.isVisible)
+        XCTAssertEqual(events.count, 2)
+        XCTAssertEqual(events[1].viewId, backgroundedViewId)
+        XCTAssertEqual(events[1].viewDurationMs, 1500)
 
         // resume() resets the visibility flag and immediately re-evaluates from the
         // last known geometry, so a still-visible element starts a fresh cycle and
         // becomes visible again without waiting for an external geometry callback.
         controller.resume()
         XCTAssertTrue(controller.isVisible)
+
+        currentDate = Date(timeIntervalSince1970: 2.5)
+        controller.qualificationTimerFired()
+
+        XCTAssertEqual(events.count, 3)
+        XCTAssertNotEqual(events[2].viewId, backgroundedViewId)
+        XCTAssertEqual(events[2].viewDurationMs, 1000)
     }
 
     @MainActor
@@ -1849,23 +1944,20 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.5,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
         // Element at Y=400, height=100, viewport 0-500
-        // Visible portion: 400-500 = 100px of 100px = 100% >= 50%
+        // Visible portion: 400-500 = 100px of 100px = 100% >= the fixed 10% threshold.
         controller.updateVisibility(
             elementY: 400, elementHeight: 100, scrollY: 0, viewportHeight: 500
         )
         XCTAssertTrue(controller.isVisible)
 
-        // Scroll so element is mostly off-screen: element at Y=400, viewport 0-430
-        // Visible portion: 400-430 = 30px of 100px = 30% < 50%
+        // Scroll so the element is almost entirely off-screen: element at Y=400, viewport 0-409.
+        // Visible portion: 400-409 = 9px of 100px = 9% < the fixed 10% threshold.
         controller.updateVisibility(
-            elementY: 400, elementHeight: 100, scrollY: 0, viewportHeight: 430
+            elementY: 400, elementHeight: 100, scrollY: 0, viewportHeight: 409
         )
         XCTAssertFalse(controller.isVisible)
     }
@@ -1876,10 +1968,7 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
         // Zero-height element should not trigger visibility
@@ -1895,10 +1984,7 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
         // Element at Y=0, height=100, but scrolled past (scrollY=200, viewport=500)

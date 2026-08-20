@@ -88,16 +88,16 @@ export function onAnalyticsEvent(event) {
   noEventsMsg.style.display = 'none'
   trackingTable.style.display = ''
 
-  const isViewHeartbeat =
+  const isViewInteractionEvent =
     event.type === 'component' &&
     typeof event.viewId === 'string' &&
     typeof event.viewDurationMs === 'number'
-  const isHoverHeartbeat =
+  const isHoverInteractionEvent =
     event.type === 'component_hover' &&
     typeof event.hoverId === 'string' &&
     typeof event.hoverDurationMs === 'number'
 
-  if (isViewHeartbeat) {
+  if (isViewInteractionEvent) {
     const existing = viewEventRows.get(event.viewId)
     if (existing) {
       updateTrackingRow(existing, event)
@@ -109,7 +109,7 @@ export function onAnalyticsEvent(event) {
     return
   }
 
-  if (isHoverHeartbeat) {
+  if (isHoverInteractionEvent) {
     const existing = hoverEventRows.get(event.hoverId)
     if (existing) {
       updateTrackingRow(existing, event)

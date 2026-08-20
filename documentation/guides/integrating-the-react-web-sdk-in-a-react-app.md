@@ -789,12 +789,33 @@ to get started.
 
 1. Leave the defaults on when your consent policy allows them. Use the `trackEntryInteraction` prop
    on `OptimizationRoot` only to opt out of an interaction type you must not observe.
-2. Use `OptimizedEntry` props — `clickable`, `trackViews`, `trackClicks`, `trackHovers`, and the
-   duration-interval props — for per-entry control.
+2. Use the `OptimizedEntry` props `clickable`, `trackViews`, `trackClicks`, and `trackHovers` for
+   per-entry control.
 3. Page and identify events can be sent before full consent, but entry views, clicks, and hovers
    stay blocked until consent (or `allowedEventTypes`) permits them.
 
 Tracking uses the _resolved_ entry id, not the baseline id.
+
+A view interaction session begins when an entry reaches the fixed 10% visibility threshold. It
+qualifies after the entry stays at or above that threshold for a continuous 1000 ms dwell. A hover
+interaction session begins on pointer entry and qualifies after the pointer remains for a continuous
+1000 ms dwell.
+
+A qualified view interaction session produces two normal event records whose `type` field is
+`component`: the first when it qualifies and the second, final record when it ends, normally because
+visibility falls below 10%.
+Both records carry the same SDK-owned `viewId`. The `viewDurationMs` value is milliseconds measured
+from the beginning of that view interaction session, when the entry reached 10%, so it includes the
+qualifying dwell. A qualified hover interaction session follows the same two-record pattern with a
+`type` field of `component_hover`, an SDK-owned `hoverId`, and `hoverDurationMs` measured in
+milliseconds from pointer entry. Pointer leave or cancel normally ends a hover interaction session. An interaction
+session that ends before qualification emits no record, and active interaction sessions emit no
+periodic duration records.
+
+When the document becomes hidden, or the page fires `pagehide` or starts unloading, the SDK makes a
+best-effort attempt to end active qualified interaction sessions. When the page becomes visible
+again, an entry that is still visible starts a fresh view interaction session and must satisfy the
+1000 ms dwell again. Hover tracking requires a fresh pointer entry.
 
 **Follow this pattern:** opting one detector out globally, plus a per-entry override.
 

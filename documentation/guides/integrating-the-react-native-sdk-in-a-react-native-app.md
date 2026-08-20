@@ -685,8 +685,8 @@ enabled by default on `OptimizedEntry`.
 3. Override an individual entry with `trackViews`, `trackTaps`, or `onTap`.
 4. Wrap scrollable screens with `OptimizationScrollProvider` so view tracking uses the actual scroll
    position.
-5. Tune `minVisibleRatio`, `dwellTimeMs`, and `viewDurationUpdateIntervalMs` only when product
-   analytics requirements differ from the defaults.
+5. Account for the SDK's fixed view timing in analytics expectations: a view session begins at 10%
+   visibility and qualifies after a continuous 1000 ms dwell.
 
 **Adapt this to your use case:**
 
@@ -696,8 +696,6 @@ enabled by default on `OptimizedEntry`.
   <OptimizationScrollProvider>
     <OptimizedEntry
       baselineEntry={entry}
-      dwellTimeMs={1000}
-      minVisibleRatio={0.5}
       onTap={(resolvedEntry) => {
         navigation.navigate('EntryDetail', { id: resolvedEntry.sys.id })
       }}
@@ -708,11 +706,21 @@ enabled by default on `OptimizedEntry`.
 </OptimizationRoot>
 ```
 
-The default view threshold is 80% visibility (`minVisibleRatio` `0.8`) for 2000 ms (`dwellTimeMs`).
-After the first view event, periodic duration updates emit every 5000 ms
-(`viewDurationUpdateIntervalMs`) while the entry remains visible. Without
-`OptimizationScrollProvider`, the SDK assumes `scrollY` is `0` and uses the screen height as the
-viewport, which is appropriate only for non-scrollable or already-visible layouts.
+A qualified view session produces two normal event records whose `type` field is `component`: the
+first when it qualifies and the second, final record when visibility falls below 10% or another
+ending occurs.
+Both records carry the same SDK-owned `viewId`. The `viewDurationMs` value is milliseconds measured
+from the moment that view session began at 10% visibility, so it includes the qualifying dwell. A view
+session that ends before qualification emits no record, and active view sessions emit no periodic
+duration records.
+
+Moving the app to the background or inactive state, or unmounting the entry, ends and resets the
+current view session. When the app returns to the active state, the SDK checks the last measured entry
+and viewport positions without any app action. If the entry is still visible, it starts a fresh view
+session that must satisfy the continuous 1000 ms dwell again.
+
+Without `OptimizationScrollProvider`, the SDK assumes `scrollY` is `0` and uses the screen height as
+the viewport, which is appropriate only for non-scrollable or already-visible layouts.
 
 React Native tracks two interactions: entry views and entry taps (there is no hover). A touch counts
 as a tap only when the finger moves less than 10 points between touch start and end, so a scroll

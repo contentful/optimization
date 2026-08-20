@@ -527,18 +527,14 @@ Use `OptimizedEntry` props to configure Web SDK entry-tracking attributes withou
 `data-ctfl-*` metadata manually:
 
 ```tsx
-<OptimizedEntry
-  baselineEntry={entry}
-  clickable
-  hoverDurationUpdateIntervalMs={1000}
-  viewDurationUpdateIntervalMs={1000}
->
+<OptimizedEntry baselineEntry={entry} clickable trackHovers={false}>
   {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
 </OptimizedEntry>
 ```
 
 `OptimizedEntry` derives entry ID, baseline ID, optimization ID, optimization context ID, sticky
-state, variant index, and duplication scope from the resolved entry state.
+state, variant index, and duplication scope from the resolved entry state. View and hover timing use
+the Web SDK's fixed thresholds and intervals.
 
 Use `sdk.tracking.enableElement(...)` from `useOptimization()` for manual element overrides.
 

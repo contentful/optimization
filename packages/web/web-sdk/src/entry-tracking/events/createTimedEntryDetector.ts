@@ -9,7 +9,7 @@ interface TimedObserver<TElementOptions> {
   observe: (element: Element, options?: TElementOptions) => void
   unobserve: (element: Element) => void
   disconnect: () => void
-  flushActive: () => void
+  endActive: () => Promise<void>
 }
 
 interface ElementOverride<TOptions> {
@@ -42,17 +42,6 @@ interface CreateTimedEntryDetectorOptions<
     info: TInfo,
     element: Element,
   ) => Promise<void>
-}
-
-export const parseNonNegativeNumber = (raw: string | undefined): number | undefined => {
-  if (typeof raw !== 'string') return undefined
-  const normalized = raw.trim()
-  if (!normalized) return undefined
-
-  const parsed = Number(normalized)
-  if (!Number.isFinite(parsed) || parsed < 0) return undefined
-
-  return parsed
 }
 
 export function createTimedEntryDetector<
@@ -201,8 +190,8 @@ export function createTimedEntryDetector<
 
       applyElementObservation(element)
     },
-    flushActive: (): void => {
-      observer?.flushActive()
+    endActive: async (): Promise<void> => {
+      await observer?.endActive()
     },
   }
 }

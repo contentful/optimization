@@ -20,13 +20,34 @@ export const NOW = (): number =>
 export const isPageVisible = (): boolean =>
   !CAN_ADD_LISTENERS ? true : document.visibilityState === 'visible'
 
-export const addVisibilityChangeListener = (handler: () => void): (() => void) | undefined => {
+export const addVisibilityChangeListener = (
+  handler: (isVisible: boolean) => void,
+): (() => void) | undefined => {
   if (!CAN_ADD_LISTENERS) return undefined
 
-  document.addEventListener('visibilitychange', handler)
+  const onVisibilityChange = (): void => {
+    handler(isPageVisible())
+  }
+  const onPageHide = (): void => {
+    handler(false)
+  }
+  const onBeforeUnload = (): void => {
+    handler(false)
+  }
+  const onPageShow = (): void => {
+    handler(true)
+  }
+
+  document.addEventListener('visibilitychange', onVisibilityChange)
+  window.addEventListener('pagehide', onPageHide)
+  window.addEventListener('beforeunload', onBeforeUnload)
+  window.addEventListener('pageshow', onPageShow)
 
   return () => {
-    document.removeEventListener('visibilitychange', handler)
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+    window.removeEventListener('pagehide', onPageHide)
+    window.removeEventListener('beforeunload', onBeforeUnload)
+    window.removeEventListener('pageshow', onPageShow)
   }
 }
 
