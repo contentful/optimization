@@ -6,9 +6,6 @@ struct ViewTrackingModifier: ViewModifier {
     let entry: [String: Any]
     let optimizationContextId: String?
     let selectedOptimization: [String: Any]?
-    let minVisibleRatio: Double
-    let dwellTimeMs: Int
-    let viewDurationUpdateIntervalMs: Int
     let enabled: Bool
     let client: OptimizationClient
 
@@ -77,10 +74,7 @@ struct ViewTrackingModifier: ViewModifier {
                 client: client,
                 entry: entry,
                 optimizationContextId: optimizationContextId,
-                selectedOptimization: selectedOptimization,
-                minVisibleRatio: minVisibleRatio,
-                dwellTimeMs: dwellTimeMs,
-                viewDurationUpdateIntervalMs: viewDurationUpdateIntervalMs
+                selectedOptimization: selectedOptimization
             )
             controllerOptimizationContextId = optimizationContextId
         }

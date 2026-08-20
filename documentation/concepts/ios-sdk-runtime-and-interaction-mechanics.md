@@ -266,16 +266,15 @@ events:
 SDK-managed entry interaction tracking uses these defaults:
 
 - Entry view and tap tracking are enabled by default.
-- Initial view event after 2 seconds at 80% visibility.
+- Initial view event after 1 second at 10% visibility.
 - Periodic duration updates every 5 seconds while the entry remains visible.
 - Final duration update when the entry leaves view after a view event has already fired.
 - On iOS/UIKit, backgrounding pauses active view cycles. If the cycle has already emitted a view
   event, `pause()` emits a final duration update; foreground resume re-evaluates visibility and
   starts a fresh cycle when the entry is still eligible.
 
-SwiftUI `OptimizedEntry` and UIKit `ViewTrackingController` can tune `minVisibleRatio`,
-`dwellTimeMs`, and `viewDurationUpdateIntervalMs` per entry. Wrap scrollable SwiftUI content in
-`OptimizationScrollView` when view timing needs an accurate viewport.
+The 10% visibility threshold, 1-second dwell, and 5-second duration-update interval are fixed. Wrap
+scrollable SwiftUI content in `OptimizationScrollView` when view timing needs an accurate viewport.
 
 UIKit does not have automatic component visibility tracking. UIKit apps compute visibility and
 duration through their own table, collection, or view-controller callbacks. Use

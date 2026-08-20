@@ -264,13 +264,13 @@ Contentful entry interaction events:
 Entry interaction tracking uses these defaults:
 
 - Entry view and tap tracking are enabled by default in both Compose and XML Views.
-- Initial view event after 2 seconds at 80% visibility.
+- Initial view event after 1 second at 10% visibility.
 - Periodic duration updates every 5 seconds while the entry remains visible.
 - Final duration update when the entry leaves view after a view event has already fired.
 
-`OptimizedEntry` and `OptimizedEntryView` can tune `minVisibleRatio`, `dwellTimeMs`, and
-`viewDurationUpdateIntervalMs` per entry. Use `OptimizationLazyColumn` in Compose and
-`TrackingRecyclerView` in XML Views when view timing needs scroll-aware visibility updates.
+The 10% visibility threshold, 1-second dwell, and 5-second duration-update interval are fixed. Use
+`OptimizationLazyColumn` in Compose and `TrackingRecyclerView` in XML Views when view timing needs
+scroll-aware visibility updates.
 
 Applications can also call `page(...)`, `track(...)`, `trackView(...)`, and `trackClick(...)`
 directly when they need to emit page context, custom business events, or entry interactions from a

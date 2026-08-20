@@ -18,7 +18,6 @@ type ObservationMode = ContentEntryProps['observation']
 interface AutoTrackingAttributes {
   'data-ctfl-entry-id': string
   'data-ctfl-baseline-id': string
-  'data-ctfl-hover-duration-update-interval-ms': string
   'data-ctfl-optimization-id': string | undefined
   'data-ctfl-sticky': string | undefined
   'data-ctfl-variant-index': string | undefined
@@ -49,7 +48,6 @@ interface SelectedOptimizationMeta {
 }
 
 interface EntryViewElementOptions {
-  readonly dwellTimeMs?: number
   readonly data?: {
     readonly entryId: string
     readonly optimizationId?: string
@@ -104,7 +102,6 @@ function getTrackingAttributes(input: GetTrackingAttributesInput): TrackingAttri
         'data-ctfl-optimization-id': experienceId,
         'data-ctfl-sticky': sticky === undefined ? undefined : String(sticky),
         'data-ctfl-variant-index': variantIndex === undefined ? undefined : String(variantIndex),
-        'data-ctfl-hover-duration-update-interval-ms': '1000',
       },
       manualTrackingAttributes: undefined,
     }

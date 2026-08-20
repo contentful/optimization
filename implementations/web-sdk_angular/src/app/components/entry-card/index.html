@@ -21,7 +21,6 @@
     [attr.data-ctfl-optimization-id]="manualTracking() ? null : (r.optimizationId ?? null)"
     [attr.data-ctfl-sticky]="manualTracking() ? null : (r.sticky !== undefined ? r.sticky.toString() : null)"
     [attr.data-ctfl-variant-index]="manualTracking() ? null : (r.variantIndex !== undefined ? r.variantIndex.toString() : null)"
-    [attr.data-ctfl-hover-duration-update-interval-ms]="manualTracking() ? null : '1000'"
     [attr.data-ctfl-clickable]="manualTracking() || scenario !== 'direct' ? null : 'true'"
     [attr.data-entry-id]="manualTracking() ? r.baselineId : null"
   >

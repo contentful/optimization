@@ -135,7 +135,7 @@ test.describe('entry hover tracking', () => {
       const firstHoverDurationMs = await readHoverDurationMs(hoverSessionButton)
 
       await expect
-        .poll(async () => await readHoverDurationMs(hoverSessionButton))
+        .poll(async () => await readHoverDurationMs(hoverSessionButton), { timeout: 7000 })
         .toBeGreaterThan(firstHoverDurationMs)
       const updatedHoverDurationMs = await readHoverDurationMs(hoverSessionButton)
 

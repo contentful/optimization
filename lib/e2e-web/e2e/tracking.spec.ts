@@ -175,7 +175,7 @@ test.describe('Tracking', () => {
       const firstHoverDurationMs = await readHoverDurationMs(page, hoverId)
 
       await expect
-        .poll(async () => await readHoverDurationMs(page, hoverId))
+        .poll(async () => await readHoverDurationMs(page, hoverId), { timeout: 7000 })
         .toBeGreaterThan(firstHoverDurationMs)
       const updatedHoverDurationMs = await readHoverDurationMs(page, hoverId)
 

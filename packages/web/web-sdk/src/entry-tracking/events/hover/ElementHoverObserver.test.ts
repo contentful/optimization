@@ -63,7 +63,7 @@ describe('ElementHoverObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementHoverObserver(cb, { dwellTimeMs: 1000 })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchHoverEnter(el)
@@ -83,14 +83,11 @@ describe('ElementHoverObserver', () => {
     )
   })
 
-  it('emits duration updates at configured intervals while still hovered', async () => {
+  it('emits duration updates at the fixed interval while still hovered', async () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementHoverObserver(cb, {
-      dwellTimeMs: 1000,
-      hoverDurationUpdateIntervalMs: 5000,
-    })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchHoverEnter(el)
@@ -115,10 +112,7 @@ describe('ElementHoverObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementHoverObserver(cb, {
-      dwellTimeMs: 1000,
-      hoverDurationUpdateIntervalMs: 10_000,
-    })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchHoverEnter(el)
@@ -143,7 +137,7 @@ describe('ElementHoverObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementHoverObserver(cb, { dwellTimeMs: 1000 })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchHoverEnter(el)
@@ -158,18 +152,18 @@ describe('ElementHoverObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementHoverObserver(cb, { dwellTimeMs: 100 })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchHoverEnter(el)
-    await advance(100)
+    await advance(1000)
     dispatchHoverLeave(el)
     await Promise.resolve()
     await Promise.resolve()
     await Promise.resolve()
 
     dispatchHoverEnter(el)
-    await advance(100)
+    await advance(1000)
 
     expect(cb).toHaveBeenCalledTimes(3)
 
@@ -186,7 +180,7 @@ describe('ElementHoverObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementHoverObserver(cb, { dwellTimeMs: 500 })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchHoverEnter(el)
@@ -199,34 +193,33 @@ describe('ElementHoverObserver', () => {
 
     setDocumentVisibility('visible')
 
-    await advance(199)
+    await advance(699)
     expect(cb).not.toHaveBeenCalled()
 
     await advance(1)
     expect(cb).toHaveBeenCalledTimes(1)
   })
 
-  it('supports per-element dwell override and passes data to callback', async () => {
+  it('passes per-element data to the callback', async () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementHoverObserver(cb, { dwellTimeMs: 10_000 })
+    const obs = new ElementHoverObserver(cb)
 
     obs.observe(el, {
-      dwellTimeMs: 50,
       data: { id: 'xyz' },
     })
 
     dispatchHoverEnter(el)
 
-    await advance(50)
+    await advance(1000)
 
     expect(cb).toHaveBeenCalledTimes(1)
     expect(cb).toHaveBeenCalledWith(
       el,
       expect.objectContaining<Partial<Meta>>({
         attempts: 1,
-        totalHoverMs: 50,
+        totalHoverMs: 1000,
         hoverId: expect.any(String),
         data: { id: 'xyz' },
       }),
@@ -240,11 +233,11 @@ describe('ElementHoverObserver', () => {
       await firstAttempt.promise
     })
 
-    const obs = new ElementHoverObserver(cb, { dwellTimeMs: 10 })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchHoverEnter(el)
-    await advance(10)
+    await advance(1000)
     expect(cb).toHaveBeenCalledTimes(1)
 
     await advance(100)
@@ -268,14 +261,11 @@ describe('ElementHoverObserver', () => {
       }
     })
 
-    const obs = new ElementHoverObserver(cb, {
-      dwellTimeMs: 0,
-      hoverDurationUpdateIntervalMs: 1000,
-    })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchHoverEnter(el)
-    await advance(0)
+    await advance(1000)
     await advance(250)
     dispatchHoverLeave(el)
 
@@ -299,21 +289,18 @@ describe('ElementHoverObserver', () => {
       await Promise.resolve()
     })
 
-    const obs = new ElementHoverObserver(cb, {
-      dwellTimeMs: 0,
-      hoverDurationUpdateIntervalMs: 1000,
-    })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchHoverEnter(el)
 
-    await advance(0)
+    await advance(1000)
     await Promise.resolve()
     await Promise.resolve()
 
     expect(cb).toHaveBeenCalledTimes(1)
 
-    await advance(1000)
+    await advance(5000)
     expect(cb).toHaveBeenCalledTimes(2)
   })
 
@@ -321,7 +308,7 @@ describe('ElementHoverObserver', () => {
     const el = makeElement()
     const cb = rs.fn().mockResolvedValue(undefined)
 
-    const obs = new ElementHoverObserver(cb, { dwellTimeMs: 10_000 })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchHoverEnter(el)
@@ -339,7 +326,7 @@ describe('ElementHoverObserver', () => {
     const cb = rs.fn().mockResolvedValue(undefined)
     const derefSpy = rs.spyOn(ElementHover, 'derefElement')
 
-    const obs = new ElementHoverObserver(cb, { dwellTimeMs: 1_000 })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchHoverEnter(el)
@@ -356,7 +343,7 @@ describe('ElementHoverObserver', () => {
     const addSpy = rs.spyOn(document, 'addEventListener')
     const removeSpy = rs.spyOn(document, 'removeEventListener')
 
-    const obs = new ElementHoverObserver(cb, { dwellTimeMs: 100 })
+    const obs = new ElementHoverObserver(cb)
     expect(addSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
 
     obs.observe(el)
@@ -371,7 +358,7 @@ describe('ElementHoverObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementHoverObserver(cb, { dwellTimeMs: 0 })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchTouchPointerEnter(el)
@@ -384,10 +371,7 @@ describe('ElementHoverObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementHoverObserver(cb, {
-      dwellTimeMs: 1000,
-      hoverDurationUpdateIntervalMs: 10_000,
-    })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchHoverEnter(el)
@@ -415,7 +399,7 @@ describe('ElementHoverObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementHoverObserver(cb, { dwellTimeMs: 1000 })
+    const obs = new ElementHoverObserver(cb)
     obs.observe(el)
 
     dispatchHoverEnter(el)

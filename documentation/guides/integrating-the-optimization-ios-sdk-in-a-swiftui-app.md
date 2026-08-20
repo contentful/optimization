@@ -706,10 +706,9 @@ them.
 View tracking is viewport-based. Wrap scrollable content in `OptimizationScrollView` so view timing
 uses the real scroll position; without an enclosing scroll view, tracking assumes `scrollY` is `0` and
 uses the screen height as the viewport, which suits only non-scrolling or already-visible layouts. The
-default view threshold is 80% visibility (`minVisibleRatio` `0.8`) for a cumulative 2000 ms
-(`dwellTimeMs`) — visible time accumulates, so the threshold does not require one unbroken visible
-window. After the first view event, duration updates emit every 5000 ms
-(`viewDurationUpdateIntervalMs`) while the entry stays visible.
+view threshold is fixed at 10% visibility for a cumulative 1000 ms — visible time accumulates, so the
+threshold does not require one unbroken visible window. After the first view event, duration updates
+emit every 5000 ms while the entry stays visible.
 
 A tap observer on the `OptimizedEntry` wrapper emits the `component_click` event, then calls the
 optional `onTap` closure. That closure receives the **baseline** entry you passed in, not the resolved
@@ -723,8 +722,8 @@ fields from it. Because `onTap` runs through that same tap observer, `trackTaps:
    default, not a lock: an entry that passes `trackTaps: true`, or a non-nil `onTap`, still emits
    `component_click`.
 3. Wrap scrollable entry lists in `OptimizationScrollView` for accurate viewport timing.
-4. Tune `dwellTimeMs`, `minVisibleRatio`, and `viewDurationUpdateIntervalMs` per entry only when
-   analytics requirements differ from the defaults.
+4. Account for the fixed 10% visibility, 1000 ms dwell, and 5000 ms update interval in analytics
+   expectations.
 5. Use a `Button` or app gesture inside the render closure for navigation, and `onTap` only when the
    SDK tap event should also drive it.
 
@@ -748,8 +747,7 @@ scope. `config`, `posts`, `cta`, `navigate(to:)`, `analytics`, and the card view
 OptimizationScrollView {
     LazyVStack(alignment: .leading, spacing: 12) {
         ForEach(Array(posts.enumerated()), id: \.offset) { _, post in
-            // Per-entry thresholds override the tree defaults from OptimizationRoot.
-            OptimizedEntry(entry: post, dwellTimeMs: 1000, minVisibleRatio: 0.5) { resolvedEntry in
+            OptimizedEntry(entry: post) { resolvedEntry in
                 BlogPostCard(entry: resolvedEntry)
             }
         }

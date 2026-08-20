@@ -1,8 +1,4 @@
 import {
-  getRemainingMsUntilNextEntryViewFire,
-  resolveEntryViewTimingOptions,
-} from '@contentful/optimization-core'
-import {
   type Interval,
   NOW,
   type Timer,
@@ -33,29 +29,15 @@ export type ElementViewCallback = (
 ) => void | Promise<void>
 
 export interface ElementViewObserverOptions {
-  readonly dwellTimeMs?: number
-  readonly viewDurationUpdateIntervalMs?: number
-  readonly minVisibleRatio?: number
   readonly root?: Element | Document | null
   readonly rootMargin?: string
 }
 
 export interface ElementViewElementOptions {
-  readonly dwellTimeMs?: number
-  readonly viewDurationUpdateIntervalMs?: number
   readonly data?: unknown
 }
 
-export type EffectiveObserverOptions = Required<
-  Pick<
-    ElementViewObserverOptions,
-    'dwellTimeMs' | 'viewDurationUpdateIntervalMs' | 'minVisibleRatio' | 'root' | 'rootMargin'
-  >
->
-
-export type PerElementEffectiveOptions = Required<
-  Pick<EffectiveObserverOptions, 'dwellTimeMs' | 'viewDurationUpdateIntervalMs'>
->
+export type EffectiveObserverOptions = Required<ElementViewObserverOptions>
 
 export type ElementViewSource = 'element' | 'virtual'
 
@@ -64,7 +46,6 @@ export interface ElementState {
   strongRef: Element | null
   source: ElementViewSource
   target: Element | null
-  opts: PerElementEffectiveOptions
   data?: unknown
   accumulatedMs: number
   visibleSince: number | null
@@ -80,26 +61,14 @@ export interface ElementState {
 export const initElementViewObserverOptions = (
   options?: ElementViewObserverOptions,
 ): EffectiveObserverOptions => ({
-  ...resolveEntryViewTimingOptions(options, {
-    dwellTimeMs: DEFAULTS.DWELL_MS,
-    viewDurationUpdateIntervalMs: DEFAULTS.VIEW_DURATION_UPDATE_INTERVAL_MS,
-    minVisibleRatio: DEFAULTS.RATIO,
-  }),
   root: options?.root ?? null,
   rootMargin: options?.rootMargin ?? '0px',
 })
 
 export const createElementState = (
   element: Element,
-  observerOptions: EffectiveObserverOptions,
   elementOptions?: ElementViewElementOptions,
 ): ElementState => {
-  const { dwellTimeMs, viewDurationUpdateIntervalMs } = resolveEntryViewTimingOptions(
-    elementOptions,
-    observerOptions,
-  )
-  const opts: PerElementEffectiveOptions = { dwellTimeMs, viewDurationUpdateIntervalMs }
-
   const hasWeakRef = typeof WeakRef === 'function'
 
   return {
@@ -107,7 +76,6 @@ export const createElementState = (
     strongRef: hasWeakRef ? null : element,
     source: 'element',
     target: null,
-    opts,
     data: elementOptions?.data,
     accumulatedMs: 0,
     visibleSince: null,
@@ -143,8 +111,4 @@ export const resetVisibilityCycle = (state: ElementState): void => {
 }
 
 export const getRemainingMsUntilNextFire = (state: ElementState, elapsedMs: number): number =>
-  getRemainingMsUntilNextEntryViewFire({
-    ...state.opts,
-    attempts: state.attempts,
-    accumulatedMs: elapsedMs,
-  })
+  DEFAULTS.DWELL_MS + state.attempts * DEFAULTS.VIEW_DURATION_UPDATE_INTERVAL_MS - elapsedMs

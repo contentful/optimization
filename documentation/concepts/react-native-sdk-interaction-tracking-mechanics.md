@@ -47,7 +47,7 @@ and which state can survive a process restart:
 If you mount `OptimizationRoot`, wrap React Navigation with `OptimizationNavigationContainer`, and
 wrap Contentful entries in `<OptimizedEntry />`, the SDK gives you these tracking behaviors:
 
-- **Entry view tracking** - Initial event after 2 s at 80% or greater visibility, periodic updates
+- **Entry view tracking** - Initial event after 1 s at 10% or greater visibility, periodic updates
   every 5 s while visible, and a final event when visibility ends after an event has already fired.
 - **Screen tracking** - A `screen` event on every active route change.
 - **Default pre-consent `identify` and `screen` events** - The React Native default allows these
@@ -91,7 +91,7 @@ Applications still own these choices:
 - [Consent gating](#consent-gating)
   - [Why is nothing tracking?](#why-is-nothing-tracking)
 - [Entry view tracking mechanics](#entry-view-tracking-mechanics)
-  - [Default visibility and timing](#default-visibility-and-timing)
+  - [Fixed visibility and timing](#fixed-visibility-and-timing)
   - [The visibility state machine](#the-visibility-state-machine)
   - [Initial, periodic, and final events](#initial-periodic-and-final-events)
   - [App backgrounding and cleanup](#app-backgrounding-and-cleanup)
@@ -126,8 +126,8 @@ events also need an active profile.
 | Event                             | When it fires                                                                                                | Required wiring                                                                                             |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
 | **Screen view**                   | Each time the active navigation route changes.                                                               | `<OptimizationNavigationContainer>` wrapping `NavigationContainer` (or `useScreenTracking` on each screen). |
-| **Entry view (initial)**          | When a wrapped entry has accumulated enough visible time (default 2000 ms at ≥ 80% visibility).              | `<OptimizedEntry baselineEntry={entry}>` with view tracking enabled (the default).                          |
-| **Entry view (periodic updates)** | Every `viewDurationUpdateIntervalMs` (default 5000 ms) while the entry remains visible.                      | Same as above.                                                                                              |
+| **Entry view (initial)**          | When a wrapped entry has accumulated 1000 ms at ≥ 10% visibility.                                            | `<OptimizedEntry baselineEntry={entry}>` with view tracking enabled (the default).                          |
+| **Entry view (periodic updates)** | Every 5000 ms while the entry remains visible.                                                               | Same as above.                                                                                              |
 | **Entry view (final)**            | When visibility ends (scrolled away, unmounted, or app backgrounded) _if_ at least one event already fired.  | Same as above.                                                                                              |
 | **Entry tap**                     | On touch end, when the touch moved less than 10 points from touch start, on a wrapped entry.                 | `<OptimizedEntry>` with tap tracking enabled (the default; opt out with `trackTaps={false}`).               |
 | **Flag view**                     | Attempted when a flag value is read or a subscribed value is delivered; accepted emissions are deduplicated. | Any `getFlag(...)` call or `states.flag(...)` subscription.                                                 |
@@ -295,7 +295,8 @@ Five checks, in order of likelihood:
    current profile exists.
 3. **Tap tracking opt-out.** Views and taps default to `true`; check for root or per-entry
    `taps: false` or `trackTaps={false}` overrides.
-4. **Visibility requirement.** Defaults are strict (80% for 2 s). Scroll-by content never fires.
+4. **Visibility requirement.** The fixed requirement is 10% for 1 s. Brief scroll-by content
+   never fires.
 5. **No scroll context.** An entry below the fold without `<OptimizationScrollProvider>` will never
    pass the visibility requirement because `scrollY` is assumed `0`.
 
@@ -304,14 +305,14 @@ Five checks, in order of likelihood:
 This section describes the internals of `useViewportTracking`, the hook `<OptimizedEntry />` uses
 under the hood.
 
-### Default visibility and timing
+### Fixed visibility and timing
 
-The default entry view settings are:
+Entry view tracking uses these fixed values:
 
 | Constant                                   | Value  | Meaning                                                                                                              |
 | ------------------------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------- |
-| `DEFAULT_MIN_VISIBLE_RATIO`                | `0.8`  | Minimum visibility ratio (0.0 to 1.0). An entry is "visible" when at least 80% of its height is within the viewport. |
-| `DEFAULT_DWELL_TIME_MS`                    | `2000` | Minimum accumulated visible time (ms) before the **initial** view event fires.                                       |
+| `DEFAULT_MIN_VISIBLE_RATIO`                | `0.1`  | Minimum visibility ratio (0.0 to 1.0). An entry is "visible" when at least 10% of its height is within the viewport. |
+| `DEFAULT_DWELL_TIME_MS`                    | `1000` | Minimum accumulated visible time (ms) before the **initial** view event fires.                                       |
 | `DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS` | `5000` | Interval (ms) between **periodic** duration update events after the initial event.                                   |
 
 Tap tracking has one additional requirement:
@@ -337,7 +338,7 @@ interface ViewCycleState {
 
 On every scroll tick or layout change, `checkVisibility()` computes the overlap between the entry's
 measured `{y, height}` and the current viewport `{scrollY, viewportHeight}` to derive a
-`visibilityRatio`, and compares it to `minVisibleRatio`:
+`visibilityRatio`, and compares it to the fixed 10% threshold:
 
 - **Not visible to visible** - `onVisibilityStart` resets the cycle, mints a fresh `viewId`, sets
   `visibleSince = now`, and schedules the next fire.
@@ -350,33 +351,33 @@ Within a cycle, events fire based on accumulated visible time. The schedule mirr
 `ElementViewObserver`:
 
 ```
-requiredMs_for_event_N = dwellTimeMs + N * viewDurationUpdateIntervalMs
+requiredMs_for_event_N = 1000 + N * 5000
 ```
 
-So with defaults:
+This produces the following schedule:
 
 | Event       | When it fires (from cycle start)         |
 | ----------- | ---------------------------------------- |
-| Initial     | 2000 ms accumulated visible              |
-| Periodic #1 | 7000 ms accumulated visible              |
-| Periodic #2 | 12 000 ms accumulated visible            |
-| Periodic #N | `2000 + N * 5000` ms accumulated visible |
+| Initial     | 1000 ms accumulated visible              |
+| Periodic #1 | 6000 ms accumulated visible              |
+| Periodic #2 | 11 000 ms accumulated visible            |
+| Periodic #N | `1000 + N * 5000` ms accumulated visible |
 | Final       | At `onVisibilityEnd`, if `attempts > 0`  |
 
 Accumulation applies only inside the current visibility cycle. Leaving visibility ends the cycle,
 clears the fire timer, and resets accumulated time after any eligible final event is emitted. If the
-user scrolls away at 1.5 s and returns later, the return starts a fresh dwell timer from 0 ms with a
+user scrolls away at 0.5 s and returns later, the return starts a fresh dwell timer from 0 ms with a
 new `viewId`.
 
 A few consequences:
 
-- **An entry briefly scrolled into view (< 2 s total) fires no events.** The initial gate is never
+- **An entry briefly scrolled into view (< 1 s total) fires no events.** The initial gate is never
   crossed, so the final event is suppressed (guarded by `attempts > 0`).
-- **An entry scrolled into view for 2 s and then immediately unmounted** fires one initial event,
+- **An entry scrolled into view for 1 s and then immediately unmounted** fires one initial event,
   then one final event from the unmount cleanup effect.
 - **Each event carries `viewDurationMs`**, computed from the cycle's accumulated time at the moment
-  of emission. The sequence of events for a 12 s continuous view is: initial (~2000 ms), periodic
-  (~7000 ms), periodic (~12 000 ms), final (~12 000 ms).
+  of emission. The sequence of events for a 12 s continuous view is: initial (~1000 ms), periodic
+  (~6000 ms), periodic (~11 000 ms), final (~12 000 ms).
 - **Each event also carries `viewId`**, the UUID for the cycle. All events in one cycle share a
   `viewId`; a new cycle gets a fresh one. Use `viewId` downstream to correlate.
 
@@ -561,7 +562,7 @@ For a scrollable list screen with navigation and entry cards, tracking flows in 
   active profile needed by Insights.
 - **Entry rendering** - `OptimizedEntry` resolves variants from current selected optimizations and
   attaches view and tap tracking metadata.
-- **View cycle** - A card that stays at least 80% visible for 2 s emits the initial Insights view,
+- **View cycle** - A card that stays at least 10% visible for 1 s emits the initial Insights view,
   then periodic updates every 5 s, then a final view when visibility ends if at least one view event
   already fired.
 - **Tap** - A short touch movement on the wrapped entry emits a `component_click` Insights event

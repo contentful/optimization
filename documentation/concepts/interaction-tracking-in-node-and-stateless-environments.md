@@ -350,8 +350,7 @@ return <article {...trackingAttributes}>...</article>
 
 Those helpers stay aligned with the current Web and React Web tracking attributes, including
 per-element control attributes such as `data-ctfl-track-views`, `data-ctfl-track-clicks`,
-`data-ctfl-track-hovers`, `data-ctfl-clickable`, `data-ctfl-view-duration-update-interval-ms`, and
-`data-ctfl-hover-duration-update-interval-ms`.
+`data-ctfl-track-hovers`, and `data-ctfl-clickable`.
 
 If an application renders raw attributes manually, keep the stable browser tracking payload contract
 separate from SDK control metadata:

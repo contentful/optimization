@@ -19,7 +19,6 @@ import {
   type EntryClickInteractionElementOptions,
   type EntryElementInteraction,
   type EntryHoverInteractionElementOptions,
-  type EntryHoverInteractionStartOptions,
   type EntryInteraction,
   type EntryInteractionApi,
   type EntryInteractionStartOptions,
@@ -59,10 +58,7 @@ interface EntryInteractionDetectorMap {
     EntryViewInteractionStartOptions | undefined,
     EntryViewInteractionElementOptions
   >
-  hovers: EntryInteractionDetector<
-    EntryHoverInteractionStartOptions | undefined,
-    EntryHoverInteractionElementOptions
-  >
+  hovers: EntryInteractionDetector<undefined, EntryHoverInteractionElementOptions>
 }
 
 const isNode = (value: unknown): value is Node =>
@@ -171,7 +167,6 @@ export class EntryInteractionRuntime {
     hovers: new Map(),
   }
   private viewStartOptions: EntryViewInteractionStartOptions | undefined
-  private hoverStartOptions: EntryHoverInteractionStartOptions | undefined
   private readonly isInteractionRunning: Record<EntryInteraction, boolean> = {
     clicks: false,
     views: false,
@@ -297,7 +292,7 @@ export class EntryInteractionRuntime {
     if (interaction === 'clicks') this.entryInteractionDetectors.clicks.start()
     else if (interaction === 'views')
       this.entryInteractionDetectors.views.start(this.viewStartOptions)
-    else this.entryInteractionDetectors.hovers.start(this.hoverStartOptions)
+    else this.entryInteractionDetectors.hovers.start()
 
     this.ensureEntryElementObservation()
     this.seedInitialEntryElements()
@@ -542,8 +537,6 @@ export class EntryInteractionRuntime {
 
     if (interaction === 'views') {
       this.viewStartOptions = options
-    } else if (interaction === 'hovers') {
-      this.hoverStartOptions = options
     }
 
     this.reconcileInteraction(interaction, true)

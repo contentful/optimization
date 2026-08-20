@@ -678,13 +678,13 @@ uses the real scroll position; without an enclosing scroll context, tracking ass
 and uses the system display height as the viewport, which suits only non-scrolling or already-visible
 layouts.
 
-Default viewport-tracking parameters:
+Fixed viewport-tracking behavior:
 
-| Parameter                      | Default | Meaning                                                                                     |
-| ------------------------------ | ------- | ------------------------------------------------------------------------------------------- |
-| `minVisibleRatio`              | `0.8`   | Fraction of the entry that must be visible to count as viewed.                              |
-| `dwellTimeMs`                  | `2000`  | How long that visibility must hold before the first view event fires.                       |
-| `viewDurationUpdateIntervalMs` | `5000`  | How often a duration update emits while the entry stays visible after the first view event. |
+| Behavior                 | Value   | Meaning                                                                                     |
+| ------------------------ | ------- | ------------------------------------------------------------------------------------------- |
+| Minimum visible portion  | 10%     | Fraction of the entry that must be visible to count as viewed.                              |
+| Initial visible duration | 1000 ms | How long that visibility must hold before the first view event fires.                       |
+| Duration update interval | 5000 ms | How often a duration update emits while the entry stays visible after the first view event. |
 
 A final duration update emits when the entry leaves the viewport, once at least one view event has
 fired.
@@ -700,8 +700,7 @@ from the resolved entry the render lambda provides.
 2. Set `trackViews = false` or `trackTaps = false` on `OptimizationRoot` for a tree-wide opt-out, or on
    an individual `OptimizedEntry` for one surface.
 3. Wrap scrollable entry lists in `OptimizationLazyColumn` for accurate viewport timing.
-4. Tune `dwellTimeMs`, `minVisibleRatio`, and `viewDurationUpdateIntervalMs` per entry only when
-   analytics requirements differ from the defaults.
+4. Account for the fixed view timing in analytics expectations.
 5. Drive navigation from the resolved entry in the render lambda, and use `onTap` only for side effects
    the SDK tap event should also trigger.
 

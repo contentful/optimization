@@ -164,9 +164,11 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   source: web-sdk#ContentfulOptimization.ts#trackCurrentPage; core-sdk#tracking/AcceptedCurrentStateTracker.ts#emitIfNeeded
 - Interaction tracking: SDK observes any DOM element carrying `data-ctfl-*`; auto view/click/hover
   on by default; opt out per-type via `autoTrackEntryInteraction`. Manual:
-  `tracking.enableElement('views', el, { data, dwellTimeMs })` / `disableElement` / `clearElement`
-  (manual data precedes attributes). Uses RESOLVED entry id.
-  source: web-sdk#entry-tracking/EntryInteractionRuntime.ts#EntryInteractionRuntime; web-sdk#entry-tracking/resolveAutoTrackEntryInteractionOptions.ts#EntryInteractionApi; web-sdk#presentation/OptimizedEntryTrackingAttributes.ts#resolveOptimizedEntryTrackingAttributes
+  `tracking.enableElement('views', el, { data })` / `disableElement` / `clearElement` (manual data
+  precedes attributes). Uses RESOLVED entry id. View tracking uses a fixed 1000 ms dwell, 5000 ms
+  duration-update interval, and 10% visibility threshold; hover tracking uses a fixed 1000 ms dwell
+  and 5000 ms duration-update interval.
+  source: web-sdk#entry-tracking/EntryInteractionRuntime.ts#EntryInteractionRuntime; web-sdk#entry-tracking/resolveAutoTrackEntryInteractionOptions.ts#EntryInteractionApi; web-sdk#presentation/OptimizedEntryTrackingAttributes.ts#resolveOptimizedEntryTrackingAttributes; web-sdk#entry-tracking/events/view/element-view-observer-support.ts#DEFAULTS; web-sdk#entry-tracking/events/hover/element-hover-observer-support.ts#DEFAULTS
 - Analytics-only handoff: `initializeOptimizationAnalyticsRuntime(config)` creates a narrow Web
   runtime with `tracking`, `trackCurrentPage`, `flush`, and `destroy`, but no content-resolution
   surface. It removes the global browser SDK reference if construction registered this analytics

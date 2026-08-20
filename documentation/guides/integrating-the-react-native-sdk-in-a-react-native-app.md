@@ -685,8 +685,8 @@ enabled by default on `OptimizedEntry`.
 3. Override an individual entry with `trackViews`, `trackTaps`, or `onTap`.
 4. Wrap scrollable screens with `OptimizationScrollProvider` so view tracking uses the actual scroll
    position.
-5. Tune `minVisibleRatio`, `dwellTimeMs`, and `viewDurationUpdateIntervalMs` only when product
-   analytics requirements differ from the defaults.
+5. Account for the SDK's fixed view timing in analytics expectations: 10% visibility for 1000 ms,
+   followed by duration updates every 5000 ms while the entry remains visible.
 
 **Adapt this to your use case:**
 
@@ -696,8 +696,6 @@ enabled by default on `OptimizedEntry`.
   <OptimizationScrollProvider>
     <OptimizedEntry
       baselineEntry={entry}
-      dwellTimeMs={1000}
-      minVisibleRatio={0.5}
       onTap={(resolvedEntry) => {
         navigation.navigate('EntryDetail', { id: resolvedEntry.sys.id })
       }}
@@ -708,9 +706,8 @@ enabled by default on `OptimizedEntry`.
 </OptimizationRoot>
 ```
 
-The default view threshold is 80% visibility (`minVisibleRatio` `0.8`) for 2000 ms (`dwellTimeMs`).
-After the first view event, periodic duration updates emit every 5000 ms
-(`viewDurationUpdateIntervalMs`) while the entry remains visible. Without
+The view threshold is fixed at 10% visibility for 1000 ms. After the first view event, periodic
+duration updates emit every 5000 ms while the entry remains visible. Without
 `OptimizationScrollProvider`, the SDK assumes `scrollY` is `0` and uses the screen height as the
 viewport, which is appropriate only for non-scrollable or already-visible layouts.
 

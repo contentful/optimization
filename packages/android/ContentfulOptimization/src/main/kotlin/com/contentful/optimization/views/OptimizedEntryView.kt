@@ -49,10 +49,6 @@ public class OptimizedEntryView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
-    // Configuration — public so consumers can tune per-instance without subclassing.
-    var dwellTimeMs: Int = 2000
-    var minVisibleRatio: Double = 0.8
-    var viewDurationUpdateIntervalMs: Int = 5000
     var liveUpdates: Boolean? = null
     var trackViews: Boolean? = null
     var trackTaps: Boolean? = null
@@ -295,9 +291,6 @@ public class OptimizedEntryView @JvmOverloads constructor(
             entry = entry,
             optimizationContextId = newOptimizationContextId,
             selectedOptimization = newSelectedOptimization,
-            minVisibleRatio = minVisibleRatio,
-            dwellTimeMs = dwellTimeMs,
-            viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
         )
         controllerEntry = entry
         controllerSelectedOptimization = newSelectedOptimization

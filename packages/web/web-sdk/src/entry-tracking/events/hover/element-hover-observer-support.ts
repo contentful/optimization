@@ -27,29 +27,13 @@ export type ElementHoverCallback = (
   info: ElementHoverCallbackInfo,
 ) => void | Promise<void>
 
-export interface ElementHoverObserverOptions {
-  readonly dwellTimeMs?: number
-  readonly hoverDurationUpdateIntervalMs?: number
-}
-
 export interface ElementHoverElementOptions {
-  readonly dwellTimeMs?: number
-  readonly hoverDurationUpdateIntervalMs?: number
   readonly data?: unknown
 }
-
-export type EffectiveObserverOptions = Required<
-  Pick<ElementHoverObserverOptions, 'dwellTimeMs' | 'hoverDurationUpdateIntervalMs'>
->
-
-export type PerElementEffectiveOptions = Required<
-  Pick<ElementHoverElementOptions, 'dwellTimeMs' | 'hoverDurationUpdateIntervalMs'>
->
 
 export interface ElementState {
   ref: WeakRef<Element> | null
   strongRef: Element | null
-  opts: PerElementEffectiveOptions
   data?: unknown
   accumulatedMs: number
   hoverSince: number | null

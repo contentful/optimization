@@ -168,16 +168,9 @@ class MainActivity : AppCompatActivity() {
                 // mirrors the iOS pattern where `RichText.resolveText` is a synchronous
                 // function (no `await`), so UILabel.text is set at construction time
                 // and the view's measured height is stable from the first layout pass.
-                // The Views path's previous behavior — async resolution inside an
-                // `onViewAttachedToWindow` listener — caused the merge-tag entry's
-                // TextView to grow from a "No content" placeholder to its resolved text
-                // height (164 → 207 px observed) up to ~1 s after `OptimizedEntryView`
-                // had already fired `ViewTrackingController.onBecameVisible` at the
-                // smaller height, and that height growth combined with the test's
-                // scroll-to-stats swipe dropped the visible ratio below the 0.8
-                // minVisibleRatio, hitting `onBecameInvisible` while `attempts == 0` and
-                // resetting the 2s dwell cycle — so the entry's `trackView` event
-                // never fired and `component-stats-1MwiFl4z…` never appeared.
+                // Resolving after attachment can change the measured height during an
+                // active visibility cycle. Resolving first keeps view timing stable for
+                // both the fixed threshold and the dwell timer.
                 val resolvedBaselineTexts = entries.map { entry ->
                     RichText.resolveText(entry.getField<Any>("text"), client)
                 }

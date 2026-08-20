@@ -44,17 +44,6 @@ interface CreateTimedEntryDetectorOptions<
   ) => Promise<void>
 }
 
-export const parseNonNegativeNumber = (raw: string | undefined): number | undefined => {
-  if (typeof raw !== 'string') return undefined
-  const normalized = raw.trim()
-  if (!normalized) return undefined
-
-  const parsed = Number(normalized)
-  if (!Number.isFinite(parsed) || parsed < 0) return undefined
-
-  return parsed
-}
-
 export function createTimedEntryDetector<
   TCore,
   TStartOptions,

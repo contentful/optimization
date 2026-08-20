@@ -1704,29 +1704,23 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
         XCTAssertFalse(controller.isVisible)
     }
 
     @MainActor
-    func testViewTrackingControllerBecomesVisibleAboveThreshold() {
+    func testViewTrackingControllerBecomesVisibleAtThreshold() {
         let client = makeViewTrackingClient()
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
-        // Element fully visible (100% ratio >= 0.8 minVisibleRatio)
+        // Exactly 10px of a 100px element is visible (10% = the fixed threshold).
         controller.updateVisibility(
-            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 500
+            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 10
         )
         XCTAssertTrue(controller.isVisible)
     }
@@ -1737,15 +1731,12 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
-        // Only 10px of 100px element visible (10% < 80% minVisibleRatio)
+        // Only 9px of a 100px element is visible (9% < the fixed 10% threshold).
         controller.updateVisibility(
-            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 10
+            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 9
         )
         XCTAssertFalse(controller.isVisible)
     }
@@ -1756,10 +1747,7 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
         controller.updateVisibility(
@@ -1774,10 +1762,7 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
         controller.updateVisibility(
@@ -1795,10 +1780,7 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
         // First cycle: become visible then disappear
@@ -1822,10 +1804,7 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
         controller.updateVisibility(
@@ -1849,23 +1828,20 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.5,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
         // Element at Y=400, height=100, viewport 0-500
-        // Visible portion: 400-500 = 100px of 100px = 100% >= 50%
+        // Visible portion: 400-500 = 100px of 100px = 100% >= the fixed 10% threshold.
         controller.updateVisibility(
             elementY: 400, elementHeight: 100, scrollY: 0, viewportHeight: 500
         )
         XCTAssertTrue(controller.isVisible)
 
-        // Scroll so element is mostly off-screen: element at Y=400, viewport 0-430
-        // Visible portion: 400-430 = 30px of 100px = 30% < 50%
+        // Scroll so the element is almost entirely off-screen: element at Y=400, viewport 0-409.
+        // Visible portion: 400-409 = 9px of 100px = 9% < the fixed 10% threshold.
         controller.updateVisibility(
-            elementY: 400, elementHeight: 100, scrollY: 0, viewportHeight: 430
+            elementY: 400, elementHeight: 100, scrollY: 0, viewportHeight: 409
         )
         XCTAssertFalse(controller.isVisible)
     }
@@ -1876,10 +1852,7 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
         // Zero-height element should not trigger visibility
@@ -1895,10 +1868,7 @@ final class OptimizationClientTests: XCTestCase {
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
-            selectedOptimization: nil,
-            minVisibleRatio: 0.8,
-            dwellTimeMs: 2000,
-            viewDurationUpdateIntervalMs: 5000
+            selectedOptimization: nil
         )
 
         // Element at Y=0, height=100, but scrolled past (scrollY=200, viewport=500)

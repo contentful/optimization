@@ -225,11 +225,11 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   by `routeKey` (defaulting to `name`) through an `AcceptedCurrentStateTracker`, so a repeat of the
   same current screen is skipped; a blocked attempt is retried once consent allows. Plain
   `screen(name:)` calls the core `screen()` with no dedupe. source: extern:.trackScreen fires onAppear/consent/name change → trackCurrentScreen — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Views/ScreenTrackingModifier.swift#ScreenTrackingModifier; optimization-js-bridge#index.ts#Bridge; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker
-- Entry view tracking timing (SwiftUI `OptimizedEntry` and UIKit `ViewTrackingController`): defaults
-  `minVisibleRatio = 0.8`, `dwellTimeMs = 2000`, `viewDurationUpdateIntervalMs = 5000`. Three-phase
-  cycle: initial `trackView` after accumulated visible time ≥ dwell, periodic duration updates every
-  interval while visible, and a final duration event when visibility ends (only if ≥1 event already
-  fired). Gated on `hasConsent("trackView")` (→ core wire type `component`). source: extern:ViewTrackingController three-phase timing, defaults 2000/0.8/5000 — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Tracking/ViewTrackingController.swift#ViewTrackingController; core-sdk#consent/ConsentPolicy.ts#hasEventConsent
+- Entry view tracking timing (SwiftUI `OptimizedEntry` and UIKit `ViewTrackingController`) uses a
+  fixed 10% visibility threshold, 1000 ms dwell, and 5000 ms duration-update interval. Three-phase
+  cycle: initial `trackView` after accumulated visible time reaches 1000 ms, periodic duration
+  updates every 5000 ms while visible, and a final duration event when visibility ends (only if ≥1
+  event already fired). Gated on `hasConsent("trackView")` (→ core wire type `component`). source: extern:ViewTrackingController three-phase timing fixed at 1000/0.1/5000 — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Tracking/ViewTrackingController.swift#ViewTrackingController; core-sdk#consent/ConsentPolicy.ts#hasEventConsent
 - Background handling of view cycles: on `UIApplication.didEnterBackgroundNotification` the
   controller pauses accumulation, emits a final event if `attempts > 0`, and resets the cycle; on
   `didBecomeActive` it re-evaluates visibility from the last known geometry and starts a fresh cycle

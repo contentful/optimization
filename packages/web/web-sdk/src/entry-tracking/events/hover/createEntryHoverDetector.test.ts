@@ -57,17 +57,17 @@ describe('EntryHoverTracker', () => {
     const { core, trackHover } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
 
-    tracker.start({ dwellTimeMs: 0 })
+    tracker.start()
 
     dispatchHoverEnter(entry)
-    await advance(0)
+    await advance(1000)
 
     expect(trackHover).toHaveBeenCalledTimes(1)
     expect(trackHover).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-auto-hover',
         hoverId: expect.any(String),
-        hoverDurationMs: 0,
+        hoverDurationMs: 1000,
       }),
     )
 
@@ -81,18 +81,18 @@ describe('EntryHoverTracker', () => {
     const { core, trackHover } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
 
-    tracker.start({ dwellTimeMs: 0 })
-    tracker.enableElement(element, { data: { entryId: 'manual-hover-entry' }, dwellTimeMs: 0 })
+    tracker.start()
+    tracker.enableElement(element, { data: { entryId: 'manual-hover-entry' } })
 
     dispatchHoverEnter(element)
-    await advance(0)
+    await advance(1000)
 
     expect(trackHover).toHaveBeenCalledTimes(1)
     expect(trackHover).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'manual-hover-entry',
         hoverId: expect.any(String),
-        hoverDurationMs: 0,
+        hoverDurationMs: 1000,
       }),
     )
 
@@ -106,8 +106,8 @@ describe('EntryHoverTracker', () => {
     const { core, trackHover } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
 
-    tracker.start({ dwellTimeMs: 0 })
-    tracker.enableElement(element, { data: { entryId: 'manual-hover-entry' }, dwellTimeMs: 0 })
+    tracker.start()
+    tracker.enableElement(element, { data: { entryId: 'manual-hover-entry' } })
     tracker.clearElement(element)
 
     dispatchHoverEnter(element)
@@ -126,7 +126,7 @@ describe('EntryHoverTracker', () => {
     const { core, trackHover } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
 
-    tracker.start({ dwellTimeMs: 0 })
+    tracker.start()
     tracker.disableElement(entry)
 
     dispatchHoverEnter(entry)
@@ -146,7 +146,7 @@ describe('EntryHoverTracker', () => {
     const { core, trackHover } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
 
-    tracker.start({ dwellTimeMs: 0 })
+    tracker.start()
 
     dispatchHoverEnter(entry)
     await advance(0)
@@ -166,17 +166,17 @@ describe('EntryHoverTracker', () => {
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
 
     tracker.setAuto(false)
-    tracker.start({ dwellTimeMs: 0 })
+    tracker.start()
 
     dispatchHoverEnter(entry)
-    await advance(0)
+    await advance(1000)
 
     expect(trackHover).toHaveBeenCalledTimes(1)
     expect(trackHover).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-auto-hover-enabled-by-data',
         hoverId: expect.any(String),
-        hoverDurationMs: 0,
+        hoverDurationMs: 1000,
       }),
     )
 
@@ -191,12 +191,12 @@ describe('EntryHoverTracker', () => {
     const { core, trackHover } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
 
-    tracker.start({ dwellTimeMs: 0, hoverDurationUpdateIntervalMs: 1000 })
+    tracker.start()
 
     dispatchHoverEnter(entry)
 
-    await advance(0)
     await advance(1000)
+    await advance(5000)
 
     expect(trackHover).toHaveBeenCalledTimes(2)
 
@@ -207,14 +207,14 @@ describe('EntryHoverTracker', () => {
       expect.objectContaining({
         componentId: 'entry-periodic-hover',
         hoverId: expect.any(String),
-        hoverDurationMs: 0,
+        hoverDurationMs: 1000,
       }),
     )
     expect(secondPayload).toEqual(
       expect.objectContaining({
         componentId: 'entry-periodic-hover',
         hoverId: firstPayload?.hoverId,
-        hoverDurationMs: 1000,
+        hoverDurationMs: 6000,
       }),
     )
 
@@ -229,10 +229,10 @@ describe('EntryHoverTracker', () => {
     const { core, trackHover } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
 
-    tracker.start({ dwellTimeMs: 0, hoverDurationUpdateIntervalMs: 10_000 })
+    tracker.start()
 
     dispatchHoverEnter(entry)
-    await advance(0)
+    await advance(1000)
     await advance(500)
     dispatchHoverLeave(entry)
     await Promise.resolve()
@@ -246,54 +246,9 @@ describe('EntryHoverTracker', () => {
       expect.objectContaining({
         componentId: 'entry-hover-final',
         hoverId: firstPayload?.hoverId,
-        hoverDurationMs: 500,
+        hoverDurationMs: 1500,
       }),
     )
-
-    cleanup()
-  })
-
-  it('applies hover-duration interval override from data attributes for auto-tracked entries', async () => {
-    const entry = document.createElement('div')
-    entry.dataset.ctflEntryId = 'entry-attr-hover-interval'
-    entry.dataset.ctflHoverDurationUpdateIntervalMs = '250'
-    document.body.append(entry)
-
-    const { core, trackHover } = createCore()
-    const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
-
-    tracker.start({ dwellTimeMs: 0, hoverDurationUpdateIntervalMs: 10_000 })
-
-    dispatchHoverEnter(entry)
-
-    await advance(0)
-    await advance(250)
-
-    expect(trackHover).toHaveBeenCalledTimes(2)
-
-    cleanup()
-  })
-
-  it('applies hover-duration interval override for manually enabled elements', async () => {
-    const element = document.createElement('section')
-    document.body.append(element)
-
-    const { core, trackHover } = createCore()
-    const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
-
-    tracker.start({ dwellTimeMs: 0, hoverDurationUpdateIntervalMs: 10_000 })
-    tracker.enableElement(element, {
-      data: { entryId: 'manual-hover-interval-entry' },
-      dwellTimeMs: 0,
-      hoverDurationUpdateIntervalMs: 200,
-    })
-
-    dispatchHoverEnter(element)
-
-    await advance(0)
-    await advance(200)
-
-    expect(trackHover).toHaveBeenCalledTimes(2)
 
     cleanup()
   })
@@ -309,10 +264,10 @@ describe('EntryHoverTracker', () => {
     const { core, trackHover } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
 
-    tracker.start({ dwellTimeMs: 0 })
+    tracker.start()
 
     dispatchHoverEnter(entry)
-    await advance(0)
+    await advance(1000)
 
     expect(trackHover).toHaveBeenCalledTimes(1)
     expect(preventDefaultSpy).not.toHaveBeenCalled()

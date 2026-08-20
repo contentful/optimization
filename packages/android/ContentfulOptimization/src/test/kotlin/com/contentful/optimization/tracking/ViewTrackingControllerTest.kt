@@ -36,7 +36,7 @@ import org.junit.Test
 class ViewTrackingControllerTest {
 
     @Test
-    fun `becoming visible at ratio above minVisibleRatio and dwelling dwellTimeMs fires trackView once with the entry's componentId`() = runTest {
+    fun `becoming visible at the fixed ratio and dwelling for one second fires trackView once with the entry's componentId`() = runTest {
         val recorded = mutableListOf<TrackViewPayload>()
         val controller = makeController(
             scope = this,
@@ -44,10 +44,10 @@ class ViewTrackingControllerTest {
             clock = { testScheduler.currentTime },
         )
 
-        // Entry fully visible: h=100, vh=200 -> ratio = 1.0 (>= minVisibleRatio)
-        controller.updateVisibility(elementY = 0f, elementHeight = 100f, scrollY = 0f, viewportHeight = 200f)
-        // Step the clock by dwellTimeMs (default 2000) and drain.
-        advanceTimeBy(2_001L)
+        // Exactly 10px of a 100px entry is visible: ratio = 0.1 (the fixed threshold).
+        controller.updateVisibility(elementY = 0f, elementHeight = 100f, scrollY = 0f, viewportHeight = 10f)
+        // Step the clock by the fixed 1000 ms dwell and drain.
+        advanceTimeBy(1_001L)
         runCurrent()
 
         assertEquals("expected exactly one trackView call", 1, recorded.size)
@@ -58,7 +58,7 @@ class ViewTrackingControllerTest {
     }
 
     @Test
-    fun `becoming invisible BEFORE dwellTimeMs with attempts equals zero emits NO event and resets the cycle`() = runTest {
+    fun `becoming invisible before the fixed dwell with attempts equals zero emits no event and resets the cycle`() = runTest {
         val recorded = mutableListOf<TrackViewPayload>()
         val controller = makeController(
             scope = this,
@@ -68,14 +68,14 @@ class ViewTrackingControllerTest {
 
         // Become visible at ratio = 1.0
         controller.updateVisibility(0f, 100f, 0f, 100f)
-        // 1s of dwell — still under dwellTimeMs (2000)
-        advanceTimeBy(1_000L)
+        // 500ms of dwell — still under the fixed 1000 ms requirement.
+        advanceTimeBy(500L)
         runCurrent()
-        // Ratio drops below minVisibleRatio (mimic the views CI swipe-during-dwell race)
-        controller.updateVisibility(0f, 100f, 60f, 100f) // visible portion 40 -> ratio 0.4
+        // Ratio drops below the fixed threshold (mimic the views CI swipe-during-dwell race)
+        controller.updateVisibility(0f, 100f, 96f, 100f) // visible portion 4 -> ratio 0.04
         runCurrent()
         // Advance past where the original dwell would have fired, to prove the cycle was reset.
-        advanceTimeBy(2_001L)
+        advanceTimeBy(1_001L)
         runCurrent()
 
         assertTrue(
@@ -96,9 +96,9 @@ class ViewTrackingControllerTest {
             clock = { testScheduler.currentTime },
         )
 
-        // Fully visible -> first emit at dwellTimeMs (2000)
+        // Fully visible -> first emit after the fixed 1000 ms dwell.
         controller.updateVisibility(0f, 100f, 0f, 200f)
-        advanceTimeBy(2_001L)
+        advanceTimeBy(1_001L)
         runCurrent()
         assertEquals("first attempt emit", 1, recorded.size)
 
@@ -106,43 +106,41 @@ class ViewTrackingControllerTest {
         advanceTimeBy(1_000L)
         runCurrent()
         // Now become invisible — attempts > 0 path fires a final event
-        controller.updateVisibility(0f, 100f, 80f, 200f) // ratio 0.2
+        controller.updateVisibility(0f, 100f, 95f, 200f) // ratio 0.05
         runCurrent()
 
         assertEquals("expected initial emit + final emit", 2, recorded.size)
         val finalDuration = recorded.last().viewDurationMs
         assertTrue(
-            "expected final viewDurationMs to include the 3s of visibility, got $finalDuration",
-            finalDuration >= 3_000,
+            "expected final viewDurationMs to include the 2s of visibility, got $finalDuration",
+            finalDuration >= 2_000,
         )
 
         cleanup(controller)
     }
 
     @Test
-    fun `subsequent timer firings follow the dwellTimeMs then viewDurationUpdateIntervalMs cadence`() = runTest {
+    fun `subsequent timer firings follow the fixed one second then five second cadence`() = runTest {
         val recorded = mutableListOf<TrackViewPayload>()
         val controller = makeController(
             scope = this,
             onTrackView = { recorded.add(it) },
             clock = { testScheduler.currentTime },
-            dwellTimeMs = 2_000,
-            viewDurationUpdateIntervalMs = 5_000,
         )
 
         controller.updateVisibility(0f, 100f, 0f, 200f)
 
-        // First emit at dwellTimeMs (2_000)
-        advanceTimeBy(2_001L)
+        // First emit at 1_000 ms.
+        advanceTimeBy(1_001L)
         runCurrent()
         assertEquals(1, recorded.size)
 
-        // Second emit at dwellTimeMs + viewDurationUpdateIntervalMs (7_000)
+        // Second emit at 6_000 ms.
         advanceTimeBy(5_000L)
         runCurrent()
         assertEquals(2, recorded.size)
 
-        // Third emit at dwellTimeMs + 2 * viewDurationUpdateIntervalMs (12_000)
+        // Third emit at 11_000 ms.
         advanceTimeBy(5_000L)
         runCurrent()
         assertEquals(3, recorded.size)
@@ -168,12 +166,10 @@ class ViewTrackingControllerTest {
                 "variantIndex" to 1,
                 "sticky" to true,
             ),
-            dwellTimeMs = 2_000,
-            viewDurationUpdateIntervalMs = 5_000,
         )
 
         controller.updateVisibility(0f, 100f, 0f, 200f)
-        advanceTimeBy(2_001L)
+        advanceTimeBy(1_001L)
         runCurrent()
         advanceTimeBy(5_000L)
         runCurrent()
@@ -202,7 +198,7 @@ class ViewTrackingControllerTest {
         )
 
         controller.updateVisibility(0f, 100f, 0f, 200f)
-        advanceTimeBy(1_000L)
+        advanceTimeBy(500L)
         runCurrent()
 
         // App backgrounded -> pause should be called via DefaultLifecycleObserver.onStop
@@ -216,8 +212,8 @@ class ViewTrackingControllerTest {
         runCurrent()
         assertEquals(true, controller.isVisible)
 
-        // After full dwellTimeMs of post-resume dwell, emit fires
-        advanceTimeBy(2_001L)
+        // After the fixed post-resume dwell, emit fires
+        advanceTimeBy(1_001L)
         runCurrent()
         assertEquals(1, recorded.size)
 
@@ -236,7 +232,7 @@ class ViewTrackingControllerTest {
         )
 
         controller.updateVisibility(0f, 100f, 0f, 200f)
-        advanceTimeBy(2_001L)
+        advanceTimeBy(1_001L)
         runCurrent()
 
         assertEquals(false, controller.isVisible)
@@ -247,7 +243,7 @@ class ViewTrackingControllerTest {
 
         assertEquals(true, controller.isVisible)
 
-        advanceTimeBy(2_001L)
+        advanceTimeBy(1_001L)
         runCurrent()
 
         assertEquals("expected one post-consent current-visibility event", 1, recorded.size)
@@ -256,17 +252,9 @@ class ViewTrackingControllerTest {
         cleanup(controller)
     }
 
-    /**
-     * Regression test pinning the current 0.8/0.8 symmetric minVisibleRatio behavior. This was the
-     * shape of the failure on the views CI x86_64 emulator: at t≈+1s the test's
-     * `scrollToElement` swipe clipped the merge-tag entry to ratio≈0.54 (above 0.4, below 0.8),
-     * `onBecameInvisible` fired with `attempts=0`, `resetCycle()` wiped the dwell, and the
-     * 2s timer never reached `emitEvent`. If we later add hysteresis (e.g., enter at 0.8, exit
-     * at 0.4 — see plan `out of scope` section), this assertion will flip and the test must be
-     * updated to reflect the new contract.
-     */
+    /** A partially clipped entry remains visible when its ratio stays above the fixed threshold. */
     @Test
-    fun `regression - ratio dip from 1_00 to 0_54 before dwellTimeMs resets the cycle and prevents emit`() = runTest {
+    fun `regression - ratio dip from 1_00 to 0_54 preserves the cycle and allows emit`() = runTest {
         val recorded = mutableListOf<TrackViewPayload>()
         val controller = makeController(
             scope = this,
@@ -278,8 +266,8 @@ class ViewTrackingControllerTest {
         controller.updateVisibility(elementY = 0f, elementHeight = 164f, scrollY = 0f, viewportHeight = 164f)
         assertEquals(true, controller.isVisible)
 
-        // ~1s of dwell elapses
-        advanceTimeBy(1_000L)
+        // Half of the fixed dwell elapses.
+        advanceTimeBy(500L)
         runCurrent()
         assertTrue("no emit while dwell in progress", recorded.isEmpty())
 
@@ -288,16 +276,13 @@ class ViewTrackingControllerTest {
         controller.updateVisibility(elementY = 0f, elementHeight = 207f, scrollY = 95f, viewportHeight = 207f)
         runCurrent()
         // visibleTop=max(0,95)=95, visibleBottom=min(207,302)=207, visibleHeight=112, ratio=0.541
-        assertEquals("ratio below 0.8 with current symmetric minVisibleRatio transitions to invisible",
-            false, controller.isVisible)
+        assertEquals("ratio above the fixed 0.1 threshold remains visible",
+            true, controller.isVisible)
 
-        // Step past where the original 2s timer would have fired, to prove the cycle stayed reset.
-        advanceTimeBy(2_001L)
+        // Finish the original cycle's dwell and prove the timer was preserved.
+        advanceTimeBy(501L)
         runCurrent()
-        assertTrue(
-            "expected no emit because the cycle was reset at attempts=0, got $recorded",
-            recorded.isEmpty(),
-        )
+        assertEquals("expected one emit from the preserved cycle", 1, recorded.size)
 
         cleanup(controller)
     }
@@ -323,9 +308,6 @@ class ViewTrackingControllerTest {
         entry: Map<String, Any> = mapOf("sys" to mapOf("id" to TEST_ENTRY_ID)),
         selectedOptimization: Map<String, Any>? = null,
         isTrackingAllowed: () -> Boolean = { true },
-        minVisibleRatio: Double = 0.8,
-        dwellTimeMs: Int = 2_000,
-        viewDurationUpdateIntervalMs: Int = 5_000,
         lifecycleOwner: LifecycleOwner = TestLifecycleOwner(
             initialState = Lifecycle.State.STARTED,
             coroutineDispatcher = UnconfinedTestDispatcher(testScheduler),
@@ -335,9 +317,6 @@ class ViewTrackingControllerTest {
         selectedOptimization = selectedOptimization,
         onTrackView = onTrackView,
         isTrackingAllowed = isTrackingAllowed,
-        minVisibleRatio = minVisibleRatio,
-        dwellTimeMs = dwellTimeMs,
-        viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
         scope = scope,
         lifecycleOwner = lifecycleOwner,
         clock = clock,

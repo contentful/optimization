@@ -831,21 +831,8 @@ whether these events are allowed by its Analytics and privacy policy.
    }
    ```
 
-3. Tune view-tracking timing only when the default 2-second dwell time, 80% visible ratio, or
-   5-second update interval does not match the component.
-
-   **Adapt this to your use case:**
-
-   ```kotlin
-   OptimizedEntryView(context).apply {
-       // Changing timing changes when view events are emitted for this entry.
-       minVisibleRatio = 0.75
-       dwellTimeMs = 1500
-       viewDurationUpdateIntervalMs = 5000
-       setContentRenderer { resolvedEntry -> ContentEntryBinder.create(context, resolvedEntry) }
-       setEntry(promo)
-   }
-   ```
+3. Account for the fixed view timing in analytics expectations: 10% visibility for 1 second,
+   followed by duration updates every 5 seconds while the entry remains visible.
 
 4. For a `RecyclerView` screen, use the SDK's `TrackingRecyclerView` (a `RecyclerView` subclass) so
    descendant `OptimizedEntryView` instances re-check visibility on each scroll frame. It is an

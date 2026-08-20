@@ -1,9 +1,5 @@
 import { isEntryElement, type EntryElement } from '../resolveTrackingPayload'
-import {
-  createTimedEntryDetector,
-  isHtmlOrSvgElement,
-  parseNonNegativeNumber,
-} from './createTimedEntryDetector'
+import { createTimedEntryDetector, isHtmlOrSvgElement } from './createTimedEntryDetector'
 
 interface TestInfo {
   data?: unknown
@@ -64,41 +60,6 @@ describe('isHtmlOrSvgElement', () => {
     rs.stubGlobal('SVGElement', undefined)
 
     expect(isHtmlOrSvgElement(document.createElement('div'))).toBe(false)
-  })
-})
-
-describe('parseNonNegativeNumber', () => {
-  it('parses well-formed positive numbers', () => {
-    expect(parseNonNegativeNumber('1500')).toBe(1500)
-  })
-
-  it('treats zero as a valid value', () => {
-    expect(parseNonNegativeNumber('0')).toBe(0)
-  })
-
-  it('trims whitespace before parsing', () => {
-    expect(parseNonNegativeNumber('  42  ')).toBe(42)
-  })
-
-  it('returns undefined for undefined input', () => {
-    expect(parseNonNegativeNumber(undefined)).toBeUndefined()
-  })
-
-  it('returns undefined for empty or whitespace-only strings', () => {
-    expect(parseNonNegativeNumber('')).toBeUndefined()
-    expect(parseNonNegativeNumber('   ')).toBeUndefined()
-  })
-
-  it('returns undefined for non-numeric strings', () => {
-    expect(parseNonNegativeNumber('not-a-number')).toBeUndefined()
-  })
-
-  it('returns undefined for negative numbers', () => {
-    expect(parseNonNegativeNumber('-5')).toBeUndefined()
-  })
-
-  it('returns undefined for non-finite values', () => {
-    expect(parseNonNegativeNumber('Infinity')).toBeUndefined()
   })
 })
 
@@ -208,13 +169,13 @@ describe('createTimedEntryDetector', () => {
     detector.start(undefined)
 
     const element = makeEntryElement()
-    const firstOptions = { dwellTimeMs: 1000 }
+    const firstOptions = { data: { version: 1 } }
     detector.enableElement?.(element, firstOptions)
     expect(observer.observe).toHaveBeenCalledWith(element, firstOptions)
 
     observer.observe.mockClear()
     observer.unobserve.mockClear()
-    const secondOptions = { dwellTimeMs: 2000 }
+    const secondOptions = { data: { version: 2 } }
     detector.enableElement?.(element, secondOptions)
 
     expect(observer.unobserve).toHaveBeenCalledWith(element)

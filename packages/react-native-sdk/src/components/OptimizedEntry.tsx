@@ -94,30 +94,6 @@ export interface OptimizedEntrySharedProps<
   onEntryResolved?: (metadata: OptimizedEntryMetadata<S, M, L>) => void
 
   /**
-   * Minimum time (in milliseconds) the component must be visible
-   * before tracking fires.
-   *
-   * @defaultValue `2000`
-   */
-  dwellTimeMs?: number
-
-  /**
-   * Minimum visibility ratio (0.0 - 1.0) required to consider
-   * the component "visible".
-   *
-   * @defaultValue `0.8`
-   */
-  minVisibleRatio?: number
-
-  /**
-   * Interval (in milliseconds) between periodic view duration update events
-   * after the initial event has fired.
-   *
-   * @defaultValue `5000`
-   */
-  viewDurationUpdateIntervalMs?: number
-
-  /**
    * Optional style prop for the wrapper View.
    */
   style?: StyleProp<ViewStyle>
@@ -299,8 +275,6 @@ function resolveChildren(
 
 interface OptimizedEntryContentProps {
   readonly children: OptimizedEntryChildren
-  readonly dwellTimeMs?: number
-  readonly minVisibleRatio?: number
   readonly metadata: OptimizedEntryMetadata
   readonly onTap?: (resolvedEntry: Entry) => void
   readonly resolvedData: ResolvedData<EntrySkeletonType>
@@ -308,13 +282,10 @@ interface OptimizedEntryContentProps {
   readonly testID?: string
   readonly trackTaps?: boolean
   readonly trackViews?: boolean
-  readonly viewDurationUpdateIntervalMs?: number
 }
 
 function OptimizedEntryContent({
   children,
-  dwellTimeMs,
-  minVisibleRatio,
   metadata,
   onTap,
   resolvedData,
@@ -322,7 +293,6 @@ function OptimizedEntryContent({
   testID,
   trackTaps,
   trackViews,
-  viewDurationUpdateIntervalMs,
 }: OptimizedEntryContentProps): React.JSX.Element {
   const interactionTracking = useInteractionTracking()
   const viewsEnabled = trackViews ?? interactionTracking.views
@@ -332,9 +302,6 @@ function OptimizedEntryContent({
     entry: resolvedData.entry,
     optimizationContextId: resolvedData.optimizationContextId,
     selectedOptimization: resolvedData.selectedOptimization,
-    dwellTimeMs,
-    minVisibleRatio,
-    viewDurationUpdateIntervalMs,
     enabled: viewsEnabled,
   })
 
@@ -447,9 +414,6 @@ export function OptimizedEntry({
   errorFallback,
   onEntryError,
   onEntryResolved,
-  dwellTimeMs,
-  minVisibleRatio,
-  viewDurationUpdateIntervalMs,
   style,
   testID,
   liveUpdates,
@@ -477,8 +441,6 @@ export function OptimizedEntry({
   return (
     <OptimizedEntryContent
       children={children}
-      dwellTimeMs={dwellTimeMs}
-      minVisibleRatio={minVisibleRatio}
       metadata={optimizedEntry.metadata}
       onTap={onTap}
       resolvedData={optimizedEntry.resolvedData}
@@ -486,7 +448,6 @@ export function OptimizedEntry({
       testID={testID}
       trackTaps={trackTaps}
       trackViews={trackViews}
-      viewDurationUpdateIntervalMs={viewDurationUpdateIntervalMs}
     />
   )
 }

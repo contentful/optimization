@@ -5,6 +5,12 @@ import AppKit
 #endif
 import Foundation
 
+enum ViewTrackingDefaults {
+    static let minimumVisibleRatio = 0.1
+    static let initialViewDelayMs = 1000
+    static let durationUpdateIntervalMs = 5000
+}
+
 /// Extracts tracking metadata from an entry and its selected optimization.
 public struct TrackingMetadata {
     public let componentId: String
@@ -29,15 +35,15 @@ public struct TrackingMetadata {
 
 /// Manages viewport tracking for a single component, implementing the three-phase event lifecycle:
 ///
-/// 1. **Initial event**: After accumulated visible time reaches `dwellTimeMs` (default 2000ms)
-/// 2. **Periodic updates**: Every `viewDurationUpdateIntervalMs` (default 5000ms) while visible
+/// 1. **Initial event**: After 1000ms of accumulated visible time
+/// 2. **Periodic updates**: Every 5000ms while visible
 /// 3. **Final event**: When visibility ends (only if at least one event was already emitted)
 ///
 /// State machine per visibility cycle:
 /// ```
-/// INVISIBLE → (ratio >= minVisibleRatio) → VISIBLE → timer → EMIT → schedule next
+/// INVISIBLE → (ratio >= 0.1) → VISIBLE → timer → EMIT → schedule next
 ///                                       ↓
-///                            (ratio < minVisibleRatio) → INVISIBLE (emit final if attempts > 0)
+///                            (ratio < 0.1) → INVISIBLE (emit final if attempts > 0)
 /// ```
 @MainActor
 public final class ViewTrackingController {
@@ -45,9 +51,6 @@ public final class ViewTrackingController {
 
     private weak var client: OptimizationClient?
     private let metadata: TrackingMetadata
-    private let minVisibleRatio: Double
-    private let dwellTimeMs: Int
-    private let viewDurationUpdateIntervalMs: Int
 
     // Cycle state
     private var viewId: String?
@@ -83,10 +86,7 @@ public final class ViewTrackingController {
         client: OptimizationClient,
         entry: [String: Any],
         optimizationContextId: String? = nil,
-        selectedOptimization: [String: Any]?,
-        minVisibleRatio: Double = 0.8,
-        dwellTimeMs: Int = 2000,
-        viewDurationUpdateIntervalMs: Int = 5000
+        selectedOptimization: [String: Any]?
     ) {
         self.client = client
         self.metadata = TrackingMetadata(
@@ -94,10 +94,6 @@ public final class ViewTrackingController {
             optimizationContextId: optimizationContextId,
             selectedOptimization: selectedOptimization
         )
-        self.minVisibleRatio = minVisibleRatio
-        self.dwellTimeMs = dwellTimeMs
-        self.viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs
-
         #if canImport(UIKit)
         backgroundObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.didEnterBackgroundNotification,
@@ -147,7 +143,7 @@ public final class ViewTrackingController {
         let visibleHeight = max(0, visibleBottom - visibleTop)
         let visibilityRatio = Double(visibleHeight / elementHeight)
 
-        let nowVisible = visibilityRatio >= minVisibleRatio
+        let nowVisible = visibilityRatio >= ViewTrackingDefaults.minimumVisibleRatio
 
         if nowVisible && !isVisible {
             onBecameVisible()
@@ -227,7 +223,8 @@ public final class ViewTrackingController {
 
     private func scheduleNextFire() {
         flushAccumulatedTime()
-        let requiredMs = Double(dwellTimeMs) + Double(attempts) * Double(viewDurationUpdateIntervalMs)
+        let requiredMs = Double(ViewTrackingDefaults.initialViewDelayMs)
+            + Double(attempts) * Double(ViewTrackingDefaults.durationUpdateIntervalMs)
         let remainingMs = max(0, requiredMs - accumulatedMs)
         let interval = remainingMs / 1000.0
 

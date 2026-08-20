@@ -843,11 +843,11 @@ func configure(with entry: Contentful.Entry) {
 
 **Entry views.** Feed app-owned scroll or layout geometry to a `ViewTrackingController` — the SDK's
 imperative view-timing engine for UIKit — and it applies the same timing model and emits a
-`TrackViewPayload` (an SDK payload type) through the client for you. The controller uses the default
-model: an initial view event once the entry has accumulated a cumulative 2 seconds (`dwellTimeMs`) at
-or above 80% visibility (`minVisibleRatio`) — visible time adds up, so scrolling away and back does not
-restart the count — periodic duration updates every 5 seconds (`viewDurationUpdateIntervalMs`) while
-visible, and a final duration event when visibility ends, once at least one event has fired. It also
+`TrackViewPayload` (an SDK payload type) through the client for you. The controller uses a fixed
+model: an initial view event once the entry has accumulated a cumulative 1 second at or above 10%
+visibility — visible time adds up, so scrolling away and back does not restart the count — periodic
+duration updates every 5 seconds while visible, and a final duration event when visibility ends,
+once at least one event has fired. It also
 pauses on backgrounding and re-evaluates on foreground, and dedupes its own sticky views, so you own
 the geometry and the call sites.
 

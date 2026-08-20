@@ -4,18 +4,11 @@ import {
   isPageVisible,
   NOW,
   type ElementState,
-  type PerElementEffectiveOptions,
 } from './element-hover-observer-support'
-
-const defaultPerElOpts: PerElementEffectiveOptions = {
-  dwellTimeMs: 1000,
-  hoverDurationUpdateIntervalMs: 5000,
-}
 
 const makeState = (overrides: Partial<ElementState> = {}): ElementState => ({
   ref: null,
   strongRef: null,
-  opts: defaultPerElOpts,
   data: undefined,
   accumulatedMs: 0,
   hoverSince: null,

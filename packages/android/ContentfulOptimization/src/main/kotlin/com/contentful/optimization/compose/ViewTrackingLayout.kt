@@ -18,9 +18,6 @@ import com.contentful.optimization.tracking.ViewTrackingController
 public fun Modifier.trackViews(
     entry: Map<String, Any>,
     selectedOptimization: Map<String, Any>?,
-    minVisibleRatio: Double,
-    dwellTimeMs: Int,
-    viewDurationUpdateIntervalMs: Int,
     enabled: Boolean,
     client: OptimizationClient,
     optimizationContextId: String? = null,
@@ -37,9 +34,6 @@ public fun Modifier.trackViews(
             entry = entry,
             optimizationContextId = optimizationContextId,
             selectedOptimization = selectedOptimization,
-            minVisibleRatio = minVisibleRatio,
-            dwellTimeMs = dwellTimeMs,
-            viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
         )
     }
 

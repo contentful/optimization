@@ -1,14 +1,7 @@
 import type { CoreStateful } from '@contentful/optimization-core'
 import type { EntryInteractionDetector } from '../../EntryInteractionDetector'
-import type {
-  EntryHoverInteractionElementOptions,
-  EntryHoverInteractionStartOptions,
-} from '../../resolveAutoTrackEntryInteractionOptions'
-import {
-  createTimedEntryDetector,
-  isHtmlOrSvgElement,
-  parseNonNegativeNumber,
-} from '../createTimedEntryDetector'
+import type { EntryHoverInteractionElementOptions } from '../../resolveAutoTrackEntryInteractionOptions'
+import { createTimedEntryDetector } from '../createTimedEntryDetector'
 import type { ElementHoverCallbackInfo } from './element-hover-observer-support'
 import ElementHoverObserver from './ElementHoverObserver'
 
@@ -24,33 +17,18 @@ export type EntryHoverTrackingCore = Pick<CoreStateful, 'trackHover'>
 
 export function createEntryHoverDetector(
   core: EntryHoverTrackingCore,
-): EntryInteractionDetector<
-  EntryHoverInteractionStartOptions | undefined,
-  EntryHoverInteractionElementOptions
-> {
+): EntryInteractionDetector<undefined, EntryHoverInteractionElementOptions> {
   return createTimedEntryDetector<
     EntryHoverTrackingCore,
-    EntryHoverInteractionStartOptions,
+    undefined,
     EntryHoverInteractionElementOptions,
     ElementHoverCallbackInfo,
     ElementHoverObserver
   >({
     core,
     interaction: 'hovers',
-    createObserver: (callback, options) => new ElementHoverObserver(callback, options),
-    resolveAttributeOptions: (element): EntryHoverInteractionElementOptions | undefined => {
-      if (!isHtmlOrSvgElement(element)) return undefined
-
-      const hoverDurationUpdateIntervalMs = parseNonNegativeNumber(
-        element.dataset.ctflHoverDurationUpdateIntervalMs,
-      )
-
-      if (hoverDurationUpdateIntervalMs === undefined) return undefined
-
-      return {
-        hoverDurationUpdateIntervalMs,
-      }
-    },
+    createObserver: (callback) => new ElementHoverObserver(callback),
+    resolveAttributeOptions: (): undefined => undefined,
     track: async (runtimeCore, payload, info: ElementHoverCallbackInfo): Promise<void> => {
       await runtimeCore.trackHover({
         ...payload,

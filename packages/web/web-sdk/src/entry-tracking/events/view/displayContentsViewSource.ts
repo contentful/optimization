@@ -1,5 +1,5 @@
 import { CAN_ADD_LISTENERS } from '../../../constants'
-import type { ElementState } from './element-view-observer-support'
+import { DEFAULTS, type ElementState } from './element-view-observer-support'
 
 interface MarginValue {
   readonly unit: '%' | 'px'
@@ -24,7 +24,6 @@ interface RenderedTargets {
 }
 
 interface VirtualVisibilityOptions {
-  readonly minVisibleRatio: number
   readonly root: Element | Document | null
   readonly rootMargin: RootMargin
 }
@@ -226,5 +225,5 @@ export const measureVirtualVisibility = (
     visibleArea += rectArea(intersectRects(toRect(rect), clip))
   })
 
-  return totalArea > 0 && visibleArea / totalArea >= options.minVisibleRatio
+  return totalArea > 0 && visibleArea / totalArea >= DEFAULTS.RATIO
 }

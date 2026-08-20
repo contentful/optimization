@@ -68,7 +68,7 @@ class ElementViewObserver {
       {
         root: this.opts.root ?? null,
         rootMargin: this.opts.rootMargin,
-        threshold: this.opts.minVisibleRatio === 0 ? [0] : [0, this.opts.minVisibleRatio],
+        threshold: [0, DEFAULTS.RATIO],
       },
     )
     this.sourceController = new ElementViewSourceController(this.io, this.opts, {
@@ -87,7 +87,7 @@ class ElementViewObserver {
     let state = this.states.get(element)
 
     if (!state) {
-      state = createElementState(element, this.opts, options)
+      state = createElementState(element, options)
       this.states.set(element, state)
       this.activeStates.add(state)
       this.ensureSweeper()
@@ -179,7 +179,7 @@ class ElementViewObserver {
         if (state.done) continue
 
         const intersectsThreshold =
-          entry.isIntersecting && entry.intersectionRatio >= this.opts.minVisibleRatio
+          entry.isIntersecting && entry.intersectionRatio >= DEFAULTS.RATIO
 
         if (intersectsThreshold) {
           this.onIntersecting(state, now)

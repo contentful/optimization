@@ -22,14 +22,11 @@ import {
 import { addVisibilityChangeListener } from '../observerSupport'
 import {
   DEFAULTS,
-  type EffectiveObserverOptions,
   type ElementHoverCallback,
   type ElementHoverElementOptions,
-  type ElementHoverObserverOptions,
   type ElementState,
   type Interval,
   NOW,
-  type PerElementEffectiveOptions,
   clearFireTimer,
   derefElement,
   isPageVisible,
@@ -37,8 +34,6 @@ import {
 
 const logger = createScopedLogger('Web:ElementHoverObserver')
 const createHoverId = (): string => crypto.randomUUID()
-const nonNegativeNumber = (value: number | undefined, fallback: number): number =>
-  Math.max(0, typeof value === 'number' ? value : fallback)
 
 const canUsePointerEvents = (): boolean =>
   CAN_ADD_LISTENERS &&
@@ -62,15 +57,13 @@ const isNaturalHoverEvent = (event: Event): boolean => {
  */
 class ElementHoverObserver {
   private readonly callback: ElementHoverCallback
-  private readonly opts: EffectiveObserverOptions
   private readonly states = new WeakMap<Element, ElementState>()
   private readonly activeStates = new Set<ElementState>()
   private cleanupVisibilityListener?: () => void
   private sweepInterval: Interval | null = null
 
-  public constructor(callback: ElementHoverCallback, options?: ElementHoverObserverOptions) {
+  public constructor(callback: ElementHoverCallback) {
     this.callback = callback
-    this.opts = ElementHoverObserver.initOptions(options)
 
     this.cleanupVisibilityListener = addVisibilityChangeListener(() => {
       this.onPageVisibilityChange()
@@ -89,7 +82,6 @@ class ElementHoverObserver {
       return
     }
 
-    state.opts = ElementHoverObserver.resolvePerElementOptions(options, this.opts)
     state.data = options?.data
   }
 
@@ -137,37 +129,12 @@ class ElementHoverObserver {
     }
   }
 
-  private static initOptions(options?: ElementHoverObserverOptions): EffectiveObserverOptions {
-    return {
-      dwellTimeMs: nonNegativeNumber(options?.dwellTimeMs, DEFAULTS.DWELL_MS),
-      hoverDurationUpdateIntervalMs: nonNegativeNumber(
-        options?.hoverDurationUpdateIntervalMs,
-        DEFAULTS.HOVER_DURATION_UPDATE_INTERVAL_MS,
-      ),
-    }
-  }
-
-  private static resolvePerElementOptions(
-    options: ElementHoverElementOptions | undefined,
-    observerOptions: EffectiveObserverOptions,
-  ): PerElementEffectiveOptions {
-    return {
-      dwellTimeMs: nonNegativeNumber(options?.dwellTimeMs, observerOptions.dwellTimeMs),
-      hoverDurationUpdateIntervalMs: nonNegativeNumber(
-        options?.hoverDurationUpdateIntervalMs,
-        observerOptions.hoverDurationUpdateIntervalMs,
-      ),
-    }
-  }
-
   private createState(element: Element, options?: ElementHoverElementOptions): ElementState {
-    const opts = ElementHoverObserver.resolvePerElementOptions(options, this.opts)
     const hasWeakRef = typeof WeakRef === 'function'
 
     const state: ElementState = {
       ref: hasWeakRef ? new WeakRef(element) : null,
       strongRef: hasWeakRef ? null : element,
-      opts,
       data: options?.data,
       accumulatedMs: 0,
       hoverSince: null,
@@ -407,7 +374,7 @@ class ElementHoverObserver {
 
   private static getRemainingMsUntilNextFire(state: ElementState, elapsedMs: number): number {
     const requiredElapsedMs =
-      state.opts.dwellTimeMs + state.attempts * state.opts.hoverDurationUpdateIntervalMs
+      DEFAULTS.DWELL_MS + state.attempts * DEFAULTS.HOVER_DURATION_UPDATE_INTERVAL_MS
 
     return requiredElapsedMs - elapsedMs
   }

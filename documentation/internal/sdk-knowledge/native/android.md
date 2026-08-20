@@ -272,12 +272,12 @@ fallback)`'s own fail-soft `catch` only fires on a cyclic self-referential map o
   dedupes in the bridge by `routeKey` (defaulting to `name`) through an `AcceptedCurrentStateTracker`,
   so a repeat of the same current screen is skipped and a blocked attempt is retried once consent
   allows. Plain `screen(name)` calls core `screen()` with no dedupe. source: extern:ScreenTrackingEffect keyed on screenName+consent → trackCurrentScreen — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/compose/ScreenTrackingEffect.kt#ScreenTrackingEffect; extern:ScreenTracker re-tracks on state change — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/views/ScreenTracker.kt#ScreenTracker; optimization-js-bridge#index.ts#Bridge; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker
-- Entry view tracking timing (`ViewTrackingController`, shared by both adapters): defaults
-  `minVisibleRatio = 0.8`, `dwellTimeMs = 2000`, `viewDurationUpdateIntervalMs = 5000` (tunable per
-  entry). Three-phase cycle: initial `trackView` after accumulated visible time ≥ dwell, periodic
-  duration updates every interval while visible, and a final duration event when visibility ends (only
-  if ≥1 event already fired). Gated on `hasConsent("trackView")` (→ core wire type `component`).
-  source: extern:ViewTrackingController three-phase timing, defaults 2000/0.8/5000, isTrackingAllowed=hasConsent(trackView) — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/tracking/ViewTrackingController.kt#ViewTrackingController; core-sdk#consent/ConsentPolicy.ts#hasEventConsent
+- Entry view tracking timing (`ViewTrackingController`, shared by both adapters) uses a fixed 10%
+  visibility threshold, 1000 ms dwell, and 5000 ms duration-update interval. Three-phase cycle:
+  initial `trackView` after accumulated visible time reaches 1000 ms, periodic duration updates every
+  5000 ms while visible, and a final duration event when visibility ends (only if ≥1 event already
+  fired). Gated on `hasConsent("trackView")` (→ core wire type `component`).
+  source: extern:ViewTrackingController three-phase timing fixed at 1000/0.1/5000, isTrackingAllowed=hasConsent(trackView) — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/tracking/ViewTrackingController.kt#ViewTrackingController; core-sdk#consent/ConsentPolicy.ts#hasEventConsent
 - Background handling of view cycles: `ViewTrackingController` is a `ProcessLifecycleOwner`
   `DefaultLifecycleObserver`. On `onStop` (app backgrounded) it pauses accumulation, emits a final
   event if `attempts > 0`, and resets the cycle; on `onStart` it re-evaluates visibility from the last

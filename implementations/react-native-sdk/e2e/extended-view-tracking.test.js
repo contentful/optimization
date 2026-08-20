@@ -20,7 +20,7 @@ const SECOND_ENTRY_ID = '4ib0hsHWoSOnCVdDkizE8d'
 // An entry that starts below the fold (not visible on launch).
 const BELOW_FOLD_ENTRY_ID = '7pa5bOx8Z9NmNcr7mISvD'
 
-// Extended timeouts for periodic event tests - need to wait for dwell (2s) + update intervals (5s each)
+// Extended timeouts for periodic event tests - need to wait for dwell (1s) + update intervals (5s each)
 const EXTENDED_TIMEOUT = 30000
 
 describe('Extended View Tracking', () => {
@@ -36,10 +36,10 @@ describe('Extended View Tracking', () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    // Wait for the initial event (after dwell threshold ~2s)
+    // Wait for the initial event (after dwell threshold ~1s)
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
 
-    // Wait for at least one periodic update (dwell 2s + update interval 5s = ~7s total)
+    // Wait for at least one periodic update (dwell 1s + update interval 5s = ~6s total)
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
   })
 
@@ -52,8 +52,8 @@ describe('Extended View Tracking', () => {
 
     const duration = await getViewDuration(VISIBLE_ENTRY_ID)
 
-    // Duration should exceed the dwell threshold (2000ms) since we've had at least 2 events
-    jestExpect(duration).toBeGreaterThan(2000)
+    // Duration should exceed the dwell threshold (1000ms) since we've had at least 2 events
+    jestExpect(duration).toBeGreaterThan(1000)
   })
 
   it('should maintain a stable viewId within a visibility cycle', async () => {
@@ -151,7 +151,8 @@ describe('Extended View Tracking', () => {
       .whileElement(by.id('main-scroll-view'))
       .scroll(300, 'down')
 
-    // Immediately scroll back to top — the entry was visible for well under 2s
+    // Immediately scroll back to top — the entry is intended to remain visible for well under 1s.
+    // The lower 10% visibility threshold makes this gesture-bound assertion more timing-sensitive.
     await element(by.id('main-scroll-view')).scrollTo('top')
 
     // Wait long enough that an event WOULD have fired if tracking hadn't been cancelled
@@ -316,10 +317,10 @@ describe('Extended View Tracking', () => {
     // New cycle initial = event 4
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 4, EXTENDED_TIMEOUT)
 
-    // The new cycle's duration should be around the dwell threshold (~2000ms),
+    // The new cycle's duration should be around the dwell threshold (~1000ms),
     // not carrying over the 4000+ms from cycle 1
     const secondCycleDuration = await getViewDuration(VISIBLE_ENTRY_ID)
-    jestExpect(secondCycleDuration).toBeGreaterThanOrEqual(2000)
+    jestExpect(secondCycleDuration).toBeGreaterThanOrEqual(1000)
     jestExpect(secondCycleDuration).toBeLessThan(4000)
   })
 })

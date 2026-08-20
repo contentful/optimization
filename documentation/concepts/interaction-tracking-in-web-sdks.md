@@ -160,19 +160,17 @@ the underlying state is still current and the event has not already been accepte
 Automatic tracking starts from DOM metadata. The Web SDK looks for HTML or SVG elements with a
 non-empty `data-ctfl-entry-id` attribute.
 
-| Attribute                                     | Used for                                                                                             |
-| --------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `data-ctfl-entry-id`                          | Required. Becomes `componentId` in entry interaction events.                                         |
-| `data-ctfl-optimization-id`                   | Optional. Becomes `experienceId`.                                                                    |
-| `data-ctfl-optimization-context-id`           | Optional. Runtime-owned context for follow-up event enrichment and diagnostics.                      |
-| `data-ctfl-sticky`                            | Optional. `true` sends the first successful view for the element through the sticky Experience path. |
-| `data-ctfl-variant-index`                     | Optional. Non-negative integer used as `variantIndex`; invalid or unsafe values are ignored.         |
-| `data-ctfl-track-views`                       | Optional. `true` or `false` override for view observation when the view detector is running.         |
-| `data-ctfl-track-clicks`                      | Optional. `true` or `false` override for click observation when the click detector is running.       |
-| `data-ctfl-track-hovers`                      | Optional. `true` or `false` override for hover observation when the hover detector is running.       |
-| `data-ctfl-view-duration-update-interval-ms`  | Optional. Per-element interval for periodic view-duration updates.                                   |
-| `data-ctfl-hover-duration-update-interval-ms` | Optional. Per-element interval for periodic hover-duration updates.                                  |
-| `data-ctfl-clickable`                         | Optional. `true` marks a non-semantic element as part of a clickable path for click tracking.        |
+| Attribute                           | Used for                                                                                             |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `data-ctfl-entry-id`                | Required. Becomes `componentId` in entry interaction events.                                         |
+| `data-ctfl-optimization-id`         | Optional. Becomes `experienceId`.                                                                    |
+| `data-ctfl-optimization-context-id` | Optional. Runtime-owned context for follow-up event enrichment and diagnostics.                      |
+| `data-ctfl-sticky`                  | Optional. `true` sends the first successful view for the element through the sticky Experience path. |
+| `data-ctfl-variant-index`           | Optional. Non-negative integer used as `variantIndex`; invalid or unsafe values are ignored.         |
+| `data-ctfl-track-views`             | Optional. `true` or `false` override for view observation when the view detector is running.         |
+| `data-ctfl-track-clicks`            | Optional. `true` or `false` override for click observation when the click detector is running.       |
+| `data-ctfl-track-hovers`            | Optional. `true` or `false` override for hover observation when the hover detector is running.       |
+| `data-ctfl-clickable`               | Optional. `true` marks a non-semantic element as part of a clickable path for click tracking.        |
 
 The tracking payload uses the resolved entry ID, not the baseline entry ID. When an application
 needs the baseline ID for rerendering, store it separately, for example in `data-ctfl-baseline-id`.
@@ -251,28 +249,29 @@ The registry observes element existence and `data-ctfl-entry-id` mutations, not 
 changes. Payload attributes such as `data-ctfl-optimization-id`,
 `data-ctfl-optimization-context-id`, and `data-ctfl-variant-index` are read when an event fires, so
 updated values can affect later payloads. Per-element tracking overrides such as
-`data-ctfl-track-views` and interval attributes are resolved when the element is added to the
-detector. If an existing mounted element needs dynamic non-entry-ID override changes, use the
+`data-ctfl-track-views` are resolved when the element is added to the detector. If an existing
+mounted element needs dynamic non-entry-ID override changes, use the
 `tracking.*Element(...)` API or remount the tracked element.
 
 ## View tracking mechanics
 
 View tracking uses `IntersectionObserver` and dwell-time timers.
 
-Default view settings:
+View timing uses these fixed values:
 
-| Setting                             | Default  |
-| ----------------------------------- | -------- |
-| Required visible dwell time         | 1000 ms  |
-| Periodic duration update interval   | 5000 ms  |
-| Minimum visible ratio               | 0.1      |
-| `IntersectionObserver` root         | `null`   |
-| `IntersectionObserver` root margin  | `0px`    |
-| Disconnected-element sweep interval | 30000 ms |
+| Behavior                          | Value   |
+| --------------------------------- | ------- |
+| Required visible dwell time       | 1000 ms |
+| Periodic duration update interval | 5000 ms |
+| Minimum visible ratio             | 10%     |
+
+The `IntersectionObserver` root defaults to the viewport, its root margin defaults to `0px`, and
+the observer sweeps disconnected elements every 30000 ms. Applications can choose the root and root
+margin, but cannot override the timing or visibility values.
 
 A view cycle works like this:
 
-1. The element crosses the configured visibility threshold.
+1. The element crosses the fixed 10% visibility threshold.
 2. The observer starts a fresh cycle, assigns a `viewId`, resets accumulated duration, and starts
    the dwell timer.
 3. After the dwell time passes, the observer calls `trackView()` with `viewId` and `viewDurationMs`.
@@ -344,13 +343,15 @@ Hover tracking uses element-level listeners. When `PointerEvent` is available, t
 for `pointerenter`, `pointerleave`, and `pointercancel`, and ignores touch pointer events. When
 pointer events are unavailable, it falls back to `mouseenter` and `mouseleave`.
 
-Default hover settings:
+Hover timing uses these fixed values:
 
-| Setting                             | Default  |
-| ----------------------------------- | -------- |
-| Required hover dwell time           | 1000 ms  |
-| Periodic duration update interval   | 5000 ms  |
-| Disconnected-element sweep interval | 30000 ms |
+| Behavior                          | Value   |
+| --------------------------------- | ------- |
+| Required hover dwell time         | 1000 ms |
+| Periodic duration update interval | 5000 ms |
+
+The observer sweeps disconnected elements every 30000 ms. Applications cannot override the hover
+timing values.
 
 A hover cycle mirrors the view cycle:
 
@@ -471,7 +472,7 @@ When an expected interaction does not appear, check the gates in this order:
    opted the relevant interaction out.
 4. **Element metadata** - Confirm the tracked element is an HTML or SVG element with non-empty
    `data-ctfl-entry-id`, or that `enableElement(...)` supplies valid `data.entryId`.
-5. **View threshold** - Confirm the element stays above `minVisibleRatio` for `dwellTimeMs`.
+5. **View threshold** - Confirm the element remains at least 10% visible for 1000 ms.
 6. **Clickability** - Confirm clicks happen on a semantic clickable path or an element marked with
    `data-ctfl-clickable="true"`.
 7. **Hover source** - Confirm the event is not a touch pointer event and that the pointer remains

@@ -20,10 +20,10 @@ final class ExtendedViewTrackingTests: XCTestCase {
     func testPeriodicEventsForContinuouslyVisibleEntry() {
         waitForElement(app.staticTexts["Analytics Events"])
 
-        // Wait for the initial event (after dwell threshold ~2s)
+        // Wait for the initial event (after dwell threshold ~1s)
         waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: 1, app: app, timeout: EXTENDED_TIMEOUT)
 
-        // Wait for at least one periodic update (dwell 2s + update interval 5s = ~7s total)
+        // Wait for at least one periodic update (dwell 1s + update interval 5s = ~6s total)
         waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: 2, app: app, timeout: EXTENDED_TIMEOUT)
     }
 
@@ -35,9 +35,9 @@ final class ExtendedViewTrackingTests: XCTestCase {
 
         let duration = getViewDuration(VISIBLE_ENTRY_ID, app: app)
 
-        // Duration should exceed the dwell threshold (2000ms) since we've had at least 2 events
+        // Duration should exceed the dwell threshold (1000ms) since we've had at least 2 events
         XCTAssertNotNil(duration)
-        XCTAssertGreaterThan(duration!, 2000)
+        XCTAssertGreaterThan(duration!, 1000)
     }
 
     func testStableViewIdWithinCycle() {
@@ -122,10 +122,11 @@ final class ExtendedViewTrackingTests: XCTestCase {
 
         // On a tall simulator the "below-fold" entry can render just inside the
         // viewport at launch. Sweep it up and out with large, fast momentum-free
-        // drags: each single drag carries the entry all the way through the 0.8
+        // drags: each single drag carries the entry all the way through the 0.1
         // tracked-visibility band in a few hundred milliseconds and ends with it
         // below that band, so it never rests on screen — between XCUITest
-        // gestures or otherwise — long enough to trip the 2000 ms dwell timer.
+        // gestures or otherwise — long enough to trip the 1000 ms dwell timer. The wider
+        // visibility band and shorter dwell make this test more sensitive to driver timing.
         // A fling instead leaves the entry resting mid-viewport during XCUITest's
         // post-gesture idle wait; a slow drag keeps it fully visible for seconds.
         let fast = XCUIGestureVelocity(rawValue: 2500)
@@ -277,7 +278,7 @@ final class ExtendedViewTrackingTests: XCTestCase {
         // cycle, not the 4000+ ms accumulated in cycle 1.
         let secondCycleDuration = getViewDuration(VISIBLE_ENTRY_ID, app: app)
         XCTAssertNotNil(secondCycleDuration)
-        XCTAssertGreaterThanOrEqual(secondCycleDuration!, 2000)
+        XCTAssertGreaterThanOrEqual(secondCycleDuration!, 1000)
         XCTAssertLessThan(secondCycleDuration!, 4000,
             "New cycle duration should reset — expected < 4000ms but got \(secondCycleDuration!)ms")
     }

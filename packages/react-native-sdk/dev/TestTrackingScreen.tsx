@@ -131,8 +131,6 @@ export function TestTrackingScreen({
         {/* Optimized entry example */}
         <OptimizedEntry
           baselineEntry={optimizedEntry}
-          dwellTimeMs={2000} // 2 seconds
-          minVisibleRatio={0.8} // 80% visible
           style={StyleSheet.flatten([styles.trackedView, { backgroundColor: '#6366f1' }])}
           testID="optimizationComponent"
         >
@@ -150,7 +148,7 @@ export function TestTrackingScreen({
                 {'\n'}
                 Content Type: {resolvedEntry.sys.contentType.sys.id}
                 {'\n'}
-                Tracking: 80% visible for 2000ms
+                Tracking: 10% visible for 1000ms
               </Text>
             </View>
           )}
@@ -168,8 +166,6 @@ export function TestTrackingScreen({
 
         <OptimizedEntry
           baselineEntry={productEntry}
-          dwellTimeMs={1500}
-          minVisibleRatio={0.9}
           style={StyleSheet.flatten([styles.trackedView, { backgroundColor: '#10b981' }])}
           testID="analyticsComponent"
         >

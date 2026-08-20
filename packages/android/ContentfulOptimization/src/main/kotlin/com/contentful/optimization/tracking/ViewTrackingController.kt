@@ -14,6 +14,9 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 internal const val VIEW_TRACKING_LOG_TAG = "ViewTracking"
+internal const val VIEW_TRACKING_MIN_VISIBLE_RATIO = 0.1
+internal const val VIEW_TRACKING_DWELL_TIME_MS = 1_000
+internal const val VIEW_TRACKING_DURATION_UPDATE_INTERVAL_MS = 5_000
 
 /**
  * The primary constructor is `internal` so JVM unit tests can supply a controlled
@@ -23,18 +26,16 @@ internal const val VIEW_TRACKING_LOG_TAG = "ViewTracking"
  * and a JNI-loaded QuickJS bridge) into the test target. The secondary constructor preserves the
  * `client: OptimizationClient` call shape used internally by [OptimizedEntryView]'s
  * `attachController` and the Compose `Modifier.trackViews`. The dwell state machine (minimum
- * visible ratio, 2s-then-5s timer cadence, attempts counter, resetCycle on
+ * visible ratio, 1s-then-5s timer cadence, attempts counter, resetCycle on
  * becoming-invisible-before-first-emit) lives entirely in this class and is covered by
- * `ViewTrackingControllerTest` in `src/test/`.
+ * `ViewTrackingControllerTest` in `src/test/`. The visibility ratio and timing cadence are fixed
+ * by the SDK.
  */
 internal class ViewTrackingController internal constructor(
     entry: Map<String, Any>,
     selectedOptimization: Map<String, Any>?,
     private val onTrackView: suspend (TrackViewPayload) -> Unit,
     private val isTrackingAllowed: () -> Boolean = { true },
-    private val minVisibleRatio: Double = 0.8,
-    private val dwellTimeMs: Int = 2000,
-    private val viewDurationUpdateIntervalMs: Int = 5000,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main),
     private val lifecycleOwner: LifecycleOwner = ProcessLifecycleOwner.get(),
     private val clock: () -> Long = { System.currentTimeMillis() },
@@ -50,9 +51,6 @@ internal class ViewTrackingController internal constructor(
         client: OptimizationClient,
         entry: Map<String, Any>,
         selectedOptimization: Map<String, Any>?,
-        minVisibleRatio: Double = 0.8,
-        dwellTimeMs: Int = 2000,
-        viewDurationUpdateIntervalMs: Int = 5000,
         optimizationContextId: String? = null,
     ) : this(
         entry = entry,
@@ -60,9 +58,6 @@ internal class ViewTrackingController internal constructor(
         selectedOptimization = selectedOptimization,
         onTrackView = { payload -> client.trackView(payload) },
         isTrackingAllowed = { client.hasConsent("trackView") },
-        minVisibleRatio = minVisibleRatio,
-        dwellTimeMs = dwellTimeMs,
-        viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
     )
 
     var isVisible: Boolean = false
@@ -112,7 +107,7 @@ internal class ViewTrackingController internal constructor(
         val visibleHeight = maxOf(0f, visibleBottom - visibleTop)
         val visibilityRatio = visibleHeight / elementHeight
 
-        val nowVisible = visibilityRatio >= minVisibleRatio
+        val nowVisible = visibilityRatio >= VIEW_TRACKING_MIN_VISIBLE_RATIO
 
         if (nowVisible && !isVisible) {
             trackingLog {
@@ -206,7 +201,8 @@ internal class ViewTrackingController internal constructor(
 
     private fun scheduleNextFire() {
         flushAccumulatedTime()
-        val requiredMs = dwellTimeMs.toDouble() + attempts.toDouble() * viewDurationUpdateIntervalMs.toDouble()
+        val requiredMs = VIEW_TRACKING_DWELL_TIME_MS.toDouble() +
+            attempts.toDouble() * VIEW_TRACKING_DURATION_UPDATE_INTERVAL_MS.toDouble()
         val remainingMs = maxOf(0.0, requiredMs - accumulatedMs)
 
         timerJob?.cancel()

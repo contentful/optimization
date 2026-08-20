@@ -54,10 +54,7 @@ describe('ElementViewObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementViewObserver(cb, {
-      minVisibleRatio: 0.5,
-      dwellTimeMs: 1000,
-    })
+    const obs = new ElementViewObserver(cb)
 
     obs.observe(el)
 
@@ -83,14 +80,11 @@ describe('ElementViewObserver', () => {
     expect(cb).toHaveBeenCalledTimes(1)
   })
 
-  it('emits duration updates at configured intervals while still visible', async () => {
+  it('emits duration updates at the fixed interval while still visible', async () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementViewObserver(cb, {
-      dwellTimeMs: 1000,
-      viewDurationUpdateIntervalMs: 5000,
-    })
+    const obs = new ElementViewObserver(cb)
 
     obs.observe(el)
 
@@ -117,10 +111,7 @@ describe('ElementViewObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementViewObserver(cb, {
-      dwellTimeMs: 1000,
-      viewDurationUpdateIntervalMs: 10_000,
-    })
+    const obs = new ElementViewObserver(cb)
     obs.observe(el)
 
     const inst = mustGetIO()
@@ -147,7 +138,7 @@ describe('ElementViewObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementViewObserver(cb, { dwellTimeMs: 1000 })
+    const obs = new ElementViewObserver(cb)
     obs.observe(el)
 
     const inst = mustGetIO()
@@ -187,12 +178,12 @@ describe('ElementViewObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementViewObserver(cb, { dwellTimeMs: 100 })
+    const obs = new ElementViewObserver(cb)
     obs.observe(el)
 
     const inst = mustGetIO()
     inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
-    await advance(100)
+    await advance(1000)
     await Promise.resolve()
     await Promise.resolve()
 
@@ -201,7 +192,7 @@ describe('ElementViewObserver', () => {
     await Promise.resolve()
 
     inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
-    await advance(100)
+    await advance(1000)
 
     expect(cb).toHaveBeenCalledTimes(3)
 
@@ -220,7 +211,7 @@ describe('ElementViewObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementViewObserver(cb, { dwellTimeMs: 500 })
+    const obs = new ElementViewObserver(cb)
     obs.observe(el)
 
     const inst = mustGetIO()
@@ -234,7 +225,7 @@ describe('ElementViewObserver', () => {
 
     setDocumentVisibility('visible')
 
-    await advance(199)
+    await advance(699)
     expect(cb).not.toHaveBeenCalled()
 
     await advance(1)
@@ -251,7 +242,7 @@ describe('ElementViewObserver', () => {
       const [, metaCandidate] = first
 
       if (isMeta(metaCandidate)) {
-        expect(metaCandidate.totalVisibleMs).toBe(500)
+        expect(metaCandidate.totalVisibleMs).toBe(1000)
         expect(metaCandidate.viewId).toEqual(expect.any(String))
       } else {
         throw new Error('Unexpected meta payload for first callback')
@@ -259,31 +250,27 @@ describe('ElementViewObserver', () => {
     }
   })
 
-  it('supports per-element dwell override and passes data to callback', async () => {
+  it('passes per-element data to the callback', async () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementViewObserver(cb, {
-      dwellTimeMs: 10_000,
-      minVisibleRatio: 0.8,
-    })
+    const obs = new ElementViewObserver(cb)
 
     obs.observe(el, {
-      dwellTimeMs: 50,
       data: { id: 'xyz' },
     })
 
     const inst = mustGetIO()
     inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
 
-    await advance(50)
+    await advance(1000)
 
     expect(cb).toHaveBeenCalledTimes(1)
     expect(cb).toHaveBeenCalledWith(
       el,
       expect.objectContaining<Partial<Meta>>({
         attempts: 1,
-        totalVisibleMs: 50,
+        totalVisibleMs: 1000,
         viewId: expect.any(String),
         data: { id: 'xyz' },
       }),
@@ -297,13 +284,13 @@ describe('ElementViewObserver', () => {
       await firstAttempt.promise
     })
 
-    const obs = new ElementViewObserver(cb, { dwellTimeMs: 10 })
+    const obs = new ElementViewObserver(cb)
     obs.observe(el)
 
     const inst = mustGetIO()
     inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
 
-    await advance(10)
+    await advance(1000)
     expect(cb).toHaveBeenCalledTimes(1)
 
     inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
@@ -328,15 +315,12 @@ describe('ElementViewObserver', () => {
       }
     })
 
-    const obs = new ElementViewObserver(cb, {
-      dwellTimeMs: 0,
-      viewDurationUpdateIntervalMs: 1000,
-    })
+    const obs = new ElementViewObserver(cb)
     obs.observe(el)
 
     const inst = mustGetIO()
     inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
-    await advance(0)
+    await advance(1000)
     await advance(250)
     inst.trigger({ target: el, isIntersecting: false, intersectionRatio: 0 })
 
@@ -363,22 +347,19 @@ describe('ElementViewObserver', () => {
       await Promise.resolve()
     })
 
-    const obs = new ElementViewObserver(cb, {
-      dwellTimeMs: 0,
-      viewDurationUpdateIntervalMs: 1000,
-    })
+    const obs = new ElementViewObserver(cb)
     obs.observe(el)
 
     const inst = mustGetIO()
     inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
 
-    await advance(0)
+    await advance(1000)
     await Promise.resolve()
     await Promise.resolve()
 
     expect(cb).toHaveBeenCalledTimes(1)
 
-    await advance(1000)
+    await advance(5000)
     expect(cb).toHaveBeenCalledTimes(2)
   })
 
@@ -386,7 +367,7 @@ describe('ElementViewObserver', () => {
     const el = makeElement()
     const cb = rs.fn().mockResolvedValue(undefined)
 
-    const obs = new ElementViewObserver(cb, { dwellTimeMs: 10_000 })
+    const obs = new ElementViewObserver(cb)
     obs.observe(el)
 
     const inst = mustGetIO()
@@ -405,7 +386,7 @@ describe('ElementViewObserver', () => {
     const cb = rs.fn().mockResolvedValue(undefined)
     const derefSpy = rs.spyOn(ElementView, 'derefElement')
 
-    const obs = new ElementViewObserver(cb, { dwellTimeMs: 1_000 })
+    const obs = new ElementViewObserver(cb)
     obs.observe(el)
 
     const inst = mustGetIO()
@@ -426,7 +407,7 @@ describe('ElementViewObserver', () => {
     const addSpy = rs.spyOn(document, 'addEventListener')
     const removeSpy = rs.spyOn(document, 'removeEventListener')
 
-    const obs = new ElementViewObserver(cb, { dwellTimeMs: 100 })
+    const obs = new ElementViewObserver(cb)
     expect(addSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
 
     obs.observe(el)
@@ -440,10 +421,7 @@ describe('ElementViewObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementViewObserver(cb, {
-      dwellTimeMs: 1000,
-      viewDurationUpdateIntervalMs: 10_000,
-    })
+    const obs = new ElementViewObserver(cb)
     obs.observe(el)
 
     const inst = mustGetIO()
@@ -472,7 +450,7 @@ describe('ElementViewObserver', () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
-    const obs = new ElementViewObserver(cb, { dwellTimeMs: 1000 })
+    const obs = new ElementViewObserver(cb)
     obs.observe(el)
 
     const inst = mustGetIO()

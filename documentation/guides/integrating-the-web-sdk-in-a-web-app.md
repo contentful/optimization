@@ -771,7 +771,6 @@ optimization.tracking.enableElement('views', element, {
     optimizationId: selectedOptimization?.experienceId,
     variantIndex: selectedOptimization?.variantIndex,
   },
-  dwellTimeMs: 1000,
 })
 
 await optimization.track({
@@ -782,7 +781,7 @@ await optimization.track({
 
 Use `tracking.disableElement(...)` to force-disable one element, or `tracking.clearElement(...)` to
 remove a manual override so recycled DOM nodes do not keep stale entry data. For thresholds,
-attribute precedence, and delivery paths, see
+fixed interaction timing, attribute precedence, and delivery paths, see
 [Interaction tracking in Web SDKs](../concepts/interaction-tracking-in-web-sdks.md).
 
 ### Identity, profile, and reset

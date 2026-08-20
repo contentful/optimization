@@ -89,11 +89,9 @@ export interface OptimizedEntryControllerOptions<
   readonly isSdkStateReady?: boolean
   readonly targetDisplay?: OptimizedEntryLoadingTargetDisplay
   readonly clickable?: boolean
-  readonly hoverDurationUpdateIntervalMs?: number
   readonly trackClicks?: boolean
   readonly trackHovers?: boolean
   readonly trackViews?: boolean
-  readonly viewDurationUpdateIntervalMs?: number
 }
 
 interface NormalizedOptimizedEntryControllerOptions<
@@ -143,11 +141,9 @@ function normalizeOptions<
     isSdkStateReady: options.isSdkStateReady ?? false,
     targetDisplay: options.targetDisplay ?? 'block',
     clickable: options.clickable,
-    hoverDurationUpdateIntervalMs: options.hoverDurationUpdateIntervalMs,
     trackClicks: options.trackClicks,
     trackHovers: options.trackHovers,
     trackViews: options.trackViews,
-    viewDurationUpdateIntervalMs: options.viewDurationUpdateIntervalMs,
   }
 }
 

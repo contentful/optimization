@@ -116,14 +116,6 @@ interface OptimizedEntrySharedProps<
    * Per-component override for view tracking.
    */
   trackViews?: boolean
-  /**
-   * Per-component override for view-duration update events, in milliseconds.
-   */
-  viewDurationUpdateIntervalMs?: number
-  /**
-   * Per-component override for hover-duration update events, in milliseconds.
-   */
-  hoverDurationUpdateIntervalMs?: number
 }
 
 export type OptimizedEntryBaselineProps<
@@ -436,11 +428,9 @@ export function OptimizedEntry(props: OptimizedEntryProps): JSX.Element | null {
     onEntryError,
     onEntryResolved,
     clickable,
-    hoverDurationUpdateIntervalMs,
     trackClicks,
     trackHovers,
     trackViews,
-    viewDurationUpdateIntervalMs,
     ...entryProps
   } = toImplementationProps(props)
   const sdk = useOptimization()
@@ -462,13 +452,11 @@ export function OptimizedEntry(props: OptimizedEntryProps): JSX.Element | null {
     baselineEntry,
     clickable,
     hasCustomLoadingFallback,
-    hoverDurationUpdateIntervalMs,
     liveUpdates,
     targetDisplay,
     trackClicks,
     trackHovers,
     trackViews,
-    viewDurationUpdateIntervalMs,
   })
   const { metadata } = snapshot
   const renderContext = useMemo<OptimizedEntryRenderContext>(
