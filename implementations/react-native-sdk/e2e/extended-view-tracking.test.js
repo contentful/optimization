@@ -68,18 +68,6 @@ describe('Extended View Tracking', () => {
     // Scroll the entry out of the viewport (scroll down far enough)
     await element(by.id('main-scroll-view')).scroll(1500, 'down')
 
-    // Give the final event time to fire
-    await sleep(1000)
-
-    // Scroll back to the top so the stats elements become visible again
-    await element(by.id('main-scroll-view')).scrollTo('top')
-
-    // Scroll to the events display to read updated stats
-    await waitFor(element(by.id(`event-count-${VISIBLE_ENTRY_ID}`)))
-      .toBeVisible()
-      .whileElement(by.id('main-scroll-view'))
-      .scroll(300, 'down')
-
     // The lifecycle end emits exactly the final for this session.
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, ELEMENT_VISIBILITY_TIMEOUT)
 
@@ -100,11 +88,10 @@ describe('Extended View Tracking', () => {
 
     // Scroll the entry out of the viewport
     await element(by.id('main-scroll-view')).scroll(1500, 'down')
-    await sleep(1000)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, ELEMENT_VISIBILITY_TIMEOUT)
 
     // Scroll back to the top to make the entry visible again
     await element(by.id('main-scroll-view')).scrollTo('top')
-    await sleep(500)
 
     // First session start + final, then the new session start.
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 3, EXTENDED_TIMEOUT)
@@ -266,7 +253,6 @@ describe('Extended View Tracking', () => {
 
     // Scroll entry out of view (end cycle, triggers final event)
     await element(by.id('main-scroll-view')).scroll(1500, 'down')
-    await sleep(1000)
 
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, ELEMENT_VISIBILITY_TIMEOUT)
     const finalDuration = await getViewDuration(VISIBLE_ENTRY_ID)
@@ -274,7 +260,6 @@ describe('Extended View Tracking', () => {
 
     // Scroll back to top (entry visible again, new cycle starts)
     await element(by.id('main-scroll-view')).scrollTo('top')
-    await sleep(500)
 
     // First session start + final, then the new session start.
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 3, EXTENDED_TIMEOUT)
