@@ -37,7 +37,7 @@
   "devDependencies": {
     "e2e-web": "file:../../lib/e2e-web",
     "@rsbuild/core": "1.7.3",
-    "@rsbuild/plugin-react": "1.4.5",
+    "@rsbuild/plugin-react": "1.4.6",
     "@rsdoctor/cli": "1.5.2",
     "@types/node": "24.11.0",
     "@types/react": "19.2.14",
