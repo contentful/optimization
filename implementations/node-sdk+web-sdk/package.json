@@ -42,7 +42,7 @@
     "@types/supertest": "6.0.3",
     "@rstest/core": "0.8.5",
     "@rstest/coverage-istanbul": "0.2.1",
-    "@types/cookie-parser": "1.4.7",
+    "@types/cookie-parser": "1.4.10",
     "dotenv": "17.3.1",
     "pm2": "7.0.0",
     "rimraf": "6.1.3",
