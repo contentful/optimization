@@ -20,13 +20,29 @@ public sealed class JSONValue {
 
     operator fun get(key: String): JSONValue? = (this as? Obj)?.value?.get(key)
 
-    fun toFoundation(): Any? = when (this) {
+    /**
+     * Converts to the requested type `T`. `Number.value` is a raw `Double`, and `as? Int` always
+     * fails for it on the JVM even for a whole number, so a request for `Int` coerces the value
+     * directly instead of casting the boxed `Double`. A fractional value still yields `null`,
+     * since it has no exact `Int` representation.
+     */
+    inline fun <reified T> toTypedValue(): T? {
+        if (T::class == Int::class && this is Number) {
+            @Suppress("UNCHECKED_CAST")
+            return (value.toInt().takeIf { it.toDouble() == value } as T?)
+        }
+        @Suppress("UNCHECKED_CAST")
+        return toAny() as? T
+    }
+
+    @PublishedApi
+    internal fun toAny(): Any? = when (this) {
         is Null -> null
         is Bool -> value
         is Number -> value
         is Str -> value
-        is Array -> value.map { it.toFoundation() }
-        is Obj -> value.mapValues { it.value.toFoundation() }
+        is Array -> value.map { it.toAny() }
+        is Obj -> value.mapValues { it.value.toAny() }
     }
 
     fun toStringArray(): List<String>? =

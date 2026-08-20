@@ -21,8 +21,6 @@ private func jsonValueEncoded(_ value: some Encodable) throws -> JSONValue {
 /// (`ContentType`, `Locale`, `Metadata`) with no public initializer to fabricate from the resolved
 /// tree alone.
 ///
-/// `JSONValue.number` has no `Int` case, so an `Int` field round-trips as `Double` —
-/// `getField<Int>` won't match it.
 public struct CTEntry {
     private let entry: CDA.Entry
 

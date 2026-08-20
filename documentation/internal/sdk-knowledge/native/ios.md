@@ -193,6 +193,14 @@ viewportHeight:)` from its own scroll/layout callbacks and the controller applie
   initializers are for reading an entry through `getField`/`hasField` rather than for passing one
   back into resolution.
   source: extern:packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Contentful/CTEntry.swift; extern:packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/contentful/CTEntry.kt
+- `getField<T>(_:)` is `entry.fields[name]?.toFoundation() as? T`. `JSONValue` models every number
+  as one `.number(Double)` case and `toFoundation()` boxes it as `NSNumber`, so Foundation's numeric
+  bridging satisfies both `getField<Int>` and `getField<Double>` off the same stored value: a
+  whole-number field read as `Int` yields the `Int`, and a fractional field read as `Int` yields
+  `nil`, since `as? Int` on an `NSNumber` requires an exact representation. Android reaches the same
+  observable behavior by a different mechanism — Kotlin/JVM boxes a `Double` as `java.lang.Double`
+  with no bridging, so a cast can never satisfy `Int`, and `JSONValue.toTypedValue<T>()` branches on
+  the reified `T` instead. source: extern:getField converts through toFoundation then casts as? T — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Contentful/CTEntry.swift#CTEntry; extern:JSONValue has a single number(Double) case that toFoundation boxes as NSNumber — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/JSONValue.swift#JSONValue; kb:native/android.md
 
 ## Identifier ownership
 

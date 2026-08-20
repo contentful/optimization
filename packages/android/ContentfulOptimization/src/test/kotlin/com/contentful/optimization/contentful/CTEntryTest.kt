@@ -73,6 +73,18 @@ class CTEntryTest {
     }
 
     @Test
+    fun `getField returns Int for a whole-number field`() {
+        val entry = CTEntry.from(minimalEntry)
+        assertEquals(42, entry.getField<Int>("count"))
+    }
+
+    @Test
+    fun `getField returns null for a fractional field requested as Int`() {
+        val entry = CTEntry.from(mapOf("sys" to mapOf("id" to "e1"), "fields" to mapOf("price" to 3.5)))
+        assertNull(entry.getField<Int>("price"))
+    }
+
+    @Test
     fun `hasField distinguishes present from absent`() {
         val entry = CTEntry.from(minimalEntry)
         assertTrue(entry.hasField("title"))

@@ -29,7 +29,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
-public class CTEntry internal constructor(private val entry: Entry) {
+public class CTEntry internal constructor(@PublishedApi internal val entry: Entry) {
 
     public fun toMap(): Map<String, Any> = gson.fromJson(gson.toJson(entry), Map::class.java) as Map<String, Any>
 
@@ -45,10 +45,7 @@ public class CTEntry internal constructor(private val entry: Entry) {
 
     public val updatedAt: Date? get() = entry.sys?.updatedAt?.let(::parseIso8601)
 
-    public fun <T> getField(name: String): T? {
-        @Suppress("UNCHECKED_CAST")
-        return entry.fields[name]?.toFoundation() as? T
-    }
+    public inline fun <reified T> getField(name: String): T? = entry.fields[name]?.toTypedValue<T>()
 
     public fun hasField(name: String): Boolean = entry.fields.containsKey(name)
 
@@ -75,6 +72,7 @@ public class CTEntry internal constructor(private val entry: Entry) {
         }
     }
 
+    @PublishedApi
     internal data class Entry(
         val sys: Sys?,
         val fields: Map<String, JSONValue>,

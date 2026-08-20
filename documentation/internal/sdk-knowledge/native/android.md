@@ -184,7 +184,10 @@ viewportHeight }` via `LocalScrollContext` that descendant `Modifier.trackViews`
 - `CTEntry` is backed by an SDK-owned `CTEntry.Entry` data class (typed `Sys` / `fields: Map<String, JSONValue>` / `Metadata`
   sub-classes) that Gson serializes and deserializes natively via a `JSONValueTypeAdapter` — no reflection into `contentful.java`
   internals, and no reflection in tests either. Accessors mirror `CDAEntry`: `id` → `entry.sys?.id`; `contentTypeId` →
-  `entry.sys?.contentType?.sys?.id`; `getField<T>(name)` returns `entry.fields[name]?.toFoundation() as? T`; `hasField` →
+  `entry.sys?.contentType?.sys?.id`; `getField<T>(name)` is a reified inline fun returning
+  `entry.fields[name]?.toTypedValue<T>()` — `JSONValue.toTypedValue<T>()` coerces a `Number`'s
+  underlying `Double` to `Int` (exact round-trip; `null` if fractional) when `T == Int`, otherwise
+  falls back to the internal `toAny()` conversion cast `as? T`; `hasField` →
   `entry.fields.containsKey(name)`; `localeCode` / `createdAt` / `updatedAt` → `entry.sys?...`; plus a
   `String` `operator get(name)` subscript. Three factory methods produce the same `Entry` shape:
   `CTEntry.from(entry: CDAEntry)` walks the live entry into an `Entry` directly (top-level fields
@@ -201,7 +204,15 @@ viewportHeight }` via `LocalScrollContext` that descendant `Modifier.trackViews`
   both `OptimizedEntry(Map, ...)` and `OptimizedEntry(CDAEntry, ...)` wrap their result the same
   way, so callers on the CDAEntry overload read the resolved variant through `getField` /
   `hasField` / `id` instead of `as?` casts on a raw map. Numbers round-trip through JSON as
-  `Double` (Gson's default); read numeric fields as `Double`, not `Int`. source: extern:CTEntry backed by SDK-owned Entry data class, from(CDAEntry)/from(Map, fallback)/from(String, fallback), Gson round-trip, toMap/toJSON, mirrored accessors, CDAEntry walk with ancestor cycle guard — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/contentful/CTEntry.kt#CTEntry
+  `Double` (Gson's default); `getField<Double>` reads the raw value, and `getField<Int>` on a
+  whole-number field resolves to the coerced `Int` (a fractional field returns `null` for an `Int`
+  request). source: extern:CTEntry backed by SDK-owned Entry data class, from(CDAEntry)/from(Map, fallback)/from(String, fallback), Gson round-trip, toMap/toJSON, mirrored accessors, CDAEntry walk with ancestor cycle guard — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/contentful/CTEntry.kt#CTEntry
+- `JSONValue.toTypedValue<T>()` is the single reified, type-directed conversion `getField` uses: for
+  `T == Int` against a `Number`, it coerces the underlying `Double` to `Int` via an exact round-trip
+  check (returns `null` for a fractional value) instead of casting the boxed `Double`, since
+  `(3.0 as Any) as? Int` always fails on the JVM; for any other `T` it falls back to the internal
+  `toAny()` conversion (`String`, `Boolean`, `Double`, `List<Any?>`, `Map<String, Any?>`, or `null` —
+  a `Number` case always yields a raw `Double` here, never `Int`) cast `as? T`. source: extern:JSONValue's reified toTypedValue<T> coerces Number to Int for whole values, else falls back to toAny() — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/JSONValue.kt#JSONValue
 - The raw-map `OptimizedEntry(Map, ...)` / `OptimizedEntryView.setEntry(Map, ...)` /
   `resolveOptimizedEntry(Map, ...)` path never validates the map's shape in Kotlin — `CTEntry.from(Map,
 fallback)`'s own fail-soft `catch` only fires on a cyclic self-referential map or a Gson
