@@ -575,6 +575,27 @@ first load and on every route change.
    not report a duplicate (see
    [Hybrid Node SSR and browser continuity](#hybrid-node-ssr-and-browser-continuity)).
 
+Both `page()` and the page event emitted by `trackCurrentPage()` inherit the Web SDK's default page
+context, whose URL is the current browser URL unless page input overrides it. The SDK writes
+explicit or automatically inferred campaign data to the emitted SDK output
+`event.context.campaign`, using this precedence, highest first:
+
+1. **Application input: `campaign` at the top level of the `page()` payload or `buildPayload`
+   result.** Any explicit object is the whole campaign source. `campaign: {}` suppresses URL
+   inference.
+2. **Application input: `properties.url` in that page payload.** If this URL contains even one
+   supported UTM parameter, the SDK infers the campaign only from this URL. It does not backfill
+   missing fields from the resolved `page.url`.
+3. **Resolved top-level `page.url`.** An explicit top-level `page.url` supplies this value;
+   otherwise, the Web default page context supplies the current browser URL. The SDK uses the
+   resolved value only when top-level `campaign` is absent and `properties.url` has no supported UTM
+   parameter.
+
+Referrer remains page metadata, but the SDK never reads `page.referrer` or `properties.referrer` for
+campaign attribution. See
+[Campaign attribution in event context](../concepts/core-state-management.md#campaign-attribution-in-event-context)
+for the supported parameters and full precedence rules.
+
 **Copy this:**
 
 ```ts

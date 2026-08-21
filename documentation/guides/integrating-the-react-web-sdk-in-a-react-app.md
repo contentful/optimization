@@ -668,6 +668,28 @@ with the
 3. For an app with no supported router, call `trackPageView()` from `useOptimizationActions()` in
    your own route-change effect.
 
+Auto trackers and manual `trackPageView()` calls inherit the Web SDK's default page context. The SDK
+writes explicit or automatically inferred campaign data to the emitted SDK output
+`event.context.campaign`, using this precedence, highest first:
+
+1. **Application input: `campaign` at the top level of the `trackPageView()` argument, tracker
+   `pagePayload`, or `getPagePayload` result.** Any explicit object is the whole campaign source.
+   `campaign: {}` suppresses URL inference.
+2. **Final page-event `properties.url`.** Manual `trackPageView()` calls can provide this field
+   directly. Built-in trackers seed it from the route-derived absolute URL; static `pagePayload` and
+   dynamic `getPagePayload` values can override it. If the final URL contains even one supported UTM
+   parameter, the SDK infers the campaign only from this URL and does not backfill missing fields
+   from `page.url`.
+3. **Resolved top-level `page.url`.** An explicit top-level `page.url` supplies this value;
+   otherwise, the Web default page context supplies the current browser URL. The SDK uses the
+   resolved value only when top-level `campaign` is absent and the final `properties.url` has no
+   supported UTM parameter.
+
+Referrer remains page metadata, but the SDK never reads `page.referrer` or `properties.referrer` for
+campaign attribution. See
+[Campaign attribution in event context](../concepts/core-state-management.md#campaign-attribution-in-event-context)
+for the supported parameters and full precedence rules.
+
 | Router               | Import path                                                 | Mounting rule                                                          |
 | -------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------- |
 | React Router         | `@contentful/optimization-react-web/router/react-router`    | Mount under a data router that supports `useMatches()`                 |

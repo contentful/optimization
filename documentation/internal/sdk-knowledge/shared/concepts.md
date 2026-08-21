@@ -189,6 +189,17 @@ skip the duplicate (per-SDK `initialPageEvent` / tracker prop). Interaction even
 (view/click/hover) are consent-gated browser activity and use the resolved entry id.
 source: react-web-sdk#auto-page/useAutoPageEmitter.ts; react-web-sdk#router/next-app.tsx
 
+## Campaign attribution
+
+When an event omits explicit `campaign` data, the shared event builder maps `utm_campaign`,
+`utm_source`, `utm_medium`, `utm_term`, and `utm_content` from the resolved `page.url` into
+`context.campaign`; it never reads `page.referrer`. For page events, a `properties.url` containing at
+least one supported UTM parameter supplies the whole inferred campaign before the resolved
+`page.url`; otherwise inference falls back to the resolved `page.url`. Explicit campaign data,
+including an empty object, suppresses URL inference rather than merging with it. If neither eligible
+URL parses with a supported UTM parameter, `context.campaign` is empty.
+source: core-sdk#events/EventBuilder.ts#extractCampaignFromUrl; core-sdk#events/EventBuilder.ts#buildUniversalEventProperties; core-sdk#events/EventBuilder.ts#buildPageView
+
 ## Custom flag views
 
 Stateful flag reads auto-attempt flag-view tracking: `getFlag(name)` tracks the read immediately,

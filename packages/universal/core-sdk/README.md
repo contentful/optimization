@@ -36,6 +36,7 @@ exported API signatures.
   - [Stateful Core](#stateful-core)
   - [Stateless Core](#stateless-core)
 - [Common configuration](#common-configuration)
+- [Campaign attribution](#campaign-attribution)
 - [Package surface](#package-surface)
   - [Custom entry-source adapters](#custom-entry-source-adapters)
 - [Preview support](#preview-support)
@@ -174,6 +175,18 @@ responses.
 
 For every option, callback payload, and exported type, use the generated
 [Core SDK reference](https://contentful.github.io/optimization/modules/_contentful_optimization-core.html).
+
+## Campaign attribution
+
+Event builders use explicit `campaign` data when supplied. Otherwise, they infer
+`context.campaign` from `utm_campaign`, `utm_source`, `utm_medium`, `utm_term`, and `utm_content`
+parameters in `page.url`. They do not inspect `page.referrer`.
+
+For a page event, `properties.url` supplies the inferred campaign when it contains at least one
+supported UTM parameter. Otherwise, the builder uses the resolved `context.page.url`. That resolved
+URL comes from an explicit `page.url`, or from `getPageProperties()` when event input does not
+override it. If neither eligible URL parses with a supported UTM parameter, the inferred campaign is
+empty.
 
 ## Package surface
 

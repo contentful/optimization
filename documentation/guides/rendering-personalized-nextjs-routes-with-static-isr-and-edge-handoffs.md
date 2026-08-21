@@ -211,6 +211,11 @@ produced the markup. A **baseline entry** is the Contentful entry before Optimiz
 Resolving entries means applying selected optimizations to those baseline entries before rendering.
 `initialPageEvent` tells the browser whether to emit or skip the first page event for the route.
 
+A campaign can have two independent meanings in these recipes. A public `permutationKey` can name
+an app-owned campaign and contributes to public cache identity. A page event's `context.campaign` is
+attribution metadata for that event; it does not select a public permutation, populate its
+`permutationKey`, or contribute to its cache key.
+
 | Route strategy                                 | Optimization state owner       | Rendering owner                                  | Cache scope                                |
 | ---------------------------------------------- | ------------------------------ | ------------------------------------------------ | ------------------------------------------ |
 | Browser-owned personalization                  | Browser SDK after hydration    | Static page shell                                | Static shell without a handoff             |
@@ -695,6 +700,18 @@ export async function GET(request: Request) {
 `renderPersonalizedResponse()` is your existing custom renderer that returns a `Response`. Keep the
 response private because the handoff can include request profile state.
 
+In this example, `createEdgeRequestHandoff()` builds `page.url` from the full `request.url`; the
+pathname-only `routeKey` identifies the route for duplicate-event control. Because `pagePayload`
+supplies only `properties.path`, the request-backed `page.url` is the campaign source when it has a
+supported UTM parameter. If you customize that payload, the SDK chooses one whole source in order:
+top-level `campaign`, then a UTM-bearing `properties.url`, then `page.url`. An explicit empty
+`campaign: {}` suppresses URL inference and produces empty attribution. The SDK never fills missing
+fields from a lower-priority source. The chosen URL maps into `context.campaign`: `utm_campaign`
+becomes `name`, `utm_source` becomes `source`, `utm_medium` becomes `medium`, `utm_term` becomes
+`term`, and `utm_content` becomes `content`. `page.referrer` remains page metadata, but it is not a
+campaign source. This event attribution is the second campaign meaning defined in the default
+recipe; it remains independent of public cache identity.
+
 ### Analytics-only server, static, or edge markup
 
 Use this when the route already renders the final entry output and needs browser page or interaction
@@ -703,6 +720,10 @@ needed for page and entry-interaction events. Content-resolution state is the da
 `OptimizationRoot` or `OptimizationProvider` uses to choose and render entry variants.
 `OptimizationAnalyticsRoot` hydrates the analytics state only; it does not let child components
 resolve content in the browser.
+
+Page `properties` can contain arbitrary app metadata. The example uses `pageCategory` so that value
+cannot be mistaken for top-level event `campaign` attribution or for `permutationKey`, the app-owned
+public-cache identity input. These three inputs do not populate one another.
 
 **Adapt this to your use case:**
 
@@ -736,7 +757,7 @@ export default async function AnalyticsOnlyPage() {
 
   return (
     <OptimizationAnalyticsRoot
-      buildPagePayload={() => ({ properties: { campaign: 'campaign-a' } })}
+      buildPagePayload={() => ({ properties: { pageCategory: 'campaign-landing' } })}
       handoff={handoff}
       routeKey="/campaign-a"
     >

@@ -748,6 +748,16 @@ page payload, so the app does not pass either one. Keep the tracker inside the N
 `Suspense` boundary; that boundary is a platform rendering requirement, not request-initialization
 plumbing.
 
+On this normal request-family path, the first page event's `page.url` comes from the SDK-forwarded
+request URL, and later browser page events use the tracker's current route URL. The app does not pass
+a page payload for either. When that URL contains supported UTM parameters, the SDK treats it as one
+complete campaign source and maps it into `context.campaign`: `utm_campaign` becomes `name`,
+`utm_source` becomes `source`, `utm_medium` becomes `medium`, `utm_term` becomes `term`, and
+`utm_content` becomes `content`. Missing parameters stay absent.
+`page.referrer` remains page metadata, but it is not a campaign source. For the additional inputs and
+ordered precedence available to lower-level or manual page calls, see
+[Campaign attribution in event context](../concepts/core-state-management.md#campaign-attribution-in-event-context).
+
 Keep request-independent public chrome outside both `Suspense` and the request root. Put the tracker,
 provider-dependent shell body, and all other SDK-dependent UI inside the root. Use a meaningful
 fallback for the private slot so the public navigation and page context remain available while it

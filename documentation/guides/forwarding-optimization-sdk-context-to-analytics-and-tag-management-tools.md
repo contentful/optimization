@@ -164,6 +164,39 @@ is useful for readiness checks and coarse segmentation, but it is not an exposur
 It tells you which experiences are active for the current profile, not which entry rendered or
 which user interaction occurred.
 
+Every emitted JavaScript SDK event carries `event.context.campaign`, the SDK-owned output object for
+campaign attribution. When an event call omits explicit campaign data, the SDK can populate that
+object from supported UTM parameters. If inference finds nothing, the emitted object is empty:
+`event.context.campaign` is `{}`.
+
+For a direct `page()` call, use these full paths to distinguish application inputs from SDK output:
+
+| Full field path                                         | Owner                                       | Campaign-attribution role                                                                                   |
+| ------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `page()` input `campaign`                               | Application input                           | Highest priority. Even an explicit empty object suppresses URL inference; URL values never fill its fields. |
+| `page()` input `properties.url`                         | Application input for this page event       | Supplies the whole inferred campaign when it contains at least one supported UTM parameter.                 |
+| `page()` input `page.url`                               | Application input when passed directly      | Supplies the fallback URL for inference when `properties.url` has no supported UTM parameter.               |
+| Runtime-provided `page.url`                             | JavaScript SDK runtime or route integration | Supplies the same fallback when the application does not pass `page.url` directly.                          |
+| `page()` input `page.referrer` or `properties.referrer` | Application or runtime page-metadata input  | Never supplies campaign attribution, even when the referrer contains supported UTM parameters.              |
+| Emitted `event.context.campaign`                        | SDK output                                  | Always an object containing explicit or inferred fields, or `{}` when neither source supplies them.         |
+
+The `properties.url` and fallback `page.url` values are separate inputs. When both contain UTM
+parameters, the SDK does not merge them: `properties.url` supplies the entire inferred campaign.
+Forward the resulting output fields as separate primitives:
+
+| URL parameter  | `event.context.campaign` field | Suggested destination field   |
+| -------------- | ------------------------------ | ----------------------------- |
+| `utm_campaign` | `name`                         | `contentful_campaign_name`    |
+| `utm_source`   | `source`                       | `contentful_campaign_source`  |
+| `utm_medium`   | `medium`                       | `contentful_campaign_medium`  |
+| `utm_term`     | `term`                         | `contentful_campaign_term`    |
+| `utm_content`  | `content`                      | `contentful_campaign_content` |
+
+> [!NOTE]
+>
+> An invalid URL, or both eligible URLs lacking supported UTM parameters, leaves the emitted
+> `event.context.campaign` object empty.
+
 The SDK event stream is a live handoff, not a durable third-party delivery queue. Stateful
 JavaScript observables emit the current value when a subscriber registers, then later updates. They
 do not replay the full history, and a new empty `Set` inside a new subscriber does not know which
@@ -186,12 +219,24 @@ The `optimization` object is optional. It appears when the SDK can connect an in
 an optimized entry resolution context. It is absent on events without that context, including
 standalone Custom Flag view events.
 
+`OptimizationAnalyticsEvent` below is a reader-owned local projection containing only the SDK event
+fields this mapper reads. It is not a type exported by an Optimization SDK package.
+
 **Copy this:**
 
 ```ts
 type OptimizationAnalyticsEvent = {
   type: string
   messageId: string
+  context: {
+    campaign: {
+      name?: string
+      source?: string
+      medium?: string
+      term?: string
+      content?: string
+    }
+  }
   componentId?: string
   componentType?: string
   experienceId?: string
@@ -222,6 +267,11 @@ function pickContentfulEventProperties(
   return dropUndefined({
     contentful_event_type: event.type,
     contentful_message_id: event.messageId,
+    contentful_campaign_name: event.context.campaign.name,
+    contentful_campaign_source: event.context.campaign.source,
+    contentful_campaign_medium: event.context.campaign.medium,
+    contentful_campaign_term: event.context.campaign.term,
+    contentful_campaign_content: event.context.campaign.content,
     contentful_component_id: event.componentId,
     contentful_component_type: event.componentType,
     contentful_experience_id: event.experienceId,
@@ -573,6 +623,18 @@ Verify the recipe before release:
 5. Re-enable consent, trigger an event, then remount the subscriber or provider. Confirm the same
    current `messageId` does not produce a second destination event because the cache outlives the
    subscriber or the initial current value is intentionally skipped.
+6. In a stateful browser JavaScript runtime, such as Web, React Web, or a Next.js browser binding,
+   validate URL campaign attribution separately from the iOS and Android paths. Replace the quick-
+   start `pickQuickStartContentfulProperties()` call with the full
+   `pickContentfulEventProperties()` mapper from the default recipe; the quick-start mapper does not
+   include campaign fields. Load a page URL such as
+   `https://example.com/pricing?utm_campaign=spring&utm_source=newsletter&utm_medium=email`, then
+   trigger its SDK page event. Set a breakpoint on the `analytics.track()` call, or add a temporary
+   log immediately before it, and inspect both `event.context.campaign` and the object returned by
+   `pickContentfulEventProperties(event)`. Observe `spring`, `newsletter`, and `email` in the
+   campaign object and the corresponding destination fields. Because the URL omits `utm_term` and
+   `utm_content`, expect no `contentful_campaign_term` or `contentful_campaign_content` keys after
+   `dropUndefined()`. Confirm the same payload in the destination's live debugger.
 
 Then confirm the broader tracking contract:
 

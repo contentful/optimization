@@ -33,6 +33,7 @@ extend behavior through the consumer-facing channels the SDK provides.
   - [Why observables, not direct signal access](#why-observables-not-direct-signal-access)
 - [How state changes](#how-state-changes)
   - [Main state-changing paths](#main-state-changing-paths)
+  - [Campaign attribution in event context](#campaign-attribution-in-event-context)
   - [How the Experience API drives state](#how-the-experience-api-drives-state)
   - [Runtime-specific persistence](#runtime-specific-persistence)
   - [Reset, teardown, and consent withdrawal](#reset-teardown-and-consent-withdrawal)
@@ -311,6 +312,37 @@ The package also exports raw `signals` and `signalFns` references for SDK layers
 preview tooling. Those exports are not application consumer APIs. Application code must treat them
 as read-only implementation details and use the methods, observables, defaults, and interceptors
 described in this document.
+
+### Campaign attribution in event context
+
+Core event builders add campaign attribution to `context.campaign` before an event reaches the
+queue and event interceptors. Campaign inference does not create separate campaign or
+personalization state. Accepted stateful events still publish the attributed event through
+`states.eventStream`.
+
+When an event includes explicit `campaign` data, the builder uses it without filling missing fields
+from a URL. When explicit campaign data is absent, the builder reads supported UTM parameters from
+the resolved `page.url` and maps them as follows:
+
+| URL parameter  | `context.campaign` field |
+| -------------- | ------------------------ |
+| `utm_campaign` | `name`                   |
+| `utm_source`   | `source`                 |
+| `utm_medium`   | `medium`                 |
+| `utm_term`     | `term`                   |
+| `utm_content`  | `content`                |
+
+The builder does not inspect `page.referrer`. UTM parameters in a referrer therefore cannot fill or
+replace campaign fields.
+
+Page view events have one additional precedence rule. If `properties.url` contains at least one
+supported UTM parameter, that URL supplies the entire inferred campaign. The builder does not merge
+missing fields from `page.url`. Otherwise, it checks `page.url` or the resolved page URL. An invalid
+URL or a URL without any supported UTM parameter leaves `context.campaign` empty.
+
+Provide explicit campaign data when application-owned attribution must take precedence. When a page
+view relies on URL attribution and `properties.url` contains UTM parameters, include the complete
+campaign data in that URL instead of relying on `page.url` to supply missing fields.
 
 ### How the Experience API drives state
 

@@ -423,6 +423,23 @@ handoff's `initialPageEvent` instruction; those props do not belong on `Optimiza
 separate `NextPagesAutoPageTracker` should emit the initial event when no handoff exists and skip it
 when a handoff lets the root own that first route, then track later client navigations.
 
+Campaign inputs follow page-event ownership. The `pagePayload` passed to `createRequestHandoff`
+shapes the first server page event. The root's `buildPagePayload` shapes a browser event that the root
+owns; in `beforeInitialPage` mode, it supplies both the direct attempt and later route emissions. In
+normal tracker mode, `NextPagesAutoPageTracker` instead derives `page.url` from the current router URL
+for later navigations. For either payload seam, `campaign` is an optional top-level object with
+`name`, `source`, `medium`, `term`, and `content` fields, while `url` is nested under the optional
+`properties` object. When those inputs are absent, the server request, browser page provider, or
+router tracker supplies `page.url` for the event it owns.
+
+For each event, the SDK chooses one whole campaign source in order: top-level `campaign`, then a
+`properties.url` containing at least one supported UTM parameter, then `page.url`. An explicit empty
+`campaign: {}` suppresses URL inference and produces empty attribution. Once a source is chosen,
+missing fields are not filled from a lower-priority URL. The chosen URL maps into
+`context.campaign`: `utm_campaign` becomes `name`, `utm_source` becomes `source`, `utm_medium`
+becomes `medium`, `utm_term` becomes `term`, and `utm_content` becomes `content`. `page.referrer`
+remains page metadata, but it is not a campaign source.
+
 As an optional alternative, the browser binder accepts `beforeInitialPage` for an owned content
 root that must finish returned identity or custom Experience event work before its initial page
 decision. The **initial page decision** is the root's one choice to send the first browser `page`
