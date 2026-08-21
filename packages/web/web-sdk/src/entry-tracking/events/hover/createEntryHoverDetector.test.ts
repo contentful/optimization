@@ -74,6 +74,37 @@ describe('EntryHoverTracker', () => {
     cleanup()
   })
 
+  it('emits a final duration update when an active tracked entry is removed', async () => {
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'entry-removed-hover'
+    document.body.append(entry)
+
+    const { core, trackHover } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
+
+    tracker.start({ dwellTimeMs: 0, hoverDurationUpdateIntervalMs: 10_000 })
+
+    dispatchHoverEnter(entry)
+    await advance(0)
+    await advance(500)
+
+    entry.remove()
+    await advance(0)
+
+    const firstPayload = trackHover.mock.calls[0]?.[0]
+    const finalPayload = trackHover.mock.calls[1]?.[0]
+    cleanup()
+
+    expect(trackHover).toHaveBeenCalledTimes(2)
+    expect(finalPayload).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-removed-hover',
+        hoverDurationMs: 500,
+        hoverId: firstPayload?.hoverId,
+      }),
+    )
+  })
+
   it('prefers manual data when manually observing an element', async () => {
     const element = document.createElement('section')
     document.body.append(element)
