@@ -184,6 +184,13 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
   Strict Mode double effects. Mount ONE tracker per router tree. React Router / TanStack trackers do
   NOT take `initialPageEvent`; only next-pages / next-app trackers do (React-Web-only Next setups).
   source: react-web-sdk#router/react-router.tsx#ReactRouterAutoPageTracker; react-web-sdk#router/tanstack-router.tsx#TanStackRouterAutoPageTracker; react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker; react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker; web-sdk#ContentfulOptimization.ts#trackCurrentPage
+- A config-owned provider creates the plain Web runtime, so manual page calls inherit its current
+  browser page provider. Built-in React Router, TanStack Router, Next.js Pages Router, and Next.js App
+  Router trackers additionally seed page-event properties with their route-derived absolute URL,
+  query, search, and path; static `pagePayload` and dynamic `getPagePayload` layers can override that
+  seed. Core applies the canonical
+  [`campaign-attribution`](../shared/concepts.md#campaign-attribution) behavior to the final page URL.
+  source: react-web-sdk#provider/OptimizationProvider.tsx#createOwnedSdkBinding; react-web-sdk#router/react-router.tsx#ReactRouterAutoPageTracker; react-web-sdk#router/tanstack-router.tsx#TanStackRouterAutoPageTracker; react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker; react-web-sdk#router/next-app.tsx#useNextAppAutoPageInputs; react-web-sdk#auto-page/pagePayload.ts#buildAutoPagePayload; kb:web/web.md; kb:shared/concepts.md
 - `useNextAppAutoPageInputs` derives the current App Router route key and lazy page-payload builder
   from pathname and search state without emitting. In a retained App layout, when Next.js hooks
   transiently replay an older route snapshot that disagrees with `window.location`, the hook keeps

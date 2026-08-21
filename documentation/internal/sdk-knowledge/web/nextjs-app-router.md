@@ -210,6 +210,12 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
   value from its shared handoff, so page-event ownership does not depend on which request wrapper
   starts first.
   source: `nextjs-sdk#server.tsx#createNextjsRequestHandoff`; `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#app-router-request-handoff.ts#readNextjsForwardedServerData`; `nextjs-sdk#handoff.ts#createHandoffFromSelections`
+- Request and Edge handoff helpers derive Core page context from the request or forwarded URL before
+  supplied page context and page-event payload layers override it. Browser route-to-page URL behavior
+  comes from the React Web App Router inputs recorded in [`react-web.md`](./react-web.md). Both URL
+  sources feed the shared
+  [`campaign-attribution`](../shared/concepts.md#campaign-attribution) behavior.
+  source: nextjs-sdk#server.tsx#createNextjsRequestContext; nextjs-sdk#edge.ts#createEdgeRequestContext; core-sdk#page-context.ts#createPageContextFromUrl; kb:web/react-web.md; kb:shared/concepts.md
 - `NextAppAutoPageTracker` must stay inside `Suspense` (reads `useSearchParams`).
   Duplicate-page-event control: `initialPageEvent="skip"` when the server already reported the view,
   `"emit"` for browser-owned routes.

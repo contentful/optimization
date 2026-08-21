@@ -156,6 +156,12 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   `identify({ userId, traits? })` (`userId` required), `track({ event, properties? })` (`event`
   required), `screen()`.
   source: core-sdk#CoreStatefulEventEmitter.ts#page; core-sdk#CoreStatefulEventEmitter.ts#identify; core-sdk#CoreStatefulEventEmitter.ts#track; core-sdk#CoreStatefulEventEmitter.ts#screen; core-sdk#events/EventEmissionResult.ts#EventEmissionResult; core-sdk#events/EventBuilder.ts#IdentifyBuilderArgs; core-sdk#events/EventBuilder.ts#TrackBuilderArgs
+- The Web runtime installs `getPageProperties()` as Core's default page provider. It parses
+  `window.location.href`, serializes that URL into `page.url`, and derives `page.query` and
+  `page.search` from the same URL. When event/page input does not override this source, Core uses the
+  resolved browser page URL for the URL campaign inference recorded in
+  [`../shared/concepts.md`](../shared/concepts.md#campaign-attribution).
+  source: web-sdk#ContentfulOptimization.ts#mergeConfig; web-sdk#builders/EventBuilder.ts#getPageProperties; core-sdk#events/EventBuilder.ts#buildUniversalEventProperties; core-sdk#events/EventBuilder.ts#buildPageView; kb:shared/concepts.md
 - `page()` (accepted) populates `states.selectedOptimizations`.
   source: core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals
 - `trackCurrentPage({ routeKey, buildPayload, initialPageEvent? })` — dedupes consecutive identical

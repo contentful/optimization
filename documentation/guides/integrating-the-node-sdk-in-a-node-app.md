@@ -113,6 +113,7 @@ app.get('/', async (req, res) => {
         query: {},
         referrer: req.get('referer') ?? '',
         search: url.search,
+        // The app supplies the full request URL for this request-local page context.
         url: url.toString(),
       },
     },
@@ -314,7 +315,24 @@ locale query parameter.
 1. Choose the application Contentful locale in your router, i18n layer, or request policy.
 2. Pass the same locale to Contentful CDA requests and to `forRequest({ locale: appLocale })` when
    Experience API responses and events need to use the same language.
-3. Derive page context from the current request instead of sharing it across requests.
+3. Derive page context from the current request instead of sharing it across requests. Your app
+   owns this adapter.
+
+`page.url` is the public request URL your app treats as canonical for this event after applying its
+trusted proxy and rewrite policy. Keep the full query string in this URL. The request context shown
+here supplies no top-level page-event `campaign`, and the guide's `page()` calls pass no per-call
+payload. In that call form, the SDK infers the emitted event's `event.context.campaign` from
+`page.url`. The `page.query`, `page.search`, and `page.referrer` fields remain ordinary page metadata,
+but they are not campaign-inference sources. See
+[Campaign attribution in event context](../concepts/core-state-management.md#campaign-attribution-in-event-context)
+for the five supported UTM mappings.
+
+> [!IMPORTANT]
+>
+> In Express, `req.protocol`, the `Host` value returned by `req.get('host')`, and `req.originalUrl`
+> must already reflect your app's trusted proxy and rewrite policy. If they do not, construct
+> `page.url` from your app's validated public origin and public route instead of using these request
+> values unchanged.
 
 **Adapt this to your use case:**
 
@@ -428,6 +446,12 @@ granted, and labels those events with `context.gdpr.isConsentGiven: false`. Conf
 
 Call `page()` for the server route or request that needs profile evaluation, variant selections, or
 Custom Flag changes. Render from the accepted event result for the current request.
+
+The request context above supplies no top-level `campaign`, and this guide calls `page()` with no
+per-call payload. The SDK therefore uses the request-bound `page.url` from `getRequestContext()` to
+populate the emitted page event's `event.context.campaign`. This campaign object is event metadata.
+It is separate from `pageResult.data`, the SDK-provided `OptimizationData` response whose `profile`,
+`selectedOptimizations`, and `changes` fields are listed below.
 
 An accepted `page()` returns three things your render logic uses:
 

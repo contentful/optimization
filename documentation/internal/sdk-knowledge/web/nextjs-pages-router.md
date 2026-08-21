@@ -139,6 +139,12 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
 - Page events: `NextPagesAutoPageTracker` emits on navigation; reads route via `useRouter` (NOT
   `useSearchParams`) ⇒ **no `Suspense` boundary needed** (App Router's tracker does need it).
   source: `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker`.
+- Server request handoff prefers `resolvedUrl`, makes it absolute from forwarded host/protocol when
+  available, and parses it into Core page URL/query/search context before calling `page()`. In the
+  browser, route-to-page URL behavior comes from the React Web Pages Router tracker recorded in
+  [`react-web.md`](./react-web.md). Both URL sources feed the shared
+  [`campaign-attribution`](../shared/concepts.md#campaign-attribution) behavior.
+  source: nextjs-sdk#pages-router-server.ts#createPagesRouterRequest; nextjs-sdk#pages-router-server.ts#createPagesRouterRequestUrl; nextjs-sdk#server.tsx#createNextjsRequestContext; core-sdk#page-context.ts#createPageContextFromUrl; kb:web/react-web.md; kb:shared/concepts.md
 - The Pages Router client binder forwards `beforeInitialPage` only to its bound content root; its
   bound provider and analytics root projections omit it. On this path the bound content root, rather
   than `NextPagesAutoPageTracker`, owns page emission. The React-owned callback, watchdog, readiness,
@@ -151,9 +157,11 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
   `({ context: { pathname } }) => ...`. Arbitrary `properties` keys are allowed (`Page` is
   `z.catchall(z.json())`).
   source: `react-web-sdk#auto-page/types.ts#AutoPageEmissionContext`; `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageContext`; `react-web-sdk#auto-page/pagePayload.ts#buildAutoPagePayload`; `api-schemas#experience/event/properties/Page.ts#Page`; `core-sdk#events/EventBuilder.ts#PageViewBuilderArgs`.
-- Request handoff calls `page()` inside `getServerSideProps` and returns a browser handoff with
-  explicit `initialPageEvent`; it is `'skip'` exactly when `pageResult.accepted` is true.
-  source: `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`.
+- Bound `createRequestHandoff(context, options)` forwards `options.pagePayload` through the Pages
+  Router request helper to the request-bound `page()` call, so it shapes the first server page event.
+  The returned browser handoff carries explicit `initialPageEvent`; it is `'skip'` exactly when that
+  page call's `pageResult.accepted` is true.
+  source: nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization; nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff; nextjs-sdk#server.tsx#getNextjsServerOptimizationData; nextjs-sdk#server.tsx#createNextjsRequestHandoff; core-sdk#CoreStatelessRequest.ts#page
 - Interaction tracking (views/clicks/hovers): on by default with `OptimizedEntry`; opt out per-type
   via binding config `trackEntryInteraction`; uses resolved entry id.
   source: `impl:nextjs-sdk_pages-router#lib/optimization.ts`.

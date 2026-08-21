@@ -26,6 +26,35 @@ import * as z from 'zod/mini'
 
 const eventBuilderLogger = createScopedLogger('EventBuilder')
 
+const UTM_CAMPAIGN_PARAMETERS = [
+  ['utm_campaign', 'name'],
+  ['utm_source', 'source'],
+  ['utm_medium', 'medium'],
+  ['utm_term', 'term'],
+  ['utm_content', 'content'],
+] as const
+
+function extractCampaignFromUrl(url: string | undefined): Campaign | undefined {
+  if (url === undefined) return undefined
+
+  try {
+    const { searchParams } = new URL(url)
+    const campaign: Campaign = {}
+    let hasCampaignParameter = false
+
+    for (const [parameter, property] of UTM_CAMPAIGN_PARAMETERS) {
+      if (!searchParams.has(parameter)) continue
+
+      campaign[property] = searchParams.get(parameter) ?? ''
+      hasCampaignParameter = true
+    }
+
+    return hasCampaignParameter ? campaign : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /**
  * Configuration options for creating an {@link EventBuilder} instance.
  *
@@ -96,6 +125,8 @@ export interface EventBuilderConfig {
    * Page properties are added to the context of all events, as well
    * as the `properties` of the page event. When specified, all properties of
    * the `Page` type are required, but can contain empty values.
+   * When event arguments omit explicit campaign attribution, supported UTM
+   * parameters in the returned page URL populate the event campaign context.
    *
    * @returns A {@link Page} object containing information about the current page.
    * @see {@link Page}
@@ -128,6 +159,11 @@ export const UniversalEventBuilderArgs = z.object({
 
 /**
  * Arguments used to construct the universal (shared) portion of all events.
+ *
+ * @remarks
+ * When `campaign` is omitted, the event builder infers campaign attribution
+ * from supported UTM parameters in `page.url`. It does not inspect
+ * `page.referrer`.
  *
  * @public
  */
@@ -226,6 +262,11 @@ export const PageViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
  * @remarks
  * Any properties passed here are merged with the base page properties from
  * {@link EventBuilderConfig.getPageProperties}.
+ *
+ * Explicit `campaign` attribution takes precedence over URL inference. When
+ * both `properties.url` and `page.url` contain supported UTM parameters,
+ * `properties.url` supplies the inferred campaign. The builder does not
+ * inspect either page object's `referrer`.
  *
  * @public
  */
@@ -408,7 +449,7 @@ class EventBuilder {
    * (e.g. {@link EventBuilder.buildPageView}).
    */
   protected buildUniversalEventProperties({
-    campaign = {},
+    campaign,
     locale,
     location,
     page,
@@ -416,17 +457,18 @@ class EventBuilder {
     userAgent,
   }: UniversalEventBuilderArgs): UniversalEventProperties {
     const timestamp = new Date().toISOString()
+    const resolvedPage = page ?? this.getPageProperties()
 
     return {
       channel: this.channel,
       context: {
         app: this.app,
-        campaign,
+        campaign: campaign ?? extractCampaignFromUrl(resolvedPage.url) ?? {},
         gdpr: { isConsentGiven: this.getConsent() === true },
         library: this.library,
         locale: locale ?? this.getLocale() ?? 'en-US',
         location,
-        page: page ?? this.getPageProperties(),
+        page: resolvedPage,
         screen,
         userAgent: userAgent ?? this.getUserAgent(),
       },
@@ -641,6 +683,7 @@ class EventBuilder {
    */
   buildPageView(args: PageViewBuilderArgs = {}): PageViewEvent {
     const { properties = {}, ...universal } = parseWithFriendlyError(PageViewBuilderArgs, args)
+    const propertiesCampaign = extractCampaignFromUrl(properties.url)
 
     const pageProperties = this.getPageProperties()
 
@@ -658,6 +701,7 @@ class EventBuilder {
       ...universalProperties
     } = this.buildUniversalEventProperties({
       ...universal,
+      campaign: universal.campaign ?? propertiesCampaign,
       page: universal.page ?? merged,
     })
 
