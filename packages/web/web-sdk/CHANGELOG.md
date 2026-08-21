@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.3.0](https://github.com/contentful/optimization/compare/optimization-web-v1.2.0...optimization-web-v1.3.0) (2026-08-21)
+
+### Features
+
+- **runtime:** emit component interactions only at start and end [NT-3966] ([#458](https://github.com/contentful/optimization/issues/458)) ([ddca28d](https://github.com/contentful/optimization/commit/ddca28de2135f8918e4c40ba0f5d4a40c5c439d2))
+
+### Bug Fixes
+
+- **web:** make optimized entry presentation monotonic ([#446](https://github.com/contentful/optimization/issues/446)) ([174fd40](https://github.com/contentful/optimization/commit/174fd40d87b366c474b4a2f1002742319dca5edd))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 1.3.0
+
 ## [1.2.0](https://github.com/contentful/optimization/compare/optimization-web-v1.1.0...optimization-web-v1.2.0) (2026-08-10)
 
 ### Features

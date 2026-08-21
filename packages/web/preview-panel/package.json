@@ -1,7 +1,7 @@
 {
   "name": "@contentful/optimization-web-preview-panel",
   "description": "Preview panel UI for Contentful Optimization Web integrations",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/contentful/optimization/compare/optimization-core-v1.2.0...optimization-core-v1.3.0) (2026-08-21)
+
+### Features
+
+- **core:** infer campaign data from UTM parameters ([#460](https://github.com/contentful/optimization/issues/460)) ([e7b61b6](https://github.com/contentful/optimization/commit/e7b61b60a2887ee0d20a33846cd20042abc9b078))
+- **runtime:** emit component interactions only at start and end [NT-3966] ([#458](https://github.com/contentful/optimization/issues/458)) ([ddca28d](https://github.com/contentful/optimization/commit/ddca28de2135f8918e4c40ba0f5d4a40c5c439d2))
+
 ## [1.2.0](https://github.com/contentful/optimization/compare/optimization-core-v1.1.0...optimization-core-v1.2.0) (2026-08-10)
 
 ### Features
