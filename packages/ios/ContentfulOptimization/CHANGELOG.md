@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/contentful/optimization/compare/optimization-swift-v1.0.0...optimization-swift-v1.1.0) (2026-08-21)
+
+### Features
+
+- **runtime:** emit component interactions only at start and end [NT-3966] ([#458](https://github.com/contentful/optimization/issues/458)) ([ddca28d](https://github.com/contentful/optimization/commit/ddca28de2135f8918e4c40ba0f5d4a40c5c439d2))
+
+### Bug Fixes
+
+- **swift,android:** relax pinned CDA client dependencies to version ranges ([#453](https://github.com/contentful/optimization/issues/453)) ([608715d](https://github.com/contentful/optimization/commit/608715dbdff7f21410d33ad60fadafdd25f8f786))
+- **swift,android:** resolve getField&lt;Int&gt; to whole-number fields [NT-4001] ([#454](https://github.com/contentful/optimization/issues/454)) ([67f23e0](https://github.com/contentful/optimization/commit/67f23e095f8cac1dfbfdd8ff2d8a0eb3f4c6b23c))
+- **swift:** refresh shared native runtime ([e7b61b6](https://github.com/contentful/optimization/commit/e7b61b60a2887ee0d20a33846cd20042abc9b078))
+
 ## [1.0.0](https://github.com/contentful/optimization/compare/optimization-swift-v1.0.0-beta.3...optimization-swift-v1.0.0) (2026-08-18)
 
 ### Features

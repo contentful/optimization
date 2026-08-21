@@ -1,13 +1,13 @@
 {
   "packages/universal/api-schemas": "1.2.0",
   "packages/universal/api-client": "1.1.1",
-  "packages/universal/core-sdk": "1.2.0",
-  "packages/node/node-sdk": "1.2.0",
-  "packages/web/web-sdk": "1.2.0",
-  "packages/web/frameworks/react-web-sdk": "1.2.0",
-  "packages/web/frameworks/nextjs-sdk": "1.2.0",
-  "packages/web/preview-panel": "1.1.1",
-  "packages/react-native-sdk": "1.0.0",
-  "packages/android/ContentfulOptimization": "1.0.0",
-  "packages/ios/ContentfulOptimization": "1.0.0"
+  "packages/universal/core-sdk": "1.3.0",
+  "packages/node/node-sdk": "1.2.1",
+  "packages/web/web-sdk": "1.3.0",
+  "packages/web/frameworks/react-web-sdk": "1.3.0",
+  "packages/web/frameworks/nextjs-sdk": "1.3.0",
+  "packages/web/preview-panel": "1.2.0",
+  "packages/react-native-sdk": "1.1.0",
+  "packages/android/ContentfulOptimization": "1.1.0",
+  "packages/ios/ContentfulOptimization": "1.1.0"
 }
