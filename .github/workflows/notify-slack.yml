@@ -1,4 +1,4 @@
-name: Notify Slack of Merged Changes
+name: Notify Slack of Repository Updates
 
 permissions:
   contents: read
@@ -8,11 +8,18 @@ on:
   pull_request_target:
     types: [closed]
     branches: [main]
+  workflow_run:
+    workflows: [Release Please]
+    types: [completed]
+    branches: [main]
 
 jobs:
-  notify:
+  notify-merge:
     name: Notify Slack of Merged Changes
-    if: github.event.pull_request.merged == true
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.merged == true &&
+      !startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -350,6 +357,90 @@ jobs:
                     ]
                   end
                 ))
+              }'
+          )"
+
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header 'Content-type: application/json' \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL"
+
+  notify-release:
+    name: Notify Slack of Published Releases
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find newly published releases
+        id: releases
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+        with:
+          github-token: ${{ github.token }}
+          result-encoding: string
+          script: |
+            const { owner, repo } = context.repo
+            const { data: releases } = await github.rest.repos.listReleases({
+              owner,
+              repo,
+              per_page: 20,
+            })
+
+            return releases
+              .filter(
+                (release) =>
+                  !release.draft && release.target_commitish === process.env.RELEASE_SHA,
+              )
+              .sort((left, right) => left.tag_name.localeCompare(right.tag_name))
+              .map((release) => {
+                const label = release.name || release.tag_name
+                return `• <${release.html_url}|\`${label}\`>`
+              })
+              .join('\n')
+
+      - name: Notify Slack
+        if: steps.releases.outputs.result != ''
+        env:
+          RELEASES: ${{ steps.releases.outputs.result }}
+          RELEASE_WORKFLOW_URL: ${{ github.event.workflow_run.html_url }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+
+          payload="$(
+            jq -n \
+              --arg releases "$RELEASES" \
+              --arg workflow_url "$RELEASE_WORKFLOW_URL" \
+              '{
+                text: "New Optimization SDK Suite releases are available!",
+                blocks: [
+                  {
+                    type: "section",
+                    text: {
+                      type: "mrkdwn",
+                      text: "*🎉 New Optimization SDK Suite releases!*\nFresh SDK releases are tagged and ready."
+                    }
+                  },
+                  {
+                    type: "section",
+                    text: {
+                      type: "mrkdwn",
+                      text: "*GitHub releases:*\n\($releases)"
+                    }
+                  },
+                  {
+                    type: "context",
+                    elements: [
+                      {
+                        type: "mrkdwn",
+                        text: "<\($workflow_url)|View Release Please workflow>"
+                      }
+                    ]
+                  }
+                ]
               }'
           )"
 
