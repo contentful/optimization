@@ -10,24 +10,25 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
-concurrency:
-  group: 'pages'
-  cancel-in-progress: false
+permissions: {}
 
 jobs:
-  # Single deploy job since we're just deploying
   deploy:
+    name: Deploy Documentation to GitHub Pages
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    # Allow only one concurrent deployment, skipping runs queued between the run in-progress and
+    # latest queued. Do not cancel in-progress production deployments.
+    concurrency:
+      group: 'pages'
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -48,3 +49,76 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+
+  notify:
+    name: Notify Slack of Published Documentation
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack
+        env:
+          DOCUMENTATION_URL: ${{ needs.deploy.outputs.page_url }}
+          SLACK_TECH_WRITER_ID: ${{ secrets.SLACK_TECH_WRITER_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$SLACK_TECH_WRITER_ID" ]; then
+            echo "SLACK_TECH_WRITER_ID is required for documentation notifications." >&2
+            exit 1
+          fi
+
+          message_body="<@${SLACK_TECH_WRITER_ID}>, the latest Optimization SDK documentation is now live."
+          source_short_sha="${SOURCE_SHA:0:7}"
+
+          payload="$(
+            jq -n \
+              --arg documentation_url "$DOCUMENTATION_URL" \
+              --arg message_body "$message_body" \
+              --arg source_short_sha "$source_short_sha" \
+              --arg source_url "$SOURCE_URL" \
+              --arg workflow_url "$WORKFLOW_URL" \
+              '{
+                text: "Documentation published: \($documentation_url)",
+                blocks: [
+                  {
+                    type: "section",
+                    text: {
+                      type: "mrkdwn",
+                      text: "*📝 Documentation published*\n\($message_body)"
+                    }
+                  },
+                  {
+                    type: "section",
+                    fields: [
+                      {
+                        type: "mrkdwn",
+                        text: "*Documentation:*\n<\($documentation_url)|View published documentation>"
+                      },
+                      {
+                        type: "mrkdwn",
+                        text: "*Source:*\n<\($source_url)|\($source_short_sha)>"
+                      }
+                    ]
+                  },
+                  {
+                    type: "context",
+                    elements: [
+                      {
+                        type: "mrkdwn",
+                        text: "<\($workflow_url)|View deployment workflow>"
+                      }
+                    ]
+                  }
+                ]
+              }'
+          )"
+
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header 'Content-type: application/json' \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL"

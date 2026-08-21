@@ -1,4 +1,4 @@
-name: Notify Slack
+name: Notify Slack of Package Changes
 
 permissions:
   contents: read
@@ -9,18 +9,17 @@ on:
     types: [closed]
     branches: [main]
     paths:
-      - 'documentation/**'
       - 'packages/**'
 
 jobs:
   notify:
-    name: Notify Slack
+    name: Notify Slack of Package Changes
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
-      - name: Classify changes
+      - name: Classify package changes
         id: changes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -32,10 +31,9 @@ jobs:
 
           changed_files="$(
             gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
-              --jq '.[] | [.filename, .status] | @tsv'
+              --jq '.[].filename'
           )"
 
-          has_docs=false
           has_packages=false
           changed_packages=""
           package_manifests="$(find packages -name package.json -not -path '*/node_modules/*' -print | sort)"
@@ -77,17 +75,8 @@ jobs:
             fi
           }
 
-          while IFS=$'\t' read -r file status; do
+          while IFS= read -r file; do
             case "$file" in
-              documentation/concepts/README.md | documentation/guides/README.md)
-                ;;
-              documentation/concepts/*.md | documentation/guides/*.md)
-                case "$status" in
-                  added | modified)
-                    has_docs=true
-                    ;;
-                esac
-                ;;
               packages/*)
                 has_packages=true
 
@@ -99,7 +88,7 @@ jobs:
             esac
           done <<< "$changed_files"
 
-          if [ "$has_docs" != "true" ] && [ "$has_packages" != "true" ]; then
+          if [ "$has_packages" != "true" ]; then
             echo "notify=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -110,21 +99,8 @@ jobs:
               | awk '{ print "• `" $0 "`" }'
           )"
 
-          if [ "$has_docs" = "true" ] && [ "$has_packages" = "true" ]; then
-            message_title="📝📦 Documentation and packages just landed"
-            message_body="Documentation has been updated, and package changes were merged. @TECH_WRITER@, fresh docs goodness just landed for your reading list!"
-          elif [ "$has_packages" = "true" ]; then
-            message_title="📦 Package changes just landed"
-            message_body="Package updates were merged. Fresh bits are ready for the next build!"
-          else
-            message_title="📝 Documentation just landed"
-            message_body="Documentation has been updated. @TECH_WRITER@, fresh docs goodness just landed for your reading list!"
-          fi
-
           {
             echo "notify=true"
-            echo "message_title=$message_title"
-            echo "message_body=$message_body"
             echo "package_list<<EOF"
             echo "$package_list"
             echo "EOF"
@@ -135,32 +111,19 @@ jobs:
         env:
           CHANGED_PACKAGES: ${{ steps.changes.outputs.package_list }}
           MERGED_BY: ${{ github.event.pull_request.merged_by.login || github.actor }}
-          MESSAGE_BODY: ${{ steps.changes.outputs.message_body }}
-          MESSAGE_TITLE: ${{ steps.changes.outputs.message_title }}
+          MESSAGE_BODY: Package updates were merged.
+          MESSAGE_TITLE: 📦 Package changes just landed
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-          SLACK_TECH_WRITER_ID: ${{ secrets.SLACK_TECH_WRITER_ID }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           set -euo pipefail
 
-          message_body="$MESSAGE_BODY"
-
-          if [[ "$message_body" == *"@TECH_WRITER@"* ]]; then
-            if [ -z "$SLACK_TECH_WRITER_ID" ]; then
-              echo "SLACK_TECH_WRITER_ID is required for documentation notifications." >&2
-              exit 1
-            fi
-
-            tech_writer_mention="<@${SLACK_TECH_WRITER_ID}>"
-            message_body="${message_body//@TECH_WRITER@/$tech_writer_mention}"
-          fi
-
           payload="$(
             jq -n \
               --arg message_title "$MESSAGE_TITLE" \
-              --arg message_body "$message_body" \
+              --arg message_body "$MESSAGE_BODY" \
               --arg changed_packages "$CHANGED_PACKAGES" \
               --arg merged_by "$MERGED_BY" \
               --arg pr_number "#${PR_NUMBER}" \
