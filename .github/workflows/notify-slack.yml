@@ -1,4 +1,4 @@
-name: Notify Slack
+name: Notify Slack of Repository Updates
 
 permissions:
   contents: read
@@ -8,14 +8,18 @@ on:
   pull_request_target:
     types: [closed]
     branches: [main]
-    paths:
-      - 'documentation/**'
-      - 'packages/**'
+  workflow_run:
+    workflows: [Release Please]
+    types: [completed]
+    branches: [main]
 
 jobs:
-  notify:
-    name: Notify Slack
-    if: github.event.pull_request.merged == true
+  notify-merge:
+    name: Notify Slack of Merged Changes
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.merged == true &&
+      !startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -32,19 +36,46 @@ jobs:
 
           changed_files="$(
             gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
-              --jq '.[] | [.filename, .status] | @tsv'
+              --jq '.[].filename'
           )"
 
-          has_docs=false
-          has_packages=false
           changed_packages=""
-          package_manifests="$(find packages -name package.json -not -path '*/node_modules/*' -print | sort)"
+          changed_implementations=""
+          changed_libraries=""
+          has_agent_tooling=false
+          has_ci_cd=false
+          has_documentation=false
+          has_global_configuration=false
+          has_uncategorized=false
+          has_changes=false
+          package_manifests="$(
+            find packages -path '*/node_modules' -prune -o -name package.json -print | sort
+          )"
+          package_targets="$(
+            while IFS= read -r manifest; do
+              [ -n "$manifest" ] || continue
 
-          add_package() {
-            local package="$1"
+              package_name="$(jq -r '.name // empty' "$manifest")"
+              if [ -n "$package_name" ]; then
+                printf '%s\t%s\n' "${manifest%/package.json}" "$package_name"
+              fi
+            done <<< "$package_manifests"
 
-            if ! grep --fixed-strings --line-regexp --quiet "$package" <<< "$changed_packages"; then
-              changed_packages="${changed_packages}${package}"$'\n'
+            jq -r '.packages | to_entries[] | [.key, .value["package-name"]] | @tsv' \
+              release-please-config.json
+
+            printf '%s\t%s\n' \
+              'packages/android' 'optimization-android' \
+              'packages/ios' 'optimization-swift'
+          )"
+
+          add_item() {
+            local list_name="$1"
+            local item="$2"
+            local list="${!list_name}"
+
+            if ! grep --fixed-strings --line-regexp --quiet "$item" <<< "$list"; then
+              printf -v "$list_name" '%s%s\n' "$list" "$item"
             fi
           }
 
@@ -52,17 +83,13 @@ jobs:
             local file="$1"
             local best_name=""
             local best_path=""
-            local manifest package_name package_path
+            local package_name package_path
 
-            while IFS= read -r manifest; do
-              [ -n "$manifest" ] || continue
-
-              package_path="${manifest%/package.json}"
+            while IFS=$'\t' read -r package_path package_name; do
+              [ -n "$package_path" ] || continue
               case "$file" in
                 "$package_path" | "$package_path"/*)
                   if [ ${#package_path} -gt ${#best_path} ]; then
-                    package_name="$(jq -r '.name // empty' "$manifest")"
-
                     if [ -n "$package_name" ]; then
                       best_name="$package_name"
                       best_path="$package_path"
@@ -70,63 +97,167 @@ jobs:
                   fi
                   ;;
               esac
-            done <<< "$package_manifests"
+            done <<< "$package_targets"
 
             if [ -n "$best_name" ]; then
               printf '%s\n' "$best_name"
             fi
           }
 
-          while IFS=$'\t' read -r file status; do
-            case "$file" in
-              documentation/concepts/README.md | documentation/guides/README.md)
+          is_global_configuration() {
+            case "$1" in
+              .env.example | .gitignore | .npmrc | .nvmrc | .pnpmfile.cjs | .prettierignore | .prettierrc)
+                return 0
                 ;;
-              documentation/concepts/*.md | documentation/guides/*.md)
-                case "$status" in
-                  added | modified)
-                    has_docs=true
-                    ;;
-                esac
+              .husky/* | .lintstagedrc.yaml | .markdownlint.yaml | .release-please-manifest.json)
+                return 0
+                ;;
+              .github/dependabot.yml | .github/CODEOWNERS | CODEOWNERS)
+                return 0
+                ;;
+              commitlint.config.ts | eslint.config.ts | release-please-config.json | renovate.json)
+                return 0
+                ;;
+              package.json | pnpm-lock.yaml | pnpm-workspace.yaml | tsconfig*.json | typedoc.json)
+                return 0
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
+
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            has_changes=true
+
+            case "$file" in
+              AGENTS.md | */AGENTS.md | CLAUDE.md | */CLAUDE.md | .bito.yaml | .claude/* | .codex/* | skills/*)
+                has_agent_tooling=true
                 ;;
               packages/*)
-                has_packages=true
-
                 package_name="$(package_name_for_file "$file")"
                 if [ -n "$package_name" ]; then
-                  add_package "$package_name"
+                  add_item changed_packages "$package_name"
+                else
+                  has_uncategorized=true
+                fi
+                ;;
+              implementations/*/*)
+                implementation_name="${file#implementations/}"
+                add_item changed_implementations "${implementation_name%%/*}"
+                ;;
+              lib/*/*)
+                library_name="${file#lib/}"
+                add_item changed_libraries "${library_name%%/*}"
+                ;;
+              documentation/* | docs/* | CONTRIBUTING.md | README.md | STYLE_GUIDE.md)
+                has_documentation=true
+                ;;
+              .github/workflows/*)
+                has_ci_cd=true
+                ;;
+              *)
+                if is_global_configuration "$file"; then
+                  has_global_configuration=true
+                else
+                  has_uncategorized=true
                 fi
                 ;;
             esac
           done <<< "$changed_files"
 
-          if [ "$has_docs" != "true" ] && [ "$has_packages" != "true" ]; then
+          if [ "$has_changes" != "true" ]; then
             echo "notify=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          package_list="$(
-            printf '%s' "$changed_packages" \
+          format_list() {
+            printf '%s' "$1" \
               | sed '/^$/d' \
+              | LC_ALL=C sort --unique \
               | awk '{ print "• `" $0 "`" }'
-          )"
+          }
 
-          if [ "$has_docs" = "true" ] && [ "$has_packages" = "true" ]; then
-            message_title="📝📦 Documentation and packages just landed"
-            message_body="Documentation has been updated, and package changes were merged. @TECH_WRITER@, fresh docs goodness just landed for your reading list!"
-          elif [ "$has_packages" = "true" ]; then
-            message_title="📦 Package changes just landed"
-            message_body="Package updates were merged. Fresh bits are ready for the next build!"
+          package_list="$(format_list "$changed_packages")"
+          implementation_list="$(format_list "$changed_implementations")"
+          library_list="$(format_list "$changed_libraries")"
+          prose_changes=()
+
+          if [ "$has_documentation" = "true" ]; then
+            prose_changes+=("documentation")
+          fi
+
+          if [ "$has_agent_tooling" = "true" ]; then
+            prose_changes+=("agent tooling and instructions")
+          fi
+
+          if [ "$has_ci_cd" = "true" ]; then
+            prose_changes+=("CI/CD workflows")
+          fi
+
+          if [ "$has_global_configuration" = "true" ]; then
+            prose_changes+=("global configuration")
+          fi
+
+          join_with_and() {
+            local count="$#"
+            local index
+
+            case "$count" in
+              0)
+                return
+                ;;
+              1)
+                printf '%s' "$1"
+                return
+                ;;
+              2)
+                printf '%s and %s' "$1" "$2"
+                return
+                ;;
+            esac
+
+            index=1
+            while [ "$index" -lt "$count" ]; do
+              if [ "$index" -gt 1 ]; then
+                printf ', '
+              fi
+
+              printf '%s' "${!index}"
+              index=$((index + 1))
+            done
+
+            printf ', and %s' "${!count}"
+          }
+
+          prose_summary="$(join_with_and "${prose_changes[@]}")"
+
+          if [ -n "$prose_summary" ]; then
+            message_body="This merge updates ${prose_summary}."
+
+            if [ "$has_uncategorized" = "true" ]; then
+              message_body="${message_body} It also includes uncategorized repository changes."
+            fi
+          elif [ "$has_uncategorized" = "true" ]; then
+            message_body="This merge includes uncategorized repository changes."
           else
-            message_title="📝 Documentation just landed"
-            message_body="Documentation has been updated. @TECH_WRITER@, fresh docs goodness just landed for your reading list!"
+            message_body='Changes were merged into `main`.'
           fi
 
           {
             echo "notify=true"
-            echo "message_title=$message_title"
-            echo "message_body=$message_body"
             echo "package_list<<EOF"
             echo "$package_list"
+            echo "EOF"
+            echo "implementation_list<<EOF"
+            echo "$implementation_list"
+            echo "EOF"
+            echo "library_list<<EOF"
+            echo "$library_list"
+            echo "EOF"
+            echo "message_body<<EOF"
+            echo "$message_body"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -134,34 +265,25 @@ jobs:
         if: steps.changes.outputs.notify == 'true'
         env:
           CHANGED_PACKAGES: ${{ steps.changes.outputs.package_list }}
+          CHANGED_IMPLEMENTATIONS: ${{ steps.changes.outputs.implementation_list }}
+          CHANGED_LIBRARIES: ${{ steps.changes.outputs.library_list }}
           MERGED_BY: ${{ github.event.pull_request.merged_by.login || github.actor }}
           MESSAGE_BODY: ${{ steps.changes.outputs.message_body }}
-          MESSAGE_TITLE: ${{ steps.changes.outputs.message_title }}
+          MESSAGE_TITLE: 🔔 Optimization SDK Suite updates just landed!
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-          SLACK_TECH_WRITER_ID: ${{ secrets.SLACK_TECH_WRITER_ID }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           set -euo pipefail
 
-          message_body="$MESSAGE_BODY"
-
-          if [[ "$message_body" == *"@TECH_WRITER@"* ]]; then
-            if [ -z "$SLACK_TECH_WRITER_ID" ]; then
-              echo "SLACK_TECH_WRITER_ID is required for documentation notifications." >&2
-              exit 1
-            fi
-
-            tech_writer_mention="<@${SLACK_TECH_WRITER_ID}>"
-            message_body="${message_body//@TECH_WRITER@/$tech_writer_mention}"
-          fi
-
           payload="$(
             jq -n \
               --arg message_title "$MESSAGE_TITLE" \
-              --arg message_body "$message_body" \
+              --arg message_body "$MESSAGE_BODY" \
               --arg changed_packages "$CHANGED_PACKAGES" \
+              --arg changed_implementations "$CHANGED_IMPLEMENTATIONS" \
+              --arg changed_libraries "$CHANGED_LIBRARIES" \
               --arg merged_by "$MERGED_BY" \
               --arg pr_number "#${PR_NUMBER}" \
               --arg pr_title "$PR_TITLE" \
@@ -189,7 +311,8 @@ jobs:
                         }
                       ]
                     }
-                  ] + (
+                  ] +
+                  (
                   if $changed_packages == "" then
                     []
                   else
@@ -198,12 +321,148 @@ jobs:
                         type: "section",
                         text: {
                           type: "mrkdwn",
-                          text: "*Changed packages:*\n\($changed_packages)"
+                          text: "*Packages:*\n\($changed_packages)"
+                        }
+                      }
+                    ]
+                  end
+                ) +
+                (
+                  if $changed_implementations == "" then
+                    []
+                  else
+                    [
+                      {
+                        type: "section",
+                        text: {
+                          type: "mrkdwn",
+                          text: "*Reference implementations:*\n\($changed_implementations)"
+                        }
+                      }
+                    ]
+                  end
+                ) +
+                (
+                  if $changed_libraries == "" then
+                    []
+                  else
+                    [
+                      {
+                        type: "section",
+                        text: {
+                          type: "mrkdwn",
+                          text: "*Internal libraries:*\n\($changed_libraries)"
                         }
                       }
                     ]
                   end
                 ))
+              }'
+          )"
+
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header 'Content-type: application/json' \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL"
+
+  notify-release:
+    name: Notify Slack of Published Releases
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find newly published releases
+        id: releases
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+        with:
+          github-token: ${{ github.token }}
+          result-encoding: string
+          script: |
+            const { owner, repo } = context.repo
+            const { data: releases } = await github.rest.repos.listReleases({
+              owner,
+              repo,
+              per_page: 20,
+            })
+            return releases
+              .filter(
+                (release) =>
+                  !release.draft && release.target_commitish === process.env.RELEASE_SHA,
+              )
+              .sort((left, right) => left.tag_name.localeCompare(right.tag_name))
+              .map((release) => {
+                const label = release.name || release.tag_name
+                const releaseLabel = `\`${label}\``
+                const releaseLink = `<${release.html_url}|GitHub Release>`
+                const versionSeparator = release.tag_name.lastIndexOf('-v')
+
+                if (versionSeparator === -1) {
+                  return `• ${releaseLabel} · ${releaseLink}`
+                }
+
+                const component = release.tag_name.slice(0, versionSeparator)
+                const githubOrigin = new URL(release.html_url).origin
+                const version = release.tag_name.slice(versionSeparator + 2)
+
+                if (component === 'optimization-android') {
+                  const mavenUrl = `https://central.sonatype.com/artifact/com.contentful.java/optimization-android/${version}`
+                  return `• ${releaseLabel} · ${releaseLink} · <${mavenUrl}|Maven Central>`
+                }
+
+                if (component === 'optimization-swift') {
+                  const swiftRepositoryUrl = `${githubOrigin}/${owner}/optimization.swift`
+                  return `• ${releaseLabel} · ${releaseLink} · <${swiftRepositoryUrl}|Swift package repository>`
+                }
+
+                const githubPackageUrl = `${githubOrigin}/orgs/${owner}/packages/npm/package/${component}`
+                return `• ${releaseLabel} · ${releaseLink} · <${githubPackageUrl}|GitHub Packages>`
+              })
+              .join('\n')
+
+      - name: Notify Slack
+        if: steps.releases.outputs.result != ''
+        env:
+          RELEASES: ${{ steps.releases.outputs.result }}
+          RELEASE_WORKFLOW_URL: ${{ github.event.workflow_run.html_url }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+
+          payload="$(
+            jq -n \
+              --arg releases "$RELEASES" \
+              --arg workflow_url "$RELEASE_WORKFLOW_URL" \
+              '{
+                text: "New Optimization SDK Suite releases are available!",
+                blocks: [
+                  {
+                    type: "section",
+                    text: {
+                      type: "mrkdwn",
+                      text: "*🎉 New Optimization SDK Suite releases!*\nFresh SDK releases are tagged and ready."
+                    }
+                  },
+                  {
+                    type: "section",
+                    text: {
+                      type: "mrkdwn",
+                      text: "*GitHub releases:*\n\($releases)"
+                    }
+                  },
+                  {
+                    type: "context",
+                    elements: [
+                      {
+                        type: "mrkdwn",
+                        text: "Package and distribution pages may take a few minutes to reflect newly published versions. • <\($workflow_url)|View Release Please workflow>"
+                      }
+                    ]
+                  }
+                ]
               }'
           )"
 
