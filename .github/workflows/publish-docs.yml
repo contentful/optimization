@@ -66,9 +66,14 @@ jobs:
               owner,
               repo,
               environment: 'github-pages',
-              per_page: 1,
+              per_page: 2,
             })
-            const [previousDeployment] = deployments
+            // Declaring the job environment creates the current deployment before this step runs.
+            const [currentDeployment, previousDeployment] = deployments
+
+            if (currentDeployment === undefined || currentDeployment.sha !== currentSha) {
+              return ''
+            }
 
             if (previousDeployment === undefined || previousDeployment.sha === currentSha) {
               return ''
