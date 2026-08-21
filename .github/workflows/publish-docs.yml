@@ -17,6 +17,7 @@ jobs:
     name: Deploy Documentation to GitHub Pages
     permissions:
       contents: read
+      deployments: read
       pages: write
       id-token: write
     # Allow only one concurrent deployment, skipping runs queued between the run in-progress and
@@ -28,6 +29,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     outputs:
+      comparison_url: ${{ steps.previous_deployment.outputs.result }}
       page_url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
@@ -46,6 +48,44 @@ jobs:
         with:
           # Upload docs
           path: './docs'
+      - name: Find previous successful Pages deployment
+        continue-on-error: true
+        id: previous_deployment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          CURRENT_SHA: ${{ github.sha }}
+          SERVER_URL: ${{ github.server_url }}
+        with:
+          github-token: ${{ github.token }}
+          result-encoding: string
+          script: |
+            const { owner, repo } = context.repo
+            const currentSha = process.env.CURRENT_SHA
+
+            const { data: deployments } = await github.rest.repos.listDeployments({
+              owner,
+              repo,
+              environment: 'github-pages',
+              per_page: 1,
+            })
+            const [previousDeployment] = deployments
+
+            if (previousDeployment === undefined || previousDeployment.sha === currentSha) {
+              return ''
+            }
+
+            const { data: statuses } = await github.rest.repos.listDeploymentStatuses({
+              owner,
+              repo,
+              deployment_id: previousDeployment.id,
+              per_page: 10,
+            })
+
+            if (!statuses.some((status) => status.state === 'success')) {
+              return ''
+            }
+
+            return `${process.env.SERVER_URL}/${owner}/${repo}/compare/${previousDeployment.sha}...${currentSha}`
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
@@ -57,6 +97,7 @@ jobs:
     steps:
       - name: Notify Slack
         env:
+          COMPARISON_URL: ${{ needs.deploy.outputs.comparison_url }}
           DOCUMENTATION_URL: ${{ needs.deploy.outputs.page_url }}
           SLACK_TECH_WRITER_ID: ${{ secrets.SLACK_TECH_WRITER_ID }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -76,6 +117,7 @@ jobs:
 
           payload="$(
             jq -n \
+              --arg comparison_url "$COMPARISON_URL" \
               --arg documentation_url "$DOCUMENTATION_URL" \
               --arg message_body "$message_body" \
               --arg source_short_sha "$source_short_sha" \
@@ -93,16 +135,30 @@ jobs:
                   },
                   {
                     type: "section",
-                    fields: [
-                      {
-                        type: "mrkdwn",
-                        text: "*Documentation:*\n<\($documentation_url)|View published documentation>"
-                      },
-                      {
-                        type: "mrkdwn",
-                        text: "*Source:*\n<\($source_url)|\($source_short_sha)>"
-                      }
-                    ]
+                    fields: (
+                      [
+                        {
+                          type: "mrkdwn",
+                          text: "*Documentation:*\n<\($documentation_url)|View published documentation>"
+                        },
+                        {
+                          type: "mrkdwn",
+                          text: "*Source:*\n<\($source_url)|\($source_short_sha)>"
+                        }
+                      ] +
+                      (
+                        if $comparison_url == "" then
+                          []
+                        else
+                          [
+                            {
+                              type: "mrkdwn",
+                              text: "*Changes:*\n<\($comparison_url)|Compare with previous publication>"
+                            }
+                          ]
+                        end
+                      )
+                    )
                   },
                   {
                     type: "context",
