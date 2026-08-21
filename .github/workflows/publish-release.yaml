@@ -15,6 +15,7 @@ jobs:
       - name: Dispatch matching publish workflow
         env:
           GH_TOKEN: ${{ github.token }}
+          PUBLISH_WORKFLOW_REF: ${{ github.event.repository.default_branch }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           case "$RELEASE_TAG" in
@@ -33,4 +34,7 @@ jobs:
               ;;
           esac
 
-          gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref "$RELEASE_TAG" -f tag="$RELEASE_TAG" -f publish=true
+          # Use the current workflow implementation so a publishing fix can be rerun
+          # without moving the immutable source release tag. The called workflow
+          # still checks out RELEASE_TAG when it builds the package payload.
+          gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref "$PUBLISH_WORKFLOW_REF" -f tag="$RELEASE_TAG" -f publish=true
