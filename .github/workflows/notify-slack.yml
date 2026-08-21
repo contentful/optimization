@@ -388,7 +388,6 @@ jobs:
               repo,
               per_page: 20,
             })
-
             return releases
               .filter(
                 (release) =>
@@ -397,7 +396,30 @@ jobs:
               .sort((left, right) => left.tag_name.localeCompare(right.tag_name))
               .map((release) => {
                 const label = release.name || release.tag_name
-                return `• <${release.html_url}|\`${label}\`>`
+                const releaseLabel = `\`${label}\``
+                const releaseLink = `<${release.html_url}|GitHub Release>`
+                const versionSeparator = release.tag_name.lastIndexOf('-v')
+
+                if (versionSeparator === -1) {
+                  return `• ${releaseLabel} · ${releaseLink}`
+                }
+
+                const component = release.tag_name.slice(0, versionSeparator)
+                const githubOrigin = new URL(release.html_url).origin
+                const version = release.tag_name.slice(versionSeparator + 2)
+
+                if (component === 'optimization-android') {
+                  const mavenUrl = `https://central.sonatype.com/artifact/com.contentful.java/optimization-android/${version}`
+                  return `• ${releaseLabel} · ${releaseLink} · <${mavenUrl}|Maven Central>`
+                }
+
+                if (component === 'optimization-swift') {
+                  const swiftRepositoryUrl = `${githubOrigin}/${owner}/optimization.swift`
+                  return `• ${releaseLabel} · ${releaseLink} · <${swiftRepositoryUrl}|Swift package repository>`
+                }
+
+                const githubPackageUrl = `${githubOrigin}/orgs/${owner}/packages/npm/package/${component}`
+                return `• ${releaseLabel} · ${releaseLink} · <${githubPackageUrl}|GitHub Packages>`
               })
               .join('\n')
 
@@ -436,7 +458,7 @@ jobs:
                     elements: [
                       {
                         type: "mrkdwn",
-                        text: "<\($workflow_url)|View Release Please workflow>"
+                        text: "Package and distribution pages may take a few minutes to reflect newly published versions. • <\($workflow_url)|View Release Please workflow>"
                       }
                     ]
                   }
