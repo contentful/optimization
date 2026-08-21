@@ -14,6 +14,10 @@ import { ManifestPlugin } from 'release-please/build/src/plugin'
 import type { Release } from 'release-please/build/src/release'
 import type { Update, Updater } from 'release-please/build/src/update'
 import type { Logger } from 'release-please/build/src/util/logger'
+import {
+  assertPullRequestBodySurvivesReleasePleaseReparse,
+  configureReparseSafePullRequestBodies,
+} from './release-please-pull-request-body'
 import { isRecord } from './typeGuards'
 
 const DEFAULT_CONFIG_FILE = 'release-please-config.json'
@@ -207,6 +211,8 @@ async function runReleasePleaseCommand(
     readStringOption(values, 'manifest-file') ?? DEFAULT_MANIFEST_FILE,
   )
 
+  configureReparseSafePullRequestBodies(manifest, github)
+
   await runManifestCommand(command, manifest, values['dry-run'] === true)
 }
 
@@ -389,6 +395,8 @@ function runSelfCheck(): void {
   - nested item
 `,
   )
+
+  assertPullRequestBodySurvivesReleasePleaseReparse()
 
   assertNoChangelogSeedPlaceholders()
   assert.equal(
