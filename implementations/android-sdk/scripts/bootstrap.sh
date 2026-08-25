@@ -4,7 +4,7 @@
 #
 # This script orchestrates the complete local development workflow by:
 #   1. Ensuring a device/emulator is available (uses running device, starts an
-#      existing AVD, or creates a Pixel 7 API 35 AVD as a last resort)
+#      existing AVD, or creates a Pixel 7 API 36 AVD as a last resort)
 #   2. Starting the mock API server (from lib/mocks)
 #   3. Setting up adb reverse port forwarding so the emulator can reach localhost
 #   4. Building the Android app (via Gradle)
@@ -15,6 +15,7 @@
 # Environment Variables:
 #   MOCK_SERVER_PORT  - Port for mock API server (default: 8000)
 #   SKIP_BUILD        - Set to "true" to skip the Gradle build step (default: false)
+#   EMULATOR_AVD      - AVD to launch or create (default: Pixel_7_API_36)
 #
 # Prerequisites:
 #   - Android SDK installed with ANDROID_HOME set
@@ -29,6 +30,7 @@ ROOT_DIR="$(cd "$APP_DIR/../.." && pwd)"
 
 MOCK_SERVER_PORT="${MOCK_SERVER_PORT:-8000}"
 SKIP_BUILD="${SKIP_BUILD:-false}"
+EMULATOR_AVD="${EMULATOR_AVD:-Pixel_7_API_36}"
 MOCK_SERVER_PID=""
 EMULATOR_PID=""
 
@@ -103,17 +105,16 @@ ensure_device() {
         exit 1
     fi
 
-    local avd
-    avd=$("$emulator_bin" -list-avds 2>/dev/null | head -n1)
+    local avds
+    avds=$("$emulator_bin" -list-avds 2>/dev/null)
 
-    if [[ -z "$avd" ]]; then
-        log_info "No AVDs found. Creating one..."
+    if ! echo "$avds" | grep -qx "$EMULATOR_AVD"; then
+        log_info "AVD '$EMULATOR_AVD' not found. Creating it..."
         create_avd
-        avd=$("$emulator_bin" -list-avds 2>/dev/null | head -n1)
     fi
 
-    log_info "Starting emulator: $avd"
-    "$emulator_bin" -avd "$avd" -no-snapshot-load &
+    log_info "Starting emulator: $EMULATOR_AVD"
+    "$emulator_bin" -avd "$EMULATOR_AVD" -no-snapshot-load &
     EMULATOR_PID=$!
 
     log_info "Waiting for emulator to boot..."
@@ -136,9 +137,14 @@ create_avd() {
         exit 1
     fi
 
-    local sys_image="system-images;android-35;google_apis;arm64-v8a"
+    local system_image_arch="x86_64"
+    if [[ "$(uname -m)" == "arm64" ]]; then
+        system_image_arch="arm64-v8a"
+    fi
+
+    local sys_image="system-images;android-36;google_apis;$system_image_arch"
     log_info "Installing system image: $sys_image"
-    yes | "$sdkmanager" --install "$sys_image" "platforms;android-35" >/dev/null 2>&1 || true
+    yes | "$sdkmanager" --install "$sys_image" "platforms;android-36" >/dev/null 2>&1 || true
 
     local avdmanager="${ANDROID_HOME:-}/cmdline-tools/latest/bin/avdmanager"
     if [[ ! -x "$avdmanager" ]]; then
@@ -149,9 +155,9 @@ create_avd() {
         exit 1
     fi
 
-    log_info "Creating AVD: Pixel_7_API_35"
+    log_info "Creating AVD: $EMULATOR_AVD"
     echo "no" | "$avdmanager" create avd \
-        --name "Pixel_7_API_35" \
+        --name "$EMULATOR_AVD" \
         --package "$sys_image" \
         --device "pixel_7"
     log_info "AVD created"

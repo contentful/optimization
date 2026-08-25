@@ -25,9 +25,9 @@ single command.
 - The JS bridge built: `pnpm --filter @contentful/optimization-js-bridge build` (`bootstrap.sh` and
   `run-e2e.sh` build it for you unless `SKIP_BUILD=true`).
 
-If no device or emulator is connected, `bootstrap.sh` starts an existing AVD (or creates a Pixel 7
-API 35 AVD as a last resort), and `run-e2e.sh` auto-launches a visible emulator pinned to the
-CI-aligned AVD `pixel_7_api35_e2e`.
+If no device or emulator is connected, `bootstrap.sh` and `run-e2e.sh` use the API 36 Google APIs
+AVD `Pixel_7_API_36`, creating it with the host-compatible architecture when needed. Its API level
+and Pixel 7 profile match CI; CI uses an x86_64 AOSP ATD image.
 
 ## `bootstrap.sh`
 
@@ -90,17 +90,17 @@ cd implementations/android-sdk
 
 ## Environment variables
 
-| Variable                      | Default             | `bootstrap.sh` | `run-e2e.sh` | `prepare-env.sh` | Notes                                                              |
-| ----------------------------- | ------------------- | :------------: | :----------: | :--------------: | ------------------------------------------------------------------ |
-| `MOCK_SERVER_PORT`            | `8000`              |       ✅       |      ✅      |        ✅        | Port for the mock API server.                                      |
-| `SKIP_BUILD`                  | `false`             |       ✅       |      ✅      |        —         | Reuse the existing build instead of rebuilding.                    |
-| `EMULATOR_AVD`                | `pixel_7_api35_e2e` |       —        |      ✅      |        —         | AVD to require/auto-launch; pinned to match CI.                    |
-| `APP_PACKAGE`                 | `all`               |       —        |      ✅      |        —         | `all`, `both`, or one app package such as the XML Views package.   |
-| `MAESTRO_ITERATIONS`          | `1`                 |       —        |      ✅      |        —         | Repeat the full run to measure flakiness.                          |
-| `MAESTRO_ATTEMPTS`            | `2`                 |       —        |      ✅      |        —         | Attempts per app suite before declaring failure. Set `1` for none. |
-| `DISABLE_EMULATOR_ANIMATIONS` | `true`              |       —        |      ✅      |        —         | Set `false` to keep emulator animation scales unchanged.           |
-| `STREAM_BACKGROUND_LOGS`      | `false`             |       —        |      ✅      |        —         | Set `true` to stream mock server logs to stdout.                   |
-| `CI`                          | `false`             |       —        |      ✅      |        —         | Set `true` for CI mode.                                            |
+| Variable                      | Default          | `bootstrap.sh` | `run-e2e.sh` | `prepare-env.sh` | Notes                                                              |
+| ----------------------------- | ---------------- | :------------: | :----------: | :--------------: | ------------------------------------------------------------------ |
+| `MOCK_SERVER_PORT`            | `8000`           |       ✅       |      ✅      |        ✅        | Port for the mock API server.                                      |
+| `SKIP_BUILD`                  | `false`          |       ✅       |      ✅      |        —         | Reuse the existing build instead of rebuilding.                    |
+| `EMULATOR_AVD`                | `Pixel_7_API_36` |       ✅       |      ✅      |        —         | API 36 AVD to create or require and auto-launch.                   |
+| `APP_PACKAGE`                 | `all`            |       —        |      ✅      |        —         | `all`, `both`, or one app package such as the XML Views package.   |
+| `MAESTRO_ITERATIONS`          | `1`              |       —        |      ✅      |        —         | Repeat the full run to measure flakiness.                          |
+| `MAESTRO_ATTEMPTS`            | `2`              |       —        |      ✅      |        —         | Attempts per app suite before declaring failure. Set `1` for none. |
+| `DISABLE_EMULATOR_ANIMATIONS` | `true`           |       —        |      ✅      |        —         | Set `false` to keep emulator animation scales unchanged.           |
+| `STREAM_BACKGROUND_LOGS`      | `false`          |       —        |      ✅      |        —         | Set `true` to stream mock server logs to stdout.                   |
+| `CI`                          | `false`          |       —        |      ✅      |        —         | Set `true` for CI mode.                                            |
 
 ## Related
 
