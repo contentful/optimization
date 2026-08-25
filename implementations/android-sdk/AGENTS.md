@@ -15,7 +15,7 @@ Native Android reference implementations: Jetpack Compose and XML Views apps usi
 - The retired UiAutomator module under `uitests/` is dormant; do not add to it.
 - Keep accessibility identifiers aligned with iOS and `implementations/PREVIEW_PANEL_SCENARIOS.md`.
 - Prefer `scripts/run-e2e.sh` or the package scripts for local Maestro. The runner starts the mock
-  server, resolves or launches a visible emulator for the pinned `pixel_7_api35_e2e` AVD, builds,
+  server, resolves or launches a visible emulator for the pinned `Pixel_7_API_36` AVD, builds,
   installs, runs Maestro, and writes logs. To recover from stale emulator state, it may terminate
   detected headless `qemu-system` emulator processes and restart adb before launching a visible
   emulator; do not replace that documented runner behavior with manual process termination.

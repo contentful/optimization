@@ -8,7 +8,7 @@
     "build:ci": "pnpm --filter './packages/**' --stream build:ci",
     "build:pkgs": "pnpm build && pnpm run pack:pkgs",
     "build:rsdoctor": "pnpm --filter './packages/**' --stream build:rsdoctor",
-    "clean": "pnpm --filter './lib/*' --filter './packages/**' --parallel clean",
+    "clean": "pnpm run --filter './lib/*' --filter './packages/**' --parallel clean",
     "commit": "tsx ./scripts/prepare-commit-message.ts --commit",
     "docs:generate": "typedoc",
     "docs:watch": "typedoc --watch",

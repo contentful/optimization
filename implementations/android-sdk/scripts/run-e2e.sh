@@ -28,7 +28,7 @@
 #   SKIP_BUILD        - Set to "true" to skip the Gradle build step (default: false)
 #   DISABLE_EMULATOR_ANIMATIONS - Set to "false" to keep animation scales unchanged (default: true)
 #   STREAM_BACKGROUND_LOGS - Set to "true" to stream mock server logs to stdout (default: false)
-#   EMULATOR_AVD      - AVD to require/auto-launch (default: pixel_7_api35_e2e, pinned to match CI)
+#   EMULATOR_AVD      - AVD to require/auto-launch (default: Pixel_7_API_36, pinned to match CI)
 #   APP_PACKAGE       - Which app(s) to drive: "all"/"both"/"" (default) runs Compose then
 #                       Views; a single package value drives just that app.
 #   MAESTRO_ITERATIONS - Repeat the full run N times to measure flakiness (default: 1)
@@ -75,11 +75,10 @@ MAESTRO_ATTEMPTS="${MAESTRO_ATTEMPTS:-2}"
 
 # AVD pinned to match the CI emulator-runner config in
 # .github/workflows/main-pipeline.yaml (e2e-android-maestro):
-#   profile=pixel_7, api-level=35, target=google_apis
-# The only intentional difference is CPU arch: local uses arm64-v8a for native
-# speed on Apple Silicon; CI uses x86_64 because Namespace's KVM-backed Android
-# emulator support is linux/amd64-only.
-EMULATOR_AVD="${EMULATOR_AVD:-pixel_7_api35_e2e}"
+#   profile=pixel_7, api-level=36
+# Local runs use the Google APIs ARM64 image for native speed on Apple Silicon;
+# CI uses the x86_64 AOSP ATD image for KVM-backed execution.
+EMULATOR_AVD="${EMULATOR_AVD:-Pixel_7_API_36}"
 
 # Subdirectory of maestro/ to run; empty means the whole suite.
 FLOW_SUBPATH=""
@@ -115,7 +114,7 @@ Environment Variables:
   SKIP_BUILD          Set to 'true' to skip build (default: false)
   DISABLE_EMULATOR_ANIMATIONS Set to 'false' to keep emulator animations (default: true)
   STREAM_BACKGROUND_LOGS Set to 'true' to stream mock server logs to stdout (default: false)
-  EMULATOR_AVD        AVD name to require/auto-launch (default: pixel_7_api35_e2e)
+  EMULATOR_AVD        AVD name to require/auto-launch (default: Pixel_7_API_36)
   APP_PACKAGE         all|both|<single package> (default: all)
   MAESTRO_ITERATIONS  Repeat the full run N times (default: 1)
   CI                  Set to 'true' for CI mode (default: false)
@@ -281,14 +280,21 @@ find_emulator_binary() {
 }
 
 print_avd_setup_instructions() {
+    local system_image_arch="x86_64"
+    if [[ "$(uname -m)" == "arm64" ]]; then
+        system_image_arch="arm64-v8a"
+    fi
+
+    local sys_image="system-images;android-36;google_apis;$system_image_arch"
+
     cat <<EOF
   # Install the system image (arm64-v8a on Apple Silicon, x86_64 on Intel):
-  sdkmanager --install "system-images;android-35;google_apis;arm64-v8a"
+  sdkmanager --install "$sys_image"
 
   # Create the AVD pinned to match CI:
   avdmanager create avd \\
       --name "${EMULATOR_AVD}" \\
-      --package "system-images;android-35;google_apis;arm64-v8a" \\
+      --package "$sys_image" \\
       --device "pixel_7"
 
   # (Optional) override via env var if you need a different name:

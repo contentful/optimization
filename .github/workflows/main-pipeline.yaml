@@ -1026,7 +1026,7 @@ jobs:
       CI: 'true'
       MAESTRO_VERSION: '2.6.0'
       MAESTRO_ITERATIONS: '1'
-      API_LEVEL: '35'
+      API_LEVEL: '36'
       ARCH: x86_64
       TARGET: aosp_atd
       PROFILE: pixel_7

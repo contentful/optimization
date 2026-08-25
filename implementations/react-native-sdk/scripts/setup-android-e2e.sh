@@ -460,19 +460,19 @@ setup_android_sdk() {
     # Install required SDK packages
     log_step "Installing Android SDK packages..."
     
+    local system_image_arch="x86_64"
+    if [[ "$OS" == "macos" ]] && [[ "$(uname -m)" == "arm64" ]]; then
+        system_image_arch="arm64-v8a"
+    fi
+
     local packages=(
         "platform-tools"
         "platforms;android-$ANDROID_PLATFORM_VERSION"
         "build-tools;$ANDROID_BUILD_TOOLS_VERSION"
         "emulator"
-        "system-images;android-$ANDROID_API_LEVEL;google_apis;x86_64"
+        "system-images;android-$ANDROID_API_LEVEL;google_apis;$system_image_arch"
         "ndk;$NDK_VERSION"
     )
-    
-    # For ARM Macs, also install ARM system image
-    if [[ "$OS" == "macos" ]] && [[ "$(uname -m)" == "arm64" ]]; then
-        packages+=("system-images;android-$ANDROID_API_LEVEL;google_apis;arm64-v8a")
-    fi
     
     for package in "${packages[@]}"; do
         log_step "Installing $package..."
