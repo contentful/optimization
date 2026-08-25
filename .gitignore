@@ -19,6 +19,10 @@ build
 coverage
 dist
 docs
+!docs/
+docs/*
+!docs/ADRs/
+!docs/ADRs/*.md
 node_modules
 pkgs
 pids
