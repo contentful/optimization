@@ -1,6 +1,7 @@
 {
   "$schema": "https://typedoc.org/schema.json",
   "name": "Contentful Personalization & Analytics",
+  "out": "site",
   "includeVersion": false,
   "headings": {
     "document": false,

@@ -141,7 +141,8 @@ patterns with intentionally minimal application code.
 - `implementations/`: reference applications used for examples and E2E coverage
 - `lib/`: shared internal workspace packages such as mocks and build tooling
 - `documentation/`: authored supporting documentation published alongside TypeDoc
-- `docs/`: generated TypeDoc output; not source of truth
+- `docs/`: architecture decision records
+- `site/`: generated TypeDoc and GitHub Pages output; not source of truth
 
 ## Get involved
 

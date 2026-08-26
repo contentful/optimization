@@ -307,7 +307,7 @@ explicitly requests it.
 ## Docs and README
 
 - Follow [`STYLE_GUIDE.md`](./STYLE_GUIDE.md) for human-authored prose. Authored docs live in
-  `documentation/`; generated TypeDoc output lives in `docs/`.
+  `documentation/`; generated TypeDoc output lives in `site/`.
 - Preserve existing README families: repo/package/reference implementation headers, navigation, and
   release-status warnings where applicable; documentation indexes; short status READMEs for placeholders or
   internal-only surfaces.

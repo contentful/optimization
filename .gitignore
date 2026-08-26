@@ -18,16 +18,12 @@ blob-report
 build
 coverage
 dist
-docs
-!docs/
-docs/*
-!docs/ADRs/
-!docs/ADRs/*.md
 node_modules
 pkgs
 pids
 playwright-report
 playwright.cache
+site
 temp
 test-results
 tmp

@@ -29,7 +29,7 @@ export default defineConfig(
       '**/coverage',
       '**/contentful-generated.d.ts',
       '**/dist',
-      'docs/media/**',
+      'site/media/**',
       '**/ios/**',
       // Engine-targeted JS bridge glue compiled into the native SDKs; consolidated
       // from the ios/android bridge packages, which were ignored under the rules above.

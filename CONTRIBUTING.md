@@ -66,7 +66,7 @@ package, implementation, or `lib/` workspace.
   `.nvmrc`.
 - Use the pnpm version pinned in the root [`package.json`](./package.json).
 - Change source-of-truth files, not generated output. Authored docs live in `documentation/`;
-  generated TypeDoc output lives in `docs/`.
+  generated TypeDoc output lives in `site/`.
 - Treat reference implementations as maintained product artifacts, not disposable examples.
 - Do not hand-edit `dist/`, `coverage/`, `docs/`, `pkgs/`, `.rslib/`, `.rsdoctor/`, `node_modules/`,
   or local `.env` files unless the task explicitly targets them.
@@ -104,7 +104,8 @@ pnpm version:pnpm
 | `packages/ios/`      | Swift package                                                                       |
 | `implementations/`   | Reference apps used for integration testing, validation evidence, and E2E coverage  |
 | `documentation/`     | Authored guides and concepts published with TypeDoc                                 |
-| `docs/`              | Generated TypeDoc output                                                            |
+| `docs/`              | Architecture decision records                                                       |
+| `site/`              | Generated TypeDoc and GitHub Pages output                                           |
 | `pkgs/`              | Generated tarballs created by `pnpm build:pkgs`; implementations install from these |
 | `dist/`, `coverage/` | Generated build and test artifacts inside individual workspaces                     |
 | `.github/workflows/` | CI, release, publish, and title-check workflows                                     |
@@ -377,7 +378,7 @@ Follow [`STYLE_GUIDE.md`](./STYLE_GUIDE.md) for human-authored prose.
 Code reference documentation is generated with TypeDoc:
 
 - Authored supporting docs belong in `documentation/`.
-- Generated TypeDoc output belongs in `docs/`; do not hand-edit it.
+- Generated TypeDoc output belongs in `site/`; do not hand-edit it.
 - `pnpm docs:generate` generates documentation from TSDoc comments, package README files, and
   Markdown files under `documentation/`.
 - `pnpm docs:watch` watches for file updates and rebuilds generated docs while writing.
