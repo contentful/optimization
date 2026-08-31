@@ -107,6 +107,43 @@ describe('EntryViewTracker', () => {
     cleanup()
   })
 
+  it('emits a final duration update when an active tracked entry is removed', async () => {
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'entry-removed-view'
+    document.body.append(entry)
+
+    const { core, trackView } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
+
+    tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
+
+    const instance = io.getLast()
+
+    if (!instance) {
+      throw new Error('IntersectionObserver polyfill instance not found')
+    }
+
+    instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
+    await advance(0)
+    await advance(500)
+
+    entry.remove()
+    await advance(0)
+
+    const firstPayload = trackView.mock.calls[0]?.[0]
+    const finalPayload = trackView.mock.calls[1]?.[0]
+    cleanup()
+
+    expect(trackView).toHaveBeenCalledTimes(2)
+    expect(finalPayload).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-removed-view',
+        viewDurationMs: 500,
+        viewId: firstPayload?.viewId,
+      }),
+    )
+  })
+
   it('tracks a display:contents entry through its single rendered child', async () => {
     const entry = document.createElement('div')
     entry.dataset.ctflEntryId = 'entry-single-child-view'
