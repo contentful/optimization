@@ -64,8 +64,13 @@ function parseArgs(argv: readonly string[]): Options {
 }
 
 /**
- * Replaces the `- section: Optimization SDK` block in place. The block runs until the next list item
- * at the same indentation, which is how the surrounding sections stay untouched.
+ * Replaces the `- section: Optimization SDK` block in place.
+ *
+ * The owned span ends at the first nonblank line indented no deeper than the section itself,
+ * whatever that line is. Terminating only on a sibling `- ` list item would be enough for the
+ * navigation layout that happens to be checked in today, but a comment banner at the section's
+ * indentation, or a trailing top-level key such as `tabs:`, would then be swallowed into the
+ * replaced range and silently deleted.
  */
 function spliceNavSection(existing: string, navBlock: string): string {
   const lines = existing.split('\n')
@@ -87,7 +92,7 @@ function spliceNavSection(existing: string, navBlock: string): string {
       continue
     }
     const lineIndent = line.length - line.trimStart().length
-    if (lineIndent <= indent && line.trimStart().startsWith('- ')) {
+    if (lineIndent <= indent) {
       end = index
       break
     }

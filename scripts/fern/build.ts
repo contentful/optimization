@@ -8,7 +8,14 @@
 
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import { emptyLock, reconcileLock, renderNavBlock, renderRedirects, type SlugLock } from './bundle'
+import {
+  emptyLock,
+  reconcileLock,
+  renderNavBlock,
+  renderRedirects,
+  resolveRedirects,
+  type SlugLock,
+} from './bundle'
 import { bySourceName, DocError, loadPublishedDocs, rootDir, type PublishedDoc } from './docs'
 import { transformDoc } from './transform'
 
@@ -92,6 +99,12 @@ export function buildBundle(options: BuildOptions): BuildResult {
   }
 
   const reconciled = reconcileLock(lock, docs)
+
+  // A slug history that cannot produce a usable redirect is reported here rather than silently
+  // emitting nothing, so a lock the exporter can no longer explain fails the check.
+  for (const message of resolveRedirects(reconciled).problems) {
+    problems.push({ file: 'documentation/fern-slugs.lock.json', line: 1, message })
+  }
 
   return {
     docs,

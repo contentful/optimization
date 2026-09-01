@@ -61,40 +61,88 @@ export function reconcileLock(lock: SlugLock, docs: readonly PublishedDoc[]): Sl
   return { slugs, redirects }
 }
 
+/** Slugs that are published right now. A published page must never redirect away from itself. */
+function liveSlugs(lock: SlugLock): Set<string> {
+  return new Set(Object.values(lock.slugs))
+}
+
+export interface ResolvedRedirects {
+  entries: Array<{ from: string; to: string }>
+  /** Recorded histories that cannot produce a usable redirect, for `pnpm fern:check` to report. */
+  problems: string[]
+}
+
 /**
- * Rewrites redirect chains to point at the current slug. If a page moved A -> B -> C, both A and B
- * must land on C; leaving A -> B would cost a hop and break if B is ever reused.
+ * Turns the append-only slug history into the redirects to publish.
+ *
+ * Published slugs are terminal. That is what makes a restoration safe: if a page moves `A` to `B`
+ * and later back to `A`, `A` is published again, so the recorded `A -> B` move is skipped rather
+ * than emitted. Emitting it would point the live page away from itself, and emitting both moves
+ * would be a redirect loop. Longer histories collapse the same way — `A -> B -> C -> A` publishes
+ * `B -> A` and `C -> A` — so this is not a special case for the direct reverse edge.
+ *
+ * A history that never reaches a published slug produces no redirect and is reported instead, since
+ * silently dropping it would hide a slug the lock can no longer explain.
  */
-function resolveRedirectTarget(
-  from: string,
-  redirects: ReadonlyArray<{ from: string; to: string }>,
-): string {
-  const seen = new Set<string>([from])
-  let target = from
-  for (;;) {
-    // A per-iteration binding, so the predicate never closes over the mutated `target`.
-    const current = target
-    const next = redirects.find((entry) => entry.from === current)
-    if (next === undefined || seen.has(next.to)) {
-      return target
+export function resolveRedirects(lock: SlugLock): ResolvedRedirects {
+  const live = liveSlugs(lock)
+  const entries: Array<{ from: string; to: string }> = []
+  const problems = new Set<string>()
+
+  for (const from of new Set(lock.redirects.map((entry) => entry.from))) {
+    if (live.has(from)) {
+      continue
     }
-    const { to } = next
-    seen.add(to)
-    target = to
+
+    const seen = new Set<string>([from])
+    let target = from
+    let destination: string | undefined = undefined
+    let cycled = false
+
+    for (;;) {
+      const current = target
+      const next = lock.redirects.find((entry) => entry.from === current)
+      if (next === undefined) {
+        break
+      }
+      if (seen.has(next.to)) {
+        problems.add(
+          `slug history for "${from}" cycles without reaching a published slug; no redirect can be emitted`,
+        )
+        cycled = true
+        break
+      }
+      const { to } = next
+      seen.add(to)
+      target = to
+      if (live.has(to)) {
+        destination = to
+        break
+      }
+    }
+
+    if (destination === undefined) {
+      // A cycle already explains why there is no destination; do not also report it as dangling.
+      if (!cycled) {
+        problems.add(
+          `slug "${from}" has no published destination in the lock; its redirect would dangle`,
+        )
+      }
+      continue
+    }
+    entries.push({ from, to: destination })
   }
+
+  return { entries, problems: [...problems] }
 }
 
 /** The `redirects:` entries to merge into `fern/docs.yml`, in the site's quoted absolute form. */
 export function renderRedirects(lock: SlugLock): string[] {
   const lines: string[] = []
-  for (const entry of lock.redirects) {
-    const destination = resolveRedirectTarget(entry.from, lock.redirects)
-    if (destination === entry.from) {
-      continue
-    }
+  for (const { from, to } of resolveRedirects(lock).entries) {
     lines.push(
-      `${BASE_INDENT}- source: "${REDIRECT_PREFIX}/${entry.from}/"`,
-      `${BASE_INDENT}  destination: "${REDIRECT_PREFIX}/${destination}/"`,
+      `${BASE_INDENT}- source: "${REDIRECT_PREFIX}/${from}/"`,
+      `${BASE_INDENT}  destination: "${REDIRECT_PREFIX}/${to}/"`,
     )
   }
   return lines

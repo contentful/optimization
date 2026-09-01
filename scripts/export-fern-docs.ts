@@ -9,28 +9,34 @@
  *   pnpm docs:fern                          build into fern-bundle/
  *   pnpm docs:fern -- --ref <git-ref>       pin repo-relative links to a release tag
  *   pnpm docs:fern -- --update-lock         accept slug changes and record their redirects
- *   pnpm docs:fern -- --out <dir>           write somewhere other than fern-bundle/
  */
 
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { buildBundle, LOCK_PATH, reportFatal, reportProblems } from './fern/build'
 import { rootDir } from './fern/docs'
 
-const DEFAULT_OUT_DIR = 'fern-bundle'
+/**
+ * The bundle directory is a fixed, gitignored path this script owns, not a caller-supplied one. It
+ * is cleared before each build, and an arbitrary path reaching a recursive delete is the kind of
+ * mistake that costs a working tree. Nothing consumes a configurable location: `docs:fern:apply`
+ * reads from here, and the sync workflow builds and applies in one checkout. To compare two builds,
+ * copy this directory aside between runs.
+ */
+const BUNDLE_DIR = 'fern-bundle'
+/** Everything the build writes, so cleanup removes only what a previous build put here. */
+const BUNDLE_MEMBERS = ['nav-block.yaml', 'redirects.yaml', 'manifest.json'] as const
 const DEFAULT_REF = 'main'
 /** Each redirect renders as a `source` line plus a `destination` line. */
 const REDIRECT_LINES = 2
 
 interface Options {
   ref: string
-  outDir: string
   updateLock: boolean
 }
 
 function parseArgs(argv: readonly string[]): Options {
   let ref = DEFAULT_REF
-  let outDir = DEFAULT_OUT_DIR
   let updateLock = false
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -38,9 +44,6 @@ function parseArgs(argv: readonly string[]): Options {
     if (arg === '--ref') {
       index += 1
       ref = argv[index] ?? DEFAULT_REF
-    } else if (arg === '--out') {
-      index += 1
-      outDir = argv[index] ?? DEFAULT_OUT_DIR
     } else if (arg === '--update-lock') {
       updateLock = true
     } else if (arg !== undefined && arg !== '--') {
@@ -49,7 +52,7 @@ function parseArgs(argv: readonly string[]): Options {
     }
   }
 
-  return { ref, outDir, updateLock }
+  return { ref, updateLock }
 }
 
 function main(): void {
@@ -72,9 +75,20 @@ function main(): void {
     )
   }
 
-  const outDir = path.resolve(rootDir, options.outDir)
-  rmSync(outDir, { force: true, recursive: true })
-  mkdirSync(path.join(outDir, 'pages'), { recursive: true })
+  const outDir = path.join(rootDir, BUNDLE_DIR)
+  const pagesDir = path.join(outDir, 'pages')
+  mkdirSync(pagesDir, { recursive: true })
+
+  // Remove the previous build member by member. A stale page for a document that no longer
+  // publishes has to go, but anything else parked in this directory is left alone.
+  for (const name of readdirSync(pagesDir)) {
+    if (name.endsWith('.mdx')) {
+      rmSync(path.join(pagesDir, name))
+    }
+  }
+  for (const name of BUNDLE_MEMBERS) {
+    rmSync(path.join(outDir, name), { force: true })
+  }
 
   for (const page of result.pages) {
     writeFileSync(path.join(outDir, 'pages', `${page.slug}.mdx`), page.mdx)
