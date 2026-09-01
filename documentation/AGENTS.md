@@ -23,8 +23,10 @@ Applies to authored documentation under `documentation/`.
 
 ## Publishing to the documentation site
 
-Everything in `guides/` and `concepts/` publishes to `contentful/contentful-docs` through
-`pnpm docs:fern`. Run `pnpm fern:check` after editing either directory.
+Everything in `guides/` and `concepts/` is published to `contentful/contentful-docs`. Getting there is
+three separate steps: `pnpm docs:fern` builds the bundle locally, `pnpm docs:fern:apply` writes it
+into a `contentful-docs` checkout, and the sync workflow opens the pull request there. Run
+`pnpm fern:check` after editing either directory.
 
 - Every published document needs a `fern:` frontmatter block: `slug`, `section` (`Guides`,
   `Concepts`, or `Migration guides`), and `description`. Add `navTitle` only when the sidebar needs a

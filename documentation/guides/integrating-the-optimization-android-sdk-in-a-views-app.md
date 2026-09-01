@@ -973,7 +973,7 @@ streams for local diagnostics or app-owned analytics forwarding.
 When forwarding SDK events to third-party destinations, apply the same app-owned consent policy,
 deduplication, and data-minimization rules that govern the destination. For destination mapping,
 consent, identity, dedupe, and governance guidance, see
-[Forward Optimization SDK context to analytics and tag management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+[Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
 
 ### Custom Flags and MergeTag rendering
 

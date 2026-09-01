@@ -18,8 +18,8 @@ Structure invariant: intro → TOC → `## Recommendation` → `## Decision tabl
 `Next guide`; add `Do not choose when` only when a row needs a boundary or warning.
 
 H1 form: the imperative mood, naming the task, as required by the `Headings` section of
-[`../../../STYLE_GUIDE.md`](../../../STYLE_GUIDE.md). Never a gerund. Name the choice being made: "Choose the right SDK",
-"Choose a Next.js migration path from experience.js".
+[`../../../STYLE_GUIDE.md`](../../../STYLE_GUIDE.md). Never a gerund. Name the choice being made:
+"Choose the right SDK", "Choose a Next.js migration path from experience.js".
 
 ## Template
 

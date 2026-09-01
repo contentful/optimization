@@ -349,7 +349,7 @@ Applications own:
 - [Integrate the React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md)
 - [Integrate the Optimization Next.js SDK in a Next.js App Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
 - [Integrate the Optimization Next.js SDK in a Next.js Pages Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
-- [Integrate the Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md)
+- [Integrate the Optimization Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md)
 - [Integrate the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
 - [React Native SDK interaction tracking mechanics](./react-native-sdk-interaction-tracking-mechanics.md)
 - [Integrate the Optimization iOS SDK in a SwiftUI app](../guides/integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)

@@ -558,7 +558,7 @@ Use this checklist when implementing a hybrid Node and browser profile flow:
 - [Integrate the Optimization Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md)
 - [Integrate the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md)
 - [Integrate the React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md)
-- [Integrate the React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
+- [Integrate the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
 - [Integrate the Optimization Next.js SDK in a Next.js App Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
 - [Integrate the Optimization Next.js SDK in a Next.js Pages Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
 - [Core state management](./core-state-management.md)

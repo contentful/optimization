@@ -551,5 +551,5 @@ Before releasing a consent-aware Optimization SDK integration, verify these impl
   consent, UserDefaults persistence, streams, preview behavior, and offline delivery.
 - [Android SDK runtime and interaction mechanics](./android-sdk-runtime-and-interaction-mechanics.md) -
   Android consent, SharedPreferences persistence, streams, preview behavior, and offline delivery.
-- [Forward Optimization SDK context to analytics and tag management tools](../guides/forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
+- [Forward Optimization SDK context to analytics and tag-management tools](../guides/forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
   Consent-aware routing to third-party analytics and tag management destinations.

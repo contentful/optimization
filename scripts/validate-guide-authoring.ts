@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { headingsOf, isTableDivider, parseTableRow } from './sdk-knowledge/markdown'
+import { headingAnchor, headingsOf, isTableDivider, parseTableRow } from './sdk-knowledge/markdown'
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const blueprintDir = path.join(rootDir, 'documentation/authoring/blueprints')
@@ -75,15 +75,6 @@ function parseFrontmatter(file: string, lines: string[]): Map<string, string> {
   return result
 }
 
-function slug(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/<[^>]+>/gu, '')
-    .replace(/[^\p{L}\p{N}\s-]/gu, '')
-    .replace(/\s/gu, '-')
-}
-
 function validateLink(file: string, line: number, target: string): void {
   if (/^(?:https?:)?\/\//u.test(target) || target.startsWith('mailto:')) {
     return
@@ -99,7 +90,7 @@ function validateLink(file: string, line: number, target: string): void {
     return
   }
   const targetLines = readFileSync(resolved, 'utf8').split(/\r?\n/u)
-  const anchors = new Set(headingsOf(targetLines).map((heading) => slug(heading.text)))
+  const anchors = new Set(headingsOf(targetLines).map((heading) => headingAnchor(heading.text)))
   if (!anchors.has(rawAnchor)) {
     addProblem(file, line, `link anchor does not exist: ${target}`)
   }

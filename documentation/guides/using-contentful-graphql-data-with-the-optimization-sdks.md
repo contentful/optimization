@@ -510,7 +510,7 @@ model changes, and it avoids turning your GraphQL schema into a second Contentfu
   App Router request handoff and server/client rendering paths.
 - [Integrate the Optimization Next.js SDK in a Next.js Pages Router app](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md) -
   Pages Router request handoff and SSR patterns.
-- [Integrate the Node SDK in a Node app](./integrating-the-node-sdk-in-a-node-app.md) -
+- [Integrate the Optimization Node SDK in a Node app](./integrating-the-node-sdk-in-a-node-app.md) -
   Request-bound server selection and manual entry resolution.
 - [Build a custom JavaScript Optimization adapter](./building-a-custom-javascript-optimization-adapter.md) -
   Low-level adapter boundaries when no official SDK package fits your runtime.

@@ -42,16 +42,23 @@ export function headingsOf(lines: string[]): Heading[] {
   return headings
 }
 
-/** GitHub/Fern heading anchor: inline markup stripped, lowercased, spaces to hyphens. */
+/**
+ * GitHub/Fern heading anchor: inline markup stripped, lowercased, each whitespace character replaced
+ * by one hyphen.
+ *
+ * Whitespace is replaced per character, not per run. Dropping punctuation from a heading such as
+ * `## Render / entry resolution` leaves two adjacent spaces, and the anchor keeps both as
+ * `render--entry-resolution`. Collapsing the run would produce an anchor no authored link uses.
+ */
 export function headingAnchor(text: string): string {
   return text
     .replace(/`([^`]*)`/gu, '$1')
     .replace(/\[([^\]]*)\]\([^)]*\)/gu, '$1')
-    .replace(/[*_]/gu, '')
+    .replace(/[*]/gu, '')
     .toLowerCase()
-    .replace(/[^\p{L}\p{N} _-]/gu, '')
     .trim()
-    .replace(/\s+/gu, '-')
+    .replace(/[^\p{L}\p{N}\s_-]/gu, '')
+    .replace(/\s/gu, '-')
 }
 
 /** Splits a `| a | b |` table row into trimmed cells, or returns undefined for a non-row line. */

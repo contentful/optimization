@@ -894,7 +894,7 @@ fun AnalyticsDebugPanel() {
 ```
 
 For cross-SDK forwarding patterns, see
-[Forward Optimization SDK context to analytics and tag management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+[Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
 
 ### Custom Flags and MergeTag rendering
 

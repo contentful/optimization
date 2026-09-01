@@ -18,7 +18,7 @@ how consent, state, entry resolution, tracking, preview overrides, and offline d
 For step-by-step setup, see
 [Integrate the Optimization Android SDK in a Jetpack Compose app](../guides/integrating-the-optimization-android-sdk-in-a-compose-app.md)
 and
-[Integrate the Optimization Android SDK in an XML Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md).
+[Integrate the Optimization Android SDK in an Android Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md).
 For the full Contentful entry contract, see
 [Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md).
 
@@ -340,7 +340,7 @@ model for Compose and XML Views integrations.
 - [Integrate the Optimization Android SDK in a Jetpack Compose app](../guides/integrating-the-optimization-android-sdk-in-a-compose-app.md) -
   Compose setup flow for `OptimizationRoot`, `OptimizedEntry`, screen tracking, and preview panel
   mounting.
-- [Integrate the Optimization Android SDK in an XML Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md) -
+- [Integrate the Optimization Android SDK in an Android Views app](../guides/integrating-the-optimization-android-sdk-in-a-views-app.md) -
   XML Views setup flow for `OptimizationManager`, `OptimizedEntryView`, screen tracking, and preview
   panel mounting.
 - [Android reference implementation](../../implementations/android-sdk/README.md) - Native Android
