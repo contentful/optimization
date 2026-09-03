@@ -24,7 +24,7 @@
 
 # Node and package-manager runtime configuration.
 /.nvmrc @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @fmamud
-/.pnpmfile.cjs @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @fmamud
+/scripts/pack-pnpmfile.cjs @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @fmamud
 
 # Documentation generation.
 /typedoc.json @Lp-Francois @elton-muteswa-cf @TimBeyer @phobetron @fmamud
