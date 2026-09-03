@@ -5,3 +5,6 @@ overrides:
   '@contentful/optimization-api-schemas': 'file:../../pkgs/contentful-optimization-api-schemas-local.tgz'
   '@contentful/optimization-core': 'file:../../pkgs/contentful-optimization-core-local.tgz'
   '@contentful/optimization-node': 'file:../../pkgs/contentful-optimization-node-local.tgz'
+
+allowBuilds:
+  esbuild: true

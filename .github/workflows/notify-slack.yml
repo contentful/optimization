@@ -106,7 +106,7 @@ jobs:
 
           is_global_configuration() {
             case "$1" in
-              .env.example | .gitignore | .npmrc | .nvmrc | .pnpmfile.cjs | .prettierignore | .prettierrc)
+              .env.example | .gitignore | .npmrc | .nvmrc | scripts/pack-pnpmfile.cjs | .prettierignore | .prettierrc)
                 return 0
                 ;;
               .husky/* | .lintstagedrc.yaml | .markdownlint.yaml | .release-please-manifest.json)

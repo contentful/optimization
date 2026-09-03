@@ -18,7 +18,7 @@ while IFS=$'\t' read -r package package_dir _notice_path; do
   PACKAGE_TARGETS+=("$package"$'\t'"$package_dir")
 done < <("$ROOT_DIR/node_modules/.bin/tsx" "$ROOT_DIR/scripts/list-npm-package-targets.ts" npm-targets)
 
-pnpm pack "${FILTERS[@]}" --pack-destination pkgs
+pnpm --config.pnpmfile=./scripts/pack-pnpmfile.cjs pack "${FILTERS[@]}" --pack-destination pkgs
 
 for package_target in "${PACKAGE_TARGETS[@]}"; do
   IFS=$'\t' read -r package package_dir <<< "$package_target"

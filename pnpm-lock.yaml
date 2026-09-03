@@ -88,8 +88,6 @@ overrides:
   typescript: ^5.8.3
   vitest: ^3.2.4
 
-pnpmfileChecksum: sha256-rLiWILKkFlFQKhy97Tbh9foy0hnpkE0o6ga/JPemGI8=
-
 importers:
 
   .:
