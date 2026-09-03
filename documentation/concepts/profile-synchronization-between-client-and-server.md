@@ -1,5 +1,11 @@
 ---
 title: Profile synchronization between client and server
+fern:
+  slug: profile-synchronization-between-client-and-server
+  section: Concepts
+  description: >-
+    Understand how the Optimization SDK Suite keeps a visitor profile continuous when a Node server
+    and a browser client both participate in personalization and analytics.
 ---
 
 # Profile synchronization between client and server
@@ -34,7 +40,7 @@ state, and which application boundaries still belong to your implementation.
 - [Reset, revocation, and teardown](#reset-revocation-and-teardown)
 - [Edge cases and failure modes](#edge-cases-and-failure-modes)
 - [Implementation checklist](#implementation-checklist)
-- [Related docs and reference implementations](#related-docs-and-reference-implementations)
+- [Related documentation](#related-documentation)
 
 <!-- mtoc-end -->
 </details>
@@ -547,14 +553,14 @@ Use this checklist when implementing a hybrid Node and browser profile flow:
 - Cache raw Contentful delivery payloads, not profile-evaluated SDK responses or personalized HTML
   unless the cache key varies on the full personalization context.
 
-## Related docs and reference implementations
+## Related documentation
 
-- [Integrating the Optimization Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md)
-- [Integrating the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md)
-- [Integrating the React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md)
-- [Integrating the React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
-- [Integrating the Optimization Next.js SDK in a Next.js App Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
-- [Integrating the Optimization Next.js SDK in a Next.js Pages Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
+- [Integrate the Optimization Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md)
+- [Integrate the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md)
+- [Integrate the React Web SDK in a React app](../guides/integrating-the-react-web-sdk-in-a-react-app.md)
+- [Integrate the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
+- [Integrate the Optimization Next.js SDK in a Next.js App Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
+- [Integrate the Optimization Next.js SDK in a Next.js Pages Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
 - [Core state management](./core-state-management.md)
 - [Consent management in the Optimization SDK Suite](./consent-management-in-the-optimization-sdk-suite.md)
 - [Interaction tracking in Node and stateless environments](./interaction-tracking-in-node-and-stateless-environments.md)

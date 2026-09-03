@@ -18,6 +18,31 @@ Applies to authored documentation under `documentation/`.
 - Keep frontmatter `children`, visible list order, and one-sentence child descriptions aligned.
 - When adding, moving, or removing docs, update the nearest directory README and affected links.
 - Preserve observed index headings and frontmatter `title` values matching the visible `#` heading.
+- `children` order is the published sidebar order, not just a list. It is authored in reader-routing
+  order, so reordering it reorders the public documentation site.
+
+## Publishing to the documentation site
+
+Everything in `guides/` and `concepts/` is published to `contentful/contentful-docs`. Getting there is
+three separate steps: `pnpm docs:fern` builds the bundle locally, `pnpm docs:fern:apply` writes it
+into a `contentful-docs` checkout, and the sync workflow opens the pull request there. Run
+`pnpm fern:check` after editing either directory.
+
+- Every published document needs a `fern:` frontmatter block: `slug`, `section` (`Guides`,
+  `Concepts`, or `Migration guides`), and `description`. Add `navTitle` only when the sidebar needs a
+  shorter label than the page title.
+- The published page title is the document's `# ` heading. There is no `fern.title`, so the title
+  cannot drift from the heading; `pnpm fern:check` rejects one if it is reintroduced, and rejects an
+  authored top-level `title` that no longer matches the heading.
+- `fern.slug` is data and is never derived from a heading, so rewording an `#` heading cannot move a
+  live URL. Changing a slug requires `pnpm docs:fern -- --update-lock`, which records a permanent
+  redirect in `documentation/fern-slugs.lock.json`. `pnpm fern:check` fails on an unrecorded change.
+- Cross-document links must resolve to a published document, and a `#fragment` must match a real
+  heading on the target page. Never link a published document to `authoring/` or `internal/`.
+- Do not hand-edit the pages in `contentful-docs`; they are generated and the next sync overwrites
+  them. Prose changes belong here.
+- Keep raw markup out of prose. Published pages become MDX, where `<` and `{` are active syntax, so
+  angle-bracket placeholders belong inside inline code or a fenced block.
 
 ## Writing and links
 

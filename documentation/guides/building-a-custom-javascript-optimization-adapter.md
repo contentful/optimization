@@ -1,8 +1,14 @@
 ---
-title: Building a custom JavaScript Optimization adapter
+title: Build a custom JavaScript Optimization adapter
+fern:
+  slug: build-a-custom-javascript-optimization-adapter
+  section: Guides
+  description: >-
+    Use this guide when you are building a JavaScript runtime or framework adapter and no official
+    Optimization SDK package fits that surface.
 ---
 
-# Building a custom JavaScript Optimization adapter
+# Build a custom JavaScript Optimization adapter
 
 Use this guide when you are building a JavaScript runtime or framework adapter and no official
 Optimization SDK package fits that surface.
@@ -255,7 +261,7 @@ events, managed entry fetching when configured, and local entry resolution.
 
 ## Related guides and concepts
 
-- [Choosing the right SDK](./choosing-the-right-sdk.md) - Package selection before building a custom
+- [Choose the right SDK](./choosing-the-right-sdk.md) - Package selection before building a custom
   adapter.
 - [Entry optimization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md) -
   Resolver inputs, fallback behavior, and single-locale entry constraints.

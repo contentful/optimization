@@ -1,8 +1,14 @@
 ---
-title: Using Contentful GraphQL data with the Optimization SDKs
+title: Use Contentful GraphQL data with the Optimization SDKs
+fern:
+  slug: use-contentful-graphql-data-with-the-optimization-sdks
+  section: Guides
+  description: >-
+    Use this guide when your app fetches Contentful data through the Contentful GraphQL Content API
+    and wants an Optimization SDK to choose which authored entry to render for a visitor.
 ---
 
-# Using Contentful GraphQL data with the Optimization SDKs
+# Use Contentful GraphQL data with the Optimization SDKs
 
 Use this guide when your app fetches Contentful data through the Contentful GraphQL Content API and
 wants an Optimization SDK to choose which authored entry to render for a visitor.
@@ -498,13 +504,13 @@ model changes, and it avoids turning your GraphQL schema into a second Contentfu
   Resolver inputs, content-model typing, fallback behavior, and single-locale entry constraints.
 - [Contentful GraphQL Content API](https://www.contentful.com/developers/docs/references/graphql/) -
   Official Contentful GraphQL schema, locale, preview, and collection-field reference.
-- [Integrating the Optimization React Web SDK in a React app](./integrating-the-react-web-sdk-in-a-react-app.md) -
+- [Integrate the Optimization React Web SDK in a React app](./integrating-the-react-web-sdk-in-a-react-app.md) -
   React provider setup, entry resolution, and interaction tracking.
-- [Integrating the Optimization Next.js SDK in a Next.js App Router app](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md) -
+- [Integrate the Optimization Next.js SDK in a Next.js App Router app](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md) -
   App Router request handoff and server/client rendering paths.
-- [Integrating the Optimization Next.js SDK in a Next.js Pages Router app](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md) -
+- [Integrate the Optimization Next.js SDK in a Next.js Pages Router app](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md) -
   Pages Router request handoff and SSR patterns.
-- [Integrating the Node SDK in a Node app](./integrating-the-node-sdk-in-a-node-app.md) -
+- [Integrate the Optimization Node SDK in a Node app](./integrating-the-node-sdk-in-a-node-app.md) -
   Request-bound server selection and manual entry resolution.
-- [Building a custom JavaScript Optimization adapter](./building-a-custom-javascript-optimization-adapter.md) -
+- [Build a custom JavaScript Optimization adapter](./building-a-custom-javascript-optimization-adapter.md) -
   Low-level adapter boundaries when no official SDK package fits your runtime.
