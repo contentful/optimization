@@ -108,6 +108,27 @@ export class ExperienceQueue {
     this.flushRuntime.reset()
   }
 
+  /**
+   * Remove and return all currently queued Experience events in oldest-first order.
+   *
+   * @remarks
+   * Empties the offline queue and resets the flush retry state. Intended for
+   * callers that will submit the events through a different transport (e.g. the
+   * personalization request handed to the delivery client). No consent check —
+   * callers must gate on consent before invoking this.
+   *
+   * @internal
+   */
+  drainQueuedEvents(): ExperienceEventArray {
+    if (this.queuedExperienceEvents.size === 0) return []
+
+    const drained = Array.from(this.queuedExperienceEvents)
+    this.queuedExperienceEvents.clear()
+    this.flushRuntime.reset()
+
+    return drained
+  }
+
   async send(
     event: ExperienceEventPayload,
     optimizationContext?: EventOptimizationContext,
