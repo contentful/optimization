@@ -1,4 +1,9 @@
 // OptimizedEntryResolver.test.ts
+import type { SelectedOptimizationArray } from '@contentful/optimization-api-client/api-schemas'
+import { describe, expect, it, rs } from '@rstest/core'
+import type { Entry, EntryFieldTypes, EntrySkeletonType, UnresolvedLink } from 'contentful'
+
+import { mockLogger } from 'mocks'
 import {
   isEntryReplacementComponent,
   isEntryReplacementVariant,
@@ -9,12 +14,7 @@ import {
   type EntryReplacementVariant,
   type OptimizationEntry,
   type OptimizedEntry,
-  type SelectedOptimizationArray,
-} from '@contentful/optimization-api-client/api-schemas'
-import { describe, expect, it, rs } from '@rstest/core'
-import type { Entry, EntryFieldTypes, EntrySkeletonType, UnresolvedLink } from 'contentful'
-
-import { mockLogger } from 'mocks'
+} from '../contentful'
 import type CoreStateful from '../CoreStateful'
 import type { CoreStatelessRequest } from '../CoreStatelessRequest'
 import { resolveEntriesForSelections } from '../handoff'

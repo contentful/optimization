@@ -1,9 +1,3 @@
-import {
-  BatchExperienceEventArray,
-  ExperienceEventArray,
-  ExperienceResponse,
-  type ExperienceRequestData,
-} from '@contentful/optimization-api-schemas'
 import { cloneDeep } from 'es-toolkit/compat'
 import { http, HttpResponse, type HttpHandler } from 'msw'
 import { readFile } from 'node:fs/promises'
@@ -19,6 +13,33 @@ const CORS_HEADERS = { 'Access-Control-Allow-Origin': '*' }
 
 type State = Record<string, boolean>
 
+interface ExperienceEvent {
+  type: string
+}
+
+interface BatchExperienceEvent {
+  anonymousId: string
+  type: string
+}
+
+interface ExperienceResponse {
+  data: { profile: { id: string; stableId: string } }
+}
+
+export interface Parser<T> {
+  parse: (value: unknown) => T
+}
+
+export interface SafeParser<T> {
+  safeParse: (value: unknown) => { data: T; success: true } | { success: false }
+}
+
+export interface ExperienceHandlerDependencies {
+  batchExperienceEventArray: SafeParser<readonly BatchExperienceEvent[]>
+  experienceEventArray: SafeParser<readonly ExperienceEvent[]>
+  experienceResponse: Parser<ExperienceResponse>
+}
+
 let identifiedState: State = {}
 let knownProfileIds = new Set<string>()
 
@@ -27,19 +48,19 @@ let identifiedVisitor: ExperienceResponse | undefined = undefined
 let fixtureLoadPromise: Promise<void> | undefined = undefined
 let fixtureLoadError: unknown = undefined
 
-async function loadFixtures(): Promise<void> {
+async function loadFixtures(dependencies: ExperienceHandlerDependencies): Promise<void> {
   const [newVisitorData, identifiedVisitorData] = await Promise.all([
     readFile(newVisitorPath, 'utf8'),
     readFile(identifiedVisitorPath, 'utf8'),
   ])
 
-  newVisitor = ExperienceResponse.parse(JSON.parse(newVisitorData))
-  identifiedVisitor = ExperienceResponse.parse(JSON.parse(identifiedVisitorData))
+  newVisitor = dependencies.experienceResponse.parse(JSON.parse(newVisitorData))
+  identifiedVisitor = dependencies.experienceResponse.parse(JSON.parse(identifiedVisitorData))
   resetState()
 }
 
-async function ensureFixturesLoaded(): Promise<void> {
-  fixtureLoadPromise ??= loadFixtures().catch((error: unknown) => {
+async function ensureFixturesLoaded(dependencies: ExperienceHandlerDependencies): Promise<void> {
+  fixtureLoadPromise ??= loadFixtures(dependencies).catch((error: unknown) => {
     fixtureLoadError = error
     throw error
   })
@@ -91,13 +112,16 @@ async function parseJson<T>(req: Request): Promise<T> {
   return JSON.parse(raw) as T
 }
 
-function hasIdentifyEvent(events: ExperienceEventArray | undefined): boolean {
+function hasIdentifyEvent(events: readonly ExperienceEvent[] | undefined): boolean {
   if (!events?.length) return false
 
   return events.some(({ type }) => type === 'identify')
 }
 
-function getResponseBody(profileId?: string, events?: ExperienceEventArray): ExperienceResponse {
+function getResponseBody(
+  profileId?: string,
+  events?: readonly ExperienceEvent[],
+): ExperienceResponse {
   const fixtures = getLoadedFixtures()
 
   profileId ??= crypto.randomUUID()
@@ -121,20 +145,34 @@ function getResponseBody(profileId?: string, events?: ExperienceEventArray): Exp
 /**
  * Returns MSW request handlers that mock the Experience API v2 endpoints.
  *
+ * @param dependencies - Injected schema parsers for Experience API requests and fixtures.
  * @param baseUrl - URL prefix prepended to each route pattern.
  * @returns An array of {@link HttpHandler} instances for use with MSW.
  *
  * @example
  * ```typescript
+ * import {
+ *   BatchExperienceEventArray,
+ *   ExperienceEventArray,
+ *   ExperienceResponse,
+ * } from '@contentful/optimization-api-client/api-schemas'
  * import { setupServer } from 'msw/node'
  * import { getHandlers } from './experience-handlers'
  *
- * const server = setupServer(...getHandlers())
+ * const dependencies = {
+ *   batchExperienceEventArray: BatchExperienceEventArray,
+ *   experienceEventArray: ExperienceEventArray,
+ *   experienceResponse: ExperienceResponse,
+ * }
+ * const server = setupServer(...getHandlers(dependencies))
  * ```
  *
  * @public
  */
-export function getHandlers(baseUrl = '*'): HttpHandler[] {
+export function getHandlers(
+  dependencies: ExperienceHandlerDependencies,
+  baseUrl = '*',
+): HttpHandler[] {
   return [
     // CORS preflight
     http.options('*', () =>
@@ -153,22 +191,22 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
       `${baseUrl}v2/organizations/:organizationId/environments/:environment/profiles`,
       async ({ request }) => {
         try {
-          await ensureFixturesLoaded()
+          await ensureFixturesLoaded(dependencies)
         } catch {
           return fixturesUnavailableResponse()
         }
 
-        const { events } = await parseJson<ExperienceRequestData>(request)
-        const { success: eventsAreValid } = ExperienceEventArray.safeParse(events)
+        const { events } = await parseJson<{ events: unknown }>(request)
+        const parsedEvents = dependencies.experienceEventArray.safeParse(events)
 
-        if (!eventsAreValid) {
+        if (!parsedEvents.success) {
           return HttpResponse.json(
             { error: 'Invalid Event Array' },
             { headers: CORS_HEADERS, status: 400 },
           )
         }
 
-        return HttpResponse.json(getResponseBody(undefined, events), {
+        return HttpResponse.json(getResponseBody(undefined, parsedEvents.data), {
           headers: CORS_HEADERS,
         })
       },
@@ -179,7 +217,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
       `${baseUrl}v2/organizations/:organizationId/environments/:environment/profiles/:profileId`,
       async ({ params, request }) => {
         try {
-          await ensureFixturesLoaded()
+          await ensureFixturesLoaded(dependencies)
         } catch {
           return fixturesUnavailableResponse()
         }
@@ -193,17 +231,17 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
           )
         }
 
-        const { events } = await parseJson<ExperienceRequestData>(request)
-        const { success: eventsAreValid } = ExperienceEventArray.safeParse(events)
+        const { events } = await parseJson<{ events: unknown }>(request)
+        const parsedEvents = dependencies.experienceEventArray.safeParse(events)
 
-        if (!eventsAreValid) {
+        if (!parsedEvents.success) {
           return HttpResponse.json(
             { error: 'Invalid Event Array' },
             { headers: CORS_HEADERS, status: 400 },
           )
         }
 
-        return HttpResponse.json(getResponseBody(profileId.toString(), events), {
+        return HttpResponse.json(getResponseBody(profileId.toString(), parsedEvents.data), {
           headers: CORS_HEADERS,
         })
       },
@@ -214,7 +252,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
       `${baseUrl}v2/organizations/:organizationId/environments/:environment/profiles/:profileId`,
       async ({ params }) => {
         try {
-          await ensureFixturesLoaded()
+          await ensureFixturesLoaded(dependencies)
         } catch {
           return fixturesUnavailableResponse()
         }
@@ -239,26 +277,26 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
       `${baseUrl}v2/organizations/:organizationId/environments/:environment/events`,
       async ({ request }) => {
         try {
-          await ensureFixturesLoaded()
+          await ensureFixturesLoaded(dependencies)
         } catch {
           return fixturesUnavailableResponse()
         }
 
-        const { events } = await parseJson<{ events: BatchExperienceEventArray }>(request)
-        const { success: eventsAreValid } = BatchExperienceEventArray.safeParse(events)
+        const { events } = await parseJson<{ events: unknown }>(request)
+        const parsedEvents = dependencies.batchExperienceEventArray.safeParse(events)
 
-        const profileId = events.find((event) => event.anonymousId)?.anonymousId
-
-        if (!eventsAreValid) {
+        if (!parsedEvents.success) {
           return HttpResponse.json(
             { error: 'Invalid Batch Event Array' },
             { headers: CORS_HEADERS, status: 400 },
           )
         }
 
+        const profileId = parsedEvents.data.find((event) => event.anonymousId)?.anonymousId
+
         // Just send one, no matter what
         return HttpResponse.json(
-          { data: { profiles: [getResponseBody(profileId, events)] } },
+          { data: { profiles: [getResponseBody(profileId, parsedEvents.data)] } },
           {
             headers: CORS_HEADERS,
           },

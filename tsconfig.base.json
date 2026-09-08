@@ -22,7 +22,6 @@
       "@contentful/optimization-api-client": ["./packages/universal/api-client/src/index.ts"],
       "@contentful/optimization-api-client/*": ["./packages/universal/api-client/src/*"],
       "@contentful/optimization-api-schemas": ["./packages/universal/api-schemas/src/index.ts"],
-      "@contentful/optimization-api-schemas/*": ["./packages/universal/api-schemas/src/*"],
       "@contentful/optimization-core": ["./packages/universal/core-sdk/src/index.ts"],
       "@contentful/optimization-core/*": ["./packages/universal/core-sdk/src/*"],
       "@contentful/optimization-node": ["./packages/node/node-sdk/src/index.ts"],

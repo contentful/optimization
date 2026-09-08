@@ -1,9 +1,9 @@
 import type {
   ChangeArray,
-  OptimizationEntry,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { signal } from '@preact/signals-core'
+import type { OptimizationEntry } from '../contentful'
 import type { OptimizationSelectionState } from '../handoff'
 import { InterceptorManager } from '../lib/interceptor'
 import { PreviewOverrideManager } from './PreviewOverrideManager'

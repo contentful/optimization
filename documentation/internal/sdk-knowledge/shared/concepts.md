@@ -69,7 +69,7 @@ never fetches. source: core-sdk#CoreBase.ts#ContentfulConfig
 Fetch with ONE concrete locale and an `include` depth deep enough to cover the page, its sections,
 and linked variant entries. All-locale payloads (`withAllLocales` / CDA `locale=*`) use locale-keyed
 field maps the resolver cannot read ⇒ entries fall back to baseline.
-source: core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext; api-schemas#contentful/typeGuards.ts#isResolvedOptimizedEntry; concept:entry-personalization-and-variant-resolution
+source: core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext; core-sdk#contentful/typeGuards.ts#isResolvedOptimizedEntry; concept:entry-personalization-and-variant-resolution
 
 Contentful GraphQL Content API responses are schema-shaped, not `contentful.js` Entry-shaped: the
 generated schema exposes `sys`, `contentfulMetadata`, and typed content fields directly; Object
@@ -87,7 +87,7 @@ optimization entry under it must validate as `nt_experience` with SDK-owned `nt_
 a matching component and variant entries in `nt_variants` are already resolved entries for the
 selected variant ID. A resolved linked variant can use any content type; unresolved or structurally
 invalid links return the baseline.
-source: core-sdk#CoreBase.ts#resolveOptimizedEntry; api-schemas#contentful/typeGuards.ts#isResolvedContentfulEntry; api-schemas#contentful/typeGuards.ts#isResolvedOptimizedEntry; api-schemas#contentful/typeGuards.ts#isResolvedOptimizationEntry; api-schemas#contentful/OptimizedEntry.ts#OptimizedEntryFields; api-schemas#contentful/OptimizationEntry.ts#OptimizationEntryFields; core-sdk#resolvers/OptimizedEntryResolver.ts#getOptimizationEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry
+source: core-sdk#CoreBase.ts#resolveOptimizedEntry; core-sdk#contentful/typeGuards.ts#isResolvedContentfulEntry; core-sdk#contentful/typeGuards.ts#isResolvedOptimizedEntry; core-sdk#contentful/typeGuards.ts#isResolvedOptimizationEntry; core-sdk#contentful/OptimizedEntry.ts#OptimizedEntryFields; core-sdk#contentful/OptimizationEntry.ts#OptimizationEntryFields; core-sdk#resolvers/OptimizedEntryResolver.ts#getOptimizationEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry
 
 Entry resolution on Android and iOS uses this same contract. The native JavaScript bridge forwards the
 baseline entry and selections to `CoreStateful.resolveOptimizedEntry` and serializes the Core result
@@ -99,7 +99,7 @@ any structurally resolved selected link regardless of content type.
 source: core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry; extern:TypeScript type parameters are erased at runtime
 
 `isEntryOfContentType` compares only `sys.contentType.sys.id`; it does not validate entry fields.
-source: api-schemas#contentful/typeGuards.ts#isEntryOfContentType
+source: core-sdk#contentful/typeGuards.ts#isEntryOfContentType
 
 GraphQL integrations that keep app-owned fetching must query enough optimization-owned fields
 (`nt_experiences`, each linked `nt_experience` entry's `nt_name`, `nt_type`, `nt_config`,
@@ -114,7 +114,7 @@ Entry replacement depends on two fixed SDK content-model fields: a baseline entr
 experience's `fields.nt_variants` contains the linked replacement entries. These names are
 SDK-owned, not application aliases. If either link is unresolved or absent from the fetched payload,
 the resolver cannot select the authored replacement and returns baseline.
-source: api-schemas#contentful/OptimizedEntry.ts#OptimizedEntryFields; api-schemas#contentful/OptimizationEntry.ts#OptimizationEntryFields; core-sdk#resolvers/OptimizedEntryResolver.ts#getOptimizationEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry
+source: core-sdk#contentful/OptimizedEntry.ts#OptimizedEntryFields; core-sdk#contentful/OptimizationEntry.ts#OptimizationEntryFields; core-sdk#resolvers/OptimizedEntryResolver.ts#getOptimizationEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry
 
 After an attached `nt_experience` entry matches a selection by
 `selectedOptimization.experienceId === optimizationEntry.fields.nt_experience_id`, the resolver reads
@@ -124,13 +124,13 @@ positive variant indexes are one-based into that component's `variants`. Missing
 a hidden baseline component, an out-of-range or invalid selected variant, or a linked variant in
 `nt_variants` that is unresolved or structurally invalid returns the baseline. An empty variant
 (`id === ""`) returns the baseline with `isEmptyVariant: true`.
-source: core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedOptimization; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariant; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext; api-schemas#contentful/OptimizationConfig.ts#normalizeOptimizationConfig
+source: core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedOptimization; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariant; core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariantEntry; core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext; core-sdk#contentful/OptimizationConfig.ts#normalizeOptimizationConfig
 
 `SelectedOptimization.variants` is not read during entry resolution; public cache identity includes
 it through the selection fingerprint. Keep it consistent with the source selection because cache
 keys can change when the variant map changes even though the resolver chooses from `nt_config` and
 `nt_variants`.
-source: core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariant; core-sdk#handoff.ts#formatVariants; core-sdk#handoff.ts#createSelectionFingerprint; api-schemas#experience/optimization/SelectedOptimization.ts#SelectedOptimization
+source: core-sdk#resolvers/OptimizedEntryResolver.ts#getSelectedVariant; core-sdk#handoff.ts#formatVariants; core-sdk#handoff.ts#createSelectionFingerprint; api-client#schemas/experience/optimization/SelectedOptimization.ts#SelectedOptimization
 
 Merge tags are a separate, profile-backed mechanism rather than entry replacement. Pass only a
 value accepted by `isMergeTagEntry` to `getMergeTagValue`; the resolver reads the merge-tag selector
@@ -139,7 +139,7 @@ from `fields.nt_mergetag_id`, looks it up in the supplied/current profile, and f
 embedded entry target before applying the guard. Import `documentToReactComponents` from
 `@contentful/rich-text-react-renderer`; import `INLINES` and Rich Text document types from
 `@contentful/rich-text-types`.
-source: api-schemas#contentful/typeGuards.ts#isMergeTagEntry; api-schemas#contentful/MergeTagEntry.ts#MergeTagEntryFields; core-sdk#resolvers/MergeTagValueResolver.ts#resolve; react-web-sdk#optimized-entry/optimizedEntryUtils.ts#OptimizedEntryRenderContext; impl:nextjs-sdk_app-router#components/EntryCardContent.tsx
+source: core-sdk#contentful/typeGuards.ts#isMergeTagEntry; core-sdk#contentful/MergeTagEntry.ts#MergeTagEntryFields; core-sdk#resolvers/MergeTagValueResolver.ts#resolve; react-web-sdk#optimized-entry/optimizedEntryUtils.ts#OptimizedEntryRenderContext; impl:nextjs-sdk_app-router#components/EntryCardContent.tsx
 
 Resolution itself does NOT read consent. The resolver takes only `(entry, selectedOptimizations)` and
 returns variant-or-baseline purely from whether a selection matches; consent gates event _emission_
@@ -230,13 +230,13 @@ Event-stream payloads carry each event's normal schema plus universal event fiel
 `messageId`, `channel`, `context`, and timestamps. Optimized-entry interactions add `optimization`
 context only to the stream payload, not to the strict API payload. Flag-view stream events are not
 enriched with `optimization`.
-source: api-schemas#experience/event/UniversalEventProperties.ts#UniversalEventProperties; core-sdk#queues/ExperienceQueue.ts#send; core-sdk#queues/InsightsQueue.ts#send; core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent
+source: api-client#schemas/experience/event/UniversalEventProperties.ts#UniversalEventProperties; core-sdk#queues/ExperienceQueue.ts#send; core-sdk#queues/InsightsQueue.ts#send; core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent
 
 The runtime event stream is model-agnostic because one long-lived stream carries interactions for
 entries of every content type. Its optimization context retains baseline and resolved entries, but
 resolver-specific entry modeling cannot flow into a later event emission; consumers narrow each
 resolved entry with `isEntryOfContentType` at the point of use.
-source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#events/OptimizationEventStreamEvent.ts#EventOptimizationContext; core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent; api-schemas#contentful/typeGuards.ts#isEntryOfContentType
+source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#events/OptimizationEventStreamEvent.ts#EventOptimizationContext; core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent; core-sdk#contentful/typeGuards.ts#isEntryOfContentType
 
 Consent-blocked stateful events stop before API delivery or queueing: Experience methods return
 `{ accepted: false }`, Insights methods return without enqueueing, and Core writes only
@@ -258,7 +258,7 @@ selections so consumers never see `!pending` while optimization is still unavail
 state interceptors are field-presence aware: omitted interceptor fields keep the original payload
 field, while an own present `undefined` field is applied intentionally. A stateless SDK returns the
 same payload per request instead of holding it.
-source: api-schemas#experience/ExperienceResponse.ts#OptimizationData; api-schemas#experience/ExperienceResponse.ts#ExperienceData; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals
+source: api-client#schemas/experience/ExperienceResponse.ts#OptimizationData; api-client#schemas/experience/ExperienceResponse.ts#ExperienceData; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals
 
 Event-method acceptance and response data are separate: `EventEmissionResult` is
 `{ accepted: false } | { accepted: true, data?: OptimizationData }`. An accepted queued/offline

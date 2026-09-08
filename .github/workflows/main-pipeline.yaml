@@ -1071,7 +1071,7 @@ jobs:
 
       - name: Start Mock Server
         run: |
-          pnpm --dir lib/mocks serve > /tmp/mock-server.log 2>&1 &
+          pnpm serve:mocks > /tmp/mock-server.log 2>&1 &
           echo $! > /tmp/mock-server.pid
           for i in {1..60}; do
             if nc -z localhost 8000 2>/dev/null; then
@@ -1387,7 +1387,7 @@ jobs:
 
       - name: Start Mock Server
         run: |
-          pnpm --dir lib/mocks serve > /tmp/mock-server.log 2>&1 &
+          pnpm serve:mocks > /tmp/mock-server.log 2>&1 &
           echo $! > /tmp/mock-server.pid
           for i in {1..60}; do
             if nc -z localhost 8000 2>/dev/null; then
@@ -1503,7 +1503,7 @@ jobs:
 
       - name: Start Mock Server
         run: |
-          pnpm --dir lib/mocks serve > /tmp/mock-server.log 2>&1 &
+          pnpm serve:mocks > /tmp/mock-server.log 2>&1 &
           echo $! > /tmp/mock-server.pid
           for i in {1..60}; do
             if nc -z localhost 8000 2>/dev/null; then

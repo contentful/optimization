@@ -10,7 +10,7 @@
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:app": "pm2 start --name node-app \"tsx --env-file=.env ./src/app.ts\"",
     "serve:app:stop": "pm2 stop node-app && pm2 delete node-app",
-    "serve:mocks": "pm2 start --name node-mocks \"pnpm --dir ../../lib/mocks serve\"",
+    "serve:mocks": "pm2 start --name node-mocks \"pnpm --dir ../.. serve:mocks\"",
     "serve:mocks:stop": "pm2 stop node-mocks && pm2 delete node-mocks",
     "serve:stop": "pnpm serve:app:stop; pnpm serve:mocks:stop",
     "test:e2e": "sh -c 'pnpm serve && playwright test \"$@\"; E2E_RESULT=$?; pnpm serve:stop; exit $E2E_RESULT' --",

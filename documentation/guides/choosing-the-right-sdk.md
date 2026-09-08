@@ -46,6 +46,13 @@ entry fetching. Keep manual fetching when the app needs full delivery control.
 
 Use Core only when building a custom runtime or framework adapter and no official package fits.
 
+For schema imports in a JavaScript app, use the `/api-schemas` pass-through from the application SDK
+that the app already installs. If no application SDK fits, use
+`@contentful/optimization-api-client/api-schemas` for Experience API and Insights API schemas and
+validation helpers. Use `@contentful/optimization-core/api-schemas` when you also need Contentful
+Content Delivery API (CDA) schemas; Core includes those schemas and passes through the API Client
+schema surface.
+
 For mobile apps, choose `@contentful/optimization-react-native` when the mobile app is built with
 JavaScript or TypeScript in React Native. Choose the native iOS or Android SDK for
 platform-native apps.
@@ -83,9 +90,12 @@ Use this table to choose the primary package and the next integration guide:
   tests, or first-party integrations that need direct Experience API or Insights API transport
   without SDK state, consent handling, event builders, entry resolution, tracking, or platform
   defaults.
-- **API schemas** - Use `@contentful/optimization-api-schemas` when you need shared runtime
-  validation schemas or inferred TypeScript types for Contentful CDA, Experience API, and Insights
-  API payloads.
+- **API schemas** - In a JavaScript application, use the installed application SDK's `/api-schemas`
+  pass-through. For lower-level consumers, use `@contentful/optimization-api-client/api-schemas`
+  for Experience API and Insights API schemas and validation helpers. Use
+  `@contentful/optimization-core/api-schemas` for the aggregate surface, including Contentful CDA
+  schemas and the API Client schema pass-throughs. `@contentful/optimization-api-schemas` is a
+  deprecated compatibility facade and is not recommended for new integrations.
 - **Native JavaScript bridge** - `@contentful/optimization-js-bridge` is internal bridge
   infrastructure for the native iOS and Android SDKs. Native applications use the
   `ContentfulOptimization` Swift Package or `com.contentful.java:optimization-android` instead.

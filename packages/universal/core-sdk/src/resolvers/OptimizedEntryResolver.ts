@@ -1,3 +1,5 @@
+import { createScopedLogger } from '@contentful/optimization-api-client/logger'
+import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import {
   type EntryReplacementComponent,
   type EntryReplacementVariant,
@@ -12,9 +14,7 @@ import {
   type OptimizedEntry,
   type SelectedOptimization,
   type SelectedOptimizationArray,
-} from '@contentful/optimization-api-client/api-schemas'
-import { createScopedLogger } from '@contentful/optimization-api-client/logger'
-import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
+} from '../api-schemas'
 import type { EventOptimizationContext } from '../events'
 
 const logger = createScopedLogger('Optimization')

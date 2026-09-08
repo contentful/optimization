@@ -1,1 +1,1 @@
-export * from '@contentful/optimization-api-schemas'
+export * from './schemas'

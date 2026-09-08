@@ -2,13 +2,12 @@
  * Contentful Optimization API Schema Library.
  *
  * @remarks
- * A collection of Zod Mini schemas and their inferred TypeScript types
- * that provide run-time validation for Optimization SDK API requests
- * and responses.
+ * @deprecated This compatibility facade preserves the combined historical
+ * API-schema surface. Import Experience and Insights API schemas from
+ * `@contentful/optimization-api-client/api-schemas` and CDA schemas from
+ * `@contentful/optimization-core/api-schemas` instead.
  *
  * @packageDocumentation
  */
-export * from './contentful'
-export * from './experience'
-export * from './insights'
-export * from './validation'
+export * from '@contentful/optimization-api-client/api-schemas'
+export * from '@contentful/optimization-core/api-schemas'

@@ -145,4 +145,6 @@ E2E tests are run using Playwright.
 - [@contentful/optimization-node](../../packages/node/node-sdk/README.md) - Node SDK package
 - [Node SDK SSR + Web SDK Vanilla JS reference implementation](../node-sdk+web-sdk/README.md) -
   Hybrid server/browser reference implementation
-- [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures
+- [Mock server](../../lib/mock-server/README.md) - HTTP composition for local development and
+  reference implementations
+- [Mocks package](../../lib/mocks/README.md) - Shared handlers and fixtures

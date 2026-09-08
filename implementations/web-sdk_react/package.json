@@ -14,7 +14,7 @@
     "serve:e2e": "rsbuild build && rsbuild preview",
     "serve:app": "pnpm build && pm2 start --name web-sdk_react-app \"rsbuild preview\"",
     "serve:app:stop": "pm2 stop web-sdk_react-app && pm2 delete web-sdk_react-app",
-    "serve:mocks": "pm2 start --name web-sdk_react-mocks \"pnpm --dir ../../lib/mocks serve\"",
+    "serve:mocks": "pm2 start --name web-sdk_react-mocks \"pnpm --dir ../.. serve:mocks\"",
     "serve:mocks:stop": "pm2 stop web-sdk_react-mocks && pm2 delete web-sdk_react-mocks",
     "serve:stop": "pnpm serve:app:stop; pnpm serve:mocks:stop",
     "test:e2e": "IMPLEMENTATION=web-sdk_react pnpm --dir ../../lib/e2e-web test",

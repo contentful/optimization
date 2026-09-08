@@ -17,7 +17,7 @@ App Router surface: see [`nextjs-app-router.md`](./nextjs-app-router.md).
 | `@contentful/optimization-nextjs/pages-router/server` | **Server** binding helper for `createRequestHandoff`; also exports public permutation handoff helpers, selection resolution, `prefetchManagedEntries`, `ManagedEntryDescriptor`, `ManagedEntryHandoff`       | `nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization`; `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterOptimization`; `nextjs-sdk#pages-router-server.ts`; `core-sdk#CoreBase.ts#prefetchManagedEntries`; `core-sdk#CoreBase.ts#ManagedEntryDescriptor`; `core-sdk#CoreBase.ts#ManagedEntryHandoff` |
 | `@contentful/optimization-nextjs/client`              | Browser-only hooks + per-entry controls                                                                                                                                                                      | `nextjs-sdk#client.ts`; `nextjs-sdk#../package.json`                                                                                                                                                                                                                                                                          |
 | `@contentful/optimization-nextjs/server`              | Manual server SDK control (escape hatches)                                                                                                                                                                   | `nextjs-sdk#server.tsx`; `nextjs-sdk#../package.json`                                                                                                                                                                                                                                                                         |
-| `@contentful/optimization-nextjs/api-schemas`         | Type guards `isMergeTagEntry`, `isResolvedContentfulEntry`                                                                                                                                                   | `nextjs-sdk#api-schemas.ts`; `api-schemas#contentful/typeGuards.ts#isMergeTagEntry`; `api-schemas#contentful/typeGuards.ts#isResolvedContentfulEntry`                                                                                                                                                                         |
+| `@contentful/optimization-nextjs/api-schemas`         | Type guards `isMergeTagEntry`, `isResolvedContentfulEntry`                                                                                                                                                   | `nextjs-sdk#api-schemas.ts`; `core-sdk#contentful/typeGuards.ts#isMergeTagEntry`; `core-sdk#contentful/typeGuards.ts#isResolvedContentfulEntry`                                                                                                                                                                               |
 
 Note: `/pages-router` and `/pages-router/server` export separate binding helpers:
 `bindNextjsPagesRouterOptimization` for the browser component set and
@@ -123,7 +123,7 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
   empty result while omitting consumer children. An absent empty-variant flag renders normally.
   source: `nextjs-sdk#server-entry-renderer.tsx#renderOptimizedEntryOnServer`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`
 - Merge tags: guard embedded nodes with `isMergeTagEntry`; pass node `target` to `getMergeTagValue`.
-  source: `api-schemas#contentful/typeGuards.ts#isMergeTagEntry`; `core-sdk#CoreBase.ts#getMergeTagValue`.
+  source: `core-sdk#contentful/typeGuards.ts#isMergeTagEntry`; `core-sdk#CoreBase.ts#getMergeTagValue`.
 
 ## Identifier ownership
 
@@ -156,7 +156,7 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
   `routeKey`) are nested under `.context`, NOT top-level ⇒ destructure
   `({ context: { pathname } }) => ...`. Arbitrary `properties` keys are allowed (`Page` is
   `z.catchall(z.json())`).
-  source: `react-web-sdk#auto-page/types.ts#AutoPageEmissionContext`; `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageContext`; `react-web-sdk#auto-page/pagePayload.ts#buildAutoPagePayload`; `api-schemas#experience/event/properties/Page.ts#Page`; `core-sdk#events/EventBuilder.ts#PageViewBuilderArgs`.
+  source: `react-web-sdk#auto-page/types.ts#AutoPageEmissionContext`; `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageContext`; `react-web-sdk#auto-page/pagePayload.ts#buildAutoPagePayload`; `api-client#schemas/experience/event/properties/Page.ts#Page`; `core-sdk#events/EventBuilder.ts#PageViewBuilderArgs`.
 - Bound `createRequestHandoff(context, options)` forwards `options.pagePayload` through the Pages
   Router request helper to the request-bound `page()` call, so it shapes the first server page event.
   The returned browser handoff carries explicit `initialPageEvent`; it is `'skip'` exactly when that

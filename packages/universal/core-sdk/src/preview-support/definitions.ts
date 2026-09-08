@@ -1,4 +1,3 @@
-import type { OptimizationType } from '@contentful/optimization-api-client/api-schemas'
 import type {
   ChainModifiers,
   EntriesQueries,
@@ -7,6 +6,7 @@ import type {
   EntrySkeletonType,
   LocaleCode,
 } from 'contentful'
+import type { OptimizationType } from '../contentful'
 
 /**
  * Audience definition from the optimization platform.

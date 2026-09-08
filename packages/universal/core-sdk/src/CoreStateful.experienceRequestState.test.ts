@@ -1,4 +1,4 @@
-import type { ExperienceResponse } from '@contentful/optimization-api-schemas'
+import type { ExperienceResponse } from '@contentful/optimization-api-client/api-schemas'
 import { http, HttpResponse } from 'msw'
 import CoreStateful, { type CoreStatefulConfig } from './CoreStateful'
 import { batch, signals, type ExperienceRequestState } from './signals'

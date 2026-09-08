@@ -384,12 +384,12 @@ function runSelfCheck(): void {
   ]).map((target) => target.name)
 
   assert(
-    sortedNames.indexOf('@contentful/optimization-api-schemas') <
-      sortedNames.indexOf('@contentful/optimization-api-client'),
-  )
-  assert(
     sortedNames.indexOf('@contentful/optimization-api-client') <
       sortedNames.indexOf('@contentful/optimization-core'),
+  )
+  assert(
+    sortedNames.indexOf('@contentful/optimization-core') <
+      sortedNames.indexOf('@contentful/optimization-api-schemas'),
   )
   assert(
     sortedNames.indexOf('@contentful/optimization-core') <

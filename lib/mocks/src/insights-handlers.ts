@@ -1,8 +1,11 @@
-import type { BatchInsightsEventArray } from '@contentful/optimization-api-schemas'
 import { http, type HttpHandler, HttpResponse } from 'msw'
 
+interface InsightBatchEvent {
+  profile: { id?: string; stableId?: string }
+}
+
 // Minimal in-memory store
-const eventsStore: BatchInsightsEventArray = []
+const eventsStore: InsightBatchEvent[] = []
 
 // Helper to parse JSON whether body is application/json or text/plain
 async function parseJson<T>(req: Request): Promise<T> {
@@ -51,7 +54,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
       `${baseUrl}v1/organizations/:organizationId/environments/:environmentSlug/events`,
       async ({ request }) => {
         try {
-          const payload = await parseJson<BatchInsightsEventArray>(request)
+          const payload = await parseJson<InsightBatchEvent[]>(request)
 
           eventsStore.push(...payload)
 

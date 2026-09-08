@@ -1,14 +1,18 @@
-import { isRecord } from '@contentful/optimization-api-schemas'
 import { http, type HttpHandler, HttpResponse } from 'msw'
 import { readdir, readFile } from 'node:fs/promises'
-import path from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const BASE_DIR = './src/contentful/data/entries'
-const SPACE_DATA_PATH = './src/contentful/data/space/ctfl-space-data.json'
+const _filename = fileURLToPath(import.meta.url)
+const _dirname = dirname(_filename)
+const BASE_DIR = resolve(_dirname, './contentful/data/entries')
+const SPACE_DATA_PATH = resolve(_dirname, './contentful/data/space/ctfl-space-data.json')
 /** Mirrors the `limit` Contentful SDKs send when reading the space's locales. */
 const LOCALES_LIMIT = 1000
 
-function getContentTypeId(entry: Record<string, unknown>): string | undefined {
+export type IsRecord = (value: unknown) => value is Record<string, unknown>
+
+function getContentTypeId(isRecord: IsRecord, entry: Record<string, unknown>): string | undefined {
   const { sys } = entry
   if (!isRecord(sys)) return undefined
   const { contentType } = sys
@@ -18,7 +22,10 @@ function getContentTypeId(entry: Record<string, unknown>): string | undefined {
   return typeof innerSys.id === 'string' ? innerSys.id : undefined
 }
 
-function extractEntriesFromFile(json: Record<string, unknown>): Array<Record<string, unknown>> {
+function extractEntriesFromFile(
+  isRecord: IsRecord,
+  json: Record<string, unknown>,
+): Array<Record<string, unknown>> {
   const entries: Array<Record<string, unknown>> = []
 
   const { items } = json
@@ -41,7 +48,7 @@ function extractEntriesFromFile(json: Record<string, unknown>): Array<Record<str
   return entries
 }
 
-async function loadAllEntries(): Promise<Array<Record<string, unknown>>> {
+async function loadAllEntries(isRecord: IsRecord): Promise<Array<Record<string, unknown>>> {
   const files = await readdir(BASE_DIR)
   const jsonFiles = files.filter((f) => f.endsWith('.json'))
 
@@ -49,12 +56,12 @@ async function loadAllEntries(): Promise<Array<Record<string, unknown>>> {
   const seenIds = new Set<string>()
 
   for (const file of jsonFiles) {
-    const filePath = path.join(BASE_DIR, file)
+    const filePath = join(BASE_DIR, file)
     const text = await readFile(filePath, 'utf8')
     const json: unknown = JSON.parse(text)
     if (!isRecord(json)) continue
 
-    const entries = extractEntriesFromFile(json)
+    const entries = extractEntriesFromFile(isRecord, json)
     for (const entry of entries) {
       const { sys } = entry
       if (isRecord(sys) && typeof sys.id === 'string' && !seenIds.has(sys.id)) {
@@ -70,14 +77,15 @@ async function loadAllEntries(): Promise<Array<Record<string, unknown>>> {
 const CORS_HEADERS = { 'Access-Control-Allow-Origin': '*' }
 
 async function handleContentTypeQuery(
+  isRecord: IsRecord,
   contentType: string,
   searchParams: URLSearchParams,
 ): Promise<Response> {
   try {
-    const allEntries = await loadAllEntries()
+    const allEntries = await loadAllEntries(isRecord)
     const fieldFilters = [...searchParams].filter(([name]) => name.startsWith('fields.'))
     const filtered = allEntries.filter((entry) => {
-      if (getContentTypeId(entry) !== contentType) return false
+      if (getContentTypeId(isRecord, entry) !== contentType) return false
 
       const { fields } = entry
       return fieldFilters.every(
@@ -119,7 +127,10 @@ async function handleContentTypeQuery(
  * cannot decode entries without it. `contentful.js` sends `locale` to the API
  * instead, so web consumers never request it.
  */
-async function handleLocalesQuery(searchParams: URLSearchParams): Promise<Response> {
+async function handleLocalesQuery(
+  isRecord: IsRecord,
+  searchParams: URLSearchParams,
+): Promise<Response> {
   try {
     const text = await readFile(SPACE_DATA_PATH, 'utf8')
     const json: unknown = JSON.parse(text)
@@ -153,7 +164,10 @@ async function handleLocalesQuery(searchParams: URLSearchParams): Promise<Respon
  * `contentful.java` requires this to resolve Rich Text fields and 404s hard without it;
  * `contentful.js` and `contentful.swift` don't request it.
  */
-async function handleContentTypesQuery(searchParams: URLSearchParams): Promise<Response> {
+async function handleContentTypesQuery(
+  isRecord: IsRecord,
+  searchParams: URLSearchParams,
+): Promise<Response> {
   try {
     const text = await readFile(SPACE_DATA_PATH, 'utf8')
     const json: unknown = JSON.parse(text)
@@ -199,17 +213,20 @@ function handleEntryIdError(err: unknown, entryId: string): Response {
   )
 }
 
-async function loadEntryFixture(entryId: string): Promise<Record<string, unknown>> {
-  const filePath = path.join(BASE_DIR, `${entryId}.json`)
+async function loadEntryFixture(
+  isRecord: IsRecord,
+  entryId: string,
+): Promise<Record<string, unknown>> {
+  const filePath = join(BASE_DIR, `${entryId}.json`)
   const text = await readFile(filePath, 'utf8')
   const json: unknown = JSON.parse(text)
   if (!isRecord(json)) throw new Error()
   return json
 }
 
-async function handleEntryIdQuery(entryId: string): Promise<Response> {
+async function handleEntryIdQuery(isRecord: IsRecord, entryId: string): Promise<Response> {
   try {
-    return HttpResponse.json(await loadEntryFixture(entryId), {
+    return HttpResponse.json(await loadEntryFixture(isRecord, entryId), {
       headers: CORS_HEADERS,
       status: 200,
     })
@@ -218,13 +235,13 @@ async function handleEntryIdQuery(entryId: string): Promise<Response> {
   }
 }
 
-async function handleEntryIdsQuery(entryIds: string): Promise<Response> {
+async function handleEntryIdsQuery(isRecord: IsRecord, entryIds: string): Promise<Response> {
   try {
     const fixtures = (
       await Promise.all(
         entryIds.split(',').map(async (entryId) => {
           try {
-            return await loadEntryFixture(entryId)
+            return await loadEntryFixture(isRecord, entryId)
           } catch (error) {
             if (isRecord(error) && error.code === 'ENOENT') return undefined
             throw error
@@ -262,6 +279,7 @@ async function handleEntryIdsQuery(entryIds: string): Promise<Response> {
 /**
  * Returns MSW request handlers that mock the Contentful Content Delivery API.
  *
+ * @param isRecord - Injected guard that identifies object records in fixture data.
  * @param baseUrl - URL prefix prepended to each route pattern.
  * @returns An array of {@link HttpHandler} instances for use with MSW.
  *
@@ -274,12 +292,14 @@ async function handleEntryIdsQuery(entryIds: string): Promise<Response> {
  * import { setupServer } from 'msw/node'
  * import { getHandlers } from './contentful-handlers'
  *
- * const server = setupServer(...getHandlers())
+ * const isRecord = (value: unknown): value is Record<string, unknown> =>
+ *   typeof value === 'object' && value !== null && !Array.isArray(value)
+ * const server = setupServer(...getHandlers(isRecord))
  * ```
  *
  * @public
  */
-export function getHandlers(baseUrl = '*'): HttpHandler[] {
+export function getHandlers(isRecord: IsRecord, baseUrl = '*'): HttpHandler[] {
   return [
     // CORS preflight for Beacon/fetch
     http.options('*', () =>
@@ -295,12 +315,13 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
 
     http.get(
       `${baseUrl}spaces/:spaceId/environments/:environmentId/locales`,
-      async ({ request }) => await handleLocalesQuery(new URL(request.url).searchParams),
+      async ({ request }) => await handleLocalesQuery(isRecord, new URL(request.url).searchParams),
     ),
 
     http.get(
       `${baseUrl}spaces/:spaceId/environments/:environmentId/content_types`,
-      async ({ request }) => await handleContentTypesQuery(new URL(request.url).searchParams),
+      async ({ request }) =>
+        await handleContentTypesQuery(isRecord, new URL(request.url).searchParams),
     ),
 
     http.get(
@@ -312,15 +333,15 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
         const contentType = url.searchParams.get('content_type')
 
         if (contentType) {
-          return await handleContentTypeQuery(contentType, url.searchParams)
+          return await handleContentTypeQuery(isRecord, contentType, url.searchParams)
         }
 
         if (entryId) {
-          return await handleEntryIdQuery(entryId)
+          return await handleEntryIdQuery(isRecord, entryId)
         }
 
         if (entryIds) {
-          return await handleEntryIdsQuery(entryIds)
+          return await handleEntryIdsQuery(isRecord, entryIds)
         }
 
         return HttpResponse.json(

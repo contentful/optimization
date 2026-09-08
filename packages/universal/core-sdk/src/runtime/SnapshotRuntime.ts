@@ -1,13 +1,13 @@
 import type {
   ChangeArray,
   Json,
-  MergeTagEntry,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { hasEventConsent, UNLOCKING_EVENT_TYPES } from '../consent/ConsentPolicy'
+import type { MergeTagEntry } from '../contentful'
 import type { CoreStates } from '../CoreStateful'
 import type { EventEmissionResult } from '../events/EventEmissionResult'
 import { type AllowedEventType, DEFAULT_ALLOWED_EVENT_TYPES } from '../events/EventType'

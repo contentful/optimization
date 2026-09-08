@@ -46,7 +46,7 @@ check_mock_server() {
     log_error "Mock server is not running on port ${MOCK_SERVER_PORT}."
     log_error ""
     log_error "Start it in a separate terminal from the monorepo root:"
-    log_error "  pnpm --dir lib/mocks serve"
+    log_error "  pnpm serve:mocks"
     log_error ""
     log_error "Or use the bootstrap script to launch mock + app together:"
     log_error "  ./scripts/bootstrap.sh"

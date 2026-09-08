@@ -106,4 +106,4 @@ cd implementations/android-sdk
 
 - [Android reference app README](../README.md)
 - [iOS reference app scripts](../../ios-sdk/scripts/README.md)
-- [Mock server](../../../lib/mocks/README.md)
+- [Mock server](../../../lib/mock-server/README.md)

@@ -9,7 +9,6 @@
       "@contentful/optimization-api-client": ["../../universal/api-client/src/index.ts"],
       "@contentful/optimization-api-client/*": ["../../universal/api-client/src/*"],
       "@contentful/optimization-api-schemas": ["../../universal/api-schemas/src/index.ts"],
-      "@contentful/optimization-api-schemas/*": ["../../universal/api-schemas/src/*"],
       "@contentful/optimization-core": ["../../universal/core-sdk/src/index.ts"],
       "@contentful/optimization-core/*": ["../../universal/core-sdk/src/*"],
       "@contentful/optimization-react-native": ["../src/index.ts"],

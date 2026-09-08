@@ -358,9 +358,9 @@ start_mock_server() {
     
     cd "$ROOT_DIR"
     if [[ "$STREAM_BACKGROUND_LOGS" == "true" ]]; then
-        pnpm --dir "$ROOT_DIR/lib/mocks" serve 2>&1 | tee "$MOCK_SERVER_LOG" &
+        pnpm --dir "$ROOT_DIR" serve:mocks 2>&1 | tee "$MOCK_SERVER_LOG" &
     else
-        pnpm --dir "$ROOT_DIR/lib/mocks" serve > "$MOCK_SERVER_LOG" 2>&1 &
+        pnpm --dir "$ROOT_DIR" serve:mocks > "$MOCK_SERVER_LOG" 2>&1 &
     fi
     MOCK_SERVER_PID=$!
     

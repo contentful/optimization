@@ -9,7 +9,7 @@ import {
   type BatchExperienceResponseData,
   type ExperienceRequestOptions as ExperienceRequestBodyOptions,
   type OptimizationData,
-} from '@contentful/optimization-api-schemas'
+} from '../api-schemas'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 import { createScopedLogger } from '../logger'
 

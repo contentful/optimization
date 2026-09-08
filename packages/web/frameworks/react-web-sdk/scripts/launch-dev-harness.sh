@@ -246,9 +246,9 @@ start_mock_server() {
     log_info "Starting mock server on port ${MOCK_SERVER_PORT}..."
 
     if [[ "$STREAM_BACKGROUND_LOGS" == "true" ]]; then
-        PORT="${MOCK_SERVER_PORT}" pnpm --dir "${ROOT_DIR}/lib/mocks" serve 2>&1 | tee "$MOCK_SERVER_LOG" &
+        PORT="${MOCK_SERVER_PORT}" pnpm --dir "${ROOT_DIR}" serve:mocks 2>&1 | tee "$MOCK_SERVER_LOG" &
     else
-        PORT="${MOCK_SERVER_PORT}" pnpm --dir "${ROOT_DIR}/lib/mocks" serve > "$MOCK_SERVER_LOG" 2>&1 &
+        PORT="${MOCK_SERVER_PORT}" pnpm --dir "${ROOT_DIR}" serve:mocks > "$MOCK_SERVER_LOG" 2>&1 &
     fi
     MOCK_SERVER_PID=$!
 

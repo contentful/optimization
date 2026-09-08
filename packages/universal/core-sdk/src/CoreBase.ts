@@ -8,7 +8,6 @@ import type {
   ExperienceEvent as ExperienceEventPayload,
   InsightsEvent as InsightsEventPayload,
   Json,
-  MergeTagEntry,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
@@ -24,6 +23,7 @@ import type {
   LocaleCode,
 } from 'contentful'
 import { OPTIMIZATION_CORE_SDK_NAME, OPTIMIZATION_CORE_SDK_VERSION } from './constants'
+import type { MergeTagEntry } from './contentful'
 import { EventBuilder, type EventBuilderConfig } from './events'
 import type { OptimizationSelectionState } from './handoff'
 import { InterceptorManager } from './lib/interceptor'

@@ -17,7 +17,7 @@ wraps this). Package source root: `packages/web/web-sdk/src`; shared core:
 | -------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@contentful/optimization-web` (default export)    | `ContentfulOptimization` class                                               | web-sdk#index.ts; web-sdk#ContentfulOptimization.ts#ContentfulOptimization                                                                                                                              |
 | `@contentful/optimization-web/web-components`      | `defineContentfulOptimizationElements()` + element/detail types              | web-sdk#web-components/index.ts#defineContentfulOptimizationElements                                                                                                                                    |
-| `@contentful/optimization-web/api-schemas`         | Type guards incl. `isMergeTagEntry`                                          | web-sdk#api-schemas.ts; api-schemas#contentful/typeGuards.ts#isMergeTagEntry                                                                                                                            |
+| `@contentful/optimization-web/api-schemas`         | Type guards incl. `isMergeTagEntry`                                          | web-sdk#api-schemas.ts; core-sdk#contentful/typeGuards.ts#isMergeTagEntry                                                                                                                               |
 | `@contentful/optimization-web/constants`           | `ANONYMOUS_ID_COOKIE`, `DEFAULT_WEB_ALLOWED_EVENT_TYPES`, etc.               | web-sdk#constants.ts#DEFAULT_WEB_ALLOWED_EVENT_TYPES; core-sdk#constants.ts#ANONYMOUS_ID_COOKIE                                                                                                         |
 | `@contentful/optimization-web/logger`              | logger utilities                                                             | web-sdk#logger.ts                                                                                                                                                                                       |
 | `@contentful/optimization-web/handoff`             | Browser handoff types, hydration target, and content/state hydration helpers | web-sdk#handoff.ts#BrowserOptimizationHandoff; web-sdk#handoff.ts#OptimizationHandoffHydrationTarget; web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoffState |
@@ -45,7 +45,7 @@ wraps this). Package source root: `packages/web/web-sdk/src`; shared core:
   - `allowedEventTypes`, `queuePolicy`, `onEventBlocked`.
     source: core-sdk#CoreStateful.ts#allowedEventTypes; core-sdk#CoreStateful.ts#queuePolicy; core-sdk#CoreStateful.ts#onEventBlocked
   - `app.name` / `app.version`.
-    source: api-schemas#experience/event/properties/App.ts#App
+    source: api-client#schemas/experience/event/properties/App.ts#App
   - `cookie.domain`, `cookie.expires` (days; **default 365**).
     source: web-sdk#lib/cookies.ts#CookieAttributes; web-sdk#ContentfulOptimization.ts#EXPIRATION_DAYS_DEFAULT
   - `autoTrackEntryInteraction` — default `views`/`clicks`/`hovers` all `true`.
@@ -132,7 +132,7 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   `selectedOptimization === undefined` as "seeing baseline content."
   source: core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext; core-sdk#resolvers/OptimizedEntryResolver.ts#resolveTo
 - `SelectedOptimization` fields: `experienceId`, `variantIndex`, `variants`, `sticky`.
-  source: api-schemas#experience/optimization/SelectedOptimization.ts#SelectedOptimization
+  source: api-client#schemas/experience/optimization/SelectedOptimization.ts#SelectedOptimization
 - Loading presentation honors content hydration mode. The default
   `client-only-hidden-until-ready` path can show a loading fallback and hide a baseline layout target
   while content is loading; `preserve-server` suppresses loading fallback, baseline-while-loading,
@@ -206,7 +206,7 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   `messageId`. Event-stream payloads carry each event's normal schema plus universal fields such as
   `messageId`, `channel`, `context`, and timestamps. See
   [`../shared/concepts.md`](../shared/concepts.md#stateful-event-forwarding-streams).
-  source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent; core-sdk#events/BlockedEvent.ts#BlockedEvent; api-schemas#experience/event/UniversalEventProperties.ts#UniversalEventProperties; kb:shared/concepts.md
+  source: core-sdk#CoreStateful.ts#CoreStates; core-sdk#events/OptimizationEventStreamEvent.ts#OptimizationEventStreamEvent; core-sdk#events/BlockedEvent.ts#BlockedEvent; api-client#schemas/experience/event/UniversalEventProperties.ts#UniversalEventProperties; kb:shared/concepts.md
 
 ## Consent & persistence
 

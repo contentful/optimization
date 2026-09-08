@@ -1,4 +1,4 @@
-import type { SelectedOptimizationArray } from '@contentful/optimization-api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-api-client/api-schemas'
 
 export const selectedOptimizations: SelectedOptimizationArray = [
   {

@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, rs } from '@rstest/core'
-import { createLoggerMock } from 'mocks/loggerMock'
+import type { LogEvent, Logger } from '@contentful/optimization-core/logger'
+import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 
 // Create a holder for the AppState callback
 const callbackHolder: {
@@ -7,14 +7,11 @@ const callbackHolder: {
 } = { callback: null }
 
 const mockRemove = rs.fn()
-const mockLogger = {
-  debug: rs.fn(),
-  info: rs.fn(),
-  log: rs.fn(),
-  warn: rs.fn(),
-  error: rs.fn(),
-  fatal: rs.fn(),
+const mockSink = {
+  name: 'ReactNativeAppStateTestSink',
+  ingest: rs.fn<(event: LogEvent) => void>(),
 }
+let activeLogger: Logger
 
 async function waitForExpectation(assertion: () => void): Promise<void> {
   const deadline = Date.now() + 1000
@@ -34,13 +31,10 @@ async function waitForExpectation(assertion: () => void): Promise<void> {
 }
 
 describe('createAppStateChangeListener', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     rs.clearAllMocks()
     callbackHolder.callback = null
     rs.resetModules()
-
-    // Set up mocks before each test
-    rs.doMock('@contentful/optimization-core/logger', () => createLoggerMock(mockLogger))
 
     rs.doMock('react-native', () => ({
       AppState: {
@@ -55,6 +49,14 @@ describe('createAppStateChangeListener', () => {
         },
       },
     }))
+
+    const loggerModule = await import('@contentful/optimization-core/logger')
+    activeLogger = loggerModule.logger
+    activeLogger.addSink(mockSink)
+  })
+
+  afterEach(() => {
+    activeLogger.removeSink(mockSink.name)
   })
 
   it('should register a listener with AppState and return cleanup function', async () => {
@@ -134,11 +136,11 @@ describe('createAppStateChangeListener', () => {
 
     await waitForExpectation(() => {
       expect(callback).toHaveBeenCalled()
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'RN:AppState',
-        'Error in app state callback:',
-        error,
-      )
+      expect(mockSink.ingest).toHaveBeenCalledWith({
+        name: '@contentful/optimization',
+        level: 'error',
+        messages: ['[Ctfl:O10n:RN:AppState] Error in app state callback:', error],
+      })
     })
   })
 
@@ -154,11 +156,11 @@ describe('createAppStateChangeListener', () => {
 
     await waitForExpectation(() => {
       expect(callback).toHaveBeenCalled()
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'RN:AppState',
-        'Error in app state callback:',
-        error,
-      )
+      expect(mockSink.ingest).toHaveBeenCalledWith({
+        name: '@contentful/optimization',
+        level: 'error',
+        messages: ['[Ctfl:O10n:RN:AppState] Error in app state callback:', error],
+      })
     })
   })
 
@@ -206,6 +208,6 @@ describe('createAppStateChangeListener', () => {
     })
 
     // No error should be logged
-    expect(mockLogger.error).not.toHaveBeenCalled()
+    expect(mockSink.ingest).not.toHaveBeenCalled()
   })
 })

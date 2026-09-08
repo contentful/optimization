@@ -13,6 +13,12 @@ const common = {
 } as const
 
 export default defineConfig({
+  output: {
+    externals: {
+      '../api-schemas': '@contentful/optimization-api-client/api-schemas',
+    },
+  },
+
   source: {
     entry: {
       index: './src/index.ts',

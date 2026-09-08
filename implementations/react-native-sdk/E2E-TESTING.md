@@ -113,7 +113,8 @@ This script handles the complete E2E testing workflow automatically:
 
 1. **Creates `.env` configuration** - Copies `.env.example` to `.env`, then applies the selected
    mock server port and optional `PUBLIC_*` overrides
-2. **Starts mock API server** - Launches the mock server from `lib/mocks` on port 8000
+2. **Starts mock API server** - Runs the root `pnpm serve:mocks` command, which starts the
+   `lib/mock-server` HTTP composition with shared `lib/mocks` handlers and fixtures on port 8000
 3. **Starts Metro bundler** - Starts the React Native bundler on port 8081
 4. **Sets up adb reverse** - Configures port forwarding so the emulator can reach localhost services
 5. **Builds the Android app** - Runs the Detox build for Android

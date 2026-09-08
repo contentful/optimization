@@ -1,15 +1,11 @@
-import { beforeEach, describe, expect, it, rs } from '@rstest/core'
-import { createLoggerMock } from 'mocks/loggerMock'
+import type { LogEvent, Logger } from '@contentful/optimization-core/logger'
+import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 
-// Create mock holder
-const mockLogger = {
-  debug: rs.fn(),
-  info: rs.fn(),
-  log: rs.fn(),
-  warn: rs.fn(),
-  error: rs.fn(),
-  fatal: rs.fn(),
+const mockSink = {
+  name: 'ReactNativeNetworkTestSink',
+  ingest: rs.fn<(event: LogEvent) => void>(),
 }
+let activeLogger: Logger
 
 async function waitForExpectation(assertion: () => void): Promise<void> {
   const deadline = Date.now() + 1000
@@ -29,11 +25,17 @@ async function waitForExpectation(assertion: () => void): Promise<void> {
 }
 
 describe('createOnlineChangeListener', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     rs.clearAllMocks()
     rs.resetModules()
 
-    rs.doMock('@contentful/optimization-core/logger', () => createLoggerMock(mockLogger))
+    const loggerModule = await import('@contentful/optimization-core/logger')
+    activeLogger = loggerModule.logger
+    activeLogger.addSink(mockSink)
+  })
+
+  afterEach(() => {
+    activeLogger.removeSink(mockSink.name)
   })
 
   describe('when NetInfo is not installed', () => {
@@ -48,10 +50,13 @@ describe('createOnlineChangeListener', () => {
       const cleanup = createOnlineChangeListener(callback)
 
       await waitForExpectation(() => {
-        expect(mockLogger.warn).toHaveBeenCalledWith(
-          'RN:Network',
-          '@react-native-community/netinfo not installed. Offline detection disabled.',
-        )
+        expect(mockSink.ingest).toHaveBeenCalledWith({
+          name: '@contentful/optimization',
+          level: 'warn',
+          messages: [
+            '[Ctfl:O10n:RN:Network] @react-native-community/netinfo not installed. Offline detection disabled.',
+          ],
+        })
       })
       expect(typeof cleanup).toBe('function')
 
@@ -75,10 +80,13 @@ describe('createOnlineChangeListener', () => {
       const cleanup = createOnlineChangeListener(callback)
 
       await waitForExpectation(() => {
-        expect(mockLogger.warn).toHaveBeenCalledWith(
-          'RN:Network',
-          '@react-native-community/netinfo not installed. Offline detection disabled.',
-        )
+        expect(mockSink.ingest).toHaveBeenCalledWith({
+          name: '@contentful/optimization',
+          level: 'warn',
+          messages: [
+            '[Ctfl:O10n:RN:Network] @react-native-community/netinfo not installed. Offline detection disabled.',
+          ],
+        })
       })
       expect(typeof cleanup).toBe('function')
     })
@@ -94,10 +102,13 @@ describe('createOnlineChangeListener', () => {
       const cleanup = createOnlineChangeListener(callback)
 
       await waitForExpectation(() => {
-        expect(mockLogger.warn).toHaveBeenCalledWith(
-          'RN:Network',
-          '@react-native-community/netinfo not installed. Offline detection disabled.',
-        )
+        expect(mockSink.ingest).toHaveBeenCalledWith({
+          name: '@contentful/optimization',
+          level: 'warn',
+          messages: [
+            '[Ctfl:O10n:RN:Network] @react-native-community/netinfo not installed. Offline detection disabled.',
+          ],
+        })
       })
       expect(typeof cleanup).toBe('function')
     })
@@ -113,10 +124,13 @@ describe('createOnlineChangeListener', () => {
       const cleanup = createOnlineChangeListener(callback)
 
       await waitForExpectation(() => {
-        expect(mockLogger.warn).toHaveBeenCalledWith(
-          'RN:Network',
-          '@react-native-community/netinfo not installed. Offline detection disabled.',
-        )
+        expect(mockSink.ingest).toHaveBeenCalledWith({
+          name: '@contentful/optimization',
+          level: 'warn',
+          messages: [
+            '[Ctfl:O10n:RN:Network] @react-native-community/netinfo not installed. Offline detection disabled.',
+          ],
+        })
       })
       expect(typeof cleanup).toBe('function')
     })
@@ -132,7 +146,7 @@ describe('createOnlineChangeListener', () => {
       createOnlineChangeListener(callback)
 
       await waitForExpectation(() => {
-        expect(mockLogger.warn).toHaveBeenCalled()
+        expect(mockSink.ingest).toHaveBeenCalled()
       })
     })
 
@@ -145,7 +159,7 @@ describe('createOnlineChangeListener', () => {
       createOnlineChangeListener(callback)
 
       await waitForExpectation(() => {
-        expect(mockLogger.warn).toHaveBeenCalled()
+        expect(mockSink.ingest).toHaveBeenCalled()
       })
     })
   })

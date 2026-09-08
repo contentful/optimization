@@ -20,7 +20,7 @@ per-visitor state between requests. Package source root: `packages/node/node-sdk
 | `@contentful/optimization-node` (named)          | `OPTIMIZATION_NODE_SDK_NAME`, `OPTIMIZATION_NODE_SDK_VERSION`, `OptimizationNodeConfig`, `PublicNodeEventBuilderConfig`, `createRequestHandoffFromData`    | node-sdk#index.ts; node-sdk#constants.ts#OPTIMIZATION_NODE_SDK_NAME; node-sdk#ContentfulOptimization.ts#OptimizationNodeConfig; node-sdk#handoff.ts#createRequestHandoffFromData |
 | `@contentful/optimization-node/constants`        | `ANONYMOUS_ID_COOKIE`, `ANONYMOUS_ID_KEY`, Node SDK name/version                                                                                           | node-sdk#constants.ts; core-sdk#constants.ts#ANONYMOUS_ID_COOKIE; core-sdk#constants.ts#ANONYMOUS_ID_KEY                                                                         |
 | `@contentful/optimization-node/core-sdk`         | Re-exports all of core-sdk (incl. `UniversalEventBuilderArgs`, `CoreStateless`, `CoreStatelessRequest`) plus `prefetchManagedEntries` entry-source helpers | node-sdk#core-sdk.ts; core-sdk#events/EventBuilder.ts#UniversalEventBuilderArgs                                                                                                  |
-| `@contentful/optimization-node/api-schemas`      | Schemas + type guards incl. `isMergeTagEntry`                                                                                                              | node-sdk#api-schemas.ts; api-schemas#contentful/typeGuards.ts#isMergeTagEntry                                                                                                    |
+| `@contentful/optimization-node/api-schemas`      | Schemas + type guards incl. `isMergeTagEntry`                                                                                                              | node-sdk#api-schemas.ts; core-sdk#contentful/typeGuards.ts#isMergeTagEntry                                                                                                       |
 | `@contentful/optimization-node/api-client`       | API client re-export                                                                                                                                       | node-sdk#api-client.ts                                                                                                                                                           |
 | `@contentful/optimization-node/logger`           | logger utilities (default + named)                                                                                                                         | node-sdk#logger.ts                                                                                                                                                               |
 
@@ -46,7 +46,7 @@ per-visitor state between requests. Package source root: `packages/node/node-sdk
     correctly; set only for mocks/non-default hosts.
     source: core-sdk#CoreApiConfig.ts#CoreSharedApiConfig; core-sdk#CoreApiConfig.ts#CoreStatelessApiConfig
   - `app.name` / `app.version` (both required strings when `app` is given; whole object optional).
-    source: api-schemas#experience/event/properties/App.ts#App
+    source: api-client#schemas/experience/event/properties/App.ts#App
   - `allowedEventTypes` (pre-consent allow-list), `onEventBlocked` (blocked-event diagnostics).
     source: core-sdk#CoreStateless.ts#CoreStatelessConfig; core-sdk#CoreStateless.ts#CoreStateless
   - `contentful?: ContentfulConfig` (managed entry fetching) — same shape/semantics as the web
@@ -94,7 +94,7 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   source: core-sdk#CoreStatelessRequest.ts#fetchContentfulEntry; core-sdk#CoreBase.ts#fetchContentfulEntry
 - `selectedOptimization` fields: `experienceId`, `variantIndex`, `variants` (baseline-entry-id →
   variant-entry-id map), `sticky`. `variants[baselineEntryId]` equal to the baseline id means baseline.
-  source: api-schemas#experience/optimization/SelectedOptimization.ts#SelectedOptimization
+  source: api-client#schemas/experience/optimization/SelectedOptimization.ts#SelectedOptimization
 - `getFlag(name, changes?)` → resolves a flag value from a `changes` list; read-only, no side effect.
   `getMergeTagValue(mergeTagEntry, profile?)` → resolves a MergeTag value against the request profile,
   falling back to the entry's configured fallback.
@@ -108,12 +108,12 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
 
 ## Identifier ownership
 
-| Identifier                                            | Owner  | Notes                                                                                                                                                                                                                                                  | source                                                                                                                    |
-| ----------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `ctfl-opt-aid` (`ANONYMOUS_ID_COOKIE`)                | reader | The SDK exports the constant but manages NO cookies in Node; the app reads/writes/clears it and passes the id via `forRequest({ profile })`. Value === `'ctfl-opt-aid'`. Keep non-`HttpOnly` in a hybrid Node+Web app so browser SDK code can read it. | core-sdk#constants.ts#ANONYMOUS_ID_COOKIE; node-sdk#constants.ts                                                          |
-| request `profile` (`PartialProfile`, `{ id }` + JSON) | reader | Bound per request via `forRequest({ profile })`; the request client's `profile` getter updates after an Experience response.                                                                                                                           | core-sdk#CoreStatelessRequest.ts#CoreStatelessForRequestOptions; api-schemas#experience/profile/Profile.ts#PartialProfile |
-| request `consent` decision                            | reader | App reads its own CMP/cookie/session; SDK only receives the per-request decision.                                                                                                                                                                      | core-sdk#CoreStatelessRequest.ts#CoreStatelessRequestConsent                                                              |
-| env/config values                                     | reader | SDK config is framework-agnostic; app owns the env-var convention (e.g. `PUBLIC_...`, `process.env`).                                                                                                                                                  | extern:app owns server runtime config values                                                                              |
+| Identifier                                            | Owner  | Notes                                                                                                                                                                                                                                                  | source                                                                                                                           |
+| ----------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `ctfl-opt-aid` (`ANONYMOUS_ID_COOKIE`)                | reader | The SDK exports the constant but manages NO cookies in Node; the app reads/writes/clears it and passes the id via `forRequest({ profile })`. Value === `'ctfl-opt-aid'`. Keep non-`HttpOnly` in a hybrid Node+Web app so browser SDK code can read it. | core-sdk#constants.ts#ANONYMOUS_ID_COOKIE; node-sdk#constants.ts                                                                 |
+| request `profile` (`PartialProfile`, `{ id }` + JSON) | reader | Bound per request via `forRequest({ profile })`; the request client's `profile` getter updates after an Experience response.                                                                                                                           | core-sdk#CoreStatelessRequest.ts#CoreStatelessForRequestOptions; api-client#schemas/experience/profile/Profile.ts#PartialProfile |
+| request `consent` decision                            | reader | App reads its own CMP/cookie/session; SDK only receives the per-request decision.                                                                                                                                                                      | core-sdk#CoreStatelessRequest.ts#CoreStatelessRequestConsent                                                                     |
+| env/config values                                     | reader | SDK config is framework-agnostic; app owns the env-var convention (e.g. `PUBLIC_...`, `process.env`).                                                                                                                                                  | extern:app owns server runtime config values                                                                                     |
 
 ## Events & tracking
 
@@ -124,7 +124,7 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   (see [`../shared/concepts.md`](../shared/concepts.md#experience-response-payload)). Being stateless,
   the request client does not apply it to any signals; instead accepted `page()`/`identify()` update
   this request client's `profile` getter and cached `selectedOptimizations` for the rest of the request.
-  source: core-sdk#CoreStatelessRequest.ts#page; core-sdk#CoreStatelessRequest.ts#identify; core-sdk#CoreStatelessRequest.ts#screen; core-sdk#CoreStatelessRequest.ts#track; core-sdk#events/EventEmissionResult.ts#EventEmissionResult; api-schemas#experience/ExperienceResponse.ts#OptimizationData
+  source: core-sdk#CoreStatelessRequest.ts#page; core-sdk#CoreStatelessRequest.ts#identify; core-sdk#CoreStatelessRequest.ts#screen; core-sdk#CoreStatelessRequest.ts#track; core-sdk#events/EventEmissionResult.ts#EventEmissionResult; api-client#schemas/experience/ExperienceResponse.ts#OptimizationData
 - Insights methods: `trackView(payload)` returns `EventEmissionResult`; `trackClick`, `trackHover`,
   `trackFlagView` return `void`. `trackView({ componentId, viewId, viewDurationMs, experienceId?, variantIndex?, sticky? })`.
   source: core-sdk#CoreStatelessRequest.ts#trackView; core-sdk#CoreStatelessRequest.ts#trackClick; core-sdk#CoreStatelessRequest.ts#trackHover; core-sdk#CoreStatelessRequest.ts#trackFlagView; core-sdk#events/EventBuilder.ts#ViewBuilderArgs
@@ -153,7 +153,7 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   it. `page.*` requires `path`, `query`, `referrer`, `search`, `url` (`title` optional). The app builds
   the `page.*` object from its own incoming request (URL, headers, parsed query); the SDK does not
   derive or infer any `page.*` field from the request — it only receives what the app passes.
-  source: core-sdk#CoreStatelessRequest.ts#withEventContext; core-sdk#events/EventBuilder.ts#UniversalEventBuilderArgs; api-schemas#experience/event/properties/Page.ts#Page
+  source: core-sdk#CoreStatelessRequest.ts#withEventContext; core-sdk#events/EventBuilder.ts#UniversalEventBuilderArgs; api-client#schemas/experience/event/properties/Page.ts#Page
 
 ## Consent & persistence
 

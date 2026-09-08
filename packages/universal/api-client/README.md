@@ -33,6 +33,7 @@ need raw API access.
 - [API surface](#api-surface)
   - [Experience API](#experience-api)
   - [Insights API](#insights-api)
+  - [Schema entry point](#schema-entry-point)
   - [Fetch helpers](#fetch-helpers)
 - [Related](#related)
 
@@ -147,6 +148,20 @@ await client.insights.sendBatchEvents([
 Insights endpoints do not return response data. For last-chance browser lifecycle delivery, pass a
 per-call `beacon` sender that receives the request URL and already serialized body.
 
+### Schema entry point
+
+`@contentful/optimization-api-client/api-schemas` owns the Experience API and Insights API runtime
+validation schemas, inferred types, and validation helpers used by this client. Import those
+contracts from that entry point when building SDK layers, tooling, or tests:
+
+```ts
+import { ExperienceResponse } from '@contentful/optimization-api-client/api-schemas'
+```
+
+This entry point does not include Contentful CDA schemas. Import CDA schemas from
+`@contentful/optimization-core/api-schemas` instead. That Core entry point also provides an
+aggregate schema surface for SDK layers that need both CDA and API contracts.
+
 ### Fetch helpers
 
 This package also exports fetch helper functions used by SDK layers:
@@ -163,8 +178,9 @@ Use generated reference docs for helper signatures and callback payloads.
 
 - [API Client generated reference](https://contentful.github.io/optimization/modules/_contentful_optimization-api-client.html) -
   exported API reference
-- [API Schemas](../api-schemas/README.md) - runtime validation schemas and inferred API types
 - [Optimization Core SDK](../core-sdk/README.md) - platform-agnostic SDK layer that composes this
-  client
+  client and owns CDA schemas through its `/api-schemas` entry point
+- [API Schemas](../api-schemas/README.md) - deprecated compatibility facade and import migration
+  guidance
 - [Choosing the right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html) -
   package selection guidance for application integrations

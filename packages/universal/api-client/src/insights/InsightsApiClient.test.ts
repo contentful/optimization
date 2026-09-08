@@ -1,7 +1,7 @@
-import { BatchInsightsEventArray } from '@contentful/optimization-api-schemas'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { mockLogger } from 'mocks'
 import { http, HttpResponse } from 'msw'
+import { BatchInsightsEventArray } from '../api-schemas'
 import ApiClientBase from '../ApiClientBase'
 import type { FetchMethod } from '../fetch'
 import { server } from '../test/setup'

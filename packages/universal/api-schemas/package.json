@@ -1,6 +1,6 @@
 {
   "name": "@contentful/optimization-api-schemas",
-  "description": "API schemas and types for Contentful Optimization",
+  "description": "Deprecated compatibility facade for Contentful Optimization API schemas",
   "version": "1.2.0",
   "license": "MIT",
   "repository": {
@@ -25,7 +25,6 @@
     },
     "./package.json": "./package.json"
   },
-  "sideEffects": false,
   "files": [
     "dist/**/*",
     "THIRD_PARTY_NOTICES.txt"
@@ -50,9 +49,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contentful/rich-text-types": "catalog:",
-    "contentful": "catalog:",
-    "zod": "catalog:"
+    "@contentful/optimization-api-client": "workspace:*",
+    "@contentful/optimization-core": "workspace:*"
   },
   "devDependencies": {
     "build-tools": "workspace:*",
@@ -63,6 +61,7 @@
     "@types/node": "catalog:",
     "rimraf": "catalog:",
     "tslib": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "zod": "catalog:"
   }
 }

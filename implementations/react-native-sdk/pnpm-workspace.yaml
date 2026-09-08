@@ -2,6 +2,11 @@ sharedWorkspaceLockfile: false
 
 overrides:
   '@contentful/optimization-api-client': 'file:../../pkgs/contentful-optimization-api-client-local.tgz'
-  '@contentful/optimization-api-schemas': 'file:../../pkgs/contentful-optimization-api-schemas-local.tgz'
   '@contentful/optimization-core': 'file:../../pkgs/contentful-optimization-core-local.tgz'
   '@contentful/optimization-react-native': 'file:../../pkgs/contentful-optimization-react-native-local.tgz'
+
+allowBuilds:
+  core-js: true
+  dtrace-provider: true
+  unrs-resolver: true
+  detox: true

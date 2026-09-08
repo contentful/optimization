@@ -1,4 +1,4 @@
-# Contentful Optimization SDK suite testing support library & server
+# Contentful Optimization SDK suite testing support library
 
 > [!WARNING]
 >
@@ -9,7 +9,6 @@ The testing support library offers the following features:
 - Management of Contentful test space data
 - Fetching of Contentful test entry data
 - MSW handlers for the Experience API and Insights API
-- Mock server based on the MSW handlers
 
 > [!NOTE]
 >
@@ -18,8 +17,9 @@ The testing support library offers the following features:
 
 ## When to use this package
 
-Use this package for local test data, unit-test MSW handlers, and the mock API server consumed by
-reference implementations. It is an internal monorepo support package, not a public SDK dependency.
+Use this package for local test data, fixture fetching, and unit-test MSW handlers. The separate
+`mock-server` workspace only composes these handlers into the HTTP server consumed by reference
+implementations. This is an internal monorepo support package, not a public SDK dependency.
 
 ## Using mocks in unit tests
 
@@ -32,11 +32,20 @@ pnpm add -D mocks@workspace:* msw
 Add the following code to your unit test setup script (commonly in `test/setup.ts`):
 
 ```ts
+import {
+  BatchExperienceEventArray,
+  ExperienceEventArray,
+  ExperienceResponse,
+} from '@contentful/optimization-api-client/api-schemas'
 import { experienceApiHandlers, insightsApiHandlers } from 'mocks'
 import { setupServer } from 'msw/node'
 
 export const server = setupServer(
-  ...experienceApiHandlers.getHandlers(),
+  ...experienceApiHandlers.getHandlers({
+    batchExperienceEventArray: BatchExperienceEventArray,
+    experienceEventArray: ExperienceEventArray,
+    experienceResponse: ExperienceResponse,
+  }),
   ...insightsApiHandlers.getHandlers(),
 )
 
@@ -73,8 +82,8 @@ Use this command to run a mock server instance:
 pnpm serve:mocks
 ```
 
-From inside package-focused workflows, the equivalent package command is
-`pnpm --filter mocks serve`.
+The `mock-server` workspace only composes and runs the server. Run fixture-fetch commands from this
+package, including `pnpm --filter mocks fetch:ctfl`.
 
 The server runs in a process attached to the current terminal. When a detached process is needed,
 prefer implementation `serve` and `serve:stop` scripts because they use scoped PM2 process names.

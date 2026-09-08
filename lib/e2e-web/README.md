@@ -64,9 +64,10 @@ Current implementation env defaults:
 | `nextjs-sdk_app-router`              | `3002`     | `CSR,HYDRATION,SSR,SKIP_NO_JS` |
 | `nextjs-sdk_app-router_edge-runtime` | `3003`     | `EDGE`                         |
 
-The config also starts the shared mock server from `lib/mocks` as a Playwright `webServer`. Both web
-servers use `reuseExistingServer: true`, so Playwright can reuse a server that is already listening
-or start it for a cold run and clean up the child process afterward.
+The config starts the HTTP mock-server composition through `pnpm serve:mocks` as a Playwright
+`webServer`. The `mock-server` workspace composes shared handlers and fixtures from `lib/mocks`.
+Both web servers use `reuseExistingServer: true`, so Playwright can reuse a server that is already
+listening or start it for a cold run and clean up the child process afterward.
 
 Each implementation owns its own app startup behavior through `serve:e2e`, including any build step,
 dev server command, fixed port, and environment handling. The shared suite only needs the app to be

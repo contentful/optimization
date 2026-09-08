@@ -181,7 +181,7 @@ Before running the app from the IDE, in a separate terminal:
 pnpm --filter @contentful/optimization-js-bridge build
 
 # Then start the mock server and leave it running:
-pnpm --dir lib/mocks serve
+pnpm serve:mocks
 ```
 
 The E2E suite is run from the command line rather than an IDE run configuration; see
@@ -246,4 +246,6 @@ Common local pitfalls:
   implementation
 - [Preview panel scenario contract](../PREVIEW_PANEL_SCENARIOS.md) - Cross-platform preview-panel
   scenario source of truth
-- [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures
+- [Mock server](../../lib/mock-server/README.md) - HTTP composition for local development and
+  reference implementations
+- [Mocks package](../../lib/mocks/README.md) - Shared handlers and fixtures

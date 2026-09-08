@@ -21,7 +21,7 @@ scenarios, etc.) — that is already unit-covered.
 
 **Preconditions for both platforms:**
 
-- Mock server running at `localhost:8000` (`pnpm --filter @contentful/optimization-mocks serve`)
+- Mock server running at `localhost:8000` (`pnpm serve:mocks`)
 - Reference app identifies as an "identified visitor" so `identified-visitor.json` is served
 - App launched fresh (no cached overrides)
 

@@ -2,11 +2,14 @@
   "private": true,
   "name": "mocks",
   "version": "0.0.0",
-  "description": "Testing Support Library & Server",
+  "description": "Testing Support Library",
   "license": "MIT",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./contentful-handlers": "./src/contentful-handlers.ts",
+    "./experience-handlers": "./src/experience-handlers.ts",
+    "./insights-handlers": "./src/insights-handlers.ts",
     "./loggerMock": "./src/loggerMock.ts"
   },
   "files": [
@@ -19,16 +22,16 @@
     "fetch:ctfl:entries": "tsx ./scripts/fetchEntries.ts",
     "fetch:ctfl:space": "contentful space export --config .contentfulrc.json",
     "generate:ctfl:types": "tsx ./scripts/generateTypeDefinition.ts && tsx ./scripts/copyGeneratedTypeDefinition.ts",
-    "serve": "tsx ./src/server.ts",
     "test:unit": "rstest run --coverage --passWithNoTests",
     "typecheck": "tsc --noEmit",
     "upload:ctfl:space": "read -p 'This will overwrite your space data! Do you really want to do this? (y/N)' yn && [ \"$yn\" = 'y' ] && pnpm upload:ctfl:space:confirmed",
     "upload:ctfl:space:confirmed": "contentful space import --config .contentfulrc.json"
   },
   "dependencies": {
-    "@contentful/optimization-api-schemas": "workspace:*",
-    "@mswjs/http-middleware": "0.10.3",
+    "es-toolkit": "catalog:",
+    "fs-extra": "^11.3.3",
     "msw": "catalog:",
+    "p-retry": "catalog:",
     "tslib": "catalog:"
   },
   "devDependencies": {
@@ -38,10 +41,6 @@
     "@types/node": "catalog:",
     "contentful": "catalog:",
     "contentful-cli": "^3.10.4",
-    "dotenv": "catalog:",
-    "es-toolkit": "catalog:",
-    "fs-extra": "^11.3.3",
-    "p-retry": "catalog:",
     "rimraf": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:"

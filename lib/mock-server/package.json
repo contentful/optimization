@@ -1,0 +1,23 @@
+{
+  "private": true,
+  "name": "mock-server",
+  "version": "0.0.0",
+  "description": "Composition layer for the shared Contentful Optimization mock server",
+  "license": "MIT",
+  "scripts": {
+    "serve": "tsx ./src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@contentful/optimization-api-client": "workspace:*",
+    "@mswjs/http-middleware": "0.10.3",
+    "mocks": "workspace:*",
+    "msw": "catalog:"
+  },
+  "devDependencies": {
+    "@types/express": "catalog:",
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}

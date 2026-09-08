@@ -6,7 +6,9 @@ artifacts or independent validation targets.
 
 ## Rules
 
-- Keep mock contracts aligned with `@contentful/optimization-api-schemas`.
+- Keep mock contracts minimal and package-independent. Inject SDK schema parsers and guards into
+  handlers from the command-composition layer; fixture-fetching code uses only local structural
+  guards for the fields it reads.
 - Implement authored mock behavior only when a consuming unit or E2E test requires it. Consumer
   demand never authorizes manual edits or synthetic additions to generated external data.
 - Do not commit secrets or local credentials from `.contentfulrc.json`.
@@ -33,7 +35,8 @@ artifacts or independent validation targets.
 
 ## Commands
 
-- `pnpm --filter mocks <script>` with `serve`, `typecheck`, `fetch:ctfl`, or `generate:ctfl:types`.
+- `pnpm --filter mocks <script>` with `typecheck`, `fetch:ctfl`, or `generate:ctfl:types`.
+- `pnpm --filter mock-server serve` runs the composed HTTP server.
 
 ## Validation exception
 

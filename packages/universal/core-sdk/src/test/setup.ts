@@ -1,3 +1,8 @@
+import {
+  BatchExperienceEventArray,
+  ExperienceEventArray,
+  ExperienceResponse,
+} from '@contentful/optimization-api-client/api-schemas'
 import { rs } from '@rstest/core'
 import { experienceApiHandlers, insightsApiHandlers, loggerMock, resetMockLogger } from 'mocks'
 import { setupServer } from 'msw/node'
@@ -5,7 +10,11 @@ import { setupServer } from 'msw/node'
 rs.mock('@contentful/optimization-api-client/logger', () => loggerMock)
 
 export const server = setupServer(
-  ...experienceApiHandlers.getHandlers(),
+  ...experienceApiHandlers.getHandlers({
+    batchExperienceEventArray: BatchExperienceEventArray,
+    experienceEventArray: ExperienceEventArray,
+    experienceResponse: ExperienceResponse,
+  }),
   ...insightsApiHandlers.getHandlers(),
 )
 

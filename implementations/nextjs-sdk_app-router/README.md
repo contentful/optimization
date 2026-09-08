@@ -175,4 +175,6 @@ pnpm test:e2e:nextjs-sdk_app-router
   integration.
 - [@contentful/optimization-nextjs](../../packages/web/frameworks/nextjs-sdk/README.md) - Package
   documentation.
-- [Mocks package](../../lib/mocks/README.md) - Shared mock server and fixtures.
+- [Mock server](../../lib/mock-server/README.md) - HTTP composition for local development and
+  reference implementations.
+- [Mocks package](../../lib/mocks/README.md) - Shared handlers and fixtures.

@@ -1,9 +1,9 @@
+import type { ChainModifiers } from 'contentful'
 import type {
   AudienceEntryFields,
   OptimizationConfig,
   OptimizationEntryFields,
-} from '@contentful/optimization-api-client/api-schemas'
-import type { ChainModifiers } from 'contentful'
+} from '../contentful'
 import type {
   AudienceDefinition,
   ContentfulEntry,

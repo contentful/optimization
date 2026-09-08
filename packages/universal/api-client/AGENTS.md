@@ -1,6 +1,7 @@
 # AGENTS.md
 
-Owns the unified client surface for Contentful Experience API and Insights API interactions.
+Owns the unified client surface for Contentful Experience API and Insights API interactions, plus
+their runtime schemas, inferred types, and validation helpers exposed through `./api-schemas`.
 
 ## Commands
 

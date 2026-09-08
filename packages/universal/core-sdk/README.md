@@ -38,6 +38,7 @@ exported API signatures.
 - [Common configuration](#common-configuration)
 - [Campaign attribution](#campaign-attribution)
 - [Package surface](#package-surface)
+  - [Schema entry point](#schema-entry-point)
   - [Custom entry-source adapters](#custom-entry-source-adapters)
 - [Preview support](#preview-support)
 - [Related](#related)
@@ -204,6 +205,22 @@ Core exposes reusable primitives for SDK layers:
 | Interceptors                    | First-party hooks for event and state lifecycle customization                                                                                                 |
 | Queue policy and fetch helpers  | Shared retry, flush, timeout, and offline buffering behavior                                                                                                  |
 | Signal and observable utilities | Lightweight reactive primitives used internally by stateful SDK layers                                                                                        |
+| `api-schemas` entry point       | CDA schemas owned by Core, plus Experience API and Insights API schema pass-throughs                                                                          |
+
+### Schema entry point
+
+`@contentful/optimization-core/api-schemas` owns the Contentful CDA schemas, inferred types, and
+helpers used by Core. It also passes through the Experience API and Insights API validation surface
+from `@contentful/optimization-api-client/api-schemas`, so SDK layers can retain a single aggregate
+schema import when that is useful:
+
+```ts
+import { OptimizationConfig, ExperienceResponse } from '@contentful/optimization-core/api-schemas'
+```
+
+For direct Experience API or Insights API work, import validation contracts from
+`@contentful/optimization-api-client/api-schemas` to use their owning package. Do not add imports
+from the deprecated `@contentful/optimization-api-schemas` compatibility package.
 
 When a `contentful.js` client is available, prefer SDK-managed fetching. Configure
 `contentful: { client, defaultQuery?, cache? }`, then identify each entry by ID or by content type
@@ -298,4 +315,8 @@ surface.
 - [Optimization Node SDK](../../node/node-sdk/README.md) - server SDK built on `CoreStateless`
 - [Optimization React Native SDK](../../react-native-sdk/README.md) - mobile SDK built on
   `CoreStateful`
+- [API Client](../api-client/README.md) - direct API transport and Experience API and Insights API
+  schema ownership
+- [API Schemas](../api-schemas/README.md) - deprecated compatibility facade and import migration
+  guidance
 - [Core preview support](./src/preview-support/README.md) - internal preview helper entry

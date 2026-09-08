@@ -1,11 +1,16 @@
 import { rs } from '@rstest/core'
 import { experienceApiHandlers, insightsApiHandlers, loggerMock, resetMockLogger } from 'mocks'
 import { setupServer } from 'msw/node'
+import { BatchExperienceEventArray, ExperienceEventArray, ExperienceResponse } from '../api-schemas'
 
 rs.mock('../logger', () => loggerMock)
 
 export const server = setupServer(
-  ...experienceApiHandlers.getHandlers(),
+  ...experienceApiHandlers.getHandlers({
+    batchExperienceEventArray: BatchExperienceEventArray,
+    experienceEventArray: ExperienceEventArray,
+    experienceResponse: ExperienceResponse,
+  }),
   ...insightsApiHandlers.getHandlers(),
 )
 

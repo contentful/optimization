@@ -1,6 +1,7 @@
 # AGENTS.md
 
-Owns the platform-agnostic optimization core used by all platform SDKs.
+Owns the platform-agnostic optimization core used by all platform SDKs, Contentful CDA schemas, and
+the aggregate `./api-schemas` pass-through for CDA and API Client schema exports.
 
 ## Rules
 

@@ -12,7 +12,7 @@
     "start": "react-native start",
     "start:clean": "kill-port 8081 && react-native start --reset-cache",
     "prestart": "kill-port 8081 || true",
-    "serve:mocks": "pnpm --dir ../../lib/mocks serve",
+    "serve:mocks": "pnpm --dir ../.. serve:mocks",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:unit": "echo 'Unit tests skipped - this is a reference implementation app. E2E tests are run separately via Detox.'",
@@ -74,7 +74,6 @@
   "pnpm": {
     "overrides": {
       "@contentful/optimization-api-client": "file:../../pkgs/contentful-optimization-api-client-local.tgz",
-      "@contentful/optimization-api-schemas": "file:../../pkgs/contentful-optimization-api-schemas-local.tgz",
       "@contentful/optimization-core": "file:../../pkgs/contentful-optimization-core-local.tgz",
       "@contentful/optimization-react-native": "file:../../pkgs/contentful-optimization-react-native-local.tgz"
     }
