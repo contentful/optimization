@@ -10,7 +10,7 @@
     "build": "pnpm generate:env && ng build",
     "clean": "rimraf ./dist",
     "serve": "pnpm serve:mocks && pnpm serve:app",
-    "serve:mocks": "pm2 start --name web-sdk_angular-mocks \"pnpm --dir ../../lib/mocks serve\"",
+    "serve:mocks": "pm2 start --name web-sdk_angular-mocks \"pnpm --dir ../.. serve:mocks\"",
     "serve:mocks:stop": "pm2 stop web-sdk_angular-mocks && pm2 delete web-sdk_angular-mocks",
     "serve:e2e": "pnpm dev",
     "serve:app": "pm2 start --name web-sdk_angular-app \"pnpm dev\"",

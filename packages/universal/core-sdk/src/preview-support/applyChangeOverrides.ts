@@ -1,9 +1,9 @@
-import type {
-  ChangeArray,
-  InlineVariableComponent,
-  OptimizationEntry,
-} from '@contentful/optimization-api-client/api-schemas'
-import { isInlineVariableComponent } from '@contentful/optimization-api-client/api-schemas'
+import {
+  isInlineVariableComponent,
+  type ChangeArray,
+  type InlineVariableComponent,
+  type OptimizationEntry,
+} from '../api-schemas'
 import type { OptimizationOverride } from './types'
 
 function getInlineVariableComponents(optimization: OptimizationEntry): InlineVariableComponent[] {

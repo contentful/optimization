@@ -1,11 +1,11 @@
 import type {
   ChangeArray,
-  OptimizationEntry,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import { batch, type Signal } from '@preact/signals-core'
+import type { OptimizationEntry } from '../contentful'
 import type { OptimizationSelectionState } from '../handoff'
 import type { InterceptorManager } from '../lib/interceptor'
 import { applyChangeOverrides } from './applyChangeOverrides'

@@ -1,13 +1,13 @@
+import { afterEach, describe, expect, it, rs } from '@rstest/core'
+import { mockLogger } from 'mocks'
+import { http, HttpResponse } from 'msw'
 import {
   BatchExperienceResponse,
   ExperienceEventArray,
   ExperienceResponse,
   type BatchExperienceEvent,
   type ExperienceEvent,
-} from '@contentful/optimization-api-schemas'
-import { afterEach, describe, expect, it, rs } from '@rstest/core'
-import { mockLogger } from 'mocks'
-import { http, HttpResponse } from 'msw'
+} from '../api-schemas'
 import { server } from '../test/setup'
 import ExperienceApiClient, {
   EXPERIENCE_BASE_URL,

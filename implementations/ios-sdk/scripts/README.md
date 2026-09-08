@@ -83,4 +83,4 @@ APP_SHELL=both ./scripts/run-e2e.sh
 
 - [iOS reference app README](../README.md)
 - [Android reference app scripts](../../android-sdk/scripts/README.md)
-- [Mock server](../../../lib/mocks/README.md)
+- [Mock server](../../../lib/mock-server/README.md)

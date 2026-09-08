@@ -54,7 +54,7 @@
     "prepare": "husky",
     "release:please": "tsx ./scripts/release-please.ts",
     "release:self-check": "pnpm exec tsx ./scripts/list-npm-package-targets.ts self-check && pnpm exec tsx ./scripts/release-please.ts self-check",
-    "serve:mocks": "pnpm --dir lib/mocks serve",
+    "serve:mocks": "pnpm --filter mock-server serve",
     "setup:e2e": "pnpm run build:pkgs && pnpm run implementation:run -- --all -- implementation:install && pnpm run playwright:install && pnpm run playwright:install-deps",
     "setup:e2e:ios-sdk": "pnpm run implementation:ios-sdk -- xcodegen",
     "setup:e2e:node-sdk": "pnpm run build:pkgs && pnpm run implementation:run -- node-sdk implementation:install && pnpm run implementation:run -- node-sdk implementation:setup:e2e",

@@ -1,8 +1,5 @@
-import {
-  type ChangeArray,
-  isResolvedOptimizationEntry,
-  type OptimizationEntry,
-} from '@contentful/optimization-api-client/api-schemas'
+import type { ChangeArray } from '@contentful/optimization-api-client/api-schemas'
+import { isResolvedOptimizationEntry, type OptimizationEntry } from '../contentful'
 import { applyChangeOverrides } from './applyChangeOverrides'
 import type { OptimizationOverride } from './types'
 

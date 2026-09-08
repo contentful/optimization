@@ -1,6 +1,5 @@
-import type { MergeTagEntry } from '@contentful/optimization-api-client/api-schemas'
-import { Profile, isMergeTagEntry } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
+import { isMergeTagEntry, type MergeTagEntry, Profile } from '../api-schemas'
 
 const logger = createScopedLogger('Optimization')
 

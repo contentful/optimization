@@ -1,6 +1,5 @@
 /* eslint-disable no-console -- CLI */
 
-import { isRecord, isResolvedContentfulEntry } from '@contentful/optimization-api-schemas'
 import type { Entry } from 'contentful'
 import { get } from 'es-toolkit/compat'
 import fs from 'fs-extra'
@@ -20,6 +19,25 @@ const ENV_FALLBACK = 'master'
 const EXPORT_JSON_PATH = './src/contentful/data/space/ctfl-space-data.json'
 const OUTPUT_DIRECTORY = './src/contentful/data/entries'
 const CONTENTFUL_CONFIG_PATH = './.contentfulrc.json'
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isResolvedContentfulEntry(value: unknown): value is Entry {
+  if (!isRecord(value)) return false
+
+  const { fields, sys } = value
+  if (!isRecord(sys) || !isRecord(fields)) return false
+
+  const { contentType, id } = sys
+  if (typeof id !== 'string' || !isRecord(contentType)) return false
+
+  const { sys: contentTypeSys } = contentType
+  if (!isRecord(contentTypeSys)) return false
+
+  return typeof contentTypeSys.id === 'string'
+}
 
 // -----------------------------------
 // Type guards & safe accessors

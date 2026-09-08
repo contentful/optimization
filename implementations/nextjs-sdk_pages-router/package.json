@@ -14,7 +14,7 @@
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:app": "pnpm build && pm2 start --name nextjs-sdk-pages-router-app \"pnpm start\"",
     "serve:app:stop": "pm2 stop nextjs-sdk-pages-router-app && pm2 delete nextjs-sdk-pages-router-app",
-    "serve:mocks": "pm2 start --name nextjs-sdk-pages-router-mocks \"pnpm --dir ../../lib/mocks serve\"",
+    "serve:mocks": "pm2 start --name nextjs-sdk-pages-router-mocks \"pnpm --dir ../.. serve:mocks\"",
     "serve:mocks:stop": "pm2 stop nextjs-sdk-pages-router-mocks && pm2 delete nextjs-sdk-pages-router-mocks",
     "serve:stop": "pnpm serve:app:stop; pnpm serve:mocks:stop",
     "serve:e2e": "pnpm build && pnpm start",

@@ -1,12 +1,10 @@
 import type {
-  AudienceEntry,
-  EntryReplacementVariant,
   ExperienceEvent,
   InsightsEvent,
-  OptimizationEntry,
   SelectedOptimization,
 } from '@contentful/optimization-api-client/api-schemas'
 import type { Entry } from 'contentful'
+import type { AudienceEntry, EntryReplacementVariant, OptimizationEntry } from '../contentful'
 
 export type ContentfulEntry = Entry
 

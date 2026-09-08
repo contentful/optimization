@@ -156,4 +156,6 @@ E2E tests are run using Playwright.
 - [Node SDK reference implementation](../node-sdk/README.md) - Server-only reference implementation
 - [Web SDK Vanilla JS reference implementation](../web-sdk/README.md) - Browser-only reference
   implementation
-- [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures
+- [Mock server](../../lib/mock-server/README.md) - HTTP composition for local development and
+  reference implementations
+- [Mocks package](../../lib/mocks/README.md) - Shared handlers and fixtures

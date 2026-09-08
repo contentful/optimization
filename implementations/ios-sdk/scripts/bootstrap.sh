@@ -349,7 +349,7 @@ start_mock_server() {
         sleep 1
     fi
 
-    PORT="${MOCK_SERVER_PORT}" pnpm --dir "$ROOT_DIR/lib/mocks" serve \
+    PORT="${MOCK_SERVER_PORT}" pnpm --dir "$ROOT_DIR" serve:mocks \
         >"$LOG_DIR/mock-server.log" 2>&1 &
     MOCK_SERVER_PID=$!
 

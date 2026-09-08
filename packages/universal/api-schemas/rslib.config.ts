@@ -13,6 +13,13 @@ const common = {
 } as const
 
 export default defineConfig({
+  output: {
+    externals: [
+      '@contentful/optimization-api-client/api-schemas',
+      '@contentful/optimization-core/api-schemas',
+    ],
+  },
+
   source: {
     tsconfigPath: './tsconfig.build.json',
     decorators: { version: '2022-03' }, // stage-3 decorators

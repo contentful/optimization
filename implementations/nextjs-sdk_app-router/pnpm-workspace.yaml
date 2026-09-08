@@ -1,12 +1,11 @@
 sharedWorkspaceLockfile: false
 
 allowBuilds:
-  sharp: false
-  unrs-resolver: false
+  sharp: true
+  unrs-resolver: true
 
 overrides:
   '@contentful/optimization-api-client': 'file:../../pkgs/contentful-optimization-api-client-local.tgz'
-  '@contentful/optimization-api-schemas': 'file:../../pkgs/contentful-optimization-api-schemas-local.tgz'
   '@contentful/optimization-core': 'file:../../pkgs/contentful-optimization-core-local.tgz'
   '@contentful/optimization-node': 'file:../../pkgs/contentful-optimization-node-local.tgz'
   '@contentful/optimization-nextjs': 'file:../../pkgs/contentful-optimization-nextjs-local.tgz'

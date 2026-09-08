@@ -148,4 +148,6 @@ E2E tests are run using Playwright.
 - [@contentful/optimization-web](../../packages/web/web-sdk/README.md) - Web SDK package
 - [Web SDK React Adapter reference implementation](../web-sdk_react/README.md) - Adapter-based React
   reference implementation built on the Web SDK
-- [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures
+- [Mock server](../../lib/mock-server/README.md) - HTTP composition for local development and
+  reference implementations
+- [Mocks package](../../lib/mocks/README.md) - Shared handlers and fixtures

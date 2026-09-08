@@ -4,7 +4,7 @@
 #
 # This script orchestrates the complete development environment by:
 #   1. Installing workspace dependencies
-#   2. Starting the mock API server (from lib/mocks)
+#   2. Starting the mock API server
 #   3. Starting the Metro bundler for React Native
 #   4. Installing CocoaPods (iOS) or setting up adb reverse (Android)
 #   5. Building and launching the app on simulator/emulator
@@ -223,7 +223,7 @@ start_mock_server() {
     cd "$ROOT_DIR"
     log_info "Starting mock server on port ${MOCK_SERVER_PORT}..."
     
-    pnpm --filter mocks serve 2>&1 | tee "$MOCK_SERVER_LOG" &
+    PORT="${MOCK_SERVER_PORT}" pnpm --dir "$ROOT_DIR" serve:mocks 2>&1 | tee "$MOCK_SERVER_LOG" &
     MOCK_SERVER_PID=$!
     
     log_info "Mock server started with PID: $MOCK_SERVER_PID"

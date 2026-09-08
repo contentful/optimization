@@ -164,4 +164,6 @@ pnpm implementation:run -- nextjs-sdk_pages-router test:e2e:codegen
   integration using the React Web SDK
 - [@contentful/optimization-nextjs](../../packages/web/frameworks/nextjs-sdk/README.md) - Next.js
   SDK package
-- [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures
+- [Mock server](../../lib/mock-server/README.md) - HTTP composition for local development and
+  reference implementations
+- [Mocks package](../../lib/mocks/README.md) - Shared handlers and fixtures

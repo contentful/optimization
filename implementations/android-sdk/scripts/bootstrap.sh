@@ -174,7 +174,7 @@ start_mock_server() {
         sleep 1
     fi
 
-    pnpm --dir "$ROOT_DIR/lib/mocks" serve >"$LOG_DIR/mock-server.log" 2>&1 &
+    PORT="$MOCK_SERVER_PORT" pnpm --dir "$ROOT_DIR" serve:mocks >"$LOG_DIR/mock-server.log" 2>&1 &
     MOCK_SERVER_PID=$!
 
     if ! wait_for_port "${MOCK_SERVER_PORT}" "Mock server" 30; then

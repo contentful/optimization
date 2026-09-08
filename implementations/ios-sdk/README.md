@@ -17,7 +17,8 @@
 </div>
 
 Reference app for native iOS bridge and preview-panel validation work. This app exercises two iOS
-shells against the mock server in `lib/mocks/` and hosts the XCUITest suite.
+shells against the HTTP mock server composed by `lib/mock-server/` from shared `lib/mocks/` handlers
+and fixtures, and hosts the XCUITest suite.
 
 > [!NOTE]
 >
@@ -57,7 +58,7 @@ Only two arguments differ from a production integration: `host` points at `local
 `clientConfiguration.secure` is `false` because the mock server is plain HTTP. A production app
 builds `Contentful.Client(spaceId:accessToken:)` and gets `cdn.contentful.com` over HTTPS.
 
-That works because `lib/mocks` also serves the CDA from the host root, in addition to the
+That works because `lib/mock-server` serves the CDA from the host root, in addition to the
 `/contentful/` namespace it multiplexes alongside the Experience and Insights APIs.
 `Contentful.Client` accepts only a `host[:port]` and builds `/spaces/...` from the root, so it has
 nowhere to put a path prefix — unlike `contentful.js`, which has `basePath` and keeps using the
@@ -258,6 +259,8 @@ Common local pitfalls:
   the native iOS package
 - [Native bridge architecture](../../packages/universal/optimization-js-bridge/BRIDGE_ARCHITECTURE.md) -
   Shared bridge runtime and build notes
-- [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures
+- [Mock server](../../lib/mock-server/README.md) - HTTP composition for local development and
+  reference implementations
+- [Mocks package](../../lib/mocks/README.md) - Shared handlers and fixtures
 - [Preview panel scenario contract](../PREVIEW_PANEL_SCENARIOS.md) - Cross-platform preview-panel
   scenario source of truth

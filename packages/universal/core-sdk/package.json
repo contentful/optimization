@@ -9,6 +9,7 @@
     "directory": "packages/universal/core-sdk"
   },
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -138,6 +139,7 @@
   },
   "dependencies": {
     "@contentful/optimization-api-client": "workspace:*",
+    "@contentful/rich-text-types": "catalog:",
     "@preact/signals-core": "catalog:",
     "contentful": "catalog:",
     "es-toolkit": "catalog:",

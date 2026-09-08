@@ -69,7 +69,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contentful/optimization-api-schemas": "workspace:*"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "build-tools": "workspace:*",

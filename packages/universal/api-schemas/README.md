@@ -6,7 +6,7 @@
 
 <h1 align="center">Contentful Personalization & Analytics</h1>
 
-<h3 align="center">API Schema Library</h3>
+<h3 align="center">API Schema Compatibility Facade</h3>
 
 <div align="center">
 
@@ -15,20 +15,21 @@
 
 </div>
 
-The Contentful Optimization API Schema Library provides Zod Mini schemas, inferred TypeScript types,
-and small runtime helpers for Contentful CDA, Experience API, and Insights API payloads. SDK layers
-use this package to validate API contracts and normalize optimization data.
+> [!WARNING]
+>
+> `@contentful/optimization-api-schemas` is deprecated. It remains available as a compatibility
+> facade for the historical combined root schema surface. Do not add new imports from this package.
+
+This package preserves the historical root exports for Contentful CDA, Experience API, and Insights
+API schemas. The owning packages maintain those contracts.
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
 - [Getting started](#getting-started)
-- [When to use this package](#when-to-use-this-package)
-- [Package surface](#package-surface)
-  - [Contentful CDA helpers](#contentful-cda-helpers)
-  - [Experience API schemas](#experience-api-schemas)
-  - [Insights API schemas](#insights-api-schemas)
+- [Migrate imports](#migrate-imports)
+- [Compatibility surface](#compatibility-surface)
 - [Related](#related)
 
 <!-- mtoc-end -->
@@ -42,89 +43,45 @@ Install using an NPM-compatible package manager, pnpm for example:
 pnpm install @contentful/optimization-api-schemas
 ```
 
-Import schemas or helpers from the package:
+Existing applications can continue to import from the package root while they migrate:
 
 ```ts
-import {
-  isResolvedOptimizedEntry,
-  normalizeOptimizationConfig,
-} from '@contentful/optimization-api-schemas'
+import { isResolvedOptimizedEntry } from '@contentful/optimization-api-schemas'
 ```
+
+## Migrate imports
+
+Move imports according to the contract they use:
+
+| Contract                                             | Import from                                       |
+| ---------------------------------------------------- | ------------------------------------------------- |
+| Experience API, Insights API, and validation schemas | `@contentful/optimization-api-client/api-schemas` |
+| Contentful CDA schemas and helpers                   | `@contentful/optimization-core/api-schemas`       |
+
+For example, replace a combined historical import with owner-specific imports:
+
+```ts
+import { ExperienceResponse } from '@contentful/optimization-api-client/api-schemas'
+import { isResolvedOptimizedEntry } from '@contentful/optimization-core/api-schemas'
+```
+
+Most application integrations must use an environment SDK instead of importing schemas directly.
+Use these imports when building or maintaining SDK layers, tooling, or tests.
+
+## Compatibility surface
+
+The facade preserves the same combined root surface so existing imports continue to resolve. It does
+not provide new schema entry points. `@contentful/optimization-core/api-schemas` remains the
+aggregate entry point for SDK layers that need CDA schemas with the API schema pass-throughs.
 
 Consult [Zod's documentation](https://zod.dev/basics) for more information on working with
 [Zod Mini](https://zod.dev/packages/mini) schemas.
 
-## When to use this package
-
-Use `@contentful/optimization-api-schemas` when you need shared runtime validation schemas or
-inferred TypeScript types for Contentful CDA, Experience API, and Insights API payloads. Most
-application integrations must use an environment SDK instead of importing schemas directly.
-
-## Package surface
-
-### Contentful CDA helpers
-
-These helpers identify and normalize Optimization-owned Contentful fields:
-
-| Export                        | Purpose                                                         |
-| ----------------------------- | --------------------------------------------------------------- |
-| `OptimizedEntry`              | Contentful SDK entry type with associated optimization entries  |
-| `OptimizationEntry`           | Contentful SDK entry type referenced by `fields.nt_experiences` |
-| `OptimizationConfig`          | Optimization configuration schema from `fields.nt_config`       |
-| `isRecord`                    | Structural guard for non-array object records                   |
-| `isEntryOfContentType`        | Narrows a resolved entry by its Contentful content type ID      |
-| `isRichTextDocument`          | Structural guard for Contentful Rich Text documents             |
-| `isRichTextNode`              | Structural guard for Contentful Rich Text nodes                 |
-| `isResolvedContentfulEntry`   | Structural guard for resolved Contentful Entry values           |
-| `isResolvedOptimizedEntry`    | Structural guard for resolved optimized entries                 |
-| `isResolvedOptimizationEntry` | Structural guard for resolved optimization entries              |
-| `normalizeOptimizationConfig` | Fills omitted optimization config fields with SDK-safe defaults |
-
-These schemas model the SDK's single-locale CDA entry contract. Manual resolution passes entries
-fetched with one app Contentful locale. JS SDK-managed fetching uses the same contract when a
-`contentful.js` client is configured. Avoid `withAllLocales` or `locale=*` in either path. See
-[Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
-for the entry contract and
-[Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
-for the broader locale model.
-
-### Experience API schemas
-
-Experience API schemas validate profile evaluation request and response payloads:
-
-| Export                       | Purpose                                                  |
-| ---------------------------- | -------------------------------------------------------- |
-| `ExperienceRequestData`      | Request payload for a single Experience API call         |
-| `BatchExperienceRequestData` | Request payload for batch Experience API calls           |
-| `ExperienceEvent`            | Union of supported Experience API event schemas          |
-| `BatchExperienceEvent`       | Batch event schema with required `anonymousId` per event |
-| `ExperienceResponse`         | Full Experience API response envelope                    |
-| `BatchExperienceResponse`    | Batch Experience API response envelope                   |
-| `Change`                     | Supported change union, including Custom Flag data       |
-| `SelectedOptimization`       | Selected optimization outcome for a profile              |
-| `Profile`                    | User profile returned by the Experience API              |
-
-### Insights API schemas
-
-Insights API schemas validate event ingestion payloads:
-
-| Export               | Purpose                                                     |
-| -------------------- | ----------------------------------------------------------- |
-| `InsightsEvent`      | Union of supported Insights API event schemas               |
-| `BatchInsightsEvent` | Batched Insights API payload with profile and event entries |
-| `ClickEvent`         | `component_click` event schema                              |
-| `HoverEvent`         | `component_hover` event schema                              |
-| `ViewEvent`          | `component` view event schema                               |
-
-For every schema, inferred type, and helper signature, use the generated
-[API Schemas reference](https://contentful.github.io/optimization/modules/_contentful_optimization-api-schemas.html).
-
 ## Related
 
-- [API Schemas generated reference](https://contentful.github.io/optimization/modules/_contentful_optimization-api-schemas.html) -
-  exported schema and type reference
-- [API Client](../api-client/README.md) - low-level Experience API and Insights API transport
-- [Optimization Core SDK](../core-sdk/README.md) - platform-agnostic SDK layer that consumes these
-  schemas
+- [API Client](../api-client/README.md) - low-level Experience API and Insights API transport and
+  schema ownership
+- [Optimization Core SDK](../core-sdk/README.md) - platform-agnostic SDK layer and CDA schema
+  ownership
 - [Choosing the right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html) -
   package selection guidance for application integrations

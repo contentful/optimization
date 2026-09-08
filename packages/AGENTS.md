@@ -88,8 +88,9 @@ For pnpm-managed packages with matching scripts, use `pnpm --filter <package-nam
 - Run upstream SDK build, package, and size commands to completion before starting downstream SDK
   build, package, or size commands. When the affected graph is broad or uncertain, prefer the
   aggregate workspace command so pnpm owns the dependency scheduling.
-- Common package order is: `@contentful/optimization-api-schemas`, then
-  `@contentful/optimization-api-client`, then `@contentful/optimization-core`, then leaf packages
+- Common package order is: `@contentful/optimization-api-client`, then
+  `@contentful/optimization-core`, then the deprecated
+  `@contentful/optimization-api-schemas` compatibility facade, then leaf packages
   such as `@contentful/optimization-node`, `@contentful/optimization-react-native`,
   `@contentful/optimization-web`, and `@contentful/optimization-js-bridge`. Web dependents such as
   `@contentful/optimization-react-web` and `@contentful/optimization-web-preview-panel` run after

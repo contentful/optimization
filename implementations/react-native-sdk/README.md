@@ -203,4 +203,6 @@ Local Android E2E logging is intentionally minimal by default.
   SDK package
 - [React Native SDK package-local dev dashboard](../../packages/react-native-sdk/dev/README.md) -
   Interactive development harness
-- [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures
+- [Mock server](../../lib/mock-server/README.md) - HTTP composition for local development and
+  reference implementations
+- [Mocks package](../../lib/mocks/README.md) - Shared handlers and fixtures

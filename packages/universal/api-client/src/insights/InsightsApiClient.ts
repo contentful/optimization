@@ -1,7 +1,4 @@
-import {
-  BatchInsightsEventArray,
-  parseWithFriendlyError,
-} from '@contentful/optimization-api-schemas'
+import { BatchInsightsEventArray, parseWithFriendlyError } from '../api-schemas'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 import { createScopedLogger } from '../logger'
 

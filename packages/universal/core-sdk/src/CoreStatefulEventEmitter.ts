@@ -3,7 +3,6 @@ import type {
   ExperienceEvent as ExperienceEventPayload,
   InsightsEvent as InsightsEventPayload,
   Json,
-  MergeTagEntry,
   PartialProfile,
   Profile,
 } from '@contentful/optimization-api-client/api-schemas'
@@ -11,6 +10,7 @@ import { createScopedLogger, logger } from '@contentful/optimization-api-client/
 import { isEqual } from 'es-toolkit/predicate'
 import type { ConsentGuard } from './consent'
 import { hasEventConsent } from './consent/ConsentPolicy'
+import type { MergeTagEntry } from './contentful'
 import CoreBase from './CoreBase'
 import type { CoreStatefulConfig } from './CoreStateful'
 import type {
