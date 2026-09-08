@@ -29,6 +29,12 @@
       "schedule": ["* 8-11 * * 2"]
     },
     {
+      "description": "Keep React runtime versions aligned with the renderer embedded by React Native.",
+      "matchFileNames": ["implementations/react-native-sdk/package.json"],
+      "matchPackageNames": ["react", "react-test-renderer"],
+      "enabled": false
+    },
+    {
       "description": "Run Gradle dependency updates during the first-Monday morning maintenance window.",
       "matchManagers": ["gradle"],
       "schedule": ["* 9-12 1-7 * 1"]
