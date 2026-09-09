@@ -95,7 +95,6 @@
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
     "@commitlint/prompt": "^21.2.0",
-    "@commitlint/prompt-cli": "^21.2.0",
     "@eslint/js": "^10.0.1",
     "@rstest/core": "catalog:",
     "@types/inquirer": "^9.0.10",

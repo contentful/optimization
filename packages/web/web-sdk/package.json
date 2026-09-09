@@ -200,7 +200,6 @@
     "happy-dom": "catalog:",
     "rimraf": "catalog:",
     "tslib": "catalog:",
-    "tsx": "catalog:",
     "typescript": "catalog:"
   }
 }
