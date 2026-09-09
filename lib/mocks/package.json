@@ -36,7 +36,6 @@
   },
   "devDependencies": {
     "@rstest/core": "catalog:",
-    "@types/express": "catalog:",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "catalog:",
     "contentful": "catalog:",
