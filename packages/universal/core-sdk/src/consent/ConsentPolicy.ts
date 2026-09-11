@@ -5,8 +5,6 @@ export const UNLOCKING_EVENT_TYPES: readonly AllowedEventType[] = [
   'page',
   'screen',
   'track',
-  'group',
-  'alias',
   'component',
 ]
 

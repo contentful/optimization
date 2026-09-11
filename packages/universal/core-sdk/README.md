@@ -59,8 +59,14 @@ Choose the stateful or stateless Core class based on the runtime layer you are b
 ```ts
 import { CoreStateful, CoreStateless } from '@contentful/optimization-core'
 
-const statefulOptimization = new CoreStateful({ clientId: 'your-client-id' })
-const statelessOptimization = new CoreStateless({ clientId: 'your-client-id' })
+const statefulOptimization = new CoreStateful({
+  spaceId: 'your-space-id',
+  clientId: 'your-client-id',
+})
+const statelessOptimization = new CoreStateless({
+  spaceId: 'your-space-id',
+  clientId: 'your-client-id',
+})
 ```
 
 Stateful runtimes own durable in-process SDK state. Stateless runtimes bind request-scoped consent,
@@ -109,15 +115,17 @@ Experience options for that one incoming request.
 
 Shared Core configuration:
 
-| Option         | Required? | Default               | Description                                                 |
-| -------------- | --------- | --------------------- | ----------------------------------------------------------- |
-| `clientId`     | Yes       | N/A                   | Shared API key for Experience API and Insights API requests |
-| `environment`  | No        | `'main'`              | Contentful environment identifier                           |
-| `api`          | No        | See API options below | Experience API and Insights API endpoint options            |
-| `contentful`   | No        | `undefined`           | App-owned `contentful.js` client, default query, and cache  |
-| `eventBuilder` | No        | SDK-layer defaults    | Event metadata overrides for platform SDK authors           |
-| `fetchOptions` | No        | SDK defaults          | Fetch timeout and retry behavior                            |
-| `logLevel`     | No        | `'error'`             | Minimum log level for the default console sink              |
+| Option                  | Required? | Default               | Description                                                               |
+| ----------------------- | --------- | --------------------- | ------------------------------------------------------------------------- |
+| `spaceId`               | Yes       | N/A                   | Contentful Space identifier for Experience API requests                   |
+| `clientId`              | Yes       | N/A                   | Ninetailed/Optimization organization identifier for Insights API requests |
+| `environment`           | No        | `'main'`              | Ninetailed/Optimization environment identifier, used by the Insights API  |
+| `contentfulEnvironment` | No        | `'master'`            | Contentful space environment identifier, used by the Experience API       |
+| `api`                   | No        | See API options below | Experience API and Insights API endpoint options                          |
+| `contentful`            | No        | `undefined`           | App-owned `contentful.js` client, default query, and cache                |
+| `eventBuilder`          | No        | SDK-layer defaults    | Event metadata overrides for platform SDK authors                         |
+| `fetchOptions`          | No        | SDK defaults          | Fetch timeout and retry behavior                                          |
+| `logLevel`              | No        | `'error'`             | Minimum log level for the default console sink                            |
 
 Consent and event configuration:
 

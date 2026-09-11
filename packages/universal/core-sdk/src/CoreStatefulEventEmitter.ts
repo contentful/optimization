@@ -5,6 +5,7 @@ import type {
   Json,
   PartialProfile,
   Profile,
+  VariableChange,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger, logger } from '@contentful/optimization-api-client/logger'
 import { isEqual } from 'es-toolkit/predicate'
@@ -40,6 +41,10 @@ import {
 } from './signals'
 
 const coreLogger = createScopedLogger('CoreStateful')
+
+function isVariableChange(change: ChangeArray[number]): change is VariableChange {
+  return change.type === 'Variable'
+}
 
 type FlagViewTrackingSignature = readonly [
   value: Json,
@@ -334,7 +339,7 @@ abstract class CoreStatefulEventEmitter
     name: string,
     changes: ChangeArray | undefined = changesSignal.value,
   ): FlagViewBuilderArgs {
-    const change = changes?.find((candidate) => candidate.key === name)
+    const change = changes?.filter(isVariableChange).find((candidate) => candidate.key === name)
 
     return {
       componentId: name,

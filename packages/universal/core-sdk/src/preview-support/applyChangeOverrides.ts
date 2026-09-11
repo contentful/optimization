@@ -3,12 +3,17 @@ import {
   type ChangeArray,
   type InlineVariableComponent,
   type OptimizationEntry,
+  type VariableChange,
 } from '../api-schemas'
 import type { OptimizationOverride } from './types'
 
 function getInlineVariableComponents(optimization: OptimizationEntry): InlineVariableComponent[] {
   const { components } = optimization.fields.nt_config ?? {}
   return Array.isArray(components) ? components.filter(isInlineVariableComponent) : []
+}
+
+function isVariableChange(change: ChangeArray[number]): change is VariableChange {
+  return change.type === 'Variable'
 }
 
 /**
@@ -34,7 +39,7 @@ export function applyChangeOverrides(
   const overrideValues = Object.values(overrides)
   if (overrideValues.length === 0) return changes
 
-  const overrideChanges = optimizationEntries.flatMap((optimization): ChangeArray => {
+  const overrideChanges = optimizationEntries.flatMap((optimization): VariableChange[] => {
     const {
       fields: { nt_experience_id: experienceId },
     } = optimization
@@ -43,30 +48,32 @@ export function applyChangeOverrides(
 
     const { variantIndex } = override
 
-    return getInlineVariableComponents(optimization).map((component): ChangeArray[number] => ({
-      key: component.key,
-      type: 'Variable',
-      value:
-        variantIndex === 0
-          ? component.baseline.value
-          : (component.variants[variantIndex - 1]?.value ?? component.baseline.value),
-      meta: {
-        experienceId,
-        variantIndex,
-      },
-    }))
+    return getInlineVariableComponents(optimization).map(
+      (component): VariableChange => ({
+        key: component.key,
+        type: 'Variable',
+        value:
+          variantIndex === 0
+            ? component.baseline.value
+            : (component.variants[variantIndex - 1]?.value ?? component.baseline.value),
+        meta: {
+          experienceId,
+          variantIndex,
+        },
+      }),
+    )
   })
 
   if (overrideChanges.length === 0) return changes
 
+  const isOverridden = (change: VariableChange): boolean =>
+    overrideChanges.some(
+      ({ key, meta: { experienceId } }) =>
+        change.key === key && change.meta.experienceId === experienceId,
+    )
+
   return [
-    ...changes.filter(
-      (change) =>
-        !overrideChanges.some(
-          ({ key, meta: { experienceId } }) =>
-            change.key === key && change.meta.experienceId === experienceId,
-        ),
-    ),
+    ...changes.filter((change) => !isVariableChange(change) || !isOverridden(change)),
     ...overrideChanges,
   ]
 }

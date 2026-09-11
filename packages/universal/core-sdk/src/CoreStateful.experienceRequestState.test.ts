@@ -8,6 +8,7 @@ import { server } from './test/setup'
 const EXPERIENCE_BASE_URL = 'https://experience.ninetailed.co/'
 
 const config: CoreStatefulConfig = {
+  spaceId: 'key_123',
   clientId: 'key_123',
   environment: 'main',
   defaults: { consent: true },
@@ -74,7 +75,7 @@ describe('CoreStateful experienceRequestState end-to-end', () => {
 
   it('flips idle -> pending -> success when the Experience API responds 200', async () => {
     server.use(
-      http.post(`${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles`, () =>
+      http.post(`${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles`, () =>
         HttpResponse.json(SUCCESS_BODY, { status: 200 }),
       ),
     )
@@ -92,7 +93,7 @@ describe('CoreStateful experienceRequestState end-to-end', () => {
 
   it('flips idle -> pending -> failed:api-error on a 500 response', async () => {
     server.use(
-      http.post(`${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles`, () =>
+      http.post(`${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles`, () =>
         HttpResponse.json({ error: 'kaboom' }, { status: 500 }),
       ),
     )
@@ -121,13 +122,10 @@ describe('CoreStateful experienceRequestState end-to-end', () => {
   // without breaking the public contract.
   it('flips idle -> pending -> failed:api-error when the request times out', async () => {
     server.use(
-      http.post(
-        `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles`,
-        async () => {
-          await new Promise((resolve) => setTimeout(resolve, 200))
-          return HttpResponse.json(SUCCESS_BODY, { status: 200 })
-        },
-      ),
+      http.post(`${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles`, async () => {
+        await new Promise((resolve) => setTimeout(resolve, 200))
+        return HttpResponse.json(SUCCESS_BODY, { status: 200 })
+      }),
     )
 
     const core = createCore({ fetchOptions: { requestTimeout: 25 } })
@@ -147,7 +145,7 @@ describe('CoreStateful experienceRequestState end-to-end', () => {
 
   it('overwrites a terminal failed state with pending on the next request', async () => {
     server.use(
-      http.post(`${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles`, () =>
+      http.post(`${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles`, () =>
         HttpResponse.json({ error: 'kaboom' }, { status: 500 }),
       ),
     )
@@ -161,7 +159,7 @@ describe('CoreStateful experienceRequestState end-to-end', () => {
     })
 
     server.use(
-      http.post(`${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles`, () =>
+      http.post(`${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles`, () =>
         HttpResponse.json(SUCCESS_BODY, { status: 200 }),
       ),
     )
