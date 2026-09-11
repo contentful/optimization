@@ -38,7 +38,7 @@ graph TB
     subgraph "Core Client"
         OC["OptimizationClient\n<i>@MainActor ObservableObject — main facade.\nPublishes state, drives all bridge calls</i>"]
         EP["EventPayloads\n<i>Typed Identify/Page/Screen/Track payloads\nwith JSONValue properties</i>"]
-        CFG["OptimizationConfig\n<i>clientId, environment,\napi, logLevel, queuePolicy,\nStorageDefaults</i>"]
+        CFG["OptimizationConfig\n<i>spaceId, clientId, environment,\ncontentfulEnvironment, api, logLevel,\nqueuePolicy, StorageDefaults</i>"]
         ST["OptimizationState\n<i>Reactive snapshot: profile,\nconsent, canOptimize, changes,\nselectedOptimizations</i>"]
         ERR["OptimizationError\n<i>notInitialized, bridgeError,\nresourceLoadError, configError</i>"]
     end

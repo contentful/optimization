@@ -17,6 +17,7 @@ final class PreviewOverrideTests: XCTestCase {
     private func makeInitializedClient() throws -> OptimizationClient {
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -76,6 +77,7 @@ final class PreviewOverrideTests: XCTestCase {
         client.testOnlyEvaluateScript("""
             __bridge.destroy();
             __bridge.initialize({
+                spaceId: "test-client",
                 clientId: "test-client",
                 environment: "master",
                 api: {
@@ -432,6 +434,7 @@ final class PreviewOverrideTests: XCTestCase {
         // Destroy and reinitialize
         client.destroy()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
