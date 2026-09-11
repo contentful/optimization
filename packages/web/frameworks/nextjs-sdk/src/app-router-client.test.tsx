@@ -5,6 +5,7 @@ import * as appRouter from './app-router-client'
 import * as client from './client'
 
 const testConfig = {
+  spaceId: 'test-space-id',
   clientId: 'test-client-id',
   environment: 'main',
   api: {
@@ -94,6 +95,7 @@ describe('Next.js App Router client components', () => {
     expect(element.props).toMatchObject({
       api: testConfig.api,
       children: 'Bound content',
+      spaceId: testConfig.spaceId,
       clientId: testConfig.clientId,
       defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,
@@ -105,6 +107,7 @@ describe('Next.js App Router client components', () => {
     })
     expect(provider?.props).toMatchObject({
       api: testConfig.api,
+      spaceId: testConfig.spaceId,
       clientId: testConfig.clientId,
       defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,

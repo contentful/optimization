@@ -3,6 +3,7 @@ import { renderToString } from 'react-dom/server'
 import * as pagesRouter from './pages-router'
 
 const testConfig = {
+  spaceId: 'test-space-id',
   clientId: 'test-client-id',
   environment: 'main',
   api: {
@@ -83,6 +84,7 @@ describe('Next.js Pages Router client components', () => {
     expect(root.props).toMatchObject({
       api: testConfig.api,
       children: 'Root content',
+      spaceId: testConfig.spaceId,
       clientId: testConfig.clientId,
       defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,
@@ -94,6 +96,7 @@ describe('Next.js Pages Router client components', () => {
     })
     expect(provider?.props).toMatchObject({
       api: testConfig.api,
+      spaceId: testConfig.spaceId,
       clientId: testConfig.clientId,
       defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,

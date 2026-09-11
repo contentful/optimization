@@ -9,7 +9,8 @@ import * as edgeExports from './edge'
 const { configureNextjsEdgeOptimization } = edgeExports
 
 const SDK_CONFIG = {
-  clientId: 'key_123',
+  spaceId: 'key_123',
+  clientId: 'key_456',
   environment: 'main',
 }
 

@@ -71,6 +71,7 @@ import { contentfulClient } from './contentful'
 import { getAppConsent } from './consent'
 
 export const optimization = bindNextjsAppRouterServerOptimization({
+  spaceId: 'space-id',
   clientId: 'client-id',
   environment: 'main',
   locale: 'en-US',
@@ -187,6 +188,7 @@ manual server handoff API:
 import { bindNextjsAppRouterClientOptimization } from '@contentful/optimization-nextjs/app-router/client'
 
 export const clientOptimization = bindNextjsAppRouterClientOptimization({
+  spaceId: 'space-id',
   clientId: 'client-id',
   environment: 'main',
   locale: 'en-US',
@@ -287,6 +289,7 @@ import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-next
 
 export const { OptimizationRoot, OptimizationAnalyticsRoot, OptimizedEntry } =
   bindNextjsPagesRouterOptimization({
+    spaceId: 'space-id',
     clientId: 'client-id',
     environment: 'main',
     consent: {
@@ -321,6 +324,7 @@ import { bindNextjsPagesRouterServerOptimization } from '@contentful/optimizatio
 import { contentfulClient } from './contentful'
 
 const { createRequestHandoff } = bindNextjsPagesRouterServerOptimization({
+  spaceId: 'space-id',
   clientId: 'client-id',
   contentful: { client: contentfulClient },
   environment: 'main',
@@ -361,6 +365,7 @@ route:
 import { bindNextjsAppRouterClientOptimization } from '@contentful/optimization-nextjs/app-router/client'
 
 export const clientOptimization = bindNextjsAppRouterClientOptimization({
+  spaceId: 'space-id',
   clientId: 'client-id',
   environment: 'main',
   beforeInitialPage: {
@@ -422,6 +427,7 @@ The Pages Router client binder uses the same option in its client-only module:
 import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router'
 
 export const optimization = bindNextjsPagesRouterOptimization({
+  spaceId: 'space-id',
   clientId: 'client-id',
   environment: 'main',
   beforeInitialPage: {
@@ -494,6 +500,7 @@ Node-only APIs.
 import { configureNextjsEdgeOptimization } from '@contentful/optimization-nextjs/edge'
 
 const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
+  spaceId: 'space-id',
   clientId: 'client-id',
   environment: 'main',
   consent: {
