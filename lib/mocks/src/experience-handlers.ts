@@ -143,7 +143,7 @@ function getResponseBody(
 }
 
 /**
- * Returns MSW request handlers that mock the Experience API v2 endpoints.
+ * Returns MSW request handlers that mock the Experience API v3 endpoints.
  *
  * @param dependencies - Injected schema parsers for Experience API requests and fixtures.
  * @param baseUrl - URL prefix prepended to each route pattern.
@@ -188,7 +188,7 @@ export function getHandlers(
 
     // Create profile (upsert by events)
     http.post(
-      `${baseUrl}v2/organizations/:organizationId/environments/:environment/profiles`,
+      `${baseUrl}v3/spaces/:spaceId/environments/:environment/profiles`,
       async ({ request }) => {
         try {
           await ensureFixturesLoaded(dependencies)
@@ -214,7 +214,7 @@ export function getHandlers(
 
     // Update profile by id
     http.post(
-      `${baseUrl}v2/organizations/:organizationId/environments/:environment/profiles/:profileId`,
+      `${baseUrl}v3/spaces/:spaceId/environments/:environment/profiles/:profileId`,
       async ({ params, request }) => {
         try {
           await ensureFixturesLoaded(dependencies)
@@ -249,7 +249,7 @@ export function getHandlers(
 
     // Get profile by id
     http.get(
-      `${baseUrl}v2/organizations/:organizationId/environments/:environment/profiles/:profileId`,
+      `${baseUrl}v3/spaces/:spaceId/environments/:environment/profiles/:profileId`,
       async ({ params }) => {
         try {
           await ensureFixturesLoaded(dependencies)
@@ -274,7 +274,7 @@ export function getHandlers(
 
     // Batch upsert profiles (max limits are not enforced in this mock)
     http.post(
-      `${baseUrl}v2/organizations/:organizationId/environments/:environment/events`,
+      `${baseUrl}v3/spaces/:spaceId/environments/:environment/events`,
       async ({ request }) => {
         try {
           await ensureFixturesLoaded(dependencies)

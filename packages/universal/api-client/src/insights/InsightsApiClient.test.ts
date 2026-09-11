@@ -10,7 +10,8 @@ import InsightsApiClient, {
   type InsightsApiClientConfig,
 } from './InsightsApiClient'
 
-const CLIENT_ID = 'key_123'
+const SPACE_ID = 'key_123'
+const CLIENT_ID = 'org_123'
 const ENVIRONMENT = 'main'
 
 const expectedUrl = new URL(
@@ -20,6 +21,7 @@ const expectedUrl = new URL(
 
 function makeClient(overrides: Partial<InsightsApiClientConfig> = {}): InsightsApiClient {
   const config: InsightsApiClientConfig = {
+    spaceId: SPACE_ID,
     clientId: CLIENT_ID,
     environment: ENVIRONMENT,
     ...overrides,

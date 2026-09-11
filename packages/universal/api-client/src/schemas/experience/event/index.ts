@@ -1,7 +1,5 @@
-export * from './AliasEvent'
 export * from './BatchExperienceEvent'
 export * from './ExperienceEvent'
-export * from './GroupEvent'
 export * from './IdentifyEvent'
 export * from './InteractionEventProperties'
 export * from './PageViewEvent'

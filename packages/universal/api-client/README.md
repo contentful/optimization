@@ -55,8 +55,10 @@ preferred:
 import { ApiClient } from '@contentful/optimization-api-client'
 
 const client = new ApiClient({
+  spaceId: 'your-space-id',
   clientId: 'your-client-id',
   environment: 'main',
+  contentfulEnvironment: 'master',
 })
 ```
 
@@ -68,13 +70,15 @@ state, consent handling, event builders, entry resolution, tracking, or platform
 
 ## Common configuration
 
-| Option         | Required? | Default                      | Description                                                 |
-| -------------- | --------- | ---------------------------- | ----------------------------------------------------------- |
-| `clientId`     | Yes       | N/A                          | Shared API key for Experience API and Insights API requests |
-| `environment`  | No        | `'main'`                     | Contentful environment identifier                           |
-| `experience`   | No        | See Experience options below | Experience API endpoint and default request options         |
-| `insights`     | No        | See Insights options below   | Insights API endpoint options                               |
-| `fetchOptions` | No        | SDK defaults                 | Fetch timeout and retry behavior                            |
+| Option                  | Required? | Default                      | Description                                                               |
+| ----------------------- | --------- | ---------------------------- | ------------------------------------------------------------------------- |
+| `spaceId`               | Yes       | N/A                          | Contentful Space identifier for Experience API requests                   |
+| `clientId`              | Yes       | N/A                          | Ninetailed/Optimization organization identifier for Insights API requests |
+| `environment`           | No        | `'main'`                     | Ninetailed/Optimization environment identifier, used by the Insights API  |
+| `contentfulEnvironment` | No        | `'master'`                   | Contentful space environment identifier, used by the Experience API       |
+| `experience`            | No        | See Experience options below | Experience API endpoint and default request options                       |
+| `insights`              | No        | See Insights options below   | Insights API endpoint options                                             |
+| `fetchOptions`          | No        | SDK defaults                 | Fetch timeout and retry behavior                                          |
 
 Common Experience API options:
 

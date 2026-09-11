@@ -156,8 +156,8 @@ export interface ExperienceApiClientConfig extends ApiConfig, ExperienceApiClien
  * @example
  * ```ts
  * const client = new ExperienceApiClient({
- *   clientId: 'org-id',
- *   environment: 'main',
+ *   spaceId: 'space-id',
+ *   contentfulEnvironment: 'master',
  * })
  *
  * const profile = await client.getProfile('profile-id')
@@ -239,7 +239,7 @@ export default class ExperienceApiClient extends ApiClientBase {
     try {
       const response = await this.fetch(
         this.constructUrl(
-          `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${id}`,
+          `v3/spaces/${this.spaceId}/environments/${this.contentfulEnvironment}/profiles/${id}`,
           options,
         ),
         {
@@ -315,7 +315,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles`,
+        url: `v3/spaces/${this.spaceId}/environments/${this.contentfulEnvironment}/profiles`,
         body,
         options,
       })
@@ -370,7 +370,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${profileId}`,
+        url: `v3/spaces/${this.spaceId}/environments/${this.contentfulEnvironment}/profiles/${profileId}`,
         body,
         options,
       })
@@ -459,7 +459,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `v2/organizations/${this.clientId}/environments/${this.environment}/events`,
+        url: `v3/spaces/${this.spaceId}/environments/${this.contentfulEnvironment}/events`,
         body,
         options: { plainText: false, ...options },
       })
