@@ -14,7 +14,7 @@ export async function initializeSDK(
 
   try {
     const {
-      optimization: { clientId, environment },
+      optimization: { spaceId, clientId, environment },
       api: { experienceBaseUrl, insightsBaseUrl },
     } = ENV_CONFIG
 
@@ -22,6 +22,7 @@ export async function initializeSDK(
     AsyncStorageStore.consent = true
 
     const sdkInstance = await ContentfulOptimization.initialize({
+      spaceId,
       clientId,
       environment,
       api: {
@@ -32,6 +33,7 @@ export async function initializeSDK(
     })
 
     setSdkInfo({
+      spaceId,
       clientId,
       environment,
       initialized: true,

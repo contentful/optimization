@@ -100,7 +100,7 @@ describe('OptimizationProvider locale prop', () => {
     initializeOptimization.mockResolvedValue(sdk)
 
     renderer = await renderWithAct(
-      <OptimizationProvider clientId="test-client-id" locale="en-US">
+      <OptimizationProvider spaceId="test-space-id" clientId="test-client-id" locale="en-US">
         <></>
       </OptimizationProvider>,
     )
@@ -109,7 +109,7 @@ describe('OptimizationProvider locale prop', () => {
 
     await act(async () => {
       requireRenderer(renderer).update(
-        <OptimizationProvider clientId="test-client-id" locale="de-DE">
+        <OptimizationProvider spaceId="test-space-id" clientId="test-client-id" locale="de-DE">
           <></>
         </OptimizationProvider>,
       )

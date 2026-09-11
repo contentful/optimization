@@ -34,7 +34,7 @@ const DRAG_HANDLE_HEIGHT = 4
  *
  * @example
  * ```tsx
- * <OptimizationRoot clientId="your-client-id">
+ * <OptimizationRoot spaceId="your-space-id" clientId="your-client-id">
  *   <App />
  *   <PreviewPanelOverlay contentfulClient={contentfulClient} />
  * </OptimizationRoot>

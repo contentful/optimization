@@ -26,6 +26,7 @@ interface EnvConfig {
     basePath: string
   }
   optimization: {
+    spaceId: string
     clientId: string
     environment: string
   }
@@ -63,6 +64,7 @@ export const ENV_CONFIG = {
   },
 
   optimization: {
+    spaceId: PUBLIC_CONTENTFUL_SPACE_ID,
     clientId: PUBLIC_NINETAILED_CLIENT_ID,
     environment: PUBLIC_NINETAILED_ENVIRONMENT,
   },

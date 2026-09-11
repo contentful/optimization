@@ -114,7 +114,7 @@ export interface OptimizationNavigationContainerProps {
  *
  * function App() {
  *   return (
- *     <OptimizationProvider clientId="your-client-id" environment="main">
+ *     <OptimizationProvider spaceId="your-space-id" clientId="your-client-id" environment="main">
  *       <OptimizationNavigationContainer>
  *         {(navigationProps) => (
  *           <NavigationContainer {...navigationProps}>
