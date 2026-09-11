@@ -33,7 +33,10 @@ const FlagsResolver = {
   resolve(changes?: ChangeArray): Flags {
     if (!changes) return {}
 
-    return changes.reduce<Flags>((acc, { key, value }) => {
+    return changes.reduce<Flags>((acc, change) => {
+      if (change.type !== 'Variable') return acc
+
+      const { key, value } = change
       const actualValue =
         typeof value === 'object' &&
         value !== null &&

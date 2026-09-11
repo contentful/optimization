@@ -107,6 +107,7 @@ describe('CoreStateless', () => {
   it('strips stateful-only api config from stateless construction', () => {
     const core: unknown = Reflect.construct(CoreStateless, [
       {
+        spaceId: 'key_123',
         clientId: 'key_123',
         environment: 'main',
         api: {
@@ -131,6 +132,7 @@ describe('CoreStateless', () => {
 
   it('exposes the configured top-level SDK locale', () => {
     const core = new CoreStateless({
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       locale: ' de_DE ',
@@ -142,6 +144,7 @@ describe('CoreStateless', () => {
 
   it('omits the default Experience API locale when no SDK locale is configured', () => {
     const core = new CoreStateless({
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
     })
@@ -151,7 +154,7 @@ describe('CoreStateless', () => {
   })
 
   it('binds consent, profile, event context, and Experience request options with forRequest()', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const core = new CoreStateless({ spaceId: 'key_123', clientId: 'key_123', environment: 'main' })
     const upsertProfile = rs
       .spyOn(core.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
@@ -202,7 +205,7 @@ describe('CoreStateless', () => {
   })
 
   it('forwards request page query context to request-bound page events', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const core = new CoreStateless({ spaceId: 'key_123', clientId: 'key_123', environment: 'main' })
     const upsertProfile = rs
       .spyOn(core.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
@@ -240,7 +243,7 @@ describe('CoreStateless', () => {
   })
 
   it('keeps request event locale and advanced Experience request locale separate', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const core = new CoreStateless({ spaceId: 'key_123', clientId: 'key_123', environment: 'main' })
     const upsertProfile = rs
       .spyOn(core.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
@@ -265,7 +268,7 @@ describe('CoreStateless', () => {
   })
 
   it('uses request locale for event defaults and Experience options when both locale paths are provided', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const core = new CoreStateless({ spaceId: 'key_123', clientId: 'key_123', environment: 'main' })
     const upsertProfile = rs
       .spyOn(core.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
@@ -293,6 +296,7 @@ describe('CoreStateless', () => {
   it('uses latest request-bound Experience selections for managed optimized entry fetching', async () => {
     const client = createOptimizedEntryClient()
     const core = new CoreStateless({
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       contentful: { client, cache: false },
@@ -326,6 +330,7 @@ describe('CoreStateless', () => {
   it('preserves managed Contentful entry skeleton types for request-bound fetches', async () => {
     const client = createOptimizedEntryClient()
     const core = new CoreStateless({
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       contentful: { client, cache: false },
@@ -350,6 +355,7 @@ describe('CoreStateless', () => {
   it('uses request locale as the managed Contentful query fallback', async () => {
     const client = createOptimizedEntryClient()
     const core = new CoreStateless({
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       locale: 'en-US',
@@ -381,6 +387,7 @@ describe('CoreStateless', () => {
 
     const defaultLocaleClient = createOptimizedEntryClient()
     const defaultLocaleCore = new CoreStateless({
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       contentful: {
@@ -417,6 +424,7 @@ describe('CoreStateless', () => {
       )
     })
     const core = new CoreStateless({
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       locale: 'en-US',
@@ -463,6 +471,7 @@ describe('CoreStateless', () => {
   it('preserves slug descriptors while applying request-local Contentful locale', async () => {
     const client = createOptimizedEntryClient()
     const core = new CoreStateless({
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       contentful: { client, cache: false },
@@ -506,6 +515,7 @@ describe('CoreStateless', () => {
   it('defaults allowedEventTypes to empty for stateless core requests', async () => {
     const blockedEvents: BlockedEvent[] = []
     const core = new CoreStateless({
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       onEventBlocked: (event) => blockedEvents.push(event),
@@ -530,6 +540,7 @@ describe('CoreStateless', () => {
   it('blocks non-allowlisted events before consent and reports diagnostics', async () => {
     const blockedEvents: BlockedEvent[] = []
     const core = new CoreStateless({
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       onEventBlocked: (event) => blockedEvents.push(event),
@@ -560,6 +571,7 @@ describe('CoreStateless', () => {
     const blockedEvents: BlockedEvent[] = []
     const core = new CoreStateless({
       allowedEventTypes: [],
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       onEventBlocked: (event) => blockedEvents.push(event),
@@ -582,6 +594,7 @@ describe('CoreStateless', () => {
   it('allows consumers to widen pre-consent stateless event types', async () => {
     const core = new CoreStateless({
       allowedEventTypes: ['track'],
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
     })
@@ -602,6 +615,7 @@ describe('CoreStateless', () => {
     const blockedEvents: BlockedEvent[] = []
     const core = new CoreStateless({
       allowedEventTypes: ['flag'],
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       onEventBlocked: (event) => blockedEvents.push(event),
@@ -638,6 +652,7 @@ describe('CoreStateless', () => {
     const blockedEvents: BlockedEvent[] = []
     const core = new CoreStateless({
       allowedEventTypes: ['component'],
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       onEventBlocked: (event) => blockedEvents.push(event),
@@ -672,7 +687,7 @@ describe('CoreStateless', () => {
   })
 
   it('updates the request-bound profile across sequential Experience calls', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const core = new CoreStateless({ spaceId: 'key_123', clientId: 'key_123', environment: 'main' })
     const firstProfile = { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'first-profile' }
     const secondProfile = { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'second-profile' }
     const upsertProfile = rs
@@ -695,7 +710,7 @@ describe('CoreStateless', () => {
   })
 
   it('sends sticky entry views through both the Experience API and Insights API', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const core = new CoreStateless({ spaceId: 'key_123', clientId: 'key_123', environment: 'main' })
     const upsertProfile = rs
       .spyOn(core.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
@@ -738,6 +753,7 @@ describe('CoreStateless', () => {
   it('blocks Insights-only events before consent', async () => {
     const blockedEvents: BlockedEvent[] = []
     const core = new CoreStateless({
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       onEventBlocked: (event) => blockedEvents.push(event),
@@ -755,7 +771,7 @@ describe('CoreStateless', () => {
   })
 
   it('passes request-scoped Insights options to Insights-only events', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const core = new CoreStateless({ spaceId: 'key_123', clientId: 'key_123', environment: 'main' })
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const beacon = (): boolean => true
     const requestOptimization = core.forRequest({
@@ -775,6 +791,7 @@ describe('CoreStateless', () => {
   it('blocks Insights-only events before profile validation when consent is missing', async () => {
     const blockedEvents: BlockedEvent[] = []
     const core = new CoreStateless({
+      spaceId: 'key_123',
       clientId: 'key_123',
       environment: 'main',
       onEventBlocked: (event) => blockedEvents.push(event),
@@ -791,7 +808,7 @@ describe('CoreStateless', () => {
   })
 
   it('rejects insights-only request methods without a request-bound profile id', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const core = new CoreStateless({ spaceId: 'key_123', clientId: 'key_123', environment: 'main' })
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = core.forRequest({ consent: true })
 
@@ -817,7 +834,7 @@ describe('CoreStateless', () => {
   })
 
   it('keeps non-sticky entry views on Insights only', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const core = new CoreStateless({ spaceId: 'key_123', clientId: 'key_123', environment: 'main' })
     const upsertProfile = rs
       .spyOn(core.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
@@ -853,7 +870,7 @@ describe('CoreStateless', () => {
   })
 
   it('rejects non-sticky entry views without a request-bound profile id', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const core = new CoreStateless({ spaceId: 'key_123', clientId: 'key_123', environment: 'main' })
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = core.forRequest({ consent: true })
 
@@ -869,7 +886,7 @@ describe('CoreStateless', () => {
   })
 
   it('reuses the Experience response profile for sticky entry views without an input profile', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const core = new CoreStateless({ spaceId: 'key_123', clientId: 'key_123', environment: 'main' })
     const responseProfile = {
       ...EMPTY_OPTIMIZATION_DATA.profile,
       id: 'a19c3f54d2b84e37a93f6d1c0e5b7284',

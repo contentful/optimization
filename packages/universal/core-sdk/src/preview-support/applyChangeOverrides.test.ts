@@ -1,7 +1,13 @@
-import type { ChangeArray } from '@contentful/optimization-api-client/api-schemas'
+import type { ChangeArray, VariableChange } from '@contentful/optimization-api-client/api-schemas'
 import { isResolvedOptimizationEntry, type OptimizationEntry } from '../contentful'
 import { applyChangeOverrides } from './applyChangeOverrides'
 import type { OptimizationOverride } from './types'
+
+function findVariableChange(changes: ChangeArray, key: string): VariableChange | undefined {
+  return changes.find(
+    (change): change is VariableChange => change.type === 'Variable' && change.key === key,
+  )
+}
 
 function buildEntry(
   experienceId: string,
@@ -89,10 +95,10 @@ describe('applyChangeOverrides', () => {
       ENTRIES,
       overrides({ '6IueRX1pS3iMJncbhUQTba': 1 }),
     )
-    expect(result.find((c) => c.key === 'flag-a')?.value).toBe(true)
-    expect(result.find((c) => c.key === 'flag-a')?.meta.variantIndex).toBe(1)
+    expect(findVariableChange(result, 'flag-a')?.value).toBe(true)
+    expect(findVariableChange(result, 'flag-a')?.meta.variantIndex).toBe(1)
     // Untouched override leaves flag-b alone.
-    expect(result.find((c) => c.key === 'flag-b')?.value).toBe(0)
+    expect(findVariableChange(result, 'flag-b')?.value).toBe(0)
   })
 
   it('falls back to baseline value when the override variantIndex points past the variants array', () => {
@@ -102,7 +108,7 @@ describe('applyChangeOverrides', () => {
       overrides({ '6IueRX1pS3iMJncbhUQTba': 99 }),
     )
     // No variant at index 98 → baseline value re-emitted.
-    expect(result.find((c) => c.key === 'flag-a')?.value).toBe(false)
+    expect(findVariableChange(result, 'flag-a')?.value).toBe(false)
   })
 
   it('emits the baseline value for variantIndex 0', () => {
@@ -121,7 +127,7 @@ describe('applyChangeOverrides', () => {
       ENTRIES,
       overrides({ '6IueRX1pS3iMJncbhUQTba': 0 }),
     )
-    expect(result.find((c) => c.key === 'flag-a')?.value).toBe(false)
+    expect(findVariableChange(result, 'flag-a')?.value).toBe(false)
   })
 
   it('returns the input unchanged when overrides exist but no entries have inline-variable components', () => {
