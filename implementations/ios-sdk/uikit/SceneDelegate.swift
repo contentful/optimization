@@ -15,8 +15,10 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         try? client.initialize(config: OptimizationConfig(
+            spaceId: AppConfig.contentfulSpaceId,
             clientId: AppConfig.clientId,
             environment: AppConfig.environment,
+            contentfulEnvironment: AppConfig.contentfulEnvironment,
             api: OptimizationApiConfig(
                 experienceBaseUrl: AppConfig.experienceBaseUrl,
                 insightsBaseUrl: AppConfig.insightsBaseUrl

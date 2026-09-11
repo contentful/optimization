@@ -334,7 +334,6 @@ create_env_file() {
     append_env_override "PUBLIC_CONTENTFUL_CDA_HOST" "localhost:${MOCK_SERVER_PORT}"
 
     # Allow optional runtime overrides for values loaded from .env.example.
-    append_env_override "PUBLIC_NINETAILED_CLIENT_ID" "${PUBLIC_NINETAILED_CLIENT_ID:-}"
     append_env_override "PUBLIC_NINETAILED_ENVIRONMENT" "${PUBLIC_NINETAILED_ENVIRONMENT:-}"
     append_env_override "PUBLIC_CONTENTFUL_TOKEN" "${PUBLIC_CONTENTFUL_TOKEN:-}"
     append_env_override "PUBLIC_CONTENTFUL_PREVIEW_TOKEN" "${PUBLIC_CONTENTFUL_PREVIEW_TOKEN:-}"

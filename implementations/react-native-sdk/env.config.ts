@@ -20,8 +20,10 @@ interface EnvConfig {
     basePath: string
   }
   optimization: {
+    spaceId: string
     clientId: string
     environment: string
+    contentfulEnvironment: string
     locale: string
     api: {
       experienceBaseUrl: string
@@ -55,8 +57,10 @@ export const ENV_CONFIG = {
   },
 
   optimization: {
+    spaceId: PUBLIC_CONTENTFUL_SPACE_ID,
     clientId: PUBLIC_NINETAILED_CLIENT_ID,
     environment: PUBLIC_NINETAILED_ENVIRONMENT,
+    contentfulEnvironment: PUBLIC_CONTENTFUL_ENVIRONMENT,
     locale: 'en-US',
     api: {
       experienceBaseUrl: getAndroidCompatibleUrl(PUBLIC_EXPERIENCE_API_BASE_URL),
@@ -74,11 +78,6 @@ export const ENV_CONFIG = {
 
 export const {
   contentful: { spaceId, accessToken },
-  optimization: { clientId },
 } = ENV_CONFIG
 
-export {
-  accessToken as CONTENTFUL_ACCESS_TOKEN,
-  spaceId as CONTENTFUL_SPACE_ID,
-  clientId as NINETAILED_CLIENT_ID,
-}
+export { accessToken as CONTENTFUL_ACCESS_TOKEN, spaceId as CONTENTFUL_SPACE_ID }
