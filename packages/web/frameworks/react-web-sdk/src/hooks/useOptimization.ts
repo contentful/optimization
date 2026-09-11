@@ -9,7 +9,7 @@ import {
 function getMissingProviderError(): Error {
   return new Error(
     'useOptimization must be used within an OptimizationProvider. ' +
-      'Make sure to wrap your component tree with <OptimizationRoot clientId="your-client-id">.',
+      'Make sure to wrap your component tree with <OptimizationRoot spaceId="your-space-id" clientId="your-client-id">.',
   )
 }
 

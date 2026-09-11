@@ -71,7 +71,7 @@ import { OptimizationRoot } from '@contentful/optimization-react-web'
 
 function App() {
   return (
-    <OptimizationRoot clientId="your-client-id" environment="main">
+    <OptimizationRoot spaceId="your-space-id" clientId="your-client-id" environment="main">
       <YourApp />
     </OptimizationRoot>
   )
@@ -82,7 +82,12 @@ For a single-locale app that fetches Contentful entries, pass the application lo
 Experience API responses and events need to use the same language:
 
 ```tsx
-<OptimizationRoot clientId="your-client-id" environment="main" locale="en-US">
+<OptimizationRoot
+  spaceId="your-space-id"
+  clientId="your-client-id"
+  environment="main"
+  locale="en-US"
+>
   <YourApp />
 </OptimizationRoot>
 ```
@@ -102,7 +107,8 @@ such as `liveUpdates`, `onStatesReady`, `handoff`, and `hydration`. The Web SDK
 
 | Prop                     | Required? | Default                                       | Description                                                         |
 | ------------------------ | --------- | --------------------------------------------- | ------------------------------------------------------------------- |
-| `clientId`               | Yes       | N/A                                           | Shared API key for Experience API and Insights API requests         |
+| `spaceId`                | Yes       | N/A                                           | Contentful Space identifier used for Experience API requests        |
+| `clientId`               | Yes       | N/A                                           | Client identifier used for Insights API requests                    |
 | `environment`            | No        | `'main'`                                      | Contentful environment identifier                                   |
 | `api`                    | No        | Web SDK defaults                              | Experience API and Insights API endpoint and request options        |
 | `app`                    | No        | `undefined`                                   | Application metadata attached to outgoing event context             |
@@ -145,6 +151,7 @@ configuration or default state such as consent policy:
 
 ```tsx
 <OptimizationRoot
+  spaceId="your-space-id"
   clientId="your-client-id"
   defaults={{ consent: true }}
   environment="main"
@@ -178,7 +185,7 @@ Consent policy remains application-owned. For default-on application policies th
 end-user consent UI, seed accepted consent on `OptimizationRoot`:
 
 ```tsx
-<OptimizationRoot clientId="your-client-id" defaults={{ consent: true }}>
+<OptimizationRoot spaceId="your-space-id" clientId="your-client-id" defaults={{ consent: true }}>
   <YourApp />
 </OptimizationRoot>
 ```
@@ -314,6 +321,7 @@ subscribes.
 
 ```tsx
 <OptimizationRoot
+  spaceId="your-space-id"
   clientId="your-client-id"
   onStatesReady={(states) => {
     const subscriptions = [
@@ -350,6 +358,7 @@ SDK receiver:
 
 ```tsx
 <OptimizationRoot
+  spaceId="your-space-id"
   clientId="your-client-id"
   environment="main"
   routeKey={routeKey}
@@ -410,6 +419,7 @@ import { OptimizationAnalyticsRoot } from '@contentful/optimization-react-web'
 function App({ handoff, routeKey }) {
   return (
     <OptimizationAnalyticsRoot
+      spaceId="your-space-id"
       clientId="your-client-id"
       environment="main"
       handoff={handoff}
@@ -518,7 +528,11 @@ root config observes views, clicks, and hovers by default; pass `false` for any 
 that your application does not want to observe:
 
 ```tsx
-<OptimizationRoot clientId="your-client-id" trackEntryInteraction={{ hovers: false }}>
+<OptimizationRoot
+  spaceId="your-space-id"
+  clientId="your-client-id"
+  trackEntryInteraction={{ hovers: false }}
+>
   <YourApp />
 </OptimizationRoot>
 ```
@@ -567,7 +581,7 @@ baseline entry ID. Set
 changes:
 
 ```tsx
-<OptimizationRoot clientId="your-client-id" liveUpdates={true}>
+<OptimizationRoot spaceId="your-space-id" clientId="your-client-id" liveUpdates={true}>
   <OptimizedEntry baselineEntry={entry} liveUpdates={false}>
     {(resolvedEntry) => <Card entry={resolvedEntry} />}
   </OptimizedEntry>
