@@ -44,12 +44,16 @@ markdown as the single source of truth for wording.
   without a recorded redirect.
 - Publication is release-gated. The sync workflow is ref-parameterized, idempotent against one branch
   and one pull request, and concurrency-guarded.
-- Write access is a short-lived GitHub App token from the `cross-repository-write` Vault preset,
+- Write access is a short-lived `contentful-cross-repository` GitHub App token minted by Vault,
   scoped to `contentful-docs` alone. The grant is target-owned: `contentful-docs` names this
   repository under `cross-repository-write.sources` in its own `.contentful/vault-secrets.yaml`, so
   this repository cannot widen its own access and no long-lived token is stored here.
-- The preset selects a Vault role from the triggering event, and both triggers publish: a published
-  release uses the tag-bound role, a manual dispatch uses a role bound to this repository's default
+- The workflow authenticates to Vault directly rather than through the shared
+  `cross-repository-write` preset action. That action is in an internal repository and this one is
+  public, so the runner cannot resolve it at all. The role names, secret path, and bot identity are
+  copied from the preset, so the trust boundary is unchanged and only the caller differs.
+- The Vault role depends on the triggering event, and both triggers publish: a published release uses
+  the tag-bound role, a manual dispatch uses a role bound to this repository's default
   branch. Manual publication was a requirement, so the Vault grant was extended to cover it rather
   than the workflow being narrowed to fit the grant.
 - Authoring instructions own the conventions the transform depends on. `STYLE_GUIDE.md` holds the
@@ -88,6 +92,12 @@ markdown as the single source of truth for wording.
   ships. Release-gating means a documentation-only fix waits for the next release, for which manual
   dispatch is the escape hatch. Keeping that escape hatch cost a role in the shared Vault grant, since
   the preset originally issued no token for `workflow_dispatch`.
+- **Consume the shared `cross-repository-write` preset action.** Preferred, and not available: GitHub
+  will not resolve an action from an internal repository for a public one, which this repository is.
+  Making that repository public would have fixed it and is not ours to decide, so the workflow calls
+  `hashicorp/vault-action` directly, as this repository already does when publishing packages. The
+  cost is that the event-to-role mapping is duplicated here and has to follow that repository if the
+  naming changes.
 - **A long-lived token for `contentful-docs`.** Discarded: it would sit in this repository's secrets
   with no expiry and, in practice, wider scope than the one repository it needs. The preset issues a
   token good for an hour and scoped to one repository by immutable ID, and the target repository

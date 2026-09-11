@@ -2,13 +2,19 @@
 # request. Layer 3 of the sync: a thin shell around `pnpm docs:fern` and `pnpm docs:fern:apply`, both
 # of which run locally without credentials (see documentation/AGENTS.md).
 #
-# Write access to contentful-docs comes from the `cross-repository-write` Vault preset, which mints a
-# short-lived `contentful-cross-repository` GitHub App token scoped to that one repository
-# (`contents: write`, `pull_requests: write`). The grant is target-owned: contentful-docs lists this
-# repository under `cross-repository-write.sources` in its own `.contentful/vault-secrets.yaml`, so
-# nothing here can widen it and no long-lived token is stored here.
+# Write access to contentful-docs is a short-lived `contentful-cross-repository` GitHub App token
+# minted by Vault, scoped to that one repository by immutable ID (`contents: write`,
+# `pull_requests: write`). The grant is target-owned: contentful-docs lists this repository under
+# `cross-repository-write.sources` in its own `.contentful/vault-secrets.yaml`, so nothing here can
+# widen it and no long-lived token is stored here.
 #
-# The preset picks a Vault role from the triggering event. Both triggers deliver a pull request:
+# This talks to Vault directly rather than through the `cross-repository-write` preset in
+# contentful/vault-github-actions. That action lives in an internal repository and this repository is
+# public, so the runner cannot resolve it — the failure is `Unable to resolve action …, not found`.
+# The role names, secret path, and bot identity below are the preset's, so the trust model is
+# identical; only the caller differs. Keep them in step with that repository.
+#
+# The role depends on the triggering event, and both triggers deliver a pull request:
 #   * release published  — role `…-release`, bound to a tag
 #   * workflow_dispatch  — role `…-workflow-dispatch`, bound to the default branch
 #
@@ -104,20 +110,59 @@ jobs:
           EXPORT_REF: ${{ steps.resolve.outputs.ref }}
         run: pnpm docs:fern -- --ref "$EXPORT_REF"
 
-      # Mints a token scoped to contentful-docs alone and configures git as
-      # `contentful-cross-repository[bot]`, so the commit below is attributable to the App rather
-      # than to a shared machine user.
-      #
-      # Pinned to a commit rather than a release tag. v1.5.0 was cut a minute before the
-      # `workflow_dispatch` mapping merged, so it rejects a manual run, and the floating `@v1` still
-      # points at v1.2.1, which has no preset at all. Bump to the first tag that contains both.
+      # One Vault role per event, named exactly as cf-vault creates them. Failing here rather than
+      # letting Vault reject the login keeps the reason legible: a dispatch from a feature branch is
+      # outside the role's bound subject, which is otherwise an opaque permission-denied.
+      - name: Select the Vault role for this event
+        id: vault-role
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          DEFAULT_BRANCH_REF: refs/heads/${{ github.event.repository.default_branch }}
+          TARGET_REPO: ${{ env.DOCS_REPO }}
+        run: |
+          set -euo pipefail
+
+          source_name="${GITHUB_REPOSITORY#*/}"
+          target_name="${TARGET_REPO#contentful/}"
+
+          if [ "$EVENT_NAME" = 'release' ] && [ "$GITHUB_REF_TYPE" = 'tag' ] && [ "$EVENT_ACTION" = 'published' ]; then
+            suffix='release'
+          elif [ "$EVENT_NAME" = 'workflow_dispatch' ] && [ "$GITHUB_REF" = "$DEFAULT_BRANCH_REF" ]; then
+            suffix='workflow-dispatch'
+          else
+            echo "No cross-repository write role covers this run ($EVENT_NAME on $GITHUB_REF)." >&2
+            echo "Publish a release, or dispatch from $DEFAULT_BRANCH_REF and pass 'ref' to export another tree." >&2
+            exit 1
+          fi
+
+          printf 'role=%s-github-action-cross-repository-write-%s-%s\n' \
+            "$source_name" "$target_name" "$suffix" >>"$GITHUB_OUTPUT"
+          printf 'secret=github-cross-repository/token/%s-cross-repository-write-%s\n' \
+            "$source_name" "$target_name" >>"$GITHUB_OUTPUT"
+
       - name: Retrieve a contentful-docs token from Vault
         id: vault
-        uses: contentful/vault-github-actions/action@3b4e3c6ee2ec24d1dce34061ecfa1539149035b0 # cross-repository-write, incl. workflow_dispatch
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ secrets.VAULT_URL }}
-          template-preset: cross-repository-write
-          target-repository: ${{ env.DOCS_REPO }}
+          role: ${{ steps.vault-role.outputs.role }}
+          method: jwt
+          path: github-actions
+          secrets: |
+            ${{ steps.vault-role.outputs.secret }} token | GITHUB_TOKEN ;
+
+      # Attributes the sync commit to the App rather than to a shared machine user. The address form
+      # is the one GitHub links back to the bot account, so the numeric ID has to be looked up.
+      - name: Configure the bot git identity
+        env:
+          GH_TOKEN: ${{ steps.vault.outputs.GITHUB_TOKEN }}
+          BOT_NAME: contentful-cross-repository[bot]
+        run: |
+          set -euo pipefail
+          user_id="$(gh api "/users/$BOT_NAME" --jq .id)"
+          git config --global user.name "$BOT_NAME"
+          git config --global user.email "$user_id+$BOT_NAME@users.noreply.github.com"
 
       - name: Checkout contentful-docs
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -151,8 +196,7 @@ jobs:
             exit 0
           fi
 
-          # Git identity is configured globally by the Vault action as
-          # `contentful-cross-repository[bot]`; do not override it here.
+          # Git identity was configured globally as `contentful-cross-repository[bot]` above.
           git checkout -b "$BRANCH"
           git add --all
           git commit --message "docs: sync Optimization SDK documentation from ${EXPORT_REF}" \
