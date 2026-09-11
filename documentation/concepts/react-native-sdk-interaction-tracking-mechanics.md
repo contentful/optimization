@@ -261,7 +261,11 @@ default.
 To change the default pre-consent allow-list, pass `allowedEventTypes` to `OptimizationRoot`:
 
 ```tsx
-<OptimizationRoot clientId={CLIENT_ID} allowedEventTypes={['identify', 'screen', 'page']}>
+<OptimizationRoot
+  spaceId={SPACE_ID}
+  clientId={CLIENT_ID}
+  allowedEventTypes={['identify', 'screen', 'page']}
+>
   <App />
 </OptimizationRoot>
 ```

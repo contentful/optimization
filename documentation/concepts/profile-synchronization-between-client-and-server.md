@@ -155,6 +155,7 @@ render:
 
 ```ts
 const optimization = new ContentfulOptimization({
+  spaceId: 'your-space-id',
   clientId: 'your-client-id',
   environment: 'main',
   defaults: {

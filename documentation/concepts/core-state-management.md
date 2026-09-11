@@ -595,6 +595,7 @@ React Web and React Native TSX provider root:
 
 ```tsx
 <OptimizationRoot
+  spaceId="my-space-id"
   clientId="my-client-id"
   onStatesReady={(states) => {
     const subscription = states.eventStream.subscribe((event) => {
@@ -653,6 +654,7 @@ Web and React Native TypeScript SDK instance:
 
 ```ts
 const sdk = new ContentfulOptimization({
+  spaceId: 'my-space-id',
   clientId: 'my-client-id',
   onEventBlocked: (blocked) => {
     logger.warn('Optimization event blocked', blocked)

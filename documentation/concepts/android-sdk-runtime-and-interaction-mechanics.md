@@ -64,16 +64,16 @@ manages consent UX, controls routing, decides identity policy, and renders the f
 Decide these policies before initialization because they shape the client state the bridge receives
 at startup and the events it can emit before runtime consent changes:
 
-| Constraint           | Android behavior                                                                                                                                                                                                                                                                                                     |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Consent              | `state.consent` starts as unset unless `StorageDefaults.consent` or persisted SDK consent provides a value. Until event consent is `true`, Android/native allow-list behavior lets only `identify` and `screen` emit by default.                                                                                     |
-| Configuration        | Build `OptimizationConfig` before initialization. `clientId` is required, `environment` defaults to `"main"`, and `locale` controls the SDK Experience/event locale. Apps often pass the same string to Contentful CDA requests, but the SDK treats that as a separate app-owned locale.                             |
-| Persistence consent  | Boolean `client.consent(true)` or `client.consent(false)` updates event consent and durable profile-continuity persistence consent together. Use object-form consent when event consent and durable profile continuity have separate policy decisions.                                                               |
-| Allowed event types  | `OptimizationConfig.allowedEventTypes` replaces the native default pre-consent allow-list. Pass `allowedEventTypes = emptyList()` for strict opt-in before any Optimization event, or pass a narrow custom list when legal and privacy review permits specific pre-consent events.                                   |
-| Storage availability | Android stores consent and, when persistence consent is `true`, profile-continuity values in `SharedPreferences`. If storage has no usable value or is cleared, the SDK starts from configured defaults and does not restore profile-continuity state from a previous process.                                       |
-| Preview mode         | The preview panel is an app opt-in surface. Mount it only in debug or internal flows; opening it forces live entry updates so audience and variant overrides are visible immediately.                                                                                                                                |
-| Offline behavior     | Event queues are in memory. Events queued while offline flush when connectivity returns. The SDK also tries to flush queued events when the app moves toward the background, but it does not provide a durable outbox across process death.                                                                          |
-| Configured defaults  | `StorageDefaults` are startup defaults and take precedence over persisted values. If the application persists user choices, leave consent and persistence defaults unset. Restore SDK-stored consent naturally, or call `client.consent(...)` from the resolved app policy instead of seeding a choice every launch. |
+| Constraint           | Android behavior                                                                                                                                                                                                                                                                                                                                        |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Consent              | `state.consent` starts as unset unless `StorageDefaults.consent` or persisted SDK consent provides a value. Until event consent is `true`, Android/native allow-list behavior lets only `identify` and `screen` emit by default.                                                                                                                        |
+| Configuration        | Build `OptimizationConfig` before initialization. `spaceId` and `clientId` are required, `environment` defaults to `"main"`, `contentfulEnvironment` defaults to `"master"`, and `locale` controls the SDK Experience/event locale. Apps often pass the same string to Contentful CDA requests, but the SDK treats that as a separate app-owned locale. |
+| Persistence consent  | Boolean `client.consent(true)` or `client.consent(false)` updates event consent and durable profile-continuity persistence consent together. Use object-form consent when event consent and durable profile continuity have separate policy decisions.                                                                                                  |
+| Allowed event types  | `OptimizationConfig.allowedEventTypes` replaces the native default pre-consent allow-list. Pass `allowedEventTypes = emptyList()` for strict opt-in before any Optimization event, or pass a narrow custom list when legal and privacy review permits specific pre-consent events.                                                                      |
+| Storage availability | Android stores consent and, when persistence consent is `true`, profile-continuity values in `SharedPreferences`. If storage has no usable value or is cleared, the SDK starts from configured defaults and does not restore profile-continuity state from a previous process.                                                                          |
+| Preview mode         | The preview panel is an app opt-in surface. Mount it only in debug or internal flows; opening it forces live entry updates so audience and variant overrides are visible immediately.                                                                                                                                                                   |
+| Offline behavior     | Event queues are in memory. Events queued while offline flush when connectivity returns. The SDK also tries to flush queued events when the app moves toward the background, but it does not provide a durable outbox across process death.                                                                                                             |
+| Configured defaults  | `StorageDefaults` are startup defaults and take precedence over persisted values. If the application persists user choices, leave consent and persistence defaults unset. Restore SDK-stored consent naturally, or call `client.consent(...)` from the resolved app policy instead of seeding a choice every launch.                                    |
 
 ## Lifecycle and coroutines
 
@@ -106,14 +106,18 @@ Every Android integration builds an `OptimizationConfig`:
 
 ```kotlin
 OptimizationConfig(
+    spaceId = "your-space-id",
     clientId = "your-client-id",
     environment = "main",
+    contentfulEnvironment = "master",
     locale = "en-US",
     logLevel = if (BuildConfig.DEBUG) OptimizationLogLevel.debug else OptimizationLogLevel.error,
 )
 ```
 
-Only `clientId` is required. `environment` defaults to `"main"`. Base URL overrides belong only in
+Only `spaceId` and `clientId` are required. `environment` (the Ninetailed/Optimization environment, used by
+the Insights API) defaults to `"main"`, and `contentfulEnvironment` (the Contentful space environment, used
+by the Experience API) defaults to `"master"`. Base URL overrides belong only in
 integrations that need non-default Experience API or Insights API endpoints.
 
 Use top-level `locale` for the SDK Experience/event locale. When the application renders localized

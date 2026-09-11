@@ -423,9 +423,11 @@ export function BrowserOwnedHero({ hero }) {
 
   return (
     <OptimizationRoot
+      spaceId={process.env.NEXT_PUBLIC_OPTIMIZATION_SPACE_ID!}
       clientId={process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!}
       defaults={{ consent: events, persistenceConsent: persistence }}
-      environment={process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'main'}
+      environment={process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
+      contentfulEnvironment={process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master'}
       hydration="client-only-hidden-until-ready"
       locale="en-US"
       routeKey="/landing"
@@ -442,8 +444,11 @@ export function BrowserOwnedHero({ hero }) {
 }
 ```
 
-`NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID` and `NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT` are reader-owned
-browser-visible environment variable names. `consent` controls whether SDK events can personalize or
+`NEXT_PUBLIC_OPTIMIZATION_SPACE_ID`, `NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID`,
+`NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT`, and `NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT` are reader-owned
+browser-visible environment variable names. `environment` is the Ninetailed/Optimization
+environment used by the Insights API; `contentfulEnvironment` is the separate Contentful space
+environment used by the Experience API. `consent` controls whether SDK events can personalize or
 emit; `persistenceConsent` controls whether the browser can store SDK profile continuity.
 
 For this browser-owned route, set your app-owned consent record to allow Optimization events during
@@ -599,11 +604,13 @@ profile. The route must export `runtime = 'edge'` and avoid Node-only APIs.
 The route can return an application-owned `Response` and still use public-permutation cache metadata
 because the selected optimizations are supplied by application code. This is the `/edge` helper
 boundary; an App Router page that imports the top-level bound React `OptimizationRoot` and returns
-React markup from `runtime = 'edge'` is outside this guide. `NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID` and
-`CONTENTFUL_ENVIRONMENT` are reader-owned environment variable names in this excerpt. The latter is
-server-only; give it the same environment value as the browser binding's
-`NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT`. Keep visitor-profile, cookie, header, and other
-request-derived selections out of this public path.
+React markup from `runtime = 'edge'` is outside this guide. `NEXT_PUBLIC_OPTIMIZATION_SPACE_ID`,
+`NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID`, `OPTIMIZATION_ENVIRONMENT`, and `CONTENTFUL_ENVIRONMENT` are
+reader-owned environment variable names in this excerpt. Both are server-only; give them the same
+values as the browser binding's `NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT` and
+`NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT`. `environment` feeds the Insights API and `contentfulEnvironment`
+feeds the Experience API — keep them distinct even when they happen to share a value. Keep
+visitor-profile, cookie, header, and other request-derived selections out of this public path.
 `configureNextjsEdgeOptimization(...)` configures stateless Edge helpers for the route module; it is
 not a per-request isolation context.
 
@@ -618,8 +625,10 @@ import { configureNextjsEdgeOptimization } from '@contentful/optimization-nextjs
 export const runtime = 'edge'
 
 const { createPublicPermutationHandoff } = configureNextjsEdgeOptimization({
+  spaceId: process.env.NEXT_PUBLIC_OPTIMIZATION_SPACE_ID!,
   clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
-  environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'main',
+  environment: process.env.OPTIMIZATION_ENVIRONMENT ?? 'main',
+  contentfulEnvironment: process.env.CONTENTFUL_ENVIRONMENT ?? 'master',
   locale: 'en-US',
 })
 
@@ -669,8 +678,10 @@ import { configureNextjsEdgeOptimization } from '@contentful/optimization-nextjs
 export const runtime = 'edge'
 
 const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
+  spaceId: process.env.NEXT_PUBLIC_OPTIMIZATION_SPACE_ID!,
   clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
-  environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'main',
+  environment: process.env.OPTIMIZATION_ENVIRONMENT ?? 'main',
+  contentfulEnvironment: process.env.CONTENTFUL_ENVIRONMENT ?? 'master',
   locale: 'en-US',
   consent: {
     server: ({ cookies }) =>

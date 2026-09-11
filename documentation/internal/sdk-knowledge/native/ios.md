@@ -71,11 +71,14 @@ apps mostly use the view surface, UIKit apps mostly use the imperative `Optimiza
   `persistenceConsent == true` (`canLoadPersistedContinuity`), otherwise continuity is cleared when
   it resolves to `false`; (4) the merged `defaults` and a separate `anonymousId` are serialized into
   the bridge config. source: extern:initialize resolves consent → StatefulPolicy defaults → conditional profile-continuity load — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationClient.swift#OptimizationClient; extern:resolveStatefulDefaults + canLoadPersistedContinuity — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/StatefulPolicy.swift#resolveStatefulDefaults
-- `OptimizationConfig`: `clientId` required; `environment` has a **Swift-side default `"main"`** in
-  the initializer (unlike the JS SDKs, which fall back to the api-client `DEFAULT_ENVIRONMENT`);
-  `logLevel` default `.error`; `locale`, `api` (`experienceBaseUrl`/`insightsBaseUrl`/
-  `enabledFeatures`/`preflight`), `allowedEventTypes`, `queuePolicy`, `defaults: StorageDefaults`,
-  `onEventBlocked` all optional. source: extern:environment default "main", logLevel default .error, clientId required — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationConfig.swift#OptimizationConfig
+- `OptimizationConfig`: `spaceId` and `clientId` required; `environment` (Ninetailed/Optimization
+  environment, used by the Insights API) has a **Swift-side default `"main"`** in the initializer
+  (unlike the JS SDKs, which fall back to the api-client `DEFAULT_ENVIRONMENT`); `contentfulEnvironment`
+  (Contentful space environment, used by the Experience API) has a Swift-side default `"master"`;
+  `logLevel` default `.error`; `locale`, `api`
+  (`experienceBaseUrl`/`insightsBaseUrl`/`enabledFeatures`/`preflight`), `allowedEventTypes`,
+  `queuePolicy`, `defaults: StorageDefaults`,
+  `onEventBlocked` all optional. source: extern:environment default "main", contentfulEnvironment default "master", logLevel default .error, spaceId and clientId required — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationConfig.swift#OptimizationConfig
 - `config.toJSON()` serializes to the bridge `BridgeConfig` shape, omitting nil URLs and empty
   sub-dicts; the bridge maps it into `CoreStatefulConfig` via `resolveStatefulDefaults`, defaulting
   `allowedEventTypes` to `DEFAULT_NATIVE_ALLOWED_EVENT_TYPES` and installing `queuePolicy` callbacks

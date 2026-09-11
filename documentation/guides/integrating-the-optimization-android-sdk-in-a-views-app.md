@@ -128,8 +128,10 @@ manifest, and tracks the current screen from an activity's `onResume`.
    +        OptimizationManager.initialize(
    +            context = this,
    +            config = OptimizationConfig(
+   +                spaceId = "your-optimization-space-id",
    +                clientId = "your-optimization-client-id",
    +                // environment defaults to "main"; pass it only when your setup differs.
+   +                // contentfulEnvironment defaults to "master"; pass it only when your setup differs.
    +                locale = "en-US",
    +                defaults = StorageDefaults(consent = true),
    +                // debug is verbose and non-default; useful here to see activity in logcat.
@@ -286,18 +288,21 @@ outside this guide:
   an authored variant, the integration can still run correctly while returning the baseline, so you
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
-- **Your Optimization project values** — client ID and environment, from your Optimization project
-  settings. In the Contentful web app, the path depends on which navigation your organization uses;
-  check your left-hand sidebar to tell which one applies: if it shows a top-level **Apps** entry, you
-  are on classic navigation; if it shows a top-level **Platform** entry above **Apps**, you are on new
-  navigation (the Contentful app with ExO navigation enabled). In **classic navigation**, go to
-  **Apps → Installed apps → Contentful Personalization → SDK keys**; in **new navigation**, go to
-  **Platform/Apps → Installed apps → Contentful Personalization → SDK keys**. The Client ID and
-  environment are listed there.
+- **Your Optimization project values** — space ID, client ID, and environment, from your
+  Optimization project settings. In the Contentful web app, the path depends on which navigation
+  your organization uses; check your left-hand sidebar to tell which one applies: if it shows a
+  top-level **Apps** entry, you are on classic navigation; if it shows a top-level **Platform**
+  entry above **Apps**, you are on new navigation (the Contentful app with ExO navigation enabled).
+  In **classic navigation**, go to **Apps → Installed apps → Contentful Personalization → SDK
+  keys**; in **new navigation**, go to **Platform/Apps → Installed apps → Contentful
+  Personalization → SDK keys**. The Space ID, Client ID, and environment are listed there.
 
-  The `environment` defaults to `main`, so pass it only when your setup differs. The Experience API
-  (which picks variants) and the Insights API (which receives event and interaction delivery) each
-  have a base URL that defaults correctly; you only set them for mocks or non-default hosts (see
+  The `environment` (the Ninetailed/Optimization environment, used by the Insights API) defaults to
+  `main`, so pass it only when your setup differs. `contentfulEnvironment` (the Contentful space
+  environment, used by the Experience API) defaults to `master` and is a separate value — pass it
+  only when your Contentful space uses a non-default environment. The Experience API (which picks
+  variants) and the Insights API (which receives event and interaction delivery) each have a base URL
+  that defaults correctly; you only set them for mocks or non-default hosts (see
   [SDK installation and process-wide client](#sdk-installation-and-process-wide-client)).
 
 You do not need a setup inventory up front. Everything else — consent, entry resolution, screen
@@ -306,10 +311,10 @@ by the section that needs it.
 
 > [!NOTE]
 >
-> Read the SDK client ID, Contentful credentials, and any base-URL overrides from your app's own
-> configuration layer — `BuildConfig` fields, a Gradle build value, or a generated config type. This
-> guide's examples use inline placeholder strings for clarity; the Android reference app centralizes
-> these in a shared `AppConfig` because it runs against shared mock defaults. Use whatever
+> Read the SDK space ID, client ID, Contentful credentials, and any base-URL overrides from your
+> app's own configuration layer — `BuildConfig` fields, a Gradle build value, or a generated config
+> type. This guide's examples use inline placeholder strings for clarity; the Android reference app
+> centralizes these in a shared `AppConfig` because it runs against shared mock defaults. Use whatever
 > configuration convention your app already uses and keep it consistent.
 
 ## Core integration
@@ -356,22 +361,27 @@ callers wait for readiness before making direct calls that depend on it.
    }
    ```
 
-2. Build one `OptimizationConfig`. Only `clientId` is required; the rest have working defaults.
-   1. Pass `clientId` from your configuration layer.
+2. Build one `OptimizationConfig`. `spaceId` and `clientId` are required; the rest have working
+   defaults.
+   1. Pass `spaceId` and `clientId` from your configuration layer.
    2. Pass `environment` only when it is not the Kotlin-side default `"main"`.
-   3. Pass `locale` when Experience API requests and event context must use the same language as the
+   3. Pass `contentfulEnvironment` only when it is not the Kotlin-side default `"master"`; it is a
+      separate value from `environment` and feeds only the Experience API.
+   4. Pass `locale` when Experience API requests and event context must use the same language as the
       Contentful entries you render.
-   4. Set `api = OptimizationApiConfig(...)` (`experienceBaseUrl`/`insightsBaseUrl`) only for mock,
+   5. Set `api = OptimizationApiConfig(...)` (`experienceBaseUrl`/`insightsBaseUrl`) only for mock,
       staging, or other non-default endpoints — both default correctly otherwise.
-   5. Keep `logLevel` at its default `OptimizationLogLevel.error` in production unless your
+   6. Keep `logLevel` at its default `OptimizationLogLevel.error` in production unless your
       operational policy allows more verbose logging.
 
    **Adapt this to your use case:**
 
    ```kotlin
    val optimizationConfig = OptimizationConfig(
+       spaceId = "your-optimization-space-id",
        clientId = "your-optimization-client-id",
        // environment defaults to "main"; pass it only when your setup differs.
+       // contentfulEnvironment defaults to "master"; pass it only when your setup differs.
        // Keep the SDK event and Experience locale aligned with the CDA entries you render.
        locale = "en-US",
        logLevel = if (BuildConfig.DEBUG) {
@@ -438,6 +448,7 @@ two independent axes: event consent (may the SDK personalize and emit events) an
 
    ```kotlin
    val optimizationConfig = OptimizationConfig(
+       spaceId = "your-optimization-space-id",
        clientId = "your-optimization-client-id",
        // Seed accepted consent only when your app policy permits event emission at startup.
        defaults = StorageDefaults(consent = true),
@@ -521,6 +532,7 @@ opt-in before any Optimization event, replace the default allow-list during init
 
 ```kotlin
 val strictConfig = OptimizationConfig(
+    spaceId = "your-optimization-space-id",
     clientId = "your-optimization-client-id",
     // Empty means no SDK event emits before explicit consent.
     allowedEventTypes = emptyList(),
@@ -606,6 +618,8 @@ content model.
    val cdaClient: CDAClient = CDAClient.builder()
        .setSpace(spaceId)
        .setToken(deliveryToken)
+       // This is the Contentful space environment (contentfulEnvironment on OptimizationConfig),
+       // not the Optimization environment.
        .setEnvironment(environment)
        .build()
 
@@ -1107,7 +1121,9 @@ cannot open local overrides.
                contentfulClient = ContentfulHTTPPreviewClient(
                    spaceId = "your-space-id",
                    accessToken = "your-cda-token",
-                   environment = "main",
+                   // This is the Contentful space environment; it defaults to "master" and is
+                   // unrelated to OptimizationConfig.environment (the Ninetailed/Optimization environment).
+                   environment = "master",
                ),
            )
        } else {
@@ -1155,6 +1171,7 @@ path.
 
    ```kotlin
    val optimizationConfig = OptimizationConfig(
+       spaceId = "your-optimization-space-id",
        clientId = "your-optimization-client-id",
        queuePolicy = QueuePolicy(
            // Cap offline storage to the app's production delivery budget.
@@ -1177,10 +1194,10 @@ For the runtime delivery model, see
 
 Before releasing an Android Views integration, verify these checks:
 
-- **Credentials and runtime configuration** — The app uses the intended Maven coordinate, client ID,
-  Contentful environment, SDK `locale`, and CDA locale. Non-default Experience or Insights API base
-  URLs and `OptimizationLogLevel.debug` logging are absent from production builds unless explicitly
-  approved.
+- **Credentials and runtime configuration** — The app uses the intended Maven coordinate, space ID,
+  client ID, Contentful environment, SDK `locale`, and CDA locale. Non-default Experience or
+  Insights API base URLs and `OptimizationLogLevel.debug` logging are absent from production builds
+  unless explicitly approved.
 - **Consent behavior** — Startup consent is seeded only when policy permits it, consent UI calls
   `consent(...)` for every choice, withdrawal blocks later gated events, split event and persistence
   consent behaves as intended, and `reset()` behavior matches legal and privacy requirements.
