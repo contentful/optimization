@@ -196,6 +196,7 @@ export interface NextjsAppRouterRequestOptimization {
 export type BoundNextjsOptimizationAnalyticsRootProps = Omit<
   OptimizationAnalyticsRootProps,
   | 'api'
+  | 'spaceId'
   | 'clientId'
   | 'contentful'
   | 'cookie'
