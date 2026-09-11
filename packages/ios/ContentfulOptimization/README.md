@@ -72,8 +72,10 @@ struct MyApp: App {
         WindowGroup {
             OptimizationRoot(
                 config: OptimizationConfig(
+                    spaceId: "<your-space-id>",
                     clientId: "<your-client-id>",
-                    environment: "main"
+                    environment: "main",
+                    contentfulEnvironment: "master"
                 )
             ) {
                 ContentView()
@@ -94,7 +96,12 @@ import ContentfulOptimization
 
 let client = OptimizationClient()
 try client.initialize(
-    config: OptimizationConfig(clientId: "<your-client-id>", environment: "main")
+    config: OptimizationConfig(
+        spaceId: "<your-space-id>",
+        clientId: "<your-client-id>",
+        environment: "main",
+        contentfulEnvironment: "master"
+    )
 )
 
 let screenResult = try await client.screen(name: "Home")
@@ -109,6 +116,7 @@ profile-continuity persistence by default:
 
 ```swift
 let config = OptimizationConfig(
+    spaceId: "<your-space-id>",
     clientId: "<your-client-id>",
     defaults: StorageDefaults(consent: true)
 )
@@ -140,6 +148,7 @@ For a single-locale app, choose the application Contentful locale and pass the s
 let appLocale = "en-US"
 
 let config = OptimizationConfig(
+    spaceId: "<your-space-id>",
     clientId: "<your-client-id>",
     environment: "main",
     locale: appLocale
@@ -152,6 +161,7 @@ For localized apps, derive `appLocale` from your navigation, i18n, or app config
 let appLocale = getAppLocale()
 
 let config = OptimizationConfig(
+    spaceId: "<your-space-id>",
     clientId: "<your-client-id>",
     environment: "main",
     locale: appLocale
