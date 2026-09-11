@@ -46,10 +46,12 @@ function compileNodeResolvedEntryTypes(
 
 void compileNodeResolvedEntryTypes
 
-const CLIENT_ID = 'key_123'
+const SPACE_ID = 'key_123'
+const CLIENT_ID = 'org_123'
 const ENVIRONMENT = 'main'
 
 const config: CoreConfig = {
+  spaceId: SPACE_ID,
   clientId: CLIENT_ID,
   environment: ENVIRONMENT,
 }
@@ -90,12 +92,14 @@ describe('ContentfulOptimization', () => {
   it('gives itself a name', () => {
     const node = new ContentfulOptimization(config)
 
+    expect(node.config.spaceId).toEqual(SPACE_ID)
     expect(node.config.clientId).toEqual(CLIENT_ID)
     expect(node.eventBuilder.library.name).toEqual(OPTIMIZATION_NODE_SDK_NAME)
   })
 
   it('keeps constructor-level event consent out of normal Node config', () => {
     const nodeConfig: OptimizationNodeConfig = {
+      spaceId: SPACE_ID,
       clientId: CLIENT_ID,
       eventBuilder: {
         // @ts-expect-error Use forRequest() for request-scoped Node consent.

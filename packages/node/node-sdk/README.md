@@ -63,6 +63,7 @@ Create the SDK once per module or process, then bind consent and request context
 
 ```ts
 const optimization = new ContentfulOptimization({
+  spaceId: 'your-space-id',
   clientId: 'your-client-id',
   environment: 'main',
   locale: 'en-US',
@@ -106,18 +107,19 @@ The Node SDK is stateless. It does not maintain consent, profile, or browser per
 between requests. For cross-SDK consent guidance, see
 [Consent management in the Optimization SDK Suite](../../../documentation/concepts/consent-management-in-the-optimization-sdk-suite.md).
 
-| Option              | Required? | Default                | Description                                                 |
-| ------------------- | --------- | ---------------------- | ----------------------------------------------------------- |
-| `clientId`          | Yes       | N/A                    | Shared API key for Experience API and Insights API requests |
-| `environment`       | No        | `'main'`               | Contentful environment identifier                           |
-| `api`               | No        | See API options below  | Experience API and Insights API endpoint options            |
-| `app`               | No        | `undefined`            | Application metadata attached to outgoing event context     |
-| `contentful`        | No        | `undefined`            | App-owned `contentful.js` client, default query, and cache  |
-| `locale`            | No        | `undefined`            | Default SDK Experience API and event locale                 |
-| `fetchOptions`      | No        | SDK defaults           | Fetch timeout and retry behavior                            |
-| `allowedEventTypes` | No        | `['identify', 'page']` | Event types allowed before request event consent is granted |
-| `eventBuilder`      | No        | Node SDK defaults      | Event metadata overrides for SDK-layer authors              |
-| `logLevel`          | No        | `'error'`              | Minimum log level for the default console sink              |
+| Option              | Required? | Default                | Description                                                  |
+| ------------------- | --------- | ---------------------- | ------------------------------------------------------------ |
+| `spaceId`           | Yes       | N/A                    | Contentful Space identifier used for Experience API requests |
+| `clientId`          | Yes       | N/A                    | Organization identifier used for Insights API requests       |
+| `environment`       | No        | `'main'`               | Contentful environment identifier                            |
+| `api`               | No        | See API options below  | Experience API and Insights API endpoint options             |
+| `app`               | No        | `undefined`            | Application metadata attached to outgoing event context      |
+| `contentful`        | No        | `undefined`            | App-owned `contentful.js` client, default query, and cache   |
+| `locale`            | No        | `undefined`            | Default SDK Experience API and event locale                  |
+| `fetchOptions`      | No        | SDK defaults           | Fetch timeout and retry behavior                             |
+| `allowedEventTypes` | No        | `['identify', 'page']` | Event types allowed before request event consent is granted  |
+| `eventBuilder`      | No        | Node SDK defaults      | Event metadata overrides for SDK-layer authors               |
+| `logLevel`          | No        | `'error'`              | Minimum log level for the default console sink               |
 
 Common `api` options:
 
@@ -229,6 +231,7 @@ when omitted; singleton calls require explicit `selectedOptimizations`.
 
 ```ts
 const optimization = new ContentfulOptimization({
+  spaceId: 'space-id',
   clientId: 'client-id',
   contentful: { client: contentfulClient },
   environment: 'main',
