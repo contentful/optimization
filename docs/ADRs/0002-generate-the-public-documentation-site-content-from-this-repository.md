@@ -48,6 +48,10 @@ markdown as the single source of truth for wording.
   scoped to `contentful-docs` alone. The grant is target-owned: `contentful-docs` names this
   repository under `cross-repository-write.sources` in its own `.contentful/vault-secrets.yaml`, so
   this repository cannot widen its own access and no long-lived token is stored here.
+- The preset selects a Vault role from the triggering event, and both triggers publish: a published
+  release uses the tag-bound role, a manual dispatch uses a role bound to this repository's default
+  branch. Manual publication was a requirement, so the Vault grant was extended to cover it rather
+  than the workflow being narrowed to fit the grant.
 - Authoring instructions own the conventions the transform depends on. `STYLE_GUIDE.md` holds the
   document-title rule; the archetype recipes defer to it rather than restating it.
 
@@ -81,9 +85,9 @@ markdown as the single source of truth for wording.
   does.
 - **Publish on every merge to `main` that touches documentation.** Discarded by the maintainer:
   documentation describes SDK behavior, and that behavior is only real to a reader once the package
-  ships. Release-gating means a documentation-only fix waits for the next release. Manual dispatch was
-  intended as the escape hatch for that, and the credential decision above removed it: the preset
-  issues no token for `workflow_dispatch`, so a manual run validates and exports but cannot publish.
+  ships. Release-gating means a documentation-only fix waits for the next release, for which manual
+  dispatch is the escape hatch. Keeping that escape hatch cost a role in the shared Vault grant, since
+  the preset originally issued no token for `workflow_dispatch`.
 - **A long-lived token for `contentful-docs`.** Discarded: it would sit in this repository's secrets
   with no expiry and, in practice, wider scope than the one repository it needs. The preset issues a
   token good for an hour and scoped to one repository by immutable ID, and the target repository
@@ -104,9 +108,9 @@ markdown as the single source of truth for wording.
 - Delivery depends on infrastructure in three other repositories: the Vault policy and App in
   `cf-vault`, the action preset in `vault-github-actions`, and the grant itself in `contentful-docs`.
   The sync cannot publish until all three are in place and the App is installed on `contentful-docs`.
-- The preset authenticates only for a default-branch push, a pull request, a tag push, or a published
-  release, so an out-of-band documentation publish is not available on demand. A manual run still
-  exports and validates, and publishes the bundle as a run artifact, but it opens no pull request.
+- The dispatch role's subject is pinned to this repository's default branch, so a manual run must be
+  launched from `main`. Any tree can still be published from there via the `ref` input; a run launched
+  from a feature branch fails Vault authentication rather than publishing the wrong thing.
 - A pull request from a branch in `contentful-docs` receives a Fern preview URL, which a fork cannot,
   so the sync pushes a branch to that repository rather than forking it.
 - `contentful-docs` is accepting generated content from another repository, which is a change to how
