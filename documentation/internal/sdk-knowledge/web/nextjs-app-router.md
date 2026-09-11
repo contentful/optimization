@@ -44,9 +44,13 @@ dependencies; each carries a symbol-anchored source pointer.
   context as application attribution metadata.
   source: `core-sdk#CoreApiConfig.ts#CoreSharedApiConfig`; `api-client#experience/ExperienceApiClient.ts#EXPERIENCE_BASE_URL`; `api-client#insights/InsightsApiClient.ts#INSIGHTS_BASE_URL`; `core-sdk#events/EventBuilder.ts#EventBuilderConfig`; `core-sdk#events/EventBuilder.ts#buildUniversalEventProperties`
 - API clients default an omitted `environment` to `main`; an explicitly configured environment is
-  used as supplied. Guides should still show the value when the reader must make project targeting
+  used as supplied. `environment` is the Ninetailed/Optimization environment used only by the
+  Insights API. Guides should still show the value when the reader must make project targeting
   unambiguous.
   source: `api-client#ApiClientBase.ts#DEFAULT_ENVIRONMENT`; `api-client#ApiClientBase.ts#ApiClientBase`
+- API clients default an omitted `contentfulEnvironment` to `master`; it is the Contentful space
+  environment used only by the v3 Experience API and is distinct from `environment`.
+  source: `api-client#ApiClientBase.ts#DEFAULT_CONTENTFUL_ENVIRONMENT`; `api-client#ApiClientBase.ts#ApiClientBase`
 - **`contentful?: ContentfulConfig` (managed fetching):** via the core `contentful` config. The bound
   server `OptimizedEntry` accepts a manual `baselineEntry`, a flat managed `entryId` + `entryQuery`
   source, or an ID/slug object descriptor under `managedEntry`; the config powers the two managed

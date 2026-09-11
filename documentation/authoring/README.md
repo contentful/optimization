@@ -236,7 +236,7 @@ The integration recipe currently composes:
 
 - `personalization-explainer.md`—fixed conceptual wording plus two explicit blueprint switches;
 - `authored-variant-gotcha.md`—one invariant prerequisite warning with no SDK-specific slots;
-- `optimization-client-id.md`—the classic and ExO navigation paths for the client ID and
+- `optimization-client-id.md`—the classic and ExO navigation paths for the space ID, client ID, and
   environment, nested under the Optimization project values bullet in `## Before you start`.
 
 ## Validation and coverage

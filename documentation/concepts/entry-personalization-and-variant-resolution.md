@@ -168,6 +168,7 @@ JavaScript runtimes / TypeScript:
 const appLocale = getAppLocale()
 
 const optimization = new ContentfulOptimization({
+  spaceId,
   clientId,
   contentful: {
     client: contentfulClient,
@@ -197,6 +198,7 @@ locale and enough include depth for optimization links:
 
 ```ts
 const optimization = new ContentfulOptimization({
+  spaceId,
   clientId,
   environment,
   locale: appLocale,

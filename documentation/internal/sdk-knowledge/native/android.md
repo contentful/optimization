@@ -76,12 +76,14 @@ imperative `.core` client.
   `persistenceConsent == true` (`canLoadPersistedContinuity`), otherwise continuity is cleared when it
   resolves to `false`; (4) the merged `defaults` plus a separate `anonymousId` are serialized into the
   bridge config. source: extern:initialize resolves consent → resolveStatefulDefaults → conditional profile-continuity load — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationClient.kt#OptimizationClient; extern:resolveStatefulDefaults + canLoadPersistedContinuity — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/StatefulPolicy.kt#resolveStatefulDefaults
-- `OptimizationConfig`: `clientId` required; `environment` has a **Kotlin-side default `"main"`** in
-  the data class (unlike the JS SDKs, which fall back to the api-client `DEFAULT_ENVIRONMENT`);
+- `OptimizationConfig`: `spaceId` and `clientId` required; `environment` (Ninetailed/Optimization
+  environment, used by the Insights API) has a **Kotlin-side default `"main"`** in the data class
+  (unlike the JS SDKs, which fall back to the api-client `DEFAULT_ENVIRONMENT`); `contentfulEnvironment`
+  (Contentful space environment, used by the Experience API) has a Kotlin-side default `"master"`;
   `logLevel` default `OptimizationLogLevel.error`; `locale`, `api`
   (`experienceBaseUrl`/`insightsBaseUrl`/`enabledFeatures`/`preflight`), `allowedEventTypes`,
   `queuePolicy`, `defaults: StorageDefaults`, `onEventBlocked` all optional/nullable.
-  source: extern:environment default "main", logLevel default error, clientId required — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationConfig.kt#OptimizationConfig
+  source: extern:environment default "main", contentfulEnvironment default "master", logLevel default error, spaceId and clientId required — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationConfig.kt#OptimizationConfig
 - `config.toJSON(anonymousId)` serializes to the bridge `BridgeConfig` shape, omitting null URLs and
   empty sub-objects (`api`/`queuePolicy` skipped when empty; `defaults` object emitted only when
   non-empty); the bridge maps it into `CoreStatefulConfig` via `resolveStatefulDefaults`, defaulting
