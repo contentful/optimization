@@ -44,6 +44,10 @@ markdown as the single source of truth for wording.
   without a recorded redirect.
 - Publication is release-gated. The sync workflow is ref-parameterized, idempotent against one branch
   and one pull request, and concurrency-guarded.
+- Write access is a short-lived GitHub App token from the `cross-repository-write` Vault preset,
+  scoped to `contentful-docs` alone. The grant is target-owned: `contentful-docs` names this
+  repository under `cross-repository-write.sources` in its own `.contentful/vault-secrets.yaml`, so
+  this repository cannot widen its own access and no long-lived token is stored here.
 - Authoring instructions own the conventions the transform depends on. `STYLE_GUIDE.md` holds the
   document-title rule; the archetype recipes defer to it rather than restating it.
 
@@ -77,8 +81,14 @@ markdown as the single source of truth for wording.
   does.
 - **Publish on every merge to `main` that touches documentation.** Discarded by the maintainer:
   documentation describes SDK behavior, and that behavior is only real to a reader once the package
-  ships. Release-gating means a documentation-only fix waits for the next release, for which manual
-  dispatch is the escape hatch.
+  ships. Release-gating means a documentation-only fix waits for the next release. Manual dispatch was
+  intended as the escape hatch for that, and the credential decision above removed it: the preset
+  issues no token for `workflow_dispatch`, so a manual run validates and exports but cannot publish.
+- **A long-lived token for `contentful-docs`.** Discarded: it would sit in this repository's secrets
+  with no expiry and, in practice, wider scope than the one repository it needs. The preset issues a
+  token good for an hour and scoped to one repository by immutable ID, and the target repository
+  decides who may request it. The cost is that publishing now depends on infrastructure in three
+  other repositories.
 - **Fan out naively from `on: release`.** Discarded: merging the grouped release pull request creates
   one GitHub release per component, so a single release moment fires the trigger several times. The
   workflow is idempotent and concurrency-guarded so those firings converge on one pull request.
@@ -91,9 +101,14 @@ markdown as the single source of truth for wording.
 - Pages under `fern/docs/pages/personalization/optimization-sdk/` in `contentful-docs` become
   generated output. Editing them there is overwritten by the next sync; wording changes belong in
   `documentation/`.
-- Delivery needs a credential scoped to `contentful-docs` (`contents: write`,
-  `pull-requests: write`). A GitHub App installation token is preferred over a long-lived token. A
-  pull request from a branch in that repository also receives a Fern preview URL, which a fork cannot.
+- Delivery depends on infrastructure in three other repositories: the Vault policy and App in
+  `cf-vault`, the action preset in `vault-github-actions`, and the grant itself in `contentful-docs`.
+  The sync cannot publish until all three are in place and the App is installed on `contentful-docs`.
+- The preset authenticates only for a default-branch push, a pull request, a tag push, or a published
+  release, so an out-of-band documentation publish is not available on demand. A manual run still
+  exports and validates, and publishes the bundle as a run artifact, but it opens no pull request.
+- A pull request from a branch in `contentful-docs` receives a Fern preview URL, which a fork cannot,
+  so the sync pushes a branch to that repository rather than forking it.
 - `contentful-docs` is accepting generated content from another repository, which is a change to how
   that repository works and is its maintainers' decision to record, not ours.
 - Sidebar order now comes from the authored `children:` lists, which are in reader-routing order. The

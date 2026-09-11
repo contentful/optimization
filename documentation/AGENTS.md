@@ -25,7 +25,8 @@ Applies to authored documentation under `documentation/`.
 
 Everything in `guides/` and `concepts/` is published to `contentful/contentful-docs`. Getting there is
 three separate steps: `pnpm docs:fern` builds the bundle locally, `pnpm docs:fern:apply` writes it
-into a `contentful-docs` checkout, and the sync workflow opens the pull request there. Run
+into a `contentful-docs` checkout, and the sync workflow opens the pull request there. Publication is
+release-gated, so an edit here reaches the public site at the next release, not on merge. Run
 `pnpm fern:check` after editing either directory.
 
 - Every published document needs a `fern:` frontmatter block: `slug`, `section` (`Guides`,
