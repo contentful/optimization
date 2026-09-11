@@ -3,7 +3,7 @@ import ExperienceApiClient, { EXPERIENCE_BASE_URL } from './experience'
 import InsightsApiClient from './insights'
 
 describe('ApiClient', () => {
-  const config: ApiClientConfig = { clientId: 'testId', fetchOptions: {} }
+  const config: ApiClientConfig = { spaceId: 'testId', clientId: 'testClientId', fetchOptions: {} }
 
   it('assigns an ExperienceApiClient instance to .experience', () => {
     const client = new ApiClient(config)
@@ -17,7 +17,8 @@ describe('ApiClient', () => {
 
   it('isolates per-client baseUrl overrides', () => {
     const client = new ApiClient({
-      clientId: 'testId',
+      spaceId: 'testId',
+      clientId: 'testClientId',
       insights: { baseUrl: 'https://ingest.example.test/' },
       experience: { baseUrl: 'https://experience.example.test/' },
     })
@@ -28,7 +29,8 @@ describe('ApiClient', () => {
 
   it('ignores unsupported top-level baseUrl if present at runtime', () => {
     const runtimeConfig: ApiClientConfig & { baseUrl: string } = {
-      clientId: 'testId',
+      spaceId: 'testId',
+      clientId: 'testClientId',
       insights: { baseUrl: 'https://ingest.example.test/' },
       baseUrl: 'https://invalid-top-level.example.test/',
     }

@@ -83,7 +83,7 @@ export async function seedIdentifiedProfile(
   const profileId = await seedAnonymousProfile(context, baseURL)
   const now = new Date().toISOString()
   await request.post(
-    `${MOCK_EXPERIENCE_URL}/v2/organizations/mock-client-id/environments/main/profiles/${profileId}`,
+    `${MOCK_EXPERIENCE_URL}/v3/spaces/mock-space-id/environments/main/profiles/${profileId}`,
     {
       data: {
         events: [
