@@ -40,8 +40,10 @@ const config = {
     insecure: Boolean(process.env.PUBLIC_CONTENTFUL_CDA_HOST),
   },
   optimization: {
+    spaceId: process.env.PUBLIC_CONTENTFUL_SPACE_ID ?? '',
     clientId: process.env.PUBLIC_NINETAILED_CLIENT_ID ?? '',
     environment: process.env.PUBLIC_NINETAILED_ENVIRONMENT,
+    contentfulEnvironment: process.env.PUBLIC_CONTENTFUL_ENVIRONMENT,
     logLevel: 'debug',
     locale: APP_LOCALE,
     api: {

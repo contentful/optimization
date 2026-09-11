@@ -16,8 +16,10 @@ export const appConfig: ApplicationConfig = {
     provideClientHydration(withEventReplay()),
     provideRouter(routes),
     provideContentfulOptimizationConfig({
+      spaceId: environment.PUBLIC_CONTENTFUL_SPACE_ID,
       clientId: environment.PUBLIC_NINETAILED_CLIENT_ID,
       environment: environment.PUBLIC_NINETAILED_ENVIRONMENT,
+      contentfulEnvironment: environment.PUBLIC_CONTENTFUL_ENVIRONMENT,
       insightsBaseUrl: environment.PUBLIC_INSIGHTS_API_BASE_URL,
       experienceBaseUrl: environment.PUBLIC_EXPERIENCE_API_BASE_URL,
       logLevel: resolveLogLevel(environment.PUBLIC_OPTIMIZATION_LOG_LEVEL),
