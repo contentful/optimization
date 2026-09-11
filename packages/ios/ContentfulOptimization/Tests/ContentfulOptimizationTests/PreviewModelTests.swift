@@ -11,6 +11,7 @@ final class PreviewModelTests: XCTestCase {
     private func makeInitializedClient() throws -> OptimizationClient {
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -116,6 +117,7 @@ final class PreviewModelTests: XCTestCase {
         client.testOnlyEvaluateScript("""
             __bridge.destroy();
             __bridge.initialize({
+                spaceId: "test-client",
                 clientId: "test-client",
                 environment: "master",
                 api: {

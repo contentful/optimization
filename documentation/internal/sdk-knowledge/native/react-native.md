@@ -34,19 +34,20 @@ source root: `packages/react-native-sdk/src`; shared core: `packages/universal/c
   active singleton and injects it via `OptimizationProvider sdk={sdk}`). `initialize` is `async`
   because it reads AsyncStorage before constructing.
   source: react-native-sdk#components/OptimizationRoot.tsx#OptimizationRoot; react-native-sdk#ContentfulOptimization.ts#initialize
-- Config type is `CoreStatefulConfig` (aliased as `OptimizationConfig`); only `clientId` is
-  required, and its keys are: `clientId` (required), `environment?`, `fetchOptions?` (from
-  `api-client` `ApiConfig`);
+- Config type is `CoreStatefulConfig` (aliased as `OptimizationConfig`); `spaceId` and `clientId` are
+  required, and its keys are: `spaceId` (required), `clientId` (required), `environment?`,
+  `contentfulEnvironment?`, `fetchOptions?` (from `api-client` `ApiConfig`);
   `locale?`, `logLevel?`, `contentful?`, `eventBuilder?` (from `CoreConfig`); `api?`
   (`experienceBaseUrl`, `insightsBaseUrl`, `enabledFeatures`, `ip`, `plainText`, `preflight`),
   `allowedEventTypes?`, `defaults?` (`consent`, `persistenceConsent`, `profile`, `changes`,
   `selectedOptimizations`), `getAnonymousId?`, `onEventBlocked?`, `queuePolicy?` (`flush`,
   `offlineMaxEvents`, `onOfflineDrop`) — all from `CoreStatefulConfig`.
   source: react-native-sdk#index.ts#OptimizationConfig; core-sdk#CoreStateful.ts#CoreStatefulConfig; core-sdk#CoreBase.ts#CoreConfig; core-sdk#CoreApiConfig.ts#CoreStatefulApiConfig; core-sdk#StatefulDefaults.ts#StatefulDefaults; core-sdk#CoreStateful.ts#QueuePolicy; api-client#ApiClientBase.ts#ApiConfig
-- `environment` default: when `environment` is omitted, the API client uses `main`
-  (`DEFAULT_ENVIRONMENT`) for Experience/Insights/CDA requests. There is no separate SDK-side
-  default; the fallback lives in `api-client` `ApiClientBase`.
-  source: api-client#ApiClientBase.ts#DEFAULT_ENVIRONMENT; api-client#ApiClientBase.ts#ApiConfig
+- `environment`/`contentfulEnvironment` defaults: when `environment` is omitted, the API client uses
+  `main` (`DEFAULT_ENVIRONMENT`) for Insights requests; when `contentfulEnvironment` is omitted, it
+  uses `master` (`DEFAULT_CONTENTFUL_ENVIRONMENT`) for Experience/CDA requests. These are distinct
+  fields with no separate SDK-side default; the fallbacks live in `api-client` `ApiClientBase`.
+  source: api-client#ApiClientBase.ts#DEFAULT_ENVIRONMENT; api-client#ApiClientBase.ts#DEFAULT_CONTENTFUL_ENVIRONMENT; api-client#ApiClientBase.ts#ApiConfig
 - `fetchOptions` shape (`api-client` `ApiConfig`, typed `Omit<ProtectedFetchMethodOptions,
 'apiName'>`): `requestTimeout?` (ms, default `3000`), `retries?` (max retry attempts, default `1`),
   `intervalTimeout?` (delay between retries in ms, default `0`), `fetchMethod?` (custom fetch),

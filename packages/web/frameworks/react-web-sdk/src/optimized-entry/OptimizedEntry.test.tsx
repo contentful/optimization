@@ -1024,6 +1024,7 @@ describe('OptimizedEntry', () => {
     const markup = renderToStringWithoutWindow(() =>
       renderToString(
         <OptimizationRoot
+          spaceId="test-space-id"
           clientId="test-client-id"
           environment="main"
           handoff={createContentHandoff({
@@ -1061,6 +1062,7 @@ describe('OptimizedEntry', () => {
     const markup = renderToStringWithoutWindow(() =>
       renderToString(
         <OptimizationRoot
+          spaceId="test-space-id"
           clientId="test-client-id"
           environment="main"
           handoff={createContentHandoff({

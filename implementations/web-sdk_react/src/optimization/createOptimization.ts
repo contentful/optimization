@@ -3,9 +3,12 @@ import ContentfulOptimization from '@contentful/optimization-web'
 export type OptimizationInstance = ContentfulOptimization
 export type OptimizationConfig = ConstructorParameters<typeof ContentfulOptimization>[0]
 
+const OPTIMIZATION_SPACE_ID = import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID?.trim() ?? 'mock-space-id'
 const OPTIMIZATION_CLIENT_ID =
   import.meta.env.PUBLIC_NINETAILED_CLIENT_ID?.trim() ?? 'mock-client-id'
 const OPTIMIZATION_ENVIRONMENT = import.meta.env.PUBLIC_NINETAILED_ENVIRONMENT?.trim() ?? 'main'
+const OPTIMIZATION_CONTENTFUL_ENVIRONMENT =
+  import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT?.trim() ?? 'master'
 const EXPERIENCE_API_BASE_URL =
   import.meta.env.PUBLIC_EXPERIENCE_API_BASE_URL?.trim() ?? 'http://localhost:8000/experience/'
 const INSIGHTS_API_BASE_URL =
@@ -42,8 +45,10 @@ class OptimizationInitializationError extends Error {
 
 function createOptimizationConfig(): OptimizationConfig {
   return {
+    spaceId: OPTIMIZATION_SPACE_ID,
     clientId: OPTIMIZATION_CLIENT_ID,
     environment: OPTIMIZATION_ENVIRONMENT,
+    contentfulEnvironment: OPTIMIZATION_CONTENTFUL_ENVIRONMENT,
     logLevel: resolveLogLevel(),
     locale: APP_LOCALE,
     app: {

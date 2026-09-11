@@ -206,6 +206,7 @@ interaction type that the application does not observe:
 
 ```ts
 const optimization = new ContentfulOptimization({
+  spaceId: 'your-space-id',
   clientId: 'your-client-id',
   autoTrackEntryInteraction: {
     hovers: false,

@@ -4,11 +4,18 @@ import { createScopedLogger } from './logger'
 const logger = createScopedLogger('ApiClient')
 
 /**
- * Default Contentful environment used when none is explicitly provided.
+ * Default Ninetailed/Optimization environment used when none is explicitly provided.
  *
  * @internal
  */
 const DEFAULT_ENVIRONMENT = 'main'
+
+/**
+ * Default Contentful space environment used when none is explicitly provided.
+ *
+ * @internal
+ */
+const DEFAULT_CONTENTFUL_ENVIRONMENT = 'master'
 
 /**
  * Configuration options for API clients extending `ApiClientBase`.
@@ -26,11 +33,27 @@ export interface ApiConfig {
   baseUrl?: string
 
   /**
-   * Contentful environment identifier.
+   * Ninetailed/Optimization environment identifier.
+   *
+   * @remarks
+   * Used by the legacy v1 Insights ingest API. This is a distinct value from
+   * {@link ApiConfig.contentfulEnvironment}, which the v3 Experience API uses.
    *
    * @defaultValue `'main'`
    */
   environment?: string
+
+  /**
+   * Contentful space environment identifier.
+   *
+   * @remarks
+   * Used by the v3 Experience API's `/environments/{contentfulEnvironment}/`
+   * path segment. This is a distinct value from {@link ApiConfig.environment},
+   * which the legacy v1 Insights API uses.
+   *
+   * @defaultValue `'master'`
+   */
+  contentfulEnvironment?: string
 
   /**
    * Options used to configure the underlying protected fetch method.
@@ -39,6 +62,11 @@ export interface ApiConfig {
    * `apiName` is derived from the client name and must not be provided here.
    */
   fetchOptions?: Omit<ProtectedFetchMethodOptions, 'apiName'>
+
+  /**
+   * Contentful Space identifier used for authentication or tracking.
+   */
+  spaceId: string
 
   /**
    * Client identifier used for authentication or tracking.
@@ -51,7 +79,12 @@ export interface ApiConfig {
  *
  * @public
  */
-export type GlobalApiConfigProperties = 'environment' | 'fetchOptions' | 'clientId'
+export type GlobalApiConfigProperties =
+  | 'environment'
+  | 'contentfulEnvironment'
+  | 'fetchOptions'
+  | 'spaceId'
+  | 'clientId'
 
 /**
  * Base class for API clients that provides shared configuration and error logging.
@@ -90,14 +123,24 @@ abstract class ApiClientBase {
   protected readonly name: string
 
   /**
+   * Contentful Space identifier used for authentication or tracking.
+   */
+  protected readonly spaceId: string
+
+  /**
    * Client identifier used for authentication or tracking.
    */
   protected readonly clientId: string
 
   /**
-   * Contentful environment associated with this client.
+   * Ninetailed/Optimization environment associated with this client.
    */
   protected readonly environment: string
+
+  /**
+   * Contentful space environment associated with this client.
+   */
+  protected readonly contentfulEnvironment: string
 
   /**
    * Protected fetch method used by the client to perform HTTP requests.
@@ -110,9 +153,14 @@ abstract class ApiClientBase {
    * @param name - Human-readable name of the client (used for logging and `apiName`).
    * @param config - Configuration options for the client.
    */
-  constructor(name: string, { fetchOptions, clientId, environment }: ApiConfig) {
+  constructor(
+    name: string,
+    { fetchOptions, spaceId, clientId, environment, contentfulEnvironment }: ApiConfig,
+  ) {
+    this.spaceId = spaceId
     this.clientId = clientId
     this.environment = environment ?? DEFAULT_ENVIRONMENT
+    this.contentfulEnvironment = contentfulEnvironment ?? DEFAULT_CONTENTFUL_ENVIRONMENT
     this.name = name
 
     this.fetch = Fetch.create({ ...(fetchOptions ?? {}), apiName: name })

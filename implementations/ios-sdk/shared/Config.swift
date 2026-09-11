@@ -11,7 +11,8 @@ struct AppConfig {
     /// start below the fold — the layout the cross-platform view-tracking
     /// contract assumes for `BELOW_FOLD_ENTRY_ID`.
     static let contentEntryMinHeight: CGFloat = 180
-    static let environment = "master"
+    static let environment = "main"
+    static let contentfulEnvironment = "master"
     static let experienceBaseUrl = "http://localhost:8000/experience/"
     static let insightsBaseUrl = "http://localhost:8000/insights/"
 

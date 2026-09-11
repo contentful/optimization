@@ -21,6 +21,7 @@ final class OptimizationClientTests: XCTestCase {
 
     func testConfigToJSON() throws {
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -34,6 +35,7 @@ final class OptimizationClientTests: XCTestCase {
         let data = json.data(using: .utf8)!
         let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
 
+        XCTAssertEqual(dict["spaceId"] as? String, "test-client")
         XCTAssertEqual(dict["clientId"] as? String, "test-client")
         XCTAssertEqual(dict["environment"] as? String, "master")
         let api = dict["api"] as? [String: Any]
@@ -45,6 +47,7 @@ final class OptimizationClientTests: XCTestCase {
 
     func testConfigToJSONSerializesApiOptionsAndLogLevel() throws {
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -71,6 +74,7 @@ final class OptimizationClientTests: XCTestCase {
 
     func testConfigToJSONSerializesQueuePolicyKnobs() throws {
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             queuePolicy: QueuePolicy(
                 flush: QueueFlushPolicy(
@@ -110,6 +114,7 @@ final class OptimizationClientTests: XCTestCase {
 
     func testConfigToJSONSerializesPersistenceConsentDefault() throws {
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             defaults: StorageDefaults(consent: true, persistenceConsent: false)
         )
@@ -124,7 +129,7 @@ final class OptimizationClientTests: XCTestCase {
     }
 
     func testConfigToJSONSerializesBridgeOnlyAnonymousIdDefault() throws {
-        let config = OptimizationConfig(clientId: "test-client")
+        let config = OptimizationConfig(spaceId: "test-client", clientId: "test-client")
 
         let json = try config.toJSON(anonymousId: "f0837d7dc6344c36a3a0a06c4cde754b")
         let data = json.data(using: .utf8)!
@@ -136,6 +141,7 @@ final class OptimizationClientTests: XCTestCase {
 
     func testConfigToJSONNormalizesExplicitLocale() throws {
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             locale: " de_DE "
         )
@@ -150,6 +156,7 @@ final class OptimizationClientTests: XCTestCase {
 
     func testConfigToJSONOmitsLocaleWhenUnset() throws {
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client"
         )
 
@@ -163,6 +170,7 @@ final class OptimizationClientTests: XCTestCase {
 
     func testConfigToJSONSerializesAllowedEventTypes() throws {
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             allowedEventTypes: ["identify", "screen", "flag"]
         )
@@ -176,6 +184,7 @@ final class OptimizationClientTests: XCTestCase {
 
     func testConfigToJSONSerializesEmptyAllowedEventTypes() throws {
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             allowedEventTypes: []
         )
@@ -189,6 +198,7 @@ final class OptimizationClientTests: XCTestCase {
 
     func testConfigToJSONRejectsInvalidLocale() throws {
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             locale: "*"
         )
@@ -197,22 +207,25 @@ final class OptimizationClientTests: XCTestCase {
     }
 
     func testConfigDefaultEnvironment() {
-        let config = OptimizationConfig(clientId: "test")
+        let config = OptimizationConfig(spaceId: "test", clientId: "test")
         XCTAssertEqual(config.environment, "main")
+        XCTAssertEqual(config.contentfulEnvironment, "master")
         XCTAssertNil(config.api)
         XCTAssertNil(config.locale)
         XCTAssertEqual(config.logLevel, .error)
     }
 
     func testConfigToJSONOmitsNilUrls() throws {
-        let config = OptimizationConfig(clientId: "test")
+        let config = OptimizationConfig(spaceId: "test", clientId: "test")
         let json = try config.toJSON()
         let data = json.data(using: .utf8)!
         let dict = try JSONSerialization.jsonObject(with: data) as! [String: String]
 
-        XCTAssertEqual(dict.count, 3)
+        XCTAssertEqual(dict.count, 5)
+        XCTAssertEqual(dict["spaceId"], "test")
         XCTAssertEqual(dict["clientId"], "test")
         XCTAssertEqual(dict["environment"], "main")
+        XCTAssertEqual(dict["contentfulEnvironment"], "master")
         XCTAssertEqual(dict["logLevel"], "error")
     }
 
@@ -221,6 +234,7 @@ final class OptimizationClientTests: XCTestCase {
             ["experienceId": "6IueRX1pS3iMJncbhUQTba", "variantIndex": 2]
         ]
         let config = OptimizationConfig(
+            spaceId: "test",
             clientId: "test",
             defaults: StorageDefaults(selectedOptimizations: seeded)
         )
@@ -329,6 +343,7 @@ final class OptimizationClientTests: XCTestCase {
     func testPolyfillsAvailableAfterInitialize() throws {
         let manager = JSContextManager()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -410,6 +425,7 @@ final class OptimizationClientTests: XCTestCase {
     func testJSContextManagerInitializes() throws {
         let manager = JSContextManager()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -436,6 +452,7 @@ final class OptimizationClientTests: XCTestCase {
     func testJSContextManagerDestroy() throws {
         let manager = JSContextManager()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -455,6 +472,7 @@ final class OptimizationClientTests: XCTestCase {
     func testJSContextManagerGetProfile() throws {
         let manager = JSContextManager()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -474,6 +492,7 @@ final class OptimizationClientTests: XCTestCase {
     func testJSContextManagerGetState() throws {
         let manager = JSContextManager()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -519,6 +538,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientInitialize() throws {
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -535,6 +555,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientPublishesCoreEquivalentStateSurfaces() async throws {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -555,6 +576,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientDestroy() throws {
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -578,6 +600,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientGetProfileBeforeIdentify() throws {
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -631,6 +654,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientTrackCallsBridgePayload() async throws {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -676,6 +700,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientFlagAPIsResolveAndPublishJSONValues() throws {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -710,6 +735,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientExposesEventAndBlockedEventStreams() throws {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -749,6 +775,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientConsentCallsThrough() throws {
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -769,6 +796,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientResetCallsThrough() throws {
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -787,6 +815,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientResetPreservesConsentAndClearsProfileContinuity() async throws {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -820,6 +849,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientDestroyPreservesStoredConsentAndProfileContinuity() async throws {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -890,6 +920,7 @@ final class OptimizationClientTests: XCTestCase {
         defer { client.destroy() }
 
         try client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -926,6 +957,7 @@ final class OptimizationClientTests: XCTestCase {
         defer { client.destroy() }
 
         try client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -941,6 +973,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientSetOnlineCallsThrough() throws {
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -960,6 +993,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientSetLocaleUpdatesResolvedLocale() throws {
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -980,6 +1014,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientSetLocaleRejectsInvalidLocale() throws {
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -1016,6 +1051,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientHasConsentReflectsAcceptedConsent() throws {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -1033,6 +1069,7 @@ final class OptimizationClientTests: XCTestCase {
     func testClientHasConsentGatesByAllowedEventTypesWhenConsentDenied() throws {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -1087,6 +1124,7 @@ final class OptimizationClientTests: XCTestCase {
     func testResolveOptimizedEntryReturnsBaselineWhenInitialized() throws {
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -1111,6 +1149,7 @@ final class OptimizationClientTests: XCTestCase {
     func testResolveOptimizedEntryDoesNotProduceJSExceptions() throws {
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -1146,6 +1185,7 @@ final class OptimizationClientTests: XCTestCase {
     func testResolveOptimizedEntryPreservesFieldsWhenInitialized() throws {
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -1273,6 +1313,7 @@ final class OptimizationClientTests: XCTestCase {
         """)
         let client = OptimizationClient()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -1519,6 +1560,7 @@ final class OptimizationClientTests: XCTestCase {
     func testEventStreamReceivesEvents() throws {
         let manager = JSContextManager()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -1562,6 +1604,7 @@ final class OptimizationClientTests: XCTestCase {
     func testCallSyncExceptionIncludesMethodName() throws {
         let manager = JSContextManager()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -1595,6 +1638,7 @@ final class OptimizationClientTests: XCTestCase {
     func testSelectedOptimizationsUpdatedFromState() throws {
         let manager = JSContextManager()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -1692,6 +1736,7 @@ final class OptimizationClientTests: XCTestCase {
     private func makeViewTrackingClient(consent: Bool = true) -> OptimizationClient {
         let client = OptimizationClient()
         try! client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             defaults: StorageDefaults(consent: consent)
         ))
@@ -2078,6 +2123,7 @@ final class OptimizationClientTests: XCTestCase {
     func testDestroyedManagerCancelsTimers() throws {
         let manager = JSContextManager()
         let config = OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -2109,6 +2155,7 @@ final class OptimizationClientTests: XCTestCase {
         defer { client.destroy() }
 
         try client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -2132,6 +2179,7 @@ final class OptimizationClientTests: XCTestCase {
         defer { client.destroy() }
 
         try client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -2148,6 +2196,7 @@ final class OptimizationClientTests: XCTestCase {
         client.testOnlyEvaluateScript("""
             __bridge.destroy();
             __bridge.initialize({
+                spaceId: "test-client",
                 clientId: "test-client",
                 environment: "master",
                 api: {
@@ -2174,6 +2223,7 @@ final class OptimizationClientTests: XCTestCase {
         defer { client.destroy() }
 
         try client.initialize(config: OptimizationConfig(
+            spaceId: "test-client",
             clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
@@ -2185,6 +2235,7 @@ final class OptimizationClientTests: XCTestCase {
         client.testOnlyEvaluateScript("""
             __bridge.destroy();
             __bridge.initialize({
+                spaceId: "test-client",
                 clientId: "test-client",
                 environment: "master",
                 api: {

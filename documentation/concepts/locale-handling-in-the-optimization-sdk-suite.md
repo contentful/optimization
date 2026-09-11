@@ -75,6 +75,7 @@ SDK-managed Contentful fetch, JavaScript runtimes (TypeScript):
 const appLocale = getAppLocale()
 
 const optimization = new ContentfulOptimization({
+  spaceId,
   clientId,
   contentful: {
     client: contentfulClient,
@@ -125,6 +126,7 @@ Web runtime (TypeScript):
 const appLocale = getAppLocale()
 
 const optimization = new ContentfulOptimization({
+  spaceId,
   clientId,
   locale: appLocale,
 })
@@ -195,6 +197,7 @@ Next.js App Router binding module (TypeScript):
 import { bindNextjsAppRouterServerOptimization } from '@contentful/optimization-nextjs/app-router/server'
 
 export const optimization = bindNextjsAppRouterServerOptimization({
+  spaceId,
   clientId,
   locale: defaultLocale,
   consent: { server: consent },
@@ -218,6 +221,7 @@ Next.js manual server runtime (TypeScript):
 
 ```ts
 const optimization = configureNextjsServerOptimization({
+  spaceId,
   clientId,
   locale: defaultLocale,
 })

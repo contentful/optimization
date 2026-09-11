@@ -24,9 +24,11 @@ Gather these inputs:
   `__nt_experiences__`, `__nt_changes__`, `__nt_debug__`, `__nt-consent__`, or `ntaid`.
 - The app's consent and analytics policy.
 - The Contentful entries that were resolved through legacy mapped experiences.
-- The target Optimization `clientId`, environment, locale, and browser-visible config convention.
-  These values identify the Contentful project and locale the browser runtime may call; keep secrets
-  out of them and follow your bundler's public-variable convention.
+- The target Optimization `spaceId`, `clientId`, `environment`, `contentfulEnvironment`, locale, and
+  browser-visible config convention. `environment` is the Ninetailed/Optimization environment used
+  by the Insights API; `contentfulEnvironment` is the separate Contentful space environment used by
+  the Experience API. These values identify the Contentful project and locale the browser runtime
+  may call; keep secrets out of them and follow your bundler's public-variable convention.
 
 ## Migration path
 

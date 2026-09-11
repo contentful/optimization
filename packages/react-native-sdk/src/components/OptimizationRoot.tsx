@@ -11,7 +11,8 @@ import { OptimizationProvider } from './OptimizationProvider'
 /**
  * Props for the {@link OptimizationRoot} component.
  *
- * Accepts all {@link CoreStatefulConfig} properties directly. Only `clientId` is required.
+ * Accepts all {@link CoreStatefulConfig} properties directly. Only `spaceId` and `clientId`
+ * are required.
  *
  * @public
  */
@@ -47,6 +48,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
    * @example
    * ```tsx
    * <OptimizationRoot
+   *   spaceId="your-space-id"
    *   clientId="your-client-id"
    *   trackEntryInteraction={{ taps: false }}
    * >
@@ -79,13 +81,14 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
  *
  * @example Basic usage
  * ```tsx
- * <OptimizationRoot clientId="your-client-id" environment="main">
+ * <OptimizationRoot spaceId="your-space-id" clientId="your-client-id" environment="main">
  *   <App />
  * </OptimizationRoot>
  * ```
  * @example With tap tracking opt out
  * ```tsx
  * <OptimizationRoot
+ *   spaceId="your-space-id"
  *   clientId="your-client-id"
  *   trackEntryInteraction={{ taps: false }}
  * >
@@ -94,7 +97,12 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
  * ```
  * @example With global live updates
  * ```tsx
- * <OptimizationRoot clientId="your-client-id" environment="main" liveUpdates={true}>
+ * <OptimizationRoot
+ *   spaceId="your-space-id"
+ *   clientId="your-client-id"
+ *   environment="main"
+ *   liveUpdates={true}
+ * >
  *   <App />
  * </OptimizationRoot>
  * ```

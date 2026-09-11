@@ -65,7 +65,7 @@ at startup and the events it can emit before runtime consent changes:
 
 | Constraint           | iOS behavior                                                                                                                                                                                                                                                                                                                                                                                                           |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Configuration        | `clientId` is required. `environment` defaults to `"main"`. `locale` configures the SDK Experience API and event locale; it does not choose the Contentful CDA locale for app-owned entry fetches.                                                                                                                                                                                                                     |
+| Configuration        | `spaceId` and `clientId` are required. `environment` defaults to `"main"` and `contentfulEnvironment` defaults to `"master"`. `locale` configures the SDK Experience API and event locale; it does not choose the Contentful CDA locale for app-owned entry fetches.                                                                                                                                                   |
 | Consent              | `state.consent` starts as unset unless `StorageDefaults.consent` or persisted SDK consent provides a value. Until event consent is `true`, iOS/native allow-list behavior lets only `identify` and `screen` emit by default.                                                                                                                                                                                           |
 | Persistence consent  | Boolean `client.consent(true)` or `client.consent(false)` updates event consent and durable profile-continuity persistence consent together. Use split consent when event consent and durable profile continuity have separate policy decisions.                                                                                                                                                                       |
 | Allowed event types  | `OptimizationConfig.allowedEventTypes` replaces the native default pre-consent allow-list. Pass `allowedEventTypes: []` for strict opt-in before any Optimization event, or pass a narrow custom list when legal and privacy review permits specific pre-consent events.                                                                                                                                               |
@@ -99,14 +99,18 @@ Every iOS integration builds an `OptimizationConfig`:
 
 ```swift
 OptimizationConfig(
+    spaceId: "your-space-id",
     clientId: "your-client-id",
     environment: "main",
+    contentfulEnvironment: "master",
     locale: "en-US",
     logLevel: .debug
 )
 ```
 
-Only `clientId` is required. `environment` defaults to `"main"`. Base URL overrides belong only in
+Only `spaceId` and `clientId` are required. `environment` (the Ninetailed/Optimization environment, used by
+the Insights API) defaults to `"main"`, and `contentfulEnvironment` (the Contentful space environment, used
+by the Experience API) defaults to `"master"`. Base URL overrides belong only in
 integrations that need non-default Experience API or Insights API endpoints.
 
 Use top-level `locale` for the SDK Experience/event locale. When the application renders localized

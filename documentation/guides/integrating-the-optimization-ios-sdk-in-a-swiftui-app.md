@@ -106,8 +106,9 @@ axes, the split form that sets them separately, and why an app that collects a c
    Swift-to-JavaScript boundary **the bridge**; you never call it yourself, but step 3 has you read its
    log lines.
 
-2. Wrap your app root in `OptimizationRoot`, pass your Optimization client ID — the value from your
-   Optimization project settings, listed under [Before you start](#before-you-start) — set
+2. Wrap your app root in `OptimizationRoot`, pass your Optimization space ID and client ID — the
+   values from your Optimization project settings, listed under
+   [Before you start](#before-you-start) — set
    `logLevel: .debug` so the SDK logs its activity, and add `.trackScreen(name:)` to one screen you
    already render.
 
@@ -125,6 +126,7 @@ axes, the split form that sets them separately, and why an app that collects a c
    +            // Wrap the tree that uses SDK views; one client stays alive for its lifetime.
    +            OptimizationRoot(
    +                config: OptimizationConfig(
+   +                    spaceId: "<your-space-id>",
    +                    clientId: "<your-client-id>",
    +                    // Startup consent default, reapplied every launch; the Consent section replaces it.
    +                    defaults: StorageDefaults(consent: true),
@@ -209,12 +211,15 @@ outside this guide:
   an authored variant, the integration can still run correctly while returning the baseline, so you
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
-- **Your Optimization project values** — client ID and environment, from your Optimization project
-  settings. In the Contentful web app the path depends on which navigation your organization uses: in
-  **classic navigation**, go to **Apps → Installed apps → Contentful Personalization → SDK keys**; in
-  **new navigation** (the Contentful app with ExO navigation enabled), go to **Platform/Apps →
-  Installed apps → Contentful Personalization → SDK keys**. The client ID and environment are listed
-  there.
+- **Your Optimization project values** — space ID, client ID, and environment, from your
+  Optimization project settings. In the Contentful web app the path depends on which navigation
+  your organization uses: in **classic navigation**, go to **Apps → Installed apps → Contentful
+  Personalization → SDK keys**; in **new navigation** (the Contentful app with ExO navigation
+  enabled), go to **Platform/Apps → Installed apps → Contentful Personalization → SDK keys**. The
+  space ID, client ID, and environment are listed there. This `environment` is the
+  Ninetailed/Optimization environment used by the Insights API — a separate, optional
+  `contentfulEnvironment` value configures the Contentful space environment used by the Experience
+  API.
 
   The Experience API (which picks variants) and the Insights API (which receives event and
   interaction delivery) each have a base URL that defaults correctly; you set them only for mocks or
@@ -255,8 +260,9 @@ rather than awaiting. `OptimizationClient` is a `@MainActor` type; call its meth
 tasks, event handlers, or other main-actor contexts.
 
 1. Add `ContentfulOptimization` as a Swift Package dependency and build the app on a simulator.
-2. Create one `OptimizationConfig` with the Optimization client ID. `environment` defaults to `main`,
-   so pass it only when your Contentful environment differs.
+2. Create one `OptimizationConfig` with the Optimization space ID and client ID. `environment`
+   defaults to `main`, so pass it only when your Optimization environment differs; `contentfulEnvironment`
+   defaults to `master`, so pass it only when your Contentful space environment differs.
 3. Pass `locale` when Experience API responses and event context must use the same app locale as your
    Contentful entry fetches.
 4. Pass `api` endpoint overrides only for staging, mocks, or non-default hosts; both base URLs default
@@ -277,8 +283,10 @@ struct MyApp: App {
             // One SDK-owned client stays alive for the SwiftUI tree that uses Optimization.
             OptimizationRoot(
                 config: OptimizationConfig(
+                    spaceId: "<your-space-id>",
                     clientId: "<your-client-id>",
-                    // environment defaults to "main"; set it only when your Contentful environment differs.
+                    // environment defaults to "main"; set it only when your Optimization environment differs.
+                    // contentfulEnvironment defaults to "master"; set it only when your Contentful space environment differs.
                     locale: "en-US",
                     // Still the quick start's startup consent; the Consent section replaces it.
                     defaults: StorageDefaults(consent: true),
@@ -451,6 +459,7 @@ import ContentfulOptimization
 let appLocale = "en-US"
 
 let config = OptimizationConfig(
+    spaceId: "<your-space-id>",
     clientId: "<your-client-id>",
     // Aligns Experience API responses and event context with the rendered Contentful locale.
     locale: appLocale
@@ -1029,7 +1038,7 @@ let previewPanel = PreviewPanelConfig(
     contentfulClient: ContentfulHTTPPreviewClient(
         spaceId: "<space-id>",
         accessToken: "<delivery-api-token>",
-        environment: "main"
+        environment: "master"
     )
 )
 #else
@@ -1073,6 +1082,7 @@ event allow-lists, non-default endpoints, or queue observability.
 
 ```swift
 let config = OptimizationConfig(
+    spaceId: "<your-space-id>",
     clientId: "<your-client-id>",
     api: OptimizationApiConfig(
         experienceBaseUrl: "<experience-api-base-url>",
@@ -1130,9 +1140,10 @@ For deeper runtime behavior, see
 
 Before release, verify these checks against the target app build:
 
-- **Credentials and runtime configuration** — the app uses the intended Optimization client ID and
-  environment, the SDK Experience/event locale, and any approved Experience API or Insights API
-  endpoint overrides; mock or localhost base URLs are absent from production configuration.
+- **Credentials and runtime configuration** — the app uses the intended Optimization space ID,
+  client ID, environment, and contentfulEnvironment, the SDK Experience/event locale, and any
+  approved Experience API or Insights API endpoint overrides; mock or localhost base URLs are absent
+  from production configuration.
 - **Consent behavior** — default-on consent is used only when policy permits it; user-choice flows
   call `consent(true | false)`; split event/persistence consent matches your persistence policy; and
   rejected consent blocks non-allowed event types.

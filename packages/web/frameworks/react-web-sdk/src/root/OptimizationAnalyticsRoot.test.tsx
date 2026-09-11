@@ -9,6 +9,7 @@ import { captureRenderError } from '../test/sdkTestUtils'
 import { OptimizationAnalyticsRoot } from './OptimizationAnalyticsRoot'
 
 const testConfig = {
+  spaceId: 'test-space-id',
   clientId: 'test-client-id',
   environment: 'main',
   api: {

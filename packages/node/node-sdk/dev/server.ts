@@ -61,6 +61,7 @@ const env = {
 } as const
 
 const sdk = new ContentfulOptimization({
+  spaceId: env.contentfulSpaceId,
   clientId: env.optimizationClientId,
   environment: env.optimizationEnvironment,
   logLevel: 'debug',

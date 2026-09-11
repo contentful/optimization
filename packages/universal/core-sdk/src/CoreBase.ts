@@ -239,7 +239,12 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
    * @param config - Core configuration including API and builder options.
    * @example
    * ```ts
-   * const sdk = new CoreStateless({ clientId: 'abc123', environment: 'prod' })
+   * const sdk = new CoreStateless({
+   *   spaceId: 'abc123',
+   *   clientId: 'org-id',
+   *   environment: 'prod',
+   *   contentfulEnvironment: 'master',
+   * })
    * ```
    */
   constructor(config: TConfig, api: CoreBaseApiClientConfig = {}, locale?: string) {
@@ -250,13 +255,23 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
       () => this.locale,
     )
 
-    const { eventBuilder, logLevel, environment, clientId, fetchOptions } = config
+    const {
+      eventBuilder,
+      logLevel,
+      environment,
+      contentfulEnvironment,
+      spaceId,
+      clientId,
+      fetchOptions,
+    } = config
 
     logger.addSink(new ConsoleLogSink(logLevel))
 
     const apiConfig: ApiClientConfig = {
+      spaceId,
       clientId,
       environment,
+      contentfulEnvironment,
       fetchOptions,
       experience: api.experience,
       insights: api.insights,
