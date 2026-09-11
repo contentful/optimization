@@ -6,3 +6,6 @@ overrides:
   '@contentful/optimization-web': 'file:../../pkgs/contentful-optimization-web-local.tgz'
   '@contentful/optimization-react-web': 'file:../../pkgs/contentful-optimization-react-web-local.tgz'
   '@contentful/optimization-web-preview-panel': 'file:../../pkgs/contentful-optimization-web-preview-panel-local.tgz'
+
+allowBuilds:
+  core-js: true
