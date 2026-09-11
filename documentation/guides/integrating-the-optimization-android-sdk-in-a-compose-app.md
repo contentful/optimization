@@ -1,4 +1,14 @@
-# Integrating the Optimization Android SDK in a Jetpack Compose app
+---
+fern:
+  navTitle: Integrate the Optimization Android SDK in a Compose app
+  slug: integrate-the-optimization-android-sdk-in-a-compose-app
+  section: Guides
+  description: >-
+    Use this guide to add Contentful personalization to a Jetpack Compose app with the Optimization
+    Android SDK.
+---
+
+# Integrate the Optimization Android SDK in a Jetpack Compose app
 
 Use this guide to add Contentful personalization to a Jetpack Compose app with the Optimization
 Android SDK. By the end of the quick start, the SDK is initialized inside your Compose app and emits
@@ -884,7 +894,7 @@ fun AnalyticsDebugPanel() {
 ```
 
 For cross-SDK forwarding patterns, see
-[Forwarding Optimization SDK context to analytics and tag management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+[Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
 
 ### Custom Flags and MergeTag rendering
 
@@ -1173,7 +1183,7 @@ Before releasing a Compose integration, verify these points against the target a
 
 **Reference excerpt:**
 
-```bash
+```sh
 # These run against this repository's maintained Android reference implementation, not your app.
 # SDK unit tests, from packages/android/ContentfulOptimization:
 ./gradlew testDebugUnitTest
@@ -1199,5 +1209,3 @@ pnpm implementation:run -- android-sdk test:e2e:compose -- --flow <suite>
   fetching, entry resolution, interaction tracking, screen tracking, live updates,
   `getMergeTagValue(...)`, Custom Flags, event diagnostics, and preview-panel overrides against the
   same mock API.
-  </content>
-  </invoke>

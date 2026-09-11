@@ -1,4 +1,14 @@
-# Integrating the Optimization Next.js SDK in a Next.js Pages Router app
+---
+fern:
+  navTitle: Integrate the Optimization Next.js SDK in a Next.js Pages app
+  slug: integrate-the-optimization-sdk-in-a-nextjs-pages-router-app
+  section: Guides
+  description: >-
+    This guide helps you render personalized Contentful entries in `getServerSideProps` for a
+    Next.js Pages Router app, then hydrate the browser from the same Optimization handoff.
+---
+
+# Integrate the Optimization Next.js SDK in a Next.js Pages Router app
 
 Use this guide to render Contentful entries with personalized `getServerSideProps` first paint in a
 Next.js Pages Router app, then hydrate the browser from the same Optimization handoff.
@@ -736,7 +746,7 @@ every content type. If you read `event.optimization?.resolvedEntry`, narrow that
 later event.
 
 For the full pattern, use
-[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+[Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
 
 ### Merge tags and Custom Flags
 
@@ -848,7 +858,7 @@ The page treats a `null` `hero` prop as no consumer output. The handoff still ca
 optimization state needed by the browser runtime.
 
 For complete static, ISR, edge rendering, and analytics-only recipes, use
-[Rendering personalized Next.js routes with static, ISR, and edge handoffs](./rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md).
+[Render personalized Next.js routes with static, ISR, and edge handoffs](./rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md).
 For the mechanics behind handoff state and cache scopes, use
 [Optimization handoff and cache-safe rendering](../concepts/optimization-handoff-and-cache-safe-rendering.md).
 

@@ -43,6 +43,12 @@ Applies to authored concept documentation under `documentation/concepts/`.
 - Define domain terms before using them in dense mechanics.
 - Use short paragraphs and tables for comparisons, not for exhaustive reference.
 - Keep headings task-neutral and descriptive, in sentence case.
+- Title a concept document with a descriptive noun phrase, never the imperative or a gerund: it
+  explains how something works rather than a task the reader performs. Guides carry the imperative
+  titles. See the `Headings` section of [`../../STYLE_GUIDE.md`](../../STYLE_GUIDE.md).
+- Close a concept document with `## Related documentation`, spelled exactly that way. It may list
+  guides, other concepts, package READMEs, and reference implementations together; do not rename the
+  heading to describe whichever kinds happen to appear in the list.
 - Avoid `should`; use `must`, `can`, or `we recommend` according to the style guide.
 - For junior readers, explain why constraints matter, not only that they exist.
 

@@ -33,7 +33,7 @@ you are unsure which SDK layer belongs in your app.
 
 ## Start here
 
-- [Choosing the right SDK](./choosing-the-right-sdk.md) - Choose the SDK package and runtime layer
+- [Choose the right SDK](./choosing-the-right-sdk.md) - Choose the SDK package and runtime layer
   for your app.
 
 ## Integration guides
@@ -81,15 +81,15 @@ that integration with the Optimization SDK Suite. Start with the Contentful mode
 
 ## Supplemental guides
 
-- [Using Contentful GraphQL data with the Optimization SDKs](./using-contentful-graphql-data-with-the-optimization-sdks.md) -
+- [Use Contentful GraphQL data with the Optimization SDKs](./using-contentful-graphql-data-with-the-optimization-sdks.md) -
   Query Optimization-owned fields through Contentful GraphQL, adapt GraphQL-shaped entries for the
   resolver, and keep your app's GraphQL client and cache.
-- [Building a custom JavaScript Optimization adapter](./building-a-custom-javascript-optimization-adapter.md) -
+- [Build a custom JavaScript Optimization adapter](./building-a-custom-javascript-optimization-adapter.md) -
   Build a low-level adapter only when no official SDK package fits your JavaScript runtime or
   framework.
-- [Rendering personalized Next.js routes with static, ISR, and edge handoffs](./rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md) -
+- [Render personalized Next.js routes with static, ISR, and edge handoffs](./rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md) -
   Choose cache-safe handoff patterns for Next.js static, ISR, edge, and analytics-only routes after
   integrating the Next.js SDK.
-- [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
+- [Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
   Forward optimization context to analytics, tag-management, customer-data, or product-analytics
   tools after SDK integration.

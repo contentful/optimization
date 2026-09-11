@@ -1,4 +1,13 @@
-# Migrating experience.js to the Optimization Web SDK
+---
+fern:
+  slug: migrate-experiencejs-to-web-sdk
+  section: Migration guides
+  description: >-
+    Use this guide when a plain browser app or custom JavaScript adapter uses
+    `@ninetailed/experience.js` and you want to move to `@contentful/optimization-web`.
+---
+
+# Migrate experience.js to the Optimization Web SDK
 
 Use this guide when a plain browser app or custom JavaScript adapter uses
 `@ninetailed/experience.js` and you want to move to `@contentful/optimization-web`.
@@ -32,12 +41,12 @@ Gather these inputs:
 
 1. Migrate authored Contentful entries first when the app depends on legacy `nt_*` fields. Start
    with one authored all-visitors variant. See
-   [Migrating an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md).
+   [Migrate an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md).
 2. Install `@contentful/optimization-web` and create one Web SDK instance for the browser runtime.
 3. Replace the first `page()` call and entry resolution using the Web SDK guide.
 4. Replace `identify`, `track`, flags, reset, and consent with target SDK calls and app-owned policy.
 5. Move analytics, privacy, and preview plugins through
-   [Migrating experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md).
+   [Migrate experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md).
 6. Remove `@ninetailed/experience.js` and legacy plugin packages after imports are gone.
 
 ## Replace legacy surfaces
@@ -121,6 +130,6 @@ Use the Web guide's production checks, then add migration-specific checks:
 ## Related guides
 
 - [Web SDK integration guide](./integrating-the-web-sdk-in-a-web-app.md)
-- [Migrating an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md)
-- [Migrating experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md)
-- [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
+- [Migrate an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md)
+- [Migrate experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md)
+- [Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)

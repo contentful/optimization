@@ -39,9 +39,13 @@ event, the target profile-cookie boundary, and any per-request dynamic or cache 
 the rendering replacement. Manual Node/Web hybrids are app-owned at the cookie boundary; target
 framework adapters may own more of that handoff.
 
+H1 form: the imperative mood, naming the task, as required by the `Headings` section of
+[`../../../STYLE_GUIDE.md`](../../../STYLE_GUIDE.md). Never a gerund. Name the move: "Migrate experience.js to the
+Optimization Web SDK", "Migrate an experience.js Contentful model to Optimization".
+
 ## Template
 
-# ⟨Migration guide title⟩
+# ⟨Imperative migration title, naming the move⟩
 
 Use this guide when ⟨the legacy integration being replaced and the target result⟩.
 

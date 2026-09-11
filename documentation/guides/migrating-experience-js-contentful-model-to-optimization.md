@@ -1,4 +1,14 @@
-# Migrating an experience.js Contentful model to Optimization
+---
+fern:
+  slug: migrate-an-experiencejs-contentful-model-to-optimization
+  section: Migration guides
+  description: >-
+    Use this guide when a Contentful space uses Ninetailed-authored experience entries, legacy
+    `nt_*` fields, or `@ninetailed/experience.js-utils-contentful` mapper code and you need the
+    authored content ready for Optimization SDK rendering.
+---
+
+# Migrate an experience.js Contentful model to Optimization
 
 Use this guide when a Contentful space uses Ninetailed-authored experience entries, legacy `nt_*`
 fields, or `@ninetailed/experience.js-utils-contentful` mapper code and you need the authored

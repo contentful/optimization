@@ -1,8 +1,14 @@
 ---
-title: Rendering personalized Next.js routes with static, ISR, and edge handoffs
+title: Render personalized Next.js routes with static, ISR, and edge handoffs
+fern:
+  slug: render-personalized-nextjs-routes
+  section: Guides
+  description: >-
+    Use this guide to render a Next.js route from application-chosen Optimization selections, cache
+    the result at the right scope, and hydrate the browser from the same state.
 ---
 
-# Rendering personalized Next.js routes with static, ISR, and edge handoffs
+# Render personalized Next.js routes with static, ISR, and edge handoffs
 
 Use this guide to render a Next.js route from application-chosen Optimization selections, cache the
 result at the right scope, and hydrate the browser from the same state.
@@ -828,7 +834,7 @@ to your application policy, then scope resolved output to the Optimization state
 ## Related guides and concepts
 
 - [Optimization handoff and cache-safe rendering](../concepts/optimization-handoff-and-cache-safe-rendering.md)
-- [Integrating the Optimization Next.js SDK in a Next.js App Router app](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
-- [Integrating the Optimization Next.js SDK in a Next.js Pages Router app](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
-- [Choosing the right SDK](./choosing-the-right-sdk.md)
-- [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
+- [Integrate the Optimization Next.js SDK in a Next.js App Router app](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
+- [Integrate the Optimization Next.js SDK in a Next.js Pages Router app](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
+- [Choose the right SDK](./choosing-the-right-sdk.md)
+- [Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)

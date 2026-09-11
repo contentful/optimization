@@ -1,0 +1,175 @@
+# Publishes the authored Optimization SDK documentation to contentful/contentful-docs as a pull
+# request. Layer 3 of the sync: a thin shell around `pnpm docs:fern` and `pnpm docs:fern:apply`, both
+# of which run locally without credentials (see documentation/AGENTS.md).
+#
+# Write access to contentful-docs comes from the `cross-repository-write` Vault preset, which mints a
+# short-lived `contentful-cross-repository` GitHub App token scoped to that one repository
+# (`contents: write`, `pull_requests: write`). The grant is target-owned: contentful-docs lists this
+# repository under `cross-repository-write.sources` in its own `.contentful/vault-secrets.yaml`, so
+# nothing here can widen it and no long-lived token is stored here.
+#
+# The preset picks a Vault role from the triggering event. Both triggers deliver a pull request:
+#   * release published  — role `…-release`, bound to a tag
+#   * workflow_dispatch  — role `…-workflow-dispatch`, bound to the default branch
+#
+# The dispatch role's subject is pinned to this repository's default branch, so a manual run must be
+# launched from `main`. That is not a limit on what can be published: launch from `main` and pass
+# `ref` to export any other tree. A dispatch launched from a feature branch fails Vault
+# authentication, which is why the input describes the ref rather than the launch branch.
+#
+# Merging the grouped release PR creates one GitHub release per component, so `on: release` fires
+# several times for one release moment. Those firings converge on the same pull request here rather
+# than opening several, which is what the fixed branch and the concurrency group buy.
+#
+# contentful-docs conventions this must satisfy (see that repo's docs/ADRs and AGENTS.md):
+#   * no `${{ }}` interpolation inside a `run:` block — bind to `env:` and reference "$VAR"
+#   * third-party actions pinned to a full commit SHA
+#   * every synced page needs a nav entry in the same commit, or check-orphan-pages.js fails
+name: Sync Fern Docs
+
+on:
+  # Only `published` is usable: the preset requires `github.event.action == 'published'`, so adding
+  # `created` or `released` here would produce runs that fail Vault authentication. release-please
+  # creates these releases with its own token rather than the default one, which is what lets the
+  # event start a workflow run at all.
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Ref to export documentation from (defaults to the branch this runs on)'
+        required: false
+        type: string
+      draft:
+        description: 'Open the pull request as a draft'
+        required: false
+        type: boolean
+        default: true
+
+# Never cancel in progress: a half-pushed branch is worse than a duplicate run, and the job is
+# idempotent, so a queued run simply reproduces the same result.
+concurrency:
+  group: fern-docs-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  # Required for the OIDC token that Vault exchanges for the scoped App token.
+  id-token: write
+
+env:
+  DOCS_REPO: contentful/contentful-docs
+  DOCS_DIR: contentful-docs
+  SYNC_BRANCH: sync/optimization-docs
+
+jobs:
+  sync:
+    name: 📤 Sync docs to contentful-docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout optimization
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - run: pnpm install --prefer-offline --frozen-lockfile
+
+      # Resolve the ref once so the export, the commit message, and the PR body all describe the same
+      # thing. `inputs.ref` is empty on a release, in which case the checked-out tag is used.
+      - name: Resolve export ref
+        id: resolve
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+          FALLBACK_REF: ${{ github.ref_name }}
+        run: |
+          ref="$INPUT_REF"
+          [ -z "$ref" ] && ref="$FALLBACK_REF"
+          printf 'ref=%s\n' "$ref" >>"$GITHUB_OUTPUT"
+          printf 'sha=%s\n' "$(git rev-parse --short HEAD)" >>"$GITHUB_OUTPUT"
+
+      # Fails the run before anything is pushed if a link, anchor, slug, or MDX problem exists.
+      - run: pnpm fern:check
+
+      - name: Build the Fern bundle
+        env:
+          EXPORT_REF: ${{ steps.resolve.outputs.ref }}
+        run: pnpm docs:fern -- --ref "$EXPORT_REF"
+
+      # Mints a token scoped to contentful-docs alone and configures git as
+      # `contentful-cross-repository[bot]`, so the commit below is attributable to the App rather
+      # than to a shared machine user.
+      #
+      # Pinned to a commit rather than a release tag. v1.5.0 was cut a minute before the
+      # `workflow_dispatch` mapping merged, so it rejects a manual run, and the floating `@v1` still
+      # points at v1.2.1, which has no preset at all. Bump to the first tag that contains both.
+      - name: Retrieve a contentful-docs token from Vault
+        id: vault
+        uses: contentful/vault-github-actions/action@3b4e3c6ee2ec24d1dce34061ecfa1539149035b0 # cross-repository-write, incl. workflow_dispatch
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          template-preset: cross-repository-write
+          target-repository: ${{ env.DOCS_REPO }}
+
+      - name: Checkout contentful-docs
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: ${{ env.DOCS_REPO }}
+          path: ${{ env.DOCS_DIR }}
+          token: ${{ steps.vault.outputs.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Apply the bundle
+        env:
+          TARGET_DIR: ${{ env.DOCS_DIR }}
+        run: pnpm docs:fern:apply -- --docs-repo "$TARGET_DIR"
+
+      - name: Push the sync branch and upsert the pull request
+        working-directory: ${{ env.DOCS_DIR }}
+        env:
+          GH_TOKEN: ${{ steps.vault.outputs.GITHUB_TOKEN }}
+          BRANCH: ${{ env.SYNC_BRANCH }}
+          EXPORT_REF: ${{ steps.resolve.outputs.ref }}
+          EXPORT_SHA: ${{ steps.resolve.outputs.sha }}
+          SOURCE_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # Empty on a release, so a release publishes a reviewable pull request rather than a draft.
+          DRAFT: ${{ inputs.draft }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Documentation is already in sync; nothing to push."
+            exit 0
+          fi
+
+          # Git identity is configured globally by the Vault action as
+          # `contentful-cross-repository[bot]`; do not override it here.
+          git checkout -b "$BRANCH"
+          git add --all
+          git commit --message "docs: sync Optimization SDK documentation from ${EXPORT_REF}" \
+            --message "Generated by \`pnpm docs:fern\` from ${SOURCE_REPO}@${EXPORT_SHA}. Do not edit these pages here; edit \`documentation/\` in ${SOURCE_REPO} and re-run the sync."
+          # Force-push a fixed branch so repeated runs converge on one pull request.
+          git push --force origin "$BRANCH"
+
+          body="$(printf 'Automated sync of the Optimization SDK documentation.\n\n- Source: `%s@%s` (ref `%s`)\n- Generated by `pnpm docs:fern`; pages, navigation, and redirects are all generated.\n- Workflow run: %s\n\nThese pages are generated. Prose changes belong in `documentation/` in the source repo, otherwise the next sync overwrites them.\n' "$SOURCE_REPO" "$EXPORT_SHA" "$EXPORT_REF" "$RUN_URL")"
+
+          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            gh pr edit "$BRANCH" --body "$body"
+            echo "Updated the existing pull request for $BRANCH."
+          else
+            draft_flag=''
+            [ "$DRAFT" = 'true' ] && draft_flag='--draft'
+            # shellcheck disable=SC2086 # draft_flag is an intentional single optional flag.
+            gh pr create --base main --head "$BRANCH" $draft_flag \
+              --title "docs: sync Optimization SDK documentation" \
+              --body "$body"
+          fi

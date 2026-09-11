@@ -1,5 +1,11 @@
 ---
 title: Optimization handoff and cache-safe rendering
+fern:
+  slug: optimization-handoff-and-cache-safe-rendering
+  section: Concepts
+  description: >-
+    Understand how server, static, and edge-rendered Optimization state reaches the browser without
+    putting visitor-specific profile state into public caches.
 ---
 
 # Optimization handoff and cache-safe rendering
@@ -170,7 +176,7 @@ request-context path.
 For selected-optimization shape, content model, variant-index, and fallback details, see
 [Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md). For
 the procedural Next.js recipe, see
-[Rendering personalized Next.js routes with static, ISR, and edge handoffs](../guides/rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md).
+[Render personalized Next.js routes with static, ISR, and edge handoffs](../guides/rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md).
 
 ## Hydration and live updates
 
@@ -259,9 +265,9 @@ application policy, but keep resolved personalized output scoped to the state th
 
 ## Related documentation
 
-- [Rendering personalized Next.js routes with static, ISR, and edge handoffs](../guides/rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md)
-- [Integrating the Optimization Next.js SDK in a Next.js App Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
-- [Integrating the Optimization Next.js SDK in a Next.js Pages Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
+- [Render personalized Next.js routes with static, ISR, and edge handoffs](../guides/rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md)
+- [Integrate the Optimization Next.js SDK in a Next.js App Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
+- [Integrate the Optimization Next.js SDK in a Next.js Pages Router app](../guides/integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
 - [Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md)
 - [Profile synchronization between client and server](./profile-synchronization-between-client-and-server.md)
 - [Interaction tracking in Web SDKs](./interaction-tracking-in-web-sdks.md)

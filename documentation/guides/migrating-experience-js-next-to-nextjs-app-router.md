@@ -1,4 +1,15 @@
-# Migrating experience.js Next.js to the App Router SDK
+---
+fern:
+  slug: migrate-experiencejs-next-to-nextjs-app-router
+  section: Migration guides
+  description: >-
+    Use this guide when a Next.js App Router app carries legacy Next.js, ESR, SSR plugin, or React
+    experience.js wiring and you want to move server rendering to
+    `@contentful/optimization-nextjs/app-router/server`, with
+    `@contentful/optimization-nextjs/app-router/client` only for bound Client Components.
+---
+
+# Migrate experience.js Next.js to the App Router SDK
 
 Use this guide when a Next.js App Router app carries legacy Next.js, ESR, SSR plugin, or React
 experience.js wiring and you want to move server rendering to
@@ -30,12 +41,12 @@ Gather these inputs:
 ## Migration path
 
 1. Confirm this app should use App Router through
-   [Choosing a Next.js migration path from experience.js](./choosing-a-nextjs-migration-path-from-experience-js.md).
+   [Choose a Next.js migration path from experience.js](./choosing-a-nextjs-migration-path-from-experience-js.md).
    Then open the
    [App Router integration quick start](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md#quick-start)
    and make the forwarding-only request handler run before replacing render components.
 2. Migrate authored Contentful entries when legacy mapper output is still required. See
-   [Migrating an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md).
+   [Migrate an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md).
 3. Install the App Router SDK and bind its server entry point.
 4. Replace SSR/ESR profile continuity with target request context and cookie behavior.
 5. Replace server-rendered personalization with bound `OptimizedEntry`.
@@ -108,7 +119,7 @@ preview, and live updates use the React Web runtime behind the App Router SDK:
 - Accepted and blocked event streams are available on the live client SDK.
 - Preview panel attachment is a browser concern and forces live updates while open.
 - Legacy plugin behavior moves to
-  [Migrating experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md).
+  [Migrate experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md).
 
 ### Validate App Router migration
 
@@ -141,8 +152,8 @@ Verify server HTML, hydration, and browser takeover together:
 ## Related guides
 
 - [Next.js App Router integration guide](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)
-- [Choosing a Next.js migration path from experience.js](./choosing-a-nextjs-migration-path-from-experience-js.md)
-- [Migrating an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md)
-- [Migrating experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md)
+- [Choose a Next.js migration path from experience.js](./choosing-a-nextjs-migration-path-from-experience-js.md)
+- [Migrate an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md)
+- [Migrate experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md)
 - [Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md)
 - [App Router reference implementation](../../implementations/nextjs-sdk_app-router/README.md)

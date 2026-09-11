@@ -39,8 +39,9 @@ Structure invariants (`pnpm guides:check` enforces the blueprint-to-guide sectio
   `## Core integration` → `## Optional integrations` (if any) → `## Advanced integrations` (if any) →
   `## Production checks` → `## Troubleshooting` (if any) → `## Reference implementations to compare
 against`.
-- H1 form: `# Integrating the Optimization <SDK name> SDK in a <runtime> app`. Next.js variants name
-  the router (`Next.js App Router app`, `Next.js Pages Router app`).
+- H1 form: `# Integrate the Optimization <SDK name> SDK in a <runtime> app`. Next.js variants name
+  the router (`Next.js App Router app`, `Next.js Pages Router app`). The imperative mood is required
+  by the `Headings` section of [`../../../STYLE_GUIDE.md`](../../../STYLE_GUIDE.md); never a gerund.
 - No numbered headings at any level. No monolithic flow section (`## The integration flow`,
   `## Required steps`, `## Core steps`). Procedures are numbered lists inside `###` sections.
 - Every `###` feature section opens with a bold `**Integration category:**` line, exactly one of:
@@ -56,7 +57,7 @@ against`.
 
 ## Template
 
-# Integrating the Optimization ⟨SDK name⟩ SDK in a ⟨runtime⟩ app
+# Integrate the Optimization ⟨SDK name⟩ SDK in a ⟨runtime⟩ app
 
 Use this guide to ⟨one-sentence reader goal, phrased as the working result they will have⟩.
 

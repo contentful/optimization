@@ -64,6 +64,10 @@ Avoid time-bound words unless the document is explicitly date-stamped:
 When timing matters, use a durable reference such as a package version, release date, API version,
 or documented support boundary.
 
+Do not count the items in a list you are introducing ("Here is the whole idea in four points"). The
+count silently goes stale the moment an item is added or removed. Introduce the list by what it
+contains instead ("Here is a breakdown of how it works").
+
 This principle does not apply to time-stamped documentation intended to describe product updates,
 such as release notes and changelog entries.
 
@@ -89,6 +93,16 @@ such as release notes and changelog entries.
 - Use sentence case for headings, preserving official product, package, API, component, hook, file,
   and UI casing.
 - Make headings short, focused, descriptive, and useful for navigation.
+- Title a task document — a guide that walks the reader through doing something — with the imperative
+  mood, naming the task: "Integrate the Optimization Web SDK in a web app", "Choose the right SDK",
+  "Migrate experience.js to the Optimization Web SDK".
+- Title an explanatory document — one that explains how something works rather than what to do — with
+  a descriptive noun phrase: "Core state management", "Entry optimization and variant resolution".
+- Do not title a document with a gerund ("Integrating the...", "Choosing the..."). A gerund names an
+  activity in progress rather than the task the reader came to complete, and it reads poorly in a
+  navigation sidebar next to imperative siblings.
+- A document's title is also its published page title and sidebar label, so changing it changes both.
+  Update the cross-document link text that names it at the same time.
 - Keep headings unique within a document. Avoid reusing identical headings for different purposes
   across nearby docs when that would confuse navigation or generated anchors.
 - Use subheadings to introduce conceptual blocks.

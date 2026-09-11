@@ -1,4 +1,13 @@
-# Integrating the Optimization Android SDK in an Android Views app
+---
+fern:
+  slug: integrate-the-optimization-android-sdk-in-a-views-app
+  section: Guides
+  description: >-
+    Use this guide to add Contentful personalization to a native Android app built with XML layouts
+    and Android Views.
+---
+
+# Integrate the Optimization Android SDK in an Android Views app
 
 Use this guide to add Contentful personalization to a native Android app built with XML layouts and
 Android Views. By the end of the quick start, the SDK is running from your application and one screen
@@ -41,7 +50,7 @@ then read `OptimizationManager.client` from the activities and fragments that tr
 entries. The SDK does not replace your Contentful client — your app still owns Contentful fetching,
 link resolution, consent UX, identity policy, navigation, caching, and rendering. If your screens are
 built with Jetpack Compose instead, use the
-[Integrating the Optimization Android SDK in a Jetpack Compose app](./integrating-the-optimization-android-sdk-in-a-compose-app.md)
+[Integrate the Optimization Android SDK in a Jetpack Compose app](./integrating-the-optimization-android-sdk-in-a-compose-app.md)
 guide.
 
 ## Quick start
@@ -964,7 +973,7 @@ streams for local diagnostics or app-owned analytics forwarding.
 When forwarding SDK events to third-party destinations, apply the same app-owned consent policy,
 deduplication, and data-minimization rules that govern the destination. For destination mapping,
 consent, identity, dedupe, and governance guidance, see
-[Forwarding Optimization SDK context to analytics and tag management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
+[Forward Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md).
 
 ### Custom Flags and MergeTag rendering
 

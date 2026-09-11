@@ -1,4 +1,13 @@
-# Migrating experience.js Node, SSR, and ESR
+---
+fern:
+  slug: migrate-experiencejs-node-ssr-and-esr
+  section: Migration guides
+  description: >-
+    Use this guide when server code uses `@ninetailed/experience.js-node`, SSR plugin helpers, ESR
+    helpers, or a manual server-to-browser handoff.
+---
+
+# Migrate experience.js Node, SSR, and ESR
 
 Use this guide when server code uses `@ninetailed/experience.js-node`, SSR plugin helpers, ESR
 helpers, or a manual server-to-browser handoff.
@@ -114,7 +123,7 @@ Verify the request boundary:
 
 - [Node SDK integration guide](./integrating-the-node-sdk-in-a-node-app.md)
 - [Web SDK integration guide](./integrating-the-web-sdk-in-a-web-app.md)
-- [Choosing a Next.js migration path from experience.js](./choosing-a-nextjs-migration-path-from-experience-js.md)
+- [Choose a Next.js migration path from experience.js](./choosing-a-nextjs-migration-path-from-experience-js.md)
 - [Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md)
 - [Node reference implementation](../../implementations/node-sdk/README.md)
 - [Node plus Web reference implementation](../../implementations/node-sdk+web-sdk/README.md)

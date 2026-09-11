@@ -1,4 +1,13 @@
-# Migrating experience.js Next.js to the Pages Router SDK
+---
+fern:
+  slug: migrate-experiencejs-next-to-nextjs-pages-router
+  section: Migration guides
+  description: >-
+    Use this guide when a Pages Router app uses `@ninetailed/experience.js-next`, SSR plugin
+    behavior, or legacy React surfaces and you want to move to the Optimization Pages Router SDK.
+---
+
+# Migrate experience.js Next.js to the Pages Router SDK
 
 Use this guide when a Pages Router app uses `@ninetailed/experience.js-next`, SSR plugin behavior,
 or legacy React surfaces and you want to move to the Optimization Pages Router SDK.
@@ -26,9 +35,9 @@ Gather these inputs:
 ## Migration path
 
 1. Confirm this app should use Pages Router through
-   [Choosing a Next.js migration path from experience.js](./choosing-a-nextjs-migration-path-from-experience-js.md).
+   [Choose a Next.js migration path from experience.js](./choosing-a-nextjs-migration-path-from-experience-js.md).
 2. Migrate authored Contentful entries when legacy mapper output is still required. See
-   [Migrating an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md).
+   [Migrate an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md).
 3. Create the Pages Router client and server bindings.
 4. Replace SSR plugin profile and page evaluation in `getServerSideProps`.
 5. Replace personalized rendering with the bound Pages Router `OptimizedEntry`.
@@ -105,7 +114,7 @@ Client features use the React Web runtime:
 - Consent uses app-owned policy passed to server and browser SDK surfaces.
 - Preview attaches to the live browser SDK through the preview panel package.
 
-Use [Migrating experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md)
+Use [Migrate experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md)
 for plugin-specific replacement.
 
 ### Validate Pages Router migration
@@ -140,8 +149,8 @@ Verify the server and browser handoff:
 ## Related guides
 
 - [Next.js Pages Router integration guide](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md)
-- [Choosing a Next.js migration path from experience.js](./choosing-a-nextjs-migration-path-from-experience-js.md)
-- [Migrating an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md)
-- [Migrating experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md)
+- [Choose a Next.js migration path from experience.js](./choosing-a-nextjs-migration-path-from-experience-js.md)
+- [Migrate an experience.js Contentful model to Optimization](./migrating-experience-js-contentful-model-to-optimization.md)
+- [Migrate experience.js plugins and preview](./migrating-experience-js-plugins-and-preview.md)
 - [Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md)
 - [Pages Router reference implementation](../../implementations/nextjs-sdk_pages-router/README.md)
