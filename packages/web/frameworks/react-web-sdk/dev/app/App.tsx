@@ -7,6 +7,7 @@ import { useEntryResolver, useLiveUpdates, useOptimization } from '../../src'
 import {
   BASELINE_IDS,
   CLIENT_ID,
+  CONTENTFUL_SPACE_ID,
   ENVIRONMENT,
   EXPERIENCE_BASE_URL,
   INSIGHTS_BASE_URL,
@@ -229,6 +230,7 @@ export function App(): ReactElement {
       <LifecycleSection sdk={sdk} />
 
       <ProvidersSection
+        spaceId={CONTENTFUL_SPACE_ID}
         clientId={CLIENT_ID}
         environment={ENVIRONMENT}
         insightsBaseUrl={INSIGHTS_BASE_URL}

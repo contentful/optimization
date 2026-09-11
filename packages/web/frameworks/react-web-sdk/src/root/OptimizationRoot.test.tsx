@@ -14,6 +14,7 @@ import { useOptimizationContext } from '../hooks/useOptimization'
 import { OptimizationRoot } from './OptimizationRoot'
 
 const testConfig = {
+  spaceId: 'test-space-id',
   clientId: 'test-client-id',
   environment: 'main',
   api: {
