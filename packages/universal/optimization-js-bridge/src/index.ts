@@ -68,8 +68,10 @@ type BridgeQueuePolicy = Omit<CoreQueuePolicy, 'flush' | 'onOfflineDrop'> & {
 }
 
 interface BridgeConfig {
+  spaceId: string
   clientId: string
   environment: string
+  contentfulEnvironment: string
   api?: {
     experienceBaseUrl?: CoreApiConfig['experienceBaseUrl']
     insightsBaseUrl?: CoreApiConfig['insightsBaseUrl']
@@ -373,8 +375,10 @@ const bridge: Bridge = {
     const { defaults } = resolveStatefulDefaults(config.defaults)
 
     const coreConfig: CoreStatefulConfig = {
+      spaceId: config.spaceId,
       clientId: config.clientId,
       environment: config.environment,
+      contentfulEnvironment: config.contentfulEnvironment,
       locale: config.locale,
       logLevel: config.logLevel,
       allowedEventTypes: config.allowedEventTypes ?? DEFAULT_NATIVE_ALLOWED_EVENT_TYPES,
