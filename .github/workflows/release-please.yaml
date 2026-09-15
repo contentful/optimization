@@ -1,9 +1,8 @@
 name: Release Please
 
 permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+  contents: read
+  id-token: write
 
 concurrency:
   group: release-please-${{ github.ref }}
@@ -23,6 +22,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Retrieve GitHub release token from Vault
+        id: vault
+        uses: contentful/vault-github-actions/action@5b8cb32ba4cc671f83bda0371d2d1d1fbc653836 # v1.6.0
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          template-preset: github-release
+
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: '.nvmrc'
@@ -35,9 +41,9 @@ jobs:
       - name: Create GitHub releases
         run: pnpm release:please -- github-release --repo-url "$GITHUB_REPOSITORY" --target-branch main
         env:
-          RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.vault.outputs.GITHUB_TOKEN }}
 
       - name: Create or update release PR
         run: pnpm release:please -- release-pr --repo-url "$GITHUB_REPOSITORY" --target-branch main
         env:
-          RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.vault.outputs.GITHUB_TOKEN }}
