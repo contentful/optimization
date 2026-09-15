@@ -414,6 +414,8 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
 
       - name: Install JS dependencies
         run: pnpm install --prefer-offline --frozen-lockfile
@@ -908,6 +910,8 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
 
       - name: Install JS dependencies
         run: pnpm install --prefer-offline --frozen-lockfile
@@ -986,6 +990,8 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
 
       - name: Install JS dependencies
         run: pnpm install --prefer-offline --frozen-lockfile
@@ -1065,6 +1071,8 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
 
       - name: Install JS dependencies
         run: pnpm install --prefer-offline --frozen-lockfile
@@ -1282,6 +1290,8 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
 
       # Smoke-test packaging: assemble the AAR + sources/javadoc/POM the release would publish
       # (no Central access, no signing) so packaging breaks are caught on PRs. Release publishing
@@ -1364,6 +1374,8 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
 
       - name: Install JS dependencies
         run: pnpm install --prefer-offline --frozen-lockfile
