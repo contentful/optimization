@@ -217,14 +217,11 @@ async function runReleasePleaseCommand(
 }
 
 function readGitHubOptions(values: ParsedOptions): { owner: string; repo: string; token: string } {
-  const token =
-    readStringOption(values, 'token') ??
-    process.env.RELEASE_PLEASE_TOKEN ??
-    process.env.GITHUB_TOKEN
+  const token = readStringOption(values, 'token') ?? process.env.GITHUB_TOKEN
   const repoUrl = readStringOption(values, 'repo-url') ?? process.env.GITHUB_REPOSITORY
 
   if (token === undefined || token === '') {
-    fail('Set RELEASE_PLEASE_TOKEN or pass --token.')
+    fail('Set GITHUB_TOKEN or pass --token.')
   }
 
   if (repoUrl === undefined || repoUrl === '') {
