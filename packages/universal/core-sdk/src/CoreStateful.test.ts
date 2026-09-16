@@ -76,6 +76,10 @@ class CoreStatefulTestHarness extends CoreStateful {
   setOnlineState(isOnline: boolean): void {
     this.online = isOnline
   }
+
+  async forceFlushWithBeacon(beacon: (url: string, body: string) => boolean): Promise<void> {
+    await this.flushQueues({ force: true, beacon })
+  }
 }
 
 describe('CoreStateful blocked event handling', () => {
@@ -343,6 +347,99 @@ describe('CoreStateful blocked event handling', () => {
       rs.clearAllTimers()
       rs.useRealTimers()
     }
+  })
+
+  it('retains Insights events queued while a successful flush is in flight', async () => {
+    const core = createCoreStatefulHarness({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    const firstRequest = createDeferred()
+    const sendBatchEvents = rs
+      .spyOn(core.api.insights, 'sendBatchEvents')
+      .mockImplementationOnce(async () => {
+        await firstRequest.promise
+        return true
+      })
+      .mockResolvedValue(true)
+
+    await core.trackClick({ componentId: 'first-click' })
+    const firstFlush = core.flush()
+    await flushMicrotasks()
+
+    await core.trackClick({ componentId: 'queued-during-flush' })
+    firstRequest.resolve()
+    await firstFlush
+    await core.flush()
+
+    expect(sendBatchEvents).toHaveBeenCalledTimes(2)
+    expect(sendBatchEvents.mock.calls[1]?.[0][0]?.events).toEqual([
+      expect.objectContaining({ componentId: 'queued-during-flush' }),
+    ])
+  })
+
+  it('does not skip a forced beacon flush while a normal Insights flush is in flight', async () => {
+    const core = createCoreStatefulHarness({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    const firstRequest = createDeferred()
+    const sendBatchEvents = rs
+      .spyOn(core.api.insights, 'sendBatchEvents')
+      .mockImplementationOnce(async () => {
+        await firstRequest.promise
+        return true
+      })
+      .mockResolvedValue(true)
+    const beacon = rs.fn<(url: string, body: string) => boolean>(() => true)
+
+    await core.trackClick({ componentId: 'first-click' })
+    const normalFlush = core.flush()
+    await flushMicrotasks()
+    await core.trackClick({ componentId: 'lifecycle-click' })
+
+    const lifecycleFlush = core.forceFlushWithBeacon(beacon)
+    await flushMicrotasks()
+
+    try {
+      expect(sendBatchEvents).toHaveBeenCalledTimes(2)
+      expect(sendBatchEvents.mock.calls[1]?.[1]?.beacon).toBe(beacon)
+      expect(sendBatchEvents.mock.calls[1]?.[0][0]?.events).toEqual(
+        expect.arrayContaining([expect.objectContaining({ componentId: 'lifecycle-click' })]),
+      )
+    } finally {
+      firstRequest.resolve()
+      await normalFlush
+      await lifecycleFlush
+    }
+  })
+
+  it('does not treat beacon queue acceptance as server acknowledgement', async () => {
+    const core = createCoreStatefulHarness({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    const beacon = rs.fn<(url: string, body: string) => boolean>(() => true)
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+
+    await core.trackClick({ componentId: 'beacon-replay-click' })
+    await core.forceFlushWithBeacon(beacon)
+    await core.flush()
+
+    expect(sendBatchEvents).toHaveBeenCalledTimes(2)
+    expect(sendBatchEvents.mock.calls[0]?.[1]?.beacon).toBe(beacon)
+
+    const lifecycleEvent = sendBatchEvents.mock.calls[0]?.[0][0]?.events[0]
+    const acknowledgedEvent = sendBatchEvents.mock.calls[1]?.[0][0]?.events[0]
+
+    expect(acknowledgedEvent?.messageId).toBe(lifecycleEvent?.messageId)
+    expect(sendBatchEvents.mock.calls[1]?.[1]).toBeUndefined()
   })
 
   it('uses queuePolicy.offlineMaxEvents and onOfflineDrop for Experience buffering', async () => {
