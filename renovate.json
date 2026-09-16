@@ -15,8 +15,10 @@
     "implementations/react-native-sdk/**",
     "packages/react-native-sdk/dev/**"
   ],
-  "prConcurrentLimit": 5,
+  "platformAutomerge": false,
+  "rebaseWhen": "behind-base-branch",
   "timezone": "Europe/Berlin",
+  "updateNotScheduled": true,
   "packageRules": [
     {
       "description": "Run GitHub Actions dependency updates during the Monday morning maintenance window.",
