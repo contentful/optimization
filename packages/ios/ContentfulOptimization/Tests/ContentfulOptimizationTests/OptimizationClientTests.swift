@@ -150,7 +150,7 @@ final class OptimizationClientTests: XCTestCase {
 
     func testConfigToJSONOmitsLocaleWhenUnset() throws {
         let config = OptimizationConfig(
-            spaceId: "test-client",
+            spaceId: "test-client"
         )
 
         let json = try config.toJSON()
