@@ -27,7 +27,7 @@
     "@contentful/optimization-web": "0.0.0",
     "@contentful/optimization-web-preview-panel": "0.0.0",
     "cookie-parser": "1.4.7",
-    "ejs": "3.1.10",
+    "ejs": "5.0.2",
     "express": "5.2.1",
     "express-rate-limit": "8.2.2",
     "qs": "6.16.0",
