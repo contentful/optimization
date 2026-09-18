@@ -1,5 +1,5 @@
 const path = require('path')
-const { execSync } = require('child_process')
+const { execFileSync } = require('child_process')
 
 function getAvailableEmulator() {
   try {
@@ -9,7 +9,10 @@ function getAvailableEmulator() {
         ? `${process.env.ANDROID_SDK_ROOT}/emulator/emulator`
         : 'emulator'
 
-    const output = execSync(`${emulatorPath} -list-avds`, { encoding: 'utf-8', stdio: 'pipe' })
+    const output = execFileSync(emulatorPath, ['-list-avds'], {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+    })
     const avds = output
       .trim()
       .split('\n')
