@@ -402,7 +402,7 @@ describe('CoreStateful blocked event handling', () => {
     const first = createCoreStateful()
     const createSecondCore = (): CoreStateful => new CoreStateful(config)
 
-    expect(createSecondCore).toThrowError(/already initialized/i)
+    expect(createSecondCore).toThrow(/already initialized/i)
 
     first.destroy()
 

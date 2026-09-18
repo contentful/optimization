@@ -14,12 +14,6 @@ const packageVersion = getPackageVersion(__dirname, '0.0.0')
 const common = {
   bundle: true,
   autoExtension: false,
-  autoExternal: {
-    dependencies: true,
-    peerDependencies: true,
-    optionalDependencies: true,
-    devDependencies: false,
-  },
 } as const
 
 const CLIENT_DIRECTIVE = "'use client';"
@@ -63,6 +57,14 @@ const bundledDts = {
 
 export default defineConfig({
   plugins: [pluginReact()],
+  output: {
+    autoExternal: {
+      dependencies: true,
+      peerDependencies: true,
+      optionalDependencies: true,
+      devDependencies: false,
+    },
+  },
   source: {
     tsconfigPath: './tsconfig.build.json',
     define: {

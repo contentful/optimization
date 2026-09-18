@@ -15,20 +15,22 @@ const packageName = getPackageName(__dirname, '@contentful/optimization-web-prev
 const packageVersion = getPackageVersion(__dirname, '0.0.0')
 /* eslint-enable @typescript-eslint/naming-convention -- standardized var names */
 
+const autoExternal = {
+  dependencies: true,
+  peerDependencies: true,
+  optionalDependencies: true,
+  devDependencies: false,
+} as const
+
 const common = {
   bundle: true,
   autoExtension: false,
-  autoExternal: {
-    dependencies: true,
-    peerDependencies: true,
-    optionalDependencies: true,
-    devDependencies: false,
-  },
 } as const
 
 export default defineConfig({
   source: {
     tsconfigPath: './tsconfig.build.json',
+    decorators: { version: '2022-03' },
     define: {
       __OPTIMIZATION_VERSION__: JSON.stringify(process.env.RELEASE_VERSION ?? packageVersion),
       __OPTIMIZATION_PACKAGE_NAME__: JSON.stringify(packageName),
@@ -64,6 +66,7 @@ export default defineConfig({
         },
       },
       output: {
+        autoExternal,
         distPath: { root: 'dist' },
         filename: { js: '[name].mjs' },
         sourceMap: true,
@@ -94,6 +97,7 @@ export default defineConfig({
         },
       },
       output: {
+        autoExternal,
         distPath: { root: 'dist' },
         filename: { js: '[name].cjs' },
         sourceMap: true,
@@ -109,7 +113,6 @@ export default defineConfig({
     {
       ...common,
       format: 'umd',
-      autoExternal: false,
       umdName: 'attachOptimizationPreviewPanel',
       source: {
         entry: {
@@ -118,6 +121,7 @@ export default defineConfig({
         },
       },
       output: {
+        autoExternal: false,
         distPath: { root: 'dist' },
         filename: { js: '[name].js' },
         legalComments: 'none',

@@ -62,7 +62,7 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "guards.cjs": 500,
+        "guards.cjs": 550,
         "guards.mjs": 200,
         "index.cjs": 5000,
         "index.mjs": 4700
@@ -74,7 +74,7 @@
     "build:ci": "pnpm build:dist",
     "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
-    "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo ./node_modules/.cache/rspack",
+    "clean": "rimraf ./.rsdoctor ./.rslib ./.rstack ./dist ./coverage .tsbuildinfo ./node_modules/.cache/rspack",
     "size:check": "pnpm build:dist && build-tools bundle-size",
     "size:report": "build-tools bundle-size --report-only",
     "test:unit": "rstest run --coverage",

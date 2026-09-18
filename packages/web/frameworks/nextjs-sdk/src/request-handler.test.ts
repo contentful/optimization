@@ -63,7 +63,7 @@ function createNextFetchEvent(request: NextRequest): NextFetchEvent {
   })
 }
 
-void afterEach(() => {
+afterEach(() => {
   rs.restoreAllMocks()
 })
 

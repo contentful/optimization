@@ -225,12 +225,12 @@ async function renderWithAct(element: ReactElement): Promise<TestRenderer> {
 describe('OptimizationProvider onStatesReady', () => {
   let renderer: TestRenderer | undefined = undefined
 
-  void beforeEach(() => {
+  beforeEach(() => {
     renderer = undefined
     initializeOptimization.mockReset()
   })
 
-  void afterEach(async () => {
+  afterEach(async () => {
     if (renderer) {
       await act(async () => {
         renderer?.unmount()

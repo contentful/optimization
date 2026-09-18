@@ -47,7 +47,7 @@ const OPTIMIZATION_DATA: OptimizationData = {
   },
 }
 
-void afterEach(() => {
+afterEach(() => {
   rs.restoreAllMocks()
 })
 

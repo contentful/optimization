@@ -60,11 +60,11 @@ async function renderTracker(
 }
 
 describe('ReactRouterAutoPageTracker', () => {
-  void afterEach(() => {
+  afterEach(() => {
     rs.restoreAllMocks()
   })
 
-  void beforeEach(() => {
+  beforeEach(() => {
     resetAutoPageEmitterState()
     locationState.hash = ''
     locationState.key = 'default'

@@ -74,13 +74,13 @@ const prependPolyfillSource = (config: { plugins?: unknown }): void => {
 const commonLib = {
   bundle: true,
   autoExtension: false,
-  autoExternal: false,
   format: 'umd',
   umdName: 'OptimizationBridge',
   dts: false,
 } as const
 
 const commonOutput = {
+  autoExternal: false,
   distPath: { root: 'dist' },
   filename: { js: '[name].js' },
   sourceMap: true,

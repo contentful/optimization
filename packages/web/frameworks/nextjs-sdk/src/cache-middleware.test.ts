@@ -8,7 +8,7 @@ import {
 const readableCacheKey = 'permutation=segment:a;b=c,d'
 const encodedReadableCacheKey = 'permutation%3Dsegment%3Aa%3Bb%3Dc%2Cd'
 
-void afterEach(() => {
+afterEach(() => {
   rs.restoreAllMocks()
 })
 

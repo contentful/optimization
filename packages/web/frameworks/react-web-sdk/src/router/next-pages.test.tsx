@@ -58,11 +58,11 @@ async function renderTracker(
 }
 
 describe('NextPagesAutoPageTracker', () => {
-  void afterEach(() => {
+  afterEach(() => {
     rs.restoreAllMocks()
   })
 
-  void beforeEach(() => {
+  beforeEach(() => {
     resetAutoPageEmitterState()
     routerState.asPath = '/'
     routerState.isReady = true

@@ -74,11 +74,11 @@ function createSdk(): ContentfulOptimization {
 describe('OptimizationProvider injected SDK performance', () => {
   let renderer: TestRenderer | undefined = undefined
 
-  void beforeEach(() => {
+  beforeEach(() => {
     initializeOptimization.mockReset()
   })
 
-  void afterEach(() => {
+  afterEach(() => {
     if (renderer) {
       act(() => {
         renderer?.unmount()

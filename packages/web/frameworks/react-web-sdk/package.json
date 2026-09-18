@@ -176,7 +176,7 @@
     "build:ci": "pnpm build:dist",
     "build:dist": "rslib build && build-tools check-client-boundary-exports ./src ./dist && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/router",
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/router",
-    "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo ./node_modules/.cache/rspack",
+    "clean": "rimraf ./.rsdoctor ./.rslib ./.rstack ./dist ./coverage .tsbuildinfo ./node_modules/.cache/rspack",
     "dev": "rsbuild dev --host 0.0.0.0 -c dev/rsbuild.config.ts",
     "dev:launch": "./scripts/launch-dev-harness.sh",
     "size:check": "pnpm build:dist && build-tools bundle-size",
@@ -189,7 +189,7 @@
   },
   "devDependencies": {
     "@rsbuild/core": "catalog:",
-    "@rsbuild/plugin-react": "^1.4.5",
+    "@rsbuild/plugin-react": "^2.1.0",
     "@rslib/core": "catalog:",
     "@rstest/core": "catalog:",
     "@rstest/coverage-istanbul": "catalog:",

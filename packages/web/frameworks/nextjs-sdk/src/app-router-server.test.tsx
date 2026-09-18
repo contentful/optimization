@@ -36,7 +36,7 @@ let currentNextRequest = createRequest()
 const readNextCookies = rs.fn(async () => await Promise.resolve(currentNextRequest.cookies))
 const readNextHeaders = rs.fn(async () => await Promise.resolve(currentNextRequest.headers))
 
-void beforeAll(async () => {
+beforeAll(async () => {
   rs.doMock('next/headers', () => ({ cookies: readNextCookies, headers: readNextHeaders }))
   rs.doMock('react', () => ({
     default: React,
@@ -128,7 +128,7 @@ function setForwardedServerData(headers: Headers, value: unknown): void {
   )
 }
 
-void afterEach(() => {
+afterEach(() => {
   reactCacheTestGeneration += 1
   rs.restoreAllMocks()
   readNextCookies.mockClear()

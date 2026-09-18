@@ -7,11 +7,11 @@ function cleanupOptimizationSingleton(): void {
   }
 }
 
-void beforeEach(() => {
+beforeEach(() => {
   cleanupOptimizationSingleton()
 })
 
-void afterEach(() => {
+afterEach(() => {
   cleanupOptimizationSingleton()
   document.body.innerHTML = ''
 })

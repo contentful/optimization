@@ -7,15 +7,17 @@ const packageVersion = getPackageVersion(__dirname, '0.0.0')
 const common = {
   bundle: true,
   autoExtension: false,
-  autoExternal: {
-    dependencies: true,
-    peerDependencies: true,
-    optionalDependencies: true,
-    devDependencies: false,
-  },
 } as const
 
 export default defineConfig({
+  output: {
+    autoExternal: {
+      dependencies: true,
+      peerDependencies: true,
+      optionalDependencies: true,
+      devDependencies: false,
+    },
+  },
   source: {
     entry: {
       index: './src/index.ts',

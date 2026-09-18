@@ -102,7 +102,7 @@ async function navigateTo(router: TestRouter, path: string): Promise<void> {
 }
 
 describe('TanStackRouterAutoPageTracker', () => {
-  void beforeEach(() => {
+  beforeEach(() => {
     resetAutoPageEmitterState()
   })
 
