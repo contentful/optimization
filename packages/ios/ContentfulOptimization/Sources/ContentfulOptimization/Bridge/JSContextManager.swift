@@ -198,16 +198,16 @@ final class JSContextManager {
     // MARK: - Private
 
     private func loadBundleSource() throws -> String {
-        guard let url = Bundle.module.url(
+        guard let path = Bundle.module.path(
             forResource: "optimization-ios-bridge.umd",
-            withExtension: "js"
+            ofType: "js"
         ) else {
             throw OptimizationError.resourceLoadError(
                 "optimization-ios-bridge.umd.js not found in package resources"
             )
         }
         do {
-            return try String(contentsOf: url, encoding: .utf8)
+            return try String(contentsOfFile: path, encoding: .utf8)
         } catch {
             throw OptimizationError.resourceLoadError(
                 "Failed to read UMD bundle: \(error.localizedDescription)"
