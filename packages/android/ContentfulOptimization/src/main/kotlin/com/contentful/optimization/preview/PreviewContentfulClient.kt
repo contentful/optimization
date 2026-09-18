@@ -42,6 +42,13 @@ public sealed class ContentfulPreviewError(message: String) : Exception(message)
     class InvalidJSON : ContentfulPreviewError("Failed to parse Contentful API response")
 }
 
+/**
+ * Fetches preview definitions from Contentful over HTTPS.
+ *
+ * The default client uses Android and OkHttp's standard TLS certificate and hostname validation.
+ * Applications with a certificate-pinning requirement can provide a configured [OkHttpClient] and
+ * remain responsible for keeping its pins aligned with Contentful's certificate lifecycle.
+ */
 public class ContentfulHTTPPreviewClient(
     private val spaceId: String,
     private val accessToken: String,

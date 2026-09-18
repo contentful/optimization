@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/optimization_data_extraction_rules"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.OptimizationApp">
         <activity
