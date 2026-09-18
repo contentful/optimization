@@ -1,0 +1,166 @@
+name: CodeQL
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  interpreted:
+    name: CodeQL (${{ matrix.language }})
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - actions
+          - javascript-typescript
+          - ruby
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
+        with:
+          category: /language:${{ matrix.language }}
+
+  java-kotlin:
+    name: CodeQL (Java/Kotlin)
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+    env:
+      CI: 'true'
+      GRADLE_OPTS: >-
+        -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx4g
+        -Dkotlin.daemon.jvm.options=-Xmx2g
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - name: Set Android SDK environment variables
+        run: |
+          echo "ANDROID_SDK_ROOT=$HOME/.android/sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$HOME/.android/sdk" >> "$GITHUB_ENV"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --prefer-offline --frozen-lockfile
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
+        with:
+          languages: java-kotlin
+          build-mode: manual
+          queries: security-extended
+
+      - name: Build the JavaScript bridge
+        run: pnpm --filter @contentful/optimization-js-bridge build
+
+      - name: Build the native Android SDK and reference apps
+        working-directory: implementations/android-sdk
+        run: >-
+          ./gradlew :compose:assembleDebug :views:assembleDebug
+          --no-configuration-cache --no-daemon --console=plain
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
+        with:
+          category: /language:java-kotlin
+
+  swift:
+    name: CodeQL (Swift)
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: namespace-profile-macos-apple-silicon-arm64-6-cpu-14-gb
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - name: Install Xcode build tools
+        run: brew install xcodegen xcbeautify
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --prefer-offline --frozen-lockfile
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
+        with:
+          languages: swift
+          build-mode: manual
+          queries: security-extended
+
+      - name: Build the JavaScript bridge
+        run: pnpm run ios:bridge
+
+      - name: Build the Swift SDK and reference apps
+        run: pnpm run implementation:ios-sdk -- test:e2e:ios:build:release
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
+        with:
+          category: /language:swift
