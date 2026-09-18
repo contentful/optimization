@@ -16,6 +16,10 @@ const DEFAULT_RETRY_DELAY_MS = 500
 const MAX_RETRIES = 5
 const BASE_TWO = 2
 const ENV_FALLBACK = 'master'
+const CONTENTFUL_CDA_ORIGIN = 'https://cdn.contentful.com'
+const CONTENTFUL_SPACE_ID_PATTERN = /^[A-Za-z0-9]+$/
+const CONTENTFUL_ENVIRONMENT_ID_PATTERN = /^[A-Za-z0-9_.-]{1,40}$/
+const OAUTH_BEARER_TOKEN_PATTERN = /^[A-Za-z0-9._~+/-]+=*$/
 const EXPORT_JSON_PATH = './src/contentful/data/space/ctfl-space-data.json'
 const OUTPUT_DIRECTORY = './src/contentful/data/entries'
 const CONTENTFUL_CONFIG_PATH = './.contentfulrc.json'
@@ -114,6 +118,28 @@ async function executeWithRetry<T>(action: () => Promise<T>): Promise<T> {
 // IO & client builders
 // -----------------------------------
 
+function sanitizeContentfulConfigString(
+  value: string,
+  fieldName: string,
+  allowedPattern: RegExp,
+): string {
+  if (!allowedPattern.test(value)) {
+    throw new Error(`Invalid Contentful configuration field: ${fieldName}`)
+  }
+
+  // Reconstruct the value from individually validated characters so only allowlisted data crosses
+  // the network boundary.
+  let sanitized = ''
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value.at(index)
+    if (character === undefined) {
+      throw new Error(`Invalid Contentful configuration field: ${fieldName}`)
+    }
+    sanitized += character
+  }
+  return sanitized
+}
+
 async function getContentfulConfig(): Promise<{
   spaceId: string
   environmentId: string
@@ -127,10 +153,26 @@ async function getContentfulConfig(): Promise<{
   const parsed: unknown = JSON.parse(raw)
   if (!isRecord(parsed)) throw new Error('Invalid .contentfulrc.json format')
 
-  const spaceId = typeof parsed.spaceId === 'string' ? parsed.spaceId : undefined
+  const spaceId =
+    typeof parsed.spaceId === 'string'
+      ? sanitizeContentfulConfigString(parsed.spaceId, 'spaceId', CONTENTFUL_SPACE_ID_PATTERN)
+      : undefined
   const environmentId =
-    typeof parsed.environmentId === 'string' ? parsed.environmentId : ENV_FALLBACK
-  const deliveryToken = typeof parsed.deliveryToken === 'string' ? parsed.deliveryToken : undefined
+    typeof parsed.environmentId === 'string'
+      ? sanitizeContentfulConfigString(
+          parsed.environmentId,
+          'environmentId',
+          CONTENTFUL_ENVIRONMENT_ID_PATTERN,
+        )
+      : ENV_FALLBACK
+  const deliveryToken =
+    typeof parsed.deliveryToken === 'string'
+      ? sanitizeContentfulConfigString(
+          parsed.deliveryToken,
+          'deliveryToken',
+          OAUTH_BEARER_TOKEN_PATTERN,
+        )
+      : undefined
 
   if (!spaceId || !deliveryToken) {
     throw new Error('Missing required Contentful configuration fields: spaceId or accessToken')
@@ -158,16 +200,18 @@ async function fetchEntryJSON(entryId: string): Promise<string> {
   const { spaceId, environmentId, deliveryToken } = await getContentfulConfig()
 
   const url = new URL(
-    `https://cdn.contentful.com/spaces/${spaceId}/environments/${environmentId}/entries`,
+    `/spaces/${encodeURIComponent(spaceId)}/environments/${encodeURIComponent(environmentId)}/entries`,
+    CONTENTFUL_CDA_ORIGIN,
   )
   url.searchParams.set('sys.id', entryId)
   url.searchParams.set('include', '10')
 
   const text = await executeWithRetry(async () => {
-    const response = await fetch(url.toString(), {
+    const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${deliveryToken}`,
       },
+      redirect: 'error',
     })
 
     return await response.text()
