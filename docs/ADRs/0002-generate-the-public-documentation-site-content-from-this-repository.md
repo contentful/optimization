@@ -42,8 +42,10 @@ markdown as the single source of truth for wording.
   published page, every fragment must match a real heading, no published page may link into
   `documentation/authoring/` or `documentation/internal/`, the MDX must be safe, and no slug may move
   without a recorded redirect.
-- Publication is release-gated. The sync workflow is ref-parameterized, idempotent against one branch
-  and one pull request, and concurrency-guarded.
+- Publication is release-gated. The sync workflow is ref-parameterized, concurrency-guarded, and
+  delivers to a branch named after the exported commit. Every component tag from one release moment
+  points at the same commit, so the several release events that moment fires converge on one branch
+  and one pull request, while a later release gets a branch of its own.
 - Write access is a short-lived `contentful-cross-repository` GitHub App token minted by Vault,
   scoped to `contentful-docs` alone. The grant is target-owned: `contentful-docs` names this
   repository under `cross-repository-write.sources` in its own `.contentful/vault-secrets.yaml`, so
@@ -105,13 +107,22 @@ markdown as the single source of truth for wording.
   other repositories.
 - **Fan out naively from `on: release`.** Discarded: merging the grouped release pull request creates
   one GitHub release per component, so a single release moment fires the trigger several times. The
-  workflow is idempotent and concurrency-guarded so those firings converge on one pull request.
+  workflow is concurrency-guarded and names its branch after the exported commit, so those firings
+  converge on one pull request.
+- **One fixed sync branch, force-pushed.** Tried first, then replaced. It converged the release fan-out
+  onto one pull request, which is the property worth keeping, but it made the branch permanent while
+  each delivery was not: `contentful-docs` deletes a branch on merge, so every sync resurrected the
+  same name, and a release landing while an earlier sync was still open rewrote the commit a reviewer
+  was reading. Naming the branch after the exported commit keeps the convergence and drops both.
 - **Convert the gerund titles in the documents only.** Discarded: `recipes/integration.md` mandated
   the gerund form and the other three recipes stated no title form at all, so the pipeline would have
   regenerated what we had just corrected. The instruction layer was the actual defect.
 
 ## Consequences
 
+- A sync replaces the whole generated corpus, so two open sync pull requests could only conflict with
+  each other. Opening one closes any older one and deletes its branch, which means an unreviewed sync
+  is superseded rather than queued.
 - Pages under `fern/docs/pages/personalization/optimization-sdk/` in `contentful-docs` become
   generated output. Editing them there is overwritten by the next sync; wording changes belong in
   `documentation/`.
