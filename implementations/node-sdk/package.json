@@ -25,9 +25,9 @@
     "@contentful/rich-text-html-renderer": "17.1.6",
     "@contentful/rich-text-types": "17.2.5",
     "contentful": "11.10.3",
-    "ejs": "5.0.2",
+    "ejs": "6.0.1",
     "express": "5.2.1",
-    "express-rate-limit": "8.2.2",
+    "express-rate-limit": "8.7.0",
     "qs": "6.16.0",
     "tslib": "2.8.1"
   },
