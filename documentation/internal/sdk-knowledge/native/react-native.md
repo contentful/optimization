@@ -256,7 +256,8 @@ selectedOptimizations, changes }` payload, and this stateful SDK applies it to i
 - Persisted consent is decoded via `decodeConsentStorageValue`; persisted persistence-consent falls
   back to the persisted event consent through `resolvePersistedPersistenceConsent`.
   source: core-sdk#consent/ConsentStorage.ts#decodeConsentStorageValue; core-sdk#consent/ConsentStorage.ts#resolvePersistedPersistenceConsent
-- AsyncStorage is read only during startup: `AsyncStorage.multiGet` runs only in
+- AsyncStorage is read only during startup: the adapter uses `AsyncStorage.getMany` with v3 and
+  `AsyncStorage.multiGet` with v2, only in
   `initializeConsentState` / `initializeProfileContinuity` (each guarded by a one-shot initialized
   flag, invoked from `mergeConfig` during `initialize`). After startup, live SDK state comes from Core
   signals (`signals.consent`, `signals.profile`, `signals.selectedOptimizations`, `signals.changes`);

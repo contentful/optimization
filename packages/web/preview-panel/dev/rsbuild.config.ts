@@ -26,6 +26,7 @@ const config: RsbuildConfig = {
       index: path.resolve(packageRoot, 'dev/main.ts'),
     },
     tsconfigPath: path.resolve(packageRoot, 'tsconfig.json'),
+    decorators: { version: '2022-03' },
     define: {
       __OPTIMIZATION_VERSION__: JSON.stringify(process.env.RELEASE_VERSION ?? '0.0.0'),
       __OPTIMIZATION_PACKAGE_NAME__: JSON.stringify(packageName),

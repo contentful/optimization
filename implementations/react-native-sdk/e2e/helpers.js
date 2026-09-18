@@ -79,8 +79,9 @@ async function waitForEventsCountAtLeast(minCount, timeout = ELEMENT_VISIBILITY_
 }
 
 async function relaunchCleanApp() {
-  await device.terminateApp()
-  await device.launchApp({ delete: true })
+  // Reset app data through Detox's platform-specific path. Android clears data
+  // without uninstalling the APK; iOS restores a cached installation.
+  await device.launchApp({ resetAppState: true })
   await waitFor(element(by.id('identify-button')))
     .toBeVisible()
     .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
@@ -113,7 +114,7 @@ async function clearProfileState(options = {}) {
     // Continue into fallback relaunch below.
   }
 
-  // Fallback if app state is unrecoverable: hard relaunch with clean storage.
+  // Fallback if app state is unrecoverable: relaunch with clean storage.
   await relaunchCleanApp()
 }
 

@@ -1441,13 +1441,17 @@ jobs:
             echo "Setting up adb reverse port forwarding..."
             adb reverse tcp:8000 tcp:8000
             echo "Running E2E tests..."
-            pnpm run implementation:react-native-sdk -- test:e2e:android:run:release -- --retries 1 --shard=${{ matrix.shard }}/2
+            pnpm run implementation:react-native-sdk -- test:e2e:android:run:release -- --loglevel error --retries 1 --shard=${{ matrix.shard }}/2
 
-      - name: Upload logs on failure
+      - name: Capture Android E2E diagnostics on failure
         if: failure()
         run: |
           echo "=== Mock Server Logs ==="
           cat /tmp/mock-server.log || echo "No mock server logs found"
+          mkdir -p /tmp/react-native-e2e-diagnostics
+          adb reverse --list > /tmp/react-native-e2e-diagnostics/adb-reverse-list.txt 2>&1 || true
+          adb logcat -d -v threadtime > /tmp/react-native-e2e-diagnostics/android-logcat.txt 2>&1 || true
+          find /tmp -maxdepth 1 -name '*.detox.jsonl' -exec cp {} /tmp/react-native-e2e-diagnostics/ \; 2>/dev/null || true
 
       - name: Stop Mock Server
         if: always()
@@ -1459,7 +1463,8 @@ jobs:
         with:
           name: ci-results-react-native-android-shard-${{ matrix.shard }}
           path: |
-            implementations/react-native-sdk/.detox/
+            implementations/react-native-sdk/artifacts/
+            /tmp/react-native-e2e-diagnostics/
             /tmp/mock-server.log
           retention-days: 7
 

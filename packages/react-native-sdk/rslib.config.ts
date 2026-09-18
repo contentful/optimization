@@ -10,12 +10,6 @@ const browserUtilEntry = path.resolve(workspaceRoot, 'node_modules/.pnpm/node_mo
 const common = {
   bundle: true,
   autoExtension: false,
-  autoExternal: {
-    dependencies: true,
-    peerDependencies: true,
-    optionalDependencies: true,
-    devDependencies: false,
-  },
 } as const
 
 export default defineConfig({
@@ -39,6 +33,12 @@ export default defineConfig({
   },
   output: {
     target: 'web',
+    autoExternal: {
+      dependencies: true,
+      peerDependencies: true,
+      optionalDependencies: true,
+      devDependencies: false,
+    },
   },
   resolve: {
     alias: {
@@ -50,7 +50,6 @@ export default defineConfig({
     {
       ...common,
       format: 'esm',
-      experiments: { advancedEsm: false },
       output: {
         distPath: { root: 'dist' },
         filename: { js: '[name].mjs' },

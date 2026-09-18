@@ -4,16 +4,16 @@ import { maybeEnableRsDoctor } from 'build-tools'
 const common = {
   bundle: true,
   autoExtension: false,
-  autoExternal: {
-    dependencies: true,
-    peerDependencies: true,
-    optionalDependencies: true,
-    devDependencies: false,
-  },
 } as const
 
 export default defineConfig({
   output: {
+    autoExternal: {
+      dependencies: true,
+      peerDependencies: true,
+      optionalDependencies: true,
+      devDependencies: false,
+    },
     externals: {
       '../api-schemas': '@contentful/optimization-api-client/api-schemas',
     },

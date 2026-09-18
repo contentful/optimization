@@ -24,6 +24,7 @@ export default defineConfig(
       '**/*.{js,jsx,cjs,mjs}',
       '**/.bundle/**',
       '**/.rslib',
+      '**/.rstack',
       '**/android/**',
       '**/build/**',
       '**/coverage',

@@ -46,7 +46,7 @@ function TestSkipOnlyAutoPageEmitter({ routeKey }: { routeKey: string }): null {
 }
 
 describe('useAutoPageEmitter', () => {
-  void beforeEach(() => {
+  beforeEach(() => {
     resetAutoPageEmitterState()
   })
 

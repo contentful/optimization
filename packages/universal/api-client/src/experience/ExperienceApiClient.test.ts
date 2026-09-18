@@ -121,7 +121,7 @@ describe('ExperienceApiClient', () => {
   describe('getProfile', () => {
     it('throws on empty profile id', async () => {
       const client = makeClient()
-      await expect(client.getProfile('')).rejects.toThrowError('Valid profile ID required.')
+      await expect(client.getProfile('')).rejects.toThrow('Valid profile ID required.')
     })
 
     it('getProfile hits the correct URL with default environment and optional locale', async () => {
@@ -367,7 +367,7 @@ describe('ExperienceApiClient', () => {
       const client = makeClient()
       await expect(
         client.updateProfile({ profileId: '', events: [makeTrackEvent('empty-profile-id')] }),
-      ).rejects.toThrowError('Valid profile ID required.')
+      ).rejects.toThrow('Valid profile ID required.')
     })
 
     it('updateProfile posts to the correct URL with provided profileId', async () => {

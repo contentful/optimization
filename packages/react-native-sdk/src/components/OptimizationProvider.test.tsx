@@ -19,7 +19,7 @@ rs.mock('../ContentfulOptimization', () => ({
 rs.mock('@react-native-async-storage/async-storage', () => ({
   default: {
     getItem: rs.fn(),
-    multiGet: rs.fn().mockResolvedValue([]),
+    getMany: rs.fn().mockResolvedValue({}),
     removeItem: rs.fn(),
     setItem: rs.fn(),
   },
@@ -225,12 +225,12 @@ async function renderWithAct(element: ReactElement): Promise<TestRenderer> {
 describe('OptimizationProvider onStatesReady', () => {
   let renderer: TestRenderer | undefined = undefined
 
-  void beforeEach(() => {
+  beforeEach(() => {
     renderer = undefined
     initializeOptimization.mockReset()
   })
 
-  void afterEach(async () => {
+  afterEach(async () => {
     if (renderer) {
       await act(async () => {
         renderer?.unmount()

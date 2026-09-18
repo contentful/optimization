@@ -11,6 +11,7 @@ packages:
 verifyDepsBeforeRun: false
 
 allowBuilds:
+  '@parcel/watcher': true
   core-js: true
   esbuild: true
   msw: true
@@ -24,16 +25,16 @@ catalog:
   '@microsoft/api-extractor': ^7.59.1
   '@playwright/test': 1.63.0
   '@preact/signals-core': ^1.13.0
-  '@rsbuild/core': ^1.7.3
-  '@rstest/core': ^0.8.5
-  '@rstest/coverage-istanbul': ^0.2.1
+  '@rsbuild/core': ^2.2.7
+  '@rstest/core': ^0.12.0
+  '@rstest/coverage-istanbul': ^0.12.0
   '@rsdoctor/cli': ^1.6.4
   '@rsdoctor/rspack-plugin': ^1.6.4
-  '@rslib/core': ^0.19.6
+  '@rslib/core': ^1.0.1
   '@types/express': ^5.0.6
   '@types/node': ^24.0.13
   contentful: ^11.10.5
-  ejs: ^5.0.2
+  ejs: ^6.0.1
   es-toolkit: ^1.46.0
   express: ^5.2.1
   express-rate-limit: ^8.7.0

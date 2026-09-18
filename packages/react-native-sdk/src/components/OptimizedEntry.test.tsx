@@ -131,7 +131,7 @@ function getCallOptions(
 describe('OptimizedEntry', () => {
   let renderer: TestRenderer | undefined = undefined
 
-  void beforeEach(() => {
+  beforeEach(() => {
     rs.clearAllMocks()
     selectedOptimizationsListener = undefined
     selectedOptimizations.current = undefined
@@ -146,7 +146,7 @@ describe('OptimizedEntry', () => {
     )
   })
 
-  void afterEach(() => {
+  afterEach(() => {
     if (renderer) {
       act(() => {
         renderer?.unmount()

@@ -90,7 +90,7 @@ describe('preview panel overrides', () => {
   // Launch fresh before every scenario so modal state and override state
   // from a prior scenario can't leak into the next one.
   beforeEach(async () => {
-    await device.launchApp({ newInstance: true, delete: true })
+    await device.launchApp({ resetAppState: true })
     await clearProfileState()
     await identifyAndRelaunch()
   })

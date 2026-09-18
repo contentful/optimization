@@ -15,15 +15,16 @@ const packageName = getPackageName(__dirname, '@contentful/optimization-web')
 const packageVersion = getPackageVersion(__dirname, '0.0.0')
 /* eslint-enable @typescript-eslint/naming-convention -- standardized var names */
 
+const autoExternal = {
+  dependencies: true,
+  peerDependencies: true,
+  optionalDependencies: true,
+  devDependencies: false,
+} as const
+
 const common = {
   bundle: true,
   autoExtension: false,
-  autoExternal: {
-    dependencies: true,
-    peerDependencies: true,
-    optionalDependencies: true,
-    devDependencies: false,
-  },
 } as const
 
 export default defineConfig({
@@ -75,6 +76,7 @@ export default defineConfig({
         },
       },
       output: {
+        autoExternal,
         distPath: { root: 'dist' },
         filename: { js: '[name].mjs' },
         sourceMap: true,
@@ -117,6 +119,7 @@ export default defineConfig({
         },
       },
       output: {
+        autoExternal,
         distPath: { root: 'dist' },
         filename: { js: '[name].cjs' },
         sourceMap: true,
@@ -132,7 +135,6 @@ export default defineConfig({
     {
       ...common,
       format: 'umd',
-      autoExternal: false,
       umdName: 'ContentfulOptimization',
       source: {
         entry: {
@@ -140,6 +142,7 @@ export default defineConfig({
         },
       },
       output: {
+        autoExternal: false,
         distPath: { root: 'dist' },
         filename: { js: '[name].js' },
         sourceMap: true,
@@ -158,7 +161,6 @@ export default defineConfig({
     {
       ...common,
       format: 'umd',
-      autoExternal: false,
       umdName: 'ContentfulOptimizationWebComponents',
       source: {
         entry: {
@@ -166,6 +168,7 @@ export default defineConfig({
         },
       },
       output: {
+        autoExternal: false,
         distPath: { root: 'dist' },
         filename: { js: '[name].js' },
         sourceMap: true,

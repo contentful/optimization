@@ -56,7 +56,7 @@ export async function fetchEntries(
 export async function clearProfileState(): Promise<void> {
   try {
     const keys = [PROFILE_CACHE_KEY, SELECTED_OPTIMIZATIONS_CACHE_KEY, CHANGES_CACHE_KEY]
-    await AsyncStorage.multiRemove(keys)
+    await AsyncStorage.removeMany(keys)
     logger.info('Profile state cleared successfully')
   } catch (error: unknown) {
     logger.error('Failed to clear profile state:', error)

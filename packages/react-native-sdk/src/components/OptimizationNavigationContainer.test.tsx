@@ -167,7 +167,7 @@ describe('OptimizationNavigationContainer', () => {
   let renderer: TestRenderer | undefined = undefined
   let latestProps: NavigationRenderProps | undefined = undefined
 
-  void beforeEach(() => {
+  beforeEach(() => {
     rs.clearAllMocks()
     consentSnapshot = undefined
     acceptedRouteKey = undefined
@@ -180,7 +180,7 @@ describe('OptimizationNavigationContainer', () => {
     latestProps = undefined
   })
 
-  void afterEach(() => {
+  afterEach(() => {
     if (renderer) {
       act(() => {
         renderer?.unmount()

@@ -29,7 +29,7 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
   `.github/workflows/**`.
 - Bundle-size budget values inside `package.json` are release policy, not ordinary source config.
   The `Bundle size` policy controls whether they may be changed.
-- Treat `dist/**`, `coverage/**`, `docs/**`, `pkgs/**`, `.rslib/**`, `.rsdoctor/**`,
+- Treat `dist/**`, `coverage/**`, `docs/**`, `pkgs/**`, `.rslib/**`, `.rstack/**`, `.rsdoctor/**`,
   `node_modules/**`, and local `.env` files as generated or local-only unless the task explicitly
   targets them.
 - Never manually edit generated external API mock or MSW data. Change the external source or the

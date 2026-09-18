@@ -151,11 +151,11 @@ function createDeferred<T>(): {
 }
 
 describe('NextAppAutoPageTracker', () => {
-  void afterEach(() => {
+  afterEach(() => {
     rs.restoreAllMocks()
   })
 
-  void beforeEach(() => {
+  beforeEach(() => {
     resetAutoPageEmitterState()
     setCurrentRoute('/')
     currentRouterState = routerState
