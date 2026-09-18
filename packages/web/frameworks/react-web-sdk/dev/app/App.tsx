@@ -6,7 +6,6 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { useEntryResolver, useLiveUpdates, useOptimization } from '../../src'
 import {
   BASELINE_IDS,
-  CLIENT_ID,
   CONTENTFUL_SPACE_ID,
   ENVIRONMENT,
   EXPERIENCE_BASE_URL,
@@ -231,7 +230,6 @@ export function App(): ReactElement {
 
       <ProvidersSection
         spaceId={CONTENTFUL_SPACE_ID}
-        clientId={CLIENT_ID}
         environment={ENVIRONMENT}
         insightsBaseUrl={INSIGHTS_BASE_URL}
         experienceBaseUrl={EXPERIENCE_BASE_URL}

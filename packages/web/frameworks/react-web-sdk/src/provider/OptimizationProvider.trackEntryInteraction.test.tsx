@@ -67,7 +67,7 @@ describe('OptimizationProvider trackEntryInteraction', () => {
     setLocaleCalls.length = 0
 
     const rendered = renderProvider(
-      <OptimizationProvider spaceId="test-space-id" clientId="test-client-id" environment="main">
+      <OptimizationProvider spaceId="test-space-id" environment="main">
         <div />
       </OptimizationProvider>,
     )
@@ -88,7 +88,6 @@ describe('OptimizationProvider trackEntryInteraction', () => {
     const rendered = renderProvider(
       <OptimizationProvider
         spaceId="test-space-id"
-        clientId="test-client-id"
         environment="main"
         trackEntryInteraction={{ clicks: false, views: false }}
       >
@@ -112,12 +111,7 @@ describe('OptimizationProvider trackEntryInteraction', () => {
     setLocaleCalls.length = 0
 
     const rendered = renderProvider(
-      <OptimizationProvider
-        spaceId="test-space-id"
-        clientId="test-client-id"
-        environment="main"
-        locale="en-US"
-      >
+      <OptimizationProvider spaceId="test-space-id" environment="main" locale="en-US">
         <div />
       </OptimizationProvider>,
     )
@@ -125,12 +119,7 @@ describe('OptimizationProvider trackEntryInteraction', () => {
     expect(setLocaleCalls).toEqual(['en-US'])
 
     rendered.update(
-      <OptimizationProvider
-        spaceId="test-space-id"
-        clientId="test-client-id"
-        environment="main"
-        locale="de-DE"
-      >
+      <OptimizationProvider spaceId="test-space-id" environment="main" locale="de-DE">
         <div />
       </OptimizationProvider>,
     )

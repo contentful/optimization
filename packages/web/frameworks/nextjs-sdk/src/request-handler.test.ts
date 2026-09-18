@@ -24,7 +24,6 @@ const removedRequestHandlerExportName = ['createNextjsOptimization', 'RequestHan
 
 const sdkConfig = {
   spaceId: 'key_123',
-  clientId: 'key_456',
   environment: 'main',
 }
 

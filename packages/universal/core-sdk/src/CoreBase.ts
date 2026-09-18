@@ -241,9 +241,7 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
    * ```ts
    * const sdk = new CoreStateless({
    *   spaceId: 'abc123',
-   *   clientId: 'org-id',
-   *   environment: 'prod',
-   *   contentfulEnvironment: 'master',
+   *   environment: 'master',
    * })
    * ```
    */
@@ -255,23 +253,13 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
       () => this.locale,
     )
 
-    const {
-      eventBuilder,
-      logLevel,
-      environment,
-      contentfulEnvironment,
-      spaceId,
-      clientId,
-      fetchOptions,
-    } = config
+    const { eventBuilder, logLevel, environment, spaceId, fetchOptions } = config
 
     logger.addSink(new ConsoleLogSink(logLevel))
 
     const apiConfig: ApiClientConfig = {
       spaceId,
-      clientId,
       environment,
-      contentfulEnvironment,
       fetchOptions,
       experience: api.experience,
       insights: api.insights,

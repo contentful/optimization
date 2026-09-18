@@ -20,7 +20,6 @@ import { selectedOptimizations as selectedOptimizationsFixture } from './test/fi
 
 const config: CoreStatefulConfig = {
   spaceId: 'key_123',
-  clientId: 'key_123',
   environment: 'main',
 }
 

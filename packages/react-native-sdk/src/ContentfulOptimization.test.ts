@@ -223,7 +223,6 @@ describe('ContentfulOptimization locale resolution', () => {
 
     const created = await ContentfulOptimization.initialize({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       environment: 'main',
       locale: ' de_DE ',
     })
@@ -241,7 +240,6 @@ describe('ContentfulOptimization locale resolution', () => {
 
     const created = await ContentfulOptimization.initialize({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       environment: 'main',
     })
     optimization = created
@@ -255,7 +253,6 @@ describe('ContentfulOptimization locale resolution', () => {
 
     const created = await ContentfulOptimization.initialize({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       environment: 'main',
       locale: 'en-US',
     })
@@ -273,7 +270,6 @@ describe('ContentfulOptimization locale resolution', () => {
 
     const created = await ContentfulOptimization.initialize({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       environment: 'main',
     })
     optimization = created
@@ -286,7 +282,6 @@ describe('ContentfulOptimization locale resolution', () => {
 
     const created = await ContentfulOptimization.initialize({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       environment: 'main',
       defaults: {
         profile: DEFAULT_PROFILE,
@@ -314,7 +309,6 @@ describe('ContentfulOptimization locale resolution', () => {
 
     const created = await ContentfulOptimization.initialize({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       environment: 'main',
     })
     optimization = created
@@ -351,7 +345,6 @@ describe('ContentfulOptimization locale resolution', () => {
 
     const created = await ContentfulOptimization.initialize({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       environment: 'main',
     })
     optimization = created
@@ -375,7 +368,6 @@ describe('ContentfulOptimization locale resolution', () => {
 
     const created = await ContentfulOptimization.initialize({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       environment: 'main',
       defaults: {
         consent: true,
@@ -409,7 +401,6 @@ describe('ContentfulOptimization locale resolution', () => {
 
     const created = await ContentfulOptimization.initialize({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       environment: 'main',
       defaults: {
         changes: [],
@@ -457,7 +448,6 @@ describe('ContentfulOptimization locale resolution', () => {
 
     const created = await ContentfulOptimization.initialize({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       environment: 'main',
     })
     optimization = created
@@ -481,7 +471,6 @@ describe('ContentfulOptimization locale resolution', () => {
 
     const created = await ContentfulOptimization.initialize({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       environment: 'main',
       defaults: { consent: true },
     })
@@ -525,7 +514,6 @@ describe('ContentfulOptimization locale resolution', () => {
 
     const created = await ContentfulOptimization.initialize({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       environment: 'main',
       defaults: { consent: true },
     })
@@ -556,7 +544,6 @@ describe('ContentfulOptimization locale resolution', () => {
 
     const created = await ContentfulOptimization.initialize({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       environment: 'main',
       defaults: { consent: true },
     })

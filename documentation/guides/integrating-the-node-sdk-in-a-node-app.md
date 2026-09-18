@@ -101,10 +101,8 @@ function required(name) {
 
 // Reuse one SDK instance for the process; bind request data with forRequest().
 const optimization = new ContentfulOptimization({
-  spaceId: required('CONTENTFUL_OPTIMIZATION_SPACE_ID'),
-  clientId: required('CONTENTFUL_OPTIMIZATION_CLIENT_ID'),
-  environment: process.env.CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main',
-  contentfulEnvironment: process.env.CONTENTFUL_ENVIRONMENT ?? 'master',
+  spaceId: required('CONTENTFUL_SPACE_ID'),
+  environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'master',
   locale: APP_LOCALE,
 })
 
@@ -148,12 +146,12 @@ app.listen(PORT, () => {
 })
 ```
 
-Start the app with your Optimization space ID and client ID.
+Start the app with your Contentful space ID.
 
 **Copy this:**
 
 ```sh
-CONTENTFUL_OPTIMIZATION_SPACE_ID=your-space-id CONTENTFUL_OPTIMIZATION_CLIENT_ID=your-client-id CONTENTFUL_OPTIMIZATION_ENVIRONMENT=main node server.mjs
+CONTENTFUL_SPACE_ID=your-space-id CONTENTFUL_ENVIRONMENT=master node server.mjs
 ```
 
 In another terminal, verify the route.
@@ -215,16 +213,13 @@ outside this guide:
   an authored variant, the integration can still run correctly while returning the baseline, so you
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
-- **Your Optimization project values** — space ID, client ID, and environment, from your
-  Optimization project settings. Find them in the Contentful web app under **Apps → Installed
-  apps → Contentful Personalization → SDK keys**.
+- **Your Contentful space values** — space ID and environment, from your Contentful space
+  settings. Find them in the Contentful web app under **Apps → Installed apps → Contentful
+  Personalization → SDK keys**.
 
   The Experience API (which picks variants) and the Insights API (which receives event and
   interaction delivery) each have a base URL that defaults correctly; you only set them for mocks or
   non-default hosts (see [Install and initialize the Node SDK](#install-and-initialize-the-node-sdk)).
-  The SDK's `environment` option is this Optimization environment, used by the Insights API. It is
-  distinct from `contentfulEnvironment`, the Contentful space environment (the same value as the CDA
-  client's `environment` above) used by the Experience API.
 
 You do not need a setup inventory up front. Everything else — consent, entry resolution, identity,
 tracking, caching — is introduced by the section that needs it. The Node SDK holds no per-visitor
@@ -258,7 +253,7 @@ into a small shared module (call it `optimization.ts`) that each route handler i
 still exactly one SDK instance per process.
 
 1. Install `@contentful/optimization-node` and `contentful` when the SDK will fetch entries.
-2. Read the Optimization space ID, client ID, and environment from your runtime configuration.
+2. Read the Contentful space ID and environment from your runtime configuration.
 3. Configure default locale and API endpoint overrides only when your app needs them.
 4. Export the singleton so route handlers can create request-bound SDK clients.
 
@@ -294,15 +289,13 @@ const contentfulClient = contentful.createClient({
 
 // Create this once per process; route handlers import it and call forRequest() per request.
 export const optimization = new ContentfulOptimization({
-  spaceId: required('CONTENTFUL_OPTIMIZATION_SPACE_ID'),
-  clientId: required('CONTENTFUL_OPTIMIZATION_CLIENT_ID'),
+  spaceId: required('CONTENTFUL_SPACE_ID'),
   contentful: {
     client: contentfulClient,
     // Include linked optimization entries and variants for SDK-managed entry fetches.
     defaultQuery: { include: 10 },
   },
-  environment: process.env.CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main',
-  contentfulEnvironment: required('CONTENTFUL_ENVIRONMENT'),
+  environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'master',
   app: {
     name: 'my-express-app',
     version: '1.0.0',
@@ -685,15 +678,13 @@ const contentfulClient = contentful.createClient({
 
 // This is the same singleton from optimization.ts; shown here so contentful.client is visible.
 const optimization = new ContentfulOptimization({
-  spaceId: required('CONTENTFUL_OPTIMIZATION_SPACE_ID'),
-  clientId: required('CONTENTFUL_OPTIMIZATION_CLIENT_ID'),
+  spaceId: required('CONTENTFUL_SPACE_ID'),
   contentful: {
     client: contentfulClient,
     // Include linked optimization entries and variants before SDK resolution.
     defaultQuery: { include: 10 },
   },
-  environment: process.env.CONTENTFUL_OPTIMIZATION_ENVIRONMENT ?? 'main',
-  contentfulEnvironment: required('CONTENTFUL_ENVIRONMENT'),
+  environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'master',
   locale: 'en-US',
 })
 
@@ -1042,7 +1033,7 @@ Use the Node SDK alone when the server chooses the variant and renders the full 
 
 1. Store the shared anonymous profile ID in `ANONYMOUS_ID_COOKIE` when consent permits persistence.
 2. Leave the shared cookie readable by browser-side code in hybrid Node + Web SDK apps.
-3. Initialize the Web SDK with the same Optimization client, environment, and application locale.
+3. Initialize the Web SDK with the same Contentful space ID, environment, and application locale.
 4. Let browser code handle later client-side consent, page events, entry interactions, and live
    updates.
 
@@ -1076,9 +1067,7 @@ const optimization = new ContentfulOptimization({
   // Empty allowlist blocks page() and identify() until request consent is true.
   allowedEventTypes: [],
   spaceId: 'your-space-id',
-  clientId: 'your-client-id',
-  environment: 'main',
-  contentfulEnvironment: 'master',
+  environment: 'master',
   // Use this callback for rollout diagnostics, not user-facing error handling.
   onEventBlocked: (event) => {
     console.warn('Contentful Optimization event blocked', event.method, event.reason)
@@ -1134,9 +1123,9 @@ Use this cache-safety table when planning production caching:
 
 Before releasing a Node SDK integration, verify these points:
 
-- Credentials and runtime configuration: the deployed runtime has the Optimization space ID,
-  client ID, environment, API endpoint overrides if needed, Contentful delivery credentials, and
-  the same Node runtime support you validated locally.
+- Credentials and runtime configuration: the deployed runtime has the Contentful space ID,
+  environment, API endpoint overrides if needed, Contentful delivery credentials, and the same Node
+  runtime support you validated locally.
 - Consent behavior: default-on requests bind `{ events: true, persistence: true }` only when policy
   permits it, user-choice flows bind the actual request decision, and revoked consent clears stored
   profile IDs.

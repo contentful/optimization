@@ -22,7 +22,7 @@ async function parseJson<T>(req: Request): Promise<T> {
 }
 
 /**
- * Returns MSW request handlers that mock the Insights API v1 endpoints.
+ * Returns MSW request handlers that mock the Insights API v2 endpoints.
  *
  * @param baseUrl - URL prefix prepended to each route pattern.
  * @returns An array of {@link HttpHandler} instances for use with MSW.
@@ -51,7 +51,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
       }),
     ),
     http.post(
-      `${baseUrl}v1/organizations/:organizationId/environments/:environmentSlug/events`,
+      `${baseUrl}v2/spaces/:spaceId/environments/:environmentSlug/events`,
       async ({ request }) => {
         try {
           const payload = await parseJson<InsightBatchEvent[]>(request)
@@ -72,7 +72,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
     ),
     // Debug endpoint that returns events for a given ID
     http.get(
-      `${baseUrl}v1/organizations/:organizationId/environments/:environmentSlug/profiles/:profileId`,
+      `${baseUrl}v2/spaces/:spaceId/environments/:environmentSlug/profiles/:profileId`,
       ({ params }) => {
         const { profileId } = params
         const events = eventsStore.filter(

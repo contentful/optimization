@@ -15,9 +15,7 @@ import ExperienceApiClient, {
 } from './ExperienceApiClient'
 
 const SPACE_ID = 'key_123'
-const CLIENT_ID = 'org_123'
-const ENVIRONMENT = 'main'
-const CONTENTFUL_ENVIRONMENT = 'master'
+const ENVIRONMENT = 'master'
 
 const getLocaleParam = (url: string): string | null => new URL(url).searchParams.get('locale')
 const getParam = (url: string): string | null => new URL(url).searchParams.get('type')
@@ -86,9 +84,7 @@ function makeTrackEvent(event = 'test-event'): ExperienceEvent {
 function makeClient(overrides: Partial<ExperienceApiClientConfig> = {}): ExperienceApiClient {
   const config: ExperienceApiClientConfig = {
     spaceId: SPACE_ID,
-    clientId: CLIENT_ID,
     environment: ENVIRONMENT,
-    contentfulEnvironment: CONTENTFUL_ENVIRONMENT,
     ...overrides,
   }
   return new ExperienceApiClient(config)
@@ -153,7 +149,7 @@ describe('ExperienceApiClient', () => {
       const profile = await client.getProfile('f0837d7dc6344c36a3a0a06c4cde754b')
       expect(profile).toBeDefined()
       expect(requested.space).toBe(SPACE_ID)
-      expect(requested.env).toBe(CONTENTFUL_ENVIRONMENT)
+      expect(requested.env).toBe(ENVIRONMENT)
       expect(requested.id).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
       expect(requested.locale).toBeNull()
 
@@ -388,7 +384,7 @@ describe('ExperienceApiClient', () => {
         ),
       )
 
-      const client = makeClient({ contentfulEnvironment: CONTENTFUL_ENVIRONMENT })
+      const client = makeClient({ environment: ENVIRONMENT })
       const events = [makeTrackEvent('update-profile-url')]
 
       const result = await client.updateProfile(
@@ -398,7 +394,7 @@ describe('ExperienceApiClient', () => {
 
       expect(result).toBeDefined()
       expect(hitPath).toBe(
-        `/v3/spaces/${SPACE_ID}/environments/${CONTENTFUL_ENVIRONMENT}/profiles/f0837d7dc6344c36a3a0a06c4cde754b`,
+        `/v3/spaces/${SPACE_ID}/environments/${ENVIRONMENT}/profiles/f0837d7dc6344c36a3a0a06c4cde754b`,
       )
     })
 

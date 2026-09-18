@@ -18,7 +18,6 @@ type OptimizationData = serverExports.OptimizationData
 
 const sdkConfig = {
   spaceId: 'test-space-id',
-  clientId: 'test-client-id',
   environment: 'main',
 }
 

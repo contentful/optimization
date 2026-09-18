@@ -9,7 +9,6 @@ const EXPERIENCE_BASE_URL = 'https://experience.ninetailed.co/'
 
 const config: CoreStatefulConfig = {
   spaceId: 'key_123',
-  clientId: 'key_123',
   environment: 'main',
   defaults: { consent: true },
 }

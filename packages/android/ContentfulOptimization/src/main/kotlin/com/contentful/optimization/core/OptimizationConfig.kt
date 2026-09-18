@@ -126,14 +126,10 @@ public data class QueueEvent(
 )
 
 public data class OptimizationConfig(
-    /** Contentful space identifier used for Experience API requests. */
+    /** Contentful space identifier used for Experience and Insights API requests. */
     val spaceId: String,
-    /** Client/organization identifier used for Insights API event ingestion. */
-    val clientId: String,
-    /** Ninetailed/Optimization environment used for Insights API event ingestion. */
-    val environment: String = "main",
-    /** Contentful space environment used for Experience API requests. */
-    val contentfulEnvironment: String = "master",
+    /** Contentful space environment used for Experience and Insights API requests. */
+    val environment: String = "master",
     val api: OptimizationApiConfig? = null,
     /** Default SDK locale used for Experience API requests and event context. */
     val locale: String? = null,
@@ -149,9 +145,7 @@ public data class OptimizationConfig(
     internal fun toJSON(anonymousId: String? = null): String {
         val obj = JSONObject()
         obj.put("spaceId", spaceId)
-        obj.put("clientId", clientId)
         obj.put("environment", environment)
-        obj.put("contentfulEnvironment", contentfulEnvironment)
         obj.put("logLevel", logLevel.wireValue)
         if (api != null && !api.isEmpty()) {
             obj.put("api", api.toJSONObject())

@@ -71,8 +71,7 @@ export interface OptimizationNodeConfig extends Omit<CoreStatelessConfig, 'event
  *
  * const sdk = new ContentfulOptimization({
  *   spaceId: 'abc-123',
- *   clientId: 'def-456',
- *   environment: 'main',
+ *   environment: 'master',
  *   logLevel: 'info',
  * })
  *
@@ -100,7 +99,7 @@ class ContentfulOptimization extends CoreStateless {
    * ```ts
    * import ContentfulOptimization from '@contentful/optimization-node'
    *
-   * const optimization = new ContentfulOptimization({ spaceId: 'my-space-id', clientId: 'my-client-id' })
+   * const optimization = new ContentfulOptimization({ spaceId: 'my-space-id' })
    * ```
    */
   constructor({ app, allowedEventTypes, eventBuilder, ...config }: OptimizationNodeConfig) {

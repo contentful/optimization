@@ -4,7 +4,6 @@ import * as pagesRouter from './pages-router'
 
 const testConfig = {
   spaceId: 'test-space-id',
-  clientId: 'test-client-id',
   environment: 'main',
   api: {
     insightsBaseUrl: 'http://localhost:8000/insights/',
@@ -85,7 +84,6 @@ describe('Next.js Pages Router client components', () => {
       api: testConfig.api,
       children: 'Root content',
       spaceId: testConfig.spaceId,
-      clientId: testConfig.clientId,
       defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,
       liveUpdates: true,
@@ -97,7 +95,6 @@ describe('Next.js Pages Router client components', () => {
     expect(provider?.props).toMatchObject({
       api: testConfig.api,
       spaceId: testConfig.spaceId,
-      clientId: testConfig.clientId,
       defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,
       handoff,

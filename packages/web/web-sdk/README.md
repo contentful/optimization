@@ -69,8 +69,7 @@ Configure and initialize the Optimization Web SDK once per page runtime:
 ```ts
 const optimization = new ContentfulOptimization({
   spaceId: 'your-space-id',
-  clientId: 'your-client-id',
-  environment: 'main',
+  environment: 'master',
   locale: 'en-US',
 })
 ```
@@ -89,8 +88,7 @@ The UMD build is available for HTML pages that do not use a bundler:
 <script>
   window.contentfulOptimization = new ContentfulOptimization({
     spaceId: 'your-space-id',
-    clientId: 'your-client-id',
-    environment: 'main',
+    environment: 'master',
     locale: 'en-US',
   })
 </script>
@@ -113,12 +111,7 @@ registered only when `defineContentfulOptimizationElements()` runs, and the main
 Use `<ctfl-optimization-root>` once around the entries that share one SDK instance:
 
 ```html
-<ctfl-optimization-root
-  space-id="your-space-id"
-  client-id="your-client-id"
-  environment="main"
-  locale="en-US"
->
+<ctfl-optimization-root space-id="your-space-id" environment="master" locale="en-US">
   <ctfl-optimized-entry id="hero-entry" hidden>
     <article>Baseline content rendered by your app</article>
   </ctfl-optimized-entry>
@@ -223,9 +216,8 @@ the Insights API for event ingestion.
 
 | Option                      | Required? | Default                                       | Description                                                                       |
 | --------------------------- | --------- | --------------------------------------------- | --------------------------------------------------------------------------------- |
-| `spaceId`                   | Yes       | N/A                                           | Contentful Space identifier for Experience API requests                           |
-| `clientId`                  | Yes       | N/A                                           | Client identifier for Insights API event ingestion requests                       |
-| `environment`               | No        | `'main'`                                      | Contentful environment identifier                                                 |
+| `spaceId`                   | Yes       | N/A                                           | Contentful Space identifier for Experience and Insights API requests              |
+| `environment`               | No        | `'master'`                                    | Contentful environment identifier for Experience and Insights API requests        |
 | `api`                       | No        | See API options below                         | Experience API and Insights API endpoint and request options                      |
 | `app`                       | No        | `undefined`                                   | Application metadata attached to outgoing event context                           |
 | `contentful`                | No        | `undefined`                                   | App-owned `contentful.js` client, default query, and cache                        |
@@ -287,7 +279,6 @@ at startup:
 ```ts
 const optimization = new ContentfulOptimization({
   spaceId: 'your-space-id',
-  clientId: 'your-client-id',
   defaults: { consent: true },
 })
 ```
@@ -322,9 +313,8 @@ and slug:
 ```ts
 const optimization = new ContentfulOptimization({
   spaceId: 'space-id',
-  clientId: 'client-id',
   contentful: { client: contentfulClient },
-  environment: 'main',
+  environment: 'master',
   locale: appLocale,
 })
 
@@ -380,7 +370,6 @@ Automatic tracking is enabled when entry elements follow the standard data-attri
 ```ts
 const optimization = new ContentfulOptimization({
   spaceId: 'your-space-id',
-  clientId: 'your-client-id',
   autoTrackEntryInteraction: { hovers: false },
 })
 ```

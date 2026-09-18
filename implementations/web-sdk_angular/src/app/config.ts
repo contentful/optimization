@@ -3,9 +3,7 @@ import { type ContentfulClientApi, createClient } from 'contentful'
 
 export interface NgContentfulOptimizationConfig {
   spaceId: string
-  clientId: string
   environment: string
-  contentfulEnvironment: string
   insightsBaseUrl: string
   experienceBaseUrl: string
   logLevel?: 'debug' | 'warn' | 'error'

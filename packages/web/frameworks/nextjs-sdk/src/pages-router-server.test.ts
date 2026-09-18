@@ -16,7 +16,6 @@ const { bindNextjsPagesRouterServerOptimization, createNextjsPagesRouterRequestH
 
 const SDK_CONFIG = {
   spaceId: 'key_123',
-  clientId: 'key_456',
   environment: 'main',
 }
 

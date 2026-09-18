@@ -97,9 +97,7 @@ val appLocale = "en-US"
 
 val optimizationConfig = OptimizationConfig(
     spaceId = "your-space-id",
-    clientId = "your-client-id",
-    environment = "main",
-    contentfulEnvironment = "master",
+    environment = "master",
     locale = appLocale,
     logLevel = if (BuildConfig.DEBUG) OptimizationLogLevel.debug else OptimizationLogLevel.error,
 )
@@ -198,19 +196,17 @@ tracking, screen tracking, live updates, preview-panel overrides, and shared moc
 
 ### Common options
 
-| Option                  | Required? | Default                      | Description                                                                                       |
-| ----------------------- | --------- | ---------------------------- | ------------------------------------------------------------------------------------------------- |
-| `spaceId`               | Yes       | None                         | Contentful Space identifier used for Experience API calls.                                        |
-| `clientId`              | Yes       | None                         | Ninetailed/Optimization organization identifier used for Insights API calls.                      |
-| `environment`           | No        | `main`                       | Ninetailed/Optimization environment identifier, used by the Insights API.                         |
-| `contentfulEnvironment` | No        | `master`                     | Contentful space environment identifier, used by the Experience API.                              |
-| `api`                   | No        | `null`                       | `OptimizationApiConfig` for endpoint overrides, enabled Experience features, and preflight.       |
-| `locale`                | No        | `null`                       | SDK Experience API and default event locale.                                                      |
-| `defaults`              | No        | `null`                       | Startup defaults for consent, persistence consent, profile, or selected variants (see below).     |
-| `allowedEventTypes`     | No        | Bridge default               | Event types allowed before consent is explicitly set.                                             |
-| `logLevel`              | No        | `OptimizationLogLevel.error` | Minimum native and bridge log level.                                                              |
-| `queuePolicy`           | No        | SDK defaults                 | Queue flush retry behavior, offline bounds, and queue observability callbacks.                    |
-| `onEventBlocked`        | No        | `null`                       | Callback invoked with `reason`, `method`, and `args` when consent or guard logic blocks an event. |
+| Option              | Required? | Default                      | Description                                                                                       |
+| ------------------- | --------- | ---------------------------- | ------------------------------------------------------------------------------------------------- |
+| `spaceId`           | Yes       | None                         | Contentful Space identifier used for Experience and Insights API calls.                           |
+| `environment`       | No        | `master`                     | Contentful space environment identifier used for Experience and Insights API calls.               |
+| `api`               | No        | `null`                       | `OptimizationApiConfig` for endpoint overrides, enabled Experience features, and preflight.       |
+| `locale`            | No        | `null`                       | SDK Experience API and default event locale.                                                      |
+| `defaults`          | No        | `null`                       | Startup defaults for consent, persistence consent, profile, or selected variants (see below).     |
+| `allowedEventTypes` | No        | Bridge default               | Event types allowed before consent is explicitly set.                                             |
+| `logLevel`          | No        | `OptimizationLogLevel.error` | Minimum native and bridge log level.                                                              |
+| `queuePolicy`       | No        | SDK defaults                 | Queue flush retry behavior, offline bounds, and queue observability callbacks.                    |
+| `onEventBlocked`    | No        | `null`                       | Callback invoked with `reason`, `method`, and `args` when consent or guard logic blocks an event. |
 
 `OptimizationRoot` and `OptimizationManager.initialize(...)` also accept global `trackViews`,
 `trackTaps`, and `liveUpdates` defaults. Entry view and tap tracking default to enabled;
@@ -226,8 +222,7 @@ val appLocale = "en-US"
 
 val config = OptimizationConfig(
     spaceId = "your-space-id",
-    clientId = "your-client-id",
-    environment = "main",
+    environment = "master",
     locale = appLocale,
 )
 ```
@@ -239,8 +234,7 @@ val appLocale = getAppLocale()
 
 val config = OptimizationConfig(
     spaceId = "your-space-id",
-    clientId = "your-client-id",
-    environment = "main",
+    environment = "master",
     locale = appLocale,
 )
 ```
@@ -264,7 +258,6 @@ render an end-user consent UI, set `defaults = StorageDefaults(consent = true)` 
 ```kotlin
 val config = OptimizationConfig(
     spaceId = "your-space-id",
-    clientId = "your-client-id",
     defaults = StorageDefaults(consent = true),
 )
 ```

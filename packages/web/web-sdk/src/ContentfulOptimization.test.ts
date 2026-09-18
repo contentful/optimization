@@ -15,12 +15,10 @@ import { getCookie, removeCookie, setCookie } from './lib/cookies'
 import { deferred } from './test/helpers'
 
 const SPACE_ID = 'key_123'
-const CLIENT_ID = 'org_123'
 const ENVIRONMENT = 'main'
 
 const config: CoreConfig = {
   spaceId: SPACE_ID,
-  clientId: CLIENT_ID,
   environment: ENVIRONMENT,
 }
 
@@ -145,7 +143,6 @@ describe('ContentfulOptimization', () => {
     const web = new ContentfulOptimization(config)
 
     expect(web.config.spaceId).toEqual(SPACE_ID)
-    expect(web.config.clientId).toEqual(CLIENT_ID)
     expect(web.eventBuilder.library.name).toEqual(OPTIMIZATION_WEB_SDK_NAME)
   })
 

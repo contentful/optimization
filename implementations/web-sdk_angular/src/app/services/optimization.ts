@@ -61,9 +61,7 @@ const SERVER_OPTIMIZATION_KEY: StateKey<OptimizationSnapshot> =
  */
 function toSdkConstructorArgs(config: NgContentfulOptimizationConfig): {
   spaceId: string
-  clientId: string
   environment: string
-  contentfulEnvironment: string
   logLevel: 'debug' | 'warn' | 'error'
   locale: string
   app: NgContentfulOptimizationConfig['app']
@@ -71,9 +69,7 @@ function toSdkConstructorArgs(config: NgContentfulOptimizationConfig): {
 } {
   return {
     spaceId: config.spaceId,
-    clientId: config.clientId,
     environment: config.environment,
-    contentfulEnvironment: config.contentfulEnvironment,
     logLevel: resolveLogLevel(config.logLevel),
     locale: config.locale,
     app: config.app,

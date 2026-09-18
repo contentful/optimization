@@ -52,15 +52,7 @@ function getGlobalSdk(): ContentfulOptimization | undefined {
 
 export class ContentfulOptimizationRootElement extends HTMLElement {
   static get observedAttributes(): string[] {
-    return [
-      'space-id',
-      'client-id',
-      'environment',
-      'contentful-environment',
-      'hydration',
-      'live-updates',
-      'locale',
-    ]
+    return ['space-id', 'environment', 'hydration', 'live-updates', 'locale']
   }
 
   private apiOptions: OptimizationRootSdkConfig['api'] | undefined
@@ -90,28 +82,12 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
     this.setOptionalAttribute('space-id', value)
   }
 
-  get clientId(): string | undefined {
-    return this.getAttribute('client-id') ?? undefined
-  }
-
-  set clientId(value: string | undefined) {
-    this.setOptionalAttribute('client-id', value)
-  }
-
   get environment(): string | undefined {
     return this.getAttribute('environment') ?? undefined
   }
 
   set environment(value: string | undefined) {
     this.setOptionalAttribute('environment', value)
-  }
-
-  get contentfulEnvironment(): string | undefined {
-    return this.getAttribute('contentful-environment') ?? undefined
-  }
-
-  set contentfulEnvironment(value: string | undefined) {
-    this.setOptionalAttribute('contentful-environment', value)
   }
 
   get locale(): string | undefined {
@@ -315,24 +291,18 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
   }
 
   private createConfig(): OptimizationRootSdkConfig {
-    const { spaceId, clientId } = this
+    const { spaceId } = this
 
     if (!spaceId) {
       throw new Error('ctfl-optimization-root requires a space-id attribute or sdk property.')
     }
 
-    if (!clientId) {
-      throw new Error('ctfl-optimization-root requires a client-id attribute or sdk property.')
-    }
-
     return {
       api: this.apiOptions,
       spaceId,
-      clientId,
       contentful: this.contentfulOptions,
       defaults: this.defaultOptions,
       environment: this.environment,
-      contentfulEnvironment: this.contentfulEnvironment,
       locale: this.locale,
     }
   }

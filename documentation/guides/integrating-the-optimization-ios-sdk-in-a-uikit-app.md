@@ -84,9 +84,8 @@ choice leaves `defaults` unset.
    controller. `initialize(config:)` is synchronous and `throws` — it loads the SDK's bridge and runs
    bridge setup inline on the main actor — so call it with `try` and no `await`. **The bridge** is the
    SDK's embedded JavaScript runtime: the iOS SDK runs the same Optimization core as the other SDKs in
-   the suite inside a JavaScriptCore context, one per client. `spaceId` and `clientId` are your
-   Optimization space ID and client ID; [Before you start](#before-you-start) says where to find them
-   in the Contentful web app.
+   the suite inside a JavaScriptCore context, one per client. `spaceId` is your Contentful space ID;
+   [Before you start](#before-you-start) says where to find it in the Contentful web app.
 
    **Adapt this to your use case:**
 
@@ -112,8 +111,7 @@ choice leaves `defaults` unset.
    +        // and printing keeps a failed startup visible instead of silent.
    +        do {
    +            try client.initialize(config: OptimizationConfig(
-   +                spaceId: "your-optimization-space-id",
-   +                clientId: "your-optimization-client-id",
+   +                spaceId: "your-space-id",
    +                // Startup default, not a one-time seed: this wins over a stored choice.
    +                defaults: StorageDefaults(consent: true),
    +                logLevel: .debug,
@@ -272,21 +270,19 @@ outside this guide:
   an authored variant, the integration can still run correctly while returning the baseline, so you
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
-- **Your Optimization project values** — space ID, client ID, and environment, from your
-  Optimization project settings. In the Contentful web app the path depends on which navigation
-  your organization uses: in **classic navigation**, go to **Apps → Installed apps → Contentful
-  Personalization → SDK keys**; in **new navigation** (the Contentful app with ExO navigation
-  enabled), go to **Platform/Apps → Installed apps → Contentful Personalization → SDK keys**. The
-  space ID, client ID, and environment are listed there.
+- **Your Contentful space values** — space ID and environment, from your Contentful space
+  settings. In the Contentful web app the path depends on which navigation your organization uses: in
+  **classic navigation**, go to **Apps → Installed apps → Contentful Personalization → SDK keys**; in
+  **new navigation** (the Contentful app with ExO navigation enabled), go to **Platform/Apps →
+  Installed apps → Contentful Personalization → SDK keys**. The space ID and environment are listed
+  there.
 
-  `OptimizationConfig.environment` (the Ninetailed/Optimization environment, used by the Insights
-  API) defaults to `main`, and `OptimizationConfig.contentfulEnvironment` (the Contentful space
-  environment, used by the Experience API) defaults to `master`; pass either only when your setup
-  differs. The preview panel's own Contentful client (`ContentfulHTTPPreviewClient`, in
-  [Preview panel](#preview-panel)) also defaults its `environment` to `master`, so pass yours
-  explicitly there. The Experience API (which picks variants) and the Insights API (which receives
-  event and interaction delivery) each have a base URL that defaults correctly; you only set them
-  for mocks or non-default hosts (see
+  `OptimizationConfig.environment` defaults to `master`, so pass it only when your setup differs. That
+  default belongs to `OptimizationConfig` alone: the preview panel's own Contentful client
+  (`ContentfulHTTPPreviewClient`, in [Preview panel](#preview-panel)) defaults its `environment` to
+  `master`, so pass yours explicitly there. The Experience API
+  (which picks variants) and the Insights API (which receives event and interaction delivery) each
+  have a base URL that defaults correctly; you only set them for mocks or non-default hosts (see
   [Package installation and SDK configuration](#package-installation-and-sdk-configuration)).
 
 You do not need a setup inventory up front. Everything else — consent, entry resolution, screen
@@ -295,11 +291,10 @@ delivery — is introduced by the section that needs it.
 
 > [!NOTE]
 >
-> Read the SDK space ID, client ID, Contentful credentials, and any base-URL overrides from your
-> app's own configuration layer — an xcconfig value, a build setting, or a generated config type.
-> This guide's examples use inline placeholder strings for clarity; the iOS reference app centralizes
-> these in a shared `AppConfig` because it runs against shared mock defaults. Use whatever
-> configuration
+> Read the SDK space ID, Contentful credentials, and any base-URL overrides from your app's own
+> configuration layer — an xcconfig value, a build setting, or a generated config type. This guide's
+> examples use inline placeholder strings for clarity; the iOS reference app centralizes these in a
+> shared `AppConfig` because it runs against shared mock defaults. Use whatever configuration
 > convention your app already uses and keep it consistent.
 
 ## Core integration
@@ -328,17 +323,13 @@ targets: [
 ],
 ```
 
-Configure the SDK with your Optimization space ID, client ID, and the environment(s) that match your
-Contentful setup. `spaceId` and `clientId` are required by the initializer. An app builds one
-`OptimizationConfig` and calls `initialize(config:)` once, in the scene or app startup the quick
-start edited; the config snippets in later sections add keys to that same config rather than
-introducing a second one.
+Configure the SDK with your Contentful space ID and the environment that matches your Contentful
+setup. Only `spaceId` is required by the initializer. An app builds one `OptimizationConfig` and
+calls `initialize(config:)` once, in the scene or app startup the quick start edited; the config
+snippets in later sections add keys to that same config rather than introducing a second one.
 
-1. Pass `spaceId` and `clientId` from your configuration layer.
-2. Pass `environment` only when it is not the default `main`, and `contentfulEnvironment` only when
-   it is not the default `master` — the two are distinct: `environment` is the Ninetailed/Optimization
-   environment used by the Insights API, and `contentfulEnvironment` is the Contentful space
-   environment used by the Experience API.
+1. Pass `spaceId` from your configuration layer.
+2. Pass `environment` only when it is not the default `master`.
 3. Pass `locale` when Experience API requests and event context must use the same language as the
    Contentful Delivery API (CDA) entries you render.
 4. Set `api` base URLs (`experienceBaseUrl`/`insightsBaseUrl`) only for mock, staging, or other
@@ -352,10 +343,8 @@ introducing a second one.
 let appLocale = "en-US"
 
 let config = OptimizationConfig(
-    spaceId: "your-optimization-space-id",
-    clientId: "your-optimization-client-id",
-    // environment defaults to "main"; pass it only when your setup differs.
-    // contentfulEnvironment defaults to "master"; pass it only when your setup differs.
+    spaceId: "your-space-id",
+    // environment defaults to "master"; pass it only when your setup differs.
     // Keep SDK event and Experience locale aligned with rendered CDA entries.
     locale: appLocale
 )
@@ -495,8 +484,7 @@ teardown.
 ```swift
 // The same config the scene initializes with, plus one key.
 let config = OptimizationConfig(
-    spaceId: "your-optimization-space-id",
-    clientId: "your-optimization-client-id",
+    spaceId: "your-space-id",
     // Replaces the default pre-consent allow-list of identify and screen with
     // strict opt-in: nothing emits until consent is accepted.
     allowedEventTypes: []
@@ -1339,8 +1327,7 @@ lifecycle handler flushes on `willResignActive`.
 ```swift
 // Again the one config the scene initializes with, plus one key.
 let config = OptimizationConfig(
-    spaceId: "your-optimization-space-id",
-    clientId: "your-optimization-client-id",
+    spaceId: "your-space-id",
     queuePolicy: QueuePolicy(
         offlineMaxEvents: 500,
         onOfflineDrop: { event in
@@ -1362,10 +1349,9 @@ let config = OptimizationConfig(
 
 Before release, verify the UIKit integration against these checks:
 
-- **Credentials and runtime configuration** — The app uses the intended Optimization space ID and
-  client ID, `environment` (Insights API), `contentfulEnvironment` (Experience API), SDK `locale`,
-  and CDA locale. Non-default API base URLs and `.debug` logging are absent from production builds
-  unless explicitly approved.
+- **Credentials and runtime configuration** — The app uses the intended Contentful space ID,
+  Contentful environment, SDK `locale`, and CDA locale. Non-default API base URLs and `.debug`
+  logging are absent from production builds unless explicitly approved.
 - **Consent behavior** — Startup consent, CMP wiring, refusal, withdrawal, split event and
   persistence consent, and `reset()` behavior match the app's legal and privacy requirements.
 - **Event delivery** — Screen, custom, tap, view, identify, and flag-view events appear when allowed

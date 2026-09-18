@@ -18,7 +18,7 @@ import type { CoreStatefulConfig } from '@contentful/optimization-core'
  * Configuration options for initializing the Optimization React Native SDK.
  *
  * Passed as props to {@link OptimizationProvider} and {@link OptimizationRoot}.
- * Only `spaceId` and `clientId` are required. See the README for full configuration reference.
+ * Only `spaceId` is required. See the README for full configuration reference.
  *
  * @public
  */

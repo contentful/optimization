@@ -77,7 +77,7 @@ and add the [Consent and privacy handoff](#consent-and-privacy-handoff) step bef
    ```
 
 2. Mount `OptimizationRoot` once, around every component that will use the SDK. Pass your
-   Optimization project config as props. Use the same environment-variable convention your app
+   Contentful space config as props. Use the same environment-variable convention your app
    already uses for browser-visible values (this example uses Vite's `import.meta.env` with a
    `PUBLIC_` prefix; adjust to your bundler).
 
@@ -97,10 +97,8 @@ and add the [Consent and privacy handoff](#consent-and-privacy-handoff) step bef
     export function App() {
       return (
    +    <OptimizationRoot
-   +      spaceId={import.meta.env.PUBLIC_OPTIMIZATION_SPACE_ID}
-   +      clientId={import.meta.env.PUBLIC_OPTIMIZATION_CLIENT_ID}
-   +      environment={import.meta.env.PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
-   +      contentfulEnvironment={import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master'}
+   +      spaceId={import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID}
+   +      environment={import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master'}
    +      locale="en-US" // the one locale you also pass to Contentful
    +      // consent: allowed to personalize and send events for this visitor.
    +      defaults={{ consent: true }}
@@ -139,7 +137,7 @@ and add the [Consent and privacy handoff](#consent-and-privacy-handoff) step bef
 
    const contentfulClient = createClient({
      accessToken: import.meta.env.PUBLIC_CONTENTFUL_TOKEN,
-     environment: import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'main',
+     environment: import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
      space: import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID,
    })
 
@@ -229,9 +227,9 @@ outside this guide:
   an authored variant, the integration can still run correctly while returning the baseline, so you
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
-- **Your Optimization project values** — space ID, client ID, and environment, from your
-  Optimization project settings. Find them in the Contentful web app under **Apps → Installed apps
-  → Contentful Personalization → SDK keys**.
+- **Your Contentful space values** — space ID and environment, from your Contentful space
+  settings. Find them in the Contentful web app under **Apps → Installed apps → Contentful
+  Personalization → SDK keys**.
 
   The Experience and Insights API base URLs default correctly; you only set them for mocks or
   non-default hosts (see [How the SDK fits your app](#how-the-sdk-fits-your-app)).
@@ -262,9 +260,8 @@ component, and you mount it exactly once around the subtree that uses the SDK.
 
 The props you pass break down like this:
 
-1. `spaceId`, `clientId`, and `environment` identify your Optimization project. Read them from
-   browser-safe env variables. `contentfulEnvironment` is a separate, optional prop for the
-   Contentful space environment used by the Experience API; it defaults to `'master'`.
+1. `spaceId` and `environment` identify your Contentful space and environment. Read them from browser-safe env
+   variables.
 2. `locale` is the one locale the SDK uses for Experience and event context. Use the same locale you
    pass to Contentful.
 3. `defaults` is the browser SDK's starting state: `consent` (may personalize and send events) and
@@ -309,10 +306,8 @@ import type { ReactNode } from 'react'
 export function AppRoot({ children }: { children: ReactNode }) {
   return (
     <OptimizationRoot
-      spaceId={import.meta.env.PUBLIC_OPTIMIZATION_SPACE_ID}
-      clientId={import.meta.env.PUBLIC_OPTIMIZATION_CLIENT_ID}
-      environment={import.meta.env.PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
-      contentfulEnvironment={import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master'}
+      spaceId={import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID}
+      environment={import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master'}
       locale="en-US"
       app={{ name: 'my-react-app', version: '1.0.0' }}
       // Set these only for mocks or non-default hosts; both default correctly otherwise.
@@ -441,7 +436,7 @@ const INCLUDE_DEPTH = 10
 
 const contentfulClient = createClient({
   accessToken: import.meta.env.PUBLIC_CONTENTFUL_TOKEN,
-  environment: import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'main',
+  environment: import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
   space: import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID,
 })
 
@@ -461,10 +456,8 @@ is the only addition; the rest is the root from the quick start.
 
 ```tsx
  <OptimizationRoot
-   spaceId={import.meta.env.PUBLIC_OPTIMIZATION_SPACE_ID}
-   clientId={import.meta.env.PUBLIC_OPTIMIZATION_CLIENT_ID}
-   environment={import.meta.env.PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
-   contentfulEnvironment={import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master'}
+   spaceId={import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID}
+   environment={import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master'}
    locale="en-US"
    defaults={{ consent: true }}
 +  // Hand the SDK your Contentful client for managed ID and content-type/slug sources.
@@ -727,10 +720,7 @@ import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 
 function RootLayout() {
   return (
-    <OptimizationRoot
-      spaceId={import.meta.env.PUBLIC_OPTIMIZATION_SPACE_ID}
-      clientId={import.meta.env.PUBLIC_OPTIMIZATION_CLIENT_ID}
-    >
+    <OptimizationRoot spaceId={import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID}>
       {/* One tracker per router tree — more than one emits duplicate route page events. */}
       <ReactRouterAutoPageTracker />
       <Outlet />
@@ -861,7 +851,7 @@ again, an entry that is still visible starts a fresh view interaction session an
 **Follow this pattern:** opting one detector out globally, plus a per-entry override.
 
 ```tsx
-<OptimizationRoot spaceId={spaceId} clientId={clientId} trackEntryInteraction={{ hovers: false }}>
+<OptimizationRoot spaceId={spaceId} trackEntryInteraction={{ hovers: false }}>
   <OptimizedEntry baselineEntry={entry} clickable trackViews>
     {(resolved) => <HeroCard entry={resolved} />}
   </OptimizedEntry>
@@ -996,11 +986,10 @@ code remains yours.
 +  const routeKey = `${location.pathname}${location.search}`
 +
    return (
--    <OptimizationRoot spaceId={import.meta.env.PUBLIC_OPTIMIZATION_SPACE_ID}>
+-    <OptimizationRoot spaceId={import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID}>
 -      <ReactRouterAutoPageTracker />
 +    <OptimizationRoot
-+      spaceId={import.meta.env.PUBLIC_OPTIMIZATION_SPACE_ID}
-+      clientId={import.meta.env.PUBLIC_OPTIMIZATION_CLIENT_ID}
++      spaceId={import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID}
 +      routeKey={routeKey}
 +      buildPagePayload={() => ({ properties: { path: routeKey } })}
 +      beforeInitialPage={beforeInitialPage}
@@ -1102,7 +1091,7 @@ behavior while it is open, even when an entry sets `liveUpdates={false}`.
 
 ```tsx
 // globalLiveUpdates is your own boolean (a state value or setting) — true turns live updates on app-wide.
-<OptimizationRoot spaceId={spaceId} clientId={clientId} liveUpdates={globalLiveUpdates}>
+<OptimizationRoot spaceId={spaceId} liveUpdates={globalLiveUpdates}>
   <OptimizedEntry baselineEntry={entry}>
     {(resolved) => <InheritsGlobalSetting entry={resolved} />}
   </OptimizedEntry>
@@ -1205,7 +1194,6 @@ const forwardedMessageIds = new Set<string>()
 
 <OptimizationRoot
   spaceId={spaceId}
-  clientId={clientId}
   onStatesReady={(states) => {
     // Subscribe before the selected page owner's effects emit events.
     const initialMessageId = states.eventStream.current?.messageId
@@ -1280,7 +1268,7 @@ function attachPreviewPanel(): void {
 
 export function App() {
   return (
-    <OptimizationRoot spaceId={spaceId} clientId={clientId} onStatesReady={attachPreviewPanel}>
+    <OptimizationRoot spaceId={spaceId} onStatesReady={attachPreviewPanel}>
       <YourApp />
     </OptimizationRoot>
   )
@@ -1319,12 +1307,7 @@ includes `OptimizationProvider`, and a nested provider creates a separate contex
 import ContentfulOptimization from '@contentful/optimization-web'
 import { LiveUpdatesProvider, OptimizationProvider } from '@contentful/optimization-react-web'
 
-const optimization = new ContentfulOptimization({
-  spaceId: 'your-space-id',
-  clientId: 'your-client-id',
-  environment: 'main',
-  contentfulEnvironment: 'master',
-})
+const optimization = new ContentfulOptimization({ spaceId: 'your-space-id', environment: 'master' })
 
 function App() {
   return (
@@ -1395,7 +1378,6 @@ Configure these only after your privacy, analytics, and platform owners agree on
 ```tsx
 <OptimizationRoot
   spaceId={spaceId}
-  clientId={clientId}
   allowedEventTypes={[]} // block all Optimization events until consent is accepted
   cookie={{ domain: '.example.com', expires: 180 }}
   queuePolicy={{ offlineMaxEvents: 100 }}
@@ -1412,9 +1394,8 @@ state still qualifies after consent, the SDK can emit a fresh current-state even
 
 Run these checks before release:
 
-- Confirm `spaceId`, `clientId`, `environment`, `contentfulEnvironment`, `locale`, `api` endpoints,
-  app metadata, and log level point to the intended environment, and that browser-exposed env
-  variables contain only values safe to ship.
+- Confirm `spaceId`, environment, `locale`, `api` endpoints, app metadata, and log level point to
+  the intended environment, and that browser-exposed env variables contain only values safe to ship.
 - Confirm Contentful fetches use one concrete locale with a deep enough `include`, and never pass
   `withAllLocales` / `locale=*` payloads to `OptimizedEntry` or the resolver hooks.
 - Confirm default-on vs opt-in startup matches policy, `allowedEventTypes` matches the pre-consent

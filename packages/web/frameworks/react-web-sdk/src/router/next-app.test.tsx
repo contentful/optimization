@@ -123,7 +123,6 @@ function BeforeInitialPageRequestRoot({
       }}
       buildPagePayload={buildPagePayload}
       spaceId="test-space-id"
-      clientId="test-client-id"
       environment="main"
       beforeInitialPage={beforeInitialPage}
       routeKey={routeKey}

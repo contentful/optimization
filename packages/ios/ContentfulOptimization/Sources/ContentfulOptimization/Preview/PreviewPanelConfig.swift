@@ -8,7 +8,7 @@ import Contentful
 ///
 /// ```swift
 /// OptimizationRoot(
-///     config: OptimizationConfig(spaceId: "my-id", clientId: "my-client-id"),
+///     config: OptimizationConfig(spaceId: "my-id"),
 ///     previewPanel: PreviewPanelConfig(contentfulClient: myContentfulClient)
 /// ) {
 ///     ContentView()

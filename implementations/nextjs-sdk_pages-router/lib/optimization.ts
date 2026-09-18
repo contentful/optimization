@@ -23,9 +23,7 @@ export const {
   resolveEntriesForSelections,
 } = bindNextjsPagesRouterOptimization({
   spaceId: appConfig.spaceId,
-  clientId: appConfig.clientId,
   environment: appConfig.environment,
-  contentfulEnvironment: appConfig.contentfulEnvironment,
   locale: appConfig.locale,
   logLevel: 'debug',
   api: appConfig.api,

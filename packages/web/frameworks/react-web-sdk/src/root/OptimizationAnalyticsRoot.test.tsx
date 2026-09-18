@@ -10,7 +10,6 @@ import { OptimizationAnalyticsRoot } from './OptimizationAnalyticsRoot'
 
 const testConfig = {
   spaceId: 'test-space-id',
-  clientId: 'test-client-id',
   environment: 'main',
   api: {
     insightsBaseUrl: 'http://localhost:8000/insights/',

@@ -73,9 +73,7 @@ struct MyApp: App {
             OptimizationRoot(
                 config: OptimizationConfig(
                     spaceId: "<your-space-id>",
-                    clientId: "<your-client-id>",
-                    environment: "main",
-                    contentfulEnvironment: "master"
+                    environment: "master",
                 )
             ) {
                 ContentView()
@@ -98,9 +96,7 @@ let client = OptimizationClient()
 try client.initialize(
     config: OptimizationConfig(
         spaceId: "<your-space-id>",
-        clientId: "<your-client-id>",
-        environment: "main",
-        contentfulEnvironment: "master"
+        environment: "master",
     )
 )
 
@@ -117,7 +113,6 @@ profile-continuity persistence by default:
 ```swift
 let config = OptimizationConfig(
     spaceId: "<your-space-id>",
-    clientId: "<your-client-id>",
     defaults: StorageDefaults(consent: true)
 )
 ```
@@ -149,8 +144,7 @@ let appLocale = "en-US"
 
 let config = OptimizationConfig(
     spaceId: "<your-space-id>",
-    clientId: "<your-client-id>",
-    environment: "main",
+    environment: "master",
     locale: appLocale
 )
 ```
@@ -162,8 +156,7 @@ let appLocale = getAppLocale()
 
 let config = OptimizationConfig(
     spaceId: "<your-space-id>",
-    clientId: "<your-client-id>",
-    environment: "main",
+    environment: "master",
     locale: appLocale
 )
 ```

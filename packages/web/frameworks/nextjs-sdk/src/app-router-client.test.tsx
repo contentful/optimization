@@ -6,7 +6,6 @@ import * as client from './client'
 
 const testConfig = {
   spaceId: 'test-space-id',
-  clientId: 'test-client-id',
   environment: 'main',
   api: {
     insightsBaseUrl: 'http://localhost:8000/insights/',
@@ -96,7 +95,6 @@ describe('Next.js App Router client components', () => {
       api: testConfig.api,
       children: 'Bound content',
       spaceId: testConfig.spaceId,
-      clientId: testConfig.clientId,
       defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,
       handoff,
@@ -108,7 +106,6 @@ describe('Next.js App Router client components', () => {
     expect(provider?.props).toMatchObject({
       api: testConfig.api,
       spaceId: testConfig.spaceId,
-      clientId: testConfig.clientId,
       defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,
       handoff,

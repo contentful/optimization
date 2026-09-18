@@ -27,7 +27,6 @@ class TestCore extends CoreBase {
 }
 
 const SPACE_ID = 'key_123'
-const CLIENT_ID = 'org_123'
 const ENVIRONMENT = 'main'
 
 type MockContentfulGetEntry = (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
@@ -42,7 +41,6 @@ type ProductEntrySkeleton = EntrySkeletonType<
 >
 const config: CoreConfig = {
   spaceId: SPACE_ID,
-  clientId: CLIENT_ID,
   environment: ENVIRONMENT,
 }
 
@@ -160,7 +158,6 @@ describe('CoreBase', () => {
     const core = new TestCore(
       {
         spaceId: SPACE_ID,
-        clientId: CLIENT_ID,
       },
       {
         insights: {
@@ -180,7 +177,6 @@ describe('CoreBase', () => {
     const core = new TestCore(
       {
         spaceId: SPACE_ID,
-        clientId: CLIENT_ID,
       },
       {
         insights: { baseUrl: 'https://ingest.example.test/' },
@@ -195,7 +191,6 @@ describe('CoreBase', () => {
     const fetchOptions = { requestTimeout: 9_000 }
     const core = new TestCore({
       spaceId: SPACE_ID,
-      clientId: CLIENT_ID,
       fetchOptions,
     })
 

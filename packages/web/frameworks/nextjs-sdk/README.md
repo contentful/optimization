@@ -72,8 +72,7 @@ import { getAppConsent } from './consent'
 
 export const optimization = bindNextjsAppRouterServerOptimization({
   spaceId: 'space-id',
-  clientId: 'client-id',
-  environment: 'main',
+  environment: 'master',
   locale: 'en-US',
   contentful: { client: contentfulClient },
   consent: {
@@ -189,8 +188,7 @@ import { bindNextjsAppRouterClientOptimization } from '@contentful/optimization-
 
 export const clientOptimization = bindNextjsAppRouterClientOptimization({
   spaceId: 'space-id',
-  clientId: 'client-id',
-  environment: 'main',
+  environment: 'master',
   locale: 'en-US',
   consent: {
     clientDefaults: { consent: false, persistenceConsent: false },
@@ -290,8 +288,7 @@ import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-next
 export const { OptimizationRoot, OptimizationAnalyticsRoot, OptimizedEntry } =
   bindNextjsPagesRouterOptimization({
     spaceId: 'space-id',
-    clientId: 'client-id',
-    environment: 'main',
+    environment: 'master',
     consent: {
       clientDefaults: { consent: false, persistenceConsent: false },
     },
@@ -325,9 +322,8 @@ import { contentfulClient } from './contentful'
 
 const { createRequestHandoff } = bindNextjsPagesRouterServerOptimization({
   spaceId: 'space-id',
-  clientId: 'client-id',
   contentful: { client: contentfulClient },
-  environment: 'main',
+  environment: 'master',
   consent: {
     server: { events: true, persistence: true },
   },
@@ -366,8 +362,7 @@ import { bindNextjsAppRouterClientOptimization } from '@contentful/optimization-
 
 export const clientOptimization = bindNextjsAppRouterClientOptimization({
   spaceId: 'space-id',
-  clientId: 'client-id',
-  environment: 'main',
+  environment: 'master',
   beforeInitialPage: {
     run: async ({ identify }) => {
       await identify({ userId: visitor.id })
@@ -428,8 +423,7 @@ import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-next
 
 export const optimization = bindNextjsPagesRouterOptimization({
   spaceId: 'space-id',
-  clientId: 'client-id',
-  environment: 'main',
+  environment: 'master',
   beforeInitialPage: {
     run: ({ identify }) => identify({ userId: visitor.id }),
   },
@@ -501,8 +495,7 @@ import { configureNextjsEdgeOptimization } from '@contentful/optimization-nextjs
 
 const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
   spaceId: 'space-id',
-  clientId: 'client-id',
-  environment: 'main',
+  environment: 'master',
   consent: {
     server: { events: true, persistence: true },
     clientDefaults: { consent: false, persistenceConsent: false },

@@ -12,7 +12,6 @@ final class PreviewModelTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -118,7 +117,6 @@ final class PreviewModelTests: XCTestCase {
             __bridge.destroy();
             __bridge.initialize({
                 spaceId: "test-client",
-                clientId: "test-client",
                 environment: "master",
                 api: {
                     experienceBaseUrl: "http://localhost:8000/experience/",

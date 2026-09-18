@@ -44,7 +44,6 @@ import {
 
 const testConfig = {
   spaceId: 'test-space-id',
-  clientId: 'test-client-id',
   environment: 'main',
   api: {
     insightsBaseUrl: 'http://localhost:8000/insights/',
@@ -201,7 +200,6 @@ describe('@contentful/optimization-react-web core providers', () => {
     const rendered = renderClient(
       <OptimizationProvider
         spaceId={testConfig.spaceId}
-        clientId={testConfig.clientId}
         environment={testConfig.environment}
         api={testConfig.api}
         locale="de-DE"
@@ -222,7 +220,6 @@ describe('@contentful/optimization-react-web core providers', () => {
     const withoutLocale = renderClient(
       <OptimizationProvider
         spaceId={testConfig.spaceId}
-        clientId={testConfig.clientId}
         environment={testConfig.environment}
         api={testConfig.api}
       >
@@ -247,7 +244,6 @@ describe('@contentful/optimization-react-web core providers', () => {
     const markup = renderToString(
       <OptimizationProvider
         spaceId={testConfig.spaceId}
-        clientId={testConfig.clientId}
         environment={testConfig.environment}
         api={testConfig.api}
       >
@@ -274,7 +270,6 @@ describe('@contentful/optimization-react-web core providers', () => {
     const rendered = renderClient(
       <OptimizationRoot
         spaceId={testConfig.spaceId}
-        clientId={testConfig.clientId}
         environment={testConfig.environment}
         api={testConfig.api}
         liveUpdates={true}
@@ -306,9 +301,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(capturedError.message).toContain(
       'useOptimization must be used within an OptimizationProvider',
     )
-    expect(capturedError.message).toContain(
-      '<OptimizationRoot spaceId="your-space-id" clientId="your-client-id">',
-    )
+    expect(capturedError.message).toContain('<OptimizationRoot spaceId="your-space-id">')
   })
 
   it('returns provider initialization state from useOptimizationContext when the sdk is unavailable', () => {
@@ -573,7 +566,6 @@ describe('@contentful/optimization-react-web core providers', () => {
     const rendered = renderClient(
       <OptimizationRoot
         spaceId={testConfig.spaceId}
-        clientId={testConfig.clientId}
         environment={testConfig.environment}
         api={testConfig.api}
       >
@@ -617,7 +609,6 @@ describe('@contentful/optimization-react-web core providers', () => {
       return (
         <OptimizationRoot
           spaceId={`${testConfig.spaceId}-1`}
-          clientId={`${testConfig.clientId}-1`}
           environment={testConfig.environment}
           api={testConfig.api}
           liveUpdates={true}
@@ -632,7 +623,6 @@ describe('@contentful/optimization-react-web core providers', () => {
       return (
         <OptimizationRoot
           spaceId={`${testConfig.spaceId}-2`}
-          clientId={`${testConfig.clientId}-2`}
           environment={testConfig.environment}
           api={testConfig.api}
           liveUpdates={false}
@@ -657,7 +647,6 @@ describe('@contentful/optimization-react-web core providers', () => {
       root.render(
         <OptimizationProvider
           spaceId={testConfig.spaceId}
-          clientId={testConfig.clientId}
           environment={testConfig.environment}
           api={testConfig.api}
         >
@@ -680,7 +669,6 @@ describe('@contentful/optimization-react-web core providers', () => {
       remountRoot.render(
         <OptimizationProvider
           spaceId={testConfig.spaceId}
-          clientId={testConfig.clientId}
           environment={testConfig.environment}
           api={testConfig.api}
         >
@@ -703,7 +691,6 @@ describe('@contentful/optimization-react-web core providers', () => {
       <StrictMode>
         <OptimizationProvider
           spaceId={testConfig.spaceId}
-          clientId={testConfig.clientId}
           environment={testConfig.environment}
           api={testConfig.api}
         >

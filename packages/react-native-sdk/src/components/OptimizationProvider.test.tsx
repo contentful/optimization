@@ -269,7 +269,6 @@ describe('OptimizationProvider onStatesReady', () => {
     renderer = await renderWithAct(
       <OptimizationProvider
         spaceId="test-space-id"
-        clientId="test-client-id"
         onStatesReady={(states) => {
           order.push('onStatesReady')
           return states.eventStream.subscribe((event) => {
@@ -296,7 +295,6 @@ describe('OptimizationProvider onStatesReady', () => {
     const rootProps: OptimizationRootProps = {
       children: <></>,
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       onStatesReady,
     }
 
@@ -313,7 +311,6 @@ describe('OptimizationProvider onStatesReady', () => {
     const providerConfigProps: OptimizationProviderProps = {
       children: <></>,
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       prefetchManagedEntries: descriptors,
     }
     const providerSdkProps: OptimizationProviderProps = {
@@ -324,7 +321,6 @@ describe('OptimizationProvider onStatesReady', () => {
     const rootProps: OptimizationRootProps = {
       children: <></>,
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
       prefetchManagedEntries: descriptors,
     }
 
@@ -348,7 +344,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const testRenderer = await loadTestRenderer<TestRenderer>()
     act(() => {
       renderer = testRenderer.create(
-        <OptimizationProvider spaceId="test-space-id" clientId="test-client-id">
+        <OptimizationProvider spaceId="test-space-id">
           <Probe />
         </OptimizationProvider>,
       )
@@ -368,7 +364,7 @@ describe('OptimizationProvider onStatesReady', () => {
     initializeOptimization.mockResolvedValue(sdk)
 
     renderer = await renderWithAct(
-      <OptimizationProvider spaceId="test-space-id" clientId="test-client-id" locale="en-US">
+      <OptimizationProvider spaceId="test-space-id" locale="en-US">
         <></>
       </OptimizationProvider>,
     )
@@ -387,11 +383,7 @@ describe('OptimizationProvider onStatesReady', () => {
     initializeOptimization.mockResolvedValue(sdk)
 
     renderer = await renderWithAct(
-      <OptimizationProvider
-        spaceId="test-space-id"
-        clientId="test-client-id"
-        prefetchManagedEntries={descriptors}
-      >
+      <OptimizationProvider spaceId="test-space-id" prefetchManagedEntries={descriptors}>
         <></>
       </OptimizationProvider>,
     )
@@ -399,7 +391,6 @@ describe('OptimizationProvider onStatesReady', () => {
 
     expect(initializeOptimization).toHaveBeenCalledWith({
       spaceId: 'test-space-id',
-      clientId: 'test-client-id',
     })
     expect(sdk.prefetchManagedEntries).toHaveBeenCalledWith(descriptors)
   })
@@ -437,11 +428,7 @@ describe('OptimizationProvider onStatesReady', () => {
     }
 
     renderer = await renderWithAct(
-      <OptimizationProvider
-        spaceId="test-space-id"
-        clientId="test-client-id"
-        prefetchManagedEntries={descriptors}
-      >
+      <OptimizationProvider spaceId="test-space-id" prefetchManagedEntries={descriptors}>
         <Probe />
       </OptimizationProvider>,
     )
@@ -462,7 +449,6 @@ describe('OptimizationProvider onStatesReady', () => {
     renderer = await renderWithAct(
       <OptimizationProvider
         spaceId="test-space-id"
-        clientId="test-client-id"
         onStatesReady={() => () => {
           teardownOrder.push('cleanup')
         }}
@@ -489,11 +475,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const testRenderer = await loadTestRenderer<TestRenderer>()
     act(() => {
       renderer = testRenderer.create(
-        <OptimizationProvider
-          spaceId="test-space-id"
-          clientId="test-client-id"
-          onStatesReady={onStatesReady}
-        >
+        <OptimizationProvider spaceId="test-space-id" onStatesReady={onStatesReady}>
           <></>
         </OptimizationProvider>,
       )
@@ -528,7 +510,6 @@ describe('OptimizationProvider onStatesReady', () => {
     renderer = await renderWithAct(
       <OptimizationProvider
         spaceId="test-space-id"
-        clientId="test-client-id"
         onStatesReady={() => {
           throw error
         }}

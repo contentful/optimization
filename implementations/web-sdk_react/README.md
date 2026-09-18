@@ -189,7 +189,7 @@ test -f implementations/web-sdk_react/.env || cp implementations/web-sdk_react/.
 ```
 
 See `.env.example` for the Contentful and Optimization API values used by the local mock setup. The
-Optimization SDK client has mock-safe defaults for its client ID, environment, and API base URLs,
+Optimization SDK client has mock-safe defaults for its space ID, environment, and API base URLs,
 but Contentful entry loading requires the Contentful env vars from `.env.example`. To use local mock
 Contentful endpoints, set `PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000` and
 `PUBLIC_CONTENTFUL_BASE_PATH=contentful`.

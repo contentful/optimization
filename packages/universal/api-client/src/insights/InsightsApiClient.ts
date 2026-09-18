@@ -50,8 +50,8 @@ export interface InsightsApiClientConfig extends ApiConfig {}
  * @example
  * ```ts
  * const insightsClient = new InsightsApiClient({
- *   clientId: 'org-id',
- *   environment: 'main',
+ *   spaceId: 'space-id',
+ *   environment: 'master',
  * })
  *
  * await insightsClient.sendBatchEvents([
@@ -86,8 +86,8 @@ export default class InsightsApiClient extends ApiClientBase {
    * @example
    * ```ts
    * const client = new InsightsApiClient({
-   *   clientId: 'org-id',
-   *   environment: 'main',
+   *   spaceId: 'space-id',
+   *   environment: 'master',
    * })
    * ```
    */
@@ -137,7 +137,7 @@ export default class InsightsApiClient extends ApiClientBase {
     const { beacon } = options
 
     const url = new URL(
-      `v1/organizations/${this.clientId}/environments/${this.environment}/events`,
+      `v2/spaces/${this.spaceId}/environments/${this.environment}/events`,
       this.baseUrl,
     )
     const urlString = url.toString()

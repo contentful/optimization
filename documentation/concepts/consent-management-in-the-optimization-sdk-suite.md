@@ -198,8 +198,7 @@ import { bindNextjsAppRouterServerOptimization } from '@contentful/optimization-
 
 export const optimization = bindNextjsAppRouterServerOptimization({
   spaceId: 'your-space-id',
-  clientId: 'your-client-id',
-  environment: 'main',
+  environment: 'master',
   consent: { server: consent },
 })
 ```
@@ -263,7 +262,6 @@ Node / TypeScript:
 const optimization = new ContentfulOptimization({
   allowedEventTypes: ['page'],
   spaceId: 'your-space-id',
-  clientId: 'your-client-id',
 })
 
 const requestOptimization = optimization.forRequest({

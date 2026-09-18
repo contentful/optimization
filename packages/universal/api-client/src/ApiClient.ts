@@ -12,9 +12,8 @@ export interface ApiClientConfig extends Pick<ApiConfig, GlobalApiConfigProperti
    * Configuration for the Experience API client.
    *
    * @remarks
-   * Shared fields (`spaceId`, `clientId`, `environment`, `contentfulEnvironment`,
-   * `fetchOptions`) are inherited from top-level config; this object is for
-   * Experience-specific options.
+   * Shared fields (`spaceId`, `environment`, and `fetchOptions`) are inherited
+   * from top-level config; this object is for Experience-specific options.
    */
   experience?: Omit<ExperienceApiClientConfig, GlobalApiConfigProperties>
 
@@ -22,9 +21,8 @@ export interface ApiClientConfig extends Pick<ApiConfig, GlobalApiConfigProperti
    * Configuration for the Insights API client.
    *
    * @remarks
-   * Shared fields (`spaceId`, `clientId`, `environment`, `contentfulEnvironment`,
-   * `fetchOptions`) are inherited from top-level config; this object is for
-   * Insights-specific options.
+   * Shared fields (`spaceId`, `environment`, and `fetchOptions`) are inherited
+   * from top-level config; this object is for Insights-specific options.
    */
   insights?: Omit<InsightsApiClientConfig, GlobalApiConfigProperties>
 }
@@ -40,9 +38,7 @@ export interface ApiClientConfig extends Pick<ApiConfig, GlobalApiConfigProperti
  * ```ts
  * const client = new ApiClient({
  *   spaceId: 'space-id',
- *   clientId: 'org-id',
- *   environment: 'main',
- *   contentfulEnvironment: 'master',
+ *   environment: 'master',
  *   experience: {
  *     // experience-specific overrides
  *   },
@@ -88,20 +84,10 @@ export default class ApiClient {
    * @param config - Global API client configuration with optional per-client overrides.
    */
   constructor(config: ApiClientConfig) {
-    const {
-      experience,
-      insights,
-      spaceId,
-      clientId,
-      environment,
-      contentfulEnvironment,
-      fetchOptions,
-    } = config
+    const { experience, insights, spaceId, environment, fetchOptions } = config
     const apiConfig: ApiConfig = {
       spaceId,
-      clientId,
       environment,
-      contentfulEnvironment,
       fetchOptions,
     }
 

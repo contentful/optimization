@@ -11,18 +11,16 @@ import InsightsApiClient, {
 } from './InsightsApiClient'
 
 const SPACE_ID = 'key_123'
-const CLIENT_ID = 'org_123'
-const ENVIRONMENT = 'main'
+const ENVIRONMENT = 'master'
 
 const expectedUrl = new URL(
-  `/v1/organizations/${CLIENT_ID}/environments/${ENVIRONMENT}/events`,
+  `/v2/spaces/${SPACE_ID}/environments/${ENVIRONMENT}/events`,
   INSIGHTS_BASE_URL,
 )
 
 function makeClient(overrides: Partial<InsightsApiClientConfig> = {}): InsightsApiClient {
   const config: InsightsApiClientConfig = {
     spaceId: SPACE_ID,
-    clientId: CLIENT_ID,
     environment: ENVIRONMENT,
     ...overrides,
   }
@@ -141,9 +139,9 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     )
 
     const handler = http.post(
-      `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
+      `${INSIGHTS_BASE_URL}v2/spaces/:spaceId/environments/:env/events`,
       async ({ request, params }) => {
-        expect(params.orgId).toBe(CLIENT_ID)
+        expect(params.spaceId).toBe(SPACE_ID)
         expect(params.env).toBe(ENVIRONMENT)
 
         expect(request.headers.get('Content-Type')).toBe('application/json')
@@ -173,6 +171,25 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     expect(mockLogger.debug).toHaveBeenCalledWith(
       'ApiClient:Insights',
       expect.stringContaining('request successfully completed'),
+    )
+  })
+
+  it('scopes Insights v2 requests by Contentful space and environment', async () => {
+    const batches = generateBatchEventArray('e1-contentful-scope')
+    const fetchMethod = rs.fn<FetchMethod>(async () => {
+      await Promise.resolve()
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    })
+    const client = makeClient({
+      environment: 'staging',
+      fetchOptions: { fetchMethod },
+    })
+
+    await expect(client.sendBatchEvents(batches)).resolves.toBe(true)
+
+    expect(fetchMethod).toHaveBeenCalledWith(
+      `${INSIGHTS_BASE_URL}v2/spaces/${SPACE_ID}/environments/staging/events`,
+      expect.any(Object),
     )
   })
 
@@ -221,7 +238,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     const batches = generateBatchEventArray('e2-click', 'component_click')
 
     const handler = http.post(
-      `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
+      `${INSIGHTS_BASE_URL}v2/spaces/:spaceId/environments/:env/events`,
       async ({ request }) => {
         const json = (await request.json()) as unknown
         expect(json).toEqual(batches)
@@ -240,7 +257,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     const batches = generateBatchEventArray('e2-hover', 'component_hover')
 
     const handler = http.post(
-      `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
+      `${INSIGHTS_BASE_URL}v2/spaces/:spaceId/environments/:env/events`,
       async ({ request }) => {
         const json = (await request.json()) as unknown
         expect(json).toEqual(batches)
@@ -321,7 +338,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     )
 
     server.use(
-      http.post(`${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`, () =>
+      http.post(`${INSIGHTS_BASE_URL}v2/spaces/:spaceId/environments/:env/events`, () =>
         HttpResponse.error(),
       ),
     )

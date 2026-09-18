@@ -96,8 +96,7 @@ public class OptimizationClient(private val applicationContext: Context) {
     suspend fun initialize(config: OptimizationConfig) {
         log.setLevel(config.logLevel)
         log.info {
-            "[init] Starting SDK initialization (spaceId=${config.spaceId}, clientId=${config.clientId}, " +
-                "env=${config.environment}, contentfulEnv=${config.contentfulEnvironment})"
+            "[init] Starting SDK initialization (spaceId=${config.spaceId}, env=${config.environment})"
         }
 
         store.loadConsentState()

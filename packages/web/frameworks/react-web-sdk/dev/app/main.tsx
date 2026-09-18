@@ -6,7 +6,6 @@ import { ReactRouterAutoPageTracker } from '../../src/router/react-router'
 
 import { App } from './App'
 import {
-  CLIENT_ID,
   CONTENTFUL_SPACE_ID,
   ENVIRONMENT,
   EXPERIENCE_BASE_URL,
@@ -18,7 +17,6 @@ function RootLayout(): ReactElement {
   return (
     <OptimizationRoot
       spaceId={CONTENTFUL_SPACE_ID}
-      clientId={CLIENT_ID}
       environment={ENVIRONMENT}
       api={{
         insightsBaseUrl: INSIGHTS_BASE_URL,

@@ -2,9 +2,7 @@ package com.contentful.optimization.shared
 
 object AppConfig {
     const val defaultContentfulLocale = "en-US"
-    const val clientId = "mock-client-id"
-    const val environment = "main"
-    const val contentfulEnvironment = "master"
+    const val environment = "master"
 
     // The mock API server runs on the HOST machine. From inside an Android
     // emulator, `localhost`/`127.0.0.1` is the emulator's OWN loopback, not the

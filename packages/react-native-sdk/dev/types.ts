@@ -1,6 +1,5 @@
 export interface SDKInfo {
   spaceId: string
-  clientId: string
   environment: string
   initialized: boolean
   timestamp: string

@@ -50,20 +50,17 @@ function requireEnv(label: string, key: string): string {
 
 const env = {
   contentfulBasePath: readEnv('PUBLIC_CONTENTFUL_BASE_PATH'),
-  contentfulEnvironment: requireEnv('Contentful environment', 'PUBLIC_CONTENTFUL_ENVIRONMENT'),
+  environment: requireEnv('Contentful environment', 'PUBLIC_CONTENTFUL_ENVIRONMENT'),
   contentfulHost: readEnv('PUBLIC_CONTENTFUL_CDA_HOST'),
   contentfulSpaceId: requireEnv('Contentful space ID', 'PUBLIC_CONTENTFUL_SPACE_ID'),
   contentfulToken: requireEnv('Contentful access token', 'PUBLIC_CONTENTFUL_TOKEN'),
   experienceBaseUrl: readEnv('PUBLIC_EXPERIENCE_API_BASE_URL'),
   insightsBaseUrl: readEnv('PUBLIC_INSIGHTS_API_BASE_URL'),
-  optimizationClientId: requireEnv('Optimization client ID', 'PUBLIC_NINETAILED_CLIENT_ID'),
-  optimizationEnvironment: readEnv('PUBLIC_NINETAILED_ENVIRONMENT') ?? 'main',
 } as const
 
 const sdk = new ContentfulOptimization({
   spaceId: env.contentfulSpaceId,
-  clientId: env.optimizationClientId,
-  environment: env.optimizationEnvironment,
+  environment: env.environment,
   logLevel: 'debug',
   api: {
     insightsBaseUrl: env.insightsBaseUrl,
@@ -73,7 +70,7 @@ const sdk = new ContentfulOptimization({
 
 const ctfl = contentful.createClient({
   accessToken: env.contentfulToken,
-  environment: env.contentfulEnvironment,
+  environment: env.environment,
   space: env.contentfulSpaceId,
   host: env.contentfulHost ?? '',
   basePath: env.contentfulBasePath ?? '',

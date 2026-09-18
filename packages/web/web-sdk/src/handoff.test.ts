@@ -18,7 +18,6 @@ import LocalStore from './storage/LocalStore'
 
 const config = {
   spaceId: 'key_123',
-  clientId: 'org_123',
   environment: 'main',
 }
 

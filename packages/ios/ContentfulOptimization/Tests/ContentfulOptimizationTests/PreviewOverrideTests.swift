@@ -18,7 +18,6 @@ final class PreviewOverrideTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -78,7 +77,6 @@ final class PreviewOverrideTests: XCTestCase {
             __bridge.destroy();
             __bridge.initialize({
                 spaceId: "test-client",
-                clientId: "test-client",
                 environment: "master",
                 api: {
                     experienceBaseUrl: "http://localhost:8000/experience/",
@@ -435,7 +433,6 @@ final class PreviewOverrideTests: XCTestCase {
         client.destroy()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",

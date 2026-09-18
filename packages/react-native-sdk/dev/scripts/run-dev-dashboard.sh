@@ -185,8 +185,6 @@ create_env_file() {
     log_step "Creating .env File"
     
     cat > "${DEV_DIR}/.env" << EOF
-PUBLIC_NINETAILED_CLIENT_ID=${PUBLIC_NINETAILED_CLIENT_ID:-test-client-id}
-PUBLIC_NINETAILED_ENVIRONMENT=${PUBLIC_NINETAILED_ENVIRONMENT:-main}
 PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:${MOCK_SERVER_PORT}/experience/
 PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:${MOCK_SERVER_PORT}/insights/
 PUBLIC_CONTENTFUL_TOKEN=${PUBLIC_CONTENTFUL_TOKEN:-test-token}

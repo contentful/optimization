@@ -34,7 +34,7 @@ object ContentfulFetcher {
 
         CDAClient.builder()
             .setSpace(AppConfig.contentfulSpaceId)
-            .setEnvironment(AppConfig.contentfulEnvironment)
+            .setEnvironment(AppConfig.environment)
             .setToken(MOCK_ACCESS_TOKEN)
             .setEndpoint(AppConfig.contentfulBaseUrl)
             .setCallFactory(httpClient)

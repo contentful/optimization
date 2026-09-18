@@ -1025,7 +1025,6 @@ describe('OptimizedEntry', () => {
       renderToString(
         <OptimizationRoot
           spaceId="test-space-id"
-          clientId="test-client-id"
           environment="main"
           handoff={createContentHandoff({
             entries: [
@@ -1063,7 +1062,6 @@ describe('OptimizedEntry', () => {
       renderToString(
         <OptimizationRoot
           spaceId="test-space-id"
-          clientId="test-client-id"
           environment="main"
           handoff={createContentHandoff({
             entries: [

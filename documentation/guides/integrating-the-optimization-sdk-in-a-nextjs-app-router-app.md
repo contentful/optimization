@@ -63,30 +63,23 @@ personalization path.
    pnpm add @contentful/optimization-nextjs contentful
    ```
 
-2. Add the Optimization project values to your app's browser-visible environment file. Find the
-   space ID, client ID, and environment in the Contentful web app under **Apps → Installed apps →
-   Contentful Personalization → SDK keys**. The variable names and `.env.local` placement below are
-   app-owned; keep the `NEXT_PUBLIC_` prefix because the browser binding needs these values. The SDK
-   config has two distinct environment fields: `environment` (the Ninetailed/Optimization
-   environment, used by the Insights API) and `contentfulEnvironment` (the Contentful space
-   environment, used by the Experience API) — keep both env vars below even though they often share
-   the same value.
+2. Add the Contentful space values to your app's browser-visible environment file. Find the
+   space ID and environment in the Contentful web app under **Apps → Installed apps → Contentful
+   Personalization → SDK keys**. The variable names and `.env.local` placement below are
+   app-owned; keep the `NEXT_PUBLIC_` prefix because the browser binding needs these values.
 
    **Adapt this to your use case:**
 
    ```dotenv
    # .env.local
-   NEXT_PUBLIC_OPTIMIZATION_SPACE_ID=your-space-id
-   NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID=your-client-id
-   NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT=main
+   NEXT_PUBLIC_CONTENTFUL_SPACE_ID=your-space-id
    NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT=master
    ```
 
 3. Bind one app-local server Optimization module. This binding shares one configured helper set for
    the app. Its nested `optimization.request` family initializes the active request before any
    request-bound component renders.
-   Use the same Optimization and Contentful environment values for server and client binding code.
-   The consent values below
+   Use the same Contentful environment for server and client binding code. The consent values below
    are a quick-start policy shortcut: `server.events` and `clientDefaults.consent` allow
    personalization events, while `server.persistence` and
    `clientDefaults.persistenceConsent` allow the SDK-owned anonymous ID to persist. The
@@ -101,10 +94,8 @@ personalization path.
    import { contentfulClient } from './contentful'
 
    export const optimization = bindNextjsAppRouterServerOptimization({
-     spaceId: process.env.NEXT_PUBLIC_OPTIMIZATION_SPACE_ID!,
-     clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
-     environment: process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main',
-     contentfulEnvironment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
+     spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
+     environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
      locale: 'en-US',
      contentful: { client: contentfulClient },
      consent: {
@@ -313,14 +304,11 @@ outside this guide:
   an authored variant, the integration can still run correctly while returning the baseline, so you
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
-- **Your Optimization project values** — space ID, client ID, and environment, from your
-  Optimization project settings. Find them in the Contentful web app under **Apps → Installed
-  apps → Contentful Personalization → SDK keys**. This guide stores them in
-  `NEXT_PUBLIC_OPTIMIZATION_SPACE_ID`, `NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID`,
-  `NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT`, and `NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT`. The latter two are
-  distinct: `NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT` feeds the SDK's `environment` (Insights API), and
-  `NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT` feeds `contentfulEnvironment` (Experience API). All four values
-  are safe to expose to the browser, and both bindings must use the same values.
+- **Your Contentful space values** — space ID and environment, from your Contentful space
+  settings. Find them in the Contentful web app under **Apps → Installed apps → Contentful
+  Personalization → SDK keys**. This guide stores them in
+  `NEXT_PUBLIC_CONTENTFUL_SPACE_ID` and `NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT`. The space ID and
+  environment are safe to expose to the browser, and both bindings must use the same values.
 
   The Experience and Insights API base URLs default correctly; you only set them for mocks or
   non-default hosts (see [How the SDK fits your app](#how-the-sdk-fits-your-app)).
@@ -371,10 +359,8 @@ match the server binding's public configuration values.
 import { bindNextjsAppRouterClientOptimization } from '@contentful/optimization-nextjs/app-router/client'
 
 export const clientOptimization = bindNextjsAppRouterClientOptimization({
-  spaceId: process.env.NEXT_PUBLIC_OPTIMIZATION_SPACE_ID!,
-  clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
-  environment: process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main',
-  contentfulEnvironment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
+  spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
+  environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
   locale: 'en-US',
 })
 ```
@@ -429,10 +415,8 @@ event name your app owns.
 +} satisfies BeforeInitialPageOptions
 +
  export const clientOptimization = bindNextjsAppRouterClientOptimization({
-   spaceId: process.env.NEXT_PUBLIC_OPTIMIZATION_SPACE_ID!,
-   clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
-   environment: process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main',
-   contentfulEnvironment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
+   spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
+   environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
    locale: 'en-US',
 +  beforeInitialPage,
  })
@@ -594,7 +578,7 @@ the managed-entry changes.
  import { contentfulClient } from './contentful'
 
  export const optimization = bindNextjsAppRouterServerOptimization({
-   // Keep the existing space ID, client ID, environment, locale, and consent.
+   // Keep the existing space ID, environment, locale, and consent.
    contentful: { client: contentfulClient },
  })
 
@@ -1048,10 +1032,8 @@ value. Use the object form, `setConsent({ events, persistence })`, when those tw
 
 ```tsx
 bindNextjsAppRouterServerOptimization({
-  spaceId: process.env.NEXT_PUBLIC_OPTIMIZATION_SPACE_ID!,
-  clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
-  environment: process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main',
-  contentfulEnvironment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
+  spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
+  environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
   consent: {
     server: ({ cookies }) =>
       cookies.get('app-consent')?.value === 'accepted'
@@ -1648,7 +1630,7 @@ account record.
 ## Production checks
 
 - Confirm server and browser config use the intended Contentful space, environment, locale, and
-  Optimization space ID and client ID.
+  Contentful space ID.
 - Confirm `consent.server`, browser consent defaults, and app-owned consent storage agree.
 - Confirm `ctfl-opt-aid` is browser-readable where server and browser profile continuity is needed.
 - Confirm locally accepted server and browser events arrive at the intended Experience or Insights

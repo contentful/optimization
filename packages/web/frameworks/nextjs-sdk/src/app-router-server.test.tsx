@@ -67,7 +67,6 @@ void beforeAll(async () => {
 
 const sdkConfig = {
   spaceId: 'test-space-id',
-  clientId: 'test-client-id',
   environment: 'main',
   locale: 'en-US',
 }

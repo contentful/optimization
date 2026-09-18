@@ -23,7 +23,7 @@ describe('ApiClientBase', () => {
 
   beforeEach(() => {
     rs.spyOn(Fetch, 'create').mockReturnValue(mockFetchMethod)
-    config = { spaceId: 'testId', clientId: 'testClientId', fetchOptions }
+    config = { spaceId: 'testId', fetchOptions }
   })
 
   afterEach(() => {

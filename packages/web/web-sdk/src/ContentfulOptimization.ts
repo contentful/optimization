@@ -323,8 +323,7 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
    *
    * const optimization = new ContentfulOptimization({
    *   spaceId: 'abc-123',
-   *   clientId: 'org_123',
-   *   environment: 'main',
+   *   environment: 'master',
    *   autoTrackEntryInteraction: { clicks: false },
    * })
    * ```

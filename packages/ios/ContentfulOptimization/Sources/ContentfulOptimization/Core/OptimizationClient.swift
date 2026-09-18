@@ -32,9 +32,7 @@ private extension Optional where Wrapped == [String: Any] {
 /// let client = OptimizationClient()
 /// try await client.initialize(config: OptimizationConfig(
 ///     spaceId: "my-space-id",
-///     clientId: "my-client-id",
-///     environment: "main",
-///     contentfulEnvironment: "master",
+///     environment: "master",
 ///     api: OptimizationApiConfig(
 ///         experienceBaseUrl: "https://example.com/experience/",
 ///         insightsBaseUrl: "https://example.com/insights/"
@@ -121,7 +119,7 @@ public final class OptimizationClient: ObservableObject {
     /// Initialize the SDK with the given configuration.
     public func initialize(config: OptimizationConfig) throws {
         log.setLevel(config.logLevel)
-        log.info("[init] Starting SDK initialization (spaceId=\(config.spaceId), clientId=\(config.clientId), env=\(config.environment), contentfulEnv=\(config.contentfulEnvironment))")
+        log.info("[init] Starting SDK initialization (spaceId=\(config.spaceId), env=\(config.environment))")
         if let url = config.api?.experienceBaseUrl {
             log.debug("[init] experienceBaseUrl=\(url)")
         } else {

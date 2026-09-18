@@ -23,7 +23,7 @@ enum ContentfulClient {
 
         return Contentful.Client(
             spaceId: AppConfig.contentfulSpaceId,
-            environmentId: AppConfig.contentfulEnvironment,
+            environmentId: AppConfig.environment,
             accessToken: AppConfig.contentfulAccessToken,
             host: AppConfig.contentfulHost,
             clientConfiguration: clientConfiguration

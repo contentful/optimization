@@ -4,15 +4,13 @@ import Foundation
 
 struct AppConfig {
     static let defaultContentfulLocale = "en-US"
-    static let clientId = "mock-client-id"
 
     /// Minimum height for each home-screen content entry card. Sized so the
     /// home list is taller than the viewport and the lower entries genuinely
     /// start below the fold — the layout the cross-platform view-tracking
     /// contract assumes for `BELOW_FOLD_ENTRY_ID`.
     static let contentEntryMinHeight: CGFloat = 180
-    static let environment = "main"
-    static let contentfulEnvironment = "master"
+    static let environment = "master"
     static let experienceBaseUrl = "http://localhost:8000/experience/"
     static let insightsBaseUrl = "http://localhost:8000/insights/"
 

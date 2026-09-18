@@ -17,13 +17,6 @@ export function SDKConfigCard({ sdkInfo, colors }: SDKConfigCardProps): React.JS
       </View>
 
       <View style={styles.infoRow}>
-        <Text style={[styles.infoLabel, { color: mutedTextColor }]}>Client ID:</Text>
-        <Text style={[styles.infoValue, { color: textColor }]} testID="clientIdValue">
-          {sdkInfo.clientId}
-        </Text>
-      </View>
-
-      <View style={styles.infoRow}>
         <Text style={[styles.infoLabel, { color: mutedTextColor }]}>Environment:</Text>
         <Text style={[styles.infoValue, { color: textColor }]} testID="environmentValue">
           {sdkInfo.environment}

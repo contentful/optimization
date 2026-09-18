@@ -82,7 +82,6 @@ const appLocale = getAppLocale()
 
 const optimization = new ContentfulOptimization({
   spaceId,
-  clientId,
   contentful: {
     client: contentfulClient,
     defaultQuery: { locale: appLocale },
@@ -133,7 +132,6 @@ const appLocale = getAppLocale()
 
 const optimization = new ContentfulOptimization({
   spaceId,
-  clientId,
   locale: appLocale,
 })
 ```
@@ -204,7 +202,6 @@ import { bindNextjsAppRouterServerOptimization } from '@contentful/optimization-
 
 export const optimization = bindNextjsAppRouterServerOptimization({
   spaceId,
-  clientId,
   locale: defaultLocale,
   consent: { server: consent },
 })
@@ -228,7 +225,6 @@ Next.js manual server runtime (TypeScript):
 ```ts
 const optimization = configureNextjsServerOptimization({
   spaceId,
-  clientId,
   locale: defaultLocale,
 })
 

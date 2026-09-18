@@ -22,7 +22,6 @@ final class OptimizationClientTests: XCTestCase {
     func testConfigToJSON() throws {
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -36,7 +35,6 @@ final class OptimizationClientTests: XCTestCase {
         let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
 
         XCTAssertEqual(dict["spaceId"] as? String, "test-client")
-        XCTAssertEqual(dict["clientId"] as? String, "test-client")
         XCTAssertEqual(dict["environment"] as? String, "master")
         let api = dict["api"] as? [String: Any]
         XCTAssertEqual(api?["experienceBaseUrl"] as? String, "http://localhost:8000/experience/")
@@ -48,7 +46,6 @@ final class OptimizationClientTests: XCTestCase {
     func testConfigToJSONSerializesApiOptionsAndLogLevel() throws {
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
                 insightsBaseUrl: "http://localhost:8000/insights/",
@@ -75,7 +72,6 @@ final class OptimizationClientTests: XCTestCase {
     func testConfigToJSONSerializesQueuePolicyKnobs() throws {
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             queuePolicy: QueuePolicy(
                 flush: QueueFlushPolicy(
                     flushIntervalMs: 1000,
@@ -115,7 +111,6 @@ final class OptimizationClientTests: XCTestCase {
     func testConfigToJSONSerializesPersistenceConsentDefault() throws {
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             defaults: StorageDefaults(consent: true, persistenceConsent: false)
         )
 
@@ -129,7 +124,7 @@ final class OptimizationClientTests: XCTestCase {
     }
 
     func testConfigToJSONSerializesBridgeOnlyAnonymousIdDefault() throws {
-        let config = OptimizationConfig(spaceId: "test-client", clientId: "test-client")
+        let config = OptimizationConfig(spaceId: "test-client")
 
         let json = try config.toJSON(anonymousId: "f0837d7dc6344c36a3a0a06c4cde754b")
         let data = json.data(using: .utf8)!
@@ -142,7 +137,6 @@ final class OptimizationClientTests: XCTestCase {
     func testConfigToJSONNormalizesExplicitLocale() throws {
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             locale: " de_DE "
         )
 
@@ -157,7 +151,6 @@ final class OptimizationClientTests: XCTestCase {
     func testConfigToJSONOmitsLocaleWhenUnset() throws {
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client"
         )
 
         let json = try config.toJSON()
@@ -171,7 +164,6 @@ final class OptimizationClientTests: XCTestCase {
     func testConfigToJSONSerializesAllowedEventTypes() throws {
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             allowedEventTypes: ["identify", "screen", "flag"]
         )
 
@@ -185,7 +177,6 @@ final class OptimizationClientTests: XCTestCase {
     func testConfigToJSONSerializesEmptyAllowedEventTypes() throws {
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             allowedEventTypes: []
         )
 
@@ -199,7 +190,6 @@ final class OptimizationClientTests: XCTestCase {
     func testConfigToJSONRejectsInvalidLocale() throws {
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             locale: "*"
         )
 
@@ -207,25 +197,22 @@ final class OptimizationClientTests: XCTestCase {
     }
 
     func testConfigDefaultEnvironment() {
-        let config = OptimizationConfig(spaceId: "test", clientId: "test")
-        XCTAssertEqual(config.environment, "main")
-        XCTAssertEqual(config.contentfulEnvironment, "master")
+        let config = OptimizationConfig(spaceId: "test")
+        XCTAssertEqual(config.environment, "master")
         XCTAssertNil(config.api)
         XCTAssertNil(config.locale)
         XCTAssertEqual(config.logLevel, .error)
     }
 
     func testConfigToJSONOmitsNilUrls() throws {
-        let config = OptimizationConfig(spaceId: "test", clientId: "test")
+        let config = OptimizationConfig(spaceId: "test")
         let json = try config.toJSON()
         let data = json.data(using: .utf8)!
         let dict = try JSONSerialization.jsonObject(with: data) as! [String: String]
 
-        XCTAssertEqual(dict.count, 5)
+        XCTAssertEqual(dict.count, 3)
         XCTAssertEqual(dict["spaceId"], "test")
-        XCTAssertEqual(dict["clientId"], "test")
-        XCTAssertEqual(dict["environment"], "main")
-        XCTAssertEqual(dict["contentfulEnvironment"], "master")
+        XCTAssertEqual(dict["environment"], "master")
         XCTAssertEqual(dict["logLevel"], "error")
     }
 
@@ -235,7 +222,6 @@ final class OptimizationClientTests: XCTestCase {
         ]
         let config = OptimizationConfig(
             spaceId: "test",
-            clientId: "test",
             defaults: StorageDefaults(selectedOptimizations: seeded)
         )
 
@@ -344,7 +330,6 @@ final class OptimizationClientTests: XCTestCase {
         let manager = JSContextManager()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -426,7 +411,6 @@ final class OptimizationClientTests: XCTestCase {
         let manager = JSContextManager()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -453,7 +437,6 @@ final class OptimizationClientTests: XCTestCase {
         let manager = JSContextManager()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -473,7 +456,6 @@ final class OptimizationClientTests: XCTestCase {
         let manager = JSContextManager()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -493,7 +475,6 @@ final class OptimizationClientTests: XCTestCase {
         let manager = JSContextManager()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -539,7 +520,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -556,7 +536,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -577,7 +556,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -601,7 +579,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -655,7 +632,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
                 insightsBaseUrl: "http://localhost:8000/insights/"
@@ -701,7 +677,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
                 insightsBaseUrl: "http://localhost:8000/insights/"
@@ -736,7 +711,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
                 insightsBaseUrl: "http://localhost:8000/insights/"
@@ -776,7 +750,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -797,7 +770,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -816,7 +788,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -850,7 +821,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -921,7 +891,6 @@ final class OptimizationClientTests: XCTestCase {
 
         try client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -958,7 +927,6 @@ final class OptimizationClientTests: XCTestCase {
 
         try client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -974,7 +942,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -994,7 +961,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -1015,7 +981,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -1052,7 +1017,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
                 insightsBaseUrl: "http://localhost:8000/insights/"
@@ -1070,7 +1034,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         try client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
                 insightsBaseUrl: "http://localhost:8000/insights/"
@@ -1125,7 +1088,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -1150,7 +1112,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -1186,7 +1147,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -1314,7 +1274,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -1561,7 +1520,6 @@ final class OptimizationClientTests: XCTestCase {
         let manager = JSContextManager()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -1605,7 +1563,6 @@ final class OptimizationClientTests: XCTestCase {
         let manager = JSContextManager()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -1639,7 +1596,6 @@ final class OptimizationClientTests: XCTestCase {
         let manager = JSContextManager()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -1737,7 +1693,6 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         try! client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             defaults: StorageDefaults(consent: consent)
         ))
         return client
@@ -2124,7 +2079,6 @@ final class OptimizationClientTests: XCTestCase {
         let manager = JSContextManager()
         let config = OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -2156,7 +2110,6 @@ final class OptimizationClientTests: XCTestCase {
 
         try client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -2180,7 +2133,6 @@ final class OptimizationClientTests: XCTestCase {
 
         try client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -2197,7 +2149,6 @@ final class OptimizationClientTests: XCTestCase {
             __bridge.destroy();
             __bridge.initialize({
                 spaceId: "test-client",
-                clientId: "test-client",
                 environment: "master",
                 api: {
                     experienceBaseUrl: "http://localhost:8000/experience/",
@@ -2224,7 +2175,6 @@ final class OptimizationClientTests: XCTestCase {
 
         try client.initialize(config: OptimizationConfig(
             spaceId: "test-client",
-            clientId: "test-client",
             environment: "master",
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
@@ -2236,7 +2186,6 @@ final class OptimizationClientTests: XCTestCase {
             __bridge.destroy();
             __bridge.initialize({
                 spaceId: "test-client",
-                clientId: "test-client",
                 environment: "master",
                 api: {
                     experienceBaseUrl: "http://localhost:8000/experience/",

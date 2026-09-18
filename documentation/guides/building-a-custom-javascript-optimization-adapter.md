@@ -38,9 +38,7 @@ import { OptimizedEntrySourceController } from '@contentful/optimization-core/en
 
 const optimization = new CoreStateful({
   spaceId,
-  clientId,
   environment,
-  contentfulEnvironment,
   locale: appLocale,
   contentful: {
     client: contentfulClient,
@@ -112,9 +110,7 @@ Create the Contentful Delivery client in your application or adapter host, then 
 ```ts
 const optimization = new CoreStateful({
   spaceId,
-  clientId,
   environment,
-  contentfulEnvironment,
   locale: appLocale,
   contentful: {
     client: contentfulClient,

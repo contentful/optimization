@@ -3,7 +3,6 @@ import { batch, signals } from './signals'
 
 const config: CoreStatefulConfig = {
   spaceId: 'key_123',
-  clientId: 'key_123',
   environment: 'main',
 }
 
