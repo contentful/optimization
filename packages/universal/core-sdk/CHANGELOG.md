@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.0.0](https://github.com/contentful/optimization/compare/optimization-core-v1.3.0...optimization-core-v2.0.0) (2026-09-18)
+
+### ⚠ BREAKING CHANGES
+
+- **api-client:** SDK configuration now requires spaceId instead of clientId and defaults environment to master instead of main. The Experience and Insights API route contracts, native SDK initialization APIs, Web Component attributes, and exported API schemas have also changed. Existing consumers must migrate before upgrading.
+
+### Features
+
+- **api-client:** migrate Experience API to v3 and Insights API to v2 ([fa0896c](https://github.com/contentful/optimization/commit/fa0896cc6a59138165c87120e6030e38871b9cbd))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-api-client bumped to 2.0.0
+
 ## [1.3.0](https://github.com/contentful/optimization/compare/optimization-core-v1.2.0...optimization-core-v1.3.0) (2026-08-21)
 
 ### Features

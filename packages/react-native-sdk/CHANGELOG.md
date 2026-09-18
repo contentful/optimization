@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.0.0](https://github.com/contentful/optimization/compare/optimization-react-native-v1.1.0...optimization-react-native-v2.0.0) (2026-09-18)
+
+### ⚠ BREAKING CHANGES
+
+- **api-client:** SDK configuration now requires spaceId instead of clientId and defaults environment to master instead of main. The Experience and Insights API route contracts, native SDK initialization APIs, Web Component attributes, and exported API schemas have also changed. Existing consumers must migrate before upgrading.
+
+### Features
+
+- **api-client:** migrate Experience API to v3 and Insights API to v2 ([fa0896c](https://github.com/contentful/optimization/commit/fa0896cc6a59138165c87120e6030e38871b9cbd))
+
+### Bug Fixes
+
+- **deps:** remediate pnpm audit findings ([#505](https://github.com/contentful/optimization/issues/505)) ([b293d74](https://github.com/contentful/optimization/commit/b293d742368fa1c396bcbc222fa3792b559b3deb))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-core bumped to 2.0.0
+
 ## [1.1.0](https://github.com/contentful/optimization/compare/optimization-react-native-v1.0.0...optimization-react-native-v1.1.0) (2026-08-21)
 
 ### Features
