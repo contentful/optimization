@@ -5,6 +5,8 @@
 
     <application
         android:name=".ViewsApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/optimization_data_extraction_rules"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.OptimizationAppViews">
         <activity
