@@ -17,7 +17,7 @@ rs.mock('react-native', () => ({
 rs.mock('@react-native-async-storage/async-storage', () => ({
   default: {
     getItem: rs.fn(),
-    multiGet: rs.fn().mockResolvedValue([]),
+    getMany: rs.fn().mockResolvedValue({}),
     setItem: rs.fn(),
     removeItem: rs.fn(),
   },

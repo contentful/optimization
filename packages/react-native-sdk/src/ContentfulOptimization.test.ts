@@ -29,17 +29,17 @@ rs.mock('react-native', () => ({
 
 const asyncStorageMock = {
   getItem: rs.fn(),
-  multiGet: rs.fn().mockResolvedValue([]),
-  multiRemove: rs.fn().mockResolvedValue(undefined),
-  multiSet: rs.fn().mockResolvedValue(undefined),
+  getMany: rs.fn().mockResolvedValue({}),
+  removeMany: rs.fn().mockResolvedValue(undefined),
+  setMany: rs.fn().mockResolvedValue(undefined),
 }
 
 rs.mock('@react-native-async-storage/async-storage', () => ({
   default: {
     getItem: asyncStorageMock.getItem,
-    multiGet: asyncStorageMock.multiGet,
-    multiRemove: asyncStorageMock.multiRemove,
-    multiSet: asyncStorageMock.multiSet,
+    getMany: asyncStorageMock.getMany,
+    removeMany: asyncStorageMock.removeMany,
+    setMany: asyncStorageMock.setMany,
   },
 }))
 
@@ -143,22 +143,21 @@ async function flushPromises(): Promise<void> {
   await Promise.resolve()
 }
 
-function hasProfileCacheEntry(entries: ReadonlyArray<[string, string]>): boolean {
-  return entries.some(([key]) => key === PROFILE_CACHE_KEY)
+function hasProfileCacheEntry(entries: Readonly<Record<string, string>>): boolean {
+  return Object.hasOwn(entries, PROFILE_CACHE_KEY)
 }
 
-function isStorageEntries(value: unknown): value is ReadonlyArray<[string, string]> {
+function isStorageEntries(value: unknown): value is Readonly<Record<string, string>> {
   return (
-    Array.isArray(value) &&
-    value.every(
-      (entry): entry is [string, string] =>
-        Array.isArray(entry) && typeof entry[0] === 'string' && typeof entry[1] === 'string',
-    )
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every((entry) => typeof entry === 'string')
   )
 }
 
-function getProfileWriteCalls(): Array<ReadonlyArray<[string, string]>> {
-  const calls: unknown = asyncStorageMock.multiSet.mock.calls
+function getProfileWriteCalls(): Array<Readonly<Record<string, string>>> {
+  const calls: unknown = asyncStorageMock.setMany.mock.calls
   if (!Array.isArray(calls)) return []
 
   const entries = calls
@@ -169,7 +168,7 @@ function getProfileWriteCalls(): Array<ReadonlyArray<[string, string]>> {
 }
 
 function hasProfileRemoveCall(): boolean {
-  const calls: unknown = asyncStorageMock.multiRemove.mock.calls
+  const calls: unknown = asyncStorageMock.removeMany.mock.calls
   if (!Array.isArray(calls)) return false
 
   return calls.some((call) => {
@@ -207,9 +206,9 @@ describe('ContentfulOptimization locale resolution', () => {
       signals.profile.value = undefined
       signals.selectedOptimizations.value = undefined
     })
-    asyncStorageMock.multiGet.mockResolvedValue([])
-    asyncStorageMock.multiRemove.mockResolvedValue(undefined)
-    asyncStorageMock.multiSet.mockResolvedValue(undefined)
+    asyncStorageMock.getMany.mockResolvedValue({})
+    asyncStorageMock.removeMany.mockResolvedValue(undefined)
+    asyncStorageMock.setMany.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -296,15 +295,15 @@ describe('ContentfulOptimization locale resolution', () => {
     await drainAsyncStorageStore()
 
     expect(getProfileWriteCalls()).toEqual([
-      expect.arrayContaining([[PROFILE_CACHE_KEY, JSON.stringify(DEFAULT_PROFILE)]]),
+      expect.objectContaining({ [PROFILE_CACHE_KEY]: JSON.stringify(DEFAULT_PROFILE) }),
     ])
   })
 
   it('does not load persisted profile continuity when persistence consent is denied', async () => {
-    asyncStorageMock.multiGet.mockResolvedValue([
-      [PERSISTENCE_CONSENT_KEY, 'denied'],
-      [PROFILE_CACHE_KEY, JSON.stringify(DEFAULT_PROFILE)],
-    ])
+    asyncStorageMock.getMany.mockResolvedValue({
+      [PERSISTENCE_CONSENT_KEY]: 'denied',
+      [PROFILE_CACHE_KEY]: JSON.stringify(DEFAULT_PROFILE),
+    })
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
@@ -314,18 +313,18 @@ describe('ContentfulOptimization locale resolution', () => {
     optimization = created
 
     expect(created.states.profile.current).toBeUndefined()
-    expect(asyncStorageMock.multiGet).toHaveBeenCalledWith([
+    expect(asyncStorageMock.getMany).toHaveBeenCalledWith([
       CONSENT_KEY,
       PERSISTENCE_CONSENT_KEY,
       DEBUG_FLAG_KEY,
     ])
-    expect(asyncStorageMock.multiGet).not.toHaveBeenCalledWith([
+    expect(asyncStorageMock.getMany).not.toHaveBeenCalledWith([
       ANONYMOUS_ID_KEY,
       CHANGES_CACHE_KEY,
       PROFILE_CACHE_KEY,
       SELECTED_OPTIMIZATIONS_CACHE_KEY,
     ])
-    expect(asyncStorageMock.multiRemove).toHaveBeenCalledWith([
+    expect(asyncStorageMock.removeMany).toHaveBeenCalledWith([
       ANONYMOUS_ID_KEY,
       CHANGES_CACHE_KEY,
       PROFILE_CACHE_KEY,
@@ -334,12 +333,12 @@ describe('ContentfulOptimization locale resolution', () => {
   })
 
   it('loads persisted profile continuity when persistence consent is accepted', async () => {
-    asyncStorageMock.multiGet.mockImplementation(async (keys: string[]) => {
+    asyncStorageMock.getMany.mockImplementation(async (keys: string[]) => {
       if (keys.includes(PROFILE_CACHE_KEY)) {
-        return await Promise.resolve([[PROFILE_CACHE_KEY, JSON.stringify(DEFAULT_PROFILE)]])
+        return await Promise.resolve({ [PROFILE_CACHE_KEY]: JSON.stringify(DEFAULT_PROFILE) })
       }
 
-      return await Promise.resolve([[PERSISTENCE_CONSENT_KEY, 'accepted']])
+      return await Promise.resolve({ [PERSISTENCE_CONSENT_KEY]: 'accepted' })
     })
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
@@ -349,12 +348,12 @@ describe('ContentfulOptimization locale resolution', () => {
     })
     optimization = created
 
-    expect(asyncStorageMock.multiGet).toHaveBeenNthCalledWith(1, [
+    expect(asyncStorageMock.getMany).toHaveBeenNthCalledWith(1, [
       CONSENT_KEY,
       PERSISTENCE_CONSENT_KEY,
       DEBUG_FLAG_KEY,
     ])
-    expect(asyncStorageMock.multiGet).toHaveBeenNthCalledWith(2, [
+    expect(asyncStorageMock.getMany).toHaveBeenNthCalledWith(2, [
       ANONYMOUS_ID_KEY,
       CHANGES_CACHE_KEY,
       PROFILE_CACHE_KEY,
@@ -377,8 +376,8 @@ describe('ContentfulOptimization locale resolution', () => {
     })
     optimization = created
 
-    asyncStorageMock.multiRemove.mockClear()
-    asyncStorageMock.multiSet.mockClear()
+    asyncStorageMock.removeMany.mockClear()
+    asyncStorageMock.setMany.mockClear()
 
     await created.interceptors.state.run({
       changes: [],
@@ -387,12 +386,12 @@ describe('ContentfulOptimization locale resolution', () => {
     await drainAsyncStorageStore()
 
     expect(hasProfileRemoveCall()).toBe(false)
-    expect(asyncStorageMock.multiSet).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        [CHANGES_CACHE_KEY, JSON.stringify([])],
-        [PROFILE_CACHE_KEY, JSON.stringify(DEFAULT_PROFILE)],
-        [SELECTED_OPTIMIZATIONS_CACHE_KEY, JSON.stringify([])],
-      ]),
+    expect(asyncStorageMock.setMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        [CHANGES_CACHE_KEY]: JSON.stringify([]),
+        [PROFILE_CACHE_KEY]: JSON.stringify(DEFAULT_PROFILE),
+        [SELECTED_OPTIMIZATIONS_CACHE_KEY]: JSON.stringify([]),
+      }),
     )
   })
 
@@ -412,8 +411,8 @@ describe('ContentfulOptimization locale resolution', () => {
     })
     optimization = created
 
-    asyncStorageMock.multiRemove.mockClear()
-    asyncStorageMock.multiSet.mockClear()
+    asyncStorageMock.removeMany.mockClear()
+    asyncStorageMock.setMany.mockClear()
 
     await created.interceptors.state.run({
       changes: undefined,
@@ -422,27 +421,27 @@ describe('ContentfulOptimization locale resolution', () => {
     })
     await drainAsyncStorageStore()
 
-    expect(asyncStorageMock.multiRemove).toHaveBeenCalledWith([
+    expect(asyncStorageMock.removeMany).toHaveBeenCalledWith([
       CHANGES_CACHE_KEY,
       PROFILE_CACHE_KEY,
       SELECTED_OPTIMIZATIONS_CACHE_KEY,
     ])
-    expect(asyncStorageMock.multiSet).not.toHaveBeenCalledWith(
-      expect.arrayContaining([
-        [CHANGES_CACHE_KEY, JSON.stringify([])],
-        [PROFILE_CACHE_KEY, JSON.stringify(DEFAULT_PROFILE)],
-        [SELECTED_OPTIMIZATIONS_CACHE_KEY, JSON.stringify([])],
-      ]),
+    expect(asyncStorageMock.setMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        [CHANGES_CACHE_KEY]: JSON.stringify([]),
+        [PROFILE_CACHE_KEY]: JSON.stringify(DEFAULT_PROFILE),
+        [SELECTED_OPTIMIZATIONS_CACHE_KEY]: JSON.stringify([]),
+      }),
     )
   })
 
   it('uses stored anonymous ID only while persistence consent is accepted', async () => {
-    asyncStorageMock.multiGet.mockImplementation(async (keys: string[]) => {
+    asyncStorageMock.getMany.mockImplementation(async (keys: string[]) => {
       if (keys.includes(ANONYMOUS_ID_KEY)) {
-        return await Promise.resolve([[ANONYMOUS_ID_KEY, 'stored-anonymous-id']])
+        return await Promise.resolve({ [ANONYMOUS_ID_KEY]: 'stored-anonymous-id' })
       }
 
-      return await Promise.resolve([[PERSISTENCE_CONSENT_KEY, 'accepted']])
+      return await Promise.resolve({ [PERSISTENCE_CONSENT_KEY]: 'accepted' })
     })
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
@@ -476,10 +475,10 @@ describe('ContentfulOptimization locale resolution', () => {
     })
     optimization = created
 
-    asyncStorageMock.multiSet.mockClear()
+    asyncStorageMock.setMany.mockClear()
     const profileWrite = createDeferred()
-    asyncStorageMock.multiSet.mockImplementation(
-      async (entries: ReadonlyArray<[string, string]>) => {
+    asyncStorageMock.setMany.mockImplementation(
+      async (entries: Readonly<Record<string, string>>) => {
         if (hasProfileCacheEntry(entries)) await profileWrite.promise
       },
     )
@@ -502,10 +501,10 @@ describe('ContentfulOptimization locale resolution', () => {
 
     expect(created.states.profile.current).toEqual(IDENTIFIED_PROFILE)
     expect(getProfileWriteCalls()).toEqual([
-      expect.arrayContaining([
-        [ANONYMOUS_ID_KEY, IDENTIFIED_PROFILE.id],
-        [PROFILE_CACHE_KEY, JSON.stringify(IDENTIFIED_PROFILE)],
-      ]),
+      expect.objectContaining({
+        [ANONYMOUS_ID_KEY]: IDENTIFIED_PROFILE.id,
+        [PROFILE_CACHE_KEY]: JSON.stringify(IDENTIFIED_PROFILE),
+      }),
     ])
   })
 
@@ -519,8 +518,8 @@ describe('ContentfulOptimization locale resolution', () => {
     })
     optimization = created
 
-    asyncStorageMock.multiSet.mockImplementation(
-      async (entries: ReadonlyArray<[string, string]>) => {
+    asyncStorageMock.setMany.mockImplementation(
+      async (entries: Readonly<Record<string, string>>) => {
         if (hasProfileCacheEntry(entries)) {
           await Promise.resolve()
           throw new Error('storage blocked')

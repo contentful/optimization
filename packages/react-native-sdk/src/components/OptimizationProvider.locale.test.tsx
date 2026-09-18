@@ -16,7 +16,7 @@ rs.mock('../ContentfulOptimization', () => ({
 rs.mock('@react-native-async-storage/async-storage', () => ({
   default: {
     getItem: rs.fn(),
-    multiGet: rs.fn().mockResolvedValue([]),
+    getMany: rs.fn().mockResolvedValue({}),
     removeItem: rs.fn(),
     setItem: rs.fn(),
   },

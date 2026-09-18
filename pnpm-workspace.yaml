@@ -11,6 +11,7 @@ packages:
 verifyDepsBeforeRun: false
 
 allowBuilds:
+  '@parcel/watcher': true
   core-js: true
   esbuild: true
   msw: true
@@ -33,7 +34,7 @@ catalog:
   '@types/express': ^5.0.6
   '@types/node': ^24.0.13
   contentful: ^11.10.5
-  ejs: ^5.0.2
+  ejs: ^6.0.1
   es-toolkit: ^1.46.0
   express: ^5.2.1
   express-rate-limit: ^8.7.0

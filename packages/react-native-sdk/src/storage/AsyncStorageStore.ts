@@ -54,11 +54,55 @@ interface ConsentState {
 
 type CacheEntry = readonly [key: string, data: unknown]
 
+interface AsyncStorageV2BatchApi {
+  multiGet: (keys: string[]) => Promise<Array<[string, string | null]>>
+  multiRemove: (keys: string[]) => Promise<void>
+  multiSet: (entries: Array<[string, string]>) => Promise<void>
+}
+
+interface AsyncStorageV3BatchApi {
+  getMany: (keys: string[]) => Promise<Record<string, string | null>>
+  removeMany: (keys: string[]) => Promise<void>
+  setMany: (entries: Record<string, string>) => Promise<void>
+}
+
+const asyncStorage: unknown = AsyncStorage
+
+function isAsyncStorageV2BatchApi(storage: unknown): storage is AsyncStorageV2BatchApi {
+  if (typeof storage !== 'object' || storage === null) return false
+
+  return (
+    typeof Reflect.get(storage, 'multiGet') === 'function' &&
+    typeof Reflect.get(storage, 'multiRemove') === 'function' &&
+    typeof Reflect.get(storage, 'multiSet') === 'function'
+  )
+}
+
+function isAsyncStorageV3BatchApi(storage: unknown): storage is AsyncStorageV3BatchApi {
+  if (typeof storage !== 'object' || storage === null) return false
+
+  return (
+    typeof Reflect.get(storage, 'getMany') === 'function' &&
+    typeof Reflect.get(storage, 'removeMany') === 'function' &&
+    typeof Reflect.get(storage, 'setMany') === 'function'
+  )
+}
+
+function unsupportedAsyncStorageVersion(): TypeError {
+  return new TypeError('AsyncStorage must provide the v2 or v3 batch API')
+}
+
 async function removeKeys(keys: readonly string[], label: string): Promise<void> {
   if (keys.length === 0) return
 
   try {
-    await AsyncStorage.multiRemove([...keys])
+    if (isAsyncStorageV3BatchApi(asyncStorage)) {
+      await asyncStorage.removeMany([...keys])
+    } else if (isAsyncStorageV2BatchApi(asyncStorage)) {
+      await asyncStorage.multiRemove([...keys])
+    } else {
+      throw unsupportedAsyncStorageVersion()
+    }
   } catch (error: unknown) {
     logger.error(`Failed to remove ${keys.join(', ')} from ${label}:`, error)
   }
@@ -68,10 +112,26 @@ async function setEntries(entries: ReadonlyArray<[string, string]>): Promise<voi
   if (entries.length === 0) return
 
   try {
-    await AsyncStorage.multiSet([...entries])
+    if (isAsyncStorageV3BatchApi(asyncStorage)) {
+      await asyncStorage.setMany(Object.fromEntries(entries))
+    } else if (isAsyncStorageV2BatchApi(asyncStorage)) {
+      await asyncStorage.multiSet([...entries])
+    } else {
+      throw unsupportedAsyncStorageVersion()
+    }
   } catch (error: unknown) {
     logger.error(`Failed to set ${entries.map(([key]) => key).join(', ')} in AsyncStorage:`, error)
   }
+}
+
+async function getEntries(keys: readonly string[]): Promise<Record<string, string | null>> {
+  if (isAsyncStorageV3BatchApi(asyncStorage)) return await asyncStorage.getMany([...keys])
+
+  if (isAsyncStorageV2BatchApi(asyncStorage)) {
+    return Object.fromEntries(await asyncStorage.multiGet([...keys]))
+  }
+
+  throw unsupportedAsyncStorageVersion()
 }
 
 /**
@@ -284,11 +344,10 @@ class AsyncStorageStore {
   }
 
   private async loadKeys(keys: readonly string[]): Promise<void> {
-    const values = await AsyncStorage.multiGet(keys)
-    const requestedKeys = new Set(keys)
+    const values = await getEntries(keys)
 
-    for (const [key, value] of values) {
-      if (!requestedKeys.has(key)) continue
+    for (const key of keys) {
+      const { [key]: value } = values
       if (!value) continue
 
       if (STRING_CACHE_KEYS.has(key)) {

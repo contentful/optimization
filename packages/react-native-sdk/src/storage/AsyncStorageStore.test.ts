@@ -32,13 +32,32 @@ interface AsyncStorageStoreInstance {
 }
 
 const asyncStorageMock = {
+  getMany: rs.fn(),
+  removeMany: rs.fn(),
+  setMany: rs.fn(),
+}
+
+const asyncStorageV2Mock = {
   multiGet: rs.fn(),
   multiRemove: rs.fn(),
   multiSet: rs.fn(),
 }
 
+let activeAsyncStorageMock: object = asyncStorageMock
+
 rs.mock('@react-native-async-storage/async-storage', () => ({
-  default: asyncStorageMock,
+  default: new Proxy(
+    {},
+    {
+      get(_target, property) {
+        const value: unknown = Reflect.get(activeAsyncStorageMock, property)
+        return value
+      },
+      has(_target, property) {
+        return Reflect.has(activeAsyncStorageMock, property)
+      },
+    },
+  ),
 }))
 
 function isAsyncStorageStoreInstance(value: unknown): value is AsyncStorageStoreInstance {
@@ -76,10 +95,14 @@ function getCache(store: AsyncStorageStoreInstance): Map<unknown, unknown> {
 describe('AsyncStorageStore', () => {
   beforeEach(async () => {
     rs.clearAllMocks()
+    activeAsyncStorageMock = asyncStorageMock
 
-    asyncStorageMock.multiGet.mockResolvedValue([])
-    asyncStorageMock.multiRemove.mockResolvedValue(undefined)
-    asyncStorageMock.multiSet.mockResolvedValue(undefined)
+    asyncStorageMock.getMany.mockResolvedValue({})
+    asyncStorageMock.removeMany.mockResolvedValue(undefined)
+    asyncStorageMock.setMany.mockResolvedValue(undefined)
+    asyncStorageV2Mock.multiGet.mockResolvedValue([])
+    asyncStorageV2Mock.multiRemove.mockResolvedValue(undefined)
+    asyncStorageV2Mock.multiSet.mockResolvedValue(undefined)
 
     const store = await getStore()
     Reflect.set(store, 'consentStateInitialized', false)
@@ -89,17 +112,40 @@ describe('AsyncStorageStore', () => {
     cache.clear()
   })
 
-  it('loads only consent state during consent initialization', async () => {
-    asyncStorageMock.multiGet.mockResolvedValue([
+  it('uses the AsyncStorage v2 batch API when the consumer provides it', async () => {
+    activeAsyncStorageMock = asyncStorageV2Mock
+    asyncStorageV2Mock.multiGet.mockResolvedValue([
       [CONSENT_KEY, 'accepted'],
       [PERSISTENCE_CONSENT_KEY, 'denied'],
-      [PROFILE_CACHE_KEY, JSON.stringify({ foo: 'bar' })],
     ])
 
     const store = await getStore()
     await store.initializeConsentState()
+    expect(store.consent).toBe(true)
+    expect(store.persistenceConsent).toBe(false)
 
-    expect(asyncStorageMock.multiGet).toHaveBeenCalledWith([
+    await store.writeConsentState({ consent: true, persistenceConsent: undefined })
+
+    expect(asyncStorageV2Mock.multiGet).toHaveBeenCalledWith([
+      CONSENT_KEY,
+      PERSISTENCE_CONSENT_KEY,
+      DEBUG_FLAG_KEY,
+    ])
+    expect(asyncStorageV2Mock.multiRemove).toHaveBeenCalledWith([PERSISTENCE_CONSENT_KEY])
+    expect(asyncStorageV2Mock.multiSet).toHaveBeenCalledWith([[CONSENT_KEY, 'accepted']])
+  })
+
+  it('loads only consent state during consent initialization', async () => {
+    asyncStorageMock.getMany.mockResolvedValue({
+      [CONSENT_KEY]: 'accepted',
+      [PERSISTENCE_CONSENT_KEY]: 'denied',
+      [PROFILE_CACHE_KEY]: JSON.stringify({ foo: 'bar' }),
+    })
+
+    const store = await getStore()
+    await store.initializeConsentState()
+
+    expect(asyncStorageMock.getMany).toHaveBeenCalledWith([
       CONSENT_KEY,
       PERSISTENCE_CONSENT_KEY,
       DEBUG_FLAG_KEY,
@@ -107,31 +153,31 @@ describe('AsyncStorageStore', () => {
     expect(store.consent).toBe(true)
     expect(store.persistenceConsent).toBe(false)
     expect(store.profile).toBeUndefined()
-    expect(asyncStorageMock.multiRemove).not.toHaveBeenCalledWith([PROFILE_CACHE_KEY])
+    expect(asyncStorageMock.removeMany).not.toHaveBeenCalledWith([PROFILE_CACHE_KEY])
   })
 
   it('deletes malformed JSON cache values during profile-continuity initialization', async () => {
-    asyncStorageMock.multiGet.mockResolvedValue([[CHANGES_CACHE_KEY, '{bad-json']])
+    asyncStorageMock.getMany.mockResolvedValue({ [CHANGES_CACHE_KEY]: '{bad-json' })
 
     const store = await getStore()
     await store.initializeProfileContinuity()
 
     expect(store.changes).toBeUndefined()
     await store.drainPersistence()
-    expect(asyncStorageMock.multiRemove).toHaveBeenCalledWith([CHANGES_CACHE_KEY])
+    expect(asyncStorageMock.removeMany).toHaveBeenCalledWith([CHANGES_CACHE_KEY])
   })
 
   it('deletes cache values that fail schema validation during profile-continuity initialization', async () => {
-    asyncStorageMock.multiGet.mockResolvedValue([
-      [PROFILE_CACHE_KEY, JSON.stringify({ foo: 'bar' })],
-    ])
+    asyncStorageMock.getMany.mockResolvedValue({
+      [PROFILE_CACHE_KEY]: JSON.stringify({ foo: 'bar' }),
+    })
 
     const store = await getStore()
     await store.initializeProfileContinuity()
 
     expect(store.profile).toBeUndefined()
     await store.drainPersistence()
-    expect(asyncStorageMock.multiRemove).toHaveBeenCalledWith([PROFILE_CACHE_KEY])
+    expect(asyncStorageMock.removeMany).toHaveBeenCalledWith([PROFILE_CACHE_KEY])
   })
 
   it('deletes in-memory structured cache values that fail schema validation', async () => {
@@ -143,11 +189,11 @@ describe('AsyncStorageStore', () => {
     expect(store.selectedOptimizations).toBeUndefined()
     await store.drainPersistence()
     expect(cache.has(SELECTED_OPTIMIZATIONS_CACHE_KEY)).toBe(false)
-    expect(asyncStorageMock.multiRemove).toHaveBeenCalledWith([SELECTED_OPTIMIZATIONS_CACHE_KEY])
+    expect(asyncStorageMock.removeMany).toHaveBeenCalledWith([SELECTED_OPTIMIZATIONS_CACHE_KEY])
   })
 
   it('swallows AsyncStorage.removeItem failures when invalidating bad cache', async () => {
-    asyncStorageMock.multiRemove.mockRejectedValueOnce(new Error('storage blocked'))
+    asyncStorageMock.removeMany.mockRejectedValueOnce(new Error('storage blocked'))
 
     const store = await getStore()
     const cache = getCache(store)
@@ -159,7 +205,7 @@ describe('AsyncStorageStore', () => {
     }).not.toThrow()
     await store.drainPersistence()
     expect(cache.has(SELECTED_OPTIMIZATIONS_CACHE_KEY)).toBe(false)
-    expect(asyncStorageMock.multiRemove).toHaveBeenCalledWith([SELECTED_OPTIMIZATIONS_CACHE_KEY])
+    expect(asyncStorageMock.removeMany).toHaveBeenCalledWith([SELECTED_OPTIMIZATIONS_CACHE_KEY])
   })
 
   it('translates persistence consent and falls back to accepted legacy consent', async () => {
@@ -167,12 +213,14 @@ describe('AsyncStorageStore', () => {
 
     store.persistenceConsent = true
     await store.drainPersistence()
-    expect(asyncStorageMock.multiSet).toHaveBeenCalledWith([[PERSISTENCE_CONSENT_KEY, 'accepted']])
+    expect(asyncStorageMock.setMany).toHaveBeenCalledWith({
+      [PERSISTENCE_CONSENT_KEY]: 'accepted',
+    })
     expect(store.persistenceConsent).toBe(true)
 
     store.persistenceConsent = false
     await store.drainPersistence()
-    expect(asyncStorageMock.multiSet).toHaveBeenCalledWith([[PERSISTENCE_CONSENT_KEY, 'denied']])
+    expect(asyncStorageMock.setMany).toHaveBeenCalledWith({ [PERSISTENCE_CONSENT_KEY]: 'denied' })
     expect(store.persistenceConsent).toBe(false)
 
     store.persistenceConsent = undefined
@@ -200,7 +248,7 @@ describe('AsyncStorageStore', () => {
     expect(cache.has(SELECTED_OPTIMIZATIONS_CACHE_KEY)).toBe(false)
     expect(cache.get(CONSENT_KEY)).toBe('accepted')
     expect(cache.get(PERSISTENCE_CONSENT_KEY)).toBe('accepted')
-    expect(asyncStorageMock.multiRemove).toHaveBeenCalledWith([
+    expect(asyncStorageMock.removeMany).toHaveBeenCalledWith([
       ANONYMOUS_ID_KEY,
       CHANGES_CACHE_KEY,
       PROFILE_CACHE_KEY,
@@ -208,7 +256,7 @@ describe('AsyncStorageStore', () => {
     ])
   })
 
-  it('batches profile-continuity writes through AsyncStorage.multiSet', async () => {
+  it('batches profile-continuity writes through AsyncStorage.setMany', async () => {
     const store = await getStore()
     const profile = { id: 'f0837d7dc6344c36a3a0a06c4cde754b' }
 
@@ -218,19 +266,19 @@ describe('AsyncStorageStore', () => {
       selectedOptimizations: [],
     })
 
-    expect(asyncStorageMock.multiSet).toHaveBeenCalledWith([
-      [ANONYMOUS_ID_KEY, 'f0837d7dc6344c36a3a0a06c4cde754b'],
-      [CHANGES_CACHE_KEY, '[]'],
-      [PROFILE_CACHE_KEY, JSON.stringify(profile)],
-      [SELECTED_OPTIMIZATIONS_CACHE_KEY, '[]'],
-    ])
+    expect(asyncStorageMock.setMany).toHaveBeenCalledWith({
+      [ANONYMOUS_ID_KEY]: 'f0837d7dc6344c36a3a0a06c4cde754b',
+      [CHANGES_CACHE_KEY]: '[]',
+      [PROFILE_CACHE_KEY]: JSON.stringify(profile),
+      [SELECTED_OPTIMIZATIONS_CACHE_KEY]: '[]',
+    })
   })
 
   it('serializes profile-continuity writes so later clears win', async () => {
     const store = await getStore()
     let resolveFirstWrite: (() => void) | undefined
 
-    asyncStorageMock.multiSet.mockImplementationOnce(async () => {
+    asyncStorageMock.setMany.mockImplementationOnce(async () => {
       await new Promise<void>((resolve) => {
         resolveFirstWrite = resolve
       })
@@ -245,13 +293,13 @@ describe('AsyncStorageStore', () => {
 
     await Promise.resolve()
     await Promise.resolve()
-    expect(asyncStorageMock.multiSet).toHaveBeenCalledTimes(1)
-    expect(asyncStorageMock.multiRemove).not.toHaveBeenCalled()
+    expect(asyncStorageMock.setMany).toHaveBeenCalledTimes(1)
+    expect(asyncStorageMock.removeMany).not.toHaveBeenCalled()
 
     resolveFirstWrite?.()
     await Promise.all([write, clear])
 
-    expect(asyncStorageMock.multiRemove).toHaveBeenLastCalledWith([
+    expect(asyncStorageMock.removeMany).toHaveBeenLastCalledWith([
       ANONYMOUS_ID_KEY,
       CHANGES_CACHE_KEY,
       PROFILE_CACHE_KEY,
