@@ -9,18 +9,18 @@ import org.junit.Test
 class OptimizationConfigTest {
 
     @Test
-    fun `defaults environment to main`() {
-        val config = OptimizationConfig(clientId = "test-client")
+    fun `defaults environment to master`() {
+        val config = OptimizationConfig(spaceId = "test-space")
         val json = JSONObject(config.toJSON())
 
-        assertEquals("main", config.environment)
-        assertEquals("main", json.getString("environment"))
+        assertEquals("master", config.environment)
+        assertEquals("master", json.getString("environment"))
     }
 
     @Test
     fun `serializes normalized explicit locale`() {
         val config = OptimizationConfig(
-            clientId = "test-client",
+            spaceId = "test-space",
             locale = " de_DE ",
         )
 
@@ -33,7 +33,7 @@ class OptimizationConfigTest {
     @Test
     fun `omits locale when unset`() {
         val config = OptimizationConfig(
-            clientId = "test-client",
+            spaceId = "test-space",
         )
 
         val json = JSONObject(config.toJSON())
@@ -45,7 +45,7 @@ class OptimizationConfigTest {
     @Test
     fun `serializes persistence consent default`() {
         val config = OptimizationConfig(
-            clientId = "test-client",
+            spaceId = "test-space",
             defaults = StorageDefaults(consent = true, persistenceConsent = false),
         )
 
@@ -58,7 +58,7 @@ class OptimizationConfigTest {
     @Test
     fun `serializes selected optimizations default under bridge key`() {
         val config = OptimizationConfig(
-            clientId = "test-client",
+            spaceId = "test-space",
             defaults = StorageDefaults(
                 selectedOptimizations = listOf(mapOf("experienceId" to "exp-1", "variantIndex" to 2)),
             ),
@@ -75,7 +75,7 @@ class OptimizationConfigTest {
 
     @Test
     fun `serializes bridge-only anonymous id default`() {
-        val config = OptimizationConfig(clientId = "test-client")
+        val config = OptimizationConfig(spaceId = "test-space")
 
         val defaults = JSONObject(config.toJSON(anonymousId = "anonymous-id")).getJSONObject("defaults")
 
@@ -85,7 +85,7 @@ class OptimizationConfigTest {
     @Test
     fun `serializes nested api and log level`() {
         val config = OptimizationConfig(
-            clientId = "test-client",
+            spaceId = "test-space",
             api = OptimizationApiConfig(
                 experienceBaseUrl = "http://localhost:8000/experience/",
                 insightsBaseUrl = "http://localhost:8000/insights/",
@@ -112,7 +112,7 @@ class OptimizationConfigTest {
     @Test
     fun `serializes queue policy knobs without callbacks`() {
         val config = OptimizationConfig(
-            clientId = "test-client",
+            spaceId = "test-space",
             queuePolicy = QueuePolicy(
                 flush = QueueFlushPolicy(
                     flushIntervalMs = 1000,
@@ -149,7 +149,7 @@ class OptimizationConfigTest {
     @Test
     fun `serializes allowed event types`() {
         val config = OptimizationConfig(
-            clientId = "test-client",
+            spaceId = "test-space",
             allowedEventTypes = listOf("identify", "screen", "flag"),
         )
 
@@ -164,7 +164,7 @@ class OptimizationConfigTest {
     @Test
     fun `serializes empty allowed event types`() {
         val config = OptimizationConfig(
-            clientId = "test-client",
+            spaceId = "test-space",
             allowedEventTypes = emptyList(),
         )
 

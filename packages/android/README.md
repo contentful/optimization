@@ -96,8 +96,8 @@ Compose apps usually initialize the SDK with `OptimizationRoot`, render Contentf
 val appLocale = "en-US"
 
 val optimizationConfig = OptimizationConfig(
-    clientId = "your-client-id",
-    environment = "main",
+    spaceId = "your-space-id",
+    environment = "master",
     locale = appLocale,
     logLevel = if (BuildConfig.DEBUG) OptimizationLogLevel.debug else OptimizationLogLevel.error,
 )
@@ -198,8 +198,8 @@ tracking, screen tracking, live updates, preview-panel overrides, and shared moc
 
 | Option              | Required? | Default                      | Description                                                                                       |
 | ------------------- | --------- | ---------------------------- | ------------------------------------------------------------------------------------------------- |
-| `clientId`          | Yes       | None                         | Optimization client identifier used for Experience API and Insights API calls.                    |
-| `environment`       | No        | `main`                       | Contentful environment name used by the Optimization APIs.                                        |
+| `spaceId`           | Yes       | None                         | Contentful Space identifier used for Experience and Insights API calls.                           |
+| `environment`       | No        | `master`                     | Contentful space environment identifier used for Experience and Insights API calls.               |
 | `api`               | No        | `null`                       | `OptimizationApiConfig` for endpoint overrides, enabled Experience features, and preflight.       |
 | `locale`            | No        | `null`                       | SDK Experience API and default event locale.                                                      |
 | `defaults`          | No        | `null`                       | Startup defaults for consent, persistence consent, profile, or selected variants (see below).     |
@@ -221,8 +221,8 @@ For a single-locale app, choose the application Contentful locale and pass the s
 val appLocale = "en-US"
 
 val config = OptimizationConfig(
-    clientId = "your-client-id",
-    environment = "main",
+    spaceId = "your-space-id",
+    environment = "master",
     locale = appLocale,
 )
 ```
@@ -233,8 +233,8 @@ For localized apps, derive `appLocale` from your navigation, i18n, or app config
 val appLocale = getAppLocale()
 
 val config = OptimizationConfig(
-    clientId = "your-client-id",
-    environment = "main",
+    spaceId = "your-space-id",
+    environment = "master",
     locale = appLocale,
 )
 ```
@@ -257,7 +257,7 @@ render an end-user consent UI, set `defaults = StorageDefaults(consent = true)` 
 
 ```kotlin
 val config = OptimizationConfig(
-    clientId = "your-client-id",
+    spaceId = "your-space-id",
     defaults = StorageDefaults(consent = true),
 )
 ```

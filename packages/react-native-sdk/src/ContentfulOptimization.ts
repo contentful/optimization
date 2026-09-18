@@ -168,7 +168,7 @@ export type TrackCurrentScreenPayload = ScreenViewBuilderArgs & {
  * ```tsx
  * import { OptimizationProvider } from '@contentful/optimization-react-native'
  *
- * <OptimizationProvider clientId="your-client-id" environment="main">
+ * <OptimizationProvider spaceId="your-space-id" environment="master">
  *   <App />
  * </OptimizationProvider>
  * ```
@@ -178,8 +178,8 @@ export type TrackCurrentScreenPayload = ScreenViewBuilderArgs & {
  * import { ContentfulOptimization } from '@contentful/optimization-react-native'
  *
  * const optimization = await ContentfulOptimization.initialize({
- *   clientId: 'your-client-id',
- *   environment: 'main',
+ *   spaceId: 'your-space-id',
+ *   environment: 'master',
  * })
  * ```
  *
@@ -223,8 +223,8 @@ class ContentfulOptimization extends CoreStateful {
    * @example
    * ```ts
    * const optimization = await ContentfulOptimization.initialize({
-   *   clientId: 'your-client-id',
-   *   environment: 'main',
+   *   spaceId: 'your-space-id',
+   *   environment: 'master',
    * })
    * ```
    *

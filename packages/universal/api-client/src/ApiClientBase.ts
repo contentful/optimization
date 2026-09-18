@@ -4,11 +4,11 @@ import { createScopedLogger } from './logger'
 const logger = createScopedLogger('ApiClient')
 
 /**
- * Default Contentful environment used when none is explicitly provided.
+ * Default Contentful space environment used when none is explicitly provided.
  *
  * @internal
  */
-const DEFAULT_ENVIRONMENT = 'main'
+const DEFAULT_ENVIRONMENT = 'master'
 
 /**
  * Configuration options for API clients extending `ApiClientBase`.
@@ -26,9 +26,13 @@ export interface ApiConfig {
   baseUrl?: string
 
   /**
-   * Contentful environment identifier.
+   * Contentful space environment identifier.
    *
-   * @defaultValue `'main'`
+   * @remarks
+   * Used by the Experience API v3 and Insights API v2
+   * `/environments/{environment}/` path segment.
+   *
+   * @defaultValue `'master'`
    */
   environment?: string
 
@@ -41,9 +45,9 @@ export interface ApiConfig {
   fetchOptions?: Omit<ProtectedFetchMethodOptions, 'apiName'>
 
   /**
-   * Client identifier used for authentication or tracking.
+   * Contentful Space identifier used for authentication or tracking.
    */
-  clientId: string
+  spaceId: string
 }
 
 /**
@@ -51,7 +55,7 @@ export interface ApiConfig {
  *
  * @public
  */
-export type GlobalApiConfigProperties = 'environment' | 'fetchOptions' | 'clientId'
+export type GlobalApiConfigProperties = 'environment' | 'fetchOptions' | 'spaceId'
 
 /**
  * Base class for API clients that provides shared configuration and error logging.
@@ -90,12 +94,12 @@ abstract class ApiClientBase {
   protected readonly name: string
 
   /**
-   * Client identifier used for authentication or tracking.
+   * Contentful Space identifier used for authentication or tracking.
    */
-  protected readonly clientId: string
+  protected readonly spaceId: string
 
   /**
-   * Contentful environment associated with this client.
+   * Contentful space environment associated with this client.
    */
   protected readonly environment: string
 
@@ -110,8 +114,8 @@ abstract class ApiClientBase {
    * @param name - Human-readable name of the client (used for logging and `apiName`).
    * @param config - Configuration options for the client.
    */
-  constructor(name: string, { fetchOptions, clientId, environment }: ApiConfig) {
-    this.clientId = clientId
+  constructor(name: string, { fetchOptions, spaceId, environment }: ApiConfig) {
+    this.spaceId = spaceId
     this.environment = environment ?? DEFAULT_ENVIRONMENT
     this.name = name
 

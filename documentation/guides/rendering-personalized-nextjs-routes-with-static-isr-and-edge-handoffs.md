@@ -429,9 +429,9 @@ export function BrowserOwnedHero({ hero }) {
 
   return (
     <OptimizationRoot
-      clientId={process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!}
+      spaceId={process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!}
       defaults={{ consent: events, persistenceConsent: persistence }}
-      environment={process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'main'}
+      environment={process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master'}
       hydration="client-only-hidden-until-ready"
       locale="en-US"
       routeKey="/landing"
@@ -448,7 +448,7 @@ export function BrowserOwnedHero({ hero }) {
 }
 ```
 
-`NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID` and `NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT` are reader-owned
+`NEXT_PUBLIC_CONTENTFUL_SPACE_ID` and `NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT` are reader-owned
 browser-visible environment variable names. `consent` controls whether SDK events can personalize or
 emit; `persistenceConsent` controls whether the browser can store SDK profile continuity.
 
@@ -605,7 +605,7 @@ profile. The route must export `runtime = 'edge'` and avoid Node-only APIs.
 The route can return an application-owned `Response` and still use public-permutation cache metadata
 because the selected optimizations are supplied by application code. This is the `/edge` helper
 boundary; an App Router page that imports the top-level bound React `OptimizationRoot` and returns
-React markup from `runtime = 'edge'` is outside this guide. `NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID` and
+React markup from `runtime = 'edge'` is outside this guide. `NEXT_PUBLIC_CONTENTFUL_SPACE_ID` and
 `CONTENTFUL_ENVIRONMENT` are reader-owned environment variable names in this excerpt. The latter is
 server-only; give it the same environment value as the browser binding's
 `NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT`. Keep visitor-profile, cookie, header, and other
@@ -624,8 +624,8 @@ import { configureNextjsEdgeOptimization } from '@contentful/optimization-nextjs
 export const runtime = 'edge'
 
 const { createPublicPermutationHandoff } = configureNextjsEdgeOptimization({
-  clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
-  environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'main',
+  spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
+  environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'master',
   locale: 'en-US',
 })
 
@@ -675,8 +675,8 @@ import { configureNextjsEdgeOptimization } from '@contentful/optimization-nextjs
 export const runtime = 'edge'
 
 const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
-  clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
-  environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'main',
+  spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
+  environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'master',
   locale: 'en-US',
   consent: {
     server: ({ cookies }) =>

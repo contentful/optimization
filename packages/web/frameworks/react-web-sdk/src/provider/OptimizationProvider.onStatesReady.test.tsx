@@ -29,7 +29,7 @@ import {
 } from '../test/sdkTestUtils'
 
 const testConfig = {
-  clientId: 'test-client-id',
+  spaceId: 'test-space-id',
   environment: 'main',
   api: {
     insightsBaseUrl: 'http://localhost:8000/insights/',
@@ -374,7 +374,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     const rendered = await renderClientAsync(
       <OptimizationProvider
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         environment={testConfig.environment}
         api={testConfig.api}
         handoff={handoff}
@@ -523,7 +523,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     const rendered = await renderClientAsync(
       <OptimizationRoot
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         environment={testConfig.environment}
         api={testConfig.api}
         handoff={handoff}
@@ -552,7 +552,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     await rendered.renderAsync(
       <OptimizationProvider
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         environment={testConfig.environment}
         api={testConfig.api}
         handoff={firstHandoff}
@@ -566,7 +566,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     await rendered.renderAsync(
       <OptimizationProvider
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         environment={testConfig.environment}
         api={testConfig.api}
         handoff={secondHandoff}
@@ -641,7 +641,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     const markup = renderToString(
       <OptimizationProvider
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         environment={testConfig.environment}
         api={testConfig.api}
       >
@@ -673,7 +673,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     const markup = renderToString(
       <OptimizationProvider
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         defaults={{ consent: false, persistenceConsent: false }}
         environment={testConfig.environment}
         api={testConfig.api}
@@ -706,7 +706,7 @@ describe('OptimizationProvider onStatesReady', () => {
     expect(() => {
       renderToString(
         <OptimizationProvider
-          clientId={testConfig.clientId}
+          spaceId={testConfig.spaceId}
           environment={testConfig.environment}
           api={testConfig.api}
           handoff={handoff}
@@ -736,7 +736,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     const markup = renderToString(
       <OptimizationProvider
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         environment={testConfig.environment}
         api={testConfig.api}
         handoff={handoff}
@@ -837,7 +837,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     rendered.render(
       <OptimizationProvider
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         environment={testConfig.environment}
         api={testConfig.api}
         onStatesReady={() => {
@@ -896,7 +896,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     rendered.render(
       <OptimizationProvider
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         environment={testConfig.environment}
         api={testConfig.api}
         onStatesReady={() => () => {

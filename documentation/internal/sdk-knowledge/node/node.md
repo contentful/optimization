@@ -38,8 +38,9 @@ per-visitor state between requests. Package source root: `packages/node/node-sdk
   `getConsent`, and (via `CoreStatelessConfig`) `getLocale`/`getPageProperties`/`getUserAgent`.
   source: node-sdk#ContentfulOptimization.ts#OptimizationNodeConfig; node-sdk#ContentfulOptimization.ts#PublicNodeEventBuilderConfig; core-sdk#CoreStateless.ts#CoreStatelessConfig
 - Config keys (verified):
-  - `clientId` (required, `string`), `environment` (optional; API default `'main'`).
-    source: api-client#ApiClientBase.ts#ApiConfig; api-client#ApiClientBase.ts#GlobalApiConfigProperties
+  - `spaceId` (required, `string`) and `environment` (optional; API default `'master'`; Contentful
+    space environment used by the Experience and Insights APIs).
+    source: api-client#ApiClientBase.ts#ApiConfig; api-client#ApiClientBase.ts#GlobalApiConfigProperties; api-client#ApiClientBase.ts#DEFAULT_ENVIRONMENT
   - `locale`, `logLevel` (`'fatal'|'error'|'warn'|'info'|'debug'|'log'`).
     source: core-sdk#CoreBase.ts#CoreConfig; api-client#lib/logger/logging.ts#LogLevels
   - `api.experienceBaseUrl` / `api.insightsBaseUrl` / `api.enabledFeatures` — base URLs default

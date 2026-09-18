@@ -320,7 +320,7 @@ child effects can emit SDK events.
 For Next.js App Router integrations, configure `onStatesReady` once in
 `bindNextjsAppRouterServerOptimization(...)` from
 `@contentful/optimization-nextjs/app-router/server`. The nested request root and top-level
-explicit-input root use that binding config and render without per-render `clientId`, `environment`,
+explicit-input root use that binding config and render without per-render `spaceId`, `environment`,
 or `onStatesReady` props. The binding call is not an isolation context; call it once for the
 app-local helper set. Bound Client Components use a separate
 `bindNextjsAppRouterClientOptimization(...)` binding from `/app-router/client`; router-neutral hooks
@@ -338,7 +338,7 @@ import { bindNextjsAppRouterServerOptimization } from '@contentful/optimization-
 const forwardedMessageIds = new Set<string>()
 
 export const optimization = bindNextjsAppRouterServerOptimization({
-  // ...clientId, environment, locale, consent
+  // ...spaceId, environment, locale, consent
   onStatesReady: (states) => {
     const initialMessageId = states.eventStream.current?.messageId
 

@@ -22,8 +22,8 @@ window.contentfulClient = contentful.createClient({
 })
 
 window.contentfulOptimization = new ContentfulOptimization({
-  clientId: window.ENVIRONMENT.PUBLIC_NINETAILED_CLIENT_ID,
-  environment: window.ENVIRONMENT.PUBLIC_NINETAILED_ENVIRONMENT,
+  spaceId: window.ENVIRONMENT.PUBLIC_CONTENTFUL_SPACE_ID,
+  environment: window.ENVIRONMENT.PUBLIC_CONTENTFUL_ENVIRONMENT,
   logLevel: 'debug',
   locale: 'en-US',
   app: { name: document.title, version: '0.0.0' },

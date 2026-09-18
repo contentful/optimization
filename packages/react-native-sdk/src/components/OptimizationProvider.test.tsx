@@ -268,7 +268,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     renderer = await renderWithAct(
       <OptimizationProvider
-        clientId="test-client-id"
+        spaceId="test-space-id"
         onStatesReady={(states) => {
           order.push('onStatesReady')
           return states.eventStream.subscribe((event) => {
@@ -294,7 +294,7 @@ describe('OptimizationProvider onStatesReady', () => {
     }
     const rootProps: OptimizationRootProps = {
       children: <></>,
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       onStatesReady,
     }
 
@@ -310,7 +310,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const { sdk } = createSdk()
     const providerConfigProps: OptimizationProviderProps = {
       children: <></>,
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       prefetchManagedEntries: descriptors,
     }
     const providerSdkProps: OptimizationProviderProps = {
@@ -320,7 +320,7 @@ describe('OptimizationProvider onStatesReady', () => {
     }
     const rootProps: OptimizationRootProps = {
       children: <></>,
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       prefetchManagedEntries: descriptors,
     }
 
@@ -344,7 +344,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const testRenderer = await loadTestRenderer<TestRenderer>()
     act(() => {
       renderer = testRenderer.create(
-        <OptimizationProvider clientId="test-client-id">
+        <OptimizationProvider spaceId="test-space-id">
           <Probe />
         </OptimizationProvider>,
       )
@@ -364,7 +364,7 @@ describe('OptimizationProvider onStatesReady', () => {
     initializeOptimization.mockResolvedValue(sdk)
 
     renderer = await renderWithAct(
-      <OptimizationProvider clientId="test-client-id" locale="en-US">
+      <OptimizationProvider spaceId="test-space-id" locale="en-US">
         <></>
       </OptimizationProvider>,
     )
@@ -383,13 +383,15 @@ describe('OptimizationProvider onStatesReady', () => {
     initializeOptimization.mockResolvedValue(sdk)
 
     renderer = await renderWithAct(
-      <OptimizationProvider clientId="test-client-id" prefetchManagedEntries={descriptors}>
+      <OptimizationProvider spaceId="test-space-id" prefetchManagedEntries={descriptors}>
         <></>
       </OptimizationProvider>,
     )
     await flushPromises()
 
-    expect(initializeOptimization).toHaveBeenCalledWith({ clientId: 'test-client-id' })
+    expect(initializeOptimization).toHaveBeenCalledWith({
+      spaceId: 'test-space-id',
+    })
     expect(sdk.prefetchManagedEntries).toHaveBeenCalledWith(descriptors)
   })
 
@@ -426,7 +428,7 @@ describe('OptimizationProvider onStatesReady', () => {
     }
 
     renderer = await renderWithAct(
-      <OptimizationProvider clientId="test-client-id" prefetchManagedEntries={descriptors}>
+      <OptimizationProvider spaceId="test-space-id" prefetchManagedEntries={descriptors}>
         <Probe />
       </OptimizationProvider>,
     )
@@ -446,7 +448,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     renderer = await renderWithAct(
       <OptimizationProvider
-        clientId="test-client-id"
+        spaceId="test-space-id"
         onStatesReady={() => () => {
           teardownOrder.push('cleanup')
         }}
@@ -473,7 +475,7 @@ describe('OptimizationProvider onStatesReady', () => {
     const testRenderer = await loadTestRenderer<TestRenderer>()
     act(() => {
       renderer = testRenderer.create(
-        <OptimizationProvider clientId="test-client-id" onStatesReady={onStatesReady}>
+        <OptimizationProvider spaceId="test-space-id" onStatesReady={onStatesReady}>
           <></>
         </OptimizationProvider>,
       )
@@ -507,7 +509,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
     renderer = await renderWithAct(
       <OptimizationProvider
-        clientId="test-client-id"
+        spaceId="test-space-id"
         onStatesReady={() => {
           throw error
         }}

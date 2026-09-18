@@ -5,13 +5,18 @@ import { OptimizationRoot } from '../../src'
 import { ReactRouterAutoPageTracker } from '../../src/router/react-router'
 
 import { App } from './App'
-import { CLIENT_ID, ENVIRONMENT, EXPERIENCE_BASE_URL, INSIGHTS_BASE_URL } from './constants'
+import {
+  CONTENTFUL_SPACE_ID,
+  ENVIRONMENT,
+  EXPERIENCE_BASE_URL,
+  INSIGHTS_BASE_URL,
+} from './constants'
 import './styles.css'
 
 function RootLayout(): ReactElement {
   return (
     <OptimizationRoot
-      clientId={CLIENT_ID}
+      spaceId={CONTENTFUL_SPACE_ID}
       environment={ENVIRONMENT}
       api={{
         insightsBaseUrl: INSIGHTS_BASE_URL,

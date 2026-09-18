@@ -23,6 +23,7 @@ export default defineConfig({
     entry: {
       index: './src/index.ts',
       logger: './src/logger.ts',
+      guards: './src/guards.ts',
       'api-schemas': './src/api-schemas.ts',
     },
     tsconfigPath: './tsconfig.build.json',

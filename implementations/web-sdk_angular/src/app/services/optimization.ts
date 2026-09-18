@@ -60,7 +60,7 @@ const SERVER_OPTIMIZATION_KEY: StateKey<OptimizationSnapshot> =
  * for these fields, so the mapping lives here once.
  */
 function toSdkConstructorArgs(config: NgContentfulOptimizationConfig): {
-  clientId: string
+  spaceId: string
   environment: string
   logLevel: 'debug' | 'warn' | 'error'
   locale: string
@@ -68,7 +68,7 @@ function toSdkConstructorArgs(config: NgContentfulOptimizationConfig): {
   api: { insightsBaseUrl: string; experienceBaseUrl: string }
 } {
   return {
-    clientId: config.clientId,
+    spaceId: config.spaceId,
     environment: config.environment,
     logLevel: resolveLogLevel(config.logLevel),
     locale: config.locale,

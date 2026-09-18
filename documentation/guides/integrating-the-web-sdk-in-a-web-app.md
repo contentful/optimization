@@ -103,13 +103,13 @@ step before you ship.
 
    const contentfulClient = contentful.createClient({
      accessToken: 'your-contentful-delivery-token',
-     environment: 'main',
+     environment: 'master',
      space: 'your-space-id',
    })
 
    const optimization = new ContentfulOptimization({
-     clientId: 'your-optimization-client-id',
-     environment: 'main',
+     spaceId: 'your-space-id',
+     environment: 'master',
      locale: APP_LOCALE,
      // consent: allowed to personalize and send events for this visitor.
      // Use default-on consent only when application policy permits it.
@@ -190,7 +190,7 @@ outside this guide:
   an authored variant, the integration can still run correctly while returning the baseline, so you
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
-- **Your Optimization project values** — client ID and environment, from your Optimization project
+- **Your Contentful space values** — space ID and environment, from your Contentful space
   settings. Find them in the Contentful web app under **Apps → Installed apps → Contentful
   Personalization → SDK keys**.
 
@@ -224,7 +224,7 @@ policy, identity policy, and cache policy.
 
 The config you pass to `new ContentfulOptimization(...)` breaks down like this:
 
-1. `clientId` and `environment` identify your Optimization project. Read them from browser-safe
+1. `spaceId` and `environment` identify your Contentful space and environment. Read them from browser-safe
    config.
 2. `locale` is the one locale the SDK uses for Experience and event context. Use the same locale you
    pass to Contentful.
@@ -260,14 +260,14 @@ const APP_LOCALE = 'en-US'
 
 export const contentfulClient = contentful.createClient({
   accessToken: 'your-contentful-delivery-token',
-  environment: 'main',
+  environment: 'master',
   space: 'your-space-id',
 })
 
 // Reuse this singleton across route, render, and tracking handlers.
 export const optimization = new ContentfulOptimization({
-  clientId: 'your-optimization-client-id',
-  environment: 'main',
+  spaceId: 'your-space-id',
+  environment: 'master',
   locale: APP_LOCALE,
   app: { name: 'my-web-app', version: '1.0.0' },
   // Set these only for mocks or non-default hosts; both default correctly otherwise.
@@ -312,7 +312,7 @@ why the quick start awaits `page()` before calling `resolveOptimizedEntry()`.
 
 ```ts
 // 1. The instance is usable immediately after construction.
-const optimization = new ContentfulOptimization({ clientId, environment, locale })
+const optimization = new ContentfulOptimization({ spaceId, environment, locale })
 
 // 2. Emit an accepted event so SDK state has selections. `{ accepted: false }` means a guard blocked it.
 const { accepted } = await optimization.page()
@@ -363,7 +363,7 @@ const INCLUDE_DEPTH = 10
 
 const contentfulClient = contentful.createClient({
   accessToken: 'your-contentful-delivery-token',
-  environment: 'main',
+  environment: 'master',
   space: 'your-space-id',
 })
 
@@ -409,12 +409,12 @@ import ContentfulOptimization from '@contentful/optimization-web'
 
 const contentfulClient = contentful.createClient({
   accessToken: 'your-contentful-delivery-token',
-  environment: 'main',
+  environment: 'master',
   space: 'your-space-id',
 })
 
 const optimization = new ContentfulOptimization({
-  clientId: 'your-optimization-client-id',
+  spaceId: 'your-space-id',
   locale: 'en-US',
   // Hand the SDK your client; slug lookup calls getEntries() through it. The client stays yours.
   contentful: { client: contentfulClient },
@@ -665,7 +665,7 @@ event consent is `undefined` or `false`, the SDK's default allow-list permits on
 
 ```ts
 const optimization = new ContentfulOptimization({
-  clientId: 'your-optimization-client-id',
+  spaceId: 'your-space-id',
   // Starts event emission and durable profile continuity immediately.
   defaults: { consent: true },
 })
@@ -675,7 +675,7 @@ const optimization = new ContentfulOptimization({
 
 ```ts
 const optimization = new ContentfulOptimization({
-  clientId: 'your-optimization-client-id',
+  spaceId: 'your-space-id',
   // Replaces the default pre-consent allow-list of identify and page.
   allowedEventTypes: [],
 })
@@ -805,7 +805,7 @@ again, an element that is still visible starts a fresh view interaction session 
 
 ```ts
 const optimization = new ContentfulOptimization({
-  clientId: 'your-optimization-client-id',
+  spaceId: 'your-space-id',
   // Opt out of interactions your consent and analytics policy does not permit.
   autoTrackEntryInteraction: { hovers: false },
 })
@@ -890,7 +890,7 @@ side-effect-free until you register the elements.
    SDK from its attributes and assigned properties, reuses an existing
    `window.contentfulOptimization` instance automatically if one is already present, and lets you
    pass an explicit instance by assigning its `sdk` property.
-3. Pass simple config as **attributes** (`client-id`, `environment`, `locale`, `live-updates`), and
+3. Pass simple config as **attributes** (`space-id`, `environment`, `locale`, `live-updates`), and
    structured config as **DOM properties** (`defaults`, `api`, `trackEntryInteraction`, `sdk`,
    `onStatesReady`) — attributes are strings, so objects must be assigned as properties.
 4. Give each `<ctfl-optimized-entry>` its entry one of three ways:
@@ -904,7 +904,7 @@ side-effect-free until you register the elements.
      a Contentful client
      (`contentful: { client }`), so use a reused `window.contentfulOptimization` or an assigned
      `sdk` that was configured that way; a root that builds its SDK from
-     `client-id`/`environment`/`locale` alone has no client to fetch through.
+     `space-id`/`environment`/`locale` alone has no client to fetch through.
 
    Per-entry tracking overrides use the `track-views`, `track-clicks`, `track-hovers`, and
    `live-updates` attributes either way.
@@ -992,7 +992,7 @@ app-owned selector for the render host. `data-entry-id` is the app's own attribu
 it to decide what to fetch.
 
 ```html
-<ctfl-optimization-root client-id="your-optimization-client-id" environment="main" locale="en-US">
+<ctfl-optimization-root space-id="your-space-id" environment="master" locale="en-US">
   <ctfl-optimized-entry id="hero-entry" hidden data-entry-id="4ib0hsHWoSOnCVdDkizE8d">
     <article>Baseline content rendered by your app</article>
   </ctfl-optimized-entry>
@@ -1248,7 +1248,7 @@ Configure these only after your privacy, analytics, and platform owners agree on
 
 ```ts
 const optimization = new ContentfulOptimization({
-  clientId: 'your-optimization-client-id',
+  spaceId: 'your-space-id',
   allowedEventTypes: [], // block all Optimization events until consent is accepted
   cookie: { domain: '.example.com', expires: 180 },
   queuePolicy: { offlineMaxEvents: 100 },
@@ -1263,8 +1263,8 @@ state still qualifies after consent, the SDK can emit a fresh current-state even
 
 Before release, verify these behaviors in the target deployment:
 
-- **Credentials and runtime configuration** — the browser receives the intended Optimization client
-  id, environment, Contentful space/environment/host, API base URLs, app metadata, and locale; no
+- **Credentials and runtime configuration** — the browser receives the intended Contentful space ID,
+  environment and host, API base URLs, app metadata, and locale; no
   Management API token is exposed to the browser.
 - **Consent behavior** — default-on integrations set `defaults: { consent: true }` only when policy
   permits; CMP-driven integrations keep consent unset until a choice exists, use

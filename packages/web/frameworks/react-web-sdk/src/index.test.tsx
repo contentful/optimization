@@ -43,7 +43,7 @@ import {
 } from './test/sdkTestUtils'
 
 const testConfig = {
-  clientId: 'test-client-id',
+  spaceId: 'test-space-id',
   environment: 'main',
   api: {
     insightsBaseUrl: 'http://localhost:8000/insights/',
@@ -199,7 +199,7 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     const rendered = renderClient(
       <OptimizationProvider
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         environment={testConfig.environment}
         api={testConfig.api}
         locale="de-DE"
@@ -219,7 +219,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     capturedOptimization = undefined
     const withoutLocale = renderClient(
       <OptimizationProvider
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         environment={testConfig.environment}
         api={testConfig.api}
       >
@@ -243,7 +243,7 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     const markup = renderToString(
       <OptimizationProvider
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         environment={testConfig.environment}
         api={testConfig.api}
       >
@@ -269,7 +269,7 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     const rendered = renderClient(
       <OptimizationRoot
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         environment={testConfig.environment}
         api={testConfig.api}
         liveUpdates={true}
@@ -301,7 +301,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(capturedError.message).toContain(
       'useOptimization must be used within an OptimizationProvider',
     )
-    expect(capturedError.message).toContain('<OptimizationRoot clientId="your-client-id">')
+    expect(capturedError.message).toContain('<OptimizationRoot spaceId="your-space-id">')
   })
 
   it('returns provider initialization state from useOptimizationContext when the sdk is unavailable', () => {
@@ -565,7 +565,7 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     const rendered = renderClient(
       <OptimizationRoot
-        clientId={testConfig.clientId}
+        spaceId={testConfig.spaceId}
         environment={testConfig.environment}
         api={testConfig.api}
       >
@@ -608,7 +608,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     function FirstScenario(): ReactElement {
       return (
         <OptimizationRoot
-          clientId={`${testConfig.clientId}-1`}
+          spaceId={`${testConfig.spaceId}-1`}
           environment={testConfig.environment}
           api={testConfig.api}
           liveUpdates={true}
@@ -622,7 +622,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     function SecondScenario(): ReactElement {
       return (
         <OptimizationRoot
-          clientId={`${testConfig.clientId}-2`}
+          spaceId={`${testConfig.spaceId}-2`}
           environment={testConfig.environment}
           api={testConfig.api}
           liveUpdates={false}
@@ -646,7 +646,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     act(() => {
       root.render(
         <OptimizationProvider
-          clientId={testConfig.clientId}
+          spaceId={testConfig.spaceId}
           environment={testConfig.environment}
           api={testConfig.api}
         >
@@ -668,7 +668,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     act(() => {
       remountRoot.render(
         <OptimizationProvider
-          clientId={testConfig.clientId}
+          spaceId={testConfig.spaceId}
           environment={testConfig.environment}
           api={testConfig.api}
         >
@@ -690,7 +690,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     const rendered = renderClient(
       <StrictMode>
         <OptimizationProvider
-          clientId={testConfig.clientId}
+          spaceId={testConfig.spaceId}
           environment={testConfig.environment}
           api={testConfig.api}
         >

@@ -68,7 +68,7 @@ type BridgeQueuePolicy = Omit<CoreQueuePolicy, 'flush' | 'onOfflineDrop'> & {
 }
 
 interface BridgeConfig {
-  clientId: string
+  spaceId: string
   environment: string
   api?: {
     experienceBaseUrl?: CoreApiConfig['experienceBaseUrl']
@@ -373,7 +373,7 @@ const bridge: Bridge = {
     const { defaults } = resolveStatefulDefaults(config.defaults)
 
     const coreConfig: CoreStatefulConfig = {
-      clientId: config.clientId,
+      spaceId: config.spaceId,
       environment: config.environment,
       locale: config.locale,
       logLevel: config.logLevel,

@@ -22,7 +22,7 @@ export const {
   createPublicPermutationHandoff,
   resolveEntriesForSelections,
 } = bindNextjsPagesRouterOptimization({
-  clientId: appConfig.clientId,
+  spaceId: appConfig.spaceId,
   environment: appConfig.environment,
   locale: appConfig.locale,
   logLevel: 'debug',

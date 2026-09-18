@@ -341,7 +341,7 @@ export function acceptPagesRouterProviderProps(
 }
 
 const clientBindingConfig = {
-  clientId: 'test-client-id',
+  spaceId: 'test-space-id',
   environment: 'main',
 } as const
 

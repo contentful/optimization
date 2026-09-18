@@ -222,7 +222,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       environment: 'main',
       locale: ' de_DE ',
     })
@@ -239,7 +239,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       environment: 'main',
     })
     optimization = created
@@ -252,7 +252,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       environment: 'main',
       locale: 'en-US',
     })
@@ -269,7 +269,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       environment: 'main',
     })
     optimization = created
@@ -281,7 +281,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       environment: 'main',
       defaults: {
         profile: DEFAULT_PROFILE,
@@ -308,7 +308,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       environment: 'main',
     })
     optimization = created
@@ -344,7 +344,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       environment: 'main',
     })
     optimization = created
@@ -367,7 +367,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       environment: 'main',
       defaults: {
         consent: true,
@@ -400,7 +400,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       environment: 'main',
       defaults: {
         changes: [],
@@ -447,7 +447,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       environment: 'main',
     })
     optimization = created
@@ -470,7 +470,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       environment: 'main',
       defaults: { consent: true },
     })
@@ -513,7 +513,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.initialize({
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       environment: 'main',
       defaults: { consent: true },
     })
@@ -543,7 +543,7 @@ describe('ContentfulOptimization locale resolution', () => {
     const store = await getAsyncStorageStore()
 
     const created = await ContentfulOptimization.initialize({
-      clientId: 'test-client-id',
+      spaceId: 'test-space-id',
       environment: 'main',
       defaults: { consent: true },
     })

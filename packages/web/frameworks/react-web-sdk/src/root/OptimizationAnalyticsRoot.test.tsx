@@ -9,7 +9,7 @@ import { captureRenderError } from '../test/sdkTestUtils'
 import { OptimizationAnalyticsRoot } from './OptimizationAnalyticsRoot'
 
 const testConfig = {
-  clientId: 'test-client-id',
+  spaceId: 'test-space-id',
   environment: 'main',
   api: {
     insightsBaseUrl: 'http://localhost:8000/insights/',

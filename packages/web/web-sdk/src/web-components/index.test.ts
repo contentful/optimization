@@ -928,8 +928,7 @@ describe('Contentful Optimization Web Components', () => {
       )
     })
 
-    root.clientId = 'client-id'
-    root.environment = 'main'
+    root.spaceId = 'space-id'
     root.contentful = { client: { getEntry, getEntries }, cache: false }
     entry.entryId = '4ib0hsHWoSOnCVdDkizE8d'
     root.append(entry)

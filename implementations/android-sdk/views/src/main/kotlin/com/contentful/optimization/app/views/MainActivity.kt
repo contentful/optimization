@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
         OptimizationManager.initialize(
             context = this,
             config = OptimizationConfig(
-                clientId = AppConfig.clientId,
+                spaceId = AppConfig.spaceId,
                 environment = AppConfig.environment,
                 api = OptimizationApiConfig(
                     experienceBaseUrl = AppConfig.experienceBaseUrl,

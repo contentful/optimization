@@ -71,8 +71,8 @@ import { contentfulClient } from './contentful'
 import { getAppConsent } from './consent'
 
 export const optimization = bindNextjsAppRouterServerOptimization({
-  clientId: 'client-id',
-  environment: 'main',
+  spaceId: 'space-id',
+  environment: 'master',
   locale: 'en-US',
   contentful: { client: contentfulClient },
   consent: {
@@ -187,8 +187,8 @@ manual server handoff API:
 import { bindNextjsAppRouterClientOptimization } from '@contentful/optimization-nextjs/app-router/client'
 
 export const clientOptimization = bindNextjsAppRouterClientOptimization({
-  clientId: 'client-id',
-  environment: 'main',
+  spaceId: 'space-id',
+  environment: 'master',
   locale: 'en-US',
   consent: {
     clientDefaults: { consent: false, persistenceConsent: false },
@@ -287,8 +287,8 @@ import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-next
 
 export const { OptimizationRoot, OptimizationAnalyticsRoot, OptimizedEntry } =
   bindNextjsPagesRouterOptimization({
-    clientId: 'client-id',
-    environment: 'main',
+    spaceId: 'space-id',
+    environment: 'master',
     consent: {
       clientDefaults: { consent: false, persistenceConsent: false },
     },
@@ -321,9 +321,9 @@ import { bindNextjsPagesRouterServerOptimization } from '@contentful/optimizatio
 import { contentfulClient } from './contentful'
 
 const { createRequestHandoff } = bindNextjsPagesRouterServerOptimization({
-  clientId: 'client-id',
+  spaceId: 'space-id',
   contentful: { client: contentfulClient },
-  environment: 'main',
+  environment: 'master',
   consent: {
     server: { events: true, persistence: true },
   },
@@ -361,8 +361,8 @@ route:
 import { bindNextjsAppRouterClientOptimization } from '@contentful/optimization-nextjs/app-router/client'
 
 export const clientOptimization = bindNextjsAppRouterClientOptimization({
-  clientId: 'client-id',
-  environment: 'main',
+  spaceId: 'space-id',
+  environment: 'master',
   beforeInitialPage: {
     run: async ({ identify }) => {
       await identify({ userId: visitor.id })
@@ -422,8 +422,8 @@ The Pages Router client binder uses the same option in its client-only module:
 import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router'
 
 export const optimization = bindNextjsPagesRouterOptimization({
-  clientId: 'client-id',
-  environment: 'main',
+  spaceId: 'space-id',
+  environment: 'master',
   beforeInitialPage: {
     run: ({ identify }) => identify({ userId: visitor.id }),
   },
@@ -494,8 +494,8 @@ Node-only APIs.
 import { configureNextjsEdgeOptimization } from '@contentful/optimization-nextjs/edge'
 
 const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
-  clientId: 'client-id',
-  environment: 'main',
+  spaceId: 'space-id',
+  environment: 'master',
   consent: {
     server: { events: true, persistence: true },
     clientDefaults: { consent: false, persistenceConsent: false },

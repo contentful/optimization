@@ -17,7 +17,7 @@ type CoreStatelessRequest = serverExports.CoreStatelessRequest
 type OptimizationData = serverExports.OptimizationData
 
 const sdkConfig = {
-  clientId: 'test-client-id',
+  spaceId: 'test-space-id',
   environment: 'main',
 }
 

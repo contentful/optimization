@@ -4,7 +4,7 @@ import { batch, signals } from './signals'
 import { profile as profileFixture } from './test/fixtures/profile'
 
 const config: CoreStatefulConfig = {
-  clientId: 'key_123',
+  spaceId: 'key_123',
   environment: 'main',
 }
 

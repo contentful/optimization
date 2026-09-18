@@ -97,7 +97,7 @@ before you ship, which explains the two axes and the object form that sets them 
 
    const contentfulClient = createClient({
      accessToken: 'your-contentful-delivery-token',
-     environment: 'main',
+     environment: 'master',
      space: 'your-space-id',
    })
 
@@ -117,8 +117,8 @@ before you ship, which explains the two axes and the object form that sets them 
      // Use default accepted consent only when your application policy permits it.
      return (
        <OptimizationRoot
-         clientId="your-optimization-client-id"
-         environment="main"
+         spaceId="your-space-id"
+         environment="master"
          locale={APP_LOCALE}
          contentful={{
            client: contentfulClient,
@@ -200,7 +200,7 @@ outside this guide:
   an authored variant, the integration can still run correctly while returning the baseline, so you
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
-- **Your Optimization project values** — client ID and environment, from your Optimization project
+- **Your Contentful space values** — space ID and environment, from your Contentful space
   settings. Find them in the Contentful web app under **Apps → Installed apps → Contentful
   Personalization → SDK keys**.
 
@@ -233,8 +233,8 @@ provider children. It also composes live-update and interaction-tracking context
 components.
 
 1. Mount one `OptimizationRoot` around all components that call React Native SDK hooks.
-2. Pass `clientId` from runtime configuration. Pass `environment` only when you do not use the
-   default Contentful environment; when you omit it the SDK uses `main`.
+2. Pass `spaceId` from runtime configuration. Pass `environment` only when you do not use the
+   default Contentful environment; when you omit it the SDK uses `master`.
 3. Pass `locale` when Experience API responses and event context must use the same app locale as
    your Contentful entry fetches.
 4. Pass `api` endpoint overrides only for staging, mocks, or non-default production hosts. Both base
@@ -252,8 +252,8 @@ export function AppRoot({ children }: { children: ReactNode }) {
   // Override API hosts only for staging, mocks, or non-default production hosts.
   return (
     <OptimizationRoot
-      clientId="your-optimization-client-id"
-      environment="main"
+      spaceId="your-space-id"
+      environment="master"
       locale="en-US"
       api={{
         // Set these only for staging, mocks, or non-default hosts; both default correctly otherwise.
@@ -303,7 +303,7 @@ accepted.
 
 ```tsx
 // Use this only when policy allows Optimization to start accepted.
-<OptimizationRoot clientId="your-optimization-client-id" defaults={{ consent: true }}>
+<OptimizationRoot spaceId="your-space-id" defaults={{ consent: true }}>
   <YourApp />
 </OptimizationRoot>
 ```
@@ -381,7 +381,7 @@ direct values, not locale-keyed maps.
 const APP_LOCALE = 'en-US'
 
 <OptimizationRoot
-  clientId="your-optimization-client-id"
+  spaceId="your-space-id"
   locale={APP_LOCALE}
   contentful={{
     client: contentfulClient,
@@ -700,7 +700,7 @@ enabled by default on `OptimizedEntry`.
 **Adapt this to your use case:**
 
 ```tsx
-<OptimizationRoot clientId="your-optimization-client-id" defaults={{ consent: true }}>
+<OptimizationRoot spaceId="your-space-id" defaults={{ consent: true }}>
   {/* Scroll context lets view tracking use the actual scroll viewport. */}
   <OptimizationScrollProvider>
     <OptimizedEntry
@@ -863,7 +863,7 @@ the entry.
 **Adapt this to your use case:**
 
 ```tsx
-<OptimizationRoot clientId="your-optimization-client-id" liveUpdates>
+<OptimizationRoot spaceId="your-space-id" liveUpdates>
   {/* Per-entry false keeps this section locked even when root live updates are enabled. */}
   <OptimizedEntry baselineEntry={dashboardEntry} liveUpdates={false}>
     {(resolvedEntry) => <Dashboard entry={resolvedEntry} />}
@@ -905,7 +905,7 @@ import { createClient } from 'contentful'
 
 const contentfulClient = createClient({
   accessToken: 'your-contentful-delivery-token',
-  environment: 'main',
+  environment: 'master',
   space: 'your-space-id',
 })
 
@@ -931,7 +931,7 @@ function AppContent() {
 
 export function App() {
   return (
-    <OptimizationRoot clientId="your-optimization-client-id">
+    <OptimizationRoot spaceId="your-space-id">
       <AppContent />
     </OptimizationRoot>
   )
@@ -994,7 +994,7 @@ Contentful. Your application decides which approved Contentful context can also 
 const forwardedMessageIds = new Set<string>()
 
 <OptimizationRoot
-  clientId="your-optimization-client-id"
+  spaceId="your-space-id"
   onStatesReady={(states) => {
     // Register before child effects emit screen, entry, or flag events.
     const initialMessageId = states.eventStream.current?.messageId
@@ -1054,8 +1054,8 @@ existing instance.` while a live instance exists.
 import { ContentfulOptimization, OptimizationProvider } from '@contentful/optimization-react-native'
 
 const sdk = await ContentfulOptimization.initialize({
-  clientId: 'your-optimization-client-id',
-  environment: 'main',
+  spaceId: 'your-space-id',
+  environment: 'master',
   locale: 'en-US',
 })
 // The owner that creates an injected SDK must call sdk.destroy() during teardown.
@@ -1095,7 +1095,7 @@ behavior beyond the default React Native settings.
 ```tsx
 // Empty allow-list means no event emits before explicit consent.
 <OptimizationRoot
-  clientId="your-optimization-client-id"
+  spaceId="your-space-id"
   allowedEventTypes={[]}
   onEventBlocked={(blocked) => {
     // blocked is { reason, method, args }: the blocked method name and its original arguments.
@@ -1140,8 +1140,8 @@ React Native platform setup determines which optional SDK behavior is available 
 
 Before release, verify these checks in the app build and environment that will ship:
 
-- **Credentials and runtime configuration** - The app uses the intended Optimization `clientId`,
-  Optimization environment, API hosts, Contentful space, Contentful environment, CDA token, and app
+- **Credentials and runtime configuration** - The app uses the intended Contentful `spaceId`,
+  Contentful environment, API hosts, Contentful space, Contentful environment, CDA token, and app
   locale. Android emulator-only localhost rewrites are not present in production configuration.
 - **Consent behavior** - Default accepted consent is used only when policy permits it. User-choice
   flows call `consent(true | false)`, object-form consent matches the persistence policy, and

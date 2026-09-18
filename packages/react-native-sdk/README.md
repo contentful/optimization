@@ -76,7 +76,7 @@ import { OptimizationRoot } from '@contentful/optimization-react-native'
 
 export default function App() {
   return (
-    <OptimizationRoot clientId="your-client-id" environment="main" locale="en-US">
+    <OptimizationRoot spaceId="your-space-id" environment="master" locale="en-US">
       <YourApp />
     </OptimizationRoot>
   )
@@ -89,8 +89,8 @@ For non-component ownership paths, initialize the SDK explicitly and call method
 import { ContentfulOptimization } from '@contentful/optimization-react-native'
 
 const optimization = await ContentfulOptimization.initialize({
-  clientId: 'your-client-id',
-  environment: 'main',
+  spaceId: 'your-space-id',
+  environment: 'master',
   locale: 'en-US',
 })
 ```
@@ -105,12 +105,12 @@ that need platform-native integration surfaces.
 ## Common configuration
 
 `OptimizationRoot` accepts Core stateful configuration directly, plus React Native-specific props.
-Only `clientId` is required.
+Only `spaceId` is required.
 
 | Option                   | Required? | Default                       | Description                                                                       |
 | ------------------------ | --------- | ----------------------------- | --------------------------------------------------------------------------------- |
-| `clientId`               | Yes       | N/A                           | Shared API key for Experience API and Insights API requests                       |
-| `environment`            | No        | `'main'`                      | Contentful environment identifier                                                 |
+| `spaceId`                | Yes       | N/A                           | Contentful Space identifier for Experience and Insights API requests              |
+| `environment`            | No        | `'master'`                    | Contentful environment identifier for Experience and Insights API requests        |
 | `api`                    | No        | See API options below         | Experience API and Insights API endpoint and request options                      |
 | `locale`                 | No        | `undefined`                   | SDK Experience API and default event locale                                       |
 | `contentful`             | No        | `undefined`                   | App-provided `contentful.js` client for SDK-managed entry fetching                |
@@ -180,7 +180,7 @@ Consent policy remains application-owned. For default-on application policies th
 end-user consent prompt, set `defaults: { consent: true }` on `OptimizationRoot`:
 
 ```tsx
-<OptimizationRoot clientId="your-client-id" defaults={{ consent: true }}>
+<OptimizationRoot spaceId="your-space-id" defaults={{ consent: true }}>
   <YourApp />
 </OptimizationRoot>
 ```
@@ -246,7 +246,7 @@ entry cache after the React Native SDK is ready:
 
 ```tsx
 <OptimizationRoot
-  clientId="your-client-id"
+  spaceId="your-space-id"
   contentful={{ client }}
   prefetchManagedEntries={[
     '4ib0hsHWoSOnCVdDkizE8d',
@@ -323,7 +323,7 @@ defaults live on `OptimizationRoot` and observe both views and taps by default. 
 `OptimizedEntry` components can override them:
 
 ```tsx
-<OptimizationRoot clientId="your-client-id" trackEntryInteraction={{ taps: false }}>
+<OptimizationRoot spaceId="your-space-id" trackEntryInteraction={{ taps: false }}>
   <OptimizedEntry baselineEntry={entry} trackTaps={true}>
     {(resolvedEntry) => <Card entry={resolvedEntry} />}
   </OptimizedEntry>
@@ -356,7 +356,7 @@ navigation, or entry effects can emit events.
 
 ```tsx
 <OptimizationRoot
-  clientId="your-client-id"
+  spaceId="your-space-id"
   onStatesReady={(states) => {
     const subscriptions = [
       states.eventStream.subscribe((event) => {
@@ -391,7 +391,7 @@ call `destroy()` on the injected SDK.
 preview panel always forces live updates on while it is open.
 
 ```tsx
-<OptimizationRoot clientId="your-client-id" liveUpdates={true}>
+<OptimizationRoot spaceId="your-space-id" liveUpdates={true}>
   <OptimizedEntry baselineEntry={entry} liveUpdates={false}>
     {(resolvedEntry) => <Card entry={resolvedEntry} />}
   </OptimizedEntry>
@@ -402,7 +402,7 @@ Enable the preview panel only in authoring or development flows and provide a Co
 
 ```tsx
 import { PreviewPanelOverlay } from '@contentful/optimization-react-native/preview'
-;<OptimizationRoot clientId="your-client-id">
+;<OptimizationRoot spaceId="your-space-id">
   <YourApp />
   {__DEV__ && <PreviewPanelOverlay contentfulClient={contentfulClient} />}
 </OptimizationRoot>

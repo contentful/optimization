@@ -71,7 +71,7 @@ import { OptimizationRoot } from '@contentful/optimization-react-web'
 
 function App() {
   return (
-    <OptimizationRoot clientId="your-client-id" environment="main">
+    <OptimizationRoot spaceId="your-space-id" environment="master">
       <YourApp />
     </OptimizationRoot>
   )
@@ -82,7 +82,7 @@ For a single-locale app that fetches Contentful entries, pass the application lo
 Experience API responses and events need to use the same language:
 
 ```tsx
-<OptimizationRoot clientId="your-client-id" environment="main" locale="en-US">
+<OptimizationRoot spaceId="your-space-id" environment="master" locale="en-US">
   <YourApp />
 </OptimizationRoot>
 ```
@@ -100,27 +100,27 @@ or custom framework adapters.
 such as `liveUpdates`, `onStatesReady`, `handoff`, and `hydration`. The Web SDK
 `autoTrackEntryInteraction` option is exposed as the React `trackEntryInteraction` prop.
 
-| Prop                     | Required? | Default                                       | Description                                                         |
-| ------------------------ | --------- | --------------------------------------------- | ------------------------------------------------------------------- |
-| `clientId`               | Yes       | N/A                                           | Shared API key for Experience API and Insights API requests         |
-| `environment`            | No        | `'main'`                                      | Contentful environment identifier                                   |
-| `api`                    | No        | Web SDK defaults                              | Experience API and Insights API endpoint and request options        |
-| `app`                    | No        | `undefined`                                   | Application metadata attached to outgoing event context             |
-| `contentful`             | No        | `undefined`                                   | App-owned `contentful.js` client, default query, and cache          |
-| `locale`                 | No        | `undefined`                                   | SDK Experience API and default event locale                         |
-| `defaults`               | No        | `undefined`                                   | Configuration/default state such as consent or persistence consent  |
-| `handoff`                | No        | `undefined`                                   | Server, static, or edge Optimization handoff to hydrate             |
-| `hydration`              | No        | `handoff?.hydration`                          | Content hydration presentation mode for optimized entries           |
-| `prefetchManagedEntries` | No        | `undefined`                                   | Managed entry descriptors to warm after the live SDK is ready       |
-| `allowedEventTypes`      | No        | `['identify', 'page']`                        | Event types allowed before consent is explicitly set                |
-| `trackEntryInteraction`  | No        | `{ views: true, clicks: true, hovers: true }` | Automatic entry interaction tracking for `OptimizedEntry` elements  |
-| `cookie`                 | No        | `{ domain: undefined, expires: 365 }`         | Anonymous ID cookie settings inherited from the Web SDK             |
-| `beforeInitialPage`      | No        | `undefined`                                   | Owned-root callback that completes before the initial page decision |
-| `liveUpdates`            | No        | `false`                                       | Whether `OptimizedEntry` components react continuously to SDK state |
-| `onStatesReady`          | No        | `undefined`                                   | Provider-managed app-level state subscription hook                  |
-| `queuePolicy`            | No        | SDK defaults                                  | Flush retry behavior and offline queue bounds                       |
-| `logLevel`               | No        | `'error'`                                     | Minimum log level for the default console sink                      |
-| `onEventBlocked`         | No        | `undefined`                                   | Callback invoked when consent or guard logic blocks an event        |
+| Prop                     | Required? | Default                                       | Description                                                                |
+| ------------------------ | --------- | --------------------------------------------- | -------------------------------------------------------------------------- |
+| `spaceId`                | Yes       | N/A                                           | Contentful Space identifier used for Experience and Insights API requests  |
+| `environment`            | No        | `'master'`                                    | Contentful environment identifier for Experience and Insights API requests |
+| `api`                    | No        | Web SDK defaults                              | Experience API and Insights API endpoint and request options               |
+| `app`                    | No        | `undefined`                                   | Application metadata attached to outgoing event context                    |
+| `contentful`             | No        | `undefined`                                   | App-owned `contentful.js` client, default query, and cache                 |
+| `locale`                 | No        | `undefined`                                   | SDK Experience API and default event locale                                |
+| `defaults`               | No        | `undefined`                                   | Configuration/default state such as consent or persistence consent         |
+| `handoff`                | No        | `undefined`                                   | Server, static, or edge Optimization handoff to hydrate                    |
+| `hydration`              | No        | `handoff?.hydration`                          | Content hydration presentation mode for optimized entries                  |
+| `prefetchManagedEntries` | No        | `undefined`                                   | Managed entry descriptors to warm after the live SDK is ready              |
+| `allowedEventTypes`      | No        | `['identify', 'page']`                        | Event types allowed before consent is explicitly set                       |
+| `trackEntryInteraction`  | No        | `{ views: true, clicks: true, hovers: true }` | Automatic entry interaction tracking for `OptimizedEntry` elements         |
+| `cookie`                 | No        | `{ domain: undefined, expires: 365 }`         | Anonymous ID cookie settings inherited from the Web SDK                    |
+| `beforeInitialPage`      | No        | `undefined`                                   | Owned-root callback that completes before the initial page decision        |
+| `liveUpdates`            | No        | `false`                                       | Whether `OptimizedEntry` components react continuously to SDK state        |
+| `onStatesReady`          | No        | `undefined`                                   | Provider-managed app-level state subscription hook                         |
+| `queuePolicy`            | No        | SDK defaults                                  | Flush retry behavior and offline queue bounds                              |
+| `logLevel`               | No        | `'error'`                                     | Minimum log level for the default console sink                             |
+| `onEventBlocked`         | No        | `undefined`                                   | Callback invoked when consent or guard logic blocks an event               |
 
 Use `OptimizationProvider` directly when an application or framework adapter needs direct provider
 control, including integrations that supply an SDK instance. Use it instead of `OptimizationRoot`,
@@ -145,9 +145,9 @@ configuration or default state such as consent policy:
 
 ```tsx
 <OptimizationRoot
-  clientId="your-client-id"
+  spaceId="your-space-id"
   defaults={{ consent: true }}
-  environment="main"
+  environment="master"
   handoff={handoff}
 >
   <YourApp />
@@ -178,7 +178,7 @@ Consent policy remains application-owned. For default-on application policies th
 end-user consent UI, seed accepted consent on `OptimizationRoot`:
 
 ```tsx
-<OptimizationRoot clientId="your-client-id" defaults={{ consent: true }}>
+<OptimizationRoot spaceId="your-space-id" defaults={{ consent: true }}>
   <YourApp />
 </OptimizationRoot>
 ```
@@ -314,7 +314,7 @@ subscribes.
 
 ```tsx
 <OptimizationRoot
-  clientId="your-client-id"
+  spaceId="your-space-id"
   onStatesReady={(states) => {
     const subscriptions = [
       states.eventStream.subscribe((event) => {
@@ -350,8 +350,8 @@ SDK receiver:
 
 ```tsx
 <OptimizationRoot
-  clientId="your-client-id"
-  environment="main"
+  spaceId="your-space-id"
+  environment="master"
   routeKey={routeKey}
   buildPagePayload={() => ({ properties: { route: routeKey } })}
   beforeInitialPage={{
@@ -410,8 +410,8 @@ import { OptimizationAnalyticsRoot } from '@contentful/optimization-react-web'
 function App({ handoff, routeKey }) {
   return (
     <OptimizationAnalyticsRoot
-      clientId="your-client-id"
-      environment="main"
+      spaceId="your-space-id"
+      environment="master"
       handoff={handoff}
       routeKey={routeKey}
     >
@@ -518,7 +518,7 @@ root config observes views, clicks, and hovers by default; pass `false` for any 
 that your application does not want to observe:
 
 ```tsx
-<OptimizationRoot clientId="your-client-id" trackEntryInteraction={{ hovers: false }}>
+<OptimizationRoot spaceId="your-space-id" trackEntryInteraction={{ hovers: false }}>
   <YourApp />
 </OptimizationRoot>
 ```
@@ -567,7 +567,7 @@ baseline entry ID. Set
 changes:
 
 ```tsx
-<OptimizationRoot clientId="your-client-id" liveUpdates={true}>
+<OptimizationRoot spaceId="your-space-id" liveUpdates={true}>
   <OptimizedEntry baselineEntry={entry} liveUpdates={false}>
     {(resolvedEntry) => <Card entry={resolvedEntry} />}
   </OptimizedEntry>

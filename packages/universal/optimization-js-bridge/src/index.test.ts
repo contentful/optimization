@@ -3,7 +3,7 @@ import bridge from './index'
 
 const initializeBridge = (): void => {
   bridge.initialize({
-    clientId: 'test-client',
+    spaceId: 'test-client',
     environment: 'main',
   })
 }
@@ -148,7 +148,7 @@ describe('bridge contract', () => {
 
   it('accepts optimizationContextId on native tracking payloads', async () => {
     bridge.initialize({
-      clientId: 'test-client',
+      spaceId: 'test-client',
       environment: 'main',
       allowedEventTypes: ['component', 'component_click'],
       defaults: {
@@ -213,7 +213,7 @@ describe('bridge contract', () => {
     )
     rs.stubGlobal('fetch', fetchMock)
     bridge.initialize({
-      clientId: 'test-client',
+      spaceId: 'test-client',
       environment: 'main',
       defaults: {
         anonymousId: 'bridge-anonymous-id',

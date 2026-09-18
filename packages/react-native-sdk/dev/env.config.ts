@@ -7,8 +7,6 @@
 
 import { Platform } from 'react-native'
 
-const PUBLIC_NINETAILED_CLIENT_ID = 'test-client-id'
-const PUBLIC_NINETAILED_ENVIRONMENT = 'main'
 const PUBLIC_EXPERIENCE_API_BASE_URL = 'http://localhost:8000/experience/'
 const PUBLIC_INSIGHTS_API_BASE_URL = 'http://localhost:8000/insights/'
 const PUBLIC_CONTENTFUL_TOKEN = 'test-token'
@@ -26,7 +24,7 @@ interface EnvConfig {
     basePath: string
   }
   optimization: {
-    clientId: string
+    spaceId: string
     environment: string
   }
   api: {
@@ -63,8 +61,8 @@ export const ENV_CONFIG = {
   },
 
   optimization: {
-    clientId: PUBLIC_NINETAILED_CLIENT_ID,
-    environment: PUBLIC_NINETAILED_ENVIRONMENT,
+    spaceId: PUBLIC_CONTENTFUL_SPACE_ID,
+    environment: PUBLIC_CONTENTFUL_ENVIRONMENT,
   },
 
   api: {

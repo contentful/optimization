@@ -26,12 +26,9 @@ export const ResponseEnvelope = z.object({
   message: z.string(),
 
   /**
-   * Indicates whether an error occurred.
-   *
-   * @remarks
-   * Can be `null` when the error state is unknown or not applicable.
+   * Error details, or `null` when the request succeeded.
    */
-  error: z.nullable(z.boolean()),
+  error: z.nullable(z.object({ code: z.string() })),
 })
 
 /**

@@ -14,7 +14,7 @@ import { useOptimizationContext } from '../hooks/useOptimization'
 import { OptimizationRoot } from './OptimizationRoot'
 
 const testConfig = {
-  clientId: 'test-client-id',
+  spaceId: 'test-space-id',
   environment: 'main',
   api: {
     insightsBaseUrl: 'http://localhost:8000/insights/',

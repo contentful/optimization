@@ -17,7 +17,7 @@ function getBrowserClientDefaults(): {
 }
 
 const optimization = bindNextjsAppRouterClientOptimization({
-  clientId: appConfig.clientId,
+  spaceId: appConfig.spaceId,
   environment: appConfig.environment,
   locale: appConfig.locale,
   logLevel: 'debug',

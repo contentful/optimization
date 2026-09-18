@@ -105,7 +105,7 @@ explains the two axes and the split form that sets them separately.
    }
    ```
 
-2. Wrap your app UI in `OptimizationRoot`, pass your Optimization client ID, set
+2. Wrap your app UI in `OptimizationRoot`, pass your Contentful space ID, set
    `logLevel = OptimizationLogLevel.debug` so the SDK logs its activity, and add `ScreenTrackingEffect`
    to one screen you already render. `debug` is verbose and not the SDK's default — dial it back
    before shipping to production; see the default `logLevel` in
@@ -137,7 +137,7 @@ explains the two axes and the split form that sets them separately.
    +            // Wrap the tree that uses SDK helpers; one client stays alive for its lifetime.
    +            OptimizationRoot(
    +                config = OptimizationConfig(
-   +                    clientId = "<your-client-id>",
+   +                    spaceId = "<your-space-id>",
    +                    // Accepted startup consent; the Consent section replaces this with your policy.
    +                    defaults = StorageDefaults(consent = true),
    +                    // debug surfaces the accepted screen event in logcat.
@@ -219,11 +219,11 @@ outside this guide:
   an authored variant, the integration can still run correctly while returning the baseline, so you
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
-- **Your Optimization project values** — client ID and environment, from your Optimization project
+- **Your Contentful space values** — space ID and environment, from your Contentful space
   settings. Find them in the Contentful web app under **Apps → Installed apps → Contentful
   Personalization → SDK keys**.
 
-  `environment` has a Kotlin-side default of `"main"`, so pass it only when your Contentful
+  `environment` has a Kotlin-side default of `"master"`, so pass it only when your Contentful
   environment differs. The Experience API (which picks variants) and the Insights API (which receives
   event and interaction delivery) each have a base URL that defaults correctly; you set them through
   `OptimizationApiConfig` only for mocks or non-default hosts (see
@@ -265,7 +265,7 @@ suspending methods from Compose effects, event-handler coroutine scopes, or anot
 scope.
 
 1. Add `com.contentful.java:optimization-android` from Maven Central and build the app.
-2. Create one `OptimizationConfig` with the Optimization client ID. `environment` defaults to `"main"`,
+2. Create one `OptimizationConfig` with the Contentful space ID. `environment` defaults to `"master"`,
    so pass it only when your Contentful environment differs.
 3. Pass `locale` when Experience API responses and event context must use the same app locale as your
    Contentful entry fetches.
@@ -293,8 +293,8 @@ fun AppRoot() {
     // One SDK-owned client stays alive for the Compose tree that uses Optimization.
     OptimizationRoot(
         config = OptimizationConfig(
-            clientId = "<your-client-id>",
-            // environment defaults to "main"; set it only when your Contentful environment differs.
+            spaceId = "<your-space-id>",
+            // environment defaults to "master"; set it only when your Contentful environment differs.
             locale = "en-US",
             logLevel = OptimizationLogLevel.warn,
             // Both base URLs default correctly; set api only for staging, mocks, or non-default hosts.
@@ -1021,7 +1021,7 @@ falls back to raw identifiers in override summaries.
 val previewContentfulClient = ContentfulHTTPPreviewClient(
     spaceId = "<space-id>",
     accessToken = "<delivery-api-token>",
-    environment = "main",
+    environment = "master",
 )
 
 OptimizationRoot(
@@ -1077,7 +1077,7 @@ as Web and Node. For the cross-SDK selector list and consent behavior, see
 
 ```kotlin
 val strictConfig = OptimizationConfig(
-    clientId = "<your-client-id>",
+    spaceId = "<your-space-id>",
     // Empty means no SDK events are allowed before explicit consent.
     allowedEventTypes = emptyList(),
     queuePolicy = QueuePolicy(
@@ -1152,7 +1152,7 @@ guide.
 
 Before releasing a Compose integration, verify these points against the target app build:
 
-- **Credentials and runtime configuration** — the app uses the intended Optimization client ID,
+- **Credentials and runtime configuration** — the app uses the intended Contentful space ID,
   Contentful environment, SDK Experience/event locale, Android `minSdk`, Java bytecode level, Maven
   artifact version, and any approved Experience API or Insights API endpoint overrides; mock or
   localhost base URLs are absent from production configuration.

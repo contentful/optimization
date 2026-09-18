@@ -22,7 +22,7 @@ enum ContentfulClient {
         clientConfiguration.secure = false
 
         return Contentful.Client(
-            spaceId: AppConfig.contentfulSpaceId,
+            spaceId: AppConfig.spaceId,
             environmentId: AppConfig.environment,
             accessToken: AppConfig.contentfulAccessToken,
             host: AppConfig.contentfulHost,

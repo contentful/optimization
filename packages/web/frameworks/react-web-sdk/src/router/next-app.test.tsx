@@ -122,7 +122,7 @@ function BeforeInitialPageRequestRoot({
         insightsBaseUrl: 'http://localhost:8000/insights/',
       }}
       buildPagePayload={buildPagePayload}
-      clientId="test-client-id"
+      spaceId="test-space-id"
       environment="main"
       beforeInitialPage={beforeInitialPage}
       routeKey={routeKey}

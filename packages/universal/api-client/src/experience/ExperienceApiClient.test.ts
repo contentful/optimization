@@ -14,8 +14,8 @@ import ExperienceApiClient, {
   type ExperienceApiClientConfig,
 } from './ExperienceApiClient'
 
-const CLIENT_ID = 'key_123'
-const ENVIRONMENT = 'main'
+const SPACE_ID = 'key_123'
+const ENVIRONMENT = 'master'
 
 const getLocaleParam = (url: string): string | null => new URL(url).searchParams.get('locale')
 const getParam = (url: string): string | null => new URL(url).searchParams.get('type')
@@ -83,7 +83,7 @@ function makeTrackEvent(event = 'test-event'): ExperienceEvent {
 
 function makeClient(overrides: Partial<ExperienceApiClientConfig> = {}): ExperienceApiClient {
   const config: ExperienceApiClientConfig = {
-    clientId: CLIENT_ID,
+    spaceId: SPACE_ID,
     environment: ENVIRONMENT,
     ...overrides,
   }
@@ -125,15 +125,15 @@ describe('ExperienceApiClient', () => {
     })
 
     it('getProfile hits the correct URL with default environment and optional locale', async () => {
-      const requested: { org?: string; env?: string; id?: string; locale?: string | null } = {}
+      const requested: { space?: string; env?: string; id?: string; locale?: string | null } = {}
 
       server.use(
         http.get(
-          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles/:id`,
+          `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles/:id`,
           ({ request, params }) => {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing
-            const { org, env, id } = params as Record<string, string>
-            requested.org = org
+            const { space, env, id } = params as Record<string, string>
+            requested.space = space
             requested.env = env
             requested.id = id
             requested.locale = getLocaleParam(request.url)
@@ -148,7 +148,7 @@ describe('ExperienceApiClient', () => {
       // without locale
       const profile = await client.getProfile('f0837d7dc6344c36a3a0a06c4cde754b')
       expect(profile).toBeDefined()
-      expect(requested.org).toBe(CLIENT_ID)
+      expect(requested.space).toBe(SPACE_ID)
       expect(requested.env).toBe(ENVIRONMENT)
       expect(requested.id).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
       expect(requested.locale).toBeNull()
@@ -176,7 +176,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.get(
-          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles/:id`,
+          `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles/:id`,
           ({ request }) => {
             requested.locale = getLocaleParam(request.url)
 
@@ -203,7 +203,7 @@ describe('ExperienceApiClient', () => {
 
     it('logs an error when the request fails (network error)', async () => {
       server.use(
-        http.get(`${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles/:id`, () =>
+        http.get(`${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles/:id`, () =>
           HttpResponse.error(),
         ),
       )
@@ -214,6 +214,45 @@ describe('ExperienceApiClient', () => {
       // The base client logs errors via logger.error on non-abort errors
       expect(mockLogger.error).toHaveBeenCalled()
     })
+
+    it('round-trips Experience and Fragment changes alongside Variable changes', async () => {
+      const changes = [
+        {
+          key: 'headline',
+          type: 'Variable',
+          value: 'Hello',
+          meta: { experienceId: 'exp_1', variantIndex: 0 },
+        },
+        {
+          type: 'Experience',
+          id: 'entry_1',
+          variantId: 'variant_1',
+          meta: { optimizationId: 'opt_1', variantIndex: 1 },
+        },
+        {
+          type: 'Fragment',
+          id: 'entry_2',
+          variantId: 'variant_2',
+          meta: { optimizationId: 'opt_2', variantIndex: 0 },
+        },
+      ]
+
+      server.use(
+        http.get(
+          `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles/:id`,
+          ({ params }) =>
+            HttpResponse.json(
+              { data: { id: params.id, changes, experiences: [] } },
+              { status: 200 },
+            ),
+        ),
+      )
+
+      const client = makeClient()
+      const profile = await client.getProfile('f0837d7dc6344c36a3a0a06c4cde754b')
+
+      expect(profile.changes).toEqual(changes)
+    })
   })
 
   describe('createProfile', () => {
@@ -223,7 +262,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.post(
-          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles`,
+          `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles`,
           async ({ request }) => {
             capturedContent = getContent(request.headers)
             const body = await request.json()
@@ -271,7 +310,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.post(
-          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles`,
+          `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles`,
           ({ request }) => {
             content = getContent(request.headers)
             forcedIp = getHeader(request.headers, 'X-Force-IP')
@@ -299,7 +338,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.post(
-          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles`,
+          `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles`,
           async ({ request }) => {
             rawBody = await request.json()
             return HttpResponse.json({ data: { id: 'new_profile' } }, { status: 200 })
@@ -336,7 +375,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.post(
-          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles/:profileId`,
+          `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles/:profileId`,
           ({ request, params }) => {
             const { profileId } = params
             hitPath = getPathname(request.url)
@@ -355,7 +394,7 @@ describe('ExperienceApiClient', () => {
 
       expect(result).toBeDefined()
       expect(hitPath).toBe(
-        `/v2/organizations/${CLIENT_ID}/environments/${ENVIRONMENT}/profiles/f0837d7dc6344c36a3a0a06c4cde754b`,
+        `/v3/spaces/${SPACE_ID}/environments/${ENVIRONMENT}/profiles/f0837d7dc6344c36a3a0a06c4cde754b`,
       )
     })
 
@@ -366,7 +405,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.post(
-          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles/:profileId`,
+          `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/profiles/:profileId`,
           async ({ request }) => {
             content = getContent(request.headers)
             forcedIp = getHeader(request.headers, 'X-Force-IP')
@@ -418,7 +457,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.post(
-          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/events`,
+          `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/events`,
           async ({ request }) => {
             content = getContent(request.headers)
             const body = await request.json()

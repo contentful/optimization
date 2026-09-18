@@ -66,7 +66,7 @@ void beforeAll(async () => {
 })
 
 const sdkConfig = {
-  clientId: 'test-client-id',
+  spaceId: 'test-space-id',
   environment: 'main',
   locale: 'en-US',
 }
@@ -302,7 +302,7 @@ function mockProfileFetch(
               experiences: data.selectedOptimizations,
               profile: data.profile,
             },
-            error: false,
+            error: null,
             message: 'ok',
           }),
         ),

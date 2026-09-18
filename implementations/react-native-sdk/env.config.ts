@@ -6,8 +6,6 @@ import {
   PUBLIC_CONTENTFUL_TOKEN,
   PUBLIC_EXPERIENCE_API_BASE_URL,
   PUBLIC_INSIGHTS_API_BASE_URL,
-  PUBLIC_NINETAILED_CLIENT_ID,
-  PUBLIC_NINETAILED_ENVIRONMENT,
 } from '@env'
 import { Platform } from 'react-native'
 
@@ -20,7 +18,7 @@ interface EnvConfig {
     basePath: string
   }
   optimization: {
-    clientId: string
+    spaceId: string
     environment: string
     locale: string
     api: {
@@ -55,8 +53,8 @@ export const ENV_CONFIG = {
   },
 
   optimization: {
-    clientId: PUBLIC_NINETAILED_CLIENT_ID,
-    environment: PUBLIC_NINETAILED_ENVIRONMENT,
+    spaceId: PUBLIC_CONTENTFUL_SPACE_ID,
+    environment: PUBLIC_CONTENTFUL_ENVIRONMENT,
     locale: 'en-US',
     api: {
       experienceBaseUrl: getAndroidCompatibleUrl(PUBLIC_EXPERIENCE_API_BASE_URL),
@@ -74,11 +72,6 @@ export const ENV_CONFIG = {
 
 export const {
   contentful: { spaceId, accessToken },
-  optimization: { clientId },
 } = ENV_CONFIG
 
-export {
-  accessToken as CONTENTFUL_ACCESS_TOKEN,
-  spaceId as CONTENTFUL_SPACE_ID,
-  clientId as NINETAILED_CLIENT_ID,
-}
+export { accessToken as CONTENTFUL_ACCESS_TOKEN, spaceId as CONTENTFUL_SPACE_ID }

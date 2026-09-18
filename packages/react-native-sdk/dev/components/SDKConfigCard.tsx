@@ -10,9 +10,9 @@ export function SDKConfigCard({ sdkInfo, colors }: SDKConfigCardProps): React.JS
       <Text style={[styles.cardTitle, { color: textColor }]}>Configuration</Text>
 
       <View style={styles.infoRow}>
-        <Text style={[styles.infoLabel, { color: mutedTextColor }]}>Client ID:</Text>
-        <Text style={[styles.infoValue, { color: textColor }]} testID="clientIdValue">
-          {sdkInfo.clientId}
+        <Text style={[styles.infoLabel, { color: mutedTextColor }]}>Space ID:</Text>
+        <Text style={[styles.infoValue, { color: textColor }]} testID="spaceIdValue">
+          {sdkInfo.spaceId}
         </Text>
       </View>
 

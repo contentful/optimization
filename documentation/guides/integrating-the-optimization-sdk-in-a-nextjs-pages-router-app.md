@@ -69,8 +69,8 @@ replace it in [Consent, identity, profile, and reset](#consent-identity-profile-
 
    export const { NextPagesAutoPageTracker, OptimizationRoot, OptimizedEntry } =
      bindNextjsPagesRouterOptimization({
-       clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
-       environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'main',
+       spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
+       environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
        locale: 'en-US',
        consent: {
          clientDefaults: { consent: true, persistenceConsent: true },
@@ -91,8 +91,8 @@ replace it in [Consent, identity, profile, and reset](#consent-identity-profile-
    import type { GetServerSidePropsContext } from 'next'
 
    const { createRequestHandoff } = bindNextjsPagesRouterServerOptimization({
-     clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
-     environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'main',
+     spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
+     environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'master',
      locale: 'en-US',
      consent: {
        server: { events: true, persistence: true },
@@ -235,9 +235,9 @@ outside this guide:
   an authored variant, the integration can still run correctly while returning the baseline, so you
   cannot yet distinguish working personalization from a content-authoring gap. For the first
   personalized-content test, target all visitors so the test request or visitor matches automatically.
-- **Your Optimization project values** — client ID and environment, from your Optimization project
+- **Your Contentful space values** — space ID and environment, from your Contentful space
   settings. Find them in the Contentful web app under **Apps → Installed apps → Contentful
-  Personalization → SDK keys**. The client ID and environment are safe to expose to the browser.
+  Personalization → SDK keys**. The space ID and environment are safe to expose to the browser.
 
   The Experience and Insights API base URLs default correctly; you only set them for mocks or
   non-default hosts (see [How the SDK fits your app](#how-the-sdk-fits-your-app)).
@@ -295,7 +295,7 @@ extends the app-owned `getContentfulOptimization` wrapper with the descriptors f
 +import { contentfulClient } from './contentful'
 
  bindNextjsPagesRouterOptimization({
-   clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
+   spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
 +  contentful: { client: contentfulClient },
    // your existing config
  })
@@ -309,7 +309,7 @@ extends the app-owned `getContentfulOptimization` wrapper with the descriptors f
 +import { contentfulClient } from './contentful'
 
  bindNextjsPagesRouterServerOptimization({
-   clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
+   spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
 +  contentful: { client: contentfulClient },
    // your existing config
  })
@@ -502,8 +502,8 @@ this example; replace them with the browser identity store and custom event name
 +
 +export const { OptimizationRoot, OptimizedEntry } =
    bindNextjsPagesRouterOptimization({
-     clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
-     environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'main',
+     spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
+     environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
      locale: 'en-US',
 +    beforeInitialPage,
      // your existing browser config
@@ -713,8 +713,8 @@ aligned so hydration starts from the same consent decision the server used.
 
 ```ts
 bindNextjsPagesRouterServerOptimization({
-  clientId: process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID!,
-  environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'main',
+  spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
+  environment: process.env.CONTENTFUL_ENVIRONMENT ?? 'master',
   consent: {
     server: ({ cookies }) =>
       cookies.get('app-consent')?.value === 'accepted'
@@ -926,7 +926,7 @@ Use blocked-event diagnostics to verify denied events are dropped at the SDK bou
 ## Production checks
 
 - Confirm server and browser config use the intended Contentful space, environment, locale, and
-  Optimization client ID.
+  Contentful space ID.
 - Confirm `consent.server`, request handoff defaults, browser consent defaults, and app-owned
   consent storage agree.
 - Confirm `ctfl-opt-aid` is browser-readable where server and browser profile continuity is needed.

@@ -5,7 +5,7 @@ import type { PagesRouterContentHandoff } from './optimization'
 import { getAppConsent } from './util'
 
 const { createRequestHandoff } = bindNextjsPagesRouterServerOptimization({
-  clientId: appConfig.clientId,
+  spaceId: appConfig.spaceId,
   environment: appConfig.environment,
   locale: appConfig.locale,
   logLevel: 'debug',

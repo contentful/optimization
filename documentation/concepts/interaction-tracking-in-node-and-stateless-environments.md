@@ -389,7 +389,7 @@ delivery depends on consent or `allowedEventTypes` and a current Web SDK profile
 ```html
 <script>
   const optimization = new ContentfulOptimization({
-    clientId: window.__OPTIMIZATION_CONFIG__.clientId,
+    spaceId: window.__OPTIMIZATION_CONFIG__.spaceId,
     environment: window.__OPTIMIZATION_CONFIG__.environment,
     app: { name: document.title, version: '1.0.0' },
     defaults: {

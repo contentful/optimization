@@ -322,8 +322,8 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
    * import ContentfulOptimization from '@contentful/optimization-web'
    *
    * const optimization = new ContentfulOptimization({
-   *   clientId: 'abc-123',
-   *   environment: 'main',
+   *   spaceId: 'abc-123',
+   *   environment: 'master',
    *   autoTrackEntryInteraction: { clicks: false },
    * })
    * ```

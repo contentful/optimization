@@ -8,7 +8,7 @@ import SwiftUI
 /// to opt out globally.
 ///
 /// ```swift
-/// OptimizationRoot(config: OptimizationConfig(clientId: "my-id")) {
+/// OptimizationRoot(config: OptimizationConfig(spaceId: "my-id")) {
 ///     ContentView()
 /// }
 /// ```
@@ -18,7 +18,7 @@ import SwiftUI
 ///
 /// ```swift
 /// OptimizationRoot(
-///     config: OptimizationConfig(clientId: "my-id"),
+///     config: OptimizationConfig(spaceId: "my-id"),
 ///     previewPanel: PreviewPanelConfig(contentfulClient: myContentfulClient)
 /// ) {
 ///     ContentView()

@@ -35,7 +35,7 @@ interface ProviderState {
 /**
  * Props for the {@link OptimizationProvider} component.
  *
- * Accepts all `OptimizationConfig` properties directly. Only `clientId` is required.
+ * Accepts all `OptimizationConfig` properties directly. Only `spaceId` is required.
  *
  * @public
  */
@@ -117,7 +117,7 @@ function getCleanup(
  *
  * @example
  * ```tsx
- * <OptimizationProvider clientId="your-client-id" environment="main">
+ * <OptimizationProvider spaceId="your-space-id" environment="master">
  *   <App />
  * </OptimizationProvider>
  * ```

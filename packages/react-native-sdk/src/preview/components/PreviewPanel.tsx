@@ -64,7 +64,7 @@ function PreviewPanelHeader({ consent }: { consent: boolean | undefined }): Reac
  *
  * function App() {
  *   return (
- *     <OptimizationRoot clientId="your-client-id" environment="main">
+ *     <OptimizationRoot spaceId="your-space-id" environment="master">
  *       <YourAppContent />
  *       <PreviewPanelOverlay contentfulClient={contentfulClient} />
  *     </OptimizationRoot>

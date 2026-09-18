@@ -11,8 +11,7 @@ export const CONTENTFUL_TOKEN = getEnvString('PUBLIC_CONTENTFUL_TOKEN') ?? 'test
 export const CONTENTFUL_HOST = getEnvString('PUBLIC_CONTENTFUL_CDA_HOST') ?? 'localhost:8000'
 export const CONTENTFUL_BASE_PATH = getEnvString('PUBLIC_CONTENTFUL_BASE_PATH') ?? '/contentful/'
 
-export const CLIENT_ID = getEnvString('PUBLIC_NINETAILED_CLIENT_ID') ?? 'mock-client-id'
-export const ENVIRONMENT = getEnvString('PUBLIC_NINETAILED_ENVIRONMENT') ?? 'main'
+export const ENVIRONMENT = CONTENTFUL_ENVIRONMENT
 export const INSIGHTS_BASE_URL =
   getEnvString('PUBLIC_INSIGHTS_API_BASE_URL') ?? 'http://localhost:8000/insights/'
 export const EXPERIENCE_BASE_URL =

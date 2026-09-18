@@ -25,7 +25,7 @@ function ContextConsumer(): ReactElement {
 }
 
 interface ProvidersSectionProps {
-  clientId: string
+  spaceId: string
   environment: string
   insightsBaseUrl: string
   experienceBaseUrl: string
@@ -33,7 +33,7 @@ interface ProvidersSectionProps {
 }
 
 export function ProvidersSection({
-  clientId,
+  spaceId,
   environment,
   insightsBaseUrl,
   experienceBaseUrl,
@@ -45,7 +45,7 @@ export function ProvidersSection({
         <h2>Decoupled Providers (config)</h2>
         <p>OptimizationProvider + LiveUpdatesProvider without OptimizationRoot.</p>
         <OptimizationProvider
-          clientId={clientId}
+          spaceId={spaceId}
           environment={environment}
           api={{ insightsBaseUrl, experienceBaseUrl }}
         >

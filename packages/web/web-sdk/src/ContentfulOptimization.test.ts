@@ -14,11 +14,11 @@ import { EntryInteractionRuntime } from './entry-tracking/EntryInteractionRuntim
 import { getCookie, removeCookie, setCookie } from './lib/cookies'
 import { deferred } from './test/helpers'
 
-const CLIENT_ID = 'key_123'
+const SPACE_ID = 'key_123'
 const ENVIRONMENT = 'main'
 
 const config: CoreConfig = {
-  clientId: CLIENT_ID,
+  spaceId: SPACE_ID,
   environment: ENVIRONMENT,
 }
 
@@ -142,7 +142,7 @@ describe('ContentfulOptimization', () => {
   it('sets configured options', () => {
     const web = new ContentfulOptimization(config)
 
-    expect(web.config.clientId).toEqual(CLIENT_ID)
+    expect(web.config.spaceId).toEqual(SPACE_ID)
     expect(web.eventBuilder.library.name).toEqual(OPTIMIZATION_WEB_SDK_NAME)
   })
 

@@ -226,7 +226,8 @@ public struct QueueEvent {
 
 /// Configuration for initializing the Contentful Optimization SDK.
 public struct OptimizationConfig {
-    public let clientId: String
+    public let spaceId: String
+    /// Contentful space environment used for Experience and Insights API requests.
     public let environment: String
     public let api: OptimizationApiConfig?
     /// Default SDK locale used for Experience API requests and event context.
@@ -238,8 +239,8 @@ public struct OptimizationConfig {
     public let onEventBlocked: ((BlockedEvent) -> Void)?
 
     public init(
-        clientId: String,
-        environment: String = "main",
+        spaceId: String,
+        environment: String = "master",
         api: OptimizationApiConfig? = nil,
         locale: String? = nil,
         defaults: StorageDefaults? = nil,
@@ -248,7 +249,7 @@ public struct OptimizationConfig {
         queuePolicy: QueuePolicy? = nil,
         onEventBlocked: ((BlockedEvent) -> Void)? = nil
     ) {
-        self.clientId = clientId
+        self.spaceId = spaceId
         self.environment = environment
         self.api = api
         self.locale = locale
@@ -271,7 +272,7 @@ public struct OptimizationConfig {
         anonymousId: String? = nil
     ) throws -> String {
         var dict: [String: Any] = [
-            "clientId": clientId,
+            "spaceId": spaceId,
             "environment": environment,
             "logLevel": logLevel.rawValue,
         ]

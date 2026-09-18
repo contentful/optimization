@@ -23,7 +23,7 @@ const removedRequestHandlerExportIsAbsent: RemovedRequestHandlerExportIsAbsent =
 const removedRequestHandlerExportName = ['createNextjsOptimization', 'RequestHandler'].join('')
 
 const sdkConfig = {
-  clientId: 'key_123',
+  spaceId: 'key_123',
   environment: 'main',
 }
 

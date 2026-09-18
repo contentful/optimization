@@ -55,8 +55,8 @@ preferred:
 import { ApiClient } from '@contentful/optimization-api-client'
 
 const client = new ApiClient({
-  clientId: 'your-client-id',
-  environment: 'main',
+  spaceId: 'your-space-id',
+  environment: 'master',
 })
 ```
 
@@ -68,13 +68,13 @@ state, consent handling, event builders, entry resolution, tracking, or platform
 
 ## Common configuration
 
-| Option         | Required? | Default                      | Description                                                 |
-| -------------- | --------- | ---------------------------- | ----------------------------------------------------------- |
-| `clientId`     | Yes       | N/A                          | Shared API key for Experience API and Insights API requests |
-| `environment`  | No        | `'main'`                     | Contentful environment identifier                           |
-| `experience`   | No        | See Experience options below | Experience API endpoint and default request options         |
-| `insights`     | No        | See Insights options below   | Insights API endpoint options                               |
-| `fetchOptions` | No        | SDK defaults                 | Fetch timeout and retry behavior                            |
+| Option         | Required? | Default                      | Description                                                              |
+| -------------- | --------- | ---------------------------- | ------------------------------------------------------------------------ |
+| `spaceId`      | Yes       | N/A                          | Contentful Space identifier for Experience and Insights API requests     |
+| `environment`  | No        | `'master'`                   | Contentful space environment identifier for Experience and Insights APIs |
+| `experience`   | No        | See Experience options below | Experience API endpoint and default request options                      |
+| `insights`     | No        | See Insights options below   | Insights API endpoint options                                            |
+| `fetchOptions` | No        | SDK defaults                 | Fetch timeout and retry behavior                                         |
 
 Common Experience API options:
 

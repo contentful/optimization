@@ -14,7 +14,7 @@ import ContentfulOptimization from './ContentfulOptimization'
 import LocalStore from './storage/LocalStore'
 
 const config = {
-  clientId: 'key_123',
+  spaceId: 'key_123',
   environment: 'main',
 }
 
@@ -162,7 +162,7 @@ function createFetchMethod(): {
             experiences: selectedOptimizations,
             profile,
           },
-          error: false,
+          error: null,
           message: 'ok',
         }),
         { status: 200 },
@@ -318,7 +318,7 @@ describe('Optimization analytics handoff runtime', () => {
   it('hydrates static profileless analytics state without overwriting durable continuity', async () => {
     const [selectedOptimization] = selectedOptimizations
     const [change] = changes
-    if (selectedOptimization === undefined || change === undefined)
+    if (selectedOptimization === undefined || change?.type !== 'Variable')
       throw new Error('Expected analytics fixtures.')
 
     const durableProfile = createProfile('durable-profile')

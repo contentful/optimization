@@ -17,7 +17,7 @@ import { removeCookie } from './lib/cookies'
 import LocalStore from './storage/LocalStore'
 
 const config = {
-  clientId: 'key_123',
+  spaceId: 'key_123',
   environment: 'main',
 }
 
@@ -101,7 +101,7 @@ async function expectProfilelessCacheableHandoffPreservesDurableContinuity(
 ): Promise<void> {
   const [selectedOptimization] = selectedOptimizations
   const [change] = changes
-  if (selectedOptimization === undefined || change === undefined)
+  if (selectedOptimization === undefined || change?.type !== 'Variable')
     throw new Error('Expected optimization state fixtures.')
 
   const durableSelectedOptimizations: SelectedOptimizationArray = [

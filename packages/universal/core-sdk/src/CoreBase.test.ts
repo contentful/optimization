@@ -26,7 +26,7 @@ class TestCore extends CoreBase {
   }
 }
 
-const CLIENT_ID = 'key_123'
+const SPACE_ID = 'key_123'
 const ENVIRONMENT = 'main'
 
 type MockContentfulGetEntry = (entryId: string, query?: ContentfulEntryQuery) => Promise<Entry>
@@ -40,7 +40,7 @@ type ProductEntrySkeleton = EntrySkeletonType<
   'product'
 >
 const config: CoreConfig = {
-  clientId: CLIENT_ID,
+  spaceId: SPACE_ID,
   environment: ENVIRONMENT,
 }
 
@@ -157,7 +157,7 @@ describe('CoreBase', () => {
   it('keeps Insights API and Experience API client config isolated', () => {
     const core = new TestCore(
       {
-        clientId: CLIENT_ID,
+        spaceId: SPACE_ID,
       },
       {
         insights: {
@@ -176,7 +176,7 @@ describe('CoreBase', () => {
   it('falls back to default base URLs when only one side is configured', () => {
     const core = new TestCore(
       {
-        clientId: CLIENT_ID,
+        spaceId: SPACE_ID,
       },
       {
         insights: { baseUrl: 'https://ingest.example.test/' },
@@ -190,7 +190,7 @@ describe('CoreBase', () => {
   it('forwards top-level fetch options to the shared api config', () => {
     const fetchOptions = { requestTimeout: 9_000 }
     const core = new TestCore({
-      clientId: CLIENT_ID,
+      spaceId: SPACE_ID,
       fetchOptions,
     })
 

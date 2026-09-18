@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server'
 import * as pagesRouter from './pages-router'
 
 const testConfig = {
-  clientId: 'test-client-id',
+  spaceId: 'test-space-id',
   environment: 'main',
   api: {
     insightsBaseUrl: 'http://localhost:8000/insights/',
@@ -83,7 +83,7 @@ describe('Next.js Pages Router client components', () => {
     expect(root.props).toMatchObject({
       api: testConfig.api,
       children: 'Root content',
-      clientId: testConfig.clientId,
+      spaceId: testConfig.spaceId,
       defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,
       liveUpdates: true,
@@ -94,7 +94,7 @@ describe('Next.js Pages Router client components', () => {
     })
     expect(provider?.props).toMatchObject({
       api: testConfig.api,
-      clientId: testConfig.clientId,
+      spaceId: testConfig.spaceId,
       defaults: { consent: false, persistenceConsent: false },
       environment: testConfig.environment,
       handoff,

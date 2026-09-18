@@ -2,7 +2,6 @@ package com.contentful.optimization.shared
 
 object AppConfig {
     const val defaultContentfulLocale = "en-US"
-    const val clientId = "mock-client-id"
     const val environment = "master"
 
     // The mock API server runs on the HOST machine. From inside an Android
@@ -20,7 +19,7 @@ object AppConfig {
     const val insightsBaseUrl = "$mockHost/insights/"
 
     const val contentfulBaseUrl = "$mockHost/contentful/"
-    const val contentfulSpaceId = "mock-space-id"
+    const val spaceId = "mock-space-id"
 
     val entryIds = listOf(
         "1MwiFl4z7gkwqGYdvCmr8c",

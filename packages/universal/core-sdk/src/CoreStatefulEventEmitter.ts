@@ -6,6 +6,7 @@ import type {
   PartialProfile,
   Profile,
 } from '@contentful/optimization-api-client/api-schemas'
+import { isVariableChange } from '@contentful/optimization-api-client/guards'
 import { createScopedLogger, logger } from '@contentful/optimization-api-client/logger'
 import { isEqual } from 'es-toolkit/predicate'
 import type { ConsentGuard } from './consent'
@@ -334,7 +335,7 @@ abstract class CoreStatefulEventEmitter
     name: string,
     changes: ChangeArray | undefined = changesSignal.value,
   ): FlagViewBuilderArgs {
-    const change = changes?.find((candidate) => candidate.key === name)
+    const change = changes?.filter(isVariableChange).find((candidate) => candidate.key === name)
 
     return {
       componentId: name,

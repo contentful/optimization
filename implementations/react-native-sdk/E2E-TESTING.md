@@ -203,7 +203,7 @@ The app components have been annotated with `testID` props for Detox to identify
 - `sdkStatusCard` - SDK status card container
 - `sdkLoaded` - SDK loaded status indicator
 - `sdkConfigCard` - Configuration card
-- `clientIdValue` - Client ID value
+- `spaceIdValue` - Space ID value
 - `environmentValue` - Environment value
 - `instructionsCard` - Instructions card
 

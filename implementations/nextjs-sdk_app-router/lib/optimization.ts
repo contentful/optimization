@@ -25,7 +25,7 @@ export type ContentHandoff = NonNullable<
 >
 
 const serverOptimizationConfig = {
-  clientId: appConfig.clientId,
+  spaceId: appConfig.spaceId,
   environment: appConfig.environment,
   locale: appConfig.locale,
   logLevel: 'debug',

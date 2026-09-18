@@ -42,8 +42,9 @@ Package source root: `packages/web/frameworks/react-web-sdk/src`; underlying Web
 - `OptimizationRootProps` extends `OptimizationProviderConfigProps` and adds `liveUpdates`,
   `routeKey`, `buildPagePayload`, and `initialPagePayload`.
   source: react-web-sdk#root/OptimizationRoot.tsx#OptimizationRootProps
-  - `clientId`, `environment`, `fetchOptions?` — `CoreConfig` via `api-client` `ApiConfig`.
-    source: core-sdk#CoreBase.ts#CoreConfig; api-client#ApiClientBase.ts#ApiConfig
+  - `spaceId`, `environment` (optional, default `'master'`, Experience and Insights APIs), and
+    `fetchOptions?` — `CoreConfig` via `api-client` `ApiConfig`.
+    source: core-sdk#CoreBase.ts#CoreConfig; api-client#ApiClientBase.ts#ApiConfig; api-client#ApiClientBase.ts#DEFAULT_ENVIRONMENT
   - `locale`, `logLevel?` — `core-sdk` `CoreConfig`.
     source: core-sdk#CoreBase.ts#CoreConfig
   - `defaults` (`consent`, `persistenceConsent`), `api?`, `allowedEventTypes?`, `onEventBlocked?`,

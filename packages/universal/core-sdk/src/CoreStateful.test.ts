@@ -19,7 +19,7 @@ import { profile as profileFixture } from './test/fixtures/profile'
 import { selectedOptimizations as selectedOptimizationsFixture } from './test/fixtures/selectedOptimizations'
 
 const config: CoreStatefulConfig = {
-  clientId: 'key_123',
+  spaceId: 'key_123',
   environment: 'main',
 }
 

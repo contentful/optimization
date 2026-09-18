@@ -52,7 +52,7 @@ function getGlobalSdk(): ContentfulOptimization | undefined {
 
 export class ContentfulOptimizationRootElement extends HTMLElement {
   static get observedAttributes(): string[] {
-    return ['client-id', 'environment', 'hydration', 'live-updates', 'locale']
+    return ['space-id', 'environment', 'hydration', 'live-updates', 'locale']
   }
 
   private apiOptions: OptimizationRootSdkConfig['api'] | undefined
@@ -74,12 +74,12 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
   private readonly subscribers = new Set<OptimizationRootContextSubscriber>()
   private trackEntryInteractionOptions: TrackEntryInteractionOptions | undefined
 
-  get clientId(): string | undefined {
-    return this.getAttribute('client-id') ?? undefined
+  get spaceId(): string | undefined {
+    return this.getAttribute('space-id') ?? undefined
   }
 
-  set clientId(value: string | undefined) {
-    this.setOptionalAttribute('client-id', value)
+  set spaceId(value: string | undefined) {
+    this.setOptionalAttribute('space-id', value)
   }
 
   get environment(): string | undefined {
@@ -291,15 +291,15 @@ export class ContentfulOptimizationRootElement extends HTMLElement {
   }
 
   private createConfig(): OptimizationRootSdkConfig {
-    const { clientId } = this
+    const { spaceId } = this
 
-    if (!clientId) {
-      throw new Error('ctfl-optimization-root requires a client-id attribute or sdk property.')
+    if (!spaceId) {
+      throw new Error('ctfl-optimization-root requires a space-id attribute or sdk property.')
     }
 
     return {
       api: this.apiOptions,
-      clientId,
+      spaceId,
       contentful: this.contentfulOptions,
       defaults: this.defaultOptions,
       environment: this.environment,

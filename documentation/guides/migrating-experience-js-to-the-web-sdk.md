@@ -33,7 +33,7 @@ Gather these inputs:
   `__nt_experiences__`, `__nt_changes__`, `__nt_debug__`, `__nt-consent__`, or `ntaid`.
 - The app's consent and analytics policy.
 - The Contentful entries that were resolved through legacy mapped experiences.
-- The target Optimization `clientId`, environment, locale, and browser-visible config convention.
+- The target Contentful `spaceId`, environment, locale, and browser-visible config convention.
   These values identify the Contentful project and locale the browser runtime may call; keep secrets
   out of them and follow your bundler's public-variable convention.
 

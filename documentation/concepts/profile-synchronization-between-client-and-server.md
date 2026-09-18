@@ -161,8 +161,8 @@ render:
 
 ```ts
 const optimization = new ContentfulOptimization({
-  clientId: 'your-client-id',
-  environment: 'main',
+  spaceId: 'your-space-id',
+  environment: 'master',
   defaults: {
     profile: window.__OPTIMIZATION_DATA__.profile,
     selectedOptimizations: window.__OPTIMIZATION_DATA__.selectedOptimizations,

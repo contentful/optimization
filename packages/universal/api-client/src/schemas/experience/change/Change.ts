@@ -3,13 +3,9 @@ import * as z from 'zod/mini'
 /**
  * Enumeration of supported change types.
  *
- * @remarks
- * Only the `'Variable'` change type is supported, but the union
- * in `ChangeBase` allows for additional types to be introduced.
- *
  * @public
  */
-export const ChangeType = ['Variable'] as const
+export const ChangeType = ['Variable', 'Experience', 'Fragment'] as const
 
 /**
  * Zod schema describing the base shape for a change.
@@ -124,6 +120,77 @@ export const VariableChange = z.extend(ChangeBase, {
 export type VariableChange = z.infer<typeof VariableChange>
 
 /**
+ * Zod schema describing the base shape shared by entity-based changes
+ * ({@link ExperienceChange} and {@link FragmentChange}).
+ *
+ * @internal
+ */
+export const EntityChangeBase = z.object({
+  /**
+   * Identifier of the entity affected by the change.
+   */
+  id: z.string(),
+
+  /**
+   * Identifier of the selected variant.
+   */
+  variantId: z.string(),
+
+  /**
+   * Metadata describing the originating optimization and variant index.
+   */
+  meta: z.object({
+    /**
+     * Identifier of the optimization that produced this change.
+     */
+    optimizationId: z.string(),
+
+    /**
+     * Index of the variant within the optimization's distribution.
+     */
+    variantIndex: z.number(),
+  }),
+})
+
+/**
+ * Zod schema representing a change whose type is `'Experience'`.
+ *
+ * @public
+ */
+export const ExperienceChange = z.extend(EntityChangeBase, {
+  /**
+   * Discriminator for an experience change.
+   */
+  type: z.literal('Experience'),
+})
+
+/**
+ * TypeScript type inferred from {@link ExperienceChange}.
+ *
+ * @public
+ */
+export type ExperienceChange = z.infer<typeof ExperienceChange>
+
+/**
+ * Zod schema representing a change whose type is `'Fragment'`.
+ *
+ * @public
+ */
+export const FragmentChange = z.extend(EntityChangeBase, {
+  /**
+   * Discriminator for a fragment change.
+   */
+  type: z.literal('Fragment'),
+})
+
+/**
+ * TypeScript type inferred from {@link FragmentChange}.
+ *
+ * @public
+ */
+export type FragmentChange = z.infer<typeof FragmentChange>
+
+/**
  * JSON value type inferred from {@link z.json}.
  *
  * @remarks
@@ -143,12 +210,13 @@ export type Flags = Record<string, Json>
 /**
  * Union of supported change types.
  *
- * @remarks
- * Only {@link VariableChange} is included.
- *
  * @public
  */
-export const Change = z.discriminatedUnion('type', [VariableChange])
+export const Change = z.discriminatedUnion('type', [
+  VariableChange,
+  ExperienceChange,
+  FragmentChange,
+])
 
 /**
  * TypeScript type inferred from {@link Change}.

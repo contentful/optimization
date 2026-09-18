@@ -5,7 +5,7 @@ import { getAppConsent } from './util'
 
 export const { createEdgeRequestHandoff, createPublicPermutationHandoff } =
   configureNextjsEdgeOptimization({
-    clientId: appConfig.clientId,
+    spaceId: appConfig.spaceId,
     environment: appConfig.environment,
     locale: appConfig.locale,
     logLevel: 'debug',

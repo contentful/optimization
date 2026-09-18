@@ -74,7 +74,7 @@ at startup and the events it can emit before runtime consent changes:
 | Constraint           | Android behavior                                                                                                                                                                                                                                                                                                     |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Consent              | `state.consent` starts as unset unless `StorageDefaults.consent` or persisted SDK consent provides a value. Until event consent is `true`, Android/native allow-list behavior lets only `identify` and `screen` emit by default.                                                                                     |
-| Configuration        | Build `OptimizationConfig` before initialization. `clientId` is required, `environment` defaults to `"main"`, and `locale` controls the SDK Experience/event locale. Apps often pass the same string to Contentful CDA requests, but the SDK treats that as a separate app-owned locale.                             |
+| Configuration        | Build `OptimizationConfig` before initialization. `spaceId` is required, `environment` defaults to `"master"`, and `locale` controls the SDK Experience/event locale. Apps often pass the same string to Contentful CDA requests, but the SDK treats that as a separate app-owned locale.                            |
 | Persistence consent  | Boolean `client.consent(true)` or `client.consent(false)` updates event consent and durable profile-continuity persistence consent together. Use object-form consent when event consent and durable profile continuity have separate policy decisions.                                                               |
 | Allowed event types  | `OptimizationConfig.allowedEventTypes` replaces the native default pre-consent allow-list. Pass `allowedEventTypes = emptyList()` for strict opt-in before any Optimization event, or pass a narrow custom list when legal and privacy review permits specific pre-consent events.                                   |
 | Storage availability | Android stores consent and, when persistence consent is `true`, profile-continuity values in `SharedPreferences`. If storage has no usable value or is cleared, the SDK starts from configured defaults and does not restore profile-continuity state from a previous process.                                       |
@@ -113,14 +113,14 @@ Every Android integration builds an `OptimizationConfig`:
 
 ```kotlin
 OptimizationConfig(
-    clientId = "your-client-id",
-    environment = "main",
+    spaceId = "your-space-id",
+    environment = "master",
     locale = "en-US",
     logLevel = if (BuildConfig.DEBUG) OptimizationLogLevel.debug else OptimizationLogLevel.error,
 )
 ```
 
-Only `clientId` is required. `environment` defaults to `"main"`. Base URL overrides belong only in
+Only `spaceId` is required. `environment` defaults to `"master"`. Base URL overrides belong only in
 integrations that need non-default Experience API or Insights API endpoints.
 
 Use top-level `locale` for the SDK Experience/event locale. When the application renders localized
