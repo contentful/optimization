@@ -79,8 +79,8 @@ async function waitForEventsCountAtLeast(minCount, timeout = ELEMENT_VISIBILITY_
 }
 
 async function relaunchCleanApp() {
-  // Reset app data without uninstalling the APK. This keeps the clean-state
-  // guarantee while avoiding an unnecessary instrumentation restart.
+  // Reset app data through Detox's platform-specific path. Android clears data
+  // without uninstalling the APK; iOS restores a cached installation.
   await device.launchApp({ resetAppState: true })
   await waitFor(element(by.id('identify-button')))
     .toBeVisible()
