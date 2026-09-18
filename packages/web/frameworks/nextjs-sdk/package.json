@@ -168,7 +168,7 @@
     "@contentful/optimization-react-web": "workspace:*"
   },
   "devDependencies": {
-    "@rsbuild/plugin-react": "^1.4.2",
+    "@rsbuild/plugin-react": "^1.4.5",
     "@rsdoctor/cli": "catalog:",
     "@rslib/core": "catalog:",
     "@rstest/core": "catalog:",
@@ -179,7 +179,7 @@
     "build-tools": "workspace:*",
     "contentful": "catalog:",
     "happy-dom": "catalog:",
-    "next": "^16.2.11",
+    "next": "^16.3.5",
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "rimraf": "catalog:",

@@ -63,6 +63,12 @@ export default defineConfig(
         'error',
         { ignore: [-2, -1, 0, 0.5, 1, 2, 10, 36, 100] },
       ],
+      // Reassess after compile-time checks stop using `void` to consume values.
+      '@typescript-eslint/no-meaningless-void-operator': 'off',
+      // Reassess after explicit boundary assertions are migrated or removed.
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+      // Reassess after existing default-assignment patterns are simplified.
+      '@typescript-eslint/no-useless-default-assignment': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -76,13 +82,47 @@ export default defineConfig(
         },
       ],
       '@typescript-eslint/strict-boolean-expressions': 'off',
-      'eslint-comments/disable-enable-pair': 'off',
-      'eslint-comments/no-aggregating-enable': 'off',
-      'eslint-comments/no-duplicate-disable': 'off',
-      'eslint-comments/no-unlimited-disable': 'off',
-      'eslint-comments/no-unused-enable': 'off',
-      'eslint-comments/require-description': 'off',
+      // Reassess after callbacks that intentionally return values are normalized.
+      '@typescript-eslint/strict-void-return': 'off',
+      // Reassess after intentional loose null comparisons are rewritten.
+      eqeqeq: 'off',
+      // Reassess after unpaired directive blocks are migrated to scoped comments.
+      '@eslint-community/eslint-comments/disable-enable-pair': 'off',
+      // Reassess after aggregated enable directives are split by rule.
+      '@eslint-community/eslint-comments/no-aggregating-enable': 'off',
+      // Reassess after overlapping directive comments are consolidated.
+      '@eslint-community/eslint-comments/no-duplicate-disable': 'off',
+      // Reassess after generated and framework-owned files use scoped directives.
+      '@eslint-community/eslint-comments/no-unlimited-disable': 'off',
+      // Reassess after legacy enable directives are paired or removed.
+      '@eslint-community/eslint-comments/no-unused-enable': 'off',
+      // Reassess after all existing directive comments include descriptions.
+      '@eslint-community/eslint-comments/require-description': 'off',
+      // Reassess after sequential async workflows are made explicit helpers.
+      'no-await-in-loop': 'off',
+      // Reassess after the existing chained assignment is expanded.
+      'no-multi-assign': 'off',
+      // Reassess after existing negated guard branches are normalized.
+      'no-negated-condition': 'off',
+      // Reassess after state-machine and reducer parameter mutation is removed.
+      'no-param-reassign': 'off',
+      // Reassess after counter increments use assignment expressions.
+      'no-plusplus': 'off',
+      // Reassess after test promise executors stop returning callback results.
+      'no-promise-executor-return': 'off',
       'no-useless-assignment': 'off',
+      // Reassess after positional regular-expression consumers are migrated.
+      'prefer-named-capture-group': 'off',
+      // Reassess after compatibility-oriented ownership checks are modernized.
+      'prefer-object-has-own': 'off',
+      // Reassess after generated and diagnostic string assembly is modernized.
+      'prefer-template': 'off',
+      // Reassess after two-argument promise handlers are refactored.
+      'promise/prefer-catch': 'off',
+      // Reassess after flagged async state transitions receive lifecycle review.
+      'require-atomic-updates': 'off',
+      // Reassess after regular-expression runtime compatibility is audited.
+      'require-unicode-regexp': 'off',
     },
   },
   wc['flat/best-practice'],
