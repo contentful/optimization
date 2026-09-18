@@ -1,18 +1,26 @@
 import * as z from 'zod/mini'
 import { ViewEvent } from '../../experience/event'
 import { ClickEvent } from './ClickEvent'
+import { ExoNodeClickEvent, ExoNodeHoverEvent, ExoNodeViewEvent } from './ExoNodeEvent'
 import { HoverEvent } from './HoverEvent'
 
 /**
  * Zod schema describing an Insights event.
  *
  * @remarks
- * Insights events include {@link ViewEvent},
- * {@link ClickEvent}, and {@link HoverEvent}.
+ * Insights events include legacy component interactions and ExO node
+ * interactions.
  *
  * @public
  */
-export const InsightsEvent = z.discriminatedUnion('type', [ViewEvent, ClickEvent, HoverEvent])
+export const InsightsEvent = z.discriminatedUnion('type', [
+  ViewEvent,
+  ClickEvent,
+  HoverEvent,
+  ExoNodeViewEvent,
+  ExoNodeClickEvent,
+  ExoNodeHoverEvent,
+])
 
 /**
  * TypeScript type inferred from {@link InsightsEvent}.

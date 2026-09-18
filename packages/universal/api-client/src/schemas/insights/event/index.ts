@@ -1,4 +1,5 @@
 export * from './BatchInsightsEvent'
 export * from './ClickEvent'
+export * from './ExoNodeEvent'
 export * from './HoverEvent'
 export * from './InsightsEvent'
