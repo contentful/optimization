@@ -19,7 +19,7 @@ struct AppConfig {
     /// gets the default `cdn.contentful.com`.
     static let contentfulHost = "localhost:8000"
 
-    static let contentfulSpaceId = "mock-space-id"
+    static let spaceId = "mock-space-id"
 
     /// The mock CDA ignores authorization, but `Contentful.Client` requires a
     /// token to build its `Authorization` header.

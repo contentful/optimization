@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 OptimizationRoot(
                     config = OptimizationConfig(
-                        spaceId = AppConfig.contentfulSpaceId,
+                        spaceId = AppConfig.spaceId,
                         environment = AppConfig.environment,
                         api = OptimizationApiConfig(
                             experienceBaseUrl = AppConfig.experienceBaseUrl,

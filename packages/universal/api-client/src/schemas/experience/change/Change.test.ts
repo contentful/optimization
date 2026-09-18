@@ -1,4 +1,5 @@
-import { Change } from './Change'
+import { Change, ChangeArray } from './Change'
+import { isVariableChange } from './isVariableChange'
 
 describe('Change', () => {
   it('parses a Variable change', () => {
@@ -43,5 +44,24 @@ describe('Change', () => {
     })
 
     expect(result.success).toBe(false)
+  })
+
+  it('narrows Variable changes with the exported type guard', () => {
+    const changes = ChangeArray.parse([
+      {
+        key: 'headline',
+        type: 'Variable',
+        value: 'Hello',
+        meta: { experienceId: 'exp_1', variantIndex: 0 },
+      },
+      {
+        type: 'Experience',
+        id: 'entry_1',
+        variantId: 'variant_1',
+        meta: { optimizationId: 'opt_1', variantIndex: 1 },
+      },
+    ])
+
+    expect(changes.filter(isVariableChange)).toEqual([changes[0]])
   })
 })

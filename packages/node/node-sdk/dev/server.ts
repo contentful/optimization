@@ -52,14 +52,14 @@ const env = {
   contentfulBasePath: readEnv('PUBLIC_CONTENTFUL_BASE_PATH'),
   environment: requireEnv('Contentful environment', 'PUBLIC_CONTENTFUL_ENVIRONMENT'),
   contentfulHost: readEnv('PUBLIC_CONTENTFUL_CDA_HOST'),
-  contentfulSpaceId: requireEnv('Contentful space ID', 'PUBLIC_CONTENTFUL_SPACE_ID'),
+  spaceId: requireEnv('Contentful space ID', 'PUBLIC_CONTENTFUL_SPACE_ID'),
   contentfulToken: requireEnv('Contentful access token', 'PUBLIC_CONTENTFUL_TOKEN'),
   experienceBaseUrl: readEnv('PUBLIC_EXPERIENCE_API_BASE_URL'),
   insightsBaseUrl: readEnv('PUBLIC_INSIGHTS_API_BASE_URL'),
 } as const
 
 const sdk = new ContentfulOptimization({
-  spaceId: env.contentfulSpaceId,
+  spaceId: env.spaceId,
   environment: env.environment,
   logLevel: 'debug',
   api: {
@@ -71,7 +71,7 @@ const sdk = new ContentfulOptimization({
 const ctfl = contentful.createClient({
   accessToken: env.contentfulToken,
   environment: env.environment,
-  space: env.contentfulSpaceId,
+  space: env.spaceId,
   host: env.contentfulHost ?? '',
   basePath: env.contentfulBasePath ?? '',
   insecure: Boolean(env.contentfulHost),

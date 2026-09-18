@@ -1,9 +1,12 @@
 import {
-  ExoNodeClickEvent,
-  ExoNodeEntityKind,
-  ExoNodeHoverEvent,
-  ExoNodeViewEvent,
-} from './ExoNodeEvent'
+  BatchExperienceEvent,
+  ExoEntityKind,
+  ExoEventProperties,
+  ExoViewEvent,
+  ExperienceEvent,
+} from '../../experience/event'
+import { ExoClickEvent } from './ExoClickEvent'
+import { ExoHoverEvent } from './ExoHoverEvent'
 import { InsightsEvent } from './InsightsEvent'
 
 const universalEventProperties = {
@@ -20,7 +23,7 @@ const universalEventProperties = {
   timestamp: '2026-02-01T10:15:00.000Z',
 } as const
 
-const exoNodeProperties = {
+const exoProperties = {
   ...universalEventProperties,
   entityId: 'experience-123',
   entityKind: 'Experience',
@@ -37,45 +40,50 @@ const exoNodeProperties = {
   variantIndex: 1,
 } as const
 
-describe('ExO node Insights events', () => {
+describe('ExO events', () => {
   it.each(['Experience', 'Fragment', 'InlineFragment', 'InlineComponent'])(
     'accepts the %s entity kind',
     (entityKind) => {
-      expect(ExoNodeEntityKind.safeParse(entityKind).success).toBe(true)
+      expect(ExoEntityKind.safeParse(entityKind).success).toBe(true)
     },
   )
 
-  it('parses an exo_node_view event through the Insights event union', () => {
+  it('parses an exo_node_view event through the Experience and Insights event unions', () => {
     const event = {
-      ...exoNodeProperties,
+      ...exoProperties,
       type: 'exo_node_view',
       viewDurationMs: 3000,
       viewId: 'view-123',
     }
 
-    expect(ExoNodeViewEvent.safeParse(event).success).toBe(true)
+    expect(ExoEventProperties.safeParse(event).success).toBe(true)
+    expect(ExoViewEvent.safeParse(event).success).toBe(true)
+    expect(ExperienceEvent.safeParse(event).success).toBe(true)
+    expect(BatchExperienceEvent.safeParse({ ...event, anonymousId: 'profile-123' }).success).toBe(
+      true,
+    )
     expect(InsightsEvent.safeParse(event).success).toBe(true)
   })
 
   it('parses an exo_node_click event through the Insights event union', () => {
     const event = {
-      ...exoNodeProperties,
+      ...exoProperties,
       type: 'exo_node_click',
     }
 
-    expect(ExoNodeClickEvent.safeParse(event).success).toBe(true)
+    expect(ExoClickEvent.safeParse(event).success).toBe(true)
     expect(InsightsEvent.safeParse(event).success).toBe(true)
   })
 
   it('parses an exo_node_hover event through the Insights event union', () => {
     const event = {
-      ...exoNodeProperties,
+      ...exoProperties,
       type: 'exo_node_hover',
       hoverDurationMs: 1500,
       hoverId: 'hover-123',
     }
 
-    expect(ExoNodeHoverEvent.safeParse(event).success).toBe(true)
+    expect(ExoHoverEvent.safeParse(event).success).toBe(true)
     expect(InsightsEvent.safeParse(event).success).toBe(true)
   })
 
@@ -84,8 +92,8 @@ describe('ExO node Insights events', () => {
     { viewDurationMs: 1.5, viewId: 'view-123' },
   ])('rejects an invalid view duration', (viewProperties) => {
     expect(
-      ExoNodeViewEvent.safeParse({
-        ...exoNodeProperties,
+      ExoViewEvent.safeParse({
+        ...exoProperties,
         type: 'exo_node_view',
         ...viewProperties,
       }).success,
@@ -97,8 +105,8 @@ describe('ExO node Insights events', () => {
     { hoverDurationMs: 1.5, hoverId: 'hover-123' },
   ])('rejects an invalid hover duration', (hoverProperties) => {
     expect(
-      ExoNodeHoverEvent.safeParse({
-        ...exoNodeProperties,
+      ExoHoverEvent.safeParse({
+        ...exoProperties,
         type: 'exo_node_hover',
         ...hoverProperties,
       }).success,
@@ -107,8 +115,8 @@ describe('ExO node Insights events', () => {
 
   it('rejects an unknown entity kind', () => {
     expect(
-      ExoNodeClickEvent.safeParse({
-        ...exoNodeProperties,
+      ExoClickEvent.safeParse({
+        ...exoProperties,
         type: 'exo_node_click',
         entityKind: 'Entry',
       }).success,

@@ -5,8 +5,8 @@ import type {
   Json,
   PartialProfile,
   Profile,
-  VariableChange,
 } from '@contentful/optimization-api-client/api-schemas'
+import { isVariableChange } from '@contentful/optimization-api-client/guards'
 import { createScopedLogger, logger } from '@contentful/optimization-api-client/logger'
 import { isEqual } from 'es-toolkit/predicate'
 import type { ConsentGuard } from './consent'
@@ -41,10 +41,6 @@ import {
 } from './signals'
 
 const coreLogger = createScopedLogger('CoreStateful')
-
-function isVariableChange(change: ChangeArray[number]): change is VariableChange {
-  return change.type === 'Variable'
-}
 
 type FlagViewTrackingSignature = readonly [
   value: Json,

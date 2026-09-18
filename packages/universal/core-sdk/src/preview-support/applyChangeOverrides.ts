@@ -1,3 +1,4 @@
+import { isVariableChange } from '@contentful/optimization-api-client/guards'
 import {
   isInlineVariableComponent,
   type ChangeArray,
@@ -10,10 +11,6 @@ import type { OptimizationOverride } from './types'
 function getInlineVariableComponents(optimization: OptimizationEntry): InlineVariableComponent[] {
   const { components } = optimization.fields.nt_config ?? {}
   return Array.isArray(components) ? components.filter(isInlineVariableComponent) : []
-}
-
-function isVariableChange(change: ChangeArray[number]): change is VariableChange {
-  return change.type === 'Variable'
 }
 
 /**

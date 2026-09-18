@@ -33,6 +33,16 @@
         "default": "./dist/logger.cjs"
       }
     },
+    "./guards": {
+      "import": {
+        "types": "./dist/guards.d.mts",
+        "default": "./dist/guards.mjs"
+      },
+      "require": {
+        "types": "./dist/guards.d.cts",
+        "default": "./dist/guards.cjs"
+      }
+    },
     "./api-schemas": {
       "import": {
         "types": "./dist/api-schemas.d.mts",
@@ -52,6 +62,8 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
+        "guards.cjs": 500,
+        "guards.mjs": 200,
         "index.cjs": 5000,
         "index.mjs": 4700
       }

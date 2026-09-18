@@ -1,7 +1,8 @@
 import * as z from 'zod/mini'
-import { ViewEvent } from '../../experience/event'
+import { ExoViewEvent, ViewEvent } from '../../experience/event'
 import { ClickEvent } from './ClickEvent'
-import { ExoNodeClickEvent, ExoNodeHoverEvent, ExoNodeViewEvent } from './ExoNodeEvent'
+import { ExoClickEvent } from './ExoClickEvent'
+import { ExoHoverEvent } from './ExoHoverEvent'
 import { HoverEvent } from './HoverEvent'
 
 /**
@@ -17,9 +18,9 @@ export const InsightsEvent = z.discriminatedUnion('type', [
   ViewEvent,
   ClickEvent,
   HoverEvent,
-  ExoNodeViewEvent,
-  ExoNodeClickEvent,
-  ExoNodeHoverEvent,
+  ExoViewEvent,
+  ExoClickEvent,
+  ExoHoverEvent,
 ])
 
 /**

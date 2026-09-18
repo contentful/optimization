@@ -1,4 +1,5 @@
 import type { ChangeArray, Flags } from '@contentful/optimization-api-client/api-schemas'
+import { isVariableChange } from '@contentful/optimization-api-client/guards'
 
 /**
  * Resolves a {@link Flags} map from a list of optimization changes.
@@ -34,7 +35,7 @@ const FlagsResolver = {
     if (!changes) return {}
 
     return changes.reduce<Flags>((acc, change) => {
-      if (change.type !== 'Variable') return acc
+      if (!isVariableChange(change)) return acc
 
       const { key, value } = change
       const actualValue =

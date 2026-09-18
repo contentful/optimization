@@ -1,4 +1,6 @@
 export * from './BatchExperienceEvent'
+export * from './ExoEventProperties'
+export * from './ExoViewEvent'
 export * from './ExperienceEvent'
 export * from './IdentifyEvent'
 export * from './InteractionEventProperties'

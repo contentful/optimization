@@ -1,4 +1,5 @@
 import * as z from 'zod/mini'
+import { ExoViewEvent } from './ExoViewEvent'
 import { IdentifyEvent } from './IdentifyEvent'
 import { PageViewEvent } from './PageViewEvent'
 import { ScreenViewEvent } from './ScreenViewEvent'
@@ -16,6 +17,7 @@ import { ViewEvent } from './ViewEvent'
  */
 export const ExperienceEvent = z.discriminatedUnion('type', [
   ViewEvent,
+  ExoViewEvent,
   IdentifyEvent,
   PageViewEvent,
   ScreenViewEvent,

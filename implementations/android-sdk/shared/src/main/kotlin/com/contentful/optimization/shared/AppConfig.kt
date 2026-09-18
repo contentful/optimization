@@ -19,7 +19,7 @@ object AppConfig {
     const val insightsBaseUrl = "$mockHost/insights/"
 
     const val contentfulBaseUrl = "$mockHost/contentful/"
-    const val contentfulSpaceId = "mock-space-id"
+    const val spaceId = "mock-space-id"
 
     val entryIds = listOf(
         "1MwiFl4z7gkwqGYdvCmr8c",
