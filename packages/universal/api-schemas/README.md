@@ -23,6 +23,10 @@
 This package preserves the historical root exports for Contentful CDA, Experience API, and Insights
 API schemas. The owning packages maintain those contracts.
 
+If you are upgrading an Optimization integration from v1, follow the
+[v1-to-v2 migration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.migrating-optimization-sdk-packages-from-v1-to-v2.html)
+and use [Migrate imports](#migrate-imports) for this deprecated facade.
+
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->

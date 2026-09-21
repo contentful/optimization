@@ -21,6 +21,12 @@ server helpers, React Web roots, and edge-safe Core pass-throughs; it is not a n
 runtime. The package root intentionally has no runtime export. Import one of the documented
 subpaths so server, client, router, and edge boundaries stay explicit.
 
+> [!IMPORTANT]
+>
+> Upgrading from v1? Follow the
+> [v1-to-v2 migration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.migrating-optimization-sdk-packages-from-v1-to-v2.html)
+> before changing package versions.
+
 ## What this package provides
 
 | Runtime           | Import path                                           | Responsibility                                              |

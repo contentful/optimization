@@ -55,6 +55,10 @@ For step-by-step implementation docs, start with the [Guides](./documentation/gu
 index. For behavior explanations, start with the [Concepts](./documentation/concepts/README.md)
 index.
 
+If you are upgrading existing Optimization packages from v1, follow
+[Migrate Optimization SDK packages from v1 to v2](./documentation/guides/migrating-optimization-sdk-packages-from-v1-to-v2.md)
+before changing package versions.
+
 Package README files listed below are package-level guides and API surface summaries. For packages
 included in the TypeDoc build, generated
 [reference documentation](https://contentful.github.io/optimization) remains the source of truth for

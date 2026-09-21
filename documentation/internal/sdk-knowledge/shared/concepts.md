@@ -266,6 +266,14 @@ event can therefore have no `data` yet; only a returned `data` value contains th
 selections, and changes described above.
 source: core-sdk#events/EventEmissionResult.ts#EventEmissionResult; core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult
 
+## API transport scope
+
+The API Client scopes Experience API requests under
+`v3/spaces/{spaceId}/environments/{environment}` and Insights API event requests under
+`v2/spaces/{spaceId}/environments/{environment}`. Both clients use the shared configured Contentful
+space and environment; an omitted environment resolves to `master`.
+source: api-client#ApiClientBase.ts#DEFAULT_ENVIRONMENT; api-client#experience/ExperienceApiClient.ts#ExperienceApiClient; api-client#insights/InsightsApiClient.ts#InsightsApiClient
+
 ## Optimization handoff
 
 `OptimizationHandoff` is the framework-neutral handoff shape for server, static, and edge rendered

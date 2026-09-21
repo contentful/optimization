@@ -247,6 +247,13 @@ add per-archetype checks.
       behavior, and cache boundaries.
 - [ ] Runtime migrations stay split; plugin/privacy/preview and content-model replacement work is
       routed to shared migration guides instead of folded into every runtime guide.
+- [ ] Every staged example names the version or migration state in which it is valid. A preparatory
+      edit made before the package upgrade does not use a target-version-only API.
+- [ ] Adjacent cross-runtime examples name their language or runtime in prose; readers do not have to
+      infer Swift versus Kotlin, or another runtime distinction, from syntax alone.
+- [ ] Every cross-runtime validation item includes its action and observation mechanism inline or
+      deep-links to the exact runtime subsection that supplies them. A generic link to an integration
+      guide is not performable verification.
 
 ## D. Decision guides (`choosing-the-right-sdk.md` and future)
 

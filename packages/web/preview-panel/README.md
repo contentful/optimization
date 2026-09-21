@@ -20,6 +20,12 @@ This package implements the first-party browser preview panel for the
 micro-frontend and talks to the Web SDK through the preview bridge exposed by the Optimization Web
 SDK runtime.
 
+> [!IMPORTANT]
+>
+> Upgrading from v1? Follow the
+> [v1-to-v2 migration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.migrating-optimization-sdk-packages-from-v1-to-v2.html)
+> and align this package with the upgraded Web SDK packages.
+
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
