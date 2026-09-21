@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.0.0](https://github.com/contentful/optimization/compare/optimization-android-v1.1.0...optimization-android-v2.0.0) (2026-09-21)
+
+### ⚠ BREAKING CHANGES
+
+- **api-client:** SDK configuration now requires spaceId instead of clientId and defaults environment to master instead of main. The Experience and Insights API route contracts, native SDK initialization APIs, Web Component attributes, and exported API schemas have also changed. Existing consumers must migrate before upgrading.
+- **api-client:** SDK configuration now requires spaceId instead of clientId and defaults environment to master instead of main. The Experience and Insights API route contracts, native SDK initialization APIs, Web Component attributes, and exported API schemas have also changed. Existing consumers must migrate before upgrading.
+
+### Features
+
+- **api-client:** migrate Experience API to v3 and Insights API to v2 ([fa0896c](https://github.com/contentful/optimization/commit/fa0896cc6a59138165c87120e6030e38871b9cbd))
+- **api-client:** migrate Experience API to v3 and Insights API to v2 ([fa0896c](https://github.com/contentful/optimization/commit/fa0896cc6a59138165c87120e6030e38871b9cbd))
+
+### Bug Fixes
+
+- **android:** harden backup and TLS guidance ([#502](https://github.com/contentful/optimization/issues/502)) ([86949a4](https://github.com/contentful/optimization/commit/86949a4e1b76afaa80958acad73ecad3f66af89a))
+
 ## [1.1.0](https://github.com/contentful/optimization/compare/optimization-android-v1.0.0...optimization-android-v1.1.0) (2026-08-21)
 
 ### Features
