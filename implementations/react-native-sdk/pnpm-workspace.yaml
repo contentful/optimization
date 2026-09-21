@@ -10,6 +10,7 @@ allowBuilds:
   dtrace-provider: true
   unrs-resolver: true
   detox: true
+  '@parcel/watcher': true
 
 patchedDependencies:
   detox@20.51.4: patches/detox@20.51.4.patch
