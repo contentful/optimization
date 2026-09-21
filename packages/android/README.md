@@ -21,6 +21,12 @@ optimization behavior through a local QuickJS bridge while Kotlin code owns nati
 as persistence, networking, lifecycle handling, Jetpack Compose UI, XML Views UI, and preview-panel
 UI.
 
+> [!IMPORTANT]
+>
+> Upgrading from v1? Follow the
+> [v1-to-v2 migration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.migrating-optimization-sdk-packages-from-v1-to-v2.html)
+> before changing the Maven dependency version.
+
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->

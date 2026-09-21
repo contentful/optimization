@@ -27,6 +27,12 @@
 optimization behavior through a local JavaScriptCore bridge while Swift code owns native app
 concerns such as persistence, networking, lifecycle handling, SwiftUI views, and preview-panel UI.
 
+> [!IMPORTANT]
+>
+> Upgrading from v1? Follow the
+> [v1-to-v2 migration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.migrating-optimization-sdk-packages-from-v1-to-v2.html)
+> before changing the Swift Package version.
+
 Requires iOS 15 or later.
 
 ## Installation

@@ -23,6 +23,12 @@ We recommend starting applications with Web, React Web, Node, or React Native SD
 directly when building or maintaining SDK layers, tests, tooling, or first-party integrations that
 need raw API access.
 
+> [!IMPORTANT]
+>
+> Upgrading from v1? Follow the
+> [v1-to-v2 migration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.migrating-optimization-sdk-packages-from-v1-to-v2.html)
+> before changing package versions or route-dependent infrastructure.
+
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->

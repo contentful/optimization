@@ -2,6 +2,7 @@
 title: Guides
 children:
   - ./choosing-the-right-sdk.md
+  - ./migrating-optimization-sdk-packages-from-v1-to-v2.md
   - ./integrating-the-node-sdk-in-a-node-app.md
   - ./integrating-the-web-sdk-in-a-web-app.md
   - ./integrating-the-react-web-sdk-in-a-react-app.md
@@ -35,6 +36,14 @@ you are unsure which SDK layer belongs in your app.
 
 - [Choose the right SDK](./choosing-the-right-sdk.md) - Choose the SDK package and runtime layer
   for your app.
+
+## Version migration guides
+
+Use this guide when an existing Optimization SDK integration is moving between major versions.
+
+| Guide                                                                               | Runtime or app type                         | Package                         |
+| ----------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------- |
+| [Optimization SDK v1 to v2](./migrating-optimization-sdk-packages-from-v1-to-v2.md) | Existing Optimization SDK Suite integration | Installed Optimization packages |
 
 ## Integration guides
 

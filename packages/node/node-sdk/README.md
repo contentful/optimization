@@ -25,6 +25,12 @@ for the step-by-step flow. This README keeps the package orientation and common 
 at hand; generated [reference documentation](https://contentful.github.io/optimization) remains the
 source of truth for exported API signatures.
 
+> [!IMPORTANT]
+>
+> Upgrading from v1? Follow the
+> [v1-to-v2 migration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.migrating-optimization-sdk-packages-from-v1-to-v2.html)
+> before changing package versions.
+
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
