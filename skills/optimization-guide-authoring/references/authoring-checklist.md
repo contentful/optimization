@@ -285,22 +285,15 @@ add per-archetype checks; G covers the wiring that decides whether the guide rea
 
 ## G. Site publishing wiring (every published guide)
 
-See `docs-site-publishing` for the reasoning behind each item; `pnpm fern:check` enforces all of them.
+`pnpm fern:check` mechanically enforces the publishing contract — the `fern:` block's shape, slug
+format, link and anchor resolution, MDX safety, and that the slug is recorded. Run it and fix what it
+reports; those rules are deliberately **not** repeated here. What it cannot check is intent, which is
+all this section asks about. See `docs-site-publishing`.
 
-- [ ] The guide has a `fern:` frontmatter block with `slug`, `section`, and `description`.
-- [ ] `fern.section` is exactly one of `Guides`, `Concepts`, `Migration guides`.
-- [ ] `fern.slug` is kebab-case, and for an existing guide it is **unchanged** unless the URL is
-      deliberately moving — a reworded `#` heading is not a reason to change it.
-- [ ] There is no `fern.title`. The published title is the `# ` heading.
-- [ ] `description` uses a plain scalar or a `>-` folded block, and nothing else.
-- [ ] The guide's filename appears in `documentation/guides/README.md` frontmatter `children:`.
-- [ ] Its `children:` index places it where it should appear **within its own `fern.section`** —
-      ordering is global across the group, not per section.
-- [ ] `documentation/fern-slugs.lock.json` records the guide, via
-      `pnpm docs:fern -- --update-lock`, and the lock diff is committed with the guide.
-- [ ] A changed slug produced a redirect entry in the lock, not just a new mapping.
-- [ ] No link points into `documentation/authoring/` or `documentation/internal/`.
-- [ ] Every cross-document link resolves to a published page, and every `#fragment` matches a real
-      heading on the target page.
-- [ ] Angle-bracket placeholders appear only inside inline code or a fenced block — never bare in
-      prose, where MDX treats `<` and `{` as active syntax.
+- [ ] Its index in `children:` places it where it should appear **within its own `fern.section`** —
+      ordering is global across the group, not per section, so position N in the one `guides/` list
+      decides where the page lands inside its section.
+- [ ] `fern.slug` is unchanged unless the URL is **deliberately** moving. A reworded `#` heading is
+      never a reason to change it.
+- [ ] The `documentation/fern-slugs.lock.json` diff is committed **with** the guide, not left behind
+      in a follow-up.

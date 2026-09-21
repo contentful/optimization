@@ -171,11 +171,8 @@ not published at all. See `docs-site-publishing`.
 6. **Sync the TOC and anchors**, add `## Production checks` and (if there are known failure modes)
    `## Troubleshooting`, and link the reference implementation READMEs.
 7. **Wire the page for publication**, following `docs-site-publishing`. A guide that is written but
-   not wired is invisible on the public site, and that failure is silent. For a new guide: add the
-   `fern:` block (`slug`, `section`, `description`), add it to the group README `children:` at the
-   position it should hold in its own sidebar section, and record the slug with
-   `pnpm docs:fern -- --update-lock`. For a refresh: if the `#` heading changed, leave `fern.slug`
-   alone — the slug is data precisely so a reworded heading cannot move a live URL.
+   not wired is invisible on the public site, and that failure is silent. On a refresh, a reworded
+   `#` heading is never a reason to touch `fern.slug`.
 8. **Self-review** against [references/authoring-checklist.md](references/authoring-checklist.md).
 9. **Validate**: run `pnpm exec prettier --write <file>`, `pnpm guides:check`, `pnpm knowledge:check`,
    and `pnpm fern:check`; confirm the collapsible TOC anchors resolve.
