@@ -2,7 +2,7 @@
 
 Run before finishing any guide edit. Assertions are written to be mechanically checkable so they can
 also back a future validation hook on `documentation/guides/**`. Group A applies to all guides; B–F
-add per-archetype checks.
+add per-archetype checks; G covers the wiring that decides whether the guide reaches the public site.
 
 ## A. All guides
 
@@ -282,3 +282,25 @@ add per-archetype checks.
 - [ ] No fastest-path column, setup summary, tradeoff matrix, or procedure preview.
 - [ ] Listing order: Node, Web, React Web, Next.js App Router, Next.js Pages Router, React Native,
       iOS SwiftUI, iOS UIKit, Android Compose, Android Views.
+
+## G. Site publishing wiring (every published guide)
+
+See `docs-site-publishing` for the reasoning behind each item; `pnpm fern:check` enforces all of them.
+
+- [ ] The guide has a `fern:` frontmatter block with `slug`, `section`, and `description`.
+- [ ] `fern.section` is exactly one of `Guides`, `Concepts`, `Migration guides`.
+- [ ] `fern.slug` is kebab-case, and for an existing guide it is **unchanged** unless the URL is
+      deliberately moving — a reworded `#` heading is not a reason to change it.
+- [ ] There is no `fern.title`. The published title is the `# ` heading.
+- [ ] `description` uses a plain scalar or a `>-` folded block, and nothing else.
+- [ ] The guide's filename appears in `documentation/guides/README.md` frontmatter `children:`.
+- [ ] Its `children:` index places it where it should appear **within its own `fern.section`** —
+      ordering is global across the group, not per section.
+- [ ] `documentation/fern-slugs.lock.json` records the guide, via
+      `pnpm docs:fern -- --update-lock`, and the lock diff is committed with the guide.
+- [ ] A changed slug produced a redirect entry in the lock, not just a new mapping.
+- [ ] No link points into `documentation/authoring/` or `documentation/internal/`.
+- [ ] Every cross-document link resolves to a published page, and every `#fragment` matches a real
+      heading on the target page.
+- [ ] Angle-bracket placeholders appear only inside inline code or a fenced block — never bare in
+      prose, where MDX treats `<` and `{` as active syntax.

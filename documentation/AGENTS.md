@@ -30,6 +30,9 @@ release-gated, so an edit here reaches the public site at the next release rathe
 maintainer can publish out of band by dispatching the sync workflow from `main`. Run
 `pnpm fern:check` after editing either directory.
 
+- A document is published only if it is listed in its group README frontmatter `children:`. The
+  exporter reads that list and never scans the filesystem, so a file on disk but absent from
+  `children:` is simply not published rather than an error.
 - Every published document needs a `fern:` frontmatter block: `slug`, `section` (`Guides`,
   `Concepts`, or `Migration guides`), and `description`. Add `navTitle` only when the sidebar needs a
   shorter label than the page title.
@@ -37,8 +40,11 @@ maintainer can publish out of band by dispatching the sync workflow from `main`.
   cannot drift from the heading; `pnpm fern:check` rejects one if it is reintroduced, and rejects an
   authored top-level `title` that no longer matches the heading.
 - `fern.slug` is data and is never derived from a heading, so rewording an `#` heading cannot move a
-  live URL. Changing a slug requires `pnpm docs:fern -- --update-lock`, which records a permanent
-  redirect in `documentation/fern-slugs.lock.json`. `pnpm fern:check` fails on an unrecorded change.
+  live URL. Both a new slug and a changed one are recorded with `pnpm docs:fern -- --update-lock`,
+  which writes `documentation/fern-slugs.lock.json` — appending a permanent redirect when a slug
+  moved. Commit that lock diff with the document; `pnpm fern:check` fails on any slug the lock does
+  not record. The sync workflow runs `pnpm docs:fern` without `--update-lock`, so an entry that is
+  never committed never appears, and the page's first slug reword would move a live URL silently.
 - Cross-document links must resolve to a published document, and a `#fragment` must match a real
   heading on the target page. Never link a published document to `authoring/` or `internal/`.
 - Do not hand-edit the pages in `contentful-docs`; they are generated and the next sync overwrites

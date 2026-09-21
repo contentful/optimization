@@ -1,0 +1,9 @@
+{
+  "name": "@contentful/skill-docs-site-publishing",
+  "version": "0.1.0",
+  "description": "Wire authored Optimization SDK docs into the published Contentful documentation site",
+  "license": "MIT",
+  "files": [
+    "SKILL.md"
+  ]
+}
