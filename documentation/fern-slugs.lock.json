@@ -32,6 +32,7 @@
     "documentation/guides/migrating-experience-js-plugins-and-preview.md": "migrate-experiencejs-plugins-and-preview",
     "documentation/guides/migrating-experience-js-react-to-react-web.md": "migrate-experiencejs-to-react-web",
     "documentation/guides/migrating-experience-js-to-the-web-sdk.md": "migrate-experiencejs-to-web-sdk",
+    "documentation/guides/migrating-optimization-sdk-packages-from-v1-to-v2.md": "migrate-optimization-sdk-v1-to-v2",
     "documentation/guides/rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md": "render-personalized-nextjs-routes",
     "documentation/guides/using-contentful-graphql-data-with-the-optimization-sdks.md": "use-contentful-graphql-data-with-the-optimization-sdks"
   },
