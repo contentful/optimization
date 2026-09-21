@@ -87,7 +87,20 @@ export function buildBundle(options: BuildOptions): BuildResult {
     const { slugs } = lock
     for (const doc of docs) {
       const { [doc.relPath]: previous } = slugs
-      if (previous !== undefined && previous !== doc.fern.slug) {
+      // An unrecorded document is what a brand-new page looks like, and it publishes fine without an
+      // entry because `reconcileLock` supplies one in memory. Requiring the entry anyway is what buys
+      // the page slug protection: the check below can only compare against a slug the lock names, and
+      // the sync workflow runs `pnpm docs:fern` without `--update-lock`, so an entry the author never
+      // commits never appears. Without it, the page's first slug reword moves a live URL silently.
+      if (previous === undefined) {
+        problems.push({
+          file: doc.relPath,
+          line: 1,
+          message: `fern.slug "${doc.fern.slug}" is not recorded in documentation/fern-slugs.lock.json; rerun \`pnpm docs:fern -- --update-lock\` to record it`,
+        })
+        continue
+      }
+      if (previous !== doc.fern.slug) {
         problems.push({
           file: doc.relPath,
           line: 1,
@@ -95,7 +108,6 @@ export function buildBundle(options: BuildOptions): BuildResult {
         })
       }
     }
-    // A document missing from the lock has never been published; that is expected for a new page.
   }
 
   const reconciled = reconcileLock(lock, docs)

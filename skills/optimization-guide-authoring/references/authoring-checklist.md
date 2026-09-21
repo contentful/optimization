@@ -2,7 +2,7 @@
 
 Run before finishing any guide edit. Assertions are written to be mechanically checkable so they can
 also back a future validation hook on `documentation/guides/**`. Group A applies to all guides; B–F
-add per-archetype checks.
+add per-archetype checks; G covers the wiring that decides whether the guide reaches the public site.
 
 ## A. All guides
 
@@ -282,3 +282,18 @@ add per-archetype checks.
 - [ ] No fastest-path column, setup summary, tradeoff matrix, or procedure preview.
 - [ ] Listing order: Node, Web, React Web, Next.js App Router, Next.js Pages Router, React Native,
       iOS SwiftUI, iOS UIKit, Android Compose, Android Views.
+
+## G. Site publishing wiring (every published guide)
+
+`pnpm fern:check` mechanically enforces the publishing contract — the `fern:` block's shape, slug
+format, link and anchor resolution, MDX safety, and that the slug is recorded. Run it and fix what it
+reports; those rules are deliberately **not** repeated here. What it cannot check is intent, which is
+all this section asks about. See `docs-site-publishing`.
+
+- [ ] Its index in `children:` places it where it should appear **within its own `fern.section`** —
+      ordering is global across the group, not per section, so position N in the one `guides/` list
+      decides where the page lands inside its section.
+- [ ] `fern.slug` is unchanged unless the URL is **deliberately** moving. A reworded `#` heading is
+      never a reason to change it.
+- [ ] The `documentation/fern-slugs.lock.json` diff is committed **with** the guide, not left behind
+      in a follow-up.

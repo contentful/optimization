@@ -4,7 +4,8 @@
  * This is the gate that makes the link rot the manual process accumulated impossible to reintroduce:
  * every cross-document link must resolve to a published page, and every `#fragment` must match a real
  * heading on that page. It also enforces the MDX safety rule that catches leaked markup, and refuses
- * an unrecorded slug change so a live URL can never move silently.
+ * any slug the lock does not record — a new page's as well as a changed one's — so a live URL can
+ * never move silently.
  *
  * Usage: pnpm fern:check [-- --ref <git-ref>]
  */

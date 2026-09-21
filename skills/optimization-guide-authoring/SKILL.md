@@ -67,6 +67,9 @@ go deeper. Two consequences drive everything below:
   owns its Quick-start contract, Milestone contract, `###` inventory/order/category, and what each
   section must teach or show. Shared wording lives in `documentation/authoring/fragments/`. Open both
   recipe and blueprint before drafting.
+- **Site publishing wiring** — the `fern:` frontmatter block, the group README `children:` manifest,
+  the slug lock, sidebar order, MDX safety, and the release-gated sync belong to
+  `docs-site-publishing`. This skill decides what a guide says; that one decides whether it ships.
 - Concept docs under `documentation/concepts/` — they own deeper mechanics; guides link to them.
 - Package READMEs, implementation READMEs, and product docs.
 - Generated TypeDoc under `docs/` — it owns exhaustive, method-by-method API reference.
@@ -110,6 +113,10 @@ Keep `documentation/guides/README.md` a lightweight router only. Use concise fie
 procedure previews. Put package tradeoffs in `choosing-the-right-sdk.md` and runnable paths in the
 integration guides. Keep the listing order: Node, Web, React Web, Next.js App Router, Next.js Pages
 Router, React Native, iOS SwiftUI, iOS UIKit, Android Compose, Android Views.
+
+The README is also the publishing manifest: its frontmatter `children:` list is the only thing the
+site exporter reads, and its order is the published sidebar order. A guide missing from `children:` is
+not published at all. See `docs-site-publishing`.
 
 ## Workflow
 
@@ -163,14 +170,18 @@ Router, React Native, iOS SwiftUI, iOS UIKit, Android Compose, Android Views.
 
 6. **Sync the TOC and anchors**, add `## Production checks` and (if there are known failure modes)
    `## Troubleshooting`, and link the reference implementation READMEs.
-7. **Self-review** against [references/authoring-checklist.md](references/authoring-checklist.md).
-8. **Validate**: run `pnpm exec prettier --write <file>`, `pnpm guides:check`, and
-   `pnpm knowledge:check`; confirm the collapsible TOC anchors resolve.
-9. **Review new or substantially rewritten guides independently.** A newcomer reviewer checks that
-   the target reader can perform and verify the guide. A technical-foundation reviewer checks
-   interfaces against `packages/**/src` and behavior against the knowledge base. Resolve blocker and
-   high-severity findings before acceptance; the writer does not sign off its own draft.
-10. **Report the result.** Return the edited guide path and a short summary of what changed and why.
+7. **Wire the page for publication**, following `docs-site-publishing`. A guide that is written but
+   not wired is invisible on the public site, and that failure is silent. On a refresh, a reworded
+   `#` heading is never a reason to touch `fern.slug`.
+8. **Self-review** against [references/authoring-checklist.md](references/authoring-checklist.md).
+9. **Validate**: run `pnpm exec prettier --write <file>`, `pnpm guides:check`, `pnpm knowledge:check`,
+   and `pnpm fern:check`; confirm the collapsible TOC anchors resolve.
+10. **Review new or substantially rewritten guides independently.** A newcomer reviewer checks that
+    the target reader can perform and verify the guide. A technical-foundation reviewer checks
+    interfaces against `packages/**/src` and behavior against the knowledge base. Resolve blocker and
+    high-severity findings before acceptance; the writer does not sign off its own draft.
+11. **Report the result.** Return the edited guide path and a short summary of what changed and why,
+    including whether the page is wired for publication and that publication is release-gated.
 
 For a new guide, draft from the recipe and blueprint. Include every required quick-start artifact and
 satisfy every “Must teach or show” / “Must route to” item; matching headings alone is incomplete.
