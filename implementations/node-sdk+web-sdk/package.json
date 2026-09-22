@@ -38,7 +38,7 @@
     "@playwright/test": "1.63.0",
     "@types/express": "5.0.6",
     "@types/node": "24.10.13",
-    "@types/qs": "6.14.0",
+    "@types/qs": "6.15.1",
     "@types/supertest": "6.0.3",
     "@rstest/core": "0.12.0",
     "@rstest/coverage-istanbul": "0.12.0",
