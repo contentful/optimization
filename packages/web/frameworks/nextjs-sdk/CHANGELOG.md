@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.1](https://github.com/contentful/optimization/compare/optimization-nextjs-v2.0.0...optimization-nextjs-v2.0.1) (2026-09-23)
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @contentful/optimization-node bumped to 2.0.1
+    - @contentful/optimization-react-web bumped to 2.0.1
+
 ## [2.0.0](https://github.com/contentful/optimization/compare/optimization-nextjs-v1.3.0...optimization-nextjs-v2.0.0) (2026-09-21)
 
 ### ⚠ BREAKING CHANGES
