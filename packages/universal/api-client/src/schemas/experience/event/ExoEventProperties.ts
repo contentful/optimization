@@ -33,8 +33,8 @@ export const ExoEventProperties = z.extend(UniversalEventProperties, {
   /** Contentful entry identifiers rendered by the entity. */
   entryIds: z.optional(z.array(z.string())),
 
-  /** Identifier of the optimization that selected the entity variant. */
-  optimizationId: z.string(),
+  /** Identifier of the optimization that selected the entity variant, when available. */
+  optimizationId: z.optional(z.string()),
 
   /** Parameter values used to render the entity. */
   parameters: z.optional(z.record(z.string(), z.json())),
@@ -42,8 +42,8 @@ export const ExoEventProperties = z.extend(UniversalEventProperties, {
   /** Identifier of the containing experience, when the entity is nested. */
   parentExperienceId: z.optional(z.string()),
 
-  /** Identifier of the selected entity variant. */
-  variantId: z.string(),
+  /** Identifier of the selected entity variant, when available. */
+  variantId: z.optional(z.string()),
 
   /** Index of the selected variant when available. */
   variantIndex: z.optional(z.number()),
