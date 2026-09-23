@@ -40,6 +40,8 @@ const exoProperties = {
   variantIndex: 1,
 } as const
 
+const { optimizationId, variantId, ...unattributedExoProperties } = exoProperties
+
 describe('ExO events', () => {
   it.each(['Experience', 'Fragment', 'InlineFragment', 'InlineComponent'])(
     'accepts the %s entity kind',
@@ -84,6 +86,40 @@ describe('ExO events', () => {
     }
 
     expect(ExoHoverEvent.safeParse(event).success).toBe(true)
+    expect(InsightsEvent.safeParse(event).success).toBe(true)
+  })
+
+  it.each([
+    {
+      type: 'exo_node_view',
+      viewDurationMs: 3000,
+      viewId: 'view-123',
+    },
+    { type: 'exo_node_click' },
+    {
+      type: 'exo_node_hover',
+      hoverDurationMs: 1500,
+      hoverId: 'hover-123',
+    },
+  ])('parses an unattributed $type event through the Insights event union', (event) => {
+    expect(
+      InsightsEvent.safeParse({
+        ...unattributedExoProperties,
+        ...event,
+      }).success,
+    ).toBe(true)
+  })
+
+  it('preserves attribution for a baseline selection', () => {
+    const event = {
+      ...exoProperties,
+      type: 'exo_node_view',
+      variantIndex: 0,
+      viewDurationMs: 3000,
+      viewId: 'view-123',
+    }
+
+    expect(ExoViewEvent.safeParse(event).success).toBe(true)
     expect(InsightsEvent.safeParse(event).success).toBe(true)
   })
 
