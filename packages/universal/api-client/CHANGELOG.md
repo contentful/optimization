@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.1](https://github.com/contentful/optimization/compare/optimization-api-client-v2.0.0...optimization-api-client-v2.0.1) (2026-09-23)
+
+### Bug Fixes
+
+- **api-client:** allow unattributed ExO node events ([#518](https://github.com/contentful/optimization/issues/518)) ([5501080](https://github.com/contentful/optimization/commit/5501080ad030760d980c69bda677e5df404ff813))
+
 ## [2.0.0](https://github.com/contentful/optimization/compare/optimization-api-client-v1.1.1...optimization-api-client-v2.0.0) (2026-09-21)
 
 ### ⚠ BREAKING CHANGES
