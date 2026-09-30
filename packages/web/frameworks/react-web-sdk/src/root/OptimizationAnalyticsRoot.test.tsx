@@ -20,7 +20,6 @@ const testConfig = {
 const analyticsHandoff: AnalyticsOptimizationHandoff = {
   cache: { scope: 'static' },
   hydration: 'analytics-only',
-  initialPageEvent: 'emit',
   state: { selectedOptimizations: [] },
 }
 
@@ -110,9 +109,9 @@ async function renderClientAsync(element: ReactElement): Promise<{
 }
 
 describe('OptimizationAnalyticsRoot', () => {
-  it('hydrates analytics handoff and tracks the initial route without content context', async () => {
+  it('hydrates analytics handoff and tracks initial and changed routes without content context', async () => {
     const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     const resolveOptimizedEntry = rs.spyOn(
       ContentfulOptimization.prototype,
@@ -131,44 +130,14 @@ describe('OptimizationAnalyticsRoot', () => {
       </OptimizationAnalyticsRoot>,
     )
 
-    expect(trackCurrentPage).toHaveBeenCalledWith({
-      buildPayload: buildPagePayload,
-      initialPageEvent: 'emit',
-      routeKey: '/segments/a',
-    })
+    expect(trackCurrentPage).toHaveBeenCalledWith({ properties: { route: '/segments/a' } })
     expect(resolveOptimizedEntry).not.toHaveBeenCalled()
-
-    rendered.unmount()
-    trackCurrentPage.mockRestore()
-    resolveOptimizedEntry.mockRestore()
-  })
-
-  it('skips only the initially hydrated analytics route', async () => {
-    const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
-      .mockResolvedValue({ accepted: true })
-    const buildPagePayload = rs.fn(() => ({}))
-    const handoff: AnalyticsOptimizationHandoff = {
-      ...analyticsHandoff,
-      initialPageEvent: 'skip',
-    }
-
-    const rendered = await renderClientAsync(
-      <OptimizationAnalyticsRoot
-        {...testConfig}
-        handoff={handoff}
-        routeKey="/"
-        buildPagePayload={buildPagePayload}
-      >
-        <div />
-      </OptimizationAnalyticsRoot>,
-    )
 
     await rendered.rerender(
       <OptimizationAnalyticsRoot
         {...testConfig}
-        handoff={handoff}
-        routeKey="/products"
+        handoff={analyticsHandoff}
+        routeKey="/segments/b"
         buildPagePayload={buildPagePayload}
       >
         <div />
@@ -176,29 +145,20 @@ describe('OptimizationAnalyticsRoot', () => {
     )
 
     expect(trackCurrentPage).toHaveBeenCalledTimes(2)
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(1, {
-      buildPayload: buildPagePayload,
-      initialPageEvent: 'skip',
-      routeKey: '/',
-    })
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(2, {
-      buildPayload: buildPagePayload,
-      initialPageEvent: 'emit',
-      routeKey: '/products',
-    })
+    expect(trackCurrentPage).toHaveBeenNthCalledWith(2, { properties: { route: '/segments/a' } })
 
     rendered.unmount()
     trackCurrentPage.mockRestore()
+    resolveOptimizedEntry.mockRestore()
   })
 
-  it('keeps a skipped initial analytics route skipped through StrictMode replay', async () => {
+  it('deduplicates the StrictMode mount while tracking a route change', async () => {
     const page = rs.spyOn(ContentfulOptimization.prototype, 'page').mockResolvedValue({
       accepted: true,
     })
     const buildPagePayload = rs.fn(() => ({ properties: { route: 'client' } }))
     const handoff: AnalyticsOptimizationHandoff = {
       ...analyticsHandoff,
-      initialPageEvent: 'skip',
     }
 
     const rendered = await renderClientAsync(
@@ -215,7 +175,7 @@ describe('OptimizationAnalyticsRoot', () => {
       </StrictMode>,
     )
 
-    expect(page).not.toHaveBeenCalled()
+    expect(page).toHaveBeenCalledTimes(1)
 
     await rendered.rerender(
       <StrictMode>
@@ -231,7 +191,7 @@ describe('OptimizationAnalyticsRoot', () => {
       </StrictMode>,
     )
 
-    expect(page).toHaveBeenCalledTimes(1)
+    expect(page).toHaveBeenCalledTimes(2)
     expect(page).toHaveBeenCalledWith({ properties: { route: 'client' } })
 
     rendered.unmount()
@@ -240,7 +200,7 @@ describe('OptimizationAnalyticsRoot', () => {
 
   it('hydrates analytics handoff with a serializable initial payload', async () => {
     const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     const initialPagePayload = { properties: { route: '/segments/a' } }
 
@@ -255,29 +215,20 @@ describe('OptimizationAnalyticsRoot', () => {
       </OptimizationAnalyticsRoot>,
     )
 
-    expect(trackCurrentPage).toHaveBeenCalledWith({
-      buildPayload: expect.any(Function),
-      initialPageEvent: 'emit',
-      routeKey: '/segments/a',
-    })
-    const firstCall = trackCurrentPage.mock.calls[0]
-    if (firstCall === undefined) throw new Error('Expected trackCurrentPage to be called.')
-    const [{ buildPayload }] = firstCall
-    if (buildPayload === undefined) throw new Error('Expected buildPayload to be provided.')
-    expect(buildPayload({ isInitialEmission: true })).toBe(initialPagePayload)
+    expect(trackCurrentPage).toHaveBeenCalledWith(initialPagePayload)
 
     rendered.unmount()
     trackCurrentPage.mockRestore()
   })
 
-  it('does not track an older route when analytics hydration resolves after a newer handoff', async () => {
+  it('keeps latest state while replay-less page attempts finish out of order', async () => {
     const firstProfile = createProfile('first-profile')
     const secondProfile = createProfile('second-profile')
     const firstHydration = createDeferred()
     const secondHydration = createDeferred()
     const buildPagePayload = rs.fn(() => ({}))
     const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     const runInterceptors = InterceptorManager.prototype.run
     const runInterceptorsSpy = rs
@@ -329,11 +280,7 @@ describe('OptimizationAnalyticsRoot', () => {
     })
 
     expect(trackCurrentPage).toHaveBeenCalledTimes(1)
-    expect(trackCurrentPage).toHaveBeenCalledWith({
-      buildPayload: buildPagePayload,
-      initialPageEvent: 'emit',
-      routeKey: '/segments/b',
-    })
+    expect(trackCurrentPage).toHaveBeenCalledWith({})
 
     firstHydration.resolve()
     await act(async () => {
@@ -341,7 +288,40 @@ describe('OptimizationAnalyticsRoot', () => {
       await Promise.resolve()
     })
 
+    expect(trackCurrentPage).toHaveBeenCalledTimes(2)
+
+    rendered.unmount()
+    trackCurrentPage.mockRestore()
+    runInterceptorsSpy.mockRestore()
+  })
+
+  it('tracks the initial page when private-request analytics hydration fails', async () => {
+    const hydrationError = new Error('handoff failed')
+    const trackCurrentPage = rs
+      .spyOn(ContentfulOptimization.prototype, 'page')
+      .mockResolvedValue({ accepted: true })
+    const runInterceptorsSpy = rs
+      .spyOn(InterceptorManager.prototype, 'run')
+      .mockRejectedValue(hydrationError)
+
+    const rendered = await renderClientAsync(
+      <OptimizationAnalyticsRoot
+        {...testConfig}
+        handoff={{
+          ...analyticsHandoff,
+          cache: { scope: 'private-request' },
+          state: { profile: createProfile('handoff-profile'), selectedOptimizations: [] },
+        }}
+        routeKey="/segments/a"
+        buildPagePayload={() => ({ properties: { ordinary: true } })}
+      >
+        <div />
+      </OptimizationAnalyticsRoot>,
+    )
+
+    expect(signals.selectedOptimizations.value).toBeUndefined()
     expect(trackCurrentPage).toHaveBeenCalledTimes(1)
+    expect(trackCurrentPage).toHaveBeenCalledWith({ properties: { ordinary: true } })
 
     rendered.unmount()
     trackCurrentPage.mockRestore()
@@ -353,7 +333,7 @@ describe('OptimizationAnalyticsRoot', () => {
     const hydration = createDeferred()
     const buildPagePayload = rs.fn(() => ({}))
     const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     const runInterceptors = InterceptorManager.prototype.run
     const runInterceptorsSpy = rs

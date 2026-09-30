@@ -10,6 +10,7 @@ import {
   hasOptimizationSelectionStateField,
   mergeOptimizationSelectionState,
   signals,
+  type ContentOptimizationHydrationMode,
   type OptimizationHandoff,
   type OptimizationSelectionState,
 } from '@contentful/optimization-core'
@@ -23,14 +24,14 @@ import {
  *
  * @public
  */
-export type ContentOptimizationHydrationMode = 'preserve-server' | 'client-only-hidden-until-ready'
+export type { ContentOptimizationHydrationMode } from '@contentful/optimization-core'
 
 /**
  * Browser hydration policy for content or analytics-only handoffs.
  *
  * @public
  */
-export type OptimizationHydrationMode = ContentOptimizationHydrationMode | 'analytics-only'
+export type { OptimizationHydrationMode } from '@contentful/optimization-core'
 
 /**
  * Content-capable browser handoff.
@@ -40,8 +41,8 @@ export type OptimizationHydrationMode = ContentOptimizationHydrationMode | 'anal
 export interface ContentOptimizationHandoff extends OptimizationHandoff {
   /** Initial content hydration mode. */
   readonly hydration: ContentOptimizationHydrationMode
-  /** Whether the browser owns the initial page event for this route. */
-  readonly initialPageEvent: 'emit' | 'skip'
+  /** @deprecated This legacy input is inert. */
+  readonly initialPageEvent?: 'emit' | 'skip'
 }
 
 /**
@@ -52,8 +53,8 @@ export interface ContentOptimizationHandoff extends OptimizationHandoff {
 export interface AnalyticsOptimizationHandoff extends OptimizationHandoff {
   /** Analytics-only handoffs never control content presentation. */
   readonly hydration: 'analytics-only'
-  /** Whether the browser owns the initial page event for this route. */
-  readonly initialPageEvent: 'emit' | 'skip'
+  /** @deprecated This legacy input is inert. */
+  readonly initialPageEvent?: 'emit' | 'skip'
 }
 
 /**
@@ -111,12 +112,9 @@ const CONTENT_HYDRATION_MODES: readonly ContentOptimizationHydrationMode[] = [
 
 let latestHandoffStateHydration = 0
 
-function assertInitialPageEvent(
-  initialPageEvent: unknown,
-): asserts initialPageEvent is 'emit' | 'skip' {
-  if (initialPageEvent === 'emit' || initialPageEvent === 'skip') return
-
-  throw new TypeError('Optimization handoff requires initialPageEvent to be "emit" or "skip".')
+/** @internal */
+export function invalidateOptimizationHandoffHydration(): void {
+  latestHandoffStateHydration += 1
 }
 
 function assertContentHandoff(
@@ -138,16 +136,6 @@ function hasBrowserHandoffStateInterceptorRunner(
 
 function shouldContinueHydration(options: HandoffStateHydrationOptions): boolean {
   return options.isCurrent?.() !== false
-}
-
-/**
- * @internal
- */
-export function shouldPreserveDurableContinuity(handoff: BrowserOptimizationHandoff): boolean {
-  return (
-    (handoff.cache.scope === 'public-permutation' || handoff.cache.scope === 'static') &&
-    handoff.state?.profile === undefined
-  )
 }
 
 function applyHydratedSignals({
@@ -184,8 +172,8 @@ function applyHydratedSignals({
   updateSignals()
 }
 
-function applySuccessfulEmptyHandoffHydration(options: HandoffStateHydrationOptions): void {
-  if (!shouldContinueHydration(options)) return
+function applySuccessfulEmptyHandoffHydration(options: HandoffStateHydrationOptions): boolean {
+  if (!shouldContinueHydration(options)) return false
 
   applyHydratedSignals({
     hasChanges: true,
@@ -194,19 +182,19 @@ function applySuccessfulEmptyHandoffHydration(options: HandoffStateHydrationOpti
     options,
     state: CONTENT_STATE_RESET,
   })
+  return true
 }
 
-async function hydrateOptimizationHandoffStateInternal(
+export async function hydrateContentOptimizationHandoffState(
   sdk: OptimizationHandoffHydrationTarget,
   state: BrowserOptimizationHandoff['state'],
   options: HandoffStateHydrationOptions = {},
-): Promise<void> {
+): Promise<boolean> {
   latestHandoffStateHydration += 1
   const hydration = latestHandoffStateHydration
 
   if (!state) {
-    applySuccessfulEmptyHandoffHydration(options)
-    return
+    return applySuccessfulEmptyHandoffHydration(options)
   }
 
   const hasChanges = hasOptimizationSelectionStateField(state, 'changes')
@@ -216,8 +204,7 @@ async function hydrateOptimizationHandoffStateInternal(
     'selectedOptimizations',
   )
   if (!hasChanges && !hasProfile && !hasSelectedOptimizations) {
-    applySuccessfulEmptyHandoffHydration(options)
-    return
+    return applySuccessfulEmptyHandoffHydration(options)
   }
 
   const inputState = mergeOptimizationSelectionState(CONTENT_STATE_RESET, state)
@@ -234,8 +221,8 @@ async function hydrateOptimizationHandoffStateInternal(
       return undefined
     })
 
-  if (hydratedState === undefined || hydration !== latestHandoffStateHydration) return
-  if (!shouldContinueHydration(options)) return
+  if (hydratedState === undefined || hydration !== latestHandoffStateHydration) return false
+  if (!shouldContinueHydration(options)) return false
 
   const mergedState = mergeOptimizationSelectionState(inputState, hydratedState)
 
@@ -249,6 +236,7 @@ async function hydrateOptimizationHandoffStateInternal(
     options,
     state: mergedState,
   })
+  return true
 }
 
 /**
@@ -264,7 +252,7 @@ export async function hydrateOptimizationHandoffState(
   state: BrowserOptimizationHandoff['state'],
   options: HandoffStateHydrationOptions = {},
 ): Promise<void> {
-  await hydrateOptimizationHandoffStateInternal(sdk, state, options)
+  await hydrateContentOptimizationHandoffState(sdk, state, options)
 }
 
 /**
@@ -280,9 +268,9 @@ export async function hydrateOptimizationHandoff(
   handoff: ContentOptimizationHandoff,
 ): Promise<void> {
   assertContentHandoff(handoff)
-  assertInitialPageEvent(handoff.initialPageEvent)
   assertOptimizationCacheSafety(handoff)
-  await hydrateOptimizationHandoffStateInternal(sdk, handoff.state, {
-    suppressDurableContinuityPersistence: shouldPreserveDurableContinuity(handoff),
+
+  await hydrateContentOptimizationHandoffState(sdk, handoff.state, {
+    suppressDurableContinuityPersistence: true,
   })
 }

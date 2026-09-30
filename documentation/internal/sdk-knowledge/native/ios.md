@@ -76,7 +76,9 @@ apps mostly use the view surface, UIKit apps mostly use the imperative `Optimiza
   `logLevel` default `.error`; `locale`, `api`
   (`experienceBaseUrl`/`insightsBaseUrl`/`enabledFeatures`/`preflight`), `allowedEventTypes`,
   `queuePolicy`, `defaults: StorageDefaults`,
-  `onEventBlocked` all optional. source: extern:environment default "master", logLevel default .error, spaceId required — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationConfig.swift#OptimizationConfig
+  `onEventBlocked` all optional. `preflight` is deprecated and retained only for mixed-version
+  configuration serialization; the bridged stateful Core runtime ignores it.
+  source: extern:environment default "master", logLevel default .error, spaceId required, and preflight compatibility behavior — packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/OptimizationConfig.swift#OptimizationConfig; optimization-js-bridge#index.ts#BridgeConfig; core-sdk#CoreStateful.ts#createStatefulExperienceApiConfig
 - `config.toJSON()` serializes to the bridge `BridgeConfig` shape, omitting nil URLs and empty
   sub-dicts; the bridge maps it into `CoreStatefulConfig` via `resolveStatefulDefaults`, defaulting
   `allowedEventTypes` to `DEFAULT_NATIVE_ALLOWED_EVENT_TYPES` and installing `queuePolicy` callbacks

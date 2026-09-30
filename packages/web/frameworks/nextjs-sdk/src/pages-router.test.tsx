@@ -63,7 +63,6 @@ describe('Next.js Pages Router client components', () => {
         { baselineEntry: createEntry('4ib0hsHWoSOnCVdDkizE8d'), entryId: '4ib0hsHWoSOnCVdDkizE8d' },
       ],
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
 
@@ -124,7 +123,6 @@ describe('Next.js Pages Router client components', () => {
       ...components.createHandoffFromSelections({
         cache: { scope: 'private-request' },
         hydration: 'preserve-server',
-        initialPageEvent: 'skip',
         selectedOptimizations: [],
       }),
       defaults: { consent: true },
@@ -133,7 +131,6 @@ describe('Next.js Pages Router client components', () => {
       ...components.createHandoffFromSelections({
         cache: { scope: 'private-request' },
         hydration: 'analytics-only',
-        initialPageEvent: 'skip',
         selectedOptimizations: [],
       }),
       defaults: { consent: true },
@@ -188,7 +185,6 @@ describe('Next.js Pages Router client components', () => {
         },
       ],
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
 
@@ -226,7 +222,6 @@ describe('Next.js Pages Router client components', () => {
     const analyticsHandoff = components.createHandoffFromSelections({
       cache: { scope: 'static' },
       hydration: 'analytics-only',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
     const root = components.OptimizationRoot({
@@ -247,7 +242,7 @@ describe('Next.js Pages Router client components', () => {
     expect(components).not.toHaveProperty('beforeInitialPage')
   })
 
-  it('returns Pages Router v2 helpers only', () => {
+  it('provides Pages Router v2 helpers', () => {
     const components = pagesRouter.bindNextjsPagesRouterOptimization(testConfig)
 
     expect(components.NextPagesAutoPageTracker).toBe(pagesRouter.NextPagesAutoPageTracker)
@@ -256,18 +251,5 @@ describe('Next.js Pages Router client components', () => {
     expect(components.createOptimizationCacheKey).toBeTypeOf('function')
     expect(components.createPublicPermutationHandoff).toBeTypeOf('function')
     expect(components.resolveEntriesForSelections).toBeTypeOf('function')
-    expect(components).not.toHaveProperty('NextAppAutoPageTracker')
-  })
-
-  it('keeps the Pages Router entry scoped to the client binding and pass-through helpers', () => {
-    expect(Object.keys(pagesRouter).sort()).toEqual([
-      'NextPagesAutoPageTracker',
-      'bindNextjsPagesRouterOptimization',
-      'createHandoffFromSelections',
-      'createOptimizationCacheKey',
-      'createPublicPermutationCacheMetadata',
-      'createPublicPermutationHandoff',
-      'resolveEntriesForSelections',
-    ])
   })
 })

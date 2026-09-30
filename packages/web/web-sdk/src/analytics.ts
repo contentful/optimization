@@ -5,22 +5,14 @@
  */
 
 import { assertOptimizationCacheSafety } from '@contentful/optimization-core'
-import { createScopedLogger } from '@contentful/optimization-core/logger'
 import ContentfulOptimization, {
   type OptimizationTrackingApi,
   type OptimizationWebConfig,
   type TrackCurrentPageOptions,
 } from './ContentfulOptimization'
-import {
-  hydrateOptimizationHandoffState,
-  shouldPreserveDurableContinuity,
-  type AnalyticsOptimizationHandoff,
-} from './handoff'
-
-const logger = createScopedLogger('Web:AnalyticsHandoff')
+import type { AnalyticsOptimizationHandoff } from './handoff'
 
 const runtimeSdks = new WeakMap<OptimizationAnalyticsRuntime, ContentfulOptimization>()
-let latestAnalyticsHandoffHydration = 0
 
 /**
  * Options used when hydrating an analytics-only handoff.
@@ -30,8 +22,8 @@ let latestAnalyticsHandoffHydration = 0
 export interface HydrateOptimizationAnalyticsHandoffOptions {
   /** Stable route identity used for current-page deduplication. */
   readonly routeKey: string
-  /** Builds the browser page payload when `handoff.initialPageEvent` is `emit`. */
-  readonly buildPagePayload: TrackCurrentPageOptions['buildPayload']
+  /** Builds the browser page payload. */
+  readonly buildPagePayload?: TrackCurrentPageOptions['buildPayload']
   /** Cancels async hydration before state apply or page tracking. */
   readonly isCurrent?: () => boolean
 }
@@ -62,22 +54,6 @@ function getRuntimeSdk(runtime: OptimizationAnalyticsRuntime): ContentfulOptimiz
   return sdk
 }
 
-function hasProfileContinuity(sdk: ContentfulOptimization): boolean {
-  return sdk.states.persistenceConsent.current === true && sdk.states.profile.current !== undefined
-}
-
-function warnSkippedInitialPageWithoutProfileContinuity(
-  sdk: ContentfulOptimization,
-  handoff: AnalyticsOptimizationHandoff,
-): void {
-  if (handoff.initialPageEvent !== 'skip') return
-  if (handoff.state?.profile !== undefined || hasProfileContinuity(sdk)) return
-
-  logger.warn(
-    'Analytics-only handoff skipped the initial page event without handoff profile state or browser profile continuity.',
-  )
-}
-
 function assertAnalyticsHandoff(handoff: AnalyticsOptimizationHandoff): void {
   const hydration: unknown = handoff.hydration
 
@@ -86,12 +62,6 @@ function assertAnalyticsHandoff(handoff: AnalyticsOptimizationHandoff): void {
   throw new TypeError(
     'hydrateOptimizationAnalyticsHandoff only accepts analytics-only optimization handoffs.',
   )
-}
-
-function assertInitialPageEvent(initialPageEvent: unknown): void {
-  if (initialPageEvent === 'emit' || initialPageEvent === 'skip') return
-
-  throw new TypeError('Optimization handoff requires initialPageEvent to be "emit" or "skip".')
 }
 
 /**
@@ -142,28 +112,12 @@ export async function hydrateOptimizationAnalyticsHandoff(
   options: HydrateOptimizationAnalyticsHandoffOptions,
 ): Promise<void> {
   assertAnalyticsHandoff(handoff)
-  assertInitialPageEvent(handoff.initialPageEvent)
   assertOptimizationCacheSafety(handoff)
   const sdk = getRuntimeSdk(runtime)
-  latestAnalyticsHandoffHydration += 1
-  const hydration = latestAnalyticsHandoffHydration
-  const isCurrent = (): boolean =>
-    hydration === latestAnalyticsHandoffHydration && options.isCurrent?.() !== false
-
-  await hydrateOptimizationHandoffState(sdk, handoff.state, {
-    isCurrent,
-    suppressDurableContinuityPersistence: shouldPreserveDurableContinuity(handoff),
-  })
-  if (!isCurrent()) return
-
-  warnSkippedInitialPageWithoutProfileContinuity(sdk, handoff)
-
-  if (!isCurrent()) return
-
-  await runtime.trackCurrentPage({
+  await sdk.hydrateAndTrackCurrentPage(handoff, {
     buildPayload: options.buildPagePayload,
-    initialPageEvent: handoff.initialPageEvent,
     routeKey: options.routeKey,
+    isCurrent: options.isCurrent,
   })
 }
 

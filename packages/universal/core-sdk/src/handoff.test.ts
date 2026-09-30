@@ -2,11 +2,13 @@ import { describe, expect, it } from '@rstest/core'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import type { SelectedOptimizationArray } from './api-schemas'
 import type { ManagedEntryHandoff } from './CoreBase'
+import EventBuilder from './events/EventBuilder'
 import {
   assertOptimizationCacheSafety,
   createHandoffFromSelections,
   createOptimizationCacheKey,
   createPublicPermutationCacheMetadata,
+  createRequestHandoffFromPreview,
   createSelectionFingerprint,
   getOptimizationCacheSafetyWarnings,
   resolveEntriesForSelections,
@@ -14,6 +16,10 @@ import {
 } from './handoff'
 import { optimizedEntry } from './test/fixtures/optimizedEntry'
 import { profile } from './test/fixtures/profile'
+const replayEventBuilder = new EventBuilder({
+  channel: 'server',
+  library: { name: 'test-server', version: '1.0.0' },
+})
 
 type TestEntry = Entry<EntrySkeletonType, undefined>
 
@@ -301,6 +307,38 @@ describe('handoff helpers', () => {
           selectedOptimizations: [],
         }),
       ).toThrow('Public optimization permutations should include cache.key.')
+    })
+  })
+
+  describe('createRequestHandoffFromPreview', () => {
+    it('creates a private request handoff with preview state and a route-bound replay', () => {
+      const handoff = createRequestHandoffFromPreview({
+        preview: {
+          accepted: true,
+          experience: [replayEventBuilder.buildPageView({})],
+          insights: [],
+          data: {
+            changes: [],
+            profile,
+            selectedOptimizations: [],
+          },
+        },
+        routeKey: '/products',
+      })
+
+      expect(handoff).toMatchObject({
+        cache: { scope: 'private-request' },
+        replay: {
+          experience: [expect.objectContaining({ type: 'page' })],
+          insights: [],
+          routeKey: '/products',
+        },
+        state: {
+          changes: [],
+          profile,
+          selectedOptimizations: [],
+        },
+      })
     })
   })
 

@@ -200,33 +200,31 @@
       const CONFIG = <%- JSON.stringify(config) %>
       const APP_LOCALE = <%- JSON.stringify(appLocale) %>
       const SERVER_APP_CONSENT = <%- JSON.stringify(appConsent) %>
-      const SERVER_OPTIMIZATION_DATA = <%- JSON.stringify(optimizationData) %>
+      const SERVER_OPTIMIZATION_HANDOFF = <%- JSON.stringify(optimizationHandoff) %>
     </script>
     <script>
       /* --- Standard Initialization Code --- */
 
       const SERVER_SDK_DEFAULTS = {
-        ...(typeof SERVER_APP_CONSENT === 'boolean'
-          ? { consent: SERVER_APP_CONSENT }
-          : {}),
-        ...(SERVER_OPTIMIZATION_DATA
-          ? {
-              changes: SERVER_OPTIMIZATION_DATA.changes,
-              profile: SERVER_OPTIMIZATION_DATA.profile,
-              selectedOptimizations: SERVER_OPTIMIZATION_DATA.selectedOptimizations,
-            }
-          : {}),
+        ...(typeof SERVER_APP_CONSENT === 'boolean' ? { consent: SERVER_APP_CONSENT } : {}),
       }
       let contentfulClient = contentful.createClient(CONFIG.contentful)
       window.contentfulOptimization = new ContentfulOptimization({
         ...CONFIG.optimization,
-        ...(Object.keys(SERVER_SDK_DEFAULTS).length > 0
-          ? { defaults: SERVER_SDK_DEFAULTS }
-          : {}),
+        ...(Object.keys(SERVER_SDK_DEFAULTS).length > 0 ? { defaults: SERVER_SDK_DEFAULTS } : {}),
         locale: APP_LOCALE,
         app: { name: document.title, version: '0.0.0' },
       })
       const contentfulOptimization = window.contentfulOptimization
+      const initialHandoff = (async () => {
+        try {
+          await contentfulOptimization.hydrateAndTrackCurrentPage(SERVER_OPTIMIZATION_HANDOFF ?? undefined, {
+            routeKey: window.location.pathname + window.location.search,
+          })
+        } catch (error) {
+          console.warn('Failed to track the initial page.', error)
+        }
+      })()
       attachOptimizationPreviewPanel({
         contentful: contentfulClient,
         optimization: window.contentfulOptimization,
@@ -367,7 +365,7 @@
       }
 
       let renderEntriesPromise = Promise.resolve()
-      let hasEmittedClientConsentPage = SERVER_OPTIMIZATION_DATA !== null
+      let hasTrackedClientConsentRoute = false
 
       // Render optimized entries
       async function renderOptimizedEntry(rawEntry, element, autoObserve = true) {
@@ -497,9 +495,18 @@
         if (typeof consent === 'boolean') setAppConsentCookie(consent)
         toggleConsent(consent)
 
-        if (consent === true && !hasEmittedClientConsentPage) {
-          hasEmittedClientConsentPage = true
-          void contentfulOptimization.page()
+        if (consent === true && !hasTrackedClientConsentRoute) {
+          hasTrackedClientConsentRoute = true
+          void initialHandoff.then(async () => {
+            try {
+              await contentfulOptimization.trackCurrentPage({
+                buildPayload: () => ({ properties: { url: window.location.href } }),
+                routeKey: window.location.pathname + window.location.search,
+              })
+            } catch (error) {
+              console.warn('Failed to track the page after consent changed.', error)
+            }
+          })
         }
       })
 
@@ -556,7 +563,13 @@
         console.log('Flag "boolean" value:', value)
       })
 
-      void scheduleRenderEntries()
+      void initialHandoff.then(async () => {
+        try {
+          await scheduleRenderEntries()
+        } catch (error) {
+          console.warn('Failed to render optimized entries.', error)
+        }
+      })
     </script>
   </body>
 </html>

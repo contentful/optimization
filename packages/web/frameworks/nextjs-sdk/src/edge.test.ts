@@ -1,12 +1,15 @@
+import { EventBuilder } from '@contentful/optimization-node/core-sdk'
 import {
   CoreStateless,
   type CoreStatelessRequest,
   type OptimizationData,
 } from '@contentful/optimization-react-web/core-sdk'
 import { NextRequest } from 'next/server'
-import * as edgeExports from './edge'
-
-const { configureNextjsEdgeOptimization } = edgeExports
+import { configureNextjsEdgeOptimization } from './edge'
+const replayEventBuilder = new EventBuilder({
+  channel: 'server',
+  library: { name: 'test-server', version: '1.0.0' },
+})
 
 const SDK_CONFIG = {
   spaceId: 'key_123',
@@ -46,38 +49,39 @@ afterEach(() => {
 })
 
 function mockEdgeRequestPage(
-  result: Awaited<ReturnType<CoreStatelessRequest['page']>> = {
+  result: Awaited<ReturnType<CoreStatelessRequest['previewInitialExperience']>> = {
     accepted: true,
     data: OPTIMIZATION_DATA,
+    experience: [replayEventBuilder.buildPageView({})],
+    insights: [],
   },
 ): {
   readonly forRequest: ReturnType<typeof rs.spyOn>
-  readonly page: ReturnType<typeof rs.fn<CoreStatelessRequest['page']>>
+  readonly previewInitialExperience: ReturnType<
+    typeof rs.fn<CoreStatelessRequest['previewInitialExperience']>
+  >
   readonly runtimes: CoreStateless[]
 } {
   const originalForRequest = CoreStateless.prototype.forRequest
-  const page = rs.fn<CoreStatelessRequest['page']>(async () => await Promise.resolve(result))
+  const previewInitialExperience = rs.fn<CoreStatelessRequest['previewInitialExperience']>(
+    async () => await Promise.resolve(result),
+  )
   const forRequest = rs.spyOn(CoreStateless.prototype, 'forRequest')
   const runtimes: CoreStateless[] = []
 
   forRequest.mockImplementation(function mockForRequest(this: CoreStateless, options) {
     runtimes.push(this)
     const requestOptimization = originalForRequest.call(this, options)
-    rs.spyOn(requestOptimization, 'page').mockImplementation(page)
+    rs.spyOn(requestOptimization, 'previewInitialExperience').mockImplementation(
+      previewInitialExperience,
+    )
     return requestOptimization
   })
 
-  return { forRequest, page, runtimes }
+  return { forRequest, previewInitialExperience, runtimes }
 }
 
 describe('Next.js Edge runtime helpers', () => {
-  it('exports the Edge configure helper without the removed create helper name', () => {
-    expect(edgeExports.configureNextjsEdgeOptimization).toBeTypeOf('function')
-    expect(edgeExports.createPublicPermutationHandoff).toBeTypeOf('function')
-    expect(edgeExports.createPublicPermutationCacheMetadata).toBeTypeOf('function')
-    expect(edgeExports).not.toHaveProperty('createNextjsEdgeOptimization')
-  })
-
   it('uses the build-time package version for Edge event library metadata', async () => {
     const { runtimes } = mockEdgeRequestPage()
     const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization(SDK_CONFIG)
@@ -94,8 +98,17 @@ describe('Next.js Edge runtime helpers', () => {
     })
   })
 
-  it('builds request handoff from a Web Request, reads cookies, and persists a Response cookie', async () => {
-    const { forRequest, page } = mockEdgeRequestPage()
+  it('builds a preview handoff from a Web Request without persisting identity', async () => {
+    const { forRequest, previewInitialExperience } = mockEdgeRequestPage()
+    const events = [
+      { event: 'initial-preview', properties: { source: 'edge' }, type: 'track' },
+    ] as const
+    const resolveInitialExperienceEvents = rs.fn((context) => {
+      expect(context).toMatchObject({
+        url: 'https://example.com/products?tab=featured',
+      })
+      return events
+    })
     const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
       ...SDK_CONFIG,
       consent: { server: { events: true, persistence: true } },
@@ -111,13 +124,19 @@ describe('Next.js Edge runtime helpers', () => {
     const result = await createEdgeRequestHandoff({
       cache: { scope: 'private-request' },
       hydration: 'preserve-server',
+      initialExperienceEvents: resolveInitialExperienceEvents,
       pagePayload: { properties: { route: '/products' } },
       request,
     })
 
-    expect(result.handoff.initialPageEvent).toBe('skip')
+    expect(result.handoff.replay).toMatchObject({
+      routeKey: '/products?tab=featured',
+    })
     expect(result.handoff.state?.profile?.id).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
-    expect(page).toHaveBeenCalledWith({ properties: { route: '/products' } })
+    expect(previewInitialExperience).toHaveBeenCalledWith({
+      events,
+      page: { properties: { route: '/products' } },
+    })
     expect(forRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         consent: { events: true, persistence: true },
@@ -142,11 +161,7 @@ describe('Next.js Edge runtime helpers', () => {
     })
     result.persist(response)
 
-    expect(response.headers.get('set-cookie')).toContain(
-      'ctfl-opt-aid=f0837d7dc6344c36a3a0a06c4cde754b',
-    )
-    expect(response.headers.get('set-cookie')).toContain('Path=/')
-    expect(response.headers.get('set-cookie')).toContain('SameSite=Lax')
+    expect(response.headers.get('set-cookie')).toBeNull()
   })
 
   it('reads anonymous ID from framework cookie snapshots', async () => {
@@ -173,10 +188,36 @@ describe('Next.js Edge runtime helpers', () => {
     )
   })
 
+  it('falls back to browser-owned tracking when the initial-event resolver rejects', async () => {
+    const initialEventError = new Error('Initial events unavailable')
+    const { forRequest, previewInitialExperience } = mockEdgeRequestPage()
+    const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization(SDK_CONFIG)
+
+    const result = await createEdgeRequestHandoff({
+      hydration: 'client-only-hidden-until-ready',
+      initialExperienceEvents: async () => await Promise.reject(initialEventError),
+      pagePayload: {},
+      request: new Request('https://example.com/products'),
+    })
+
+    expect(forRequest).toHaveBeenCalledTimes(2)
+    expect(previewInitialExperience).toHaveBeenCalledTimes(0)
+    expect(result).toMatchObject({
+      data: undefined,
+      handoff: {
+        cache: { scope: 'private-request' },
+        hydration: 'client-only-hidden-until-ready',
+      },
+      pageResult: { accepted: false },
+    })
+    expect(result.handoff).not.toHaveProperty('state')
+    expect(result.handoff).not.toHaveProperty('replay')
+  })
+
   it.each([{ key: 'segment-a', scope: 'public-permutation' }, { scope: 'static' }] as const)(
     'rejects $scope request handoff cache metadata before request evaluation',
     async (cache) => {
-      const { forRequest, page } = mockEdgeRequestPage()
+      const { forRequest, previewInitialExperience } = mockEdgeRequestPage()
       const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
         ...SDK_CONFIG,
         consent: { server: true },
@@ -194,17 +235,25 @@ describe('Next.js Edge runtime helpers', () => {
         'Request handoffs must use private-request cache scope. Use public permutation handoffs for public cache scopes, or a non-request handoff for static output.',
       )
       expect(forRequest).not.toHaveBeenCalled()
-      expect(page).not.toHaveBeenCalled()
+      expect(previewInitialExperience).not.toHaveBeenCalled()
     },
   )
 
   it.each([
-    ['accepted without data', { accepted: true }, 'skip'],
-    ['blocked', { accepted: false }, 'emit'],
+    [
+      'accepted',
+      {
+        accepted: true,
+        data: OPTIMIZATION_DATA,
+        experience: [replayEventBuilder.buildPageView({})],
+        insights: [],
+      },
+    ],
+    ['blocked', { accepted: false }],
   ] as const)(
-    'sets initialPageEvent from page acceptance for %s',
-    async (_label, pageResult, expectedInitialPageEvent) => {
-      mockEdgeRequestPage(pageResult)
+    'creates replay handoff from preview result for %s',
+    async (_label, previewResult) => {
+      mockEdgeRequestPage(previewResult)
       const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
         ...SDK_CONFIG,
         consent: { server: true },
@@ -216,7 +265,10 @@ describe('Next.js Edge runtime helpers', () => {
         request: new Request('https://example.com/products'),
       })
 
-      expect(result.handoff.initialPageEvent).toBe(expectedInitialPageEvent)
+      expect(result.pageResult.accepted).toBe(previewResult.accepted)
+      expect(result.handoff.replay).toEqual(
+        previewResult.accepted ? expect.objectContaining({ routeKey: '/products' }) : undefined,
+      )
     },
   )
 
@@ -230,14 +282,12 @@ describe('Next.js Edge runtime helpers', () => {
     const handoff = createHandoffFromSelections({
       cache: { scope: 'public-permutation', key: 'segment-a' },
       hydration: 'analytics-only',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
     const permutationHandoff = createPublicPermutationHandoff({
       cacheVersion: 'version 1',
       entryIds: ['4ib0hsHWoSOnCVdDkizE8d'],
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       locale: 'en-US',
       permutationKey: 'segment a',
       selectedOptimizations: [],
@@ -252,7 +302,6 @@ describe('Next.js Edge runtime helpers', () => {
     expect(handoff).toEqual({
       cache: { scope: 'public-permutation', key: 'segment-a' },
       hydration: 'analytics-only',
-      initialPageEvent: 'emit',
       state: { selectedOptimizations: [] },
     })
     expect(permutationHandoff).toMatchObject({
@@ -261,7 +310,6 @@ describe('Next.js Edge runtime helpers', () => {
         scope: 'public-permutation',
       },
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       state: { selectedOptimizations: [] },
     })
     expect(permutationHandoff.cache.tags).toBeUndefined()

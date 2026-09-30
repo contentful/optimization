@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, existsSync, readdirSync, readFileSync } from 'node:fs'
+import { copyFileSync, existsSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { isRecord } from './typeGuards'
@@ -211,6 +211,13 @@ function ensureImplementationEnvFile(implementation: string): void {
   process.stdout.write(`\n> created ${envPath} from .env.example\n`)
 }
 
+function resetImplementationInstallState(implementation: string): void {
+  rmSync(path.join(IMPLEMENTATIONS_DIRECTORY, implementation, 'node_modules'), {
+    force: true,
+    recursive: true,
+  })
+}
+
 function runScript(
   implementation: string,
   scriptName: string,
@@ -243,14 +250,9 @@ function runImplementationInstallAction(
     return localPackageTarballsExitCode
   }
 
-  const installArgs = [
-    'install',
-    '--force',
-    '--no-lockfile',
-    '--no-optimistic-repeat-install',
-    '--update-checksums',
-    ...actionArgs,
-  ]
+  resetImplementationInstallState(implementation)
+
+  const installArgs = ['install', '--update-checksums', ...actionArgs]
 
   if (!hasExplicitFrozenLockfileFlag(actionArgs)) {
     installArgs.push('--no-frozen-lockfile')

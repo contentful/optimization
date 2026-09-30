@@ -18,17 +18,15 @@ test.describe('identified user', () => {
     await page.waitForLoadState('domcontentloaded')
   })
 
-  test('should store profile id in cookie', async ({ context }) => {
-    const cookieId = await getAnonymousIdFromCookie(context)
-    expect(cookieId).toBeDefined()
-  })
-
-  test('should sync profile id between cookie and localStorage', async ({ context }) => {
-    const cookieId = await getAnonymousIdFromCookie(context)
-    const storedId = await getAnonymousIdFromStorage(context)
-
-    expect(storedId).toBeDefined()
-    expect(storedId).toEqual(cookieId)
+  test('should store profile id in cookie and localStorage', async ({ context }) => {
+    await expect.poll(async () => await getAnonymousIdFromCookie(context)).toBeDefined()
+    await expect
+      .poll(async () => {
+        const cookieId = await getAnonymousIdFromCookie(context)
+        const storedId = await getAnonymousIdFromStorage(context)
+        return cookieId !== undefined && storedId === cookieId
+      })
+      .toBe(true)
   })
 
   test('displays common variants', async ({ page }) => {

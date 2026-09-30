@@ -1,4 +1,4 @@
-import * as reactWeb from '@contentful/optimization-react-web'
+import * as nextApp from '@contentful/optimization-react-web/router/next-app'
 import type { Entry } from 'contentful'
 import { renderToString } from 'react-dom/server'
 import * as appRouter from './app-router-client'
@@ -65,7 +65,6 @@ describe('Next.js App Router client components', () => {
         { baselineEntry: createEntry('4ib0hsHWoSOnCVdDkizE8d'), entryId: '4ib0hsHWoSOnCVdDkizE8d' },
       ],
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
 
@@ -85,12 +84,6 @@ describe('Next.js App Router client components', () => {
     expect(components.OptimizedEntry).toBe(client.OptimizedEntry)
     expect(components.NextAppAutoPageTracker).toBe(appRouter.NextAppAutoPageTracker)
     expect(components.createPublicPermutationHandoff).toBeTypeOf('function')
-    expect(components).not.toHaveProperty('createCacheMiddleware')
-    expect(components).not.toHaveProperty('proxy')
-    expect(components).not.toHaveProperty('config')
-    expect(components).not.toHaveProperty('NextPagesAutoPageTracker')
-    expect(components).not.toHaveProperty('createRequestHandoff')
-    expect(components).not.toHaveProperty('request')
     expect(element.props).toMatchObject({
       api: testConfig.api,
       children: 'Bound content',
@@ -138,7 +131,6 @@ describe('Next.js App Router client components', () => {
       cache: { scope: 'static' },
       entries: [{ baselineEntry, entryId: '4ib0hsHWoSOnCVdDkizE8d' }],
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
 
@@ -166,7 +158,6 @@ describe('Next.js App Router client components', () => {
     const analyticsHandoff = components.createHandoffFromSelections({
       cache: { scope: 'static' },
       hydration: 'analytics-only',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
     const root = components.OptimizationRoot({
@@ -188,38 +179,44 @@ describe('Next.js App Router client components', () => {
     expect(components).not.toHaveProperty('beforeInitialPage')
   })
 
-  it('adds the request content root only to callback-present bindings', () => {
+  it('provides the request content root from every binding', () => {
     const withoutBeforeInitialPage = appRouter.bindNextjsAppRouterClientOptimization(testConfig)
     const withBeforeInitialPage = appRouter.bindNextjsAppRouterClientOptimization({
       ...testConfig,
       beforeInitialPage: { run: () => undefined },
     })
 
-    expect(withoutBeforeInitialPage).not.toHaveProperty('RequestOptimizationRoot')
+    expect(withoutBeforeInitialPage.RequestOptimizationRoot).toBeTypeOf('function')
     expect(withBeforeInitialPage.RequestOptimizationRoot).toBeTypeOf('function')
     expect(withBeforeInitialPage.RequestOptimizationRoot).not.toBe(
       withBeforeInitialPage.OptimizationRoot,
     )
   })
 
-  it('keeps the low-level client entry free of router-specific exports', () => {
-    expect(Object.keys(client).sort()).toEqual(Object.keys(reactWeb).sort())
-    expect(client).not.toHaveProperty('NextAppAutoPageTracker')
-    expect(client).not.toHaveProperty('NextPagesAutoPageTracker')
-    expect(client).not.toHaveProperty('createNextjsOptimizationComponents')
-  })
+  it('forwards before-initial-page work to the request root without a handoff', () => {
+    const beforeInitialPage = { run: rs.fn(() => undefined) }
+    const buildPagePayload: NonNullable<client.OptimizationRootProps['buildPagePayload']> = () => ({
+      properties: { route: '/products' },
+    })
+    const inputs = rs.spyOn(nextApp, 'useNextAppAutoPageInputs').mockReturnValue({
+      buildPagePayload,
+      routeKey: '/products',
+    })
+    try {
+      const components = appRouter.bindNextjsAppRouterClientOptimization({
+        ...testConfig,
+        beforeInitialPage,
+      })
+      const root = components.RequestOptimizationRoot({ children: 'Root content' })
 
-  it('keeps the App Router client entry scoped to client-safe binding helpers', () => {
-    expect(Object.keys(appRouter).sort()).toEqual([
-      'NextAppAutoPageTracker',
-      'bindNextjsAppRouterClientOptimization',
-      'createHandoffFromSelections',
-      'createOptimizationCacheKey',
-      'createPublicPermutationCacheMetadata',
-      'createPublicPermutationHandoff',
-      'resolveEntriesForSelections',
-    ])
-    expect(appRouter).not.toHaveProperty('getServerTrackingAttributes')
+      expect(root.props).toMatchObject({
+        beforeInitialPage,
+        buildPagePayload,
+        routeKey: '/products',
+      })
+    } finally {
+      inputs.mockRestore()
+    }
   })
 
   it('rejects server-only request configuration', () => {

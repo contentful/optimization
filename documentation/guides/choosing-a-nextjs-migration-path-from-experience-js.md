@@ -35,7 +35,7 @@ Gather these inputs:
 - Whether the app renders through `app/`, `pages/`, or both.
 - Use of `@ninetailed/experience.js-next`, `@ninetailed/experience.js-next-esr`, SSR plugin helpers,
   route trackers, or `ntaid`.
-- Where the first page event is emitted today: server, browser tracker, or both.
+- Whether legacy code commits the first page on the server, browser, or both.
 - Where visitor identity is persisted and whether the browser must continue the same profile.
 - Whether the target route can be per-request dynamic.
 
@@ -47,12 +47,23 @@ Use these terms consistently:
 - ESR means legacy edge-side rendering helpers from `@ninetailed/experience.js-next-esr`.
 - Manual Node/Web hybrid means the app uses the Node SDK on a custom server boundary and the Web or
   React Web SDK in the browser.
+- Server preview means the server evaluates zero or more optional `identify`/`track` commands in
+  application-supplied order, followed by the SDK-appended `page` command. It returns preview state
+  without committing the sequence. The handoff's **private replay** is the SDK-owned, route-bound
+  continuation for the initial browser route. A **successful Experience commit** is the non-preflight
+  browser profile response; only that response can persist browser continuity.
+
+> [!NOTE]
+>
+> Without JavaScript, previewed server HTML can still render, but matching-route delivery and a new
+> browser `ctfl-opt-aid` cookie do not occur.
 
 ## Migration path
 
 1. Classify the current router and legacy SSR/ESR surfaces.
 2. Choose the target package by the route that owns personalization.
-3. Decide which layer owns the first page event.
+3. Replace server commit plus browser-skip logic with target server preview, private replay, and one
+   browser route coordinator.
 4. Decide how profile continuity moves from `ntaid` to the target `ctfl-opt-aid` policy.
 5. Follow the selected runtime migration guide.
 
@@ -89,36 +100,32 @@ never share personalized output across visitors.
 
 Use the highest-level adapter that matches the app. In an App Router request path, the server
 binding's nested `optimization.request` family owns request initialization, provider state handoff,
-and first-page tracking that a manual hybrid would otherwise need to rebuild.
+private replay, and route tracking that a manual hybrid would otherwise need to rebuild.
 
-### Route SSR and first page event ownership
+### Route SSR preview and browser replay ownership
 
-Avoid duplicate page evaluation. Legacy Next tracking emits page events on the first route and on
-route changes, while SSR helpers can also evaluate the first request.
+Legacy Next tracking can commit page events on the first route and route changes while SSR helpers
+also commit the first request. The target framework adapters instead create preview state on the
+server, apply preview state in memory, and commit the admitted replay in the browser.
 
-In the target App Router path, the no-argument request handler only forwards the original request
-URL and sanitized request context. The server binding's nested `optimization.request` family
-evaluates the request, creates the handoff, and gives its `NextAppAutoPageTracker` first-page-event
-ownership automatically. Mount that tracker inside `optimization.request.OptimizationRoot`; do not
-create or pass a handoff or `initialPageEvent` prop for this ordinary request-family path.
+In the target App Router path, the no-argument request handler forwards the original URL and sanitized context. The server binding's nested `optimization.request` family previews the optional commands followed by the SDK page in one request. Inject the client `RequestOptimizationRoot` and mount the nested `optimization.request.OptimizationRoot`. It applies private preview state in memory, owns the initial replay/page decision, and tracks later routes while rendering remains independent of delivery.
 
-In the target Pages Router path, bind the server SDK with
-`bindNextjsPagesRouterServerOptimization(config)` and call its returned
-`createRequestHandoff(context, options)` inside `getServerSideProps`. The returned handoff records
-accepted server evaluation as `handoff.initialPageEvent === 'skip'` and a server path that did not
-report the view as `'emit'`.
+In the target Pages Router path, bind the server SDK with `bindNextjsPagesRouterServerOptimization(config)` and call `createRequestHandoff(context, options)` inside `getServerSideProps`. Pass the handoff, stable route key, and lazy page builder to one `OptimizationRoot` in `_app.tsx`. The root hydrates preview state and makes the initial replay/page decision through ordinary queues and route deduplication. It owns later routes; do not add a separate tracker.
 
-Pass that Pages Router handoff to `OptimizationRoot`, which consumes the instruction. Its browser
-tracker uses the handoff's `initialPageEvent` value and continues to track later browser navigations.
+The legacy `initialPageEvent` option is compatibility-only and inert. Remove explicit emit/skip
+plumbing during migration instead of using it to coordinate the server and browser.
 
 ### Route cookie and profile continuity
 
 Legacy continuity commonly used `ntaid`. Target Web, React Web, and Next.js browser/framework SDKs
 use `ctfl-opt-aid` for the SDK-owned anonymous profile cookie. In a manual Node/Web hybrid, the Node
-SDK only exports the `ANONYMOUS_ID_COOKIE` constant; app code must read, write, and clear that
-cookie and pass the profile ID through `forRequest({ profile })`. Decide whether migration resets
-visitor identity or whether the app reads the legacy cookie and writes the target continuity value
-as a one-time operational handoff.
+SDK exports the `ANONYMOUS_ID_COOKIE` constant; app code reads an existing cookie and passes the
+profile ID through `forRequest({ profile })`. A hybrid route previews the initial sequence in Node,
+creates a private replay handoff, and lets full Web hydration stage it for ordinary current-page
+tracking. A successful browser Experience response commits the sequence and can write the target
+cookie when persistence consent permits. A server-only Node route can commit events directly and
+persist the returned profile ID in app code. Decide whether migration resets visitor identity or
+performs a one-time operational handoff from the legacy cookie.
 
 The target consent record remains app-owned. Do not reuse `__nt-consent__` as if it were an SDK
 contract.
@@ -126,18 +133,24 @@ contract.
 ## Validate the migration
 
 - The selected guide matches the route that renders personalized content.
-- Exactly one layer owns the first page event for the first route.
-- The App Router request tracker receives first-page-event ownership automatically; explicit paths
-  set it intentionally.
+- The server preview contains zero or more optional identify/track events in application-supplied
+  order, followed by the SDK-appended page.
+- For the chosen router, run the exact browser commit, duplicate-route, and continuity-cookie checks
+  in the [App Router guide](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md#the-bound-root-and-page-events)
+  or [Pages Router guide](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md#the-bound-root-and-page-events).
+- Observe one successful browser Experience commit for the initial route, no duplicate request for
+  the same path plus search, and `ctfl-opt-aid` only after that response when persistence consent
+  permits it.
 - Cookie and consent ownership are documented in app code before deleting legacy packages.
 
 ## Troubleshooting
 
-| Symptom                                           | Check                                                                                                                                             |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Both server and browser emit the first page event | Use the App Router nested request root and tracker together; reserve explicit `initialPageEvent` plumbing for manual or Pages Router paths.       |
-| App Router route no longer behaves statically     | Request-family personalization reads request data; use a public-permutation, static, or browser-only path if static output is required.           |
-| ESR migration has no matching import              | The legacy ESR package did not export every helper present in source; use the explicit App Router server entry point or a manual Node/Web hybrid. |
+| Symptom                                             | Check                                                                                                                                             |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Browser page events duplicate                       | Remove the legacy tracker, direct page call, and inert `initialPageEvent` plumbing; keep one target browser root as route coordinator.            |
+| Server variant renders but no target cookie appears | Run the selected guide's browser Experience commit check; confirm JavaScript ran and persistence consent is true.                                 |
+| App Router route no longer behaves statically       | Request-family personalization reads request data; use a public-permutation, static, or browser-only path if static output is required.           |
+| ESR migration has no matching import                | The legacy ESR package did not export every helper present in source; use the explicit App Router server entry point or a manual Node/Web hybrid. |
 
 ## Related guides
 

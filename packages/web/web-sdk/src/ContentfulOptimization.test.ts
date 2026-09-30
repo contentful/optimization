@@ -1,4 +1,10 @@
-import { batch, signals, type CoreConfig } from '@contentful/optimization-core'
+import {
+  batch,
+  EventBuilder,
+  signals,
+  type CoreConfig,
+  type OptimizationReplayEnvelope,
+} from '@contentful/optimization-core'
 import type { OptimizationData, Profile } from '@contentful/optimization-core/api-schemas'
 import {
   ANONYMOUS_ID_COOKIE,
@@ -11,8 +17,14 @@ import {
 import ContentfulOptimization from './ContentfulOptimization'
 import { OPTIMIZATION_WEB_SDK_NAME } from './constants'
 import { EntryInteractionRuntime } from './entry-tracking/EntryInteractionRuntime'
+import type { ContentOptimizationHandoff } from './handoff'
 import { getCookie, removeCookie, setCookie } from './lib/cookies'
+import LocalStore from './storage/LocalStore'
 import { deferred } from './test/helpers'
+const replayEventBuilder = new EventBuilder({
+  channel: 'server',
+  library: { name: 'test-server', version: '1.0.0' },
+})
 
 const SPACE_ID = 'key_123'
 const ENVIRONMENT = 'main'
@@ -20,6 +32,25 @@ const ENVIRONMENT = 'main'
 const config: CoreConfig = {
   spaceId: SPACE_ID,
   environment: ENVIRONMENT,
+}
+
+function createReplay(routeKey: string): OptimizationReplayEnvelope {
+  return {
+    experience: [
+      replayEventBuilder.buildIdentify({ userId: 'handoff-user' }),
+      replayEventBuilder.buildPageView({}),
+    ],
+    insights: [],
+    routeKey,
+  }
+}
+
+function createContentHandoff(replay?: OptimizationReplayEnvelope): ContentOptimizationHandoff {
+  return {
+    cache: { scope: 'private-request' },
+    hydration: 'preserve-server',
+    replay,
+  }
 }
 
 function compileManagedEntryDescriptorApis(web: ContentfulOptimization): void {
@@ -566,60 +597,401 @@ describe('ContentfulOptimization', () => {
     expect(upsertProfile).toHaveBeenCalledTimes(1)
   })
 
-  it('can mark an SSR-emitted initial current page as accepted', async () => {
+  it('treats the legacy skip input as inert and still deduplicates the same route', async () => {
     const web = new ContentfulOptimization(config)
     const upsertProfile = rs
       .spyOn(web.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const legacyPayload = rs.fn(() => ({ properties: { legacy: true } }))
+    const deduplicatedPayload = rs.fn(() => ({}))
 
     await expect(
       web.trackCurrentPage({
+        buildPayload: legacyPayload,
         initialPageEvent: 'skip',
         routeKey: '/',
-      }),
-    ).resolves.toEqual({ accepted: true })
-    await expect(
-      web.trackCurrentPage({
-        routeKey: '/',
-        buildPayload: () => ({}),
-      }),
-    ).resolves.toEqual({ accepted: false })
-
-    expect(upsertProfile).not.toHaveBeenCalled()
-  })
-
-  it('can mark an SSR-emitted current page as accepted after another route', async () => {
-    const web = new ContentfulOptimization(config)
-    const upsertProfile = rs
-      .spyOn(web.api.experience, 'upsertProfile')
-      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
-    const skippedPayload = rs.fn(() => ({}))
-    const dedupedPayload = rs.fn(() => ({}))
-
-    await expect(
-      web.trackCurrentPage({
-        routeKey: '/',
-        buildPayload: () => ({}),
       }),
     ).resolves.toEqual({ accepted: true, data: EMPTY_OPTIMIZATION_DATA })
     await expect(
       web.trackCurrentPage({
-        initialPageEvent: 'skip',
-        routeKey: '/page-two',
-        buildPayload: skippedPayload,
-      }),
-    ).resolves.toEqual({ accepted: true })
-    await expect(
-      web.trackCurrentPage({
-        routeKey: '/page-two',
-        buildPayload: dedupedPayload,
+        routeKey: '/',
+        buildPayload: deduplicatedPayload,
       }),
     ).resolves.toEqual({ accepted: false })
 
     expect(upsertProfile).toHaveBeenCalledTimes(1)
-    expect(skippedPayload).not.toHaveBeenCalled()
-    expect(dedupedPayload).not.toHaveBeenCalled()
+    expect(legacyPayload).toHaveBeenCalledTimes(1)
+    expect(deduplicatedPayload).not.toHaveBeenCalled()
   })
+
+  it('shares one matching operation and suppresses ordinary concurrent and later pages', async () => {
+    const web = new ContentfulOptimization(config)
+    const response = Promise.withResolvers<OptimizationData>()
+    const upsert = rs.spyOn(web.api.experience, 'upsertProfile').mockReturnValue(response.promise)
+    const handoff = createContentHandoff(createReplay('/replay'))
+    const payload = rs.fn(() => ({ properties: { fallback: true } }))
+    const first = web.hydrateAndTrackCurrentPage(handoff, {
+      routeKey: '/replay',
+      buildPayload: payload,
+    })
+    const duplicate = web.hydrateAndTrackCurrentPage(handoff, { routeKey: '/replay' })
+    const concurrentPage = web.trackCurrentPage({ routeKey: '/replay' })
+    response.resolve(EMPTY_OPTIMIZATION_DATA)
+    await expect(concurrentPage).resolves.toEqual({ accepted: false })
+    await duplicate
+    await expect(first).resolves.toMatchObject({ accepted: true })
+    await expect(web.trackCurrentPage({ routeKey: '/replay' })).resolves.toEqual({
+      accepted: false,
+    })
+    expect(upsert).toHaveBeenCalledTimes(1)
+    expect(upsert.mock.calls[0]?.[0].events.map((event) => event.type)).toEqual([
+      'identify',
+      'page',
+    ])
+    expect(payload).not.toHaveBeenCalled()
+  })
+
+  it('rejects unsafe replay before applying state or emitting', async () => {
+    const web = new ContentfulOptimization(config)
+    const upsert = rs.spyOn(web.api.experience, 'upsertProfile')
+    await expect(
+      web.hydrateAndTrackCurrentPage(
+        { cache: { scope: 'static' }, hydration: 'preserve-server', replay: createReplay('/a') },
+        { routeKey: '/a' },
+      ),
+    ).rejects.toThrow('must not be included in public or static caches')
+    expect(upsert).not.toHaveBeenCalled()
+  })
+
+  it('publishes state readiness without persisting preview before live completion', async () => {
+    const web = new ContentfulOptimization({
+      ...config,
+      defaults: { consent: true, persistenceConsent: true },
+    })
+    const response = Promise.withResolvers<OptimizationData>()
+    rs.spyOn(web.api.experience, 'upsertProfile').mockReturnValue(response.promise)
+    const ready = Promise.withResolvers<undefined>()
+    const operation = web.hydrateAndTrackCurrentPage(
+      { ...createContentHandoff(createReplay('/a')), state: EMPTY_OPTIMIZATION_DATA },
+      {
+        routeKey: '/a',
+        onHydrated: () => {
+          ready.resolve(undefined)
+        },
+      },
+    )
+    await ready.promise
+    expect(web.states.profile.current).toEqual(EMPTY_OPTIMIZATION_DATA.profile)
+    expect(LocalStore.profile).toBeUndefined()
+    expect(getCookie(ANONYMOUS_ID_COOKIE)).toBeUndefined()
+    response.resolve(EMPTY_OPTIMIZATION_DATA)
+    await operation
+    expect(LocalStore.profile).toEqual(EMPTY_OPTIMIZATION_DATA.profile)
+    expect(LocalStore.anonymousId).toBe(EMPTY_OPTIMIZATION_DATA.profile.id)
+  })
+
+  it('continues replay after a recoverable hydration failure', async () => {
+    const web = new ContentfulOptimization(config)
+    const error = new Error('state apply failed')
+    let initial = true
+    web.interceptors.state.add((state) => {
+      if (initial) {
+        initial = false
+        throw error
+      }
+      return state
+    })
+    const onError = rs.fn()
+    const upsert = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    await expect(
+      web.hydrateAndTrackCurrentPage(
+        { ...createContentHandoff(createReplay('/a')), state: { profile: DEFAULT_PROFILE } },
+        { routeKey: '/a', onHydrated: onError },
+      ),
+    ).resolves.toMatchObject({ accepted: true })
+    expect(onError).toHaveBeenCalledWith(error)
+    expect(upsert.mock.calls[0]?.[0].events.map((event) => event.type)).toEqual([
+      'identify',
+      'page',
+    ])
+  })
+
+  it('does not cancel an older event journal when a newer handoff arrives', async () => {
+    const web = new ContentfulOptimization(config)
+    const hydration = deferred()
+    let firstState = true
+    web.interceptors.state.add(async (state) => {
+      if (firstState) {
+        firstState = false
+        await hydration.promise
+      }
+      return state
+    })
+    const upsert = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const first = web.hydrateAndTrackCurrentPage(
+      {
+        ...createContentHandoff({
+          experience: [
+            replayEventBuilder.buildIdentify({ userId: 'first' }),
+            replayEventBuilder.buildPageView({}),
+          ],
+          insights: [],
+          routeKey: '/a',
+        }),
+        state: { profile: DEFAULT_PROFILE },
+      },
+      { routeKey: '/a' },
+    )
+    await web.hydrateAndTrackCurrentPage(
+      createContentHandoff({
+        experience: [
+          replayEventBuilder.buildIdentify({ userId: 'second' }),
+          replayEventBuilder.buildPageView({}),
+        ],
+        insights: [],
+        routeKey: '/a',
+      }),
+      { routeKey: '/a' },
+    )
+    hydration.resolve()
+    await first
+    expect(upsert).toHaveBeenCalledTimes(2)
+    expect(
+      upsert.mock.calls.map(([payload]) => String(Reflect.get(payload.events[0] ?? {}, 'userId'))),
+    ).toEqual(['second', 'first'])
+  })
+
+  it('keeps an admitted journal when routing changes during hydration', async () => {
+    const web = new ContentfulOptimization(config)
+    const hydration = deferred()
+    let initial = true
+    web.interceptors.state.add(async (state) => {
+      if (initial) {
+        initial = false
+        await hydration.promise
+      }
+      return state
+    })
+    const upsert = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    let routeKey = '/server'
+    const before = rs.fn(async () => {
+      await Promise.resolve()
+    })
+    const operation = web.hydrateAndTrackCurrentPage(
+      { ...createContentHandoff(createReplay('/server')), state: { profile: DEFAULT_PROFILE } },
+      {
+        routeKey,
+        getCurrentPage: () => ({
+          routeKey,
+          buildPayload: () => ({ properties: { path: routeKey } }),
+        }),
+        beforeInitialPage: before,
+      },
+    )
+    routeKey = '/browser'
+    hydration.resolve()
+    await operation
+    expect(before).not.toHaveBeenCalled()
+    expect(upsert.mock.calls[0]?.[0].events.map((event) => event.type)).toEqual([
+      'identify',
+      'page',
+    ])
+  })
+
+  it('uses current router inputs for fallback after a mismatch at admission', async () => {
+    const web = new ContentfulOptimization(config)
+    const hydration = deferred()
+    let initial = true
+    web.interceptors.state.add(async (state) => {
+      if (initial) {
+        initial = false
+        await hydration.promise
+      }
+      return state
+    })
+    const upsert = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    let routeKey = '/browser-a'
+    const operation = web.hydrateAndTrackCurrentPage(
+      { ...createContentHandoff(createReplay('/server')), state: { profile: DEFAULT_PROFILE } },
+      {
+        routeKey,
+        getCurrentPage: () => ({
+          routeKey,
+          buildPayload: () => ({ properties: { path: routeKey } }),
+        }),
+      },
+    )
+    routeKey = '/browser-b'
+    hydration.resolve()
+    await expect(operation).resolves.toMatchObject({ accepted: true })
+    expect(upsert.mock.calls[0]?.[0].events.map((event) => event.type)).toEqual(['page'])
+    expect(Reflect.get(upsert.mock.calls[0]?.[0].events[0] ?? {}, 'properties')).toMatchObject({
+      path: '/browser-b',
+    })
+  })
+
+  it('does not let an older accepted replay replace the newer route deduplication', async () => {
+    const web = new ContentfulOptimization(config)
+    const older = deferred()
+    let initial = true
+    web.interceptors.state.add(async (state) => {
+      if (initial) {
+        initial = false
+        await older.promise
+      }
+      return state
+    })
+    const upsert = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const first = web.hydrateAndTrackCurrentPage(
+      { ...createContentHandoff(createReplay('/older')), state: { profile: DEFAULT_PROFILE } },
+      { routeKey: '/older' },
+    )
+    await web.hydrateAndTrackCurrentPage(createContentHandoff(createReplay('/newer')), {
+      routeKey: '/newer',
+    })
+    older.resolve()
+    await first
+    await web.trackCurrentPage({ routeKey: '/newer' })
+    expect(upsert).toHaveBeenCalledTimes(2)
+  })
+
+  it('makes an ordinary page attempt for malformed private replay instructions', async () => {
+    const web = new ContentfulOptimization(config)
+    const upsert = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const handoff: unknown = {
+      cache: { scope: 'private-request' },
+      hydration: 'preserve-server',
+      replay: { routeKey: '/a', experience: null, insights: [] },
+    }
+    const operation: unknown = Reflect.apply(web.hydrateAndTrackCurrentPage, web, [
+      handoff,
+      { routeKey: '/a' },
+    ])
+    await expect(operation).resolves.toMatchObject({ accepted: true })
+    expect(upsert.mock.calls[0]?.[0].events.map((event) => event.type)).toEqual(['page'])
+  })
+
+  it('keeps an Analytics-only handoff identity for the ordinary page and later live continuity', async () => {
+    const web = new ContentfulOptimization({ ...config, defaults: { consent: true } })
+    const upsert = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    await web.hydrateAndTrackCurrentPage(
+      createContentHandoff({
+        profile: { id: 'request-profile' },
+        experience: [],
+        insights: [replayEventBuilder.buildClick({ componentId: 'entry' })],
+      }),
+      { routeKey: '/a' },
+    )
+    expect(upsert.mock.calls[0]?.[0].profileId).toBe('request-profile')
+    await web.trackCurrentPage({ routeKey: '/later' })
+    expect(upsert.mock.calls[1]?.[0].profileId).toBe(EMPTY_OPTIMIZATION_DATA.profile.id)
+  })
+
+  it('falls back once after replay failure', async () => {
+    const web = new ContentfulOptimization(config)
+    const upsert = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(EMPTY_OPTIMIZATION_DATA)
+    await expect(
+      web.hydrateAndTrackCurrentPage(createContentHandoff(createReplay('/a')), { routeKey: '/a' }),
+    ).resolves.toMatchObject({ accepted: true })
+    expect(upsert).toHaveBeenCalledTimes(2)
+    expect(upsert.mock.calls[1]?.[0].events.map((event) => event.type)).toEqual(['page'])
+  })
+
+  it('preserves page acceptance after a later malformed Analytics command', async () => {
+    const web = new ContentfulOptimization({ ...config, defaults: { consent: true } })
+    const upsert = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const handoff = createContentHandoff({
+      routeKey: '/a',
+      experience: [replayEventBuilder.buildPageView({})],
+      insights: [replayEventBuilder.buildClick({ componentId: 'entry' })],
+    })
+    web.interceptors.event.add((event) => {
+      if (event.type === 'component_click') throw new Error('analytics failed')
+      return event
+    })
+    await expect(
+      web.hydrateAndTrackCurrentPage(handoff, { routeKey: '/a' }),
+    ).resolves.toMatchObject({ accepted: true })
+    expect(upsert).toHaveBeenCalledTimes(1)
+  })
+
+  it('accepts offline replay once without persisting preview continuity', async () => {
+    const web = new ContentfulOptimization({
+      ...config,
+      defaults: { consent: true, persistenceConsent: true },
+    })
+    const upsert = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    signals.online.value = false
+    const handoff = { ...createContentHandoff(createReplay('/a')), state: EMPTY_OPTIMIZATION_DATA }
+    await expect(web.hydrateAndTrackCurrentPage(handoff, { routeKey: '/a' })).resolves.toEqual({
+      accepted: true,
+    })
+    await expect(web.trackCurrentPage({ routeKey: '/a' })).resolves.toEqual({ accepted: false })
+    expect(upsert).not.toHaveBeenCalled()
+    expect(LocalStore.profile).toBeUndefined()
+    signals.online.value = true
+    await web.flush()
+    expect(upsert).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['reset', 'destroy'] as const)(
+    'does not start canceled initial delivery after %s',
+    async (lifecycle) => {
+      const web = new ContentfulOptimization(config)
+      const hydration = deferred()
+      web.interceptors.state.add(async (state) => {
+        await hydration.promise
+        return state
+      })
+      const upsert = rs.spyOn(web.api.experience, 'upsertProfile')
+      const operation = web.hydrateAndTrackCurrentPage(
+        { ...createContentHandoff(createReplay('/a')), state: { profile: DEFAULT_PROFILE } },
+        { routeKey: '/a' },
+      )
+      web[lifecycle]()
+      hydration.resolve()
+      await expect(operation).resolves.toEqual({ accepted: false })
+      expect(upsert).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(['reset', 'destroy'] as const)(
+    'does not start replay when state readiness tears down the runtime with %s',
+    async (lifecycle) => {
+      const web = new ContentfulOptimization(config)
+      const upsert = rs.spyOn(web.api.experience, 'upsertProfile')
+      await expect(
+        web.hydrateAndTrackCurrentPage(createContentHandoff(createReplay('/a')), {
+          routeKey: '/a',
+          onHydrated: () => {
+            web[lifecycle]()
+          },
+        }),
+      ).resolves.toEqual({ accepted: false })
+      expect(upsert).not.toHaveBeenCalled()
+    },
+  )
 
   it('forwards onEventBlocked callback to core stateful guards', async () => {
     const onEventBlocked = rs.fn()

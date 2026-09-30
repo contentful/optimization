@@ -80,8 +80,10 @@ imperative `.core` client.
   used by the Experience and Insights APIs and has a Kotlin-side default `"master"`;
   `logLevel` default `OptimizationLogLevel.error`; `locale`, `api`
   (`experienceBaseUrl`/`insightsBaseUrl`/`enabledFeatures`/`preflight`), `allowedEventTypes`,
-  `queuePolicy`, `defaults: StorageDefaults`, `onEventBlocked` all optional/nullable.
-  source: extern:environment default "master", logLevel default error, spaceId required — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationConfig.kt#OptimizationConfig
+  `queuePolicy`, `defaults: StorageDefaults`, `onEventBlocked` all optional/nullable. `preflight` is
+  deprecated and retained only for mixed-version configuration serialization; the bridged stateful
+  Core runtime ignores it.
+  source: extern:environment default "master", logLevel default error, spaceId required, and preflight compatibility behavior — packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/core/OptimizationConfig.kt#OptimizationConfig; optimization-js-bridge#index.ts#BridgeConfig; core-sdk#CoreStateful.ts#createStatefulExperienceApiConfig
 - `config.toJSON(anonymousId)` serializes to the bridge `BridgeConfig` shape, omitting null URLs and
   empty sub-objects (`api`/`queuePolicy` skipped when empty; `defaults` object emitted only when
   non-empty); the bridge maps it into `CoreStatefulConfig` via `resolveStatefulDefaults`, defaulting

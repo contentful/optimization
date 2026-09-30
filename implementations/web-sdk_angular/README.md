@@ -38,6 +38,13 @@ an Angular-specific SDK adapter.
 - Analytics event display with interaction-session aggregation
 - Multi-route navigation with conversion tracking
 
+For SSR, the implementation transfers one `ServerOptimizationTransfer` object through Angular
+`TransferState`. Its `handoff` is the canonical Optimization data passed from the Node preview to the
+browser runtime; `defaults` provide the matching consent and locale snapshot. The browser hydrates
+that handoff once before routing begins, in memory only. A private replay is attempted by the first
+matching route tracking call and otherwise falls through to ordinary route tracking; a later
+successful live Experience response is the durable-continuity path.
+
 ## CDA locale handling
 
 This app configures one locale in `app.config.ts`, passes it as the Web SDK top-level `locale`, and
@@ -156,7 +163,7 @@ panel behavior.
 | File or area                            | Purpose                                                      |
 | --------------------------------------- | ------------------------------------------------------------ |
 | `src/app/app.config.ts`                 | Angular providers and SDK configuration                      |
-| `src/app/services/optimization.ts`      | Web SDK singleton, consent, state, and event-stream glue     |
+| `src/app/services/optimization.ts`      | SSR preview handoff, Web SDK promotion, consent, and routing |
 | `src/app/services/contentful-client.ts` | Single-locale Contentful CDA reads                           |
 | `src/app/components/entry-card/`        | Optimized entry display and automatic/manual tracking markup |
 | `src/app/components/control-panel/`     | Consent, identify, reset, live updates, and preview controls |

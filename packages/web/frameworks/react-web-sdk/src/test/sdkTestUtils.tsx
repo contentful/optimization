@@ -209,12 +209,12 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
     (async (options) => {
       const { routeKey } = options
 
-      if (options.initialPageEvent === 'skip') {
-        acceptedRouteKey = routeKey
-        return { accepted: true }
-      }
-
-      if (!hasConsent('page') || acceptedRouteKey === routeKey || inFlightRouteKey === routeKey) {
+      if (
+        options.isCurrent?.() === false ||
+        !hasConsent('page') ||
+        acceptedRouteKey === routeKey ||
+        inFlightRouteKey === routeKey
+      ) {
         return { accepted: false }
       }
 
@@ -223,7 +223,9 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
 
       try {
         const { buildPayload } = options
-        const result = toEventEmissionResult(await page(buildPayload({ isInitialEmission })))
+        const result = toEventEmissionResult(
+          await page(buildPayload?.({ isInitialEmission }) ?? {}),
+        )
         if (result.accepted) {
           acceptedRouteKey = routeKey
         }
@@ -297,6 +299,14 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
       return undefined
     },
     trackCurrentPage,
+    hydrateAndTrackCurrentPage: async (
+      _handoff: Parameters<OptimizationSdk['hydrateAndTrackCurrentPage']>[0],
+      options: Parameters<OptimizationSdk['hydrateAndTrackCurrentPage']>[1],
+    ) => {
+      options.onHydrated?.()
+      await options.beforeInitialPage?.()
+      return await trackCurrentPage(options.getCurrentPage?.() ?? options)
+    },
     trackView: async () => {
       await Promise.resolve()
       return { accepted: true }

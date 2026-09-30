@@ -1,4 +1,8 @@
 import type NodeContentfulOptimization from '@contentful/optimization-node'
+import {
+  createRequestHandoffFromData,
+  createRequestHandoffFromPreview,
+} from '@contentful/optimization-node'
 import type { ResolvedData } from '@contentful/optimization-node/core-sdk'
 import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import type { ReactElement } from 'react'
@@ -216,7 +220,6 @@ export function acceptBoundPublicPermutationHandoffOverload(
 ): ContentOptimizationHandoff {
   return components.createPublicPermutationHandoff({
     hydration: 'preserve-server',
-    initialPageEvent: 'emit',
     permutationKey: 'new-visitor',
     selectedOptimizations: [],
   })
@@ -267,10 +270,7 @@ export function rejectAppRouterRequestOwnedProps(
     // @ts-expect-error Request providers own hydration.
     hydration: 'preserve-server',
   })
-  void components.request.NextAppAutoPageTracker({
-    // @ts-expect-error Request page trackers own the initial page event.
-    initialPageEvent: 'emit',
-  })
+  void components.request.NextAppAutoPageTracker({ initialPageEvent: 'emit' })
 }
 
 export function acceptAppRouterRootPageEventProps(
@@ -420,9 +420,7 @@ export function assertAppRouterClientConfigBranches(
   presentBound.OptimizationRoot({ buildPagePayload, routeKey: '/products' })
   presentBound.RequestOptimizationRoot({ children: null })
 
-  // @ts-expect-error Callback-absent App bindings do not expose a request client root.
-  const absentRequestRoot = absentLiteral.RequestOptimizationRoot
-  void absentRequestRoot
+  absentLiteral.RequestOptimizationRoot({ children: null })
 
   const widenedBound = bindNextjsAppRouterClientOptimization(widenedExport)
   widenedBound.OptimizationRoot({ buildPagePayload, routeKey: '/products' })
@@ -628,6 +626,32 @@ export function rejectInvalidAppRouterRequestClientRootReference(
       OptimizationRoot: InvalidRequestRoot,
     },
   })
+}
+
+export function acceptHydrationOptionsWithoutAssertions(
+  preview: Parameters<typeof createRequestHandoffFromPreview>[0]['preview'],
+): void {
+  const handoff = createRequestHandoffFromPreview({
+    preview,
+    routeKey: '/page',
+    hydration: 'preserve-server',
+  })
+  const fallback = createRequestHandoffFromData({ hydration: 'client-only-hidden-until-ready' })
+  const contentProps: BoundNextjsOptimizationRootProps = { handoff }
+  const fallbackProps: BoundNextjsOptimizationRootProps = { handoff: fallback }
+  const mode: 'preserve-server' = handoff.hydration
+  const analytics = createRequestHandoffFromPreview({
+    preview,
+    routeKey: '/page',
+    hydration: 'analytics-only',
+  })
+  const analyticsProps: BoundNextjsOptimizationAnalyticsRootProps = {
+    handoff: analytics,
+    routeKey: '/page',
+  }
+  void [contentProps, fallbackProps, mode, analyticsProps]
+  // @ts-expect-error Unsupported hydration strings remain rejected by the SDK.
+  createRequestHandoffFromData({ hydration: 'unsupported-mode' })
 }
 
 describe('Next.js runtime type contracts', () => {

@@ -5,7 +5,7 @@ import type {
   PrivateRequestOptimizationCacheMetadata,
 } from '@contentful/optimization-core'
 import type { Entry, EntrySkeletonType } from 'contentful'
-import { createRequestHandoffFromData } from './handoff'
+import { createRequestHandoffFromData, createRequestHandoffFromPreview } from './handoff'
 
 type TestEntry = Entry<EntrySkeletonType, undefined>
 
@@ -83,6 +83,14 @@ const requestData: OptimizationData = {
 }
 
 describe('createRequestHandoffFromData', () => {
+  it('retains the selected hydration mode without a literal assertion', () => {
+    const handoff = createRequestHandoffFromData({
+      data: requestData,
+      hydration: 'preserve-server',
+    })
+    const mode: 'preserve-server' = handoff.hydration
+    expect(mode).toBe('preserve-server')
+  })
   it('maps completed request OptimizationData into Core handoff state', () => {
     const cache: PrivateRequestOptimizationCacheMetadata = {
       scope: 'private-request',
@@ -145,5 +153,17 @@ describe('createRequestHandoffFromData', () => {
 
     expect(handoff).toEqual({ cache: { scope: 'private-request' } })
     expect(handoff.state).toBeUndefined()
+  })
+})
+
+describe('createRequestHandoffFromPreview', () => {
+  it('retains analytics-only mode without a literal assertion', () => {
+    const handoff = createRequestHandoffFromPreview({
+      preview: { accepted: true, experience: [], insights: [], profile: { id: 'existing' } },
+      hydration: 'analytics-only',
+    })
+    const mode: 'analytics-only' = handoff.hydration
+    expect(mode).toBe('analytics-only')
+    expect(handoff.replay?.profile?.id).toBe('existing')
   })
 })

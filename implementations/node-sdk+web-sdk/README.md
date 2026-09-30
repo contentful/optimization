@@ -24,15 +24,15 @@ This is a reference implementation using both the
 ## What this demonstrates
 
 Use this implementation when you need a hybrid SSR/browser example. It demonstrates a stateless Node
-SDK server flow, a stateful Web SDK browser flow, consent-aware cookie-based profile continuity
-between them, and local mock API usage for end-to-end validation.
+SDK preview flow, a stateful Web SDK browser continuation, consent-aware application cookies, and
+local mock API usage for end-to-end validation.
 
-On the server side, the stateless Node SDK is created once at module load. Each request binds
-request-scoped options with `sdk.forRequest(...)`, then calls stateless event methods on the
-returned request object. The demo stores application-owned consent in a server-readable cookie and
-writes the shared anonymous ID cookie only when consent permits profile continuity. When app consent
-is missing or denied, the server clears the shared anonymous ID cookie, skips Node SDK event calls,
-and lets the browser render baseline entries.
+The stateless Node SDK is created once at module load. Each consented request calls `previewInitialExperience()` once for `[page]`, `[identify, page]`, or `[track, page]`, then creates a private handoff. The server neither persists preview identity nor writes its anonymous-ID cookie. Web calls `hydrateAndTrackCurrentPage()` to apply state in memory and deliver one browser batch or ordinary fallback. Rendering does not await delivery. A successful live response can persist continuity, and later navigation uses ordinary tracking. Missing or denied app consent skips preview and renders baseline entries.
+
+The SSR page transfers one canonical `optimizationHandoff` object to the browser. The browser uses
+that object for both initial state hydration and its possible private replay; it does not reconstruct
+or combine a second replay payload. A replay is one-shot, so a route mismatch or delivery failure
+falls through to ordinary current-page tracking.
 
 The goal of this reference implementation is to illustrate the usage of cookie-based communication
 in both the Node and Web SDKs, which is an important component of many server-side/client-side

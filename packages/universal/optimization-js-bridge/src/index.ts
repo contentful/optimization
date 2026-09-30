@@ -74,6 +74,10 @@ interface BridgeConfig {
     experienceBaseUrl?: CoreApiConfig['experienceBaseUrl']
     insightsBaseUrl?: CoreApiConfig['insightsBaseUrl']
     enabledFeatures?: CoreApiConfig['enabledFeatures']
+    /**
+     * @deprecated Compatibility-only wire field retained for existing native
+     * configurations. It is forwarded without adding native replay behavior.
+     */
     preflight?: CoreApiConfig['preflight']
   }
   locale?: string

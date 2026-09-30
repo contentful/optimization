@@ -1,4 +1,4 @@
-import { batch, InterceptorManager, signals } from '@contentful/optimization-core'
+import { batch, EventBuilder, InterceptorManager, signals } from '@contentful/optimization-core'
 import type {
   ChangeArray,
   Profile,
@@ -12,6 +12,10 @@ import {
 } from './analytics'
 import ContentfulOptimization from './ContentfulOptimization'
 import LocalStore from './storage/LocalStore'
+const replayEventBuilder = new EventBuilder({
+  channel: 'server',
+  library: { name: 'test-server', version: '1.0.0' },
+})
 
 const config = {
   spaceId: 'key_123',
@@ -98,7 +102,6 @@ function createAnalyticsHandoff(
   return {
     cache: { scope: 'private-request' },
     hydration: 'analytics-only',
-    initialPageEvent: 'emit',
     state: {
       profile,
       selectedOptimizations,
@@ -250,7 +253,50 @@ describe('Optimization analytics handoff runtime', () => {
     expect('fetchOptimizedEntry' in runtime).toBe(false)
   })
 
-  it('does not track an older analytics route after a newer handoff starts', async () => {
+  it('stages and consumes an analytics handoff replay through ordinary page tracking', async () => {
+    const { fetchMethod, requests } = createFetchMethod()
+    runtime = initializeOptimizationAnalyticsRuntime({
+      ...config,
+      defaults: { consent: true, persistenceConsent: true },
+      fetchOptions: { fetchMethod },
+    })
+
+    await hydrateOptimizationAnalyticsHandoff(
+      runtime,
+      createAnalyticsHandoff({
+        replay: {
+          experience: [
+            replayEventBuilder.buildIdentify({ userId: 'handoff-user' }),
+            replayEventBuilder.buildPageView({}),
+          ],
+          insights: [],
+          routeKey: '/segment-a',
+        },
+      }),
+      {
+        buildPagePayload: () => ({ properties: { ordinary: true } }),
+        routeKey: '/segment-a',
+      },
+    )
+
+    const pageRequest = requests.find((request) => request.url.includes('/profiles'))
+    expect(pageRequest?.body).toEqual(
+      expect.objectContaining({
+        events: [
+          expect.objectContaining({ type: 'identify' }),
+          expect.objectContaining({ type: 'page' }),
+        ],
+      }),
+    )
+    const replayedPage = Reflect.get(pageRequest?.body ?? {}, 'events')
+    if (!Array.isArray(replayedPage)) throw new Error('Expected replayed analytics events.')
+    const pageEvent = replayedPage.find((event) => Reflect.get(event, 'type') === 'page')
+    expect(Reflect.get(pageEvent ?? {}, 'properties')).not.toEqual(
+      expect.objectContaining({ ordinary: true }),
+    )
+  })
+
+  it('keeps latest state while each replay-less initialization makes its page attempt', async () => {
     const firstProfile = createProfile('first-profile')
     const secondProfile = createProfile('second-profile')
     const firstHydration = createDeferred()
@@ -258,7 +304,7 @@ describe('Optimization analytics handoff runtime', () => {
     const firstPayload = rs.fn(() => ({}))
     const secondPayload = rs.fn(() => ({}))
     const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     const runInterceptors = InterceptorManager.prototype.run
     rs.spyOn(InterceptorManager.prototype, 'run').mockImplementation(async function run(
@@ -303,16 +349,39 @@ describe('Optimization analytics handoff runtime', () => {
     await second
 
     expect(trackCurrentPage).toHaveBeenCalledTimes(1)
-    expect(trackCurrentPage).toHaveBeenCalledWith({
-      buildPayload: secondPayload,
-      initialPageEvent: 'emit',
-      routeKey: '/segment-b',
-    })
+    expect(trackCurrentPage).toHaveBeenCalledWith({})
 
     firstHydration.resolve()
     await first
 
+    expect(trackCurrentPage).toHaveBeenCalledTimes(2)
+  })
+
+  it('tracks the ordinary page when private-request analytics hydration fails', async () => {
+    const baselineSelectedOptimizations: SelectedOptimizationArray = []
+    const hydrationError = new Error('handoff failed')
+    const warn = rs.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const trackCurrentPage = rs
+      .spyOn(ContentfulOptimization.prototype, 'page')
+      .mockResolvedValue({ accepted: true })
+    rs.spyOn(InterceptorManager.prototype, 'run').mockRejectedValue(hydrationError)
+    runtime = initializeOptimizationAnalyticsRuntime({ ...config, logLevel: 'warn' })
+    signals.selectedOptimizations.value = baselineSelectedOptimizations
+
+    await expect(
+      hydrateOptimizationAnalyticsHandoff(runtime, createAnalyticsHandoff(), {
+        buildPagePayload: () => ({ properties: { ordinary: true } }),
+        routeKey: '/segment-a',
+      }),
+    ).resolves.toBeUndefined()
+
+    expect(signals.selectedOptimizations.value).toBe(baselineSelectedOptimizations)
     expect(trackCurrentPage).toHaveBeenCalledTimes(1)
+    expect(trackCurrentPage).toHaveBeenCalledWith({ properties: { ordinary: true } })
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('Handoff state could not be applied'),
+      hydrationError,
+    )
   })
 
   it('hydrates static profileless analytics state without overwriting durable continuity', async () => {
@@ -327,7 +396,7 @@ describe('Optimization analytics handoff runtime', () => {
     ]
     const durableChanges: ChangeArray = [{ ...change, value: false }]
     const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     runtime = initializeOptimizationAnalyticsRuntime({
       ...config,
@@ -355,10 +424,10 @@ describe('Optimization analytics handoff runtime', () => {
     expect(LocalStore.selectedOptimizations).toEqual(durableSelectedOptimizations)
   })
 
-  it('persists private-request analytics state to durable continuity', async () => {
+  it('keeps private-request analytics state in memory', async () => {
     const durableProfile = createProfile('durable-profile')
     const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     runtime = initializeOptimizationAnalyticsRuntime({
       ...config,
@@ -378,35 +447,9 @@ describe('Optimization analytics handoff runtime', () => {
     )
 
     expect(trackCurrentPage).toHaveBeenCalledTimes(1)
-    expect(LocalStore.changes).toEqual(changes)
+    expect(LocalStore.changes).toBeUndefined()
     expect(LocalStore.profile).toEqual(durableProfile)
-    expect(LocalStore.selectedOptimizations).toEqual(selectedOptimizations)
-  })
-
-  it('warns without throwing when skipping the page event without profile continuity', async () => {
-    const warn = rs.spyOn(console, 'warn').mockImplementation(() => undefined)
-    runtime = initializeOptimizationAnalyticsRuntime({
-      ...config,
-      logLevel: 'warn',
-    })
-
-    await expect(
-      hydrateOptimizationAnalyticsHandoff(
-        runtime,
-        createAnalyticsHandoff({
-          initialPageEvent: 'skip',
-          state: { selectedOptimizations },
-        }),
-        {
-          routeKey: '/segment-a',
-          buildPagePayload: () => ({}),
-        },
-      ),
-    ).resolves.toBeUndefined()
-
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining('without handoff profile state or browser profile continuity'),
-    )
+    expect(LocalStore.selectedOptimizations).toBeUndefined()
   })
 
   it('rejects content handoffs', async () => {
@@ -418,7 +461,6 @@ describe('Optimization analytics handoff runtime', () => {
         {
           cache: { scope: 'static' },
           hydration: 'preserve-server',
-          initialPageEvent: 'emit',
         },
         {
           routeKey: '/',
@@ -428,43 +470,26 @@ describe('Optimization analytics handoff runtime', () => {
     ).rejects.toThrow('analytics-only optimization handoffs')
   })
 
-  it('rejects invalid initialPageEvent values', async () => {
+  it('fails closed for unsafe public and static analytics handoffs', async () => {
+    const trackCurrentPage = rs.spyOn(ContentfulOptimization.prototype, 'page')
     runtime = initializeOptimizationAnalyticsRuntime(config)
 
-    await expect(
-      Reflect.apply(hydrateOptimizationAnalyticsHandoff, undefined, [
-        runtime,
-        {
-          ...createAnalyticsHandoff(),
-          initialPageEvent: 'invalid',
-        },
-        {
+    for (const cache of [
+      { scope: 'public-permutation', key: 'segment-a' },
+      { scope: 'static' },
+    ] as const) {
+      await expect(
+        hydrateOptimizationAnalyticsHandoff(runtime, createAnalyticsHandoff({ cache }), {
           routeKey: '/',
           buildPagePayload: () => ({}),
-        },
-      ]),
-    ).rejects.toThrow('initialPageEvent')
-  })
-
-  it('rejects public profile state before hydrating browser signals', async () => {
-    runtime = initializeOptimizationAnalyticsRuntime(config)
-
-    await expect(
-      hydrateOptimizationAnalyticsHandoff(
-        runtime,
-        createAnalyticsHandoff({
-          cache: { scope: 'public-permutation', key: 'segment-a' },
         }),
-        {
-          routeKey: '/',
-          buildPagePayload: () => ({}),
-        },
-      ),
-    ).rejects.toThrow(
-      'Profile state should not be included in public or static optimization caches.',
-    )
+      ).rejects.toThrow(
+        'Profile state should not be included in public or static optimization caches.',
+      )
+    }
 
     expect(signals.profile.value).toBeUndefined()
     expect(signals.selectedOptimizations.value).toBeUndefined()
+    expect(trackCurrentPage).not.toHaveBeenCalled()
   })
 })

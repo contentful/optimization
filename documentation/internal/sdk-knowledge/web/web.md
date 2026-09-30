@@ -40,6 +40,9 @@ wraps this). Package source root: `packages/web/web-sdk/src`; shared core:
     source: core-sdk#CoreBase.ts#locale; core-sdk#CoreBase.ts#logLevel; api-client#lib/logger/logging.ts#LogLevels
   - `api.experienceBaseUrl` / `api.insightsBaseUrl`.
     source: core-sdk#CoreApiConfig.ts#experienceBaseUrl; core-sdk#CoreApiConfig.ts#insightsBaseUrl
+  - Inherited global `api.preflight` is a deprecated compatibility input and is inert in the
+    stateful Web runtime.
+    source: core-sdk#CoreApiConfig.ts#CoreSharedApiConfig; core-sdk#CoreStateful.ts#createStatefulExperienceApiConfig
   - `defaults.consent`, `defaults.persistenceConsent` — **`persistenceConsent` defaults to
     `consent`** (`persistenceConsent ?? consent`).
     source: core-sdk#StatefulDefaults.ts#resolveStatefulDefaults
@@ -55,25 +58,12 @@ wraps this). Package source root: `packages/web/web-sdk/src`; shared core:
     `CoreConfig.contentful`; see
     [`../shared/concepts.md`](../shared/concepts.md#entry-source-boundary-managed-or-manual).
     source: core-sdk#CoreBase.ts#CoreConfig; core-sdk#CoreBase.ts#ContentfulConfig; web-sdk#ContentfulOptimization.ts#OptimizationWebConfig; core-sdk#CoreStateful.ts#CoreStatefulConfig
-- Browser handoff model: see [`../shared/concepts.md`](../shared/concepts.md#optimization-handoff).
-  `hydrateOptimizationHandoff(sdk, handoff)` accepts only content handoffs, validates
-  `initialPageEvent`, enforces cache safety, hydrates state into the live SDK through Web handoff
-  state hydration, and leaves page-event emission to the root or route tracker that consumes
-  `initialPageEvent`. `@contentful/optimization-web/handoff` also exports
-  `hydrateOptimizationHandoffState` for customer adapters. Undefined or empty handoff state still
-  marks the Experience request state successful and clears stale browser content state by publishing
-  `selectedOptimizations: undefined` and `changes: undefined` while leaving `profile` untouched. When
-  fields are present, the helper awaits the Web SDK state interceptor, treats own-property presence
-  as intentional, keeps input handoff fields when an interceptor omits them, applies own present
-  `undefined` fields, and publishes only those present fields plus the content reset in one browser
-  SDK batch.
-  source: web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoffState; web-sdk#handoff.ts#applyHydratedSignals; web-sdk#handoff.ts#applySuccessfulEmptyHandoffHydration; core-sdk#handoff.ts#assertOptimizationCacheSafety
-- `hydrateOptimizationHandoff()` treats profileless `static` and `public-permutation` handoffs as
-  live-memory hydration: it publishes handoff `changes` / `selectedOptimizations` to browser signals
-  while suppressing durable continuity persistence, so existing durable `LocalStore` continuity is
-  preserved. Private request handoffs, or profile-backed handoffs that pass cache safety, follow
-  normal signal persistence and can update durable continuity when persistence consent allows.
-  source: web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#handoff.ts#shouldPreserveDurableContinuity; web-sdk#handoff.ts#applyHydratedSignals; web-sdk#storage/durableContinuityPersistence.ts#suppressDurableContinuityPersistence; web-sdk#storage/LocalStore.ts#LocalStore
+- Browser handoff state is provisional and memory-only. `hydrateAndTrackCurrentPage()` owns hydration, replay admission, and one ordinary-page fallback. Its setup callback runs after hydration and before events, including recoverable hydration errors, without waiting for transport. The state-only handoff helpers apply cache-safe state without retaining replay. Empty state clears content selections and changes while retaining the profile; present fields pass through state interceptors and latest-wins publication arbitration.
+  source: web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#handoff.ts#hydrateContentOptimizationHandoffState; web-sdk#handoff.ts#applyHydratedSignals
+- Full handoff hydration suppresses durable continuity writes regardless of cache scope. Existing cookies and LocalStore continuity remain intact until a successful live Experience response and persistence consent permit promotion. Offline acceptance is queue acceptance and has no live response yet.
+  source: web-sdk#ContentfulOptimization.ts#promoteCommittedCurrentPage; web-sdk#handoff.ts#applyHydratedSignals; web-sdk#storage/durableContinuityPersistence.ts#suppressDurableContinuityPersistence
+- Repeated calls with the same handoff object share one completion. Distinct handoffs keep their events when newer state arrives. Reset, destroy, or a caller lifetime guard can stop delivery before it starts. Replay route admission is captured when the operation starts. A later route or handoff cannot revoke that admission, and an older response cannot replace current-route deduplication. Matching page replay suppresses an ordinary page; mismatched, unusable, blocked, or failed replay falls back only if no page was accepted. Later failure in a mixed journal preserves earlier page acceptance. Ordinary tracking waits for the active initial completion and uses the existing accepted/in-flight route tracker; distinct initial journals retain their events.
+  source: web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#ContentfulOptimization.ts#emitInitialPage; web-sdk#ContentfulOptimization.ts#trackCurrentPage; core-sdk#CoreStateful.ts#replayOptimizationHandoff
 
 ## Components & hooks
 
@@ -165,9 +155,10 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   source: web-sdk#ContentfulOptimization.ts#mergeConfig; web-sdk#builders/EventBuilder.ts#getPageProperties; core-sdk#events/EventBuilder.ts#buildUniversalEventProperties; core-sdk#events/EventBuilder.ts#buildPageView; kb:shared/concepts.md
 - `page()` (accepted) populates `states.selectedOptimizations`.
   source: core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals
-- `trackCurrentPage({ routeKey, buildPayload, initialPageEvent? })` — dedupes consecutive identical
-  route keys; `initialPageEvent: 'skip'` for hybrid first-route dedupe; a bare `page()` always emits
-  when consent permits.
+- `trackCurrentPage({ routeKey, buildPayload, initialPageEvent? })` dedupes consecutive accepted
+  route keys. Omitted `buildPayload` emits the legacy empty page payload. The compatibility
+  `initialPageEvent` input is inert, including `'skip'`; a bare `page()` always emits when consent
+  permits.
   source: web-sdk#ContentfulOptimization.ts#trackCurrentPage; core-sdk#tracking/AcceptedCurrentStateTracker.ts#emitIfNeeded
 - Interaction tracking: SDK observes any DOM element carrying `data-ctfl-*`; auto view/click/hover
   on by default; opt out per-type via `autoTrackEntryInteraction`. Manual:
@@ -189,15 +180,8 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   flush uses Beacon, so final interaction events are queued first.
   source: web-sdk#entry-tracking/events/observerSupport.ts#addVisibilityChangeListener; web-sdk#entry-tracking/events/view/ElementViewObserver.ts#ElementViewObserver; web-sdk#entry-tracking/events/hover/ElementHoverObserver.ts#ElementHoverObserver; web-sdk#entry-tracking/EntryInteractionRuntime.ts#EntryInteractionRuntime; web-sdk#ContentfulOptimization.ts#ContentfulOptimization; web-sdk#handlers/createVisibilityChangeListener.ts#createVisibilityChangeListener
 - Analytics-only handoff: `initializeOptimizationAnalyticsRuntime(config)` creates a narrow Web
-  runtime with `tracking`, `trackCurrentPage`, `flush`, and `destroy`, but no content-resolution
-  surface. It removes the global browser SDK reference if construction registered this analytics
-  runtime's own internal SDK instance. Hydration through `hydrateOptimizationAnalyticsHandoff`
-  accepts only `hydration: 'analytics-only'`, hydrates handoff state, warns when a skipped initial
-  page lacks profile continuity, then delegates initial route ownership to `trackCurrentPage()`.
-  Stale analytics hydrations stop before state apply, the warning, or page tracking; profileless
-  `static` and `public-permutation` analytics handoffs suppress durable continuity persistence the
-  same way content handoffs do.
-  source: web-sdk#analytics.ts#initializeOptimizationAnalyticsRuntime; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff; web-sdk#analytics.ts#warnSkippedInitialPageWithoutProfileContinuity; web-sdk#handoff.ts#shouldPreserveDurableContinuity
+  runtime with `tracking`, `trackCurrentPage`, `flush`, and `destroy`, but no content-resolution surface. `hydrateOptimizationAnalyticsHandoff()` delegates hydration and the initial page decision to the full runtime's combined operation. Earlier handoff event delivery continues when a newer handoff arrives; state publication keeps latest-wins arbitration. All cache-safe handoff state uses durable-continuity suppression.
+  source: web-sdk#analytics.ts#initializeOptimizationAnalyticsRuntime; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff; web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#handoff.ts#applyHydratedSignals
 - Flags: `getFlag(name)` one-off and `states.flag(name)` reactive reads auto-attempt flag-view
   tracking; explicit/manual replacement is `trackFlagView()`. See
   [`../shared/concepts.md`](../shared/concepts.md#custom-flag-views).
@@ -252,6 +236,8 @@ None (imperative class + Web Components; no React surface). Web Components eleme
 - `consent(false)` blocks non-allowed events and clears SDK durable storage; does NOT drop the
   active in-memory profile (use `reset()`) or erase app/server/CMP records.
   source: core-sdk#CoreStateful.ts#consent
+- Private replay is rejected on public or static handoffs before state application. Live consent, ordinary interceptors, and event schemas govern submission of server-built events through the normal Experience and Insights queues. Recoverable state-apply errors are reported and delivery continues; reset/destroy lifetime cancellation stops unsent work. Ordinary-page fallback is conditional on no accepted page.
+  source: core-sdk#handoff.ts#assertOptimizationCacheSafety; core-sdk#CoreStateful.ts#replayOptimizationHandoff; core-sdk#queues/ExperienceQueue.ts#sendBatch; core-sdk#queues/InsightsQueue.ts#send; web-sdk#ContentfulOptimization.ts#emitInitialPage
 - Preview panel: separate published package `@contentful/optimization-web-preview-panel` (dir
   `packages/web/preview-panel`), `attachOptimizationPreviewPanel` is its DEFAULT export.
   `attachOptimizationPreviewPanel({ contentful? | entries? | optimization?, nonce? })`;

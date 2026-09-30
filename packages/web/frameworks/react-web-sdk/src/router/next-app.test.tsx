@@ -2,7 +2,6 @@ import ContentfulOptimization from '@contentful/optimization-web'
 import { rs } from '@rstest/core'
 import { act, StrictMode, useEffect, useLayoutEffect, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { resetAutoPageEmitterState } from '../auto-page/useAutoPageEmitter'
 import type { BeforeInitialPageOptions } from '../before-initial-page/beforeInitialPage'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import { OptimizationContext } from '../context/OptimizationContext'
@@ -156,7 +155,6 @@ describe('NextAppAutoPageTracker', () => {
   })
 
   beforeEach(() => {
-    resetAutoPageEmitterState()
     setCurrentRoute('/')
     currentRouterState = routerState
   })
@@ -269,7 +267,7 @@ describe('NextAppAutoPageTracker', () => {
   it('keeps the attempted latest route across readiness without suppressing a later route', async () => {
     const callback = createDeferred<undefined>()
     const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     const beforeInitialPage = {
       run: async () => {
@@ -291,28 +289,25 @@ describe('NextAppAutoPageTracker', () => {
       await Promise.resolve()
     })
 
-    expect(trackCurrentPage).toHaveBeenCalledTimes(2)
+    expect(trackCurrentPage).toHaveBeenCalledTimes(1)
     expect(trackCurrentPage).toHaveBeenNthCalledWith(1, {
-      buildPayload: expect.any(Function),
-      initialPageEvent: 'emit',
-      routeKey: '/',
-    })
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(2, {
-      initialPageEvent: 'skip',
-      routeKey: '/',
+      properties: { path: '/', query: {}, search: '', url: `${window.location.origin}/` },
     })
 
     setCurrentRoute('/page-two', new URLSearchParams('beforeInitialPage=readiness'), false)
     await rendered.rerender(<BeforeInitialPageRequestRoot beforeInitialPage={beforeInitialPage} />)
-    expect(trackCurrentPage).toHaveBeenCalledTimes(2)
+    expect(trackCurrentPage).toHaveBeenCalledTimes(1)
 
     setCurrentRoute('/page-two')
     await rendered.rerender(<BeforeInitialPageRequestRoot beforeInitialPage={beforeInitialPage} />)
-    expect(trackCurrentPage).toHaveBeenCalledTimes(3)
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(3, {
-      buildPayload: expect.any(Function),
-      initialPageEvent: 'emit',
-      routeKey: '/page-two',
+    expect(trackCurrentPage).toHaveBeenCalledTimes(2)
+    expect(trackCurrentPage).toHaveBeenNthCalledWith(2, {
+      properties: {
+        path: '/page-two',
+        query: {},
+        search: '',
+        url: `${window.location.origin}/page-two`,
+      },
     })
 
     await rendered.unmount()
@@ -376,35 +371,6 @@ describe('NextAppAutoPageTracker', () => {
     await rendered.rerender(<NextAppAutoPageTracker />)
 
     expect(page).toHaveBeenCalledTimes(1)
-
-    await rendered.unmount()
-  })
-
-  it('skips only the initial route when server rendering already emitted its page event', async () => {
-    const page = rs.fn(async () => {
-      await Promise.resolve()
-      return undefined
-    })
-    const sdk = createOptimizationSdk({ page })
-    const rendered = await renderTracker(<NextAppAutoPageTracker initialPageEvent="skip" />, sdk)
-
-    expect(page).not.toHaveBeenCalled()
-
-    setCurrentRoute('/products')
-
-    await rendered.rerender(<NextAppAutoPageTracker initialPageEvent="skip" />)
-
-    expect(page).toHaveBeenCalledTimes(1)
-
-    await rendered.rerender(<NextAppAutoPageTracker />)
-
-    expect(page).toHaveBeenCalledTimes(1)
-
-    setCurrentRoute('/')
-
-    await rendered.rerender(<NextAppAutoPageTracker initialPageEvent="skip" />)
-
-    expect(page).toHaveBeenCalledTimes(2)
 
     await rendered.unmount()
   })

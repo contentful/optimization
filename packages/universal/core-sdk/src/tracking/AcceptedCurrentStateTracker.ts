@@ -18,6 +18,8 @@ export interface AcceptedCurrentStateEmissionOptions<TKey, TData> {
   readonly key: TKey
   readonly isAllowed: boolean
   readonly emit: () => Promise<EventEmissionResult<TData>>
+  /** Initial journals share route ownership but retain their distinct events. @internal */
+  readonly deduplicate?: boolean
 }
 
 /**
@@ -61,10 +63,14 @@ export class AcceptedCurrentStateTracker<TKey> {
     key,
     isAllowed,
     emit,
+    deduplicate = true,
   }: AcceptedCurrentStateEmissionOptions<TKey, TData>): Promise<
     AcceptedCurrentStateEmissionResult<TData>
   > {
-    if (!isAllowed || this.matches(this.accepted, key) || this.matches(this.inFlight, key)) {
+    if (
+      !isAllowed ||
+      (deduplicate && (this.matches(this.accepted, key) || this.matches(this.inFlight, key)))
+    ) {
       return { accepted: false, attempted: false }
     }
 

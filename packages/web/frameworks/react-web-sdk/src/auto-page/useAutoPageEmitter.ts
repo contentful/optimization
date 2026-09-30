@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useOptimization } from '../hooks/useOptimization'
 import { useConsentState } from '../hooks/useOptimizationState'
 import type { AutoPagePayload } from './types'
@@ -22,17 +22,9 @@ export interface UseAutoPageEmitterArgs {
    * double-effect invocations.
    */
   readonly routeKey: string
-  /**
-   * Controls the first eligible route emission. SSR integrations can use
-   * `skip` when the server already emitted the mounted route's page event.
-   * Later client-side route changes still emit when a payload builder is
-   * available.
-   */
+  /** @deprecated This legacy input is inert. */
   readonly initialPageEvent?: InitialAutoPageEvent
-  /**
-   * Builds the page event payload to emit. Required for emitted routes and not
-   * called for skip-only initial route marking.
-   */
+  /** Builds the page event payload. Omit it to use the legacy empty payload. */
   readonly buildPayload?: (metadata: AutoPageEmissionMetadata) => AutoPagePayload
 }
 
@@ -47,46 +39,27 @@ export interface UseAutoPageEmitterArgs {
  */
 export function useAutoPageEmitter({
   enabled,
-  initialPageEvent = 'emit',
   routeKey,
   buildPayload,
 }: UseAutoPageEmitterArgs): void {
   const sdk = useOptimization()
   const consent = useConsentState()
-  const skippedInitialRouteKey = useRef<string | null | undefined>(undefined)
 
   useEffect(() => {
     if (!enabled) {
       return
     }
 
-    if (skippedInitialRouteKey.current === undefined) {
-      skippedInitialRouteKey.current = initialPageEvent === 'skip' ? routeKey : null
-    }
-
-    const currentInitialPageEvent = skippedInitialRouteKey.current === routeKey ? 'skip' : 'emit'
-
-    if (skippedInitialRouteKey.current !== routeKey) {
-      skippedInitialRouteKey.current = null
-    }
-
-    if (currentInitialPageEvent === 'skip') {
-      void sdk.trackCurrentPage({ initialPageEvent: 'skip', routeKey }).catch(() => undefined)
-      return
-    }
-
-    if (buildPayload === undefined) return
-
+    let active = true
     void sdk
       .trackCurrentPage({
         buildPayload,
-        initialPageEvent: 'emit',
+        isCurrent: () => active,
         routeKey,
       })
       .catch(() => undefined)
-  }, [buildPayload, consent, enabled, initialPageEvent, routeKey, sdk])
-}
-
-export function resetAutoPageEmitterState(): void {
-  // Current-page state is owned by each Web SDK instance.
+    return () => {
+      active = false
+    }
+  }, [buildPayload, consent, enabled, routeKey, sdk])
 }

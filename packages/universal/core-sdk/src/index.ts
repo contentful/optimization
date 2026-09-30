@@ -43,6 +43,13 @@ export type * from './OptimizedEntryMetadata'
 export * from './page-context'
 export type { ExperienceQueue } from './queues/ExperienceQueue'
 export type { InsightsQueue, InsightsQueueFlushOptions } from './queues/InsightsQueue'
+export type {
+  InitialExperienceCommandInput,
+  OptimizationReplayCommand,
+  OptimizationReplayEnvelope,
+  PreviewExperienceOptions,
+  PreviewInitialExperienceOptions,
+} from './replay'
 export * from './resolvers'
 export * from './StatefulDefaults'
 export * from './tracking'

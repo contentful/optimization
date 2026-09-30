@@ -12,6 +12,7 @@
 
 import {
   AcceptedCurrentStateTracker,
+  assertOptimizationCacheSafety,
   CoreStateful,
   effect,
   resolveStatefulDefaults,
@@ -27,6 +28,7 @@ import {
   type CoreBridgeHost,
 } from '@contentful/optimization-core/bridge-support'
 import { ANONYMOUS_ID_COOKIE_LEGACY } from '@contentful/optimization-core/constants'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import { getPageProperties, getUserAgent } from './builders/EventBuilder'
 import {
   ANONYMOUS_ID_COOKIE,
@@ -41,6 +43,11 @@ import {
   createOnlineChangeListener,
   createVisibilityChangeListener,
 } from './handlers'
+import {
+  hydrateContentOptimizationHandoffState,
+  invalidateOptimizationHandoffHydration,
+  type BrowserOptimizationHandoff,
+} from './handoff'
 import { getCookie, removeCookie, setCookie, type CookieAttributes } from './lib/cookies'
 import {
   clearProfilelessHandoffDurableContinuity,
@@ -65,6 +72,32 @@ declare global {
  *
  * @internal
  */
+const logger = createScopedLogger('Web:Handoff')
+
+function readInitialCookieValues(canLoadPersistedContinuity: boolean): {
+  cookieValue?: string
+  legacyCookieValue?: string
+} {
+  if (!canLoadPersistedContinuity) return {}
+
+  const legacyCookieValue = getCookie(ANONYMOUS_ID_COOKIE_LEGACY)
+
+  return {
+    cookieValue: legacyCookieValue ?? getCookie(ANONYMOUS_ID_COOKIE),
+    legacyCookieValue,
+  }
+}
+
+function canPersistDurableContinuity(persistenceConsent: boolean | undefined): boolean {
+  const hasProfile = signals.profile.value !== undefined
+
+  if (hasProfile && !isDurableContinuityPersistenceSuppressed()) {
+    clearProfilelessHandoffDurableContinuity()
+  }
+
+  return persistenceConsent === true && !shouldSkipDurableContinuityPersistence(hasProfile)
+}
+
 const EXPIRATION_DAYS_DEFAULT = 365
 
 /**
@@ -133,36 +166,28 @@ export interface TrackCurrentPageOptions {
    * Stable route identity used for current-page deduplication.
    */
   readonly routeKey: string
-  /**
-   * Controls the current route emission. SSR integrations can use `skip` when
-   * the server already emitted this route's page event.
-   */
+  /** @deprecated This input is inert. Current-page tracking always emits when admitted. */
   readonly initialPageEvent?: InitialCurrentPageEvent
-  /**
-   * Builds the page payload only when a page event will be emitted.
-   */
-  readonly buildPayload: (metadata: CurrentPageEmissionMetadata) => PageViewBuilderArgs | undefined
+  /** Builds the page payload. Omit it to emit the legacy empty payload. */
+  readonly buildPayload?: (metadata: CurrentPageEmissionMetadata) => PageViewBuilderArgs | undefined
+  /** Skip queued work when its owning route effect has been disposed. */
+  readonly isCurrent?: () => boolean
 }
 
-/**
- * Skip-only options for {@link ContentfulOptimization.trackCurrentPage}.
- *
- * @public
- */
-export interface TrackCurrentPageSkipOptions {
-  /**
-   * Stable route identity used for current-page deduplication.
-   */
-  readonly routeKey: string
-  /**
-   * Marks the current route accepted without emitting a page event.
-   */
-  readonly initialPageEvent: 'skip'
-  /**
-   * Ignored for skip-only tracking. Kept for callers that share option builders.
-   */
-  readonly buildPayload?: TrackCurrentPageOptions['buildPayload']
+/** Initial handoff state and event delivery owned by one operation. @public */
+export interface HydrateAndTrackCurrentPageOptions extends TrackCurrentPageOptions {
+  /** Read router inputs after asynchronous hydration or prerequisite work. */
+  readonly getCurrentPage?: () => TrackCurrentPageOptions
+  /** Runtime lifetime guard; newer handoffs do not cancel this operation. */
+  readonly isCurrent?: () => boolean
+  /** Called after state hydration, before any replay events are emitted. */
+  readonly onHydrated?: (error?: unknown) => void
+  /** Browser prerequisite work when no matching page replay supplies it. */
+  readonly beforeInitialPage?: () => Promise<void>
 }
+
+/** @deprecated Use {@link TrackCurrentPageOptions}; skip-only tracking is inert. */
+export type TrackCurrentPageSkipOptions = TrackCurrentPageOptions
 
 function resolveDefaultState(
   defaults: CoreStatefulConfig['defaults'] | undefined,
@@ -174,20 +199,6 @@ function resolveDefaultState(
     changes: () => LocalStore.changes,
     selectedOptimizations: () => LocalStore.selectedOptimizations,
   }).defaults
-}
-
-function readInitialCookieValues(canLoadPersistedContinuity: boolean): {
-  cookieValue?: string
-  legacyCookieValue?: string
-} {
-  if (!canLoadPersistedContinuity) return {}
-
-  const legacyCookieValue = getCookie(ANONYMOUS_ID_COOKIE_LEGACY)
-
-  return {
-    cookieValue: legacyCookieValue ?? getCookie(ANONYMOUS_ID_COOKIE),
-    legacyCookieValue,
-  }
 }
 
 /**
@@ -245,16 +256,6 @@ function mergeConfig({
   return mergedConfig
 }
 
-function canPersistDurableContinuity(persistenceConsent: boolean | undefined): boolean {
-  const hasProfile = signals.profile.value !== undefined
-
-  if (hasProfile && !isDurableContinuityPersistenceSuppressed()) {
-    clearProfilelessHandoffDurableContinuity()
-  }
-
-  return persistenceConsent === true && !shouldSkipDurableContinuityPersistence(hasProfile)
-}
-
 /**
  * Stateful Web SDK built on top of {@link CoreStateful}.
  *
@@ -274,6 +275,12 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
   declare readonly [CORE_BRIDGE_CAPABILITIES_SYMBOL]: CoreBridgeCapabilities
 
   private readonly currentPageTracker = new AcceptedCurrentStateTracker<string>()
+  private readonly handoffOperations = new WeakMap<
+    BrowserOptimizationHandoff,
+    Promise<EventEmissionResult>
+  >()
+  private handoffLifetime = 0
+  private initialPage: Promise<EventEmissionResult> | undefined = undefined
 
   /**
    * Tracked entry interaction runtime state and trackers.
@@ -403,6 +410,7 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
         clearProfilelessHandoffDurableContinuity()
       }
 
+      if (isDurableContinuityPersistenceSuppressed()) return
       if (persistenceConsent !== true) return
 
       LocalStore.profile = value
@@ -490,6 +498,9 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
    */
   reset(): void {
     this.currentPageTracker.reset()
+    this.handoffLifetime += 1
+    this.initialPage = undefined
+    invalidateOptimizationHandoffHydration()
     this.entryInteractionRuntime.reset()
     removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
     LocalStore.reset()
@@ -498,36 +509,157 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
   }
 
   /**
-   * Track the current browser page with route-key deduplication.
-   *
-   * @remarks
-   * This is intended for router integrations. Manual `page()` calls remain
-   * direct emits and are not deduplicated.
-   *
+   * Apply provisional state and make the initial replay/page decision once.
+   * State readiness is reported before delivery, so presentation need not await the result.
+   * Repeated calls with the same handoff share its completion; distinct handoffs keep their events.
    * @public
    */
-  async trackCurrentPage(
-    options: TrackCurrentPageOptions | TrackCurrentPageSkipOptions,
+  async hydrateAndTrackCurrentPage(
+    handoff: BrowserOptimizationHandoff | undefined,
+    options: HydrateAndTrackCurrentPageOptions,
   ): Promise<EventEmissionResult> {
-    const { routeKey } = options
+    const existing = handoff === undefined ? undefined : this.handoffOperations.get(handoff)
+    if (existing !== undefined) return await existing
+    if (handoff !== undefined) assertOptimizationCacheSafety(handoff)
+    const { handoffLifetime: lifetime } = this
+    const operation = this.currentPageTracker
+      .emitIfNeeded({
+        key: options.routeKey,
+        isAllowed: true,
+        deduplicate: false,
+        emit: async () => await this.emitInitialPage(handoff, options, lifetime),
+      })
+      .then(
+        (result): EventEmissionResult =>
+          result.accepted
+            ? result.data === undefined
+              ? { accepted: true }
+              : { accepted: true, data: result.data }
+            : { accepted: false },
+      )
+    this.initialPage = operation
+    if (handoff !== undefined) this.handoffOperations.set(handoff, operation)
+    return await operation
+  }
 
-    if (options.initialPageEvent === 'skip') {
-      this.currentPageTracker.markAccepted(routeKey)
-      return { accepted: true }
+  private isCurrentHandoff(options: HydrateAndTrackCurrentPageOptions, lifetime: number): boolean {
+    return lifetime === this.handoffLifetime && options.isCurrent?.() !== false
+  }
+
+  private async hydrateInitialState(
+    handoff: BrowserOptimizationHandoff | undefined,
+    options: HydrateAndTrackCurrentPageOptions,
+    lifetime: number,
+  ): Promise<void> {
+    let error: unknown = undefined
+    try {
+      if (handoff !== undefined)
+        await hydrateContentOptimizationHandoffState(this, handoff.state, {
+          isCurrent: () => this.isCurrentHandoff(options, lifetime),
+          suppressDurableContinuityPersistence: true,
+        })
+    } catch (hydrationError: unknown) {
+      error = hydrationError
+      logger.warn('Handoff state could not be applied; continuing browser delivery.', error)
     }
+    if (!this.isCurrentHandoff(options, lifetime)) return
+    options.onHydrated?.(error)
+  }
 
-    const { buildPayload } = options
-    const isInitialEmission = !this.currentPageTracker.hasAccepted()
+  private async emitInitialPage(
+    handoff: BrowserOptimizationHandoff | undefined,
+    options: HydrateAndTrackCurrentPageOptions,
+    lifetime: number,
+  ): Promise<EventEmissionResult> {
+    await this.hydrateInitialState(handoff, options, lifetime)
+    if (!this.isCurrentHandoff(options, lifetime)) return { accepted: false }
+    const replayResult = await this.tryInitialReplay(handoff, options.routeKey)
+    if (replayResult.accepted) return this.promoteCommittedCurrentPage(replayResult)
+    if (!this.isCurrentHandoff(options, lifetime)) return { accepted: false }
+    await options.beforeInitialPage?.()
+    if (!this.isCurrentHandoff(options, lifetime)) return { accepted: false }
+    const page = options.getCurrentPage?.() ?? options
+    if (page.routeKey !== options.routeKey) return await this.emitCurrentPage(page)
+    return await this.emitPage(page)
+  }
+
+  private async tryInitialReplay(
+    handoff: BrowserOptimizationHandoff | undefined,
+    routeKey: string,
+  ): Promise<EventEmissionResult> {
+    try {
+      const replay = handoff?.replay
+      if (
+        replay !== undefined &&
+        (!replay.experience.some((event) => event.type === 'page') || replay.routeKey === routeKey)
+      ) {
+        return await this.replayOptimizationHandoff({
+          ...replay,
+          profile: replay.profile ?? handoff?.state?.profile,
+        })
+      }
+    } catch (error: unknown) {
+      logger.warn('Private replay failed; using ordinary page tracking.', error)
+    }
+    return { accepted: false }
+  }
+
+  /** Ordinary routing uses the existing accepted/in-flight route tracker. @public */
+  async trackCurrentPage(options: TrackCurrentPageOptions): Promise<EventEmissionResult> {
+    const { handoffLifetime: lifetime } = this
+    await this.initialPage?.catch(() => undefined)
+    if (lifetime !== this.handoffLifetime || options.isCurrent?.() === false)
+      return { accepted: false }
+    return await this.emitCurrentPage(options)
+  }
+
+  private async emitCurrentPage(options: TrackCurrentPageOptions): Promise<EventEmissionResult> {
     const result = await this.currentPageTracker.emitIfNeeded({
-      key: routeKey,
+      key: options.routeKey,
       isAllowed: this.hasConsent('page'),
-      emit: async () => await this.page(buildPayload({ isInitialEmission }) ?? {}),
+      emit: async () => await this.emitPage(options),
     })
+    return result.accepted
+      ? result.data === undefined
+        ? { accepted: true }
+        : { accepted: true, data: result.data }
+      : { accepted: false }
+  }
 
-    if (!result.accepted) return { accepted: false }
-    if (result.data === undefined) return { accepted: true }
+  private async emitPage(options: TrackCurrentPageOptions): Promise<EventEmissionResult> {
+    if (!this.hasConsent('page')) return { accepted: false }
+    return this.promoteCommittedCurrentPage(
+      await this.page(
+        options.buildPayload?.({ isInitialEmission: !this.currentPageTracker.hasAccepted() }) ?? {},
+      ),
+    )
+  }
 
-    return { accepted: true, data: result.data }
+  private promoteCommittedCurrentPage(result: EventEmissionResult): EventEmissionResult {
+    if (result.accepted && result.data !== undefined) this.persistCurrentDurableContinuity()
+
+    return result
+  }
+
+  private persistCurrentDurableContinuity(): void {
+    const {
+      changes: { value: changes },
+      persistenceConsent: { value: persistenceConsent },
+      profile: { value: profile },
+      selectedOptimizations: { value: selectedOptimizations },
+    } = signals
+
+    if (persistenceConsent !== true) return
+
+    if (profile !== undefined) clearProfilelessHandoffDurableContinuity()
+
+    LocalStore.profile = profile
+    this.setAnonymousId(profile?.id ?? LocalStore.anonymousId)
+
+    if (!canPersistDurableContinuity(persistenceConsent)) return
+
+    LocalStore.changes = changes
+    LocalStore.selectedOptimizations = selectedOptimizations
   }
 
   /**
@@ -538,6 +670,9 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
    * clear persisted user state.
    */
   destroy(): void {
+    this.handoffLifetime += 1
+    this.initialPage = undefined
+    invalidateOptimizationHandoffHydration()
     this.entryInteractionRuntime.destroy()
     this.cleanupOnlineListener()
     this.cleanupVisibilityListener()

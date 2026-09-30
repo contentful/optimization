@@ -48,10 +48,9 @@ function initializeAnalyticsRuntime(
 
 export function OptimizationAnalyticsRoot(props: OptimizationAnalyticsRootProps): ReactElement {
   const { buildPagePayload, children, handoff, initialPagePayload, routeKey } = props
-  const hydrationGeneration = useRef(0)
   const initialPropsRef = useRef(props)
+  const lastHandoffRef = useRef<AnalyticsOptimizationHandoff | undefined>(undefined)
   const runtimeRef = useRef<OptimizationAnalyticsRuntime | undefined>(undefined)
-  const skippedInitialRouteKey = useRef<string | null | undefined>(undefined)
   const resolvedBuildPagePayload = useMemo(
     () => buildPagePayload ?? (() => initialPagePayload),
     [buildPagePayload, initialPagePayload],
@@ -60,6 +59,7 @@ export function OptimizationAnalyticsRoot(props: OptimizationAnalyticsRootProps)
   useLayoutEffect(() => {
     const runtime = initializeAnalyticsRuntime(initialPropsRef.current)
     runtimeRef.current = runtime
+    lastHandoffRef.current = undefined
 
     return () => {
       runtimeRef.current = undefined
@@ -71,40 +71,21 @@ export function OptimizationAnalyticsRoot(props: OptimizationAnalyticsRootProps)
     const { current: runtime } = runtimeRef
     if (runtime === undefined) return
 
-    let disposed = false
-    const generation = (hydrationGeneration.current += 1)
-    const isCurrent = (): boolean => !disposed && hydrationGeneration.current === generation
+    const isCurrent = (): boolean => runtimeRef.current === runtime
 
-    if (skippedInitialRouteKey.current === undefined) {
-      skippedInitialRouteKey.current = handoff.initialPageEvent === 'skip' ? routeKey : null
-    }
-
-    const initialPageEvent = skippedInitialRouteKey.current === routeKey ? 'skip' : 'emit'
-
-    if (skippedInitialRouteKey.current !== routeKey) {
-      skippedInitialRouteKey.current = null
-    }
-
-    void hydrateOptimizationAnalyticsHandoff(
-      runtime,
-      {
-        ...handoff,
-        initialPageEvent,
-      },
-      {
-        buildPagePayload: resolvedBuildPagePayload,
-        isCurrent,
-        routeKey,
-      },
-    ).catch((error: unknown) => {
-      if (isCurrent()) {
-        logger.warn('OptimizationAnalyticsRoot failed to hydrate handoff.', error)
-      }
+    const delivery =
+      lastHandoffRef.current === handoff
+        ? runtime.trackCurrentPage({ buildPayload: resolvedBuildPagePayload, routeKey })
+        : hydrateOptimizationAnalyticsHandoff(runtime, handoff, {
+            buildPagePayload: resolvedBuildPagePayload,
+            isCurrent,
+            routeKey,
+          })
+    lastHandoffRef.current = handoff
+    void delivery.catch((error: unknown) => {
+      if (isCurrent())
+        logger.warn('OptimizationAnalyticsRoot failed to deliver browser events.', error)
     })
-
-    return () => {
-      disposed = true
-    }
   }, [handoff, resolvedBuildPagePayload, routeKey])
 
   return <>{children}</>

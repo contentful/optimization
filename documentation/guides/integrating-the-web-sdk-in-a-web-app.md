@@ -573,16 +573,24 @@ A **page event** signals that a page or route was viewed. The Experience API use
 evaluate route-based experiences and to return current selections, so most integrations emit one on
 first load and on every route change.
 
+On a hybrid server-rendered route, server preview provides provisional state and server-built events for the browser. Call `hydrateAndTrackCurrentPage()` once for the initial replay/page decision and use `trackCurrentPage()` for later routes. Preview-backed content need not await delivery. Only a successful live Experience response can establish durable continuity. The [hybrid integration section](#hybrid-node-ssr-and-browser-continuity) covers this flow.
+
+> [!NOTE]
+>
+> On a hybrid server-rendered route without JavaScript, previewed HTML can still render, but
+> browser delivery and a new `ctfl-opt-aid` cookie do not occur. `ctfl-opt-aid` is the exact
+> SDK-owned cookie name.
+
 1. Call `page()` after SDK initialization for a multi-page app or the first SPA route. It returns
    `{ accepted, data }`; `{ accepted: false }` means consent or an SDK guard blocked the event.
 2. In SPAs, use `trackCurrentPage({ routeKey, buildPayload })` on route changes. It deduplicates
-   consecutive identical route keys (a manual `page()` always emits when consent permits it).
+   consecutive accepted route keys (a manual `page()` always emits when consent permits it).
 3. Include stable page properties — url, path, search, referrer, title — when your router or
    analytics taxonomy needs them.
-4. In hybrid apps where the server already emitted the first page event, pass
-   `initialPageEvent: 'skip'` to `trackCurrentPage` for the first browser route so the browser does
-   not report a duplicate (see
-   [Hybrid Node SSR and browser continuity](#hybrid-node-ssr-and-browser-continuity)).
+4. In hybrid apps, hydrate the server's private handoff before starting the same
+   `trackCurrentPage()` route loop. The first call attempts browser delivery for the current route
+   or makes an ordinary page attempt. See
+   [Hybrid Node SSR and browser continuity](#hybrid-node-ssr-and-browser-continuity).
 
 Both `page()` and the page event emitted by `trackCurrentPage()` inherit the Web SDK's default page
 context, whose URL is the current browser URL unless page input overrides it. The SDK writes
@@ -611,7 +619,9 @@ for the supported parameters and full precedence rules.
 const result = await optimization.page()
 ```
 
-**Adapt this to your use case:** an SPA route tracker with stable route keys, wired to your router.
+**Adapt this to your use case:** an SPA route tracker wired to your router. The `routeKey` is the
+path plus search string used for deduplication; `properties.url` is the full page URL recorded as
+event data.
 
 ```ts
 function getRouteKey(): string {
@@ -1195,40 +1205,92 @@ Use this integration when the same app uses `@contentful/optimization-node` on t
 `@contentful/optimization-web` in the browser, and you want the same visitor's profile to carry
 across the boundary.
 
-1. Decide whether the server or browser owns the first personalization decision for each route.
-2. Share the anonymous profile identifier through the SDK's `ANONYMOUS_ID_COOKIE` value
-   (`ctfl-opt-aid`) when consent permits durable profile continuity. This cookie is **SDK-owned** —
-   match the exact name; do not invent your own.
-3. Write the cookie from the server with `Path=/` and a same-site policy that matches your app, and
-   do **not** mark it `HttpOnly` — the browser SDK must read it to keep the same profile after
-   takeover.
-4. Use `trackCurrentPage({ initialPageEvent: 'skip', ... })` for the first browser route when the
-   server already emitted the same initial page event, so the browser does not duplicate it.
-5. On consent denial or revocation, clear the shared cookie and avoid persisting a returned profile
-   id. Treat server-rendered personalized HTML as personalized output for cache policy.
+Use direct Node event methods only for server-only routes. Calls such as `page()` and `identify()`
+commit on the server, and the application owns persistence of their returned profile ID. For a
+route that continues in Web, the paired sequence is zero or more optional `identify`/`track`
+commands in application-supplied order, followed by the SDK-appended `page` command.
 
-**Follow this pattern:** build the shared anonymous-id `Set-Cookie` on the server.
+Follow this flow:
+
+1. Read an existing SDK-owned `ctfl-opt-aid` cookie and bind it as the request profile. The server
+   uses it as input; it does not write a new cookie from preview output.
+2. Call the Node request client's `previewInitialExperience()` with the optional commands in their
+   intended order. Identify uses the flat input `{ type: 'identify', userId, traits? }`. Custom
+   tracking uses the flat input `{ type: 'track', event, properties? }`. The SDK appends the page
+   command. The server preview sends an Experience profile `POST` with `type=preflight`; this is an
+   SDK transport mode, not a browser CORS preflight. A page command blocked by consent produces
+   `{ accepted: false }`.
+3. Build a private handoff with `createRequestHandoffFromPreview()`. Transport the handoff and its
+   stable route key through your application's existing SSR data channel, then initialize Web with
+   the same space, environment, locale, and consent policy. The application owns serialization and
+   transport.
+4. Call `hydrateAndTrackCurrentPage(handoff, { routeKey, buildPayload })` on the live Web instance. It applies preview state in memory and attempts replay with browser context, consent, and interceptors. Render preview-backed content while its promise is pending.
+5. Use `trackCurrentPage({ routeKey, buildPayload })` for later navigation. The initial operation attempts one ordinary page after mismatch, blocked page, unusable replay, or failure only if replay accepted no page. Later Analytics failure preserves page acceptance.
+
+The continuation wrapper below is produced by the Node-side flow in the
+[Node SDK guide](./integrating-the-node-sdk-in-a-node-app.md#share-continuity-with-the-web-sdk).
+Its `routeKey` is the path plus search string used to match the private replay and deduplicate
+page delivery, while `window.location.href` supplies the full page URL. `renderCurrentRoute()` in
+the pattern is your app-owned renderer.
+
+**Adapt this to your use case:** start the combined operation with the serialized private handoff,
+render from available preview data, and use ordinary route tracking for later navigation.
 
 ```ts
-import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-web/constants'
+import ContentfulOptimization from '@contentful/optimization-web'
+import { type ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
 
-function buildAnonymousIdSetCookie(id: string | undefined): string {
-  if (!id) return `${ANONYMOUS_ID_COOKIE}=; Max-Age=0; Path=/`
-  // Browser code must be able to read this cookie for Web SDK continuity — no HttpOnly.
-  return `${ANONYMOUS_ID_COOKIE}=${id}; Path=/; SameSite=Lax`
+async function continueServerPreview(
+  optimization: ContentfulOptimization,
+  continuation:
+    | { readonly handoff: ContentOptimizationHandoff; readonly routeKey: string }
+    | undefined,
+): Promise<void> {
+  const delivery = optimization.hydrateAndTrackCurrentPage(continuation?.handoff, {
+    routeKey: continuation?.routeKey ?? `${window.location.pathname}${window.location.search}`,
+    buildPayload: () => ({ properties: { url: window.location.href } }),
+  })
+  void delivery.catch((error: unknown) => {
+    console.warn('Initial event delivery failed.', error)
+  })
+
+  await renderCurrentRoute()
+}
+
+export async function trackCurrentRoute(
+  optimization: ContentfulOptimization,
+  routeKey = `${window.location.pathname}${window.location.search}`,
+): Promise<void> {
+  await optimization.trackCurrentPage({
+    routeKey,
+    buildPayload: () => ({ properties: { url: window.location.href } }),
+  })
 }
 ```
 
-`ANONYMOUS_ID_COOKIE` re-exports the core constant and equals `'ctfl-opt-aid'`. For the lower-level
-mechanics, see
+A successful browser commit can establish durable persistence and write the browser-readable
+`ctfl-opt-aid` cookie when persistence consent permits it; your server reads that value on later
+requests. On consent denial, call `consent(false)` and `reset()` according to your policy. Treat
+the HTML and private replay handoff as visitor-specific output that must not enter a public cache.
+
+Verify the paired flow in the browser developer tools Network panel. Load the server-rendered route
+and find one browser `POST` ending in `/profiles` or `/profiles/:id` with no `type=preflight`
+query parameter. The separate server preview is an Experience profile `POST` with
+`type=preflight`, not a CORS preflight. In the browser request body, inspect the `events` array and
+confirm zero or more optional identify/track events appear in your supplied order, followed by the
+page event. A successful response is the browser commit. Call `continueServerPreview()` once, then
+call only `trackCurrentRoute(optimization)` again without changing path or search. The second route
+call must not produce another profile `POST`; do not repeat `continueServerPreview()`, because
+that helper hydrates the handoff. Finally, inspect browser cookies and confirm `ctfl-opt-aid`
+appears only when persistence consent allows durable persistence.
+
+For lower-level continuity mechanics, see
 [Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md).
 
-If you hydrate a browser handoff with `hydrateOptimizationHandoff()` from
-`@contentful/optimization-web/handoff`, cache safety is enforced before state is published.
-Profileless `static` and `public-permutation` handoffs publish selected optimizations and Custom
-Flag changes to live browser state without overwriting durable profile continuity in browser
-storage. `private-request` handoffs, and profile-backed handoffs that pass cache safety, follow
-normal persistence behavior when persistence consent allows.
+Public and static handoffs cannot carry private replay. Browser handoff state is always applied in
+memory during hydration. Profileless `static` and `public-permutation` handoffs hydrate selected
+optimizations and Custom Flag changes without overwriting durable browser profile continuity; only
+a later successful live Experience response can establish new durable continuity.
 
 ### Strict consent, storage, and delivery controls
 
@@ -1279,6 +1341,9 @@ Before release, verify these behaviors in the target deployment:
   subscriptions register once per app root, `messageId` dedupe is applied before forwarding, the
   resolved (not baseline) entry id is used for tracking, and element tracking is not enabled twice
   for the same node.
+- **Hybrid continuity** — for Node/Web routes, perform the browser-delivery,
+  duplicate-request, and continuity-cookie checks in
+  [Hybrid Node SSR and browser continuity](#hybrid-node-ssr-and-browser-continuity).
 - **Privacy and governance** — profile identifiers, traits, forwarded fields, `localStorage` usage,
   the `ctfl-opt-aid` cookie, and retention match the app's approved policy.
 - **Local validation path** — compare the app against the Web SDK reference implementation and run
@@ -1320,8 +1385,8 @@ pnpm test:e2e:web-sdk
   consent, identify/reset, nested entries, Rich Text merge tags, Custom Flags, and interaction
   tracking.
 - [Node SDK SSR + Web SDK Vanilla JS reference implementation](../../implementations/node-sdk+web-sdk/README.md):
-  Hybrid server/browser continuity with shared anonymous-id cookies, consent-aware persistence, and
-  browser-side Web SDK takeover.
+  Hybrid server preview, private browser replay, consent-aware browser persistence, and Web SDK
+  takeover.
 
 Use the [Web SDK package README](../../packages/web/web-sdk/README.md) for package orientation, and
 the generated

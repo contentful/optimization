@@ -17,7 +17,6 @@ import {
 } from '@contentful/optimization-web/presentation'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useBeforeInitialPageReady } from '../context/BeforeInitialPageContext'
 import { useOptimizationHydrationMode } from '../context/OptimizationHydrationContext'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimizationContext } from '../hooks/useOptimization'
@@ -244,10 +243,9 @@ export function useOptimizedEntrySnapshot<
     readonly sdk?: OptimizedEntrySdk<S, M, L>
   }
   const hydration = useOptimizationHydrationMode()
-  const isBeforeInitialPageReady = useBeforeInitialPageReady()
   const liveUpdatesContext = useLiveUpdates()
   const isSdkReady = sdk !== undefined
-  const currentPresentationReady = isSdkReady && isBeforeInitialPageReady
+  const currentPresentationReady = isSdkReady
   const [isPresentationReady, setIsPresentationReady] = useState(currentPresentationReady)
 
   const controllerOptions = useMemo(

@@ -1,7 +1,9 @@
 import type {
+  ExperienceEvent,
   ExperienceEventArray,
   OptimizationData,
 } from '@contentful/optimization-api-client/api-schemas'
+import type { LifecycleInterceptors } from '../CoreBase'
 import { InterceptorManager } from '../lib/interceptor'
 import { resolveQueueFlushPolicy } from '../lib/queue'
 import {
@@ -12,6 +14,12 @@ import {
 } from '../signals'
 import { profile as profileFixture } from '../test/fixtures/profile'
 import { ExperienceQueue } from './ExperienceQueue'
+
+type InterceptedEvent = Parameters<LifecycleInterceptors['event']['add']>[0] extends (
+  value: Readonly<infer T>,
+) => unknown
+  ? T
+  : never
 
 const SAMPLE_DATA: OptimizationData = {
   changes: [],
@@ -26,13 +34,19 @@ class ExperienceQueueTestHarness extends ExperienceQueue {
 }
 
 interface BuildQueueOptions {
+  eventInterceptors?: LifecycleInterceptors['event']
   upsertProfile?: (payload: {
     profileId?: string
     events: ExperienceEventArray
   }) => Promise<OptimizationData>
+  offlineMaxEvents?: number
 }
 
-const buildQueue = ({ upsertProfile }: BuildQueueOptions = {}): {
+const buildQueue = ({
+  eventInterceptors = new InterceptorManager<InterceptedEvent>(),
+  offlineMaxEvents = 100,
+  upsertProfile,
+}: BuildQueueOptions = {}): {
   queue: ExperienceQueueTestHarness
   upsertProfile: ReturnType<typeof rs.fn>
 } => {
@@ -43,15 +57,72 @@ const buildQueue = ({ upsertProfile }: BuildQueueOptions = {}): {
 
   const queue = new ExperienceQueueTestHarness({
     experienceApi: { upsertProfile: upsertProfileMock },
-    eventInterceptors: new InterceptorManager(),
+    eventInterceptors,
     flushPolicy: resolveQueueFlushPolicy(undefined),
     getAnonymousId: () => undefined,
-    offlineMaxEvents: 100,
+    offlineMaxEvents,
     stateInterceptors: new InterceptorManager(),
   })
 
   return { queue, upsertProfile: upsertProfileMock }
 }
+
+const makeTrackEvent = (event: string): ExperienceEvent => ({
+  channel: 'web',
+  context: {
+    app: { name: 'test-app', version: '1.0.0' },
+    campaign: {},
+    gdpr: { isConsentGiven: true },
+    library: { name: 'test-lib', version: '1.0.0' },
+    locale: 'en-US',
+  },
+  event,
+  messageId: crypto.randomUUID(),
+  originalTimestamp: '2026-01-01T00:00:00.000Z',
+  properties: {
+    path: '/',
+    query: {},
+    referrer: '',
+    search: '',
+    title: '',
+    url: 'https://example.test/',
+  },
+  sentAt: '2026-01-01T00:00:00.000Z',
+  timestamp: '2026-01-01T00:00:00.000Z',
+  type: 'track',
+})
+
+const makePageEvent = (): ExperienceEvent => ({
+  channel: 'web',
+  context: {
+    app: { name: 'test-app', version: '1.0.0' },
+    campaign: {},
+    gdpr: { isConsentGiven: true },
+    library: { name: 'test-lib', version: '1.0.0' },
+    locale: 'en-US',
+    page: {
+      path: '/',
+      query: {},
+      referrer: '',
+      search: '',
+      title: '',
+      url: 'https://example.test/',
+    },
+  },
+  messageId: crypto.randomUUID(),
+  originalTimestamp: '2026-01-01T00:00:00.000Z',
+  properties: {
+    path: '/',
+    query: {},
+    referrer: '',
+    search: '',
+    title: '',
+    url: 'https://example.test/',
+  },
+  sentAt: '2026-01-01T00:00:00.000Z',
+  timestamp: '2026-01-01T00:00:00.000Z',
+  type: 'page',
+})
 
 const observeRequestState = (): {
   states: ExperienceRequestState[]
@@ -156,5 +227,47 @@ describe('ExperienceQueue.experienceRequestState transitions', () => {
     ])
 
     unsubscribe()
+  })
+})
+
+describe('ExperienceQueue batches', () => {
+  beforeEach(() => {
+    onlineSignal.value = true
+  })
+
+  it('intercepts and sends a batch once', async () => {
+    const eventInterceptors = new InterceptorManager<InterceptedEvent>()
+    const interceptedTypes: string[] = []
+    eventInterceptors.add((event) => {
+      interceptedTypes.push(event.type)
+      return event
+    })
+    const { queue, upsertProfile } = buildQueue({ eventInterceptors })
+
+    await queue.sendBatch([makeTrackEvent('first'), makePageEvent()])
+
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+    expect(interceptedTypes).toEqual(['track', 'page'])
+    expect(upsertProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        events: expect.arrayContaining([
+          expect.objectContaining({ event: 'first' }),
+          expect.objectContaining({ type: 'page' }),
+        ]),
+      }),
+    )
+  })
+
+  it('rejects an overflowing batch without queueing a partial batch', async () => {
+    const { queue, upsertProfile } = buildQueue({ offlineMaxEvents: 1 })
+    onlineSignal.value = false
+
+    await expect(queue.sendBatch([makeTrackEvent('first'), makePageEvent()])).rejects.toThrow(
+      'Experience batch exceeds offline queue capacity',
+    )
+
+    onlineSignal.value = true
+    await queue.flush({ force: true })
+    expect(upsertProfile).not.toHaveBeenCalled()
   })
 })

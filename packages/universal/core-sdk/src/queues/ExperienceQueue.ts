@@ -69,6 +69,7 @@ export class ExperienceQueue {
   private readonly offlineMaxEvents: number
   private readonly onOfflineDrop?: ExperienceQueueOptions['onOfflineDrop']
   private readonly queuedExperienceEvents = new Set<ExperienceEventPayload>()
+  private requestProfileId: string | undefined = undefined
   private readonly stateInterceptors: ExperienceQueueOptions['stateInterceptors']
 
   constructor(options: ExperienceQueueOptions) {
@@ -99,6 +100,11 @@ export class ExperienceQueue {
     })
   }
 
+  /** Request-private identity is volatile and uses the ordinary queue. @internal */
+  bindProfileId(profileId?: string): void {
+    this.requestProfileId = profileId
+  }
+
   clearScheduledRetry(): void {
     this.flushRuntime.clearScheduledRetry()
   }
@@ -112,23 +118,7 @@ export class ExperienceQueue {
     event: ExperienceEventPayload,
     optimizationContext?: EventOptimizationContext,
   ): Promise<OptimizationData | undefined> {
-    const intercepted = await this.eventInterceptors.run(event)
-    const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)
-
-    eventSignal.value =
-      optimizationContext === undefined
-        ? validEvent
-        : ({
-            ...validEvent,
-            optimization: optimizationContext,
-          } satisfies OptimizationEventStreamEvent)
-
-    if (onlineSignal.value) return await this.upsertProfile([validEvent])
-
-    coreLogger.debug(`Queueing ${validEvent.type} event`, validEvent)
-    this.enqueueEvent(validEvent)
-
-    return undefined
+    return await this.sendBatch([event], [optimizationContext])
   }
 
   async flush(options: { force?: boolean } = {}): Promise<void> {
@@ -191,6 +181,51 @@ export class ExperienceQueue {
     }
   }
 
+  async sendBatch(
+    events: ExperienceEventArray,
+    optimizationContexts: ReadonlyArray<EventOptimizationContext | undefined> = [],
+  ): Promise<OptimizationData | undefined> {
+    if (events.length === 0) throw new TypeError('Experience batches require at least one event.')
+
+    const validEvents: ExperienceEventArray = []
+    for (const event of events) {
+      const intercepted = await this.eventInterceptors.run(event)
+      validEvents.push(parseWithFriendlyError(ExperienceEventSchema, intercepted))
+    }
+
+    if (
+      !onlineSignal.value &&
+      validEvents.length > 1 &&
+      this.queuedExperienceEvents.size + validEvents.length > this.offlineMaxEvents
+    ) {
+      throw new Error('Experience batch exceeds offline queue capacity and was not enqueued.')
+    }
+
+    validEvents.forEach((event, index) => {
+      const { [index]: optimizationContext } = optimizationContexts
+      eventSignal.value =
+        optimizationContext === undefined
+          ? event
+          : ({
+              ...event,
+              optimization: optimizationContext,
+            } satisfies OptimizationEventStreamEvent)
+    })
+
+    if (onlineSignal.value) return await this.upsertProfile(validEvents)
+
+    if (validEvents.length > 1) {
+      validEvents.forEach((event) => this.queuedExperienceEvents.add(event))
+      return undefined
+    }
+
+    validEvents.forEach((event) => {
+      coreLogger.debug(`Queueing ${event.type} event`, event)
+      this.enqueueEvent(event)
+    })
+    return undefined
+  }
+
   private dropOldestEvents(count: number): ExperienceEventArray {
     const droppedEvents: ExperienceEventArray = []
 
@@ -231,10 +266,16 @@ export class ExperienceQueue {
 
     try {
       const data = await this.experienceApi.upsertProfile({
-        profileId: anonymousId ?? profileSignal.value?.id,
+        profileId: this.requestProfileId ?? anonymousId ?? profileSignal.value?.id,
         events,
       })
 
+      if (this.requestProfileId !== undefined) {
+        const {
+          profile: { id },
+        } = data
+        this.requestProfileId = id
+      }
       await applyOptimizationDataToSignals(data, this.stateInterceptors)
 
       return data

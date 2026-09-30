@@ -28,7 +28,7 @@ from live updates, and how analytics-only markup can still carry Optimization tr
 - [Cache scopes](#cache-scopes)
 - [Customer-owned permutations](#customer-owned-permutations)
 - [Hydration and live updates](#hydration-and-live-updates)
-- [Initial page event ownership](#initial-page-event-ownership)
+- [Replay and initial page ownership](#replay-and-initial-page-ownership)
 - [Analytics-only handoff and tracking attributes](#analytics-only-handoff-and-tracking-attributes)
 - [Why profile state stays out of public caches](#why-profile-state-stays-out-of-public-caches)
 - [Related documentation](#related-documentation)
@@ -38,17 +38,17 @@ from live updates, and how analytics-only markup can still carry Optimization tr
 
 ## Runtime support
 
-| Runtime surface                                                           | Handoff role                                                                                                                                                    |
-| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@contentful/optimization-nextjs/app-router/server`                       | Binds explicit-input App Router server components and helpers plus the nested request component family.                                                         |
-| `@contentful/optimization-nextjs/app-router/client`                       | Binds App Router browser roots, entries, trackers, and explicit handoff helpers.                                                                                |
-| `@contentful/optimization-nextjs/pages-router` and `/pages-router/server` | Binds Pages Router roots, `getServerSideProps` request handoff helpers, and public permutation handoff helpers.                                                 |
-| `@contentful/optimization-nextjs/edge`                                    | Configures Edge runtime request handoff and public permutation handoff helpers.                                                                                 |
-| `@contentful/optimization-nextjs/request-handler`                         | Forwards sanitized request context through pass-through responses and can perform response-capable server page work before App Router Server Components render. |
-| `@contentful/optimization-nextjs/cache-middleware`                        | Rewrites pass-through Next.js proxy or middleware requests to the public permutation cache key produced by the same metadata helper used by handoffs.           |
-| `@contentful/optimization-nextjs/tracking-attributes`                     | Produces server, static, and edge `data-ctfl-*` tracking attributes for manual rendering paths.                                                                 |
-| `@contentful/optimization-react-web`                                      | Consumes content handoffs in `OptimizationRoot` and analytics-only handoffs in `OptimizationAnalyticsRoot`.                                                     |
-| `@contentful/optimization-web`                                            | Hydrates content handoffs into a live browser SDK and analytics-only handoffs into a narrow analytics runtime.                                                  |
+| Runtime surface                                                           | Handoff role                                                                                                                                          |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-nextjs/app-router/server`                       | Binds explicit-input App Router server components and helpers plus the nested request component family.                                               |
+| `@contentful/optimization-nextjs/app-router/client`                       | Binds App Router browser roots, entries, trackers, and explicit handoff helpers.                                                                      |
+| `@contentful/optimization-nextjs/pages-router` and `/pages-router/server` | Binds Pages Router roots, `getServerSideProps` request handoff helpers, and public permutation handoff helpers.                                       |
+| `@contentful/optimization-nextjs/edge`                                    | Configures Edge runtime request handoff and public permutation handoff helpers.                                                                       |
+| `@contentful/optimization-nextjs/request-handler`                         | Forwards sanitized request context through pass-through responses.                                                                                    |
+| `@contentful/optimization-nextjs/cache-middleware`                        | Rewrites pass-through Next.js proxy or middleware requests to the public permutation cache key produced by the same metadata helper used by handoffs. |
+| `@contentful/optimization-nextjs/tracking-attributes`                     | Produces server, static, and edge `data-ctfl-*` tracking attributes for manual rendering paths.                                                       |
+| `@contentful/optimization-react-web`                                      | Consumes content handoffs in `OptimizationRoot` and analytics-only handoffs in `OptimizationAnalyticsRoot`.                                           |
+| `@contentful/optimization-web`                                            | Hydrates content handoffs into a live browser SDK and analytics-only handoffs into a narrow analytics runtime.                                        |
 
 ## Inputs and constraints
 
@@ -65,10 +65,12 @@ It can contain:
   `sys.id` in `entryId`.
 - `cache` - metadata that describes where the rendered output is allowed to be cached.
 
-Browser handoffs add two fields:
+Browser handoffs add `hydration`, the browser presentation policy for already-rendered content. A
+private request handoff can also carry a replay envelope. The envelope is not general handoff state:
+it is a one-shot browser-delivery instruction for the previewed server event batch.
 
-- `hydration` - the browser presentation policy for already-rendered content.
-- `initialPageEvent` - whether the browser emits or skips the first page event for this route.
+The application owns serialization and transport of the handoff between its server render and browser
+entry point. The SDK consumes the supplied handoff; it does not choose an application transport.
 
 The SDK serializes and hydrates the state it receives. Browser hydration applies only state fields
 that are present on the handoff. During Web handoff state interception, omitted interceptor fields
@@ -100,8 +102,8 @@ The handoff is not a cache key by itself. Cache safety comes from matching the r
 handoff state, and the cache scope.
 
 In App Router, managed-entry prefetch without a supplied handoff creates a baseline `static` handoff
-with `hydration: 'preserve-server'`, `selectedOptimizations: []`, and
-`initialPageEvent: 'emit'`. Treat it as baseline entry warming, not request-personalized state.
+with `hydration: 'preserve-server'` and `selectedOptimizations: []`. Treat it as baseline entry
+warming, not request-personalized state.
 Prefetch accepts ID and content-type/slug descriptors. A matching browser source uses the handed-off
 baseline through either the source key or resolved `sys.id`, so it does not repeat the CDA request.
 
@@ -168,10 +170,10 @@ invalidation labels. When supplied to the Next.js helpers or middleware metadata
 include commas. App Router Cache Components can pass short custom tags to `cacheTag()`. Pages Router
 ISR and Edge runtime public routes can omit tags unless the app wires tag invalidation.
 For public permutation middleware, existing middleware or proxy rewrites, redirects, or other
-terminal responses are returned unchanged. The request-context handler is different: it preserves
-an existing rewrite response while still applying SDK request context and eligible profile-cookie
-persistence. Pass-through responses keep flowing through the Optimization rewrite or
-request-context path.
+terminal responses are returned unchanged. The request-context handler is context-only: it preserves
+an existing rewrite response while applying SDK request context, but it does not perform a server
+event request or write profile cookies. Pass-through responses keep flowing through the Optimization
+rewrite or request-context path.
 
 For selected-optimization shape, content model, variant-index, and fallback details, see
 [Entry optimization and variant resolution](./entry-personalization-and-variant-resolution.md). For
@@ -200,36 +202,35 @@ content for stable first paint and still keep live updates off. Turn live update
 content must react to consent, identity, profile, or preview changes after hydration. Preview state
 can force live re-resolution for authoring flows.
 
-When Web or React Web hydrates a profileless `static` or `public-permutation` content or analytics
-handoff, the handoff state can affect live browser memory for that page, but the SDK preserves
-existing durable browser profile continuity by suppressing durable continuity persistence for that
-handoff. A `private-request` handoff, or any profile-backed handoff that passes cache safety,
-follows normal persistence behavior when persistence consent allows.
+Every full browser handoff applies its state in live memory only during hydration, regardless of
+cache scope, profile state, or replay. Hydration does not update durable continuity. A later
+successful live Experience response can persist continuity when persistence consent allows.
 
-## Initial page event ownership
+## Replay and initial page ownership
 
-The first page event must have one owner.
+For a private Node or Next.js request, the server previews the supplied `identify` and `track`
+commands, then appends one SDK-created `page` command. Prefix commands are flat objects:
+`{ type: 'identify', userId, traits? }` and `{ type: 'track', event, properties? }`. Preview
+evaluates the resulting state but does not commit those events or write a server preview cookie. The
+private handoff carries that batch for browser replay. The caller documents the intended command
+order; replay does not add versions, schemas, canonicalization, or general order and count
+enforcement.
 
-- Use `initialPageEvent: 'skip'` when a request or edge helper already accepted the first page
-  event for the same route.
-- Use `initialPageEvent: 'emit'` when the browser owns the first page event for a static,
-  public-permutation, or browser-owned route.
+The combined browser operation applies preview state in memory, then submits the server-built Personalization batch with live consent and ordinary event interceptors. Analytics follows that batch using its returned or initially known profile. Input order is retained within Personalization; cross-transport interleaving and intermediate profiles are not reconstructed. Event locale remains metadata and does not split the request. A successful live Experience response can persist continuity when persistence consent permits it.
 
-Next.js request helpers set this value from the accepted page event result. The App Router request
-family passes its handoff-owned value to the nested route tracker. When the binding opts into trusted
-request handoff, a response-capable request handler can forward `pageAccepted` so the Server
-Component path does not call `page()` a second time. That forwarded context is compact: `consent`,
-`pageAccepted`, and optional `profileId`. The request family refetches profile and selection state
-server-side when `profileId` is present instead of forwarding full `OptimizationData`. Manual
-`createRequestHandoff()` remains available for advanced orchestration. Selection handoff helpers
-require application code to supply the initial page-event owner because customer-owned static and
-public permutations do not emit a server request event by themselves.
+Server-built events retain their IDs, timestamps, channel, library metadata, request context, and
+server interceptor changes. The browser does not regenerate those fields. Browser event interceptors
+can still alter payloads through ordinary queue policy. Analytics is built on the server without
+server delivery, then committed from the browser after Personalization.
 
-React Web roots can emit the handoff-owned initial page event when they receive `routeKey` and
-either `buildPagePayload` or `initialPagePayload`. A skip can mark the initial route accepted with
-only the route key. A skip applies only to the first route hydrated from that handoff; later
-route-key changes emit browser page events. Next.js route trackers use the same `"emit"` or
-`"skip"` control for the first browser route and then track later navigations.
+Repeated calls with the same handoff share one completion. Distinct handoffs retain their admitted journals even when newer state arrives. A mismatch, unusable replay, blocked page, or delivery failure permits one ordinary-page attempt only when no page was accepted. Later Analytics failure cannot duplicate an accepted page. Recoverable hydration errors permit safe browser delivery; teardown stops work that has not started.
+
+The server produces wire events and the browser root owns their initial replay/page decision. Keep one root or route tracker per browser runtime. A root with `beforeInitialPage` skips that callback after an accepted matching page replay; otherwise it runs the callback before the ordinary page attempt. Preview-backed content renders independently of this delivery. When a Next.js request has no route identity, preview state can still hydrate but the handoff has no page replay.
+
+Static and public-permutation handoffs do not carry a private replay. A private-request
+analytics-only handoff can carry one and follows the same one-shot continuation rules. Without a
+replay, the browser route tracker emits the current page when its normal consent and deduplication
+rules allow.
 
 ## Analytics-only handoff and tracking attributes
 
@@ -242,11 +243,11 @@ browser SDK only for page and interaction tracking. Those routes use an analytic
 - The `data-ctfl-*` attributes describe the resolved entry, baseline entry, optimization context,
   variant index, sticky selection, and clickable state.
 
-When an analytics-only handoff skips the initial route, React StrictMode effect replay does not
-turn that skip into a duplicate browser page event. Later route-key changes still emit route events
-through the analytics runtime. If a newer analytics hydration starts or the root unmounts before
-async hydration finishes, the stale hydration stops before writing state, warning, or tracking the
-page.
+Analytics-only handoffs can carry private replay without providing content resolution. Mount one
+analytics route owner per browser runtime. Its combined operation hydrates state and owns initial
+delivery, while the ordinary route tracker deduplicates later pages. Newer hydration controls state
+publication but preserves earlier admitted journals. A runtime lifetime guard stops work that has
+not started after teardown.
 
 Analytics-only rendering still needs the same cache decision as the markup it tracks. A static
 analytics handoff is static; a public permutation needs an application-owned key; request-personalized
@@ -257,7 +258,8 @@ markup remains private to the request.
 Profile state is visitor-specific. Request-backed selected optimizations, Custom Flag changes, merge
 tag values, and rendered personalized HTML can all depend on that profile. If that state enters a
 shared public cache, another visitor can receive the wrong variant, wrong Custom Flag state, wrong
-merge-tag output, or a page-event handoff that was created for a different profile.
+merge-tag output, or a replay envelope that was created for a different profile. Replay is valid
+only for a private request handoff and must never enter a static or public-permutation cache.
 
 Use request-backed handoffs for private request rendering. Use public permutation handoffs for
 cacheable app-owned permutations. Cache raw Contentful baseline entries according to your

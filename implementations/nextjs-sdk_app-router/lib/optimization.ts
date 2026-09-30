@@ -1,23 +1,19 @@
 import {
   bindNextjsAppRouterServerOptimization,
-  createPublicPermutationCacheMetadata,
+  type NextjsAppRouterServerOptimizationConfig,
 } from '@contentful/optimization-nextjs/app-router/server'
-import {
-  createNextjsPublicPermutationCacheMiddleware,
-  type NextjsPublicPermutationCacheMiddleware,
-} from '@contentful/optimization-nextjs/cache-middleware'
 import { createNextjsOptimizationContextHandler } from '@contentful/optimization-nextjs/request-handler'
 import { type NextjsOptimizationServerConsentResolver } from '@contentful/optimization-nextjs/server'
 import { getServerTrackingAttributes } from '@contentful/optimization-nextjs/tracking-attributes'
 import type { NextRequest, NextResponse } from 'next/server'
 import { appConfig } from './config'
 import { client } from './contentful'
-import { getCustomerSegment, type CustomerSegment } from './customer-segments'
+import type { CustomerSegment } from './customer-segments'
 import { ClientRequestOptimizationRoot } from './optimization-client'
 import { getAppConsent } from './util'
 
 const HIDDEN_UNTIL_READY_ROUTE = '/hidden-until-ready'
-const PUBLIC_HANDOFF_PREFIXES = ['/selection-handoff/', '/analytics-only/'] as const
+const BEFORE_INITIAL_PAGE_QUERY_VALUE = 'readiness'
 
 type AppRouterOptimization = ReturnType<typeof bindNextjsAppRouterServerOptimization>
 export type ContentHandoff = NonNullable<
@@ -34,7 +30,7 @@ const serverOptimizationConfig = {
     name: 'Contentful Optimization Next.js SDK App Router',
     version: '0.1.0',
   },
-} as const
+} satisfies NextjsAppRouterServerOptimizationConfig
 
 const serverConsent: NextjsOptimizationServerConsentResolver = ({ cookies }) =>
   getAppConsent(cookies) ? { events: true, persistence: true } : false
@@ -53,6 +49,11 @@ const optimization = bindNextjsAppRouterServerOptimization(
         routeKey.split('?')[0] === HIDDEN_UNTIL_READY_ROUTE
           ? 'client-only-hidden-until-ready'
           : 'preserve-server',
+      initialExperienceEvents: ({ requestUrl }) =>
+        new URL(requestUrl).searchParams.get('beforeInitialPage') ===
+        BEFORE_INITIAL_PAGE_QUERY_VALUE
+          ? [{ type: 'identify', userId: 'charles', traits: { identified: true } }]
+          : [],
     },
   },
   {
@@ -75,25 +76,6 @@ export const { OptimizationRoot: RequestOptimizationRoot, OptimizedEntry: Reques
   optimization.request
 export { getServerTrackingAttributes }
 
-const cacheMiddleware: NextjsPublicPermutationCacheMiddleware =
-  createNextjsPublicPermutationCacheMiddleware({
-    resolveCache: (request) => {
-      const segmentSlug = getPublicHandoffSegmentSlug(request.nextUrl.pathname)
-      const segment = segmentSlug === undefined ? undefined : getCustomerSegment(segmentSlug)
-
-      return segment === undefined
-        ? undefined
-        : createPublicPermutationCacheMetadata({
-            cacheVersion: segment.cacheVersion,
-            entryIds: segment.baselineEntryIds,
-            locale: segment.locale,
-            permutationKey: segment.slug,
-            selectedOptimizations: segment.selectedOptimizations,
-            tags: createCustomerSegmentCacheTags(segment),
-          })
-    },
-  })
-
 const forwardOptimizationContext = createNextjsOptimizationContextHandler()
 
 export function createCustomerSegmentHandoff(segment: CustomerSegment): ContentHandoff {
@@ -101,7 +83,6 @@ export function createCustomerSegmentHandoff(segment: CustomerSegment): ContentH
     cacheVersion: segment.cacheVersion,
     entryIds: segment.baselineEntryIds,
     hydration: 'preserve-server',
-    initialPageEvent: 'emit',
     locale: segment.locale,
     permutationKey: segment.slug,
     selectedOptimizations: segment.selectedOptimizations,
@@ -114,7 +95,6 @@ export function createCustomerSegmentAnalyticsHandoff(segment: CustomerSegment) 
     cacheVersion: segment.cacheVersion,
     entryIds: segment.baselineEntryIds,
     hydration: 'analytics-only',
-    initialPageEvent: 'emit',
     locale: segment.locale,
     permutationKey: segment.slug,
     selectedOptimizations: segment.selectedOptimizations,
@@ -126,24 +106,8 @@ function createCustomerSegmentCacheTags(segment: CustomerSegment): readonly stri
   return [`ctfl-opt-segment:${segment.slug}:v${segment.cacheVersion}`]
 }
 
-function getPublicHandoffSegmentSlug(pathname: string): string | undefined {
-  const prefix = PUBLIC_HANDOFF_PREFIXES.find((candidate) => pathname.startsWith(candidate))
-  if (prefix === undefined) return undefined
-
-  const segment = pathname.slice(prefix.length)
-  return segment.length > 0 ? segment : undefined
-}
-
 export async function proxy(request: NextRequest): Promise<NextResponse> {
-  if (isPublicHandoffPath(request.nextUrl.pathname)) {
-    return cacheMiddleware(request)
-  }
-
   return forwardOptimizationContext(request)
-}
-
-function isPublicHandoffPath(pathname: string): boolean {
-  return PUBLIC_HANDOFF_PREFIXES.some((prefix) => pathname.startsWith(prefix))
 }
 
 export function createRoutePagePayload(

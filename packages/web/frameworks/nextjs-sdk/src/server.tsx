@@ -1,5 +1,6 @@
 import ContentfulOptimizationRuntime, {
   createRequestHandoffFromData,
+  createRequestHandoffFromPreview,
   type OptimizationNodeConfig,
 } from '@contentful/optimization-node'
 import type { OptimizationData, PartialProfile } from '@contentful/optimization-node/api-schemas'
@@ -10,7 +11,9 @@ import type {
   CoreStatelessRequestOptions,
   EventEmissionResult,
   FetchOptimizedEntryResult,
+  InitialExperienceCommandInput,
   ManagedEntryHandoff,
+  OptimizationCacheMetadata,
   PageViewBuilderArgs,
   PrivateRequestOptimizationCacheMetadata,
   UniversalEventBuilderArgs,
@@ -18,6 +21,7 @@ import type {
 import { createPageContextFromUrl } from '@contentful/optimization-node/core-sdk'
 import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
 import type { JSX, ReactElement, ReactNode } from 'react'
+import { assertRequestHandoffCacheMetadata } from './app-router-request-handoff'
 import type { NextjsCookieReader } from './bound-component-types'
 import {
   DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE,
@@ -32,7 +36,7 @@ import type {
   OptimizationHydrationMode,
 } from './handoff'
 import { addBrowserHandoffMetadata } from './handoff'
-import { NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER } from './request-context'
+import { createNextjsRequestRouteKey, getForwardedRequestPage } from './request-handoff-support'
 import { renderOptimizedEntryOnServer } from './server-entry-renderer'
 import type {
   ServerTrackingAttributeOptions,
@@ -127,6 +131,8 @@ export interface NextjsRequestHandoffOptions extends NextjsServerOptimizationDat
   readonly entries?: readonly ManagedEntryHandoff[]
   readonly hydration: OptimizationHydrationMode
   readonly pagePayload: PageViewBuilderArgs
+  /** Commands to preflight before the initial page and replay in the browser. */
+  readonly initialExperienceEvents?: readonly InitialExperienceCommandInput[]
 }
 
 export interface NextjsRequestHandoffResult extends NextjsServerOptimizationData {
@@ -344,26 +350,14 @@ function isCompletePageContext(
   return 'query' in page && 'search' in page && 'url' in page
 }
 
-function getForwardedRequestPage(
-  headers: Headers | undefined,
-  referrer: string | undefined,
-): NonNullable<UniversalEventBuilderArgs['page']> | undefined {
-  const requestUrl = headers?.get(NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER)
-  if (!requestUrl) return undefined
-
-  return createPageContextFromUrl(requestUrl, { referrer })
-}
-
 export async function getNextjsServerOptimizationData(
   sdk: ContentfulOptimization,
   options: NextjsServerOptimizationDataOptions,
 ): Promise<NextjsServerOptimizationData> {
   const requestOptimization = bindNextjsOptimizationRequest(sdk, options)
   const pageResult = await requestOptimization.page(options.pagePayload)
-
   return { data: pageResult.data, pageResult, requestOptimization }
 }
-
 export function createNextjsRequestHandoff(
   sdk: ContentfulOptimization,
   options: NextjsRequestHandoffOptions & { readonly hydration: 'analytics-only' },
@@ -380,24 +374,43 @@ export async function createNextjsRequestHandoff(
   sdk: ContentfulOptimization,
   options: NextjsRequestHandoffOptions,
 ): Promise<NextjsRequestHandoffResult> {
-  const { cache, entries, hydration, ...requestOptions } = options
-  const { data, pageResult, requestOptimization } = await getNextjsServerOptimizationData(
-    sdk,
-    requestOptions,
-  )
+  const { cache, entries, hydration, initialExperienceEvents, ...requestOptions } = options
+  const cacheMetadata: OptimizationCacheMetadata = cache ?? { scope: 'private-request' }
+  assertRequestHandoffCacheMetadata(cacheMetadata)
+  const requestOptimization = bindNextjsOptimizationRequest(sdk, requestOptions)
+  const preview = await requestOptimization.previewInitialExperience({
+    ...(initialExperienceEvents === undefined ? {} : { events: initialExperienceEvents }),
+    page: options.pagePayload,
+  })
+  const data = preview.accepted ? preview.data : undefined
+  const pageResult: EventEmissionResult = preview.accepted
+    ? { accepted: true, data: preview.data }
+    : { accepted: false }
+  const routeKey = preview.accepted
+    ? createNextjsRequestRouteKey(options, getExplicitPage)
+    : undefined
   const handoff = addBrowserHandoffMetadata(
-    createRequestHandoffFromData({
-      ...(cache === undefined ? {} : { cache }),
-      data,
-      ...(entries === undefined ? {} : { entries }),
-    }),
-    {
-      hydration,
-      initialPageEvent: pageResult.accepted ? 'skip' : 'emit',
-    },
+    createRequestHandoffFromPreviewOrData(preview, routeKey, cacheMetadata, entries),
+    { hydration },
   )
-
   return { data, handoff, pageResult, requestOptimization }
+}
+
+function createRequestHandoffFromPreviewOrData(
+  preview: Awaited<ReturnType<CoreStatelessRequest['previewInitialExperience']>>,
+  routeKey: string | undefined,
+  cache: PrivateRequestOptimizationCacheMetadata,
+  entries: readonly ManagedEntryHandoff[] | undefined,
+): ReturnType<typeof createRequestHandoffFromData> {
+  if (preview.accepted && routeKey !== undefined) {
+    return createRequestHandoffFromPreview({ cache, entries, preview, routeKey })
+  }
+
+  return createRequestHandoffFromData({
+    cache,
+    entries,
+    ...(preview.accepted ? { data: preview.data } : {}),
+  })
 }
 
 export function persistNextjsAnonymousId(

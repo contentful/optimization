@@ -432,11 +432,7 @@ delivery. Choose one of these patterns before enabling interaction tracking:
   call the Node SDK with the request's profile ID. This is a manual tracking architecture, not the
   Web SDK auto-tracking path.
 
-In Next.js server-rendered integrations, `initialPageEvent="skip"` intentionally avoids the initial
-browser Experience API `page()` request when the server or edge helper already accepted that page
-event. If that skip leaves the browser with neither a bound root or provider `handoff` nor manual
-handoff, and without a prior persisted browser profile, automatic entry views, clicks, and hovers
-cannot deliver until a later browser Experience API call populates profile state.
+In Next.js server-rendered integrations, the server previews one initial Personalization batch without committing it. The browser root applies preview state in memory and submits replay through the normal queues with live consent and interceptors. Analytics follows the Personalization batch using the available profile. The SDK attempts an ordinary page only if replay has not accepted one; the route tracker owns later pages. Without a bound root, provider handoff, manual handoff, or persisted profile, automatic entry interactions need a browser Experience response to populate profile state.
 
 If the Web SDK must read `ctfl-opt-aid`, do not mark that cookie as `HttpOnly`. Configure `path`,
 `domain`, and `SameSite` so the server route and browser code refer to the same profile.

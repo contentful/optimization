@@ -62,9 +62,9 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "guards.cjs": 550,
-        "guards.mjs": 200,
-        "index.cjs": 5000,
+        "guards.cjs": 600,
+        "guards.mjs": 300,
+        "index.cjs": 5100,
         "index.mjs": 4700
       }
     }

@@ -33,14 +33,26 @@ Vocabulary used below:
   other app-owned source.
 - **Hydration** is the first browser render over existing markup. `liveUpdates` is later browser
   re-resolution after startup.
+- A handoff's **private replay** carries server-built events for one browser operation. The initial
+  Personalization commands retain input order in one batch; Analytics follows with the available
+  profile. The combined operation hydrates provisional state and attempts an ordinary page only
+  when replay accepted none. A successful **browser commit** is the non-preflight Experience
+  response; only that response can establish durable continuity. Public and static handoffs cannot
+  contain private replay. The Edge private-request section covers detailed fallback behavior.
 - **Customer-owned** means owned by your application team. It does not mean a site visitor owns the
   selection.
 - Cache scope and hydration strings such as `public-permutation`, `static`, `private-request`,
-  `preserve-server`, `client-only-hidden-until-ready`, `analytics-only`, `emit`, and `skip` are
-  SDK-owned exact values. Route keys, payload `properties`, environment variable names, and helper
+  `preserve-server`, `client-only-hidden-until-ready`, and `analytics-only` are SDK-owned exact
+  values. Route keys, payload `properties`, environment variable names, and helper
   names are application-owned. `permutationKey`, `cacheVersion`, and Next.js tags are
   application-owned cache inputs; `handoff.cache.key` and `ctfl-opt-cache-key` are SDK-generated
   cache metadata.
+
+> [!NOTE]
+>
+> For a private request handoff without JavaScript, previewed output can still render, but
+> browser delivery and a new `ctfl-opt-aid` cookie do not occur. `ctfl-opt-aid` is the exact
+> SDK-owned cookie name.
 
 Here, edge-side rendering (ESR) means a Next.js Edge route owns the response before it reaches the
 browser. The public SDK entrypoint for Edge handoff state is
@@ -161,7 +173,6 @@ export default async function SegmentPage({ params }: { params: Promise<{ segmen
     selectedOptimizations: segment.selectedOptimizations,
     changes: segment.changes,
     hydration: 'preserve-server',
-    initialPageEvent: 'emit',
   })
 
   return (
@@ -215,7 +226,8 @@ Action, or Route Handler outside the first route proof.
 Use the same ownership test for every route: the cache owner must match the Optimization state that
 produced the markup. A **baseline entry** is the Contentful entry before Optimization resolution.
 Resolving entries means applying selected optimizations to those baseline entries before rendering.
-`initialPageEvent` tells the browser whether to emit or skip the first page event for the route.
+The browser root owns current-route tracking. Public and static handoffs carry selected state, not
+private replay instructions.
 
 A campaign can have two independent meanings in these recipes. A public `permutationKey` can name
 an app-owned campaign and contributes to public cache identity. A page event's `context.campaign` is
@@ -246,11 +258,7 @@ The public/static handoff helpers serialize the selected optimizations, changes,
 metadata your application supplies. They do not call the Experience API or derive selections from
 route, cookie, header, locale, or cache-key inputs.
 
-When the browser hydrates a profileless `static` or `public-permutation` handoff, the SDK applies
-the selected optimizations and Custom Flag changes to live browser state for that page without
-overwriting durable browser profile continuity. `private-request` handoffs, and profile-backed
-handoffs that pass cache safety, keep the normal persistence behavior when persistence consent
-allows.
+All browser handoff state is applied in memory. Profileless `static` or `public-permutation` handoffs apply selections and Custom Flag changes without overwriting durable browser profile continuity. Private replay also uses provisional state; the combined operation owns its delivery and page fallback. Only a successful live Experience response can establish durable continuity.
 
 Each registry record needs enough information to fetch, resolve, hand off, and cache one public
 output:
@@ -338,13 +346,10 @@ Resolve and assemble each usable permutation in the route that renders it:
 3. Call `resolveEntriesForSelections()` with those baseline entries and the record's
    `selectedOptimizations`.
 4. Call `createPublicPermutationHandoff()` with the same public key, `cacheVersion`, locale, entry
-   IDs, `selectedOptimizations`, optional `changes`, hydration mode, and initial page-event
-   ownership used by the route.
+   IDs, `selectedOptimizations`, optional `changes`, and hydration mode.
 5. Use `cache: { scope: 'static' }` with `createHandoffFromSelections()` for one build-time static
    output. Use `createPublicPermutationHandoff()` for Cache Components, Pages Router ISR, Edge
    runtime, or CDN-cached public outputs.
-6. Use `initialPageEvent: 'emit'` unless a request or edge helper already accepted the first page
-   event for the same route.
 
 **Follow this pattern:**
 
@@ -366,7 +371,6 @@ const handoff = createPublicPermutationHandoff({
   selectedOptimizations: permutation.selectedOptimizations,
   changes: permutation.changes,
   hydration: 'preserve-server',
-  initialPageEvent: 'emit',
 })
 ```
 
@@ -407,10 +411,10 @@ Define `useOptimizationConsent()` as an app-owned client hook that reads your co
 returns `{ events, persistence }` booleans for Optimization event delivery and profile-cookie
 persistence.
 
-This example intentionally combines two client entrypoints from the same installed package.
-`/app-router/client` owns the App Router navigation tracker; router-neutral `/client` owns the root
-and entry because this component supplies browser configuration and consent directly. Both consume
-the nearest Optimization React provider.
+This example uses the router-neutral `/client` root and entry because the component supplies browser
+configuration and consent directly. `NextAppAutoPageTracker` is the one route coordinator. It
+derives the App Router path and search state, emits the first accepted page event, and tracks later
+navigation. Keep it inside `Suspense` because it reads `useSearchParams()`.
 
 **Adapt this to your use case:**
 
@@ -434,11 +438,9 @@ export function BrowserOwnedHero({ hero }) {
       environment={process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master'}
       hydration="client-only-hidden-until-ready"
       locale="en-US"
-      routeKey="/landing"
-      buildPagePayload={() => ({ properties: { path: '/landing' } })}
     >
       <Suspense fallback={null}>
-        <NextAppAutoPageTracker initialPageEvent="emit" />
+        <NextAppAutoPageTracker />
       </Suspense>
       <OptimizedEntry baselineEntry={hero}>
         {(resolvedHero) => <Hero entry={resolvedHero} />}
@@ -454,7 +456,8 @@ emit; `persistenceConsent` controls whether the browser can store SDK profile co
 
 For this browser-owned route, set your app-owned consent record to allow Optimization events during
 the proof, then verify in the rendered page or browser devtools after hydration, not in View Source.
-`NextAppAutoPageTracker` owns the first page event because this route has no server handoff.
+The tracker emits the current page after the SDK becomes live. Confirm one accepted page event on
+initial load and one on navigation. Do not add another page tracker or direct page call beside it.
 
 ### SSG customer-owned static permutation
 
@@ -487,7 +490,6 @@ export default async function StaticSegmentPage() {
     changes: selection.changes,
     cache: { scope: 'static' },
     hydration: 'preserve-server',
-    initialPageEvent: 'emit',
   })
 
   return (
@@ -532,7 +534,6 @@ const handoff = createPublicPermutationHandoff({
   selectedOptimizations: segment.selectedOptimizations,
   changes: segment.changes,
   hydration: 'preserve-server',
-  initialPageEvent: 'emit',
 })
 ```
 
@@ -641,7 +642,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ seg
     selectedOptimizations: segment.selectedOptimizations,
     changes: segment.changes,
     hydration: 'preserve-server',
-    initialPageEvent: 'emit',
   })
   const response = await renderEdgeSegmentResponse({ handoff, hero, segment })
 
@@ -661,10 +661,33 @@ reads visitor state, use a `private-request` handoff.
 Use this when an Edge runtime route owns a `Response` and renders for the current request. The route
 must export `runtime = 'edge'` and avoid Node-only APIs. This is a reference excerpt for custom
 route handlers that already turn application HTML into a `Response`; it is not an App Router page
-recipe. The helper reads request cookies and headers, emits the page event, returns a browser
-handoff, and gives the route a `persist(response)` callback for the SDK-owned anonymous ID cookie.
-`app-consent` is a reader-owned consent cookie name. Configure `consent.server` explicitly; if it is
-omitted, Edge request consent resolves to `false`.
+recipe. The helper reads request cookies and headers and returns a private request handoff for the
+paired flow. The sequence is zero or more optional `identify`/`track` commands in application-supplied
+order, followed by the SDK-appended `page` command. `app-consent` is a reader-owned consent cookie
+name, and `edge_response_rendered` below is an app-owned event name. Configure `consent.server`
+explicitly; if it is omitted, Edge request consent resolves to `false`.
+
+`createEdgeRequestHandoff()` accepts either an already-resolved command array or a resolver that
+receives the Edge request snapshot with `url`, `headers`, and optional `cookies`. Each command is
+a flat input, such as `{ type: 'identify', userId, traits? }` or
+`{ type: 'track', event, properties? }`. The App Router request config offers a similar
+framework-owned resolver boundary. The Pages Router helper and lower-level Next.js server helper
+accept only already-resolved arrays.
+
+The Edge server preview sends the commands and SDK-appended page in an Experience profile `POST`
+with `type=preflight`. This is an SDK transport mode, not a browser CORS preflight. An accepted
+preview can carry state and replay; a consent-blocked page carries neither.
+
+The Edge request helper converts operational preview failures, including Experience API,
+initial-command resolver, interceptor, and event-schema failures, into a profileless private
+baseline handoff. The route can render and the browser makes its normal page attempt. Invalid cache
+scope and cache-safety failures remain fail-closed.
+
+The app-owned `renderPersonalizedResponse()` must serialize both the private `handoff` and
+`routeKey` into browser startup data. The browser parses that data, hydrates the handoff on its live
+Web instance, then makes the ordinary `trackCurrentPage({ routeKey, buildPayload })` call for the
+matching route. In the excerpt, `routeKey` is the path plus search string used for matching and
+deduplication; `request.url` is the full page URL used as event context.
 
 **Reference excerpt:**
 
@@ -687,29 +710,67 @@ const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
 })
 
 export async function GET(request: Request) {
-  const routeKey = new URL(request.url).pathname
-  const { handoff, persist } = await createEdgeRequestHandoff({
+  const pageUrl = new URL(request.url)
+  const routeKey = `${pageUrl.pathname}${pageUrl.search}`
+  const { handoff } = await createEdgeRequestHandoff({
     cache: { scope: 'private-request' },
     hydration: 'preserve-server',
-    pagePayload: { properties: { path: routeKey } },
+    initialExperienceEvents: ({ url }) => [
+      { type: 'track', event: 'edge_response_rendered', properties: { url } },
+    ],
+    pagePayload: { properties: { path: pageUrl.pathname, search: pageUrl.search } },
     request,
   })
   const response = await renderPersonalizedResponse({ handoff, routeKey })
 
   response.headers.set('Cache-Control', 'private, no-store')
-  persist(response)
 
   return response
 }
 ```
 
-`renderPersonalizedResponse()` is your existing custom renderer that returns a `Response`. Keep the
-response private because the handoff can include request profile state.
+`renderPersonalizedResponse()` must expose the serialized handoff and route key to browser startup
+code. Keep one-time hydration separate from the reusable route-tracking call so duplicate
+suppression can be tested without hydrating again.
+
+**Adapt this to your use case:**
+
+```ts
+import ContentfulOptimization from '@contentful/optimization-web'
+import { type ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
+
+export async function startEdgeBrowserRuntime(
+  optimization: ContentfulOptimization,
+  handoff: ContentOptimizationHandoff,
+  routeKey: string,
+): Promise<void> {
+  await optimization.hydrateAndTrackCurrentPage(handoff, {
+    routeKey,
+    buildPayload: () => ({ properties: { url: window.location.href } }),
+  })
+}
+
+export async function trackCurrentRoute(
+  optimization: ContentfulOptimization,
+  routeKey = `${window.location.pathname}${window.location.search}`,
+): Promise<void> {
+  await optimization.trackCurrentPage({
+    routeKey,
+    buildPayload: () => ({ properties: { url: window.location.href } }),
+  })
+}
+```
+
+`renderPersonalizedResponse()` is your existing renderer returning a `Response`. Keep that response private because its handoff can include visitor state and replay. Edge preview does not write a new profile cookie. The browser's combined operation hydrates state in memory and submits the server-built Personalization batch followed by Analytics. It attempts one ordinary page only if replay accepted no page. Newer handoffs preserve earlier admitted journals. Preview-backed rendering proceeds during delivery, and only a successful live response can establish durable continuity when consent permits it.
+
+Recoverable state hydration errors permit safe browser delivery through the combined operation.
+Cache-safety errors remain fail-closed: do not apply the supplied state or replay.
 
 In this example, `createEdgeRequestHandoff()` builds `page.url` from the full `request.url`; the
-pathname-only `routeKey` identifies the route for duplicate-event control. Because `pagePayload`
-supplies only `properties.path`, the request-backed `page.url` is the campaign source when it has a
-supported UTM parameter. If you customize that payload, the SDK chooses one whole source in order:
+path-and-search `routeKey` is the separate stable identity used for duplicate-event control. Because
+`pagePayload` supplies `properties.path` and `properties.search` but not `properties.url`, the
+request-backed `page.url` is the campaign source when it has a supported UTM parameter. If you
+customize that payload, the SDK chooses one whole source in order:
 top-level `campaign`, then a UTM-bearing `properties.url`, then `page.url`. An explicit empty
 `campaign: {}` suppresses URL inference and produces empty attribution. The SDK never fills missing
 fields from a lower-priority source. The chosen URL maps into `context.campaign`: `utm_campaign`
@@ -757,7 +818,6 @@ export default async function AnalyticsOnlyPage() {
     selectedOptimizations: segment.selectedOptimizations,
     changes: segment.changes,
     hydration: 'analytics-only',
-    initialPageEvent: 'emit',
   })
   const trackingAttributes = getServerTrackingAttributes(hero, resolvedHero)
 
@@ -783,8 +843,8 @@ If you build the analytics-only browser owner without React, import
 `initializeOptimizationAnalyticsRuntime(...)` and `hydrateOptimizationAnalyticsHandoff(...)` from
 `@contentful/optimization-web/analytics`. Initialize one analytics-only runtime for the page and
 hydrate each analytics-only handoff into it; the runtime does not expose content-resolution APIs and
-is not an isolation context. When route changes can replace a handoff before hydration finishes, pass
-the helper's `isCurrent` option so stale hydration stops before state or page tracking applies.
+is not an isolation context. Use the helper's `isCurrent` option for runtime lifetime, so teardown stops work that has not
+started. Newer handoffs preserve earlier admitted journals while state publication keeps latest-wins arbitration.
 
 ## Validate the integration
 
@@ -793,7 +853,7 @@ the helper's `isCurrent` option so stale hydration stops before state or page tr
   `private-request`.
 - For customer-owned permutations, inspect the logged handoff and verify `handoff.state?.profile`
   is absent. That property is the optional per-visitor profile snapshot; a public or static handoff
-  cannot carry it safely.
+  cannot carry it safely. Also verify `handoff.replay` is absent; replay is private-request only.
 - For every `public-permutation` handoff, inspect the logged `handoff.cache.key` and verify it
   starts with encoded fields such as `permutation=...:version=...:` and changes when the segment,
   locale, selected optimization set, entry set, or app-owned cache version changes. If rendered
@@ -811,6 +871,20 @@ the helper's `isCurrent` option so stale hydration stops before state or page tr
   `s-maxage=60` when the route returns `revalidate: 60`.
 - With `hydration: 'preserve-server'`, load the page normally and verify the same distinctive text
   remains after hydration.
+- For an Edge request handoff, confirm the server response does not create a preview profile cookie,
+  then inspect the browser Network panel for one browser `POST` whose path ends in `/profiles` or
+  `/profiles/:id` and whose URL has no `type=preflight` query parameter. The separate Edge preview
+  is an Experience profile `POST` with `type=preflight`, not a CORS preflight. In the browser
+  request body, inspect the `events` array: zero or more optional identify/track events appear in
+  your supplied order, followed by the page event. Treat a successful response as the browser
+  commit, then confirm `ctfl-opt-aid` appears only when persistence consent permits durable
+  persistence.
+- Call `startEdgeBrowserRuntime()` once, then call only
+  `trackCurrentRoute(optimization, routeKey)` again without changing the route key. The second
+  route call must not produce another browser profile `POST`. Do not repeat
+  `startEdgeBrowserRuntime()`, because it hydrates the handoff.
+- Navigate to a different path or search string and observe one new page event. Each recipe names
+  one current-page owner, so do not mount a second tracker or direct page call beside it.
 - For browser-owned routes, skip View Source for the variant proof; verify the variant in the
   rendered page or browser devtools after hydration.
 - For a bound App Router path, mount the integration guide's

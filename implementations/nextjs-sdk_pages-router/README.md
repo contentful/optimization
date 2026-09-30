@@ -27,7 +27,7 @@ The implementation binds `OptimizationRoot` and `OptimizedEntry` once in `@/lib/
 package root is not imported:
 
 - `@contentful/optimization-nextjs/pages-router` in `@/lib/optimization` for the bound component
-  binding and before-initial-page callback
+  binding and browser readiness callback
 - `@contentful/optimization-nextjs/pages-router/server` in `@/lib/optimization-server` for
   `getServerSideProps` request handoff
 - `@contentful/optimization-nextjs/client` for browser hooks and providers
@@ -45,8 +45,7 @@ after hydration. It covers:
 - Query-controlled before-initial-page work in the root-owned browser page flow
 - Root-owned initial and later route tracking without a separate router tracker
 - Browser-side entry resolution with the app-local `OptimizedEntry`
-- `initialPageEvent` ownership from the handoff so the browser skips only when the server request
-  accepted the first page event
+- Private request preview with browser replay of the ordered initial event batch
 - Live re-resolution after consent, identify, reset, and client-side route changes
 - Preview panel attachment behind `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`
 
@@ -59,20 +58,18 @@ single-locale fields such as `fields.nt_experiences` and `fields.nt_variants`.
 
 ## Route strategy
 
-Use `getServerSideProps` for pages that need server-personalized first paint. It fetches entries,
-calls the Pages Router Optimization helper, and returns both through `props`. `pages/_app.tsx`
-passes `pageProps.contentfulOptimization.handoff` to the bound `OptimizationRoot` with the current
-`routeKey` and `buildPagePayload`; the handoff carries the first-page-event decision so the browser
-does not duplicate an accepted server page event.
+Use `getServerSideProps` for server-personalized first paint. It fetches entries, calls the Pages Router helper, and returns both through `props`. `pages/_app.tsx` passes `pageProps.contentfulOptimization.handoff`, `routeKey`, and `buildPagePayload` to the bound root. The helper previews one ordered Personalization batch. The root hydrates preview state in memory and owns the initial replay/page decision while rendering proceeds.
 
-The bound client config uses `beforeInitialPage` to make this root the only browser page owner in
-its subtree. The callback returns immediately on ordinary routes. Add
-`?beforeInitialPage=readiness` to run the maintained identify-before-page scenario: the callback
-returns its `identify()` request, and the root waits for that work before making its direct page
-attempt with the latest route and lazy payload. When the attempt finishes, the root activates its
-existing page emitter with a non-emitting initial `skip` mark for the attempted route. A later route
-change uses the emitter's normal `emit` path. Do not mount `NextPagesAutoPageTracker` beside this
-callback-enabled root; that would introduce a second page owner.
+The server request helper configures `?beforeInitialPage=readiness` as the maintained
+identify-before-page preview prefix. The root's next ordinary current-page call delivers that
+continuation when it can; otherwise it follows the normal current-page path. Later route changes use
+the emitter's normal path. Do not mount `NextPagesAutoPageTracker` beside this root; that would
+introduce a second page owner.
+
+Routes without a private request handoff still use the client binding's `beforeInitialPage`
+callback. The callback identifies only for `?beforeInitialPage=readiness`; ordinary routes return
+immediately. A matching private replay bypasses that callback because the previewed batch already
+owns the initial route.
 
 Use `getStaticProps` and `getStaticPaths` for finite public personalization permutations. The
 `/selection-handoff/[segment]` route builds a public-permutation handoff with the SDK helper,
@@ -142,8 +139,8 @@ Run the focused readiness scenarios to verify the shared SSG route's raw HTML an
 pnpm test:e2e:nextjs-sdk_pages-router -- --grep readiness
 ```
 
-Run the focused before initial page scenarios to verify callback-before-page ordering, latest-route
-capture, rejection and watchdog continuation, preserved content, and later-route emission:
+Run the focused initial-batch scenarios to verify preview ordering, replay hydration, preserved
+content, and later-route emission:
 
 ```sh
 pnpm test:e2e:nextjs-sdk_pages-router -- --grep "before initial page"

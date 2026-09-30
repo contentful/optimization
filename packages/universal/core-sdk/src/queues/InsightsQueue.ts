@@ -5,7 +5,7 @@ import {
   type BatchInsightsEventArray,
   type InsightsEventArray,
   type InsightsEvent as InsightsEventPayload,
-  type Profile,
+  type PartialProfile,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { LifecycleInterceptors } from '../CoreBase'
@@ -18,7 +18,7 @@ const coreLogger = createScopedLogger('CoreStateful')
 const MAX_QUEUED_INSIGHTS_EVENTS = 25
 
 interface QueuedProfileEvents {
-  profile: Profile
+  profile: PartialProfile
   events: InsightsEventArray
 }
 
@@ -47,7 +47,7 @@ export class InsightsQueue {
   private readonly flushIntervalMs: number
   private readonly flushRuntime: QueueFlushRuntime
   private readonly insightsApi: InsightsQueueOptions['insightsApi']
-  private readonly queuedInsightsByProfile = new Map<Profile['id'], QueuedProfileEvents>()
+  private readonly queuedInsightsByProfile = new Map<PartialProfile['id'], QueuedProfileEvents>()
   private insightsPeriodicFlushTimer: ReturnType<typeof setInterval> | undefined
 
   constructor(options: InsightsQueueOptions) {
@@ -88,8 +88,9 @@ export class InsightsQueue {
   async send(
     event: InsightsEventPayload,
     optimizationContext?: EventOptimizationContext,
+    replayProfile?: PartialProfile,
   ): Promise<void> {
-    const { value: profile } = profileSignal
+    const profile = replayProfile ?? profileSignal.value
 
     if (!profile) {
       coreLogger.warn('Attempting to emit an event without an Optimization profile')

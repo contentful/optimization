@@ -1,6 +1,22 @@
 import { expect, test } from '@playwright/test'
 import { getAnonymousIdFromCookie, getAnonymousIdFromStorage } from './utils'
 
+const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function readEventTypes(payload: unknown): string[] {
+  if (!isRecord(payload)) return []
+  const events = payload.events
+  if (!Array.isArray(events)) return []
+
+  return events.flatMap((event) =>
+    isRecord(event) && typeof event.type === 'string' ? [event.type] : [],
+  )
+}
+
 test.describe('unidentified user', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
@@ -44,5 +60,31 @@ test.describe('unidentified user', () => {
     await expect(
       page.getByText('This is a baseline content entry for all identified or unidentified users.'),
     ).toBeVisible()
+  })
+
+  test('commits the track preview replay once without preflight', async ({ context, page }) => {
+    const commits: Array<{ readonly eventTypes: string[]; readonly url: string }> = []
+    await context.addCookies([
+      {
+        name: APP_PERSONALIZATION_CONSENT_COOKIE,
+        value: 'granted',
+        domain: 'localhost',
+        path: '/',
+        sameSite: 'Lax',
+      },
+    ])
+    await page.route('**/experience/**', async (route) => {
+      commits.push({
+        eventTypes: readEventTypes(route.request().postDataJSON()),
+        url: route.request().url(),
+      })
+      await route.continue()
+    })
+
+    await page.goto('/track')
+    await expect
+      .poll(() => commits)
+      .toEqual([{ eventTypes: ['track', 'page'], url: expect.any(String) }])
+    expect(commits[0]?.url).not.toContain('type=preflight')
   })
 })

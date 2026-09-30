@@ -26,6 +26,10 @@ public data class OptimizationApiConfig(
     val experienceBaseUrl: String? = null,
     val insightsBaseUrl: String? = null,
     val enabledFeatures: List<String>? = null,
+    @Deprecated(
+        message = "Retained only to serialize existing native configurations during mixed-version upgrades. It no longer affects runtime behavior.",
+        level = DeprecationLevel.WARNING,
+    )
     val preflight: Boolean? = null,
 ) {
     internal fun isEmpty(): Boolean =

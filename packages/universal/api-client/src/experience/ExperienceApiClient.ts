@@ -240,7 +240,9 @@ export default class ExperienceApiClient extends ApiClientBase {
       const response = await this.fetch(
         this.constructUrl(
           `v3/spaces/${this.spaceId}/environments/${this.environment}/profiles/${id}`,
-          options,
+          {
+            locale: options.locale,
+          },
         ),
         {
           method: 'GET',
@@ -276,12 +278,18 @@ export default class ExperienceApiClient extends ApiClientBase {
     body,
     options,
   }: ProfileMutationRequestOptions): Promise<Response> {
-    return await this.fetch(this.constructUrl(url, options), {
-      method: 'POST',
-      headers: this.constructHeaders(options),
-      body: JSON.stringify(body),
-      keepalive: true,
-    })
+    return await this.fetch(
+      this.constructUrl(url, {
+        locale: options.locale,
+        preflight: options.preflight,
+      }),
+      {
+        method: 'POST',
+        headers: this.constructHeaders(options),
+        body: JSON.stringify(body),
+        keepalive: true,
+      },
+    )
   }
 
   /**
@@ -317,7 +325,7 @@ export default class ExperienceApiClient extends ApiClientBase {
       const response = await this.makeProfileMutationRequest({
         url: `v3/spaces/${this.spaceId}/environments/${this.environment}/profiles`,
         body,
-        options,
+        options: { ...options, preflight: options.preflight ?? this.preflight },
       })
 
       const {
@@ -372,7 +380,7 @@ export default class ExperienceApiClient extends ApiClientBase {
       const response = await this.makeProfileMutationRequest({
         url: `v3/spaces/${this.spaceId}/environments/${this.environment}/profiles/${profileId}`,
         body,
-        options,
+        options: { ...options, preflight: options.preflight ?? this.preflight },
       })
 
       const {
@@ -458,10 +466,11 @@ export default class ExperienceApiClient extends ApiClientBase {
     logger.debug(`"${requestName}" request body:`, body)
 
     try {
+      const { preflight: _, ...batchOptions } = options
       const response = await this.makeProfileMutationRequest({
         url: `v3/spaces/${this.spaceId}/environments/${this.environment}/events`,
         body,
-        options: { plainText: false, ...options },
+        options: { plainText: false, ...batchOptions },
       })
 
       const {
@@ -487,16 +496,18 @@ export default class ExperienceApiClient extends ApiClientBase {
    *
    * @internal
    */
-  private constructUrl(path: string, options: ExperienceApiClientRequestOptions): string {
+  private constructUrl(
+    path: string,
+    options: Pick<ExperienceApiClientRequestOptions, 'locale' | 'preflight'>,
+  ): string {
     const url = new URL(path, this.baseUrl)
     const locale = options.locale ?? this.locale
-    const preflight = options.preflight ?? this.preflight
 
     if (locale) {
       url.searchParams.set('locale', locale)
     }
 
-    if (preflight) {
+    if (options.preflight) {
       url.searchParams.set('type', 'preflight')
     }
 

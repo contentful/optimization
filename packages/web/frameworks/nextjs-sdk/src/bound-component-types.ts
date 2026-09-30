@@ -1,3 +1,4 @@
+import type { InitialExperienceCommandInput } from '@contentful/optimization-node/core-sdk'
 import type {
   BeforeInitialPageOptions,
   OptimizationAnalyticsRootProps,
@@ -84,6 +85,14 @@ export type NextjsAppRouterRequestHydration =
 
 export interface NextjsAppRouterRequestConfig {
   readonly hydration?: NextjsAppRouterRequestHydration
+  readonly initialExperienceEvents?:
+    | readonly InitialExperienceCommandInput[]
+    | ((
+        context: NextjsAppRouterRequestContext,
+      ) =>
+        | readonly InitialExperienceCommandInput[]
+        | Promise<readonly InitialExperienceCommandInput[]>)
+  /** @deprecated This compatibility field is no longer read. */
   readonly trustedRequestHandoff?: true
 }
 
@@ -175,10 +184,8 @@ export type NextjsAppRouterRequestOptimizationProviderProps = Omit<
   'handoff' | 'hydration'
 >
 
-export type NextjsAppRouterRequestAutoPageTrackerProps = Omit<
-  NextAppAutoPageTrackerProps,
-  'initialPageEvent'
->
+/** @deprecated `initialPageEvent` remains accepted but is inert. */
+export type NextjsAppRouterRequestAutoPageTrackerProps = NextAppAutoPageTrackerProps
 
 export interface NextjsAppRouterRequestOptimization {
   readonly OptimizationRoot: (

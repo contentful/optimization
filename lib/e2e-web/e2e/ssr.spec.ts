@@ -1,26 +1,42 @@
 import { expect, test, type Page } from '@playwright/test'
-import { CONSENT_COOKIE, runIf, seedAnonymousProfile, seedIdentifiedProfile, skipIf } from './utils'
+import {
+  CONSENT_COOKIE,
+  PROFILE_COOKIE,
+  runIf,
+  runIfImplementation,
+  seedAnonymousProfile,
+  seedIdentifiedProfile,
+  skipIf,
+} from './utils'
 
 test.describe('Hydration', () => {
   runIf('HYDRATION')
+  runIfImplementation('nextjs-sdk_pages-router', 'web-sdk_angular')
 
-  test('does not issue a client Experience request after consented SSR hydration', async ({
+  test('preserves the server preflight and commits its replay once in the browser', async ({
     baseURL,
     context,
     page,
   }) => {
     await context.addCookies([{ name: CONSENT_COOKIE, value: 'granted', url: baseURL }])
-    const clientExperienceRequests: string[] = []
+    const clientExperienceRequests: Array<{ readonly method: string; readonly url: string }> = []
     await page.route('**/experience/**', async (route) => {
-      clientExperienceRequests.push(route.request().url())
+      clientExperienceRequests.push({
+        method: route.request().method(),
+        url: route.request().url(),
+      })
       await route.continue()
     })
 
-    await page.goto('/')
+    const response = await page.goto('/')
     await page.waitForLoadState('networkidle')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
 
-    expect(clientExperienceRequests).toEqual([])
+    expect(response?.headers()['set-cookie']).toBeUndefined()
+    expect(clientExperienceRequests).toEqual([
+      expect.objectContaining({ method: 'POST', url: expect.stringContaining('/experience/') }),
+    ])
+    expect((await context.cookies()).some((cookie) => cookie.name === PROFILE_COOKIE)).toBe(true)
   })
 })
 
@@ -31,21 +47,24 @@ test.describe('SSR first-paint state', () => {
 
   test.describe('unidentified user', () => {
     test('consent-status is No without consent cookie', async ({ page }) => {
-      await page.goto('/')
+      const response = await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
 
       await expect(page.getByTestId('consent-status')).toHaveText('No')
       await expect(page.getByTestId('identified-status')).toHaveText('No')
+      expect(response?.headers()['set-cookie']).toBeUndefined()
     })
 
     test('consent-status is Yes with consent cookie', async ({ baseURL, context, page }) => {
-      await seedAnonymousProfile(context, baseURL)
+      await context.addCookies([{ name: CONSENT_COOKIE, value: 'granted', url: baseURL }])
 
-      await page.goto('/')
+      const response = await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
 
       await expect(page.getByTestId('consent-status')).toHaveText('Yes')
       await expect(page.getByTestId('identified-status')).toHaveText('No')
+      expect(response?.headers()['set-cookie']).toBeUndefined()
+      expect((await context.cookies()).some((cookie) => cookie.name === PROFILE_COOKIE)).toBe(false)
     })
   })
 

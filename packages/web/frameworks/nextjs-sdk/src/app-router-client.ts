@@ -78,6 +78,9 @@ export interface NextjsAppRouterClientOptimization {
   readonly OptimizationAnalyticsRoot: (
     props: BoundNextjsOptimizationAnalyticsRootProps,
   ) => ReactElement
+  readonly RequestOptimizationRoot: (
+    props: BoundNextjsAppRouterRequestClientRootProps,
+  ) => ReactElement
   readonly OptimizedEntry: NextjsBoundOptimizedEntryComponent<ReactElement | null>
   readonly NextAppAutoPageTracker: typeof NextAppAutoPageTracker
   readonly createHandoffFromSelections: typeof createHandoffFromSelections
@@ -92,9 +95,6 @@ export interface NextjsAppRouterClientOptimizationWithBeforeInitialPage extends 
 > {
   readonly OptimizationRoot: (
     props: BoundNextjsOptimizationRootWithBeforeInitialPageProps,
-  ) => ReactElement
-  readonly RequestOptimizationRoot: (
-    props: BoundNextjsAppRouterRequestClientRootProps,
   ) => ReactElement
 }
 
@@ -180,6 +180,7 @@ export function bindNextjsAppRouterClientOptimization(
     OptimizationAnalyticsRoot,
     OptimizationProvider,
     OptimizedEntry: ReactWebOptimizedEntry,
+    RequestOptimizationRoot,
     createHandoffFromSelections,
     createOptimizationCacheKey,
     createPublicPermutationHandoff,
@@ -193,7 +194,6 @@ export function bindNextjsAppRouterClientOptimization(
   return {
     ...commonResult,
     OptimizationRoot: OptimizationRootWithBeforeInitialPage,
-    RequestOptimizationRoot,
   }
 }
 

@@ -434,13 +434,7 @@ React Web router adapters emit `page()` calls when supported routers change rout
 event helpers, not entry interaction detectors. Entry views, clicks, and hovers still come from the
 Web SDK runtime.
 
-`OptimizationRoot` and `OptimizationAnalyticsRoot` use handoff `initialPageEvent` ownership for the
-first browser route. When an analytics-only handoff skips that route, React StrictMode effect replay
-does not emit a duplicate page event; later route-key changes still emit through the analytics
-runtime. If the analytics root unmounts or a newer hydration starts before async hydration finishes,
-the stale hydration stops before state apply, warning, or page tracking. Profileless static or
-public analytics handoffs hydrate live tracking state without overwriting durable browser
-continuity.
+For private request handoffs, the combined browser operation publishes preview state in memory and attempts the admitted replay with browser consent and event interceptors. It makes one ordinary-page fallback only if no replay page was accepted. Newer handoffs preserve earlier journals. Static handoffs have no replay; private analytics-only handoffs can carry one. Mount one root or route tracker per browser runtime so accepted and in-flight route deduplication also governs later navigation and StrictMode effect replay. Profileless static or public handoffs preserve durable browser continuity.
 
 ## Delivery and flushing
 
@@ -450,7 +444,8 @@ explicitly with `optimization.flush()`.
 
 Experience events are sent immediately when the browser is online. When the browser is offline,
 Experience events are queued up to the configured offline maximum and replayed when the online
-signal becomes `true`.
+signal becomes `true`. A supplied multi-event batch is admitted as one unit: if it cannot fit, the
+queue rejects the batch without retaining only part of it.
 
 The Web SDK wires browser lifecycle events into this queue model:
 

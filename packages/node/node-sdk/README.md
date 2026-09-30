@@ -136,12 +136,12 @@ Common `api` options:
 Request-scoped Experience options belong in `experienceOptions` when creating the request-bound
 client:
 
-| Option      | Description                                                   |
-| ----------- | ------------------------------------------------------------- |
-| `ip`        | IP address override used by the Experience API                |
-| `locale`    | Locale query parameter for localized Experience API responses |
-| `plainText` | Sends performance-critical Experience API endpoints as text   |
-| `preflight` | Aggregates a new profile state without storing it             |
+| Option      | Description                                                                 |
+| ----------- | --------------------------------------------------------------------------- |
+| `ip`        | IP address override used by the Experience API                              |
+| `locale`    | Locale query parameter for localized Experience API responses               |
+| `plainText` | Sends performance-critical Experience API endpoints as text                 |
+| `preflight` | Forces a non-persistent Experience API evaluation for this ordinary request |
 
 Request-scoped Insights options belong in `insightsOptions`:
 
@@ -225,6 +225,18 @@ stateless event methods.
 In stateless runtimes, Insights-backed methods require a request-bound profile for delivery.
 Non-sticky `trackView`, `trackClick`, `trackHover`, and `trackFlagView` require a profile ID passed
 to `forRequest()`.
+
+### Server preview and browser replay
+
+For a private Node-rendered browser route, use the request handoff helper instead of committing the
+initial browser batch on the server. It previews the supplied `identify` and `track` commands, then
+appends one SDK-created `page` command and returns a private handoff for the Web SDK to submit and
+deliver in the browser. Prefix commands are flat objects: `{ type: 'identify', userId, traits? }`
+and `{ type: 'track', event, properties? }`. The server owns their order; replay does not add a
+general command grammar, versioning, canonicalization, or order and count enforcement. The browser
+attempts the replay once when its current route matches. If it cannot use the replay, it tracks the
+current page normally. Keep this replay out of public and static caches; it does not create a server
+preview cookie.
 
 ### Content resolution
 
@@ -327,3 +339,17 @@ package directory.
   hybrid SSR and browser implementation
 - [Optimization Web SDK](../../web/web-sdk/README.md) - browser SDK used when the same application
   also needs client-side consent, persistence, tracking, or live updates
+
+For paired browser event delivery, use `request.previewInitialExperience({ events, page })` for a prefix plus the initial page, or `request.previewExperience({ events })` for semantic server inputs with optional pages and mixed Experience/Insights commands. Both use one Experience preflight request; an Insights-only journal with an existing profile needs no preflight transport. Insights events are delivered only by the paired browser. Build one private handoff with `createRequestHandoffFromPreview()`. A page-bearing journal requires a route key. Pass the result to the browser's combined initial operation; preview data is provisional and can render without awaiting browser delivery.
+
+Select presentation directly in the handoff factory; its return type retains the selected mode without a literal assertion:
+
+```ts
+const handoff = createRequestHandoffFromPreview({
+  preview,
+  routeKey,
+  hydration: 'preserve-server',
+})
+```
+
+`createRequestHandoffFromData({ hydration: 'preserve-server' })` creates a typed empty private handoff when preview state is unavailable. Omitting `hydration` preserves the framework-neutral result.

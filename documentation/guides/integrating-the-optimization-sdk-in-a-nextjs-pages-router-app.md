@@ -50,6 +50,19 @@ This quick start assumes a Pages Router page already fetches a Contentful entry 
 appears in View Source and stays stable after hydration. Consent is granted only to prove the wiring;
 replace it in [Consent, identity, profile, and reset](#consent-identity-profile-and-reset).
 
+A **server preview** sends zero or more optional `identify`/`track` commands in
+application-supplied order, followed by the SDK-appended `page`, in an Experience profile `POST`
+with `type=preflight`. This is an SDK transport mode, not a browser CORS preflight. An accepted
+preview returns in-memory state and a private, route-bound continuation; a consent-blocked page
+returns no replay. Browser delivery happens through current-page tracking. A successful **browser
+commit** is the non-preflight Experience profile response; only that response can establish durable
+persistence.
+
+> [!NOTE]
+>
+> Without JavaScript, previewed server HTML can still render, but browser delivery and a new
+> `ctfl-opt-aid` cookie do not occur. `ctfl-opt-aid` is the exact SDK-owned cookie name.
+
 1. Install the package and keep `contentful` app-owned.
 
    **Copy this:**
@@ -67,15 +80,14 @@ replace it in [Consent, identity, profile, and reset](#consent-identity-profile-
    // lib/optimization.ts
    import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router'
 
-   export const { NextPagesAutoPageTracker, OptimizationRoot, OptimizedEntry } =
-     bindNextjsPagesRouterOptimization({
-       spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
-       environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
-       locale: 'en-US',
-       consent: {
-         clientDefaults: { consent: true, persistenceConsent: true },
-       },
-     })
+   export const { OptimizationRoot, OptimizedEntry } = bindNextjsPagesRouterOptimization({
+     spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
+     environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
+     locale: 'en-US',
+     consent: {
+       clientDefaults: { consent: true, persistenceConsent: true },
+     },
+   })
    ```
 
 3. Bind the server helper for `getServerSideProps`. The server entry point is separate from the
@@ -100,27 +112,23 @@ replace it in [Consent, identity, profile, and reset](#consent-identity-profile-
    })
 
    export async function getContentfulOptimization(context: GetServerSidePropsContext) {
-     const routeKey = context.resolvedUrl || context.req.url || '/'
-
      return {
        handoff: await createRequestHandoff(context, {
          cache: { scope: 'private-request' },
          hydration: 'preserve-server',
-         pagePayload: { properties: { path: routeKey } },
+         pagePayload: {}, // the request context supplies the full page URL
        }),
      }
    }
    ```
 
-4. Mount the bound root once in `_app.tsx`. When a handoff exists, the root owns the server's
-   page-event decision. When no handoff exists, the separate route tracker emits the first browser
-   page event and tracks later navigations.
+4. Mount the bound root once in `_app.tsx`. It hydrates a request handoff, owns the initial replay/page decision, and tracks later routes. Do not add a separate page tracker. The `routeKey` is the path plus search string used to match and deduplicate pages; `window.location.href` supplies the full event URL.
 
    **Adapt this to your use case:**
 
    ```diff
    // pages/_app.tsx
-   +import { NextPagesAutoPageTracker, OptimizationRoot } from '@/lib/optimization'
+   +import { OptimizationRoot } from '@/lib/optimization'
     import type { AppProps } from 'next/app'
    +import { useRouter } from 'next/router'
 
@@ -132,11 +140,10 @@ replace it in [Consent, identity, profile, and reset](#consent-identity-profile-
       return (
    -    <Component {...pageProps} />
    +    <OptimizationRoot
-   +      buildPagePayload={() => ({ properties: { path: routeKey } })}
+   +      buildPagePayload={() => ({ properties: { url: window.location.href } })}
    +      handoff={handoff}
    +      routeKey={routeKey}
    +    >
-   +      <NextPagesAutoPageTracker initialPageEvent={handoff ? 'skip' : 'emit'} />
    +      <Component {...pageProps} />
    +    </OptimizationRoot>
       )
@@ -319,13 +326,11 @@ extends the app-owned `getContentfulOptimization` wrapper with the descriptors f
 +  context: GetServerSidePropsContext,
 +  prefetchManagedEntries: readonly ManagedEntryDescriptor[] = [],
 +) {
-   const routeKey = context.resolvedUrl || context.req.url || '/'
-
    return {
      handoff: await createRequestHandoff(context, {
        cache: { scope: 'private-request' },
        hydration: 'preserve-server',
-       pagePayload: { properties: { path: routeKey } },
+       pagePayload: {},
 +      prefetchManagedEntries,
      }),
    }
@@ -408,8 +413,10 @@ the slug.
 **Integration category:** Required for first integration
 
 `createRequestHandoff(context, options)` reads the Pages Router request, evaluates
-`consent.server`, calls the request page event, persists the SDK-owned anonymous profile cookie on
-the response when appropriate, and returns a serializable browser `handoff`.
+`consent.server`, previews zero or more optional `identify`/`track` commands in
+application-supplied order followed by the SDK-appended `page` command, and returns a serializable
+private browser `handoff`. An accepted preview includes in-memory state and a route-bound
+continuation; a consent-blocked page includes neither.
 Configure `consent.server` explicitly. If it is omitted, Pages Router request consent resolves to
 `false`.
 
@@ -418,29 +425,71 @@ The returned handoff also carries browser defaults derived from the resolved ser
 `consent.clientDefaults` axes for the first browser runtime; `clientDefaults` remains the fallback
 for routes without a request handoff.
 
-The SDK-owned anonymous profile cookie is `ctfl-opt-aid`. Your app owns any consent cookie or account
-record that `consent.server` reads. Pages Router server work happens in `getServerSideProps`; there
-is no middleware or proxy requirement for the Pages Router path.
+The SDK-owned anonymous profile cookie is `ctfl-opt-aid`. The server helper can read an existing
+value for continuity, but it does not write preview identity to the response. A successful browser
+commit can establish durable persistence when persistence consent permits. Your app owns any
+consent cookie or account record that
+`consent.server` reads. Pages Router server work happens in `getServerSideProps`; there is no
+middleware or proxy requirement for this path.
+
+Use `initialExperienceEvents` when request-derived identify or custom track commands must precede
+the page. The Pages Router server helper accepts an already-resolved command array, not a callback.
+Build the array from `getServerSideProps` context and application state before calling the helper.
+Supply zero or more flat `identify`/`track` inputs in their intended order. The SDK appends its
+`page` command. This differs from the App Router request config and the Edge helper, which can
+resolve commands at their framework-owned request boundaries.
+
+**Adapt this to your use case:** add initial commands to the existing handoff call. `signedInUserId`
+and `checkout_started` come from your application identity and event taxonomy.
+
+```ts
+async function createSignedInHandoff(context: GetServerSidePropsContext, signedInUserId?: string) {
+  return await createRequestHandoff(context, {
+    cache: { scope: 'private-request' },
+    hydration: 'preserve-server',
+    initialExperienceEvents: [
+      ...(signedInUserId ? [{ type: 'identify' as const, userId: signedInUserId }] : []),
+      { type: 'track', event: 'checkout_started' },
+    ],
+    pagePayload: {},
+  })
+}
+```
+
+The server preview evaluates the optional commands and SDK-appended page for the first paint.
+Hydration applies accepted preview state in memory, and the first current-page call attempts browser
+delivery once. If the continuation cannot handle that route, the same call makes an ordinary page
+attempt. When a cache-safe handoff cannot hydrate or replay, the bound root discards it and makes
+that same ordinary page attempt. The
+[manual escape-hatch section](#manual-server-and-client-escape-hatches) covers the detailed fallback
+cases.
+
+The bound `createRequestHandoff()` also converts Experience API, server-consent resolver,
+interceptor, and event-schema failures into a profileless private baseline handoff. The page keeps
+rendering and the browser makes its normal page attempt. Invalid cache scope and cache-safety
+failures remain fail-closed.
 
 ### The bound root and page events
 
 **Integration category:** Required for first integration
 
-The bound `OptimizationProvider` handles the content SDK context, handoff, hydration mode, and
-managed-entry prefetch for a subtree. Use the bound `OptimizationRoot` in `_app.tsx` because it adds
-initial page-event wiring. Pass `routeKey` and `buildPagePayload` so the root can follow the
-handoff's `initialPageEvent` instruction; those props do not belong on `OptimizationProvider`. The
-separate `NextPagesAutoPageTracker` should emit the initial event when no handoff exists and skip it
-when a handoff lets the root own that first route, then track later client navigations.
+The bound `OptimizationProvider` handles content SDK context, handoff, hydration mode, and managed-
+entry prefetch for a subtree. Use the bound `OptimizationRoot` in `_app.tsx` because it also owns
+current-route tracking. Pass a stable `routeKey` and lazy `buildPagePayload`; those props do not
+belong on `OptimizationProvider`. Do not mount `NextPagesAutoPageTracker` beside the root.
 
-Campaign inputs follow page-event ownership. The `pagePayload` passed to `createRequestHandoff`
-shapes the first server page event. The root's `buildPagePayload` shapes a browser event that the root
-owns; in `beforeInitialPage` mode, it supplies both the direct attempt and later route emissions. In
-normal tracker mode, `NextPagesAutoPageTracker` instead derives `page.url` from the current router URL
-for later navigations. For either payload seam, `campaign` is an optional top-level object with
+Keep the two route inputs distinct. `routeKey` is the path-and-search identity used for
+deduplication; the lazy payload builder supplies the full browser URL as page-event data. On the
+server, `createRequestHandoff()` derives the full request page URL from the Pages Router context, so
+`pagePayload: {}` leaves that value intact.
+
+Campaign inputs follow the preview and browser route boundary. The `pagePayload` passed to
+`createRequestHandoff` shapes the page command in the server preview and private replay. The root's
+`buildPagePayload` shapes ordinary current-page events, including later route emissions. For
+either payload seam, `campaign` is an optional top-level object with
 `name`, `source`, `medium`, `term`, and `content` fields, while `url` is nested under the optional
 `properties` object. When those inputs are absent, the server request, browser page provider, or
-router tracker supplies `page.url` for the event it owns.
+root route coordinator supplies `page.url` for the event it owns.
 
 For each event, the SDK chooses one whole campaign source in order: top-level `campaign`, then a
 `properties.url` containing at least one supported UTM parameter, then `page.url`. An explicit empty
@@ -450,121 +499,9 @@ missing fields are not filled from a lower-priority URL. The chosen URL maps int
 becomes `medium`, `utm_term` becomes `term`, and `utm_content` becomes `content`. `page.referrer`
 remains page metadata, but it is not a campaign source.
 
-As an optional alternative, the browser binder accepts `beforeInitialPage` for an owned content
-root that must finish returned identity or custom Experience event work before its initial page
-decision. The **initial page decision** is the root's one choice to send the first browser `page`
-event or skip it because an applied handoff already owns that route. During `getServerSideProps`,
-the server helper can accept the page event and record that ownership in the handoff. `_app.tsx`
-passes the handoff to the browser root; after its live owned runtime exists, the root invokes the
-callback, makes one direct page attempt or same-route handoff skip, marks the attempted route, and
-emits for later route changes.
+The private handoff carries the preview state used for HTML and server-built events for browser delivery. The root applies state in memory and makes one replay/page decision. A matching replay page suppresses ordinary fallback; otherwise the SDK attempts one ordinary page. No application replay receipt or error branch is needed. Newer handoffs preserve earlier admitted events.
 
-The binder captures the callback only for its bound `OptimizationRoot`; its bound
-`OptimizationProvider` and `OptimizationAnalyticsRoot` do not receive it. Here, **identity** means
-the visitor ID and traits your application is allowed to send; the full lifecycle is covered in
-[Consent, identity, profile, and reset](#consent-identity-profile-and-reset). The callback runs once
-after that live owned runtime exists, during a retained root lifetime that ends when the root
-unmounts. A real remount starts another lifetime. Its SDK-provided
-`BeforeInitialPageClient` exposes methods that stay bound when destructured: `identify` supplies
-visitor identity, `screen` records a screen-view Experience event, and `track` sends an app-named
-custom Experience event.
-
-Return one value that represents all before-initial-page operations. A JavaScript `Promise`
-represents work that finishes later; a **thenable** is a Promise-like object with a `.then()` method.
-An `async` callback returns one Promise automatically, and every operation you `await` becomes part
-of that returned work. A standalone `OptimizationProvider` with an injected SDK does not accept
-this option.
-
-**Adapt this to your use case:** add the callback to the existing browser binding and stop exporting
-the separate tracker for this path. `app-user-id` and `client_ready` are app-owned identifiers in
-this example; replace them with the browser identity store and custom event name your app owns.
-
-```diff
- // lib/optimization.ts
--import { bindNextjsPagesRouterOptimization } from '@contentful/optimization-nextjs/pages-router'
-+import {
-+  bindNextjsPagesRouterOptimization,
-+  type BeforeInitialPageOptions,
-+} from '@contentful/optimization-nextjs/pages-router'
-
--export const { NextPagesAutoPageTracker, OptimizationRoot, OptimizedEntry } =
-+const APP_USER_ID_KEY = 'app-user-id'
-+const CLIENT_READY_EVENT = 'client_ready'
-+
-+const beforeInitialPage = {
-+  run: async ({ identify, track }) => {
-+    const userId = window.localStorage.getItem(APP_USER_ID_KEY)
-+    if (userId !== null) await identify({ userId })
-+    await track({ event: CLIENT_READY_EVENT })
-+  },
-+  onError: (error) => console.warn('Before-initial-page work failed.', error),
-+} satisfies BeforeInitialPageOptions
-+
-+export const { OptimizationRoot, OptimizedEntry } =
-   bindNextjsPagesRouterOptimization({
-     spaceId: process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID!,
-     environment: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'master',
-     locale: 'en-US',
-+    beforeInitialPage,
-     // your existing browser config
-   })
-```
-
-The before-initial-page root requires `routeKey` and lazy `buildPagePayload`. It does not accept
-`initialPagePayload`, the eager page data object computed before later route changes. The `_app.tsx`
-root in the quick start already supplies the two required values. Remove only the separate tracker
-from this before-initial-page subtree; leaving it mounted creates a second page owner.
-
-**Adapt this to your use case:** keep the handoff, current route key, lazy payload builder, and page
-component from your existing `_app.tsx`.
-
-```diff
- // pages/_app.tsx
--import { NextPagesAutoPageTracker, OptimizationRoot } from '@/lib/optimization'
-+import { OptimizationRoot } from '@/lib/optimization'
-
- <OptimizationRoot
-   buildPagePayload={() => ({ properties: { path: routeKey } })}
-   handoff={handoff}
-   routeKey={routeKey}
- >
--  <NextPagesAutoPageTracker initialPageEvent={handoff ? 'skip' : 'emit'} />
-   <Component {...pageProps} />
- </OptimizationRoot>
-```
-
-A **direct page attempt** means the root calls the page-event API itself once before automatic route
-tracking starts. The root's **page emitter** is its built-in route-change logic, not a tracker
-component you mount. After the direct attempt finishes, its initial `skip` mark records the attempted
-route as handled without sending another event. A later route change makes the emitter send its
-normal page event. If the page call returns `{ accepted: false }`, the SDK finished the call but did
-not admit that page event locally; the sequence still advances without an immediate same-route
-retry.
-
-The watchdog uses 3,000 ms when `maxWaitMs` is omitted and accepts any positive finite value. A
-value of `0`, a negative number, `NaN`, `Infinity`, or `-Infinity` synchronously throws
-`TypeError('beforeInitialPage.maxWaitMs must be a positive finite number.')` before the provider,
-callback, page, `onError`, or watchdog runs. A callback throw, returned-work rejection, or watchdog
-expiry is reported to `onError` when supplied. While the root remains mounted and the same live
-owned runtime is current, the root still attempts the page.
-
-The watchdog stops waiting but does not cancel callback code or a request it already sent.
-Fire-and-forget work that the callback does not return can finish after the page. If the root
-unmounts or its live runtime is replaced, only unsent local page and readiness continuation is
-suppressed; work already started is not canceled.
-
-A route change after the direct page attempt starts neither cancels that attempt nor starts a
-competing page attempt. The root settles and marks the captured attempted route before enabling
-later page emission. A route observed only while the attempt is in flight is not emitted; a route
-change after readiness emits normally.
-
-> [!NOTE]
->
-> If callback and page work remain pending when an entry reaches its existing five-second fallback
-> deadline, the entry can reveal baseline content. With live updates disabled, that first visible
-> content stays frozen even if the before-initial-page work later selects a variant. Enable
-> [Browser takeover and live updates](#browser-takeover-and-live-updates) only when a late
-> replacement is intended.
+For browser delivery, the browser checks live consent and submits the server-built events through ordinary interceptors and queues, using one Personalization batch followed by Analytics through the normal queues. A successful browser Experience response can establish durable continuity when persistence consent permits it. Preview content renders while delivery is pending. Keep the handoff private: public and static handoffs cannot carry replay.
 
 Use the accepted and blocked event streams introduced in
 [Analytics forwarding](#analytics-forwarding) for a development-only ordering check.
@@ -573,8 +510,8 @@ Use the accepted and blocked event streams introduced in
 complete event records and removes both subscriptions when the root tears down.
 
 ```diff
- bindNextjsPagesRouterOptimization({
-   // your existing browser config and beforeInitialPage
+bindNextjsPagesRouterOptimization({
+  // your existing browser config
 +  onStatesReady: (states) => {
 +    if (process.env.NODE_ENV !== 'development') return
 +
@@ -590,22 +527,19 @@ complete event records and removes both subscriptions when the root tears down.
 +      blocked.unsubscribe()
 +    }
 +  },
- })
+})
 ```
 
-Set the example identity first with
-`localStorage.setItem('app-user-id', 'guide-user')`, then reload the page that uses
-`beforeInitialPage`. The identify and `client_ready` results must appear, as accepted or blocked
-calls, before at most one initial `page` result. Navigate once and confirm one later `page` result.
-An initial `page` before
-callback completion or two initial page results usually means the separate tracker is still
-mounted. These streams prove local SDK admission or blocking, not API delivery.
-
-The Pages server binder deliberately rejects `NextjsClientOptimizationConfigWithBeforeInitialPage`
-through its `beforeInitialPage?: never` parameter boundary. The callback remains browser-only:
-the server binder does not run it or serialize it into the handoff that the app passes through page
-props. Direct Web and Node integrations keep this ordering in application code by awaiting their
-identity or custom-event work before calling their existing page-event API.
+`onStatesReady` runs after hydration and before the root route effect, so its subscribers can observe
+locally accepted events from browser delivery. In the browser Network panel, find one
+browser `POST` whose path ends in `/profiles` or `/profiles/:id` and whose URL has no
+`type=preflight` query parameter. The separate server preview is an Experience profile `POST` with
+`type=preflight`, not a CORS preflight. In the browser request body, inspect the `events` array:
+zero or more optional identify/track events appear in your supplied order, followed by the page
+event. Treat a successful response, not a local stream event, as the browser commit and
+durable-persistence point. Then navigate once and use the streams to confirm one later page result.
+Two page events for one route usually mean app code mounted another tracker or called the page API
+directly. The streams prove local SDK acceptance or blocking, not API delivery.
 
 ### Personalizing entries
 
@@ -728,10 +662,6 @@ bindNextjsPagesRouterServerOptimization({
 
 ## Optional integrations
 
-Looking for optional before-initial-page work? Because it changes first-page ownership, its
-setup and verification live in
-[The bound root and page events](#the-bound-root-and-page-events).
-
 ### Analytics forwarding
 
 **Integration category:** Optional
@@ -844,7 +774,6 @@ export async function getStaticProps({ params }) {
           selectedOptimizations: segment.selectedOptimizations,
           changes: segment.changes,
           hydration: 'preserve-server',
-          initialPageEvent: 'emit',
         }),
       },
       hero: resolvedHero.isEmptyVariant ? null : resolvedHero.entry,
@@ -872,6 +801,20 @@ escape hatches are `/server` for direct Node request control with
 `/tracking-attributes` for manually rendered analytics-only markup.
 `configureNextjsServerOptimization(...)` configures a stateless server runtime; it is not a
 request-isolation context. Manual flows still pass `handoff` to a React root.
+
+The bound Pages Router `createRequestHandoff(context, options)`, the bound manual App Router
+`createRequestHandoff(options)`, and the lower-level `/server`
+`createNextjsRequestHandoff(...)` accept only already-resolved `initialExperienceEvents` arrays.
+Resolve application inputs before calling those helpers. The App Router request config and Edge
+request helper are the framework resolver boundaries that can accept callbacks.
+
+An accepted low-level server preview without a derived route key produces a private, state-only
+handoff. Hydration applies that state in memory, then the browser performs ordinary current-page
+tracking. When a handoff does carry replay, a matching replay whose page command is accepted owns
+the route and starts browser delivery. A route mismatch, unusable event payload, blocked page
+command, or browser-delivery failure consumes the one-shot replay and falls through to an ordinary
+page attempt in the same call. The SDK does not retain or retry that replay, and only a successful
+browser commit can establish durable persistence.
 
 Lower-level resolver calls keep selections as the optional second positional argument:
 `resolveOptimizedEntry(entry, selectedOptimizations)`. Managed fetch calls accept an ID or a
@@ -919,9 +862,10 @@ export async function getServerSideProps(context) {
 **Integration category:** Advanced or production-only
 
 When no Optimization event may emit before explicit consent, configure a strict event policy and
-return `false` from `consent.server` until your app-owned consent record is accepted. Use
-`initialPageEvent="skip"` only when a handoff lets the root own the same route's first page event.
-Use blocked-event diagnostics to verify denied events are dropped at the SDK boundary.
+return `false` from `consent.server` until your app-owned consent record is accepted. A blocked
+server preview carries no replay state, so the browser root makes its normal current-page attempt
+under browser consent. Use blocked-event diagnostics to verify denied events are dropped at the SDK
+boundary, and keep the root as the only route coordinator.
 
 ## Production checks
 
@@ -930,9 +874,14 @@ Use blocked-event diagnostics to verify denied events are dropped at the SDK bou
 - Confirm `consent.server`, request handoff defaults, browser consent defaults, and app-owned
   consent storage agree.
 - Confirm `ctfl-opt-aid` is browser-readable where server and browser profile continuity is needed.
-- Confirm first-page ownership matches one mode. In normal tracker mode, the separate tracker skips
-  a server-owned first event and emits later routes. In `beforeInitialPage` mode, no tracker is
-  mounted and the root's direct attempt plus built-in emitter do not duplicate the initial route.
+- Perform the browser commit check in
+  [The bound root and page events](#the-bound-root-and-page-events).
+- Reload once, then navigate once; confirm one browser commit for the initial route and one page
+  event for the later route, with no duplicate request for either route.
+- Before the browser commit, inspect cookies and confirm the server preview wrote no new
+  `ctfl-opt-aid`; after the successful browser response, confirm the cookie appears only when
+  persistence consent permits it. Repeat with JavaScript disabled if the application supports it
+  and confirm previewed HTML remains while browser delivery and the new cookie are absent.
 - Confirm baseline fallback is acceptable when no variant applies or Contentful links are
   unresolved.
 - Confirm request-personalized output is never stored in a public shared cache.
@@ -941,14 +890,15 @@ Use blocked-event diagnostics to verify denied events are dropped at the SDK bou
 
 ## Troubleshooting
 
-| Symptom                                                         | Likely cause                                                                                                           | Check                                                                                                                                                                       |
-| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Entries stay on baseline                                        | Missing handoff props, no matching variant, denied consent, unresolved variant links, or all-locale CDA payload        | Target all visitors for the first test, pass `contentfulOptimization.handoff` into `_app.tsx`, and fetch one locale with enough `include` depth                             |
-| A heterogeneous render cannot read content-type-specific fields | The skeleton union omits a possible content type, or the entry was not narrowed before rendering                       | Include every baseline and variant skeleton in `S`, then narrow with `isEntryOfContentType`                                                                                 |
-| Page returns 500 instead of baseline                            | The request handoff call threw and the page did not catch it                                                           | Wrap the personalization helper according to your fallback policy                                                                                                           |
-| Duplicate first page events                                     | Normal tracker mode gave both root and tracker the initial event, or `beforeInitialPage` mode still mounts the tracker | In normal tracker mode, set the tracker from the handoff's `initialPageEvent`; in `beforeInitialPage` mode, remove the tracker and let the root own initial and later pages |
-| Live entries do not change after identify or reset              | The entry is locked to the handoff and live updates are off                                                            | Enable live updates for the route or entry, or open the preview panel in an allowed environment                                                                             |
-| Personalized HTML is cached for the wrong visitor               | Request handoff output entered a public cache                                                                          | Keep request handoff pages private and use public permutation handoff only for explicit static or ISR permutations                                                          |
+| Symptom                                                         | Likely cause                                                                                                    | Check                                                                                                                                           |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entries stay on baseline                                        | Missing handoff props, no matching variant, denied consent, unresolved variant links, or all-locale CDA payload | Target all visitors for the first test, pass `contentfulOptimization.handoff` into `_app.tsx`, and fetch one locale with enough `include` depth |
+| A heterogeneous render cannot read content-type-specific fields | The skeleton union omits a possible content type, or the entry was not narrowed before rendering                | Include every baseline and variant skeleton in `S`, then narrow with `isEntryOfContentType`                                                     |
+| Page returns 500 instead of baseline                            | The request handoff call threw and the page did not catch it                                                    | Wrap the personalization helper according to your fallback policy                                                                               |
+| Duplicate browser page events                                   | App code mounted another tracker or calls the page API beside the root                                          | Keep `OptimizationRoot` as the only route coordinator; remove the extra tracker or manual page call                                             |
+| Server variant renders but profile continuity is absent         | JavaScript did not run, the browser commit failed, or browser persistence consent is false                      | Run the browser commit check above; the server preview does not write a new `ctfl-opt-aid` cookie                                               |
+| Live entries do not change after identify or reset              | The entry is locked to the handoff and live updates are off                                                     | Enable live updates for the route or entry, or open the preview panel in an allowed environment                                                 |
+| Personalized HTML is cached for the wrong visitor               | Request handoff output entered a public cache                                                                   | Keep request handoff pages private and use public permutation handoff only for explicit static or ISR permutations                              |
 
 ## Reference implementations to compare against
 

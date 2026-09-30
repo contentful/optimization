@@ -661,13 +661,9 @@ evaluate route-based experiences, so most integrations emit one on first load an
 change. React Web ships auto page trackers for common routers; each dedupes consecutive route keys,
 including React Strict Mode's double effects.
 
-Choose one page-ownership mode for each root. The steps below use the normal tracker mode. In
-`beforeInitialPage` mode, the **initial page decision** is the root's one choice to send the first
-browser `page` event or skip it because an applied handoff already owns that route. The root runs
-the callback after its live owned runtime exists, makes that direct page attempt or skip, marks the
-attempted route without emitting it again, and emits for later route changes. Replace the tracker
-with the
-[before-initial-page root](#run-work-before-the-initial-page-decision).
+Use one route owner for each root. The common path mounts one router tracker. An owned root with
+`beforeInitialPage` uses its built-in route coordinator instead, so replace the component tracker
+with the [before-initial-page root](#run-work-before-the-initial-page-decision).
 
 1. In normal tracker mode, mount one tracker inside `OptimizationRoot` and inside the router context
    it reads. Use the tracker that matches your router.
@@ -749,10 +745,12 @@ In normal tracker mode, attach route-aware properties with `getPagePayload`:
 />
 ```
 
-In normal tracker mode, the `next-pages` and `next-app` trackers also accept
-`initialPageEvent="skip"` for setups where an SSR handoff root owns the first route. In a
-browser-only React SPA you emit the first page event yourself, so leave it at the default
-(`"emit"`).
+For a server handoff, the server sends optional inputs followed by the SDK page in one Experience profile `POST` with `type=preflight`. This is an SDK transport mode, not browser CORS preflight. The root applies preview state in memory and owns the initial replay/page decision without delaying preview rendering. A successful **browser commit** is the non-preflight Experience response; only that response can establish durable continuity. Configure server preview in the corresponding Next.js guide.
+
+> [!NOTE]
+>
+> Without JavaScript, previewed server HTML can still render, but browser delivery and a new
+> `ctfl-opt-aid` cookie do not occur. `ctfl-opt-aid` is the exact SDK-owned cookie name.
 
 ### Consent and privacy handoff
 
@@ -928,31 +926,29 @@ behavior, see
 
 **Integration category:** Optional
 
-Use `beforeInitialPage` when an owned `OptimizationRoot` must finish returned identity or custom
-Experience event work before that root makes its initial page decision. This is an alternative to
-the router tracker in [Page events and route tracking](#page-events-and-route-tracking), not an
-addition to it. The before-initial-page root is the sole page owner for its subtree.
+Use `beforeInitialPage` in a browser-owned or replay-less React root when identity or custom
+Experience event work must finish before the root tracks the current page. This is an alternative
+to the router tracker in [Page events and route tracking](#page-events-and-route-tracking), not an
+addition to it. The root becomes the sole route owner for its subtree. Next.js request integrations
+put zero or more optional `identify`/`track` commands in server `initialExperienceEvents` instead;
+the SDK appends the page command.
 
-After the root's owned runtime is live, the callback runs once during a retained root lifetime,
-which starts when that `OptimizationRoot` mounts and ends when it unmounts. A real remount starts a
-new lifetime and runs the callback again. The SDK-provided `BeforeInitialPageClient` exposes three
-methods that stay bound when destructured:
+After the owned runtime is live, the callback runs once per mounted root. The SDK-provided
+`BeforeInitialPageClient` exposes three bound methods:
 
 - `identify` supplies the visitor ID and traits your app is allowed to send.
 - `screen` records a screen-view Experience event.
 - `track` sends an app-named custom Experience event.
 
-Return one value that represents all before-initial-page operations. A JavaScript `Promise`
-represents work that finishes later; a **thenable** is a Promise-like object with a `.then()` method.
-An `async` callback returns one Promise automatically, and every operation you `await` becomes part
-of the work the root waits for.
+Return the work the root must await. An `async` callback returns one Promise automatically, so await
+each initial operation inside it. Work started without being returned can finish after the page.
 
 Supplying `beforeInitialPage` changes the root's required props: `routeKey` and
-`buildPagePayload` are required. `initialPagePayload`, an eager page data object computed before
-later route changes, is not accepted. The lazy builder matters because the route can change while
-callback work is pending. Your app owns `routeKey`: make it a stable identity for the current route
-and update it when the router changes. Your app also owns `buildPagePayload`; keep it lazy so the
-root reads current route data after the callback instead of capturing an eager initial payload.
+`buildPagePayload` are required. Your app owns both values: update the path-plus-search `routeKey`
+when the router changes, and keep the payload builder lazy so it reads the full page URL after the
+callback.
+
+The initial operation hydrates preview state in memory, then registers `onStatesReady` subscriptions before emitting replay events. Preview-backed content remains visible while event delivery is pending. A matching page replay supplies the initial event work. Otherwise `beforeInitialPage` runs before the ordinary page attempt; callback completion gates that attempt rather than rendering. The operation reads current router inputs after asynchronous hydration and callback work. A newer handoff does not cancel earlier event delivery. If replay partially succeeds and then fails, an already accepted page prevents a duplicate fallback.
 
 **Adapt this to your use case:** replace the normal tracker in the router root from the earlier
 section. `app-user-id` and `client_ready` are app-owned identifiers in this example; replace them
@@ -991,7 +987,7 @@ code remains yours.
 +    <OptimizationRoot
 +      spaceId={import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID}
 +      routeKey={routeKey}
-+      buildPagePayload={() => ({ properties: { path: routeKey } })}
++      buildPagePayload={() => ({ properties: { url: window.location.href } })}
 +      beforeInitialPage={beforeInitialPage}
 +      onStatesReady={(states) => {
 +        if (!import.meta.env.DEV) return
@@ -1012,53 +1008,25 @@ code remains yours.
        <Outlet />
      </OptimizationRoot>
    )
- }
+}
 ```
 
-The watchdog timeout bounds how long the root waits for returned callback work:
-
-| `maxWaitMs` value                                         | Result                                                                                                                                                                        |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Omitted                                                   | The root waits up to 3,000 ms.                                                                                                                                                |
-| Any positive finite number                                | The root waits up to that many milliseconds.                                                                                                                                  |
-| `0`, a negative number, `NaN`, `Infinity`, or `-Infinity` | Rendering synchronously throws `TypeError('beforeInitialPage.maxWaitMs must be a positive finite number.')` before the provider, callback, page, `onError`, or watchdog runs. |
-
-A **direct page attempt** means the root calls the page-event API itself once before automatic route
-tracking starts. The root's **page emitter** is its built-in route-change logic, not a tracker
-component you mount. After the direct attempt finishes, its initial `skip` mark records the attempted
-route as handled without sending another event. A later route change makes the emitter send its
-normal page event. If the page call returns `{ accepted: false }`, the SDK finished the call but did
-not admit that page event locally; the sequence still advances and does not retry the same route
-immediately.
-
-A callback throw, returned-work rejection, or watchdog expiry is reported to `onError` when you
-supply it. While the root remains mounted and the same live owned runtime is current, the root still
-makes the direct page attempt. A page rejection also ends the initial sequence. The watchdog stops
-waiting but does not cancel the callback or a request it already sent. Work started without being
-returned is fire-and-forget activity and can finish after the page. If the root unmounts or its live
-runtime is replaced, only unsent local page and readiness continuation is suppressed; work already
-started is not canceled.
-
-A route change after the direct page attempt starts neither cancels that attempt nor starts a
-competing page attempt. The root settles and marks the captured attempted route before enabling
-later page emission. A route observed only while the attempt is in flight is not emitted; a route
-change after readiness emits normally.
-
-> [!NOTE]
->
-> If callback and page work remain pending when an entry reaches its existing five-second fallback
-> deadline, the entry can reveal baseline content. With live updates disabled, that first visible
-> content stays frozen even if the before-initial-page work later selects a variant. Enable
-> [Live updates](#live-updates) only when a late replacement is the intended experience.
+The root waits up to 3,000 ms by default; set a positive finite `maxWaitMs` when your startup budget
+differs. Callback errors, rejected work, and timeouts reach `onError`, then the root continues to its
+ordinary current-page call.
 
 The inline development-only `onStatesReady` observer logs locally accepted and blocked events and
 unsubscribes from both streams during cleanup. Set the example identity first with
-`localStorage.setItem('app-user-id', 'guide-user')`, then reload. The callback's identify and
-`client_ready` results must appear, as accepted or blocked calls, before at most one initial `page`
-result. Navigate once after readiness and confirm one later `page` result. An initial `page` before
+`localStorage.setItem('app-user-id', 'guide-user')`, then reload. In this replay-less example, the
+callback's identify and `client_ready` results appear, as accepted or blocked calls, before one
+initial `page` result. Navigate once and confirm one later `page` result. An initial `page` before
 the callback results or two initial page results usually means the normal tracker is still mounted.
-These streams prove local SDK admission or blocking, not API delivery. Remove the observer after
-this development check.
+These streams prove local SDK acceptance or blocking, not API delivery. Remove the observer after
+this development check. This check applies to the replay-less example above. For a server handoff,
+use the matching browser Network and duplicate-route checks in the
+[App Router guide](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md#the-bound-root-and-page-events)
+or
+[Pages Router guide](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md#the-bound-root-and-page-events).
 
 `beforeInitialPage` belongs only to an owned content `OptimizationRoot`. An injected
 `OptimizationProvider` and `OptimizationAnalyticsRoot` do not accept it. Direct Web and Node
@@ -1329,7 +1297,8 @@ The provider always renders its children — they are never withheld or unmounte
 `sdk` and no `handoff`, children render against the live injected SDK from the first render;
 `onStatesReady` alone does not add a snapshot phase. When a server, static, or edge renderer passes a
 content `handoff`, children render against that snapshot first and the provider hydrates the live SDK
-from the same state after React commits.
+from the same state after React commits. Handoff state is applied only in memory; a later successful
+live Experience response is what can establish durable continuity.
 
 React Web validates handoff cache safety before children render from the initial snapshot runtime.
 If a public or static handoff contains profile state, the provider fails before showing
@@ -1400,10 +1369,15 @@ Run these checks before release:
   `withAllLocales` / `locale=*` payloads to `OptimizedEntry` or the resolver hooks.
 - Confirm default-on vs opt-in startup matches policy, `allowedEventTypes` matches the pre-consent
   posture, and revoking consent blocks non-allowed events.
-- Confirm the first page event and route-change page events deliver. In normal tracker mode, mount
-  one tracker per router tree. In `beforeInitialPage` mode, mount no tracker and confirm the root's
-  direct attempt plus built-in emitter do not duplicate the initial route. Confirm Strict Mode
-  remounts do not duplicate either mode.
+- Confirm current-page and route-change events deliver. In component-tracker mode, mount one tracker
+  per router tree. In `beforeInitialPage` mode, mount no tracker. Confirm a replay-less root runs the
+  callback before one initial page, while a continuation matching the route the root is about to
+  track skips the callback and delivers once through the built-in coordinator. For server handoffs,
+  use the exact
+  [App Router](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md#the-bound-root-and-page-events)
+  or
+  [Pages Router](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md#the-bound-root-and-page-events)
+  browser checks. Confirm Strict Mode remounts do not duplicate either mode.
 - Confirm baseline fallback renders when the Experience API fails, variants are missing, links are
   unresolved, or a payload is all-locale — and that `OptimizedEntry` stops showing loading after
   resolution settles or the 5-second reveal.
