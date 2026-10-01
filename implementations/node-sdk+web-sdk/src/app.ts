@@ -1,10 +1,13 @@
-import ContentfulOptimization from '@contentful/optimization-node'
-import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
+import ContentfulOptimization, {
+  createRequestHandoffFromPreview,
+  type OptimizationNodeConfig,
+} from '@contentful/optimization-node'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import type {
-  EventEmissionResult,
+  InitialExperienceCommandInput,
   UniversalEventBuilderArgs,
 } from '@contentful/optimization-node/core-sdk'
+import type { ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
 import cookieParser from 'cookie-parser'
 import express, { type Express, type Request, type Response } from 'express'
 import rateLimit from 'express-rate-limit'
@@ -30,6 +33,18 @@ const __dirname = path.dirname(__filename)
 app.set('view engine', 'ejs')
 app.set('views', path.join(__dirname, '.'))
 
+const optimizationConfig = {
+  allowedEventTypes: [],
+  spaceId: process.env.PUBLIC_CONTENTFUL_SPACE_ID ?? '',
+  environment: process.env.PUBLIC_CONTENTFUL_ENVIRONMENT,
+  logLevel: 'debug',
+  locale: APP_LOCALE,
+  api: {
+    insightsBaseUrl: process.env.PUBLIC_INSIGHTS_API_BASE_URL,
+    experienceBaseUrl: process.env.PUBLIC_EXPERIENCE_API_BASE_URL,
+  },
+} satisfies OptimizationNodeConfig
+
 const config = {
   contentful: {
     accessToken: process.env.PUBLIC_CONTENTFUL_TOKEN,
@@ -39,19 +54,10 @@ const config = {
     basePath: process.env.PUBLIC_CONTENTFUL_BASE_PATH,
     insecure: Boolean(process.env.PUBLIC_CONTENTFUL_CDA_HOST),
   },
-  optimization: {
-    spaceId: process.env.PUBLIC_CONTENTFUL_SPACE_ID ?? '',
-    environment: process.env.PUBLIC_CONTENTFUL_ENVIRONMENT,
-    logLevel: 'debug',
-    locale: APP_LOCALE,
-    api: {
-      insightsBaseUrl: process.env.PUBLIC_INSIGHTS_API_BASE_URL,
-      experienceBaseUrl: process.env.PUBLIC_EXPERIENCE_API_BASE_URL,
-    },
-  },
+  optimization: optimizationConfig,
 } as const
 
-const sdk = new ContentfulOptimization(config.optimization)
+const sdk = new ContentfulOptimization(optimizationConfig)
 const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
 
 type QsPrimitive = string | ParsedQs
@@ -59,13 +65,12 @@ type QsArray = QsPrimitive[] // Note: mixed arrays are allowed by ParsedQs
 type QsValue = QsPrimitive | QsArray | undefined
 interface ProfileResult {
   readonly appLocale: string
-  readonly optimizationData: OptimizationData | undefined
+  readonly handoff: ContentOptimizationHandoff | undefined
 }
 interface RenderResponseOptions {
   readonly appConsent: boolean | undefined
   readonly appLocale: string
-  readonly id?: string
-  readonly optimizationData?: OptimizationData
+  readonly handoff?: ContentOptimizationHandoff
   readonly userId?: string
 }
 
@@ -129,29 +134,16 @@ function getAppConsentFromCookies(cookies: unknown): boolean | undefined {
   return undefined
 }
 
-function getAcceptedOptimizationData(result: EventEmissionResult): OptimizationData | undefined {
-  return result.accepted ? result.data : undefined
-}
-
 function respond(
   res: Response,
-  { appConsent, appLocale, id, optimizationData, userId }: RenderResponseOptions,
+  { appConsent, appLocale, handoff, userId }: RenderResponseOptions,
 ): void {
-  if (appConsent === true && id) {
-    res.cookie(ANONYMOUS_ID_COOKIE, id, {
-      path: '/',
-      sameSite: 'lax', // good default for same-site apps
-    })
-  } else {
-    res.clearCookie(ANONYMOUS_ID_COOKIE, { path: '/' })
-  }
-
   res.render('index', {
     config,
     appConsent: appConsent ?? null,
     appLocale,
     identified: userId,
-    optimizationData: optimizationData ?? null,
+    optimizationHandoff: handoff ?? null,
   })
 }
 
@@ -159,74 +151,96 @@ async function getProfile(
   req: Request,
   appConsent: boolean | undefined,
   userId?: string,
-  anonymousId?: string,
+  track?: boolean,
 ): Promise<ProfileResult> {
   if (appConsent !== true) {
     return {
       appLocale: APP_LOCALE,
-      optimizationData: undefined,
+      handoff: undefined,
     }
   }
 
   const args = getUniversalEventBuilderArgs(req, APP_LOCALE)
-  const cookieProfile = anonymousId ? { id: anonymousId } : undefined
-  const requestOptimization = sdk.forRequest({
-    consent: { events: true, persistence: true },
-    eventContext: args,
-    locale: APP_LOCALE,
-    profile: cookieProfile,
-  })
+  const anonymousId = getAnonymousIdFromCookies(req.cookies)
+  try {
+    const requestOptimization = sdk.forRequest({
+      consent: { events: true, persistence: true },
+      eventContext: args,
+      locale: APP_LOCALE,
+      ...(anonymousId === undefined ? {} : { profile: { id: anonymousId } }),
+    })
 
-  if (!userId) {
+    const events: InitialExperienceCommandInput[] = []
+    if (userId) {
+      events.push({ type: 'identify', userId, traits: { identified: true } })
+    } else if (track) {
+      events.push({ type: 'track', event: 'server-previewed-page' })
+    }
+    const routeKey = `${req.path}${new URL(req.originalUrl, 'http://localhost').search}`
+    const preview = await requestOptimization.previewInitialExperience({
+      ...(events.length > 0 ? { events } : {}),
+      page: { properties: { url: req.originalUrl } },
+    })
+    if (!preview.accepted) {
+      return {
+        appLocale: APP_LOCALE,
+        handoff: undefined,
+      }
+    }
+
     return {
       appLocale: APP_LOCALE,
-      optimizationData: getAcceptedOptimizationData(await requestOptimization.page()),
+      handoff: createRequestHandoffFromPreview({
+        preview,
+        routeKey,
+        hydration: 'preserve-server',
+      }),
     }
-  }
-
-  await requestOptimization.identify({
-    userId,
-    traits: { identified: true },
-  })
-
-  return {
-    appLocale: APP_LOCALE,
-    optimizationData: getAcceptedOptimizationData(await requestOptimization.page()),
+  } catch {
+    // Preview is an enhancement. Do not carry request identity into a baseline fallback.
+    process.emitWarning('Optimization preview failed; rendering baseline output.')
+    return {
+      appLocale: APP_LOCALE,
+      handoff: undefined,
+    }
   }
 }
 
 app.get('/', limiter, async (req, res) => {
   const appConsent = getAppConsentFromCookies(req.cookies)
-  const { appLocale, optimizationData } = await getProfile(req, appConsent)
+  const { appLocale, handoff } = await getProfile(req, appConsent)
 
   respond(res, {
     appConsent,
     appLocale,
-    id: optimizationData?.profile.id,
-    optimizationData,
+    handoff,
   })
 })
 app.get('/smoke-test', limiter, (_, res) => {
   res.render('index', {
-    appConsent: null,
     config,
+    appConsent: null,
     appLocale: APP_LOCALE,
-    optimizationData: null,
+    optimizationHandoff: null,
   })
 })
 app.get('/user/:id', limiter, async (req, res) => {
-  const anonymousId = getAnonymousIdFromCookies(req.cookies)
   const appConsent = getAppConsentFromCookies(req.cookies)
   const userId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  const { appLocale, optimizationData } = await getProfile(req, appConsent, userId, anonymousId)
+  const { appLocale, handoff } = await getProfile(req, appConsent, userId)
 
   respond(res, {
     appConsent,
     appLocale,
-    id: optimizationData?.profile.id,
-    optimizationData,
+    handoff,
     userId,
   })
+})
+app.get('/track', limiter, async (req, res) => {
+  const appConsent = getAppConsentFromCookies(req.cookies)
+  const { appLocale, handoff } = await getProfile(req, appConsent, undefined, true)
+
+  respond(res, { appConsent, appLocale, handoff })
 })
 app.use('/dist', express.static('./public/dist'))
 

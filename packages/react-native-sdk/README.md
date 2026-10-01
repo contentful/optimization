@@ -133,12 +133,12 @@ Only `spaceId` is required.
 
 Common `api` options:
 
-| Option              | Required? | Default                                    | Description                                      |
-| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------ |
-| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                  |
-| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                    |
-| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Experience API features to apply to each request |
-| `preflight`         | No        | `false`                                    | Aggregate a new profile state without storing it |
+| Option              | Required? | Default                                    | Description                                                             |
+| ------------------- | --------- | ------------------------------------------ | ----------------------------------------------------------------------- |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                         |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                           |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Experience API features to apply to each request                        |
+| `preflight`         | No        | `false`                                    | Deprecated compatibility input; inert for the stateful React Native SDK |
 
 Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalTimeout`,
 `onFailedAttempt`, and `onRequestTimeout`. Default retries intentionally apply only to HTTP `503`

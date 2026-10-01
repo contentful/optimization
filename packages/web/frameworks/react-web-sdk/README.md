@@ -348,9 +348,8 @@ component-local UI state, keep using hooks and React effects under the provider.
 ### Work before the initial page decision
 
 Use `beforeInitialPage` on an owned `OptimizationRoot` when browser identity or custom Experience
-event work must finish before that root's initial page decision. The initial page decision is the
-root's one choice to send the first browser page event or skip it because an applied handoff already
-owns that route. After the root's live owned runtime exists, the callback receives receiver-safe
+event work must finish before its initial page coordination. After the root's live owned runtime
+exists, the callback receives receiver-safe
 `identify`, `screen`, and `track` methods, so you can destructure and call them without losing the
 SDK receiver:
 
@@ -371,13 +370,7 @@ SDK receiver:
 </OptimizationRoot>
 ```
 
-A root with `beforeInitialPage` requires `routeKey` and lazy `buildPagePayload`, and it does not
-accept `initialPagePayload`. The app owns `routeKey` as the stable identity of the current route and
-owns `buildPagePayload` as a lazy read of current page data. The root awaits the work returned by
-`run` or its watchdog, reads the latest route and payload builder for one direct page attempt,
-activates the existing page emitter with a non-emitting initial `skip` mark for the attempted route,
-and emits normally for later route changes. A successfully applied same-route handoff can make the
-direct page decision a `skip`; otherwise, the direct page attempt uses `emit`.
+A root with `beforeInitialPage` requires `routeKey` and lazy `buildPagePayload`; it does not accept `initialPagePayload`. The app owns the route identity and payload builder. The combined operation hydrates preview state and registers subscriptions before events. An accepted matching page replay supplies the initial work; otherwise the root awaits returned callback work or its watchdog before an ordinary page attempt. This does not gate preview rendering. Newer handoffs preserve earlier admitted events. Hydration is memory-only, and durable continuity requires a successful live response and persistence consent. Later routes use ordinary tracking.
 
 This root is the sole page owner for its subtree. Do not also mount a React Router, TanStack Router,
 Next.js App Router, or Next.js Pages Router automatic page tracker. Omit `beforeInitialPage` when a
@@ -393,15 +386,12 @@ The sequence is best-effort. Return every promise or thenable that must finish b
 fire-and-forget work continues as later activity. Callback rejection or watchdog expiry is reported
 through `onError` when supplied. While the root remains mounted and the same live owned runtime is
 current, the page is still attempted. The watchdog stops waiting but does not cancel callback code
-or an in-flight request. If the root unmounts or its runtime is replaced, only unsent local page and
-readiness continuation is suppressed.
+or an in-flight request. If the root unmounts or its runtime is replaced, only unsent local page work is suppressed.
 
-A route change after the direct page attempt starts neither cancels that attempt nor starts a
-competing attempt. The root settles and marks the captured attempted route before enabling later
-page emission. A route observed only during the in-flight attempt is not emitted; a route change
-after readiness emits normally. The existing optimized-entry deadline can commit baseline content
-first, and with default `liveUpdates={false}`, that fallback remains frozen after the
-before-initial-page work later succeeds.
+A route change does not cancel events already handed off. Ordinary route effects wait for the
+initial operation, discard unsent work for disposed route effects, and then use the existing
+accepted/in-flight route tracker. The current route can emit after initial delivery settles.
+Preview content and entry resolution do not wait for event completion.
 
 ### Analytics-only handoff
 
@@ -556,7 +546,7 @@ Router adapters emit `page()` events for supported client-side routers:
 | TanStack Router    | `@contentful/optimization-react-web/router/tanstack-router` | Mount under the TanStack router tree and inside `OptimizationRoot`   |
 
 The `next-pages` tracker remains available for low-level Pages Router wiring. For full Next.js Pages
-Router SSR setup with `getServerSideProps`, request handoff, and anonymous ID cookie writes,
+Router SSR setup with `getServerSideProps` and request handoff,
 prefer the
 [`@contentful/optimization-nextjs/pages-router`](../nextjs-sdk/README.md#pages-router-setup) adapter
 path.
@@ -620,3 +610,5 @@ behavior.
   browser authoring workflows
 - [React Web reference implementation](../../../../implementations/react-web-sdk/README.md) -
   application using providers, router tracking, optimized entries, live updates, and entry tracking
+
+A root with route inputs owns the combined paired replay and initial-page decision. `OptimizationProvider` and the standalone state-hydration helpers publish state without retaining or submitting replay instructions. Custom route owners use the live SDK's `hydrateAndTrackCurrentPage()` operation for paired delivery. Recoverable hydration errors retain a usable owned or injected runtime and report the error through context; they do not require replacing rendered preview content.

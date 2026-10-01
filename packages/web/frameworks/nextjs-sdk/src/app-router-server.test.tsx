@@ -1,6 +1,7 @@
 import ContentfulOptimizationRuntime from '@contentful/optimization-node'
 import type { MergeTagEntry } from '@contentful/optimization-node/api-schemas'
 import type { CoreStatelessRequest } from '@contentful/optimization-node/core-sdk'
+import { EventBuilder } from '@contentful/optimization-node/core-sdk'
 import { useConsentState, useSelectedOptimizationsState } from '@contentful/optimization-react-web'
 import { PassThrough } from 'node:stream'
 import type { ReactElement } from 'react'
@@ -12,16 +13,14 @@ import type {
   createPublicPermutationCacheMetadata as createPublicPermutationCacheMetadataFactory,
   createPublicPermutationHandoff as createPublicPermutationHandoffFactory,
 } from './app-router-server'
-import {
-  NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER,
-  NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER,
-  serializeNextjsOptimizationRequestContext,
-} from './request-context'
+import { NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER } from './request-context'
 import type { OptimizationData, ServerTrackingBaselineEntry } from './server'
+const replayEventBuilder = new EventBuilder({
+  channel: 'server',
+  library: { name: 'test-server', version: '1.0.0' },
+})
 
 type CacheableFunction = (...args: never[]) => unknown
-type FetchMethod = (input: string | Request, init?: RequestInit) => Promise<Response>
-
 let bindNextjsAppRouterServerOptimization: typeof bindNextjsAppRouterServerOptimizationFactory
 let createStandaloneHandoffFromSelections: typeof createHandoffFromSelectionsFactory
 let createStandalonePublicPermutationHandoff: typeof createPublicPermutationHandoffFactory
@@ -119,13 +118,6 @@ const optimizationData: OptimizationData = {
       averageSessionLength: 0,
     },
   },
-}
-
-function setForwardedServerData(headers: Headers, value: unknown): void {
-  headers.set(
-    NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER,
-    serializeNextjsOptimizationRequestContext(value),
-  )
 }
 
 afterEach(() => {
@@ -247,12 +239,29 @@ function createMergeTagEntry(id: string, selector: string): MergeTagEntry {
   }
 }
 
-function mockRequestPage(result: Awaited<ReturnType<CoreStatelessRequest['page']>>): {
+type PreviewFixture =
+  | { readonly accepted: false }
+  | { readonly accepted: true; readonly data: OptimizationData }
+
+function mockRequestPreview(result: PreviewFixture): {
   readonly forRequest: ReturnType<typeof rs.spyOn>
-  readonly page: ReturnType<typeof rs.fn<CoreStatelessRequest['page']>>
+  readonly previewInitialExperience: ReturnType<
+    typeof rs.fn<CoreStatelessRequest['previewInitialExperience']>
+  >
 } {
   const originalForRequest = ContentfulOptimizationRuntime.prototype.forRequest
-  const page = rs.fn<CoreStatelessRequest['page']>(async () => await Promise.resolve(result))
+  const previewInitialExperience = rs.fn<CoreStatelessRequest['previewInitialExperience']>(
+    async () =>
+      await Promise.resolve(
+        result.accepted
+          ? {
+              ...result,
+              experience: [replayEventBuilder.buildPageView({})],
+              insights: [],
+            }
+          : result,
+      ),
+  )
   const forRequest = rs.spyOn(ContentfulOptimizationRuntime.prototype, 'forRequest')
 
   forRequest.mockImplementation(function mockForRequest(
@@ -260,11 +269,13 @@ function mockRequestPage(result: Awaited<ReturnType<CoreStatelessRequest['page']
     options,
   ) {
     const requestOptimization = originalForRequest.call(this, options)
-    rs.spyOn(requestOptimization, 'page').mockImplementation(page)
+    rs.spyOn(requestOptimization, 'previewInitialExperience').mockImplementation(
+      previewInitialExperience,
+    )
     return requestOptimization
   })
 
-  return { forRequest, page }
+  return { forRequest, previewInitialExperience }
 }
 
 function createRequest(): {
@@ -287,27 +298,6 @@ function setCurrentNextRequest(
   currentNextRequest = { ...request, url }
 
   return currentNextRequest
-}
-
-function mockProfileFetch(
-  data: OptimizationData = optimizationData,
-): ReturnType<typeof rs.fn<FetchMethod>> {
-  return rs.fn<FetchMethod>(
-    async () =>
-      await Promise.resolve(
-        new Response(
-          JSON.stringify({
-            data: {
-              changes: data.changes,
-              experiences: data.selectedOptimizations,
-              profile: data.profile,
-            },
-            error: null,
-            message: 'ok',
-          }),
-        ),
-      ),
-  )
 }
 
 async function renderToHtml(element: ReactElement): Promise<string> {
@@ -351,7 +341,6 @@ describe('Next.js App Router v2 binding', () => {
     const optimization = bindNextjsAppRouterServerOptimization(sdkConfig)
 
     expect(appRouterServerExports.bindNextjsAppRouterServerOptimization).toBeTypeOf('function')
-    expect(appRouterServerExports).not.toHaveProperty('createNextjsAppRouterOptimization')
     expect(optimization.OptimizationRoot).toBeTypeOf('function')
     expect(optimization.OptimizationAnalyticsRoot).toBeTypeOf('function')
     expect(optimization.OptimizedEntry).toBeTypeOf('function')
@@ -365,15 +354,12 @@ describe('Next.js App Router v2 binding', () => {
     expect(optimization.createPublicPermutationHandoff).toBeTypeOf('function')
     expect(appRouterServerExports.createPublicPermutationCacheMetadata).toBeTypeOf('function')
     expect(appRouterServerExports.createPublicPermutationHandoff).toBeTypeOf('function')
-    expect(optimization).not.toHaveProperty('getServerTrackingAttributes')
     expect(optimization.resolveEntriesForSelections).toBeTypeOf('function')
-    expect(optimization).not.toHaveProperty('createCacheMiddleware')
-    expect(optimization).not.toHaveProperty('proxy')
   })
 
   it('replaces only the request root with an injected serializable client root', async () => {
     setCurrentNextRequest('https://example.test/page-two?beforeInitialPage=readiness')
-    mockRequestPage({ accepted: true, data: optimizationData })
+    mockRequestPreview({ accepted: true, data: optimizationData })
     const ClientRequestOptimizationRoot = (_props: {
       readonly children?: React.ReactNode
     }): ReactElement => React.createElement(React.Fragment)
@@ -391,7 +377,7 @@ describe('Next.js App Router v2 binding', () => {
       defaults: { consent: false, persistenceConsent: false },
       handoff: {
         hydration: 'preserve-server',
-        initialPageEvent: 'skip',
+        replay: expect.objectContaining({ routeKey: '/page-two?beforeInitialPage=readiness' }),
       },
       hydration: 'preserve-server',
     })
@@ -406,12 +392,20 @@ describe('Next.js App Router v2 binding', () => {
 
   it('waits for the shared request handoff when OptimizedEntry starts before the root', async () => {
     setCurrentNextRequest()
-    const { page } = mockRequestPage({ accepted: true, data: optimizationData })
+    const { previewInitialExperience } = mockRequestPreview({
+      accepted: true,
+      data: optimizationData,
+    })
     let resolvePage: ((result: { accepted: true; data: OptimizationData }) => void) | undefined
     const delayedPage = new Promise<{ accepted: true; data: OptimizationData }>((resolve) => {
       resolvePage = resolve
     })
-    page.mockImplementationOnce(async () => await delayedPage)
+    previewInitialExperience.mockImplementationOnce(async () => ({
+      accepted: true,
+      data: (await delayedPage).data,
+      experience: [replayEventBuilder.buildPageView({})],
+      insights: [],
+    }))
     const { request } = bindNextjsAppRouterServerOptimization(sdkConfig)
 
     const entryPromise = request.OptimizedEntry({
@@ -427,7 +421,7 @@ describe('Next.js App Router v2 binding', () => {
     const [entry, root] = await Promise.all([entryPromise, rootPromise])
     const html = await renderToHtml(entry)
 
-    expect(page).toHaveBeenCalledTimes(1)
+    expect(previewInitialExperience).toHaveBeenCalledTimes(1)
     expect(getElementProps(root).handoff).toBeDefined()
     expect(html).toContain(`data-ctfl-entry-id="${variantEntry.sys.id}"`)
     expect(html).toContain(variantEntry.sys.id)
@@ -443,10 +437,18 @@ describe('Next.js App Router v2 binding', () => {
       data: OptimizationData
     }>()
     const cdaRelease = Promise.withResolvers<ServerTrackingBaselineEntry>()
-    const { page } = mockRequestPage({ accepted: true, data: optimizationData })
-    page.mockImplementationOnce(async () => {
+    const { previewInitialExperience } = mockRequestPreview({
+      accepted: true,
+      data: optimizationData,
+    })
+    previewInitialExperience.mockImplementationOnce(async () => {
       experienceStarted.resolve(undefined)
-      return await experienceRelease.promise
+      return {
+        accepted: true,
+        data: (await experienceRelease.promise).data,
+        experience: [replayEventBuilder.buildPageView({})],
+        insights: [],
+      }
     })
     const getEntry = rs.fn(async () => {
       cdaStarted.resolve(undefined)
@@ -472,7 +474,7 @@ describe('Next.js App Router v2 binding', () => {
     void entryPromise.then(settled)
 
     await Promise.all([experienceStarted.promise, cdaStarted.promise])
-    expect(page).toHaveBeenCalledTimes(1)
+    expect(previewInitialExperience).toHaveBeenCalledTimes(1)
     expect(getEntry).toHaveBeenCalledTimes(1)
 
     cdaRelease.resolve(optimizedEntry)
@@ -500,12 +502,20 @@ describe('Next.js App Router v2 binding', () => {
         data: OptimizationData
       }>()
       const cdaRelease = Promise.withResolvers<ServerTrackingBaselineEntry>()
-      const { page } = mockRequestPage({ accepted: true, data: optimizationData })
-      page.mockImplementationOnce(async () => {
+      const { previewInitialExperience } = mockRequestPreview({
+        accepted: true,
+        data: optimizationData,
+      })
+      previewInitialExperience.mockImplementationOnce(async () => {
         experienceStarted.resolve(undefined)
-        const result = await experienceRelease.promise
+        const data = (await experienceRelease.promise).data
         experienceFinished.resolve(undefined)
-        return result
+        return {
+          accepted: true,
+          data,
+          experience: [replayEventBuilder.buildPageView({})],
+          insights: [],
+        }
       })
       const getEntry = rs.fn(async () => {
         cdaStarted.resolve(undefined)
@@ -526,7 +536,7 @@ describe('Next.js App Router v2 binding', () => {
       void componentPromise.then(settled)
 
       await Promise.all([experienceStarted.promise, cdaStarted.promise])
-      expect(page).toHaveBeenCalledTimes(1)
+      expect(previewInitialExperience).toHaveBeenCalledTimes(1)
       expect(getEntry).toHaveBeenCalledTimes(1)
 
       experienceRelease.resolve({ accepted: true, data: optimizationData })
@@ -549,53 +559,41 @@ describe('Next.js App Router v2 binding', () => {
     },
   )
 
-  it.each(['managed prefetch', 'OptimizedEntry'] as const)(
-    'surfaces request initialization failure before %s CDA failure',
-    async (component) => {
-      setCurrentNextRequest()
-      const requestError = new Error('Request initialization failed')
-      const cdaStarted = Promise.withResolvers<undefined>()
-      const requestRelease = Promise.withResolvers<{
-        accepted: true
-        data: OptimizationData
-      }>()
-      const { page } = mockRequestPage({ accepted: true, data: optimizationData })
-      page.mockImplementationOnce(async () => await requestRelease.promise)
-      const getEntry = rs.fn(async () => {
-        cdaStarted.resolve(undefined)
-        return await Promise.reject(new Error('CDA failed'))
-      })
-      const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
-      const { request } = bindNextjsAppRouterServerOptimization({
-        ...sdkConfig,
-        contentful: { cache: false, client: { getEntry, getEntries } },
-      })
-      const settled = rs.fn()
-      const result = (
-        component === 'managed prefetch'
-          ? request.OptimizationRoot({
-              children: null,
-              prefetchManagedEntries: [baselineEntry.sys.id],
-            })
-          : request.OptimizedEntry({ children: null, entryId: baselineEntry.sys.id })
-      ).catch((error: unknown) => error)
-      void result.then(settled)
+  it('falls back to a profileless handoff when request preview rejects', async () => {
+    setCurrentNextRequest()
+    const requestError = new Error('Request initialization failed')
+    const { previewInitialExperience } = mockRequestPreview({
+      accepted: true,
+      data: optimizationData,
+    })
+    previewInitialExperience.mockRejectedValueOnce(requestError)
+    const { request } = bindNextjsAppRouterServerOptimization(sdkConfig)
 
-      await cdaStarted.promise
-      await Promise.resolve()
-      expect(settled).not.toHaveBeenCalled()
+    const root = await request.OptimizationRoot({ children: null })
 
-      requestRelease.reject(requestError)
-      expect(await result).toBe(requestError)
-    },
-  )
+    expect(previewInitialExperience).toHaveBeenCalledTimes(1)
+    expect(getElementProps(root)).toMatchObject({
+      defaults: { consent: false, persistenceConsent: false },
+      handoff: { cache: { scope: 'private-request' }, hydration: 'preserve-server' },
+      initialPagePayload: {
+        properties: {
+          path: '/products',
+          search: '?tab=featured',
+          url: 'https://example.test/products?tab=featured',
+        },
+      },
+      routeKey: '/products?tab=featured',
+    })
+    expect(getElementProps(root).handoff).not.toHaveProperty('state')
+    expect(getElementProps(root).handoff).not.toHaveProperty('replay')
+  })
 
   it.each(['managed prefetch', 'OptimizedEntry'] as const)(
     'surfaces %s CDA failure after successful request initialization',
     async (component) => {
       setCurrentNextRequest()
       const cdaError = new Error('CDA failed')
-      mockRequestPage({ accepted: true, data: optimizationData })
+      mockRequestPreview({ accepted: true, data: optimizationData })
       const getEntry = rs.fn(async () => await Promise.reject(cdaError))
       const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
       const { request } = bindNextjsAppRouterServerOptimization({
@@ -617,25 +615,26 @@ describe('Next.js App Router v2 binding', () => {
 
   it('initializes all request wrappers from one cached resource', async () => {
     setCurrentNextRequest()
-    const { forRequest, page } = mockRequestPage({ accepted: true, data: optimizationData })
+    const { forRequest, previewInitialExperience } = mockRequestPreview({
+      accepted: true,
+      data: optimizationData,
+    })
     const { request } = bindNextjsAppRouterServerOptimization(sdkConfig)
 
-    const [root, provider, entry, tracker] = await Promise.all([
+    const [root, provider, entry] = await Promise.all([
       request.OptimizationRoot({ children: 'Root' }),
       request.OptimizationProvider({ children: 'Provider' }),
       request.OptimizedEntry({
         baselineEntry: optimizedEntry,
         children: (resolvedEntry) => resolvedEntry.sys.id,
       }),
-      request.NextAppAutoPageTracker({}),
     ])
 
     expect(forRequest).toHaveBeenCalledTimes(1)
-    expect(page).toHaveBeenCalledTimes(1)
+    expect(previewInitialExperience).toHaveBeenCalledTimes(1)
     expect(getElementProps(root).handoff).toBe(
       provider === null ? undefined : getElementProps(provider).handoff,
     )
-    expect(getElementProps(tracker).initialPageEvent).toBe('skip')
     expect(await renderToHtml(entry)).toContain(variantEntry.sys.id)
     expect(readNextCookies).toHaveBeenCalledTimes(1)
     expect(readNextHeaders).toHaveBeenCalledTimes(1)
@@ -653,7 +652,7 @@ describe('Next.js App Router v2 binding', () => {
   ] as const)('uses %s request hydration', async (_label, hydration, expectedHydration) => {
     const url = 'https://example.test/products?tab=featured'
     setCurrentNextRequest(url)
-    mockRequestPage({ accepted: true })
+    mockRequestPreview({ accepted: true, data: optimizationData })
     const { request } = bindNextjsAppRouterServerOptimization({
       ...sdkConfig,
       request: hydration === undefined ? undefined : { hydration },
@@ -670,31 +669,18 @@ describe('Next.js App Router v2 binding', () => {
     })
   })
 
-  it('fails with request-handler setup guidance when the forwarded URL is missing', async () => {
+  it('leaves page inputs to the browser when the forwarded URL is missing', async () => {
     const { request } = bindNextjsAppRouterServerOptimization(sdkConfig)
 
-    await expect(request.OptimizationRoot({ children: null })).rejects.toThrow(
-      'Missing x-ctfl-opt-request-url. Configure the Contentful Optimization request handler in your Next.js proxy before using request components.',
-    )
-  })
+    const root = await request.OptimizationRoot({ children: null })
 
-  it('uses trusted forwarded handoff state and preserves page-event ownership only when opted in', async () => {
-    const forwardedRequest = setCurrentNextRequest()
-    setForwardedServerData(forwardedRequest.headers, {
-      consent: true,
-      pageAccepted: true,
+    expect(getElementProps(root)).toMatchObject({
+      defaults: { consent: false, persistenceConsent: false },
+      handoff: { cache: { scope: 'private-request' }, hydration: 'preserve-server' },
     })
-    const { forRequest, page } = mockRequestPage({ accepted: false })
-    const { request } = bindNextjsAppRouterServerOptimization({
-      ...sdkConfig,
-      request: { trustedRequestHandoff: true },
-    })
-
-    const tracker = await request.NextAppAutoPageTracker({})
-
-    expect(forRequest).not.toHaveBeenCalled()
-    expect(page).not.toHaveBeenCalled()
-    expect(getElementProps(tracker).initialPageEvent).toBe('skip')
+    expect(getElementProps(root)).not.toHaveProperty('initialPagePayload')
+    expect(getElementProps(root)).not.toHaveProperty('routeKey')
+    expect(getElementProps(root).handoff).not.toHaveProperty('state')
   })
 
   it('isolates request URL, profile, handoff, and selected-entry state across RSC requests', async () => {
@@ -708,9 +694,22 @@ describe('Next.js App Router v2 binding', () => {
       profile: secondProfile,
       selectedOptimizations: [],
     }
-    const { forRequest, page } = mockRequestPage({ accepted: true, data: optimizationData })
-    page.mockResolvedValueOnce({ accepted: true, data: optimizationData })
-    page.mockResolvedValueOnce({ accepted: true, data: secondData })
+    const { forRequest, previewInitialExperience } = mockRequestPreview({
+      accepted: true,
+      data: optimizationData,
+    })
+    previewInitialExperience.mockResolvedValueOnce({
+      accepted: true,
+      data: optimizationData,
+      experience: [replayEventBuilder.buildPageView({})],
+      insights: [],
+    })
+    previewInitialExperience.mockResolvedValueOnce({
+      accepted: true,
+      data: secondData,
+      experience: [replayEventBuilder.buildPageView({})],
+      insights: [],
+    })
     const hydration = rs.fn(() => 'preserve-server' as const)
     const { request } = bindNextjsAppRouterServerOptimization({
       ...sdkConfig,
@@ -733,7 +732,7 @@ describe('Next.js App Router v2 binding', () => {
     })
 
     expect(forRequest).toHaveBeenCalledTimes(2)
-    expect(page).toHaveBeenCalledTimes(2)
+    expect(previewInitialExperience).toHaveBeenCalledTimes(2)
     expect(hydration.mock.calls).toEqual([
       [{ requestUrl: 'https://example.test/first?segment=a', routeKey: '/first?segment=a' }],
       [{ requestUrl: 'https://example.test/second?segment=b', routeKey: '/second?segment=b' }],
@@ -751,7 +750,10 @@ describe('Next.js App Router v2 binding', () => {
   })
 
   it('keeps top-level static, public, analytics, and manual paths free of Next.js request reads', async () => {
-    const { page } = mockRequestPage({ accepted: true })
+    const { previewInitialExperience } = mockRequestPreview({
+      accepted: true,
+      data: optimizationData,
+    })
     const {
       OptimizationAnalyticsRoot,
       OptimizationRoot,
@@ -762,18 +764,15 @@ describe('Next.js App Router v2 binding', () => {
     const staticHandoff = createHandoffFromSelections({
       cache: { scope: 'static' },
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
     createPublicPermutationHandoff({
       hydration: 'analytics-only',
-      initialPageEvent: 'emit',
       permutationKey: 'segment-a',
       selectedOptimizations: [],
     })
     const publicHandoff = createStandalonePublicPermutationHandoff({
       hydration: 'analytics-only',
-      initialPageEvent: 'emit',
       permutationKey: 'segment-a',
       selectedOptimizations: [],
     })
@@ -786,7 +785,7 @@ describe('Next.js App Router v2 binding', () => {
       request: createRequest(),
     })
 
-    expect(page).toHaveBeenCalledTimes(1)
+    expect(previewInitialExperience).toHaveBeenCalledTimes(1)
     expect(readNextCookies).not.toHaveBeenCalled()
     expect(readNextHeaders).not.toHaveBeenCalled()
   })
@@ -809,7 +808,6 @@ describe('Next.js App Router v2 binding', () => {
       cache: { scope: 'static' },
       entries: [{ baselineEntry: variantEntry, entryId: variantEntry.sys.id }],
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
 
@@ -890,214 +888,50 @@ describe('Next.js App Router v2 binding', () => {
     expect(element?.props).not.toHaveProperty('prefetchManagedEntries')
   })
 
-  it.each([
-    ['accepted with data', { accepted: true, data: optimizationData }, 'skip'],
-    ['accepted without data', { accepted: true }, 'skip'],
-    ['blocked', { accepted: false }, 'emit'],
-    ['pre-consent accepted', { accepted: true, data: optimizationData }, 'skip'],
-  ] as const)(
-    'creates request handoff with initialPageEvent from page acceptance: %s',
-    async (_label, pageResult, expectedInitialPageEvent) => {
-      const { forRequest, page } = mockRequestPage(pageResult)
-      const serverConsent = _label !== 'pre-consent accepted'
-      const { createRequestHandoff } = bindNextjsAppRouterServerOptimization({
-        ...sdkConfig,
-        consent: { server: serverConsent },
-      })
-
-      const handoff = await createRequestHandoff({
-        cache: { scope: 'private-request' },
-        hydration: 'preserve-server',
-        pagePayload: { properties: { route: '/products' } },
-        request: createRequest(),
-      })
-
-      expect(page).toHaveBeenCalledWith({ properties: { route: '/products' } })
-      expect(forRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          consent: serverConsent,
-          eventContext: expect.objectContaining({
-            page: expect.objectContaining({
-              path: '/products',
-              search: '?tab=featured',
-            }),
-            userAgent: 'app-router-agent',
-          }),
-          profile: { id: 'incoming-id' },
-        }),
-      )
-      expect(handoff.initialPageEvent).toBe(expectedInitialPageEvent)
-      expect(handoff.cache).toEqual({ scope: 'private-request' })
-    },
-  )
-
-  it.each([
-    ['accepted with data', true],
-    ['not accepted with data', false],
-  ] as const)(
-    'creates request handoff from trusted forwarded server data while browser owns page payload: %s',
-    async (_label, pageAccepted) => {
-      const { forRequest, page } = mockRequestPage({ accepted: true, data: optimizationData })
-      const request = createRequest()
-      const getProfile = mockProfileFetch()
-      const { OptimizationRoot, createRequestHandoff } = bindNextjsAppRouterServerOptimization({
-        ...sdkConfig,
-        fetchOptions: { fetchMethod: getProfile },
-      })
-
-      setForwardedServerData(request.headers, {
-        consent: { events: true, persistence: false },
-        pageAccepted,
-        profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
-      })
-
-      const handoff = await createRequestHandoff({
-        cache: { scope: 'private-request' },
-        hydration: 'preserve-server',
-        pagePayload: { properties: { route: '/products' } },
-        request,
-        trustedRequestHandoff: true,
-      })
-      const element = await OptimizationRoot({ children: 'Server content', handoff })
-
-      expect(forRequest).not.toHaveBeenCalled()
-      expect(page).not.toHaveBeenCalled()
-      expect(getProfile).toHaveBeenCalledTimes(1)
-      const profileUrl = getProfile.mock.calls[0]?.[0]
-      if (typeof profileUrl !== 'string') throw new Error('Expected getProfile URL string.')
-      expect(profileUrl).toContain('/profiles/f0837d7dc6344c36a3a0a06c4cde754b')
-      expect(profileUrl).toContain('locale=en-US')
-      expect(handoff.initialPageEvent).toBe(pageAccepted ? 'skip' : 'emit')
-      expect(handoff.cache).toEqual({ scope: 'private-request' })
-      expect(handoff.state).toEqual({
-        changes: optimizationData.changes,
-        profile: optimizationData.profile,
-        selectedOptimizations: optimizationData.selectedOptimizations,
-      })
-      expect(element.props).toMatchObject({
-        defaults: { consent: true, persistenceConsent: false },
-      })
-    },
-  )
-
-  it.each([
-    [
-      'accepted without persistence consent',
+  it('resolves request initial experience events from the App Router context', async () => {
+    setCurrentNextRequest()
+    const events = [
       {
-        consent: { events: true },
-        defaults: { consent: true, persistenceConsent: false },
-        pageAccepted: true,
+        event: 'initial-preview',
+        properties: { source: 'app-router' },
+        type: 'track',
       },
-    ],
-    [
-      'accepted without data',
-      {
-        consent: { events: true, persistence: false },
-        defaults: { consent: true, persistenceConsent: false },
-        pageAccepted: true,
-      },
-    ],
-    [
-      'blocked without data',
-      {
-        consent: false,
-        defaults: { consent: false, persistenceConsent: false },
-        pageAccepted: false,
-      },
-    ],
-  ] as const)(
-    'creates request handoff from trusted forwarded no-data server result while browser owns page payload: %s',
-    async (_label, { consent, defaults, pageAccepted }) => {
-      const { forRequest, page } = mockRequestPage({ accepted: true, data: optimizationData })
-      const request = createRequest()
-      const getProfile = mockProfileFetch()
-      const { OptimizationRoot, createRequestHandoff } = bindNextjsAppRouterServerOptimization({
-        ...sdkConfig,
-        fetchOptions: { fetchMethod: getProfile },
+    ] as const
+    const resolveEvents = rs.fn(({ requestUrl, routeKey }) => {
+      expect({ requestUrl, routeKey }).toEqual({
+        requestUrl: 'https://example.test/products?tab=featured',
+        routeKey: '/products?tab=featured',
       })
-
-      setForwardedServerData(request.headers, {
-        consent,
-        pageAccepted,
-      })
-
-      const handoff = await createRequestHandoff({
-        cache: { scope: 'private-request' },
-        hydration: 'preserve-server',
-        pagePayload: { properties: { route: '/products' } },
-        request,
-        trustedRequestHandoff: true,
-      })
-      const element = await OptimizationRoot({ children: 'Server content', handoff })
-
-      expect(forRequest).not.toHaveBeenCalled()
-      expect(page).not.toHaveBeenCalled()
-      expect(getProfile).not.toHaveBeenCalled()
-      expect(handoff.initialPageEvent).toBe(pageAccepted ? 'skip' : 'emit')
-      expect(handoff.cache).toEqual({ scope: 'private-request' })
-      expect(handoff.state).toBeUndefined()
-      expect(element.props).toMatchObject({ defaults })
-    },
-  )
-
-  it('ignores raw forwarded server data without trusted opt-in', async () => {
-    const { forRequest, page } = mockRequestPage({ accepted: true, data: optimizationData })
-    const request = createRequest()
-    const { createRequestHandoff } = bindNextjsAppRouterServerOptimization({
+      return events
+    })
+    const { previewInitialExperience } = mockRequestPreview({
+      accepted: true,
+      data: optimizationData,
+    })
+    const { request } = bindNextjsAppRouterServerOptimization({
       ...sdkConfig,
-      consent: { server: true },
+      request: { initialExperienceEvents: resolveEvents },
     })
 
-    request.headers.set(
-      NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER,
-      serializeNextjsOptimizationRequestContext({
-        consent: false,
-        pageAccepted: false,
-        profileId: 'a19c3f54d2b84e37a93f6d1c0e5b7284',
-      }),
-    )
+    await request.OptimizationRoot({ children: null })
 
-    const handoff = await createRequestHandoff({
-      cache: { scope: 'private-request' },
-      hydration: 'preserve-server',
-      pagePayload: { properties: { route: '/products' } },
-      request,
+    expect(previewInitialExperience).toHaveBeenCalledWith({
+      events,
+      page: {
+        properties: {
+          path: '/products',
+          search: '?tab=featured',
+          url: 'https://example.test/products?tab=featured',
+        },
+      },
     })
-
-    expect(forRequest).toHaveBeenCalledTimes(1)
-    expect(page).toHaveBeenCalledTimes(1)
-    expect(handoff.initialPageEvent).toBe('skip')
-  })
-
-  it('ignores forwarded server data without a pageAccepted signal', async () => {
-    const { forRequest, page } = mockRequestPage({ accepted: true, data: optimizationData })
-    const request = createRequest()
-    const { createRequestHandoff } = bindNextjsAppRouterServerOptimization({
-      ...sdkConfig,
-      consent: { server: true },
-    })
-
-    setForwardedServerData(request.headers, {
-      consent: false,
-      pageAccepted: undefined,
-      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
-    })
-
-    const handoff = await createRequestHandoff({
-      cache: { scope: 'private-request' },
-      hydration: 'preserve-server',
-      pagePayload: { properties: { route: '/products' } },
-      request,
-      trustedRequestHandoff: true,
-    })
-
-    expect(forRequest).toHaveBeenCalledTimes(1)
-    expect(page).toHaveBeenCalledTimes(1)
-    expect(handoff.initialPageEvent).toBe('skip')
   })
 
   it('rejects public request handoff cache metadata before request evaluation', async () => {
-    const { forRequest, page } = mockRequestPage({ accepted: true, data: optimizationData })
+    const { forRequest, previewInitialExperience } = mockRequestPreview({
+      accepted: true,
+      data: optimizationData,
+    })
     const { createRequestHandoff } = bindNextjsAppRouterServerOptimization(sdkConfig)
 
     await expect(
@@ -1112,14 +946,38 @@ describe('Next.js App Router v2 binding', () => {
       'Request handoffs must use private-request cache scope. Use public permutation handoffs for public cache scopes, or a non-request handoff for static output.',
     )
     expect(forRequest).not.toHaveBeenCalled()
-    expect(page).not.toHaveBeenCalled()
+    expect(previewInitialExperience).not.toHaveBeenCalled()
+  })
+
+  it('falls back when the public request handoff preview rejects', async () => {
+    const entries = [{ baselineEntry, entryId: baselineEntry.sys.id }] as const
+    const { previewInitialExperience } = mockRequestPreview({
+      accepted: true,
+      data: optimizationData,
+    })
+    previewInitialExperience.mockRejectedValueOnce(new Error('Preview unavailable'))
+    const { createRequestHandoff } = bindNextjsAppRouterServerOptimization(sdkConfig)
+
+    const handoff = await createRequestHandoff({
+      entries,
+      hydration: 'preserve-server',
+      pagePayload: { properties: { path: '/products' } },
+      request: createRequest(),
+    })
+
+    expect(handoff).toMatchObject({
+      cache: { scope: 'private-request' },
+      entries,
+      hydration: 'preserve-server',
+    })
+    expect(handoff).not.toHaveProperty('state')
+    expect(handoff).not.toHaveProperty('replay')
   })
 
   it('creates analytics-only public permutation handoffs without mounting content personalization', () => {
     const { OptimizationAnalyticsRoot } = bindNextjsAppRouterServerOptimization(sdkConfig)
     const handoff = createStandalonePublicPermutationHandoff({
       hydration: 'analytics-only',
-      initialPageEvent: 'emit',
       permutationKey: 'segment-a',
       selectedOptimizations: [],
     })
@@ -1145,7 +1003,6 @@ describe('Next.js App Router v2 binding', () => {
   it('preserves caller-owned public permutation tags', () => {
     const handoff = createStandalonePublicPermutationHandoff({
       hydration: 'analytics-only',
-      initialPageEvent: 'emit',
       permutationKey: 'segment-a',
       selectedOptimizations: [],
       tags: ['segment-a', 'products'],
@@ -1159,7 +1016,6 @@ describe('Next.js App Router v2 binding', () => {
       createStandaloneHandoffFromSelections({
         cache: { key: 'segment-a', scope: 'public-permutation', tags: ['segment,a'] },
         hydration: 'analytics-only',
-        initialPageEvent: 'emit',
         selectedOptimizations: [],
       }),
     ).toThrow(TypeError)
@@ -1175,7 +1031,6 @@ describe('Next.js App Router v2 binding', () => {
     expect(() =>
       createStandalonePublicPermutationHandoff({
         hydration: 'analytics-only',
-        initialPageEvent: 'emit',
         permutationKey: 'segment-a',
         selectedOptimizations: [],
         tags,
@@ -1190,13 +1045,11 @@ describe('Next.js App Router v2 binding', () => {
     createHandoffFromSelections({
       cache: { scope: 'public-permutation', key: 'segment-a' },
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations,
     })
     const handoff = createStandaloneHandoffFromSelections({
       cache: { scope: 'public-permutation', key: 'segment-a' },
       hydration: 'analytics-only',
-      initialPageEvent: 'emit',
       selectedOptimizations,
     })
     OptimizationAnalyticsRoot({
@@ -1245,7 +1098,6 @@ describe('Next.js App Router v2 binding', () => {
     createHandoffFromSelections({
       cache: { scope: 'public-permutation', key: 'empty-variant' },
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations: emptyVariantSelectedOptimizations,
     })
     const html = await renderToHtml(
@@ -1275,7 +1127,7 @@ describe('Next.js App Router v2 binding', () => {
   })
 
   it('resolves server OptimizedEntry from request handoff selections', async () => {
-    mockRequestPage({ accepted: true, data: optimizationData })
+    mockRequestPreview({ accepted: true, data: optimizationData })
     const { OptimizationRoot, OptimizedEntry, createRequestHandoff } =
       bindNextjsAppRouterServerOptimization(sdkConfig)
 
@@ -1306,7 +1158,7 @@ describe('Next.js App Router v2 binding', () => {
   })
 
   it('defaults server merge-tag helpers to the request handoff profile', async () => {
-    mockRequestPage({ accepted: true, data: optimizationData })
+    mockRequestPreview({ accepted: true, data: optimizationData })
     const mergeTagEntry = createMergeTagEntry('merge-tag', 'traits.continent')
     const { OptimizationRoot, OptimizedEntry, createRequestHandoff } =
       bindNextjsAppRouterServerOptimization(sdkConfig)
@@ -1341,7 +1193,6 @@ describe('Next.js App Router v2 binding', () => {
       const handoff = createHandoffFromSelections({
         cache: { scope: 'public-permutation', key: 'segment-a' },
         hydration: 'preserve-server',
-        initialPageEvent: 'emit',
         selectedOptimizations,
       })
 
@@ -1381,7 +1232,6 @@ describe('Next.js App Router v2 binding', () => {
     createHandoffFromSelections({
       cache: { scope: 'public-permutation', key: 'segment-a' },
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations,
     })
     cdaRelease.resolve(optimizedEntry)
@@ -1394,7 +1244,7 @@ describe('Next.js App Router v2 binding', () => {
   })
 
   it('uses request handoff selections when resolving managed server entries', async () => {
-    mockRequestPage({ accepted: true, data: optimizationData })
+    mockRequestPreview({ accepted: true, data: optimizationData })
     const getEntry = rs.fn(async () => await Promise.resolve(optimizedEntry))
     const getEntries = rs.fn(async () => await Promise.resolve(createEntryCollection([])))
     const { OptimizationRoot, OptimizedEntry, createRequestHandoff } =
@@ -1431,7 +1281,7 @@ describe('Next.js App Router v2 binding', () => {
   })
 
   it('resolves slug-managed server entries with request selections and tracking IDs', async () => {
-    mockRequestPage({ accepted: true, data: optimizationData })
+    mockRequestPreview({ accepted: true, data: optimizationData })
     const getEntry = rs.fn(async () => await Promise.resolve(createEntry('unused')))
     const getEntries = rs.fn(
       async () => await Promise.resolve(createEntryCollection([optimizedEntry])),
@@ -1493,7 +1343,7 @@ describe('Next.js App Router v2 binding', () => {
   })
 
   it('makes request handoff consent and selections available during server render', async () => {
-    mockRequestPage({ accepted: true, data: optimizationData })
+    mockRequestPreview({ accepted: true, data: optimizationData })
     const { OptimizationRoot, createRequestHandoff } = bindNextjsAppRouterServerOptimization({
       ...sdkConfig,
       consent: { server: true, clientDefaults: { consent: false, persistenceConsent: false } },
@@ -1531,7 +1381,6 @@ describe('Next.js App Router v2 binding', () => {
     const handoff = createHandoffFromSelections({
       cache: { scope: 'static' },
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
 

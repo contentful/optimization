@@ -272,11 +272,6 @@ Use `useOptimization()` under the provider when a component needs the SDK instan
 outside `OptimizationRoot` or `OptimizationProvider`, and the provider-owned path withholds children
 until the SDK is ready.
 
-Set `api.preflight = true` only for dry-run Experience API requests that aggregate a fresh profile
-state on the server without persisting it, for example when validating configuration or exercising
-targeting rules from a debug tool. It changes Experience delivery for the whole SDK instance, so
-leave it off in normal application builds.
-
 ### Consent and privacy-policy handoff
 
 **Integration category:** Common but policy-dependent

@@ -2,13 +2,13 @@ import { optimizedEntry } from '@contentful/optimization-core/test/fixtures/opti
 import { selectedOptimizations } from '@contentful/optimization-core/test/fixtures/selectedOptimizations'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
-import { InterceptorManager } from '@contentful/optimization-web/core-sdk'
+import { EventBuilder, InterceptorManager } from '@contentful/optimization-web/core-sdk'
 import type { ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
-import { beforeEach, describe, expect, it, rs } from '@rstest/core'
+import { describe, expect, it, rs } from '@rstest/core'
 import { act, type ReactElement, useContext } from 'react'
 import { createRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
-import { resetAutoPageEmitterState, useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
+import { useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
 import type { OptimizationContextValue } from '../context/OptimizationContext'
 import { OptimizationHydrationContext } from '../context/OptimizationHydrationContext'
 import {
@@ -27,6 +27,10 @@ import {
   requireOptimizationContext,
   requireOptimizationSdk,
 } from '../test/sdkTestUtils'
+const replayEventBuilder = new EventBuilder({
+  channel: 'server',
+  library: { name: 'test-server', version: '1.0.0' },
+})
 
 const testConfig = {
   spaceId: 'test-space-id',
@@ -117,7 +121,6 @@ function createContentHandoff(
   return {
     cache: { scope: 'private-request' },
     hydration: 'preserve-server',
-    initialPageEvent: 'skip',
     state: createServerOptimizationState(profileId),
     ...overrides,
   }
@@ -192,10 +195,6 @@ async function renderClientAsync(
 }
 
 describe('OptimizationProvider onStatesReady', () => {
-  beforeEach(() => {
-    resetAutoPageEmitterState()
-  })
-
   it('accepts onStatesReady on OptimizationProvider and OptimizationRoot props', () => {
     const onStatesReady = rs.fn()
     const providerProps: OptimizationProviderProps = {
@@ -262,6 +261,37 @@ describe('OptimizationProvider onStatesReady', () => {
     expect(page).toHaveBeenCalledTimes(1)
     expect(observedEvents).toEqual([pageEvent])
 
+    rendered.unmount()
+  })
+
+  it('binds onStatesReady subscribers before an ordinary page effect consumes a handoff replay', async () => {
+    const observedTypes: string[] = []
+    const handoff = createContentHandoff('f0837d7dc6344c36a3a0a06c4cde754b', {
+      replay: {
+        experience: [
+          replayEventBuilder.buildIdentify({ userId: 'handoff-user' }),
+          replayEventBuilder.buildPageView({}),
+        ],
+        insights: [],
+        routeKey: '/handoff',
+      },
+    })
+    const rendered = await renderClientAsync(
+      <OptimizationRoot
+        {...testConfig}
+        handoff={handoff}
+        routeKey="/handoff"
+        onStatesReady={(states) =>
+          states.eventStream.subscribe((event) => {
+            if (event) observedTypes.push(event.type)
+          }).unsubscribe
+        }
+      >
+        <div />
+      </OptimizationRoot>,
+    )
+
+    expect(observedTypes).toEqual(['identify', 'page'])
     rendered.unmount()
   })
 
@@ -417,9 +447,6 @@ describe('OptimizationProvider onStatesReady', () => {
     expect(context).toEqual(expect.objectContaining({ error: hydrationError, isLive: true }))
     const sdk = requireOptimizationSdk(context.sdk)
     expect(sdk).toBeInstanceOf(ContentfulOptimization)
-    await expect(
-      sdk.trackCurrentPage({ initialPageEvent: 'skip', routeKey: '/failed-handoff' }),
-    ).resolves.toEqual({ accepted: true })
     expect(destroy).not.toHaveBeenCalled()
 
     rendered.unmount()
@@ -428,7 +455,7 @@ describe('OptimizationProvider onStatesReady', () => {
     destroy.mockRestore()
   })
 
-  it('keeps injected initial-handoff failure behavior unchanged', async () => {
+  it('keeps an injected runtime usable after recoverable initial hydration failure', async () => {
     const hydrationError = new Error('injected handoff apply failed')
     const sdk = new ContentfulOptimization(testConfig)
     sdk.interceptors.state.add(async () => await Promise.reject(hydrationError))
@@ -448,7 +475,7 @@ describe('OptimizationProvider onStatesReady', () => {
     )
 
     expect(capturedContext).toEqual(
-      expect.objectContaining({ error: hydrationError, isLive: false, sdk: undefined }),
+      expect.objectContaining({ error: hydrationError, isLive: true, sdk }),
     )
     expect(destroy).not.toHaveBeenCalled()
 

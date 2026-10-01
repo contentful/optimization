@@ -63,21 +63,17 @@ dependencies; each carries a symbol-anchored source pointer.
   root's `prefetchManagedEntries` descriptors. Otherwise the browser has no Contentful
   client in its derived config and cannot infer the server component's managed fetch.
   source: `nextjs-sdk#app-router-server.tsx#OptimizedEntry`; `nextjs-sdk#app-router-server.tsx#renderBoundRootTree`; `nextjs-sdk#app-router-server.tsx#resolveHandoffEntries`; `nextjs-sdk#app-router-server.tsx#toClientProviderConfig`; `react-web-sdk#provider/OptimizationProvider.tsx#createPrefetchedManagedEntries`
-- Request handoff: the bound `createRequestHandoff(options)` reads forwarded server context from the
-  request headers' `x-ctfl-opt-server-data` value only when `trustedRequestHandoff: true` is passed.
-  Raw forwarded server-data headers are ignored without that explicit opt-in. Trusted forwarded
-  context can carry `consent`, boolean `pageAccepted`, and optional non-empty `profileId`, not full
-  `OptimizationData`; when `profileId` is present, the helper fetches profile/selection data with
-  `getProfile()` and builds a browser handoff without evaluating `page()` again. The profile fetch
-  uses request handoff `locale` before bound config `locale` before `experienceOptions.locale`, and
-  forwards `experienceOptions.ip` when supplied. Boolean consent seeds both consent axes; object
-  consent seeds `consent` when `events` is present and always sets `persistenceConsent`, defaulting
-  missing `persistence` to `false`. The handoff uses `pageAccepted: true` for
-  `initialPageEvent: 'skip'` and `pageAccepted: false` for `initialPageEvent: 'emit'`. Without valid
-  forwarded context, the helper binds the request, calls `page()`, builds a browser handoff, and sets
-  `initialPageEvent` to `'skip'` exactly when `pageResult.accepted` is true; response data presence
-  is not the page-event ownership signal.
-  source: `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#app-router-request-handoff.ts#NextjsForwardedServerData`; `nextjs-sdk#app-router-request-handoff.ts#readNextjsForwardedServerData`; `nextjs-sdk#app-router-request-handoff.ts#toForwardedProfileOptions`; `nextjs-sdk#app-router-request-handoff.ts#toHandoffDefaults`; `nextjs-sdk#request-context.ts#NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER`; `nextjs-sdk#request-context.ts#parseNextjsOptimizationRequestContext`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`
+- Request handoff: the bound `createRequestHandoff(options)` resolves server consent in the App
+  Router request resource, binds request URL/cookies/headers and profile continuity, then previews
+  optional identify/track commands followed by the initial page as one forced-preflight request.
+  An accepted preview becomes a private route-bound replay handoff; a blocked final page produces a
+  handoff without preview state or replay so the browser can make its normal current-page attempt.
+  If the lower-level helper accepts the preview but cannot derive a route key, it retains the preview
+  state in the handoff and omits replay.
+  `trustedRequestHandoff` is a compatibility input and is not read. Boolean consent seeds both
+  browser consent axes; object consent seeds `consent` when `events` is present and always sets
+  `persistenceConsent`, defaulting missing `persistence` to `false`.
+  source: `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#app-router-request-handoff.ts#toHandoffDefaults`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`; `nextjs-sdk#server.tsx#createRequestHandoffFromPreviewOrData`; `nextjs-sdk#request-handoff-support.ts#createNextjsRequestRouteKey`; `core-sdk#CoreStatelessRequest.ts#previewInitialExperience`; `core-sdk#handoff.ts#createRequestHandoffFromPreview`
 - The server binder's nested `request` components share one no-argument React-cached initializer. It
   reads Next.js headers and cookies, derives the request URL, route key, initial page payload, and
   hydration once, creates one request handoff, and shares those render inputs among the four wrappers
@@ -92,10 +88,15 @@ dependencies; each carries a symbol-anchored source pointer.
 - Request hydration defaults to `preserve-server`. A configured resolver runs once during cached
   initialization with the SDK-derived request URL and route key.
   source: `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#bound-component-types.ts#NextjsAppRouterRequestHydration`
+- Config-owned request `initialExperienceEvents` may be static or resolved once by the cached
+  initializer from SDK-derived `{ requestUrl, routeKey }`; those commands precede the final page in
+  both server preview and browser replay. The bound manual `createRequestHandoff(options)` and the
+  lower-level `/server` helper accept only an already-resolved command array.
+  source: `nextjs-sdk#app-router-request-runtime.tsx#resolveInitialExperienceEvents`; `nextjs-sdk#app-router-request-runtime.tsx#AppRouterCreateRequestHandoffOptions`; `nextjs-sdk#bound-component-types.ts#NextjsAppRouterRequestConfig`; `nextjs-sdk#server.tsx#NextjsRequestHandoffOptions`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`
 - Selection handoff: the bound `createHandoffFromSelections(input)` adds browser hydration metadata to
   the Core selection handoff. It is the lower-level App Router helper for explicit selection
-  handoffs; applications supply the selected optimizations, cache metadata, hydration mode, and
-  initial page-event ownership.
+  handoffs; applications supply the selected optimizations, cache metadata, and hydration mode.
+  Legacy `initialPageEvent` input is accepted for compatibility but is not serialized.
   source: `nextjs-sdk#handoff.ts#createHandoffFromSelections`; `core-sdk#handoff.ts#createHandoffFromSelections`
 - Public permutation handoff: `createPublicPermutationHandoff(input)` creates public-permutation
   cache metadata from `permutationKey`, optional `cacheVersion`, locale, entry IDs, selected
@@ -139,16 +140,23 @@ dependencies; each carries a symbol-anchored source pointer.
   `createEdgeRequestHandoff(options)` reads cookies from a Next cookie reader or the raw `cookie`
   header, resolves server consent with cookies and headers, derives profile continuity from the
   anonymous-id cookie when no explicit profile is supplied, builds page context from
-  URL/referrer/user-agent, emits `page()`, sets `initialPageEvent` from whether that page event was
-  accepted, and returns `persist(response)` for the anonymous-id `Set-Cookie` append.
-  source: `nextjs-sdk#edge.ts#configureNextjsEdgeOptimization`; `nextjs-sdk#edge.ts#createEdgeOptimizationRuntime`; `nextjs-sdk#constants.ts#OPTIMIZATION_NEXTJS_SDK_VERSION`; `nextjs-sdk#edge.ts#createEdgeRequestSnapshot`; `nextjs-sdk#edge.ts#createEdgeRequestContext`; `nextjs-sdk#edge.ts#createEdgeRequestOptimizationHandoff`; `nextjs-sdk#edge.ts#persistEdgeAnonymousId`
+  URL/referrer/user-agent, resolves optional initial Experience commands from either an array or a
+  request-snapshot resolver, and previews those commands plus the final page as one request. An
+  accepted preview carries a private replay bound to the request pathname and search. The
+  helper converts operational preview failures into a profileless private-request baseline handoff,
+  dropping preview state and replay while preserving the chosen hydration mode. The
+  compatibility `persist(response)` callback is inert; preview identity is not written from the Edge
+  response.
+  source: `nextjs-sdk#edge.ts#configureNextjsEdgeOptimization`; `nextjs-sdk#edge.ts#NextjsEdgeRequestHandoffOptions`; `nextjs-sdk#edge.ts#resolveInitialExperienceEvents`; `nextjs-sdk#edge.ts#createEdgeOptimizationRuntime`; `nextjs-sdk#constants.ts#OPTIMIZATION_NEXTJS_SDK_VERSION`; `nextjs-sdk#edge.ts#createEdgeRequestSnapshot`; `nextjs-sdk#edge.ts#createEdgeRequestContext`; `nextjs-sdk#edge.ts#createEdgeRequestHandoffFromPreview`; `nextjs-sdk#edge.ts#createEdgeRequestRouteKey`; `nextjs-sdk#request-preview-fallback.ts#resolveRequestPreview`; `nextjs-sdk#request-preview-fallback.ts#createPrivateRequestPreviewFallbackHandoff`; `core-sdk#CoreStatelessRequest.ts#previewInitialExperience`
 - Manual `/server` flow: `configureNextjsServerOptimization(config)` creates the long-lived
   stateless server runtime; `bindNextjsOptimizationRequest(sdk, options)` binds consent,
   request/page context, locale, and profile continuity to one request; `createNextjsRequestHandoff()`
-  emits the page event and returns a browser handoff.
+  accepts an already-resolved initial-command array, previews it plus the final page, and returns a
+  private replay handoff when that preview is admitted and a route key can be derived. An accepted
+  preview without a route key still contributes handoff state but no replay.
   `getServerTrackingAttributes(baselineEntry, resolvedData)` maps a manual resolution to the
   `data-ctfl-*` attributes browser interaction tracking consumes.
-  source: `nextjs-sdk#server.tsx#configureNextjsServerOptimization`; `nextjs-sdk#server.tsx#bindNextjsOptimizationRequest`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`; `nextjs-sdk#server.tsx#persistNextjsAnonymousId`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`; `nextjs-sdk#tracking-attributes.ts#getServerTrackingAttributes`
+  source: `nextjs-sdk#server.tsx#configureNextjsServerOptimization`; `nextjs-sdk#server.tsx#bindNextjsOptimizationRequest`; `nextjs-sdk#server.tsx#NextjsRequestHandoffOptions`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`; `nextjs-sdk#server.tsx#createRequestHandoffFromPreviewOrData`; `nextjs-sdk#request-handoff-support.ts#createNextjsRequestRouteKey`; `nextjs-sdk#server.tsx#persistNextjsAnonymousId`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`; `nextjs-sdk#tracking-attributes.ts#getServerTrackingAttributes`
 
 ## Components & hooks
 
@@ -187,7 +195,7 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
   prop is not invoked; an absent empty-variant flag renders normally.
   source: `nextjs-sdk#server-entry-renderer.tsx#renderOptimizedEntryOnServer`; `nextjs-sdk#server-entry-renderer.tsx#resolveOptimizedEntryChildren`; `nextjs-sdk#app-router-server.tsx#OptimizedEntry`; `nextjs-sdk#server.tsx#ServerOptimizedEntry`
 - `prefetchManagedEntries` without a supplied `handoff` creates a synthetic `static` +
-  `preserve-server` handoff with `selectedOptimizations: []` and `initialPageEvent: 'emit'`.
+  `preserve-server` handoff with `selectedOptimizations: []` and no replay.
   source: `nextjs-sdk#app-router-server.tsx#resolveHandoffEntries`
 - Runtime props that provide zero or multiple `baselineEntry`, `entryId`, and `managedEntry` sources
   reject before any managed fetch; the error names those three allowed sources.
@@ -195,21 +203,17 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
 
 ## Identifier ownership
 
-| Identifier                              | Owner  | Notes                                                                              | source                                                                                                                                                                                                     |
-| --------------------------------------- | ------ | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ctfl-opt-aid` (profile/anon-id cookie) | SDK    | Written by response-persistence helpers; must NOT be `HttpOnly` (browser reads it) | `core-sdk#constants.ts#ANONYMOUS_ID_COOKIE`; `nextjs-sdk#server.tsx#persistNextjsAnonymousId`; `nextjs-sdk#cookies.ts#createNextjsAnonymousIdSetCookieHeader`; `nextjs-sdk#edge.ts#persistEdgeAnonymousId` |
-| app consent cookie                      | reader | Reader names/writes/reads; SDK only calls `consent.server`                         | `nextjs-sdk#bound-component-types.ts#NextjsOptimizationServerConsentResolver`; `nextjs-sdk#app-router-request-runtime.tsx#resolveServerConsent`; `nextjs-sdk#edge.ts#resolveServerConsent`                 |
-| `NEXT_PUBLIC_*` env vars                | reader | Next.js exposes only `NEXT_PUBLIC_`-prefixed vars to browser                       | `extern:Next.js exposes only NEXT_PUBLIC_-prefixed vars to the browser`                                                                                                                                    |
+| Identifier                              | Owner  | Notes                                                                                                                                                                                                 | source                                                                                                                                                                                                       |
+| --------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ctfl-opt-aid` (profile/anon-id cookie) | SDK    | Request helpers read existing continuity; the live browser SDK writes replay results when persistence permits. The Edge handoff's compatibility `persist()` callback does not write preview identity. | `core-sdk#constants.ts#ANONYMOUS_ID_COOKIE`; `nextjs-sdk#server.tsx#readNextjsAnonymousId`; `nextjs-sdk#edge.ts#configureNextjsEdgeOptimization`; `web-sdk#ContentfulOptimization.ts#ContentfulOptimization` |
+| app consent cookie                      | reader | Reader names/writes/reads; SDK only calls `consent.server`                                                                                                                                            | `nextjs-sdk#bound-component-types.ts#NextjsOptimizationServerConsentResolver`; `nextjs-sdk#app-router-request-runtime.tsx#resolveServerConsent`; `nextjs-sdk#edge.ts#resolveServerConsent`                   |
+| `NEXT_PUBLIC_*` env vars                | reader | Next.js exposes only `NEXT_PUBLIC_`-prefixed vars to browser                                                                                                                                          | `extern:Next.js exposes only NEXT_PUBLIC_-prefixed vars to the browser`                                                                                                                                      |
 
 ## Events & tracking
 
-- App Router request handoff helpers call the request-bound SDK's `page()` method. A browser handoff
-  carries explicit `initialPageEvent`; direct request helpers set it from `pageResult.accepted`,
-  forwarded request handoffs set it from boolean `pageAccepted`, and selection helpers require the
-  caller to provide it. On the default request-root path, the nested request tracker receives this
-  value from its shared handoff, so page-event ownership does not depend on which request wrapper
-  starts first.
-  source: `nextjs-sdk#server.tsx#createNextjsRequestHandoff`; `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#app-router-request-handoff.ts#readNextjsForwardedServerData`; `nextjs-sdk#handoff.ts#createHandoffFromSelections`
+- App Router request handoff helpers preview optional identify/track commands followed by the page, then bind the server-built event arrays to the initial route for browser replay. The bound root owns one combined hydration and initial event operation; preview rendering and live state readiness precede delivery completion. Server-built IDs, timestamps, channel, request context, and interceptor changes survive browser submission; live consent and ordinary queue interceptors still apply. Legacy `initialPageEvent` inputs do not own or suppress the route.
+  source: `nextjs-sdk#server.tsx#createNextjsRequestHandoff`; `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `core-sdk#handoff.ts#createRequestHandoffFromPreview`; `web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage`; `web-sdk#ContentfulOptimization.ts#trackCurrentPage`
+
 - Request and Edge handoff helpers derive Core page context from the request or forwarded URL before
   supplied page context and page-event payload layers override it. Browser route-to-page URL behavior
   comes from the React Web App Router inputs recorded in [`react-web.md`](./react-web.md). Both URL
@@ -217,8 +221,8 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
   [`campaign-attribution`](../shared/concepts.md#campaign-attribution) behavior.
   source: nextjs-sdk#server.tsx#createNextjsRequestContext; nextjs-sdk#edge.ts#createEdgeRequestContext; core-sdk#page-context.ts#createPageContextFromUrl; kb:web/react-web.md; kb:shared/concepts.md
 - `NextAppAutoPageTracker` must stay inside `Suspense` (reads `useSearchParams`).
-  Duplicate-page-event control: `initialPageEvent="skip"` when the server already reported the view,
-  `"emit"` for browser-owned routes.
+  Its legacy `initialPageEvent` input is inert; current-route dedupe comes from accepted live tracking
+  and private replay.
   source: `react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker`; `react-web-sdk#auto-page/useAutoPageEmitter.ts#InitialAutoPageEvent`
 - The App Router client binder forwards `beforeInitialPage` only to its direct and request-family
   content roots; its bound provider and analytics root projections omit it. The request-family root
@@ -272,21 +276,14 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
   differ by helper. Public permutation cache middleware treats an existing rewrite, redirect, or
   plain non-pass-through response as terminal and returns it unchanged. The request-context handler
   treats redirects and plain non-pass-through responses as terminal; existing rewrite responses keep
-  their rewrite target while the handler still applies sanitized SDK request context and eligible
-  anonymous-id cookie persistence. For pass-through responses, helpers preserve Next's forwarded
+  their rewrite target while the handler still applies sanitized request context. For pass-through
+  responses, helpers preserve Next's forwarded
   request headers encoded in
   `x-middleware-override-headers` and `x-middleware-request-*`, clear only SDK-owned `x-ctfl-opt-*`
-  request context, then write the current Optimization request URL back into the forwarded request
-  header set. This removes direct client-supplied `x-ctfl-opt-server-data` before a trusted handler
-  writes its own forwarded context. When configured with `sdk` and `consent`, the request-context
-  handler also resolves consent, calls `page()`, serializes compact
-  `{ consent, pageAccepted, profileId }` context with
-  `encodeURIComponent(JSON.stringify(value))` into the forwarded `x-ctfl-opt-server-data` request
-  header without serializing profile traits, changes, or selected optimizations, and persists the
-  SDK-owned anonymous ID cookie on the response when persistence permits it. `pageAccepted` is copied
-  from `pageResult.accepted`; `profileId` comes from response data or the request-bound profile.
-  Without options, it only forwards sanitized request context.
-  source: `nextjs-sdk#request-handler.ts#createNextjsOptimizationContextHandler`; `nextjs-sdk#request-handler.ts#hasExistingTerminalMiddlewareTarget`; `nextjs-sdk#request-handler.ts#sanitizeForwardedRequestHeaders`; `nextjs-sdk#request-handler.ts#getRequestOptimizationData`; `nextjs-sdk#request-context.ts#serializeNextjsOptimizationRequestContext`; `nextjs-sdk#server.tsx#getNextjsServerOptimizationData`; `nextjs-sdk#server.tsx#persistNextjsAnonymousId`; `nextjs-sdk#forwarded-request-headers.ts#createForwardedRequestHeaders`; `nextjs-sdk#forwarded-request-headers.ts#applyForwardedRequestHeaders`; `nextjs-sdk#cache-middleware.ts#createNextjsPublicPermutationCacheMiddleware`; `nextjs-sdk#cache-middleware.ts#hasExistingTerminalMiddlewareTarget`
+  request context, then write only the current request URL into the SDK-owned forwarded header. The
+  request-context handler performs no SDK/API, consent, profile, or cookie-persistence work; its
+  legacy options are inert.
+  source: `nextjs-sdk#request-handler.ts#createNextjsOptimizationContextHandler`; `nextjs-sdk#request-handler.ts#hasExistingTerminalMiddlewareTarget`; `nextjs-sdk#request-handler.ts#createSanitizedForwardedRequestHeaders`; `nextjs-sdk#request-context.ts#NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER`; `nextjs-sdk#forwarded-request-headers.ts#createForwardedRequestHeaders`; `nextjs-sdk#forwarded-request-headers.ts#applyForwardedRequestHeaders`; `nextjs-sdk#cache-middleware.ts#createNextjsPublicPermutationCacheMiddleware`; `nextjs-sdk#cache-middleware.ts#hasExistingTerminalMiddlewareTarget`
 - **Public permutations can be static, ISR, or edge-rendered:** routes that call
   `createPublicPermutationHandoff()` with application-provided selections do not need request
   profile state; cache safety is represented by the helper-created `public-permutation` cache
@@ -294,7 +291,7 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
   static cache metadata before request evaluation.
   The manual App Router request helper defaults omitted cache metadata to `private-request`; the
   nested request family uses that same default.
-  source: `nextjs-sdk#handoff.ts#createPublicPermutationHandoff`; `core-sdk#handoff.ts#createPublicPermutationCacheMetadata`; `nextjs-sdk#app-router-request-handoff.ts#assertRequestHandoffCacheMetadata`; `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#edge.ts#assertEdgeRequestHandoffCacheMetadata`; `node-sdk#handoff.ts#createRequestHandoffFromData`
+  source: `nextjs-sdk#handoff.ts#createPublicPermutationHandoff`; `core-sdk#handoff.ts#createPublicPermutationCacheMetadata`; `nextjs-sdk#app-router-request-handoff.ts#assertRequestHandoffCacheMetadata`; `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#edge.ts#assertEdgeRequestHandoffCacheMetadata`; `core-sdk#handoff.ts#createRequestHandoffFromData`
 - **Rendered server output is request-specific:** the bound `OptimizedEntry` reads the current
   request handoff state and resolves a supplied or managed baseline entry with that request's
   `selectedOptimizations`; merge tags can also read its profile. Request handoff state, resolved
@@ -302,21 +299,21 @@ source: `nextjs-sdk#app-router-server.tsx#bindNextjsAppRouterServerOptimization`
   cache key covers the complete personalization context. Raw Contentful baseline-entry caching is a
   separate application policy.
   source: `nextjs-sdk#app-router-server.tsx#OptimizedEntry`; `nextjs-sdk#app-router-server.tsx#getAppRouterBaselineEntry`; `core-sdk#CoreBase.ts#resolveOptimizedEntry`
-- **The bound root provides a handoff-to-live transition:** React Web builds the initial browser
-  render from `handoff.state` and `handoff.entries`, then hydrates the owned live SDK before
-  switching the context runtime. Children remain mounted through the transition.
-  source: `nextjs-sdk#app-router-server.tsx#toClientRootConfig`; `react-web-sdk#provider/OptimizationProvider.tsx#createInitialRuntime`; `react-web-sdk#provider/OptimizationProvider.tsx#initializeServerOptimizationState`; `react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider`
-  A handoff without matching baseline entries cannot guarantee no visual change for managed-entry
-  client rendering; stable takeover also requires the browser to render the same baseline entry
-  through the same component path or to receive a matching managed-entry handoff in `handoff.entries`.
+- The bound root owns one combined hydration and initial event operation; preview rendering and live state readiness precede delivery completion. The root's ordinary route tracking effect performs the browser commit after that transition. Children remain mounted throughout. A handoff without matching baseline entries cannot guarantee no visual change for managed-entry client rendering; stable takeover also requires the browser to render the same baseline entry through the same component path or to receive a matching managed-entry handoff in `handoff.entries`.
+  source: `nextjs-sdk#app-router-server.tsx#toClientRootConfig`; `react-web-sdk#provider/OptimizationProvider.tsx#createInitialRuntime`; `react-web-sdk#provider/OptimizationProvider.tsx#initializeProviderSdk`; `react-web-sdk#provider/OptimizationProvider.tsx#OptimizationProvider`; `react-web-sdk#root/OptimizationRoot.tsx#PageEmitter`; `web-sdk#ContentfulOptimization.ts#trackCurrentPage`
   source: `react-web-sdk#provider/OptimizationProvider.tsx#createInitialRuntime`; `react-web-sdk#provider/OptimizationProvider.tsx#createPrefetchedManagedEntries`; `react-web-sdk#optimized-entry/useOptimizedEntry.ts#useManagedBaselineEntry`
 
 ## Failure & fallback behavior
 
-- The request-family initializer requires the SDK-forwarded `x-ctfl-opt-request-url` header and
-  throws setup guidance for the Optimization request handler/proxy before it resolves any request
-  component when that header is absent.
-  source: `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#request-context.ts#NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER`
+- The automatic request family treats missing forwarded request context and operational preview
+  failures (Experience API, request command resolver, interceptor, or event-schema failures) as
+  profileless private-request baseline handoffs. It discards preview state and replay, preserves the
+  chosen hydration mode, and lets the browser make its normal page attempt. For missing or malformed
+  forwarded URLs, it omits server route inputs so the injected client root or request page tracker
+  derives the real browser route instead of emitting a synthetic one. The public bound
+  `optimization.createRequestHandoff()` uses the same operational fallback; the lower-level
+  `createNextjsRequestHandoff()` remains strict.
+  source: `nextjs-sdk#app-router-request-runtime.tsx#bindNextjsAppRouterRequestRuntime`; `nextjs-sdk#request-preview-fallback.ts#resolveRequestPreview`; `nextjs-sdk#request-preview-fallback.ts#createPrivateRequestPreviewFallbackHandoff`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`
 - Baseline fallback when event policy produced no selections / no variant / unresolved links /
   all-locale payloads: see
   [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback).

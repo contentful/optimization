@@ -178,9 +178,16 @@ Keep any `Suspense` or `connection()` boundary required by your Next.js renderin
 Components setup; request mode removes SDK request plumbing, not Next.js rendering requirements.
 
 Set `request.hydration` on the server binder only when a route needs another fixed hydration mode or
-a synchronous resolver based on `requestUrl` and `routeKey`. Set `request.trustedRequestHandoff` to
-`true` only when the request handler is configured with the server SDK and consent so it can forward
-trusted page and profile context.
+a synchronous resolver based on `requestUrl` and `routeKey`. The proxy or middleware request-context
+handler is context-only; request helpers create their private preview and browser replay at the
+rendering boundary.
+
+For the low-level request helpers, `initialExperienceEvents` is an array of flat `identify` and
+`track` command objects. The App Router request configuration and Edge helper can resolve that array
+from their framework request context before they call the low-level helper. Keep command ordering in
+that application or framework boundary; replay does not normalize commands or enforce an event
+grammar. If a request helper cannot derive route identity, it still returns accepted preview state,
+but it omits replay and browser tracking follows the ordinary current-page path.
 
 ### Client Components
 
@@ -230,7 +237,6 @@ const handoff = optimization.createPublicPermutationHandoff({
   entryIds: permutation.entryIds,
   selectedOptimizations: permutation.selectedOptimizations,
   hydration: 'preserve-server',
-  initialPageEvent: 'emit',
 })
 ```
 
@@ -357,9 +363,7 @@ to the browser handoff. The bound client `OptimizedEntry` and `/client` `useOpti
 ## Work before the initial page decision
 
 Both client binders accept `beforeInitialPage` when browser identity or custom Experience event work
-must finish before the bound content root's initial page decision. That decision is the root's one
-choice to send the first browser page event or skip it because an applied handoff already owns that
-route:
+must finish before the bound content root coordinates its initial page event:
 
 ```tsx
 'use client'
@@ -417,10 +421,7 @@ state and replaces the request family's default root. Mount it without
 route changes. The component reference crosses the server composition boundary, but the callback
 remains in its client module and does not enter server config or Flight data.
 
-The App server request family can accept its page event and put that ownership in the handoff. The
-browser request root applies the handoff; after its live owned runtime exists, it invokes
-`beforeInitialPage`, makes one direct page attempt or same-route handoff skip, marks the attempted
-route, and emits for later route changes.
+The App server request family preflights one initial Personalization batch and puts server-built event arrays in a private handoff. The browser root applies preview state in memory and owns the initial replay/page decision. Accepted matching page replay supplies the initial event work; otherwise `beforeInitialPage` runs before an ordinary page attempt. Preview rendering is independent of delivery. Newer handoffs preserve earlier admitted journals, and later routes use ordinary tracking. Durable continuity requires a successful live Experience response and persistence consent.
 
 The Pages Router client binder uses the same option in its client-only module:
 
@@ -439,10 +440,7 @@ export const optimization = bindNextjsPagesRouterOptimization({
 The client binder captures the callback and forwards it only to the bound content root. The callback
 receives receiver-safe `identify`, `screen`, and `track` methods. It is not forwarded to the bound
 `OptimizationProvider` or `OptimizationAnalyticsRoot`, and injected providers do not accept it.
-For Pages Router requests, the server helper can accept the page event and record that ownership in
-the handoff passed through page props. After the browser root applies that handoff and its live owned
-runtime exists, it invokes `beforeInitialPage`, makes one direct page attempt or same-route handoff
-skip, marks the attempted route, and emits for later route changes.
+For Pages Router requests, the helper preflights one initial Personalization batch and places replay in the private handoff. The browser root hydrates state and owns the initial replay/page decision. An accepted matching page replay supplies the initial work; otherwise `beforeInitialPage` precedes the ordinary page attempt. Newer handoffs preserve admitted journals, preview rendering proceeds during delivery, and later routes use ordinary tracking.
 
 The `NextjsClientOptimizationConfigWithoutBeforeInitialPage` and
 `NextjsClientOptimizationConfigWithBeforeInitialPage` branches derive from
@@ -454,12 +452,11 @@ The `NextjsClientOptimizationConfigWithoutBeforeInitialPage` and
 config is narrowed before binding.
 
 After the callback's returned work finishes or the watchdog expires, the root reads the latest route
-and payload builder for one direct page attempt. A successfully applied same-route handoff can make
-that direct decision a `skip`; otherwise, it attempts `emit`. After the attempt reaches a terminal
-result, the existing page emitter makes a non-emitting initial `skip` mark for the attempted route,
-then uses its normal `emit` path for later route changes. The before-initial-page root is the sole
-page owner in its subtree. Direct App roots, injected App request roots, and Pages roots therefore
-do not mount a separate `NextAppAutoPageTracker`, `RequestNextAppAutoPageTracker`, or
+and payload builder for one initial-page coordination. Only a replay whose route key matches the
+route the root is about to track skips this callback; a stale or mismatched replay is discarded and
+the root attempts the current page after its usual callback. The before-initial-page root is the sole
+page owner in its subtree. Direct App roots, injected App request roots, and Pages roots therefore do
+not mount a separate `NextAppAutoPageTracker`, `RequestNextAppAutoPageTracker`, or
 `NextPagesAutoPageTracker` on this path.
 
 When `maxWaitMs` is omitted, it defaults to 3,000 ms. It accepts positive finite values. `0`,
@@ -471,15 +468,12 @@ The sequence is best-effort. Return every promise or thenable that belongs to th
 before-initial-page work. Fire-and-forget work is later activity, and the watchdog stops waiting
 without canceling callback code or in-flight requests. While the root remains mounted and the same
 live owned runtime is current, callback failure or watchdog expiry still leads to the direct page
-attempt. If the root unmounts or its runtime is replaced, only unsent local page and readiness
-continuation is suppressed.
+attempt. If the root unmounts or its runtime is replaced, only unsent local page work is suppressed.
 
-A route change after the direct page attempt starts neither cancels that attempt nor starts a
-competing attempt. The root settles and marks the captured attempted route before enabling later
-page emission. A route observed only during the in-flight attempt is not emitted; a route change
-after readiness emits normally. The existing entry deadline can commit fallback content first, and
-default non-live behavior keeps that fallback frozen after the before-initial-page work later
-succeeds.
+A route change does not cancel events already handed off. Ordinary route effects wait for the
+initial operation, discard unsent work for disposed route effects, and then use the existing
+accepted/in-flight route tracker. The current route can emit after initial delivery settles.
+Preview content and entry resolution do not wait for event completion.
 
 Keep `beforeInitialPage` config in a client-only module. The App Router server config inherits, and
 the Pages Router server binder uses, an explicit `beforeInitialPage?: never` boundary. Both server
@@ -511,7 +505,7 @@ const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
 export const runtime = 'edge'
 
 export async function GET(request: Request) {
-  const { handoff, persist } = await createEdgeRequestHandoff({
+  const { handoff } = await createEdgeRequestHandoff({
     cache: { scope: 'private-request' },
     hydration: 'preserve-server',
     pagePayload: { properties: { route: new URL(request.url).pathname } },
@@ -520,8 +514,6 @@ export async function GET(request: Request) {
   const response = new Response(renderHtml({ handoff }), {
     headers: { 'content-type': 'text/html; charset=utf-8' },
   })
-
-  persist(response)
 
   return response
 }
@@ -555,16 +547,10 @@ import { createNextjsOptimizationContextHandler } from '@contentful/optimization
 export const proxy = createNextjsOptimizationContextHandler()
 ```
 
-The request-context handler always forwards sanitized request context headers. Called without
-options, it only forwards request context. When configured with `sdk` and `consent`, it resolves
-consent, performs the server page request once, forwards compact `x-ctfl-opt-server-data` context as
-`encodeURIComponent(JSON.stringify({ consent, pageAccepted, profileId }))`, and persists
-`ctfl-opt-aid` on the `NextResponse` when persistence is allowed. Set
-`request.trustedRequestHandoff` to `true` on the App Router server binding so the request family uses
-the forwarded `profileId` without a second `page()` call and uses `pageAccepted` to avoid duplicate
-first page events. For manual orchestration, pass `trustedRequestHandoff: true` to the top-level
-`createRequestHandoff()` instead. Only opt in on routes covered by this configured request handler;
-raw client-supplied `x-ctfl-opt-server-data` is ignored unless the route opts in.
+The request-context handler forwards sanitized request context headers and preserves existing
+NextResponse chain state. It is context-only: it does not perform server event work, forward
+profile or page results, persist `ctfl-opt-aid`, or create trusted request data. Request helpers
+create their private preview and browser replay at the rendering boundary instead.
 
 Use `createNextjsPublicPermutationCacheMiddleware()` from
 `@contentful/optimization-nextjs/cache-middleware` when proxy code needs public permutation

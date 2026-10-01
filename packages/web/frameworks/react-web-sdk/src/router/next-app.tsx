@@ -45,6 +45,7 @@ export interface NextAppAutoPageContext {
 }
 
 export interface NextAppAutoPageTrackerProps extends AutoPagePayloadOptions<NextAppAutoPageContext> {
+  /** @deprecated This legacy input is inert. */
   readonly initialPageEvent?: InitialAutoPageEvent
 }
 
@@ -143,7 +144,6 @@ export function useNextAppAutoPageInputs({
 }
 
 export function NextAppAutoPageTracker({
-  initialPageEvent,
   pagePayload,
   getPagePayload,
 }: NextAppAutoPageTrackerProps): ReactElement | null {
@@ -155,7 +155,6 @@ export function NextAppAutoPageTracker({
   useAutoPageEmitter({
     buildPayload: buildPagePayload,
     enabled: true,
-    initialPageEvent,
     routeKey,
   })
 

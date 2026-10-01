@@ -55,6 +55,7 @@ public struct OptimizationApiConfig {
     public let experienceBaseUrl: String?
     public let insightsBaseUrl: String?
     public let enabledFeatures: [String]?
+    @available(*, deprecated, message: "Retained only to serialize existing native configurations during mixed-version upgrades. It no longer affects runtime behavior.")
     public let preflight: Bool?
 
     public init(

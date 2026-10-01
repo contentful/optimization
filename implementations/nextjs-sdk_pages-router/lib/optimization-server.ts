@@ -4,6 +4,8 @@ import { appConfig } from './config'
 import type { PagesRouterContentHandoff } from './optimization'
 import { getAppConsent } from './util'
 
+const BEFORE_INITIAL_PAGE_QUERY_VALUE = 'readiness'
+
 const { createRequestHandoff } = bindNextjsPagesRouterServerOptimization({
   spaceId: appConfig.spaceId,
   environment: appConfig.environment,
@@ -60,6 +62,11 @@ export async function getPagesRouterOptimizationProps(
   const handoff = await createRequestHandoff(context, {
     cache: { scope: 'private-request' },
     hydration: 'preserve-server',
+    initialExperienceEvents:
+      new URL(routeKey, 'http://localhost').searchParams.get('beforeInitialPage') ===
+      BEFORE_INITIAL_PAGE_QUERY_VALUE
+        ? [{ type: 'identify', userId: 'charles', traits: { identified: true } }]
+        : [],
     pagePayload: createRoutePagePayload(routeKey),
   })
   assertContentHandoff(handoff)

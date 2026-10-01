@@ -73,7 +73,6 @@ function createContentHandoff(
   return {
     cache: { scope: 'static' },
     hydration: 'preserve-server',
-    initialPageEvent: 'skip',
     state,
     ...overrides,
   }
@@ -224,6 +223,33 @@ describe('hydrateOptimizationHandoff', () => {
     expect(sdk.states.experienceRequestState.current).toEqual({ status: 'success' })
   })
 
+  it('hydrates the live SDK state without a retained replay lifecycle', async () => {
+    const sdk = new ContentfulOptimization(config)
+
+    await hydrateOptimizationHandoff(sdk, createContentHandoff({ changes, selectedOptimizations }))
+
+    expect(sdk.states.selectedOptimizations.current).toEqual(selectedOptimizations)
+    expect(sdk.states.experienceRequestState.current).toEqual({ status: 'success' })
+  })
+
+  it('hydrates private preview state without validating its optional replay', async () => {
+    const sdk = new ContentfulOptimization(config)
+
+    await hydrateOptimizationHandoff(
+      sdk,
+      createContentHandoff(
+        { changes, selectedOptimizations },
+        {
+          cache: { scope: 'private-request' },
+          replay: { experience: [], insights: [], routeKey: '' },
+        },
+      ),
+    )
+
+    expect(sdk.states.selectedOptimizations.current).toEqual(selectedOptimizations)
+    expect(sdk.states.experienceRequestState.current).toEqual({ status: 'success' })
+  })
+
   it('hydrates public handoff state through the Web handoff helper', async () => {
     const sdk = new ContentfulOptimization(config)
 
@@ -273,7 +299,7 @@ describe('hydrateOptimizationHandoff', () => {
     })
   })
 
-  it('applies a full server profile when the handoff includes one', async () => {
+  it('applies a full server profile in memory when the handoff includes one', async () => {
     const existingProfile = createProfile('existing-profile')
     const serverProfile = createProfile('server-profile')
     const interceptedProfile = createProfile('intercepted-profile')
@@ -306,9 +332,9 @@ describe('hydrateOptimizationHandoff', () => {
     expect(incomingProfiles).toEqual([serverProfile])
     expect(sdk.states.profile.current).toEqual(interceptedProfile)
     expect(sdk.states.selectedOptimizations.current).toEqual(selectedOptimizations)
-    expect(LocalStore.changes).toEqual(changes)
-    expect(LocalStore.profile).toEqual(interceptedProfile)
-    expect(LocalStore.selectedOptimizations).toEqual(selectedOptimizations)
+    expect(LocalStore.changes).toBeUndefined()
+    expect(LocalStore.profile).toEqual(existingProfile)
+    expect(LocalStore.selectedOptimizations).toBeUndefined()
   })
 
   it('keeps input handoff fields when an interceptor omits them', async () => {
@@ -336,9 +362,6 @@ describe('hydrateOptimizationHandoff', () => {
 
     expect(sdk.states.profile.current).toEqual(serverProfile)
     expect(sdk.states.selectedOptimizations.current).toEqual(selectedOptimizations)
-    expect(LocalStore.changes).toEqual(changes)
-    expect(LocalStore.profile).toEqual(serverProfile)
-    expect(LocalStore.selectedOptimizations).toEqual(selectedOptimizations)
   })
 
   it('applies present undefined handoff fields intentionally', async () => {
@@ -509,6 +532,32 @@ describe('hydrateOptimizationHandoff', () => {
     expect(sdk.states.profile.current).toEqual(secondProfile)
   })
 
+  it.each(['reset', 'destroy'] as const)(
+    'cancels an in-flight handoff when SDK %s runs',
+    async (lifecycle) => {
+      const hydration = createDeferred()
+      const delayedProfile = createProfile('delayed-profile')
+      const sdk = new ContentfulOptimization(config)
+      sdk.interceptors.state.add(async (incoming) => {
+        await hydration.promise
+        return incoming
+      })
+
+      const handoff = hydrateOptimizationHandoff(
+        sdk,
+        createContentHandoff(
+          { changes, profile: delayedProfile, selectedOptimizations },
+          { cache: { scope: 'private-request' } },
+        ),
+      )
+      sdk[lifecycle]()
+      hydration.resolve()
+      await handoff
+
+      expect(sdk.states.profile.current).toBeUndefined()
+    },
+  )
+
   it('rejects analytics-only handoffs', async () => {
     const sdk = new ContentfulOptimization(config)
 
@@ -518,7 +567,6 @@ describe('hydrateOptimizationHandoff', () => {
         {
           cache: { scope: 'static' },
           hydration: 'analytics-only',
-          initialPageEvent: 'skip',
         },
       ]),
     ).rejects.toThrow('content optimization handoffs')

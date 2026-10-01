@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
 import { CUSTOMER_SEGMENTS, PAGES } from '../src/fixtures'
-import { runIf, runIfImplementation } from './utils'
+import { CONSENT_COOKIE, runIf, runIfImplementation } from './utils'
 
 const newVisitorSegment = CUSTOMER_SEGMENTS['new-visitor']
 const baselineSegment = CUSTOMER_SEGMENTS.baseline
@@ -17,6 +17,14 @@ interface PublicCacheMetadata {
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === 'object' && value !== null
+}
+
+function readExperienceEventTypes(payload: unknown): string[] {
+  if (!isRecord(payload) || !Array.isArray(payload.events)) return []
+
+  return payload.events.flatMap((event) =>
+    isRecord(event) && typeof event.type === 'string' ? [event.type] : [],
+  )
 }
 
 function isPublicCacheMetadata(value: unknown): value is PublicCacheMetadata {
@@ -43,24 +51,6 @@ interface EdgeRuntimePayload {
     readonly isEdgeRuntime: true
     readonly witness: 'edge-runtime'
   }
-}
-
-function expectPublicCacheMiddlewareRewrite({
-  cacheKey,
-  path,
-  responseHeaders,
-}: {
-  readonly cacheKey: string
-  readonly path: string
-  readonly responseHeaders: Readonly<Record<string, string | undefined>>
-}): void {
-  const rewriteHeader = responseHeaders['x-middleware-rewrite']
-  expect(rewriteHeader).toBeTruthy()
-
-  const rewriteUrl = new URL(rewriteHeader ?? '/', 'http://middleware.invalid')
-  const requestedUrl = new URL(path, rewriteUrl.origin)
-  expect(rewriteUrl.pathname).toBe(requestedUrl.pathname)
-  expect(rewriteUrl.searchParams.get('ctfl-opt-cache-key')).toBe(cacheKey)
 }
 
 async function expectRawHiddenUntilReadyHtml(page: Page, html: string): Promise<void> {
@@ -123,7 +113,6 @@ async function expectRawSelectedHandoffHtml({
   if (expectedCacheControl !== undefined) {
     expect(responseHeaders['cache-control']).toContain(expectedCacheControl)
   }
-  expectPublicCacheMiddlewareRewrite({ cacheKey, path, responseHeaders })
   expect(html).toContain(`data-testid="${routeTestId}"`)
   expect(html).toContain(`data-testid="${cacheKeyTestId}"`)
   expect(html).toContain(segment.resolvedEntryText)
@@ -257,14 +246,60 @@ test.describe('Next.js handoff routes', () => {
     await expectPageTwoSelectedVariant(page)
   })
 
-  test('uses forwarded request context without duplicating the initial browser page event', async ({
+  test('uses forwarded request context and commits one browser replay batch', async ({
+    baseURL,
+    context,
     page,
   }) => {
-    await page.goto(PAGES.home.path)
+    await context.addCookies([{ name: CONSENT_COOKIE, value: 'granted', url: baseURL }])
+    const browserExperienceRequests: Array<{ readonly method: string; readonly url: string }> = []
+    const browserEventTypes: string[] = []
+    await page.route('**/experience/**', async (route) => {
+      browserExperienceRequests.push({
+        method: route.request().method(),
+        url: route.request().url(),
+      })
+      browserEventTypes.push(...readExperienceEventTypes(route.request().postDataJSON()))
+      await route.continue()
+    })
+
+    const replayResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' && response.url().includes('/experience/'),
+    )
+    await page.goto(`${PAGES.home.path}?beforeInitialPage=readiness`)
     await page.waitForLoadState('networkidle')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
 
-    await expect(page.locator('[data-testid^="event-page-"]')).toHaveCount(0)
+    const response = await replayResponse
+    expect(response.ok()).toBe(true)
+    expect(new URL(response.url()).searchParams.get('type')).not.toBe('preflight')
+
+    expect(browserExperienceRequests).toEqual([
+      expect.objectContaining({ method: 'POST', url: expect.stringContaining('/experience/') }),
+    ])
+    expect(browserEventTypes).toEqual(['identify', 'page'])
+  })
+
+  test('keeps preview content visible while the initial browser replay waits', async ({ page }) => {
+    const delivery = Promise.withResolvers<undefined>()
+    const started = Promise.withResolvers<undefined>()
+    await page.route('**/experience/**', async (route) => {
+      started.resolve(undefined)
+      await delivery.promise
+      await route.continue()
+    })
+
+    try {
+      await page.goto(PAGES.pageTwo.path, { waitUntil: 'domcontentloaded' })
+      await started.promise
+      await expect(page.getByTestId('page-two-view')).toBeVisible()
+      await expectPageTwoSelectedVariant(page)
+    } finally {
+      delivery.resolve(undefined)
+    }
+    await page.waitForLoadState('networkidle')
+    await expectPageTwoSelectedVariant(page)
   })
 
   for (const segment of publicPermutationSegments) {
@@ -384,11 +419,29 @@ test.describe('Next.js Edge runtime handoff routes', () => {
     expect(response.headers()['cache-control']).toBe('private, no-store')
     expect(response.headers()['x-optimization-cache-scope']).toBe('private-request')
     expect(payload).toMatchObject({
-      accepted: true,
       cache: { scope: 'private-request' },
       hydration: 'preserve-server',
-      initialPageEvent: 'skip',
     })
+  })
+
+  test('hydrates an Edge request handoff in the browser', async ({ page }) => {
+    const browserExperienceRequests: Array<{ readonly method: string; readonly url: string }> = []
+    await page.route('**/experience/**', async (route) => {
+      browserExperienceRequests.push({
+        method: route.request().method(),
+        url: route.request().url(),
+      })
+      await route.continue()
+    })
+
+    const response = await page.goto('/edge-handoff')
+    await expect(page.getByTestId('edge-browser-handoff')).toBeVisible()
+    await expect(page.getByTestId('edge-browser-handoff-runtime')).toHaveText('edge-runtime')
+
+    expect(response?.headers()['set-cookie']).toBeUndefined()
+    expect(browserExperienceRequests).toEqual([
+      expect.objectContaining({ method: 'POST', url: expect.stringContaining('/experience/') }),
+    ])
   })
 
   for (const segment of publicPermutationSegments) {

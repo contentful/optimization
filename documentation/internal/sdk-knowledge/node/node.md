@@ -14,15 +14,15 @@ per-visitor state between requests. Package source root: `packages/node/node-sdk
 
 ## Package & entry points
 
-| Import path                                      | Purpose                                                                                                                                                    | source                                                                                                                                                                           |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@contentful/optimization-node` (default export) | Node `ContentfulOptimization` class (extends `CoreStateless`)                                                                                              | node-sdk#index.ts; node-sdk#ContentfulOptimization.ts#ContentfulOptimization                                                                                                     |
-| `@contentful/optimization-node` (named)          | `OPTIMIZATION_NODE_SDK_NAME`, `OPTIMIZATION_NODE_SDK_VERSION`, `OptimizationNodeConfig`, `PublicNodeEventBuilderConfig`, `createRequestHandoffFromData`    | node-sdk#index.ts; node-sdk#constants.ts#OPTIMIZATION_NODE_SDK_NAME; node-sdk#ContentfulOptimization.ts#OptimizationNodeConfig; node-sdk#handoff.ts#createRequestHandoffFromData |
-| `@contentful/optimization-node/constants`        | `ANONYMOUS_ID_COOKIE`, `ANONYMOUS_ID_KEY`, Node SDK name/version                                                                                           | node-sdk#constants.ts; core-sdk#constants.ts#ANONYMOUS_ID_COOKIE; core-sdk#constants.ts#ANONYMOUS_ID_KEY                                                                         |
-| `@contentful/optimization-node/core-sdk`         | Re-exports all of core-sdk (incl. `UniversalEventBuilderArgs`, `CoreStateless`, `CoreStatelessRequest`) plus `prefetchManagedEntries` entry-source helpers | node-sdk#core-sdk.ts; core-sdk#events/EventBuilder.ts#UniversalEventBuilderArgs                                                                                                  |
-| `@contentful/optimization-node/api-schemas`      | Schemas + type guards incl. `isMergeTagEntry`                                                                                                              | node-sdk#api-schemas.ts; core-sdk#contentful/typeGuards.ts#isMergeTagEntry                                                                                                       |
-| `@contentful/optimization-node/api-client`       | API client re-export                                                                                                                                       | node-sdk#api-client.ts                                                                                                                                                           |
-| `@contentful/optimization-node/logger`           | logger utilities (default + named)                                                                                                                         | node-sdk#logger.ts                                                                                                                                                               |
+| Import path                                      | Purpose                                                                                                                                                    | source                                                                                                                                                                                                                                |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-node` (default export) | Node `ContentfulOptimization` class (extends `CoreStateless`)                                                                                              | node-sdk#index.ts; node-sdk#ContentfulOptimization.ts#ContentfulOptimization                                                                                                                                                          |
+| `@contentful/optimization-node` (named)          | Node constants/config plus request handoff helpers                                                                                                         | node-sdk#index.ts; node-sdk#constants.ts#OPTIMIZATION_NODE_SDK_NAME; node-sdk#ContentfulOptimization.ts#OptimizationNodeConfig; core-sdk#handoff.ts#createRequestHandoffFromData; core-sdk#handoff.ts#createRequestHandoffFromPreview |
+| `@contentful/optimization-node/constants`        | `ANONYMOUS_ID_COOKIE`, `ANONYMOUS_ID_KEY`, Node SDK name/version                                                                                           | node-sdk#constants.ts; core-sdk#constants.ts#ANONYMOUS_ID_COOKIE; core-sdk#constants.ts#ANONYMOUS_ID_KEY                                                                                                                              |
+| `@contentful/optimization-node/core-sdk`         | Re-exports all of core-sdk (incl. `UniversalEventBuilderArgs`, `CoreStateless`, `CoreStatelessRequest`) plus `prefetchManagedEntries` entry-source helpers | node-sdk#core-sdk.ts; core-sdk#events/EventBuilder.ts#UniversalEventBuilderArgs                                                                                                                                                       |
+| `@contentful/optimization-node/api-schemas`      | Schemas + type guards incl. `isMergeTagEntry`                                                                                                              | node-sdk#api-schemas.ts; core-sdk#contentful/typeGuards.ts#isMergeTagEntry                                                                                                                                                            |
+| `@contentful/optimization-node/api-client`       | API client re-export                                                                                                                                       | node-sdk#api-client.ts                                                                                                                                                                                                                |
+| `@contentful/optimization-node/logger`           | logger utilities (default + named)                                                                                                                         | node-sdk#logger.ts                                                                                                                                                                                                                    |
 
 ## Setup / initialization and binding
 
@@ -105,7 +105,11 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   events; the caller owns when the request-bound Experience call happens and which browser framework
   receives the handoff. Request handoffs must use `private-request` cache metadata; the helper throws
   a `TypeError` for `public-permutation` or `static` cache metadata before returning a handoff.
-  source: node-sdk#handoff.ts#createRequestHandoffFromData; core-sdk#handoff.ts#assertOptimizationCacheSafety; core-sdk#handoff.ts#OptimizationHandoff
+  source: core-sdk#handoff.ts#createRequestHandoffFromData; core-sdk#handoff.ts#assertOptimizationCacheSafety; core-sdk#handoff.ts#OptimizationHandoff
+- `createRequestHandoffFromPreview()` accepts only an admitted `previewInitialExperience()` result,
+  binds its SDK-owned replay commands to a private route handoff, and rejects public or static cache
+  metadata. A blocked final page cannot produce a replay handoff.
+  source: core-sdk#handoff.ts#createRequestHandoffFromPreview; core-sdk#CoreStatelessRequest.ts#previewInitialExperience
 
 ## Identifier ownership
 
@@ -149,6 +153,14 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
 - Blocked events do NOT throw: Experience methods return `{ accepted: false }`, Insights methods
   return without sending; `onEventBlocked({ reason: 'consent', method, args })` fires for diagnostics.
   source: core-sdk#CoreStatelessRequest.ts#sendExperienceEvent; core-sdk#CoreStatelessRequest.ts#reportBlockedEvent; core-sdk#events/BlockedEvent.ts#BlockedEvent
+- Initial browser continuation uses `previewInitialExperience()` plus
+  `createRequestHandoffFromPreview()`: the request client evaluates caller identify/track commands,
+  appends its page, and sends the admitted sequence as one forced-preflight mutation. The private
+  handoff carries the server-built events, request context, and route key; the live browser
+  retains the server-built wire events and submits the sequence through one combined hydration and current-page operation. Shared
+  actual-event validation, batching, consent, and fallback behavior is recorded in
+  [`../shared/concepts.md`](../shared/concepts.md#experience-preflight-and-private-replay).
+  source: core-sdk#CoreStatelessRequest.ts#previewInitialExperience; core-sdk#handoff.ts#createRequestHandoffFromPreview; kb:shared/concepts.md
 - `eventContext` (`UniversalEventBuilderArgs`: `locale?`, `userAgent?`, `page?`, `screen?`, `campaign?`,
   `location?`) is merged into every event built through the request client; a per-call payload wins over
   it. `page.*` requires `path`, `query`, `referrer`, `search`, `url` (`title` optional). The app builds
@@ -183,6 +195,10 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   `plainText`, `preflight`) and `insightsOptions` (`CoreStatelessInsightsOptions`: `beacon`) apply only
   to that request's calls.
   source: core-sdk#CoreStateless.ts#CoreStatelessRequestOptions; core-sdk#CoreStateless.ts#CoreStatelessInsightsOptions
+- Global `api.preflight` is a deprecated compatibility input and is inert in Node. Ordinary
+  stateless calls use request-local `experienceOptions.preflight`; `previewInitialExperience()`
+  forces preflight for its single ordered preview regardless of that request-local value.
+  source: core-sdk#CoreApiConfig.ts#CoreSharedApiConfig; core-sdk#CoreStateless.ts#createStatelessExperienceApiConfig; core-sdk#CoreStatelessRequest.ts#previewInitialExperience
 - SDK config is framework-agnostic; store the instance in a module-level singleton. No browser live
   updates or preview UI in Node.
   source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization
@@ -203,6 +219,11 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   matching selection / broken variant link / all-locale payload: the resolver returns the baseline
   entry. Shared model: see [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback).
   source: core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext
+- `previewInitialExperience()` deliberately propagates Experience API, event-interceptor, and event
+  schema failures so a server can observe and classify them. A direct Node-plus-Web route catches
+  that rejection at its application boundary and returns baseline HTML without a handoff; it must
+  not use a request-derived handoff in public or static output.
+  source: core-sdk#CoreStatelessRequest.ts#previewInitialExperience; core-sdk#handoff.ts#assertOptimizationCacheSafety
 - Consent-blocked events fail closed without throwing (see Events & tracking). Insights-only calls
   and non-sticky `trackView` without a bound `profile.id` throw a method-specific error; sticky
   `trackView` throws only if it cannot derive a profile from its Experience response and none was bound.

@@ -50,6 +50,8 @@ page context with `forRequest()`. Your app keeps ownership of its Contentful cli
 sessions, cookies, identity, routing, caching, and rendering — the Node SDK holds no per-visitor
 state between requests.
 
+On a paired server/browser route, Node produces preview state for the server render. The handoff's **private replay** contains server-built events for browser delivery. Web applies preview state in memory and owns the initial replay/page decision. A successful **browser commit** is the non-preflight Experience profile response; only that response can establish durable persistence when consent permits it.
+
 The examples use Express, but the same request-scoped flow applies to any Node request handler. If
 you also want the browser to continue personalization after the server renders, see
 [Share continuity with the Web SDK](#share-continuity-with-the-web-sdk). For a browser-only app, use
@@ -603,11 +605,16 @@ function clearOptimizationIdentity(res: Response): void {
 }
 ```
 
-`ANONYMOUS_ID_COOKIE` is an SDK-defined constant that resolves to the cookie name `ctfl-opt-aid`;
-import it rather than hardcoding the string, and do not rename it — the browser Web SDK reads the
-same name. Use this shared cookie when the same app also runs the Web SDK in the browser, and do not
+`ctfl-opt-aid` is the exact SDK-owned cookie name exposed by the `ANONYMOUS_ID_COOKIE` constant.
+Import the constant rather than hardcoding or renaming the string. The Node SDK does not write the
+cookie; your app owns its server lifecycle, while the browser Web SDK reads the same name. Do not
 mark it `HttpOnly` in a hybrid Node + Web SDK app because browser-side SDK code must read it. In a
 server-only app, a session store or a stricter cookie policy can be valid.
+
+The `persistProfile()` pattern above belongs to a direct Node-owned event flow. For an initial route
+that continues through Web, read an existing cookie on the server but do not persist the server
+preview result. The browser establishes durable persistence after a successful browser commit, as described in
+[Share continuity with the Web SDK](#share-continuity-with-the-web-sdk).
 
 For the lower-level mechanics, see
 [Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md).
@@ -1029,19 +1036,144 @@ guidance.
 **Integration category:** Optional
 
 Add `@contentful/optimization-web` when the browser also needs to participate after server render.
-Use the Node SDK alone when the server chooses the variant and renders the full response.
+Use the Node SDK alone when the server owns the whole response. In that server-only model,
+`page()`, `identify()`, and `track()` are delivered from Node, and your application persists the
+returned profile ID when `canPersistProfile` is `true`.
 
-1. Store the shared anonymous profile ID in `ANONYMOUS_ID_COOKIE` when consent permits persistence.
-2. Leave the shared cookie readable by browser-side code in hybrid Node + Web SDK apps.
-3. Initialize the Web SDK with the same Contentful space ID, environment, and application locale.
-4. Let browser code handle later client-side consent, page events, entry interactions, and live
-   updates.
+A Node-plus-Web route uses one paired sequence: zero or more optional `identify`/`track` commands in
+application-supplied order, followed by the SDK-appended `page` command. The server preview sends
+that sequence in an Experience profile `POST` with `type=preflight`. This is an SDK transport mode,
+not a browser CORS preflight. It can select HTML without committing the events or a new profile
+cookie. A page command blocked by consent produces `{ accepted: false }`, so the example below
+returns no continuation.
+`createRequestHandoffFromPreview()` binds the preview state and sequence to the route in an
+SDK-owned private handoff. Private means request-scoped data that must not enter a public cache.
+Each optional command is a flat input: identify uses `{ type: 'identify', userId, traits? }`, and
+custom tracking uses `{ type: 'track', event, properties? }`.
 
-The Node SDK does not provide browser live updates or a preview UI. Keep those concerns in
-browser-side SDK code or app-owned Contentful preview tooling.
+> [!NOTE]
+>
+> Without JavaScript, previewed server HTML can still render, but browser delivery and a new
+> browser `ctfl-opt-aid` cookie do not occur.
+
+Your application owns the server-to-browser serialization and transport for the handoff. Transport
+the app-owned wrapper below through the same SSR data channel you use for other startup state. Keep
+its `routeKey` separate from `pageUrl`: the route key is the path plus search string used to match
+the private replay and deduplicate page delivery, while `pageUrl` is the full URL recorded as
+event data.
+
+**Adapt this to your use case:** create a private handoff on the server. `userId`, `eventName`,
+`routeKey`, and the page properties come from your request and application policy.
+
+```ts
+import type {
+  CoreStatelessRequest,
+  InitialExperienceCommandInput,
+} from '@contentful/optimization-node/core-sdk'
+import { createRequestHandoffFromPreview } from '@contentful/optimization-node'
+import type { ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
+
+async function createBrowserContinuation(
+  requestOptimization: CoreStatelessRequest,
+  routeKey: string,
+  pageUrl: string,
+  userId?: string,
+  eventName?: string,
+): Promise<
+  { readonly handoff: ContentOptimizationHandoff; readonly routeKey: string } | undefined
+> {
+  const events: InitialExperienceCommandInput[] = []
+  if (userId !== undefined) events.push({ type: 'identify', userId })
+  if (eventName !== undefined) events.push({ type: 'track', event: eventName })
+
+  try {
+    const preview = await requestOptimization.previewInitialExperience({
+      events,
+      page: { properties: { url: pageUrl } },
+    })
+
+    if (!preview.accepted) return undefined
+
+    return {
+      handoff: {
+        ...createRequestHandoffFromPreview({ preview, routeKey }),
+        hydration: 'preserve-server',
+      },
+      routeKey,
+    }
+  } catch (error) {
+    console.warn('Optimization preview failed; rendering the baseline.', error)
+    return undefined
+  }
+}
+```
+
+`previewInitialExperience()` leaves API, interceptor, and event-schema failures observable. Catch it
+at the route boundary, log it through your application diagnostics, and render the baseline with no
+handoff. Keep cache and privacy checks fail-closed: do not serialize request-derived state into a
+public or static response as a fallback.
+
+**Adapt this to your use case:** parse the app-transported continuation before browser startup,
+hydrate it on the live Web instance, and use the same current-route call for initial and later
+tracking. The call has only ordinary route inputs; replay remains inside the SDK.
+
+```ts
+import ContentfulOptimization from '@contentful/optimization-web'
+import { type ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
+
+export async function startBrowserRuntime(
+  optimization: ContentfulOptimization,
+  continuation:
+    | { readonly handoff: ContentOptimizationHandoff; readonly routeKey: string }
+    | undefined,
+) {
+  const delivery = optimization.hydrateAndTrackCurrentPage(continuation?.handoff, {
+    routeKey: continuation?.routeKey ?? `${window.location.pathname}${window.location.search}`,
+    buildPayload: () => ({ properties: { url: window.location.href } }),
+  })
+  void delivery.catch((error: unknown) => {
+    console.warn('Initial event delivery failed.', error)
+  })
+}
+
+export async function trackCurrentRoute(
+  optimization: ContentfulOptimization,
+  routeKey = `${window.location.pathname}${window.location.search}`,
+): Promise<void> {
+  await optimization.trackCurrentPage({
+    routeKey,
+    buildPayload: () => ({ properties: { url: window.location.href } }),
+  })
+}
+```
+
+`hydrateAndTrackCurrentPage()` applies preview state in memory and owns the initial delivery decision. A matching replay submits the server-built Personalization batch with live consent and ordinary interceptors, then sends Analytics through its ordinary queue. A mismatch, unusable payload, blocked page, or delivery failure permits one ordinary page only if no page was accepted. Recoverable hydration failure permits safe delivery; later Analytics failure cannot duplicate an accepted page. Repeated handoff calls share completion, and newer handoffs preserve earlier admitted events. Use `trackCurrentPage()` for later routes.
+
+When a cache-safe browser handoff cannot hydrate, discard it and continue with the same ordinary
+page attempt. A cache-safety error remains fail-closed: do not apply the supplied handoff state or
+replay.
+
+The server reads an existing `ANONYMOUS_ID_COOKIE` value into `forRequest({ profile })`, but it does
+not write the preview's profile ID. A successful browser commit can establish durable persistence
+and write `ctfl-opt-aid` when browser persistence consent permits it. Keep that cookie
+browser-readable for later server requests.
+
+Verify the paired flow in the browser developer tools Network panel. Load the server-rendered route
+and find one browser `POST` ending in `/profiles` or `/profiles/:id` with no `type=preflight`
+query parameter. The separate server preview is an Experience profile `POST` with
+`type=preflight`, not a CORS preflight. In the browser request body, inspect the `events` array and
+confirm zero or more optional identify/track events appear in your supplied order, followed by the
+page event. A successful response is the browser commit. Call `startBrowserRuntime()` once, then
+call only `trackCurrentRoute(optimization)` again without changing path or search. The second route
+call must not produce another profile `POST`; do not repeat `startBrowserRuntime()`, because that
+helper hydrates the handoff. Finally, inspect browser cookies and confirm `ctfl-opt-aid` appears
+only when persistence consent allows durable persistence.
+
+The Node SDK does not provide browser live updates or a preview UI. Keep those concerns in the Web
+SDK or app-owned Contentful preview tooling.
 
 The [Node SSR + Web SDK reference implementation](../../implementations/node-sdk+web-sdk/README.md)
-shows cookie sharing with `ANONYMOUS_ID_COOKIE` plus browser-side follow-up tracking and entry
+shows the preview-to-replay handoff, browser-owned cookie persistence, follow-up tracking, and entry
 resolution.
 
 ## Advanced integrations
@@ -1137,6 +1269,8 @@ Before releasing a Node SDK integration, verify these points:
   cannot be found.
 - Duplicate tracking prevention: server-rendered exposures, browser follow-up tracking, and
   third-party forwarding have one owner per event in your tracking plan.
+- Node/Web paired routes: perform the initial replay, duplicate-request, and continuity-cookie
+  checks in [Share continuity with the Web SDK](#share-continuity-with-the-web-sdk).
 - Privacy and governance constraints: profile IDs, full profile objects, selected optimizations,
   changes, and analytics payloads are forwarded only to approved destinations.
 - Local validation path: run the server against mock or test credentials, load a route that calls
@@ -1165,5 +1299,5 @@ snippets:
   `identify()`, `resolveOptimizedEntry()`, `getMergeTagValue()`, raw Contentful entry caching, and
   single-locale CDA requests.
 - [Node SSR + Web SDK Vanilla](../../implementations/node-sdk+web-sdk/README.md): consent-aware
-  cookie sharing with `ANONYMOUS_ID_COOKIE` for Node and Web SDK continuity, plus browser-side
-  follow-up tracking and entry resolution.
+  server preview, private browser replay, browser-owned profile persistence, follow-up tracking,
+  and entry resolution.

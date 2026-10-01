@@ -1,18 +1,22 @@
-import ContentfulOptimizationRuntime from '@contentful/optimization-node'
+import { EventBuilder } from '@contentful/optimization-node/core-sdk'
 import type { Entry } from 'contentful'
 import type { GetServerSidePropsContext } from 'next'
 import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
-import * as pagesRouterServerExports from './pages-router-server'
+import {
+  bindNextjsPagesRouterServerOptimization,
+  createNextjsPagesRouterRequestHandoff,
+} from './pages-router-server'
 import {
   configureNextjsServerOptimization,
   type ContentfulOptimization,
   type CoreStatelessRequest,
   type OptimizationData,
 } from './server'
-
-const { bindNextjsPagesRouterServerOptimization, createNextjsPagesRouterRequestHandoff } =
-  pagesRouterServerExports
+const replayEventBuilder = new EventBuilder({
+  channel: 'server',
+  library: { name: 'test-server', version: '1.0.0' },
+})
 
 const SDK_CONFIG = {
   spaceId: 'key_123',
@@ -53,14 +57,22 @@ afterEach(() => {
 
 interface CreatedSdk {
   readonly forRequest: ReturnType<typeof rs.spyOn>
-  readonly page: ReturnType<typeof rs.fn<CoreStatelessRequest['page']>>
+  readonly previewInitialExperience: ReturnType<
+    typeof rs.fn<CoreStatelessRequest['previewInitialExperience']>
+  >
   readonly sdk: ContentfulOptimization
 }
 type NextjsOptimizationConfig = Parameters<typeof configureNextjsServerOptimization>[0]
 
 function createSdk(
-  page = rs.fn<CoreStatelessRequest['page']>(
-    async () => await Promise.resolve({ accepted: true, data: OPTIMIZATION_DATA }),
+  previewInitialExperience = rs.fn<CoreStatelessRequest['previewInitialExperience']>(
+    async () =>
+      await Promise.resolve({
+        accepted: true,
+        data: OPTIMIZATION_DATA,
+        experience: [replayEventBuilder.buildPageView({})],
+        insights: [],
+      }),
   ),
   config: NextjsOptimizationConfig = SDK_CONFIG,
 ): CreatedSdk {
@@ -70,33 +82,13 @@ function createSdk(
 
   forRequest.mockImplementation((options) => {
     const requestOptimization = originalForRequest(options)
-    rs.spyOn(requestOptimization, 'page').mockImplementation(page)
+    rs.spyOn(requestOptimization, 'previewInitialExperience').mockImplementation(
+      previewInitialExperience,
+    )
     return requestOptimization
   })
 
-  return { forRequest, page, sdk }
-}
-
-function mockPrototypeRequestPage(): {
-  readonly forRequest: ReturnType<typeof rs.spyOn>
-  readonly page: ReturnType<typeof rs.fn<CoreStatelessRequest['page']>>
-} {
-  const originalForRequest = ContentfulOptimizationRuntime.prototype.forRequest
-  const page = rs.fn<CoreStatelessRequest['page']>(
-    async () => await Promise.resolve({ accepted: true, data: OPTIMIZATION_DATA }),
-  )
-  const forRequest = rs.spyOn(ContentfulOptimizationRuntime.prototype, 'forRequest')
-
-  forRequest.mockImplementation(function mockForRequest(
-    this: ContentfulOptimizationRuntime,
-    options,
-  ) {
-    const requestOptimization = originalForRequest.call(this, options)
-    rs.spyOn(requestOptimization, 'page').mockImplementation(page)
-    return requestOptimization
-  })
-
-  return { forRequest, page }
+  return { forRequest, previewInitialExperience, sdk }
 }
 
 function createEntry(id: string): Entry {
@@ -167,51 +159,31 @@ function createContext({
 }
 
 describe('Next.js Pages Router server handoff helpers', () => {
-  it('exports the server binding helper without the removed Pages Router create* name', () => {
-    expect(pagesRouterServerExports.bindNextjsPagesRouterServerOptimization).toBeTypeOf('function')
-    expect(pagesRouterServerExports.createPublicPermutationCacheMetadata).toBeTypeOf('function')
-    expect(pagesRouterServerExports.createPublicPermutationHandoff).toBeTypeOf('function')
-    expect(pagesRouterServerExports.resolveEntriesForSelections).toBeTypeOf('function')
-    expect(pagesRouterServerExports).not.toHaveProperty('createNextjsPagesRouterOptimization')
-  })
-
-  it('creates a config-bound request handoff helper', async () => {
-    const { forRequest } = mockPrototypeRequestPage()
-    const resolveConsent = rs.fn(
-      (context: { readonly cookies: { get: (name: string) => unknown } }) =>
-        context.cookies.get('consent') ? { events: true, persistence: true } : false,
-    )
+  it('falls back to a profileless handoff when the consent resolver rejects', async () => {
+    const consentError = new Error('Consent service unavailable')
     const { createRequestHandoff } = bindNextjsPagesRouterServerOptimization({
       ...SDK_CONFIG,
-      consent: { server: resolveConsent },
-      cookie: { domain: 'example.test', expires: 1 },
-      locale: 'de-DE',
+      consent: { server: async () => await Promise.reject(consentError) },
     })
-    const context = createContext({ cookies: { consent: 'yes' } })
 
-    const handoff = await createRequestHandoff(context, {
+    const handoff = await createRequestHandoff(createContext(), {
+      entries: [{ baselineEntry: createEntry('baseline-entry'), entryId: 'baseline-entry' }],
       hydration: 'preserve-server',
-      pagePayload: { properties: { route: '/products' } },
+      pagePayload: {},
     })
 
-    expect(resolveConsent).toHaveBeenCalled()
-    expect(forRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        consent: { events: true, persistence: true },
-        locale: 'de-DE',
-      }),
-    )
-    expect(handoff.initialPageEvent).toBe('skip')
     expect(handoff).toMatchObject({
-      defaults: { consent: true, persistenceConsent: true },
+      cache: { scope: 'private-request' },
+      defaults: { consent: false, persistenceConsent: false },
+      entries: [{ entryId: 'baseline-entry' }],
+      hydration: 'preserve-server',
     })
-    expect(context.res.getHeader('Set-Cookie')).toEqual(
-      expect.stringContaining('Domain=example.test'),
-    )
+    expect(handoff).not.toHaveProperty('state')
+    expect(handoff).not.toHaveProperty('replay')
   })
 
-  it('builds request context from getServerSideProps context and calls page', async () => {
-    const { forRequest, page, sdk } = createSdk()
+  it('maps getServerSideProps URL and context into the request preview', async () => {
+    const { forRequest, previewInitialExperience, sdk } = createSdk()
 
     const result = await createNextjsPagesRouterRequestHandoff(
       sdk,
@@ -231,7 +203,6 @@ describe('Next.js Pages Router server handoff helpers', () => {
       },
     )
 
-    expect(result.handoff.initialPageEvent).toBe('skip')
     expect(result.handoff.state?.profile?.id).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
     expect(forRequest).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -250,28 +221,10 @@ describe('Next.js Pages Router server handoff helpers', () => {
         locale: 'de-DE',
       }),
     )
-    expect(page).toHaveBeenCalledWith({ properties: { route: '/products' } })
+    expect(previewInitialExperience).toHaveBeenCalledWith({
+      page: { properties: { route: '/products' } },
+    })
   })
-
-  it.each([
-    ['accepted without data', { accepted: true }, 'skip'],
-    ['blocked', { accepted: false }, 'emit'],
-  ] as const)(
-    'sets initialPageEvent from page acceptance for %s',
-    async (_label, pageResult, expectedInitialPageEvent) => {
-      const { sdk } = createSdk(
-        rs.fn<CoreStatelessRequest['page']>(async () => await Promise.resolve(pageResult)),
-      )
-
-      const result = await createNextjsPagesRouterRequestHandoff(sdk, createContext(), {
-        consent: true,
-        hydration: 'preserve-server',
-        pagePayload: { properties: { route: '/products' } },
-      })
-
-      expect(result.handoff.initialPageEvent).toBe(expectedInitialPageEvent)
-    },
-  )
 
   it('defaults missing object persistence consent to false', async () => {
     const { sdk } = createSdk()
@@ -317,11 +270,18 @@ describe('Next.js Pages Router server handoff helpers', () => {
       calls.push('fetch')
       return await Promise.resolve(createEntryCollection([baselineEntry]))
     })
-    const page = rs.fn<CoreStatelessRequest['page']>(async () => {
-      calls.push('page')
-      return await Promise.resolve({ accepted: true, data: OPTIMIZATION_DATA })
-    })
-    const { sdk } = createSdk(page, {
+    const previewInitialExperience = rs.fn<CoreStatelessRequest['previewInitialExperience']>(
+      async () => {
+        calls.push('preview')
+        return await Promise.resolve({
+          accepted: true,
+          data: OPTIMIZATION_DATA,
+          experience: [replayEventBuilder.buildPageView({})],
+          insights: [],
+        })
+      },
+    )
+    const { sdk } = createSdk(previewInitialExperience, {
       ...SDK_CONFIG,
       contentful: { client: { getEntry, getEntries }, cache: false },
     })
@@ -347,7 +307,7 @@ describe('Next.js Pages Router server handoff helpers', () => {
       ],
     })
 
-    expect(calls).toEqual(['page', 'fetch'])
+    expect(calls).toEqual(['preview', 'fetch'])
     expect(getEntry).not.toHaveBeenCalled()
     expect(getEntries).toHaveBeenCalledTimes(1)
     expect(getEntries).toHaveBeenCalledWith({
@@ -385,7 +345,7 @@ describe('Next.js Pages Router server handoff helpers', () => {
     ])
   })
 
-  it('appends Set-Cookie without clobbering existing response cookies', async () => {
+  it('leaves existing response cookies untouched when preview identity is not persisted', async () => {
     const { sdk } = createSdk()
     const context = createContext({ setCookie: ['app-cookie=1; Path=/'] })
 
@@ -395,9 +355,6 @@ describe('Next.js Pages Router server handoff helpers', () => {
       pagePayload: {},
     })
 
-    expect(context.res.getHeader('Set-Cookie')).toEqual([
-      'app-cookie=1; Path=/',
-      expect.stringContaining('ctfl-opt-aid=f0837d7dc6344c36a3a0a06c4cde754b'),
-    ])
+    expect(context.res.getHeader('Set-Cookie')).toEqual(['app-cookie=1; Path=/'])
   })
 })

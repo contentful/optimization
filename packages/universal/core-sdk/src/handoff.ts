@@ -1,11 +1,14 @@
 import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
 import type {
   ChangeArray,
+  OptimizationData,
   Profile,
   SelectedOptimization,
   SelectedOptimizationArray,
 } from './api-schemas'
 import type { FetchOptimizedEntryResult, ManagedEntryHandoff } from './CoreBase'
+import type { ExperiencePreview } from './CoreStatelessRequest'
+import type { OptimizationReplayEnvelope } from './replay'
 import OptimizedEntryResolver, { type EntryFor } from './resolvers/OptimizedEntryResolver'
 
 const SELECTION_FINGERPRINT_PREFIX = 'ctfl-opt-selection:v1'
@@ -141,6 +144,38 @@ export interface OptimizationHandoff {
   readonly entries?: readonly ManagedEntryHandoff[]
   /** Cache metadata for the rendered output. */
   readonly cache: OptimizationCacheMetadata
+  /**
+   * Private replay instructions created by the SDK for a browser continuation.
+   * Public and static handoffs must not carry replay instructions.
+   */
+  readonly replay?: OptimizationReplayEnvelope
+}
+
+/** Presentation policy carried by content handoffs. @public */
+export type ContentOptimizationHydrationMode = 'preserve-server' | 'client-only-hidden-until-ready'
+
+/** Presentation policy carried by content or analytics-only handoffs. @public */
+export type OptimizationHydrationMode = ContentOptimizationHydrationMode | 'analytics-only'
+
+/** A handoff with its caller-selected presentation mode retained in the type. @public */
+export type OptimizationHandoffWithHydration<TMode extends OptimizationHydrationMode> =
+  OptimizationHandoff & { readonly hydration: TMode }
+
+/** Options for a private handoff from evaluated request data. @public */
+export interface CreateRequestHandoffFromDataOptions {
+  readonly data?: OptimizationData
+  readonly entries?: readonly ManagedEntryHandoff[]
+  readonly cache?: PrivateRequestOptimizationCacheMetadata
+  readonly hydration?: OptimizationHydrationMode
+}
+
+/** Options for a private handoff from an accepted request preview. @public */
+export interface CreateRequestHandoffFromPreviewOptions extends Omit<
+  CreateRequestHandoffFromDataOptions,
+  'data'
+> {
+  readonly preview: ExperiencePreview
+  readonly routeKey?: string
 }
 
 /**
@@ -151,6 +186,7 @@ export interface OptimizationHandoff {
 export type OptimizationCacheSafetyWarningCode =
   | 'profile-state-in-public-cache'
   | 'missing-public-permutation-cache-key'
+  | 'replay-in-non-private-cache'
 
 /**
  * Cache-safety warning for an optimization handoff.
@@ -379,6 +415,15 @@ export function getOptimizationCacheSafetyWarnings(
     })
   }
 
+  if (handoff.replay !== undefined && cache.scope !== 'private-request') {
+    warnings.push({
+      code: 'replay-in-non-private-cache',
+      message:
+        'Replay instructions are request-private and must not be included in public or static caches.',
+      path: ['replay'],
+    })
+  }
+
   return warnings
 }
 
@@ -395,4 +440,85 @@ export function assertOptimizationCacheSafety(handoff: OptimizationHandoff): voi
   if (warnings.length === 0) return
 
   throw new TypeError(warnings.map((warning) => warning.message).join(' '))
+}
+
+function assertPrivateRequestCacheMetadata(
+  cache: OptimizationCacheMetadata,
+): asserts cache is PrivateRequestOptimizationCacheMetadata {
+  if (cache.scope === 'private-request') return
+
+  throw new TypeError(
+    'Request handoffs must use private-request cache scope. Use public permutation handoffs for public cache scopes, or a non-request handoff for static output.',
+  )
+}
+
+/** Create a private request handoff from request-scoped optimization data. @public */
+export function createRequestHandoffFromData<TMode extends OptimizationHydrationMode>(
+  input: CreateRequestHandoffFromDataOptions & { readonly hydration: TMode },
+): OptimizationHandoffWithHydration<TMode>
+export function createRequestHandoffFromData(
+  input: CreateRequestHandoffFromDataOptions,
+): OptimizationHandoff
+export function createRequestHandoffFromData(
+  input: CreateRequestHandoffFromDataOptions,
+): OptimizationHandoff {
+  const cache: PrivateRequestOptimizationCacheMetadata = input.cache ?? { scope: 'private-request' }
+  assertPrivateRequestCacheMetadata(cache)
+
+  const handoff: OptimizationHandoff = {
+    cache,
+    ...(input.hydration === undefined ? {} : { hydration: input.hydration }),
+    ...(input.entries === undefined ? {} : { entries: input.entries }),
+    ...(input.data === undefined
+      ? {}
+      : {
+          state: {
+            selectedOptimizations: input.data.selectedOptimizations,
+            changes: input.data.changes,
+            profile: input.data.profile,
+          },
+        }),
+  }
+  return handoff
+}
+
+/** Bind an accepted preview replay to a private route handoff. @public */
+export function createRequestHandoffFromPreview<TMode extends OptimizationHydrationMode>(
+  input: CreateRequestHandoffFromPreviewOptions & { readonly hydration: TMode },
+): OptimizationHandoffWithHydration<TMode>
+export function createRequestHandoffFromPreview(
+  input: CreateRequestHandoffFromPreviewOptions,
+): OptimizationHandoff
+export function createRequestHandoffFromPreview(
+  input: CreateRequestHandoffFromPreviewOptions,
+): OptimizationHandoff {
+  if (!input.preview.accepted)
+    throw new TypeError(
+      'Cannot create a request handoff from a blocked initial Experience preview.',
+    )
+
+  if (
+    input.preview.experience.some((event) => event.type === 'page') &&
+    input.routeKey === undefined
+  ) {
+    throw new TypeError('Page-bearing replay requires a route key.')
+  }
+
+  const replay = {
+    experience: input.preview.experience,
+    insights: input.preview.insights,
+    ...(input.routeKey === undefined ? {} : { routeKey: input.routeKey }),
+    ...(input.preview.profile === undefined ? {} : { profile: input.preview.profile }),
+  } satisfies OptimizationReplayEnvelope
+
+  const handoff: OptimizationHandoff = {
+    ...createRequestHandoffFromData({
+      cache: input.cache,
+      data: input.preview.data,
+      entries: input.entries,
+      hydration: input.hydration,
+    }),
+    replay,
+  }
+  return handoff
 }

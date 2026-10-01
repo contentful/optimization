@@ -3,12 +3,15 @@ import type {
   InsightsApiClientRequestOptions,
 } from '@contentful/optimization-api-client'
 import type {
+  ExperienceEvent,
+  InsightsEvent,
   Json,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger, logger } from '@contentful/optimization-api-client/logger'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
+
 import { installCoreBridgeCapabilities } from './bridge-support/capabilities'
 import type { ConsentController, ConsentGuard, ConsentInput } from './consent'
 import { UNLOCKING_EVENT_TYPES } from './consent/ConsentPolicy'
@@ -19,6 +22,7 @@ import {
   type AllowedEventType,
   type BlockedEvent,
   DEFAULT_ALLOWED_EVENT_TYPES,
+  type EventEmissionResult,
   type EventOptimizationContext,
   type OptimizationEventStreamEvent,
 } from './events'
@@ -31,6 +35,7 @@ import {
 import { normalizeExplicitLocale } from './locale'
 import { ExperienceQueue, type ExperienceQueueDropContext } from './queues/ExperienceQueue'
 import { InsightsQueue } from './queues/InsightsQueue'
+import type { OptimizationReplayEnvelope } from './replay'
 import type { ResolvedData } from './resolvers'
 import {
   batch,
@@ -82,7 +87,6 @@ const createStatefulExperienceApiConfig = (
     ip: api?.ip,
     locale,
     plainText: api?.plainText,
-    preflight: api?.preflight,
   }
 
   return hasDefinedValues(experienceConfig) ? experienceConfig : undefined
@@ -349,6 +353,42 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     this.experienceQueue.clearQueuedEvents()
   }
 
+  /** One Experience batch, then Analytics through its normal queue. */
+  protected async replayOptimizationHandoff(
+    replay: OptimizationReplayEnvelope,
+  ): Promise<EventEmissionResult> {
+    if (replay.profile !== undefined) this.experienceQueue.bindProfileId(replay.profile.id)
+    const events = replay.experience.filter((event) => this.admitReplayEvent(event))
+    const data = events.length === 0 ? undefined : await this.experienceQueue.sendBatch(events)
+    const accepted = events.some((event) => event.type === 'page')
+    try {
+      for (const event of replay.insights) {
+        if (!this.admitReplayEvent(event)) continue
+        await this.insightsQueue.send(event, undefined, data?.profile ?? replay.profile)
+      }
+    } catch (error: unknown) {
+      coreLogger.warn('Insights replay failed; retaining the Experience batch result.', error)
+    }
+    if (!accepted) return { accepted: false }
+    return data === undefined ? { accepted: true } : { accepted: true, data }
+  }
+
+  private admitReplayEvent(event: ExperienceEvent | InsightsEvent): boolean {
+    const method =
+      event.type === 'component'
+        ? event.componentType === 'Variable'
+          ? 'trackFlagView'
+          : 'trackView'
+        : event.type === 'component_click'
+          ? 'trackClick'
+          : event.type === 'component_hover'
+            ? 'trackHover'
+            : event.type
+    if (this.hasConsent(method)) return true
+    this.reportBlockedEvent(method, [event])
+    return false
+  }
+
   override resolveOptimizedEntry<
     S extends EntrySkeletonType = EntrySkeletonType,
     L extends LocaleCode = LocaleCode,
@@ -449,6 +489,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   }
 
   reset(): void {
+    this.experienceQueue.bindProfileId()
     this.optimizationContexts.clear()
     batch(() => {
       blockedEventSignal.value = undefined

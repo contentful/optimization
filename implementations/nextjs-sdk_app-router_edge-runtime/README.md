@@ -28,7 +28,8 @@ does not cover ISR, route-level `revalidate`, or Cache Components.
 - Request-personalized Edge runtime handoff from `app/edge-request/route.ts`
 - Public permutation Edge runtime handoff from `app/edge-selection/[segment]/route.ts`
 - Edge runtime assertion with `globalThis.EdgeRuntime === 'edge-runtime'`
-- Browser handoff state created without Node-only APIs
+- Browser handoff state created without Node-only APIs; the server preview does not persist state,
+  and the browser commits a matching replay or tracks the current page normally
 
 ## Prerequisites
 

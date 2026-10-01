@@ -100,6 +100,17 @@ The UMD build is available for HTML pages that do not use a bundler:
 </script>
 ```
 
+When server rendering provides a content handoff, call `hydrateAndTrackCurrentPage()` on the same live instance. It applies preview state in memory and owns one replay/page decision. Matching accepted replay suppresses the ordinary page; otherwise the SDK attempts one ordinary page. Preview-backed rendering need not await delivery. Only a successful live Experience response can establish durable continuity when consent permits it:
+
+```js
+await window.contentfulOptimization.hydrateAndTrackCurrentPage(handoff, {
+  routeKey,
+  buildPayload: () => ({ properties: { url: window.location.href } }),
+})
+```
+
+For a journal that does not end in an initial page, the Node request client accepts the complete ordered input through `previewExperience({ events })`. Experience inputs are preflighted once; Insights events are built on the server and retained for browser delivery. `createRequestHandoffFromPreview()` accepts that result without a route key when no page is present. The combined browser operation delivers that journal and makes the current-page decision. New handoffs preserve earlier delivery, while repeating the same handoff object shares its completion.
+
 ### Usage with Web Components
 
 The optional Web Components entrypoint provides vanilla custom elements from the same package:
@@ -138,7 +149,6 @@ const root = document.querySelector('ctfl-optimization-root')
 const entry = document.querySelector('ctfl-optimized-entry')
 
 root.defaults = { consent: true }
-root.api = { preflight: false }
 root.contentful = { client: contentfulClient }
 root.trackEntryInteraction = { hovers: false }
 root.prefetchManagedEntries = [{ contentType: 'page', slug: 'home' }]
@@ -239,13 +249,13 @@ the Insights API for event ingestion.
 
 Common `api` options:
 
-| Option              | Required? | Default                                                          | Description                                           |
-| ------------------- | --------- | ---------------------------------------------------------------- | ----------------------------------------------------- |
-| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`                            | Base URL for the Experience API                       |
-| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'`                       | Base URL for the Insights API                         |
-| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`                                  | Experience API features to apply to each request      |
-| `preflight`         | No        | `false`                                                          | Aggregate a new profile state without storing it      |
-| `plainText`         | No        | `true` for single-profile mutations; batch mutations use `false` | Sends eligible Experience API mutations as plain text |
+| Option              | Required? | Default                                                          | Description                                                    |
+| ------------------- | --------- | ---------------------------------------------------------------- | -------------------------------------------------------------- |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`                            | Base URL for the Experience API                                |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'`                       | Base URL for the Insights API                                  |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`                                  | Experience API features to apply to each request               |
+| `preflight`         | No        | `false`                                                          | Deprecated compatibility input; inert for the stateful Web SDK |
+| `plainText`         | No        | `true` for single-profile mutations; batch mutations use `false` | Sends eligible Experience API mutations as plain text          |
 
 Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalTimeout`,
 `onFailedAttempt`, and `onRequestTimeout`. Default retries intentionally apply only to HTTP `503`

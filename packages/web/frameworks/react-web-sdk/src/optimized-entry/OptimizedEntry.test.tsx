@@ -205,7 +205,6 @@ describe('OptimizedEntry', () => {
     return {
       cache: { scope: 'private-request' },
       hydration: 'preserve-server',
-      initialPageEvent: 'skip',
       state: createServerOptimizationState(),
       ...overrides,
     }

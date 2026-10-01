@@ -183,11 +183,12 @@ source: react-web-sdk#provider/LiveUpdatesProvider.tsx#LiveUpdatesProvider; reac
 
 ## Page events
 
-A page event signals a page/route view. Auto-page trackers emit them on navigation and dedupe
-consecutive route keys. When the server already reported a consented page view, the browser must
-skip the duplicate (per-SDK `initialPageEvent` / tracker prop). Interaction events
-(view/click/hover) are consent-gated browser activity and use the resolved entry id.
-source: react-web-sdk#auto-page/useAutoPageEmitter.ts; react-web-sdk#router/next-app.tsx
+A page event signals a page/route view. Auto-page trackers emit on each eligible route and dedupe
+consecutive accepted route keys. Legacy `initialPageEvent` inputs are compatibility-only and do not
+suppress current-page tracking. `AcceptedCurrentStateTracker` is the authority for a private replay
+or a normal page event on the initial route. Interaction events (view/click/hover) are consent-gated
+browser activity and use the resolved entry id.
+source: react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter; web-sdk#ContentfulOptimization.ts#trackCurrentPage; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker
 
 ## Campaign attribution
 
@@ -274,18 +275,64 @@ The API Client scopes Experience API requests under
 space and environment; an omitted environment resolves to `master`.
 source: api-client#ApiClientBase.ts#DEFAULT_ENVIRONMENT; api-client#experience/ExperienceApiClient.ts#ExperienceApiClient; api-client#insights/InsightsApiClient.ts#InsightsApiClient
 
+## Experience preflight and private replay
+
+The Experience API client adds `type=preflight` only to single-profile mutations. Profile reads and
+batch profile upserts suppress the query parameter even when it is present in client defaults or
+per-call options. Core keeps the global `api.preflight` field for compatibility but neither its
+stateful nor stateless runtime forwards it into the Experience client; stateless request-local
+`experienceOptions.preflight` still controls ordinary single-profile request calls.
+source: api-client#experience/ExperienceApiClient.ts#ExperienceApiClient; core-sdk#CoreStateful.ts#createStatefulExperienceApiConfig; core-sdk#CoreStateless.ts#createStatelessExperienceApiConfig; core-sdk#CoreApiConfig.ts#CoreSharedApiConfig
+
+Single-profile creation is a `POST` to
+`/v3/spaces/{spaceId}/environments/{environment}/profiles`; updating an existing profile is a
+`POST` to the same path plus `/{profileId}`. Those create and update paths resolve and pass
+`preflight` to the shared mutation request. `getProfile()` is a `GET` that supplies only locale, and
+`upsertManyProfiles()` removes `preflight` before sending its batch request.
+source: api-client#experience/ExperienceApiClient.ts#createProfile; api-client#experience/ExperienceApiClient.ts#updateProfile; api-client#experience/ExperienceApiClient.ts#makeProfileMutationRequest; api-client#experience/ExperienceApiClient.ts#getProfile; api-client#experience/ExperienceApiClient.ts#upsertManyProfiles
+
+`previewInitialExperience()` evaluates caller-supplied identify/track commands, appends its own page
+command, and sends the admitted sequence as one forced-preflight profile mutation. Request consent
+gates the commands; the request EventBuilder builds actual events, then request-side event
+interceptors and Experience-event schema validation run before the mutation. A blocked page
+prevents the request; an accepted preview updates the request-local profile and selected
+optimizations and returns the built event arrays for a private browser continuation.
+source: core-sdk#CoreStatelessRequest.ts#previewInitialExperience; core-sdk#replay.ts#PreviewInitialExperienceOptions
+
+Private replay carries server-built Experience and Insights event arrays, with the profile known before preflight when available. Page-bearing journals require a private route key. Journals without a page can contain Personalization or Analytics events. Event IDs, timestamps, channel, library metadata, request context, and server interceptor changes are retained for browser delivery. Existing event schemas validate the payloads; no separate replay version or envelope schema is required.
+source: core-sdk#replay.ts#OptimizationReplayEnvelope; core-sdk#CoreStatelessRequest.ts#previewExperience; core-sdk#handoff.ts#createRequestHandoffFromPreview
+
+Request handoff factories accept an optional hydration policy. Supplying it retains that policy in both the serialized handoff and its inferred return type, so a content or analytics-only result can be passed to its matching runtime without a literal assertion or a spread wrapper. Omitting the policy keeps the framework-neutral result.
+source: core-sdk#handoff.ts#createRequestHandoffFromData; core-sdk#handoff.ts#createRequestHandoffFromPreview; core-sdk#handoff.ts#OptimizationHandoffWithHydration
+
+`previewExperience()` builds and intercepts all supplied inputs once on the server, validates the wire events, and evaluates the Experience array in one forced-preflight request. It retains both wire arrays for browser delivery without sending Insights on the server. A sticky view is built and intercepted once for both transports. `previewInitialExperience()` appends the SDK page to an optional prefix. Preview state is provisional; the result also retains the profile known before preflight.
+source: core-sdk#CoreStatelessRequest.ts#previewExperience; core-sdk#CoreStatelessRequest.ts#previewInitialExperience
+
+`hydrateAndTrackCurrentPage()` owns one initial state and event operation. Readiness precedes delivery so preview content can render while network work is pending. New handoffs do not cancel earlier events. Ordinary-page fallback runs only when no page was accepted, including after partial mixed-journal failure.
+source: web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#ContentfulOptimization.ts#emitInitialPage
+
+Browser replay filters the server-built Experience array by live consent and submits it in one batch through the ordinary queue. Event locale remains metadata; the normal SDK/request locale governs the API response. The Insights array follows with live consent and the returned or available initial profile. Browser queue interceptors and event schemas still apply, but the SDK does not rebuild event IDs, timestamps, channel, or context. Cross-transport interleaving and intermediate profiles are not reconstructed. Existing buffering and retries govern offline delivery; offline acceptance does not establish durable continuity before a live response succeeds.
+source: core-sdk#CoreStateful.ts#replayOptimizationHandoff; core-sdk#queues/ExperienceQueue.ts#sendBatch; core-sdk#queues/InsightsQueue.ts#send; web-sdk#ContentfulOptimization.ts#promoteCommittedCurrentPage
+
+Browser replay reaches `ExperienceApiClient.upsertProfile()` through the stateful Experience queue.
+The client sends `POST .../profiles` without a live profile id or `POST .../profiles/:id` with one,
+and places the admitted event array in the request body's `events` field. The stateful client has no
+preflight default and replay supplies no request-level override, so this request has no
+`type=preflight` query parameter.
+source: core-sdk#CoreStateful.ts#replayOptimizationHandoff; core-sdk#queues/ExperienceQueue.ts#sendBatch; core-sdk#queues/ExperienceQueue.ts#upsertProfile; core-sdk#CoreStateful.ts#createStatefulExperienceApiConfig; api-client#experience/ExperienceApiClient.ts#upsertProfile; api-client#experience/ExperienceApiClient.ts#createProfile; api-client#experience/ExperienceApiClient.ts#updateProfile; api-client#experience/ExperienceApiClient.ts#makeProfileMutationRequest; api-client#experience/ExperienceApiClient.ts#constructExperienceRequestBody
+
 ## Optimization handoff
 
 `OptimizationHandoff` is the framework-neutral handoff shape for server, static, and edge rendered
 Optimization state. It can carry selected state (`selectedOptimizations`, `changes`, optional
-`profile`), managed-entry baseline snapshots, and cache metadata. Public/static handoffs must not
-carry request-derived profile state; public permutations need an application-owned `cache.key`. The
-generated public-permutation `cache.key` is SDK identity and transport metadata, while framework
-tags are caller-owned invalidation labels. The generic helper reports cache-safety warnings instead
-of throwing. Node request handoff creation
-throws a `TypeError` when request data with profile state is paired with `public-permutation` or
+`profile`), managed-entry baseline snapshots, cache metadata, and private replay instructions.
+Public/static handoffs must not carry request-derived profile state or replay; public permutations
+need an application-owned `cache.key`. The generated public-permutation `cache.key` is SDK identity
+and transport metadata, while framework tags are caller-owned invalidation labels. The generic
+helper reports cache-safety warnings instead of throwing. Node request handoff creation throws a
+`TypeError` when request data with profile state or replay is paired with `public-permutation` or
 `static` cache metadata.
-source: core-sdk#handoff.ts#OptimizationHandoff; core-sdk#handoff.ts#createPublicPermutationCacheMetadata; core-sdk#handoff.ts#getOptimizationCacheSafetyWarnings; node-sdk#handoff.ts#createRequestHandoffFromData
+source: core-sdk#handoff.ts#OptimizationHandoff; core-sdk#handoff.ts#createPublicPermutationCacheMetadata; core-sdk#handoff.ts#getOptimizationCacheSafetyWarnings; core-sdk#handoff.ts#assertOptimizationCacheSafety; core-sdk#handoff.ts#createRequestHandoffFromPreview
 
 `createHandoffFromSelections()` builds a selection handoff from application-owned selected
 optimizations and optional managed-entry snapshots. It does not include profile state and requires
@@ -313,18 +360,28 @@ optimizations, preserves the input entry order, and returns each resolved result
 baseline entry.
 source: core-sdk#handoff.ts#resolveEntriesForSelections; core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext
 
-Browser handoffs extend the core handoff with `hydration` and `initialPageEvent`. Content handoffs
-are accepted by `hydrateOptimizationHandoff`; analytics-only handoffs are accepted by the analytics
-runtime. Both hydration paths validate `initialPageEvent` and enforce cache safety before state is
-published. Browser SDK state hydration is Web handoff-owned: `@contentful/optimization-web/handoff`
-exports `hydrateOptimizationHandoffState` for customer adapters; that helper awaits the Web SDK
-state interceptor only when handoff state contains present `selectedOptimizations`, `changes`, or
-`profile` own fields, keeps input handoff fields when an interceptor omits them, applies own present
-`undefined` fields intentionally, and marks the Experience request state successful even for
-undefined or empty handoff state. Content handoff state hydration starts from a content reset for
-`selectedOptimizations` and `changes`, so a new content-capable handoff that omits those fields
-clears stale browser content state while preserving `profile` unless `profile` is an own field.
-source: web-sdk#handoff.ts#BrowserOptimizationHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoffState; web-sdk#handoff.ts#applyHydratedSignals; web-sdk#handoff.ts#applySuccessfulEmptyHandoffHydration; core-sdk#handoff.ts#assertOptimizationCacheSafety
+Browser handoffs extend the core handoff with `hydration`; legacy `initialPageEvent` values are inert.
+Content handoffs are accepted by `hydrateOptimizationHandoff`; analytics-only handoffs are accepted
+by the analytics runtime. Both paths enforce cache safety before state is published. Browser SDK
+cache-safety failures stay fail-closed: the runtime does not apply the supplied state or replay, and
+framework fallback must not reuse that handoff. Cache-safe hydration or replay failures can discard
+the handoff and continue with one ordinary page attempt. Browser SDK
+state hydration is Web handoff-owned. Every cache-safe full browser handoff applies state under
+durable-continuity suppression regardless of cache scope or replay presence, so the handoff changes
+live memory without overwriting existing durable continuity. The raw
+`hydrateOptimizationHandoffState` helper applies state only and leaves suppression and currentness
+under caller control through its options; it does not infer either from cache scope or replay
+presence. State hydration awaits the Web SDK state interceptor only when
+handoff state contains present `selectedOptimizations`, `changes`, or `profile` own fields, keeps
+input handoff fields when an interceptor omits them, applies own present `undefined` fields
+intentionally, and marks the Experience request state successful even for undefined or empty handoff
+state. Content handoff state hydration starts from a content reset for `selectedOptimizations` and
+`changes`, so a content-capable handoff that omits those fields clears stale browser content state
+while preserving `profile` unless `profile` is an own field.
+source: web-sdk#handoff.ts#BrowserOptimizationHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoffState; web-sdk#handoff.ts#HandoffStateHydrationOptions; web-sdk#handoff.ts#applyHydratedSignals; web-sdk#handoff.ts#applySuccessfulEmptyHandoffHydration; web-sdk#storage/durableContinuityPersistence.ts#suppressDurableContinuityPersistence; core-sdk#handoff.ts#assertOptimizationCacheSafety
+
+Content and analytics handoffs use the same combined Web operation. State publication keeps latest-wins arbitration, but receiving newer state does not cancel an older event journal. Caller guards protect runtime lifetime rather than handoff replacement. Preview-backed rendering proceeds before browser delivery completes.
+source: web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#handoff.ts#hydrateContentOptimizationHandoffState; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff
 
 Snapshot and preview-override paths consume selection state, not necessarily a full Experience
 response: snapshot runtimes resolve from whichever `selectedOptimizations`, `changes`, and `profile`

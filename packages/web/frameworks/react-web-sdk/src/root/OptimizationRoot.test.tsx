@@ -1,5 +1,7 @@
 import ContentfulOptimization from '@contentful/optimization-web'
-import { InterceptorManager } from '@contentful/optimization-web/core-sdk'
+import { ExperienceApiClient } from '@contentful/optimization-web/api-client'
+import type { OptimizationData } from '@contentful/optimization-web/api-schemas'
+import { EventBuilder, InterceptorManager } from '@contentful/optimization-web/core-sdk'
 import type { ContentOptimizationHandoff } from '@contentful/optimization-web/handoff'
 import { logger } from '@contentful/optimization-web/logger'
 import { afterEach, describe, expect, it, rs } from '@rstest/core'
@@ -7,11 +9,12 @@ import { act, StrictMode, useContext, type ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
 import type { BeforeInitialPageOptions } from '../before-initial-page/beforeInitialPage'
-import { useBeforeInitialPageReady } from '../context/BeforeInitialPageContext'
-import type { OptimizationContextValue } from '../context/OptimizationContext'
 import { OptimizationHydrationContext } from '../context/OptimizationHydrationContext'
-import { useOptimizationContext } from '../hooks/useOptimization'
 import { OptimizationRoot } from './OptimizationRoot'
+const replayEventBuilder = new EventBuilder({
+  channel: 'server',
+  library: { name: 'test-server', version: '1.0.0' },
+})
 
 const testConfig = {
   spaceId: 'test-space-id',
@@ -28,9 +31,20 @@ function createContentHandoff(
   return {
     cache: { scope: 'private-request' },
     hydration: 'preserve-server',
-    initialPageEvent: 'skip',
     state: { selectedOptimizations: [] },
     ...overrides,
+  }
+}
+
+function createReplayHandoff(replay = createReplay('/products')): ContentOptimizationHandoff {
+  return createContentHandoff({ replay })
+}
+
+function createReplay(routeKey: string): NonNullable<ContentOptimizationHandoff['replay']> {
+  return {
+    experience: [replayEventBuilder.buildPageView({})],
+    insights: [],
+    routeKey,
   }
 }
 
@@ -126,14 +140,14 @@ afterEach(() => {
 describe('OptimizationRoot handoff', () => {
   it('emits the initial browser page event from explicit route payload props', async () => {
     const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     const buildPagePayload = rs.fn(() => ({ properties: { route: '/products' } }))
 
     const rendered = await renderClientAsync(
       <OptimizationRoot
         {...testConfig}
-        handoff={createContentHandoff({ initialPageEvent: 'emit' })}
+        handoff={createContentHandoff()}
         routeKey="/products"
         buildPagePayload={buildPagePayload}
       >
@@ -141,11 +155,8 @@ describe('OptimizationRoot handoff', () => {
       </OptimizationRoot>,
     )
 
-    expect(trackCurrentPage).toHaveBeenCalledWith({
-      buildPayload: buildPagePayload,
-      initialPageEvent: 'emit',
-      routeKey: '/products',
-    })
+    expect(trackCurrentPage).toHaveBeenCalledWith({ properties: { route: '/products' } })
+    expect(buildPagePayload).toHaveBeenCalledWith({ isInitialEmission: true })
 
     rendered.unmount()
     trackCurrentPage.mockRestore()
@@ -153,14 +164,14 @@ describe('OptimizationRoot handoff', () => {
 
   it('emits the initial browser page event from a serializable initial payload', async () => {
     const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     const initialPagePayload = { properties: { route: '/products' } }
 
     const rendered = await renderClientAsync(
       <OptimizationRoot
         {...testConfig}
-        handoff={createContentHandoff({ initialPageEvent: 'emit' })}
+        handoff={createContentHandoff()}
         routeKey="/products"
         initialPagePayload={initialPagePayload}
       >
@@ -168,42 +179,26 @@ describe('OptimizationRoot handoff', () => {
       </OptimizationRoot>,
     )
 
-    expect(trackCurrentPage).toHaveBeenCalledWith({
-      buildPayload: expect.any(Function),
-      initialPageEvent: 'emit',
-      routeKey: '/products',
-    })
-    const firstCall = trackCurrentPage.mock.calls[0]
-    if (firstCall === undefined) throw new Error('Expected trackCurrentPage to be called.')
-    const [{ buildPayload }] = firstCall
-    if (buildPayload === undefined) throw new Error('Expected buildPayload to be provided.')
-    expect(buildPayload({ isInitialEmission: true })).toBe(initialPagePayload)
+    expect(trackCurrentPage).toHaveBeenCalledWith(initialPagePayload)
 
     rendered.unmount()
     trackCurrentPage.mockRestore()
   })
 
-  it('marks the skipped initial route without route payload props', async () => {
+  it('emits an empty initial payload without explicit route payload props', async () => {
     const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     const warn = rs.spyOn(logger, 'warn').mockImplementation(() => undefined)
 
     const rendered = await renderClientAsync(
-      <OptimizationRoot
-        {...testConfig}
-        handoff={createContentHandoff({ initialPageEvent: 'skip' })}
-        routeKey="/products"
-      >
+      <OptimizationRoot {...testConfig} handoff={createContentHandoff()} routeKey="/products">
         <div />
       </OptimizationRoot>,
     )
 
     expect(trackCurrentPage).toHaveBeenCalledTimes(1)
-    expect(trackCurrentPage).toHaveBeenCalledWith({
-      initialPageEvent: 'skip',
-      routeKey: '/products',
-    })
+    expect(trackCurrentPage).toHaveBeenCalledWith({})
     expect(warn).not.toHaveBeenCalled()
 
     rendered.unmount()
@@ -211,28 +206,19 @@ describe('OptimizationRoot handoff', () => {
     warn.mockRestore()
   })
 
-  it('warns and skips initial browser page emission without route payload props', async () => {
-    const trackCurrentPage = rs.spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
-    const warn = rs.spyOn(logger, 'warn').mockImplementation(() => undefined)
+  it('leaves a handoff without a route inert without legacy warnings', async () => {
+    const trackCurrentPage = rs.spyOn(ContentfulOptimization.prototype, 'page')
 
     const rendered = await renderClientAsync(
-      <OptimizationRoot
-        {...testConfig}
-        handoff={createContentHandoff({ initialPageEvent: 'emit' })}
-      >
+      <OptimizationRoot {...testConfig} handoff={createContentHandoff()}>
         <div />
       </OptimizationRoot>,
     )
 
     expect(trackCurrentPage).not.toHaveBeenCalled()
-    expect(warn).toHaveBeenCalledWith(
-      'React:OptimizationRoot',
-      expect.stringContaining('without routeKey and buildPagePayload'),
-    )
 
     rendered.unmount()
     trackCurrentPage.mockRestore()
-    warn.mockRestore()
   })
 
   it('lets the root hydration prop override handoff hydration for children', async () => {
@@ -278,420 +264,315 @@ describe('OptimizationRoot handoff', () => {
   })
 })
 
-describe('OptimizationRoot before initial page', () => {
-  it('awaits callback work before the direct page and releases readiness after page terminality', async () => {
+const replayData: OptimizationData = {
+  changes: [],
+  selectedOptimizations: [],
+  profile: {
+    id: 'profile',
+    stableId: 'profile',
+    random: 1,
+    audiences: [],
+    traits: {},
+    location: {},
+    session: {
+      id: 'session',
+      isReturningVisitor: false,
+      count: 1,
+      activeSessionLength: 0,
+      averageSessionLength: 0,
+      landingPage: {
+        path: '/',
+        query: {},
+        referrer: '',
+        search: '',
+        title: '',
+        url: 'https://example.test/',
+      },
+    },
+  },
+}
+
+describe('OptimizationRoot initial operation', () => {
+  it('renders children while callback work and page delivery are pending', async () => {
     const callback = createDeferred<undefined>()
     const page = createDeferred<{ accepted: true }>()
-    const order: string[] = []
-    const readiness: boolean[] = []
     const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
-      .mockImplementationOnce(async () => {
-        order.push('page')
-        return await page.promise
-      })
-      .mockResolvedValue({ accepted: true })
-
-    function ReadinessProbe(): null {
-      readiness.push(useBeforeInitialPageReady())
-      return null
+      .spyOn(ContentfulOptimization.prototype, 'page')
+      .mockImplementation(async () => await page.promise)
+    function Probe(): ReactElement {
+      return <div>preview content</div>
     }
-
     const rendered = await renderClientAsync(
       createBeforeInitialPageRoot({
-        children: <ReadinessProbe />,
+        children: <Probe />,
         beforeInitialPage: {
           run: async () => {
-            order.push('callback')
             await callback.promise
-            return 'ready'
           },
         },
       }),
     )
-
-    expect(order).toEqual(['callback'])
+    expect(document.body.textContent).toContain('preview content')
     expect(trackCurrentPage).not.toHaveBeenCalled()
-    expect(readiness.at(-1)).toBe(false)
-
     callback.resolve(undefined)
     await flushMicrotasks()
-
-    expect(order).toEqual(['callback', 'page'])
     expect(trackCurrentPage).toHaveBeenCalledTimes(1)
-    expect(readiness.at(-1)).toBe(false)
-
+    expect(document.body.textContent).toContain('preview content')
     page.resolve({ accepted: true })
     await flushMicrotasks()
-
-    expect(readiness.at(-1)).toBe(true)
-    expect(trackCurrentPage).toHaveBeenCalledTimes(2)
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(1, {
-      buildPayload: expect.any(Function),
-      initialPageEvent: 'emit',
-      routeKey: '/initial',
-    })
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(2, {
-      initialPageEvent: 'skip',
-      routeKey: '/initial',
-    })
-
+    expect(trackCurrentPage).toHaveBeenCalledTimes(1)
     rendered.unmount()
   })
 
-  it.each([
-    {
-      name: 'synchronous callback throw',
-      run(error: Error): undefined {
-        throw error
-      },
-    },
-    {
-      name: 'callback rejection',
-      async run(error: Error): Promise<never> {
-        return await Promise.reject(error)
-      },
-    },
-  ])('reports one $name and still attempts the page', async ({ run }) => {
-    const callbackError = new Error('callback failed')
-    const onError = rs.fn()
-    const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
-      .mockResolvedValue({ accepted: true })
+  it('registers state observers before replay and skips the browser prerequisite for a matching page', async () => {
+    const upsert = rs
+      .spyOn(ExperienceApiClient.prototype, 'upsertProfile')
+      .mockResolvedValue(replayData)
+    const observed: string[] = []
+    const run = rs.fn(() => undefined)
+    const handoff = createReplayHandoff({
+      routeKey: '/products',
+      experience: [
+        replayEventBuilder.buildIdentify({ userId: 'visitor' }),
+        replayEventBuilder.buildPageView({}),
+      ],
+      insights: [],
+    })
+    const rendered = await renderClientAsync(
+      <OptimizationRoot
+        {...testConfig}
+        handoff={handoff}
+        routeKey="/products"
+        buildPagePayload={() => ({})}
+        beforeInitialPage={{ run }}
+        onStatesReady={(states) => {
+          const subscription = states.eventStream.subscribe((event) => {
+            if (event) observed.push(event.type)
+          })
+          return () => {
+            subscription.unsubscribe()
+          }
+        }}
+      >
+        <div>preview</div>
+      </OptimizationRoot>,
+    )
+    await flushMicrotasks()
+    expect(run).not.toHaveBeenCalled()
+    expect(observed).toEqual(['identify', 'page'])
+    expect(upsert).toHaveBeenCalledTimes(1)
+    rendered.unmount()
+  })
+
+  it('runs prerequisite work before a mismatched handoff falls back', async () => {
+    const order: string[] = []
+    const track = rs
+      .spyOn(ContentfulOptimization.prototype, 'page')
+      .mockImplementation(async () => {
+        order.push('page')
+        await Promise.resolve()
+        return { accepted: true }
+      })
     const rendered = await renderClientAsync(
       createBeforeInitialPageRoot({
+        handoff: createReplayHandoff(createReplay('/server')),
+        routeKey: '/browser',
         beforeInitialPage: {
-          onError,
-          run: (): ReturnType<typeof run> => {
-            const result = run(callbackError)
-            return result
+          run: () => {
+            order.push('callback')
           },
         },
       }),
     )
-
-    expect(onError).toHaveBeenCalledTimes(1)
-    expect(onError).toHaveBeenCalledWith(callbackError)
-    expect(trackCurrentPage).toHaveBeenCalledTimes(2)
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(1, {
-      buildPayload: expect.any(Function),
-      initialPageEvent: 'emit',
-      routeKey: '/initial',
-    })
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(2, {
-      initialPageEvent: 'skip',
-      routeKey: '/initial',
-    })
-
+    await flushMicrotasks()
+    expect(order).toEqual(['callback', 'page'])
+    expect(track).toHaveBeenCalledTimes(1)
     rendered.unmount()
   })
 
-  it.each([
-    { configured: undefined, beforeDeadline: 2_999, deadline: 1 },
-    { configured: 25, beforeDeadline: 24, deadline: 1 },
-  ])(
-    'starts the page only when the $configured watchdog expires',
-    async ({ beforeDeadline, configured, deadline }) => {
-      rs.useFakeTimers()
-      const callback = createDeferred<undefined>()
-      const onError = rs.fn()
-      const trackCurrentPage = rs
-        .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
-        .mockResolvedValue({ accepted: true })
-      const rendered = await renderClientAsync(
-        createBeforeInitialPageRoot({
-          beforeInitialPage: {
-            maxWaitMs: configured,
-            onError,
-            run: async () => {
-              await callback.promise
-              return 'ready'
-            },
-          },
-        }),
-      )
+  it('delivers the admitted journal and then tracks navigation during hydration', async () => {
+    const hydration = createDeferred<unknown>()
+    const runInterceptors = InterceptorManager.prototype.run
+    rs.spyOn(InterceptorManager.prototype, 'run').mockImplementationOnce(async function run(
+      this: InterceptorManager<unknown>,
+      state: unknown,
+    ) {
+      await hydration.promise
+      const result: unknown = await runInterceptors.call(this, state)
+      return result
+    })
+    const upsert = rs
+      .spyOn(ExperienceApiClient.prototype, 'upsertProfile')
+      .mockResolvedValue(replayData)
+    const track = rs
+      .spyOn(ContentfulOptimization.prototype, 'page')
+      .mockResolvedValue({ accepted: true })
+    const run = rs.fn(() => undefined)
+    const handoff = createReplayHandoff(createReplay('/initial'))
+    const rendered = await renderClientAsync(
+      createBeforeInitialPageRoot({ handoff, beforeInitialPage: { run } }),
+    )
+    await rendered.rerender(
+      createBeforeInitialPageRoot({ handoff, routeKey: '/latest', beforeInitialPage: { run } }),
+    )
+    hydration.resolve(undefined)
+    await flushMicrotasks()
+    expect(run).not.toHaveBeenCalled()
+    expect(upsert).toHaveBeenCalledTimes(1)
+    expect(track).toHaveBeenCalledWith({ properties: { route: '/latest' } })
+    rendered.unmount()
+  })
 
-      await act(async () => {
-        await rs.advanceTimersByTimeAsync(beforeDeadline)
-      })
-      expect(onError).not.toHaveBeenCalled()
-      expect(trackCurrentPage).not.toHaveBeenCalled()
-
-      await act(async () => {
-        await rs.advanceTimersByTimeAsync(deadline)
-      })
-      expect(onError).toHaveBeenCalledTimes(1)
-      expect(trackCurrentPage).toHaveBeenCalledTimes(2)
-
-      callback.resolve(undefined)
-      await flushMicrotasks()
-      expect(trackCurrentPage).toHaveBeenCalledTimes(2)
-
-      rendered.unmount()
-    },
-  )
-
-  it('reads the latest route and payload builder after callback work settles', async () => {
+  it('reads the latest page payload after prerequisite work', async () => {
     const callback = createDeferred<undefined>()
     const beforeInitialPage = {
       run: async () => {
         await callback.promise
-        return 'ready'
       },
     }
-    const firstBuilder = rs.fn(() => ({ properties: { route: '/initial' } }))
-    const latestBuilder = rs.fn(() => ({ properties: { route: '/latest' } }))
-    const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+    const track = rs
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
-    const handoff = createContentHandoff({ initialPageEvent: 'skip' })
+    const handoff = createContentHandoff()
     const rendered = await renderClientAsync(
-      createBeforeInitialPageRoot({
-        buildPagePayload: firstBuilder,
-        handoff,
-        beforeInitialPage,
-      }),
+      createBeforeInitialPageRoot({ handoff, beforeInitialPage }),
     )
-
+    const payload = (): { properties: { route: string } } => ({ properties: { route: '/latest' } })
     await rendered.rerender(
       createBeforeInitialPageRoot({
-        buildPagePayload: latestBuilder,
         handoff,
         beforeInitialPage,
         routeKey: '/latest',
+        buildPagePayload: payload,
       }),
     )
     callback.resolve(undefined)
     await flushMicrotasks()
-
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(1, {
-      buildPayload: latestBuilder,
-      initialPageEvent: 'emit',
-      routeKey: '/latest',
-    })
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(2, {
-      initialPageEvent: 'skip',
-      routeKey: '/latest',
-    })
-    expect(firstBuilder).not.toHaveBeenCalled()
-
+    expect(track).toHaveBeenCalledWith(payload())
     rendered.unmount()
   })
 
-  it('marks the attempted route before observing route changes made during the direct page', async () => {
-    const page = createDeferred<{ accepted: true }>()
-    const beforeInitialPage = { run: () => undefined }
-    const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
-      .mockImplementationOnce(async () => await page.promise)
+  it('reports callback errors and still attempts the ordinary page', async () => {
+    const error = new Error('callback failed')
+    const onError = rs.fn()
+    const track = rs
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     const rendered = await renderClientAsync(
-      createBeforeInitialPageRoot({ beforeInitialPage, routeKey: '/attempted' }),
+      createBeforeInitialPageRoot({
+        beforeInitialPage: {
+          run: () => {
+            throw error
+          },
+          onError,
+        },
+      }),
     )
-
-    expect(trackCurrentPage).toHaveBeenCalledTimes(1)
-    expect(trackCurrentPage).toHaveBeenCalledWith({
-      buildPayload: expect.any(Function),
-      initialPageEvent: 'emit',
-      routeKey: '/attempted',
-    })
-
-    await rendered.rerender(
-      createBeforeInitialPageRoot({ beforeInitialPage, routeKey: '/during-page' }),
-    )
-    expect(trackCurrentPage).toHaveBeenCalledTimes(1)
-
-    page.resolve({ accepted: true })
     await flushMicrotasks()
-
-    expect(trackCurrentPage).toHaveBeenCalledTimes(2)
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(2, {
-      initialPageEvent: 'skip',
-      routeKey: '/attempted',
-    })
-
-    await rendered.rerender(
-      createBeforeInitialPageRoot({ beforeInitialPage, routeKey: '/after-readiness' }),
-    )
-    expect(trackCurrentPage).toHaveBeenCalledTimes(3)
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(3, {
-      buildPayload: expect.any(Function),
-      initialPageEvent: 'emit',
-      routeKey: '/after-readiness',
-    })
-
+    expect(onError).toHaveBeenCalledWith(error)
+    expect(track).toHaveBeenCalledTimes(1)
     rendered.unmount()
   })
 
-  it('uses direct skip only after a successful same-route skip handoff', async () => {
-    const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
-      .mockResolvedValue({ accepted: true })
-    const rendered = await renderClientAsync(
-      createBeforeInitialPageRoot({
-        handoff: createContentHandoff({ initialPageEvent: 'skip' }),
-        beforeInitialPage: { run: () => undefined },
-      }),
-    )
-
-    expect(trackCurrentPage).toHaveBeenCalledTimes(2)
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(1, {
-      initialPageEvent: 'skip',
-      routeKey: '/initial',
-    })
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(2, {
-      initialPageEvent: 'skip',
-      routeKey: '/initial',
-    })
-
-    rendered.unmount()
-  })
-
-  it('retains a failed owned handoff runtime and emits the direct page', async () => {
-    const hydrationError = new Error('handoff apply failed')
-    rs.spyOn(InterceptorManager.prototype, 'run').mockRejectedValueOnce(hydrationError)
-    const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
-      .mockResolvedValue({ accepted: true })
-    let capturedContext: OptimizationContextValue | undefined
-
-    function ContextProbe(): null {
-      capturedContext = useOptimizationContext()
-      return null
-    }
-
-    const rendered = await renderClientAsync(
-      createBeforeInitialPageRoot({
-        children: <ContextProbe />,
-        handoff: createContentHandoff({ initialPageEvent: 'skip' }),
-        beforeInitialPage: { run: () => undefined },
-      }),
-    )
-
-    expect(capturedContext).toEqual(
-      expect.objectContaining({ error: hydrationError, isLive: true }),
-    )
-    expect(capturedContext?.sdk).toBeInstanceOf(ContentfulOptimization)
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(1, {
-      buildPayload: expect.any(Function),
-      initialPageEvent: 'emit',
-      routeKey: '/initial',
-    })
-    expect(trackCurrentPage).toHaveBeenNthCalledWith(2, {
-      initialPageEvent: 'skip',
-      routeKey: '/initial',
-    })
-
-    rendered.unmount()
-  })
-
-  it.each([
-    {
-      logsError: true,
-      name: 'rejected',
-      result: async () => await Promise.reject(new Error('page failed')),
-    },
-    {
-      logsError: false,
-      name: 'unaccepted',
-      result: async () => await Promise.resolve({ accepted: false as const }),
-    },
-  ])(
-    'marks the attempted route without a same-route emitting retry after a $name direct page',
-    async ({ logsError, result }) => {
-      const logError = rs.spyOn(logger, 'error').mockImplementation(() => undefined)
-      const trackCurrentPage = rs
-        .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
-        .mockImplementationOnce(result)
-        .mockResolvedValue({ accepted: true })
-      const beforeInitialPage = { run: () => undefined }
-      const rendered = await renderClientAsync(createBeforeInitialPageRoot({ beforeInitialPage }))
-
-      expect(trackCurrentPage).toHaveBeenCalledTimes(2)
-      expect(trackCurrentPage).toHaveBeenNthCalledWith(1, {
-        buildPayload: expect.any(Function),
-        initialPageEvent: 'emit',
-        routeKey: '/initial',
-      })
-      expect(trackCurrentPage).toHaveBeenNthCalledWith(2, {
-        initialPageEvent: 'skip',
-        routeKey: '/initial',
-      })
-
-      await rendered.rerender(
-        createBeforeInitialPageRoot({ beforeInitialPage, routeKey: '/later' }),
-      )
-
-      expect(trackCurrentPage).toHaveBeenCalledTimes(3)
-      expect(trackCurrentPage).toHaveBeenNthCalledWith(3, {
-        buildPayload: expect.any(Function),
-        initialPageEvent: 'emit',
-        routeKey: '/later',
-      })
-      expect(logError).toHaveBeenCalledTimes(logsError ? 1 : 0)
-
-      rendered.unmount()
-    },
-  )
-
-  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
-    'throws for maxWaitMs %s before provider, callback, page, onError, or timer work',
-    (maxWaitMs) => {
-      rs.useFakeTimers()
-      const run = rs.fn()
-      const onError = rs.fn()
-      const trackCurrentPage = rs.spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
-
-      expect(() =>
-        renderToString(
-          createBeforeInitialPageRoot({
-            beforeInitialPage: { maxWaitMs, onError, run },
-          }),
-        ),
-      ).toThrow(new TypeError('beforeInitialPage.maxWaitMs must be a positive finite number.'))
-      expect(window.contentfulOptimization).toBeUndefined()
-      expect(run).not.toHaveBeenCalled()
-      expect(onError).not.toHaveBeenCalled()
-      expect(trackCurrentPage).not.toHaveBeenCalled()
-      expect(rs.getTimerCount()).toBe(0)
-    },
-  )
-
-  it('suppresses page and readiness continuation after unmount', async () => {
+  it('bounds callback waiting without blocking rendered content', async () => {
+    rs.useFakeTimers()
     const callback = createDeferred<undefined>()
-    const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+    const onError = rs.fn()
+    const track = rs
+      .spyOn(ContentfulOptimization.prototype, 'page')
+      .mockResolvedValue({ accepted: true })
+    const rendered = await renderClientAsync(
+      createBeforeInitialPageRoot({
+        children: <div>visible preview</div>,
+        beforeInitialPage: {
+          run: async () => {
+            await callback.promise
+          },
+          maxWaitMs: 10,
+          onError,
+        },
+      }),
+    )
+    expect(document.body.textContent).toContain('visible preview')
+    await act(async () => {
+      await rs.advanceTimersByTimeAsync(10)
+    })
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(track).toHaveBeenCalledTimes(1)
+    callback.resolve(undefined)
+    rendered.unmount()
+  })
+
+  it('cancels not-yet-started page work on unmount', async () => {
+    const callback = createDeferred<undefined>()
+    const track = rs
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     const rendered = await renderClientAsync(
       createBeforeInitialPageRoot({
         beforeInitialPage: {
           run: async () => {
             await callback.promise
-            return 'ready'
           },
         },
       }),
     )
-
     rendered.unmount()
     callback.resolve(undefined)
     await flushMicrotasks()
-
-    expect(trackCurrentPage).not.toHaveBeenCalled()
+    expect(track).not.toHaveBeenCalled()
   })
 
-  it('does not deliberately duplicate callback or page work during StrictMode effect replay', async () => {
+  it('retries a blocked initial page after live consent changes', async () => {
+    const upsert = rs
+      .spyOn(ExperienceApiClient.prototype, 'upsertProfile')
+      .mockResolvedValue(replayData)
+    const rendered = await renderClientAsync(
+      <OptimizationRoot
+        {...testConfig}
+        allowedEventTypes={[]}
+        defaults={{ consent: false }}
+        routeKey="/consent"
+        buildPagePayload={() => ({})}
+        beforeInitialPage={{ run: () => undefined }}
+      >
+        <div>preview</div>
+      </OptimizationRoot>,
+    )
+    expect(upsert).not.toHaveBeenCalled()
+    const sdk = window.contentfulOptimization
+    if (sdk === undefined) throw new Error('Expected the live singleton.')
+    await act(async () => {
+      sdk.consent(true)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(upsert).toHaveBeenCalledTimes(1)
+    rendered.unmount()
+  })
+
+  it('does not duplicate initial callback or page work in StrictMode', async () => {
     const run = rs.fn(() => undefined)
-    const trackCurrentPage = rs
-      .spyOn(ContentfulOptimization.prototype, 'trackCurrentPage')
+    const track = rs
+      .spyOn(ContentfulOptimization.prototype, 'page')
       .mockResolvedValue({ accepted: true })
     const rendered = await renderClientAsync(
       <StrictMode>{createBeforeInitialPageRoot({ beforeInitialPage: { run } })}</StrictMode>,
     )
-
+    await flushMicrotasks()
     expect(run).toHaveBeenCalledTimes(1)
-    expect(trackCurrentPage).toHaveBeenCalledTimes(2)
-
+    expect(track).toHaveBeenCalledTimes(1)
     rendered.unmount()
   })
+
+  it.each([0, -1, Number.POSITIVE_INFINITY, Number.NaN])(
+    'rejects invalid callback wait %s before initialization',
+    (maxWaitMs) => {
+      expect(() =>
+        renderToString(
+          createBeforeInitialPageRoot({ beforeInitialPage: { run: () => undefined, maxWaitMs } }),
+        ),
+      ).toThrow('beforeInitialPage.maxWaitMs must be a positive finite number.')
+    },
+  )
 })

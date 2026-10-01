@@ -33,7 +33,7 @@
     "bundleSize": {
       "gzipBudgets": {
         "contentful-optimization-web-preview-panel.umd.js": 37100,
-        "index.cjs": 24300,
+        "index.cjs": 24400,
         "index.mjs": 22700
       }
     }

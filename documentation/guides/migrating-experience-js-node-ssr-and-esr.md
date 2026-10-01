@@ -17,7 +17,20 @@ helpers, or a manual server-to-browser handoff.
 Legacy server code commonly uses `NinetailedAPIClient`, SSR plugin continuity, `ntaid`, or ESR
 preflight helpers. The Optimization Node SDK is stateless: create one process-level SDK, bind each
 incoming request with `forRequest()`, and let the app own cookies, consent, profile persistence,
-request context, and caching.
+request context, and caching. Direct Node event calls commit on the server. A route that continues
+in a browser SDK instead creates preview state on the server and delivers a private replay for
+the matching browser route.
+
+A **server preview** evaluates zero or more optional `identify`/`track` commands in
+application-supplied order, followed by the SDK-appended `page` command. It returns preview state
+without committing the sequence. The handoff's **private replay** is the SDK-owned, route-bound
+continuation for one browser route. A **successful Experience commit** is the non-preflight browser profile
+response; only that response can persist browser continuity.
+
+> [!NOTE]
+>
+> Without JavaScript, previewed server HTML can still render, but matching-route delivery and a new
+> browser `ctfl-opt-aid` cookie do not occur.
 
 Follow the [Node SDK integration guide](./integrating-the-node-sdk-in-a-node-app.md) unless a
 Next.js adapter owns the route.
@@ -48,8 +61,8 @@ Gather these inputs:
 Identify which server code owns each responsibility:
 
 - Creates or reads an anonymous profile ID.
-- Emits the first page event.
-- Persists profile continuity.
+- Commits events on a server-only route, or previews the initial sequence for a browser route.
+- Delivers private replay and persists profile continuity in the browser path.
 - Resolves Contentful entries before rendering.
 - Hands state to the browser.
 
@@ -65,21 +78,25 @@ shape is `forRequest({ consent })`; a migration request usually adds `locale`, `
 profile ID, and `eventContext` carries URL, user-agent, referrer, query, and other page data the SDK
 cannot infer from your server framework.
 
-Accepted request-bound `page()` or `identify()` results carry the profile, selected optimizations,
-and flag changes for that request. Consent-blocked events return blocked results or diagnostics
-without throwing.
+On a server-only route, accepted request-bound `page()`, `identify()`, or `track()` calls commit from
+Node and carry the profile, selected optimizations, and flag changes for that request. Persist the
+returned profile ID only when `canPersistProfile` is true. Consent-blocked events return blocked
+results or diagnostics without throwing.
 
 ### Replace SSR and ESR handoff
 
 Use a framework SDK when available. For Next.js, prefer the App Router or Pages Router migration
-guide so the adapter owns request state, provider handoff, page-event dedupe, and cookie behavior.
+guide so the adapter owns request preview, private browser replay, route dedupe, and browser cookie
+behavior.
 
-For a manual Node/Web hybrid, the app owns the profile cookie. The Node SDK exports
-`ANONYMOUS_ID_COOKIE` from `@contentful/optimization-node/constants`, and its value is
-`ctfl-opt-aid`, but Node does not read, write, or clear cookies for you. Read the cookie from the
-incoming request, pass it as `forRequest({ profile: { id } })`, write the returned profile ID only
-when persistence consent allows it, and keep the cookie browser-readable if the Web SDK must
-continue the same visitor.
+For a manual Node/Web hybrid, read an existing `ctfl-opt-aid` into `forRequest({ profile: { id } })` and call `previewInitialExperience()` with optional commands. The SDK appends its page and preflights one batch. `createRequestHandoffFromPreview()` packages private preview state and replay. Your app owns serialization and transport. In Web, call `hydrateAndTrackCurrentPage(handoff, { routeKey, buildPayload })` once, then `trackCurrentPage()` for later routes. Preview rendering need not await delivery.
+
+The browser checks live consent and submits the server-built events through its ordinary interceptors and queues, sending the Personalization sequence as one
+normal batch. The preview does not write a profile cookie. A successful browser Experience response
+commits the sequence and can write the SDK-owned `ctfl-opt-aid` cookie when persistence consent
+permits it. Keep that cookie browser-readable for the next server request. Do not migrate hybrid
+code by calling Node `page()` and trying to suppress the browser with the legacy
+`initialPageEvent` option; that option is inert compatibility input.
 
 ### Replace server content resolution
 
@@ -99,7 +116,11 @@ Verify the request boundary:
 
 - Accepted events return profile data when consent allows them.
 - Blocked events do not throw and surface diagnostics.
-- The app persists the profile only when persistence consent allows it.
+- Direct Node routes persist returned profile identity only when persistence consent allows it.
+- For Node/Web routes, perform the browser Experience commit, duplicate-route, and continuity-cookie
+  checks in the Node guide's
+  [Share continuity with the Web SDK](./integrating-the-node-sdk-in-a-node-app.md#share-continuity-with-the-web-sdk)
+  section.
 - Entry resolution uses request selections.
 - Browser takeover uses a compatible target SDK path.
 
@@ -107,17 +128,22 @@ Verify the request boundary:
 
 - Search for `@ninetailed/experience.js-node`, SSR plugin imports, ESR helper imports, and `ntaid`.
 - Verify one accepted request and one denied-consent request.
+- For a Node/Web route, run the Node guide's
+  [paired-flow checks](./integrating-the-node-sdk-in-a-node-app.md#share-continuity-with-the-web-sdk)
+  and observe one matching-route browser commit, no duplicate request for the same path plus search,
+  and `ctfl-opt-aid` only after a successful response when persistence consent permits it.
 - Verify a resolved server entry falls back to baseline with no selection.
 - Verify cache keys do not share personalized output across visitors.
 
 ## Troubleshooting
 
-| Symptom                                     | Check                                                                                                  |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Server event methods are missing            | Call `forRequest()` first; event methods live on the request-bound client.                             |
-| Non-sticky interaction tracking throws      | Bind a request profile ID or use the event flow that derives one before sending Insights interactions. |
-| Browser takeover starts a different visitor | Persist and pass the target anonymous ID according to the Web or framework SDK guide.                  |
-| Personalized HTML leaks between visitors    | Remove shared caching around request-specific responses and rendered output.                           |
+| Symptom                                      | Check                                                                                                  |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Server event methods are missing             | Call `forRequest()` first; event methods live on the request-bound client.                             |
+| Non-sticky interaction tracking throws       | Bind a request profile ID or use the event flow that derives one before sending Insights interactions. |
+| Browser takeover starts a different visitor  | Read existing continuity into Node, then run the linked browser commit and cookie checks.              |
+| Server variant renders but no cookie appears | Run the browser Experience commit check; confirm JavaScript ran and persistence consent is true.       |
+| Personalized HTML leaks between visitors     | Remove shared caching around request-specific responses and rendered output.                           |
 
 ## Related guides
 

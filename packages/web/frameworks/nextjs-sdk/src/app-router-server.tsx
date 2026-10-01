@@ -290,7 +290,6 @@ export function bindNextjsAppRouterServerOptimization(
         cache: { scope: 'static' },
         entries,
         hydration: 'preserve-server',
-        initialPageEvent: 'emit',
         selectedOptimizations: [],
       })
     }

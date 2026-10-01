@@ -47,11 +47,11 @@ export interface NextPagesAutoPageContext {
 }
 
 export interface NextPagesAutoPageTrackerProps extends AutoPagePayloadOptions<NextPagesAutoPageContext> {
+  /** @deprecated This legacy input is inert. */
   readonly initialPageEvent?: InitialAutoPageEvent
 }
 
 export function NextPagesAutoPageTracker({
-  initialPageEvent,
   pagePayload,
   getPagePayload,
 }: NextPagesAutoPageTrackerProps): ReactElement | null {
@@ -91,7 +91,7 @@ export function NextPagesAutoPageTracker({
     [asPath, getPagePayload, pagePayload, pathname, query, routeKey, router, routerPayload],
   )
 
-  useAutoPageEmitter({ enabled: isReady, initialPageEvent, routeKey, buildPayload })
+  useAutoPageEmitter({ enabled: isReady, routeKey, buildPayload })
 
   return null
 }

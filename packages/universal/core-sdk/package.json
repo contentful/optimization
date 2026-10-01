@@ -113,16 +113,16 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 23200,
-        "index.mjs": 23100,
+        "index.cjs": 24700,
+        "index.mjs": 23800,
         "bridge-support.cjs": 1000,
-        "bridge-support.mjs": 800,
-        "runtime.cjs": 3700,
-        "runtime.mjs": 4900,
+        "bridge-support.mjs": 700,
+        "runtime.cjs": 3600,
+        "runtime.mjs": 4100,
         "entry-source.cjs": 2100,
-        "entry-source.mjs": 1900,
-        "preview-support.cjs": 5200,
-        "preview-support.mjs": 5100
+        "entry-source.mjs": 1800,
+        "preview-support.cjs": 5300,
+        "preview-support.mjs": 4700
       }
     }
   },

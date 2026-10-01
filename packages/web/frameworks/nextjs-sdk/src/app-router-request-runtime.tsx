@@ -1,17 +1,12 @@
-import { createRequestHandoffFromData } from '@contentful/optimization-node'
 import type {
+  InitialExperienceCommandInput,
   OptimizationCacheMetadata,
   PrivateRequestOptimizationCacheMetadata,
 } from '@contentful/optimization-react-web/core-sdk'
 import { NextAppAutoPageTracker } from '@contentful/optimization-react-web/router/next-app'
 import { cookies, headers } from 'next/headers'
 import { cache, createElement, type ReactElement } from 'react'
-import {
-  assertRequestHandoffCacheMetadata,
-  readNextjsForwardedServerData,
-  toForwardedProfileOptions,
-  toHandoffDefaults,
-} from './app-router-request-handoff'
+import { assertRequestHandoffCacheMetadata, toHandoffDefaults } from './app-router-request-handoff'
 import type {
   BoundNextjsOptimizationProviderProps,
   BoundNextjsOptimizationRootProps,
@@ -24,13 +19,17 @@ import type {
   NextjsOptimizationServerConsent,
   NextjsOptimizationServerConsentResolver,
 } from './bound-component-types'
-import {
-  addBrowserHandoffMetadata,
-  type BrowserOptimizationHandoff,
-  type ContentOptimizationHandoff,
-  type ContentOptimizationHydrationMode,
+import type {
+  BrowserOptimizationHandoff,
+  ContentOptimizationHandoff,
+  ContentOptimizationHydrationMode,
 } from './handoff'
 import { NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER } from './request-context'
+import {
+  createPrivateRequestPreviewFallbackHandoff,
+  reportRequestPreviewFallback,
+  resolveRequestPreview,
+} from './request-preview-fallback'
 import {
   createNextjsRequestHandoff,
   type ContentfulOptimization,
@@ -49,6 +48,7 @@ export type AppRouterCreateRequestHandoffOptions = Omit<
   readonly hydration: ContentOptimizationHydrationMode
   readonly locale?: string
   readonly request: NextjsRequestLike
+  /** @deprecated This compatibility field is no longer read. */
   readonly trustedRequestHandoff?: true
 }
 
@@ -97,47 +97,32 @@ export function bindNextjsAppRouterRequestRuntime({
     }
     assertRequestHandoffCacheMetadata(cacheMetadata)
 
-    const forwardedServerData = readNextjsForwardedServerData(
-      options.request.headers,
-      options.trustedRequestHandoff,
-    )
-    if (forwardedServerData !== undefined) {
-      const data =
-        forwardedServerData.profileId === undefined
-          ? undefined
-          : await sdk.api.experience.getProfile(
-              forwardedServerData.profileId,
-              toForwardedProfileOptions(options, config.locale),
-            )
-      const handoff = addBrowserHandoffMetadata(
-        createRequestHandoffFromData({
+    const result = await resolveRequestPreview(
+      async () => {
+        const consent = await resolveServerConsent(config.consent?.server, {
+          cookies: options.request.cookies ?? EMPTY_COOKIE_READER,
+          headers: options.request.headers,
+        })
+        const { handoff } = await createNextjsRequestHandoff(sdk, {
+          ...options,
           cache: cacheMetadata,
-          data,
+          consent,
+          locale: options.locale ?? config.locale,
+          request: options.request,
+        })
+        return { defaults: toHandoffDefaults(consent), handoff }
+      },
+      () => ({
+        defaults: toHandoffDefaults(false),
+        handoff: createPrivateRequestPreviewFallbackHandoff({
           entries: options.entries,
-        }),
-        {
           hydration: options.hydration,
-          initialPageEvent: forwardedServerData.pageAccepted ? 'skip' : 'emit',
-        },
-      )
-      rememberRequestHandoff(handoff, toHandoffDefaults(forwardedServerData.consent))
-
-      return handoff
-    }
-
-    const consent = await resolveServerConsent(config.consent?.server, {
-      cookies: options.request.cookies ?? EMPTY_COOKIE_READER,
-      headers: options.request.headers,
-    })
-    const { handoff } = await createNextjsRequestHandoff(sdk, {
-      ...options,
-      cache: cacheMetadata,
-      consent,
-      locale: options.locale ?? config.locale,
-      request: options.request,
-    })
-
-    rememberRequestHandoff(handoff, toHandoffDefaults(consent))
+        }),
+      }),
+    )
+    const { value } = result
+    const { defaults, handoff } = value
+    rememberRequestHandoff(handoff, defaults)
 
     return handoff
   }
@@ -148,28 +133,73 @@ export function bindNextjsAppRouterRequestRuntime({
     const requestUrl = requestHeaders.get(NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER)
 
     if (requestUrl === null) {
-      throw new Error(
-        'Missing x-ctfl-opt-request-url. Configure the Contentful Optimization request handler in your Next.js proxy before using request components.',
+      const hydration = getFallbackHydration(config)
+      reportRequestPreviewFallback(
+        new Error(
+          'Missing x-ctfl-opt-request-url. Configure the Contentful Optimization request handler in your Next.js proxy before using request components.',
+        ),
       )
+      const handoff = createPrivateRequestPreviewFallbackHandoff({ hydration })
+      rememberRequestHandoff(handoff, toHandoffDefaults(false))
+      return {
+        handoff,
+        hydration,
+        pagePayload: undefined,
+        routeKey: undefined,
+      }
     }
 
-    const url = new URL(requestUrl)
-    const routeKey = `${url.pathname}${url.search}`
-    const pagePayload = {
+    let url: URL | undefined = undefined
+    try {
+      url = new URL(requestUrl)
+    } catch (error) {
+      const hydration = getFallbackHydration(config)
+      reportRequestPreviewFallback(error)
+      const handoff = createPrivateRequestPreviewFallbackHandoff({ hydration })
+      rememberRequestHandoff(handoff, toHandoffDefaults(false))
+      return {
+        handoff,
+        hydration,
+        pagePayload: undefined,
+        routeKey: undefined,
+      }
+    }
+
+    const resolvedRouteKey = `${url.pathname}${url.search}`
+    const resolvedPagePayload = {
       properties: { path: url.pathname, search: url.search, url: requestUrl },
     }
-    const hydration =
-      typeof config.request?.hydration === 'function'
-        ? config.request.hydration({ requestUrl, routeKey })
-        : (config.request?.hydration ?? 'preserve-server')
-    const handoff = await createRequestHandoff({
-      hydration,
-      pagePayload,
-      request: { cookies: cookieStore, headers: requestHeaders, url: requestUrl },
-      trustedRequestHandoff: config.request?.trustedRequestHandoff,
-    })
+    const fallbackHydration = getFallbackHydration(config)
+    let hydration = fallbackHydration
+    const result = await resolveRequestPreview(
+      async () => {
+        hydration =
+          typeof config.request?.hydration === 'function'
+            ? config.request.hydration({ requestUrl, routeKey: resolvedRouteKey })
+            : fallbackHydration
+        const initialExperienceEvents = await resolveInitialExperienceEvents(
+          config.request?.initialExperienceEvents,
+          { requestUrl, routeKey: resolvedRouteKey },
+        )
+        const handoff = await createRequestHandoff({
+          hydration,
+          ...(initialExperienceEvents === undefined ? {} : { initialExperienceEvents }),
+          pagePayload: resolvedPagePayload,
+          request: { cookies: cookieStore, headers: requestHeaders, url: requestUrl },
+        })
+        return { handoff, hydration, pagePayload: resolvedPagePayload, routeKey: resolvedRouteKey }
+      },
+      () => ({
+        handoff: createPrivateRequestPreviewFallbackHandoff({ hydration }),
+        hydration,
+        pagePayload: resolvedPagePayload,
+        routeKey: resolvedRouteKey,
+      }),
+    )
+    const { value } = result
+    if (result.degraded) rememberRequestHandoff(value.handoff, toHandoffDefaults(false))
 
-    return { handoff, hydration, pagePayload, routeKey }
+    return value
   })
 
   async function RequestOptimizationRoot(
@@ -189,8 +219,8 @@ export function bindNextjsAppRouterRequestRuntime({
       ...rootProps,
       handoff,
       hydration,
-      initialPagePayload: pagePayload,
-      routeKey,
+      ...(pagePayload === undefined ? {} : { initialPagePayload: pagePayload }),
+      ...(routeKey === undefined ? {} : { routeKey }),
     })
   }
 
@@ -217,12 +247,8 @@ export function bindNextjsAppRouterRequestRuntime({
   async function RequestNextAppAutoPageTracker(
     props: Parameters<NextjsAppRouterRequestOptimization['NextAppAutoPageTracker']>[0],
   ): Promise<ReactElement> {
-    const { handoff } = await getRequestRenderInputs()
-
-    return createElement(NextAppAutoPageTracker, {
-      ...props,
-      initialPageEvent: handoff.initialPageEvent,
-    })
+    await getRequestRenderInputs()
+    return createElement(NextAppAutoPageTracker, props)
   }
 
   return {
@@ -234,6 +260,30 @@ export function bindNextjsAppRouterRequestRuntime({
       OptimizedEntry: RequestOptimizedEntry,
     },
   }
+}
+
+function getFallbackHydration(
+  config: NextjsAppRouterServerOptimizationConfig,
+): ContentOptimizationHydrationMode {
+  return typeof config.request?.hydration === 'string'
+    ? config.request.hydration
+    : 'preserve-server'
+}
+
+async function resolveInitialExperienceEvents(
+  input:
+    | readonly InitialExperienceCommandInput[]
+    | ((context: {
+        readonly requestUrl: string
+        readonly routeKey: string
+      }) =>
+        | readonly InitialExperienceCommandInput[]
+        | Promise<readonly InitialExperienceCommandInput[]>)
+    | undefined,
+  context: { readonly requestUrl: string; readonly routeKey: string },
+): Promise<readonly InitialExperienceCommandInput[] | undefined> {
+  if (typeof input === 'function') return await input(context)
+  return input
 }
 
 function resolveServerConsent(

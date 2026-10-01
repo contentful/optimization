@@ -1,5 +1,10 @@
+import { EventBuilder } from '@contentful/optimization-node/core-sdk'
 import * as serverExports from './server'
 import type { ServerTrackingBaselineEntry, ServerTrackingResolvedData } from './tracking-attributes'
+const replayEventBuilder = new EventBuilder({
+  channel: 'server',
+  library: { name: 'test-server', version: '1.0.0' },
+})
 
 const {
   NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER,
@@ -7,6 +12,7 @@ const {
   bindNextjsOptimizationRequest,
   configureNextjsServerOptimization,
   createNextjsPageContext,
+  createNextjsRequestHandoff,
   createNextjsRequestContext,
   getNextjsServerOptimizationData,
   persistNextjsAnonymousId,
@@ -23,6 +29,9 @@ const sdkConfig = {
 
 interface CreatedSdk {
   readonly forRequest: ReturnType<typeof rs.fn<ContentfulOptimization['forRequest']>>
+  readonly previewInitialExperience: ReturnType<
+    typeof rs.fn<CoreStatelessRequest['previewInitialExperience']>
+  >
   readonly sdk: ContentfulOptimization
 }
 
@@ -114,6 +123,15 @@ function createSdk(
         },
       }),
   ),
+  previewInitialExperience = rs.fn<CoreStatelessRequest['previewInitialExperience']>(
+    async () =>
+      await Promise.resolve({
+        accepted: true,
+        data: optimizationData,
+        experience: [replayEventBuilder.buildPageView({})],
+        insights: [],
+      }),
+  ),
 ): CreatedSdk {
   const sdk = configureNextjsServerOptimization(sdkConfig)
   const requestOptimization = sdk.forRequest({ consent: true })
@@ -123,19 +141,18 @@ function createSdk(
 
   rs.spyOn(sdk, 'forRequest').mockImplementation(forRequest)
   rs.spyOn(requestOptimization, 'page').mockImplementation(page)
+  rs.spyOn(requestOptimization, 'previewInitialExperience').mockImplementation(
+    previewInitialExperience,
+  )
 
   return {
     forRequest,
+    previewInitialExperience,
     sdk,
   }
 }
 
 describe('Next.js server helpers', () => {
-  it('exports the server configure helper without the removed create helper name', () => {
-    expect(serverExports.configureNextjsServerOptimization).toBeTypeOf('function')
-    expect(serverExports).not.toHaveProperty('createNextjsOptimization')
-  })
-
   it('builds request context from a Next-like request', () => {
     expect(
       createNextjsRequestContext({
@@ -396,6 +413,136 @@ describe('Next.js server helpers', () => {
 
     expect(page).toHaveBeenCalledWith({ properties: { path: '/home' } })
     expect(result.data?.profile.id).toBe('profile-from-page')
+  })
+
+  it('creates a route-bound replay handoff from the preview command sequence', async () => {
+    const previewInitialExperience = rs.fn<CoreStatelessRequest['previewInitialExperience']>(
+      async () =>
+        await Promise.resolve({
+          accepted: true,
+          data: optimizationData,
+          experience: [replayEventBuilder.buildPageView({ properties: { route: '/products' } })],
+          insights: [],
+        }),
+    )
+    const { sdk } = createSdk(undefined, previewInitialExperience)
+
+    const result = await createNextjsRequestHandoff(sdk, {
+      consent: true,
+      initialExperienceEvents: [
+        { event: 'initial-preview', properties: { plan: 'pro' }, type: 'track' },
+      ],
+      pagePayload: { properties: { route: '/products' } },
+      request: {
+        headers: new Headers(),
+        url: 'https://example.test/products?tab=featured',
+      },
+      hydration: 'preserve-server',
+    })
+
+    expect(previewInitialExperience).toHaveBeenCalledWith({
+      events: [{ event: 'initial-preview', properties: { plan: 'pro' }, type: 'track' }],
+      page: { properties: { route: '/products' } },
+    })
+    expect(result.handoff.replay).toEqual({
+      experience: [
+        expect.objectContaining({
+          type: 'page',
+          properties: expect.objectContaining({ route: '/products' }),
+        }),
+      ],
+      insights: [],
+      routeKey: '/products?tab=featured',
+    })
+  })
+
+  it('omits replay when preview is blocked', async () => {
+    const previewInitialExperience = rs.fn<CoreStatelessRequest['previewInitialExperience']>(
+      async () => await Promise.resolve({ accepted: false }),
+    )
+    const { sdk } = createSdk(undefined, previewInitialExperience)
+
+    const result = await createNextjsRequestHandoff(sdk, {
+      consent: true,
+      pagePayload: {},
+      request: { headers: new Headers(), url: 'https://example.test/products' },
+      hydration: 'preserve-server',
+    })
+
+    expect(result.handoff.replay).toBeUndefined()
+  })
+
+  it('keeps accepted preview state and entries when no replay route can be resolved', async () => {
+    const { sdk } = createSdk()
+    const entries = [{ baselineEntry, entryId: baselineEntry.sys.id }] as const
+
+    const result = await createNextjsRequestHandoff(sdk, {
+      consent: true,
+      entries,
+      hydration: 'preserve-server',
+      pagePayload: { properties: { route: '/products' } },
+    })
+
+    expect(result.pageResult).toEqual({ accepted: true, data: optimizationData })
+    expect(result.handoff).toMatchObject({
+      cache: { scope: 'private-request' },
+      entries,
+      state: {
+        changes: optimizationData.changes,
+        profile: optimizationData.profile,
+        selectedOptimizations: optimizationData.selectedOptimizations,
+      },
+    })
+    expect(result.handoff.replay).toBeUndefined()
+  })
+
+  it.each([
+    [
+      'the complete explicit page before the payload route',
+      {
+        page: {
+          path: '/explicit',
+          query: {},
+          referrer: '',
+          search: '?source=page',
+          url: 'https://example.test/explicit?source=page',
+        },
+        pagePayload: { properties: { path: '/payload', search: '?source=payload' } },
+      },
+      '/explicit?source=page',
+    ],
+    [
+      'the payload path and search when no request or complete page is available',
+      { pagePayload: { properties: { path: '/payload', search: '?source=payload' } } },
+      '/payload?source=payload',
+    ],
+  ] as const)('resolves replay routes from %s', async (_label, input, routeKey) => {
+    const { sdk } = createSdk()
+
+    const result = await createNextjsRequestHandoff(sdk, {
+      consent: true,
+      hydration: 'preserve-server',
+      ...input,
+    })
+
+    expect(result.handoff.replay).toMatchObject({ routeKey })
+  })
+
+  it('rejects a public request cache before previewing the request', async () => {
+    const { previewInitialExperience, sdk } = createSdk()
+
+    await expect(
+      createNextjsRequestHandoff(sdk, {
+        // @ts-expect-error -- testing runtime validation for invalid request cache scope.
+        cache: { key: 'segment-a', scope: 'public-permutation' },
+        consent: true,
+        hydration: 'preserve-server',
+        pagePayload: {},
+      }),
+    ).rejects.toThrow(
+      'Request handoffs must use private-request cache scope. Use public permutation handoffs for public cache scopes, or a non-request handoff for static output.',
+    )
+    expect(previewInitialExperience).not.toHaveBeenCalled()
   })
 
   it('persists anonymous ID when the Node request allows persistence', () => {

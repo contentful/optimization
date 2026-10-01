@@ -125,7 +125,13 @@ describe('ExperienceApiClient', () => {
     })
 
     it('getProfile hits the correct URL with default environment and optional locale', async () => {
-      const requested: { space?: string; env?: string; id?: string; locale?: string | null } = {}
+      const requested: {
+        space?: string
+        env?: string
+        id?: string
+        locale?: string | null
+        preflight?: string | null
+      } = {}
 
       server.use(
         http.get(
@@ -137,13 +143,14 @@ describe('ExperienceApiClient', () => {
             requested.env = env
             requested.id = id
             requested.locale = getLocaleParam(request.url)
+            requested.preflight = getParam(request.url)
 
             return HttpResponse.json({ data: { id } }, { status: 200 })
           },
         ),
       )
 
-      const client = makeClient()
+      const client = makeClient({ preflight: true })
 
       // without locale
       const profile = await client.getProfile('f0837d7dc6344c36a3a0a06c4cde754b')
@@ -152,6 +159,7 @@ describe('ExperienceApiClient', () => {
       expect(requested.env).toBe(ENVIRONMENT)
       expect(requested.id).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
       expect(requested.locale).toBeNull()
+      expect(requested.preflight).toBeNull()
 
       // with locale
       const profile2 = await client.getProfile('a19c3f54d2b84e37a93f6d1c0e5b7284', {
@@ -160,6 +168,7 @@ describe('ExperienceApiClient', () => {
       expect(profile2).toBeDefined()
       expect(requested.id).toBe('a19c3f54d2b84e37a93f6d1c0e5b7284')
       expect(requested.locale).toBe('de-DE')
+      expect(requested.preflight).toBeNull()
 
       expect(mockLogger.info).toHaveBeenCalledWith(
         'ApiClient:Experience',
@@ -402,6 +411,7 @@ describe('ExperienceApiClient', () => {
       let content: string | null = null
       let forcedIp: string | null = null
       let features: string[] | undefined
+      let preflight: string | null = null
 
       server.use(
         http.post(
@@ -409,6 +419,7 @@ describe('ExperienceApiClient', () => {
           async ({ request }) => {
             content = getContent(request.headers)
             forcedIp = getHeader(request.headers, 'X-Force-IP')
+            preflight = getParam(request.url)
             const body = await request.json()
             features = getFeaturesFromBody(body)
             return HttpResponse.json(
@@ -423,6 +434,7 @@ describe('ExperienceApiClient', () => {
         enabledFeatures: ['location'],
         ip: '198.51.100.5',
         plainText: false,
+        preflight: true,
       })
       const events = [makeTrackEvent('update-profile-defaults')]
 
@@ -439,6 +451,7 @@ describe('ExperienceApiClient', () => {
       expect(content).toBe('application/json')
       expect(forcedIp).toBe('198.51.100.5')
       expect(features).toEqual(['location'])
+      expect(preflight).toBe('preflight')
     })
 
     it('throws when updateProfile is called with an empty events array', async () => {
@@ -454,12 +467,14 @@ describe('ExperienceApiClient', () => {
     it('upsertManyProfiles posts to /events and defaults to application/json (plainText=false)', async () => {
       let content: string | null = null
       let anonymousId: string | undefined
+      let preflight: string | null = null
 
       server.use(
         http.post(
           `${EXPERIENCE_BASE_URL}v3/spaces/:space/environments/:env/events`,
           async ({ request }) => {
             content = getContent(request.headers)
+            preflight = getParam(request.url)
             const body = await request.json()
 
             if (typeof body === 'object' && body !== null && 'events' in body) {
@@ -494,15 +509,16 @@ describe('ExperienceApiClient', () => {
         ),
       )
 
-      const client = makeClient()
+      const client = makeClient({ preflight: true })
 
       const profiles = await client.upsertManyProfiles(
         { events: [makeBatchTrackEvent('f0837d7dc6344c36a3a0a06c4cde754b')] },
-        {},
+        { preflight: true },
       )
       expect(Array.isArray(profiles)).toBe(true)
       expect(content).toBe('application/json')
       expect(anonymousId).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
+      expect(preflight).toBeNull()
     })
 
     it('throws when upsertManyProfiles is called with an empty event batch', async () => {

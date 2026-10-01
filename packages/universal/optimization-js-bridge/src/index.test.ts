@@ -63,6 +63,34 @@ describe('bridge contract', () => {
     }
   })
 
+  it('accepts deprecated global preflight without changing mutation behavior', async () => {
+    const fetchMock = rs.fn<typeof fetch>(
+      async () => new Response(JSON.stringify(PROFILE_RESPONSE)),
+    )
+    rs.stubGlobal('fetch', fetchMock)
+    bridge.initialize({
+      spaceId: 'test-client',
+      environment: 'main',
+      api: { preflight: true },
+      defaults: { consent: true },
+    })
+
+    await new Promise<void>((resolve, reject) => {
+      bridge.page(
+        {},
+        () => {
+          resolve()
+        },
+        (error) => {
+          reject(new Error(error))
+        },
+      )
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(String(fetchMock.mock.calls[0]?.[0])).not.toContain('type=preflight')
+  })
+
   it('rejects invalid identify payloads before calling core', () => {
     initializeBridge()
     const { onError, onSuccess } = createCallbacks()

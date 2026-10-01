@@ -27,7 +27,7 @@ export * from '@contentful/optimization-core/runtime'
  *
  * @internal
  */
-type WebOnlyRuntimeMembers = 'tracking' | 'trackCurrentPage'
+type WebOnlyRuntimeMembers = 'tracking' | 'trackCurrentPage' | 'hydrateAndTrackCurrentPage'
 type ManagedEntryFetchMembers =
   | 'fetchContentfulEntries'
   | 'fetchContentfulEntry'
@@ -95,6 +95,7 @@ export function createWebSnapshotRuntime(snapshot?: OptimizationSnapshot): WebOp
     fetchOptimizedEntry: rejectSnapshotManagedEntryFetch,
     prefetchManagedEntries: rejectSnapshotManagedEntryFetch,
     tracking: NOOP_TRACKING,
+    hydrateAndTrackCurrentPage: async () => await Promise.resolve({ accepted: false as const }),
     trackCurrentPage: async () => await Promise.resolve({ accepted: false as const }),
   })
 }

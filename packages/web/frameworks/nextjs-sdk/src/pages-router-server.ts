@@ -1,20 +1,18 @@
 import { resolveEntriesForSelections } from '@contentful/optimization-react-web/core-sdk'
 import type { GetServerSidePropsContext } from 'next'
 import type { IncomingHttpHeaders } from 'node:http'
-import { toHandoffDefaults } from './app-router-request-handoff'
+import { assertRequestHandoffCacheMetadata, toHandoffDefaults } from './app-router-request-handoff'
 import type {
   NextjsOptimizationComponentsConfig,
-  NextjsOptimizationCookieConfig,
   NextjsOptimizationServerConsent,
   NextjsOptimizationServerConsentResolver,
 } from './bound-component-types'
-import {
-  createCookieReaderFromHeader,
-  createCookieReaderFromRecord,
-  createNextjsAnonymousIdSetCookieHeader,
-  type PersistNextjsAnonymousIdOptions,
-} from './cookies'
+import { createCookieReaderFromHeader, createCookieReaderFromRecord } from './cookies'
 import type { BrowserOptimizationHandoff } from './handoff'
+import {
+  createPrivateRequestPreviewFallbackHandoff,
+  resolveRequestPreview,
+} from './request-preview-fallback'
 import {
   configureNextjsServerOptimization,
   createNextjsRequestHandoff,
@@ -29,7 +27,6 @@ import {
   type OptimizationNodeConfig,
 } from './server'
 
-const SECONDS_IN_DAY = 86_400
 const EMPTY_COOKIE_READER = {
   get: () => undefined,
 }
@@ -53,11 +50,10 @@ export { resolveEntriesForSelections }
 export type NextjsPagesRouterRequestHandoffOptions = Omit<
   NextjsRequestHandoffOptions,
   'consent' | 'cookies' | 'headers' | 'locale' | 'request'
-> &
-  PersistNextjsAnonymousIdOptions & {
-    readonly locale?: string
-    readonly prefetchManagedEntries?: readonly ManagedEntryDescriptor[]
-  }
+> & {
+  readonly locale?: string
+  readonly prefetchManagedEntries?: readonly ManagedEntryDescriptor[]
+}
 
 export interface NextjsPagesRouterOptimization {
   readonly createRequestHandoff: (
@@ -73,15 +69,29 @@ export function bindNextjsPagesRouterServerOptimization(
 
   return {
     createRequestHandoff: async (context, options) => {
-      const consent = await resolveServerConsent(config.consent?.server, context)
-      const { handoff } = await createNextjsPagesRouterRequestHandoff(sdk, context, {
-        ...options,
-        consent,
-        cookieOptions: options.cookieOptions ?? toAnonymousIdCookieOptions(config.cookie),
-        locale: options.locale ?? config.locale ?? context.locale,
-      })
+      const cache = options.cache ?? { scope: 'private-request' }
+      assertRequestHandoffCacheMetadata(cache)
+      const result = await resolveRequestPreview(
+        async () => {
+          const consent = await resolveServerConsent(config.consent?.server, context)
+          const { handoff } = await createNextjsPagesRouterRequestHandoff(sdk, context, {
+            ...options,
+            consent,
+            locale: options.locale ?? config.locale ?? context.locale,
+          })
+          return handoff
+        },
+        () =>
+          addRequestDefaultsToHandoff(
+            createPrivateRequestPreviewFallbackHandoff({
+              entries: options.entries,
+              hydration: options.hydration,
+            }),
+            false,
+          ),
+      )
 
-      return handoff
+      return result.value
     },
   }
 }
@@ -93,13 +103,7 @@ export async function createNextjsPagesRouterRequestHandoff(
     readonly consent: CoreStatelessRequestConsent
   },
 ): Promise<NextjsRequestHandoffResult> {
-  const {
-    cookieOptions,
-    deleteWhenProfileCannotPersist,
-    locale,
-    prefetchManagedEntries,
-    ...requestOptions
-  } = options
+  const { locale, prefetchManagedEntries, ...requestOptions } = options
   const request = createPagesRouterRequest(context)
   const result = await createNextjsRequestHandoff(sdk, {
     ...requestOptions,
@@ -107,17 +111,6 @@ export async function createNextjsPagesRouterRequestHandoff(
     request,
   })
   const requestHandoff = addRequestDefaultsToHandoff(result.handoff, requestOptions.consent)
-  const setCookie = createNextjsAnonymousIdSetCookieHeader(
-    result.requestOptimization,
-    result.data,
-    {
-      anonymousIdCookieName: requestOptions.anonymousIdCookieName,
-      cookieOptions,
-      deleteWhenProfileCannotPersist,
-    },
-  )
-  if (setCookie !== undefined) appendSetCookie(context, setCookie)
-
   if (prefetchManagedEntries === undefined) {
     return {
       ...result,
@@ -231,20 +224,6 @@ function getCookieHeader(value: string | string[] | undefined): string | undefin
   return Array.isArray(value) ? value.join('; ') : value
 }
 
-function appendSetCookie(context: GetServerSidePropsContext, setCookie: string): void {
-  const existingSetCookie = context.res.getHeader('Set-Cookie')
-
-  if (existingSetCookie === undefined) {
-    context.res.setHeader('Set-Cookie', setCookie)
-    return
-  }
-
-  context.res.setHeader('Set-Cookie', [
-    ...(Array.isArray(existingSetCookie) ? existingSetCookie : [existingSetCookie]).map(String),
-    setCookie,
-  ])
-}
-
 function resolveServerConsent(
   consent: NextjsOptimizationServerConsent | NextjsOptimizationServerConsentResolver | undefined,
   context: GetServerSidePropsContext,
@@ -272,19 +251,4 @@ function toServerOptimizationConfig(
   } = config
 
   return serverConfig as OptimizationNodeConfig
-}
-
-function toAnonymousIdCookieOptions(
-  cookie: NextjsOptimizationCookieConfig | undefined,
-): PersistNextjsAnonymousIdOptions['cookieOptions'] {
-  if (cookie === undefined) return undefined
-
-  const cookieOptions: NonNullable<PersistNextjsAnonymousIdOptions['cookieOptions']> = {
-    ...(cookie.domain ? { domain: cookie.domain } : {}),
-    ...(typeof cookie.expires === 'number' && Number.isFinite(cookie.expires)
-      ? { maxAge: Math.trunc(cookie.expires * SECONDS_IN_DAY) }
-      : {}),
-  }
-
-  return Object.keys(cookieOptions).length === 0 ? undefined : cookieOptions
 }

@@ -46,8 +46,9 @@ source: `nextjs-sdk#../package.json`; `nextjs-sdk#pages-router.ts#bindNextjsPage
 - **Server:** `bindNextjsPagesRouterServerOptimization(config)` → `{ createRequestHandoff }`. Server
   consent is supplied through `consent.server`, which receives `{ cookies, headers }`.
   source: `nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization`; `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterOptimization`; `nextjs-sdk#bound-component-types.ts#NextjsOptimizationServerConsentResolver`.
-  - Optional `cookie?` (`domain`, `expires` in days → maxAge seconds).
-    source: `nextjs-sdk#bound-component-types.ts#NextjsOptimizationCookieConfig`; `nextjs-sdk#pages-router-server.ts#toAnonymousIdCookieOptions`.
+  - The shared `cookie` config is browser continuity configuration. Pages Router request preview does
+    not turn it into a server `Set-Cookie` write.
+    source: `nextjs-sdk#bound-component-types.ts#NextjsOptimizationCookieConfig`; `nextjs-sdk#pages-router-server.ts#toServerOptimizationConfig`; `web-sdk#ContentfulOptimization.ts#ContentfulOptimization`.
   - **`contentful?: ContentfulConfig` (managed fetching):** via `OptimizationNodeConfig` → core
     `contentful` config; enables server-side ID or content-type/slug fetch through the request
     optimization instance and the `prefetchManagedEntries` option below.
@@ -55,9 +56,10 @@ source: `nextjs-sdk#../package.json`; `nextjs-sdk#pages-router.ts#bindNextjsPage
   - Consent resolver reads a merged Pages Router cookie reader built from `context.req.cookies` and
     the raw `cookie` header.
     source: `nextjs-sdk#pages-router-server.ts#createPagesRouterCookieReader`; `nextjs-sdk#pages-router-server.ts#resolveServerConsent`.
-  - `createRequestHandoff(context, options)` returns a browser handoff. It also writes the anonymous
-    ID `Set-Cookie` when profile persistence permits it.
-    source: `nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization`; `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `nextjs-sdk#pages-router-server.ts#appendSetCookie`.
+  - `createRequestHandoff(context, options)` previews optional identify/track commands plus the
+    initial page as one forced-preflight request and returns a private browser replay handoff when
+    the final page is admitted. It does not write preview identity into the server response.
+    source: `nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization`; `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`; `core-sdk#CoreStatelessRequest.ts#previewInitialExperience`.
   - Request handoffs carry browser defaults derived from the resolved server consent: boolean consent
     seeds both consent axes, while object consent seeds `consent` only when `events` is present and
     always seeds `persistenceConsent`, defaulting missing `persistence` to `false`. Managed-entry
@@ -68,6 +70,11 @@ source: `nextjs-sdk#../package.json`; `nextjs-sdk#pages-router.ts#bindNextjsPage
     handoffs retain the normalized descriptor and store the fetched entry's `sys.id`; the bound root
     forwards them to React Web, where a matching slug source hydrates without a client fetch.
     source: `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterRequestHandoffOptions`; `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `core-sdk#CoreBase.ts#prefetchManagedEntries`; `core-sdk#CoreBase.ts#ManagedEntryDescriptor`; `core-sdk#CoreBase.ts#ManagedEntryHandoff`.
+  - `initialExperienceEvents` is an already-resolved command array inherited from the low-level Next
+    request-handoff options. The Pages server helper has no event-resolver callback; in contrast, the
+    App binder's config-owned request resource resolves from `{ requestUrl, routeKey }` before it
+    calls the same array-only helper.
+    source: `nextjs-sdk#server.tsx#NextjsRequestHandoffOptions`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`; `nextjs-sdk#pages-router-server.ts#NextjsPagesRouterRequestHandoffOptions`; `nextjs-sdk#bound-component-types.ts#NextjsAppRouterRequestConfig`; `nextjs-sdk#app-router-request-runtime.tsx#resolveInitialExperienceEvents`.
 - `resolveEntriesForSelections` is re-exported through the Pages Router binding so public/static
   selection renders can resolve multiple baseline entries with one selected-optimization set; shared
   behavior is recorded in [`../shared/concepts.md`](../shared/concepts.md#optimization-handoff).
@@ -92,7 +99,7 @@ source: `nextjs-sdk#../package.json`; `nextjs-sdk#pages-router.ts#bindNextjsPage
 | `OptimizationProvider`      | component | `/pages-router`                  | `children`; `handoff?`; `hydration?`; `prefetchManagedEntries?`; internally wraps `LiveUpdatesProvider` (`globalLiveUpdates`) | `ReactElement` / `null`                   | `nextjs-sdk#pages-router.ts#OptimizationProvider`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationProviderProps`             |
 | `OptimizationAnalyticsRoot` | component | `/pages-router`                  | analytics handoff, route key, page payload builder, children                                                                  | `ReactElement`                            | `nextjs-sdk#pages-router.ts#OptimizationAnalyticsRoot`; `nextjs-sdk#bound-component-types.ts#BoundNextjsOptimizationAnalyticsRootProps`   |
 | `OptimizedEntry`            | component | `/pages-router` (binding return) | React Web component with `baselineEntry`, flat `entryId` + `entryQuery`, or object descriptor under `managedEntry`            | `ReactElement` / `null`                   | `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-entry/OptimizedEntry.tsx#OptimizedEntry`                            |
-| `NextPagesAutoPageTracker`  | component | `/pages-router`                  | `initialPageEvent?: 'emit' / 'skip'`, `getPagePayload?`                                                                       | `null`                                    | `nextjs-sdk#pages-router.ts#NextPagesAutoPageTracker`; `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker`                     |
+| `NextPagesAutoPageTracker`  | component | `/pages-router`                  | current-page tracker; legacy `initialPageEvent` is inert                                                                      | `null`                                    | `nextjs-sdk#pages-router.ts#NextPagesAutoPageTracker`; `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker`                     |
 | `useConsentState`           | hook      | `/client`                        | —                                                                                                                             | consent state                             | `react-web-sdk#hooks/useOptimizationState.ts#useConsentState`                                                                             |
 | `useProfileState`           | hook      | `/client`                        | —                                                                                                                             | profile (`traits`)                        | `react-web-sdk#hooks/useOptimizationState.ts#useProfileState`                                                                             |
 | `useOptimizationActions`    | hook      | `/client`                        | —                                                                                                                             | `{ setConsent, identifyUser, resetUser }` | `react-web-sdk#hooks/useOptimizationActions.ts#useOptimizationActions`                                                                    |
@@ -127,12 +134,12 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
 
 ## Identifier ownership
 
-| Identifier                                               | Owner  | Notes                                                                                                                                                                           | source                                                                                                                                                                  |
-| -------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ctfl-opt-aid` (profile/anon-id cookie)                  | SDK    | Written by server props helper via `Set-Cookie`; must NOT be `HttpOnly` (browser reads it)                                                                                      | `core-sdk#constants.ts#ANONYMOUS_ID_COOKIE`; `nextjs-sdk#cookies.ts#DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE`; `nextjs-sdk#cookies.ts#createNextjsAnonymousIdSetCookieHeader` |
-| app consent cookie (e.g. `personalizationConsentCookie`) | reader | Reader names/writes/reads; SDK only calls `consent.server` and personalizes on the result                                                                                       | `impl:nextjs-sdk_pages-router#lib/config.ts`; `impl:nextjs-sdk_pages-router#lib/optimization-server.ts`                                                                 |
-| `NEXT_PUBLIC_*` env vars                                 | reader | Next.js exposes only `NEXT_PUBLIC_`-prefixed vars to the browser                                                                                                                | `extern:Next.js exposes only NEXT_PUBLIC_-prefixed vars to the browser`                                                                                                 |
-| preview-panel enable flag                                | reader | Reader-owned, gated on a browser env var; the guide uses the standard `NEXT_PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL` prefix (the ref impl's bare `PUBLIC_...` is non-standard) | `impl:nextjs-sdk_pages-router#lib/config.ts`                                                                                                                            |
+| Identifier                                               | Owner  | Notes                                                                                                                                                                           | source                                                                                                                                                                                                                                 |
+| -------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ctfl-opt-aid` (profile/anon-id cookie)                  | SDK    | Request preview reads existing continuity; the live browser SDK writes replay results when persistence permits. The Pages server helper does not write preview identity.        | `core-sdk#constants.ts#ANONYMOUS_ID_COOKIE`; `nextjs-sdk#cookies.ts#DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE`; `nextjs-sdk#pages-router-server.ts#createPagesRouterCookieReader`; `web-sdk#ContentfulOptimization.ts#ContentfulOptimization` |
+| app consent cookie (e.g. `personalizationConsentCookie`) | reader | Reader names/writes/reads; SDK only calls `consent.server` and personalizes on the result                                                                                       | `impl:nextjs-sdk_pages-router#lib/config.ts`; `impl:nextjs-sdk_pages-router#lib/optimization-server.ts`                                                                                                                                |
+| `NEXT_PUBLIC_*` env vars                                 | reader | Next.js exposes only `NEXT_PUBLIC_`-prefixed vars to the browser                                                                                                                | `extern:Next.js exposes only NEXT_PUBLIC_-prefixed vars to the browser`                                                                                                                                                                |
+| preview-panel enable flag                                | reader | Reader-owned, gated on a browser env var; the guide uses the standard `NEXT_PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL` prefix (the ref impl's bare `PUBLIC_...` is non-standard) | `impl:nextjs-sdk_pages-router#lib/config.ts`                                                                                                                                                                                           |
 
 ## Events & tracking
 
@@ -140,11 +147,12 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
   `useSearchParams`) ⇒ **no `Suspense` boundary needed** (App Router's tracker does need it).
   source: `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker`.
 - Server request handoff prefers `resolvedUrl`, makes it absolute from forwarded host/protocol when
-  available, and parses it into Core page URL/query/search context before calling `page()`. In the
-  browser, route-to-page URL behavior comes from the React Web Pages Router tracker recorded in
-  [`react-web.md`](./react-web.md). Both URL sources feed the shared
+  available, and parses it into Core page URL/query/search context before the server preview. The
+  serialized replay retains the server-built events and their request context for browser commit. Browser route-to-page URL behavior comes from
+  the React Web Pages Router tracker recorded in [`react-web.md`](./react-web.md). Both URL sources
+  feed the shared
   [`campaign-attribution`](../shared/concepts.md#campaign-attribution) behavior.
-  source: nextjs-sdk#pages-router-server.ts#createPagesRouterRequest; nextjs-sdk#pages-router-server.ts#createPagesRouterRequestUrl; nextjs-sdk#server.tsx#createNextjsRequestContext; core-sdk#page-context.ts#createPageContextFromUrl; kb:web/react-web.md; kb:shared/concepts.md
+  source: nextjs-sdk#pages-router-server.ts#createPagesRouterRequest; nextjs-sdk#pages-router-server.ts#createPagesRouterRequestUrl; nextjs-sdk#server.tsx#createNextjsRequestContext; nextjs-sdk#server.tsx#createNextjsRequestHandoff; core-sdk#CoreStatelessRequest.ts#previewInitialExperience; core-sdk#CoreStateful.ts#replayOptimizationHandoff; core-sdk#page-context.ts#createPageContextFromUrl; kb:web/react-web.md; kb:shared/concepts.md
 - The Pages Router client binder forwards `beforeInitialPage` only to its bound content root; its
   bound provider and analytics root projections omit it. On this path the bound content root, rather
   than `NextPagesAutoPageTracker`, owns page emission. The React-owned callback, watchdog, readiness,
@@ -157,11 +165,9 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
   `({ context: { pathname } }) => ...`. Arbitrary `properties` keys are allowed (`Page` is
   `z.catchall(z.json())`).
   source: `react-web-sdk#auto-page/types.ts#AutoPageEmissionContext`; `react-web-sdk#router/next-pages.tsx#NextPagesAutoPageContext`; `react-web-sdk#auto-page/pagePayload.ts#buildAutoPagePayload`; `api-client#schemas/experience/event/properties/Page.ts#Page`; `core-sdk#events/EventBuilder.ts#PageViewBuilderArgs`.
-- Bound `createRequestHandoff(context, options)` forwards `options.pagePayload` through the Pages
-  Router request helper to the request-bound `page()` call, so it shapes the first server page event.
-  The returned browser handoff carries explicit `initialPageEvent`; it is `'skip'` exactly when that
-  page call's `pageResult.accepted` is true.
-  source: nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization; nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff; nextjs-sdk#server.tsx#getNextjsServerOptimizationData; nextjs-sdk#server.tsx#createNextjsRequestHandoff; core-sdk#CoreStatelessRequest.ts#page
+- Bound `createRequestHandoff(context, options)` sends `pagePayload` as the final command in one server preview. An accepted preview carries a private route-bound replay. The bound root owns one combined hydration and initial event operation; preview rendering and live state readiness precede delivery completion. Legacy `initialPageEvent` is inert.
+  source: nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization; nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff; nextjs-sdk#server.tsx#createNextjsRequestHandoff; core-sdk#CoreStatelessRequest.ts#previewInitialExperience; web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#ContentfulOptimization.ts#trackCurrentPage
+
 - Interaction tracking (views/clicks/hovers): on by default with `OptimizedEntry`; opt out per-type
   via binding config `trackEntryInteraction`; uses resolved entry id.
   source: `impl:nextjs-sdk_pages-router#lib/optimization.ts`.
@@ -191,15 +197,15 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
 
 ## Version / runtime quirks
 
-- **No proxy/middleware.** Server identity + resolution + `Set-Cookie` all happen inside
-  `getServerSideProps` via `createRequestHandoff(context, options)`.
-  source: `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `nextjs-sdk#pages-router-server.ts#appendSetCookie`.
+- **No proxy/middleware.** Request preview and resolution happen inside `getServerSideProps` via
+  `createRequestHandoff(context, options)`; preview identity is not persisted by that server helper.
+  source: `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `nextjs-sdk#server.tsx#createNextjsRequestHandoff`.
 - `getServerSideProps` is already per-request dynamic — no static/ISR conflict; the page is the
   request boundary. (Contrast App Router, where server personalization forces a route dynamic.)
   source: `extern:Next.js getServerSideProps runs per request (never statically pre-rendered)`.
 - Request handoff helpers accept `private-request` cache metadata and reject public or static cache
-  metadata through the shared Node request handoff path.
-  source: `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `node-sdk#handoff.ts#createRequestHandoffFromData`
+  metadata through the shared Node replay-handoff path.
+  source: `nextjs-sdk#pages-router-server.ts#createNextjsPagesRouterRequestHandoff`; `core-sdk#handoff.ts#createRequestHandoffFromPreview`
 - Static and ISR Pages Router routes do not have request context. Public permutation handoffs are
   valid for those routes only when application code supplies selected optimizations and public
   permutation dimensions without reading request profile state.
@@ -216,11 +222,12 @@ source: `nextjs-sdk#pages-router.ts#OptimizedEntry`; `react-web-sdk#optimized-en
 ## Failure & fallback behavior
 
 - Baseline fallback: see [`../shared/concepts.md`](../shared/concepts.md#baseline-fallback).
-- **Experience API failure inside `getServerSideProps` REJECTS the request ⇒ 500** (no internal
-  try/catch to baseline): `page()` → `sendAllowedExperienceEvent` awaits `upsertProfile` with no
-  catch. Reader should wrap request handoff creation in try/catch and render baseline on
-  failure. Denied consent short-circuits to `{ accepted: false }` with no API call.
-  source: `core-sdk#CoreStatelessRequest.ts#page`; `core-sdk#CoreStatelessRequest.ts#sendAllowedExperienceEvent`.
+- The bound `createRequestHandoff()` converts operational preview failures (Experience API,
+  server-consent resolver, interceptor, or event-schema failures) into a profileless
+  private-request baseline handoff. It drops preview state and replay, and the browser root makes
+  its normal page attempt. A consent-blocked final page likewise returns an unpersonalized handoff
+  without an API call or replay.
+  source: `nextjs-sdk#pages-router-server.ts#bindNextjsPagesRouterServerOptimization`; `nextjs-sdk#request-preview-fallback.ts#resolveRequestPreview`; `nextjs-sdk#request-preview-fallback.ts#createPrivateRequestPreviewFallbackHandoff`; `core-sdk#CoreStatelessRequest.ts#previewInitialExperience`.
 - All-locale payloads (`withAllLocales` / `locale=*`) ⇒ baseline. Model: see
   [`../shared/concepts.md`](../shared/concepts.md#entry-resolution).
   source: `kb:shared/concepts.md`.

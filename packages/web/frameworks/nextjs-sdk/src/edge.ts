@@ -1,8 +1,9 @@
 import type { App } from '@contentful/optimization-react-web/api-schemas'
 import {
-  assertOptimizationCacheSafety,
   CoreStateless,
   createPageContextFromUrl,
+  createRequestHandoffFromData,
+  createRequestHandoffFromPreview,
   type CoreStatelessConfig,
   type CoreStatelessInsightsOptions,
   type CoreStatelessRequest,
@@ -10,10 +11,10 @@ import {
   type CoreStatelessRequestOptions,
   type EventEmissionResult,
   type EventType,
+  type InitialExperienceCommandInput,
   type ManagedEntryHandoff,
   type OptimizationCacheMetadata,
   type OptimizationData,
-  type OptimizationHandoff,
   type PageViewBuilderArgs,
   type PartialProfile,
   type PrivateRequestOptimizationCacheMetadata,
@@ -29,11 +30,8 @@ import type {
 import { OPTIMIZATION_NEXTJS_SDK_VERSION } from './constants'
 import {
   createCookieReaderFromHeader,
-  createNextjsAnonymousIdSetCookieHeader,
   DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE,
   isNextjsCookieReader,
-  type NextjsAnonymousIdCookieOptions,
-  type PersistNextjsAnonymousIdOptions,
 } from './cookies'
 import {
   addBrowserHandoffMetadata,
@@ -44,13 +42,16 @@ import {
   type BrowserOptimizationHandoff,
   type OptimizationHydrationMode,
 } from './handoff'
+import {
+  createPrivateRequestPreviewFallbackHandoff,
+  resolveRequestPreview,
+} from './request-preview-fallback'
 
 const DEFAULT_EDGE_ALLOWED_EVENT_TYPES: EventType[] = ['identify', 'page']
 const EDGE_SDK_NAME = '@contentful/optimization-nextjs'
 const EMPTY_COOKIE_READER = {
   get: () => undefined,
 }
-const SECONDS_IN_DAY = 86_400
 
 export type NextjsEdgeRequest = Request | NextjsEdgeRequestSnapshot
 
@@ -71,13 +72,21 @@ export interface NextjsEdgeOptimizationConfig extends Omit<CoreStatelessConfig, 
   readonly eventBuilder?: PublicEdgeEventBuilderConfig
 }
 
-export interface NextjsEdgeRequestHandoffOptions extends PersistNextjsAnonymousIdOptions {
+export interface NextjsEdgeRequestHandoffOptions {
+  readonly anonymousIdCookieName?: string
   readonly cache?: PrivateRequestOptimizationCacheMetadata
   readonly entries?: readonly ManagedEntryHandoff[]
   readonly eventContext?: UniversalEventBuilderArgs
   readonly experienceOptions?: CoreStatelessRequestOptions
   readonly hydration: OptimizationHydrationMode
   readonly insightsOptions?: CoreStatelessInsightsOptions
+  readonly initialExperienceEvents?:
+    | readonly InitialExperienceCommandInput[]
+    | ((
+        context: NextjsEdgeRequestSnapshot,
+      ) =>
+        | readonly InitialExperienceCommandInput[]
+        | Promise<readonly InitialExperienceCommandInput[]>)
   readonly locale?: string
   readonly pagePayload: PageViewBuilderArgs
   readonly profile?: PartialProfile
@@ -88,6 +97,7 @@ export interface NextjsEdgeRequestHandoff {
   readonly data: OptimizationData | undefined
   readonly handoff: BrowserOptimizationHandoff
   readonly pageResult: EventEmissionResult
+  /** @deprecated Preview identity is not persisted by Edge request handoffs. */
   readonly persist: (response: Response) => void
   readonly requestOptimization: CoreStatelessRequest
 }
@@ -113,47 +123,62 @@ export function configureNextjsEdgeOptimization(
     assertEdgeRequestHandoffCacheMetadata(cache)
 
     const request = createEdgeRequestSnapshot(options.request)
-    const consent = await resolveServerConsent(config.consent?.server, {
-      cookies: request.cookies ?? EMPTY_COOKIE_READER,
-      headers: request.headers,
-    })
-    const anonymousId = readNextjsAnonymousId(request.cookies, options.anonymousIdCookieName)
-    const profile = options.profile ?? (anonymousId === undefined ? undefined : { id: anonymousId })
-    const requestOptimization = sdk.forRequest({
-      consent,
-      eventContext: createEdgeRequestContext(request, options, options.locale ?? config.locale),
-      experienceOptions: options.experienceOptions,
-      insightsOptions: options.insightsOptions,
-      locale: options.locale ?? config.locale,
-      profile,
-    })
-    const pageResult = await requestOptimization.page(options.pagePayload)
-    const { data } = pageResult
-    const handoff = addBrowserHandoffMetadata(
-      createEdgeRequestOptimizationHandoff({
-        cache,
-        data,
-        entries: options.entries,
-      }),
-      {
-        hydration: options.hydration,
-        initialPageEvent: pageResult.accepted ? 'skip' : 'emit',
+    const result = await resolveRequestPreview(
+      async () => {
+        const consent = await resolveServerConsent(config.consent?.server, {
+          cookies: request.cookies ?? EMPTY_COOKIE_READER,
+          headers: request.headers,
+        })
+        const profile = resolveEdgeProfile(options, request.cookies)
+        const requestOptimization = sdk.forRequest({
+          consent,
+          eventContext: createEdgeRequestContext(request, options, options.locale ?? config.locale),
+          experienceOptions: options.experienceOptions,
+          insightsOptions: options.insightsOptions,
+          locale: options.locale ?? config.locale,
+          profile,
+        })
+        const initialExperienceEvents = await resolveInitialExperienceEvents(
+          options.initialExperienceEvents,
+          request,
+        )
+        const preview = await requestOptimization.previewInitialExperience({
+          ...(initialExperienceEvents === undefined ? {} : { events: initialExperienceEvents }),
+          page: options.pagePayload,
+        })
+        const data = preview.accepted ? preview.data : undefined
+        const pageResult: EventEmissionResult = preview.accepted
+          ? { accepted: true, data: preview.data }
+          : { accepted: false }
+        const handoff = createEdgeRequestHandoffFromPreview({ cache, options, preview, request })
+
+        return {
+          data,
+          handoff,
+          pageResult,
+          persist: (_response: Response) => undefined,
+          requestOptimization,
+        }
       },
+      () => ({
+        data: undefined,
+        handoff: createPrivateRequestPreviewFallbackHandoff({
+          entries: options.entries,
+          hydration: options.hydration,
+        }),
+        pageResult: { accepted: false },
+        persist: (_response: Response) => undefined,
+        requestOptimization: sdk.forRequest({
+          consent: false,
+          eventContext: options.eventContext,
+          experienceOptions: options.experienceOptions,
+          insightsOptions: options.insightsOptions,
+          locale: options.locale ?? config.locale,
+        }),
+      }),
     )
 
-    return {
-      data,
-      handoff,
-      pageResult,
-      persist: (response) => {
-        persistEdgeAnonymousId(response, requestOptimization, data, {
-          anonymousIdCookieName: options.anonymousIdCookieName,
-          cookieOptions: options.cookieOptions ?? toConfigCookieOptions(config.cookie),
-          deleteWhenProfileCannotPersist: options.deleteWhenProfileCannotPersist,
-        })
-      },
-      requestOptimization,
-    }
+    return result.value
   }
 
   return {
@@ -215,6 +240,45 @@ function readNextjsAnonymousId(
   return value && value.length > 0 ? value : undefined
 }
 
+function resolveEdgeProfile(
+  options: NextjsEdgeRequestHandoffOptions,
+  cookies: NextjsCookieReader | undefined,
+): PartialProfile | undefined {
+  const anonymousId = readNextjsAnonymousId(cookies, options.anonymousIdCookieName)
+  return options.profile ?? (anonymousId === undefined ? undefined : { id: anonymousId })
+}
+
+async function resolveInitialExperienceEvents(
+  input: NextjsEdgeRequestHandoffOptions['initialExperienceEvents'],
+  request: NextjsEdgeRequestSnapshot,
+): Promise<readonly InitialExperienceCommandInput[] | undefined> {
+  if (typeof input === 'function') return await input(request)
+  return input
+}
+
+function createEdgeRequestHandoffFromPreview({
+  cache,
+  options,
+  preview,
+  request,
+}: {
+  readonly cache: PrivateRequestOptimizationCacheMetadata
+  readonly options: NextjsEdgeRequestHandoffOptions
+  readonly preview: Awaited<ReturnType<CoreStatelessRequest['previewInitialExperience']>>
+  readonly request: NextjsEdgeRequestSnapshot
+}): BrowserOptimizationHandoff {
+  const handoff = preview.accepted
+    ? createRequestHandoffFromPreview({
+        cache,
+        entries: options.entries,
+        preview,
+        routeKey: createEdgeRequestRouteKey(request.url),
+      })
+    : createRequestHandoffFromData({ cache, entries: options.entries })
+
+  return addBrowserHandoffMetadata(handoff, { hydration: options.hydration })
+}
+
 function createEdgeRequestContext(
   request: NextjsEdgeRequestSnapshot,
   options: NextjsEdgeRequestHandoffOptions,
@@ -238,28 +302,9 @@ function mergeEdgeRequestPage(
   return eventPage === undefined ? requestPage : { ...requestPage, ...eventPage }
 }
 
-function createEdgeRequestOptimizationHandoff(input: {
-  readonly cache?: PrivateRequestOptimizationCacheMetadata
-  readonly data?: OptimizationData
-  readonly entries?: readonly ManagedEntryHandoff[]
-}): OptimizationHandoff {
-  const handoff: OptimizationHandoff = {
-    cache: input.cache ?? { scope: 'private-request' },
-    ...(input.entries === undefined ? {} : { entries: input.entries }),
-    ...(input.data === undefined
-      ? {}
-      : {
-          state: {
-            changes: input.data.changes,
-            profile: input.data.profile,
-            selectedOptimizations: input.data.selectedOptimizations,
-          },
-        }),
-  }
-
-  assertOptimizationCacheSafety(handoff)
-
-  return handoff
+function createEdgeRequestRouteKey(requestUrl: string): string {
+  const url = new URL(requestUrl)
+  return `${url.pathname}${url.search}`
 }
 
 function assertEdgeRequestHandoffCacheMetadata(
@@ -279,31 +324,6 @@ function resolveServerConsent(
   if (consent === undefined) return false
 
   return typeof consent === 'function' ? consent(context) : consent
-}
-
-function persistEdgeAnonymousId(
-  response: Response,
-  requestOptimization: CoreStatelessRequest,
-  data: OptimizationData | undefined,
-  options: PersistNextjsAnonymousIdOptions,
-): void {
-  const setCookie = createNextjsAnonymousIdSetCookieHeader(requestOptimization, data, options)
-  if (setCookie === undefined) return
-
-  response.headers.append('set-cookie', setCookie)
-}
-
-function toConfigCookieOptions(
-  cookie: NextjsOptimizationCookieConfig | undefined,
-): NextjsAnonymousIdCookieOptions | undefined {
-  if (cookie === undefined) return undefined
-
-  return {
-    ...(cookie.domain ? { domain: cookie.domain } : {}),
-    ...(typeof cookie.expires === 'number' && Number.isFinite(cookie.expires)
-      ? { maxAge: Math.trunc(cookie.expires * SECONDS_IN_DAY) }
-      : {}),
-  }
 }
 
 export {

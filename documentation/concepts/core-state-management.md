@@ -391,13 +391,11 @@ runtime:
 | iOS and Android native | The JS bridge uses signal effects to push Core snapshots to Swift or Kotlin. Native handlers write consent and profile-continuity values to `UserDefaults` or SharedPreferences according to persistence consent. | Native public state is republished from bridge snapshots. Native storage is platform-owned, and the JS bridge remains the source for live Core state transitions. |
 | Node/stateless         | The SDK has no shared state store. `forRequest()` binds consent, locale, and profile for one request.                                                                                                             | The host application decides whether and where to persist returned profile continuity.                                                                            |
 
-Profileless static and public content or analytics handoff hydration applies selection state to live
-Web memory without overwriting durable continuity. `private-request` handoffs, and profile-backed
-handoffs that pass cache safety, follow normal Web persistence behavior when persistence consent
-allows.
-For content handoffs, an undefined or empty Web handoff state still marks
-`experienceRequestState` as `success` and clears stale selected optimizations and changes while
-preserving the existing profile unless the handoff explicitly includes `profile`.
+Every full browser handoff applies its state to live Web memory without writing durable continuity,
+whether it is static, public, private, profile-backed, or replay-bearing. A later successful live
+Experience response can persist continuity when persistence consent allows.
+
+A private request replay is also cache-sensitive. The combined browser operation hydrates preview state in memory, submits server-built events with live consent and ordinary queue policy, and makes one replay/page decision. Newer handoffs preserve earlier admitted journals while state publication keeps latest-wins arbitration. Recoverable hydration errors permit safe delivery. Empty content handoff state marks `experienceRequestState` successful and clears selected optimizations and changes while preserving the profile unless explicitly supplied.
 
 When durable persistence consent is `false` or unset, profile-continuity values are not loaded for
 initial state and are not written as durable continuity for responses. The SDK can still publish

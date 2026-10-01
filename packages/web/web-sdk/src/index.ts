@@ -43,6 +43,12 @@ export type {
   EntryViewInteractionStartOptions,
 } from './entry-tracking'
 export * from './handlers/beaconHandler'
+export type {
+  AnalyticsOptimizationHandoff,
+  BrowserOptimizationHandoff,
+  ContentOptimizationHandoff,
+  ContentOptimizationHydrationMode,
+} from './handoff'
 export * from './storage/LocalStore'
 
 export default ContentfulOptimization

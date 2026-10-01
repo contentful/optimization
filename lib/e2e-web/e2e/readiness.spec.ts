@@ -642,32 +642,39 @@ test.describe('readiness', () => {
   })
 
   pagesCsrTest(
-    'before initial page uses the latest route and emits once after readiness',
+    'paired replay preserves preview during delivery and tracks later navigation',
     async ({ page }) => {
       const diagnostics = watchDiagnostics(page)
       const recorder = recordExperienceEvents(page)
-      const identifyRequest = await holdNextRequest(page, 'identify')
+      const replayRequest = await holdNextRequest(page, 'identify')
       try {
         await observeFromDocumentStart(page, `[data-testid="entry-text-${PAGES.pageTwo.auto}"]`)
         await page.goto(BEFORE_INITIAL_PAGE_PRESERVED_PATH)
-        await expect.poll(identifyRequest.held).toBe(true)
-        expect(recorder.events().map(({ type }) => type)).toEqual(['identify'])
+        await expect.poll(replayRequest.held).toBe(true)
+        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page'])
+        expect(
+          recorder
+            .events()
+            .filter(({ type }) => type === 'page')
+            .map(({ pageRouteKey }) => pageRouteKey),
+        ).toEqual([BEFORE_INITIAL_PAGE_PRESERVED_PATH])
 
         await expect(page.getByTestId('page-two-view')).toBeVisible()
         await expect.poll(async () => (await readEvidence(page)).visibleCandidates.length).toBe(1)
         const pendingEvidence = await readEvidence(page)
         expectPreservedFirst(pendingEvidence)
         expectContinuouslyVisible(pendingEvidence)
-        expectNewVisitor(candidateAt(pendingEvidence))
+        expectCandidate(candidateAt(pendingEvidence))
         expectNoVisibleBlankAfterCommitment(pendingEvidence)
-        expect(
-          recorder.events().filter(({ type }) => type === 'page'),
-          'the root page must wait for the returned identify request',
-        ).toEqual([])
 
         await page.getByTestId('link-ssg-client-personalization').click()
         await expect(page.getByTestId('readiness-ssg-route')).toBeVisible()
-        identifyRequest.release()
+        const heldReplayRequest = replayRequest.request()
+        const releasedReplayResponse = page.waitForResponse(
+          (response) => response.request() === heldReplayRequest,
+        )
+        replayRequest.release()
+        expect((await releasedReplayResponse).ok()).toBe(true)
         await expect
           .poll(() =>
             recorder
@@ -675,8 +682,8 @@ test.describe('readiness', () => {
               .filter(({ type }) => type === 'page')
               .map(({ pageRouteKey }) => pageRouteKey),
           )
-          .toEqual(['/ssg-client-personalization'])
-        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page'])
+          .toEqual([BEFORE_INITIAL_PAGE_PRESERVED_PATH, '/ssg-client-personalization'])
+        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page', 'page'])
         await expect(page.getByTestId('readiness-ssg-entry')).toBeVisible()
 
         await page.getByTestId('link-home').click()
@@ -688,42 +695,53 @@ test.describe('readiness', () => {
               .filter(({ type }) => type === 'page')
               .map(({ pageRouteKey }) => pageRouteKey),
           )
-          .toEqual(['/ssg-client-personalization', PAGES.home.path])
-        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page', 'page'])
+          .toEqual([
+            BEFORE_INITIAL_PAGE_PRESERVED_PATH,
+            '/ssg-client-personalization',
+            PAGES.home.path,
+          ])
+        expect(recorder.events().map(({ type }) => type)).toEqual([
+          'identify',
+          'page',
+          'page',
+          'page',
+        ])
         expectNoErrors(diagnostics)
       } finally {
-        await identifyRequest.remove()
+        await replayRequest.remove()
         recorder.remove()
       }
     },
   )
 
   appRouterCsrTest(
-    'before initial page App request root avoids handoff duplicates and emits once later',
+    'App paired replay avoids duplicates and tracks later navigation',
     async ({ page }) => {
       const diagnostics = watchDiagnostics(page)
       const recorder = recordExperienceEvents(page)
-      const identifyRequest = await holdNextRequest(page, 'identify')
+      const replayRequest = await holdNextRequest(page, 'identify')
       try {
         await page.goto(BEFORE_INITIAL_PAGE_PRESERVED_PATH)
-        await expect.poll(identifyRequest.held).toBe(true)
+        await expect.poll(replayRequest.held).toBe(true)
         await expect(page.getByTestId('page-two-view')).toBeVisible()
-        expect(recorder.events().map(({ type }) => type)).toEqual(['identify'])
+        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page'])
+        expect(
+          recorder
+            .events()
+            .filter(({ type }) => type === 'page')
+            .map(({ pageRouteKey }) => pageRouteKey),
+        ).toEqual([BEFORE_INITIAL_PAGE_PRESERVED_PATH])
 
         await page.getByTestId('link-home').click()
-        expect(
-          recorder.events().filter(({ type }) => type === 'page'),
-          'the browser-owned home page must wait for the returned identify request',
-        ).toEqual([])
 
-        const heldIdentifyRequest = identifyRequest.request()
-        const releasedIdentifyResponse = page.waitForResponse(
-          (response) => response.request() === heldIdentifyRequest,
+        const heldReplayRequest = replayRequest.request()
+        const releasedReplayResponse = page.waitForResponse(
+          (response) => response.request() === heldReplayRequest,
         )
-        identifyRequest.release()
-        const identifyResponse = await releasedIdentifyResponse
-        expect(identifyResponse.request()).toBe(heldIdentifyRequest)
-        expect(identifyResponse.status()).toBe(200)
+        replayRequest.release()
+        const replayResponse = await releasedReplayResponse
+        expect(replayResponse.request()).toBe(heldReplayRequest)
+        expect(replayResponse.status()).toBe(200)
         await expect(page).toHaveURL(PAGES.home.path)
         await expect(page.getByRole('heading', { name: 'Next.js SDK App Router' })).toBeVisible()
         await expect
@@ -733,8 +751,8 @@ test.describe('readiness', () => {
               .filter(({ type }) => type === 'page')
               .map(({ pageRouteKey }) => pageRouteKey),
           )
-          .toEqual([PAGES.home.path])
-        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page'])
+          .toEqual([BEFORE_INITIAL_PAGE_PRESERVED_PATH, PAGES.home.path])
+        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page', 'page'])
 
         await page.getByTestId('link-page-two').click()
         await expect(page).toHaveURL(PAGES.pageTwo.path)
@@ -747,11 +765,16 @@ test.describe('readiness', () => {
               .filter(({ type }) => type === 'page')
               .map(({ pageRouteKey }) => pageRouteKey),
           )
-          .toEqual([PAGES.home.path, PAGES.pageTwo.path])
-        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page', 'page'])
+          .toEqual([BEFORE_INITIAL_PAGE_PRESERVED_PATH, PAGES.home.path, PAGES.pageTwo.path])
+        expect(recorder.events().map(({ type }) => type)).toEqual([
+          'identify',
+          'page',
+          'page',
+          'page',
+        ])
         expectNoErrors(diagnostics)
       } finally {
-        await identifyRequest.remove()
+        await replayRequest.remove()
         recorder.remove()
       }
     },
@@ -831,6 +854,17 @@ test.describe('readiness', () => {
           )
           .toEqual([PAGES.home.path])
         expect(identifyRequest.held()).toBe(true)
+
+        // A newer handoff can deliver its page before the older callback's watchdog expires.
+        await expect
+          .poll(
+            () =>
+              diagnostics.consoleErrors.some((error) =>
+                BEFORE_INITIAL_PAGE_WATCHDOG_ERROR.test(error),
+              ),
+            { timeout: BEFORE_INITIAL_PAGE_WATCHDOG_EVIDENCE_TIMEOUT_MS },
+          )
+          .toBe(true)
 
         const heldIdentifyRequest = identifyRequest.request()
         const releasedIdentifyResponse = page.waitForResponse(

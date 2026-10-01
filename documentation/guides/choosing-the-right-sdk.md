@@ -30,14 +30,26 @@ runtime-specific setup around providers, hooks, screen or route tracking, persis
 tooling, and platform defaults. Use lower-level packages only when you are building SDK layers,
 tooling, tests, or first-party integrations that need shared SDK primitives or raw API access.
 
+A **server preview** evaluates zero or more optional `identify`/`track` commands in
+application-supplied order, followed by the SDK-appended `page` command. It returns preview state
+without committing the sequence. The handoff's **private replay** is the SDK-owned, route-bound
+continuation for the initial browser route. A **successful Experience commit** is the non-preflight browser profile
+response; only that response can persist browser continuity.
+
+> [!NOTE]
+>
+> Without JavaScript, previewed server HTML can still render, but matching-route delivery and a new
+> browser `ctfl-opt-aid` cookie do not occur.
+
 For mixed server and browser applications, use the adapter when one exists. A Next.js App Router app
 installs `@contentful/optimization-nextjs`; `/app-router/server` is its normal Server Component
-import subpath. `/app-router/client` owns the Client Component binder and the direct
-`NextAppAutoPageTracker` export; use its binder when the app needs bound Client Components. These
-are entrypoints in one package, not separate packages to install.
+import subpath. `/app-router/client` owns the Client Component binder and the client request root
+that installs preview state and owns the initial replay/page decision. These are entrypoints in one package, not separate packages to install.
 Next.js Pages Router apps install the same package and use its `/pages-router` entrypoints.
 Non-Next.js server-rendered apps can combine `@contentful/optimization-node` on the server with
-`@contentful/optimization-web` or `@contentful/optimization-react-web` in the browser.
+`@contentful/optimization-web` or `@contentful/optimization-react-web` in the browser. Those manual
+hybrids create preview state in Node and use a successful browser Experience request as the commit;
+direct Node event calls remain the server-only ownership model.
 
 After choosing App Router or Pages Router, use
 [Render personalized Next.js routes with static, ISR, and edge handoffs](./rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md)
@@ -74,8 +86,8 @@ Use this table to choose the primary package and the next integration guide:
 | Nest.js app, Node server, server function, or SSR layer outside the Next.js adapter                   | `@contentful/optimization-node`                                                   | It provides request-scoped profile evaluation, event emission, managed fetching and prefetching by ID or content type and slug, entry resolution, and Node caching guidance.                       | [Integrate the Optimization Node SDK in a Node app](./integrating-the-node-sdk-in-a-node-app.md)                                           |
 | Angular, Vue, Svelte, Web Components, non-React browser app, or custom browser framework app          | `@contentful/optimization-web`                                                    | It owns browser consent, anonymous ID persistence, managed fetching and prefetching by ID or content type and slug, interaction tracking, event delivery, and Web Components.                      | [Integrate the Optimization Web SDK in a web app](./integrating-the-web-sdk-in-a-web-app.md)                                               |
 | React browser app outside Next.js integration                                                         | `@contentful/optimization-react-web`                                              | It adds React providers, hooks, route tracking, optimized entry rendering from `entryId` or a content-type/slug `managedEntry`, interaction tracking, and live updates to the Web SDK.             | [Integrate the Optimization React Web SDK in a React app](./integrating-the-react-web-sdk-in-a-react-app.md)                               |
-| Next.js App Router app with server-personalized first paint and browser re-resolution after hydration | `@contentful/optimization-nextjs`                                                 | Use `/app-router/server` for Server Components; `/app-router/client` owns the client binder and direct App Router tracker.                                                                         | [Integrate the Optimization Next.js SDK in a Next.js App Router app](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)     |
-| Next.js Pages Router app with `getServerSideProps` personalization                                    | `@contentful/optimization-nextjs/pages-router` plus `/pages-router/server`        | Its `/pages-router` components and `/pages-router/server` request handoff helper pass browser handoff through `pageProps` and avoid duplicate initial page events.                                 | [Integrate the Optimization Next.js SDK in a Next.js Pages Router app](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md) |
+| Next.js App Router app with server-personalized first paint and browser re-resolution after hydration | `@contentful/optimization-nextjs`                                                 | Use `/app-router/server` for request preview and Server Components, then inject the `/app-router/client` request root to hydrate preview state and own the initial replay/page decision.           | [Integrate the Optimization Next.js SDK in a Next.js App Router app](./integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md)     |
+| Next.js Pages Router app with `getServerSideProps` personalization                                    | `@contentful/optimization-nextjs/pages-router` plus `/pages-router/server`        | Its server helper creates preview state in `getServerSideProps`; one browser root installs that state, delivers the private replay for the matching route, and tracks later routes.                | [Integrate the Optimization Next.js SDK in a Next.js Pages Router app](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md) |
 | Custom JavaScript runtime or framework adapter where no official SDK fits                             | `@contentful/optimization-core` plus `@contentful/optimization-core/entry-source` | Core provides shared state and resolution. The entry-source subpath manages `baselineEntry`, `entryId`, or content-type/slug `managedEntry`; adapters own rendering, tracking, and runtime policy. | [Build a custom JavaScript Optimization adapter](./building-a-custom-javascript-optimization-adapter.md)                                   |
 | React Native app                                                                                      | `@contentful/optimization-react-native`                                           | It provides a stateful JavaScript mobile runtime with React providers, hooks, `OptimizedEntry`, screen tracking, optional offline-aware delivery, and preview-panel support.                       | [Integrate the Optimization React Native SDK in a React Native app](./integrating-the-react-native-sdk-in-a-react-native-app.md)           |
 | Native iOS app built with SwiftUI                                                                     | `ContentfulOptimization` Swift Package                                            | It provides native Swift APIs, SwiftUI helpers, persistence, networking, lifecycle handling, screen tracking, entry rendering, and preview-panel UI.                                               | [Integrate the Optimization iOS SDK in a SwiftUI app](./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md)                          |

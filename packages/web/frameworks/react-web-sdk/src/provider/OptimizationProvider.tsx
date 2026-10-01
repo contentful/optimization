@@ -54,7 +54,16 @@ interface ProviderSdkInitialization {
   readonly sdkBinding: ProviderSdkBinding
 }
 
+/** One SDK initialization callback; state readiness is independent of its delivery promise. @internal */
+export type InitializeProviderSdk = (
+  sdk: OptimizationSdk,
+  ready: (error?: unknown) => void,
+  isCurrent: () => boolean,
+) => Promise<unknown>
+
 interface OptimizationHandoffProps {
+  /** @internal */
+  readonly initializeSdk?: InitializeProviderSdk
   /**
    * Server/static/edge Optimization handoff to apply before provider children mount.
    */
@@ -119,6 +128,7 @@ function createOwnedSdkBinding(props: OptimizationProviderConfigProps): Provider
     onStatesReady: _onStatesReady,
     sdk: _sdk,
     handoff: _handoff,
+    initializeSdk: _initializeSdk,
     hydration: _hydration,
     prefetchManagedEntries: _prefetchManagedEntries,
     trackEntryInteraction,
@@ -149,62 +159,65 @@ function bindOnStatesReady(
   return { ...sdkBinding, cleanup }
 }
 
-async function initializeServerOptimizationState(
+function bindReadyState(
   sdkBinding: ProviderSdkBinding,
-  handoff: ContentOptimizationHandoff,
   onStatesReady: OnStatesReady | undefined,
-  retainOwnedSdkOnHydrationError: boolean,
-): Promise<ProviderSdkInitialization> {
+  error?: unknown,
+): ProviderSdkInitialization {
   try {
-    const hydrationResult: unknown = Reflect.apply(hydrateOptimizationHandoff, undefined, [
-      sdkBinding.sdk,
-      handoff,
-    ])
-
-    if (isPromiseLike(hydrationResult)) {
-      await hydrationResult
+    return {
+      error: error === undefined ? undefined : toError(error),
+      sdkBinding: bindOnStatesReady(sdkBinding, onStatesReady),
     }
-  } catch (error: unknown) {
-    if (retainOwnedSdkOnHydrationError) {
-      return { error: toError(error), sdkBinding }
-    }
-
-    disposeSdkBinding(sdkBinding)
-    throw error
-  }
-
-  try {
-    return { sdkBinding: bindOnStatesReady(sdkBinding, onStatesReady) }
-  } catch (error: unknown) {
-    disposeSdkBinding(sdkBinding)
-    throw error
+  } catch (callbackError: unknown) {
+    return { error: toError(callbackError), sdkBinding }
   }
 }
 
 function initializeProviderSdk(
   props: OptimizationProviderProps,
-): ProviderSdkInitialization | Promise<ProviderSdkInitialization> {
-  const ownsSdk = props.sdk === undefined
-  const sdkBinding = ownsSdk ? createOwnedSdkBinding(props) : createInjectedSdkBinding(props)
-
-  if (props.handoff === undefined) {
+  onBinding: (binding: ProviderSdkBinding) => void,
+  onReady: (value: ProviderSdkInitialization) => void,
+  isCurrent: () => boolean,
+): void {
+  const sdkBinding =
+    props.sdk === undefined ? createOwnedSdkBinding(props) : createInjectedSdkBinding(props)
+  onBinding(sdkBinding)
+  let initialized: ProviderSdkInitialization = { sdkBinding }
+  const ready = (error?: unknown): void => {
+    if (!isCurrent()) return
+    initialized = bindReadyState(sdkBinding, props.onStatesReady, error)
+    onReady(initialized)
+  }
+  if (props.initializeSdk === undefined && props.handoff === undefined) {
     try {
-      return { sdkBinding: bindOnStatesReady(sdkBinding, props.onStatesReady) }
+      onReady({ sdkBinding: bindOnStatesReady(sdkBinding, props.onStatesReady) })
     } catch (error: unknown) {
       disposeSdkBinding(sdkBinding)
       throw error
     }
+    return
   }
-
-  return initializeServerOptimizationState(sdkBinding, props.handoff, props.onStatesReady, ownsSdk)
-}
-
-function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
-  return value instanceof Promise
+  if (props.initializeSdk !== undefined) {
+    void props.initializeSdk(sdkBinding.sdk, ready, isCurrent).catch((error: unknown) => {
+      if (isCurrent()) onReady({ ...initialized, error: toError(error) })
+    })
+  } else if (props.handoff !== undefined) {
+    void Promise.resolve(
+      Reflect.apply(hydrateOptimizationHandoff, undefined, [sdkBinding.sdk, props.handoff]),
+    ).then(() => {
+      ready()
+    }, ready)
+  }
 }
 
 function canUseInjectedSdkDuringInitialRender(props: OptimizationProviderProps): boolean {
-  return props.sdk !== undefined && props.onStatesReady === undefined && props.handoff === undefined
+  return (
+    props.sdk !== undefined &&
+    props.onStatesReady === undefined &&
+    props.handoff === undefined &&
+    props.initializeSdk === undefined
+  )
 }
 
 function injectedSdkBacksInitialRender(props: OptimizationProviderProps): boolean {
@@ -251,6 +264,7 @@ function createPrefetchedManagedEntries(
 export function OptimizationProvider(props: OptimizationProviderProps): ReactElement {
   const { children } = props
   const initialPropsRef = useRef(props)
+  const mountedRef = useRef(false)
   const hydratedHandoffRef = useRef(props.handoff)
   const liveLocale = props.sdk === undefined ? props.locale : undefined
   const [state, setState] = useState<ProviderState>(() => ({
@@ -264,11 +278,13 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
   )
 
   useLayoutEffect(() => {
+    mountedRef.current = true
     const { current: initialProps } = initialPropsRef
 
-    if (canUseInjectedSdkDuringInitialRender(initialProps)) {
-      return
-    }
+    if (canUseInjectedSdkDuringInitialRender(initialProps))
+      return () => {
+        mountedRef.current = false
+      }
 
     const setupState = { disposed: false }
     let sdkBinding: ProviderSdkBinding | undefined = undefined
@@ -296,30 +312,30 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
 
     function setInitializationError(error: unknown): void {
       if (!setupState.disposed) {
-        setState({ error: toError(error), isLive: false, runtime: undefined })
+        setState({
+          error: toError(error),
+          isLive: false,
+          runtime: undefined,
+        })
       }
     }
 
     try {
-      const initializedBinding = initializeProviderSdk(initialProps)
-
-      if (!isPromiseLike(initializedBinding)) {
-        setInitializedState(initializedBinding)
-
-        return () => {
-          setupState.disposed = true
-          disposeOnce(sdkBinding)
-        }
-      }
-
-      void initializedBinding.then(setInitializedState, setInitializationError)
+      initializeProviderSdk(
+        initialProps,
+        (binding) => {
+          sdkBinding = binding
+        },
+        setInitializedState,
+        () => !setupState.disposed,
+      )
     } catch (error: unknown) {
       setInitializationError(error)
-      return
     }
 
     return () => {
       setupState.disposed = true
+      mountedRef.current = false
       disposeOnce(sdkBinding)
     }
   }, [])
@@ -341,21 +357,28 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
 
     function setHydrationError(error: unknown): void {
       if (!disposed) {
-        setState({ error: toError(error), isLive: true, runtime })
+        setState({
+          error: toError(error),
+          isLive: true,
+          runtime,
+        })
       }
     }
 
-    try {
-      const hydrationResult: unknown = Reflect.apply(hydrateOptimizationHandoff, undefined, [
-        runtime,
-        handoff,
-      ])
-
-      if (isPromiseLike(hydrationResult)) {
-        void hydrationResult.catch(setHydrationError)
-      }
-    } catch (error: unknown) {
-      setHydrationError(error)
+    if (props.initializeSdk !== undefined) {
+      void props
+        .initializeSdk(
+          runtime,
+          (error) => {
+            if (error !== undefined) setHydrationError(error)
+          },
+          () => mountedRef.current,
+        )
+        .catch(setHydrationError)
+    } else {
+      void Promise.resolve(
+        Reflect.apply(hydrateOptimizationHandoff, undefined, [runtime, handoff]),
+      ).catch(setHydrationError)
     }
 
     return () => {
@@ -375,7 +398,11 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     try {
       state.runtime.setLocale(liveLocale)
     } catch (error: unknown) {
-      setState({ error: toError(error), isLive: true, runtime: state.runtime })
+      setState({
+        error: toError(error),
+        isLive: true,
+        runtime: state.runtime,
+      })
     }
   }, [liveLocale, props.sdk, state.isLive, state.runtime])
 
@@ -394,7 +421,11 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       .prefetchManagedEntries(props.prefetchManagedEntries)
       .catch((error: unknown) => {
         if (!disposed) {
-          setState({ error: toError(error), isLive: true, runtime: state.runtime })
+          setState({
+            error: toError(error),
+            isLive: true,
+            runtime: state.runtime,
+          })
         }
       })
 

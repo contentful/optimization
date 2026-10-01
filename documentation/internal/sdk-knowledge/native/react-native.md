@@ -34,14 +34,15 @@ source root: `packages/react-native-sdk/src`; shared core: `packages/universal/c
   active singleton and injects it via `OptimizationProvider sdk={sdk}`). `initialize` is `async`
   because it reads AsyncStorage before constructing.
   source: react-native-sdk#components/OptimizationRoot.tsx#OptimizationRoot; react-native-sdk#ContentfulOptimization.ts#initialize
-- Config type is `CoreStatefulConfig` (aliased as `OptimizationConfig`); `spaceId` is required, and
+- Config behavior follows `CoreStatefulConfig` through the React Native `OptimizationConfig`; `spaceId` is required, and
   its API keys are `spaceId`, `environment?`, and `fetchOptions?` (from `api-client` `ApiConfig`);
   `locale?`, `logLevel?`, `contentful?`, `eventBuilder?` (from `CoreConfig`); `api?`
   (`experienceBaseUrl`, `insightsBaseUrl`, `enabledFeatures`, `ip`, `plainText`, `preflight`),
   `allowedEventTypes?`, `defaults?` (`consent`, `persistenceConsent`, `profile`, `changes`,
   `selectedOptimizations`), `getAnonymousId?`, `onEventBlocked?`, `queuePolicy?` (`flush`,
-  `offlineMaxEvents`, `onOfflineDrop`) — all from `CoreStatefulConfig`.
-  source: react-native-sdk#index.ts#OptimizationConfig; core-sdk#CoreStateful.ts#CoreStatefulConfig; core-sdk#CoreBase.ts#CoreConfig; core-sdk#CoreApiConfig.ts#CoreStatefulApiConfig; core-sdk#StatefulDefaults.ts#StatefulDefaults; core-sdk#CoreStateful.ts#QueuePolicy; api-client#ApiClientBase.ts#ApiConfig
+  `offlineMaxEvents`, `onOfflineDrop`) — all from `CoreStatefulConfig`. `api.preflight` is retained
+  only for mixed-version compatibility and does not affect this stateful runtime.
+  source: react-native-sdk#index.ts#OptimizationConfig; core-sdk#CoreStateful.ts#CoreStatefulConfig; core-sdk#CoreStateful.ts#createStatefulExperienceApiConfig; core-sdk#CoreBase.ts#CoreConfig; core-sdk#StatefulDefaults.ts#StatefulDefaults; core-sdk#CoreStateful.ts#QueuePolicy; api-client#ApiClientBase.ts#ApiConfig
 - When `environment` is omitted, the API client uses `master` for Experience and Insights requests.
   The fallback lives in `api-client` `ApiClientBase`.
   source: api-client#ApiClientBase.ts#DEFAULT_ENVIRONMENT; api-client#ApiClientBase.ts#ApiConfig
@@ -307,7 +308,7 @@ selectedOptimizations, changes }` payload, and this stateful SDK applies it to i
   source: react-native-sdk#handlers/createAppStateChangeListener.ts#createAppStateChangeListener; react-native-sdk#ContentfulOptimization.ts#ContentfulOptimization
 - Polyfills: importing the package entry runs side-effect imports for `crypto.randomUUID`
   (`react-native-get-random-values` + `react-native-uuid`) and ES2025 iterator helpers, plus a
-  `*.png` module declaration. source: react-native-sdk#index.ts#OptimizationConfig; react-native-sdk#polyfills/crypto.ts
+  `*.png` module declaration. source: react-native-sdk#index.ts; react-native-sdk#polyfills/crypto.ts
 - Preview panel: `PreviewPanelOverlay`/`PreviewPanel` are on the `/preview` subpath, need the
   optional clipboard + safe-area peers, and fetch `nt_audience`/`nt_experience` entries through the
   supplied `contentfulClient`. Expo apps require a custom dev build (`expo run:ios`/`expo

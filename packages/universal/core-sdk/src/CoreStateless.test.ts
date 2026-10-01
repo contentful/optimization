@@ -201,6 +201,215 @@ describe('CoreStateless', () => {
     )
   })
 
+  it('previews ordered initial commands with request-scoped preflight and one replay envelope', async () => {
+    const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const interceptedTypes: string[] = []
+    core.interceptors.event.add((event) => {
+      interceptedTypes.push(event.type)
+      return event
+    })
+    const requestOptimization = core.forRequest({
+      consent: true,
+      experienceOptions: { locale: 'de-DE', preflight: false },
+    })
+
+    const preview = await requestOptimization.previewInitialExperience({
+      events: [
+        { type: 'identify', userId: 'user-123' },
+        { event: 'opened', type: 'track' },
+      ],
+      page: { properties: { path: '/products' } },
+    })
+
+    expect(preview).toMatchObject({ accepted: true })
+    expect(upsertProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        events: [
+          expect.objectContaining({ type: 'identify' }),
+          expect.objectContaining({ type: 'track' }),
+          expect.objectContaining({ type: 'page' }),
+        ],
+      }),
+      { locale: 'de-DE', preflight: true },
+    )
+    if (preview.accepted) {
+      expect(preview.experience.map((event) => event.type)).toEqual(['identify', 'track', 'page'])
+    }
+    expect(interceptedTypes).toEqual(['identify', 'track', 'page'])
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+  })
+
+  it('preflights mixed semantic inputs once and leaves Insights delivery to the browser', async () => {
+    const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
+    const upsert = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const insights = rs.spyOn(core.api.insights, 'sendBatchEvents')
+    const request = core.forRequest({
+      consent: true,
+      profile: { id: 'original' },
+      locale: 'de-DE',
+      eventContext: { userAgent: 'request-agent' },
+    })
+    const preview = await request.previewExperience({
+      events: [
+        { type: 'identify', userId: 'visitor' },
+        { type: 'trackClick', componentId: 'entry' },
+        { type: 'track', event: 'opened', locale: 'fr-FR' },
+        { type: 'page' },
+      ],
+    })
+    expect(upsert).toHaveBeenCalledTimes(1)
+    expect(upsert.mock.calls[0]?.[0].events.map((event) => event.type)).toEqual([
+      'identify',
+      'track',
+      'page',
+    ])
+    expect(insights).not.toHaveBeenCalled()
+    expect(preview).toMatchObject({
+      accepted: true,
+      profile: { id: 'original' },
+      experience: [
+        expect.objectContaining({
+          type: 'identify',
+          context: expect.objectContaining({ locale: 'de-DE', userAgent: 'request-agent' }),
+        }),
+        expect.objectContaining({
+          type: 'track',
+          context: expect.objectContaining({ locale: 'fr-FR' }),
+        }),
+        expect.objectContaining({ type: 'page' }),
+      ],
+      insights: [expect.objectContaining({ type: 'component_click' })],
+    })
+  })
+
+  it('retains an Analytics-only journal with an existing profile without preflight transport', async () => {
+    const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
+    const upsert = rs.spyOn(core.api.experience, 'upsertProfile')
+    const request = core.forRequest({ consent: true, profile: { id: 'original' } })
+    await expect(
+      request.previewExperience({ events: [{ type: 'trackClick', componentId: 'entry' }] }),
+    ).resolves.toMatchObject({ accepted: true, profile: { id: 'original' } })
+    expect(upsert).not.toHaveBeenCalled()
+  })
+
+  it('retains the intercepted preflight events and builds a sticky view once for both transports', async () => {
+    const core = new CoreStateless({
+      spaceId: 'key_123',
+      environment: 'main',
+      eventBuilder: { channel: 'server', library: { name: 'test-server', version: '1.0.0' } },
+    })
+    const upsert = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const interceptedIds: string[] = []
+    core.interceptors.event.add((event) => {
+      interceptedIds.push(event.messageId)
+      const forwarded = structuredClone(event)
+      Object.assign(forwarded.context, { userAgent: 'server-interceptor' })
+      return forwarded
+    })
+    const preview = await core.forRequest({ consent: true }).previewExperience({
+      events: [
+        {
+          type: 'trackView',
+          componentId: 'entry',
+          sticky: true,
+          viewId: 'server-view',
+          viewDurationMs: 500,
+        },
+        { type: 'page' },
+      ],
+    })
+    if (!preview.accepted) throw new Error('Expected an accepted preview.')
+    expect(preview.experience).toBe(upsert.mock.calls[0]?.[0].events)
+    expect(preview.insights[0]?.messageId).toBe(preview.experience[0]?.messageId)
+    expect(interceptedIds).toHaveLength(2)
+    expect(preview.experience.map((event) => event.context.userAgent)).toEqual([
+      'server-interceptor',
+      'server-interceptor',
+    ])
+    expect(preview.insights[0]?.channel).toBe('server')
+    expect(preview).not.toHaveProperty('commands')
+  })
+
+  it('accepts Analytics ahead of Personalization because the batch supplies its browser profile', async () => {
+    const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
+    const upsert = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const request = core.forRequest({ consent: true })
+    await expect(
+      request.previewExperience({
+        events: [{ type: 'trackClick', componentId: 'entry' }, { type: 'page' }],
+      }),
+    ).resolves.toMatchObject({ accepted: true })
+    expect(upsert).toHaveBeenCalledTimes(1)
+    expect(upsert.mock.calls[0]?.[0].events.map((event) => event.type)).toEqual(['page'])
+  })
+
+  it('propagates interceptor schema errors before preview mutation', async () => {
+    const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
+    core.interceptors.event.add((event) => {
+      Reflect.deleteProperty(event, 'type')
+      return event
+    })
+    const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile')
+
+    await expect(core.forRequest({ consent: true }).previewInitialExperience()).rejects.toThrow(
+      'Invalid input',
+    )
+    expect(upsertProfile).not.toHaveBeenCalled()
+  })
+
+  it('filters blocked preview prefixes while building the page command with consent', async () => {
+    const blockedEvents: BlockedEvent[] = []
+    const core = new CoreStateless({
+      allowedEventTypes: ['page'],
+      environment: 'main',
+      onEventBlocked: (event) => blockedEvents.push(event),
+      spaceId: 'key_123',
+    })
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+
+    const preview = await core.forRequest({ consent: false }).previewInitialExperience({
+      events: [{ event: 'prefix', type: 'track' }],
+    })
+
+    expect(preview).toMatchObject({ accepted: true })
+    expect(blockedEvents.map((event) => event.method)).toEqual(['track'])
+    expect(upsertProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ events: [expect.objectContaining({ type: 'page' })] }),
+      expect.anything(),
+    )
+  })
+
+  it('blocks a preview directly when its SDK-built page command lacks consent', async () => {
+    const blockedEvents: BlockedEvent[] = []
+    const core = new CoreStateless({
+      allowedEventTypes: [],
+      environment: 'main',
+      onEventBlocked: (event) => blockedEvents.push(event),
+      spaceId: 'key_123',
+    })
+    const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile')
+
+    await expect(
+      core.forRequest({ consent: false }).previewInitialExperience({
+        events: [{ event: 'prefix', type: 'track' }],
+      }),
+    ).resolves.toEqual({ accepted: false })
+
+    expect(blockedEvents.map((event) => event.method)).toEqual(['page'])
+    expect(upsertProfile).not.toHaveBeenCalled()
+  })
+
   it('forwards request page query context to request-bound page events', async () => {
     const core = new CoreStateless({ spaceId: 'key_123', environment: 'main' })
     const upsertProfile = rs

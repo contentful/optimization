@@ -28,8 +28,8 @@ Edge runtime routes live in the
 ## What this covers
 
 - A single server binding in `lib/optimization.ts`.
-- A client-only binding in `lib/optimization-client.ts` that runs optional before-initial-page work
-  before the request root's browser-owned page event.
+- A client-only binding in `lib/optimization-client.ts` that supplies the request root's browser
+  runtime.
 - Request-bound Server Components with browser hydration and live updates.
 - Static public permutation and analytics-only handoff.
 - App-owned and SDK-managed Contentful entry fetching.
@@ -87,19 +87,19 @@ async function PrivateRequestSlot() {
 
 Keep provider-dependent tools inside `RequestOptimizationRoot`.
 
-## Run before-initial-page work
+## Preview an ordered initial batch
 
-`lib/optimization-client.ts` binds a client-only `beforeInitialPage` callback. The maintained
-callback identifies only when the URL contains `?beforeInitialPage=readiness`; ordinary routes do
-nothing. `lib/optimization.ts` injects that module's `ClientRequestOptimizationRoot` into the server
-request family as a Client Component reference.
+`lib/optimization.ts` configures the maintained identify-before-page scenario from
+`?beforeInitialPage=readiness` as a server preview prefix. It injects
+`lib/optimization-client.ts`'s `ClientRequestOptimizationRoot` into the server request family as a
+Client Component reference.
 
 The server passes only children, defaults, handoff, and hydration through the request root. The
-client root derives the current App Router route and lazy page payload in the browser, so neither the
-callback nor a payload-builder function crosses the Server Component boundary. It makes the direct
-initial page attempt, marks that attempted route through the existing non-emitting initial `skip`
-path, and emits once for each later route. Do not mount a separate request page tracker in the same
-subtree.
+client root derives the current App Router route and lazy page payload in the browser, so no
+payload-builder function crosses the Server Component boundary. Hydration publishes private preview
+state in memory and starts the combined initial event operation. The root's later ordinary
+current-page tracking call attempts it once; an unusable replay follows the ordinary page path. Do
+not mount a separate request page tracker in the same subtree.
 
 ## Choose entry-fetch ownership
 

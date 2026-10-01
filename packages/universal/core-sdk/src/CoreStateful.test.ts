@@ -5,18 +5,25 @@ import type { ContentfulEntryClient, ContentfulEntryQuery } from './CoreBase'
 import CoreStateful, { type CoreStatefulConfig } from './CoreStateful'
 import type {
   BlockedEvent,
+  EventEmissionResult,
   EventOptimizationContext,
   OptimizationEventStreamEvent,
   TrackBuilderArgs,
   ViewBuilderArgs,
 } from './events'
+import EventBuilder from './events/EventBuilder'
 import type { QueueFlushFailureContext } from './lib/queue'
+import type { OptimizationReplayEnvelope } from './replay'
 import { createSnapshotRuntime } from './runtime/SnapshotRuntime'
 import { batch, signals } from './signals'
 import { mergeTagEntry } from './test/fixtures/mergeTagEntry'
 import { optimizedEntry } from './test/fixtures/optimizedEntry'
 import { profile as profileFixture } from './test/fixtures/profile'
 import { selectedOptimizations as selectedOptimizationsFixture } from './test/fixtures/selectedOptimizations'
+const replayEventBuilder = new EventBuilder({
+  channel: 'server',
+  library: { name: 'test-server', version: '1.0.0' },
+})
 
 const config: CoreStatefulConfig = {
   spaceId: 'key_123',
@@ -63,6 +70,10 @@ function createDeferred(): { promise: Promise<void>; resolve: () => void } {
 }
 
 class CoreStatefulTestHarness extends CoreStateful {
+  async replay(input: OptimizationReplayEnvelope): Promise<EventEmissionResult> {
+    return await this.replayOptimizationHandoff(input)
+  }
+
   getOptimizationContextById(
     optimizationContextId: string | undefined,
   ): EventOptimizationContext | undefined {
@@ -154,6 +165,210 @@ describe('CoreStateful blocked event handling', () => {
       }),
     )
 
+    subscription.unsubscribe()
+  })
+
+  it('sends admitted replay commands but leaves the route unaccepted without an admitted page', async () => {
+    const onEventBlocked = rs.fn()
+    const core = createCoreStatefulHarness({
+      allowedEventTypes: ['track'],
+      defaults: { consent: false },
+      onEventBlocked,
+    })
+    const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue({
+      changes: [],
+      profile: profileFixture,
+      selectedOptimizations: [],
+    })
+
+    await expect(
+      core.replay({
+        experience: [
+          replayEventBuilder.buildTrack({ event: 'opened' }),
+          replayEventBuilder.buildPageView({}),
+        ],
+        insights: [],
+        routeKey: 'route',
+      }),
+    ).resolves.toMatchObject({ accepted: false })
+
+    expect(onEventBlocked).toHaveBeenCalledTimes(1)
+    expect(upsertProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ events: [expect.objectContaining({ type: 'track' })] }),
+    )
+  })
+
+  it('does not send a replay when consent filters every command', async () => {
+    const core = createCoreStatefulHarness({ defaults: { consent: false } })
+    const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile')
+
+    await expect(
+      core.replay({
+        experience: [replayEventBuilder.buildTrack({ event: 'opened' })],
+        insights: [],
+        routeKey: 'route',
+      }),
+    ).resolves.toEqual({ accepted: false })
+
+    expect(upsertProfile).not.toHaveBeenCalled()
+  })
+
+  it('accepts a canonical identify, track, page replay envelope', async () => {
+    const core = createCoreStatefulHarness({ defaults: { consent: true } })
+    const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue({
+      changes: [],
+      profile: profileFixture,
+      selectedOptimizations: [],
+    })
+
+    await expect(
+      core.replay({
+        experience: [
+          replayEventBuilder.buildIdentify({ userId: 'user-1' }),
+          replayEventBuilder.buildTrack({ event: 'opened' }),
+          replayEventBuilder.buildPageView({}),
+        ],
+        insights: [],
+        routeKey: 'route',
+      }),
+    ).resolves.toMatchObject({ accepted: true })
+
+    expect(upsertProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        events: [
+          expect.objectContaining({ type: 'identify' }),
+          expect.objectContaining({ type: 'track' }),
+          expect.objectContaining({ type: 'page' }),
+        ],
+      }),
+    )
+  })
+  it('commits server-built events without rebuilding their identity or metadata', async () => {
+    const page = replayEventBuilder.buildPageView({
+      properties: { url: 'https://server.example/a' },
+      userAgent: 'server-agent',
+    })
+    const click = replayEventBuilder.buildClick({ componentId: 'entry', userAgent: 'server-agent' })
+    const core = createCoreStatefulHarness({ defaults: { consent: true } })
+    const buildPage = rs.spyOn(EventBuilder.prototype, 'buildPageView')
+    const upsert = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue({ changes: [], profile: profileFixture, selectedOptimizations: [] })
+    const insights = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    await core.replay({
+      profile: { id: 'original' },
+      routeKey: '/a',
+      experience: [page],
+      insights: [click],
+    })
+    await core.flush()
+    expect(buildPage).not.toHaveBeenCalled()
+    expect(upsert.mock.calls[0]?.[0].events).toEqual([page])
+    expect(insights.mock.calls[0]?.[0][0]?.events).toEqual([click])
+    expect(insights.mock.calls[0]?.[0][0]?.profile.id).toBe(profileFixture.id)
+    expect(page.channel).toBe('server')
+  })
+
+  it('queues one mixed-locale Experience batch and uses its known identity on flush', async () => {
+    const core = createCoreStatefulHarness({ defaults: { consent: true } })
+    const flushed = Promise.withResolvers<undefined>()
+    const upsert = rs.spyOn(core.api.experience, 'upsertProfile').mockImplementation(async () => {
+      flushed.resolve(undefined)
+      return await Promise.resolve({
+        changes: [],
+        profile: profileFixture,
+        selectedOptimizations: [],
+      })
+    })
+    core.setOnlineState(false)
+    await expect(
+      core.replay({
+        profile: { id: 'original' },
+        routeKey: '/a',
+        experience: [
+          replayEventBuilder.buildPageView({ locale: 'de-DE' }),
+          replayEventBuilder.buildTrack({ event: 'later', locale: 'fr-FR' }),
+        ],
+        insights: [],
+      }),
+    ).resolves.toEqual({ accepted: true })
+    expect(upsert).not.toHaveBeenCalled()
+    core.setOnlineState(true)
+    await core.flush()
+    await flushed.promise
+    expect(upsert).toHaveBeenCalledTimes(1)
+    expect(upsert.mock.calls[0]?.[0].profileId).toBe('original')
+    expect(upsert.mock.calls[0]?.[0].events.map((event) => event.context.locale)).toEqual([
+      'de-DE',
+      'fr-FR',
+    ])
+  })
+
+  it('uses current Analytics consent after the single Experience response', async () => {
+    const blocked = rs.fn()
+    const core = createCoreStatefulHarness({
+      defaults: { consent: true },
+      allowedEventTypes: [],
+      onEventBlocked: blocked,
+    })
+    const response = Promise.withResolvers<{
+      changes: []
+      profile: typeof profileFixture
+      selectedOptimizations: []
+    }>()
+    const started = Promise.withResolvers<undefined>()
+    rs.spyOn(core.api.experience, 'upsertProfile').mockImplementation(async () => {
+      started.resolve(undefined)
+      return await response.promise
+    })
+    const events: string[] = []
+    const subscription = core.states.eventStream.subscribe((event) => {
+      if (event) events.push(event.type)
+    })
+    const replay = core.replay({
+      routeKey: '/a',
+      experience: [replayEventBuilder.buildPageView({})],
+      insights: [replayEventBuilder.buildClick({ componentId: 'entry' })],
+    })
+    await started.promise
+    core.consent(false)
+    response.resolve({ changes: [], profile: profileFixture, selectedOptimizations: [] })
+    await expect(replay).resolves.toMatchObject({ accepted: true })
+    expect(events).toEqual(['page'])
+    expect(blocked).toHaveBeenCalledTimes(1)
+    subscription.unsubscribe()
+  })
+
+  it('batches Personalization in input order without splitting for Analytics or event locale', async () => {
+    const core = createCoreStatefulHarness({ defaults: { consent: true }, locale: 'en-GB' })
+    const upsert = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue({ changes: [], profile: profileFixture, selectedOptimizations: [] })
+    const events: string[] = []
+    const subscription = core.states.eventStream.subscribe((event) => {
+      if (event) events.push(event.type)
+    })
+    await expect(
+      core.replay({
+        profile: { id: 'original' },
+        routeKey: '/a',
+        experience: [
+          replayEventBuilder.buildPageView({ locale: 'de-DE' }),
+          replayEventBuilder.buildTrack({ event: 'later', locale: 'de-DE' }),
+          replayEventBuilder.buildTrack({ event: 'french', locale: 'fr-FR' }),
+        ],
+        insights: [replayEventBuilder.buildClick({ componentId: 'entry' })],
+      }),
+    ).resolves.toMatchObject({ accepted: true })
+    expect(events).toEqual(['page', 'track', 'track', 'component_click'])
+    expect(upsert).toHaveBeenCalledTimes(1)
+    expect(upsert.mock.calls[0]?.[0].profileId).toBe('original')
+    expect(upsert.mock.calls[0]?.[0].events.map((event) => event.context.locale)).toEqual([
+      'de-DE',
+      'de-DE',
+      'fr-FR',
+    ])
+    expect(upsert.mock.calls[0]?.[1]).toBeUndefined()
     subscription.unsubscribe()
   })
 
@@ -350,7 +565,10 @@ describe('CoreStateful blocked event handling', () => {
 
     try {
       const onDrop = rs.fn()
-      const onFlushFailure = rs.fn<(context: QueueFlushFailureContext) => void>()
+      const failure = Promise.withResolvers<QueueFlushFailureContext>()
+      const onFlushFailure = rs.fn((context: QueueFlushFailureContext) => {
+        failure.resolve(context)
+      })
       const core = createCoreStatefulHarness({
         defaults: { consent: true },
         queuePolicy: {
@@ -382,6 +600,7 @@ describe('CoreStateful blocked event handling', () => {
 
       core.setOnlineState(true)
       await core.flush()
+      await failure.promise
 
       expect(onFlushFailure).toHaveBeenCalledTimes(1)
       expect(onFlushFailure).toHaveBeenCalledWith(

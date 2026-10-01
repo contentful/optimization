@@ -18,6 +18,7 @@ import type {
 import type CoreStateless from './CoreStateless'
 import type { CoreStatelessInsightsOptions, CoreStatelessRequestOptions } from './CoreStateless'
 import { PartialProfile, type OptimizationData } from './api-schemas'
+import { hasEventConsent } from './consent/ConsentPolicy'
 import type {
   AllowedEventType,
   ClickBuilderArgs,
@@ -33,6 +34,12 @@ import type {
 } from './events'
 import { normalizeExplicitLocale } from './locale'
 import { createManagedEntryHandoffs, normalizeManagedEntryDescriptor } from './managed-entry'
+import type {
+  OptimizationReplayCommand,
+  OptimizationReplayEnvelope,
+  PreviewExperienceOptions,
+  PreviewInitialExperienceOptions,
+} from './replay'
 
 const coreLogger = createScopedLogger('CoreStateless')
 
@@ -46,6 +53,8 @@ const NON_STICKY_TRACK_VIEW_PROFILE_ERROR =
   'CoreStatelessRequest.trackView() requires a request-bound profile id when `payload.sticky` is not `true`.'
 const STICKY_TRACK_VIEW_PROFILE_ERROR =
   'CoreStatelessRequest.trackView() could not derive a profile from the sticky Experience response. Bind `profile.id` with forRequest() if you need a fallback.'
+
+type ReplayCommand = OptimizationReplayCommand
 
 /**
  * Request-scoped consent accepted by stateless request clients.
@@ -120,6 +129,22 @@ export type StatelessNonStickyTrackViewPayload = Omit<ViewBuilderArgs, 'sticky'>
   sticky?: false | undefined
 }
 
+/** Result from a single paired-event preflight. @public */
+export type ExperiencePreview =
+  | { readonly accepted: false }
+  | {
+      readonly accepted: true
+      readonly data?: OptimizationData
+      readonly profile?: PartialProfile
+      readonly experience: OptimizationReplayEnvelope['experience']
+      readonly insights: OptimizationReplayEnvelope['insights']
+    }
+
+/** Result of a page-bearing initial Experience preflight. @public */
+export type InitialExperiencePreview =
+  | { readonly accepted: false }
+  | (Extract<ExperiencePreview, { readonly accepted: true }> & { readonly data: OptimizationData })
+
 const requireInsightsProfile = (
   profile: PartialProfile | undefined,
   errorMessage: string,
@@ -187,6 +212,96 @@ export class CoreStatelessRequest {
    */
   get profile(): PartialProfile | undefined {
     return this.currentProfile
+  }
+
+  /**
+   * Preview a browser replay as one forced-preflight Experience mutation.
+   *
+   * Prefix commands that lack consent are diagnosed and omitted. The SDK-built page command must
+   * have consent; otherwise no preview request is made.
+   *
+   * @public
+   */
+  async previewInitialExperience(
+    input: PreviewInitialExperienceOptions = {},
+  ): Promise<InitialExperiencePreview> {
+    const pageCommand = { ...input.page, type: 'page' } satisfies ReplayCommand
+    if (!this.hasConsent('page')) {
+      this.reportBlockedEvent('page', [pageCommand])
+      return { accepted: false }
+    }
+    const preview = await this.previewExperience({
+      events: [...(input.events ?? []), pageCommand],
+    })
+    if (!preview.accepted || preview.data === undefined) return { accepted: false }
+    return { ...preview, data: preview.data }
+  }
+
+  /**
+   * Build all events once, preflight Personalization, and retain the resulting wire events.
+   * Analytics is built and validated here but delivered only by the paired browser.
+   * Unlike initial-page preview, this operation also accepts journals without a page.
+   * @public
+   */
+  async previewExperience(input: PreviewExperienceOptions): Promise<ExperiencePreview> {
+    const { currentProfile: profile } = this
+    const events = await this.buildPreviewInputs(input)
+    if (events.experience.length === 0 && events.insights.length === 0) return { accepted: false }
+    if (events.experience.length === 0)
+      return { accepted: true, ...events, ...(profile === undefined ? {} : { profile }) }
+    const data = await this.core.api.experience.upsertProfile(
+      { profileId: profile?.id, events: events.experience },
+      { ...this.experienceOptions, preflight: true },
+    )
+    const { profile: nextProfile, selectedOptimizations } = data
+    this.currentProfile = nextProfile
+    this.currentSelectedOptimizations = selectedOptimizations
+    return { accepted: true, ...events, data, ...(profile === undefined ? {} : { profile }) }
+  }
+
+  private async buildPreviewInputs(
+    input: PreviewExperienceOptions,
+  ): Promise<{ experience: ExperienceEventPayload[]; insights: InsightsEventPayload[] }> {
+    const experience: ExperienceEventPayload[] = []
+    const insights: InsightsEventPayload[] = []
+    for (const command of input.events) {
+      if (!hasEventConsent(command.type, this.requestEventConsent, this.core.allowedEventTypes)) {
+        this.reportBlockedEvent(command.type, [command])
+        continue
+      }
+      const event = this.buildPreviewEvent(command)
+      const intercepted = await this.core.interceptors.event.run(
+        withRequestEventConsent(event, this.requestEventConsent === true),
+      )
+      const isInsights = ['trackView', 'trackClick', 'trackHover', 'trackFlagView'].includes(
+        command.type,
+      )
+      if (!isInsights || (command.type === 'trackView' && command.sticky === true))
+        experience.push(parseWithFriendlyError(ExperienceEventSchema, intercepted))
+      if (isInsights) insights.push(parseWithFriendlyError(InsightsEventSchema, intercepted))
+    }
+    return { experience, insights }
+  }
+
+  private buildPreviewEvent(command: ReplayCommand): ExperienceEventPayload | InsightsEventPayload {
+    switch (command.type) {
+      case 'identify':
+        return this.core.eventBuilder.buildIdentify(this.withEventContext(command))
+      case 'track':
+        return this.core.eventBuilder.buildTrack(this.withEventContext(command))
+      case 'page':
+        return this.core.eventBuilder.buildPageView(this.withEventContext(command))
+      case 'screen':
+        return this.core.eventBuilder.buildScreenView(this.withEventContext(command))
+      case 'trackView':
+        return this.core.eventBuilder.buildView(this.withEventContext(command))
+      case 'trackClick':
+        return this.core.eventBuilder.buildClick(this.withEventContext(command))
+      case 'trackHover':
+        return this.core.eventBuilder.buildHover(this.withEventContext(command))
+      case 'trackFlagView':
+        return this.core.eventBuilder.buildFlagView(this.withEventContext(command))
+    }
   }
 
   async identify(

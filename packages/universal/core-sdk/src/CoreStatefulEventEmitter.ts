@@ -498,7 +498,7 @@ abstract class CoreStatefulEventEmitter
     return trackedObservable
   }
 
-  private reportBlockedEvent(method: string, args: readonly unknown[]): void {
+  protected reportBlockedEvent(method: string, args: readonly unknown[]): void {
     const event: BlockedEvent = { reason: 'consent', method, args }
 
     try {
