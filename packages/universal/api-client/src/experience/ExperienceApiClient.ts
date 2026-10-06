@@ -69,7 +69,14 @@ export interface ExperienceApiClientRequestOptions {
    * preflight requests, which can improve performance in browser environments.
    */
   plainText?: boolean
+}
 
+/**
+ * Request options for single-profile mutations.
+ *
+ * @public
+ */
+export interface ExperienceApiClientProfileMutationRequestOptions extends ExperienceApiClientRequestOptions {
   /**
    * When `true`, instructs the API to aggregate a new profile state but not store it.
    *
@@ -88,7 +95,7 @@ export interface ExperienceApiClientRequestOptions {
 interface ProfileMutationRequestOptions {
   url: string
   body: unknown
-  options: ExperienceApiClientRequestOptions
+  options: ExperienceApiClientProfileMutationRequestOptions
 }
 
 /**
@@ -177,7 +184,6 @@ export default class ExperienceApiClient extends ApiClientBase {
   private readonly ip?: ExperienceApiClientRequestOptions['ip']
   private locale?: ExperienceApiClientRequestOptions['locale']
   private readonly plainText?: ExperienceApiClientRequestOptions['plainText']
-  private readonly preflight?: ExperienceApiClientRequestOptions['preflight']
 
   /**
    * Creates a new {@link ExperienceApiClient} instance.
@@ -187,7 +193,7 @@ export default class ExperienceApiClient extends ApiClientBase {
   constructor(config: ExperienceApiClientConfig) {
     super('Experience', config)
 
-    const { baseUrl, enabledFeatures, ip, locale, plainText, preflight } = config
+    const { baseUrl, enabledFeatures, ip, locale, plainText } = config
 
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Set default for anything falsey
     this.baseUrl = baseUrl || EXPERIENCE_BASE_URL
@@ -195,7 +201,6 @@ export default class ExperienceApiClient extends ApiClientBase {
     this.ip = ip
     this.locale = locale
     this.plainText = plainText
-    this.preflight = preflight
   }
 
   /**
@@ -228,7 +233,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async getProfile(
     id: string,
-    options: Omit<ExperienceApiClientRequestOptions, 'preflight' | 'plainText'> = {},
+    options: Omit<ExperienceApiClientRequestOptions, 'plainText'> = {},
   ): Promise<OptimizationData> {
     if (!id) throw new Error('Valid profile ID required.')
 
@@ -240,7 +245,7 @@ export default class ExperienceApiClient extends ApiClientBase {
       const response = await this.fetch(
         this.constructUrl(
           `v3/spaces/${this.spaceId}/environments/${this.environment}/profiles/${id}`,
-          options,
+          { locale: options.locale },
         ),
         {
           method: 'GET',
@@ -303,7 +308,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async createProfile(
     { events }: CreateProfileParams,
-    options: ExperienceApiClientRequestOptions = {},
+    options: ExperienceApiClientProfileMutationRequestOptions = {},
   ): Promise<OptimizationData> {
     const requestName = 'Create Profile'
 
@@ -356,7 +361,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async updateProfile(
     { profileId, events }: UpdateProfileParams,
-    options: ExperienceApiClientRequestOptions = {},
+    options: ExperienceApiClientProfileMutationRequestOptions = {},
   ): Promise<OptimizationData> {
     if (!profileId) throw new Error('Valid profile ID required.')
 
@@ -409,7 +414,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async upsertProfile(
     { profileId, events }: UpsertProfileParams,
-    options?: ExperienceApiClientRequestOptions,
+    options?: ExperienceApiClientProfileMutationRequestOptions,
   ): Promise<OptimizationData> {
     if (!profileId) {
       return await this.createProfile({ events }, options)
@@ -461,7 +466,7 @@ export default class ExperienceApiClient extends ApiClientBase {
       const response = await this.makeProfileMutationRequest({
         url: `v3/spaces/${this.spaceId}/environments/${this.environment}/events`,
         body,
-        options: { plainText: false, ...options },
+        options: { plainText: false, ...options, preflight: false },
       })
 
       const {
@@ -487,10 +492,13 @@ export default class ExperienceApiClient extends ApiClientBase {
    *
    * @internal
    */
-  private constructUrl(path: string, options: ExperienceApiClientRequestOptions): string {
+  private constructUrl(
+    path: string,
+    options: ExperienceApiClientProfileMutationRequestOptions,
+  ): string {
     const url = new URL(path, this.baseUrl)
     const locale = options.locale ?? this.locale
-    const preflight = options.preflight ?? this.preflight
+    const { preflight } = options
 
     if (locale) {
       url.searchParams.set('locale', locale)
