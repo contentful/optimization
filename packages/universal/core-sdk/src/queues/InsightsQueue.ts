@@ -5,7 +5,7 @@ import {
   type BatchInsightsEventArray,
   type InsightsEventArray,
   type InsightsEvent as InsightsEventPayload,
-  type Profile,
+  type PartialProfile,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { LifecycleInterceptors } from '../CoreBase'
@@ -18,11 +18,13 @@ const coreLogger = createScopedLogger('CoreStateful')
 const MAX_QUEUED_INSIGHTS_EVENTS = 25
 
 interface QueuedProfileEvents {
-  profile: Profile
+  profile: PartialProfile
   events: InsightsEventArray
 }
 
 interface InsightsQueueOptions {
+  getAnonymousId?: () => string | undefined
+  getResetToken?: () => object | undefined
   eventInterceptors: LifecycleInterceptors['event']
   flushPolicy: ResolvedQueueFlushPolicy
   insightsApi: {
@@ -47,7 +49,9 @@ export class InsightsQueue {
   private readonly flushIntervalMs: number
   private readonly flushRuntime: QueueFlushRuntime
   private readonly insightsApi: InsightsQueueOptions['insightsApi']
-  private readonly queuedInsightsByProfile = new Map<Profile['id'], QueuedProfileEvents>()
+  private readonly queuedInsightsByProfile = new Map<string, QueuedProfileEvents>()
+  private readonly getAnonymousId: () => string | undefined
+  private readonly getResetToken: () => object | undefined
   private insightsPeriodicFlushTimer: ReturnType<typeof setInterval> | undefined
 
   constructor(options: InsightsQueueOptions) {
@@ -55,6 +59,8 @@ export class InsightsQueue {
     const { flushIntervalMs } = flushPolicy
 
     this.eventInterceptors = eventInterceptors
+    this.getAnonymousId = options.getAnonymousId ?? (() => undefined)
+    this.getResetToken = options.getResetToken ?? (() => this)
     this.flushIntervalMs = flushIntervalMs
     this.insightsApi = insightsApi
     this.flushRuntime = new QueueFlushRuntime({
@@ -89,7 +95,10 @@ export class InsightsQueue {
     event: InsightsEventPayload,
     optimizationContext?: EventOptimizationContext,
   ): Promise<void> {
-    const { value: profile } = profileSignal
+    const token = this.getResetToken()
+    const anonymousId = this.getAnonymousId()
+    const profile =
+      profileSignal.value ?? (anonymousId === undefined ? undefined : { id: anonymousId })
 
     if (!profile) {
       coreLogger.warn('Attempting to emit an event without an Optimization profile')
@@ -97,6 +106,7 @@ export class InsightsQueue {
     }
 
     const intercepted = await this.eventInterceptors.run(event)
+    if (token === undefined || token !== this.getResetToken()) return
     const validEvent = parseWithFriendlyError(InsightsEventSchema, intercepted)
 
     coreLogger.debug(`Queueing ${validEvent.type} event for profile ${profile.id}`, validEvent)
@@ -128,7 +138,13 @@ export class InsightsQueue {
   async flush(options: InsightsQueueFlushOptions = {}): Promise<void> {
     const { force = false, beacon } = options
 
-    if (this.flushRuntime.shouldSkip({ force, isOnline: !!onlineSignal.value })) return
+    if (
+      this.flushRuntime.shouldSkip({
+        force,
+        isOnline: !!onlineSignal.value && this.getResetToken() !== undefined,
+      })
+    )
+      return
 
     coreLogger.debug('Flushing insights event queue')
 
@@ -141,12 +157,15 @@ export class InsightsQueue {
     }
 
     this.flushRuntime.markFlushStarted()
+    const token = this.getResetToken()
+    const isCurrent = (): boolean => token !== undefined && token === this.getResetToken()
 
     try {
-      const sendSuccess = await this.trySendBatches(batches, beacon ? { beacon } : undefined)
+      const sendSuccess = await this.trySendBatches(batches, beacon)
+      if (!isCurrent()) return
 
       if (sendSuccess) {
-        this.queuedInsightsByProfile.clear()
+        this.removeSentEvents(batches)
         this.flushRuntime.handleFlushSuccess()
       } else {
         this.flushRuntime.handleFlushFailure({
@@ -155,8 +174,19 @@ export class InsightsQueue {
         })
       }
     } finally {
-      this.flushRuntime.markFlushFinished()
-      this.reconcilePeriodicFlushTimer()
+      if (isCurrent()) {
+        this.flushRuntime.markFlushFinished()
+        this.reconcilePeriodicFlushTimer()
+      }
+    }
+  }
+
+  private removeSentEvents(batches: BatchInsightsEventArray): void {
+    for (const { profile, events } of batches) {
+      const queued = this.queuedInsightsByProfile.get(profile.id)
+      if (queued === undefined) continue
+      queued.events.splice(0, events.length)
+      if (queued.events.length === 0) this.queuedInsightsByProfile.delete(profile.id)
     }
   }
 
@@ -164,7 +194,7 @@ export class InsightsQueue {
     const batches: BatchInsightsEventArray = []
 
     this.queuedInsightsByProfile.forEach(({ profile, events }) => {
-      batches.push({ profile, events })
+      batches.push({ profile, events: [...events] })
     })
 
     return batches
@@ -172,12 +202,12 @@ export class InsightsQueue {
 
   private async trySendBatches(
     batches: BatchInsightsEventArray,
-    options: InsightsApiClientRequestOptions | undefined,
+    beacon: InsightsApiClientRequestOptions['beacon'],
   ): Promise<boolean> {
     try {
-      if (options === undefined) return await this.insightsApi.sendBatchEvents(batches)
+      if (beacon === undefined) return await this.insightsApi.sendBatchEvents(batches)
 
-      return await this.insightsApi.sendBatchEvents(batches, options)
+      return await this.insightsApi.sendBatchEvents(batches, { beacon })
     } catch (error) {
       coreLogger.warn('Insights queue flush request threw an error', error)
       return false

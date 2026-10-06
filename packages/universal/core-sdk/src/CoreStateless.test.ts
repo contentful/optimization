@@ -114,7 +114,6 @@ describe('CoreStateless', () => {
           ip: '198.51.100.5',
           locale: 'de-DE',
           plainText: false,
-          preflight: true,
         },
       },
     ])
@@ -126,7 +125,6 @@ describe('CoreStateless', () => {
     expect(Reflect.get(core.api.experience, 'ip')).toBeUndefined()
     expect(Reflect.get(core.api.experience, 'locale')).toBeUndefined()
     expect(Reflect.get(core.api.experience, 'plainText')).toBeUndefined()
-    expect(Reflect.get(core.api.experience, 'preflight')).toBeUndefined()
   })
 
   it('exposes the configured top-level SDK locale', () => {
@@ -159,7 +157,6 @@ describe('CoreStateless', () => {
       ip: '203.0.113.10',
       locale: 'de-DE',
       plainText: false,
-      preflight: true,
     }
     const requestOptimization = core.forRequest({
       consent: { events: true, persistence: true },
@@ -272,7 +269,7 @@ describe('CoreStateless', () => {
     const requestOptimization = core.forRequest({
       consent: true,
       eventContext: { locale: 'en-US' },
-      experienceOptions: { locale: 'fr-FR', preflight: true },
+      experienceOptions: { locale: 'fr-FR' },
       locale: ' de_DE ',
       profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
@@ -286,7 +283,7 @@ describe('CoreStateless', () => {
           expect.objectContaining({ context: expect.objectContaining({ locale: 'de-DE' }) }),
         ],
       }),
-      expect.objectContaining({ locale: 'de-DE', preflight: true }),
+      expect.objectContaining({ locale: 'de-DE' }),
     )
   })
 
@@ -593,7 +590,7 @@ describe('CoreStateless', () => {
       profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
-    await requestOptimization.track({ event: 'server-preflight' })
+    await requestOptimization.track({ event: 'server-event' })
 
     expect(upsertProfile.mock.calls[0]?.[0].events[0]?.context.gdpr.isConsentGiven).toBe(false)
   })
@@ -702,7 +699,6 @@ describe('CoreStateless', () => {
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = core.forRequest({
       consent: true,
-      experienceOptions: { preflight: true },
       profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
@@ -718,7 +714,7 @@ describe('CoreStateless', () => {
         profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
         events: [expect.objectContaining({ type: 'component' })],
       }),
-      expect.objectContaining({ preflight: true }),
+      undefined,
     )
     expect(sendBatchEvents).toHaveBeenCalledWith([
       {
@@ -824,7 +820,6 @@ describe('CoreStateless', () => {
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = core.forRequest({
       consent: true,
-      experienceOptions: { preflight: true },
       profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
     })
 
@@ -881,7 +876,6 @@ describe('CoreStateless', () => {
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const requestOptimization = core.forRequest({
       consent: true,
-      experienceOptions: { preflight: true },
     })
 
     const result = await requestOptimization.trackView({
@@ -903,7 +897,7 @@ describe('CoreStateless', () => {
         profileId: undefined,
         events: [expect.objectContaining({ type: 'component' })],
       }),
-      expect.objectContaining({ preflight: true }),
+      undefined,
     )
     expect(sendBatchEvents).toHaveBeenCalledWith([
       {

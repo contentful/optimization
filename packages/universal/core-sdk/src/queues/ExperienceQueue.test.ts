@@ -20,7 +20,7 @@ const SAMPLE_DATA: OptimizationData = {
 }
 
 class ExperienceQueueTestHarness extends ExperienceQueue {
-  async invokeUpsert(events: ExperienceEventArray): Promise<OptimizationData> {
+  async invokeUpsert(events: ExperienceEventArray): Promise<OptimizationData | undefined> {
     return await this.upsertProfile(events)
   }
 }

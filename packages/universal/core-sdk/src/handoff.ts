@@ -1,6 +1,7 @@
 import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
 import type {
   ChangeArray,
+  ExperienceEvent,
   Profile,
   SelectedOptimization,
   SelectedOptimizationArray,
@@ -141,6 +142,12 @@ export interface OptimizationHandoff {
   readonly entries?: readonly ManagedEntryHandoff[]
   /** Cache metadata for the rendered output. */
   readonly cache: OptimizationCacheMetadata
+  readonly profileId?: string
+  readonly replay?: {
+    readonly routeKey: string
+    readonly events: readonly ExperienceEvent[]
+    readonly locale?: string
+  }
 }
 
 /**
@@ -358,16 +365,18 @@ export function getOptimizationCacheSafetyWarnings(
   handoff: OptimizationHandoff,
 ): readonly OptimizationCacheSafetyWarning[] {
   const warnings: OptimizationCacheSafetyWarning[] = []
-  const { cache, state } = handoff
+  const { cache } = handoff
 
+  const privatePath = getPrivateHandoffPath(handoff)
   if (
     (cache.scope === 'public-permutation' || cache.scope === 'static') &&
-    state?.profile !== undefined
+    privatePath !== undefined
   ) {
     warnings.push({
       code: 'profile-state-in-public-cache',
-      message: 'Profile state should not be included in public or static optimization caches.',
-      path: ['state', 'profile'],
+      message:
+        'Profile state, identity and replay must not be included in public or static optimization caches.',
+      path: privatePath,
     })
   }
 
@@ -395,4 +404,11 @@ export function assertOptimizationCacheSafety(handoff: OptimizationHandoff): voi
   if (warnings.length === 0) return
 
   throw new TypeError(warnings.map((warning) => warning.message).join(' '))
+}
+
+function getPrivateHandoffPath(handoff: OptimizationHandoff): string[] | undefined {
+  if (handoff.state?.profile !== undefined) return ['state', 'profile']
+  if (handoff.profileId !== undefined) return ['profileId']
+  if (handoff.replay !== undefined) return ['replay']
+  return undefined
 }
