@@ -4,13 +4,7 @@ import type { Entry, EntrySkeletonType } from 'contentful'
 import { type ReactElement, useMemo, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEntryResolver, useLiveUpdates, useOptimization } from '../../src'
-import {
-  BASELINE_IDS,
-  CONTENTFUL_SPACE_ID,
-  ENVIRONMENT,
-  EXPERIENCE_BASE_URL,
-  INSIGHTS_BASE_URL,
-} from './constants'
+import { BASELINE_IDS } from './constants'
 import { useDevEntries } from './hooks/useDevEntries'
 import { useOptimizationState } from './hooks/useOptimizationState'
 import { ControlsSection } from './sections/ControlsSection'
@@ -120,6 +114,10 @@ export function App(): ReactElement {
       <header className="dashboard__header">
         <h1>@contentful/optimization-react-web</h1>
         <p>Dev app wired to the React Router auto-page adapter.</p>
+        <p>
+          <a href="/?handoff=true">Preview and commit a paired handoff</a> (start the Node harness
+          on port 3001). <a href="/">Standalone browser flow</a>.
+        </p>
         <nav className="dashboard__nav" aria-label="Dev routes">
           {DEV_ROUTES.map(({ to, label }) => (
             <NavLink
@@ -138,7 +136,7 @@ export function App(): ReactElement {
       <section className="dashboard__grid" style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
         <article className="dashboard__card">
           <h2>SDK Wiring</h2>
-          <p>OptimizationRoot: Active</p>
+          <p>SDK owner: Active</p>
           <p>Auto page adapter: React Router</p>
           <p>{`Current route: ${location.pathname}${location.search}${location.hash}`}</p>
           <p>{activeRoute}</p>
@@ -228,13 +226,7 @@ export function App(): ReactElement {
 
       <LifecycleSection sdk={sdk} />
 
-      <ProvidersSection
-        spaceId={CONTENTFUL_SPACE_ID}
-        environment={ENVIRONMENT}
-        insightsBaseUrl={INSIGHTS_BASE_URL}
-        experienceBaseUrl={EXPERIENCE_BASE_URL}
-        sdk={sdk}
-      />
+      <ProvidersSection sdk={sdk} />
     </main>
   )
 }

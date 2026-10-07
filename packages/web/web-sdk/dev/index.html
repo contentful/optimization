@@ -146,6 +146,10 @@
   </head>
   <body>
     <h1>ContentfulOptimization Web SDK Dev Development Dashboard</h1>
+    <p>
+      <a href="/?handoff=true">Preview and commit a paired handoff</a> (start the Node harness on
+      port 3001). <a href="/">Standalone browser flow</a>.
+    </p>
 
     <ctfl-optimization-root id="web-components-root">
       <main>
@@ -290,8 +294,20 @@
         insecure: Boolean('<%= PUBLIC_CONTENTFUL_CDA_HOST %>'),
       })
 
-      // Initialize Contentful ContentfulOptimization Web SDK
+      let handoff
+      if (new URLSearchParams(location.search).get('handoff') === 'true') {
+        try {
+          const response = await fetch(`/__handoff?url=${encodeURIComponent(location.href)}`)
+          if (!response.ok) throw new Error(`Preview endpoint returned ${response.status}`)
+          handoff = await response.json()
+        } catch (error) {
+          console.warn('Dev handoff unavailable; using the ordinary browser flow', error)
+        }
+      }
+
+      // Initialize the browser's single SDK instance.
       new ContentfulOptimization({
+        defaults: handoff ? { consent: true, persistenceConsent: true } : undefined,
         spaceId: '<%= PUBLIC_CONTENTFUL_SPACE_ID %>',
         environment: '<%= PUBLIC_CONTENTFUL_ENVIRONMENT %>',
         logLevel: 'debug',
@@ -756,7 +772,13 @@
       })
 
       // Emit the initial page event after subscribers are attached so the dashboard can display it.
-      void contentfulOptimization.page()
+      if (handoff) {
+        await contentfulOptimization.hydrateAndTrackCurrentPage(handoff, {
+          routeKey: `${location.pathname}${location.search}`,
+        })
+      } else {
+        void contentfulOptimization.page()
+      }
     </script>
   </body>
 </html>
