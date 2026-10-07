@@ -90,7 +90,6 @@ class OptimizationConfigTest {
                 experienceBaseUrl = "http://localhost:8000/experience/",
                 insightsBaseUrl = "http://localhost:8000/insights/",
                 enabledFeatures = listOf("audiences", "experiences"),
-                preflight = true,
             ),
             logLevel = OptimizationLogLevel.debug,
         )
@@ -105,7 +104,6 @@ class OptimizationConfigTest {
         assertEquals("http://localhost:8000/insights/", api.getString("insightsBaseUrl"))
         assertEquals("audiences", enabledFeatures.getString(0))
         assertEquals("experiences", enabledFeatures.getString(1))
-        assertEquals(true, api.getBoolean("preflight"))
         assertEquals("debug", json.getString("logLevel"))
     }
 
