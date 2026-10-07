@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.2](https://github.com/contentful/optimization/compare/optimization-react-native-v2.0.1...optimization-react-native-v2.0.2) (2026-10-07)
+
+### Bug Fixes
+
+- **deps:** update dependency androidx.appcompat:appcompat to v1.8.0 ([#525](https://github.com/contentful/optimization/issues/525)) ([77f55a8](https://github.com/contentful/optimization/commit/77f55a8e8230c213ab5f389b06fd1cb915f28be2))
+
 ## [2.0.1](https://github.com/contentful/optimization/compare/optimization-react-native-v2.0.0...optimization-react-native-v2.0.1) (2026-09-23)
 
 ### Dependencies
