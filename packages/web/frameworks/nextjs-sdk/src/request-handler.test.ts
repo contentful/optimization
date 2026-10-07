@@ -1,66 +1,17 @@
+/** @rstest-environment node */
 import { NextFetchEvent as NextFetchEventConstructor } from 'next/dist/server/web/spec-extension/fetch-event.js'
 import { NextRequest, NextResponse, type NextFetchEvent } from 'next/server'
-import {
-  NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER,
-  parseNextjsOptimizationRequestContext,
-} from './request-context'
-import * as requestHandlerExports from './request-handler'
 import { createNextjsOptimizationContextHandler } from './request-handler'
 import {
   configureNextjsServerOptimization,
   type NextjsOptimizationServerConsentResolver,
-  type OptimizationData,
 } from './server'
 
-type RemovedRequestHandlerPrefix = 'createNextjsOptimization'
-type RemovedRequestHandlerSuffix = 'RequestHandler'
-type RemovedRequestHandlerExportName =
-  `${RemovedRequestHandlerPrefix}${RemovedRequestHandlerSuffix}`
-type RemovedRequestHandlerExportIsAbsent =
-  RemovedRequestHandlerExportName extends keyof typeof requestHandlerExports ? false : true
-
-const removedRequestHandlerExportIsAbsent: RemovedRequestHandlerExportIsAbsent = true
-const removedRequestHandlerExportName = ['createNextjsOptimization', 'RequestHandler'].join('')
-
-const sdkConfig = {
-  spaceId: 'key_123',
-  environment: 'main',
-}
-
-const optimizationData: OptimizationData = {
-  changes: [],
-  selectedOptimizations: [],
-  profile: {
-    id: 'f0837d7dc6344c36a3a0a06c4cde754b',
-    stableId: 'f0837d7dc6344c36a3a0a06c4cde754b',
-    random: 1,
-    audiences: [],
-    traits: {},
-    location: {},
-    session: {
-      id: 'e77eab64-93ca-4f6e-8492-037c1ff67caa',
-      isReturningVisitor: false,
-      landingPage: {
-        path: '/',
-        query: {},
-        referrer: '',
-        search: '',
-        title: '',
-        url: 'https://example.test/',
-      },
-      count: 1,
-      activeSessionLength: 0,
-      averageSessionLength: 0,
-    },
-  },
-}
+const sdkConfig = { spaceId: 'key_123', environment: 'main' }
+const profileId = 'f0837d7dc6344c36a3a0a06c4cde754b'
 
 function createNextFetchEvent(request: NextRequest): NextFetchEvent {
-  return new NextFetchEventConstructor({
-    context: { waitUntil: rs.fn() },
-    page: '/',
-    request,
-  })
+  return new NextFetchEventConstructor({ context: { waitUntil: rs.fn() }, page: '/', request })
 }
 
 afterEach(() => {
@@ -68,337 +19,175 @@ afterEach(() => {
 })
 
 describe('createNextjsOptimizationContextHandler', () => {
-  it('exports only the context handler and not the removed page-producing request handler', () => {
-    expect(removedRequestHandlerExportIsAbsent).toBe(true)
-    expect(requestHandlerExports.createNextjsOptimizationContextHandler).toBeTypeOf('function')
-    expect(removedRequestHandlerExportName in requestHandlerExports).toBe(false)
+  it('forwards the visible URL and sanitized context without SDK work', async () => {
+    const requestHandler = createNextjsOptimizationContextHandler()
+    const response = await requestHandler(
+      new NextRequest('https://example.com/products?search=two%20words&_rsc=123', {
+        headers: {
+          'user-agent': 'test-agent',
+          'x-ctfl-opt-request-url': 'https://attacker.test/forged',
+          'x-ctfl-opt-extra': 'forged',
+        },
+      }),
+    )
+    expect(response.headers.get('x-middleware-request-user-agent')).toBe('test-agent')
+    expect(response.headers.get('x-middleware-request-x-ctfl-opt-extra')).toBeNull()
+    expect(response.headers.get('x-middleware-request-x-ctfl-opt-request-url')).toBe(
+      'https://example.com/products?search=two+words',
+    )
   })
 
-  it('forwards sanitized request URL context without performing SDK work', async () => {
-    const nextSpy = rs.spyOn(NextResponse, 'next')
-    const requestHandler = createNextjsOptimizationContextHandler()
+  it('preserves prior request overrides, response headers and cookies', async () => {
     const request = new NextRequest('https://example.com/products?tab=featured', {
-      headers: {
-        'user-agent': 'test-agent',
-        'x-ctfl-opt-request-url': 'https://attacker.test/forged',
-        'x-ctfl-opt-extra': 'forged-extra',
-      },
+      headers: { 'user-agent': 'test-agent' },
     })
-
-    const response = await requestHandler(request)
-    const forwardedHeaders = (
-      nextSpy.mock.calls[0]?.[0] as { request?: { headers?: Headers } } | undefined
-    )?.request?.headers
-
-    expect(response).toBeInstanceOf(Response)
-    expect(forwardedHeaders?.get('user-agent')).toBe('test-agent')
-    expect(forwardedHeaders?.get('x-ctfl-opt-extra')).toBeNull()
-    expect(forwardedHeaders?.get('x-ctfl-opt-request-url')).toBe(
-      'https://example.com/products?tab=featured',
-    )
-    expect(Array.from(forwardedHeaders?.keys() ?? [])).toContain('user-agent')
-    expect(Array.from(forwardedHeaders?.keys() ?? [])).toContain('x-ctfl-opt-request-url')
-    expect(Array.from(forwardedHeaders?.keys() ?? [])).not.toContain('x-ctfl-opt-extra')
-  })
-
-  it('applies forwarded request context to an existing response while preserving response chain state', async () => {
-    const requestHandler = createNextjsOptimizationContextHandler()
-    const request = new NextRequest('https://example.com/products?tab=featured', {
-      headers: {
-        'user-agent': 'test-agent',
-      },
-    })
-    const existingRequestHeaders = new Headers(request.headers)
-    existingRequestHeaders.set('x-existing-request-handler', 'preserved')
-    existingRequestHeaders.set('x-ctfl-opt-extra', 'stale-sdk-context')
-    const existingResponse = NextResponse.next({ request: { headers: existingRequestHeaders } })
-    existingResponse.headers.set('x-existing-handler', 'preserved')
-    existingResponse.headers.set(
-      'x-middleware-override-headers',
-      Array.from(existingRequestHeaders.keys()).join(','),
-    )
-
-    for (const [name, value] of existingRequestHeaders) {
-      existingResponse.headers.set(`x-middleware-request-${name}`, value)
-    }
-
-    const response = await requestHandler(request, existingResponse)
-    const overrideHeaders = response.headers.get('x-middleware-override-headers')?.split(',')
-
-    expect(response).toBe(existingResponse)
+    const headers = new Headers(request.headers)
+    headers.set('x-existing-request-handler', 'preserved')
+    headers.set('x-ctfl-opt-extra', 'stale')
+    const prior = NextResponse.next({ request: { headers } })
+    prior.headers.set('x-existing-handler', 'preserved')
+    prior.cookies.set('app-cookie', '1')
+    const response = await createNextjsOptimizationContextHandler()(request, prior)
+    expect(response).toBe(prior)
     expect(response.headers.get('x-existing-handler')).toBe('preserved')
-    expect(overrideHeaders).toContain('x-existing-request-handler')
-    expect(overrideHeaders).toContain('user-agent')
-    expect(overrideHeaders).toContain('x-ctfl-opt-request-url')
-    expect(overrideHeaders).not.toContain('x-ctfl-opt-extra')
+    expect(response.cookies.get('app-cookie')?.value).toBe('1')
     expect(response.headers.get('x-middleware-request-x-existing-request-handler')).toBe(
       'preserved',
     )
+    expect(response.headers.get('x-middleware-override-headers')?.split(',')).toContain(
+      'x-existing-request-handler',
+    )
     expect(response.headers.get('x-middleware-request-x-ctfl-opt-extra')).toBeNull()
-    expect(response.headers.get('x-middleware-request-x-ctfl-opt-request-url')).toBe(
-      'https://example.com/products?tab=featured',
-    )
   })
 
-  it('applies SDK context and cookie persistence to an existing rewrite response', async () => {
+  it('refreshes an API-issued identity cookie on a rewrite without evaluating Experience', async () => {
     const sdk = configureNextjsServerOptimization(sdkConfig)
-    const upsertProfile = rs
-      .spyOn(sdk.api.experience, 'upsertProfile')
-      .mockResolvedValue(optimizationData)
-    const requestHandler = createNextjsOptimizationContextHandler({
-      consent: { events: true, persistence: true },
-      sdk,
-    })
-    const request = new NextRequest('https://example.com/products?tab=featured', {
-      headers: {
-        'user-agent': 'test-agent',
-      },
-    })
-    const rewriteUrl = new URL('/rewritten', request.url)
-    const existingResponse = new NextResponse(null)
-    existingResponse.headers.set('x-middleware-rewrite', rewriteUrl.toString())
-
-    const response = await requestHandler(request, existingResponse)
-    const context = parseNextjsOptimizationRequestContext(
-      response.headers.get(`x-middleware-request-${NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER}`),
-    )
-
-    expect(response).toBe(existingResponse)
-    expect(response.headers.get('x-middleware-rewrite')).toBe(rewriteUrl.toString())
-    expect(response.headers.get('x-middleware-request-x-ctfl-opt-request-url')).toBe(
-      'https://example.com/products?tab=featured',
-    )
-    expect(upsertProfile).toHaveBeenCalledTimes(1)
-    expect(context).toEqual({
-      consent: { events: true, persistence: true },
-      pageAccepted: true,
-      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
-    })
-    expect(response.cookies.get('ctfl-opt-aid')?.value).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
-  })
-
-  it('preserves an existing JSON response without SDK work or request-header mutation', async () => {
-    const sdk = configureNextjsServerOptimization(sdkConfig)
-    const upsertProfile = rs
-      .spyOn(sdk.api.experience, 'upsertProfile')
-      .mockRejectedValue(new Error('terminal response should not call SDK'))
-    const consent = rs.fn(() => ({ events: true, persistence: true }))
-    const requestHandler = createNextjsOptimizationContextHandler({ consent, sdk })
-    const terminalResponse = NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-
-    const response = await requestHandler(
-      new NextRequest('https://example.com/products', {
-        headers: {
-          'x-ctfl-opt-extra': 'stale-sdk-context',
-        },
-      }),
-      terminalResponse,
-    )
-
-    expect(response).toBe(terminalResponse)
-    expect(consent).not.toHaveBeenCalled()
-    expect(upsertProfile).not.toHaveBeenCalled()
-    expect(response.headers.get('x-middleware-override-headers')).toBeNull()
-    expect(response.headers.get('x-middleware-request-x-ctfl-opt-extra')).toBeNull()
-    expect(
-      response.headers.get(`x-middleware-request-${NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER}`),
-    ).toBeNull()
-    expect(response.headers.get('set-cookie')).toBeNull()
-  })
-
-  it('ignores the Next middleware/proxy event argument and returns a response', async () => {
-    const nextSpy = rs.spyOn(NextResponse, 'next')
-    const requestHandler = createNextjsOptimizationContextHandler()
-    const request = new NextRequest('https://example.com/products')
-
-    const response = await requestHandler(request, createNextFetchEvent(request))
-    const forwardedHeaders = (
-      nextSpy.mock.calls[0]?.[0] as { request?: { headers?: Headers } } | undefined
-    )?.request?.headers
-
-    expect(response).toBeInstanceOf(Response)
-    expect(forwardedHeaders?.get('x-ctfl-opt-request-url')).toBe('https://example.com/products')
-  })
-
-  it('calls Experience once, forwards compact server context, and persists the returned profile ID', async () => {
-    const nextSpy = rs.spyOn(NextResponse, 'next')
-    const sdk = configureNextjsServerOptimization(sdkConfig)
-    const upsertProfile = rs
-      .spyOn(sdk.api.experience, 'upsertProfile')
-      .mockResolvedValue(optimizationData)
-    const requestHandler = createNextjsOptimizationContextHandler({
-      consent: { events: true, persistence: true },
-      locale: 'en-US',
-      sdk,
-    })
-
-    const response = await requestHandler(
-      new NextRequest('https://example.com/products?tab=featured', {
-        headers: {
-          'user-agent': 'test-agent',
-          [NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER]: 'forged',
-        },
-      }),
-    )
-    const forwardedHeaders = (
-      nextSpy.mock.calls[0]?.[0] as { request?: { headers?: Headers } } | undefined
-    )?.request?.headers
-    const context = parseNextjsOptimizationRequestContext(
-      forwardedHeaders?.get(NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER) ?? null,
-    )
-
-    expect(forwardedHeaders?.get(NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER)).not.toBe('forged')
-    expect(upsertProfile).toHaveBeenCalledTimes(1)
-    expect(upsertProfile).toHaveBeenCalledWith(
-      expect.objectContaining({ profileId: undefined }),
-      expect.objectContaining({ locale: 'en-US' }),
-    )
-    expect(context).toEqual({
-      consent: { events: true, persistence: true },
-      pageAccepted: true,
-      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
-    })
-    expect(response.cookies.get('ctfl-opt-aid')?.value).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
-  })
-
-  it('does not forward oversized OptimizationData in the trusted server context header', async () => {
-    const nextSpy = rs.spyOn(NextResponse, 'next')
-    const sdk = configureNextjsServerOptimization(sdkConfig)
-    const largeTrait = 'x'.repeat(20_000)
-    const largeData: OptimizationData = {
-      ...optimizationData,
-      profile: {
-        ...optimizationData.profile,
-        traits: { largeTrait },
-      },
-    }
-    rs.spyOn(sdk.api.experience, 'upsertProfile').mockResolvedValue(largeData)
-    const requestHandler = createNextjsOptimizationContextHandler({
+    const upsert = rs.spyOn(sdk.api.experience, 'upsertProfile')
+    const get = rs.spyOn(sdk.api.experience, 'getProfile')
+    const handler = createNextjsOptimizationContextHandler({
       consent: true,
       sdk,
+      cookieOptions: {
+        domain: 'example.com',
+        path: '/products',
+        sameSite: 'strict',
+        secure: true,
+        maxAge: 86400,
+        httpOnly: true,
+      },
     })
-
-    await requestHandler(new NextRequest('https://example.com/products'))
-    const forwardedHeaders = (
-      nextSpy.mock.calls[0]?.[0] as { request?: { headers?: Headers } } | undefined
-    )?.request?.headers
-    const header = forwardedHeaders?.get(NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER) ?? null
-    const context = parseNextjsOptimizationRequestContext(header)
-
-    expect(decodeURIComponent(header ?? '')).not.toContain(largeTrait)
-    expect(header?.length).toBeLessThan(300)
-    expect(context).toEqual({
-      consent: true,
-      pageAccepted: true,
-      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
-    })
-  })
-
-  it('forwards blocked no-data server results with pageAccepted false', async () => {
-    const nextSpy = rs.spyOn(NextResponse, 'next')
-    const sdk = configureNextjsServerOptimization({ ...sdkConfig, allowedEventTypes: [] })
-    const upsertProfile = rs
-      .spyOn(sdk.api.experience, 'upsertProfile')
-      .mockRejectedValue(new Error('blocked page should not call Experience'))
-    const requestHandler = createNextjsOptimizationContextHandler({
-      consent: false,
-      sdk,
-    })
-
-    await requestHandler(new NextRequest('https://example.com/products'))
-    const forwardedHeaders = (
-      nextSpy.mock.calls[0]?.[0] as { request?: { headers?: Headers } } | undefined
-    )?.request?.headers
-    const context = parseNextjsOptimizationRequestContext(
-      forwardedHeaders?.get(NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER) ?? null,
-    )
-
-    expect(upsertProfile).not.toHaveBeenCalled()
-    expect(context).toEqual({
-      consent: false,
-      pageAccepted: false,
-    })
-  })
-
-  it('binds an incoming anonymous ID before persisting the returned profile ID', async () => {
-    const sdk = configureNextjsServerOptimization(sdkConfig)
-    const upsertProfile = rs
-      .spyOn(sdk.api.experience, 'upsertProfile')
-      .mockResolvedValue(optimizationData)
-    const requestHandler = createNextjsOptimizationContextHandler({
-      consent: { events: true, persistence: true },
-      sdk,
-    })
-
-    const request = new NextRequest('https://example.com/products')
-    request.cookies.set('ctfl-opt-aid', 'incoming-profile')
-
-    await requestHandler(request)
-
-    expect(upsertProfile).toHaveBeenCalledWith(
-      expect.objectContaining({ profileId: 'incoming-profile' }),
-      undefined,
-    )
-  })
-
-  it('uses forwarded cookie overrides for consent and profile binding on an existing response', async () => {
-    const sdk = configureNextjsServerOptimization(sdkConfig)
-    const upsertProfile = rs
-      .spyOn(sdk.api.experience, 'upsertProfile')
-      .mockResolvedValue(optimizationData)
-    const seenConsentCookies: Array<string | undefined> = []
-    const consent: NextjsOptimizationServerConsentResolver = ({ cookies }) => {
-      const value = cookies.get('consent')?.value
-      seenConsentCookies.push(value)
-      return value === 'yes' ? { events: true, persistence: true } : false
-    }
-    const requestHandler = createNextjsOptimizationContextHandler({ consent, sdk })
     const request = new NextRequest('https://example.com/products', {
-      headers: {
-        'user-agent': 'test-agent',
-      },
+      headers: { cookie: `ctfl-opt-aid=${profileId}` },
     })
-    request.cookies.set('ctfl-opt-aid', 'a19c3f54d2b84e37a93f6d1c0e5b7284')
-    request.cookies.set('consent', 'no')
-    const forwardedCookie = 'ctfl-opt-aid=f0837d7dc6344c36a3a0a06c4cde754b; consent=yes'
-    const forwardedHeaders = new Headers(request.headers)
-    forwardedHeaders.set('cookie', forwardedCookie)
-    const existingResponse = NextResponse.next({ request: { headers: forwardedHeaders } })
-    existingResponse.headers.set('x-middleware-override-headers', 'cookie,user-agent')
-    existingResponse.headers.set('x-middleware-request-cookie', forwardedCookie)
-    existingResponse.headers.set('x-middleware-request-user-agent', 'test-agent')
-
-    const response = await requestHandler(request, existingResponse)
-    const context = parseNextjsOptimizationRequestContext(
-      response.headers.get(`x-middleware-request-${NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER}`),
-    )
-
-    expect(response).toBe(existingResponse)
-    expect(seenConsentCookies).toEqual(['yes'])
-    expect(upsertProfile).toHaveBeenCalledTimes(1)
-    expect(upsertProfile).toHaveBeenCalledWith(
-      expect.objectContaining({ profileId: 'f0837d7dc6344c36a3a0a06c4cde754b' }),
-      undefined,
-    )
-    expect(context).toEqual({
-      consent: { events: true, persistence: true },
-      pageAccepted: true,
-      profileId: 'f0837d7dc6344c36a3a0a06c4cde754b',
+    const prior = NextResponse.rewrite(new URL('/rewritten', request.url))
+    const response = await handler(request, prior)
+    expect(response).toBe(prior)
+    expect(response.headers.get('x-middleware-rewrite')).toBe('https://example.com/rewritten')
+    expect(response.headers.get('x-middleware-request-cookie')).toBe(`ctfl-opt-aid=${profileId}`)
+    expect(response.cookies.get('ctfl-opt-aid')).toMatchObject({
+      value: profileId,
+      domain: 'example.com',
+      path: '/products',
+      sameSite: 'strict',
+      secure: true,
+      maxAge: 86400,
+      httpOnly: false,
     })
-    expect(response.cookies.get('ctfl-opt-aid')?.value).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
+    expect(upsert).not.toHaveBeenCalled()
+    expect(get).not.toHaveBeenCalled()
   })
 
-  it('clears the profile cookie when persistence is not allowed', async () => {
+  it('leaves identity absent when no API-issued ID is known', async () => {
     const sdk = configureNextjsServerOptimization(sdkConfig)
-    rs.spyOn(sdk.api.experience, 'upsertProfile').mockResolvedValue(optimizationData)
-    const requestHandler = createNextjsOptimizationContextHandler({
+    const upsert = rs.spyOn(sdk.api.experience, 'upsertProfile')
+    const response = await createNextjsOptimizationContextHandler({ consent: true, sdk })(
+      new NextRequest('https://example.com/products'),
+    )
+    expect(response.cookies.get('ctfl-opt-aid')).toBeUndefined()
+    expect(upsert).not.toHaveBeenCalled()
+  })
+
+  it.each(['json', 'redirect'] as const)('preserves a terminal %s response', async (kind) => {
+    const sdk = configureNextjsServerOptimization(sdkConfig)
+    const forRequest = rs.spyOn(sdk, 'forRequest')
+    const consent = rs.fn(() => true)
+    const prior =
+      kind === 'json'
+        ? NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+        : NextResponse.redirect('https://example.com/login')
+    const response = await createNextjsOptimizationContextHandler({ consent, sdk })(
+      new NextRequest('https://example.com/products'),
+      prior,
+    )
+    expect(response).toBe(prior)
+    expect(consent).not.toHaveBeenCalled()
+    expect(forRequest).not.toHaveBeenCalled()
+    expect(response.headers.get('x-middleware-override-headers')).toBeNull()
+  })
+
+  it('accepts the middleware event argument', async () => {
+    const request = new NextRequest('https://example.com/products')
+    const response = await createNextjsOptimizationContextHandler()(
+      request,
+      createNextFetchEvent(request),
+    )
+    expect(response.headers.get('x-middleware-request-x-ctfl-opt-request-url')).toBe(request.url)
+  })
+
+  it('uses prior cookie overrides for consent and identity', async () => {
+    const sdk = configureNextjsServerOptimization(sdkConfig)
+    const forRequest = rs.spyOn(sdk, 'forRequest')
+    const consent: NextjsOptimizationServerConsentResolver = ({ cookies }) =>
+      cookies.get('consent')?.value === 'yes'
+    const request = new NextRequest('https://example.com/products', {
+      headers: { cookie: 'consent=no; ctfl-opt-aid=old-id' },
+    })
+    const headers = new Headers(request.headers)
+    headers.set('cookie', `consent=yes; ctfl-opt-aid=${profileId}`)
+    const prior = NextResponse.next({ request: { headers } })
+    const response = await createNextjsOptimizationContextHandler({ consent, sdk })(request, prior)
+    expect(forRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ consent: true, profile: { id: profileId } }),
+    )
+    expect(response.cookies.get('ctfl-opt-aid')?.value).toBe(profileId)
+    expect(response.headers.get('x-middleware-request-cookie')).toBe(headers.get('cookie'))
+  })
+
+  it('respects a removed cookie header in prior request overrides', async () => {
+    const sdk = configureNextjsServerOptimization(sdkConfig)
+    const forRequest = rs.spyOn(sdk, 'forRequest')
+    const request = new NextRequest('https://example.com/products', {
+      headers: { cookie: `ctfl-opt-aid=${profileId}` },
+    })
+    const prior = NextResponse.next({ request: { headers: new Headers({ 'user-agent': 'test' }) } })
+    const response = await createNextjsOptimizationContextHandler({ consent: true, sdk })(
+      request,
+      prior,
+    )
+    expect(forRequest).toHaveBeenCalledWith(expect.objectContaining({ profile: undefined }))
+    expect(response.cookies.get('ctfl-opt-aid')).toBeUndefined()
+  })
+
+  it('clears the cookie using configured scope when persistence is denied', async () => {
+    const sdk = configureNextjsServerOptimization(sdkConfig)
+    const handler = createNextjsOptimizationContextHandler({
       consent: { events: true, persistence: false },
       sdk,
+      cookieOptions: { domain: 'example.com', path: '/products', secure: true, sameSite: 'strict' },
     })
-
-    const response = await requestHandler(new NextRequest('https://example.com/products'))
-
-    expect(response.headers.get('set-cookie')).toContain('ctfl-opt-aid=')
+    const response = await handler(
+      new NextRequest('https://example.com/products', {
+        headers: { cookie: `ctfl-opt-aid=${profileId}` },
+      }),
+    )
+    expect(response.cookies.get('ctfl-opt-aid')).toMatchObject({
+      value: '',
+      domain: 'example.com',
+      path: '/products',
+      maxAge: 0,
+      secure: true,
+      sameSite: 'strict',
+    })
     expect(response.headers.get('set-cookie')).toContain('Expires=Thu, 01 Jan 1970 00:00:00 GMT')
   })
 })

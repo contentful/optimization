@@ -3,7 +3,10 @@ import {
   type CoreStatelessRequest,
   type OptimizationData,
 } from '@contentful/optimization-react-web/core-sdk'
-import type { NextjsCookieReader } from './bound-component-types'
+import type { NextjsCookieReader, NextjsOptimizationCookieConfig } from './bound-component-types'
+import type { NextjsResponseLike } from './server'
+
+const SECONDS_IN_DAY = 86_400
 
 export const DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE = ANONYMOUS_ID_COOKIE
 
@@ -58,31 +61,40 @@ export function createCookieReaderFromHeader(
 export function createNextjsAnonymousIdSetCookieHeader(
   requestOptimization: CoreStatelessRequest,
   data: OptimizationData | undefined,
+  options: PersistNextjsAnonymousIdOptions = {},
+): string | undefined {
+  const cookie = resolveAnonymousIdCookie(requestOptimization, data, options)
+  return cookie === undefined
+    ? undefined
+    : serializeCookie(cookie.name, cookie.value, cookie.options)
+}
+
+function resolveAnonymousIdCookie(
+  requestOptimization: CoreStatelessRequest,
+  data: OptimizationData | undefined,
   {
     anonymousIdCookieName = DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE,
     cookieOptions,
     deleteWhenProfileCannotPersist = true,
-  }: PersistNextjsAnonymousIdOptions = {},
-): string | undefined {
+  }: PersistNextjsAnonymousIdOptions,
+):
+  | {
+      readonly name: string
+      readonly value: string
+      readonly options: NextjsAnonymousIdCookieOptions
+    }
+  | undefined {
   const profileId = data?.profile.id ?? requestOptimization.profile?.id
-
-  if (requestOptimization.canPersistProfile && profileId) {
-    return serializeCookie(anonymousIdCookieName, profileId, {
-      path: '/',
-      sameSite: 'lax',
-      ...cookieOptions,
-    })
+  const options: NextjsAnonymousIdCookieOptions = { path: '/', sameSite: 'lax', ...cookieOptions }
+  if (requestOptimization.canPersistProfile) {
+    return profileId ? { name: anonymousIdCookieName, value: profileId, options } : undefined
   }
-
   if (!deleteWhenProfileCannotPersist) return undefined
-
-  return serializeCookie(anonymousIdCookieName, '', {
-    path: '/',
-    sameSite: 'lax',
-    ...cookieOptions,
-    expires: new Date(0),
-    maxAge: 0,
-  })
+  return {
+    name: anonymousIdCookieName,
+    value: '',
+    options: { ...options, expires: new Date(0), maxAge: 0 },
+  }
 }
 
 function readCookieHeaderValue(cookieHeader: string, cookieName: string): string | undefined {
@@ -137,4 +149,27 @@ function serializeSameSite(
   if (sameSite === true) return 'Strict'
 
   return sameSite.slice(0, 1).toUpperCase() + sameSite.slice(1)
+}
+
+export function toNextjsAnonymousIdCookieOptions(
+  cookie: NextjsOptimizationCookieConfig | undefined,
+): NextjsAnonymousIdCookieOptions | undefined {
+  if (cookie === undefined) return undefined
+  const { expires, ...attributes } = cookie
+  return {
+    ...attributes,
+    ...(typeof expires === 'number' && Number.isFinite(expires)
+      ? { maxAge: Math.trunc(expires * SECONDS_IN_DAY) }
+      : {}),
+  }
+}
+
+export function persistNextjsAnonymousId(
+  response: NextjsResponseLike,
+  requestOptimization: CoreStatelessRequest,
+  data: OptimizationData | undefined,
+  options: PersistNextjsAnonymousIdOptions = {},
+): void {
+  const cookie = resolveAnonymousIdCookie(requestOptimization, data, options)
+  if (cookie !== undefined) response.cookies.set(cookie.name, cookie.value, cookie.options)
 }

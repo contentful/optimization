@@ -10,6 +10,7 @@ import type {
   CoreStatelessRequestOptions,
   EventEmissionResult,
   FetchOptimizedEntryResult,
+  InitialExperienceEvent,
   ManagedEntryHandoff,
   PageViewBuilderArgs,
   PrivateRequestOptimizationCacheMetadata,
@@ -19,11 +20,7 @@ import { createPageContextFromUrl } from '@contentful/optimization-node/core-sdk
 import type { ChainModifiers, EntrySkeletonType, LocaleCode } from 'contentful'
 import type { JSX, ReactElement, ReactNode } from 'react'
 import type { NextjsCookieReader } from './bound-component-types'
-import {
-  DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE,
-  type NextjsAnonymousIdCookieOptions,
-  type PersistNextjsAnonymousIdOptions,
-} from './cookies'
+import { DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE, type NextjsAnonymousIdCookieOptions } from './cookies'
 import type {
   AnalyticsOptimizationHandoff,
   BrowserOptimizationHandoff,
@@ -68,6 +65,7 @@ export type {
 } from './bound-component-types'
 export {
   DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE,
+  persistNextjsAnonymousId,
   type NextjsAnonymousIdCookieOptions,
   type PersistNextjsAnonymousIdOptions,
 } from './cookies'
@@ -126,10 +124,13 @@ export interface NextjsRequestHandoffOptions extends NextjsServerOptimizationDat
   readonly cache?: PrivateRequestOptimizationCacheMetadata
   readonly entries?: readonly ManagedEntryHandoff[]
   readonly hydration: OptimizationHydrationMode
-  readonly pagePayload: PageViewBuilderArgs
+  readonly initialEvents?: readonly InitialExperienceEvent[]
 }
 
-export interface NextjsRequestHandoffResult extends NextjsServerOptimizationData {
+export interface NextjsRequestHandoffResult extends Omit<
+  NextjsServerOptimizationData,
+  'pageResult'
+> {
   readonly handoff: BrowserOptimizationHandoff
 }
 
@@ -367,11 +368,19 @@ export async function getNextjsServerOptimizationData(
 export function createNextjsRequestHandoff(
   sdk: ContentfulOptimization,
   options: NextjsRequestHandoffOptions & { readonly hydration: 'analytics-only' },
-): Promise<NextjsServerOptimizationData & { readonly handoff: AnalyticsOptimizationHandoff }>
+): Promise<
+  Omit<NextjsServerOptimizationData, 'pageResult'> & {
+    readonly handoff: AnalyticsOptimizationHandoff
+  }
+>
 export function createNextjsRequestHandoff(
   sdk: ContentfulOptimization,
   options: NextjsRequestHandoffOptions & { readonly hydration: ContentOptimizationHydrationMode },
-): Promise<NextjsServerOptimizationData & { readonly handoff: ContentOptimizationHandoff }>
+): Promise<
+  Omit<NextjsServerOptimizationData, 'pageResult'> & {
+    readonly handoff: ContentOptimizationHandoff
+  }
+>
 export function createNextjsRequestHandoff(
   sdk: ContentfulOptimization,
   options: NextjsRequestHandoffOptions,
@@ -380,56 +389,26 @@ export async function createNextjsRequestHandoff(
   sdk: ContentfulOptimization,
   options: NextjsRequestHandoffOptions,
 ): Promise<NextjsRequestHandoffResult> {
-  const { cache, entries, hydration, ...requestOptions } = options
-  const { data, pageResult, requestOptimization } = await getNextjsServerOptimizationData(
-    sdk,
-    requestOptions,
-  )
+  const { cache, entries, hydration, initialEvents, ...requestOptions } = options
+  const requestOptimization = bindNextjsOptimizationRequest(sdk, requestOptions)
+  const requestUrl =
+    options.request?.url ?? getRequestHeaders(options)?.get(NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER)
+  const routePage = requestUrl
+    ? createPageContextFromUrl(requestUrl)
+    : getExplicitPage(options.page)
+  const { handoff: prepared, data } = await requestOptimization.prepareRequestHandoff({
+    routeKey: `${routePage?.path ?? ''}${routePage?.search ?? ''}`,
+    initialEvents,
+    page: options.pagePayload,
+  })
   const handoff = addBrowserHandoffMetadata(
-    createRequestHandoffFromData({
-      ...(cache === undefined ? {} : { cache }),
-      data,
-      ...(entries === undefined ? {} : { entries }),
-    }),
     {
-      hydration,
-      initialPageEvent: pageResult.accepted ? 'skip' : 'emit',
+      ...prepared,
+      ...createRequestHandoffFromData({ cache, data, entries }),
     },
+    { hydration },
   )
-
-  return { data, handoff, pageResult, requestOptimization }
-}
-
-export function persistNextjsAnonymousId(
-  response: NextjsResponseLike,
-  requestOptimization: CoreStatelessRequest,
-  data: OptimizationData | undefined,
-  {
-    anonymousIdCookieName = DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE,
-    cookieOptions,
-    deleteWhenProfileCannotPersist = true,
-  }: PersistNextjsAnonymousIdOptions = {},
-): void {
-  const profileId = data?.profile.id ?? requestOptimization.profile?.id
-
-  if (requestOptimization.canPersistProfile && profileId) {
-    response.cookies.set(anonymousIdCookieName, profileId, {
-      path: '/',
-      sameSite: 'lax',
-      ...cookieOptions,
-    })
-    return
-  }
-
-  if (deleteWhenProfileCannotPersist) {
-    response.cookies.set(anonymousIdCookieName, '', {
-      path: '/',
-      sameSite: 'lax',
-      ...cookieOptions,
-      expires: new Date(0),
-      maxAge: 0,
-    })
-  }
+  return { data, handoff, requestOptimization }
 }
 
 function getServerOptimizedEntryData<

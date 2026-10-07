@@ -1,4 +1,5 @@
 import ContentfulOptimizationRuntime from '@contentful/optimization-node'
+import type { ExperienceApiClient } from '@contentful/optimization-node/api-client'
 import type { Entry } from 'contentful'
 import type { GetServerSidePropsContext } from 'next'
 import { IncomingMessage, ServerResponse } from 'node:http'
@@ -7,7 +8,6 @@ import * as pagesRouterServerExports from './pages-router-server'
 import {
   configureNextjsServerOptimization,
   type ContentfulOptimization,
-  type CoreStatelessRequest,
   type OptimizationData,
 } from './server'
 
@@ -53,14 +53,14 @@ afterEach(() => {
 
 interface CreatedSdk {
   readonly forRequest: ReturnType<typeof rs.spyOn>
-  readonly page: ReturnType<typeof rs.fn<CoreStatelessRequest['page']>>
+  readonly preview: ReturnType<typeof rs.fn<ExperienceApiClient['upsertProfile']>>
   readonly sdk: ContentfulOptimization
 }
 type NextjsOptimizationConfig = Parameters<typeof configureNextjsServerOptimization>[0]
 
 function createSdk(
-  page = rs.fn<CoreStatelessRequest['page']>(
-    async () => await Promise.resolve({ accepted: true, data: OPTIMIZATION_DATA }),
+  preview = rs.fn<ExperienceApiClient['upsertProfile']>(
+    async () => await Promise.resolve(OPTIMIZATION_DATA),
   ),
   config: NextjsOptimizationConfig = SDK_CONFIG,
 ): CreatedSdk {
@@ -70,20 +70,20 @@ function createSdk(
 
   forRequest.mockImplementation((options) => {
     const requestOptimization = originalForRequest(options)
-    rs.spyOn(requestOptimization, 'page').mockImplementation(page)
+    rs.spyOn(sdk.api.experience, 'upsertProfile').mockImplementation(preview)
     return requestOptimization
   })
 
-  return { forRequest, page, sdk }
+  return { forRequest, preview, sdk }
 }
 
-function mockPrototypeRequestPage(): {
+function mockPrototypeRequestPreview(): {
   readonly forRequest: ReturnType<typeof rs.spyOn>
-  readonly page: ReturnType<typeof rs.fn<CoreStatelessRequest['page']>>
+  readonly preview: ReturnType<typeof rs.fn<ExperienceApiClient['upsertProfile']>>
 } {
   const originalForRequest = ContentfulOptimizationRuntime.prototype.forRequest
-  const page = rs.fn<CoreStatelessRequest['page']>(
-    async () => await Promise.resolve({ accepted: true, data: OPTIMIZATION_DATA }),
+  const preview = rs.fn<ExperienceApiClient['upsertProfile']>(
+    async () => await Promise.resolve(OPTIMIZATION_DATA),
   )
   const forRequest = rs.spyOn(ContentfulOptimizationRuntime.prototype, 'forRequest')
 
@@ -92,11 +92,11 @@ function mockPrototypeRequestPage(): {
     options,
   ) {
     const requestOptimization = originalForRequest.call(this, options)
-    rs.spyOn(requestOptimization, 'page').mockImplementation(page)
+    rs.spyOn(this.api.experience, 'upsertProfile').mockImplementation(preview)
     return requestOptimization
   })
 
-  return { forRequest, page }
+  return { forRequest, preview }
 }
 
 function createEntry(id: string): Entry {
@@ -167,16 +167,15 @@ function createContext({
 }
 
 describe('Next.js Pages Router server handoff helpers', () => {
-  it('exports the server binding helper without the removed Pages Router create* name', () => {
+  it('exports server binding and public permutation helpers', () => {
     expect(pagesRouterServerExports.bindNextjsPagesRouterServerOptimization).toBeTypeOf('function')
     expect(pagesRouterServerExports.createPublicPermutationCacheMetadata).toBeTypeOf('function')
     expect(pagesRouterServerExports.createPublicPermutationHandoff).toBeTypeOf('function')
     expect(pagesRouterServerExports.resolveEntriesForSelections).toBeTypeOf('function')
-    expect(pagesRouterServerExports).not.toHaveProperty('createNextjsPagesRouterOptimization')
   })
 
   it('creates a config-bound request handoff helper', async () => {
-    const { forRequest } = mockPrototypeRequestPage()
+    const { forRequest } = mockPrototypeRequestPreview()
     const resolveConsent = rs.fn(
       (context: { readonly cookies: { get: (name: string) => unknown } }) =>
         context.cookies.get('consent') ? { events: true, persistence: true } : false,
@@ -201,7 +200,6 @@ describe('Next.js Pages Router server handoff helpers', () => {
         locale: 'de-DE',
       }),
     )
-    expect(handoff.initialPageEvent).toBe('skip')
     expect(handoff).toMatchObject({
       defaults: { consent: true, persistenceConsent: true },
     })
@@ -210,8 +208,8 @@ describe('Next.js Pages Router server handoff helpers', () => {
     )
   })
 
-  it('builds request context from getServerSideProps context and calls page', async () => {
-    const { forRequest, page, sdk } = createSdk()
+  it('builds request context from getServerSideProps context and previews the page', async () => {
+    const { forRequest, preview, sdk } = createSdk()
 
     const result = await createNextjsPagesRouterRequestHandoff(
       sdk,
@@ -231,7 +229,7 @@ describe('Next.js Pages Router server handoff helpers', () => {
       },
     )
 
-    expect(result.handoff.initialPageEvent).toBe('skip')
+    expect(result.handoff.replay?.routeKey).toBe('/products?tab=featured')
     expect(result.handoff.state?.profile?.id).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
     expect(forRequest).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -250,26 +248,37 @@ describe('Next.js Pages Router server handoff helpers', () => {
         locale: 'de-DE',
       }),
     )
-    expect(page).toHaveBeenCalledWith({ properties: { route: '/products' } })
+    expect(preview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        events: [
+          expect.objectContaining({
+            type: 'page',
+            properties: expect.objectContaining({ route: '/products' }),
+          }),
+        ],
+      }),
+      expect.objectContaining({ preflight: true, locale: 'de-DE' }),
+    )
   })
 
-  it.each([
-    ['accepted without data', { accepted: true }, 'skip'],
-    ['blocked', { accepted: false }, 'emit'],
-  ] as const)(
-    'sets initialPageEvent from page acceptance for %s',
-    async (_label, pageResult, expectedInitialPageEvent) => {
-      const { sdk } = createSdk(
-        rs.fn<CoreStatelessRequest['page']>(async () => await Promise.resolve(pageResult)),
-      )
-
-      const result = await createNextjsPagesRouterRequestHandoff(sdk, createContext(), {
+  it.each([undefined, 'known-api-id'])(
+    'retains replay and known identity on preview failure (%s)',
+    async (knownId) => {
+      const { sdk, preview } = createSdk()
+      preview.mockRejectedValue(new Error('Preview unavailable'))
+      const context = createContext({ cookies: knownId ? { 'ctfl-opt-aid': knownId } : {} })
+      const result = await createNextjsPagesRouterRequestHandoff(sdk, context, {
         consent: true,
         hydration: 'preserve-server',
-        pagePayload: { properties: { route: '/products' } },
       })
-
-      expect(result.handoff.initialPageEvent).toBe(expectedInitialPageEvent)
+      expect(result.data).toBeUndefined()
+      expect(result.handoff.profileId).toBe(knownId)
+      expect(result.handoff.replay).toMatchObject({
+        routeKey: '/products?tab=featured',
+        events: [expect.objectContaining({ type: 'page' })],
+      })
+      if (knownId) expect(context.res.getHeader('Set-Cookie')).toContain(`ctfl-opt-aid=${knownId}`)
+      else expect(context.res.getHeader('Set-Cookie')).toBeUndefined()
     },
   )
 
@@ -308,7 +317,7 @@ describe('Next.js Pages Router server handoff helpers', () => {
     )
   })
 
-  it('prefetches declared managed entries into handoff entries after request data loads', async () => {
+  it('prefetches declared managed entries into handoff entries alongside preview', async () => {
     const calls: string[] = []
     const baselineEntry = createEntry('4ib0hsHWoSOnCVdDkizE8d')
     const existingEntry = createEntry('4k6ZyFQnR2POY5IJLLlJRb')
@@ -317,11 +326,11 @@ describe('Next.js Pages Router server handoff helpers', () => {
       calls.push('fetch')
       return await Promise.resolve(createEntryCollection([baselineEntry]))
     })
-    const page = rs.fn<CoreStatelessRequest['page']>(async () => {
-      calls.push('page')
-      return await Promise.resolve({ accepted: true, data: OPTIMIZATION_DATA })
+    const preview = rs.fn<ExperienceApiClient['upsertProfile']>(async () => {
+      calls.push('preview')
+      return await Promise.resolve(OPTIMIZATION_DATA)
     })
-    const { sdk } = createSdk(page, {
+    const { sdk } = createSdk(preview, {
       ...SDK_CONFIG,
       contentful: { client: { getEntry, getEntries }, cache: false },
     })
@@ -347,7 +356,7 @@ describe('Next.js Pages Router server handoff helpers', () => {
       ],
     })
 
-    expect(calls).toEqual(['page', 'fetch'])
+    expect(calls).toEqual(['fetch', 'preview'])
     expect(getEntry).not.toHaveBeenCalled()
     expect(getEntries).toHaveBeenCalledTimes(1)
     expect(getEntries).toHaveBeenCalledWith({
