@@ -6,17 +6,16 @@ import {
   createNextjsPublicPermutationCacheMiddleware,
   type NextjsPublicPermutationCacheMiddleware,
 } from '@contentful/optimization-nextjs/cache-middleware'
-import { createNextjsOptimizationContextHandler } from '@contentful/optimization-nextjs/request-handler'
 import { type NextjsOptimizationServerConsentResolver } from '@contentful/optimization-nextjs/server'
 import { getServerTrackingAttributes } from '@contentful/optimization-nextjs/tracking-attributes'
 import type { NextRequest, NextResponse } from 'next/server'
 import { appConfig } from './config'
 import { client } from './contentful'
 import { getCustomerSegment, type CustomerSegment } from './customer-segments'
-import { ClientRequestOptimizationRoot } from './optimization-client'
 import { getAppConsent } from './util'
 
 const HIDDEN_UNTIL_READY_ROUTE = '/hidden-until-ready'
+const INITIAL_IDENTIFY_QUERY_VALUE = 'readiness'
 const PUBLIC_HANDOFF_PREFIXES = ['/selection-handoff/', '/analytics-only/'] as const
 
 type AppRouterOptimization = ReturnType<typeof bindNextjsAppRouterServerOptimization>
@@ -39,28 +38,25 @@ const serverOptimizationConfig = {
 const serverConsent: NextjsOptimizationServerConsentResolver = ({ cookies }) =>
   getAppConsent(cookies) ? { events: true, persistence: true } : false
 
-const optimization = bindNextjsAppRouterServerOptimization(
-  {
-    ...serverOptimizationConfig,
-    contentful: { client },
-    trackEntryInteraction: { views: true, clicks: true, hovers: true },
-    consent: {
-      server: serverConsent,
-      clientDefaults: { consent: false, persistenceConsent: false },
-    },
-    request: {
-      hydration: ({ routeKey }) =>
-        routeKey.split('?')[0] === HIDDEN_UNTIL_READY_ROUTE
-          ? 'client-only-hidden-until-ready'
-          : 'preserve-server',
-    },
+const optimization = bindNextjsAppRouterServerOptimization({
+  ...serverOptimizationConfig,
+  contentful: { client },
+  trackEntryInteraction: { views: true, clicks: true, hovers: true },
+  consent: {
+    server: serverConsent,
+    clientDefaults: { consent: false, persistenceConsent: false },
   },
-  {
-    request: {
-      OptimizationRoot: ClientRequestOptimizationRoot,
-    },
+  request: {
+    hydration: ({ routeKey }) =>
+      routeKey.split('?')[0] === HIDDEN_UNTIL_READY_ROUTE
+        ? 'client-only-hidden-until-ready'
+        : 'preserve-server',
+    initialEvents: ({ requestUrl }) =>
+      new URL(requestUrl).searchParams.get('beforeInitialPage') === INITIAL_IDENTIFY_QUERY_VALUE
+        ? [{ type: 'identify', userId: 'charles', traits: { identified: true } }]
+        : [],
   },
-)
+})
 
 export const {
   OptimizationAnalyticsRoot,
@@ -71,8 +67,12 @@ export const {
   createPublicPermutationHandoff,
   resolveEntriesForSelections,
 } = optimization
-export const { OptimizationRoot: RequestOptimizationRoot, OptimizedEntry: RequestOptimizedEntry } =
-  optimization.request
+export const {
+  NextAppAutoPageTracker: RequestPageTracker,
+  OptimizationProvider: RequestOptimizationProvider,
+  OptimizationRoot: RequestOptimizationRoot,
+  OptimizedEntry: RequestOptimizedEntry,
+} = optimization.request
 export { getServerTrackingAttributes }
 
 const cacheMiddleware: NextjsPublicPermutationCacheMiddleware =
@@ -94,14 +94,11 @@ const cacheMiddleware: NextjsPublicPermutationCacheMiddleware =
     },
   })
 
-const forwardOptimizationContext = createNextjsOptimizationContextHandler()
-
 export function createCustomerSegmentHandoff(segment: CustomerSegment): ContentHandoff {
   return createPublicPermutationHandoff({
     cacheVersion: segment.cacheVersion,
     entryIds: segment.baselineEntryIds,
     hydration: 'preserve-server',
-    initialPageEvent: 'emit',
     locale: segment.locale,
     permutationKey: segment.slug,
     selectedOptimizations: segment.selectedOptimizations,
@@ -114,7 +111,6 @@ export function createCustomerSegmentAnalyticsHandoff(segment: CustomerSegment) 
     cacheVersion: segment.cacheVersion,
     entryIds: segment.baselineEntryIds,
     hydration: 'analytics-only',
-    initialPageEvent: 'emit',
     locale: segment.locale,
     permutationKey: segment.slug,
     selectedOptimizations: segment.selectedOptimizations,
@@ -139,7 +135,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return cacheMiddleware(request)
   }
 
-  return forwardOptimizationContext(request)
+  return optimization.requestHandler(request)
 }
 
 function isPublicHandoffPath(pathname: string): boolean {

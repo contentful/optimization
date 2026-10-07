@@ -1,7 +1,7 @@
 import { AppShellBody, AppShellChrome, PersonalizedContentFallback } from '@/components/AppShell'
 import { GlobalLiveUpdatesProvider } from '@/components/GlobalLiveUpdatesProvider'
 import { PreviewPanel } from '@/components/PreviewPanel'
-import { RequestOptimizationRoot } from '@/lib/optimization'
+import { RequestOptimizationProvider } from '@/lib/optimization'
 import { connection } from 'next/server'
 import { Suspense, type ReactNode } from 'react'
 
@@ -13,12 +13,12 @@ async function RequestRuntime({
   await connection()
 
   return (
-    <RequestOptimizationRoot>
+    <RequestOptimizationProvider>
       <GlobalLiveUpdatesProvider>
         <PreviewPanel />
         <AppShellBody>{children}</AppShellBody>
       </GlobalLiveUpdatesProvider>
-    </RequestOptimizationRoot>
+    </RequestOptimizationProvider>
   )
 }
 
