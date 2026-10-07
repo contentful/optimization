@@ -1,6 +1,7 @@
 import type { OptimizationData } from './api-schemas'
 import CoreStateless from './CoreStateless'
 import type { InitialExperienceEvent } from './CoreStatelessRequest'
+import { createPageContextFromUrl } from './page-context'
 import { profile } from './test/fixtures/profile'
 import { selectedOptimizations } from './test/fixtures/selectedOptimizations'
 
@@ -52,6 +53,58 @@ describe('request handoff preparation', () => {
     expect(request.profile).toBe(returned.profile)
     expect(request.canPersistProfile).toBe(true)
     expect(handoff.state).toBeUndefined()
+  })
+
+  it.each([undefined, {}, { properties: { title: 'Product catalogue' } }])(
+    'defaults paired page properties from bound request context (%j)',
+    async (page) => {
+      const boundPage = createPageContextFromUrl('https://example.test/products?tab=featured', {
+        referrer: 'https://example.test/home',
+      })
+      const core = new CoreStateless({ spaceId: 'key_123' })
+      const preview = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue(DATA)
+      const request = core.forRequest({ consent: true, eventContext: { page: boundPage } })
+      const { handoff } = await request.prepareRequestHandoff({
+        routeKey: '/products?tab=featured',
+        page,
+      })
+      expect(handoff.replay?.events[0]).toMatchObject({
+        type: 'page',
+        context: { page: boundPage },
+        properties: { ...boundPage, title: page?.properties?.title ?? '' },
+      })
+      expect(preview).toHaveBeenCalledWith(
+        { profileId: undefined, events: handoff.replay?.events },
+        expect.objectContaining({ preflight: true }),
+      )
+    },
+  )
+
+  it('preserves explicit payload overrides without changing the replay route or ordinary page defaults', async () => {
+    const boundPage = createPageContextFromUrl('https://example.test/products?tab=featured')
+    const core = new CoreStateless({ spaceId: 'key_123' })
+    const preview = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue(DATA)
+    const request = core.forRequest({ consent: true, eventContext: { page: boundPage } })
+    const { handoff } = await request.prepareRequestHandoff({
+      routeKey: '/products?tab=featured',
+      page: { properties: { url: 'https://analytics.test/override', title: 'Custom title' } },
+    })
+    expect(handoff.replay?.routeKey).toBe('/products?tab=featured')
+    expect(handoff.replay?.events[0]).toMatchObject({
+      context: { page: boundPage },
+      properties: { ...boundPage, url: 'https://analytics.test/override', title: 'Custom title' },
+    })
+    const ordinary = await request.page()
+    expect(ordinary.accepted).toBe(true)
+    expect(preview.mock.calls[1]?.[0].events[0]).toMatchObject({
+      context: { page: boundPage },
+      properties: { path: '', url: '' },
+    })
+    // Ordinary calls retain their existing event-builder defaults.
+    const noContext = await core
+      .forRequest({ consent: true })
+      .prepareRequestHandoff({ routeKey: '/' })
+    expect(noContext.handoff.replay?.events[0]).toMatchObject({ properties: { path: '', url: '' } })
   })
 
   it('uses the profile ID returned by preview when the request has no known ID', async () => {

@@ -258,7 +258,14 @@ export class CoreStatelessRequest {
           : this.core.eventBuilder.buildTrack(this.withEventContext(input)),
       )
     }
-    inputs.push(this.core.eventBuilder.buildPageView(this.withEventContext(page)))
+    inputs.push(
+      this.core.eventBuilder.buildPageView(
+        this.withEventContext({
+          ...page,
+          properties: { ...this.eventContext.page, ...page.properties },
+        }),
+      ),
+    )
     const events: Array<ExperienceEventPayload | InsightsEventPayload> = []
     for (const event of inputs) {
       events.push(
