@@ -51,7 +51,6 @@ export function OptimizationAnalyticsRoot(props: OptimizationAnalyticsRootProps)
   const hydrationGeneration = useRef(0)
   const initialPropsRef = useRef(props)
   const runtimeRef = useRef<OptimizationAnalyticsRuntime | undefined>(undefined)
-  const skippedInitialRouteKey = useRef<string | null | undefined>(undefined)
   const resolvedBuildPagePayload = useMemo(
     () => buildPagePayload ?? (() => initialPagePayload),
     [buildPagePayload, initialPagePayload],
@@ -75,28 +74,11 @@ export function OptimizationAnalyticsRoot(props: OptimizationAnalyticsRootProps)
     const generation = (hydrationGeneration.current += 1)
     const isCurrent = (): boolean => !disposed && hydrationGeneration.current === generation
 
-    if (skippedInitialRouteKey.current === undefined) {
-      skippedInitialRouteKey.current = handoff.initialPageEvent === 'skip' ? routeKey : null
-    }
-
-    const initialPageEvent = skippedInitialRouteKey.current === routeKey ? 'skip' : 'emit'
-
-    if (skippedInitialRouteKey.current !== routeKey) {
-      skippedInitialRouteKey.current = null
-    }
-
-    void hydrateOptimizationAnalyticsHandoff(
-      runtime,
-      {
-        ...handoff,
-        initialPageEvent,
-      },
-      {
-        buildPagePayload: resolvedBuildPagePayload,
-        isCurrent,
-        routeKey,
-      },
-    ).catch((error: unknown) => {
+    void hydrateOptimizationAnalyticsHandoff(runtime, handoff, {
+      buildPagePayload: resolvedBuildPagePayload,
+      isCurrent,
+      routeKey,
+    }).catch((error: unknown) => {
       if (isCurrent()) {
         logger.warn('OptimizationAnalyticsRoot failed to hydrate handoff.', error)
       }

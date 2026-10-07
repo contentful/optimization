@@ -25,6 +25,9 @@ React-facing entry resolution primitives.
 
 - Run `typecheck`, `test:unit`, and `build`.
 - Handle bundle-size failures under the root `Bundle size` policy.
+- For approved increases to exceeded budgets or requested normalization, set each authorized budget
+  to `ceil((measuredGzipBytes + 100) / 100) * 100` under the root
+  [Bundle size](../../../../AGENTS.md#bundle-size) measurement and approval rules.
 - Before React Web `build`, `size:report`, or `size:check`, make sure any required
   `@contentful/optimization-web` build, clean, package, or size command has completed. Do not run
   React Web build, declaration, package, or size commands concurrently with Web SDK commands that

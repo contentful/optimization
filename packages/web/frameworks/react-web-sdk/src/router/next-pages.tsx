@@ -4,7 +4,8 @@ import { useRouter, type NextRouter } from 'next/router.js'
 import { useCallback, useMemo, type ReactElement } from 'react'
 import { buildAutoPagePayload } from '../auto-page/pagePayload'
 import type { AutoPagePayload, AutoPagePayloadOptions } from '../auto-page/types'
-import { useAutoPageEmitter, type InitialAutoPageEvent } from '../auto-page/useAutoPageEmitter'
+import { useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
+import type { ContentOptimizationHandoff } from '../handoff'
 
 function splitAsPath(asPath: string): { path: string; search: string } {
   const queryIndex = asPath.indexOf('?')
@@ -47,11 +48,11 @@ export interface NextPagesAutoPageContext {
 }
 
 export interface NextPagesAutoPageTrackerProps extends AutoPagePayloadOptions<NextPagesAutoPageContext> {
-  readonly initialPageEvent?: InitialAutoPageEvent
+  readonly handoff?: ContentOptimizationHandoff
 }
 
 export function NextPagesAutoPageTracker({
-  initialPageEvent,
+  handoff,
   pagePayload,
   getPagePayload,
 }: NextPagesAutoPageTrackerProps): ReactElement | null {
@@ -91,7 +92,7 @@ export function NextPagesAutoPageTracker({
     [asPath, getPagePayload, pagePayload, pathname, query, routeKey, router, routerPayload],
   )
 
-  useAutoPageEmitter({ enabled: isReady, initialPageEvent, routeKey, buildPayload })
+  useAutoPageEmitter({ enabled: isReady, handoff, routeKey, buildPayload })
 
   return null
 }
