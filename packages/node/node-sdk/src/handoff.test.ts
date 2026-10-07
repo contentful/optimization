@@ -5,6 +5,8 @@ import type {
   PrivateRequestOptimizationCacheMetadata,
 } from '@contentful/optimization-core'
 import type { Entry, EntrySkeletonType } from 'contentful'
+import { OPTIMIZATION_NODE_SDK_NAME } from './constants'
+import ContentfulOptimization from './ContentfulOptimization'
 import { createRequestHandoffFromData } from './handoff'
 
 type TestEntry = Entry<EntrySkeletonType, undefined>
@@ -83,7 +85,13 @@ const requestData: OptimizationData = {
 }
 
 describe('createRequestHandoffFromData', () => {
-  it('maps completed request OptimizationData into Core handoff state', () => {
+  it('composes prepared Node events with request rendering state and entries', async () => {
+    const node = new ContentfulOptimization({ spaceId: 'key_123' })
+    const preview = rs.spyOn(node.api.experience, 'upsertProfile').mockResolvedValue(requestData)
+    const prepared = await node.forRequest({ consent: true }).prepareRequestHandoff({
+      routeKey: '/products?campaign=one',
+      initialEvents: [{ type: 'identify', userId: 'customer' }],
+    })
     const cache: PrivateRequestOptimizationCacheMetadata = {
       scope: 'private-request',
     }
@@ -93,12 +101,21 @@ describe('createRequestHandoffFromData', () => {
         entryId: '4ib0hsHWoSOnCVdDkizE8d',
       },
     ]
-    const handoff = createRequestHandoffFromData({
-      cache,
-      data: requestData,
-      entries,
-    })
+    const handoff = {
+      ...prepared.handoff,
+      ...createRequestHandoffFromData({ cache, data: prepared.data, entries }),
+    }
 
+    expect(preview).toHaveBeenCalledTimes(1)
+    expect(handoff.profileId).toBe(requestData.profile.id)
+    expect(handoff.replay).toBe(prepared.handoff.replay)
+    expect(handoff.replay?.events.map(({ type }) => type)).toEqual(['identify', 'page'])
+    expect(
+      handoff.replay?.events.every(
+        ({ channel, context }) =>
+          channel === 'server' && context.library.name === OPTIMIZATION_NODE_SDK_NAME,
+      ),
+    ).toBe(true)
     expect(handoff.cache).toBe(cache)
     expect(handoff.entries).toBe(entries)
     expect(handoff.state).toEqual({

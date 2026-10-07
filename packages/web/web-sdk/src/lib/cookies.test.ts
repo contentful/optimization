@@ -114,6 +114,30 @@ describe('setCookie', () => {
 })
 
 describe('removeCookie', () => {
+  it('uses the configured scope and policy for both writing and deletion', () => {
+    const written: string[] = []
+    Object.defineProperty(document, 'cookie', {
+      configurable: true,
+      get: () => '',
+      set: (value: string) => {
+        written.push(value)
+      },
+    })
+    const attributes = {
+      domain: 'example.com',
+      path: '/shop',
+      sameSite: 'none',
+      secure: true,
+    } as const
+    setCookie('foo', 'bar', attributes)
+    removeCookie('foo', attributes)
+
+    expect(written).toEqual([
+      'foo=bar; Path=/shop; Domain=example.com; SameSite=none; Secure',
+      'foo=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/shop; Domain=example.com; SameSite=none; Secure',
+    ])
+  })
+
   it('writes an expired cookie at the epoch', () => {
     let written = ''
     Object.defineProperty(document, 'cookie', {

@@ -225,6 +225,7 @@ function createSdk(
       enableElement: () => undefined,
     },
     trackCurrentPage: resolveAccepted,
+    hydrateAndTrackCurrentPage: resolveAccepted,
     trackView: resolveAccepted,
   }
 
