@@ -44,6 +44,8 @@ test.describe('SSR first-paint state', () => {
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
 
+      await expect(page.getByTestId('consent-status')).toBeVisible()
+      await expect(page.getByTestId('identified-status')).toBeVisible()
       await expect(page.getByTestId('consent-status')).toHaveText('No')
       await expect(page.getByTestId('identified-status')).toHaveText('No')
     })
@@ -54,6 +56,8 @@ test.describe('SSR first-paint state', () => {
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
 
+      await expect(page.getByTestId('consent-status')).toBeVisible()
+      await expect(page.getByTestId('identified-status')).toBeVisible()
       await expect(page.getByTestId('consent-status')).toHaveText('Yes')
       await expect(page.getByTestId('identified-status')).toHaveText('No')
     })
@@ -71,6 +75,8 @@ test.describe('SSR first-paint state', () => {
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
 
+      await expect(page.getByTestId('consent-status')).toBeVisible()
+      await expect(page.getByTestId('identified-status')).toBeVisible()
       await expect(page.getByTestId('consent-status')).toHaveText('Yes')
       await expect(page.getByTestId('identified-status')).toHaveText('Yes')
     })
@@ -86,6 +92,7 @@ test.describe('SSR first-paint state', () => {
       await page.waitForLoadState('domcontentloaded')
 
       const host = page.locator(`[data-ctfl-baseline-id="${BASELINE_ID}"]`).first()
+      await expect(host).toBeVisible()
       await expect(host).toHaveAttribute('data-ctfl-entry-id', VARIANT_ENTRY_ID)
       await expect(host).toHaveAttribute('data-ctfl-optimization-id', EXPERIENCE_ID)
       await expect(host).toHaveAttribute('data-ctfl-variant-index', '1')

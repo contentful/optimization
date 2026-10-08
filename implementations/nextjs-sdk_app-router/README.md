@@ -18,7 +18,7 @@
 
 This reference implementation integrates `@contentful/optimization-nextjs` with the Next.js App
 Router. It demonstrates request-bound personalization, public permutation handoff, analytics-only
-rendering, Cache Components routes, and browser takeover without importing lower-level SDKs.
+rendering, blocking request SSR, and browser takeover without importing lower-level SDKs.
 
 For a complete integration walkthrough, see
 [Integrate the Optimization SDK in a Next.js App Router app](../../documentation/guides/integrating-the-optimization-sdk-in-a-nextjs-app-router-app.md).
@@ -164,6 +164,9 @@ Run the shared Playwright setup and suite:
 pnpm setup:e2e:nextjs-sdk_app-router
 pnpm test:e2e:nextjs-sdk_app-router
 ```
+
+The runner uses `E2E_FLAGS=CSR,HYDRATION,SSR`, so JavaScript-disabled SSR checks run alongside
+hydration and browser checks. Do not enable `SKIP_NO_JS` for this reference implementation.
 
 ## Related
 

@@ -48,8 +48,10 @@ per-entry `liveUpdates` or `loadingFallback`.
 
 ## E2E
 
-- Shared behavioral tests run via `lib/e2e-web` with `E2E_FLAGS=CSR,HYDRATION,SSR,SKIP_NO_JS`
+- Shared behavioral tests run via `lib/e2e-web` with `E2E_FLAGS=CSR,HYDRATION,SSR`
   (port 3002).
+- Keep JavaScript-disabled SSR checks active. Investigate a visible-content failure instead of
+  adding `SKIP_NO_JS` to the App Router runner.
 - App Router hydration behavior is covered by shared `lib/e2e-web` specs.
 - `test:e2e` starts the app + mocks via `serve`, then delegates to `lib/e2e-web`.
 - `test:e2e:ui` opens the shared Playwright UI with the App Router target pre-configured.

@@ -8,7 +8,7 @@ Shared Playwright E2E package for web SDK reference implementations.
   `IMPLEMENTATION` / `APP_PORT` contract for browser-based Web SDK E2E.
 - Supported CSR implementations (`E2E_FLAGS=CSR`, the default): `react-web-sdk`, `web-sdk_react`,
   and `web-sdk_angular`.
-- Supported App Router implementation (`E2E_FLAGS=CSR,HYDRATION,SSR,SKIP_NO_JS`):
+- Supported App Router implementation (`E2E_FLAGS=CSR,HYDRATION,SSR`):
   `nextjs-sdk_app-router` (port 3002).
 - Supported App Router Edge runtime implementation (`E2E_FLAGS=EDGE`):
   `nextjs-sdk_app-router_edge-runtime` (port 3003).
@@ -16,6 +16,9 @@ Shared Playwright E2E package for web SDK reference implementations.
   (port 3001).
 - Keep selectors and `data-testid` contracts aligned with every supported implementation before
   changing shared specs.
+- Keep the App Router's JavaScript-disabled SSR checks enabled. `SKIP_NO_JS` remains available for
+  implementations that explicitly opt out, but it must not hide a visible-content regression in
+  this maintained App Router implementation.
 - Treat `playwright-report/`, `test-results/`, and `node_modules/` as generated or local-only.
 
 ## Environment variables

@@ -1,6 +1,13 @@
-import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Locator,
+  type Page,
+  type Route,
+} from '@playwright/test'
 import { CUSTOMER_SEGMENTS, PAGES } from '../src/fixtures'
-import { runIf, runIfImplementation } from './utils'
+import { CONSENT_COOKIE, implementation, runIf, runIfImplementation } from './utils'
 
 const newVisitorSegment = CUSTOMER_SEGMENTS['new-visitor']
 const baselineSegment = CUSTOMER_SEGMENTS.baseline
@@ -77,9 +84,9 @@ async function expectPublicPermutationHost(host: Locator, segment: CustomerSegme
   )
 }
 
-test.describe('Next.js handoff routes', () => {
+test.describe('Next.js request handoff routes', () => {
   runIf('SSR')
-  runIfImplementation('nextjs-sdk_app-router')
+  runIfImplementation('nextjs-sdk_app-router', 'nextjs-sdk_pages-router')
 
   test('renders personalized initial SSR and preserves it through hydration', async ({
     page,
@@ -100,9 +107,7 @@ test.describe('Next.js handoff routes', () => {
     await expectPageTwoSelectedVariant(page)
   })
 
-  test('renders the page-only request entry after preserved-layout navigation', async ({
-    page,
-  }) => {
+  test('renders the page-only request entry after navigation', async ({ page }) => {
     await page.goto(PAGES.home.path)
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
@@ -127,30 +132,87 @@ test.describe('Next.js handoff routes', () => {
     await delivery
   })
 
+  test('keeps personalized SSR visible while browser delivery is delayed and fails', async ({
+    baseURL,
+    context,
+    page,
+  }) => {
+    await context.addCookies([{ name: CONSENT_COOKIE, value: 'granted', url: baseURL }])
+    let release = (): void => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let held = false
+    let failed = false
+    const routeHandler = async (route: Route): Promise<void> => {
+      if (held || route.request().method() !== 'POST') {
+        await route.continue()
+        return
+      }
+      held = true
+      await gate
+      await route.abort('failed')
+      failed = true
+    }
+    await page.route('**/experience/**', routeHandler)
+
+    try {
+      await page.goto(PAGES.pageTwo.path, { waitUntil: 'domcontentloaded' })
+      await expect.poll(() => held).toBe(true)
+      await expect(page.getByTestId('page-two-view')).toBeVisible()
+      const selectedContent = page.getByTestId(`entry-text-${PAGES.pageTwo.auto}`)
+      await expect(selectedContent).toContainText(newVisitorSegment.resolvedEntryText)
+
+      release()
+      await expect.poll(() => failed).toBe(true)
+      await expect(selectedContent).toContainText(newVisitorSegment.resolvedEntryText)
+    } finally {
+      release()
+      await page.unroute('**/experience/**', routeHandler)
+    }
+  })
+})
+
+test.describe('Next.js public permutation handoff routes', () => {
+  runIf('SSR')
+  runIfImplementation('nextjs-sdk_app-router', 'nextjs-sdk_pages-router')
+
   for (const segment of publicPermutationSegments) {
     test(`renders a customer-owned ${segment.slug} public permutation after hydration`, async ({
       page,
       request,
     }) => {
+      const path = `/selection-handoff/${segment.slug}`
+      const routeTestId =
+        implementation === 'nextjs-sdk_pages-router'
+          ? 'pages-selection-handoff-route'
+          : 'selection-handoff-route'
+      const entryTextTestId =
+        implementation === 'nextjs-sdk_pages-router'
+          ? `entry-text-pages-selection-${segment.baselineEntryId}`
+          : `entry-text-${segment.baselineEntryId}`
       await expectRawSelectedHandoffHtml({
-        path: `/selection-handoff/${segment.slug}`,
+        path,
         request,
-        routeTestId: 'selection-handoff-route',
+        routeTestId,
         segment,
       })
 
-      await page.goto(`/selection-handoff/${segment.slug}`)
+      await page.goto(path)
       await page.waitForLoadState('domcontentloaded')
 
-      await expect(page.getByTestId('selection-handoff-route')).toBeVisible()
-      await expect(page.getByTestId(`entry-text-${segment.baselineEntryId}`)).toContainText(
-        segment.resolvedEntryText,
-      )
+      await expect(page.getByTestId(routeTestId)).toBeVisible()
+      await expect(page.getByTestId(entryTextTestId)).toContainText(segment.resolvedEntryText)
 
       const host = page.locator(`[data-ctfl-baseline-id="${segment.baselineEntryId}"]`).first()
       await expectPublicPermutationHost(host, segment)
     })
   }
+})
+
+test.describe('Next.js App Router-only handoff routes', () => {
+  runIf('SSR')
+  runIfImplementation('nextjs-sdk_app-router')
 
   test('hydrates analytics-only server markup without browser content resolution', async ({
     page,
@@ -228,36 +290,4 @@ test.describe('Next.js handoff routes', () => {
       newVisitorSegment.resolvedEntryText,
     )
   })
-})
-
-test.describe('Next.js Pages Router public permutation handoff routes', () => {
-  runIf('SSR')
-  runIfImplementation('nextjs-sdk_pages-router')
-
-  for (const segment of publicPermutationSegments) {
-    test(`renders an ISR ${segment.slug} public permutation handoff and preserves it after hydration`, async ({
-      page,
-      request,
-    }) => {
-      const path = `/selection-handoff/${segment.slug}`
-      const response = await request.get(path)
-      const html = await response.text()
-
-      expect(response.ok()).toBe(true)
-      expect(html).toContain('data-testid="pages-selection-handoff-route"')
-      expect(html).toContain(segment.resolvedEntryText)
-      expectSelectedEntryMarkup(html, segment)
-
-      await page.goto(path)
-      await page.waitForLoadState('domcontentloaded')
-
-      await expect(page.getByTestId('pages-selection-handoff-route')).toBeVisible()
-      await expect(
-        page.getByTestId(`entry-text-pages-selection-${segment.baselineEntryId}`),
-      ).toContainText(segment.resolvedEntryText)
-
-      const host = page.getByTestId(`pages-selection-entry-${segment.baselineEntryId}`)
-      await expectPublicPermutationHost(host, segment)
-    })
-  }
 })
