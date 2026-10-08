@@ -27,8 +27,15 @@ does not cover ISR, route-level `revalidate`, or Cache Components.
 
 - Request-personalized Edge runtime handoff from `app/edge-request/route.ts`
 - Public permutation Edge runtime handoff from `app/edge-selection/[segment]/route.ts`
+- Request-selected content rendered on the Edge at `/edge-render/private`, with a browser root that
+  commits the handoff and keeps the content visible during hydration
+- App-owned public selections rendered on the Edge at `/edge-render/public/[segment]`
 - Edge runtime assertion with `globalThis.EdgeRuntime === 'edge-runtime'`
-- Browser handoff state created without Node-only APIs
+- Profile cookie persistence through the response owned by `/edge-request`
+
+For E2E clarity, this reference separates cookie persistence (`/edge-request`, which owns the HTTP
+response) from rendered pages (`/edge-render/*`, which exercise visible content and browser
+hydration). Applications with an Edge-safe HTML renderer can do both in one Route Handler response.
 
 ## Prerequisites
 
@@ -57,6 +64,9 @@ pnpm implementation:run -- nextjs-sdk_app-router_edge-runtime lint
 ```
 
 The development server runs on `http://localhost:3003`.
+The rendered routes fetch their baseline and variant entries through the Contentful Delivery API.
+Set `PUBLIC_CONTENTFUL_CDA_BASE_URL` and `PUBLIC_CONTENTFUL_TOKEN` in the local `.env` for your
+content; `.env.example` points them at the local mock CDA.
 
 ## Running E2E tests
 
@@ -67,7 +77,9 @@ pnpm setup:e2e:nextjs-sdk_app-router_edge-runtime
 pnpm test:e2e:nextjs-sdk_app-router_edge-runtime
 ```
 
-The E2E suite uses the shared `lib/e2e-web` Edge runtime scenarios with `E2E_FLAGS=EDGE`.
+The Edge-specific `lib/e2e-web/e2e/edge-consumer.spec.ts` runs through the shared Playwright runner
+with `E2E_FLAGS=EDGE`. It checks visible selected content without JavaScript, browser commitment,
+consent and profile-cookie continuity, and navigation across the rendered Edge routes.
 
 ## Related
 

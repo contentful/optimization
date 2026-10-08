@@ -10,4 +10,8 @@ export const appConfig = {
     experienceBaseUrl:
       env.PUBLIC_EXPERIENCE_API_BASE_URL?.trim() ?? 'http://localhost:8000/experience/',
   },
+  contentful: {
+    baseUrl: env.PUBLIC_CONTENTFUL_CDA_BASE_URL?.trim() ?? 'http://localhost:8000/contentful/',
+    accessToken: env.PUBLIC_CONTENTFUL_TOKEN?.trim() ?? 'mock-token',
+  },
 } as const
