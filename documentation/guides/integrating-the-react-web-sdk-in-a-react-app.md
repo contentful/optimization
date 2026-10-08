@@ -756,6 +756,10 @@ Web SDK the current route and handoff together. The Web SDK admits
 a matching replay as one batch; an absent or mismatched replay falls back to an ordinary page. In a
 browser-only React SPA, the tracker emits the initial page event itself.
 
+After the handoff is admitted, the mounted tracker emits fresh page events for later navigation,
+including a return to the initial route, using its current page payload settings. A distinct
+prepared handoff can initialize its own replay.
+
 The [Node guide's paired-route example](./integrating-the-node-sdk-in-a-node-app.md#share-continuity-with-the-web-sdk)
 shows where the server's `{ data, handoff }` comes from. A React content root needs a browser
 hydration mode and preview selection state in addition to the Node preparation handoff. Compose

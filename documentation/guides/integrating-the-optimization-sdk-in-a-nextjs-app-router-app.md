@@ -807,7 +807,8 @@ normally. Work the callback starts without returning can finish after the page.
 Advanced explicit-input routes can pass an app-created handoff and browser startup mode to the
 top-level `optimization.OptimizationRoot` or `optimization.OptimizationProvider`. The root can also
 take an app-created route key and initial page payload. A matching prepared replay is committed by
-the browser; without one, the root tracks an ordinary page. See
+the browser. Without a matching replay, the root tracks an ordinary page when supplied with a page
+payload; otherwise, mount the router tracker to provide the fallback page event. See
 [Manual server and client escape hatches](#manual-server-and-client-escape-hatches) before using
 these inputs. Use `optimization.OptimizationAnalyticsRoot` for analytics-only handoffs.
 

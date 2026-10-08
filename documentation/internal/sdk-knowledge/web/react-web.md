@@ -181,8 +181,8 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
 
 - Page events: auto-page trackers emit on navigation; each dedupes consecutive accepted route keys
   including Strict Mode effect replay. Mount one tracker per router tree. Trackers with a handoff
-  delegate its current-route replay or ordinary-page decision to the Web SDK.
-  source: react-web-sdk#router/react-router.tsx#ReactRouterAutoPageTracker; react-web-sdk#router/tanstack-router.tsx#TanStackRouterAutoPageTracker; react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker; react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker; web-sdk#ContentfulOptimization.ts#trackCurrentPage
+  delegate initialization to the Web SDK and use ordinary page tracking after admission.
+  source: react-web-sdk#router/react-router.tsx#ReactRouterAutoPageTracker; react-web-sdk#router/tanstack-router.tsx#TanStackRouterAutoPageTracker; react-web-sdk#router/next-pages.tsx#NextPagesAutoPageTracker; react-web-sdk#router/next-app.tsx#NextAppAutoPageTracker; react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter; web-sdk#ContentfulOptimization.ts#trackCurrentPage
 - A config-owned provider creates the plain Web runtime, so manual page calls inherit its current
   browser page provider. Built-in React Router, TanStack Router, Next.js Pages Router, and Next.js App
   Router trackers additionally seed page-event properties with their route-derived absolute URL,
@@ -200,10 +200,15 @@ source: core-sdk#runtime/SnapshotRuntime.ts#SnapshotRuntime; core-sdk#runtime/Sn
 - The shared emitter attempts the initial route after the live SDK is ready. Without a handoff it
   uses ordinary current-page tracking when a payload builder exists. With a handoff it hydrates and
   admits a matching replay, even without a payload builder; an absent or mismatched replay uses the
-  builder when available and otherwise builds an empty page payload. The Web SDK owns consent
-  admission and route deduplication.
+  builder when available and otherwise builds an empty page payload. Each mounted emitter remembers
+  its accepted handoff by the prepared page's message ID, or by object identity for state-only
+  handoffs. Later visits with that handoff use ordinary page tracking; rejected admission remains
+  retryable, and a distinct preparation can initialize. The Web SDK owns consent admission and route
+  deduplication.
   source: react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter; web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#ContentfulOptimization.ts#trackCurrentPage
 - A plain `OptimizationRoot` mounts its initial page emitter only when a handoff is present. Supplying
+  a matching replay or an explicit root payload enables that emitter. Without either, the child
+  tracker owns fallback page construction, including its custom payload properties. Supplying
   `routeKey` and `buildPagePayload` without a handoff does not emit a page by itself; a mounted
   auto-page tracker owns ordinary initial and later route events. A root configured with
   `beforeInitialPage` follows its separate callback and direct-page sequence instead.

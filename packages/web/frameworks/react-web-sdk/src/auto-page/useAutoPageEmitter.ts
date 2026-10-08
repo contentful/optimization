@@ -1,5 +1,5 @@
 import type { OptimizationHandoff } from '@contentful/optimization-web/core-sdk'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useOptimizationContext } from '../hooks/useOptimization'
 import { useConsentState } from '../hooks/useOptimizationState'
 import type { AutoPagePayload } from './types'
@@ -24,15 +24,21 @@ export function useAutoPageEmitter({
 }: UseAutoPageEmitterArgs): void {
   const { sdk, isLive } = useOptimizationContext()
   const consent = useConsentState()
+  const acceptedHandoff = useRef<string | OptimizationHandoff | undefined>(undefined)
+  const handoffKey = handoff?.replay?.events.at(-1)?.messageId ?? handoff
 
   useEffect(() => {
     if (!enabled || isLive === false || sdk === undefined) return
-    if (handoff === undefined && buildPayload === undefined) return
+    const shouldInitialize = handoff !== undefined && acceptedHandoff.current !== handoffKey
+    if (!shouldInitialize && buildPayload === undefined) return
 
-    const emission =
-      handoff === undefined
-        ? sdk.trackCurrentPage({ routeKey, buildPayload: buildPayload ?? (() => ({})) })
-        : sdk.hydrateAndTrackCurrentPage(handoff, { routeKey, buildPayload })
-    void emission.catch(() => undefined)
-  }, [buildPayload, consent, enabled, handoff, isLive, routeKey, sdk])
+    const emission = shouldInitialize
+      ? sdk.hydrateAndTrackCurrentPage(handoff, { routeKey, buildPayload })
+      : sdk.trackCurrentPage({ routeKey, buildPayload: buildPayload ?? (() => ({})) })
+    void emission
+      .then((result) => {
+        if (shouldInitialize && result.accepted) acceptedHandoff.current = handoffKey
+      })
+      .catch(() => undefined)
+  }, [buildPayload, consent, enabled, handoff, handoffKey, isLive, routeKey, sdk])
 }

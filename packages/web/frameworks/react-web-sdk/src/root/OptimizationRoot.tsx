@@ -64,7 +64,12 @@ function InitialHandoffPageEmitter({
   readonly handoff: ContentOptimizationHandoff
   readonly routeKey: string
 }): null {
-  useAutoPageEmitter({ buildPayload: buildPagePayload, enabled: true, handoff, routeKey })
+  useAutoPageEmitter({
+    buildPayload: buildPagePayload,
+    enabled: handoff.replay?.routeKey === routeKey || buildPagePayload !== undefined,
+    handoff,
+    routeKey,
+  })
   return null
 }
 
