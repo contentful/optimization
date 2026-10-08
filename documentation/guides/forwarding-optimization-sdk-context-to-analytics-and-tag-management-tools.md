@@ -648,8 +648,9 @@ Then confirm the broader tracking contract:
 - The third-party destination receives only the intended `contentful_*` fields.
 - Sticky view tracking produces one intended downstream exposure, not one Experience exposure plus
   one Insights exposure.
-- Server-rendered first paint and browser follow-up tracking have one owner for each event in the
-  tracking plan.
+- On paired server-rendered pages, the server previews prepared events for first paint and the
+  browser admits them through the SDK queue. Forward accepted browser events separately from the
+  server preview; later navigation uses normal browser page tracking.
 - Known-user identity uses your application user ID. The Optimization profile ID is metadata only
   when your policy allows forwarding it.
 - Event-stream `optimization` enrichment is reduced to approved primitive fields, such as audience

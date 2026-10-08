@@ -36,7 +36,7 @@ Vocabulary used below:
 - **Customer-owned** means owned by your application team. It does not mean a site visitor owns the
   selection.
 - Cache scope and hydration strings such as `public-permutation`, `static`, `private-request`,
-  `preserve-server`, `client-only-hidden-until-ready`, `analytics-only`, `emit`, and `skip` are
+  `preserve-server`, `client-only-hidden-until-ready`, and `analytics-only` are
   SDK-owned exact values. Route keys, payload `properties`, environment variable names, and helper
   names are application-owned. `permutationKey`, `cacheVersion`, and Next.js tags are
   application-owned cache inputs; `handoff.cache.key` and `ctfl-opt-cache-key` are SDK-generated
@@ -161,7 +161,6 @@ export default async function SegmentPage({ params }: { params: Promise<{ segmen
     selectedOptimizations: segment.selectedOptimizations,
     changes: segment.changes,
     hydration: 'preserve-server',
-    initialPageEvent: 'emit',
   })
 
   return (
@@ -215,7 +214,8 @@ Action, or Route Handler outside the first route proof.
 Use the same ownership test for every route: the cache owner must match the Optimization state that
 produced the markup. A **baseline entry** is the Contentful entry before Optimization resolution.
 Resolving entries means applying selected optimizations to those baseline entries before rendering.
-`initialPageEvent` tells the browser whether to emit or skip the first page event for the route.
+Public and static handoffs contain selected rendering state without a prepared request replay. The
+browser root tracks the current page after hydration when event consent allows it.
 
 A campaign can have two independent meanings in these recipes. A public `permutationKey` can name
 an app-owned campaign and contributes to public cache identity. A page event's `context.campaign` is
@@ -338,13 +338,10 @@ Resolve and assemble each usable permutation in the route that renders it:
 3. Call `resolveEntriesForSelections()` with those baseline entries and the record's
    `selectedOptimizations`.
 4. Call `createPublicPermutationHandoff()` with the same public key, `cacheVersion`, locale, entry
-   IDs, `selectedOptimizations`, optional `changes`, hydration mode, and initial page-event
-   ownership used by the route.
+   IDs, `selectedOptimizations`, optional `changes`, and hydration mode used by the route.
 5. Use `cache: { scope: 'static' }` with `createHandoffFromSelections()` for one build-time static
    output. Use `createPublicPermutationHandoff()` for Cache Components, Pages Router ISR, Edge
    runtime, or CDN-cached public outputs.
-6. Use `initialPageEvent: 'emit'` unless a request or edge helper already accepted the first page
-   event for the same route.
 
 **Follow this pattern:**
 
@@ -366,7 +363,6 @@ const handoff = createPublicPermutationHandoff({
   selectedOptimizations: permutation.selectedOptimizations,
   changes: permutation.changes,
   hydration: 'preserve-server',
-  initialPageEvent: 'emit',
 })
 ```
 
@@ -438,7 +434,7 @@ export function BrowserOwnedHero({ hero }) {
       buildPagePayload={() => ({ properties: { path: '/landing' } })}
     >
       <Suspense fallback={null}>
-        <NextAppAutoPageTracker initialPageEvent="emit" />
+        <NextAppAutoPageTracker />
       </Suspense>
       <OptimizedEntry baselineEntry={hero}>
         {(resolvedHero) => <Hero entry={resolvedHero} />}
@@ -487,7 +483,6 @@ export default async function StaticSegmentPage() {
     changes: selection.changes,
     cache: { scope: 'static' },
     hydration: 'preserve-server',
-    initialPageEvent: 'emit',
   })
 
   return (
@@ -532,7 +527,6 @@ const handoff = createPublicPermutationHandoff({
   selectedOptimizations: segment.selectedOptimizations,
   changes: segment.changes,
   hydration: 'preserve-server',
-  initialPageEvent: 'emit',
 })
 ```
 
@@ -641,7 +635,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ seg
     selectedOptimizations: segment.selectedOptimizations,
     changes: segment.changes,
     hydration: 'preserve-server',
-    initialPageEvent: 'emit',
   })
   const response = await renderEdgeSegmentResponse({ handoff, hero, segment })
 
@@ -661,10 +654,13 @@ reads visitor state, use a `private-request` handoff.
 Use this when an Edge runtime route owns a `Response` and renders for the current request. The route
 must export `runtime = 'edge'` and avoid Node-only APIs. This is a reference excerpt for custom
 route handlers that already turn application HTML into a `Response`; it is not an App Router page
-recipe. The helper reads request cookies and headers, emits the page event, returns a browser
-handoff, and gives the route a `persist(response)` callback for the SDK-owned anonymous ID cookie.
+recipe. The helper reads request cookies and headers, previews the page event, returns a browser
+handoff with the prepared events, and gives the route a `persist(response)` callback for the
+SDK-owned anonymous ID cookie. The browser commits matching prepared events through its SDK queue.
 `app-consent` is a reader-owned consent cookie name. Configure `consent.server` explicitly; if it is
-omitted, Edge request consent resolves to `false`.
+omitted, Edge request consent resolves to `false`. The inherited Node pre-consent allow-list still
+permits page and identify events by default; set `allowedEventTypes: []` when your policy must block
+all events until consent.
 
 **Reference excerpt:**
 
@@ -687,7 +683,8 @@ const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
 })
 
 export async function GET(request: Request) {
-  const routeKey = new URL(request.url).pathname
+  const url = new URL(request.url)
+  const routeKey = `${url.pathname}${url.search}`
   const { handoff, persist } = await createEdgeRequestHandoff({
     cache: { scope: 'private-request' },
     hydration: 'preserve-server',
@@ -707,7 +704,7 @@ export async function GET(request: Request) {
 response private because the handoff can include request profile state.
 
 In this example, `createEdgeRequestHandoff()` builds `page.url` from the full `request.url`; the
-pathname-only `routeKey` identifies the route for duplicate-event control. Because `pagePayload`
+pathname and search in `routeKey` must match the browser route for prepared-event delivery. Because `pagePayload`
 supplies only `properties.path`, the request-backed `page.url` is the campaign source when it has a
 supported UTM parameter. If you customize that payload, the SDK chooses one whole source in order:
 top-level `campaign`, then a UTM-bearing `properties.url`, then `page.url`. An explicit empty
@@ -757,7 +754,6 @@ export default async function AnalyticsOnlyPage() {
     selectedOptimizations: segment.selectedOptimizations,
     changes: segment.changes,
     hydration: 'analytics-only',
-    initialPageEvent: 'emit',
   })
   const trackingAttributes = getServerTrackingAttributes(hero, resolvedHero)
 

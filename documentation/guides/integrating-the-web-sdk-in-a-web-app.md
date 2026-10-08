@@ -231,7 +231,7 @@ The config you pass to `new ContentfulOptimization(...)` breaks down like this:
 3. `api` overrides the Experience and Insights endpoints (`experienceBaseUrl`, `insightsBaseUrl`).
    Set these only for a mock, a proxy, or non-default hosts; omit them otherwise.
 4. `defaults` is the SDK's starting state: `consent` (may personalize and send events) and
-   `persistenceConsent` (may store the profile-id cookie — the anonymous identifier the SDK assigns
+   `persistenceConsent` (may store the profile-id cookie — the anonymous identifier the Experience API issues
    each visitor to keep their variant assignments consistent across visits). If you set `consent`
    but omit `persistenceConsent`, `persistenceConsent` defaults to your `consent` value.
 5. `app` is your app's name and version, sent as event metadata.
@@ -579,9 +579,10 @@ first load and on every route change.
    consecutive identical route keys (a manual `page()` always emits when consent permits it).
 3. Include stable page properties — url, path, search, referrer, title — when your router or
    analytics taxonomy needs them.
-4. In hybrid apps where the server already emitted the first page event, pass
-   `initialPageEvent: 'skip'` to `trackCurrentPage` for the first browser route so the browser does
-   not report a duplicate (see
+4. In a paired server and browser route, pass the server's prepared handoff to
+   `hydrateAndTrackCurrentPage()` with the current `routeKey`. It admits the matching prepared
+   events, including the page, as one browser queue batch. Without a matching replay it uses an
+   ordinary page event (see
    [Hybrid Node SSR and browser continuity](#hybrid-node-ssr-and-browser-continuity)).
 
 Both `page()` and the page event emitted by `trackCurrentPage()` inherit the Web SDK's default page
@@ -1195,17 +1196,58 @@ Use this integration when the same app uses `@contentful/optimization-node` on t
 `@contentful/optimization-web` in the browser, and you want the same visitor's profile to carry
 across the boundary.
 
-1. Decide whether the server or browser owns the first personalization decision for each route.
+1. Prepare the first route's identify, track, and page inputs on the server with the Node SDK's
+   `prepareRequestHandoff()`. Its preview supplies rendering selections without committing events;
+   pass the returned handoff to the browser. Use the same visible pathname plus search as `routeKey`
+   on both sides.
 2. Share the anonymous profile identifier through the SDK's `ANONYMOUS_ID_COOKIE` value
    (`ctfl-opt-aid`) when consent permits durable profile continuity. This cookie is **SDK-owned** —
    match the exact name; do not invent your own.
 3. Write the cookie from the server with `Path=/` and a same-site policy that matches your app, and
    do **not** mark it `HttpOnly` — the browser SDK must read it to keep the same profile after
    takeover.
-4. Use `trackCurrentPage({ initialPageEvent: 'skip', ... })` for the first browser route when the
-   server already emitted the same initial page event, so the browser does not duplicate it.
+4. Use `hydrateAndTrackCurrentPage(handoff, { routeKey, buildPayload })` for the first browser route.
+   A matching replay enters the browser queue as one batch, including its page event. A handoff
+   without a matching replay uses ordinary page tracking. The call's `accepted` result means queue
+   admission, not completed HTTP delivery. Continue calling `trackCurrentPage()` from your app's
+   route-change handler for later routes.
 5. On consent denial or revocation, clear the shared cookie and avoid persisting a returned profile
    id. Treat server-rendered personalized HTML as personalized output for cache policy.
+
+The [Node guide's paired-route example](./integrating-the-node-sdk-in-a-node-app.md#share-continuity-with-the-web-sdk)
+shows how a request handler prepares `{ data, handoff }` and serializes the handoff into a JSON
+script. `data` supplies server-rendered selections; the browser reads only the handoff. The
+`optimization` variable below is the Web SDK instance created earlier in this guide.
+
+**Adapt this to your use case:** read that script at browser startup and make one current-page call.
+`buildPayload` is a lazy ordinary-page fallback when the handoff has no replay for the visible
+pathname plus search. Keep your app's route-change handler calling `trackCurrentPage()` for later
+routes.
+
+```ts
+import type { OptimizationHandoff } from '@contentful/optimization-web/core-sdk'
+
+const routeKey = `${window.location.pathname}${window.location.search}`
+const handoffJson = document.getElementById('optimization-handoff')?.textContent
+
+if (handoffJson && handoffJson !== 'null') {
+  const handoff = JSON.parse(handoffJson) as OptimizationHandoff
+  const result = await optimization.hydrateAndTrackCurrentPage(handoff, {
+    routeKey,
+    buildPayload: () => ({ properties: { path: window.location.pathname } }),
+  })
+  if (!result.accepted) console.warn('Optimization first page was not admitted locally')
+} else {
+  await optimization.trackCurrentPage({
+    routeKey,
+    buildPayload: () => ({ properties: { path: window.location.pathname } }),
+  })
+}
+```
+
+If event consent initially prevents replay admission, call the same current-page path again after
+your app records consent on that route. Do not substitute a separate `page()` call for the prepared
+identify, track, and page sequence.
 
 **Follow this pattern:** build the shared anonymous-id `Set-Cookie` on the server.
 
@@ -1219,7 +1261,9 @@ function buildAnonymousIdSetCookie(id: string | undefined): string {
 }
 ```
 
-`ANONYMOUS_ID_COOKIE` re-exports the core constant and equals `'ctfl-opt-aid'`. For the lower-level
+`ANONYMOUS_ID_COOKIE` re-exports the core constant and equals `'ctfl-opt-aid'`. Store only a known
+Experience API-issued ID in it; the SDK does not invent a profile ID when server preview fails.
+For the lower-level
 mechanics, see
 [Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md).
 

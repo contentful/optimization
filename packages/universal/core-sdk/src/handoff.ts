@@ -142,10 +142,14 @@ export interface OptimizationHandoff {
   readonly entries?: readonly ManagedEntryHandoff[]
   /** Cache metadata for the rendered output. */
   readonly cache: OptimizationCacheMetadata
+  /** API-issued identity available for browser continuation; its presence does not mean preview state was committed. */
   readonly profileId?: string
   readonly replay?: {
+    /** Pathname and search string for the browser route that receives these events. */
     readonly routeKey: string
+    /** Prepared Experience events, including the initial page event when preparation succeeds. */
     readonly events: readonly ExperienceEvent[]
+    /** Locale captured for delivery of the prepared events. */
     readonly locale?: string
   }
 }

@@ -146,8 +146,9 @@ export interface TrackCurrentPageOptions {
  * @public
  */
 export interface HydrateAndTrackCurrentPageOptions {
+  /** Pathname and search string for the browser route being initialized or tracked. */
   readonly routeKey: string
-  /** Used only when the handoff has no replay for this route. */
+  /** Builds an ordinary browser page event when the handoff has no replay matching `routeKey`. */
   readonly buildPayload?: TrackCurrentPageOptions['buildPayload']
 }
 
@@ -521,9 +522,12 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
   }
 
   /**
-   * Hydrate the current render and admit its prepared events through the Experience queue.
-   * Paired work settles on admission; HTTP completion updates live state independently.
-   * Repeated current initialization shares work. Navigation and fresh preparations remain trackable.
+   * Hydrate the current render from a server handoff and admit its matching replay through the
+   * Experience queue. Server preparation previews the events; the browser sends the replay through
+   * normal Experience delivery. This promise settles when the queue admits the work, while the HTTP
+   * response updates live state independently. If the replay does not match `routeKey`, the SDK
+   * tracks an ordinary page event.
+   * Repeated current initialization shares work; later navigation remains trackable.
    * @public
    */
   async hydrateAndTrackCurrentPage(

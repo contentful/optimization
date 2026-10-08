@@ -78,11 +78,13 @@ export interface ExperienceApiClientRequestOptions {
  */
 export interface ExperienceApiClientProfileMutationRequestOptions extends ExperienceApiClientRequestOptions {
   /**
-   * When `true`, instructs the API to aggregate a new profile state but not store it.
+   * When `true`, asks the API to evaluate the events as a preview without committing the resulting
+   * profile state.
    *
    * @remarks
-   * This is commonly used in ESR or SSR environments where you want to
-   * preview the result without persisting changes.
+   * A successful preview response includes an API-issued profile ID, including when no profile ID
+   * was supplied. The ID can continue the browser request; the preview itself does not commit the
+   * profile state.
    */
   preflight?: boolean
 }
@@ -128,9 +130,7 @@ export interface UpdateProfileParams extends CreateProfileParams {
  * @public
  */
 export interface UpsertProfileParams extends CreateProfileParams {
-  /**
-   * Optional ID of the profile; when omitted, a new profile is created.
-   */
+  /** Optional API-issued profile ID. When omitted, the API creates a profile or evaluates a preview and returns its ID. */
   profileId?: string
 }
 
@@ -290,14 +290,15 @@ export default class ExperienceApiClient extends ApiClientBase {
   }
 
   /**
-   * Creates a profile and returns the resulting optimization data.
+   * Creates or previews a profile and returns the resulting optimization data.
    *
    * @param params - Parameters containing the events to aggregate into the profile.
    * @param options - Optional request options.
-   * @returns The optimization data for the newly created profile.
+   * @returns The optimization data and API-issued profile ID.
    *
    * @remarks
-   * The returned profile ID can be used for subsequent update requests.
+   * The returned profile ID can be used for subsequent update requests. When `preflight` is `true`,
+   * the API returns an ID for continuation without committing the previewed profile state.
    *
    * @example
    * ```ts

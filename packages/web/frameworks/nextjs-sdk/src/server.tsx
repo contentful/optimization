@@ -97,7 +97,9 @@ export interface NextjsResponseLike {
 }
 
 export interface BindNextjsOptimizationRequestOptions {
+  /** Cookie name used to read an existing API-issued anonymous profile ID. */
   readonly anonymousIdCookieName?: string
+  /** Request-bound event and persistence consent; a boolean sets both values. */
   readonly consent: CoreStatelessRequestConsent
   readonly cookies?: NextjsCookieReader
   readonly eventContext?: UniversalEventBuilderArgs
@@ -105,8 +107,11 @@ export interface BindNextjsOptimizationRequestOptions {
   readonly headers?: Headers
   readonly insightsOptions?: CoreStatelessInsightsOptions
   readonly locale?: string
+  /** Explicit page context, which takes precedence over page context derived from `request`. */
   readonly page?: NextjsPageContextInput
+  /** Known profile takes precedence over the anonymous ID read from request cookies. */
   readonly profile?: PartialProfile
+  /** Incoming request used to derive page context and read cookies when `cookies` is omitted. */
   readonly request?: NextjsRequestLike
 }
 
@@ -123,7 +128,9 @@ export interface NextjsServerOptimizationData {
 export interface NextjsRequestHandoffOptions extends NextjsServerOptimizationDataOptions {
   readonly cache?: PrivateRequestOptimizationCacheMetadata
   readonly entries?: readonly ManagedEntryHandoff[]
+  /** Browser presentation policy for the rendered content or analytics-only handoff. */
   readonly hydration: OptimizationHydrationMode
+  /** Optional identify and track events to include before the initial page event. */
   readonly initialEvents?: readonly InitialExperienceEvent[]
 }
 
@@ -131,6 +138,7 @@ export interface NextjsRequestHandoffResult extends Omit<
   NextjsServerOptimizationData,
   'pageResult'
 > {
+  /** Browser handoff containing request-local state and, when prepared, replay events for its route. */
   readonly handoff: BrowserOptimizationHandoff
 }
 
@@ -365,6 +373,16 @@ export async function getNextjsServerOptimizationData(
   return { data: pageResult.data, pageResult, requestOptimization }
 }
 
+/**
+ * Prepare request-local optimization state and a browser handoff for a Next.js render.
+ *
+ * The Experience API call is a preview: its returned data can drive server rendering and its
+ * API-issued profile ID can continue in the browser, but the preview does not commit profile
+ * events. The matching browser handoff admits the replay through the Web SDK queue. If the preview
+ * request fails, the prepared replay remains available and `data` is `undefined`.
+ *
+ * @public
+ */
 export function createNextjsRequestHandoff(
   sdk: ContentfulOptimization,
   options: NextjsRequestHandoffOptions & { readonly hydration: 'analytics-only' },

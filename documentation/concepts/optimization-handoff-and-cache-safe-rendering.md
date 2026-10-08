@@ -28,7 +28,7 @@ from live updates, and how analytics-only markup can still carry Optimization tr
 - [Cache scopes](#cache-scopes)
 - [Customer-owned permutations](#customer-owned-permutations)
 - [Hydration and live updates](#hydration-and-live-updates)
-- [Initial page event ownership](#initial-page-event-ownership)
+- [Server preparation and browser commitment](#server-preparation-and-browser-commitment)
 - [Analytics-only handoff and tracking attributes](#analytics-only-handoff-and-tracking-attributes)
 - [Why profile state stays out of public caches](#why-profile-state-stays-out-of-public-caches)
 - [Related documentation](#related-documentation)
@@ -65,10 +65,14 @@ It can contain:
   `sys.id` in `entryId`.
 - `cache` - metadata that describes where the rendered output is allowed to be cached.
 
-Browser handoffs add two fields:
+Browser handoffs add one field:
 
 - `hydration` - the browser presentation policy for already-rendered content.
-- `initialPageEvent` - whether the browser emits or skips the first page event for this route.
+
+A request handoff can also contain `replay`, an ordered batch of prepared Experience events and the
+visible route key they belong to. A matching browser route hydrates the handoff and admits that
+batch to the normal Experience queue. A route without a matching replay follows ordinary browser
+page tracking.
 
 The SDK serializes and hydrates the state it receives. Browser hydration applies only state fields
 that are present on the handoff. During Web handoff state interception, omitted interceptor fields
@@ -100,8 +104,8 @@ The handoff is not a cache key by itself. Cache safety comes from matching the r
 handoff state, and the cache scope.
 
 In App Router, managed-entry prefetch without a supplied handoff creates a baseline `static` handoff
-with `hydration: 'preserve-server'`, `selectedOptimizations: []`, and
-`initialPageEvent: 'emit'`. Treat it as baseline entry warming, not request-personalized state.
+with `hydration: 'preserve-server'` and `selectedOptimizations: []`. Treat it as baseline entry
+warming, not request-personalized state.
 Prefetch accepts ID and content-type/slug descriptors. A matching browser source uses the handed-off
 baseline through either the source key or resolved `sys.id`, so it does not repeat the CDA request.
 
@@ -193,7 +197,9 @@ becomes the browser commitment: it is the first content shown, and with live upd
 place. Later selections, pending state, and failure state do not replace it or restore loading. With
 live updates on, later defined selections can replace it; an empty `selectedOptimizations` array
 (`[]`) means no selection applies and resolves baseline content with matching baseline tracking
-metadata. A different baseline entry ID starts a new presentation.
+metadata. A different baseline entry ID starts a new presentation. This presentation commitment is
+separate from event commitment: rendering handoff state does not mean the browser has admitted or
+delivered the prepared event batch.
 
 `liveUpdates` controls later browser re-resolution after startup. A route can preserve the rendered
 content for stable first paint and still keep live updates off. Turn live updates on when visible
@@ -206,30 +212,33 @@ existing durable browser profile continuity by suppressing durable continuity pe
 handoff. A `private-request` handoff, or any profile-backed handoff that passes cache safety,
 follows normal persistence behavior when persistence consent allows.
 
-## Initial page event ownership
+## Server preparation and browser commitment
 
-The first page event must have one owner.
+For a private request, the server builds the initial `identify` and `track` events in order, followed
+by one page event. It applies server event transformations and validates the batch before previewing
+it with the Experience API. The preview uses the per-request mutation option `preflight: true`, so
+the API returns evaluated profile data for rendering without storing those event mutations. The
+handoff carries the prepared events and visible route key to the browser.
 
-- Use `initialPageEvent: 'skip'` when a request or edge helper already accepted the first page
-  event for the same route.
-- Use `initialPageEvent: 'emit'` when the browser owns the first page event for a static,
-  public-permutation, or browser-owned route.
+On the matching browser route, the Web SDK hydrates presentation state and admits the prepared batch
+to its normal Experience queue. Admission is the browser's commitment point; the request-side
+preview is not event commitment. The queue applies current consent and handles delivery, retries,
+and response state through the same path as other Experience events. A repeated invocation for the
+current handoff joins current work instead of admitting the batch again. This guard covers the
+current initialization, not every future visit to the route. Later visits and distinct handoffs
+remain trackable.
 
-Next.js request helpers set this value from the accepted page event result. The App Router request
-family passes its handoff-owned value to the nested route tracker. When the binding opts into trusted
-request handoff, a response-capable request handler can forward `pageAccepted` so the Server
-Component path does not call `page()` a second time. That forwarded context is compact: `consent`,
-`pageAccepted`, and optional `profileId`. The request family refetches profile and selection state
-server-side when `profileId` is present instead of forwarding full `OptimizationData`. Manual
-`createRequestHandoff()` remains available for advanced orchestration. Selection handoff helpers
-require application code to supply the initial page-event owner because customer-owned static and
-public permutations do not emit a server request event by themselves.
+If the handoff has no replay for the current route, the browser builds and tracks an ordinary page
+event subject to current consent. If consent or queue capacity prevents replay admission, the batch
+is not replaced by a page event that omits its prepared prefix. A still-unadmitted batch can be
+reassessed through a later invocation when prerequisites change. Admission means the queue owns the
+batch; it does not guarantee exactly-once backend commitment when a response is lost.
 
-React Web roots can emit the handoff-owned initial page event when they receive `routeKey` and
-either `buildPagePayload` or `initialPagePayload`. A skip can mark the initial route accepted with
-only the route key. A skip applies only to the first route hydrated from that handoff; later
-route-key changes emit browser page events. Next.js route trackers use the same `"emit"` or
-`"skip"` control for the first browser route and then track later navigations.
+Static and public-permutation handoffs contain selected state and cache metadata, not request replay.
+Their browser route tracking follows the ordinary page path. App Router request components create
+the request handoff from one request-scoped preparation and pass it to the root or provider that
+renders the matching page. The framework must deliver the page's handoff across navigation;
+request memoization alone does not transfer a new handoff through a persistent layout.
 
 ## Analytics-only handoff and tracking attributes
 
@@ -242,11 +251,10 @@ browser SDK only for page and interaction tracking. Those routes use an analytic
 - The `data-ctfl-*` attributes describe the resolved entry, baseline entry, optimization context,
   variant index, sticky selection, and clickable state.
 
-When an analytics-only handoff skips the initial route, React StrictMode effect replay does not
-turn that skip into a duplicate browser page event. Later route-key changes still emit route events
-through the analytics runtime. If a newer analytics hydration starts or the root unmounts before
-async hydration finishes, the stale hydration stops before writing state, warning, or tracking the
-page.
+Analytics-only handoffs can also carry a prepared replay. The analytics runtime hydrates tracking
+state and admits a matching replay, or tracks the ordinary current page when no matching replay is
+present. If a newer analytics hydration starts or the root unmounts before async hydration finishes,
+the stale hydration stops before writing state, warning, or tracking the page.
 
 Analytics-only rendering still needs the same cache decision as the markup it tracks. A static
 analytics handoff is static; a public permutation needs an application-owned key; request-personalized

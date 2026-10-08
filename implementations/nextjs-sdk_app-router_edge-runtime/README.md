@@ -20,15 +20,16 @@ Reference implementation for actual Edge runtime handoff routes in
 `@contentful/optimization-nextjs`. Routes export `runtime = 'edge'`, avoid Node-only APIs, and use
 `@contentful/optimization-nextjs/edge` from `@/lib/edge-optimization`.
 
-This implementation is separate from the App Router Cache Components reference implementation. It
-does not cover ISR, route-level `revalidate`, or Cache Components.
+This implementation covers actual Edge runtime routes. It does not cover ISR, route-level
+`revalidate`, or Cache Components; the App Router reference implementation owns static and ISR
+routes.
 
 ## What this covers
 
 - Request-personalized Edge runtime handoff from `app/edge-request/route.ts`
 - Public permutation Edge runtime handoff from `app/edge-selection/[segment]/route.ts`
-- Request-selected content rendered on the Edge at `/edge-render/private`, with a browser root that
-  commits the handoff and keeps the content visible during hydration
+- Request-selected content rendered on the Edge at `/edge-render/private`, with Experience API
+  preview on the server and prepared-event commitment through the browser queue after hydration
 - App-owned public selections rendered on the Edge at `/edge-render/public/[segment]`
 - Edge runtime assertion with `globalThis.EdgeRuntime === 'edge-runtime'`
 - Profile cookie persistence through the response owned by `/edge-request`
@@ -83,8 +84,8 @@ consent and profile-cookie continuity, and navigation across the rendered Edge r
 
 ## Related
 
-- [Next.js SDK App Router](../nextjs-sdk_app-router/README.md) - Cache Components App Router
-  reference implementation
+- [Next.js SDK App Router](../nextjs-sdk_app-router/README.md) - App Router reference implementation
+  with static and ISR routes
 - [Next.js SDK Pages Router](../nextjs-sdk_pages-router/README.md) - Pages Router ISR reference
   implementation
 - [@contentful/optimization-nextjs](../../packages/web/frameworks/nextjs-sdk/README.md) - Next.js

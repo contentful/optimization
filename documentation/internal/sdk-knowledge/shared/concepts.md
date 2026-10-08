@@ -184,10 +184,11 @@ source: react-web-sdk#provider/LiveUpdatesProvider.tsx#LiveUpdatesProvider; reac
 ## Page events
 
 A page event signals a page/route view. Auto-page trackers emit them on navigation and dedupe
-consecutive route keys. When the server already reported a consented page view, the browser must
-skip the duplicate (per-SDK `initialPageEvent` / tracker prop). Interaction events
+consecutive route keys. A server preview supplies rendered selections without committing page
+effects; the browser admits the prepared replay for that route, or emits an ordinary page when no
+matching replay exists. Interaction events
 (view/click/hover) are consent-gated browser activity and use the resolved entry id.
-source: react-web-sdk#auto-page/useAutoPageEmitter.ts; react-web-sdk#router/next-app.tsx
+source: react-web-sdk#auto-page/useAutoPageEmitter.ts#useAutoPageEmitter; web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage
 
 ## Campaign attribution
 
@@ -313,10 +314,10 @@ optimizations, preserves the input entry order, and returns each resolved result
 baseline entry.
 source: core-sdk#handoff.ts#resolveEntriesForSelections; core-sdk#resolvers/OptimizedEntryResolver.ts#resolveWithContext
 
-Browser handoffs extend the core handoff with `hydration` and `initialPageEvent`. Content handoffs
+Browser handoffs extend the core handoff with `hydration`. Content handoffs
 are accepted by `hydrateOptimizationHandoff`; analytics-only handoffs are accepted by the analytics
-runtime. Both hydration paths validate `initialPageEvent` and enforce cache safety before state is
-published. Browser SDK state hydration is Web handoff-owned: `@contentful/optimization-web/handoff`
+runtime. Both hydration paths enforce cache safety before state is published. Browser SDK state
+hydration is Web handoff-owned: `@contentful/optimization-web/handoff`
 exports `hydrateOptimizationHandoffState` for customer adapters; that helper awaits the Web SDK
 state interceptor only when handoff state contains present `selectedOptimizations`, `changes`, or
 `profile` own fields, keeps input handoff fields when an interceptor omits them, applies own present
@@ -324,7 +325,27 @@ state interceptor only when handoff state contains present `selectedOptimization
 undefined or empty handoff state. Content handoff state hydration starts from a content reset for
 `selectedOptimizations` and `changes`, so a new content-capable handoff that omits those fields
 clears stale browser content state while preserving `profile` unless `profile` is an own field.
-source: web-sdk#handoff.ts#BrowserOptimizationHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoffState; web-sdk#handoff.ts#applyHydratedSignals; web-sdk#handoff.ts#applySuccessfulEmptyHandoffHydration; core-sdk#handoff.ts#assertOptimizationCacheSafety
+source: web-sdk#handoff.ts#BrowserOptimizationHandoff; web-sdk#handoff-internal.ts#hydrateOptimizationHandoff; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff; web-sdk#handoff-internal.ts#hydrateOptimizationHandoffState; web-sdk#handoff-internal.ts#applyHydratedSignals; web-sdk#handoff-internal.ts#applySuccessfulEmptyHandoffHydration; core-sdk#handoff.ts#assertOptimizationCacheSafety
+
+`prepareRequestHandoff()` validates and prepares an ordered initial `identify`/`track` plus page
+batch, then previews it with a request-scoped Experience API `preflight: true` mutation. Preview
+does not commit the events. On preview failure, the prepared replay remains available without
+selection state; denied page consent or invalid preparation yields no replay. A successful preview
+returns an API-issued profile ID, including when the request had no prior ID. The SDK does not
+invent an ID to reserve for the preview. A later browser replay uses `preflight: false` and can
+receive a different linked API-issued ID.
+source: core-sdk#CoreStatelessRequest.ts#prepareRequestHandoff; core-sdk#CoreStatelessRequest.ts#buildHandoffEvents; api-client#experience/ExperienceApiClient.ts#upsertProfile; core-sdk#queues/ExperienceQueue.ts#sendPrepared; core-sdk#queues/ExperienceQueue.ts#upsertProfile
+
+`hydrateAndTrackCurrentPage()` hydrates the current handoff and admits a matching replay as one
+retained Experience queue batch. Admission settles without waiting for HTTP delivery; the queue
+retries a failed batch and updates live state when the response succeeds. Prepared events are
+validated and consent is checked again before admission; exceeding queue capacity rejects the
+whole batch, leaving the route available for a later attempt. Repeated initialization
+for the same replay and route shares the admission, while another route or fresh replay can be
+tracked. An absent or mismatched replay uses ordinary current-page tracking; stale route hydration
+does not publish its state. A profileless public/static handoff preserves durable browser profile
+continuity while publishing its content selections in memory.
+source: web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#handoff-internal.ts#getHandoffInitialization; web-sdk#handoff-internal.ts#hydrateOptimizationHandoff; core-sdk#CoreStatefulEventEmitter.ts#sendPreparedExperienceEvents; core-sdk#queues/ExperienceQueue.ts#sendPrepared; core-sdk#queues/ExperienceQueue.ts#sendQueuedBatches
 
 Snapshot and preview-override paths consume selection state, not necessarily a full Experience
 response: snapshot runtimes resolve from whichever `selectedOptimizations`, `changes`, and `profile`

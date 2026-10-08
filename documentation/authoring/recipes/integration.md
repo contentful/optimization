@@ -26,6 +26,23 @@ Three artifacts own three different things — keep them separate:
   compose time; the blueprint makes the required coverage explicit, and the source verifier checks
   the claims the guide makes.
 
+For a paired server/browser integration, distinguish server preview from event commitment. The
+server prepares the initial Experience events and uses the per-request preflight option when it
+evaluates the request for personalized rendering. The browser receives the prepared handoff and
+admits the complete event batch through the SDK's existing queue; queue admission is separate from
+the eventual HTTP response. Do not model paired delivery as a server commit followed by a browser
+skip: the browser submits the prepared sequence, including its page event, as one batch. A matching
+replay suppresses a separate ordinary-page submission. Profile IDs come from Experience API
+responses; never describe an SDK-generated profile ID.
+Give the reader a replay-specific verification step, such as a distinctive prepared event next to
+the page in the same browser batch. A page-only browser request cannot distinguish prepared replay
+from ordinary page tracking after a missing or mismatched handoff.
+For a cross-runtime recipe, show the prepared input shape, the returned render data and handoff,
+the transfer into browser code, and the browser continuation together, or link the exact guide
+section that does. When optional page owners differ, qualify later consent, validation, and
+troubleshooting steps by mode. Distinguish a recoverable preview result from an error thrown by
+application fetching or rendering code.
+
 Shared-copy files contain small pieces of reader-facing wording reused verbatim. Any variation choice
 is explicit in the blueprint; shared copy must not infer an SDK family or restate behavior.
 

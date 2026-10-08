@@ -206,7 +206,7 @@ tracking, screen tracking, live updates, preview-panel overrides, and shared moc
 | ------------------- | --------- | ---------------------------- | ------------------------------------------------------------------------------------------------- |
 | `spaceId`           | Yes       | None                         | Contentful Space identifier used for Experience and Insights API calls.                           |
 | `environment`       | No        | `master`                     | Contentful space environment identifier used for Experience and Insights API calls.               |
-| `api`               | No        | `null`                       | `OptimizationApiConfig` for endpoint overrides, enabled Experience features, and preflight.       |
+| `api`               | No        | `null`                       | `OptimizationApiConfig` for endpoint overrides and enabled Experience features.                   |
 | `locale`            | No        | `null`                       | SDK Experience API and default event locale.                                                      |
 | `defaults`          | No        | `null`                       | Startup defaults for consent, persistence consent, profile, or selected variants (see below).     |
 | `allowedEventTypes` | No        | Bridge default               | Event types allowed before consent is explicitly set.                                             |

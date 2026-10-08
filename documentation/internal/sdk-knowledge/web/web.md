@@ -13,17 +13,17 @@ wraps this). Package source root: `packages/web/web-sdk/src`; shared core:
 
 ## Package & entry points
 
-| Import path                                        | Purpose                                                                      | source                                                                                                                                                                                                  |
-| -------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@contentful/optimization-web` (default export)    | `ContentfulOptimization` class                                               | web-sdk#index.ts; web-sdk#ContentfulOptimization.ts#ContentfulOptimization                                                                                                                              |
-| `@contentful/optimization-web/web-components`      | `defineContentfulOptimizationElements()` + element/detail types              | web-sdk#web-components/index.ts#defineContentfulOptimizationElements                                                                                                                                    |
-| `@contentful/optimization-web/api-schemas`         | Type guards incl. `isMergeTagEntry`                                          | web-sdk#api-schemas.ts; core-sdk#contentful/typeGuards.ts#isMergeTagEntry                                                                                                                               |
-| `@contentful/optimization-web/constants`           | `ANONYMOUS_ID_COOKIE`, `DEFAULT_WEB_ALLOWED_EVENT_TYPES`, etc.               | web-sdk#constants.ts#DEFAULT_WEB_ALLOWED_EVENT_TYPES; core-sdk#constants.ts#ANONYMOUS_ID_COOKIE                                                                                                         |
-| `@contentful/optimization-web/logger`              | logger utilities                                                             | web-sdk#logger.ts                                                                                                                                                                                       |
-| `@contentful/optimization-web/handoff`             | Browser handoff types, hydration target, and content/state hydration helpers | web-sdk#handoff.ts#BrowserOptimizationHandoff; web-sdk#handoff.ts#OptimizationHandoffHydrationTarget; web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoffState |
-| `@contentful/optimization-web/analytics`           | Analytics-only runtime and analytics handoff hydration helper                | web-sdk#analytics.ts#initializeOptimizationAnalyticsRuntime; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff                                                                                   |
-| `@contentful/optimization-web/presentation`        | Low-level root/entry presentation primitives used by framework wrappers      | web-sdk#presentation/index.ts; web-sdk#presentation/OptimizedEntryController.ts#OptimizedEntryController                                                                                                |
-| `@contentful/optimization-web/tracking-attributes` | Presentation tracking-attribute resolver                                     | web-sdk#tracking-attributes.ts; web-sdk#presentation/OptimizedEntryTrackingAttributes.ts#resolveOptimizedEntryTrackingAttributes                                                                        |
+| Import path                                        | Purpose                                                                      | source                                                                                                                                                                                                                    |
+| -------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-web` (default export)    | `ContentfulOptimization` class                                               | web-sdk#index.ts; web-sdk#ContentfulOptimization.ts#ContentfulOptimization                                                                                                                                                |
+| `@contentful/optimization-web/web-components`      | `defineContentfulOptimizationElements()` + element/detail types              | web-sdk#web-components/index.ts#defineContentfulOptimizationElements                                                                                                                                                      |
+| `@contentful/optimization-web/api-schemas`         | Type guards incl. `isMergeTagEntry`                                          | web-sdk#api-schemas.ts; core-sdk#contentful/typeGuards.ts#isMergeTagEntry                                                                                                                                                 |
+| `@contentful/optimization-web/constants`           | `ANONYMOUS_ID_COOKIE`, `DEFAULT_WEB_ALLOWED_EVENT_TYPES`, etc.               | web-sdk#constants.ts#DEFAULT_WEB_ALLOWED_EVENT_TYPES; core-sdk#constants.ts#ANONYMOUS_ID_COOKIE                                                                                                                           |
+| `@contentful/optimization-web/logger`              | logger utilities                                                             | web-sdk#logger.ts                                                                                                                                                                                                         |
+| `@contentful/optimization-web/handoff`             | Browser handoff types, hydration target, and content/state hydration helpers | web-sdk#handoff.ts#BrowserOptimizationHandoff; web-sdk#handoff.ts#OptimizationHandoffHydrationTarget; web-sdk#handoff-internal.ts#hydrateOptimizationHandoff; web-sdk#handoff-internal.ts#hydrateOptimizationHandoffState |
+| `@contentful/optimization-web/analytics`           | Analytics-only runtime and analytics handoff hydration helper                | web-sdk#analytics.ts#initializeOptimizationAnalyticsRuntime; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff                                                                                                     |
+| `@contentful/optimization-web/presentation`        | Low-level root/entry presentation primitives used by framework wrappers      | web-sdk#presentation/index.ts; web-sdk#presentation/OptimizedEntryController.ts#OptimizedEntryController                                                                                                                  |
+| `@contentful/optimization-web/tracking-attributes` | Presentation tracking-attribute resolver                                     | web-sdk#tracking-attributes.ts; web-sdk#presentation/OptimizedEntryTrackingAttributes.ts#resolveOptimizedEntryTrackingAttributes                                                                                          |
 
 ## Setup / initialization and binding
 
@@ -56,10 +56,10 @@ wraps this). Package source root: `packages/web/web-sdk/src`; shared core:
     [`../shared/concepts.md`](../shared/concepts.md#entry-source-boundary-managed-or-manual).
     source: core-sdk#CoreBase.ts#CoreConfig; core-sdk#CoreBase.ts#ContentfulConfig; web-sdk#ContentfulOptimization.ts#OptimizationWebConfig; core-sdk#CoreStateful.ts#CoreStatefulConfig
 - Browser handoff model: see [`../shared/concepts.md`](../shared/concepts.md#optimization-handoff).
-  `hydrateOptimizationHandoff(sdk, handoff)` accepts only content handoffs, validates
-  `initialPageEvent`, enforces cache safety, hydrates state into the live SDK through Web handoff
-  state hydration, and leaves page-event emission to the root or route tracker that consumes
-  `initialPageEvent`. `@contentful/optimization-web/handoff` also exports
+  `hydrateOptimizationHandoff(sdk, handoff)` enforces cache safety and hydrates state into the live
+  SDK. `hydrateAndTrackCurrentPage()` then admits a matching prepared replay as one retained queue
+  batch, or emits an ordinary browser page for an absent or mismatched replay. Its result settles on
+  admission, before HTTP delivery and live state update. `@contentful/optimization-web/handoff` also exports
   `hydrateOptimizationHandoffState` for customer adapters. Undefined or empty handoff state still
   marks the Experience request state successful and clears stale browser content state by publishing
   `selectedOptimizations: undefined` and `changes: undefined` while leaving `profile` untouched. When
@@ -67,13 +67,13 @@ wraps this). Package source root: `packages/web/web-sdk/src`; shared core:
   as intentional, keeps input handoff fields when an interceptor omits them, applies own present
   `undefined` fields, and publishes only those present fields plus the content reset in one browser
   SDK batch.
-  source: web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#handoff.ts#hydrateOptimizationHandoffState; web-sdk#handoff.ts#applyHydratedSignals; web-sdk#handoff.ts#applySuccessfulEmptyHandoffHydration; core-sdk#handoff.ts#assertOptimizationCacheSafety
+  source: web-sdk#handoff-internal.ts#hydrateOptimizationHandoff; web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#handoff-internal.ts#hydrateOptimizationHandoffState; web-sdk#handoff-internal.ts#applyHydratedSignals; web-sdk#handoff-internal.ts#applySuccessfulEmptyHandoffHydration; core-sdk#handoff.ts#assertOptimizationCacheSafety
 - `hydrateOptimizationHandoff()` treats profileless `static` and `public-permutation` handoffs as
   live-memory hydration: it publishes handoff `changes` / `selectedOptimizations` to browser signals
   while suppressing durable continuity persistence, so existing durable `LocalStore` continuity is
   preserved. Private request handoffs, or profile-backed handoffs that pass cache safety, follow
   normal signal persistence and can update durable continuity when persistence consent allows.
-  source: web-sdk#handoff.ts#hydrateOptimizationHandoff; web-sdk#handoff.ts#shouldPreserveDurableContinuity; web-sdk#handoff.ts#applyHydratedSignals; web-sdk#storage/durableContinuityPersistence.ts#suppressDurableContinuityPersistence; web-sdk#storage/LocalStore.ts#LocalStore
+  source: web-sdk#handoff-internal.ts#hydrateOptimizationHandoff; web-sdk#handoff-internal.ts#shouldPreserveDurableContinuity; web-sdk#handoff-internal.ts#applyHydratedSignals; web-sdk#storage/durableContinuityPersistence.ts#suppressDurableContinuityPersistence; web-sdk#storage/LocalStore.ts#LocalStore
 
 ## Components & hooks
 
@@ -165,10 +165,10 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   source: web-sdk#ContentfulOptimization.ts#mergeConfig; web-sdk#builders/EventBuilder.ts#getPageProperties; core-sdk#events/EventBuilder.ts#buildUniversalEventProperties; core-sdk#events/EventBuilder.ts#buildPageView; kb:shared/concepts.md
 - `page()` (accepted) populates `states.selectedOptimizations`.
   source: core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals
-- `trackCurrentPage({ routeKey, buildPayload, initialPageEvent? })` — dedupes consecutive identical
-  route keys; `initialPageEvent: 'skip'` for hybrid first-route dedupe; a bare `page()` always emits
-  when consent permits.
-  source: web-sdk#ContentfulOptimization.ts#trackCurrentPage; core-sdk#tracking/AcceptedCurrentStateTracker.ts#emitIfNeeded
+- `trackCurrentPage()` dedupes consecutive accepted route keys; a bare `page()` always emits when
+  consent permits. A matching prepared replay marks its route accepted at queue admission, avoiding
+  a second browser page for that route.
+  source: web-sdk#ContentfulOptimization.ts#trackCurrentPage; web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; core-sdk#tracking/AcceptedCurrentStateTracker.ts#emitIfNeeded
 - Interaction tracking: SDK observes any DOM element carrying `data-ctfl-*`; auto view/click/hover
   on by default; opt out per-type via `autoTrackEntryInteraction`. Manual:
   `tracking.enableElement('views', el, { data })` / `disableElement` / `clearElement` (manual data
@@ -189,15 +189,14 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   flush uses Beacon, so final interaction events are queued first.
   source: web-sdk#entry-tracking/events/observerSupport.ts#addVisibilityChangeListener; web-sdk#entry-tracking/events/view/ElementViewObserver.ts#ElementViewObserver; web-sdk#entry-tracking/events/hover/ElementHoverObserver.ts#ElementHoverObserver; web-sdk#entry-tracking/EntryInteractionRuntime.ts#EntryInteractionRuntime; web-sdk#ContentfulOptimization.ts#ContentfulOptimization; web-sdk#handlers/createVisibilityChangeListener.ts#createVisibilityChangeListener
 - Analytics-only handoff: `initializeOptimizationAnalyticsRuntime(config)` creates a narrow Web
-  runtime with `tracking`, `trackCurrentPage`, `flush`, and `destroy`, but no content-resolution
-  surface. It removes the global browser SDK reference if construction registered this analytics
-  runtime's own internal SDK instance. Hydration through `hydrateOptimizationAnalyticsHandoff`
-  accepts only `hydration: 'analytics-only'`, hydrates handoff state, warns when a skipped initial
-  page lacks profile continuity, then delegates initial route ownership to `trackCurrentPage()`.
-  Stale analytics hydrations stop before state apply, the warning, or page tracking; profileless
+  runtime with tracking and page admission but no content-resolution surface. It removes the global
+  browser SDK reference if construction registered this analytics runtime's own internal SDK
+  instance. `hydrateOptimizationAnalyticsHandoff()` accepts only `hydration: 'analytics-only'`,
+  hydrates state, then admits the matching replay or ordinary current page through the shared Web
+  operation. Stale analytics hydrations stop before state apply or page tracking; profileless
   `static` and `public-permutation` analytics handoffs suppress durable continuity persistence the
   same way content handoffs do.
-  source: web-sdk#analytics.ts#initializeOptimizationAnalyticsRuntime; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff; web-sdk#analytics.ts#warnSkippedInitialPageWithoutProfileContinuity; web-sdk#handoff.ts#shouldPreserveDurableContinuity
+  source: web-sdk#analytics.ts#initializeOptimizationAnalyticsRuntime; web-sdk#analytics.ts#hydrateOptimizationAnalyticsHandoff; web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#handoff-internal.ts#shouldPreserveDurableContinuity
 - Flags: `getFlag(name)` one-off and `states.flag(name)` reactive reads auto-attempt flag-view
   tracking; explicit/manual replacement is `trackFlagView()`. See
   [`../shared/concepts.md`](../shared/concepts.md#custom-flag-views).

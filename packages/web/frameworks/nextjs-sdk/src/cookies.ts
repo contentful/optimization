@@ -164,6 +164,14 @@ export function toNextjsAnonymousIdCookieOptions(
   }
 }
 
+/**
+ * Persist an API-issued profile ID in the response cookie when request persistence consent allows it.
+ *
+ * The ID comes from `data` or the bound request profile. When persistence is not allowed, the
+ * cookie is deleted by default.
+ *
+ * @public
+ */
 export function persistNextjsAnonymousId(
   response: NextjsResponseLike,
   requestOptimization: CoreStatelessRequest,
