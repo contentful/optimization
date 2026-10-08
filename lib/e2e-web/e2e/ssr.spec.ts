@@ -1,26 +1,36 @@
 import { expect, test, type Page } from '@playwright/test'
-import { CONSENT_COOKIE, runIf, seedAnonymousProfile, seedIdentifiedProfile, skipIf } from './utils'
+import { runIf, seedAnonymousProfile, seedIdentifiedProfile, skipIf } from './utils'
 
 test.describe('Hydration', () => {
   runIf('HYDRATION')
 
-  test('does not issue a client Experience request after consented SSR hydration', async ({
+  test('preserves consent and the profile cookie through browser commitment', async ({
     baseURL,
     context,
     page,
+    request,
   }) => {
-    await context.addCookies([{ name: CONSENT_COOKIE, value: 'granted', url: baseURL }])
-    const clientExperienceRequests: string[] = []
-    await page.route('**/experience/**', async (route) => {
-      clientExperienceRequests.push(route.request().url())
-      await route.continue()
-    })
+    await seedIdentifiedProfile(context, baseURL, request)
+    const profileId = (await context.cookies()).find(({ name }) => name === 'ctfl-opt-aid')?.value
+    expect(profileId).toBeTruthy()
 
+    const delivery = page.waitForResponse(
+      (response) =>
+        response.url().includes('/experience/') &&
+        response.request().method() === 'POST' &&
+        response.ok(),
+    )
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
-
-    expect(clientExperienceRequests).toEqual([])
+    await expect(page.getByTestId('consent-status')).toHaveText('Yes')
+    await expect(page.locator('[data-testid^="event-page-"]')).toHaveCount(1)
+    await delivery
+    await expect
+      .poll(
+        async () => (await context.cookies()).find(({ name }) => name === 'ctfl-opt-aid')?.value,
+      )
+      .toBe(profileId)
   })
 })
 
