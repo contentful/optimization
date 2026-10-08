@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { runIf, seedAnonymousProfile, seedIdentifiedProfile, skipIf } from './utils'
+import { PROFILE_COOKIE, runIf, seedAnonymousProfile, seedIdentifiedProfile, skipIf } from './utils'
 
 test.describe('Hydration', () => {
   runIf('HYDRATION')
@@ -98,8 +98,9 @@ test.describe('SSR first-paint state', () => {
       await expect(host).toHaveAttribute('data-ctfl-variant-index', '1')
     }
 
-    test('renders the variant for a new visitor before consent', async ({ page }) => {
+    test('renders the variant for a new visitor before consent', async ({ context, page }) => {
       await expectServerResolvedVariant(page)
+      expect((await context.cookies()).some(({ name }) => name === PROFILE_COOKIE)).toBe(false)
     })
 
     test('renders the variant for a consented visitor', async ({ baseURL, context, page }) => {

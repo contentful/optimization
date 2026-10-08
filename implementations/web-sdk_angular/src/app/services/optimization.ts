@@ -309,17 +309,9 @@ async function computeSnapshot(
   consentGranted: boolean,
   locale: string,
 ): Promise<ServerPreparationOutcome> {
-  if (!consentGranted) {
-    return {
-      snapshot: { consent: false, locale },
-      profileId: undefined,
-      canPersistProfile: false,
-    }
-  }
-
-  const anonymousId = readAnonymousId(request)
+  const anonymousId = consentGranted ? readAnonymousId(request) : undefined
   const requestOptimization: CoreStatelessRequest = sdk.forRequest({
-    consent: { events: true, persistence: true },
+    consent: consentGranted ? { events: true, persistence: true } : false,
     locale,
     eventContext: createServerEventContext(request, locale),
     ...(anonymousId === undefined ? {} : { profile: { id: anonymousId } }),
@@ -331,7 +323,7 @@ async function computeSnapshot(
 
   return {
     snapshot: {
-      consent: true,
+      consent: consentGranted,
       persistenceConsent: requestOptimization.canPersistProfile,
       locale,
       data,
