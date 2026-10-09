@@ -7,7 +7,7 @@ import {
   type Route,
 } from '@playwright/test'
 import { CUSTOMER_SEGMENTS, PAGES } from '../src/fixtures'
-import { CONSENT_COOKIE, implementation, runIf, runIfImplementation } from './utils'
+import { CONSENT_COOKIE, PROFILE_COOKIE, implementation, runIf, runIfImplementation } from './utils'
 
 const newVisitorSegment = CUSTOMER_SEGMENTS['new-visitor']
 const baselineSegment = CUSTOMER_SEGMENTS.baseline
@@ -213,6 +213,73 @@ test.describe('Next.js public permutation handoff routes', () => {
 test.describe('Next.js App Router-only handoff routes', () => {
   runIf('SSR')
   runIfImplementation('nextjs-sdk_app-router')
+
+  for (const { linkTestId, path, routeTestId } of [
+    {
+      linkTestId: 'link-selection-handoff',
+      path: '/selection-handoff/new-visitor',
+      routeTestId: 'selection-handoff-route',
+    },
+    {
+      linkTestId: 'link-analytics-only',
+      path: '/analytics-only/new-visitor',
+      routeTestId: 'analytics-only-route',
+    },
+  ]) {
+    test(`preserves consented profile continuity through ${path}`, async ({ context, page }) => {
+      const browserErrors: string[] = []
+      page.on('pageerror', (error) => browserErrors.push(error.message))
+      page.on('console', (message) => {
+        if (message.type() === 'error') browserErrors.push(message.text())
+      })
+
+      await page.goto('/')
+      await page.getByTestId('consent-button').click()
+      await expect(page.getByTestId('consent-status')).toHaveText('Yes')
+      await page.getByTestId('identify-button').click()
+      await expect(page.getByTestId('identified-status')).toHaveText('Yes')
+
+      const getProfileId = async (): Promise<string | undefined> =>
+        (await context.cookies()).find(({ name }) => name === PROFILE_COOKIE)?.value
+      await expect.poll(getProfileId).toBeTruthy()
+      const profileId = await getProfileId()
+      if (profileId === undefined) throw new Error('The identified visitor has no profile ID.')
+
+      await page.getByTestId(linkTestId).click()
+      await expect(page).toHaveURL(path)
+      await expect(page.getByTestId(routeTestId)).toContainText(newVisitorSegment.resolvedEntryText)
+      await expect.poll(getProfileId).toBe(profileId)
+
+      await page.reload()
+      await expect(page.getByTestId(routeTestId)).toContainText(newVisitorSegment.resolvedEntryText)
+      await expect.poll(getProfileId).toBe(profileId)
+
+      await page.getByTestId('link-home').click()
+      await expect(page.getByTestId('consent-status')).toHaveText('Yes')
+      await expect(page.getByTestId('identified-status')).toHaveText('Yes')
+      await expect.poll(getProfileId).toBe(profileId)
+      expect(browserErrors).toEqual([])
+    })
+  }
+
+  test('public handoff routes do not persist a profile without consent', async ({
+    context,
+    page,
+  }) => {
+    await page.goto('/')
+    await expect(page.getByTestId('consent-status')).toHaveText('No')
+
+    for (const { path, routeTestId } of [
+      { path: '/selection-handoff/new-visitor', routeTestId: 'selection-handoff-route' },
+      { path: '/analytics-only/new-visitor', routeTestId: 'analytics-only-route' },
+    ]) {
+      await page.goto(path)
+      await expect(page).toHaveURL(path)
+      await expect(page.getByTestId(routeTestId)).toBeVisible()
+      await page.waitForLoadState('networkidle')
+      expect((await context.cookies()).some(({ name }) => name === PROFILE_COOKIE)).toBe(false)
+    }
+  })
 
   test('hydrates analytics-only server markup without browser content resolution', async ({
     page,

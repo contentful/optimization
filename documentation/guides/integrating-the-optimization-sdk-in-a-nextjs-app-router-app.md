@@ -498,8 +498,9 @@ The binding config separates policy from mechanism:
 
 - `consent.server` is the app-owned server policy for the current request; configure it explicitly
   because App Router request initialization resolves omitted request consent to `false`.
-- `consent.clientDefaults` seeds the browser SDK before a persisted or explicit browser decision is
-  available.
+- `consent.clientDefaults` supplies explicit browser defaults. The nested request family replaces
+  them with the current request's consent, but a top-level static or public root uses them as given.
+  Supply the app's current browser consent when mounting a public root.
 - `contentful.client` is your delivery client. The SDK may call it for managed entry IDs or
   content-type/slug lookups, but it does not own your Contentful Delivery API (CDA) credentials or
   query policy.
@@ -1013,6 +1014,13 @@ Replace the quick-start consent shortcut with your app policy:
 
 `setConsent(true)` or `setConsent(false)` sets both event consent and persistence consent to the same
 value. Use the object form, `setConsent({ events, persistence })`, when those two decisions differ.
+
+> [!WARNING]
+> The fixed `false` browser defaults below apply to the nested request path, whose handoff supplies
+> the current request consent. A top-level static or public root uses those defaults as given rather
+> than reading the current browser decision. Initialize public browser roots from the current
+> app-owned consent decision as shown in
+> [Render personalized Next.js routes with static, ISR, and edge handoffs](./rendering-personalized-nextjs-routes-with-static-isr-and-edge-handoffs.md).
 
 **Adapt this to your use case:**
 

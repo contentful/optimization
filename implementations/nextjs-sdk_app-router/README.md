@@ -32,6 +32,8 @@ Edge runtime routes live in the
   queue.
 - Request-bound Server Components with browser hydration and live updates.
 - Static public permutation and analytics-only handoff.
+- Browser consent bootstrap for public handoffs, preserving a consented visitor's profile across
+  static selection and analytics-only routes.
 - App-owned and SDK-managed Contentful entry fetching.
 - Preview panel attachment behind `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`.
 

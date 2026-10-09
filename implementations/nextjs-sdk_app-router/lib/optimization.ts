@@ -9,7 +9,7 @@ import {
 import { type NextjsOptimizationServerConsentResolver } from '@contentful/optimization-nextjs/server'
 import { getServerTrackingAttributes } from '@contentful/optimization-nextjs/tracking-attributes'
 import type { NextRequest, NextResponse } from 'next/server'
-import { appConfig } from './config'
+import { optimizationSdkConfig } from './config'
 import { client } from './contentful'
 import { getCustomerSegment, type CustomerSegment } from './customer-segments'
 import { getAppConsent } from './util'
@@ -23,25 +23,12 @@ export type ContentHandoff = NonNullable<
   Parameters<AppRouterOptimization['OptimizationRoot']>[0]['handoff']
 >
 
-const serverOptimizationConfig = {
-  spaceId: appConfig.spaceId,
-  environment: appConfig.environment,
-  locale: appConfig.locale,
-  logLevel: 'debug',
-  api: appConfig.api,
-  app: {
-    name: 'Contentful Optimization Next.js SDK App Router',
-    version: '0.1.0',
-  },
-} as const
-
 const serverConsent: NextjsOptimizationServerConsentResolver = ({ cookies }) =>
   getAppConsent(cookies) ? { events: true, persistence: true } : false
 
 const optimization = bindNextjsAppRouterServerOptimization({
-  ...serverOptimizationConfig,
+  ...optimizationSdkConfig,
   contentful: { client },
-  trackEntryInteraction: { views: true, clicks: true, hovers: true },
   consent: {
     server: serverConsent,
     clientDefaults: { consent: false, persistenceConsent: false },
@@ -59,21 +46,23 @@ const optimization = bindNextjsAppRouterServerOptimization({
 })
 
 export const {
-  OptimizationAnalyticsRoot,
-  OptimizationRoot: ExplicitOptimizationRoot,
   OptimizedEntry: ExplicitOptimizedEntry,
   createHandoffFromSelections,
   createOptimizationCacheKey,
   createPublicPermutationHandoff,
   resolveEntriesForSelections,
 } = optimization
+export {
+  PublicContentRoot as ExplicitOptimizationRoot,
+  PublicAnalyticsRoot as OptimizationAnalyticsRoot,
+} from '@/components/PublicHandoffRoots'
+export { getServerTrackingAttributes }
 export const {
   NextAppAutoPageTracker: RequestPageTracker,
   OptimizationProvider: RequestOptimizationProvider,
   OptimizationRoot: RequestOptimizationRoot,
   OptimizedEntry: RequestOptimizedEntry,
 } = optimization.request
-export { getServerTrackingAttributes }
 
 const cacheMiddleware: NextjsPublicPermutationCacheMiddleware =
   createNextjsPublicPermutationCacheMiddleware({
