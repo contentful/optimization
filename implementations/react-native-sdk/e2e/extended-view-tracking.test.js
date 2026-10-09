@@ -1,3 +1,4 @@
+const { expect: jestExpect } = require('expect')
 const {
   clearProfileState,
   ELEMENT_VISIBILITY_TIMEOUT,
@@ -17,6 +18,8 @@ const BELOW_FOLD_ENTRY_ID = '7pa5bOx8Z9NmNcr7mISvD'
 
 // Extended timeout for the 1s dwell plus native rendering and event propagation.
 const EXTENDED_TIMEOUT = 30000
+const DWELL_TIME_MS = 1000
+const MIN_VISIBLE_PERCENT = 10
 
 async function getTrackedItemEventCount(componentId) {
   const text = await getElementTextById(`event-count-${componentId}`)
@@ -88,15 +91,26 @@ describe('Extended View Tracking', () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    // Scroll down to bring the below-fold entry into view briefly
-    await waitFor(element(by.id(`content-entry-${BELOW_FOLD_ENTRY_ID}`)))
-      .toBeVisible()
-      .whileElement(by.id('main-scroll-view'))
-      .scroll(300, 'down')
+    const entry = element(by.id(`content-entry-${BELOW_FOLD_ENTRY_ID}`))
+    const scrollView = element(by.id('main-scroll-view'))
+    await expect(entry).not.toBeVisible(1)
+    await expect(element(by.id(`entry-stats-${BELOW_FOLD_ENTRY_ID}`))).not.toExist()
 
-    // Immediately scroll back to top — the entry is intended to remain visible for well under 1s.
-    // The lower 10% visibility threshold makes this gesture-bound assertion more timing-sensitive.
-    await element(by.id('main-scroll-view')).scrollTo('top')
+    // Synchronization waits for the SDK's 1s timer before allowing the next gesture.
+    // Disable it only for the short exposure, restoring it even if an assertion fails.
+    await device.disableSynchronization()
+    try {
+      const startedAt = performance.now()
+      await scrollView.swipe('up', 'fast', 0.5)
+      await expect(entry).toBeVisible(MIN_VISIBLE_PERCENT)
+      await scrollView.swipe('down', 'fast', 0.75)
+      await expect(entry).not.toBeVisible(1)
+      // Measure the whole gesture sequence, including the time before the entry appears.
+      // A slow gesture must fail this precondition instead of testing a qualified exposure.
+      jestExpect(performance.now() - startedAt).toBeLessThan(DWELL_TIME_MS)
+    } finally {
+      await device.enableSynchronization()
+    }
 
     // Wait long enough that an event WOULD have fired if tracking hadn't been cancelled
     await sleep(3000)
