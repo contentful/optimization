@@ -70,17 +70,17 @@ that surface.
 The published package surface is intentionally layered. The table below is a package inventory and
 high-level role summary.
 
-| Package                                      | Kind                  | Runtime          | Role                                                                                                                     | Package README                                                     |
-| -------------------------------------------- | --------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| `@contentful/optimization-web`               | Environment SDK       | Browser          | Stateful browser SDK for optimization, tracking, and consent                                                             | [Web SDK](./packages/web/web-sdk/README.md)                        |
-| `@contentful/optimization-react-web`         | Framework SDK         | React on the web | React integration layer on top of the Web SDK                                                                            | [React Web SDK](./packages/web/frameworks/react-web-sdk/README.md) |
-| `@contentful/optimization-nextjs`            | Framework SDK         | Next.js          | Next.js adapter for explicit App Router and Pages Router bound components, SSR, client tracking, and request composition | [Next.js SDK](./packages/web/frameworks/nextjs-sdk/README.md)      |
-| `@contentful/optimization-node`              | Environment SDK       | Node.js          | Stateless Node SDK for server-side and SSR integrations                                                                  | [Node SDK](./packages/node/node-sdk/README.md)                     |
-| `@contentful/optimization-react-native`      | Environment SDK       | React Native     | React Native SDK for mobile applications                                                                                 | [React Native SDK](./packages/react-native-sdk/README.md)          |
-| `@contentful/optimization-web-preview-panel` | Tooling package       | Browser          | Preview tooling package for existing Web SDK instances                                                                   | [Web Preview Panel](./packages/web/preview-panel/README.md)        |
-| `@contentful/optimization-core`              | Shared SDK foundation | Runtime-agnostic | Shared optimization foundation, CDA schemas, and aggregate schema pass-throughs for runtime adapters and SDK layers      | [Core SDK](./packages/universal/core-sdk/README.md)                |
-| `@contentful/optimization-api-client`        | Universal library     | Runtime-agnostic | Direct Experience API and Insights API transport with their validation schemas                                           | [API Client](./packages/universal/api-client/README.md)            |
-| `@contentful/optimization-api-schemas`       | Compatibility facade  | Runtime-agnostic | Deprecated compatibility facade for the historical combined API-schema root surface                                      | [API Schemas](./packages/universal/api-schemas/README.md)          |
+| Package                                      | Kind                  | Runtime          | Role                                                                                                                | Package README                                                     |
+| -------------------------------------------- | --------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `@contentful/optimization-web`               | Environment SDK       | Browser          | Stateful browser SDK for optimization, tracking, and consent                                                        | [Web SDK](./packages/web/web-sdk/README.md)                        |
+| `@contentful/optimization-react-web`         | Framework SDK         | React on the web | React integration layer on top of the Web SDK                                                                       | [React Web SDK](./packages/web/frameworks/react-web-sdk/README.md) |
+| `@contentful/optimization-nextjs`            | Framework SDK         | Next.js          | Next.js adapter for request preview handoff, browser queue commitment, SSR, and router composition                  | [Next.js SDK](./packages/web/frameworks/nextjs-sdk/README.md)      |
+| `@contentful/optimization-node`              | Environment SDK       | Node.js          | Stateless Node SDK for server-side and SSR integrations                                                             | [Node SDK](./packages/node/node-sdk/README.md)                     |
+| `@contentful/optimization-react-native`      | Environment SDK       | React Native     | React Native SDK for mobile applications                                                                            | [React Native SDK](./packages/react-native-sdk/README.md)          |
+| `@contentful/optimization-web-preview-panel` | Tooling package       | Browser          | Preview tooling package for existing Web SDK instances                                                              | [Web Preview Panel](./packages/web/preview-panel/README.md)        |
+| `@contentful/optimization-core`              | Shared SDK foundation | Runtime-agnostic | Shared optimization foundation, CDA schemas, and aggregate schema pass-throughs for runtime adapters and SDK layers | [Core SDK](./packages/universal/core-sdk/README.md)                |
+| `@contentful/optimization-api-client`        | Universal library     | Runtime-agnostic | Direct Experience API and Insights API transport with their validation schemas                                      | [API Client](./packages/universal/api-client/README.md)            |
+| `@contentful/optimization-api-schemas`       | Compatibility facade  | Runtime-agnostic | Deprecated compatibility facade for the historical combined API-schema root surface                                 | [API Schemas](./packages/universal/api-schemas/README.md)          |
 
 General selection rules:
 
@@ -133,10 +133,10 @@ patterns with intentionally minimal application code.
   SDK
 - [Node SSR + Web Vanilla](./implementations/node-sdk+web-sdk/README.md) - split server/browser flow
   using Node and Web SDKs together
-- [Next.js SDK App Router](./implementations/nextjs-sdk_app-router/README.md) - Next.js App Router
-  first-paint SSR with browser-side takeover after hydration
-- [Next.js SDK Pages Router](./implementations/nextjs-sdk_pages-router/README.md) - Next.js Pages
-  Router integration using `getServerSideProps` state handoff
+- [Next.js SDK App Router](./implementations/nextjs-sdk_app-router/README.md) - request-preview SSR
+  with browser queue commitment after hydration
+- [Next.js SDK Pages Router](./implementations/nextjs-sdk_pages-router/README.md) - Pages Router
+  integration using `getServerSideProps` prepared handoff
 - [React Native](./implementations/react-native-sdk/README.md) - mobile application integration for
   Android and iOS targets
 - [iOS Reference App](./implementations/ios-sdk/README.md) - native app and XCUITest surface for

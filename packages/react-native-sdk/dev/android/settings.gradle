@@ -1,6 +1,13 @@
-pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
+pluginManagement {
+    def pluginPackage = providers.exec {
+        workingDir file("../..")
+        commandLine "node", "--print", "require.resolve('@react-native/gradle-plugin/package.json', {paths: [require.resolve('react-native/package.json')]})"
+    }.standardOutput.asText.get().trim()
+    gradle.ext.reactNativeGradlePluginDir = new File(pluginPackage).parentFile
+    includeBuild(gradle.ext.reactNativeGradlePluginDir.path)
+}
 plugins { id("com.facebook.react.settings") }
-extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand(["pnpm", "exec", "bash", "-c", "cd dev && react-native config"], file("../..")) }
 rootProject.name = 'ReactNativeApp'
 include ':app'
-includeBuild('../node_modules/@react-native/gradle-plugin')
+includeBuild(gradle.ext.reactNativeGradlePluginDir.path)

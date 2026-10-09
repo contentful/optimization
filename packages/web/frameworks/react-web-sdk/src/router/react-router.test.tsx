@@ -1,7 +1,6 @@
 import { rs } from '@rstest/core'
 import { act, StrictMode, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { resetAutoPageEmitterState } from '../auto-page/useAutoPageEmitter'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import { OptimizationContext } from '../context/OptimizationContext'
 import { createOptimizationSdk, defaultLiveUpdatesContext } from '../test/sdkTestUtils'
@@ -65,7 +64,6 @@ describe('ReactRouterAutoPageTracker', () => {
   })
 
   beforeEach(() => {
-    resetAutoPageEmitterState()
     locationState.hash = ''
     locationState.key = 'default'
     locationState.pathname = '/'

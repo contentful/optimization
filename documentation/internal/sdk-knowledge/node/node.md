@@ -106,6 +106,12 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   receives the handoff. Request handoffs must use `private-request` cache metadata; the helper throws
   a `TypeError` for `public-permutation` or `static` cache metadata before returning a handoff.
   source: node-sdk#handoff.ts#createRequestHandoffFromData; core-sdk#handoff.ts#assertOptimizationCacheSafety; core-sdk#handoff.ts#OptimizationHandoff
+- The request-bound `prepareRequestHandoff()` prepares the initial identify/track and page events,
+  then previews them through a per-request Experience API mutation with `preflight: true`. Preview
+  failure retains a replay without selected state; blocked page consent or invalid inputs produce
+  no replay. The browser must commit a prepared replay separately. The preview returns an API-issued
+  profile ID even for a first request; no SDK-created ID is reserved.
+  source: core-sdk#CoreStatelessRequest.ts#prepareRequestHandoff; core-sdk#CoreStatelessRequest.ts#buildHandoffEvents
 
 ## Identifier ownership
 
@@ -145,7 +151,7 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   `allowedEventTypes: []` blocks them until request consent is `true`. Event-type wire strings:
   `identify`, `page`, `screen`, `track`, `component` (view/flag view), `component_click`,
   `component_hover`; `flag` is a consent selector only.
-  source: core-sdk#CoreStatelessRequest.ts#hasConsent; core-sdk#CoreStatelessRequest.ts#withRequestEventConsent; core-sdk#events/EventType.ts#AllowedEventType; node-sdk#ContentfulOptimization.ts#DEFAULT_NODE_ALLOWED_EVENT_TYPES
+  source: core-sdk#CoreStatelessRequest.ts#hasConsent; core-sdk#CoreStatelessRequest.ts#sendAllowedExperienceEvent; core-sdk#events/EventType.ts#AllowedEventType; node-sdk#ContentfulOptimization.ts#DEFAULT_NODE_ALLOWED_EVENT_TYPES
 - Blocked events do NOT throw: Experience methods return `{ accepted: false }`, Insights methods
   return without sending; `onEventBlocked({ reason: 'consent', method, args })` fires for diagnostics.
   source: core-sdk#CoreStatelessRequest.ts#sendExperienceEvent; core-sdk#CoreStatelessRequest.ts#reportBlockedEvent; core-sdk#events/BlockedEvent.ts#BlockedEvent

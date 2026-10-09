@@ -1,6 +1,7 @@
 import { batch, signals } from '@contentful/optimization-core'
 import type {
   ChangeArray,
+  OptimizationData,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-core/api-schemas'
@@ -13,8 +14,10 @@ import {
   hydrateOptimizationHandoffState,
   type ContentOptimizationHandoff,
 } from './handoff'
-import { removeCookie } from './lib/cookies'
+import { getCookie, removeCookie } from './lib/cookies'
+import { createWebSnapshotRuntime } from './runtime'
 import LocalStore from './storage/LocalStore'
+import { deferred } from './test/helpers'
 
 const config = {
   spaceId: 'key_123',
@@ -73,7 +76,6 @@ function createContentHandoff(
   return {
     cache: { scope: 'static' },
     hydration: 'preserve-server',
-    initialPageEvent: 'skip',
     state,
     ...overrides,
   }
@@ -197,6 +199,279 @@ describe('hydrateOptimizationHandoff', () => {
   it('keeps handoff hydration out of Web bridge support', () => {
     expect('hydrateOptimizationSelectionState' in webBridgeSupport).toBe(false)
     expect('hydrateOptimizationHandoffState' in webBridgeSupport).toBe(false)
+  })
+
+  it('admits replay without waiting for delivery, persists its API ID and keeps early Insights attributable', async () => {
+    const sdk = new ContentfulOptimization({
+      ...config,
+      defaults: { consent: true, persistenceConsent: true },
+    })
+    const response = deferred<OptimizationData>()
+    const deliver = rs.spyOn(sdk.api.experience, 'upsertProfile').mockReturnValue(response.promise)
+    const insightsSent = createDeferred()
+    const insights = rs.spyOn(sdk.api.insights, 'sendBatchEvents').mockImplementation(async () => {
+      insightsSent.resolve()
+      return await Promise.resolve(true)
+    })
+    const browserTransform = rs.spyOn(sdk.interceptors.event, 'run')
+    const events = [
+      sdk.eventBuilder.buildIdentify({ userId: 'customer' }),
+      sdk.eventBuilder.buildPageView(),
+    ]
+    const handoff: ContentOptimizationHandoff = {
+      cache: { scope: 'private-request' },
+      hydration: 'preserve-server',
+      profileId: 'api-issued-id',
+      replay: { routeKey: '/paired', events, locale: 'de-DE' },
+    }
+    const ordinaryPage = rs.spyOn(sdk, 'page')
+
+    expect(await sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired' })).toEqual({
+      accepted: true,
+    })
+    expect(browserTransform).not.toHaveBeenCalled()
+    expect(sdk.states.profile.current).toBeUndefined()
+    expect(getCookie(ANONYMOUS_ID_COOKIE)).toBe('api-issued-id')
+    await sdk.trackClick({
+      componentId: 'displayed-variant',
+      experienceId: 'experience-id',
+      variantIndex: 1,
+    })
+    const flushing = sdk.flush()
+    await insightsSent.promise
+    expect(insights.mock.calls[0]?.[0]).toMatchObject([
+      {
+        profile: { id: 'api-issued-id' },
+        events: [
+          { componentId: 'displayed-variant', experienceId: 'experience-id', variantIndex: 1 },
+        ],
+      },
+    ])
+    expect(deliver).toHaveBeenCalledWith(
+      { profileId: 'api-issued-id', events },
+      { preflight: false, locale: 'de-DE' },
+    )
+    const liveReady = createDeferred()
+    const subscription = sdk.states.profile.subscribe((profile) => {
+      if (profile?.id === 'linked-api-id') liveReady.resolve()
+    })
+    response.resolve({ profile: createProfile('linked-api-id'), changes, selectedOptimizations })
+    await liveReady.promise
+    subscription.unsubscribe()
+    await flushing
+    expect(sdk.states.profile.current?.id).toBe('linked-api-id')
+    expect(getCookie(ANONYMOUS_ID_COOKIE)).toBe('linked-api-id')
+    expect(ordinaryPage).not.toHaveBeenCalled()
+  })
+
+  it('shares state-only and delivery initialization without reseeding after a live response', async () => {
+    const seed = createProfile('api-issued-id')
+    const live = { ...seed, traits: { accepted: true } }
+    const sdk = new ContentfulOptimization({ ...config, defaults: { consent: true } })
+    const deliver = rs.spyOn(sdk.api.experience, 'upsertProfile').mockResolvedValue({
+      profile: live,
+      changes: [],
+      selectedOptimizations: [],
+    })
+    const handoff = createContentHandoff(
+      { profile: seed, changes, selectedOptimizations },
+      {
+        cache: { scope: 'private-request' },
+        profileId: seed.id,
+        replay: { routeKey: '/paired', events: [sdk.eventBuilder.buildPageView()] },
+      },
+    )
+    await hydrateOptimizationHandoff(sdk, handoff, { routeKey: '/paired' })
+    const first = sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired' })
+    const repeat = sdk.hydrateAndTrackCurrentPage({ ...handoff }, { routeKey: '/paired' })
+    expect(await first).toEqual({ accepted: true })
+    expect(await repeat).toEqual({ accepted: true })
+    await sdk.flush()
+    await hydrateOptimizationHandoff(sdk, handoff, { routeKey: '/paired' })
+    await sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired' })
+    expect(deliver).toHaveBeenCalledTimes(1)
+    expect(sdk.states.profile.current).toEqual(live)
+    expect(sdk.states.selectedOptimizations.current).toEqual([])
+  })
+
+  it('reassesses consent, retaining the known ID in memory when persistence is denied', async () => {
+    const sdk = new ContentfulOptimization({
+      ...config,
+      allowedEventTypes: [],
+      defaults: { persistenceConsent: false },
+    })
+    window.dispatchEvent(new Event('offline'))
+    const deliver = rs.spyOn(sdk.api.experience, 'upsertProfile').mockResolvedValue({
+      profile: createProfile('api-issued-id'),
+      changes,
+      selectedOptimizations,
+    })
+    const insights = rs.spyOn(sdk.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const handoff = createContentHandoff(undefined, {
+      cache: { scope: 'private-request' },
+      profileId: 'api-issued-id',
+      replay: { routeKey: '/paired', events: [sdk.eventBuilder.buildPageView()] },
+    })
+    expect(await sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired' })).toEqual({
+      accepted: false,
+    })
+    sdk.consent({ events: true })
+    expect(await sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired' })).toEqual({
+      accepted: true,
+    })
+    await sdk.trackClick({ componentId: 'displayed-variant' })
+    expect(getCookie(ANONYMOUS_ID_COOKIE)).toBeUndefined()
+    expect(deliver).not.toHaveBeenCalled()
+    window.dispatchEvent(new Event('online'))
+    await sdk.flush()
+    expect(deliver).toHaveBeenCalledTimes(1)
+    expect(insights.mock.calls[0]?.[0][0]?.profile.id).toBe('api-issued-id')
+  })
+
+  it('rejects capacity without emitting a replacement page', async () => {
+    const sdk = new ContentfulOptimization({
+      ...config,
+      defaults: { consent: true },
+      queuePolicy: { offlineMaxEvents: 1 },
+    })
+    const deliver = rs.spyOn(sdk.api.experience, 'upsertProfile')
+    const ordinaryPage = rs.spyOn(sdk, 'page')
+    const handoff = createContentHandoff(undefined, {
+      cache: { scope: 'private-request' },
+      replay: {
+        routeKey: '/paired',
+        events: [
+          sdk.eventBuilder.buildIdentify({ userId: 'customer' }),
+          sdk.eventBuilder.buildPageView(),
+        ],
+      },
+    })
+    expect(await sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired' })).toEqual({
+      accepted: false,
+    })
+    expect(deliver).not.toHaveBeenCalled()
+    expect(ordinaryPage).not.toHaveBeenCalled()
+  })
+
+  it('tracks new preparations and return visits while leaving retry ownership with Core', async () => {
+    const sdk = new ContentfulOptimization({ ...config, defaults: { consent: true } })
+    window.dispatchEvent(new Event('offline'))
+    const delivered = createDeferred()
+    let pages = 0
+    const deliver = rs
+      .spyOn(sdk.api.experience, 'upsertProfile')
+      .mockImplementation(async (payload) => {
+        pages += payload.events.filter(({ type }) => type === 'page').length
+        if (pages === 4) delivered.resolve()
+        return await Promise.resolve({
+          profile: createProfile('api-issued-id'),
+          changes,
+          selectedOptimizations,
+        })
+      })
+    const first = createContentHandoff(undefined, {
+      cache: { scope: 'private-request' },
+      profileId: 'api-issued-id',
+      replay: { routeKey: '/one', events: [sdk.eventBuilder.buildPageView()] },
+    })
+    const second = {
+      ...first,
+      replay: { routeKey: '/one', events: [sdk.eventBuilder.buildPageView()] },
+    }
+    await sdk.hydrateAndTrackCurrentPage(first, { routeKey: '/one' })
+    await sdk.hydrateAndTrackCurrentPage(second, { routeKey: '/one' })
+    await sdk.trackCurrentPage({ routeKey: '/two', buildPayload: () => ({}) })
+    await sdk.hydrateAndTrackCurrentPage(first, { routeKey: '/one' })
+    window.dispatchEvent(new Event('online'))
+    await delivered.promise
+    expect(
+      deliver.mock.calls
+        .flatMap(([payload]) => payload.events)
+        .filter(({ type }) => type === 'page'),
+    ).toHaveLength(4)
+  })
+
+  it('skips stale-route state and replay while permitting the current ordinary page', async () => {
+    const sdk = new ContentfulOptimization({ ...config, defaults: { consent: true } })
+    const deliver = rs.spyOn(sdk.api.experience, 'upsertProfile').mockResolvedValue({
+      profile: createProfile('api-issued-id'),
+      changes: [],
+      selectedOptimizations: [],
+    })
+    const handoff = createContentHandoff(
+      { changes, selectedOptimizations },
+      {
+        cache: { scope: 'private-request' },
+        profileId: 'api-issued-id',
+        replay: { routeKey: '/old', events: [sdk.eventBuilder.buildPageView()] },
+      },
+    )
+    await hydrateOptimizationHandoff(sdk, handoff, { routeKey: '/current' })
+    expect(sdk.states.selectedOptimizations.current).toBeUndefined()
+    await sdk.hydrateAndTrackCurrentPage(handoff, {
+      routeKey: '/current',
+      buildPayload: () => ({ properties: { title: 'current' } }),
+    })
+    expect(deliver.mock.calls[0]?.[0].events).toMatchObject([
+      { type: 'page', properties: { title: 'current' } },
+    ])
+  })
+
+  it.each(['reset', 'destroy'] as const)(
+    'does not finish pending hydration after %s',
+    async (method) => {
+      const sdk = new ContentfulOptimization({ ...config, defaults: { consent: true } })
+      const waiting = createDeferred()
+      const started = createDeferred()
+      sdk.interceptors.state.add(async (state) => {
+        started.resolve()
+        await waiting.promise
+        return state
+      })
+      const deliver = rs.spyOn(sdk.api.experience, 'upsertProfile')
+      const handoff = createContentHandoff(
+        { profile: createProfile('api-issued-id') },
+        {
+          cache: { scope: 'private-request' },
+          replay: { routeKey: '/paired', events: [sdk.eventBuilder.buildPageView()] },
+        },
+      )
+      const initialization = sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired' })
+      await started.promise
+      sdk[method]()
+      waiting.resolve()
+      expect(await initialization).toEqual({ accepted: false })
+      expect(sdk.states.profile.current).toBeUndefined()
+      expect(deliver).not.toHaveBeenCalled()
+    },
+  )
+
+  it('keeps paired tracking inert in a snapshot runtime', async () => {
+    const runtime = createWebSnapshotRuntime()
+    expect(
+      await runtime.hydrateAndTrackCurrentPage({ cache: { scope: 'static' } }, { routeKey: '/' }),
+    ).toEqual({ accepted: false })
+  })
+
+  it('preserves ordinary online errors and allows another page attempt when replay is absent', async () => {
+    const sdk = new ContentfulOptimization({ ...config, defaults: { consent: true } })
+    const failure = new Error('Experience unavailable')
+    const deliver = rs
+      .spyOn(sdk.api.experience, 'upsertProfile')
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValue({
+        profile: createProfile('api-issued-id'),
+        changes,
+        selectedOptimizations,
+      })
+    const handoff = createContentHandoff(undefined)
+    await expect(sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/ordinary' })).rejects.toBe(
+      failure,
+    )
+    expect(
+      (await sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/ordinary' })).accepted,
+    ).toBe(true)
+    expect(deliver).toHaveBeenCalledTimes(2)
   })
 
   it('hydrates selection state without clearing existing profile continuity', async () => {
@@ -417,7 +692,7 @@ describe('hydrateOptimizationHandoff', () => {
         }),
       ),
     ).rejects.toThrow(
-      'Profile state should not be included in public or static optimization caches.',
+      'Profile state, identity and replay must not be included in public or static optimization caches.',
     )
 
     expect(sdk.states.profile.current).toBeUndefined()
@@ -507,20 +782,5 @@ describe('hydrateOptimizationHandoff', () => {
     firstHydration.resolve()
     await first
     expect(sdk.states.profile.current).toEqual(secondProfile)
-  })
-
-  it('rejects analytics-only handoffs', async () => {
-    const sdk = new ContentfulOptimization(config)
-
-    await expect(
-      Reflect.apply(hydrateOptimizationHandoff, undefined, [
-        sdk,
-        {
-          cache: { scope: 'static' },
-          hydration: 'analytics-only',
-          initialPageEvent: 'skip',
-        },
-      ]),
-    ).rejects.toThrow('content optimization handoffs')
   })
 })

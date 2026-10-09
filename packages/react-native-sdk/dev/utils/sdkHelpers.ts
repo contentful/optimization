@@ -1,48 +1,5 @@
-import type { ContentfulOptimization } from '@contentful/optimization-react-native'
 import { createClient, type Entry } from 'contentful'
-import AsyncStorageStore from '../../src/storage/AsyncStorageStore'
 import { ENV_CONFIG } from '../env.config'
-import type { SDKInfo } from '../types'
-
-export async function initializeSDK(
-  setSdkInfo: (info: SDKInfo) => void,
-  setSdk: (sdk: ContentfulOptimization) => void,
-  setSdkLoaded: (loaded: boolean) => void,
-  setSdkError: (error: string | null) => void,
-): Promise<void> {
-  const { ContentfulOptimization } = await import('@contentful/optimization-react-native')
-
-  try {
-    const {
-      optimization: { spaceId, environment },
-      api: { experienceBaseUrl, insightsBaseUrl },
-    } = ENV_CONFIG
-
-    await AsyncStorageStore.initializeConsentState()
-    AsyncStorageStore.consent = true
-
-    const sdkInstance = await ContentfulOptimization.initialize({
-      spaceId,
-      environment,
-      api: {
-        experienceBaseUrl,
-        insightsBaseUrl,
-      },
-      logLevel: 'debug',
-    })
-
-    setSdkInfo({
-      spaceId,
-      environment,
-      initialized: true,
-      timestamp: new Date().toISOString(),
-    })
-    setSdk(sdkInstance)
-    setSdkLoaded(true)
-  } catch (error) {
-    setSdkError(error instanceof Error ? error.message : 'Unknown error')
-  }
-}
 
 export async function fetchEntriesFromMockServer(
   setOptimizedEntry: (entry: Entry) => void,

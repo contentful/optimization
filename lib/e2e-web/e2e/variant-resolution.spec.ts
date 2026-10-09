@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { CLICK_SCENARIO_IDS, PAGES } from '../src/fixtures'
+import { CLICK_SCENARIO_IDS, CUSTOMER_SEGMENTS, PAGES } from '../src/fixtures'
 import { runIf, seedAnonymousProfile, seedIdentifiedProfile, skipIf } from './utils'
 
 test.describe('Variant Resolution (CSR)', () => {
@@ -172,6 +172,14 @@ test.describe('Variant Resolution (SSR, JavaScript disabled)', () => {
   runIf('SSR')
   skipIf('SKIP_NO_JS')
   test.use({ javaScriptEnabled: false })
+
+  test('renders personalized page-two content', async ({ page }) => {
+    await page.goto(PAGES.pageTwo.path)
+    await expect(page.getByTestId(`entry-text-${PAGES.pageTwo.auto}`)).toBeVisible()
+    await expect(page.getByTestId(`entry-text-${PAGES.pageTwo.auto}`)).toContainText(
+      CUSTOMER_SEGMENTS['new-visitor'].resolvedEntryText,
+    )
+  })
 
   test.describe('unidentified user', () => {
     test.beforeEach(async ({ baseURL, context, page }) => {

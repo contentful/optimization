@@ -81,7 +81,6 @@ const requestOptimization = statelessOptimization.forRequest({
   consent: true,
   locale: 'en-US',
   eventContext: { locale: 'en-US' },
-  experienceOptions: { preflight: false },
   profile: { id: 'f0837d7dc6344c36a3a0a06c4cde754b' },
 })
 
@@ -161,14 +160,15 @@ Common `api` options:
 | `enabledFeatures`   | All        | `['ip-enrichment', 'location']`            | Experience API features for each request          |
 | `ip`                | Stateful   | `undefined`                                | IP address override for Experience API analysis   |
 | `plainText`         | Stateful   | `true` for single-profile mutations        | Sends single-profile Experience mutations as text |
-| `preflight`         | Stateful   | `false`                                    | Aggregates a profile state without storing it     |
 
 When `plainText` is omitted, single-profile Experience mutation/event requests use `text/plain`.
 Pass `plainText: false` to send JSON. Experience batch profile updates still default to JSON.
 
-In stateless environments, pass `ip`, `locale`, `plainText`, and `preflight` as `experienceOptions`
-when creating the request-bound client instead of constructor config. Pass request-specific Insights
-API options, such as a last-chance `beacon` sender, as `insightsOptions`.
+In stateless environments, pass `ip`, `locale`, and `plainText` as `experienceOptions` when creating
+the request-bound client instead of constructor config. Request handoff preparation uses the
+Experience API's mutation-only preview option internally; it is not a Core configuration option.
+Pass request-specific Insights API options, such as a last-chance `beacon` sender, as
+`insightsOptions`.
 
 Core-backed stateful SDKs can accept an initial top-level `locale` and runtime `setLocale(locale)`
 calls. They expose that SDK Experience API and default event locale through the live `locale` getter

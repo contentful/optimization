@@ -21,6 +21,12 @@ export interface CookieAttributes {
    * Determines the expiration date of the cookie as the number of days until the cookie expires.
    */
   expires?: number
+  /** Cookie path; defaults to `/`. */
+  path?: string
+  /** Cross-site cookie policy. */
+  sameSite?: 'lax' | 'strict' | 'none'
+  /** Require HTTPS when writing the cookie. */
+  secure?: boolean
 }
 
 export const getCookie = (name: string): string | undefined => {
@@ -37,25 +43,29 @@ export const getCookie = (name: string): string | undefined => {
   return undefined
 }
 
+function serializeCookieScope(attributes?: CookieAttributes): string {
+  let cookie = `; Path=${attributes?.path ?? '/'}`
+  if (attributes?.domain) {
+    cookie += `; Domain=${attributes.domain}`
+  }
+  if (attributes?.sameSite) cookie += `; SameSite=${attributes.sameSite}`
+  if (attributes?.secure) cookie += '; Secure'
+  return cookie
+}
+
 export const setCookie = (name: string, value: string, attributes?: CookieAttributes): void => {
   if (typeof document === 'undefined') return
 
-  let cookie = `${name}=${value}; Path=/`
-
+  let cookie = `${name}=${value}${serializeCookieScope(attributes)}`
   if (typeof attributes?.expires === 'number' && Number.isFinite(attributes.expires)) {
     cookie += `; Expires=${new Date(Date.now() + attributes.expires * MS_IN_DAY).toUTCString()}`
-  }
-  if (attributes?.domain) {
-    cookie += `; Domain=${attributes.domain}`
   }
 
   document.cookie = cookie
 }
 
-export const removeCookie = (name: string, attributes?: Pick<CookieAttributes, 'domain'>): void => {
+export const removeCookie = (name: string, attributes?: CookieAttributes): void => {
   if (typeof document === 'undefined') return
 
-  document.cookie = `${name}=; Expires=${EXPIRED_UTC}; Path=/${
-    attributes?.domain ? `; Domain=${attributes.domain}` : ''
-  }`
+  document.cookie = `${name}=; Expires=${EXPIRED_UTC}${serializeCookieScope(attributes)}`
 }

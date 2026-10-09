@@ -49,8 +49,7 @@ final class OptimizationClientTests: XCTestCase {
             api: OptimizationApiConfig(
                 experienceBaseUrl: "http://localhost:8000/experience/",
                 insightsBaseUrl: "http://localhost:8000/insights/",
-                enabledFeatures: ["audiences", "experiences"],
-                preflight: true
+                enabledFeatures: ["audiences", "experiences"]
             ),
             logLevel: .debug
         )
@@ -65,7 +64,6 @@ final class OptimizationClientTests: XCTestCase {
         XCTAssertEqual(api?["experienceBaseUrl"] as? String, "http://localhost:8000/experience/")
         XCTAssertEqual(api?["insightsBaseUrl"] as? String, "http://localhost:8000/insights/")
         XCTAssertEqual(api?["enabledFeatures"] as? [String], ["audiences", "experiences"])
-        XCTAssertEqual(api?["preflight"] as? Bool, true)
         XCTAssertEqual(dict["logLevel"] as? String, "debug")
     }
 

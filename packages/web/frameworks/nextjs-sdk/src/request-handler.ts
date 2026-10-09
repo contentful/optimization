@@ -1,5 +1,9 @@
 import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server'
-import { createCookieReaderFromHeader } from './cookies'
+import {
+  createCookieReaderFromHeader,
+  DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE,
+  persistNextjsAnonymousId,
+} from './cookies'
 import {
   applyForwardedRequestHeaders,
   clearForwardedRequestHeaders,
@@ -9,20 +13,16 @@ import {
 import {
   NEXTJS_OPTIMIZATION_REQUEST_HEADER_PREFIX,
   NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER,
-  NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER,
-  serializeNextjsOptimizationRequestContext,
+  normalizeNextjsAppRequestUrl,
 } from './request-context'
-import {
-  getNextjsServerOptimizationData,
-  persistNextjsAnonymousId,
-  type ContentfulOptimization,
-  type CoreStatelessRequest,
-  type CoreStatelessRequestConsent,
-  type NextjsAnonymousIdCookieOptions,
-  type NextjsCookieReader,
-  type NextjsOptimizationServerConsentResolver,
-  type OptimizationData,
-  type PersistNextjsAnonymousIdOptions,
+import type {
+  ContentfulOptimization,
+  CoreStatelessRequest,
+  CoreStatelessRequestConsent,
+  NextjsAnonymousIdCookieOptions,
+  NextjsCookieReader,
+  NextjsOptimizationServerConsentResolver,
+  PersistNextjsAnonymousIdOptions,
 } from './server'
 
 export type MaybePromise<T> = T | Promise<T>
@@ -56,83 +56,55 @@ export function createNextjsOptimizationContextHandler(
     if (response && hasExistingTerminalMiddlewareTarget(response)) return response
 
     const requestHeaders = createSanitizedForwardedRequestHeaders(request, response)
-    const result =
+    const requestOptimization =
       options === undefined
         ? undefined
-        : await getRequestOptimizationData(
+        : await bindRequestIdentity(
             request,
             requestHeaders,
             hasRequestHeaderOverrides(response),
             options,
           )
-
-    if (result !== undefined) {
-      requestHeaders.set(
-        NEXTJS_OPTIMIZATION_SERVER_DATA_HEADER,
-        serializeNextjsOptimizationRequestContext({
-          consent: result.consent,
-          pageAccepted: result.pageAccepted,
-          profileId: result.profileId,
-        }),
-      )
-    }
+    const cookieOptions =
+      options === undefined
+        ? undefined
+        : {
+            ...options,
+            cookieOptions: { ...options.cookieOptions, httpOnly: false },
+          }
 
     if (!response) {
       const nextResponse = NextResponse.next({ request: { headers: requestHeaders } })
-      if (options !== undefined && result !== undefined) {
-        persistNextjsAnonymousId(nextResponse, result.requestOptimization, result.data, options)
+      if (cookieOptions !== undefined && requestOptimization !== undefined) {
+        persistNextjsAnonymousId(nextResponse, requestOptimization, undefined, cookieOptions)
       }
       return nextResponse
     }
 
     applyNextjsOptimizationRequestContext(response, requestHeaders)
-    if (options !== undefined && result !== undefined) {
-      persistNextjsAnonymousId(response, result.requestOptimization, result.data, options)
+    if (cookieOptions !== undefined && requestOptimization !== undefined) {
+      persistNextjsAnonymousId(response, requestOptimization, undefined, cookieOptions)
     }
     return response
   }
 }
 
-interface RequestOptimizationData {
-  readonly consent: CoreStatelessRequestConsent
-  readonly data: OptimizationData | undefined
-  readonly pageAccepted: boolean
-  readonly profileId: string | undefined
-  readonly requestOptimization: CoreStatelessRequest
-}
-
-async function getRequestOptimizationData(
+async function bindRequestIdentity(
   request: NextRequest,
   headers: Headers,
   requestHeaderOverrides: boolean,
   options: NextjsOptimizationContextHandlerOptions,
-): Promise<RequestOptimizationData> {
+): Promise<CoreStatelessRequest> {
   const cookies = createEffectiveRequestCookies(request, headers, requestHeaderOverrides)
-  const consent = await resolveServerConsent(options.consent, {
-    cookies,
-    headers,
-  })
-  const { data, pageResult, requestOptimization } = await getNextjsServerOptimizationData(
-    options.sdk,
-    {
-      anonymousIdCookieName: options.anonymousIdCookieName,
-      consent,
-      locale: options.locale,
-      request: {
-        cookies,
-        headers,
-        url: request.url,
-      },
-    },
-  )
-
-  return {
+  const consent = await resolveServerConsent(options.consent, { cookies, headers })
+  const profileId = cookies.get(
+    options.anonymousIdCookieName ?? DEFAULT_NEXTJS_ANONYMOUS_ID_COOKIE,
+  )?.value
+  return options.sdk.forRequest({
     consent,
-    data,
-    pageAccepted: pageResult.accepted,
-    profileId: data?.profile.id ?? requestOptimization.profile?.id,
-    requestOptimization,
-  }
+    profile: profileId ? { id: profileId } : undefined,
+    locale: options.locale,
+  })
 }
 
 function createEffectiveRequestCookies(
@@ -212,5 +184,8 @@ function sanitizeForwardedRequestHeaders(requestHeaders: Headers, requestUrl: st
     }
   }
 
-  requestHeaders.set(NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER, requestUrl)
+  requestHeaders.set(
+    NEXTJS_OPTIMIZATION_REQUEST_URL_HEADER,
+    normalizeNextjsAppRequestUrl(requestUrl),
+  )
 }

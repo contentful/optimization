@@ -1,8 +1,6 @@
-import {
-  CoreStateless,
-  type CoreStatelessRequest,
-  type OptimizationData,
-} from '@contentful/optimization-react-web/core-sdk'
+/** @rstest-environment node */
+import type { ExperienceApiClient } from '@contentful/optimization-react-web/api-client'
+import { CoreStateless, type OptimizationData } from '@contentful/optimization-react-web/core-sdk'
 import { NextRequest } from 'next/server'
 import * as edgeExports from './edge'
 
@@ -45,41 +43,34 @@ afterEach(() => {
   rs.restoreAllMocks()
 })
 
-function mockEdgeRequestPage(
-  result: Awaited<ReturnType<CoreStatelessRequest['page']>> = {
-    accepted: true,
-    data: OPTIMIZATION_DATA,
-  },
-): {
+function mockEdgeRequestPreview(): {
   readonly forRequest: ReturnType<typeof rs.spyOn>
-  readonly page: ReturnType<typeof rs.fn<CoreStatelessRequest['page']>>
+  readonly preview: ReturnType<typeof rs.fn<ExperienceApiClient['upsertProfile']>>
   readonly runtimes: CoreStateless[]
 } {
   const originalForRequest = CoreStateless.prototype.forRequest
-  const page = rs.fn<CoreStatelessRequest['page']>(async () => await Promise.resolve(result))
+  const preview = rs.fn<ExperienceApiClient['upsertProfile']>(
+    async () => await Promise.resolve(OPTIMIZATION_DATA),
+  )
   const forRequest = rs.spyOn(CoreStateless.prototype, 'forRequest')
   const runtimes: CoreStateless[] = []
-
   forRequest.mockImplementation(function mockForRequest(this: CoreStateless, options) {
     runtimes.push(this)
-    const requestOptimization = originalForRequest.call(this, options)
-    rs.spyOn(requestOptimization, 'page').mockImplementation(page)
-    return requestOptimization
+    rs.spyOn(this.api.experience, 'upsertProfile').mockImplementation(preview)
+    return originalForRequest.call(this, options)
   })
-
-  return { forRequest, page, runtimes }
+  return { forRequest, preview, runtimes }
 }
 
 describe('Next.js Edge runtime helpers', () => {
-  it('exports the Edge configure helper without the removed create helper name', () => {
+  it('exports Edge configuration and public permutation helpers', () => {
     expect(edgeExports.configureNextjsEdgeOptimization).toBeTypeOf('function')
     expect(edgeExports.createPublicPermutationHandoff).toBeTypeOf('function')
     expect(edgeExports.createPublicPermutationCacheMetadata).toBeTypeOf('function')
-    expect(edgeExports).not.toHaveProperty('createNextjsEdgeOptimization')
   })
 
   it('uses the build-time package version for Edge event library metadata', async () => {
-    const { runtimes } = mockEdgeRequestPage()
+    const { runtimes } = mockEdgeRequestPreview()
     const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization(SDK_CONFIG)
 
     await createEdgeRequestHandoff({
@@ -95,7 +86,7 @@ describe('Next.js Edge runtime helpers', () => {
   })
 
   it('builds request handoff from a Web Request, reads cookies, and persists a Response cookie', async () => {
-    const { forRequest, page } = mockEdgeRequestPage()
+    const { forRequest, preview } = mockEdgeRequestPreview()
     const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
       ...SDK_CONFIG,
       consent: { server: { events: true, persistence: true } },
@@ -115,9 +106,19 @@ describe('Next.js Edge runtime helpers', () => {
       request,
     })
 
-    expect(result.handoff.initialPageEvent).toBe('skip')
+    expect(result.handoff.replay?.routeKey).toBe('/products?tab=featured')
     expect(result.handoff.state?.profile?.id).toBe('f0837d7dc6344c36a3a0a06c4cde754b')
-    expect(page).toHaveBeenCalledWith({ properties: { route: '/products' } })
+    expect(preview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        events: [
+          expect.objectContaining({
+            type: 'page',
+            properties: expect.objectContaining({ route: '/products' }),
+          }),
+        ],
+      }),
+      expect.objectContaining({ preflight: true, locale: 'en-US' }),
+    )
     expect(forRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         consent: { events: true, persistence: true },
@@ -149,8 +150,44 @@ describe('Next.js Edge runtime helpers', () => {
     expect(response.headers.get('set-cookie')).toContain('SameSite=Lax')
   })
 
+  it('retains a replay and configured browser-readable cookie during preview failure', async () => {
+    const { preview } = mockEdgeRequestPreview()
+    preview.mockRejectedValue(new Error('Preview unavailable'))
+    const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
+      ...SDK_CONFIG,
+      consent: { server: true },
+      cookie: {
+        domain: 'example.com',
+        path: '/products',
+        expires: 1,
+        secure: true,
+        sameSite: 'strict',
+      },
+    })
+    const result = await createEdgeRequestHandoff({
+      hydration: 'analytics-only',
+      request: new Request('https://example.com/products', {
+        headers: { cookie: 'ctfl-opt-aid=known-api-id' },
+      }),
+    })
+    const response = new Response('Server rendered content', {
+      headers: { 'set-cookie': 'app-cookie=1; Path=/' },
+    })
+    result.persist(response)
+    expect(result.data).toBeUndefined()
+    expect(result.handoff).toMatchObject({
+      profileId: 'known-api-id',
+      replay: { routeKey: '/products', events: [expect.objectContaining({ type: 'page' })] },
+    })
+    expect(response.headers.get('set-cookie')).toContain('app-cookie=1')
+    expect(response.headers.get('set-cookie')).toContain(
+      'ctfl-opt-aid=known-api-id; Max-Age=86400; Domain=example.com; Path=/products; Secure; SameSite=Strict',
+    )
+    expect(response.headers.get('set-cookie')).not.toContain('HttpOnly')
+  })
+
   it('reads anonymous ID from framework cookie snapshots', async () => {
-    const { forRequest } = mockEdgeRequestPage()
+    const { forRequest } = mockEdgeRequestPreview()
     const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
       ...SDK_CONFIG,
       consent: { server: true },
@@ -176,7 +213,7 @@ describe('Next.js Edge runtime helpers', () => {
   it.each([{ key: 'segment-a', scope: 'public-permutation' }, { scope: 'static' }] as const)(
     'rejects $scope request handoff cache metadata before request evaluation',
     async (cache) => {
-      const { forRequest, page } = mockEdgeRequestPage()
+      const { forRequest, preview } = mockEdgeRequestPreview()
       const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
         ...SDK_CONFIG,
         consent: { server: true },
@@ -194,29 +231,7 @@ describe('Next.js Edge runtime helpers', () => {
         'Request handoffs must use private-request cache scope. Use public permutation handoffs for public cache scopes, or a non-request handoff for static output.',
       )
       expect(forRequest).not.toHaveBeenCalled()
-      expect(page).not.toHaveBeenCalled()
-    },
-  )
-
-  it.each([
-    ['accepted without data', { accepted: true }, 'skip'],
-    ['blocked', { accepted: false }, 'emit'],
-  ] as const)(
-    'sets initialPageEvent from page acceptance for %s',
-    async (_label, pageResult, expectedInitialPageEvent) => {
-      mockEdgeRequestPage(pageResult)
-      const { createEdgeRequestHandoff } = configureNextjsEdgeOptimization({
-        ...SDK_CONFIG,
-        consent: { server: true },
-      })
-
-      const result = await createEdgeRequestHandoff({
-        hydration: 'preserve-server',
-        pagePayload: {},
-        request: new Request('https://example.com/products'),
-      })
-
-      expect(result.handoff.initialPageEvent).toBe(expectedInitialPageEvent)
+      expect(preview).not.toHaveBeenCalled()
     },
   )
 
@@ -230,14 +245,12 @@ describe('Next.js Edge runtime helpers', () => {
     const handoff = createHandoffFromSelections({
       cache: { scope: 'public-permutation', key: 'segment-a' },
       hydration: 'analytics-only',
-      initialPageEvent: 'emit',
       selectedOptimizations: [],
     })
     const permutationHandoff = createPublicPermutationHandoff({
       cacheVersion: 'version 1',
       entryIds: ['4ib0hsHWoSOnCVdDkizE8d'],
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       locale: 'en-US',
       permutationKey: 'segment a',
       selectedOptimizations: [],
@@ -252,7 +265,6 @@ describe('Next.js Edge runtime helpers', () => {
     expect(handoff).toEqual({
       cache: { scope: 'public-permutation', key: 'segment-a' },
       hydration: 'analytics-only',
-      initialPageEvent: 'emit',
       state: { selectedOptimizations: [] },
     })
     expect(permutationHandoff).toMatchObject({
@@ -261,7 +273,6 @@ describe('Next.js Edge runtime helpers', () => {
         scope: 'public-permutation',
       },
       hydration: 'preserve-server',
-      initialPageEvent: 'emit',
       state: { selectedOptimizations: [] },
     })
     expect(permutationHandoff.cache.tags).toBeUndefined()

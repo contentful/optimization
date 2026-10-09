@@ -26,20 +26,17 @@ public data class OptimizationApiConfig(
     val experienceBaseUrl: String? = null,
     val insightsBaseUrl: String? = null,
     val enabledFeatures: List<String>? = null,
-    val preflight: Boolean? = null,
 ) {
     internal fun isEmpty(): Boolean =
         experienceBaseUrl == null &&
             insightsBaseUrl == null &&
-            enabledFeatures == null &&
-            preflight == null
+            enabledFeatures == null
 
     internal fun toJSONObject(): JSONObject {
         val obj = JSONObject()
         experienceBaseUrl?.let { obj.put("experienceBaseUrl", it) }
         insightsBaseUrl?.let { obj.put("insightsBaseUrl", it) }
         enabledFeatures?.let { obj.put("enabledFeatures", org.json.JSONArray(it)) }
-        preflight?.let { obj.put("preflight", it) }
         return obj
     }
 }

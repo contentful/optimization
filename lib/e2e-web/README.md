@@ -50,19 +50,21 @@ spec groups to run:
 - `E2E_FLAGS` - comma-separated feature flags for spec gating. It defaults to `CSR` when unset.
   Supported values are `CSR` for client-side behavior, `SSR` for server-rendered variant checks,
   `HYDRATION` for server-rendering hydration checks, and `SKIP_NO_JS` for implementations that
-  explicitly opt out of JavaScript-disabled SSR checks.
+  explicitly opt out of JavaScript-disabled SSR checks. The Angular, App Router, and Pages Router
+  reference implementations run those checks; do not use `SKIP_NO_JS` to hide a visible-content
+  failure.
 
 Current implementation env defaults:
 
-| Implementation                       | `APP_PORT` | `E2E_FLAGS`                    |
-| ------------------------------------ | ---------- | ------------------------------ |
-| `web-sdk`                            | `3000`     | `CSR`                          |
-| `react-web-sdk`                      | `3000`     | `CSR`                          |
-| `web-sdk_react`                      | `3000`     | `CSR`                          |
-| `web-sdk_angular`                    | `4200`     | `CSR,HYDRATION,SSR,SKIP_NO_JS` |
-| `nextjs-sdk_pages-router`            | `3001`     | `CSR,HYDRATION,SSR`            |
-| `nextjs-sdk_app-router`              | `3002`     | `CSR,HYDRATION,SSR,SKIP_NO_JS` |
-| `nextjs-sdk_app-router_edge-runtime` | `3003`     | `EDGE`                         |
+| Implementation                       | `APP_PORT` | `E2E_FLAGS`         |
+| ------------------------------------ | ---------- | ------------------- |
+| `web-sdk`                            | `3000`     | `CSR`               |
+| `react-web-sdk`                      | `3000`     | `CSR`               |
+| `web-sdk_react`                      | `3000`     | `CSR`               |
+| `web-sdk_angular`                    | `4200`     | `CSR,HYDRATION,SSR` |
+| `nextjs-sdk_pages-router`            | `3001`     | `CSR,HYDRATION,SSR` |
+| `nextjs-sdk_app-router`              | `3002`     | `CSR,HYDRATION,SSR` |
+| `nextjs-sdk_app-router_edge-runtime` | `3003`     | `EDGE`              |
 
 The config starts the HTTP mock-server composition through `pnpm serve:mocks` as a Playwright
 `webServer`. The `mock-server` workspace composes shared handlers and fixtures from `lib/mocks`.
@@ -86,13 +88,13 @@ IMPLEMENTATION=react-web-sdk pnpm --dir ../../lib/e2e-web test
 IMPLEMENTATION=web-sdk_react pnpm --dir ../../lib/e2e-web test
 
 # web-sdk_angular
-IMPLEMENTATION=web-sdk_angular APP_PORT=4200 E2E_FLAGS=CSR,HYDRATION,SSR,SKIP_NO_JS pnpm --dir ../../lib/e2e-web test
+IMPLEMENTATION=web-sdk_angular APP_PORT=4200 E2E_FLAGS=CSR,HYDRATION,SSR pnpm --dir ../../lib/e2e-web test
 
 # nextjs-sdk_pages-router
 IMPLEMENTATION=nextjs-sdk_pages-router APP_PORT=3001 E2E_FLAGS=CSR,HYDRATION,SSR pnpm --dir ../../lib/e2e-web test
 
 # nextjs-sdk_app-router
-IMPLEMENTATION=nextjs-sdk_app-router APP_PORT=3002 E2E_FLAGS=CSR,HYDRATION,SSR,SKIP_NO_JS pnpm --dir ../../lib/e2e-web test
+IMPLEMENTATION=nextjs-sdk_app-router APP_PORT=3002 E2E_FLAGS=CSR,HYDRATION,SSR pnpm --dir ../../lib/e2e-web test
 
 # nextjs-sdk_app-router_edge-runtime
 IMPLEMENTATION=nextjs-sdk_app-router_edge-runtime APP_PORT=3003 E2E_FLAGS=EDGE pnpm --dir ../../lib/e2e-web test

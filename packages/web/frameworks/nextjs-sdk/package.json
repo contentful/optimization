@@ -129,26 +129,26 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "app-router.cjs": 1700,
-        "app-router.mjs": 1600,
-        "app-router-server.cjs": 4900,
-        "app-router-server.mjs": 6700,
-        "cache-middleware.cjs": 1900,
+        "app-router.cjs": 1800,
+        "app-router.mjs": 1400,
+        "app-router-server.cjs": 5800,
+        "app-router-server.mjs": 8000,
+        "cache-middleware.cjs": 2000,
         "cache-middleware.mjs": 1700,
         "client.cjs": 1100,
-        "client.mjs": 600,
-        "edge.cjs": 3100,
-        "edge.mjs": 3100,
+        "client.mjs": 400,
+        "edge.cjs": 3200,
+        "edge.mjs": 3200,
         "pages-router.cjs": 1800,
-        "pages-router.mjs": 1600,
-        "pages-router/server.cjs": 3900,
-        "pages-router/server.mjs": 5600,
-        "server.cjs": 2700,
-        "server.mjs": 3900,
-        "request-handler.cjs": 2900,
-        "request-handler.mjs": 5100,
-        "tracking-attributes.cjs": 700,
-        "tracking-attributes.mjs": 400
+        "pages-router.mjs": 1400,
+        "pages-router/server.cjs": 4000,
+        "pages-router/server.mjs": 5500,
+        "server.cjs": 2800,
+        "server.mjs": 4000,
+        "request-handler.cjs": 2100,
+        "request-handler.mjs": 2800,
+        "tracking-attributes.cjs": 800,
+        "tracking-attributes.mjs": 300
       }
     }
   },

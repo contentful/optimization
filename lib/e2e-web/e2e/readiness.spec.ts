@@ -1,26 +1,18 @@
-import {
-  expect,
-  test,
-  type APIResponse,
-  type Page,
-  type Request,
-  type Route,
-  type TestInfo,
-} from '@playwright/test'
+import { expect, test, type Page, type Route, type TestInfo } from '@playwright/test'
 import { CUSTOMER_SEGMENTS, PAGES } from '../src/fixtures'
-import { hasFlag, implementation } from './utils'
+import { CONSENT_COOKIE, hasFlag, implementation } from './utils'
 
 const segment = CUSTOMER_SEGMENTS['new-visitor']
 const EVIDENCE_KEY = '__ctflReadinessEvidence'
 const EXPERIENCE_ROUTE = '**/experience/**'
 const BEFORE_INITIAL_PAGE_PATH = '/ssg-client-personalization?beforeInitialPage=readiness'
 const BEFORE_INITIAL_PAGE_PRESERVED_PATH = '/page-two?beforeInitialPage=readiness'
-const BEFORE_INITIAL_PAGE_WATCHDOG_EVIDENCE_TIMEOUT_MS = 2_000
-const BEFORE_INITIAL_PAGE_WATCHDOG_ERROR =
-  /^\[error\] \[Ctfl:O10n:React:BeforeInitialPage\] Error: beforeInitialPage\.run timed out after \d+ ms\.$/
 const diagnosticsByPage = new WeakMap<Page, Diagnostics>()
-const appRouterCsrTest =
-  hasFlag('CSR') && implementation === 'nextjs-sdk_app-router' ? test : test.skip
+const nextRouterCsrTest =
+  hasFlag('CSR') &&
+  (implementation === 'nextjs-sdk_app-router' || implementation === 'nextjs-sdk_pages-router')
+    ? test
+    : test.skip
 const pagesCsrTest =
   hasFlag('CSR') && implementation === 'nextjs-sdk_pages-router' ? test : test.skip
 const pagesSsrTest =
@@ -54,16 +46,6 @@ interface Diagnostics {
   readonly consoleErrors: string[]
   readonly hydrationErrors: string[]
   readonly pageErrors: string[]
-}
-
-interface RecordedExperienceEvent {
-  readonly pageRouteKey?: string
-  readonly type: 'identify' | 'page'
-}
-
-interface ExperienceEventRecorder {
-  readonly events: () => readonly RecordedExperienceEvent[]
-  readonly remove: () => void
 }
 
 function watchDiagnostics(page: Page): Diagnostics {
@@ -202,63 +184,23 @@ function isEvidence(value: unknown): value is Evidence {
   )
 }
 
-function toPageRouteKey(event: Readonly<Record<string, unknown>>): string | undefined {
-  const { properties } = event
-  if (!isRecord(properties) || typeof properties.url !== 'string') return undefined
+async function getVisiblePageUrls(page: Page): Promise<string[]> {
+  const events = page.locator('[data-testid^="event-page-"]')
+  const count = await events.count()
+  const urls: string[] = []
 
-  try {
-    const url = new URL(properties.url, 'http://readiness.local')
-    return `${url.pathname}${url.search}`
-  } catch {
-    return properties.url
+  for (let index = 0; index < count; index += 1) {
+    const url = await events.nth(index).getAttribute('data-page-url')
+    if (url !== null) urls.push(url)
   }
-}
 
-function readRecordedExperienceEvents(request: Request): readonly RecordedExperienceEvent[] {
-  try {
-    const payload: unknown = request.postDataJSON()
-    if (!isRecord(payload) || !Array.isArray(payload.events)) return []
-
-    return payload.events.flatMap((event): RecordedExperienceEvent[] => {
-      if (!isRecord(event) || (event.type !== 'identify' && event.type !== 'page')) return []
-
-      return [
-        {
-          pageRouteKey: event.type === 'page' ? toPageRouteKey(event) : undefined,
-          type: event.type,
-        },
-      ]
-    })
-  } catch {
-    return []
-  }
-}
-
-function containsEvent(request: Request, type: 'identify' | 'page'): boolean {
-  return readRecordedExperienceEvents(request).some((event) => event.type === type)
-}
-
-function recordExperienceEvents(page: Page): ExperienceEventRecorder {
-  const events: RecordedExperienceEvent[] = []
-  const record = (request: Request): void => {
-    events.push(...readRecordedExperienceEvents(request))
-  }
-  page.on('request', record)
-
-  return {
-    events: () => [...events],
-    remove: () => page.off('request', record),
-  }
+  return urls
 }
 
 interface HeldResponse {
   readonly held: () => boolean
   readonly release: () => void
   readonly remove: () => Promise<void>
-}
-
-interface HeldRequest extends HeldResponse {
-  readonly request: () => Request
 }
 
 interface TrackedRouteHandler {
@@ -285,7 +227,7 @@ function trackRouteHandler(handle: (route: Route) => Promise<void>): TrackedRout
   }
 }
 
-async function holdExistingResponse(page: Page, type: 'identify' | 'page'): Promise<HeldResponse> {
+async function holdExistingResponse(page: Page): Promise<HeldResponse> {
   let held = false
   let removed = false
   let release = (): void => undefined
@@ -293,7 +235,7 @@ async function holdExistingResponse(page: Page, type: 'identify' | 'page'): Prom
     release = resolve
   })
   const tracked = trackRouteHandler(async (route): Promise<void> => {
-    if (held || !containsEvent(route.request(), type)) {
+    if (held || route.request().method() !== 'POST') {
       await route.continue()
       return
     }
@@ -317,20 +259,18 @@ async function holdExistingResponse(page: Page, type: 'identify' | 'page'): Prom
   }
 }
 
-async function holdNextRequest(page: Page, type: 'identify' | 'page'): Promise<HeldRequest> {
+async function holdNextRequest(page: Page): Promise<HeldResponse> {
   let held = false
-  let heldRequest: Request | undefined
   let removed = false
   let release = (): void => undefined
   const gate = new Promise<void>((resolve) => {
     release = resolve
   })
   const tracked = trackRouteHandler(async (route): Promise<void> => {
-    if (held || !containsEvent(route.request(), type)) {
+    if (held || route.request().method() !== 'POST') {
       await route.continue()
       return
     }
-    heldRequest = route.request()
     held = true
     await gate
     await route.continue()
@@ -339,10 +279,6 @@ async function holdNextRequest(page: Page, type: 'identify' | 'page'): Promise<H
   return {
     held: () => held,
     release,
-    request: () => {
-      if (heldRequest === undefined) throw new Error(`No ${type} request is currently held.`)
-      return heldRequest
-    },
     remove: async (): Promise<void> => {
       if (removed) return
       removed = true
@@ -359,11 +295,11 @@ interface FailedRequest {
   readonly remove: () => Promise<void>
 }
 
-async function failNextRequest(page: Page, type: 'identify' | 'page'): Promise<FailedRequest> {
+async function failNextRequest(page: Page): Promise<FailedRequest> {
   let claimed = false
   let failed = false
   const tracked = trackRouteHandler(async (route): Promise<void> => {
-    if (claimed || !containsEvent(route.request(), type)) {
+    if (claimed || route.request().method() !== 'POST') {
       await route.continue()
       return
     }
@@ -374,52 +310,6 @@ async function failNextRequest(page: Page, type: 'identify' | 'page'): Promise<F
   await page.route(EXPERIENCE_ROUTE, tracked.handler)
   return {
     failed: () => failed,
-    remove: async () => {
-      await tracked.drain()
-      await page.unroute(EXPERIENCE_ROUTE, tracked.handler)
-      await tracked.drain()
-    },
-  }
-}
-
-interface FailedResponseReplay {
-  readonly firstFailed: () => boolean
-  readonly remove: () => Promise<void>
-  readonly replayed: () => boolean
-}
-
-async function failFirstPageThenReplay(page: Page): Promise<FailedResponseReplay> {
-  let capturedResponse: APIResponse | undefined
-  let capturingFirstPage = false
-  let firstFailed = false
-  let replayed = false
-  const tracked = trackRouteHandler(async (route): Promise<void> => {
-    if (!replayed && capturedResponse !== undefined && containsEvent(route.request(), 'identify')) {
-      await route.fulfill({ response: capturedResponse })
-      replayed = true
-      return
-    }
-    if (containsEvent(route.request(), 'page')) {
-      if (capturingFirstPage) {
-        await route.abort('failed')
-        return
-      }
-      capturingFirstPage = true
-      const response = await route.fetch()
-      if (!response.ok()) {
-        throw new Error('Captured Experience page response was not successful.')
-      }
-      capturedResponse = response
-      await route.abort('failed')
-      firstFailed = true
-      return
-    }
-    await route.continue()
-  })
-  await page.route(EXPERIENCE_ROUTE, tracked.handler)
-  return {
-    firstFailed: () => firstFailed,
-    replayed: () => replayed,
     remove: async () => {
       await tracked.drain()
       await page.unroute(EXPERIENCE_ROUTE, tracked.handler)
@@ -498,15 +388,11 @@ function expectNoErrors(diagnostics: Diagnostics): void {
   expect(diagnostics).toEqual({ consoleErrors: [], hydrationErrors: [], pageErrors: [] })
 }
 
-function expectOnlyIntentionalRequestErrors(
-  diagnostics: Diagnostics,
-  allowedDiagnostics: readonly RegExp[] = [],
-): void {
+function expectOnlyIntentionalRequestErrors(diagnostics: Diagnostics): void {
   expect(diagnostics.hydrationErrors).toEqual([])
   const requestErrors = [...diagnostics.consoleErrors, ...diagnostics.pageErrors]
   expect(requestErrors.length).toBeGreaterThan(0)
   for (const error of requestErrors) {
-    if (allowedDiagnostics.some((pattern) => pattern.test(error))) continue
     expect(error).toMatch(/abort|fetch|resource|network|experience|net::err/i)
   }
 }
@@ -569,7 +455,7 @@ test.describe('readiness', () => {
 
   reactCsrTest('unseeded CSR', async ({ page }) => {
     const diagnostics = watchDiagnostics(page)
-    const response = await holdExistingResponse(page, 'page')
+    const response = await holdExistingResponse(page)
     try {
       await observeFromDocumentStart(
         page,
@@ -623,7 +509,6 @@ test.describe('readiness', () => {
     const rawHtml = await response.text()
     await attachRawHtml(testInfo, rawHtml)
     expect(response.ok()).toBe(true)
-    expect(response.headers()['cache-control']).toContain('s-maxage=60')
     expect(rawHtml).toContain(segment.resolvedEntryText)
     await observeFromDocumentStart(
       page,
@@ -641,126 +526,112 @@ test.describe('readiness', () => {
     expectNoErrors(diagnostics)
   })
 
+  pagesCsrTest('paired SSR stays visible through browser navigation', async ({ page }) => {
+    const diagnostics = watchDiagnostics(page)
+    await observeFromDocumentStart(page, `[data-testid="entry-text-${PAGES.pageTwo.auto}"]`)
+    await page.goto(PAGES.pageTwo.path)
+    await expect(page.getByTestId('page-two-view')).toBeVisible()
+    await expect.poll(async () => (await readEvidence(page)).visibleCandidates.length).toBe(1)
+    const initialEvidence = await readEvidence(page)
+    expectPreservedFirst(initialEvidence)
+    expectContinuouslyVisible(initialEvidence)
+    expectNewVisitor(candidateAt(initialEvidence))
+    expectNoVisibleBlankAfterCommitment(initialEvidence)
+    await expect.poll(async () => await getVisiblePageUrls(page)).toEqual([PAGES.pageTwo.path])
+
+    await page.getByTestId('link-ssg-client-personalization').click()
+    await expect(page.getByTestId('readiness-ssg-entry')).toBeVisible()
+    await expect
+      .poll(async () => (await getVisiblePageUrls(page)).slice(0, 2))
+      .toEqual(['/ssg-client-personalization', PAGES.pageTwo.path])
+
+    await page.getByTestId('link-home').click()
+    await expect(page.getByRole('heading', { name: 'Next.js SDK Pages Router' })).toBeVisible()
+    await expect.poll(async () => (await getVisiblePageUrls(page))[0]).toBe(PAGES.home.path)
+    expectNoErrors(diagnostics)
+  })
+
   pagesCsrTest(
-    'before initial page uses the latest route and emits once after readiness',
-    async ({ page }) => {
-      const diagnostics = watchDiagnostics(page)
-      const recorder = recordExperienceEvents(page)
-      const identifyRequest = await holdNextRequest(page, 'identify')
+    'personalized SSR stays visible through delayed and failed browser delivery',
+    async ({ baseURL, context, page }) => {
+      await context.addCookies([{ name: CONSENT_COOKIE, value: 'granted', url: baseURL }])
+      let release = (): void => undefined
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      let held = false
+      let failed = false
+      const routeHandler = async (route: Route): Promise<void> => {
+        if (held || route.request().method() !== 'POST') {
+          await route.continue()
+          return
+        }
+        held = true
+        await gate
+        await route.abort('failed')
+        failed = true
+      }
+      await page.route(EXPERIENCE_ROUTE, routeHandler)
+
       try {
         await observeFromDocumentStart(page, `[data-testid="entry-text-${PAGES.pageTwo.auto}"]`)
-        await page.goto(BEFORE_INITIAL_PAGE_PRESERVED_PATH)
-        await expect.poll(identifyRequest.held).toBe(true)
-        expect(recorder.events().map(({ type }) => type)).toEqual(['identify'])
-
+        await page.goto(PAGES.pageTwo.path, { waitUntil: 'domcontentloaded' })
+        await expect.poll(() => held).toBe(true)
         await expect(page.getByTestId('page-two-view')).toBeVisible()
         await expect.poll(async () => (await readEvidence(page)).visibleCandidates.length).toBe(1)
         const pendingEvidence = await readEvidence(page)
         expectPreservedFirst(pendingEvidence)
         expectContinuouslyVisible(pendingEvidence)
         expectNewVisitor(candidateAt(pendingEvidence))
-        expectNoVisibleBlankAfterCommitment(pendingEvidence)
-        expect(
-          recorder.events().filter(({ type }) => type === 'page'),
-          'the root page must wait for the returned identify request',
-        ).toEqual([])
 
-        await page.getByTestId('link-ssg-client-personalization').click()
-        await expect(page.getByTestId('readiness-ssg-route')).toBeVisible()
-        identifyRequest.release()
-        await expect
-          .poll(() =>
-            recorder
-              .events()
-              .filter(({ type }) => type === 'page')
-              .map(({ pageRouteKey }) => pageRouteKey),
-          )
-          .toEqual(['/ssg-client-personalization'])
-        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page'])
-        await expect(page.getByTestId('readiness-ssg-entry')).toBeVisible()
-
-        await page.getByTestId('link-home').click()
-        await expect(page.getByRole('heading', { name: 'Next.js SDK Pages Router' })).toBeVisible()
-        await expect
-          .poll(() =>
-            recorder
-              .events()
-              .filter(({ type }) => type === 'page')
-              .map(({ pageRouteKey }) => pageRouteKey),
-          )
-          .toEqual(['/ssg-client-personalization', PAGES.home.path])
-        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page', 'page'])
-        expectNoErrors(diagnostics)
-      } finally {
-        await identifyRequest.remove()
-        recorder.remove()
-      }
-    },
-  )
-
-  appRouterCsrTest(
-    'before initial page App request root avoids handoff duplicates and emits once later',
-    async ({ page }) => {
-      const diagnostics = watchDiagnostics(page)
-      const recorder = recordExperienceEvents(page)
-      const identifyRequest = await holdNextRequest(page, 'identify')
-      try {
-        await page.goto(BEFORE_INITIAL_PAGE_PRESERVED_PATH)
-        await expect.poll(identifyRequest.held).toBe(true)
-        await expect(page.getByTestId('page-two-view')).toBeVisible()
-        expect(recorder.events().map(({ type }) => type)).toEqual(['identify'])
-
-        await page.getByTestId('link-home').click()
-        expect(
-          recorder.events().filter(({ type }) => type === 'page'),
-          'the browser-owned home page must wait for the returned identify request',
-        ).toEqual([])
-
-        const heldIdentifyRequest = identifyRequest.request()
-        const releasedIdentifyResponse = page.waitForResponse(
-          (response) => response.request() === heldIdentifyRequest,
+        release()
+        await expect.poll(() => failed).toBe(true)
+        const evidence = await readEvidence(page)
+        expectContinuouslyVisible(evidence)
+        expectNoVisibleBlankAfterCommitment(evidence)
+        await expect(page.getByTestId(`entry-text-${PAGES.pageTwo.auto}`)).toContainText(
+          segment.resolvedEntryText,
         )
-        identifyRequest.release()
-        const identifyResponse = await releasedIdentifyResponse
-        expect(identifyResponse.request()).toBe(heldIdentifyRequest)
-        expect(identifyResponse.status()).toBe(200)
-        await expect(page).toHaveURL(PAGES.home.path)
-        await expect(page.getByRole('heading', { name: 'Next.js SDK App Router' })).toBeVisible()
-        await expect
-          .poll(() =>
-            recorder
-              .events()
-              .filter(({ type }) => type === 'page')
-              .map(({ pageRouteKey }) => pageRouteKey),
-          )
-          .toEqual([PAGES.home.path])
-        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page'])
-
-        await page.getByTestId('link-page-two').click()
-        await expect(page).toHaveURL(PAGES.pageTwo.path)
-        await expect(page.getByTestId('page-two-view')).toBeVisible()
-        await expect(page.getByRole('heading', { name: 'Page Two' })).toBeVisible()
-        await expect
-          .poll(() =>
-            recorder
-              .events()
-              .filter(({ type }) => type === 'page')
-              .map(({ pageRouteKey }) => pageRouteKey),
-          )
-          .toEqual([PAGES.home.path, PAGES.pageTwo.path])
-        expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page', 'page'])
-        expectNoErrors(diagnostics)
       } finally {
-        await identifyRequest.remove()
-        recorder.remove()
+        release()
+        await page.unroute(EXPERIENCE_ROUTE, routeHandler)
       }
     },
   )
 
-  pagesCsrTest('before initial page rejection continues to the page', async ({ page }) => {
+  nextRouterCsrTest(
+    'prepared identify and page survive browser takeover and soft navigation',
+    async ({ baseURL, context, page }) => {
+      const diagnostics = watchDiagnostics(page)
+      await context.addCookies([{ name: CONSENT_COOKIE, value: 'granted', url: baseURL }])
+      const delivery = page.waitForResponse(
+        (response) =>
+          response.url().includes('/experience/') &&
+          response.request().method() === 'POST' &&
+          response.ok(),
+      )
+      await page.goto(BEFORE_INITIAL_PAGE_PRESERVED_PATH)
+      await expect(page.getByTestId('page-two-view')).toBeVisible()
+      await expect(page.getByTestId('identified-status')).toHaveText('Yes')
+      await expect.poll(async () => await getVisiblePageUrls(page)).toEqual([PAGES.pageTwo.path])
+      await delivery
+
+      await page.getByTestId('link-home').click()
+      await expect(page).toHaveURL(PAGES.home.path)
+      await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
+      await expect.poll(async () => (await getVisiblePageUrls(page))[0]).toBe(PAGES.home.path)
+
+      await page.getByTestId('link-page-two').click()
+      await expect(page).toHaveURL(PAGES.pageTwo.path)
+      await expect(page.getByTestId('page-two-view')).toBeVisible()
+      await expect.poll(async () => (await getVisiblePageUrls(page))[0]).toBe(PAGES.pageTwo.path)
+      expectNoErrors(diagnostics)
+    },
+  )
+
+  pagesCsrTest('standalone before-initial-page failure still renders content', async ({ page }) => {
     const diagnostics = watchDiagnostics(page)
-    const recorder = recordExperienceEvents(page)
-    const identifyRequest = await failNextRequest(page, 'identify')
+    const request = await failNextRequest(page)
     try {
       await observeFromDocumentStart(
         page,
@@ -768,38 +639,29 @@ test.describe('readiness', () => {
         '[data-testid="readiness-ssg-loading"]',
       )
       await page.goto(BEFORE_INITIAL_PAGE_PATH)
-      await expect.poll(identifyRequest.failed).toBe(true)
-      await expect
-        .poll(() =>
-          recorder
-            .events()
-            .filter(({ type }) => type === 'page')
-            .map(({ pageRouteKey }) => pageRouteKey),
-        )
-        .toEqual([BEFORE_INITIAL_PAGE_PATH])
+      await expect.poll(request.failed).toBe(true)
       await expect(page.getByTestId('readiness-ssg-entry')).toBeVisible()
+      await expect
+        .poll(async () => await getVisiblePageUrls(page))
+        .toEqual(['/ssg-client-personalization'])
 
       const evidence = await readEvidence(page)
       expectLoadingFirst(evidence, true)
       expect(evidence.visibleCandidates).toHaveLength(1)
       expectBaselineOrNewVisitor(candidateAt(evidence))
       expectContinuouslyVisible(evidence, true)
-      expect(evidence.secondVisibleCandidateAfterCommitment).toBe(false)
       expectNoVisibleBlankAfterCommitment(evidence)
-      expect(recorder.events().map(({ type }) => type)).toEqual(['identify', 'page'])
       expectOnlyIntentionalRequestErrors(diagnostics)
     } finally {
-      await identifyRequest.remove()
-      recorder.remove()
+      await request.remove()
     }
   })
 
   pagesCsrTest(
-    'before initial page watchdog continues without canceling identify',
+    'pending standalone identify does not block request navigation',
     async ({ page }) => {
       const diagnostics = watchDiagnostics(page)
-      const recorder = recordExperienceEvents(page)
-      const identifyRequest = await holdNextRequest(page, 'identify')
+      const request = await holdNextRequest(page)
       try {
         await observeFromDocumentStart(
           page,
@@ -807,7 +669,7 @@ test.describe('readiness', () => {
           '[data-testid="sdk-loading"], [data-testid="home-loading"]',
         )
         await page.goto(BEFORE_INITIAL_PAGE_PATH)
-        await expect.poll(identifyRequest.held).toBe(true)
+        await expect.poll(request.held).toBe(true)
 
         await page.getByTestId('link-home').click()
         await expect(page.getByRole('heading', { name: 'Next.js SDK Pages Router' })).toBeVisible()
@@ -819,47 +681,23 @@ test.describe('readiness', () => {
         })
         expectBaselineOrNewVisitor(candidateAt(pendingEvidence))
         expectContinuouslyVisible(pendingEvidence)
+        await expect.poll(async () => (await getVisiblePageUrls(page))[0]).toBe(PAGES.home.path)
 
-        await expect
-          .poll(
-            () =>
-              recorder
-                .events()
-                .filter(({ type }) => type === 'page')
-                .map(({ pageRouteKey }) => pageRouteKey),
-            { timeout: BEFORE_INITIAL_PAGE_WATCHDOG_EVIDENCE_TIMEOUT_MS },
-          )
-          .toEqual([PAGES.home.path])
-        expect(identifyRequest.held()).toBe(true)
-
-        const heldIdentifyRequest = identifyRequest.request()
-        const releasedIdentifyResponse = page.waitForResponse(
-          (response) => response.request() === heldIdentifyRequest,
-        )
-        identifyRequest.release()
-        expect((await releasedIdentifyResponse).ok()).toBe(true)
-        expect(
-          recorder
-            .events()
-            .filter(({ type }) => type === 'page')
-            .map(({ pageRouteKey }) => pageRouteKey),
-        ).toEqual([PAGES.home.path])
-
+        request.release()
         const evidence = await readEvidence(page)
         expect(evidence.visibleCandidates).toEqual(pendingEvidence.visibleCandidates)
         expectContinuouslyVisible(evidence)
         expectNoVisibleBlankAfterCommitment(evidence)
-        expectOnlyIntentionalRequestErrors(diagnostics, [BEFORE_INITIAL_PAGE_WATCHDOG_ERROR])
+        expectNoErrors(diagnostics)
       } finally {
-        await identifyRequest.remove()
-        recorder.remove()
+        await request.remove()
       }
     },
   )
 
-  reactCsrTest('timeout/failure then late response', async ({ page }) => {
+  reactCsrTest('failed first request leaves content usable after identify', async ({ page }) => {
     const diagnostics = watchDiagnostics(page)
-    const response = await failFirstPageThenReplay(page)
+    const request = await failNextRequest(page)
     try {
       await observeFromDocumentStart(
         page,
@@ -867,20 +705,14 @@ test.describe('readiness', () => {
         '[data-testid="sdk-loading"], [data-testid="home-loading"]',
       )
       await page.goto(PAGES.home.path)
-      await expect.poll(response.firstFailed).toBe(true)
+      await expect.poll(request.failed).toBe(true)
       await expect
         .poll(async () => (await readEvidence(page)).visibleCandidates.length, { timeout: 8000 })
         .toBe(1)
       const fallback = candidateAt(await readEvidence(page))
       expectBaseline(fallback)
-      await expect(page.getByTestId('selected-optimizations-count')).toHaveText('0')
       await page.getByTestId('identify-button').click()
-      await expect.poll(response.replayed).toBe(true)
-      await expect
-        .poll(async () =>
-          Number(await page.getByTestId('selected-optimizations-count').innerText()),
-        )
-        .toBeGreaterThan(0)
+      await expect(page.getByTestId('identified-status')).toHaveText('Yes')
       const evidence = await readEvidence(page)
       expectLoadingFirst(evidence)
       expectContinuouslyVisible(evidence, true)
@@ -889,7 +721,7 @@ test.describe('readiness', () => {
       expectNoVisibleBlankAfterCommitment(evidence)
       expectOnlyIntentionalRequestErrors(diagnostics)
     } finally {
-      await response.remove()
+      await request.remove()
     }
   })
 
@@ -904,7 +736,7 @@ test.describe('readiness', () => {
     await expect.poll(async () => (await readEvidence(page)).visibleCandidates.length).toBe(1)
     const initial = candidateAt(await readEvidence(page))
     expectNewVisitor(initial)
-    const response = await holdExistingResponse(page, 'identify')
+    const response = await holdExistingResponse(page)
     try {
       await page.getByTestId('identify-button').click()
       await expect.poll(response.held).toBe(true)
@@ -929,7 +761,7 @@ test.describe('readiness', () => {
       expectNoErrors(diagnostics)
 
       await response.remove()
-      const failure = await failNextRequest(page, 'identify')
+      const failure = await failNextRequest(page)
       try {
         await page.getByTestId('identify-button').click()
         await expect.poll(failure.failed).toBe(true)

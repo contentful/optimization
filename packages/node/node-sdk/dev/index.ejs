@@ -90,6 +90,7 @@
       <section>
         <h2>States</h2>
 
+        <% if (profile) { %>
         <% if (consent) { %>
           <a href="/?profileId=<%= profile.id %>&consent=false">Reject Consent</a>
         <% } else { %>
@@ -102,6 +103,9 @@
           <a href="/?profileId=<%= profile.id %>&userId=charles">Identify</a>
         <% } %>
         |
+        <% } else { %>
+          <span>Profile unavailable; baseline content is shown where available.</span>
+        <% } %>
         <button>Profile</button>
         <dialog>
           <pre><%= JSON.stringify(profile, undefined, 2) %></pre>
@@ -145,6 +149,7 @@
 
         <div>
           <% const entry1 = entries.get('1MwiFl4z7gkwqGYdvCmr8c') %>
+          <% if (entry1) { %>
           <div
             data-ctfl-entry-id="<%= entry1.entry.sys.id %>"
             data-ctfl-optimization-id="<%= entry1.selectedOptimization?.experienceId ?? '' %>"
@@ -155,8 +160,12 @@
               <%- entry1.entry.fields.text %>
             <% } %>
           </div>
+          <% } else { %>
+          <p>Content entry unavailable.</p>
+          <% } %>
 
           <% const entry2 = entries.get('4ib0hsHWoSOnCVdDkizE8d') %>
+          <% if (entry2) { %>
           <div
             data-ctfl-entry-id="<%= entry2.entry.sys.id %>"
             data-ctfl-optimization-id="<%= entry2.selectedOptimization?.experienceId ?? '' %>"
@@ -167,8 +176,12 @@
               <p><%= entry2.entry.fields.text %></p>
             <% } %>
           </div>
+          <% } else { %>
+          <p>Content entry unavailable.</p>
+          <% } %>
 
           <% const entry3 = entries.get('xFwgG3oNaOcjzWiGe4vXo') %>
+          <% if (entry3) { %>
           <div
             data-ctfl-entry-id="<%= entry3.entry.sys.id %>"
             data-ctfl-optimization-id="<%= entry3.selectedOptimization?.experienceId ?? '' %>"
@@ -179,8 +192,12 @@
               <p><%= entry3.entry.fields.text %></p>
             <% } %>
           </div>
+          <% } else { %>
+          <p>Content entry unavailable.</p>
+          <% } %>
 
           <% const entry4 = entries.get('2Z2WLOx07InSewC3LUB3eX') %>
+          <% if (entry4) { %>
           <div
             data-ctfl-entry-id="<%= entry4.entry.sys.id %>"
             data-ctfl-optimization-id="<%= entry4.selectedOptimization?.experienceId ?? '' %>"
@@ -191,8 +208,12 @@
               <p><%= entry4.entry.fields.text %></p>
             <% } %>
           </div>
+          <% } else { %>
+          <p>Content entry unavailable.</p>
+          <% } %>
 
           <% const entry5 = entries.get('5XHssysWUDECHzKLzoIsg1') %>
+          <% if (entry5) { %>
           <div
             data-ctfl-entry-id="<%= entry5.entry.sys.id %>"
             data-ctfl-optimization-id="<%= entry5.selectedOptimization?.experienceId ?? '' %>"
@@ -203,8 +224,12 @@
               <p><%= entry5.entry.fields.text %></p>
             <% } %>
           </div>
+          <% } else { %>
+          <p>Content entry unavailable.</p>
+          <% } %>
 
           <% const entry6 = entries.get('6zqoWXyiSrf0ja7I2WGtYj') %>
+          <% if (entry6) { %>
           <div
             data-ctfl-entry-id="<%= entry6.entry.sys.id %>"
             data-ctfl-optimization-id="<%= entry6.selectedOptimization?.experienceId ?? '' %>"
@@ -215,8 +240,12 @@
               <p><%= entry6.entry.fields.text %></p>
             <% } %>
           </div>
+          <% } else { %>
+          <p>Content entry unavailable.</p>
+          <% } %>
 
           <% const entry7 = entries.get('7pa5bOx8Z9NmNcr7mISvD') %>
+          <% if (entry7) { %>
           <div
             data-ctfl-entry-id="<%= entry7.entry.sys.id %>"
             data-ctfl-optimization-id="<%= entry7.selectedOptimization?.experienceId ?? '' %>"
@@ -227,6 +256,9 @@
               <p><%= entry7.entry.fields.text %></p>
             <% } %>
           </div>
+          <% } else { %>
+          <p>Content entry unavailable.</p>
+          <% } %>
         </div>
       </section>
     </main>

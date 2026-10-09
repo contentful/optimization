@@ -55,25 +55,21 @@ public struct OptimizationApiConfig {
     public let experienceBaseUrl: String?
     public let insightsBaseUrl: String?
     public let enabledFeatures: [String]?
-    public let preflight: Bool?
 
     public init(
         experienceBaseUrl: String? = nil,
         insightsBaseUrl: String? = nil,
-        enabledFeatures: [String]? = nil,
-        preflight: Bool? = nil
+        enabledFeatures: [String]? = nil
     ) {
         self.experienceBaseUrl = experienceBaseUrl
         self.insightsBaseUrl = insightsBaseUrl
         self.enabledFeatures = enabledFeatures
-        self.preflight = preflight
     }
 
     var isEmpty: Bool {
         experienceBaseUrl == nil
             && insightsBaseUrl == nil
             && enabledFeatures == nil
-            && preflight == nil
     }
 
     func toDictionary() -> [String: Any] {
@@ -86,9 +82,6 @@ public struct OptimizationApiConfig {
         }
         if let enabledFeatures {
             dict["enabledFeatures"] = enabledFeatures
-        }
-        if let preflight {
-            dict["preflight"] = preflight
         }
         return dict
     }

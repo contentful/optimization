@@ -16,8 +16,8 @@ or legacy React surfaces and you want to move to the Optimization Pages Router S
 
 The Pages Router target uses `@contentful/optimization-nextjs/pages-router` for browser components
 and `@contentful/optimization-nextjs/pages-router/server` for `getServerSideProps`. Server props
-own request evaluation and profile continuity; the browser root receives a request handoff and
-continues with React Web behavior.
+prepare events and preview request state for rendering. The browser root receives the handoff and
+commits the prepared events through its SDK queue.
 
 Start with the
 [Next.js Pages Router integration guide](./integrating-the-optimization-sdk-in-a-nextjs-pages-router-app.md).
@@ -62,12 +62,12 @@ Use the target guide to create both bindings:
 Mount the target `OptimizationRoot` and `NextPagesAutoPageTracker` in `_app.tsx`, passing
 `pageProps.contentfulOptimization.handoff` to the root. `contentfulOptimization` is an app-owned page
 props wrapper; its `handoff` field is the SDK `BrowserOptimizationHandoff` returned by the server
-binding's `createRequestHandoff(context, options)` helper. The handoff can contain browser consent defaults,
-request-scoped optimization state, managed entries, and the required `initialPageEvent` value.
+binding's `createRequestHandoff(context, options)` helper. The handoff can contain browser consent
+defaults, request-scoped optimization state, managed entries, and prepared events for the browser.
 
-The root consumes the handoff's initial-page instruction. Keep the separate tracker mounted with
-`initialPageEvent={handoff ? 'skip' : 'emit'}` so it skips the first route whenever the root has a
-handoff and emits only when no handoff exists.
+The root hydrates the handoff and sends matching prepared events through the browser SDK queue.
+Pass the same handoff to the separate tracker so its first-route work shares the root's replay
+admission. The tracker handles routes without a handoff and later navigation.
 
 If migrated components will use `<OptimizedEntry entryId>`, configure the server binding with the
 app's `contentful` client. Pass `prefetchManagedEntries` descriptors—entry IDs or objects containing
@@ -84,15 +84,19 @@ destructure its returned `createRequestHandoff` helper. Call
 handoff to the app-owned `contentfulOptimization.handoff` prop. If your app wraps this sequence in a
 helper, define that helper in the server module before importing it into a page.
 
-The server binding resolves request consent, emits the first page event when allowed, writes the
-anonymous-id cookie when profile persistence permits it, and returns the request handoff. Observe
-accepted server evaluation by checking
-`contentfulOptimization.handoff.initialPageEvent === 'skip'`; observe denied consent by checking
-that no Experience API call is made and the value is `'emit'`.
+The server binding resolves request consent, prepares the first page event, and previews it through
+the Experience API with per-request `preflight: true` when allowed. It writes the browser-readable
+anonymous-ID cookie when profile persistence permits it and an API-issued or existing profile ID is
+available. A successful preview supplies selections for server rendering without committing the
+event. If preview fails, the handoff retains prepared events for the browser and the server can
+render baseline content. When the effective page event gate blocks preparation, no replay is
+prepared. For a strict opt-in policy, set `allowedEventTypes: []` as well as returning `false` from
+`consent.server` until consent is granted; the Node default otherwise permits pre-consent page and
+identify events.
 
-Pass the handoff to `OptimizationRoot`. The root follows its `initialPageEvent` value, while
-`NextPagesAutoPageTracker` uses `initialPageEvent={handoff ? 'skip' : 'emit'}` to avoid duplicating
-the root's first-route decision. Keep legacy route-change code removed.
+Pass the same handoff to `OptimizationRoot` and `NextPagesAutoPageTracker`. On the matching route,
+the browser admits prepared events as one SDK queue batch and then uses normal tracking for later
+navigation. Keep legacy route-change code removed.
 
 ### Replace personalized rendering
 
@@ -124,8 +128,8 @@ Verify the server and browser handoff:
 - The server binding's `createRequestHandoff(context, options)` runs in `getServerSideProps` on the
   personalized page.
 - The app-owned `pageProps.contentfulOptimization.handoff` reaches `OptimizationRoot` in `_app.tsx`.
-- The handoff records accepted server evaluation with `initialPageEvent: 'skip'`, and the separate
-  tracker skips whenever that handoff is present.
+- The handoff carries a matching prepared replay when the page event is admitted, and browser event
+  diagnostics show one first-route admission through the SDK queue.
 - A target `OptimizedEntry` renders a variant or baseline.
 - Personalized results are not cached outside the request boundary.
 
@@ -133,18 +137,19 @@ Verify the server and browser handoff:
 
 - Search for `@ninetailed/experience.js-next`, SSR plugin imports, `ntaid`, and legacy React
   surfaces.
-- Verify accepted server evaluation and denied-consent behavior.
+- Verify successful server preview, browser event delivery, and strict denied-consent behavior
+  separately.
 - Verify all-locale Contentful payloads are not used for optimized entries.
 - Verify client-side plugin replacements only after the route and rendering work.
 
 ## Troubleshooting
 
-| Symptom                                           | Check                                                                                                                     |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| First page events duplicate                       | Pass the handoff to `OptimizationRoot`; set `NextPagesAutoPageTracker` to `initialPageEvent={handoff ? 'skip' : 'emit'}`. |
-| `getServerSideProps` returns a 500 on API failure | Wrap the server helper and render baseline on failure when your app needs graceful fallback.                              |
-| Browser render cannot find managed entries        | Pass `prefetchManagedEntries` descriptors in the `options` argument to `createRequestHandoff(context, options)`.          |
-| Hooks import fails                                | Import React Web hooks from `@contentful/optimization-nextjs/client`, not `/pages-router`.                                |
+| Symptom                                           | Check                                                                                                            |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| First page events duplicate                       | Pass the same handoff to the root and tracker; remove legacy page calls and tracker emit/skip props.             |
+| `getServerSideProps` returns a 500 on API failure | Wrap the server helper and render baseline on failure when your app needs graceful fallback.                     |
+| Browser render cannot find managed entries        | Pass `prefetchManagedEntries` descriptors in the `options` argument to `createRequestHandoff(context, options)`. |
+| Hooks import fails                                | Import React Web hooks from `@contentful/optimization-nextjs/client`, not `/pages-router`.                       |
 
 ## Related guides
 

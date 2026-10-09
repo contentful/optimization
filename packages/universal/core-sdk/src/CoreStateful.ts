@@ -82,7 +82,6 @@ const createStatefulExperienceApiConfig = (
     ip: api?.ip,
     locale,
     plainText: api?.plainText,
-    preflight: api?.preflight,
   }
 
   return hasDefinedValues(experienceConfig) ? experienceConfig : undefined
@@ -208,6 +207,7 @@ let statefulInstanceCounter = 0
 class CoreStateful extends CoreStatefulEventEmitter implements ConsentController, ConsentGuard {
   private readonly singletonOwner: string
   private destroyed = false
+  private resetToken = {}
   protected readonly allowedEventTypes: AllowedEventType[]
   protected readonly experienceQueue: ExperienceQueue
   protected readonly insightsQueue: InsightsQueue
@@ -271,9 +271,12 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
       this.allowedEventTypes = allowedEventTypes ?? DEFAULT_ALLOWED_EVENT_TYPES
       this.onEventBlocked = onEventBlocked
       localeSignal.value = locale
+      const getResetToken = (): object | undefined => (this.destroyed ? undefined : this.resetToken)
       this.insightsQueue = new InsightsQueue({
         eventInterceptors: this.interceptors.event,
         flushPolicy: resolvedQueuePolicy.flush,
+        getAnonymousId,
+        getResetToken,
         insightsApi: this.api.insights,
       })
       this.experienceQueue = new ExperienceQueue({
@@ -281,6 +284,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
         eventInterceptors: this.interceptors.event,
         flushPolicy: resolvedQueuePolicy.flush,
         getAnonymousId: getAnonymousId ?? (() => undefined),
+        getResetToken,
         offlineMaxEvents: resolvedQueuePolicy.offlineMaxEvents,
         onOfflineDrop: resolvedQueuePolicy.onOfflineDrop,
         stateInterceptors: this.interceptors.state,
@@ -329,11 +333,12 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     })
 
     effect(() => {
-      if (!onlineSignal.value) return
+      if (this.destroyed || !onlineSignal.value) return
 
       this.insightsQueue.clearScheduledRetry()
       this.experienceQueue.clearScheduledRetry()
-      void this.flushQueues({ force: true })
+      void this.insightsQueue.flush({ force: true })
+      void this.experienceQueue.flush({ force: true })
     })
   }
 
@@ -345,6 +350,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   }
 
   private clearQueuedEvents(): void {
+    this.resetToken = {}
     this.insightsQueue.clearQueuedEvents()
     this.experienceQueue.clearQueuedEvents()
   }
@@ -435,7 +441,6 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   destroy(): void {
     if (this.destroyed) return
 
-    this.destroyed = true
     this.optimizationContexts.clear()
     void this.insightsQueue.flush({ force: true }).catch((error: unknown) => {
       logger.warn('Failed to flush insights queue during destroy()', String(error))
@@ -443,12 +448,16 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     void this.experienceQueue.flush({ force: true }).catch((error: unknown) => {
       logger.warn('Failed to flush Experience queue during destroy()', String(error))
     })
+    this.destroyed = true
     this.insightsQueue.clearPeriodicFlushTimer()
+    this.insightsQueue.clearScheduledRetry()
+    this.experienceQueue.clearScheduledRetry()
 
     releaseStatefulRuntimeSingleton(this.singletonOwner)
   }
 
   reset(): void {
+    this.clearQueuedEvents()
     this.optimizationContexts.clear()
     batch(() => {
       blockedEventSignal.value = undefined

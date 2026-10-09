@@ -40,6 +40,7 @@ source of truth for exported API signatures.
 - [Common configuration](#common-configuration)
 - [Core workflows](#core-workflows)
   - [Request-scoped events](#request-scoped-events)
+  - [Prepare a server-to-browser handoff](#prepare-a-server-to-browser-handoff)
   - [Content resolution](#content-resolution)
   - [Caching guidance](#caching-guidance)
 - [Development harness](#development-harness)
@@ -80,7 +81,7 @@ function appPolicyAllowsOptimizationEvent(req: { cookies?: Record<string, string
 
 async function renderRequest(
   req: { cookies?: Record<string, string>; headers: { 'accept-language'?: string } },
-  profileId: string,
+  profileId: string | undefined,
 ) {
   const appLocale = getAppLocale(req)
   const requestOptimization = optimization.forRequest({
@@ -90,7 +91,7 @@ async function renderRequest(
     },
     locale: appLocale,
     eventContext: { locale: appLocale },
-    profile: { id: profileId },
+    profile: profileId === undefined ? undefined : { id: profileId },
   })
 
   const { accepted, data } = await requestOptimization.page()
@@ -141,7 +142,6 @@ client:
 | `ip`        | IP address override used by the Experience API                |
 | `locale`    | Locale query parameter for localized Experience API responses |
 | `plainText` | Sends performance-critical Experience API endpoints as text   |
-| `preflight` | Aggregates a new profile state without storing it             |
 
 Request-scoped Insights options belong in `insightsOptions`:
 
@@ -225,6 +225,24 @@ stateless event methods.
 In stateless runtimes, Insights-backed methods require a request-bound profile for delivery.
 Non-sticky `trackView`, `trackClick`, `trackHover`, and `trackFlagView` require a profile ID passed
 to `forRequest()`.
+
+The profile ID must come from an Experience API response or application storage populated from that
+response. The SDK does not create profile IDs.
+
+### Prepare a server-to-browser handoff
+
+When the browser must continue a server-rendered request, use `prepareRequestHandoff()` instead of
+committing that initial Experience event on the server. It previews the prepared `identify`, `track`,
+and page events through the Experience API, returns the resulting `data` for server rendering, and
+places the prepared event batch and any API-issued profile ID in the private request handoff. Pass
+that handoff to the Web SDK so the browser can admit the batch to its Experience queue. The preview
+does not commit profile or event changes; ordinary calls such as `page()` continue to commit in the
+server runtime.
+
+The Experience API supplies profile identity. Pass a known API-issued profile ID from application
+storage when one exists; otherwise, handoff preparation can use the ID returned by its preview. Do
+not create a placeholder or UUID for a missing profile ID. Persistence still follows application
+consent, and Insights calls made directly on the server require a known profile ID.
 
 ### Content resolution
 

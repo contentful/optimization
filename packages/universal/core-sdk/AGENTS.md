@@ -17,3 +17,6 @@ the aggregate `./api-schemas` pass-through for CDA and API Client schema exports
 
 - Run `typecheck`, `test:unit`, and `build`.
 - Handle bundle-size failures under the root `Bundle size` policy.
+- For approved increases to exceeded budgets or requested normalization, set each authorized budget
+  to `ceil((measuredGzipBytes + 100) / 100) * 100` under the root
+  [Bundle size](../../../AGENTS.md#bundle-size) measurement and approval rules.
