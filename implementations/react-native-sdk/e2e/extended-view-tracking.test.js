@@ -13,9 +13,6 @@ const VISIBLE_ENTRY_ID = '1MwiFl4z7gkwqGYdvCmr8c'
 // Second entry visible on launch (immediately after the merge tag entry).
 const SECOND_ENTRY_ID = '4ib0hsHWoSOnCVdDkizE8d'
 
-// An entry that starts below the fold (not visible on launch).
-const BELOW_FOLD_ENTRY_ID = '7pa5bOx8Z9NmNcr7mISvD'
-
 // Extended timeout for the 1s dwell plus native rendering and event propagation.
 const EXTENDED_TIMEOUT = 30000
 const DWELL_TIME_MS = 1000
@@ -87,23 +84,35 @@ describe('Extended View Tracking', () => {
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, afterScrollCount + 1, EXTENDED_TIMEOUT)
   })
 
-  it('should emit zero events when entry scrolls out before dwell threshold', async () => {
+  it('should emit no additional events when a new exposure ends before dwell threshold', async () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    const entry = element(by.id(`content-entry-${BELOW_FOLD_ENTRY_ID}`))
+    const entry = element(by.id(`content-entry-${VISIBLE_ENTRY_ID}`))
     const scrollView = element(by.id('main-scroll-view'))
+    await expect(entry).toBeVisible(MIN_VISIBLE_PERCENT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
+    const initialCount = await getTrackedItemEventCount(VISIBLE_ENTRY_ID)
+
+    // End the initial qualified exposure and wait for its final event before
+    // measuring a new cycle. Initial visibility depends on the device viewport.
+    await scrollView.scroll(1500, 'down')
     await expect(entry).not.toBeVisible(1)
-    await expect(element(by.id(`entry-stats-${BELOW_FOLD_ENTRY_ID}`))).not.toExist()
+    await waitForTrackedItemEventCount(
+      VISIBLE_ENTRY_ID,
+      initialCount + 1,
+      ELEMENT_VISIBILITY_TIMEOUT,
+    )
+    const settledCount = await getTrackedItemEventCount(VISIBLE_ENTRY_ID)
 
     // Synchronization waits for the SDK's 1s timer before allowing the next gesture.
     // Disable it only for the short exposure, restoring it even if an assertion fails.
     await device.disableSynchronization()
     try {
       const startedAt = performance.now()
-      await scrollView.swipe('up', 'fast', 0.5)
-      await expect(entry).toBeVisible(MIN_VISIBLE_PERCENT)
       await scrollView.swipe('down', 'fast', 0.75)
+      await expect(entry).toBeVisible(MIN_VISIBLE_PERCENT)
+      await scrollView.swipe('up', 'fast', 0.75)
       await expect(entry).not.toBeVisible(1)
       // Measure the whole gesture sequence, including the time before the entry appears.
       // A slow gesture must fail this precondition instead of testing a qualified exposure.
@@ -115,8 +124,9 @@ describe('Extended View Tracking', () => {
     // Wait long enough that an event WOULD have fired if tracking hadn't been cancelled
     await sleep(3000)
 
-    // Check absence, since a tracked stats row can exist off-screen.
-    await expect(element(by.id(`entry-stats-${BELOW_FOLD_ENTRY_ID}`))).not.toExist()
+    // Setup events remain valid; the sub-dwell cycle must add none. Read the
+    // off-screen stats without scrolling and starting another exposure.
+    jestExpect(await getTrackedItemEventCount(VISIBLE_ENTRY_ID)).toBe(settledCount)
   })
 
   it('should track multiple visible entries', async () => {
