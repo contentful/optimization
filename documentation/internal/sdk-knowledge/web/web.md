@@ -59,8 +59,13 @@ wraps this). Package source root: `packages/web/web-sdk/src`; shared core:
   `hydrateOptimizationHandoff(sdk, handoff)` enforces cache safety and hydrates state into the live
   SDK. At the start of a current initialization, `hydrateAndTrackCurrentPage()` adopts an existing
   profile ID and retains it if pending hydration or replay becomes stale. It then admits a matching prepared replay as one retained queue
-  batch, or emits an ordinary browser page for an absent or mismatched replay. Its result settles on
-  admission, before HTTP delivery and live state update. `@contentful/optimization-web/handoff` also exports
+  batch. An absent, mismatched, or rejected replay attempts ordinary current-page tracking with the
+  caller's payload builder or its default, subject to current route, lifecycle, deduplication,
+  consent, and queue guards. An accepted replay result settles on queue admission, before HTTP
+  delivery and live state update. A rejected replay returns the ordinary current-page tracking
+  result, which can await online HTTP delivery. An admitted replay's delivery failure does not
+  trigger ordinary page tracking.
+  `@contentful/optimization-web/handoff` also exports
   `hydrateOptimizationHandoffState` for customer adapters. Undefined or empty handoff state still
   marks the Experience request state successful and clears stale browser content state by publishing
   `selectedOptimizations: undefined` and `changes: undefined` while leaving `profile` untouched. When

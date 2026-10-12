@@ -194,6 +194,7 @@ describe('hydrateOptimizationHandoff', () => {
     window.contentfulOptimization?.destroy()
     delete window.contentfulOptimization
     rs.restoreAllMocks()
+    rs.useRealTimers()
   })
 
   it('keeps handoff hydration out of Web bridge support', () => {
@@ -328,16 +329,29 @@ describe('hydrateOptimizationHandoff', () => {
     expect(insights.mock.calls[0]?.[0][0]?.profile.id).toBe('api-issued-id')
   })
 
-  it('rejects capacity without emitting a replacement page', async () => {
+  it.each([1, 2])('uses ordinary capacity guards with %i queued events', async (queuedCount) => {
     const sdk = new ContentfulOptimization({
       ...config,
       defaults: { consent: true },
-      queuePolicy: { offlineMaxEvents: 1 },
+      queuePolicy: { offlineMaxEvents: 2 },
     })
-    const deliver = rs.spyOn(sdk.api.experience, 'upsertProfile')
+    window.dispatchEvent(new Event('offline'))
+    const deliver = rs.spyOn(sdk.api.experience, 'upsertProfile').mockResolvedValue({
+      profile: createProfile('api-issued-id'),
+      changes,
+      selectedOptimizations,
+    })
+    const queuedIds: string[] = []
+    for (let index = 0; index < queuedCount; index++) {
+      expect(await sdk.track({ event: `accepted-${index}` })).toEqual({ accepted: true })
+      queuedIds.push(signals.event.value?.messageId ?? '')
+    }
     const ordinaryPage = rs.spyOn(sdk, 'page')
+    const currentPage = rs.spyOn(sdk, 'trackCurrentPage')
+    const buildPayload = rs.fn(() => ({ properties: { title: 'fallback' } }))
     const handoff = createContentHandoff(undefined, {
       cache: { scope: 'private-request' },
+      profileId: 'api-issued-id',
       replay: {
         routeKey: '/paired',
         events: [
@@ -346,11 +360,166 @@ describe('hydrateOptimizationHandoff', () => {
         ],
       },
     })
-    expect(await sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired' })).toEqual({
+    const result = await sdk.hydrateAndTrackCurrentPage(handoff, {
+      routeKey: '/paired',
+      buildPayload,
+    })
+    expect(result).toEqual({ accepted: queuedCount === 1 })
+    expect(await currentPage.mock.results[0]?.value).toEqual(result)
+    expect(ordinaryPage).toHaveBeenCalledExactlyOnceWith({ properties: { title: 'fallback' } })
+    expect(buildPayload).toHaveBeenCalledExactlyOnceWith({ isInitialEmission: true })
+    expect(deliver).not.toHaveBeenCalled()
+    window.dispatchEvent(new Event('online'))
+    await sdk.flush()
+    expect(deliver).toHaveBeenCalledTimes(1)
+    const deliveredEvents = deliver.mock.calls.flatMap(([payload]) => payload.events)
+    expect(deliveredEvents.map(({ type }) => type)).toEqual(
+      queuedCount === 1 ? ['track', 'page'] : ['track', 'track'],
+    )
+    expect(deliveredEvents.slice(0, queuedCount).map(({ messageId }) => messageId)).toEqual(
+      queuedIds,
+    )
+    if (queuedCount === 1)
+      expect(deliveredEvents[1]).toMatchObject({ properties: { title: 'fallback' } })
+  })
+
+  it.each([true, false])(
+    'checks ordinary page consent after batch rejection (page permitted: %s)',
+    async (pagePermitted) => {
+      const sdk = new ContentfulOptimization({
+        ...config,
+        defaults: { consent: false },
+        allowedEventTypes: pagePermitted ? ['page'] : [],
+      })
+      window.dispatchEvent(new Event('offline'))
+      const deliver = rs.spyOn(sdk.api.experience, 'upsertProfile').mockResolvedValue({
+        profile: createProfile('api-issued-id'),
+        changes,
+        selectedOptimizations,
+      })
+      const currentPage = rs.spyOn(sdk, 'trackCurrentPage')
+      const ordinaryPage = rs.spyOn(sdk, 'page')
+      const handoff = createContentHandoff(undefined, {
+        cache: { scope: 'private-request' },
+        replay: {
+          routeKey: '/paired',
+          events: [
+            sdk.eventBuilder.buildTrack({ event: 'disallowed' }),
+            sdk.eventBuilder.buildPageView(),
+          ],
+        },
+      })
+      expect(await sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired' })).toEqual({
+        accepted: pagePermitted,
+      })
+      expect(currentPage).toHaveBeenCalledTimes(1)
+      if (pagePermitted) expect(ordinaryPage).toHaveBeenCalledExactlyOnceWith({})
+      else expect(ordinaryPage).not.toHaveBeenCalled()
+      window.dispatchEvent(new Event('online'))
+      await sdk.flush()
+      expect(deliver).toHaveBeenCalledTimes(pagePermitted ? 1 : 0)
+      if (pagePermitted) expect(deliver.mock.calls[0]?.[0].events).toMatchObject([{ type: 'page' }])
+    },
+  )
+
+  it('shares repeated fallback work and returns the ordinary page response', async () => {
+    const sdk = new ContentfulOptimization({ ...config, defaults: { consent: true } })
+    const response = deferred<OptimizationData>()
+    const started = deferred()
+    const deliver = rs.spyOn(sdk.api.experience, 'upsertProfile').mockImplementation(async () => {
+      started.resolve()
+      return await response.promise
+    })
+    const buildPayload = rs.fn(() => ({ properties: { title: 'fallback' } }))
+    const handoff = createContentHandoff(
+      { changes, selectedOptimizations },
+      {
+        cache: { scope: 'private-request' },
+        profileId: 'retained-id',
+        replay: {
+          routeKey: '/paired',
+          events: [sdk.eventBuilder.buildPageView(), sdk.eventBuilder.buildPageView()],
+        },
+      },
+    )
+    const first = sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired', buildPayload })
+    const repeat = sdk.hydrateAndTrackCurrentPage(
+      { ...handoff },
+      { routeKey: '/paired', buildPayload },
+    )
+    await started.promise
+    expect(sdk.states.selectedOptimizations.current).toEqual(selectedOptimizations)
+    expect(deliver.mock.calls[0]?.[0]).toMatchObject({
+      profileId: 'retained-id',
+      events: [{ type: 'page', properties: { title: 'fallback' } }],
+    })
+    const data = { profile: createProfile('retained-id'), changes, selectedOptimizations }
+    response.resolve(data)
+    expect(await first).toEqual({ accepted: true, data })
+    expect(await repeat).toEqual({ accepted: true, data })
+    expect(
+      await sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired', buildPayload }),
+    ).toEqual({ accepted: true, data })
+    expect(await sdk.trackCurrentPage({ routeKey: '/paired', buildPayload })).toEqual({
       accepted: false,
     })
-    expect(deliver).not.toHaveBeenCalled()
+    expect(
+      await sdk.hydrateAndTrackCurrentPage(
+        {
+          ...handoff,
+          replay: {
+            routeKey: '/paired',
+            events: [sdk.eventBuilder.buildPageView(), sdk.eventBuilder.buildPageView()],
+          },
+        },
+        { routeKey: '/paired', buildPayload },
+      ),
+    ).toEqual({ accepted: false })
+    expect(deliver).toHaveBeenCalledTimes(1)
+    expect(buildPayload).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not fall back after accepted replay delivery fails and retains the batch for retry', async () => {
+    rs.useFakeTimers()
+    const sdk = new ContentfulOptimization({
+      ...config,
+      defaults: { consent: true },
+      queuePolicy: { flush: { baseBackoffMs: 50, maxBackoffMs: 50, jitterRatio: 0 } },
+    })
+    const response = deferred<OptimizationData>()
+    const deliver = rs
+      .spyOn(sdk.api.experience, 'upsertProfile')
+      .mockReturnValueOnce(response.promise)
+      .mockResolvedValue({
+        profile: createProfile('api-issued-id'),
+        changes,
+        selectedOptimizations,
+      })
+    const ordinaryPage = rs.spyOn(sdk, 'page')
+    const buildPayload = rs.fn(() => ({}))
+    const events = [
+      sdk.eventBuilder.buildTrack({ event: 'prepared' }),
+      sdk.eventBuilder.buildPageView(),
+    ]
+    const handoff = createContentHandoff(undefined, {
+      cache: { scope: 'private-request' },
+      replay: { routeKey: '/paired', events },
+    })
+    expect(
+      await sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired', buildPayload }),
+    ).toEqual({ accepted: true })
+    const flushing = sdk.flush()
+    response.reject(new Error('Experience unavailable'))
+    await flushing
+    expect(
+      await sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired', buildPayload }),
+    ).toEqual({ accepted: true })
     expect(ordinaryPage).not.toHaveBeenCalled()
+    expect(buildPayload).not.toHaveBeenCalled()
+    await rs.advanceTimersByTimeAsync(50)
+    expect(deliver).toHaveBeenCalledTimes(2)
+    expect(deliver.mock.calls[0]?.[0].events).toEqual(events)
+    expect(deliver.mock.calls[1]?.[0].events).toEqual(events)
   })
 
   it('tracks new preparations and return visits while leaving retry ownership with Core', async () => {
@@ -453,25 +622,56 @@ describe('hydrateOptimizationHandoff', () => {
     ).toEqual({ accepted: false })
   })
 
-  it('preserves ordinary online errors and allows another page attempt when replay is absent', async () => {
+  it.each(['absent', 'rejected'])(
+    'preserves ordinary online errors and allows another attempt when replay is %s',
+    async (replay) => {
+      const sdk = new ContentfulOptimization({ ...config, defaults: { consent: true } })
+      const failure = new Error('Experience unavailable')
+      const deliver = rs
+        .spyOn(sdk.api.experience, 'upsertProfile')
+        .mockRejectedValueOnce(failure)
+        .mockResolvedValue({
+          profile: createProfile('api-issued-id'),
+          changes,
+          selectedOptimizations,
+        })
+      const handoff = createContentHandoff(
+        undefined,
+        replay === 'rejected'
+          ? {
+              cache: { scope: 'private-request' },
+              replay: {
+                routeKey: '/ordinary',
+                events: [sdk.eventBuilder.buildPageView(), sdk.eventBuilder.buildPageView()],
+              },
+            }
+          : {},
+      )
+      await expect(sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/ordinary' })).rejects.toBe(
+        failure,
+      )
+      expect(
+        (await sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/ordinary' })).accepted,
+      ).toBe(true)
+      expect(deliver).toHaveBeenCalledTimes(2)
+    },
+  )
+
+  it('does not treat unrelated admission errors as prepared validation rejection', async () => {
     const sdk = new ContentfulOptimization({ ...config, defaults: { consent: true } })
-    const failure = new Error('Experience unavailable')
-    const deliver = rs
-      .spyOn(sdk.api.experience, 'upsertProfile')
-      .mockRejectedValueOnce(failure)
-      .mockResolvedValue({
-        profile: createProfile('api-issued-id'),
-        changes,
-        selectedOptimizations,
-      })
-    const handoff = createContentHandoff(undefined)
-    await expect(sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/ordinary' })).rejects.toBe(
+    const failure = new Error('Admission guard failed')
+    const handoff = createContentHandoff(undefined, {
+      cache: { scope: 'private-request' },
+      replay: { routeKey: '/paired', events: [sdk.eventBuilder.buildPageView()] },
+    })
+    const ordinaryPage = rs.spyOn(sdk, 'trackCurrentPage')
+    rs.spyOn(sdk, 'hasConsent').mockImplementation(() => {
+      throw failure
+    })
+    await expect(sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/paired' })).rejects.toBe(
       failure,
     )
-    expect(
-      (await sdk.hydrateAndTrackCurrentPage(handoff, { routeKey: '/ordinary' })).accepted,
-    ).toBe(true)
-    expect(deliver).toHaveBeenCalledTimes(2)
+    expect(ordinaryPage).not.toHaveBeenCalled()
   })
 
   it('hydrates selection state without clearing existing profile continuity', async () => {

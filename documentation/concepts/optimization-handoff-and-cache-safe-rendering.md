@@ -70,8 +70,8 @@ Browser handoffs add one field:
 - `hydration` - the browser presentation policy for already-rendered content.
 
 A request handoff can also contain `replay`, an ordered batch of prepared Experience events and the
-visible route key they belong to. A matching browser route hydrates the handoff and admits that
-batch to the normal Experience queue. A route without a matching replay follows ordinary browser
+visible route key they belong to. A matching browser route hydrates the handoff and attempts to admit
+that batch to the normal Experience queue. A route without a matching replay follows ordinary browser
 page tracking.
 
 The SDK serializes and hydrates the state it receives. Browser hydration applies only state fields
@@ -229,10 +229,12 @@ current initialization, not every future visit to the route. Later visits and di
 remain trackable.
 
 If the handoff has no replay for the current route, the browser builds and tracks an ordinary page
-event subject to current consent. If consent or queue capacity prevents replay admission, the batch
-is not replaced by a page event that omits its prepared prefix. A still-unadmitted batch can be
-reassessed through a later invocation when prerequisites change. Admission means the queue owns the
-batch; it does not guarantee exactly-once backend commitment when a response is lost.
+event subject to current consent. If a matching prepared batch fails validation or admission, the
+Web SDK attempts ordinary current-page tracking with the supplied payload builder or its default.
+That attempt remains subject to the current route, lifecycle, deduplication, consent, and queue
+guards. An admitted replay stays in the queue for delivery and retries; an HTTP failure does not
+trigger an ordinary page attempt. Admission means the queue owns the batch; it does not guarantee
+exactly-once backend commitment when a response is lost.
 
 Static and public-permutation handoffs contain selected state and cache metadata, not request replay.
 Their browser route tracking follows the ordinary page path. App Router request components create

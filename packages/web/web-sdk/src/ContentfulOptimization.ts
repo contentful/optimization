@@ -524,15 +524,16 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
   /**
    * Hydrate the current render from a server handoff and admit its matching replay through the
    * Experience queue. Server preparation previews the events; the browser sends the replay through
-   * normal Experience delivery. This promise settles when the queue admits the work, while the HTTP
-   * response updates live state independently. If the replay does not match `routeKey`, the SDK
-   * tracks an ordinary page event.
+   * normal Experience delivery. For an admitted replay, this promise settles while the HTTP
+   * response updates live state independently. If replay is absent, does not match `routeKey`, or
+   * is rejected before admission, the SDK attempts ordinary current-page tracking and returns that
+   * attempt's result. An admitted replay's delivery failure does not trigger a fallback.
    * Repeated current initialization shares work; later navigation remains trackable.
    * @public
    */
   async hydrateAndTrackCurrentPage(
     handoff: OptimizationHandoff,
-    { routeKey, buildPayload }: HydrateAndTrackCurrentPageOptions,
+    { routeKey, buildPayload = () => ({}) }: HydrateAndTrackCurrentPageOptions,
   ): Promise<EventEmissionResult> {
     assertOptimizationCacheSafety(handoff)
     const initialization = getHandoffInitialization(handoff, routeKey)
@@ -546,15 +547,18 @@ class ContentfulOptimization extends CoreStateful implements CoreBridgeHost {
 
       const { replay } = handoff
       if (replay?.routeKey !== routeKey || replay.events.at(-1)?.type !== 'page') {
-        return await this.trackCurrentPage({ routeKey, buildPayload: buildPayload ?? (() => ({})) })
+        return await this.trackCurrentPage({ routeKey, buildPayload })
       }
       const result = await this.sendPreparedExperienceEvents(
         replay.events,
         profileId,
         replay.locale,
       )
-      if (result.accepted && initialization.isCurrent())
-        this.currentPageTracker.markAccepted(routeKey)
+      if (!initialization.isCurrent()) return { accepted: false }
+      if (!result.accepted) {
+        return await this.trackCurrentPage({ routeKey, buildPayload })
+      }
+      this.currentPageTracker.markAccepted(routeKey)
       return result
     })
     try {

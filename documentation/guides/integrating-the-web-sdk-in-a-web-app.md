@@ -1207,10 +1207,10 @@ across the boundary.
    do **not** mark it `HttpOnly` — the browser SDK must read it to keep the same profile after
    takeover.
 4. Use `hydrateAndTrackCurrentPage(handoff, { routeKey, buildPayload })` for the first browser route.
-   A matching replay enters the browser queue as one batch, including its page event. A handoff
-   without a matching replay uses ordinary page tracking. The call's `accepted` result means queue
-   admission, not completed HTTP delivery. Continue calling `trackCurrentPage()` from your app's
-   route-change handler for later routes.
+   An admitted matching replay enters the browser queue as one batch, including its page event. A handoff
+   without a matching replay uses ordinary page tracking. For an admitted replay, `accepted` means
+   queue admission, not completed HTTP delivery. An ordinary page attempt returns its own tracking
+   result. Continue calling `trackCurrentPage()` from your app's route-change handler for later routes.
 5. On consent denial or revocation, clear the shared cookie and avoid persisting a returned profile
    id. Treat server-rendered personalized HTML as personalized output for cache policy.
 
@@ -1245,9 +1245,13 @@ if (handoffJson && handoffJson !== 'null') {
 }
 ```
 
-If event consent initially prevents replay admission, call the same current-page path again after
-your app records consent on that route. Do not substitute a separate `page()` call for the prepared
-identify, track, and page sequence.
+If replay validation or admission fails, this call attempts ordinary current-page tracking with
+`buildPayload`; its result reflects that page attempt. Consent, queue capacity, the current route,
+and deduplication can still prevent it. If the ordinary attempt also returns `accepted: false`, call
+the same current-page path again after your app records consent on that route to retry the prepared
+sequence. An accepted ordinary page completes this initialization, so repeating the call shares its
+result instead of retrying the replay. An admitted replay stays in the queue for delivery and does
+not trigger an ordinary page attempt if HTTP delivery fails.
 
 **Follow this pattern:** build the shared anonymous-id `Set-Cookie` on the server.
 

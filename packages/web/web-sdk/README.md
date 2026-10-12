@@ -313,11 +313,12 @@ not have data yet. Router integrations that need current-route deduplication can
 ### Hydrate and commit a prepared handoff
 
 For a server-rendered request paired with this browser SDK, pass the private request handoff to
-`hydrateAndTrackCurrentPage()`. It hydrates the server's evaluated state and admits a matching
-prepared event batch to the normal Experience queue. Queue admission is the browser commitment
-point; the server preview does not commit those events. A handoff replay is used only for its
-matching route. When no replay matches, provide `buildPayload` so the SDK can track the current
-browser page normally.
+`hydrateAndTrackCurrentPage()`. It hydrates the server's evaluated state and attempts to admit a
+matching prepared event batch to the normal Experience queue. Queue admission is the browser
+commitment point; the server preview does not commit those events. A handoff replay is used only for
+its matching route. When no replay matches or admission fails, `buildPayload` supplies the ordinary
+current-page attempt. An admitted replay stays in the queue for delivery and does not fall back to
+an ordinary page on HTTP failure.
 
 ```ts
 await optimization.hydrateAndTrackCurrentPage(handoff, {

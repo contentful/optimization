@@ -1,5 +1,14 @@
-import { batch, signals, type OptimizationHandoff } from '@contentful/optimization-core'
-import type { OptimizationData, Profile } from '@contentful/optimization-core/api-schemas'
+import {
+  batch,
+  signals,
+  type EventEmissionResult,
+  type OptimizationHandoff,
+} from '@contentful/optimization-core'
+import type {
+  ExperienceEvent,
+  OptimizationData,
+  Profile,
+} from '@contentful/optimization-core/api-schemas'
 import { ANONYMOUS_ID_COOKIE } from './constants'
 import ContentfulOptimization from './ContentfulOptimization'
 import { getCookie, removeCookie } from './lib/cookies'
@@ -49,6 +58,22 @@ function handoff(
     profileId,
     state,
     replay: { routeKey, events: [sdk.eventBuilder.buildPageView()] },
+  }
+}
+
+class DeferredPreparedAdmission extends ContentfulOptimization {
+  readonly admissionStarted = deferred()
+  readonly releaseAdmission = deferred()
+
+  protected override async sendPreparedExperienceEvents(
+    events: readonly ExperienceEvent[],
+    profileId?: string,
+    locale?: string,
+  ): Promise<EventEmissionResult> {
+    const result = await super.sendPreparedExperienceEvents(events, profileId, locale)
+    this.admissionStarted.resolve()
+    await this.releaseAdmission.promise
+    return result
   }
 }
 
@@ -325,6 +350,57 @@ describe('Web handoff identity lifecycle', () => {
     })
     await sdk.flush()
   })
+
+  it.each(['supersession', 'reset', 'destroy'] as const)(
+    'suppresses fallback when %s invalidates initialization during prepared admission',
+    async (action) => {
+      const sdk = new DeferredPreparedAdmission({ ...config, queuePolicy: { offlineMaxEvents: 1 } })
+      window.dispatchEvent(new Event('offline'))
+      const ordinaryPage = rs.spyOn(sdk, 'page')
+      const currentPage = rs.spyOn(sdk, 'trackCurrentPage')
+      const deliver = rs.spyOn(sdk.api.experience, 'upsertProfile').mockResolvedValue({
+        profile: createProfile('issued-id'),
+        changes: [],
+        selectedOptimizations: [],
+      })
+      const prepared = handoff(sdk, 'issued-id', '/stale')
+      const initialization = sdk.hydrateAndTrackCurrentPage(
+        {
+          ...prepared,
+          replay: {
+            routeKey: '/stale',
+            events: [
+              sdk.eventBuilder.buildTrack({ event: 'prepared' }),
+              sdk.eventBuilder.buildPageView(),
+            ],
+          },
+        },
+        { routeKey: '/stale' },
+      )
+      await sdk.admissionStarted.promise
+      if (action === 'supersession') {
+        expect(
+          await sdk.hydrateAndTrackCurrentPage(
+            { cache: { scope: 'static' } },
+            {
+              routeKey: '/current',
+              buildPayload: () => ({ properties: { title: 'current' } }),
+            },
+          ),
+        ).toEqual({ accepted: true })
+      } else sdk[action]()
+      sdk.releaseAdmission.resolve()
+      expect(await initialization).toEqual({ accepted: false })
+      expect(currentPage).toHaveBeenCalledTimes(action === 'supersession' ? 1 : 0)
+      expect(ordinaryPage).toHaveBeenCalledTimes(action === 'supersession' ? 1 : 0)
+      if (action === 'supersession') {
+        expect(ordinaryPage).toHaveBeenCalledExactlyOnceWith({ properties: { title: 'current' } })
+        window.dispatchEvent(new Event('online'))
+        await sdk.flush()
+        expect(deliver).toHaveBeenCalledTimes(1)
+      } else expect(deliver).not.toHaveBeenCalled()
+    },
+  )
 
   it.each(['reset', 'destroy'] as const)(
     'invalidates pending hydration and replay on %s',

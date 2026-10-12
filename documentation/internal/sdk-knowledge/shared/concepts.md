@@ -355,12 +355,15 @@ source: core-sdk#events/preparedEvents.ts#validatePreparedEvents; core-sdk#CoreS
 retained Experience queue batch. Admission settles without waiting for HTTP delivery; the queue
 retries a failed batch and updates live state when the response succeeds. Prepared events are
 validated and consent is checked again before admission; exceeding queue capacity rejects the
-whole batch, leaving the route available for a later attempt. Repeated initialization
+whole batch. Rejected validation or admission makes the Web SDK attempt ordinary current-page
+tracking with the caller's payload builder or its default, subject to current route, lifecycle,
+deduplication, consent, and queue guards. Repeated initialization
 for the same replay and route shares the admission, while another route or fresh replay can be
 tracked. At the start of a current initialization, the Web SDK adopts the existing profile ID ahead
 of handoff hydration and retains that identity when later work becomes stale. A stale initialization
 suppresses pending hydration and replay emission; a replay already accepted into the queue remains
-accepted. An absent or mismatched replay uses ordinary current-page tracking. A profileless public/static handoff preserves durable browser profile
+accepted; delivery failure does not trigger ordinary page tracking. An absent or mismatched replay
+uses ordinary current-page tracking. A profileless public/static handoff preserves durable browser profile
 continuity while publishing its content selections in memory.
 source: web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#ContentfulOptimization.ts#adoptHandoffIdentity; web-sdk#handoff-internal.ts#getHandoffInitialization; web-sdk#handoff-internal.ts#hydrateOptimizationHandoff; core-sdk#CoreStatefulEventEmitter.ts#sendPreparedExperienceEvents; core-sdk#queues/ExperienceQueue.ts#sendPrepared; core-sdk#queues/ExperienceQueue.ts#sendQueuedBatches
 

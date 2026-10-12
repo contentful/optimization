@@ -32,7 +32,7 @@ evaluates the request for personalized rendering. The browser receives the prepa
 admits the complete event batch through the SDK's existing queue; queue admission is separate from
 the eventual HTTP response. Do not model paired delivery as a server commit followed by a browser
 skip: the browser submits the prepared sequence, including its page event, as one batch. A matching
-replay suppresses a separate ordinary-page submission. Profile IDs come from Experience API
+replay admitted by the queue suppresses a separate ordinary-page submission. Profile IDs come from Experience API
 responses; never describe an SDK-generated profile ID.
 Give the reader a replay-specific verification step, such as a distinctive prepared event next to
 the page in the same browser batch. A page-only browser request cannot distinguish prepared replay
