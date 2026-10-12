@@ -1082,7 +1082,6 @@ val strictConfig = OptimizationConfig(
     allowedEventTypes = emptyList(),
     queuePolicy = QueuePolicy(
         offlineMaxEvents = 100,
-        onOfflineDrop = { event -> logDroppedOptimizationEvent(event) },
     ),
     // Blocked events are for verification; they are not re-sent after later consent.
     onEventBlocked = { blockedEvent -> logBlockedOptimizationEvent(blockedEvent) },
@@ -1102,8 +1101,9 @@ After initialization the SDK monitors network reachability and app lifecycle. A 
 (`ConnectivityManager`) calls `setOnline(...)` on connectivity changes and `flush()` on reconnect; an
 `AppLifecycleHandler` (a `ProcessLifecycleOwner` observer) calls `flush()` when the app moves to the
 background for a best-effort drain. Queues are in-memory only — there is no durable outbox — and the
-offline Experience buffer is capped at 100 events by default (tunable via `QueuePolicy.offlineMaxEvents`);
-nothing survives process death.
+offline Experience buffer is capped at 100 events by default (tunable via `QueuePolicy.offlineMaxEvents`).
+At capacity, incoming events are rejected and accepted events keep their order. Nothing survives
+process death.
 
 1. Let the SDK manage normal network and lifecycle handling after `OptimizationRoot` initializes the
    client.

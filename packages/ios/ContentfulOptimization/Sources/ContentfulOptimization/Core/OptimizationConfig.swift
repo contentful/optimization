@@ -155,15 +155,19 @@ public struct QueueFlushPolicy {
     }
 }
 
-/// Queue policy and native queue observability callbacks.
+/// Queue capacity and native flush callbacks. Offline admission defaults to 100 events.
 public struct QueuePolicy {
     public let flush: QueueFlushPolicy?
+    /// Maximum offline Experience events admitted; the default is 100.
     public let offlineMaxEvents: Int?
+    /// Inactive compatibility callback. Offline capacity rejects incoming events without dropping queued events.
+    @available(*, deprecated, message: "Inspect EventEmissionResult.accepted for offline capacity rejection.")
     public let onOfflineDrop: ((QueueEvent) -> Void)?
     public let onFlushFailure: ((QueueEvent) -> Void)?
     public let onCircuitOpen: ((QueueEvent) -> Void)?
     public let onFlushRecovered: ((QueueEvent) -> Void)?
 
+    /// `onOfflineDrop` is retained for source compatibility and is no longer called.
     public init(
         flush: QueueFlushPolicy? = nil,
         offlineMaxEvents: Int? = nil,
@@ -205,6 +209,8 @@ public struct BlockedEvent {
 
 /// Queue callback event type.
 public enum QueueEventType: String {
+    /// Retained for compatibility; the bridge no longer emits this event.
+    @available(*, deprecated, message: "Offline capacity rejects incoming events without a queue event.")
     case offlineDrop
     case flushFailure
     case circuitOpen

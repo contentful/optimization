@@ -3,6 +3,7 @@ import Contentful
 import Foundation
 import JavaScriptCore
 
+/// An event is accepted only when it was sent or admitted to the queue. A full offline queue returns false.
 public struct EventEmissionResult {
     public let accepted: Bool
     public let data: [String: Any]?

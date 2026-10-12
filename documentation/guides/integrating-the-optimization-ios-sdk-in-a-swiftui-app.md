@@ -1112,7 +1112,8 @@ After initialization the SDK monitors network reachability and app lifecycle. A 
 app-state handler is compiled in wherever UIKit can be imported, which is the case in an iOS app build,
 so a SwiftUI-lifecycle app gets the resign-active flush too — you do not need to add your own.
 Queues are in-memory only — there is no durable outbox — and the offline Experience buffer is capped
-at 100 events by default (tunable via `QueuePolicy.offlineMaxEvents`); nothing survives process death.
+at 100 events by default (tunable via `QueuePolicy.offlineMaxEvents`). At capacity, incoming events
+are rejected and accepted events keep their order. Nothing survives process death.
 
 1. Keep one `OptimizationClient` alive for the app or scene lifetime so the in-memory queue can
    survive transient network changes.
@@ -1120,7 +1121,7 @@ at 100 events by default (tunable via `QueuePolicy.offlineMaxEvents`); nothing s
    network simulation.
 3. Call `client.flush()` from app-owned shutdown or critical-flow checkpoints when policy requires a
    best-effort delivery attempt before leaving the flow.
-4. Use the `QueuePolicy` callbacks when operations teams need telemetry for offline drops, flush
+4. Use the active `QueuePolicy` callbacks when operations teams need telemetry for flush
    failures, circuit-open events, or recovery.
 
 **Follow this pattern:**

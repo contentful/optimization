@@ -239,6 +239,11 @@ that handoff to the Web SDK so the browser can admit the batch to its Experience
 does not commit profile or event changes; ordinary calls such as `page()` continue to commit in the
 server runtime.
 
+A prepared batch contains at most 100 events total, with at most 50 `identify` events and exactly
+one final page after any initial `identify` or `track` events. Invalid batches produce no replay or
+preview request. Browser admission checks the configured queue capacity for the entire batch;
+acceptance does not confirm HTTP delivery.
+
 The Experience API supplies profile identity. Pass a known API-issued profile ID from application
 storage when one exists; otherwise, handoff preparation can use the ID returned by its preview. Do
 not create a placeholder or UUID for a missing profile ID. Persistence still follows application

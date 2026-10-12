@@ -465,6 +465,10 @@ in the server helper's `initialEvents` option. The SDK prepares them in order, f
 and previews the batch for the server render. The browser commits the prepared replay through the
 handoff. Use only identity and event values your app's consent policy permits on the server.
 
+Keep the prepared batch to 100 events total, including exactly one final page and at most 50
+identifies. The SDK validates it before the preview request; an invalid batch has no replay. In the
+browser, the whole batch needs room in the configured Experience queue before it is admitted.
+
 **Adapt this to your use case:** if your request has an app-owned event to evaluate before the page,
 add it to the existing `getContentfulOptimization()` helper. `server_render` is an app-owned event
 name; replace it with one your application actually uses.

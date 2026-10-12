@@ -78,9 +78,13 @@ public data class QueueFlushPolicy(
     }
 }
 
+/** Queue capacity and flush callbacks. Offline admission defaults to 100 events. */
 public data class QueuePolicy(
     val flush: QueueFlushPolicy? = null,
+    /** Maximum offline Experience events admitted; the default is 100. */
     val offlineMaxEvents: Int? = null,
+    /** Inactive compatibility callback. Offline capacity rejects incoming events without dropping queued events. */
+    @Deprecated("Offline capacity rejects incoming events; inspect EventEmissionResult.accepted instead.")
     val onOfflineDrop: ((QueueEvent) -> Unit)? = null,
     val onFlushFailure: ((QueueEvent) -> Unit)? = null,
     val onCircuitOpen: ((QueueEvent) -> Unit)? = null,
@@ -106,6 +110,8 @@ public data class BlockedEvent(
 )
 
 public enum class QueueEventType(public val wireValue: String) {
+    /** Retained for compatibility; the bridge no longer emits this event. */
+    @Deprecated("Offline capacity rejects incoming events without emitting a queue event.")
     offlineDrop("offlineDrop"),
     flushFailure("flushFailure"),
     circuitOpen("circuitOpen"),

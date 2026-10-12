@@ -267,6 +267,15 @@ event can therefore have no `data` yet; only a returned `data` value contains th
 selections, and changes described above.
 source: core-sdk#events/EventEmissionResult.ts#EventEmissionResult; core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult
 
+The offline Experience queue admits at most 100 events by default, configurable with
+`QueuePolicy.offlineMaxEvents`. At capacity it rejects the entire incoming ordinary event or
+prepared batch with `{ accepted: false }`, retaining previously accepted events in FIFO order.
+`QueuePolicy.onOfflineDrop` and `ExperienceQueueDropContext` are deprecated compatibility surfaces
+and do not report these rejections. An active `flush()`, including a forced call, joins the running
+attempt. Completion means the attempt settled; it does not guarantee delivery or wait for a
+scheduled retry.
+source: core-sdk#CoreStateful.ts#QueuePolicy; core-sdk#queues/ExperienceQueue.ts#ExperienceQueueDropContext; core-sdk#queues/ExperienceQueue.ts#send; core-sdk#queues/ExperienceQueue.ts#sendPrepared; core-sdk#queues/ExperienceQueue.ts#flush; core-sdk#queues/InsightsQueue.ts#flush
+
 ## API transport scope
 
 The API Client scopes Experience API requests under
@@ -336,16 +345,24 @@ invent an ID to reserve for the preview. A later browser replay uses `preflight:
 receive a different linked API-issued ID.
 source: core-sdk#CoreStatelessRequest.ts#prepareRequestHandoff; core-sdk#CoreStatelessRequest.ts#buildHandoffEvents; api-client#experience/ExperienceApiClient.ts#upsertProfile; core-sdk#queues/ExperienceQueue.ts#sendPrepared; core-sdk#queues/ExperienceQueue.ts#upsertProfile
 
+The prepared batch has at most 100 events total, including exactly one final page, and at most 50
+identify events. Events before the page are identify or track. Validation happens before the preview
+request; invalid inputs produce no replay. Browser admission checks the configured queue capacity
+for the whole batch, even when the queue is larger than the prepared-batch limit.
+source: core-sdk#events/preparedEvents.ts#validatePreparedEvents; core-sdk#CoreStatelessRequest.ts#prepareRequestHandoff; core-sdk#queues/ExperienceQueue.ts#sendPrepared
+
 `hydrateAndTrackCurrentPage()` hydrates the current handoff and admits a matching replay as one
 retained Experience queue batch. Admission settles without waiting for HTTP delivery; the queue
 retries a failed batch and updates live state when the response succeeds. Prepared events are
 validated and consent is checked again before admission; exceeding queue capacity rejects the
 whole batch, leaving the route available for a later attempt. Repeated initialization
 for the same replay and route shares the admission, while another route or fresh replay can be
-tracked. An absent or mismatched replay uses ordinary current-page tracking; stale route hydration
-does not publish its state. A profileless public/static handoff preserves durable browser profile
+tracked. At the start of a current initialization, the Web SDK adopts the existing profile ID ahead
+of handoff hydration and retains that identity when later work becomes stale. A stale initialization
+suppresses pending hydration and replay emission; a replay already accepted into the queue remains
+accepted. An absent or mismatched replay uses ordinary current-page tracking. A profileless public/static handoff preserves durable browser profile
 continuity while publishing its content selections in memory.
-source: web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#handoff-internal.ts#getHandoffInitialization; web-sdk#handoff-internal.ts#hydrateOptimizationHandoff; core-sdk#CoreStatefulEventEmitter.ts#sendPreparedExperienceEvents; core-sdk#queues/ExperienceQueue.ts#sendPrepared; core-sdk#queues/ExperienceQueue.ts#sendQueuedBatches
+source: web-sdk#ContentfulOptimization.ts#hydrateAndTrackCurrentPage; web-sdk#ContentfulOptimization.ts#adoptHandoffIdentity; web-sdk#handoff-internal.ts#getHandoffInitialization; web-sdk#handoff-internal.ts#hydrateOptimizationHandoff; core-sdk#CoreStatefulEventEmitter.ts#sendPreparedExperienceEvents; core-sdk#queues/ExperienceQueue.ts#sendPrepared; core-sdk#queues/ExperienceQueue.ts#sendQueuedBatches
 
 Snapshot and preview-override paths consume selection state, not necessarily a full Experience
 response: snapshot runtimes resolve from whichever `selectedOptimizations`, `changes`, and `profile`

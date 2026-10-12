@@ -196,8 +196,8 @@ abstract class CoreStatefulEventEmitter
    * @returns Whether the event was accepted and, for sticky views, any resulting
    * {@link OptimizationData}.
    * @remarks
-   * Experience receives sticky entry views only; Insights is always invoked
-   * regardless of `sticky`.
+   * Experience receives sticky entry views only. Accepted views invoke Insights
+   * regardless of `sticky`; a rejected sticky view does not enqueue an Insights event.
    * @example
    * ```ts
    * await core.trackView({ componentId: 'entry-123', sticky: true })
@@ -315,10 +315,7 @@ abstract class CoreStatefulEventEmitter
       return { accepted: false }
     }
 
-    const data = await this.experienceQueue.send(event, optimizationContext)
-    if (data === undefined) return { accepted: true }
-
-    return { accepted: true, data }
+    return await this.experienceQueue.send(event, optimizationContext)
   }
 
   protected async sendPreparedExperienceEvents(

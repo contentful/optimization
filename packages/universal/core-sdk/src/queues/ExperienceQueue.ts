@@ -31,8 +31,9 @@ const classifyExperienceRequestFailure = (error: unknown): ExperienceRequestFail
 }
 
 /**
- * Context payload emitted when offline Experience events are dropped.
+ * Legacy context payload for offline Experience event eviction.
  *
+ * @deprecated Offline admission no longer evicts events; this context is not emitted.
  * @public
  */
 export interface ExperienceQueueDropContext {
@@ -53,7 +54,6 @@ interface ExperienceQueueOptions {
   getAnonymousId: () => string | undefined
   getResetToken?: () => object | undefined
   offlineMaxEvents: number
-  onOfflineDrop?: (context: ExperienceQueueDropContext) => void
   stateInterceptors: LifecycleInterceptors['state']
 }
 
@@ -86,9 +86,9 @@ export class ExperienceQueue {
   private readonly getAnonymousId: ExperienceQueueOptions['getAnonymousId']
   private readonly getResetToken: () => object | undefined
   private readonly offlineMaxEvents: number
-  private readonly onOfflineDrop?: ExperienceQueueOptions['onOfflineDrop']
   private readonly queuedExperienceEvents: QueuedExperienceBatch[] = []
   private readonly stateInterceptors: ExperienceQueueOptions['stateInterceptors']
+  private activeFlush: Promise<void> | undefined
   private destroyToken: object | undefined
   private destroyProfileId: string | undefined
   private destroying = false
@@ -100,7 +100,6 @@ export class ExperienceQueue {
       flushPolicy,
       getAnonymousId,
       offlineMaxEvents,
-      onOfflineDrop,
       stateInterceptors,
     } = options
 
@@ -109,7 +108,6 @@ export class ExperienceQueue {
     this.getResetToken = options.getResetToken ?? (() => this)
     this.getAnonymousId = getAnonymousId
     this.offlineMaxEvents = offlineMaxEvents
-    this.onOfflineDrop = onOfflineDrop
     this.stateInterceptors = stateInterceptors
     this.flushRuntime = new QueueFlushRuntime({
       policy: flushPolicy,
@@ -131,6 +129,7 @@ export class ExperienceQueue {
     this.destroyProfileId = undefined
     this.queuedExperienceEvents.length = 0
     this.flushRuntime.reset()
+    this.activeFlush = undefined
   }
 
   async flushOnDestroy(): Promise<void> {
@@ -153,12 +152,17 @@ export class ExperienceQueue {
   async send(
     event: ExperienceEventPayload,
     optimizationContext?: EventOptimizationContext,
-  ): Promise<OptimizationData | undefined> {
-    if (!this.isAcceptingEvents()) return undefined
+  ): Promise<EventEmissionResult> {
+    if (!this.isAcceptingEvents()) return { accepted: false }
     const token = this.getResetToken()
     const intercepted = await this.eventInterceptors.run(event)
-    if (!this.isAcceptingEvents() || token !== this.getResetToken()) return undefined
+    if (!this.isAcceptingEvents() || token !== this.getResetToken()) return { accepted: false }
     const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)
+
+    if (!onlineSignal.value && this.getQueuedEventCount() >= this.offlineMaxEvents) {
+      coreLogger.warn('Offline Experience queue is full; event admission was rejected.')
+      return { accepted: false }
+    }
 
     eventSignal.value =
       optimizationContext === undefined
@@ -168,12 +172,15 @@ export class ExperienceQueue {
             optimization: optimizationContext,
           } satisfies OptimizationEventStreamEvent)
 
-    if (onlineSignal.value) return await this.upsertProfile([validEvent])
+    if (onlineSignal.value) {
+      const data = await this.upsertProfile([validEvent])
+      return data === undefined ? { accepted: true } : { accepted: true, data }
+    }
 
     coreLogger.debug(`Queueing ${validEvent.type} event`, validEvent)
     this.enqueueEvent(validEvent)
 
-    return undefined
+    return { accepted: true }
   }
 
   sendPrepared(
@@ -204,6 +211,10 @@ export class ExperienceQueue {
     force = false,
     allowDestroy = false,
   }: { force?: boolean; allowDestroy?: boolean } = {}): Promise<void> {
+    if (this.activeFlush !== undefined) {
+      await this.activeFlush
+      return
+    }
     if (this.shouldSkipFlush(force, allowDestroy)) return
     if (this.queuedExperienceEvents.length === 0) {
       this.flushRuntime.clearScheduledRetry()
@@ -211,6 +222,16 @@ export class ExperienceQueue {
     }
 
     const token = this.getResetToken()
+    const attempt = this.flushAttempt(token)
+    this.activeFlush = attempt
+    try {
+      await attempt
+    } finally {
+      if (this.activeFlush === attempt) this.activeFlush = undefined
+    }
+  }
+
+  private async flushAttempt(token: object | undefined): Promise<void> {
     this.flushRuntime.markFlushStarted()
     try {
       await this.sendQueuedBatches(token)
@@ -290,55 +311,9 @@ export class ExperienceQueue {
   }
 
   private enqueueEvent(event: ExperienceEventPayload): void {
-    let droppedEvents: ExperienceEventArray = []
-
-    if (this.getQueuedEventCount() >= this.offlineMaxEvents) {
-      const dropCount = this.getQueuedEventCount() - this.offlineMaxEvents + 1
-      droppedEvents = this.dropOldestEvents(dropCount)
-
-      if (droppedEvents.length > 0) {
-        coreLogger.warn(
-          `Dropped ${droppedEvents.length} oldest offline event(s) due to queue limit (${this.offlineMaxEvents})`,
-        )
-      }
-    }
-
     const last = this.queuedExperienceEvents.at(-1)
     if (last !== undefined && last.request === undefined) last.events.push(event)
     else this.queuedExperienceEvents.push({ events: [event] })
-
-    if (droppedEvents.length > 0) {
-      this.invokeOfflineDropCallback({
-        droppedCount: droppedEvents.length,
-        droppedEvents,
-        maxEvents: this.offlineMaxEvents,
-        queuedEvents: this.getQueuedEventCount(),
-      })
-    }
-  }
-
-  private dropOldestEvents(count: number): ExperienceEventArray {
-    const { queuedExperienceEvents } = this
-    const droppedEvents: ExperienceEventArray = []
-
-    while (droppedEvents.length < count) {
-      const [oldest] = queuedExperienceEvents
-      if (oldest === undefined) break
-      const { events, request } = oldest
-      const dropCount = request === undefined ? count - droppedEvents.length : events.length
-      droppedEvents.push(...events.splice(0, dropCount))
-      if (events.length === 0) queuedExperienceEvents.shift()
-    }
-
-    return droppedEvents
-  }
-
-  private invokeOfflineDropCallback(context: ExperienceQueueDropContext): void {
-    try {
-      this.onOfflineDrop?.(context)
-    } catch (error) {
-      coreLogger.warn('Offline queue drop callback failed', error)
-    }
   }
 
   protected async upsertProfile(

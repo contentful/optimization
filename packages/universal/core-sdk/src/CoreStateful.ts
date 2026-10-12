@@ -107,22 +107,20 @@ const createStatefulInsightsApiConfig = (
 export interface QueuePolicy {
   /** Shared retry/backoff/circuit policy for queued flushes. */
   flush?: QueueFlushPolicy
-  /** Maximum number of offline Experience events retained. */
+  /** Maximum number of offline Experience events admitted. */
   offlineMaxEvents?: number
-  /** Callback invoked when oldest offline Experience events are dropped. */
+  /** @deprecated Offline admission no longer evicts events; this callback is inactive. */
   onOfflineDrop?: (context: ExperienceQueueDropContext) => void
 }
 
 interface ResolvedQueuePolicy {
   flush: ReturnType<typeof resolveQueueFlushPolicy>
   offlineMaxEvents: number
-  onOfflineDrop?: QueuePolicy['onOfflineDrop']
 }
 
 const resolveQueuePolicy = (policy: QueuePolicy | undefined): ResolvedQueuePolicy => ({
   flush: resolveQueueFlushPolicy(policy?.flush),
   offlineMaxEvents: toPositiveInt(policy?.offlineMaxEvents, OFFLINE_QUEUE_MAX_EVENTS),
-  onOfflineDrop: policy?.onOfflineDrop,
 })
 
 /**
@@ -289,7 +287,6 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
         getAnonymousId: getAnonymousId ?? (() => undefined),
         getResetToken,
         offlineMaxEvents: resolvedQueuePolicy.offlineMaxEvents,
-        onOfflineDrop: resolvedQueuePolicy.onOfflineDrop,
         stateInterceptors: this.interceptors.state,
       })
       installCoreBridgeCapabilities(this, this.interceptors.state)
@@ -348,8 +345,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   protected async flushQueues(
     options: { force?: boolean } & InsightsApiClientRequestOptions = {},
   ): Promise<void> {
-    await this.insightsQueue.flush(options)
-    await this.experienceQueue.flush(options)
+    await Promise.all([this.insightsQueue.flush(options), this.experienceQueue.flush(options)])
   }
 
   private clearQueuedEvents(): void {
@@ -472,6 +468,10 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     })
   }
 
+  /**
+   * Wait for any active Insights and Experience queue attempts to settle.
+   * Scheduled retries remain independent of this promise.
+   */
   async flush(): Promise<void> {
     await this.flushQueues()
   }

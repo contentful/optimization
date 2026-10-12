@@ -25,6 +25,10 @@ class PairedCore extends CoreStateful {
   setOnline(value: boolean): void {
     this.online = value
   }
+
+  async forceFlush(): Promise<void> {
+    await this.flushQueues({ force: true })
+  }
 }
 
 let core: PairedCore | undefined
@@ -269,6 +273,130 @@ describe('prepared Core delivery', () => {
     expect(runtime.api.experience.upsertProfile).toHaveBeenCalledTimes(1)
   })
 
+  it('preserves a prepared batch when ordinary offline admission reaches capacity', async () => {
+    const onOfflineDrop = rs.fn()
+    const runtime = initialize({ queuePolicy: { offlineMaxEvents: 4, onOfflineDrop } })
+    runtime.setOnline(false)
+    const prepared = batch()
+    await expect(runtime.commit(prepared)).resolves.toEqual({ accepted: true })
+    await expect(runtime.track({ event: 'fourth' })).resolves.toEqual({ accepted: true })
+    await expect(runtime.track({ event: 'rejected' })).resolves.toEqual({ accepted: false })
+
+    runtime.setOnline(true)
+    await runtime.flush()
+
+    const calls = rs.mocked(runtime.api.experience.upsertProfile).mock.calls
+    expect(calls).toHaveLength(2)
+    expect(calls[0]?.[0].events.map(({ messageId }) => messageId)).toEqual(
+      prepared.map(({ messageId }) => messageId),
+    )
+    expect(calls[1]?.[0].events).toMatchObject([{ event: 'fourth' }])
+    expect(onOfflineDrop).not.toHaveBeenCalled()
+  })
+
+  it('admits a prepared batch of exactly 100 events and rejects the next ordinary event', async () => {
+    const runtime = initialize()
+    runtime.setOnline(false)
+    const prepared: ExperienceEventArray = Array.from({ length: 99 }, (_, index) =>
+      builder.buildTrack({ event: `prepared-${index}` }),
+    )
+    prepared.push(builder.buildPageView())
+    await expect(runtime.commit(prepared)).resolves.toEqual({ accepted: true })
+    await expect(runtime.track({ event: 'overflow' })).resolves.toEqual({ accepted: false })
+
+    runtime.setOnline(true)
+    await runtime.flush()
+
+    const calls = rs.mocked(runtime.api.experience.upsertProfile).mock.calls
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.[0].events.map(({ messageId }) => messageId)).toEqual(
+      prepared.map(({ messageId }) => messageId),
+    )
+  })
+
+  it('joins an active Experience drain for concurrent public flush calls', async () => {
+    const runtime = initialize()
+    let finish: ((value: OptimizationData) => void) | undefined
+    const upsert = rs.spyOn(runtime.api.experience, 'upsertProfile').mockImplementationOnce(
+      async () =>
+        await new Promise<OptimizationData>((resolve) => {
+          finish = resolve
+        }),
+    )
+    runtime.setOnline(false)
+    await runtime.commit(batch())
+    runtime.setOnline(true)
+    let settled = false
+    const first = runtime.flush()
+    const second = runtime.flush().then(() => {
+      settled = true
+    })
+    await rs.advanceTimersByTimeAsync(0)
+    expect(upsert).toHaveBeenCalledTimes(1)
+    expect(settled).toBe(false)
+
+    finish?.(DATA)
+    await Promise.all([first, second])
+    expect(upsert).toHaveBeenCalledTimes(1)
+  })
+
+  it('joins active Experience and Insights drains for concurrent forced flushes', async () => {
+    const runtime = initialize({ getAnonymousId: () => profile.id })
+    let finishExperience: ((value: OptimizationData) => void) | undefined
+    let finishInsights: ((value: boolean) => void) | undefined
+    const upsert = rs.spyOn(runtime.api.experience, 'upsertProfile').mockImplementationOnce(
+      async () =>
+        await new Promise<OptimizationData>((resolve) => {
+          finishExperience = resolve
+        }),
+    )
+    const insights = rs.spyOn(runtime.api.insights, 'sendBatchEvents').mockImplementationOnce(
+      async () =>
+        await new Promise<boolean>((resolve) => {
+          finishInsights = resolve
+        }),
+    )
+    runtime.setOnline(false)
+    await runtime.commit(batch())
+    await runtime.trackClick({ componentId: 'queued-insight' })
+
+    let settled = false
+    const first = runtime.forceFlush()
+    const second = runtime.forceFlush().then(() => {
+      settled = true
+    })
+    await rs.advanceTimersByTimeAsync(0)
+    expect(upsert).toHaveBeenCalledTimes(1)
+    expect(insights).toHaveBeenCalledTimes(1)
+    expect(settled).toBe(false)
+
+    finishExperience?.(DATA)
+    await rs.advanceTimersByTimeAsync(0)
+    expect(settled).toBe(false)
+    finishInsights?.(true)
+    await Promise.all([first, second])
+    expect(upsert).toHaveBeenCalledTimes(1)
+    expect(insights).toHaveBeenCalledTimes(1)
+  })
+
+  it('settles a failed public flush before its scheduled retry', async () => {
+    const runtime = initialize({
+      queuePolicy: { flush: { baseBackoffMs: 50, maxBackoffMs: 50, jitterRatio: 0 } },
+    })
+    const upsert = rs
+      .spyOn(runtime.api.experience, 'upsertProfile')
+      .mockRejectedValueOnce(new Error('temporary failure'))
+      .mockResolvedValue(DATA)
+    runtime.setOnline(false)
+    await runtime.commit(batch())
+    runtime.setOnline(true)
+    await runtime.flush()
+    expect(upsert).toHaveBeenCalledTimes(1)
+
+    await rs.advanceTimersByTimeAsync(50)
+    expect(upsert).toHaveBeenCalledTimes(2)
+  })
+
   it('drains a distinct handoff admitted while the earlier delivery is pending', async () => {
     const runtime = initialize()
     let finish: ((value: OptimizationData) => void) | undefined
@@ -368,6 +496,51 @@ describe('prepared Core delivery', () => {
     expect(runtime.states.experienceRequestState.current).toEqual({ status: 'idle' })
   })
 
+  it('does not let a stale failed flush change a replacement drain', async () => {
+    const onFlushFailure = rs.fn()
+    const runtime = initialize({ queuePolicy: { flush: { onFlushFailure } } })
+    let failOld: ((error: Error) => void) | undefined
+    let finishNew: ((value: OptimizationData) => void) | undefined
+    const upsert = rs
+      .spyOn(runtime.api.experience, 'upsertProfile')
+      .mockImplementationOnce(
+        async () =>
+          await new Promise<OptimizationData>((_resolve, reject) => {
+            failOld = reject
+          }),
+      )
+      .mockImplementationOnce(
+        async () =>
+          await new Promise<OptimizationData>((resolve) => {
+            finishNew = resolve
+          }),
+      )
+    runtime.setOnline(false)
+    await runtime.commit(batch())
+    runtime.setOnline(true)
+    const oldFlush = runtime.flush()
+
+    runtime.reset()
+    runtime.setOnline(false)
+    await runtime.commit(batch())
+    runtime.setOnline(true)
+    const newFlush = runtime.flush()
+    failOld?.(new Error('stale failure'))
+    await oldFlush
+
+    expect(upsert).toHaveBeenCalledTimes(2)
+    expect(onFlushFailure).not.toHaveBeenCalled()
+    let joinedSettled = false
+    const joinedFlush = runtime.flush().then(() => {
+      joinedSettled = true
+    })
+    await rs.advanceTimersByTimeAsync(0)
+    expect(joinedSettled).toBe(false)
+    finishNew?.(DATA)
+    await Promise.all([newFlush, joinedFlush])
+    expect(upsert).toHaveBeenCalledTimes(2)
+  })
+
   it('commits an ID-less replay through the API and uses the returned ID for the next batch', async () => {
     const runtime = initialize()
     runtime.setOnline(false)
@@ -413,16 +586,40 @@ describe('prepared Core delivery', () => {
     const newFlush = runtime.flush()
     finishOld?.(true)
     await oldFlush
-    await runtime.flush()
+    const joinedFlush = runtime.flush()
     expect(insights).toHaveBeenCalledTimes(2)
     finishNew?.(true)
-    await newFlush
+    await Promise.all([newFlush, joinedFlush])
     await runtime.flush()
     expect(insights).toHaveBeenCalledTimes(2)
     expect(insights.mock.calls[1]?.[0][0]?.events).toMatchObject([{ componentId: 'after-reset' }])
   })
 
-  it('retains an ordinary event admitted at capacity while an earlier flush is pending', async () => {
+  it('joins an active Insights drain for concurrent public flush calls', async () => {
+    const runtime = initialize({ getAnonymousId: () => profile.id })
+    let finish: ((value: boolean) => void) | undefined
+    const insights = rs.spyOn(runtime.api.insights, 'sendBatchEvents').mockImplementationOnce(
+      async () =>
+        await new Promise<boolean>((resolve) => {
+          finish = resolve
+        }),
+    )
+    await runtime.trackClick({ componentId: 'before-flush' })
+    let settled = false
+    const first = runtime.flush()
+    const second = runtime.flush().then(() => {
+      settled = true
+    })
+    await rs.advanceTimersByTimeAsync(0)
+    expect(insights).toHaveBeenCalledTimes(1)
+    expect(settled).toBe(false)
+
+    finish?.(true)
+    await Promise.all([first, second])
+    expect(insights).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects an ordinary event at capacity while an earlier flush is pending', async () => {
     const runtime = initialize({ queuePolicy: { offlineMaxEvents: 2 } })
     let finish: ((value: OptimizationData) => void) | undefined
     const upsert = rs
@@ -439,7 +636,7 @@ describe('prepared Core delivery', () => {
     await runtime.track({ event: 'second' })
     runtime.setOnline(true)
     runtime.setOnline(false)
-    await runtime.track({ event: 'third' })
+    expect(await runtime.track({ event: 'third' })).toEqual({ accepted: false })
     finish?.(DATA)
     await rs.advanceTimersByTimeAsync(0)
     expect(
@@ -447,7 +644,7 @@ describe('prepared Core delivery', () => {
         .flatMap(([payload]) => payload.events)
         .filter((event) => event.type === 'track')
         .map((event) => event.event),
-    ).toEqual(['first', 'second', 'third'])
+    ).toEqual(['first', 'second'])
   })
 
   it('queues early Insights interactions using known continuity and retains interactions admitted during flush', async () => {

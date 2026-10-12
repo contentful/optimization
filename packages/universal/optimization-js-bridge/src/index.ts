@@ -396,9 +396,6 @@ const bridge: Bridge = {
             nativeGlobal.__nativeOnQueueEvent?.(JSON.stringify({ type: 'flushRecovered', context }))
           },
         },
-        onOfflineDrop: (context) => {
-          nativeGlobal.__nativeOnQueueEvent?.(JSON.stringify({ type: 'offlineDrop', context }))
-        },
       },
       onEventBlocked: (event) => {
         nativeGlobal.__nativeOnEventBlocked?.(JSON.stringify(event))

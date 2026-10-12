@@ -52,6 +52,7 @@ export class InsightsQueue {
   private readonly queuedInsightsByProfile = new Map<string, QueuedProfileEvents>()
   private readonly getAnonymousId: () => string | undefined
   private readonly getResetToken: () => object | undefined
+  private activeFlush: Promise<void> | undefined
   private insightsPeriodicFlushTimer: ReturnType<typeof setInterval> | undefined
 
   constructor(options: InsightsQueueOptions) {
@@ -81,6 +82,7 @@ export class InsightsQueue {
   clearQueuedEvents(): void {
     this.queuedInsightsByProfile.clear()
     this.flushRuntime.reset()
+    this.activeFlush = undefined
     this.reconcilePeriodicFlushTimer()
   }
 
@@ -136,6 +138,10 @@ export class InsightsQueue {
   }
 
   async flush(options: InsightsQueueFlushOptions = {}): Promise<void> {
+    if (this.activeFlush !== undefined) {
+      await this.activeFlush
+      return
+    }
     const { force = false, beacon } = options
 
     if (
@@ -156,8 +162,22 @@ export class InsightsQueue {
       return
     }
 
-    this.flushRuntime.markFlushStarted()
     const token = this.getResetToken()
+    const attempt = this.flushAttempt(batches, beacon, token)
+    this.activeFlush = attempt
+    try {
+      await attempt
+    } finally {
+      if (this.activeFlush === attempt) this.activeFlush = undefined
+    }
+  }
+
+  private async flushAttempt(
+    batches: BatchInsightsEventArray,
+    beacon: InsightsApiClientRequestOptions['beacon'],
+    token: object | undefined,
+  ): Promise<void> {
+    this.flushRuntime.markFlushStarted()
     const isCurrent = (): boolean => token !== undefined && token === this.getResetToken()
 
     try {

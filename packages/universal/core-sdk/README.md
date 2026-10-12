@@ -217,6 +217,13 @@ Core exposes reusable primitives for SDK layers:
 | Signal and observable utilities | Lightweight reactive primitives used internally by stateful SDK layers                                                                                        |
 | `api-schemas` entry point       | CDA schemas owned by Core, plus Experience API and Insights API schema pass-throughs                                                                          |
 
+The offline Experience queue holds up to 100 accepted events by default, configurable through
+`QueuePolicy.offlineMaxEvents`. When full, it rejects an incoming event or whole prepared batch
+with `{ accepted: false }` and preserves accepted events in order. An active `flush()` call joins
+the running attempt; its completion does not confirm delivery or wait for a scheduled retry.
+`onOfflineDrop` and `ExperienceQueueDropContext` remain deprecated compatibility interfaces and
+are inactive.
+
 ### Schema entry point
 
 `@contentful/optimization-core/api-schemas` owns the Contentful CDA schemas, inferred types, and

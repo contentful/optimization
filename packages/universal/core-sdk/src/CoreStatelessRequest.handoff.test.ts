@@ -189,7 +189,7 @@ describe('request handoff preparation', () => {
   })
 
   it.each([
-    { type: 'track', count: 200 },
+    { type: 'track', count: 100 },
     { type: 'identify', count: 51 },
   ] as const)(
     'rejects an oversized $type prefix without producing a replay',
@@ -206,6 +206,27 @@ describe('request handoff preparation', () => {
       expect(preview).not.toHaveBeenCalled()
     },
   )
+
+  it('previews a valid 100-event replay with 50 identify events', async () => {
+    const core = new CoreStateless({ spaceId: 'key_123' })
+    const preview = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue(DATA)
+    const initialEvents: InitialExperienceEvent[] = [
+      ...Array.from({ length: 50 }, () => ({ type: 'identify' as const, userId: 'customer' })),
+      ...Array.from({ length: 49 }, () => ({ type: 'track' as const, event: 'campaign' })),
+    ]
+
+    const { handoff, data } = await core
+      .forRequest({ consent: true })
+      .prepareRequestHandoff({ routeKey: '/', initialEvents })
+
+    expect(handoff.replay?.events).toHaveLength(100)
+    expect(handoff.replay?.events.at(-1)?.type).toBe('page')
+    expect(preview).toHaveBeenCalledWith(
+      { profileId: undefined, events: handoff.replay?.events },
+      expect.objectContaining({ preflight: true }),
+    )
+    expect(data).toBe(DATA)
+  })
 
   it('rejects invalid route/event inputs before preview', async () => {
     const core = new CoreStateless({ spaceId: 'key_123' })

@@ -374,6 +374,10 @@ content but does not commit the events. The browser receives the prepared replay
 handoff and admits it to the Experience queue for the matching route. Use app-owned values from the
 request context only when your consent policy permits them.
 
+Keep the prepared batch to 100 events total, including exactly one final page and at most 50
+identifies. The SDK validates it before the preview request; an invalid batch has no replay. In the
+browser, the whole batch needs room in the configured Experience queue before it is admitted.
+
 **Adapt this to your use case:** derive per-request inputs from your app-owned consent and identity
 cookies. Replace `app-consent`, `app-user-id`, and `server_render` with your policy and event name.
 Apply the same consent rule in `consent.server`; checking the cookie here does not grant SDK event

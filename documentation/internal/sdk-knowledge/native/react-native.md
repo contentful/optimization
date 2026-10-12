@@ -49,9 +49,8 @@ source root: `packages/react-native-sdk/src`; shared core: `packages/universal/c
 'apiName'>`): `requestTimeout?` (ms, default `3000`), `retries?` (max retry attempts, default `1`),
   `intervalTimeout?` (delay between retries in ms, default `0`), `fetchMethod?` (custom fetch),
   `onRequestTimeout?`, `onFailedAttempt?`. source: api-client#ApiClientBase.ts#ApiConfig; api-client#fetch/createProtectedFetchMethod.ts#ProtectedFetchMethodOptions; api-client#fetch/createTimeoutFetchMethod.ts#TimeoutFetchMethodOptions; api-client#fetch/createRetryFetchMethod.ts#RetryFetchMethodOptions
-- Queue/blocked callback argument shapes: `queuePolicy.onOfflineDrop(context)` receives an
-  `ExperienceQueueDropContext` object — `{ droppedCount, droppedEvents (oldest-first), maxEvents,
-queuedEvents }` — not a single dropped event. `onEventBlocked(event)` receives a `BlockedEvent` —
+- `queuePolicy.onOfflineDrop` and `ExperienceQueueDropContext` are deprecated compatibility
+  interfaces; offline admission does not invoke the callback. `onEventBlocked(event)` receives a `BlockedEvent` —
   `{ reason: 'consent', method: string, args: readonly unknown[] }` (the blocked method name and its
   original call arguments). source: core-sdk#CoreStateful.ts#QueuePolicy; core-sdk#queues/ExperienceQueue.ts#ExperienceQueueDropContext; core-sdk#CoreStateful.ts#CoreStatefulConfig; core-sdk#events/BlockedEvent.ts#BlockedEvent
 - `OptimizationRootProps extends CoreStatefulConfig` and adds `liveUpdates?: boolean` (default
@@ -305,6 +304,9 @@ selectedOptimizations, changes }` payload, and this stateful SDK applies it to i
 - Background flush: `createAppStateChangeListener` calls the SDK's `flush()` then drains pending
   AsyncStorage writes on `AppState` `background`/`inactive`, before the OS can suspend the process.
   source: react-native-sdk#handlers/createAppStateChangeListener.ts#createAppStateChangeListener; react-native-sdk#ContentfulOptimization.ts#ContentfulOptimization
+- Offline Experience admission rejects an incoming event at the configured cap (100 by default)
+  and retains accepted events in FIFO order; see [`../shared/concepts.md`](../shared/concepts.md#experience-response-payload).
+  source: core-sdk#CoreStateful.ts#QueuePolicy; core-sdk#queues/ExperienceQueue.ts#send
 - Polyfills: importing the package entry runs side-effect imports for `crypto.randomUUID`
   (`react-native-get-random-values` + `react-native-uuid`) and ES2025 iterator helpers, plus a
   `*.png` module declaration. source: react-native-sdk#index.ts#OptimizationConfig; react-native-sdk#polyfills/crypto.ts

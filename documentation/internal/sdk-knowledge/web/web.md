@@ -57,7 +57,8 @@ wraps this). Package source root: `packages/web/web-sdk/src`; shared core:
     source: core-sdk#CoreBase.ts#CoreConfig; core-sdk#CoreBase.ts#ContentfulConfig; web-sdk#ContentfulOptimization.ts#OptimizationWebConfig; core-sdk#CoreStateful.ts#CoreStatefulConfig
 - Browser handoff model: see [`../shared/concepts.md`](../shared/concepts.md#optimization-handoff).
   `hydrateOptimizationHandoff(sdk, handoff)` enforces cache safety and hydrates state into the live
-  SDK. `hydrateAndTrackCurrentPage()` then admits a matching prepared replay as one retained queue
+  SDK. At the start of a current initialization, `hydrateAndTrackCurrentPage()` adopts an existing
+  profile ID and retains it if pending hydration or replay becomes stale. It then admits a matching prepared replay as one retained queue
   batch, or emits an ordinary browser page for an absent or mismatched replay. Its result settles on
   admission, before HTTP delivery and live state update. `@contentful/optimization-web/handoff` also exports
   `hydrateOptimizationHandoffState` for customer adapters. Undefined or empty handoff state still

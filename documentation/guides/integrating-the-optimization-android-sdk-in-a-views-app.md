@@ -1158,7 +1158,8 @@ path.
 1. Add a `QueuePolicy` only when production telemetry needs queue bounds or delivery callbacks. The
    offline Experience queue holds up to 100 events by default (tunable via
    `QueuePolicy.offlineMaxEvents`); queues are in-memory only, with no durable outbox, and do not
-   survive process death.
+   survive process death. At capacity, an incoming Experience event is rejected and accepted events
+   keep their order.
 
    **Adapt this to your use case:**
 
@@ -1168,12 +1169,11 @@ path.
        queuePolicy = QueuePolicy(
            // Cap offline storage to the app's production delivery budget.
            offlineMaxEvents = 100,
-           onOfflineDrop = { event -> Log.w("Optimization", "Dropped offline event: ${event.context}") },
        ),
    )
    ```
 
-2. Use queue callbacks for operational diagnostics, not for resending blocked or dropped events.
+2. Use active queue callbacks for flush diagnostics. `onOfflineDrop` is deprecated and inactive.
 3. Keep Contentful entry caching in the application layer — the SDK does not cache CDA responses for
    Views rendering; you own content caching with locale-aware keys.
 4. Call `flush()` only for deliberate release, test, or lifecycle flows; the SDK already flushes on
