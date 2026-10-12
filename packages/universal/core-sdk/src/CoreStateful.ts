@@ -208,6 +208,9 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   private readonly singletonOwner: string
   private destroyed = false
   private resetToken = {}
+  protected get isDestroyed(): boolean {
+    return this.destroyed
+  }
   protected readonly allowedEventTypes: AllowedEventType[]
   protected readonly experienceQueue: ExperienceQueue
   protected readonly insightsQueue: InsightsQueue
@@ -445,7 +448,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     void this.insightsQueue.flush({ force: true }).catch((error: unknown) => {
       logger.warn('Failed to flush insights queue during destroy()', String(error))
     })
-    void this.experienceQueue.flush({ force: true }).catch((error: unknown) => {
+    void this.experienceQueue.flushOnDestroy().catch((error: unknown) => {
       logger.warn('Failed to flush Experience queue during destroy()', String(error))
     })
     this.destroyed = true

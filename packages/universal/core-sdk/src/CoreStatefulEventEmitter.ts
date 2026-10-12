@@ -82,6 +82,7 @@ abstract class CoreStatefulEventEmitter
   protected abstract readonly experienceQueue: ExperienceQueue
   protected abstract readonly insightsQueue: InsightsQueue
   protected abstract readonly onEventBlocked?: CoreStatefulConfig['onEventBlocked']
+  protected abstract get isDestroyed(): boolean
   protected abstract getEventOptimizationContext(
     optimizationContextId: string | undefined,
   ): EventOptimizationContext | undefined
@@ -205,6 +206,7 @@ abstract class CoreStatefulEventEmitter
   async trackView(
     payload: ViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<EventEmissionResult> {
+    if (this.isDestroyed) return { accepted: false }
     const optimizationContext = this.getEventOptimizationContext(payload.optimizationContextId)
     if (!this.hasConsent('trackView')) {
       this.onBlockedByConsent('trackView', [payload])
@@ -307,6 +309,7 @@ abstract class CoreStatefulEventEmitter
     event: ExperienceEventPayload,
     optimizationContext?: EventOptimizationContext,
   ): Promise<EventEmissionResult> {
+    if (this.isDestroyed) return { accepted: false }
     if (!this.hasConsent(method)) {
       this.onBlockedByConsent(method, args)
       return { accepted: false }
@@ -323,6 +326,7 @@ abstract class CoreStatefulEventEmitter
     profileId?: string,
     locale?: string,
   ): Promise<EventEmissionResult> {
+    if (this.isDestroyed) return { accepted: false }
     let validEvents: ExperienceEventPayload[] = []
     try {
       validEvents = validatePreparedEvents(events)
@@ -350,6 +354,7 @@ abstract class CoreStatefulEventEmitter
     event: InsightsEventPayload,
     optimizationContext?: EventOptimizationContext,
   ): Promise<void> {
+    if (this.isDestroyed) return
     if (!this.hasConsent(method)) {
       this.onBlockedByConsent(method, args)
       return

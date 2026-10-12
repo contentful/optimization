@@ -109,6 +109,156 @@ describe('prepared Core delivery', () => {
     ])
   })
 
+  it('forces both offline prepared batches on destroy with their original targets and order', async () => {
+    const runtime = initialize()
+    runtime.setOnline(false)
+    const first = batch()
+    const second = batch()
+    await runtime.commit(first, 'first-profile', 'de-DE')
+    await runtime.commit(second, 'second-profile', 'fr-FR')
+
+    expect(() => {
+      runtime.destroy()
+    }).not.toThrow()
+    await rs.advanceTimersByTimeAsync(0)
+
+    const calls = rs.mocked(runtime.api.experience.upsertProfile).mock.calls
+    expect(calls).toHaveLength(2)
+    expect(calls.map(([payload]) => payload.events.map(({ messageId }) => messageId))).toEqual([
+      first.map(({ messageId }) => messageId),
+      second.map(({ messageId }) => messageId),
+    ])
+    expect(calls.map(([payload, options]) => [payload.profileId, options?.locale])).toEqual([
+      ['first-profile', 'de-DE'],
+      ['second-profile', 'fr-FR'],
+    ])
+    expect(runtime.states.profile.current).toBeUndefined()
+  })
+
+  it('continues an active flush after destroy and rejects new submissions', async () => {
+    const runtime = initialize()
+    let finish: ((value: OptimizationData) => void) | undefined
+    const upsert = rs
+      .spyOn(runtime.api.experience, 'upsertProfile')
+      .mockImplementationOnce(
+        async () =>
+          await new Promise<OptimizationData>((resolve) => {
+            finish = resolve
+          }),
+      )
+      .mockResolvedValue(DATA)
+    const first = batch()
+    const second = batch()
+    await runtime.commit(first, undefined, 'de-DE')
+    await runtime.commit(second, undefined, 'fr-FR')
+    expect(upsert).toHaveBeenCalledTimes(1)
+
+    runtime.destroy()
+    const lastEventAtDestroy = signals.event.value
+    await expect(runtime.commit(batch())).resolves.toEqual({ accepted: false })
+    await expect(runtime.track({ event: 'after-destroy' })).resolves.toEqual({ accepted: false })
+    await runtime.trackClick({ componentId: 'after-destroy' })
+    finish?.(DATA)
+    await rs.advanceTimersByTimeAsync(0)
+
+    expect(upsert).toHaveBeenCalledTimes(2)
+    expect(upsert.mock.calls[1]?.[0].events.map(({ messageId }) => messageId)).toEqual(
+      second.map(({ messageId }) => messageId),
+    )
+    expect(upsert.mock.calls[1]?.[0].profileId).toBe(profile.id)
+    expect(upsert.mock.calls[1]?.[1]?.locale).toBe('fr-FR')
+    expect(runtime.api.insights.sendBatchEvents).not.toHaveBeenCalled()
+    expect(signals.event.value).toBe(lastEventAtDestroy)
+    expect(runtime.states.profile.current).toBeUndefined()
+  })
+
+  it('carries a returned profile ID through the destroy drain without publishing it', async () => {
+    const runtime = initialize()
+    runtime.setOnline(false)
+    await runtime.commit(batch())
+    await runtime.commit(batch())
+
+    const requestStateAtDestroy = runtime.states.experienceRequestState.current
+    runtime.destroy()
+    await rs.advanceTimersByTimeAsync(0)
+
+    const calls = rs.mocked(runtime.api.experience.upsertProfile).mock.calls
+    expect(calls).toHaveLength(2)
+    expect(calls[0]?.[0].profileId).toBeUndefined()
+    expect(calls[1]?.[0].profileId).toBe(profile.id)
+    expect(runtime.states.profile.current).toBeUndefined()
+    expect(runtime.states.experienceRequestState.current).toEqual(requestStateAtDestroy)
+  })
+
+  it('stops a failed destroy drain without a retry or late state publication', async () => {
+    const runtime = initialize({
+      queuePolicy: { flush: { baseBackoffMs: 50, maxBackoffMs: 50, jitterRatio: 0 } },
+    })
+    const upsert = rs
+      .spyOn(runtime.api.experience, 'upsertProfile')
+      .mockRejectedValueOnce(new Error('request failed'))
+      .mockResolvedValue(DATA)
+    runtime.setOnline(false)
+    await runtime.commit(batch())
+    await runtime.commit(batch())
+
+    const requestStateAtDestroy = runtime.states.experienceRequestState.current
+    runtime.destroy()
+    await rs.advanceTimersByTimeAsync(10_000)
+
+    expect(upsert).toHaveBeenCalledTimes(1)
+    expect(runtime.states.profile.current).toBeUndefined()
+    expect(runtime.states.experienceRequestState.current).toEqual(requestStateAtDestroy)
+    await runtime.flush()
+    expect(upsert).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not let an old destroy drain publish into a replacement core', async () => {
+    const oldRuntime = initialize()
+    let finish: ((value: OptimizationData) => void) | undefined
+    rs.spyOn(oldRuntime.api.experience, 'upsertProfile').mockImplementationOnce(
+      async () =>
+        await new Promise<OptimizationData>((resolve) => {
+          finish = resolve
+        }),
+    )
+    await oldRuntime.commit(batch())
+    oldRuntime.destroy()
+
+    const replacement = initialize()
+    const requestStateAtReplacement = replacement.states.experienceRequestState.current
+    finish?.(DATA)
+    await rs.advanceTimersByTimeAsync(0)
+
+    expect(replacement.states.profile.current).toBeUndefined()
+    expect(replacement.states.experienceRequestState.current).toEqual(requestStateAtReplacement)
+  })
+
+  it('cancels the remaining destroy drain immediately on reset', async () => {
+    const runtime = initialize()
+    let finish: ((value: OptimizationData) => void) | undefined
+    const upsert = rs
+      .spyOn(runtime.api.experience, 'upsertProfile')
+      .mockImplementationOnce(
+        async () =>
+          await new Promise<OptimizationData>((resolve) => {
+            finish = resolve
+          }),
+      )
+      .mockResolvedValue(DATA)
+    await runtime.commit(batch())
+    await runtime.commit(batch())
+
+    runtime.destroy()
+    runtime.reset()
+    finish?.(DATA)
+    await rs.advanceTimersByTimeAsync(0)
+
+    expect(upsert).toHaveBeenCalledTimes(1)
+    expect(runtime.states.profile.current).toBeUndefined()
+    expect(runtime.states.experienceRequestState.current).toEqual({ status: 'idle' })
+  })
+
   it('rejects a whole batch at capacity and never admits a truncated prefix', async () => {
     const runtime = initialize({ queuePolicy: { offlineMaxEvents: 4 } })
     runtime.setOnline(false)
