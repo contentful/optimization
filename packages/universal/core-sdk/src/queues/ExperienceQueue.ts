@@ -21,6 +21,7 @@ import {
   profile as profileSignal,
   type ExperienceRequestFailureReason,
 } from '../signals'
+import { getProfileRevision } from '../signals/profileRevision'
 import { applyOptimizationDataToSignals } from '../state/applyOptimizationDataToSignals'
 
 const coreLogger = createScopedLogger('CoreStateful')
@@ -155,6 +156,7 @@ export class ExperienceQueue {
   ): Promise<EventEmissionResult> {
     if (!this.isAcceptingEvents()) return { accepted: false }
     const token = this.getResetToken()
+    const profileRevision = getProfileRevision()
     const intercepted = await this.eventInterceptors.run(event)
     if (!this.isAcceptingEvents() || token !== this.getResetToken()) return { accepted: false }
     const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)
@@ -173,7 +175,7 @@ export class ExperienceQueue {
           } satisfies OptimizationEventStreamEvent)
 
     if (onlineSignal.value) {
-      const data = await this.upsertProfile([validEvent])
+      const data = await this.upsertProfile([validEvent], undefined, undefined, profileRevision)
       return data === undefined ? { accepted: true } : { accepted: true, data }
     }
 
@@ -320,9 +322,11 @@ export class ExperienceQueue {
     events: ExperienceEventArray,
     request?: QueuedExperienceBatch['request'],
     delivery?: QueuedDelivery,
+    profileRevision = getProfileRevision(),
   ): Promise<OptimizationData | undefined> {
     const token = this.getResetToken()
     const isLive = (): boolean => this.isLiveRequest(token)
+    const canPublish = (): boolean => isLive() && profileRevision === getProfileRevision()
     const isDestroyDrain = (): boolean => this.isDestroyDeliveryCurrent(delivery)
     const isAccepted = (): boolean => isLive() || isDestroyDrain()
     if (isLive()) experienceRequestStateSignal.value = { status: 'pending' }
@@ -330,7 +334,8 @@ export class ExperienceQueue {
       const data = await this.requestExperienceData(events, request, delivery?.profileId)
       if (!isAccepted()) return undefined
       rememberProfileId(request, data)
-      if (isLive()) await applyOptimizationDataToSignals(data, this.stateInterceptors, isLive)
+      if (isLive()) await applyOptimizationDataToSignals(data, this.stateInterceptors, canPublish)
+      this.finishSuccessfulRequest(token)
       return isAccepted() ? data : undefined
     } catch (error) {
       if (!isAccepted()) return undefined
@@ -340,6 +345,12 @@ export class ExperienceQueue {
           reason: classifyExperienceRequestFailure(error),
         }
       throw error
+    }
+  }
+
+  private finishSuccessfulRequest(token: object | undefined): void {
+    if (this.isLiveRequest(token) && experienceRequestStateSignal.value.status !== 'success') {
+      experienceRequestStateSignal.value = { status: 'success' }
     }
   }
 

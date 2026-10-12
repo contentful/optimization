@@ -162,6 +162,7 @@ export class CoreStatelessRequest {
   private readonly core: CoreStateless
   private currentProfile: PartialProfile | undefined
   private currentSelectedOptimizations: OptimizationData['selectedOptimizations'] | undefined
+  private profileRevision = 0
   private readonly requestEventConsent: boolean | undefined
   private readonly eventContext: UniversalEventBuilderArgs
   private readonly experienceOptions: CoreStatelessRequestOptions | undefined
@@ -222,6 +223,7 @@ export class CoreStatelessRequest {
     page,
   }: PrepareRequestHandoffOptions): Promise<PrepareRequestHandoffResult> {
     const profileId = this.currentProfile?.id
+    const { profileRevision } = this
     const handoff: OptimizationHandoff = {
       cache: { scope: 'private-request' },
       profileId,
@@ -248,9 +250,8 @@ export class CoreStatelessRequest {
         { profileId, events },
         { ...this.experienceOptions, preflight: true },
       )
-      const { profile, selectedOptimizations } = data
-      this.currentProfile = profile
-      this.currentSelectedOptimizations = selectedOptimizations
+      const { profile } = data
+      this.publishExperienceData(data, profileRevision)
       return { handoff: { ...preparedHandoff, profileId: profileId ?? profile.id }, data }
     } catch (error) {
       coreLogger.warn('Request preview failed; the prepared handoff remains available.', error)
@@ -560,6 +561,7 @@ export class CoreStatelessRequest {
   private async sendAllowedExperienceEvent(
     event: ExperienceEventPayload,
   ): Promise<OptimizationData> {
+    const { profileRevision } = this
     const intercepted = await this.core.interceptors.event.run(
       withEventConsent(event, this.requestEventConsent === true),
     )
@@ -572,11 +574,18 @@ export class CoreStatelessRequest {
       this.experienceOptions,
     )
 
-    const { profile, selectedOptimizations } = result
-    this.currentProfile = profile
-    this.currentSelectedOptimizations = selectedOptimizations
+    this.publishExperienceData(result, profileRevision)
 
     return result
+  }
+
+  private publishExperienceData(data: OptimizationData, profileRevision: number): void {
+    if (profileRevision !== this.profileRevision) return
+
+    const { profile, selectedOptimizations } = data
+    this.currentProfile = profile
+    this.currentSelectedOptimizations = selectedOptimizations
+    this.profileRevision++
   }
 
   private async sendAllowedInsightsEvent(

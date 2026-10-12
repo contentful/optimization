@@ -169,8 +169,10 @@ None (imperative class + Web Components; no React surface). Web Components eleme
   resolved browser page URL for the URL campaign inference recorded in
   [`../shared/concepts.md`](../shared/concepts.md#campaign-attribution).
   source: web-sdk#ContentfulOptimization.ts#mergeConfig; web-sdk#builders/EventBuilder.ts#getPageProperties; core-sdk#events/EventBuilder.ts#buildUniversalEventProperties; core-sdk#events/EventBuilder.ts#buildPageView; kb:shared/concepts.md
-- `page()` (accepted) populates `states.selectedOptimizations`.
-  source: core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals
+- A successful `page()` populates `states.selectedOptimizations` when its lifecycle and captured
+  profile revision still permit publication; see the shared
+  [Experience response contract](../shared/concepts.md#experience-response-payload).
+  source: core-sdk#queues/ExperienceQueue.ts#upsertProfile; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals; kb:shared/concepts.md
 - `trackCurrentPage()` dedupes consecutive accepted route keys; a bare `page()` always emits when
   consent permits. A matching prepared replay marks its route accepted at queue admission, avoiding
   a second browser page for that route.

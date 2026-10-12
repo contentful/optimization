@@ -247,19 +247,43 @@ blocked attempts as accepted, so a later caller/effect can retry the same curren
 fresh payload under the current consent state.
 source: core-sdk#CoreStatefulEventEmitter.ts#sendExperienceEventWithResult; core-sdk#CoreStatefulEventEmitter.ts#sendInsightsEvent; core-sdk#CoreStatefulEventEmitter.ts#reportBlockedEvent; core-sdk#CoreStateful.ts#consent; core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker; web-sdk#ContentfulOptimization.ts#trackCurrentPage; optimization-js-bridge#index.ts#Bridge
 
+Current-page/screen trackers compare keys to skip accepted or in-flight duplicates, but each emission
+owns its completion bookkeeping by attempt identity. A superseded attempt cannot mark its key
+accepted or clear the active attempt, even when a later attempt uses the same key or follows a
+tracker reset. Its own caller still receives its emission result.
+source: core-sdk#tracking/AcceptedCurrentStateTracker.ts#AcceptedCurrentStateTracker
+
 ## Experience response payload
 
 An accepted Experience API request (page/identify/screen/track) returns `OptimizationData`
 `{ profile, selectedOptimizations, changes }` — this response is the origin of the profile, the
 selected optimizations, and the computed flag `changes` the rest of the SDK consumes. `OptimizationData`
 mirrors the wire `ExperienceData` but renames its `experiences` field to `selectedOptimizations`. A
-stateful SDK applies the payload to its personalization signals (`profile`, `selectedOptimizations`,
+stateful SDK applies a publishable payload to its personalization signals (`profile`, `selectedOptimizations`,
 `changes`) in one batch, transitioning the Experience-request state to `success` atomically with the
 selections so consumers never see `!pending` while optimization is still unavailable. Stateful Core
 state interceptors are field-presence aware: omitted interceptor fields keep the original payload
 field, while an own present `undefined` field is applied intentionally. A stateless SDK returns the
-same payload per request instead of holding it.
-source: api-client#schemas/experience/ExperienceResponse.ts#OptimizationData; api-client#schemas/experience/ExperienceResponse.ts#ExperienceData; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals
+same payload per call and caches profile and selections within its request-bound client.
+source: api-client#schemas/experience/ExperienceResponse.ts#OptimizationData; api-client#schemas/experience/ExperienceResponse.ts#ExperienceData; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals; core-sdk#CoreStatelessRequest.ts#publishExperienceData
+
+Online stateful Experience calls capture the shared profile revision before event interception;
+queued batches capture it when delivery starts. After state
+interceptors run, the response can publish only if its lifecycle is still live and the profile
+revision is unchanged. An intervening profile write, including hydration or preview state, prevents
+the entire response from replacing profile, selections, or changes, even if the profile ID is
+unchanged. Every response publication also advances the revision, including publications whose
+profile is deeply equal and therefore does not trigger a profile signal update. This publication
+check preserves accepted delivery and returned response data; a live
+successful request still settles the Experience-request state to `success`.
+source: core-sdk#queues/ExperienceQueue.ts#send; core-sdk#queues/ExperienceQueue.ts#upsertProfile; core-sdk#signals/profileRevision.ts#getProfileRevision; core-sdk#signals/profileRevision.ts#advanceProfileRevision; core-sdk#state/applyOptimizationDataToSignals.ts#applyOptimizationDataToSignals
+
+Stateless ordinary Experience calls capture the request client's profile revision before event
+interception; handoff previews capture it before
+asynchronous event preparation. They publish profile and selections to that client only if no other
+response has published since capture; each successful publication advances the revision.
+A superseded response still returns its own data and, for a preview, its prepared handoff.
+source: core-sdk#CoreStatelessRequest.ts#sendAllowedExperienceEvent; core-sdk#CoreStatelessRequest.ts#prepareRequestHandoff; core-sdk#CoreStatelessRequest.ts#publishExperienceData
 
 Event-method acceptance and response data are separate: `EventEmissionResult` is
 `{ accepted: false } | { accepted: true, data?: OptimizationData }`. An accepted queued/offline
@@ -353,7 +377,8 @@ source: core-sdk#events/preparedEvents.ts#validatePreparedEvents; core-sdk#CoreS
 
 `hydrateAndTrackCurrentPage()` hydrates the current handoff and admits a matching replay as one
 retained Experience queue batch. Admission settles without waiting for HTTP delivery; the queue
-retries a failed batch and updates live state when the response succeeds. Prepared events are
+retries a failed batch and publishes successful responses under the shared lifecycle and profile
+revision guards. Prepared events are
 validated and consent is checked again before admission; exceeding queue capacity rejects the
 whole batch. Rejected validation or admission makes the Web SDK attempt ordinary current-page
 tracking with the caller's payload builder or its default, subject to current route, lifecycle,

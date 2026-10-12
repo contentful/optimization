@@ -129,8 +129,9 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
   `track({ event, properties? })` (`event` required) → return `EventEmissionResult`
   `{ accepted, data? }` where `data` is the accepted Experience-response `OptimizationData` payload
   (see [`../shared/concepts.md`](../shared/concepts.md#experience-response-payload)). Being stateless,
-  the request client does not apply it to any signals; instead accepted `page()`/`identify()` update
-  this request client's `profile` getter and cached `selectedOptimizations` for the rest of the request.
+  the request client does not apply it to any signals. Experience responses update this request
+  client's `profile` getter and cached `selectedOptimizations` only if its profile revision has not
+  advanced while the call was pending; superseded responses still return their accepted data.
   source: core-sdk#CoreStatelessRequest.ts#page; core-sdk#CoreStatelessRequest.ts#identify; core-sdk#CoreStatelessRequest.ts#screen; core-sdk#CoreStatelessRequest.ts#track; core-sdk#events/EventEmissionResult.ts#EventEmissionResult; api-client#schemas/experience/ExperienceResponse.ts#OptimizationData
 - Insights methods: `trackView(payload)` returns `EventEmissionResult`; `trackClick`, `trackHover`,
   `trackFlagView` return `void`. `trackView({ componentId, viewId, viewDurationMs, experienceId?, variantIndex?, sticky? })`.
@@ -178,9 +179,10 @@ source: node-sdk#ContentfulOptimization.ts#ContentfulOptimization; core-sdk#Core
 ## Version / runtime quirks
 
 - Stateless per request: construct the SDK once, call `forRequest()` per incoming request, then call
-  event methods / entry fetches on that request client. The request client's `profile` getter is the
-  only mutable request-local state and updates only from accepted Experience responses.
-  source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#sendAllowedExperienceEvent
+  event methods / entry fetches on that request client. Its cached profile and selections update
+  from ordinary Experience responses and handoff previews under the shared
+  [response publication contract](../shared/concepts.md#experience-response-payload).
+  source: core-sdk#CoreStatelessRequest.ts#CoreStatelessRequest; core-sdk#CoreStatelessRequest.ts#publishExperienceData; kb:shared/concepts.md
 - Locale precedence: when `forRequest()` receives both a top-level `locale` and
   `experienceOptions.locale`, the top-level request `locale` wins — the constructor rewrites
   `experienceOptions.locale` (and `eventContext.locale`) to the normalized request locale.

@@ -68,17 +68,18 @@ export class AcceptedCurrentStateTracker<TKey> {
       return { accepted: false, attempted: false }
     }
 
-    this.inFlight = { key }
+    const attempt = { key }
+    this.inFlight = attempt
 
     try {
       const result = await emit()
-      if (result.accepted && this.matches(this.inFlight, key)) {
+      if (result.accepted && this.inFlight === attempt) {
         this.markAccepted(key)
       }
 
       return { ...result, attempted: true }
     } finally {
-      if (this.matches(this.inFlight, key)) {
+      if (this.inFlight === attempt) {
         this.inFlight = undefined
       }
     }

@@ -54,6 +54,17 @@ const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
   },
 }
 
+function deferredOptimizationData(): {
+  promise: Promise<OptimizationData>
+  resolve: (data: OptimizationData) => void
+} {
+  let resolveData!: (data: OptimizationData) => void
+  const promise = new Promise<OptimizationData>((resolve) => {
+    resolveData = resolve
+  })
+  return { promise, resolve: resolveData }
+}
+
 function createOptimizedEntryClient(): ContentfulEntryClient & {
   readonly getEntry: ReturnType<typeof rs.fn<MockContentfulGetEntry>>
   readonly getEntries: ReturnType<typeof rs.fn<MockContentfulGetEntries>>
@@ -689,6 +700,119 @@ describe('CoreStateless', () => {
       'first-profile',
     ])
     expect(requestOptimization.profile).toEqual(secondProfile)
+  })
+
+  it('keeps the newer profile and selections when an earlier accepted event settles later', async () => {
+    const client = createOptimizedEntryClient()
+    const core = new CoreStateless({
+      spaceId: 'key_123',
+      contentful: { client, cache: false },
+    })
+    const delayed = deferredOptimizationData()
+    const oldData = {
+      ...EMPTY_OPTIMIZATION_DATA,
+      profile: { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'old-profile' },
+      selectedOptimizations: [],
+    }
+    const currentData = {
+      ...EMPTY_OPTIMIZATION_DATA,
+      profile: { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'current-profile' },
+      selectedOptimizations,
+    }
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockReturnValueOnce(delayed.promise)
+      .mockResolvedValueOnce(currentData)
+    const request = core.forRequest({ consent: true, profile: { id: 'initial-profile' } })
+
+    const earlier = request.page()
+    const later = await request.identify({ userId: 'user-123' })
+    delayed.resolve(oldData)
+    const earlierResult = await earlier
+    const optimized = await request.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
+
+    expect(upsertProfile).toHaveBeenCalledTimes(2)
+    expect(later).toEqual({ accepted: true, data: currentData })
+    expect(earlierResult).toEqual({ accepted: true, data: oldData })
+    expect(request.profile).toEqual(currentData.profile)
+    expect(optimized.selectedOptimization).toBeDefined()
+  })
+
+  it('keeps an intervening publication when an earlier event interceptor settles later', async () => {
+    const core = new CoreStateless({ spaceId: 'key_123' })
+    let release!: () => void
+    const interceptorPending = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    core.interceptors.event.add(async (event) => {
+      if (event.type === 'page') await interceptorPending
+      return event
+    })
+    const oldData = {
+      ...EMPTY_OPTIMIZATION_DATA,
+      profile: { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'old-profile' },
+    }
+    const currentData = {
+      ...EMPTY_OPTIMIZATION_DATA,
+      profile: { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'current-profile' },
+    }
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockImplementation(
+        async ({ events }) =>
+          await Promise.resolve(events[0]?.type === 'page' ? oldData : currentData),
+      )
+    const request = core.forRequest({ consent: true, profile: { id: 'initial-profile' } })
+
+    const earlier = request.page()
+    const later = await request.identify({ userId: 'user-123' })
+    release()
+    const earlierResult = await earlier
+
+    expect(upsertProfile).toHaveBeenCalledTimes(2)
+    expect(later).toEqual({ accepted: true, data: currentData })
+    expect(earlierResult).toEqual({ accepted: true, data: oldData })
+    expect(request.profile).toEqual(currentData.profile)
+  })
+
+  it('keeps intervening selections when a delayed preview returns the same profile', async () => {
+    const client = createOptimizedEntryClient()
+    const core = new CoreStateless({
+      spaceId: 'key_123',
+      contentful: { client, cache: false },
+    })
+    const delayed = deferredOptimizationData()
+    const oldData = {
+      ...EMPTY_OPTIMIZATION_DATA,
+      profile: { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'event-profile' },
+      selectedOptimizations: [],
+    }
+    const currentData = {
+      ...EMPTY_OPTIMIZATION_DATA,
+      profile: { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'event-profile' },
+      selectedOptimizations,
+    }
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockReturnValueOnce(delayed.promise)
+      .mockResolvedValueOnce(currentData)
+    const request = core.forRequest({ consent: true, profile: { id: 'initial-profile' } })
+
+    const preview = request.prepareRequestHandoff({ routeKey: '/products' })
+    await rs.waitFor(() => {
+      expect(upsertProfile).toHaveBeenCalledTimes(1)
+    })
+    const eventResult = await request.page()
+    delayed.resolve(oldData)
+    const previewResult = await preview
+    const optimized = await request.fetchOptimizedEntry('4ib0hsHWoSOnCVdDkizE8d')
+
+    expect(upsertProfile).toHaveBeenCalledTimes(2)
+    expect(eventResult).toEqual({ accepted: true, data: currentData })
+    expect(previewResult.data).toBe(oldData)
+    expect(previewResult.handoff.replay?.events).toHaveLength(1)
+    expect(request.profile).toEqual(currentData.profile)
+    expect(optimized.selectedOptimization).toBeDefined()
   })
 
   it('sends sticky entry views through both the Experience API and Insights API', async () => {
