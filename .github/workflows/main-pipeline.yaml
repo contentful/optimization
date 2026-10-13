@@ -279,7 +279,7 @@ jobs:
       - run: pnpm size:check
       - name: Pack SDK tarballs for implementations
         run: pnpm run pack:pkgs
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sdk-package-tarballs
           path: pkgs/*.tgz
@@ -426,7 +426,7 @@ jobs:
 
       - name: Upload test reports on failure
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ci-results-android-sdk-unit
           path: packages/android/ContentfulOptimization/build/reports/tests/
@@ -469,7 +469,7 @@ jobs:
       - run: pnpm run implementation:node-sdk -- implementation:playwright:install -- --with-deps
       - run: pnpm run implementation:node-sdk -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: ci-results-node-sdk
@@ -517,7 +517,7 @@ jobs:
           --with-deps
       - run: pnpm run implementation:node-sdk+web-sdk -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: ci-results-node-sdk+web-sdk
@@ -564,7 +564,7 @@ jobs:
       - run: pnpm --dir lib/e2e-web run setup:e2e
       - run: pnpm run implementation:web-sdk -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: ci-results-web-sdk
@@ -611,7 +611,7 @@ jobs:
       - run: pnpm --dir lib/e2e-web run setup:e2e
       - run: pnpm run implementation:web-sdk_react -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: ci-results-web-sdk_react
@@ -658,7 +658,7 @@ jobs:
       - run: pnpm --dir lib/e2e-web run setup:e2e
       - run: pnpm run implementation:web-sdk_angular -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: ci-results-web-sdk_angular
@@ -705,7 +705,7 @@ jobs:
       - run: pnpm --dir lib/e2e-web run setup:e2e
       - run: pnpm run implementation:react-web-sdk -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: ci-results-react-web-sdk
@@ -754,7 +754,7 @@ jobs:
       - run: pnpm --dir lib/e2e-web run setup:e2e
       - run: pnpm run implementation:nextjs-sdk_app-router -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: ci-results-nextjs-sdk-app-router
@@ -804,7 +804,7 @@ jobs:
       - run: pnpm run implementation:nextjs-sdk_app-router_edge-runtime --
           implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: ci-results-nextjs-sdk-app-router-edge-runtime
@@ -853,7 +853,7 @@ jobs:
       - run: pnpm --dir lib/e2e-web run setup:e2e
       - run: pnpm run implementation:nextjs-sdk_pages-router -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: ci-results-nextjs-sdk-pages-router
@@ -936,7 +936,7 @@ jobs:
         run: pnpm run implementation:react-native-sdk -- test:e2e:android:build:release
 
       - name: Upload Detox APKs
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: detox-android-apks
           path: implementations/react-native-sdk/android/app/build/outputs/apk/
@@ -1010,7 +1010,7 @@ jobs:
           cp implementations/android-sdk/views/build/outputs/apk/debug/views-debug.apk android-apks/
           ls -la android-apks/
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android-apks
           path: android-apks/
@@ -1141,7 +1141,7 @@ jobs:
         run: |
           kill $(cat /tmp/mock-server.pid) 2>/dev/null || true
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: ci-results-android-maestro-${{ matrix.app }}
@@ -1198,7 +1198,7 @@ jobs:
           cp -R "$DERIVED_DATA/Build/Products" /tmp/ios-artifact/Products
           ls /tmp/ios-artifact/Products/*.xctestrun
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ios-uitest-bundles
           path: /tmp/ios-artifact/
@@ -1463,7 +1463,7 @@ jobs:
         run: |
           kill $(cat /tmp/mock-server.pid) 2>/dev/null || true
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: ci-results-react-native-android-shard-${{ matrix.shard }}
@@ -1566,7 +1566,7 @@ jobs:
         if: always()
         run: kill $(cat /tmp/mock-server.pid) 2>/dev/null || true
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: ci-results-ios-${{ matrix.scheme }}
